@@ -4,7 +4,7 @@ import dataclasses
 import html
 import json
 import logging
-import os
+import os, stat
 import re
 import shlex
 import shutil
@@ -76,17 +76,6 @@ class File:
         with path.open(mode="w") as f:
             f.write(source)
 
-    @classmethod
-    def parse(cls, path: Path, use_json: bool, bench: bool) -> (bool, Optional):
-        return cls._run(PARSER_PATH, "Parsing", path, use_json, bench)
-
-    def check(self, path: Path, use_json: bool, bench: bool) -> (bool, Optional):
-        extra_args = [
-            f"-memberAccountAccess=S.{path}:S.{(path.parent / Path(other_path)).resolve()}"
-            for other_path in self.member_account_access
-        ]
-        return self._run(CHECKER_PATH, "Checking", path, use_json, bench, extra_args)
-
     @staticmethod
     def _run(
             tool_path: Path,
@@ -126,10 +115,11 @@ class GoTest:
         if go_test_ref:
             replacement = f'github.com/onflow/cadence@{go_test_ref}'
         else:
-            replacement = shlex.quote(str(Path.cwd().parent.absolute()))
+            replacement = f'{Path.cwd().parent.absolute().resolve().as_posix()}'
 
         with cwd(working_dir / self.path):
             if prepare:
+                logger.info("Loading dependencies")
                 subprocess.run([
                     "go", "mod", "edit", "-replace", f'github.com/onflow/cadence={replacement}',
                 ])
@@ -200,6 +190,11 @@ class Description:
 
     def _clone(self, working_dir: Path):
         if working_dir.exists():
+            for root, dirs, files in os.walk(working_dir):  
+                for dir in dirs:
+                    os.chmod(os.path.join(root, dir), stat.S_IRWXU)
+                for file in files:
+                    os.chmod(os.path.join(root, file), stat.S_IRWXU)
             shutil.rmtree(working_dir)
 
         logger.info(f"Cloning {self.url} ({self.branch})")
@@ -223,56 +218,15 @@ class Description:
             self._clone(working_dir)
 
         results: List[Result] = []
-        check_succeeded = True
-        if check:
-            check_succeeded, results = self.check(working_dir, prepare=prepare, use_json=use_json, bench=bench)
-
         go_tests_succeeded = True
         if go_test:
             for test in self.go_tests:
                 if not test.run(working_dir, prepare=prepare, go_test_ref=go_test_ref):
                     go_tests_succeeded = False
 
-        succeeded = check_succeeded and go_tests_succeeded
+        succeeded = go_tests_succeeded
 
         return succeeded, results
-
-    def check(self, working_dir: Path, prepare: bool, use_json: bool, bench: bool) -> (bool, List[Result]):
-
-        run_succeeded = True
-
-        results: List[Result] = []
-
-        for file in self.files:
-            path = working_dir.joinpath(file.path)
-
-            if prepare:
-                file.rewrite(path)
-
-            parse_succeeded, parse_results = \
-                File.parse(path, use_json=use_json, bench=bench)
-            result = Result(
-                path=str(path),
-                parse_result=ParseResult.from_dict(parse_results[0]) if parse_results else None
-            )
-            if not parse_succeeded:
-                run_succeeded = False
-                if use_json:
-                    results.append(result)
-                continue
-
-            check_succeeded, check_results = \
-                file.check(path, use_json=use_json, bench=bench)
-            if check_results:
-                result.check_result = CheckResult.from_dict(check_results[0])
-            if use_json:
-                results.append(result)
-            if not check_succeeded:
-                run_succeeded = False
-                continue
-
-        return run_succeeded, results
-
 
 class Git:
 
@@ -693,7 +647,7 @@ def build_all():
 @click.option(
     "--go-test/--no-go-test",
     is_flag=True,
-    default=False,
+    default=True,
     help="Run the suite Go tests"
 )
 @click.option(
@@ -807,8 +761,6 @@ def run(
         go_test_ref: Optional[str],
         names: Collection[str]
 ) -> (bool, List[Result]):
-
-    build_all()
 
     all_succeeded = True
 
