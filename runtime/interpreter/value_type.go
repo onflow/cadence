@@ -181,8 +181,16 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 			return Nil
 		}
 
-		location, _, err := common.DecodeTypeID(interpreter, string(staticType.ID()))
-		if err != nil || location == nil {
+		var location common.Location
+
+		switch staticType := staticType.(type) {
+		case *CompositeStaticType:
+			location = staticType.Location
+
+		case *InterfaceStaticType:
+			location = staticType.Location
+
+		default:
 			return Nil
 		}
 
@@ -206,8 +214,19 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 			return Nil
 		}
 
-		location, qualifiedIdentifier, err := common.DecodeTypeID(interpreter, string(staticType.ID()))
-		if err != nil || location == nil {
+		var location common.Location
+		var qualifiedIdentifier string
+
+		switch staticType := staticType.(type) {
+		case *CompositeStaticType:
+			location = staticType.Location
+			qualifiedIdentifier = staticType.QualifiedIdentifier
+
+		case *InterfaceStaticType:
+			location = staticType.Location
+			qualifiedIdentifier = staticType.QualifiedIdentifier
+
+		default:
 			return Nil
 		}
 
