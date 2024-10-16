@@ -746,7 +746,7 @@ func TestCheckStringTemplate(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-			let x :[AnyStruct] = ["tmp", 1]
+			let x: [AnyStruct] = ["tmp", 1]
 			let y = "\(x)"
 		`)
 

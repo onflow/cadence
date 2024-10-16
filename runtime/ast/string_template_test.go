@@ -41,7 +41,7 @@ func TestStringTemplate_Doc(t *testing.T) {
 	}
 
 	assert.Equal(t,
-		prettier.Text("abc"),
+		prettier.Text("\"abc\""),
 		stmt.Doc(),
 	)
 }

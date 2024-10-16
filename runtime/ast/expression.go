@@ -223,6 +223,10 @@ func (*StringExpression) precedence() precedence {
 // StringTemplateExpression
 
 type StringTemplateExpression struct {
+	// Values and Expressions are assumed to be interleaved, V[0] + E[0] + V[1] + ... + E[n-1] + V[n]
+	// this is enforced in the parser e.g. "a\(b)c" will be parsed as follows
+	// Values: 			[]string{"a","c"}
+	// Expressions:		[]Expression{b}
 	Values      []string
 	Expressions []Expression
 	Range
@@ -237,6 +241,10 @@ func NewStringTemplateExpression(
 	exprRange Range,
 ) *StringTemplateExpression {
 	common.UseMemory(gauge, common.NewStringTemplateExpressionMemoryUsage(len(values)+len(exprs)))
+	if len(values) != len(exprs)+1 {
+		// assert string template alternating structure
+		panic(errors.NewUnreachableError())
+	}
 	return &StringTemplateExpression{
 		Values:      values,
 		Expressions: exprs,
@@ -255,8 +263,8 @@ func (*StringTemplateExpression) isExpression() {}
 
 func (*StringTemplateExpression) isIfStatementTest() {}
 
-func (*StringTemplateExpression) Walk(_ func(Element)) {
-	// NO-OP
+func (e *StringTemplateExpression) Walk(walkChild func(Element)) {
+	walkExpressions(walkChild, e.Expressions)
 }
 
 func (e *StringTemplateExpression) String() string {
@@ -265,7 +273,7 @@ func (e *StringTemplateExpression) String() string {
 
 func (e *StringTemplateExpression) Doc() prettier.Doc {
 	if len(e.Expressions) == 0 {
-		return prettier.Text(e.Values[0])
+		return prettier.Text(QuoteString(e.Values[0]))
 	}
 
 	// TODO: must reproduce expressions as literals

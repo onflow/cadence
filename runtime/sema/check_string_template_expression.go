@@ -43,12 +43,8 @@ func (checker *Checker) VisitStringTemplateExpression(stringTemplateExpression *
 	elementCount := len(stringTemplateExpression.Expressions)
 
 	if elementCount > 0 {
-		argumentTypes := make([]Type, elementCount)
-
-		for i, element := range stringTemplateExpression.Expressions {
+		for _, element := range stringTemplateExpression.Expressions {
 			valueType := checker.VisitExpression(element, stringTemplateExpression, elementType)
-
-			argumentTypes[i] = valueType
 
 			if !isValidStringTemplateValue(valueType) {
 				checker.report(
