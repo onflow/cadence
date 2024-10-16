@@ -162,7 +162,7 @@ type Interface interface {
 		capabilityBorrowType *interpreter.ReferenceStaticType,
 	) (bool, error)
 
-	CurrentVersion() string
+	MinimumRequiredVersion() string
 }
 
 type MeterInterface interface {

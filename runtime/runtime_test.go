@@ -11526,7 +11526,7 @@ func TestRuntimeBuiltInFunctionConfusion(t *testing.T) {
 			OnProgramLog: func(message string) {
 				loggedMessages = append(loggedMessages, message)
 			},
-			OnCurrentVersion: func() string {
+			OnMinimumRequiredVersion: func() string {
 				return currentVersion
 			},
 		}

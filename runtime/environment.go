@@ -1463,11 +1463,11 @@ func (e *interpreterEnvironment) newValidateAccountCapabilitiesPublishHandler() 
 }
 
 func (e *interpreterEnvironment) configureVersionedFeatures() {
-	var currentVersion string
+	var minimumRequiredVersion string
 	errors.WrapPanic(func() {
-		currentVersion = e.runtimeInterface.CurrentVersion()
+		minimumRequiredVersion = e.runtimeInterface.MinimumRequiredVersion()
 	})
-	enableOldBehaviour := useV101Behaviour(currentVersion)
+	enableOldBehaviour := useV101Behaviour(minimumRequiredVersion)
 
 	e.CheckerConfig.AttachmentConformancesEnabled = enableOldBehaviour
 	e.CheckerConfig.MemberSiblingTypeOverrideEnabled = enableOldBehaviour

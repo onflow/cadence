@@ -116,7 +116,7 @@ func newContractDeploymentTransactorWithVersion(t *testing.T, config Config, ver
 			events = append(events, event)
 			return nil
 		},
-		OnCurrentVersion: func() string {
+		OnMinimumRequiredVersion: func() string {
 			return version
 		},
 	}

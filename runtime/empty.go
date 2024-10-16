@@ -261,6 +261,6 @@ func (EmptyRuntimeInterface) ValidateAccountCapabilitiesPublish(
 	panic("unexpected call to ValidateAccountCapabilitiesPublish")
 }
 
-func (EmptyRuntimeInterface) CurrentVersion() string {
-	panic("unexpected call to CurrentVersion")
+func (EmptyRuntimeInterface) MinimumRequiredVersion() string {
+	panic("unexpected call to MinimumRequiredVersion")
 }
