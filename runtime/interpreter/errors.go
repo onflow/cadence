@@ -620,25 +620,6 @@ func (e UseBeforeInitializationError) Error() string {
 	return fmt.Sprintf("member `%s` is used before it has been initialized", e.Name)
 }
 
-// InvocationArgumentTypeError
-type InvocationArgumentTypeError struct {
-	LocationRange
-	ParameterType sema.Type
-	Index         int
-}
-
-var _ errors.UserError = InvocationArgumentTypeError{}
-
-func (InvocationArgumentTypeError) IsUserError() {}
-
-func (e InvocationArgumentTypeError) Error() string {
-	return fmt.Sprintf(
-		"invalid invocation with argument at index %d: expected `%s`",
-		e.Index,
-		e.ParameterType.QualifiedString(),
-	)
-}
-
 // MemberAccessTypeError
 type MemberAccessTypeError struct {
 	ExpectedType sema.Type
@@ -1027,6 +1008,25 @@ func (e CapabilityAddressPublishingError) Error() string {
 	)
 }
 
+// EntitledCapabilityPublishingError
+type EntitledCapabilityPublishingError struct {
+	LocationRange
+	BorrowType *ReferenceStaticType
+	Path       PathValue
+}
+
+var _ errors.UserError = EntitledCapabilityPublishingError{}
+
+func (EntitledCapabilityPublishingError) IsUserError() {}
+
+func (e EntitledCapabilityPublishingError) Error() string {
+	return fmt.Sprintf(
+		"cannot publish capability of type `%s` to the path %s",
+		e.BorrowType.ID(),
+		e.Path.String(),
+	)
+}
+
 // NestedReferenceError
 type NestedReferenceError struct {
 	Value ReferenceValue
@@ -1131,4 +1131,17 @@ func (ReferencedValueChangedError) IsUserError() {}
 
 func (e ReferencedValueChangedError) Error() string {
 	return "referenced value has been changed after taking the reference"
+}
+
+// GetCapabilityError
+type GetCapabilityError struct {
+	LocationRange
+}
+
+var _ errors.UserError = GetCapabilityError{}
+
+func (GetCapabilityError) IsUserError() {}
+
+func (e GetCapabilityError) Error() string {
+	return "cannot get capability"
 }

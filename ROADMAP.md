@@ -6,51 +6,16 @@ listed in no particular order.
 
 ## High Priority
 
-- Reliability
-
-  Cadence should run deterministically, and should not have crashers, stack overflows, or security issues.
-
 - Performance
-
-  Cadence's checker is currently not optimized for performance.
-  We are making performance improvements, mainly by profiling it using real-world programs
-  and optimizing hot paths, as well as avoiding unnecessary work (e.g. tracking position information).
 
   Cadence programs are also currently executed using a tree-walking interpreter,
   which is easy to modify and useful for debugging. However, it is not optimized for performance.
   We are investigating  compilation to improve performance.
   Potential targets / inspirations are WebAssembly, MoveVM, and IELE.
 
+- Standard Library
+
 ## Lower Priority
-
-- [Testing of Cadence programs](https://github.com/onflow/cadence/issues/330)
-
-  Cadence should provide means to test code.
-
-- Storage API
-
-  - [Storage querying API](https://github.com/onflow/cadence/issues/208)
-
-    Cadence should provide an API to query/iterate over account storage.
-
-  - [Storage API improvements](https://github.com/onflow/cadence/issues/376)
-
-    Cadence should provide APIs to overwrite and remove stored values.
-
-  - [Scripts should have access to authorized accounts](https://github.com/onflow/cadence/issues/539)
-
-
-- Extensibility
-
-  Cadence should provide means to extend existing types with additional functionality
-  even when those types did not explicitly provide mechanisms to do so.
-  This would be very useful and would increase future-proofing code.
-
-  However, it might have a negative impact on explicitness/discoverability,
-  i.e it might be hard for a user to understand where a definition originates from
-  if it wasn't defined in the type's original set of functions.
-  It might also have system and security implications.
-  A solution needs to take these issues into account.
 
 - Host interface
 
@@ -70,18 +35,9 @@ listed in no particular order.
 
   Cadence should offer a tool that generates human-readable documentation for programs.
 
-- Improving type inference
-
-  - [Improve the inferred type of conditional statements and expressions](http://github.com/onflow/cadence/issues/61),
-    binary expressions and literal expressions (e.g. arrays and dictionaries).
-
 - Type aliases
 
   Cadence should provide a way to define type aliases.
-
-- `Word128` and `Word256` types
-
-  Cadence should provide `Word128` and `Word256` types, just like it provides `UInt128` and `UInt256`
 
 - ABI generation and code generation
 
@@ -95,12 +51,6 @@ listed in no particular order.
 
   From an ABI source code could be generated that would allow client libraries
   to call Cadence programs in a type-safe way.
-
-- Code size reduction
-
-  Cadence programs are currently stored in source code form on-chain.
-
-  Cadence should offer a more efficient format that is optimized for size and read time.
 
 - Allow import statements to specify the hash of the imported contract
 
@@ -151,20 +101,6 @@ listed in no particular order.
 - XOR operator
 
   Cadence should provide an XOR operator (`^`): logical for booleans and bitwise for integers.
-
-- Debugger
-
-  Cadence should offer a debugger, which would assist developers with debugging issues.
-
-  This could be done as a command line tool, potentially integrated into the command line runner
-  and/or REPL.
-
-  Another opportunity could be implementing the debugger as a server process
-  that implements the
-  [Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/),
-  which would allow multiple editors to debug Cadence programs,
-  just like the language server implements the Language Server Protocol
-  to allow different editors to provide editing features for Cadence code.
 
 - Loose mode / Gradual typing
 
@@ -223,12 +159,6 @@ listed in no particular order.
 
   Optimize the performance by reducing the number of actual copies through copy-on-write.
 
-- Interface requirements
-
-  Cadence should allow interfaces to require conforming types to also conform to other interfaces,
-  e.g. the interface declaration `interface I3: I1, I2 {}` requires conforming types
-  to also conform to interfaces `I1` and `I2`.
-
 - Built-in types to work with timestamps and durations
 
   Cadence should offer two new built in types: `Timestamp` and `Duration`,
@@ -256,13 +186,6 @@ listed in no particular order.
   On the other hand, having some level of sub-second accuracy
   might be useful in the blocktime field,
   given that the block rate might be >1 block/sec at some point.
-
-- Exposing entropy, safe random functionality
-
-  Cadence should provide a way to get safe random numbers.
-
-  This could potentially be based on a callback mechanism,
-  which depends on contexts and a service chunk in the block.
 
 - Re-entrancy
 
@@ -296,19 +219,7 @@ listed in no particular order.
 
   - [Support more code-suggestions/auto-completions](https://github.com/onflow/cadence/issues/531)
 
-- [Make the Crypto contract compatible with Ethereum](https://github.com/onflow/cadence/issues/537)
-
-  Cadence should offer a mechanism to verify an Ethereum signature, ideally a personal signed message.
-
-  For this to be possible, the Crypto contract needs support for the Keccak hashing algorithm,
-  and the signature verification method must allow providing a custom tag,
-  e.g. the Ethereum personal signed message prefix.
-
 - Extend paths
 
   Cadence should [allow values like types, numbers, and addresses to be included in paths](https://github.com/onflow/cadence/issues/538).
   Currently paths only consist of a domain and an identifier.
-
-- Extend run-time types
-
-  Cadence should [allow run-time types to be tested for subtyping relationships](https://github.com/onflow/cadence/issues/473)

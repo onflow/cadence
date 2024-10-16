@@ -21,47 +21,100 @@ package capcons
 import (
 	"sync"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
 )
 
-type CapabilityEntry struct {
+// Path capability mappings map an address and path to a capability ID and borrow type
+
+type PathCapabilityEntry struct {
 	CapabilityID interpreter.UInt64Value
-	BorrowType   *sema.ReferenceType
+	BorrowType   *interpreter.ReferenceStaticType
 }
 
-type CapabilityEntryMap map[interpreter.PathValue]CapabilityEntry
+type PathCapabilityEntryMap map[interpreter.PathValue]PathCapabilityEntry
 
-type CapabilityMapping struct {
-	// capabilityEntries maps common.Address to CapabilityEntryMap
+type PathCapabilityMapping struct {
+	// capabilityEntries maps common.Address to PathCapabilityEntryMap
 	capabilityEntries sync.Map
 }
 
-func (m *CapabilityMapping) Record(
+func (m *PathCapabilityMapping) Record(
 	addressPath interpreter.AddressPath,
 	capabilityID interpreter.UInt64Value,
-	borrowType *sema.ReferenceType,
+	borrowType *interpreter.ReferenceStaticType,
 ) {
-	var capabilityEntryMap CapabilityEntryMap
-	rawCapabilityEntryMap, ok := m.capabilityEntries.Load(addressPath.Address)
+	var capMap PathCapabilityEntryMap
+	rawCapMap, ok := m.capabilityEntries.Load(addressPath.Address)
 	if ok {
-		capabilityEntryMap = rawCapabilityEntryMap.(CapabilityEntryMap)
+		capMap = rawCapMap.(PathCapabilityEntryMap)
 	} else {
-		capabilityEntryMap = CapabilityEntryMap{}
-		m.capabilityEntries.Store(addressPath.Address, capabilityEntryMap)
+		capMap = PathCapabilityEntryMap{}
+		m.capabilityEntries.Store(addressPath.Address, capMap)
 	}
-	capabilityEntryMap[addressPath.Path] = CapabilityEntry{
+	capMap[addressPath.Path] = PathCapabilityEntry{
 		CapabilityID: capabilityID,
 		BorrowType:   borrowType,
 	}
 }
 
-func (m *CapabilityMapping) Get(addressPath interpreter.AddressPath) (interpreter.UInt64Value, sema.Type, bool) {
+func (m *PathCapabilityMapping) Get(addressPath interpreter.AddressPath) (interpreter.UInt64Value, *interpreter.ReferenceStaticType, bool) {
 	rawCapabilityEntryMap, ok := m.capabilityEntries.Load(addressPath.Address)
 	if !ok {
 		return 0, nil, false
 	}
-	capabilityEntryMap := rawCapabilityEntryMap.(CapabilityEntryMap)
+	capabilityEntryMap := rawCapabilityEntryMap.(PathCapabilityEntryMap)
 	capabilityEntry, ok := capabilityEntryMap[addressPath.Path]
 	return capabilityEntry.CapabilityID, capabilityEntry.BorrowType, ok
+}
+
+// Path/Type mappings map an address, path, and borrow type to a capability ID
+
+type PathTypeCapabilityKey struct {
+	Path       interpreter.PathValue
+	BorrowType common.TypeID
+}
+
+type PathTypeCapabilityEntryMap map[PathTypeCapabilityKey]interpreter.UInt64Value
+
+type PathTypeCapabilityMapping struct {
+	// capabilityEntries maps common.Address to PathTypeCapabilityEntryMap
+	capabilityEntries sync.Map
+}
+
+func (m *PathTypeCapabilityMapping) Record(
+	addressPath interpreter.AddressPath,
+	capabilityID interpreter.UInt64Value,
+	borrowType common.TypeID,
+) {
+	var capMap PathTypeCapabilityEntryMap
+	rawCapMap, ok := m.capabilityEntries.Load(addressPath.Address)
+	if ok {
+		capMap = rawCapMap.(PathTypeCapabilityEntryMap)
+	} else {
+		capMap = PathTypeCapabilityEntryMap{}
+		m.capabilityEntries.Store(addressPath.Address, capMap)
+	}
+	key := PathTypeCapabilityKey{
+		Path:       addressPath.Path,
+		BorrowType: borrowType,
+	}
+	capMap[key] = capabilityID
+}
+
+func (m *PathTypeCapabilityMapping) Get(
+	addressPath interpreter.AddressPath,
+	borrowType common.TypeID,
+) (interpreter.UInt64Value, bool) {
+	rawCapMap, ok := m.capabilityEntries.Load(addressPath.Address)
+	if !ok {
+		return 0, false
+	}
+	capMap := rawCapMap.(PathTypeCapabilityEntryMap)
+	key := PathTypeCapabilityKey{
+		Path:       addressPath.Path,
+		BorrowType: borrowType,
+	}
+	capabilityID, ok := capMap[key]
+	return capabilityID, ok
 }

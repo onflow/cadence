@@ -30,6 +30,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/runtime/ast"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -63,9 +64,9 @@ type TestRuntimeInterface struct {
 		hashAlgo runtime.HashAlgorithm,
 		weight int,
 	) (*stdlib.AccountKey, error)
-	OnGetAccountKey             func(address runtime.Address, index int) (*stdlib.AccountKey, error)
-	OnRemoveAccountKey          func(address runtime.Address, index int) (*stdlib.AccountKey, error)
-	OnAccountKeysCount          func(address runtime.Address) (uint64, error)
+	OnGetAccountKey             func(address runtime.Address, index uint32) (*stdlib.AccountKey, error)
+	OnRemoveAccountKey          func(address runtime.Address, index uint32) (*stdlib.AccountKey, error)
+	OnAccountKeysCount          func(address runtime.Address) (uint32, error)
 	OnUpdateAccountContractCode func(location common.AddressLocation, code []byte) error
 	OnGetAccountContractCode    func(location common.AddressLocation) (code []byte, err error)
 	OnRemoveAccountContractCode func(location common.AddressLocation) (err error)
@@ -116,13 +117,28 @@ type TestRuntimeInterface struct {
 		duration time.Duration,
 		attrs []attribute.KeyValue,
 	)
-	OnMeterMemory          func(usage common.MemoryUsage) error
-	OnComputationUsed      func() (uint64, error)
-	OnMemoryUsed           func() (uint64, error)
-	OnInteractionUsed      func() (uint64, error)
-	OnComputationRemaining func(kind common.ComputationKind) uint
-	OnGenerateAccountID    func(address common.Address) (uint64, error)
-	OnCompileWebAssembly   func(bytes []byte) (stdlib.WebAssemblyModule, error)
+	OnMeterMemory                    func(usage common.MemoryUsage) error
+	OnComputationUsed                func() (uint64, error)
+	OnMemoryUsed                     func() (uint64, error)
+	OnInteractionUsed                func() (uint64, error)
+	OnGenerateAccountID              func(address common.Address) (uint64, error)
+	OnRecoverProgram                 func(program *ast.Program, location common.Location) ([]byte, error)
+	OnValidateAccountCapabilitiesGet func(
+		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
+		address interpreter.AddressValue,
+		path interpreter.PathValue,
+		wantedBorrowType *sema.ReferenceType,
+		capabilityBorrowType *sema.ReferenceType,
+	) (bool, error)
+	OnValidateAccountCapabilitiesPublish func(
+		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
+		address interpreter.AddressValue,
+		path interpreter.PathValue,
+		capabilityBorrowType *interpreter.ReferenceStaticType,
+	) (bool, error)
+	OnCompileWebAssembly func(bytes []byte) (stdlib.WebAssemblyModule, error)
 
 	lastUUID            uint64
 	accountIDs          map[common.Address]uint64
@@ -222,11 +238,11 @@ func (i *TestRuntimeInterface) SetValue(owner, key, value []byte) (err error) {
 	return i.Storage.SetValue(owner, key, value)
 }
 
-func (i *TestRuntimeInterface) AllocateStorageIndex(owner []byte) (atree.StorageIndex, error) {
-	if i.Storage.OnAllocateStorageIndex == nil {
-		panic("must specify TestRuntimeInterface.storage.OnAllocateStorageIndex")
+func (i *TestRuntimeInterface) AllocateSlabIndex(owner []byte) (atree.SlabIndex, error) {
+	if i.Storage.OnAllocateSlabIndex == nil {
+		panic("must specify TestRuntimeInterface.storage.OnAllocateSlabIndex")
 	}
-	return i.Storage.AllocateStorageIndex(owner)
+	return i.Storage.AllocateSlabIndex(owner)
 }
 
 func (i *TestRuntimeInterface) CreateAccount(payer runtime.Address) (address runtime.Address, err error) {
@@ -262,21 +278,21 @@ func (i *TestRuntimeInterface) AddAccountKey(
 	return i.OnAddAccountKey(address, publicKey, hashAlgo, weight)
 }
 
-func (i *TestRuntimeInterface) GetAccountKey(address runtime.Address, index int) (*stdlib.AccountKey, error) {
+func (i *TestRuntimeInterface) GetAccountKey(address runtime.Address, index uint32) (*stdlib.AccountKey, error) {
 	if i.OnGetAccountKey == nil {
 		panic("must specify TestRuntimeInterface.OnGetAccountKey")
 	}
 	return i.OnGetAccountKey(address, index)
 }
 
-func (i *TestRuntimeInterface) AccountKeysCount(address runtime.Address) (uint64, error) {
+func (i *TestRuntimeInterface) AccountKeysCount(address runtime.Address) (uint32, error) {
 	if i.OnAccountKeysCount == nil {
 		panic("must specify TestRuntimeInterface.OnAccountKeysCount")
 	}
 	return i.OnAccountKeysCount(address)
 }
 
-func (i *TestRuntimeInterface) RevokeAccountKey(address runtime.Address, index int) (*stdlib.AccountKey, error) {
+func (i *TestRuntimeInterface) RevokeAccountKey(address runtime.Address, index uint32) (*stdlib.AccountKey, error) {
 	if i.OnRemoveAccountKey == nil {
 		panic("must specify TestRuntimeInterface.OnRemoveAccountKey")
 	}
@@ -622,4 +638,51 @@ func (i *TestRuntimeInterface) InvalidateUpdatedPrograms() {
 		}
 		i.updatedContractCode = false
 	}
+}
+
+func (i *TestRuntimeInterface) RecoverProgram(program *ast.Program, location common.Location) ([]byte, error) {
+	if i.OnRecoverProgram == nil {
+		return nil, nil
+	}
+	return i.OnRecoverProgram(program, location)
+}
+
+func (i *TestRuntimeInterface) ValidateAccountCapabilitiesGet(
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	address interpreter.AddressValue,
+	path interpreter.PathValue,
+	wantedBorrowType *sema.ReferenceType,
+	capabilityBorrowType *sema.ReferenceType,
+) (bool, error) {
+	if i.OnValidateAccountCapabilitiesGet == nil {
+		return true, nil
+	}
+	return i.OnValidateAccountCapabilitiesGet(
+		inter,
+		locationRange,
+		address,
+		path,
+		wantedBorrowType,
+		capabilityBorrowType,
+	)
+}
+
+func (i *TestRuntimeInterface) ValidateAccountCapabilitiesPublish(
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	address interpreter.AddressValue,
+	path interpreter.PathValue,
+	capabilityBorrowType *interpreter.ReferenceStaticType,
+) (bool, error) {
+	if i.OnValidateAccountCapabilitiesPublish == nil {
+		return true, nil
+	}
+	return i.OnValidateAccountCapabilitiesPublish(
+		inter,
+		locationRange,
+		address,
+		path,
+		capabilityBorrowType,
+	)
 }

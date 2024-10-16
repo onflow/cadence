@@ -232,6 +232,8 @@ func exportValueWithInterpreter(
 		return exportTypeValue(v, inter), nil
 	case *interpreter.IDCapabilityValue:
 		return exportCapabilityValue(v, inter)
+	case *interpreter.PathCapabilityValue: //nolint:staticcheck
+		return exportPathCapabilityValue(v, inter)
 	case *interpreter.EphemeralReferenceValue:
 		// Break recursion through references
 		if _, ok := seenReferences[v]; ok {
@@ -561,40 +563,44 @@ func exportDictionaryValue(
 			var err error
 			pairs := make([]cadence.KeyValuePair, 0, v.Count())
 
-			v.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
+			v.Iterate(
+				inter,
+				locationRange,
+				func(key, value interpreter.Value) (resume bool) {
 
-				var convertedKey cadence.Value
-				convertedKey, err = exportValueWithInterpreter(
-					key,
-					inter,
-					locationRange,
-					seenReferences,
-				)
-				if err != nil {
-					return false
-				}
+					var convertedKey cadence.Value
+					convertedKey, err = exportValueWithInterpreter(
+						key,
+						inter,
+						locationRange,
+						seenReferences,
+					)
+					if err != nil {
+						return false
+					}
 
-				var convertedValue cadence.Value
-				convertedValue, err = exportValueWithInterpreter(
-					value,
-					inter,
-					locationRange,
-					seenReferences,
-				)
-				if err != nil {
-					return false
-				}
+					var convertedValue cadence.Value
+					convertedValue, err = exportValueWithInterpreter(
+						value,
+						inter,
+						locationRange,
+						seenReferences,
+					)
+					if err != nil {
+						return false
+					}
 
-				pairs = append(
-					pairs,
-					cadence.KeyValuePair{
-						Key:   convertedKey,
-						Value: convertedValue,
-					},
-				)
+					pairs = append(
+						pairs,
+						cadence.KeyValuePair{
+							Key:   convertedKey,
+							Value: convertedValue,
+						},
+					)
 
-				return true
-			}, locationRange)
+					return true
+				},
+			)
 
 			if err != nil {
 				return nil, err
@@ -698,9 +704,36 @@ func exportCapabilityValue(
 	return cadence.NewMeteredCapability(
 		inter,
 		cadence.NewMeteredUInt64(inter, uint64(v.ID)),
-		cadence.NewMeteredAddress(inter, v.Address),
+		cadence.NewMeteredAddress(inter, v.Address()),
 		exportedBorrowType,
 	), nil
+}
+
+func exportPathCapabilityValue(
+	v *interpreter.PathCapabilityValue, //nolint:staticcheck
+	inter *interpreter.Interpreter,
+) (cadence.Capability, error) {
+	var exportedBorrowType cadence.Type
+
+	if v.BorrowType != nil {
+		borrowType := inter.MustConvertStaticToSemaType(v.BorrowType)
+		exportedBorrowType = ExportMeteredType(inter, borrowType, map[sema.TypeID]cadence.Type{})
+	}
+
+	capability := cadence.NewMeteredCapability(
+		inter,
+		cadence.NewMeteredUInt64(inter, uint64(interpreter.InvalidCapabilityID)),
+		cadence.NewMeteredAddress(inter, v.Address()),
+		exportedBorrowType,
+	)
+
+	path, err := exportPathValue(inter, v.Path)
+	if err != nil {
+		return cadence.Capability{}, err
+	}
+	capability.DeprecatedPath = &path
+
+	return capability, nil
 }
 
 // exportEvent converts a runtime event to its native Go representation.

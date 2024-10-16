@@ -5829,10 +5829,11 @@ func TestRuntimeContractWriteback(t *testing.T) {
 
 	assert.Equal(t,
 		[]ownerKeyPair{
-			// contract value
+			// Storage map is modified because contract value is inlined in contract storage map.
+			// NOTE: contract value slab doesn't exist.
 			{
 				addressValue[:],
-				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
 			},
 		},
 		writes,
@@ -5932,6 +5933,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 				[]byte("contract"),
 			},
 			// contract value
+			// NOTE: contract value slab is empty because it is inlined in contract domain storage map
 			{
 				addressValue[:],
 				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
@@ -5975,11 +5977,13 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 				[]byte("storage"),
 			},
 			// resource value
+			// NOTE: resource value slab is empty because it is inlined in storage domain storage map
 			{
 				addressValue[:],
 				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3},
 			},
 			// storage domain storage map
+			// NOTE: resource value slab is inlined.
 			{
 				addressValue[:],
 				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4},
@@ -6041,10 +6045,11 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
 	assert.Equal(t,
 		[]ownerKeyPair{
-			// resource value
+			// Storage map is modified because resource value is inlined in storage map
+			// NOTE: resource value slab is empty.
 			{
 				addressValue[:],
-				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3},
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4},
 			},
 		},
 		writes,
@@ -7492,7 +7497,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 
 		RequireError(t, err)
 
-		assertRuntimeErrorIsInternalError(t, err)
+		assertRuntimeErrorIsExternalError(t, err)
 	})
 
 }
@@ -7557,7 +7562,7 @@ func TestRuntimeComputationMetring(t *testing.T) {
         `,
 			ok:        true,
 			hits:      3,
-			intensity: 88,
+			intensity: 76,
 		},
 	}
 
@@ -7938,7 +7943,7 @@ func TestRuntimeErrorExcerpts(t *testing.T) {
 		OnGetAccountAvailableBalance: noopRuntimeUInt64Getter,
 		OnGetStorageUsed:             noopRuntimeUInt64Getter,
 		OnGetStorageCapacity:         noopRuntimeUInt64Getter,
-		OnAccountKeysCount:           noopRuntimeUInt64Getter,
+		OnAccountKeysCount:           noopRuntimeUInt32Getter,
 		Storage:                      NewTestLedger(nil, nil),
 	}
 
@@ -7990,7 +7995,7 @@ func TestRuntimeErrorExcerptsMultiline(t *testing.T) {
 		OnGetAccountAvailableBalance: noopRuntimeUInt64Getter,
 		OnGetStorageUsed:             noopRuntimeUInt64Getter,
 		OnGetStorageCapacity:         noopRuntimeUInt64Getter,
-		OnAccountKeysCount:           noopRuntimeUInt64Getter,
+		OnAccountKeysCount:           noopRuntimeUInt32Getter,
 		Storage:                      NewTestLedger(nil, nil),
 	}
 
@@ -10961,4 +10966,600 @@ func TestRuntimeAccountStorageBorrowEphemeralReferenceValue(t *testing.T) {
 
 	var nestedReferenceErr interpreter.NestedReferenceError
 	require.ErrorAs(t, err, &nestedReferenceErr)
+}
+
+func TestRuntimeForbidPublicEntitlementBorrow(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntime()
+
+	script1 := []byte(`
+      transaction {
+
+        prepare(signer: auth (Storage, Capabilities) &Account) {
+          signer.storage.save(42, to: /storage/number)
+          let cap = signer.capabilities.storage.issue<auth(Insert) &Int>(/storage/number)
+          signer.capabilities.publish(cap, at: /public/number)
+        }
+      }
+    `)
+
+	script2 := []byte(`
+      access(all)
+      fun main() {
+          let number = getAccount(0x1).capabilities.borrow<auth(Insert) &Int>(/public/number)
+          assert(number == nil)
+      }
+    `)
+
+	var validatedPaths []interpreter.PathValue
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{
+				common.MustBytesToAddress([]byte{0x1}),
+			}, nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnValidateAccountCapabilitiesGet: func(
+			inter *interpreter.Interpreter,
+			locationRange interpreter.LocationRange,
+			address interpreter.AddressValue,
+			path interpreter.PathValue,
+			wantedBorrowType *sema.ReferenceType,
+			capabilityBorrowType *sema.ReferenceType,
+		) (bool, error) {
+
+			validatedPaths = append(validatedPaths, path)
+
+			_, wantedHasEntitlements := wantedBorrowType.Authorization.(sema.EntitlementSetAccess)
+			return !wantedHasEntitlements, nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nexScriptLocation := NewScriptLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: script1,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = runtime.ExecuteScript(
+		Script{
+			Source: script2,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nexScriptLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]interpreter.PathValue{
+			{
+				Domain:     common.PathDomainPublic,
+				Identifier: "number",
+			},
+		},
+		validatedPaths,
+	)
+}
+
+func TestRuntimeForbidPublicEntitlementGet(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntime()
+
+	script1 := []byte(`
+      transaction {
+
+        prepare(signer: auth (Storage, Capabilities) &Account) {
+          signer.storage.save(42, to: /storage/number)
+          let cap = signer.capabilities.storage.issue<auth(Insert) &Int>(/storage/number)
+          signer.capabilities.publish(cap, at: /public/number)
+        }
+      }
+    `)
+
+	script2 := []byte(`
+      access(all)
+      fun main() {
+          let cap = getAccount(0x1).capabilities.get<auth(Insert) &Int>(/public/number)
+          assert(cap.id == 0)
+      }
+    `)
+
+	var validatedPaths []interpreter.PathValue
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{
+				common.MustBytesToAddress([]byte{0x1}),
+			}, nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnValidateAccountCapabilitiesGet: func(
+			inter *interpreter.Interpreter,
+			locationRange interpreter.LocationRange,
+			address interpreter.AddressValue,
+			path interpreter.PathValue,
+			wantedBorrowType *sema.ReferenceType,
+			capabilityBorrowType *sema.ReferenceType,
+		) (bool, error) {
+
+			validatedPaths = append(validatedPaths, path)
+
+			_, wantedHasEntitlements := wantedBorrowType.Authorization.(sema.EntitlementSetAccess)
+			return !wantedHasEntitlements, nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nexScriptLocation := NewScriptLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: script1,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = runtime.ExecuteScript(
+		Script{
+			Source: script2,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nexScriptLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]interpreter.PathValue{
+			{
+				Domain:     common.PathDomainPublic,
+				Identifier: "number",
+			},
+		},
+		validatedPaths,
+	)
+}
+
+func TestRuntimeForbidPublicEntitlementPublish(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntime()
+
+	t.Run("entitled capability", func(t *testing.T) {
+
+		t.Parallel()
+
+		script1 := []byte(`
+          transaction {
+
+            prepare(signer: auth (Storage, Capabilities) &Account) {
+              signer.storage.save(42, to: /storage/number)
+              let cap = signer.capabilities.storage.issue<auth(Insert) &Int>(/storage/number)
+              signer.capabilities.publish(cap, at: /public/number)
+            }
+          }
+        `)
+
+		var validatedPaths []interpreter.PathValue
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{
+					common.MustBytesToAddress([]byte{0x1}),
+				}, nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				return nil
+			},
+			OnValidateAccountCapabilitiesPublish: func(
+				inter *interpreter.Interpreter,
+				locationRange interpreter.LocationRange,
+				address interpreter.AddressValue,
+				path interpreter.PathValue,
+				capabilityBorrowType *interpreter.ReferenceStaticType,
+			) (bool, error) {
+
+				validatedPaths = append(validatedPaths, path)
+
+				_, isEntitledCapability := capabilityBorrowType.Authorization.(interpreter.EntitlementSetAuthorization)
+				return !isEntitledCapability, nil
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: script1,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.EntitledCapabilityPublishingError{})
+	})
+
+	t.Run("non entitled capability", func(t *testing.T) {
+		t.Parallel()
+
+		script1 := []byte(`
+          transaction {
+
+            prepare(signer: auth (Storage, Capabilities) &Account) {
+              signer.storage.save(42, to: /storage/number)
+              let cap = signer.capabilities.storage.issue<&Int>(/storage/number)
+              signer.capabilities.publish(cap, at: /public/number)
+            }
+          }
+        `)
+
+		var validatedPaths []interpreter.PathValue
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{
+					common.MustBytesToAddress([]byte{0x1}),
+				}, nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				return nil
+			},
+			OnValidateAccountCapabilitiesPublish: func(
+				inter *interpreter.Interpreter,
+				locationRange interpreter.LocationRange,
+				address interpreter.AddressValue,
+				path interpreter.PathValue,
+				capabilityBorrowType *interpreter.ReferenceStaticType,
+			) (bool, error) {
+
+				validatedPaths = append(validatedPaths, path)
+
+				_, isEntitledCapability := capabilityBorrowType.Authorization.(interpreter.EntitlementSetAuthorization)
+				return !isEntitledCapability, nil
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: script1,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("untyped entitled capability", func(t *testing.T) {
+
+		t.Parallel()
+
+		script1 := []byte(`
+          transaction {
+
+            prepare(signer: auth (Storage, Capabilities) &Account) {
+              signer.storage.save(42, to: /storage/number)
+              let cap = signer.capabilities.storage.issue<auth(Insert) &Int>(/storage/number)
+              let untypedCap: Capability = cap
+              signer.capabilities.publish(untypedCap, at: /public/number)
+            }
+          }
+        `)
+
+		var validatedPaths []interpreter.PathValue
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{
+					common.MustBytesToAddress([]byte{0x1}),
+				}, nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				return nil
+			},
+			OnValidateAccountCapabilitiesPublish: func(
+				inter *interpreter.Interpreter,
+				locationRange interpreter.LocationRange,
+				address interpreter.AddressValue,
+				path interpreter.PathValue,
+				capabilityBorrowType *interpreter.ReferenceStaticType,
+			) (bool, error) {
+
+				validatedPaths = append(validatedPaths, path)
+
+				_, isEntitledCapability := capabilityBorrowType.Authorization.(interpreter.EntitlementSetAuthorization)
+				return !isEntitledCapability, nil
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: script1,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.EntitledCapabilityPublishingError{})
+	})
+}
+
+func TestRuntimeStorageEnumAsDictionaryKey(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntime()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	accountCodes := map[common.AddressLocation][]byte{}
+	var events []cadence.Event
+	var loggedMessages []string
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]common.Address, error) {
+			return []common.Address{address}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		OnProgramLog: func(message string) {
+			loggedMessages = append(loggedMessages, message)
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	// Deploy contract
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: DeploymentTransaction(
+				"C",
+				[]byte(`
+                  access(all) contract C {
+					access(self) let counter: {E: UInt64}
+                    access(all) enum E: UInt8 {
+                        access(all) case A
+                        access(all) case B
+                    }
+                    access(all) resource R {
+                        access(all) let id: UInt64
+                        access(all) let e: E
+                        init(id: UInt64, e: E) {
+                            self.id = id
+                            self.e = e
+							let counter = C.counter[e] ?? panic("couldn't retrieve resource counter")
+							// e is transferred and is stored in a slab which isn't removed after C.counter is updated.
+							C.counter[e] = counter + 1
+                        }
+                    }
+                    access(all) fun createR(id: UInt64, e: E): @R {						
+                        return <- create R(id: id, e: e)
+                    }
+                    access(all) resource Collection {
+                        access(all) var rs: @{UInt64: R}
+                        init () {
+                            self.rs <- {}
+                        }
+                        access(all) fun withdraw(id: UInt64): @R {
+                            return <- self.rs.remove(key: id)!
+                        }
+                        access(all) fun deposit(_ r: @R) {
+                            let counts: {E: UInt64} = {}
+                            log(r.e)
+                            counts[r.e] = 42 // test indexing expression is transferred properly
+                            log(r.e)
+                            let oldR <- self.rs[r.id] <-! r
+                            destroy oldR
+                        }
+                    }
+                    access(all) fun createEmptyCollection(): @Collection {
+                      return <- create Collection()
+                    }
+					init() {
+						self.counter = {
+							E.A: 0,
+							E.B: 0
+						}
+					}
+                  }
+                `),
+			),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Store enum case
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(`
+              import C from 0x1
+              transaction {
+                  prepare(signer: auth(Storage) &Account) {
+                      signer.storage.save(<-C.createEmptyCollection(), to: /storage/collection)
+                      let collection = signer.storage.borrow<&C.Collection>(from: /storage/collection)!
+                      collection.deposit(<-C.createR(id: 0, e: C.E.B))
+                  }
+               }
+            `),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Load enum case
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(`
+              import C from 0x1
+              transaction {
+                  prepare(signer: auth(Storage) &Account) {
+                      let collection = signer.storage.borrow<&C.Collection>(from: /storage/collection)!
+                      let r <- collection.withdraw(id: 0)
+                      log(r.e)
+                      destroy r
+                  }
+               }
+            `),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		[]string{
+			"A.0000000000000001.C.E(rawValue: 1)",
+			"A.0000000000000001.C.E(rawValue: 1)",
+			"A.0000000000000001.C.E(rawValue: 1)",
+		},
+		loggedMessages,
+	)
+}
+
+func TestResultRedeclared(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("function", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := NewTestInterpreterRuntime()
+
+		script := []byte(`
+          access(all) fun main(): Int {
+              let result = 1
+              return result
+          }
+        `)
+
+		runtimeInterface := &TestRuntimeInterface{}
+
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextScriptLocation(),
+			},
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("method with inherited post-condition using result", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := NewTestInterpreterRuntime()
+
+		script := []byte(`
+          access(all)
+          struct interface SI {
+              access(all)
+              fun test(): Int {
+                  post {
+                      result == 2
+                  }
+              }
+          }
+
+          access(all)
+          struct S: SI {
+
+              access(all)
+              fun test(): Int {
+                  let result = 1
+                  return 2  // return a different value than the local variable
+              }
+          }
+
+          access(all) fun main(): Int {
+			  return S().test()
+          }
+        `)
+
+		runtimeInterface := &TestRuntimeInterface{}
+
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextScriptLocation(),
+			},
+		)
+		require.NoError(t, err)
+	})
+
 }

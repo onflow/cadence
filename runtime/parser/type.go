@@ -479,9 +479,9 @@ func defineIntersectionOrDictionaryType() {
 		},
 	)
 
-	// While restricted types have been removed from Cadence, during the first few months of the
-	// migration period, leave a special error in place to help developers
-	// TODO: remove this after Stable Cadence migration period is finished
+	// Though the restricted types were removed starting with Cadence v1.0,
+	// still try to parse restricted types if present, and report a proper error.
+	// This is to give meaningful error messages for anyone trying pre-1.0 codes.
 	setTypeMetaLeftDenotation(
 		lexer.TokenBraceOpen,
 		func(p *parser, rightBindingPower int, left ast.Type) (result ast.Type, err error, done bool) {

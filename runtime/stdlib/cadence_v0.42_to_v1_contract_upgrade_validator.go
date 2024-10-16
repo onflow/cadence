@@ -71,6 +71,10 @@ func NewCadenceV042ToV1ContractUpdateValidator(
 
 var _ UpdateValidator = &CadenceV042ToV1ContractUpdateValidator{}
 
+func (validator *CadenceV042ToV1ContractUpdateValidator) Location() common.Location {
+	return validator.underlyingUpdateValidator.location
+}
+
 func (validator *CadenceV042ToV1ContractUpdateValidator) isTypeRemovalEnabled() bool {
 	return validator.underlyingUpdateValidator.isTypeRemovalEnabled()
 }
@@ -105,7 +109,7 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) getAccountContractNames
 func (validator *CadenceV042ToV1ContractUpdateValidator) Validate() error {
 	underlyingValidator := validator.underlyingUpdateValidator
 
-	oldRootDecl := getRootDeclaration(validator, underlyingValidator.oldProgram)
+	oldRootDecl := getRootDeclarationOfOldProgram(validator, underlyingValidator.oldProgram, underlyingValidator.newProgram)
 	if underlyingValidator.hasErrors() {
 		return underlyingValidator.getContractUpdateError()
 	}
@@ -314,8 +318,8 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) expectedAuthorizationOf
 	return intersectionType.SupportedEntitlements().Access()
 }
 
-func (validator *CadenceV042ToV1ContractUpdateValidator) validateEntitlementsRepresentableComposite(decl *ast.CompositeDeclaration) {
-	dummyNominalType := ast.NewNominalType(nil, decl.Identifier, nil)
+func (validator *CadenceV042ToV1ContractUpdateValidator) validateEntitlementsRepresentableComposite(newDecl *ast.CompositeDeclaration) {
+	dummyNominalType := ast.NewNominalType(nil, newDecl.Identifier, nil)
 	compositeType := validator.getCompositeType(dummyNominalType)
 	supportedEntitlements := compositeType.SupportedEntitlements()
 
@@ -323,13 +327,13 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) validateEntitlementsRep
 		validator.report(&UnrepresentableEntitlementsUpgrade{
 			Type:                 compositeType,
 			InvalidAuthorization: supportedEntitlements.Access(),
-			Range:                decl.Range,
+			Range:                newDecl.Range,
 		})
 	}
 }
 
-func (validator *CadenceV042ToV1ContractUpdateValidator) validateEntitlementsRepresentableInterface(decl *ast.InterfaceDeclaration) {
-	dummyNominalType := ast.NewNominalType(nil, decl.Identifier, nil)
+func (validator *CadenceV042ToV1ContractUpdateValidator) validateEntitlementsRepresentableInterface(newDecl *ast.InterfaceDeclaration) {
+	dummyNominalType := ast.NewNominalType(nil, newDecl.Identifier, nil)
 	interfaceType := validator.getInterfaceType(dummyNominalType)
 	supportedEntitlements := interfaceType.SupportedEntitlements()
 
@@ -337,7 +341,7 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) validateEntitlementsRep
 		validator.report(&UnrepresentableEntitlementsUpgrade{
 			Type:                 interfaceType,
 			InvalidAuthorization: supportedEntitlements.Access(),
-			Range:                decl.Range,
+			Range:                newDecl.Range,
 		})
 	}
 }

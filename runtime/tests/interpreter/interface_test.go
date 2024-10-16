@@ -154,9 +154,48 @@ func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
 			value,
 		)
 	})
+
+	t.Run("interface method subtyping", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          struct A {
+              var bar: Int
+              init() {
+                  self.bar = 4
+              }
+          }
+
+          struct interface I {
+              fun foo(): A?
+          }
+
+          struct S: I {
+              fun foo(): A {
+                  return A()
+              }
+          }
+
+          fun main(): Int? {
+              var s: {I} = S()
+              return s.foo()?.bar
+          }
+        `)
+
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(4),
+			),
+			value,
+		)
+	})
 }
 
-func TestInterpretInterfaceDefaultImplementationWhenOverriden(t *testing.T) {
+func TestInterpretInterfaceDefaultImplementationWhenOverridden(t *testing.T) {
 
 	t.Parallel()
 
@@ -871,6 +910,203 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		// A.Nested and B.Nested are two distinct separate functions
 		assert.Equal(t, []string{"B"}, logs)
 	})
+
+	t.Run("pre condition in parent, default impl in child", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            access(all) resource interface A {
+                access(all) fun get(): Int {
+                   pre {
+                       true
+                   }
+                }
+            }
+
+            access(all) resource interface B: A {
+                access(all) fun get(): Int {
+                    return 4
+                }
+            }
+
+            access(all) resource R: B {}
+
+            access(all) fun main(): Int {
+                let r <- create R()
+                let value = r.get()
+                destroy r
+                return value
+            }
+        `)
+
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewUnmeteredIntValueFromInt64(4),
+			value,
+		)
+	})
+
+	t.Run("post condition in parent, default impl in child", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            access(all) resource interface A {
+                access(all) fun get(): Int {
+                   post {
+                       true
+                   }
+                }
+            }
+
+            access(all) resource interface B: A {
+                access(all) fun get(): Int {
+                    return 4
+                }
+            }
+
+            access(all) resource R: B {}
+
+            access(all) fun main(): Int {
+                let r <- create R()
+                let value = r.get()
+                destroy r
+                return value
+            }
+        `)
+
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewUnmeteredIntValueFromInt64(4),
+			value,
+		)
+	})
+
+	t.Run("siblings with condition in first and default impl in second", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            access(all) struct interface A {
+                access(all) fun get(): Int {
+                   post { true }
+                }
+            }
+
+            access(all) struct interface B {
+                access(all) fun get(): Int {
+                    return 4
+                }
+            }
+
+            struct interface C: A, B {}
+
+            access(all) struct S: C {}
+
+            access(all) fun main(): Int {
+                let s = S()
+                return s.get()
+            }
+        `)
+
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewUnmeteredIntValueFromInt64(4),
+			value,
+		)
+	})
+
+	t.Run("siblings with default impl in first and condition in second", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            access(all) struct interface A {
+                access(all) fun get(): Int {
+                    return 4
+                }
+            }
+
+            access(all) struct interface B {
+                access(all) fun get(): Int {
+                   post { true }
+                }
+            }
+
+            struct interface C: A, B {}
+
+            access(all) struct S: C {}
+
+            access(all) fun main(): Int {
+                let s = S()
+                return s.get()
+            }
+        `)
+
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewUnmeteredIntValueFromInt64(4),
+			value,
+		)
+	})
+
+	t.Run("result variable in conditions", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, getLogs, err := parseCheckAndInterpretWithLogs(t, `
+            access(all) resource interface I1 {
+                access(all) let s: String
+
+                access(all) fun echo(_ s: String): String {
+                    post {
+                        result == self.s: "result must match stored input, got: ".concat(result)
+                    }
+                }
+            }
+
+            access(all) resource interface I2: I1 {
+                access(all) let s: String
+
+                access(all) fun echo(_ s: String): String {
+                    log(s)
+                    return self.s
+                }
+            }
+
+            access(all) resource R: I2 {
+                access(all) let s: String
+
+                init() {
+                    self.s = "hello"
+                }
+            }
+
+            access(all) fun main() {
+                let r <- create R()
+                r.echo("hello")
+                destroy r
+            }
+        `)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		require.NoError(t, err)
+
+		logs := getLogs()
+		require.Len(t, logs, 1)
+		assert.Equal(t, "\"hello\"", logs[0])
+	})
+
 }
 
 func TestInterpretNestedInterfaceCast(t *testing.T) {

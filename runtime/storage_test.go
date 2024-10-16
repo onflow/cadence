@@ -63,13 +63,13 @@ func withWritesToStorage(
 			Key:     fmt.Sprintf("%d", randomIndex),
 		}
 
-		var storageIndex atree.StorageIndex
-		binary.BigEndian.PutUint32(storageIndex[:], randomIndex)
+		var slabIndex atree.SlabIndex
+		binary.BigEndian.PutUint32(slabIndex[:], randomIndex)
 
 		if storage.NewStorageMaps == nil {
-			storage.NewStorageMaps = &orderedmap.OrderedMap[interpreter.StorageKey, atree.StorageIndex]{}
+			storage.NewStorageMaps = &orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]{}
 		}
-		storage.NewStorageMaps.Set(storageKey, storageIndex)
+		storage.NewStorageMaps.Set(storageKey, slabIndex)
 	}
 
 	handler(storage, inter)
@@ -1594,11 +1594,14 @@ func TestRuntimeStorageTransfer(t *testing.T) {
 			nonEmptyKeys++
 		}
 	}
-	// 5:
+
+	// TODO: maybe retrieve and compare stored values from 2 accounts
+
+	// 4:
+	// NOTE: with atree inlining, array is inlined inside storage map
 	// - 2x storage index for storage domain storage map
 	// - 2x storage domain storage map
-	// - array (atree array)
-	assert.Equal(t, 5, nonEmptyKeys)
+	assert.Equal(t, 4, nonEmptyKeys)
 }
 
 func TestRuntimeResourceOwnerChange(t *testing.T) {
@@ -1762,18 +1765,16 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 	assert.Equal(t,
 		[]string{
 			// account 0x1:
+			// NOTE: with atree inlining, contract is inlined in contract map
 			//     storage map (domain key + map slab)
-			//   + contract map (domain key + map slap)
-			//   + contract
-			"\x00\x00\x00\x00\x00\x00\x00\x01|$\x00\x00\x00\x00\x00\x00\x00\x01",
+			//   + contract map (domain key + map slab)
 			"\x00\x00\x00\x00\x00\x00\x00\x01|$\x00\x00\x00\x00\x00\x00\x00\x02",
 			"\x00\x00\x00\x00\x00\x00\x00\x01|$\x00\x00\x00\x00\x00\x00\x00\x04",
 			"\x00\x00\x00\x00\x00\x00\x00\x01|contract",
 			"\x00\x00\x00\x00\x00\x00\x00\x01|storage",
 			// account 0x2
+			// NOTE: with atree inlining, resource is inlined in storage map
 			//     storage map (domain key + map slab)
-			//   + resource
-			"\x00\x00\x00\x00\x00\x00\x00\x02|$\x00\x00\x00\x00\x00\x00\x00\x01",
 			"\x00\x00\x00\x00\x00\x00\x00\x02|$\x00\x00\x00\x00\x00\x00\x00\x02",
 			"\x00\x00\x00\x00\x00\x00\x00\x02|storage",
 		},
@@ -4257,6 +4258,102 @@ func TestRuntimeStorageIteration(t *testing.T) {
 		t.Run("valid type in storage", func(t *testing.T) {
 			test(false, t)
 		})
+	})
+
+	t.Run("box and convert arguments, forEachStored", func(t *testing.T) {
+		t.Parallel()
+
+		runtime := NewTestInterpreterRuntime()
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+		}
+
+		const script = `
+          access(all)
+		  fun main(): String? {
+			  let account = getAuthAccount<auth(Storage) &Account>(0x1)
+
+			  account.storage.save(1, to: /storage/foo1)
+
+              var res: String? = nil
+              // NOTE: The function has a parameter of type StoragePath? instead of just StoragePath
+			  account.storage.forEachStored(fun (path: StoragePath?, type: Type): Bool {
+                  // The map should call Optional.map, not fail,
+                  // because path is StoragePath?, not StoragePath
+                  res = path.map(fun(string: AnyStruct): String {
+                      return "Optional.map"
+                  })
+                  return true
+              })
+              return res
+		  }
+        `
+		result, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			cadence.NewOptional(cadence.String("Optional.map")),
+			result,
+		)
+	})
+
+	t.Run("box and convert arguments, forEachPublic", func(t *testing.T) {
+		t.Parallel()
+
+		runtime := NewTestInterpreterRuntime()
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnEmitEvent: func(event cadence.Event) error {
+				return nil
+			},
+		}
+
+		const script = `
+          access(all)
+		  fun main(): String? {
+			  let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
+
+              let cap = account.capabilities.storage.issue<&AnyStruct>(/storage/foo)
+			  account.capabilities.publish(cap, at: /public/bar)
+
+              var res: String? = nil
+              // NOTE: The function has a parameter of type PublicPath? instead of just PublicPath
+			  account.storage.forEachPublic(fun (path: PublicPath?, type: Type): Bool {
+                  // The map should call Optional.map, not fail,
+                  // because path is PublicPath?, not PublicPath
+                  res = path.map(fun(string: AnyStruct): String {
+                      return "Optional.map"
+                  })
+                  return true
+              })
+              return res
+		  }
+        `
+		result, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			cadence.NewOptional(cadence.String("Optional.map")),
+			result,
+		)
 	})
 }
 

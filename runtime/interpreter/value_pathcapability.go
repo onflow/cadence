@@ -25,6 +25,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 // TODO: remove once migrated
@@ -33,7 +34,7 @@ import (
 type PathCapabilityValue struct {
 	BorrowType StaticType
 	Path       PathValue
-	Address    AddressValue
+	address    AddressValue
 }
 
 var _ Value = &PathCapabilityValue{}
@@ -41,6 +42,19 @@ var _ atree.Storable = &PathCapabilityValue{}
 var _ EquatableValue = &PathCapabilityValue{}
 var _ MemberAccessibleValue = &PathCapabilityValue{}
 var _ CapabilityValue = &PathCapabilityValue{}
+
+// Deprecated: NewUnmeteredPathCapabilityValue
+func NewUnmeteredPathCapabilityValue(
+	borrowType StaticType,
+	address AddressValue,
+	path PathValue,
+) *PathCapabilityValue {
+	return &PathCapabilityValue{
+		BorrowType: borrowType,
+		address:    address,
+		Path:       path,
+	}
+}
 
 func (*PathCapabilityValue) isValue() {}
 
@@ -50,8 +64,9 @@ func (v *PathCapabilityValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange)
 	panic(errors.NewUnreachableError())
 }
 
-func (v *PathCapabilityValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
-	panic(errors.NewUnreachableError())
+func (v *PathCapabilityValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
+	walkChild(v.address)
+	walkChild(v.Path)
 }
 
 func (v *PathCapabilityValue) StaticType(inter *Interpreter) StaticType {
@@ -62,7 +77,7 @@ func (v *PathCapabilityValue) StaticType(inter *Interpreter) StaticType {
 }
 
 func (v *PathCapabilityValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
-	panic(errors.NewUnreachableError())
+	return false
 }
 func (v *PathCapabilityValue) String() string {
 	return v.RecursiveString(SeenReferences{})
@@ -73,14 +88,14 @@ func (v *PathCapabilityValue) RecursiveString(seenReferences SeenReferences) str
 	if borrowType == nil {
 		return fmt.Sprintf(
 			"Capability(address: %s, path: %s)",
-			v.Address.RecursiveString(seenReferences),
+			v.address.RecursiveString(seenReferences),
 			v.Path.RecursiveString(seenReferences),
 		)
 	} else {
 		return fmt.Sprintf(
 			"Capability<%s>(address: %s, path: %s)",
 			borrowType.String(),
-			v.Address.RecursiveString(seenReferences),
+			v.address.RecursiveString(seenReferences),
 			v.Path.RecursiveString(seenReferences),
 		)
 	}
@@ -97,21 +112,75 @@ func (v *PathCapabilityValue) MeteredString(
 	if borrowType == nil {
 		return fmt.Sprintf(
 			"Capability(address: %s, path: %s)",
-			v.Address.MeteredString(interpreter, seenReferences, locationRange),
+			v.address.MeteredString(interpreter, seenReferences, locationRange),
 			v.Path.MeteredString(interpreter, seenReferences, locationRange),
 		)
 	} else {
 		return fmt.Sprintf(
 			"Capability<%s>(address: %s, path: %s)",
 			borrowType.String(),
-			v.Address.MeteredString(interpreter, seenReferences, locationRange),
+			v.address.MeteredString(interpreter, seenReferences, locationRange),
 			v.Path.MeteredString(interpreter, seenReferences, locationRange),
 		)
 	}
 }
 
-func (v *PathCapabilityValue) GetMember(_ *Interpreter, _ LocationRange, _ string) Value {
-	panic(errors.NewUnreachableError())
+func (v *PathCapabilityValue) newBorrowFunction(
+	interpreter *Interpreter,
+	borrowType *sema.ReferenceType,
+) BoundFunctionValue {
+	return NewBoundHostFunctionValue(
+		interpreter,
+		v,
+		sema.CapabilityTypeBorrowFunctionType(borrowType),
+		func(_ Value, _ Invocation) Value {
+			// Borrowing is never allowed
+			return Nil
+		},
+	)
+}
+
+func (v *PathCapabilityValue) newCheckFunction(
+	interpreter *Interpreter,
+	borrowType *sema.ReferenceType,
+) BoundFunctionValue {
+	return NewBoundHostFunctionValue(
+		interpreter,
+		v,
+		sema.CapabilityTypeCheckFunctionType(borrowType),
+		func(_ Value, _ Invocation) Value {
+			// Borrowing is never allowed
+			return FalseValue
+		},
+	)
+}
+
+func (v *PathCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+	case sema.CapabilityTypeBorrowFunctionName:
+		var borrowType *sema.ReferenceType
+		if v.BorrowType != nil {
+			// this function will panic already if this conversion fails
+			borrowType, _ = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+		}
+		return v.newBorrowFunction(interpreter, borrowType)
+
+	case sema.CapabilityTypeCheckFunctionName:
+		var borrowType *sema.ReferenceType
+		if v.BorrowType != nil {
+			// this function will panic already if this conversion fails
+			borrowType, _ = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+		}
+		return v.newCheckFunction(interpreter, borrowType)
+
+	case sema.CapabilityTypeAddressFieldName:
+		return v.address
+
+	case sema.CapabilityTypeIDFieldName:
+		return InvalidCapabilityID
+	}
+
+	return nil
 }
 
 func (*PathCapabilityValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
@@ -127,7 +196,7 @@ func (v *PathCapabilityValue) ConformsToStaticType(
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
-	panic(errors.NewUnreachableError())
+	return true
 }
 
 func (v *PathCapabilityValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
@@ -146,12 +215,12 @@ func (v *PathCapabilityValue) Equal(interpreter *Interpreter, locationRange Loca
 		return false
 	}
 
-	return otherCapability.Address.Equal(interpreter, locationRange, v.Address) &&
+	return otherCapability.address.Equal(interpreter, locationRange, v.address) &&
 		otherCapability.Path.Equal(interpreter, locationRange, v.Path)
 }
 
 func (*PathCapabilityValue) IsStorable() bool {
-	panic(errors.NewUnreachableError())
+	return true
 }
 
 func (v *PathCapabilityValue) Storable(
@@ -181,10 +250,11 @@ func (v *PathCapabilityValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
-	_ map[atree.StorageID]struct{},
+	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
-		v.DeepRemove(interpreter)
+		v.DeepRemove(interpreter, true)
 		interpreter.RemoveReferencedSlab(storable)
 	}
 	return v
@@ -194,13 +264,13 @@ func (v *PathCapabilityValue) Clone(interpreter *Interpreter) Value {
 	return &PathCapabilityValue{
 		BorrowType: v.BorrowType,
 		Path:       v.Path.Clone(interpreter).(PathValue),
-		Address:    v.Address.Clone(interpreter).(AddressValue),
+		address:    v.address.Clone(interpreter).(AddressValue),
 	}
 }
 
-func (v *PathCapabilityValue) DeepRemove(interpreter *Interpreter) {
-	v.Address.DeepRemove(interpreter)
-	v.Path.DeepRemove(interpreter)
+func (v *PathCapabilityValue) DeepRemove(interpreter *Interpreter, _ bool) {
+	v.address.DeepRemove(interpreter, false)
+	v.Path.DeepRemove(interpreter, false)
 }
 
 func (v *PathCapabilityValue) ByteSize() uint32 {
@@ -213,14 +283,14 @@ func (v *PathCapabilityValue) StoredValue(_ atree.SlabStorage) (atree.Value, err
 
 func (v *PathCapabilityValue) ChildStorables() []atree.Storable {
 	return []atree.Storable{
-		v.Address,
+		v.address,
 		v.Path,
 	}
 }
 
 func (v *PathCapabilityValue) AddressPath() AddressPath {
 	return AddressPath{
-		Address: common.Address(v.Address),
+		Address: common.Address(v.address),
 		Path:    v.Path,
 	}
 }
@@ -261,7 +331,7 @@ func (v *PathCapabilityValue) Encode(e *atree.Encoder) error {
 	}
 
 	// Encode address at array index encodedPathCapabilityValueAddressFieldKey
-	err = v.Address.Encode(e)
+	err = v.address.Encode(e)
 	if err != nil {
 		return err
 	}
@@ -279,4 +349,8 @@ func (v *PathCapabilityValue) Encode(e *atree.Encoder) error {
 	} else {
 		return v.BorrowType.Encode(e.CBOR)
 	}
+}
+
+func (v *PathCapabilityValue) Address() AddressValue {
+	return v.address
 }

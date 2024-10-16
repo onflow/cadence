@@ -355,10 +355,13 @@ func (c *EmitCondition) Walk(walkChild func(Element)) {
 
 // Conditions
 
-type Conditions []Condition
+type Conditions struct {
+	Conditions []Condition
+	Range
+}
 
 func (c *Conditions) IsEmpty() bool {
-	return c == nil || len(*c) == 0
+	return c == nil || len(c.Conditions) == 0
 }
 
 func (c *Conditions) Doc(keywordDoc prettier.Doc) prettier.Doc {
@@ -368,7 +371,7 @@ func (c *Conditions) Doc(keywordDoc prettier.Doc) prettier.Doc {
 
 	var doc prettier.Concat
 
-	for _, condition := range *c {
+	for _, condition := range c.Conditions {
 		doc = append(
 			doc,
 			prettier.HardLine{},
@@ -395,7 +398,7 @@ func (c *Conditions) Walk(walkChild func(Element)) {
 		return
 	}
 
-	for _, condition := range *c {
+	for _, condition := range c.Conditions {
 		walkChild(condition)
 	}
 }

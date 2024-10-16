@@ -566,6 +566,39 @@ func TestRuntimeExportValue(t *testing.T) {
 			},
 			invalid: true,
 		},
+		{
+			label: "path capability, typed",
+			value: interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+				interpreter.PrimitiveStaticTypeAnyResource,
+				interpreter.AddressValue{0x1},
+				interpreter.PathValue{
+					Domain:     common.PathDomainStorage,
+					Identifier: "foo",
+				},
+			),
+			expected: cadence.NewDeprecatedPathCapability( //nolint:staticcheck
+				cadence.Address{0x1},
+				cadence.MustNewPath(common.PathDomainStorage, "foo"),
+				cadence.AnyResourceType,
+			),
+		},
+		{
+			label: "path capability, untyped",
+			value: interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+				// NOTE: no borrow type
+				nil,
+				interpreter.AddressValue{0x1},
+				interpreter.PathValue{
+					Domain:     common.PathDomainStorage,
+					Identifier: "foo",
+				},
+			),
+			expected: cadence.NewDeprecatedPathCapability( //nolint:staticcheck
+				cadence.Address{0x1},
+				cadence.MustNewPath(common.PathDomainStorage, "foo"),
+				nil,
+			),
+		},
 	} {
 		test(tt)
 	}
@@ -5412,5 +5445,110 @@ func TestRuntimeDeploymentResultTypeImportExport(t *testing.T) {
 			)),
 			result,
 		)
+	})
+}
+
+func TestRuntimeExportInterfaceType(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("exportable interface, exportable implementation", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            access(all) struct interface I {}
+
+            access(all) struct S: I {}
+
+            access(all) fun main(): {I} {
+                return S()
+            }
+        `
+
+		actual := exportValueFromScript(t, script)
+		expected := cadence.NewStruct([]cadence.Value{}).
+			WithType(cadence.NewStructType(
+				common.ScriptLocation{},
+				"S",
+				[]cadence.Field{},
+				nil,
+			))
+
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("exportable interface, non exportable implementation", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            access(all) struct interface I {}
+
+            access(all) struct S: I {
+                access(self) var a: Block?
+                init() {
+                    self.a = nil
+                }
+            }
+
+            access(all) fun main(): {I} {
+                return S()
+            }
+        `
+
+		rt := NewTestInterpreterRuntime()
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: &TestRuntimeInterface{},
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		// Dynamically validated
+		notExportableError := &ValueNotExportableError{}
+		require.ErrorAs(t, err, &notExportableError)
+	})
+
+	t.Run("non exportable interface, non exportable implementation", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            access(all) struct interface I {
+                access(all) var a: Block?
+            }
+
+            access(all) struct S: I {
+                access(all) var a: Block?
+                init() {
+                    self.a = nil
+                }
+            }
+
+            access(all) fun main(): {I} {
+                return S()
+            }
+        `
+
+		rt := NewTestInterpreterRuntime()
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: &TestRuntimeInterface{},
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		// Statically validated
+		invalidReturnType := &InvalidScriptReturnTypeError{}
+		require.ErrorAs(t, err, &invalidReturnType)
 	})
 }

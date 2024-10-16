@@ -42,11 +42,11 @@ import (
 // TODO: make these program args?
 const containerMaxDepth = 3
 const containerMaxSize = 100
-const innerContainerMaxSize = 300
 const compositeMaxFields = 10
 
 var runSmokeTests = flag.Bool("runSmokeTests", false, "Run smoke tests on values")
 var validateAtree = flag.Bool("validateAtree", true, "Enable atree validation")
+var smokeTestSeed = flag.Int64("smokeTestSeed", -1, "Seed for prng (-1 specifies current Unix time)")
 
 func TestInterpretRandomMapOperations(t *testing.T) {
 	if !*runSmokeTests {
@@ -131,13 +131,17 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 	t.Run("iterate", func(t *testing.T) {
 		require.Equal(t, testMap.Count(), entries.size())
 
-		testMap.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
-			orgValue, ok := entries.get(inter, key)
-			require.True(t, ok, "cannot find key: %v", key)
+		testMap.Iterate(
+			inter,
+			interpreter.EmptyLocationRange,
+			func(key, value interpreter.Value) (resume bool) {
+				orgValue, ok := entries.get(inter, key)
+				require.True(t, ok, "cannot find key: %v", key)
 
-			utils.AssertValuesEqual(t, inter, orgValue, value)
-			return true
-		}, interpreter.EmptyLocationRange)
+				utils.AssertValuesEqual(t, inter, orgValue, value)
+				return true
+			},
+		)
 	})
 
 	t.Run("deep copy", func(t *testing.T) {
@@ -149,6 +153,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 			false,
 			nil,
 			nil,
+			true, // testMap is standalone.
 		).(*interpreter.DictionaryValue)
 
 		require.Equal(t, entries.size(), copyOfTestMap.Count())
@@ -169,8 +174,8 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 	})
 
 	t.Run("deep remove", func(t *testing.T) {
-		copyOfTestMap.DeepRemove(inter)
-		err = storage.Remove(copyOfTestMap.StorageID())
+		copyOfTestMap.DeepRemove(inter, true)
+		err = storage.Remove(copyOfTestMap.SlabID())
 		require.NoError(t, err)
 
 		// deep removal should clean up everything
@@ -274,7 +279,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 		newEntries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
 			removedValue := dictionary.Remove(inter, interpreter.EmptyLocationRange, orgKey)
 
-			assert.IsType(t, &interpreter.SomeValue{}, removedValue)
+			require.IsType(t, &interpreter.SomeValue{}, removedValue)
 			someValue := removedValue.(*interpreter.SomeValue)
 
 			// Removed value must be same as the original value
@@ -334,7 +339,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 		newEntries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
 			removedValue := dictionary.Remove(inter, interpreter.EmptyLocationRange, orgKey)
 
-			assert.IsType(t, &interpreter.SomeValue{}, removedValue)
+			require.IsType(t, &interpreter.SomeValue{}, removedValue)
 			someValue := removedValue.(*interpreter.SomeValue)
 
 			// Removed value must be same as the original value
@@ -352,6 +357,79 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 		// Storage size after removals should be same as the size before insertion.
 		assert.Equal(t, startingStorageSize, storageSize)
 		assert.Equal(t, startingSlabCounts, slabCounts)
+	})
+
+	t.Run("update enum key", func(t *testing.T) {
+
+		dictionary := interpreter.NewDictionaryValueWithAddress(
+			inter,
+			interpreter.EmptyLocationRange,
+			&interpreter.DictionaryStaticType{
+				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
+				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+			},
+			orgOwner,
+		)
+
+		require.Equal(t, 0, dictionary.Count())
+
+		value1 := interpreter.NewUnmeteredIntValueFromInt64(1)
+		value2 := interpreter.NewUnmeteredIntValueFromInt64(2)
+
+		keys := make([]interpreter.Value, numberOfValues)
+		for i := 0; i < numberOfValues; i++ {
+			// Create a random enum as key
+			key := r.generateRandomHashableValue(inter, randomValueKindEnum)
+
+			keys[i] = key
+		}
+
+		// Insert
+		for _, key := range keys {
+			dictionary.Insert(
+				inter,
+				interpreter.EmptyLocationRange,
+				// Need to clone the key, as it is transferred, and we want to keep using it.
+				key.Clone(inter),
+				// Always insert value1
+				value1,
+			)
+		}
+
+		// Update
+		for _, key := range keys {
+			oldValue := dictionary.Insert(
+				inter,
+				interpreter.EmptyLocationRange,
+				// Need to clone the key, as it is transferred, and we want to keep using it.
+				key.Clone(inter),
+				// Change all value1 to value2
+				value2,
+			)
+
+			require.IsType(t, &interpreter.SomeValue{}, oldValue)
+			someValue := oldValue.(*interpreter.SomeValue)
+
+			// Removed value must be same as the original value
+			innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
+			utils.AssertValuesEqual(t, inter, value1, innerValue)
+		}
+
+		// Check the values
+		for _, key := range keys {
+			readValue := dictionary.GetKey(
+				inter,
+				interpreter.EmptyLocationRange,
+				key,
+			)
+
+			require.IsType(t, &interpreter.SomeValue{}, readValue)
+			someValue := readValue.(*interpreter.SomeValue)
+
+			// Read value must be updated value
+			innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
+			utils.AssertValuesEqual(t, inter, value2, innerValue)
+		}
 	})
 
 	t.Run("random insert & remove", func(t *testing.T) {
@@ -432,7 +510,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 
 				removedValue := dictionary.Remove(inter, interpreter.EmptyLocationRange, key)
 
-				assert.IsType(t, &interpreter.SomeValue{}, removedValue)
+				require.IsType(t, &interpreter.SomeValue{}, removedValue)
 				someValue := removedValue.(*interpreter.SomeValue)
 
 				// Removed value must be same as the original value
@@ -489,12 +567,13 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 			true,
 			nil,
 			nil,
+			true, // dictionary is standalone.
 		).(*interpreter.DictionaryValue)
 
 		require.Equal(t, entries.size(), movedDictionary.Count())
 
 		// Cleanup the slab of original dictionary.
-		err := storage.Remove(dictionary.StorageID())
+		err := storage.Remove(dictionary.SlabID())
 		require.NoError(t, err)
 
 		// Check the values
@@ -609,6 +688,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 			false,
 			nil,
 			nil,
+			true, // testArray is standalone.
 		).(*interpreter.ArrayValue)
 
 		require.Equal(t, len(elements), copyOfTestArray.Count())
@@ -623,8 +703,8 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 	})
 
 	t.Run("deep removal", func(t *testing.T) {
-		copyOfTestArray.DeepRemove(inter)
-		err = storage.Remove(copyOfTestArray.StorageID())
+		copyOfTestArray.DeepRemove(inter, true)
+		err = storage.Remove(copyOfTestArray.SlabID())
 		require.NoError(t, err)
 
 		// deep removal should clean up everything
@@ -865,12 +945,13 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 			true,
 			nil,
 			nil,
+			true, // array is standalone.
 		).(*interpreter.ArrayValue)
 
 		require.Equal(t, len(elements), movedArray.Count())
 
 		// Cleanup the slab of original array.
-		err := storage.Remove(array.StorageID())
+		err := storage.Remove(array.SlabID())
 		require.NoError(t, err)
 
 		// Check the elements
@@ -956,6 +1037,7 @@ func TestInterpretRandomCompositeValueOperations(t *testing.T) {
 			false,
 			nil,
 			nil,
+			true, // testComposite is standalone.
 		).(*interpreter.CompositeValue)
 
 		for name, orgValue := range orgFields {
@@ -968,8 +1050,8 @@ func TestInterpretRandomCompositeValueOperations(t *testing.T) {
 	})
 
 	t.Run("deep remove", func(t *testing.T) {
-		copyOfTestComposite.DeepRemove(inter)
-		err = storage.Remove(copyOfTestComposite.StorageID())
+		copyOfTestComposite.DeepRemove(inter, true)
+		err = storage.Remove(copyOfTestComposite.SlabID())
 		require.NoError(t, err)
 
 		// deep removal should clean up everything
@@ -997,6 +1079,7 @@ func TestInterpretRandomCompositeValueOperations(t *testing.T) {
 			false,
 			nil,
 			nil,
+			true, // testComposite is standalone.
 		).(*interpreter.CompositeValue)
 
 		require.NoError(t, err)
@@ -1022,10 +1105,11 @@ func TestInterpretRandomCompositeValueOperations(t *testing.T) {
 			true,
 			nil,
 			nil,
+			true, // composite is standalone.
 		).(*interpreter.CompositeValue)
 
 		// Cleanup the slab of original composite.
-		err := storage.Remove(composite.StorageID())
+		err := storage.Remove(composite.SlabID())
 		require.NoError(t, err)
 
 		// Check the elements
@@ -1123,7 +1207,7 @@ func getSlabStorageSize(t *testing.T, storage interpreter.InMemoryStorage) (tota
 	require.NoError(t, err)
 
 	for id, slab := range slabs {
-		if id.Address == atree.AddressUndefined {
+		if id.HasTempAddress() {
 			continue
 		}
 
@@ -1140,7 +1224,10 @@ type randomValueGenerator struct {
 }
 
 func newRandomValueGenerator() randomValueGenerator {
-	seed := time.Now().UnixNano()
+	seed := *smokeTestSeed
+	if seed == -1 {
+		seed = time.Now().UnixNano()
+	}
 
 	return randomValueGenerator{
 		seed: seed,
@@ -1366,7 +1453,7 @@ func (r randomValueGenerator) randomDictionaryValue(
 	currentDepth int,
 ) interpreter.Value {
 
-	entryCount := r.randomInt(innerContainerMaxSize)
+	entryCount := r.randomInt(containerMaxSize)
 	keyValues := make([]interpreter.Value, entryCount*2)
 
 	for i := 0; i < entryCount; i++ {
@@ -1393,7 +1480,7 @@ func (r randomValueGenerator) randomInt(upperBound int) int {
 }
 
 func (r randomValueGenerator) randomArrayValue(inter *interpreter.Interpreter, currentDepth int) interpreter.Value {
-	elementsCount := r.randomInt(innerContainerMaxSize)
+	elementsCount := r.randomInt(containerMaxSize)
 	elements := make([]interpreter.Value, elementsCount)
 
 	for i := 0; i < elementsCount; i++ {
@@ -1609,4 +1696,232 @@ func (m *valueMap) internalKey(inter *interpreter.Interpreter, key interpreter.V
 
 func (m *valueMap) size() int {
 	return len(m.keys)
+}
+
+// This test is a reproducer for "slab was not reachable from leaves" false alarm.
+// https://github.com/onflow/cadence/pull/2882#issuecomment-1781298107
+// In this test, storage.CheckHealth() should be called after array.DeepRemove(),
+// not in the middle of array.DeepRemove().
+// CheckHealth() is called in the middle of array.DeepRemove() when:
+// - array.DeepRemove() calls childArray1 and childArray2 DeepRemove()
+// - DeepRemove() calls maybeValidateAtreeValue()
+// - maybeValidateAtreeValue() calls CheckHealth()
+func TestCheckStorageHealthInMiddleOfDeepRemove(t *testing.T) {
+
+	storage := newUnmeteredInMemoryStorage()
+	inter, err := interpreter.NewInterpreter(
+		&interpreter.Program{
+			Program:     ast.NewProgram(nil, []ast.Declaration{}),
+			Elaboration: sema.NewElaboration(nil),
+		},
+		utils.TestLocation,
+		&interpreter.Config{
+			Storage: storage,
+			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+				return interpreter.VirtualImport{
+					Elaboration: inter.Program.Elaboration,
+				}
+			},
+			AtreeStorageValidationEnabled: true,
+			AtreeValueValidationEnabled:   true,
+		},
+	)
+	require.NoError(t, err)
+
+	owner := common.Address{'A'}
+
+	// Create a small child array which will be inlined in parent container.
+	childArray1 := interpreter.NewArrayValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		&interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeAnyStruct,
+		},
+		owner,
+		interpreter.NewUnmeteredStringValue("a"),
+	)
+
+	size := int(atree.MaxInlineArrayElementSize()) - 10
+
+	// Create a large child array which will NOT be inlined in parent container.
+	childArray2 := interpreter.NewArrayValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		&interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeAnyStruct,
+		},
+		owner,
+		interpreter.NewUnmeteredStringValue(strings.Repeat("b", size)),
+		interpreter.NewUnmeteredStringValue(strings.Repeat("c", size)),
+	)
+
+	// Create an array with childArray1 and childArray2.
+	array := interpreter.NewArrayValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		&interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeAnyStruct,
+		},
+		owner,
+		childArray1, // inlined
+		childArray2, // not inlined
+	)
+
+	// DeepRemove removes all elements (childArray1 and childArray2) recursively in array.
+	array.DeepRemove(inter, true)
+
+	// As noted earlier in comments at the top of this test:
+	// storage.CheckHealth() should be called after array.DeepRemove(), not in the middle of array.DeepRemove().
+	// This happens when:
+	// - array.DeepRemove() calls childArray1 and childArray2 DeepRemove()
+	// - DeepRemove() calls maybeValidateAtreeValue()
+	// - maybeValidateAtreeValue() calls CheckHealth()
+}
+
+// This test is a reproducer for "slab was not reachable from leaves" false alarm.
+// https://github.com/onflow/cadence/pull/2882#issuecomment-1796381227
+// In this test, storage.CheckHealth() should be called after DictionaryValue.Transfer()
+// with remove flag, not in the middle of DictionaryValue.Transfer().
+func TestCheckStorageHealthInMiddleOfTransferAndRemove(t *testing.T) {
+	r := newRandomValueGenerator()
+	t.Logf("seed: %d", r.seed)
+
+	storage := newUnmeteredInMemoryStorage()
+	inter, err := interpreter.NewInterpreter(
+		&interpreter.Program{
+			Program:     ast.NewProgram(nil, []ast.Declaration{}),
+			Elaboration: sema.NewElaboration(nil),
+		},
+		utils.TestLocation,
+		&interpreter.Config{
+			Storage: storage,
+			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+				return interpreter.VirtualImport{
+					Elaboration: inter.Program.Elaboration,
+				}
+			},
+			AtreeStorageValidationEnabled: true,
+			AtreeValueValidationEnabled:   true,
+		},
+	)
+	require.NoError(t, err)
+
+	// Create large array value with zero address which will not be inlined.
+	gchildArray := interpreter.NewArrayValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		&interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeAnyStruct,
+		},
+		common.ZeroAddress,
+		interpreter.NewUnmeteredStringValue(strings.Repeat("b", int(atree.MaxInlineArrayElementSize())-10)),
+		interpreter.NewUnmeteredStringValue(strings.Repeat("c", int(atree.MaxInlineArrayElementSize())-10)),
+	)
+
+	// Create small composite value with zero address which will be inlined.
+	identifier := "test"
+
+	location := common.AddressLocation{
+		Address: common.ZeroAddress,
+		Name:    identifier,
+	}
+
+	compositeType := &sema.CompositeType{
+		Location:   location,
+		Identifier: identifier,
+		Kind:       common.CompositeKindStructure,
+	}
+
+	fields := []interpreter.CompositeField{
+		interpreter.NewUnmeteredCompositeField("a", interpreter.NewUnmeteredUInt64Value(0)),
+		interpreter.NewUnmeteredCompositeField("b", interpreter.NewUnmeteredUInt64Value(1)),
+		interpreter.NewUnmeteredCompositeField("c", interpreter.NewUnmeteredUInt64Value(2)),
+	}
+
+	compositeType.Members = &sema.StringMemberOrderedMap{}
+	for _, field := range fields {
+		compositeType.Members.Set(
+			field.Name,
+			sema.NewUnmeteredPublicConstantFieldMember(
+				compositeType,
+				field.Name,
+				sema.AnyStructType,
+				"",
+			),
+		)
+	}
+
+	// Add the type to the elaboration, to short-circuit the type-lookup.
+	inter.Program.Elaboration.SetCompositeType(
+		compositeType.ID(),
+		compositeType,
+	)
+
+	gchildComposite := interpreter.NewCompositeValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		location,
+		identifier,
+		common.CompositeKindStructure,
+		fields,
+		common.ZeroAddress,
+	)
+
+	// Create large dictionary with zero address with 2 data slabs containing:
+	// - SomeValue(SlabID) as first physical element in the first data slab
+	// - inlined CompositeValue as last physical element in the second data slab
+
+	numberOfValues := 10
+	firstElementIndex := 7 // index of first physical element in the first data slab
+	lastElementIndex := 8  // index of last physical element in the last data slab
+	keyValues := make([]interpreter.Value, numberOfValues*2)
+	for i := 0; i < numberOfValues; i++ {
+		key := interpreter.NewUnmeteredUInt64Value(uint64(i))
+
+		var value interpreter.Value
+		switch i {
+		case firstElementIndex:
+			value = interpreter.NewUnmeteredSomeValueNonCopying(gchildArray)
+
+		case lastElementIndex:
+			value = gchildComposite
+
+		default:
+			// Other values are inlined random strings.
+			const size = 235
+			value = interpreter.NewUnmeteredStringValue(r.randomUTF8StringOfSize(size))
+		}
+
+		keyValues[i*2] = key
+		keyValues[i*2+1] = value
+	}
+
+	childMap := interpreter.NewDictionaryValueWithAddress(
+		inter,
+		interpreter.EmptyLocationRange,
+		&interpreter.DictionaryStaticType{
+			KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
+			ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+		},
+		common.ZeroAddress,
+		keyValues...,
+	)
+
+	// Create dictionary with non-zero address containing child dictionary.
+	owner := common.Address{'A'}
+	m := interpreter.NewDictionaryValueWithAddress(
+		inter,
+		interpreter.EmptyLocationRange,
+		&interpreter.DictionaryStaticType{
+			KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
+			ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+		},
+		owner,
+		interpreter.NewUnmeteredUInt64Value(0),
+		childMap,
+	)
+
+	inter.ValidateAtreeValue(m)
+
+	require.NoError(t, storage.CheckHealth())
 }

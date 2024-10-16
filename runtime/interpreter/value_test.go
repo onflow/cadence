@@ -176,6 +176,7 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 		false,
 		nil,
 		nil,
+		true, // array is standalone.
 	)
 	array = arrayCopy.(*ArrayValue)
 
@@ -570,6 +571,7 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 		false,
 		nil,
 		nil,
+		true, // dictionary is standalone.
 	)
 
 	dictionaryCopy := copyResult.(*DictionaryValue)
@@ -874,6 +876,7 @@ func TestOwnerCompositeCopy(t *testing.T) {
 		false,
 		nil,
 		nil,
+		true, // composite is standalone.
 	).(*CompositeValue)
 
 	value = composite.GetMember(
@@ -1179,29 +1182,30 @@ func TestStringer(t *testing.T) {
 		},
 		"Path capability with borrow type": {
 			value: func(_ *Interpreter) Value {
-				return &PathCapabilityValue{ //nolint:staticcheck
-					BorrowType: &ReferenceStaticType{
+				return NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+					&ReferenceStaticType{
 						Authorization:  UnauthorizedAccess,
 						ReferencedType: PrimitiveStaticTypeInt,
 					},
-					Path: NewUnmeteredPathValue(
+					NewUnmeteredAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
+					NewUnmeteredPathValue(
 						common.PathDomainStorage,
 						"foo",
 					),
-					Address: NewUnmeteredAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
-				}
+				)
 			},
 			expected: "Capability<&Int>(address: 0x0000000102030405, path: /storage/foo)",
 		},
 		"Path capability without borrow type": {
 			value: func(_ *Interpreter) Value {
-				return &PathCapabilityValue{ //nolint:staticcheck
-					Path: NewUnmeteredPathValue(
+				return NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+					nil,
+					NewUnmeteredAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
+					NewUnmeteredPathValue(
 						common.PathDomainStorage,
 						"foo",
 					),
-					Address: NewUnmeteredAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
-				}
+				)
 			},
 			expected: "Capability(address: 0x0000000102030405, path: /storage/foo)",
 		},
@@ -4475,4 +4479,197 @@ func TestStringIsGraphemeBoundaryEnd(t *testing.T) {
 
 	test(flagESflagEE, 16, true)
 
+}
+
+func TestOverwriteDictionaryValueWhereKeyIsStoredInSeparateAtreeSlab(t *testing.T) {
+
+	t.Parallel()
+
+	owner := common.Address{0x1}
+
+	t.Run("enum as dict key", func(t *testing.T) {
+
+		newEnumValue := func(inter *Interpreter) Value {
+			return NewCompositeValue(
+				inter,
+				EmptyLocationRange,
+				utils.TestLocation,
+				"Test",
+				common.CompositeKindEnum,
+				[]CompositeField{
+					{
+						Name:  "rawValue",
+						Value: NewUnmeteredUInt8Value(42),
+					},
+				},
+				common.ZeroAddress,
+			)
+		}
+
+		storage := newUnmeteredInMemoryStorage()
+
+		elaboration := sema.NewElaboration(nil)
+		elaboration.SetCompositeType(
+			testCompositeValueType.ID(),
+			testCompositeValueType,
+		)
+
+		inter, err := NewInterpreter(
+			&Program{
+				Elaboration: elaboration,
+			},
+			utils.TestLocation,
+			&Config{
+				Storage:                       storage,
+				AtreeValueValidationEnabled:   true,
+				AtreeStorageValidationEnabled: true,
+			},
+		)
+		require.NoError(t, err)
+
+		// Create empty dictionary
+		dictionary := NewDictionaryValueWithAddress(
+			inter,
+			EmptyLocationRange,
+			&DictionaryStaticType{
+				KeyType:   PrimitiveStaticTypeAnyStruct,
+				ValueType: PrimitiveStaticTypeAnyStruct,
+			},
+			owner,
+		)
+		require.Equal(t, 0, dictionary.Count())
+
+		// Insert new key-value pair (enum as key) to dictionary
+		existingValue := dictionary.Insert(
+			inter,
+			EmptyLocationRange,
+			newEnumValue(inter),
+			NewUnmeteredInt64Value(int64(1)),
+		)
+		require.Equal(t, NilOptionalValue, existingValue)
+		require.Equal(t, 1, dictionary.Count())
+
+		// Test inserted dictionary element
+		v, found := dictionary.Get(
+			inter,
+			EmptyLocationRange,
+			newEnumValue(inter),
+		)
+		require.True(t, found)
+		require.Equal(t, Int64Value(1), v)
+
+		// Update existing key with new value
+		existingValue = dictionary.Insert(
+			inter,
+			EmptyLocationRange,
+			newEnumValue(inter),
+			NewUnmeteredInt64Value(int64(2)),
+		)
+		require.NotEqual(t, Int64Value(1), existingValue)
+		require.Equal(t, 1, dictionary.Count())
+
+		// Check updated dictionary element
+		v, found = dictionary.Get(
+			inter,
+			EmptyLocationRange,
+			newEnumValue(inter),
+		)
+		require.True(t, found)
+		require.Equal(t, Int64Value(2), v)
+
+		// Check storage containing only one root slab (dictionary root)
+		checkRootSlabIDsInStorage(t, storage, []atree.SlabID{dictionary.SlabID()})
+	})
+
+	t.Run("large string as dict key", func(t *testing.T) {
+		newStringValue := func() Value {
+			return NewUnmeteredStringValue(strings.Repeat("a", 1024))
+		}
+
+		storage := newUnmeteredInMemoryStorage()
+
+		elaboration := sema.NewElaboration(nil)
+
+		inter, err := NewInterpreter(
+			&Program{
+				Elaboration: elaboration,
+			},
+			utils.TestLocation,
+			&Config{
+				Storage:                       storage,
+				AtreeValueValidationEnabled:   true,
+				AtreeStorageValidationEnabled: true,
+			},
+		)
+		require.NoError(t, err)
+
+		// Create empty dictionary
+		dictionary := NewDictionaryValueWithAddress(
+			inter,
+			EmptyLocationRange,
+			&DictionaryStaticType{
+				KeyType:   PrimitiveStaticTypeAnyStruct,
+				ValueType: PrimitiveStaticTypeAnyStruct,
+			},
+			owner,
+		)
+		require.Equal(t, 0, dictionary.Count())
+
+		// Insert new key-value pair to dictionary
+		// Key is a large string which is stored in its own slab.
+		existingValue := dictionary.Insert(
+			inter,
+			EmptyLocationRange,
+			newStringValue(),
+			NewUnmeteredInt64Value(int64(1)),
+		)
+		require.Equal(t, NilOptionalValue, existingValue)
+		require.Equal(t, 1, dictionary.Count())
+
+		// Check new dictionary element
+		v, found := dictionary.Get(
+			inter,
+			EmptyLocationRange,
+			newStringValue(),
+		)
+		require.True(t, found)
+		require.Equal(t, Int64Value(1), v)
+
+		// Update existing key with new value
+		existingValue = dictionary.Insert(
+			inter,
+			EmptyLocationRange,
+			newStringValue(),
+			NewUnmeteredInt64Value(int64(2)),
+		)
+		require.NotEqual(t, Int64Value(1), existingValue)
+		require.Equal(t, 1, dictionary.Count())
+
+		// Check updated dictionary element
+		v, found = dictionary.Get(
+			inter,
+			EmptyLocationRange,
+			newStringValue(),
+		)
+		require.True(t, found)
+		require.Equal(t, Int64Value(2), v)
+
+		// Check storage containing only one root slab (dictionary root)
+		checkRootSlabIDsInStorage(t, storage, []atree.SlabID{dictionary.SlabID()})
+	})
+}
+
+func checkRootSlabIDsInStorage(t *testing.T, storage atree.SlabStorage, expectedRootSlabIDs []atree.SlabID) {
+	rootSlabIDs, err := atree.CheckStorageHealth(storage, -1)
+	require.NoError(t, err)
+
+	// Get non-temp address slab IDs from rootSlabIDs
+	nontempSlabIDs := make([]atree.SlabID, 0, len(rootSlabIDs))
+	for rootSlabID := range rootSlabIDs {
+		if !rootSlabID.HasTempAddress() {
+			nontempSlabIDs = append(nontempSlabIDs, rootSlabID)
+		}
+	}
+
+	require.ElementsMatch(t, expectedRootSlabIDs, nontempSlabIDs)
 }

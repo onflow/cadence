@@ -4146,6 +4146,18 @@ func (t *FunctionType) CheckInstantiated(pos ast.HasPosition, memoryGauge common
 	t.ReturnTypeAnnotation.Type.CheckInstantiated(pos, memoryGauge, report)
 }
 
+func (t *FunctionType) ParameterTypes() []Type {
+	var types []Type
+	parameterCount := len(t.Parameters)
+	if parameterCount > 0 {
+		types = make([]Type, 0, parameterCount)
+		for _, parameter := range t.Parameters {
+			types = append(types, parameter.TypeAnnotation.Type)
+		}
+	}
+	return types
+}
+
 type ArgumentExpressionsCheck func(
 	checker *Checker,
 	argumentExpressions []ast.Expression,

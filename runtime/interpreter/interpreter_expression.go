@@ -148,7 +148,11 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 
 	elaboration := interpreter.Program.Elaboration
 
-	indexExpressionTypes := elaboration.IndexExpressionTypes(indexExpression)
+	indexExpressionTypes, ok := elaboration.IndexExpressionTypes(indexExpression)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
 	indexedType := indexExpressionTypes.IndexedType
 	indexingType := indexExpressionTypes.IndexingType
 
@@ -392,6 +396,18 @@ func (interpreter *Interpreter) checkMemberAccess(
 	}
 
 	targetStaticType := target.StaticType(interpreter)
+
+	if _, ok := expectedType.(*sema.OptionalType); ok {
+		if _, ok := targetStaticType.(*OptionalStaticType); !ok {
+			targetSemaType := interpreter.MustConvertStaticToSemaType(targetStaticType)
+
+			panic(MemberAccessTypeError{
+				ExpectedType:  expectedType,
+				ActualType:    targetSemaType,
+				LocationRange: locationRange,
+			})
+		}
+	}
 
 	if !interpreter.IsSubTypeOfSemaType(targetStaticType, expectedType) {
 		targetSemaType := interpreter.MustConvertStaticToSemaType(targetStaticType)
@@ -943,6 +959,12 @@ func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpr
 		return NewUnmeteredCharacterValue(expression.Value)
 	}
 
+	// Optimization: If the string is empty, return the empty string singleton
+	// to avoid allocating a new string value.
+	if len(expression.Value) == 0 {
+		return EmptyString
+	}
+
 	// NOTE: already metered in lexer/parser
 	return NewUnmeteredStringValue(expression.Value)
 }
@@ -1090,7 +1112,7 @@ func (interpreter *Interpreter) maybeGetReference(
 	expression *ast.IndexExpression,
 	memberValue Value,
 ) Value {
-	indexExpressionTypes := interpreter.Program.Elaboration.IndexExpressionTypes(expression)
+	indexExpressionTypes, _ := interpreter.Program.Elaboration.IndexExpressionTypes(expression)
 
 	if indexExpressionTypes.ReturnReference {
 		expectedType := indexExpressionTypes.ResultType
@@ -1197,6 +1219,7 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 	typeParameterTypes := invocationExpressionTypes.TypeArguments
 	argumentTypes := invocationExpressionTypes.ArgumentTypes
 	parameterTypes := invocationExpressionTypes.TypeParameterTypes
+	returnType := invocationExpressionTypes.ReturnType
 
 	// add the implicit argument to the end of the argument list, if it exists
 	if implicitArg != nil {
@@ -1212,6 +1235,7 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 		argumentExpressions,
 		argumentTypes,
 		parameterTypes,
+		returnType,
 		typeParameterTypes,
 		invocationExpression,
 	)
@@ -1273,13 +1297,13 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 
 	functionType := interpreter.Program.Elaboration.FunctionExpressionFunctionType(expression)
 
-	var preConditions ast.Conditions
+	var preConditions []ast.Condition
 	if expression.FunctionBlock.PreConditions != nil {
-		preConditions = *expression.FunctionBlock.PreConditions
+		preConditions = expression.FunctionBlock.PreConditions.Conditions
 	}
 
 	var beforeStatements []ast.Statement
-	var rewrittenPostConditions ast.Conditions
+	var rewrittenPostConditions []ast.Condition
 
 	if expression.FunctionBlock.PostConditions != nil {
 		postConditionsRewrite :=
@@ -1325,6 +1349,13 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		// thus this is the only place where it becomes necessary to "instantiate" the result of a map to its
 		// concrete outputs. In other places (e.g. interface conformance checks) we want to leave maps generic,
 		// so we don't substitute them.
+
+		// if the target is anystruct or anyresource we want to preserve optionals
+		unboxedExpectedType := sema.UnwrapOptionalType(expectedType)
+		if !(unboxedExpectedType == sema.AnyStructType || unboxedExpectedType == sema.AnyResourceType) {
+			// otherwise dynamic cast now always unboxes optionals
+			value = interpreter.Unbox(locationRange, value)
+		}
 		valueSemaType := interpreter.SubstituteMappedEntitlements(interpreter.MustSemaTypeOfValue(value))
 		valueStaticType := ConvertSemaToStaticType(interpreter, valueSemaType)
 		isSubType := interpreter.IsSubTypeOfSemaType(valueStaticType, expectedType)
@@ -1594,6 +1625,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		false,
 		nil,
 		nil,
+		true, // base is standalone.
 	).(*CompositeValue)
 
 	attachment.setBaseValue(interpreter, base)

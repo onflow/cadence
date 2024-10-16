@@ -290,3 +290,36 @@ func TestInterpretResultVariable(t *testing.T) {
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 }
+
+func TestInterpretFunctionSubtyping(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        struct T {
+            var bar: UInt8
+            init() {
+                self.bar = 4
+            }
+        }
+
+        access(all) fun foo(): T {
+            return T()
+        }
+
+        access(all) fun main(): UInt8?  {
+            var f: (fun(): T?) = foo
+            return f()?.bar
+        }`,
+	)
+
+	result, err := inter.Invoke("main")
+	require.NoError(t, err)
+
+	utils.AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredSomeValueNonCopying(interpreter.UInt8Value(4)),
+		result,
+	)
+}

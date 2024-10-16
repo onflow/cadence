@@ -117,24 +117,40 @@ func decodeInt64(d StorableDecoder) (int64, error) {
 
 func DecodeStorable(
 	decoder *cbor.StreamDecoder,
-	slabStorageID atree.StorageID,
+	slabID atree.SlabID,
+	inlinedExtraData []atree.ExtraData,
 	memoryGauge common.MemoryGauge,
 ) (
 	atree.Storable,
 	error,
 ) {
-	return NewStorableDecoder(decoder, slabStorageID, memoryGauge).decodeStorable()
+	return NewStorableDecoder(decoder, slabID, inlinedExtraData, memoryGauge).decodeStorable()
+}
+
+func newStorableDecoderFunc(memoryGauge common.MemoryGauge) atree.StorableDecoder {
+	return func(
+		decoder *cbor.StreamDecoder,
+		slabID atree.SlabID,
+		inlinedExtraData []atree.ExtraData,
+	) (
+		atree.Storable,
+		error,
+	) {
+		return NewStorableDecoder(decoder, slabID, inlinedExtraData, memoryGauge).decodeStorable()
+	}
 }
 
 func NewStorableDecoder(
 	decoder *cbor.StreamDecoder,
-	slabStorageID atree.StorageID,
+	slabID atree.SlabID,
+	inlinedExtraData []atree.ExtraData,
 	memoryGauge common.MemoryGauge,
 ) StorableDecoder {
 	return StorableDecoder{
-		decoder:       decoder,
-		memoryGauge:   memoryGauge,
-		slabStorageID: slabStorageID,
+		decoder:          decoder,
+		memoryGauge:      memoryGauge,
+		slabID:           slabID,
+		inlinedExtraData: inlinedExtraData,
 		TypeDecoder: NewTypeDecoder(
 			decoder,
 			memoryGauge,
@@ -144,9 +160,10 @@ func NewStorableDecoder(
 
 type StorableDecoder struct {
 	TypeDecoder
-	memoryGauge   common.MemoryGauge
-	decoder       *cbor.StreamDecoder
-	slabStorageID atree.StorageID
+	memoryGauge      common.MemoryGauge
+	decoder          *cbor.StreamDecoder
+	slabID           atree.SlabID
+	inlinedExtraData []atree.ExtraData
 }
 
 func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
@@ -200,8 +217,31 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 
 		switch num {
 
-		case atree.CBORTagStorageID:
-			return atree.DecodeStorageIDStorable(d.decoder)
+		case atree.CBORTagSlabID:
+			return atree.DecodeSlabIDStorable(d.decoder)
+
+		case atree.CBORTagInlinedArray:
+			return atree.DecodeInlinedArrayStorable(
+				d.decoder,
+				newStorableDecoderFunc(d.memoryGauge),
+				d.slabID,
+				d.inlinedExtraData)
+
+		case atree.CBORTagInlinedMap:
+			return atree.DecodeInlinedMapStorable(
+				d.decoder,
+				newStorableDecoderFunc(d.memoryGauge),
+				d.slabID,
+				d.inlinedExtraData,
+			)
+
+		case atree.CBORTagInlinedCompactMap:
+			return atree.DecodeInlinedCompactMapStorable(
+				d.decoder,
+				newStorableDecoderFunc(d.memoryGauge),
+				d.slabID,
+				d.inlinedExtraData,
+			)
 
 		case CBORTagVoidValue:
 			err := d.decoder.Skip()
@@ -224,6 +264,9 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 
 		case CBORTagSomeValue:
 			storable, err = d.decodeSome()
+
+		case CBORTagSomeValueWithNestedLevels:
+			storable, err = d.decodeSomeWithNestedLevels()
 
 		case CBORTagAddressValue:
 			storable, err = d.decodeAddress()
@@ -829,6 +872,59 @@ func (d StorableDecoder) decodeSome() (SomeStorable, error) {
 	}, nil
 }
 
+func (d StorableDecoder) decodeSomeWithNestedLevels() (SomeStorable, error) {
+	count, err := d.decoder.DecodeArrayHead()
+	if err != nil {
+		return SomeStorable{}, errors.NewUnexpectedError(
+			"invalid some value with nested levels encoding: %w",
+			err,
+		)
+	}
+
+	if count != someStorableWithMultipleNestedLevelsArrayCount {
+		return SomeStorable{}, errors.NewUnexpectedError(
+			"invalid array count for some value with nested levels encoding: got %d, expect %d",
+			count, someStorableWithMultipleNestedLevelsArrayCount,
+		)
+	}
+
+	nestedLevels, err := d.decoder.DecodeUint64()
+	if err != nil {
+		return SomeStorable{}, errors.NewUnexpectedError(
+			"invalid nested levels for some value with nested levels encoding: %w",
+			err,
+		)
+	}
+
+	if nestedLevels <= 1 {
+		return SomeStorable{}, errors.NewUnexpectedError(
+			"invalid nested levels for some value with nested levels encoding: got %d, expect > 1",
+			nestedLevels,
+		)
+	}
+
+	nonSomeStorable, err := d.decodeStorable()
+	if err != nil {
+		return SomeStorable{}, errors.NewUnexpectedError(
+			"invalid nonSomeStorable for some value with nested levels encoding: %w",
+			err,
+		)
+	}
+
+	storable := SomeStorable{
+		gauge:    d.memoryGauge,
+		Storable: nonSomeStorable,
+	}
+	for i := uint64(1); i < nestedLevels; i++ {
+		storable = SomeStorable{
+			gauge:    d.memoryGauge,
+			Storable: storable,
+		}
+	}
+
+	return storable, nil
+}
+
 func checkEncodedAddressLength(actualLength int) error {
 	const expectedLength = common.AddressLength
 	if actualLength > expectedLength {
@@ -1313,7 +1409,7 @@ func (d StorableDecoder) decodePathCapability() (*PathCapabilityValue, error) {
 	}
 
 	return &PathCapabilityValue{
-		Address:    address,
+		address:    address,
 		Path:       pathValue,
 		BorrowType: borrowType,
 	}, nil
@@ -1568,7 +1664,7 @@ func (d TypeDecoder) decodeInterfaceStaticType() (*InterfaceStaticType, error) {
 	return NewInterfaceStaticTypeComputeTypeID(d.memoryGauge, location, qualifiedIdentifier), nil
 }
 
-func (d TypeDecoder) decodeVariableSizedStaticType() (StaticType, error) {
+func (d TypeDecoder) decodeVariableSizedStaticType() (*VariableSizedStaticType, error) {
 	staticType, err := d.DecodeStaticType()
 	if err != nil {
 		return nil, errors.NewUnexpectedError(
@@ -1579,7 +1675,7 @@ func (d TypeDecoder) decodeVariableSizedStaticType() (StaticType, error) {
 	return NewVariableSizedStaticType(d.memoryGauge, staticType), nil
 }
 
-func (d TypeDecoder) decodeConstantSizedStaticType() (StaticType, error) {
+func (d TypeDecoder) decodeConstantSizedStaticType() (*ConstantSizedStaticType, error) {
 
 	const expectedLength = encodedConstantSizedStaticTypeLength
 
@@ -1826,7 +1922,7 @@ func (d TypeDecoder) decodeReferenceStaticType() (StaticType, error) {
 	return referenceType, nil
 }
 
-func (d TypeDecoder) decodeDictionaryStaticType() (StaticType, error) {
+func (d TypeDecoder) decodeDictionaryStaticType() (*DictionaryStaticType, error) {
 	const expectedLength = encodedDictionaryStaticTypeLength
 
 	arraySize, err := d.decoder.DecodeArrayHead()

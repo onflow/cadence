@@ -160,6 +160,25 @@ type AccountHandlerFunc func(
 	address AddressValue,
 ) Value
 
+// ValidateAccountCapabilitiesGetHandlerFunc is a function that is used to handle when a capability of an account is got.
+type ValidateAccountCapabilitiesGetHandlerFunc func(
+	inter *Interpreter,
+	locationRange LocationRange,
+	address AddressValue,
+	path PathValue,
+	wantedBorrowType *sema.ReferenceType,
+	capabilityBorrowType *sema.ReferenceType,
+) (bool, error)
+
+// ValidateAccountCapabilitiesPublishHandlerFunc is a function that is used to handle when a capability of an account is got.
+type ValidateAccountCapabilitiesPublishHandlerFunc func(
+	inter *Interpreter,
+	locationRange LocationRange,
+	address AddressValue,
+	path PathValue,
+	capabilityBorrowType *ReferenceStaticType,
+) (bool, error)
+
 // UUIDHandlerFunc is a function that handles the generation of UUIDs.
 type UUIDHandlerFunc func() (uint64, error)
 
@@ -227,7 +246,7 @@ type Storage interface {
 	CheckHealth() error
 }
 
-type ReferencedResourceKindedValues map[atree.StorageID]map[*EphemeralReferenceValue]struct{}
+type ReferencedResourceKindedValues map[atree.ValueID]map[*EphemeralReferenceValue]struct{}
 
 type Interpreter struct {
 	Location     common.Location
@@ -450,7 +469,11 @@ func (interpreter *Interpreter) InvokeExternally(
 	var base *EphemeralReferenceValue
 	var boundAuth Authorization
 	if boundFunc, ok := functionValue.(BoundFunctionValue); ok {
-		self = boundFunc.Self
+		self = boundFunc.SelfReference.ReferencedValue(
+			interpreter,
+			EmptyLocationRange,
+			true,
+		)
 		base = boundFunc.Base
 		boundAuth = boundFunc.BoundAuthorization
 	}
@@ -722,13 +745,13 @@ func (interpreter *Interpreter) functionDeclarationValue(
 	lexicalScope *VariableActivation,
 ) *InterpretedFunctionValue {
 
-	var preConditions ast.Conditions
+	var preConditions []ast.Condition
 	if declaration.FunctionBlock.PreConditions != nil {
-		preConditions = *declaration.FunctionBlock.PreConditions
+		preConditions = declaration.FunctionBlock.PreConditions.Conditions
 	}
 
 	var beforeStatements []ast.Statement
-	var rewrittenPostConditions ast.Conditions
+	var rewrittenPostConditions []ast.Condition
 
 	if declaration.FunctionBlock.PostConditions != nil {
 		postConditionsRewrite :=
@@ -760,9 +783,9 @@ func (interpreter *Interpreter) visitBlock(block *ast.Block) StatementResult {
 
 func (interpreter *Interpreter) visitFunctionBody(
 	beforeStatements []ast.Statement,
-	preConditions ast.Conditions,
+	preConditions []ast.Condition,
 	body func() StatementResult,
-	postConditions ast.Conditions,
+	postConditions []ast.Condition,
 	returnType sema.Type,
 	declarationLocationRange LocationRange,
 ) Value {
@@ -857,7 +880,7 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 	)
 }
 
-func (interpreter *Interpreter) visitConditions(conditions ast.Conditions, kind ast.ConditionKind) {
+func (interpreter *Interpreter) visitConditions(conditions []ast.Condition, kind ast.ConditionKind) {
 	for _, condition := range conditions {
 		interpreter.visitCondition(condition, kind)
 	}
@@ -1253,16 +1276,7 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 		functions.Set(resourceDefaultDestroyEventName(compositeType), destroyEventConstructor)
 	}
 
-	wrapFunctions := func(ty *sema.InterfaceType, code WrapperCode) {
-
-		// Wrap initializer
-
-		initializerFunctionWrapper :=
-			code.InitializerFunctionWrapper
-
-		if initializerFunctionWrapper != nil {
-			initializerFunction = initializerFunctionWrapper(initializerFunction)
-		}
+	applyDefaultFunctions := func(ty *sema.InterfaceType, code WrapperCode) {
 
 		// Apply default functions, if conforming type does not provide the function
 
@@ -1281,6 +1295,18 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 				functions.Set(name, function)
 			})
 		}
+	}
+
+	wrapFunctions := func(ty *sema.InterfaceType, code WrapperCode) {
+
+		// Wrap initializer
+
+		initializerFunctionWrapper :=
+			code.InitializerFunctionWrapper
+
+		if initializerFunctionWrapper != nil {
+			initializerFunction = initializerFunctionWrapper(initializerFunction)
+		}
 
 		// Wrap functions
 
@@ -1289,7 +1315,11 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 		// the order does not matter.
 
 		for name, functionWrapper := range code.FunctionWrappers { //nolint:maprange
-			fn, _ := functions.Get(name)
+			fn, ok := functions.Get(name)
+			// If there is a wrapper, there MUST be a body.
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 			functions.Set(name, functionWrapper(fn))
 		}
 
@@ -1299,9 +1329,21 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 	}
 
 	conformances := compositeType.EffectiveInterfaceConformances()
+	interfaceCodes := declarationInterpreter.SharedState.typeCodes.InterfaceCodes
+
+	// First apply the default functions, and then wrap with conditions.
+	// These needs to be done in separate phases.
+	// Otherwise, if the condition and the default implementation are coming from two different inherited interfaces,
+	// then the condition would wrap an empty implementation, because the default impl is not resolved by the time.
+
 	for i := len(conformances) - 1; i >= 0; i-- {
 		conformance := conformances[i].InterfaceType
-		wrapFunctions(conformance, declarationInterpreter.SharedState.typeCodes.InterfaceCodes[conformance.ID()])
+		applyDefaultFunctions(conformance, interfaceCodes[conformance.ID()])
+	}
+
+	for i := len(conformances) - 1; i >= 0; i-- {
+		conformance := conformances[i].InterfaceType
+		wrapFunctions(conformance, interfaceCodes[conformance.ID()])
 	}
 
 	declarationInterpreter.SharedState.typeCodes.CompositeCodes[compositeType.ID()] = CompositeTypeCode{
@@ -1637,15 +1679,15 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 
 	parameterList := initializer.FunctionDeclaration.ParameterList
 
-	var preConditions ast.Conditions
+	var preConditions []ast.Condition
 	if initializer.FunctionDeclaration.FunctionBlock.PreConditions != nil {
-		preConditions = *initializer.FunctionDeclaration.FunctionBlock.PreConditions
+		preConditions = initializer.FunctionDeclaration.FunctionBlock.PreConditions.Conditions
 	}
 
 	statements := initializer.FunctionDeclaration.FunctionBlock.Block.Statements
 
 	var beforeStatements []ast.Statement
-	var rewrittenPostConditions ast.Conditions
+	var rewrittenPostConditions []ast.Condition
 
 	postConditions := initializer.FunctionDeclaration.FunctionBlock.PostConditions
 	if postConditions != nil {
@@ -1754,14 +1796,14 @@ func (interpreter *Interpreter) compositeFunction(
 
 	functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionType(functionDeclaration)
 
-	var preConditions ast.Conditions
+	var preConditions []ast.Condition
 
 	if functionDeclaration.FunctionBlock.PreConditions != nil {
-		preConditions = *functionDeclaration.FunctionBlock.PreConditions
+		preConditions = functionDeclaration.FunctionBlock.PreConditions.Conditions
 	}
 
 	var beforeStatements []ast.Statement
-	var rewrittenPostConditions ast.Conditions
+	var rewrittenPostConditions []ast.Condition
 
 	if functionDeclaration.FunctionBlock.PostConditions != nil {
 
@@ -1833,6 +1875,7 @@ func (interpreter *Interpreter) transferAndConvert(
 		false,
 		nil,
 		nil,
+		true, // value is standalone.
 	)
 
 	targetType = interpreter.SubstituteMappedEntitlements(targetType)
@@ -2112,7 +2155,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 			array := arrayValue.array
 
-			iterator, err := array.Iterator()
+			iterator, err := array.ReadOnlyIterator()
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
@@ -2153,7 +2196,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 			dictionary := dictValue.dictionary
 
-			iterator, err := dictionary.Iterator()
+			iterator, err := dictionary.ReadOnlyIterator()
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
@@ -2198,12 +2241,12 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 				valueBorrowType := capability.BorrowType.(*ReferenceStaticType)
 				borrowType := interpreter.convertStaticType(valueBorrowType, targetBorrowType)
 				if capability.isInvalid() {
-					return NewInvalidCapabilityValue(interpreter, capability.Address, borrowType)
+					return NewInvalidCapabilityValue(interpreter, capability.address, borrowType)
 				}
 				return NewCapabilityValue(
 					interpreter,
 					capability.ID,
-					capability.Address,
+					capability.address,
 					borrowType,
 				)
 			default:
@@ -2418,13 +2461,13 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 		return nil
 	}
 
-	var preConditions ast.Conditions
+	var preConditions []ast.Condition
 	if declaration.FunctionBlock.PreConditions != nil {
-		preConditions = *declaration.FunctionBlock.PreConditions
+		preConditions = declaration.FunctionBlock.PreConditions.Conditions
 	}
 
 	var beforeStatements []ast.Statement
-	var rewrittenPostConditions ast.Conditions
+	var rewrittenPostConditions []ast.Condition
 
 	if declaration.FunctionBlock.PostConditions != nil {
 
@@ -2436,6 +2479,13 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 	}
 
 	return func(inner FunctionValue) FunctionValue {
+
+		// NOTE: The `inner` function cannot be nil.
+		// An executing function always have a body.
+		if inner == nil {
+			panic(errors.NewUnreachableError())
+		}
+
 		// Condition wrapper is a static function.
 		return NewStaticHostFunctionValue(
 			interpreter,
@@ -2461,72 +2511,66 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 					interpreter.declareVariable(sema.BaseIdentifier, invocation.Base)
 				}
 
-				// NOTE: The `inner` function might be nil.
-				//   This is the case if the conforming type did not declare a function.
+				// NOTE: It is important to wrap the invocation in a function,
+				//  so the inner function isn't invoked here
 
-				var body func() StatementResult
-				if inner != nil {
-					// NOTE: It is important to wrap the invocation in a function,
-					//  so the inner function isn't invoked here
+				body := func() StatementResult {
 
-					body = func() StatementResult {
+					// Pre- and post-condition wrappers "re-declare" the same
+					// parameters as are used in the actual body of the function,
+					// see the use of bindParameterArguments at the start of this function wrapper.
+					//
+					// When these parameters are given resource-kinded arguments,
+					// this can trick the resource analysis into believing that these
+					// resources exist in multiple variables at once
+					// (one for each condition wrapper + the function itself).
+					//
+					// This is not the case, however, as execution of the pre- and post-conditions
+					// occurs strictly before and after execution of the body respectively.
+					//
+					// To prevent the analysis from reporting a false positive here,
+					// when we enter the body of the wrapped function,
+					// we invalidate any resources that were assigned to parameters by the precondition block,
+					// and then restore them after execution of the wrapped function,
+					// for use by the post-condition block.
 
-						// Pre- and post-condition wrappers "re-declare" the same
-						// parameters as are used in the actual body of the function,
-						// see the use of bindParameterArguments at the start of this function wrapper.
-						//
-						// When these parameters are given resource-kinded arguments,
-						// this can trick the resource analysis into believing that these
-						// resources exist in multiple variables at once
-						// (one for each condition wrapper + the function itself).
-						//
-						// This is not the case, however, as execution of the pre- and post-conditions
-						// occurs strictly before and after execution of the body respectively.
-						//
-						// To prevent the analysis from reporting a false positive here,
-						// when we enter the body of the wrapped function,
-						// we invalidate any resources that were assigned to parameters by the precondition block,
-						// and then restore them after execution of the wrapped function,
-						// for use by the post-condition block.
-
-						type argumentVariable struct {
-							variable Variable
-							value    ResourceKindedValue
-						}
-
-						var argumentVariables []argumentVariable
-						for _, argument := range invocation.Arguments {
-							resourceKindedValue := interpreter.resourceForValidation(argument)
-							if resourceKindedValue == nil {
-								continue
-							}
-
-							argumentVariables = append(
-								argumentVariables,
-								argumentVariable{
-									variable: interpreter.SharedState.resourceVariables[resourceKindedValue],
-									value:    resourceKindedValue,
-								},
-							)
-
-							interpreter.invalidateResource(resourceKindedValue)
-						}
-
-						// NOTE: It is important to actually return the value returned
-						//   from the inner function, otherwise it is lost
-
-						returnValue := inner.invoke(invocation)
-
-						// Restore the resources which were temporarily invalidated
-						// before execution of the inner function
-
-						for _, argumentVariable := range argumentVariables {
-							value := argumentVariable.value
-							interpreter.invalidateResource(value)
-							interpreter.SharedState.resourceVariables[value] = argumentVariable.variable
-						}
-						return ReturnResult{Value: returnValue}
+					type argumentVariable struct {
+						variable Variable
+						value    ResourceKindedValue
 					}
+
+					var argumentVariables []argumentVariable
+					for _, argument := range invocation.Arguments {
+						resourceKindedValue := interpreter.resourceForValidation(argument)
+						if resourceKindedValue == nil {
+							continue
+						}
+
+						argumentVariables = append(
+							argumentVariables,
+							argumentVariable{
+								variable: interpreter.SharedState.resourceVariables[resourceKindedValue],
+								value:    resourceKindedValue,
+							},
+						)
+
+						interpreter.invalidateResource(resourceKindedValue)
+					}
+
+					// NOTE: It is important to actually return the value returned
+					//   from the inner function, otherwise it is lost
+
+					returnValue := inner.invoke(invocation)
+
+					// Restore the resources which were temporarily invalidated
+					// before execution of the inner function
+
+					for _, argumentVariable := range argumentVariables {
+						value := argumentVariable.value
+						interpreter.invalidateResource(value)
+						interpreter.SharedState.resourceVariables[value] = argumentVariable.variable
+					}
+					return ReturnResult{Value: returnValue}
 				}
 
 				declarationLocationRange := LocationRange{
@@ -4112,22 +4156,25 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 		interpreter,
 		storageValue,
 		functionType,
-		func(invocation Invocation) Value {
-			interpreter := invocation.Interpreter
+		func(_ *SimpleCompositeValue, invocation Invocation) Value {
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			fn, ok := invocation.Arguments[0].(FunctionValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
-			locationRange := invocation.LocationRange
-			inter := invocation.Interpreter
+			fnType := fn.FunctionType()
+			parameterTypes := fnType.ParameterTypes()
+			returnType := fnType.ReturnTypeAnnotation.Type
+
 			storageMap := config.Storage.GetStorageMap(address, domain.Identifier(), false)
 			if storageMap == nil {
 				// if nothing is stored, no iteration is required
 				return Void
 			}
-			storageIterator := storageMap.Iterator(interpreter)
+			storageIterator := storageMap.Iterator(inter)
 
 			invocationArgumentTypes := []sema.Type{pathType, sema.MetaType}
 
@@ -4139,7 +4186,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 
 			for key, value := storageIterator.Next(); key != nil && value != nil; key, value = storageIterator.Next() {
 
-				staticType := value.StaticType(interpreter)
+				staticType := value.StaticType(inter)
 
 				// Perform a forced value de-referencing to see if the associated type is not broken.
 				// If broken, skip this value from the iteration.
@@ -4158,18 +4205,18 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 				pathValue := NewPathValue(inter, domain, identifier)
 				runtimeType := NewTypeValue(inter, staticType)
 
-				subInvocation := NewInvocation(
-					inter,
-					nil,
-					nil,
-					nil,
+				result := inter.invokeFunctionValue(
+					fn,
 					[]Value{pathValue, runtimeType},
+					nil,
 					invocationArgumentTypes,
+					parameterTypes,
+					returnType,
 					nil,
 					locationRange,
 				)
 
-				shouldContinue, ok := fn.invoke(subInvocation).(BoolValue)
+				shouldContinue, ok := result.(BoolValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -4248,7 +4295,7 @@ func (interpreter *Interpreter) checkValue(
 		_ = interpreter.SharedState.Config.CapabilityCheckHandler(
 			interpreter,
 			locationRange,
-			capability.Address,
+			capability.address,
 			capability.ID,
 			referenceType,
 			referenceType,
@@ -4275,7 +4322,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(
 		interpreter,
 		storageValue,
 		sema.Account_StorageTypeSaveFunctionType,
-		func(invocation Invocation) Value {
+		func(_ *SimpleCompositeValue, invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
 			value := invocation.Arguments[0]
@@ -4311,6 +4358,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(
 				true,
 				nil,
 				nil,
+				true, // value is standalone because it is from invocation.Arguments[0].
 			)
 
 			// Write new value
@@ -4339,7 +4387,7 @@ func (interpreter *Interpreter) authAccountTypeFunction(
 		interpreter,
 		storageValue,
 		sema.Account_StorageTypeTypeFunctionType,
-		func(invocation Invocation) Value {
+		func(_ *SimpleCompositeValue, invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
 			path, ok := invocation.Arguments[0].(PathValue)
@@ -4397,7 +4445,7 @@ func (interpreter *Interpreter) authAccountReadFunction(
 		storageValue,
 		// same as sema.Account_StorageTypeCopyFunctionType
 		sema.Account_StorageTypeLoadFunctionType,
-		func(invocation Invocation) Value {
+		func(_ *SimpleCompositeValue, invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
 			path, ok := invocation.Arguments[0].(PathValue)
@@ -4450,6 +4498,7 @@ func (interpreter *Interpreter) authAccountReadFunction(
 				false,
 				nil,
 				nil,
+				false, // value is an element in storage map because it is from "ReadStored".
 			)
 
 			// Remove the value from storage,
@@ -4480,7 +4529,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(
 		interpreter,
 		storageValue,
 		sema.Account_StorageTypeBorrowFunctionType,
-		func(invocation Invocation) Value {
+		func(_ *SimpleCompositeValue, invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
 			path, ok := invocation.Arguments[0].(PathValue)
@@ -4537,7 +4586,7 @@ func (interpreter *Interpreter) authAccountCheckFunction(
 		interpreter,
 		storageValue,
 		sema.Account_StorageTypeCheckFunctionType,
-		func(invocation Invocation) Value {
+		func(_ *SimpleCompositeValue, invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
 			path, ok := invocation.Arguments[0].(PathValue)
@@ -4757,6 +4806,7 @@ func GetNativeCompositeValueComputedFields(qualifiedIdentifier string) map[strin
 					false,
 					nil,
 					nil,
+					false,
 				)
 			},
 		}
@@ -5016,7 +5066,14 @@ func (interpreter *Interpreter) mapMemberValueAuthorization(
 		case *StorageReferenceValue:
 			return NewStorageReferenceValue(interpreter, auth, refValue.TargetStorageAddress, refValue.TargetPath, refValue.BorrowedType)
 		case BoundFunctionValue:
-			return NewBoundFunctionValue(interpreter, refValue.Function, refValue.Self, refValue.Base, auth)
+			return NewBoundFunctionValueFromSelfReference(
+				interpreter,
+				refValue.Function,
+				refValue.SelfReference,
+				refValue.selfIsReference,
+				refValue.Base,
+				auth,
+			)
 		}
 	}
 	return resultValue
@@ -5071,7 +5128,7 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) FunctionValue {
 		interpreter,
 		self,
 		sema.IsInstanceFunctionType,
-		func(invocation Invocation) Value {
+		func(self Value, invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
 			firstArgument := invocation.Arguments[0]
@@ -5102,7 +5159,7 @@ func (interpreter *Interpreter) getTypeFunction(self Value) FunctionValue {
 		interpreter,
 		self,
 		sema.GetTypeFunctionType,
-		func(invocation Invocation) Value {
+		func(self Value, invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 			staticType := self.StaticType(interpreter)
 			return NewTypeValue(interpreter, staticType)
@@ -5147,13 +5204,13 @@ func (interpreter *Interpreter) checkContainerMutation(
 }
 
 func (interpreter *Interpreter) RemoveReferencedSlab(storable atree.Storable) {
-	storageIDStorable, ok := storable.(atree.StorageIDStorable)
+	slabIDStorable, ok := storable.(atree.SlabIDStorable)
 	if !ok {
 		return
 	}
 
-	storageID := atree.StorageID(storageIDStorable)
-	err := interpreter.Storage().Remove(storageID)
+	slabID := atree.SlabID(slabIDStorable)
+	err := interpreter.Storage().Remove(slabID)
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -5165,6 +5222,10 @@ func (interpreter *Interpreter) maybeValidateAtreeValue(v atree.Value) {
 	if config.AtreeValueValidationEnabled {
 		interpreter.ValidateAtreeValue(v)
 	}
+}
+
+func (interpreter *Interpreter) maybeValidateAtreeStorage() {
+	config := interpreter.SharedState.Config
 
 	if config.AtreeStorageValidationEnabled {
 		err := config.Storage.CheckHealth()
@@ -5249,14 +5310,16 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 		}
 	}
 
+	atreeInliningEnabled := true
+
 	switch value := value.(type) {
 	case *atree.Array:
-		err := atree.ValidArray(value, value.Type(), tic, hip)
+		err := atree.VerifyArray(value, value.Address(), value.Type(), tic, hip, atreeInliningEnabled)
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
 
-		err = atree.ValidArraySerialization(
+		err = atree.VerifyArraySerialization(
 			value,
 			CBORDecMode,
 			CBOREncMode,
@@ -5277,12 +5340,12 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 		}
 
 	case *atree.OrderedMap:
-		err := atree.ValidMap(value, value.Type(), tic, hip)
+		err := atree.VerifyMap(value, value.Address(), value.Type(), tic, hip, atreeInliningEnabled)
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
 
-		err = atree.ValidMapSerialization(
+		err = atree.VerifyMapSerialization(
 			value,
 			CBORDecMode,
 			CBOREncMode,
@@ -5307,13 +5370,13 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 func (interpreter *Interpreter) maybeTrackReferencedResourceKindedValue(value Value) {
 	if referenceValue, ok := value.(*EphemeralReferenceValue); ok {
 		if value, ok := referenceValue.Value.(ReferenceTrackedResourceKindedValue); ok {
-			interpreter.trackReferencedResourceKindedValue(value.StorageID(), referenceValue)
+			interpreter.trackReferencedResourceKindedValue(value.ValueID(), referenceValue)
 		}
 	}
 }
 
 func (interpreter *Interpreter) trackReferencedResourceKindedValue(
-	id atree.StorageID,
+	id atree.ValueID,
 	value *EphemeralReferenceValue,
 ) {
 	values := interpreter.SharedState.referencedResourceKindedValues[id]
@@ -5334,24 +5397,34 @@ func (interpreter *Interpreter) invalidateReferencedResources(
 		return
 	}
 
-	var storageID atree.StorageID
+	var valueID atree.ValueID
 
 	switch value := value.(type) {
 	case *CompositeValue:
-		value.ForEachLoadedField(interpreter, func(_ string, fieldValue Value) (resume bool) {
-			interpreter.invalidateReferencedResources(fieldValue, locationRange)
-			// continue iteration
-			return true
-		}, locationRange)
-		storageID = value.StorageID()
+		value.ForEachReadOnlyLoadedField(
+			interpreter,
+			func(_ string, fieldValue Value) (resume bool) {
+				interpreter.invalidateReferencedResources(fieldValue, locationRange)
+				// continue iteration
+				return true
+			},
+			locationRange,
+		)
+		valueID = value.ValueID()
+
 	case *DictionaryValue:
-		value.IterateLoaded(interpreter, func(_, value Value) (resume bool) {
-			interpreter.invalidateReferencedResources(value, locationRange)
-			return true
-		}, locationRange)
-		storageID = value.StorageID()
+		value.IterateReadOnlyLoaded(
+			interpreter,
+			locationRange,
+			func(_, value Value) (resume bool) {
+				interpreter.invalidateReferencedResources(value, locationRange)
+				return true
+			},
+		)
+		valueID = value.ValueID()
+
 	case *ArrayValue:
-		value.IterateLoaded(
+		value.IterateReadOnlyLoaded(
 			interpreter,
 			func(element Value) (resume bool) {
 				interpreter.invalidateReferencedResources(element, locationRange)
@@ -5359,16 +5432,18 @@ func (interpreter *Interpreter) invalidateReferencedResources(
 			},
 			locationRange,
 		)
-		storageID = value.StorageID()
+		valueID = value.ValueID()
+
 	case *SomeValue:
 		interpreter.invalidateReferencedResources(value.value, locationRange)
 		return
+
 	default:
 		// skip non-container typed values.
 		return
 	}
 
-	values := interpreter.SharedState.referencedResourceKindedValues[storageID]
+	values := interpreter.SharedState.referencedResourceKindedValues[valueID]
 	if values == nil {
 		return
 	}
@@ -5381,7 +5456,7 @@ func (interpreter *Interpreter) invalidateReferencedResources(
 	// So no need to track those stale resources anymore. We will not need to update/clear them again.
 	// Therefore, remove them from the mapping.
 	// This is only to allow GC. No impact to the behavior.
-	delete(interpreter.SharedState.referencedResourceKindedValues, storageID)
+	delete(interpreter.SharedState.referencedResourceKindedValues, valueID)
 }
 
 // startResourceTracking starts tracking the life-span of a resource.
@@ -5493,12 +5568,13 @@ func (interpreter *Interpreter) MeterMemory(usage common.MemoryUsage) error {
 
 func (interpreter *Interpreter) DecodeStorable(
 	decoder *cbor.StreamDecoder,
-	storageID atree.StorageID,
+	slabID atree.SlabID,
+	inlinedExtraData []atree.ExtraData,
 ) (
 	atree.Storable,
 	error,
 ) {
-	return DecodeStorable(decoder, storageID, interpreter)
+	return DecodeStorable(decoder, slabID, inlinedExtraData, interpreter)
 }
 
 func (interpreter *Interpreter) DecodeTypeInfo(decoder *cbor.StreamDecoder) (atree.TypeInfo, error) {
@@ -5520,7 +5596,7 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 		interpreter,
 		capabilityValue,
 		sema.CapabilityTypeBorrowFunctionType(capabilityBorrowType),
-		func(invocation Invocation) Value {
+		func(_ CapabilityValue, invocation Invocation) Value {
 
 			inter := invocation.Interpreter
 			locationRange := invocation.LocationRange
@@ -5567,7 +5643,7 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 		interpreter,
 		capabilityValue,
 		sema.CapabilityTypeCheckFunctionType(capabilityBorrowType),
-		func(invocation Invocation) Value {
+		func(_ CapabilityValue, invocation Invocation) Value {
 
 			if capabilityID == InvalidCapabilityID {
 				return FalseValue
@@ -5602,8 +5678,8 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 	)
 }
 
-func (interpreter *Interpreter) validateMutation(storageID atree.StorageID, locationRange LocationRange) {
-	_, present := interpreter.SharedState.containerValueIteration[storageID]
+func (interpreter *Interpreter) validateMutation(valueID atree.ValueID, locationRange LocationRange) {
+	_, present := interpreter.SharedState.containerValueIteration[valueID]
 	if !present {
 		return
 	}
@@ -5612,28 +5688,29 @@ func (interpreter *Interpreter) validateMutation(storageID atree.StorageID, loca
 	})
 }
 
-func (interpreter *Interpreter) withMutationPrevention(storageID atree.StorageID, f func()) {
+func (interpreter *Interpreter) withMutationPrevention(valueID atree.ValueID, f func()) {
 	if interpreter == nil {
 		f()
 		return
 	}
-	oldIteration, present := interpreter.SharedState.containerValueIteration[storageID]
-	interpreter.SharedState.containerValueIteration[storageID] = struct{}{}
+
+	oldIteration, present := interpreter.SharedState.containerValueIteration[valueID]
+	interpreter.SharedState.containerValueIteration[valueID] = struct{}{}
 
 	f()
 
 	if !present {
-		delete(interpreter.SharedState.containerValueIteration, storageID)
+		delete(interpreter.SharedState.containerValueIteration, valueID)
 	} else {
-		interpreter.SharedState.containerValueIteration[storageID] = oldIteration
+		interpreter.SharedState.containerValueIteration[valueID] = oldIteration
 	}
 }
 
 func (interpreter *Interpreter) enforceNotResourceDestruction(
-	storageID atree.StorageID,
+	valueID atree.ValueID,
 	locationRange LocationRange,
 ) {
-	_, exists := interpreter.SharedState.destroyedResources[storageID]
+	_, exists := interpreter.SharedState.destroyedResources[valueID]
 	if exists {
 		panic(DestroyedResourceError{
 			LocationRange: locationRange,
@@ -5642,13 +5719,13 @@ func (interpreter *Interpreter) enforceNotResourceDestruction(
 }
 
 func (interpreter *Interpreter) withResourceDestruction(
-	storageID atree.StorageID,
+	valueID atree.ValueID,
 	locationRange LocationRange,
 	f func(),
 ) {
-	interpreter.enforceNotResourceDestruction(storageID, locationRange)
+	interpreter.enforceNotResourceDestruction(valueID, locationRange)
 
-	interpreter.SharedState.destroyedResources[storageID] = struct{}{}
+	interpreter.SharedState.destroyedResources[valueID] = struct{}{}
 
 	f()
 }

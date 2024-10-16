@@ -39,6 +39,7 @@ import (
 	"github.com/schollz/progressbar/v3"
 
 	"github.com/onflow/cadence/runtime/common"
+	runtimeErr "github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
@@ -80,25 +81,30 @@ func isSlabStorageKey(key string) bool {
 	return len(key) == slabKeyLength && key[0] == '$'
 }
 
-func storageKeySlabStorageID(address atree.Address, key string) atree.StorageID {
+func storageKeyToSlabID(address atree.Address, key string) atree.SlabID {
 	if !isSlabStorageKey(key) {
-		return atree.StorageIDUndefined
+		return atree.SlabIDUndefined
 	}
-	var result atree.StorageID
-	result.Address = address
-	copy(result.Index[:], key[1:])
-	return result
+
+	var index atree.SlabIndex
+	copy(index[:], key[1:])
+
+	return atree.NewSlabID(address, index)
 }
 
-func decodeStorable(decoder *cbor.StreamDecoder, storableSlabStorageID atree.StorageID) (atree.Storable, error) {
-	return interpreter.DecodeStorable(decoder, storableSlabStorageID, nil)
+func decodeStorable(
+	decoder *cbor.StreamDecoder,
+	storableSlabStorageID atree.SlabID,
+	inlinedExtraData []atree.ExtraData,
+) (atree.Storable, error) {
+	return interpreter.DecodeStorable(decoder, storableSlabStorageID, inlinedExtraData, nil)
 }
 
 func decodeTypeInfo(decoder *cbor.StreamDecoder) (atree.TypeInfo, error) {
 	return interpreter.DecodeTypeInfo(decoder, nil)
 }
 
-func decodeSlab(id atree.StorageID, data []byte) (atree.Slab, error) {
+func decodeSlab(id atree.SlabID, data []byte) (atree.Slab, error) {
 	return atree.DecodeSlab(
 		id,
 		data,
@@ -108,11 +114,14 @@ func decodeSlab(id atree.StorageID, data []byte) (atree.Slab, error) {
 	)
 }
 
-func storageIDStorageKey(id atree.StorageID) storageKey {
+func slabIDToStorageKey(id atree.SlabID) storageKey {
+	address := id.Address()
+	index := id.Index()
+
 	return storageKey{
-		string(id.Address[:]),
+		string(address[:]),
 		"",
-		"$" + string(id.Index[:]),
+		"$" + string(index[:]),
 	}
 }
 
@@ -122,8 +131,8 @@ type slabStorage struct{}
 
 var _ atree.SlabStorage = &slabStorage{}
 
-func (s *slabStorage) Retrieve(id atree.StorageID) (atree.Slab, bool, error) {
-	data, ok := storage[storageIDStorageKey(id)]
+func (s *slabStorage) Retrieve(id atree.SlabID) (atree.Slab, bool, error) {
+	data, ok := storage[slabIDToStorageKey(id)]
 	if !ok {
 		return nil, false, nil
 	}
@@ -136,22 +145,22 @@ func (s *slabStorage) Retrieve(id atree.StorageID) (atree.Slab, bool, error) {
 	return slab, true, nil
 }
 
-func (s *slabStorage) Store(_ atree.StorageID, _ atree.Slab) error {
+func (s *slabStorage) Store(_ atree.SlabID, _ atree.Slab) error {
 	panic("unexpected Store call")
 }
 
-func (s *slabStorage) Remove(_ atree.StorageID) error {
+func (s *slabStorage) Remove(_ atree.SlabID) error {
 	panic("unexpected Remove call")
 }
 
-func (s *slabStorage) GenerateStorageID(_ atree.Address) (atree.StorageID, error) {
+func (s *slabStorage) GenerateSlabID(_ atree.Address) (atree.SlabID, error) {
 	panic("unexpected GenerateStorageID call")
 }
 
 func (s *slabStorage) SlabIterator() (atree.SlabIterator, error) {
 	var slabs []struct {
 		storageKey
-		atree.StorageID
+		atree.SlabID
 	}
 
 	// NOTE: iteration over map is safe,
@@ -161,16 +170,16 @@ func (s *slabStorage) SlabIterator() (atree.SlabIterator, error) {
 
 		var address atree.Address
 		copy(address[:], key[0])
-		storageID := storageKeySlabStorageID(address, key[2])
-		if storageID == atree.StorageIDUndefined {
+		slabID := storageKeyToSlabID(address, key[2])
+		if slabID == atree.SlabIDUndefined {
 			continue
 		}
 
 		slabs = append(slabs, struct {
 			storageKey
-			atree.StorageID
+			atree.SlabID
 		}{
-			StorageID:  storageID,
+			SlabID:     slabID,
 			storageKey: key,
 		})
 	}
@@ -178,17 +187,17 @@ func (s *slabStorage) SlabIterator() (atree.SlabIterator, error) {
 	sort.Slice(slabs, func(i, j int) bool {
 		a := slabs[i]
 		b := slabs[j]
-		return a.StorageID.Compare(b.StorageID) < 0
+		return a.SlabID.Compare(b.SlabID) < 0
 	})
 
 	var i int
 
 	bar := progressbar.Default(int64(len(slabs)))
 
-	return func() (atree.StorageID, atree.Slab) {
+	return func() (atree.SlabID, atree.Slab) {
 		if i >= len(slabs) {
 			_ = bar.Close()
-			return atree.StorageIDUndefined, nil
+			return atree.SlabIDUndefined, nil
 		}
 
 		slabEntry := slabs[i]
@@ -196,15 +205,15 @@ func (s *slabStorage) SlabIterator() (atree.SlabIterator, error) {
 
 		_ = bar.Add(1)
 
-		storageID := slabEntry.StorageID
+		slabID := slabEntry.SlabID
 		data := storage[slabEntry.storageKey]
 
-		slab, err := decodeSlab(storageID, data)
+		slab, err := decodeSlab(slabID, data)
 		if err != nil {
-			log.Fatalf("failed to decode slab @ %s", storageID)
+			log.Fatalf("failed to decode slab @ %s", slabID)
 		}
 
-		return storageID, slab
+		return slabID, slab
 	}, nil
 }
 
@@ -212,8 +221,9 @@ func (s *slabStorage) Count() int {
 	return len(storage)
 }
 
-func (s *slabStorage) RetrieveIfLoaded(id atree.StorageID) atree.Slab {
-	panic("unexpected RetrieveIfLoaded call")
+func (s *slabStorage) RetrieveIfLoaded(atree.SlabID) atree.Slab {
+	// RetrieveIfLoaded() is used for loaded resource tracking.  So it isn't needed here.
+	panic(runtimeErr.NewUnreachableError())
 }
 
 // interpreterStorage
@@ -323,20 +333,17 @@ func loadStorageKey(
 
 		if !*checkSlabsFlag {
 
-			var storageIndex atree.StorageIndex
+			var slabIndex atree.SlabIndex
 			// Skip '$' prefix
-			copy(storageIndex[:], key[1:])
+			copy(slabIndex[:], key[1:])
 
-			storageID := atree.StorageID{
-				Address: address,
-				Index:   storageIndex,
-			}
+			slabID := atree.NewSlabID(address, slabIndex)
 
-			_, err := decodeSlab(storageID, data)
+			_, err := decodeSlab(slabID, data)
 			if err != nil {
 				log.Printf(
 					"Failed to decode slab @ %s: %s (size: %d)",
-					storageID, err, len(data),
+					slabID, err, len(data),
 				)
 				return err
 			}
@@ -354,7 +361,7 @@ func loadStorageKey(
 
 			reader := bytes.NewReader(data)
 			decoder := interpreter.CBORDecMode.NewStreamDecoder(reader)
-			storable, err := interpreter.DecodeStorable(decoder, atree.StorageIDUndefined, nil)
+			storable, err := interpreter.DecodeStorable(decoder, atree.SlabIDUndefined, nil, nil)
 			if err != nil {
 				log.Printf(
 					"Failed to decode storable @ 0x%x %s: %s (data: %x)\n",

@@ -3656,7 +3656,7 @@ func (*InvalidIntersectedTypeError) IsUserError() {}
 
 func (e *InvalidIntersectedTypeError) Error() string {
 	return fmt.Sprintf(
-		"cannot restrict using non-resource/structure/contract interface type: `%s`",
+		"intersection type with invalid non-interface type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
@@ -4808,4 +4808,77 @@ func (*NestedReferenceError) IsUserError() {}
 
 func (e *NestedReferenceError) Error() string {
 	return fmt.Sprintf("cannot create a nested reference to value of type %s", e.Type.QualifiedString())
+}
+
+// ResultVariableConflictError
+
+type ResultVariableConflictError struct {
+	Kind                common.DeclarationKind
+	Pos                 ast.Position
+	ReturnTypeRange     ast.Range
+	PostConditionsRange ast.Range
+}
+
+var _ SemanticError = &ResultVariableConflictError{}
+var _ errors.UserError = &ResultVariableConflictError{}
+var _ errors.SecondaryError = &ResultVariableConflictError{}
+
+func (*ResultVariableConflictError) isSemanticError() {}
+
+func (*ResultVariableConflictError) IsUserError() {}
+
+func (e *ResultVariableConflictError) Error() string {
+	return fmt.Sprintf(
+		"cannot declare %[1]s `%[2]s`: it conflicts with the `%[2]s` variable for the post-conditions",
+		e.Kind.Name(),
+		ResultIdentifier,
+	)
+}
+
+func (*ResultVariableConflictError) SecondaryError() string {
+	return "consider renaming the variable"
+}
+
+func (e *ResultVariableConflictError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *ResultVariableConflictError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
+	length := len(ResultIdentifier)
+	return e.Pos.Shifted(memoryGauge, length-1)
+}
+
+func (e *ResultVariableConflictError) ErrorNotes() []errors.ErrorNote {
+	return []errors.ErrorNote{
+		ResultVariableReturnTypeNote{
+			Range: e.ReturnTypeRange,
+		},
+		ResultVariablePostConditionsNote{
+			Range: e.PostConditionsRange,
+		},
+	}
+}
+
+// ResultVariableReturnTypeNote
+
+type ResultVariableReturnTypeNote struct {
+	ast.Range
+}
+
+var _ errors.ErrorNote = ResultVariableReturnTypeNote{}
+
+func (ResultVariableReturnTypeNote) Message() string {
+	return "non-Void return type declared here"
+}
+
+// ResultVariablePostConditionsNote
+
+type ResultVariablePostConditionsNote struct {
+	ast.Range
+}
+
+var _ errors.ErrorNote = ResultVariablePostConditionsNote{}
+
+func (ResultVariablePostConditionsNote) Message() string {
+	return "post-conditions declared here"
 }

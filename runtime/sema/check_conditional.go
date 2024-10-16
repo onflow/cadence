@@ -128,7 +128,7 @@ func (checker *Checker) VisitConditionalExpression(expression *ast.ConditionalEx
 		return thenType
 	}
 
-	return LeastCommonSuperType(thenType, elseType)
+	return checker.leastCommonSuperType(expression, thenType, elseType)
 }
 
 // checkConditionalBranches checks two conditional branches.

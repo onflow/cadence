@@ -376,7 +376,7 @@ func TestCheckInvalidResourceCapturingJustMemberAccess(t *testing.T) {
 	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
 }
 
-func TestCheckInvalidFunctionWithResult(t *testing.T) {
+func TestCheckFunctionWithResult(t *testing.T) {
 
 	t.Parallel()
 
@@ -386,10 +386,26 @@ func TestCheckInvalidFunctionWithResult(t *testing.T) {
          return result
      }
    `)
+	require.NoError(t, err)
+}
+
+func TestCheckInvalidFunctionWithResultAndPostCondition(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+     fun test(): Int {
+         post {
+             result == 0
+         }
+         let result = 0
+         return result
+     }
+   `)
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
+	assert.IsType(t, &sema.ResultVariableConflictError{}, errs[0])
 }
 
 func TestCheckFunctionNonExistingField(t *testing.T) {
@@ -596,5 +612,38 @@ func TestCheckResultVariable(t *testing.T) {
 		)
 
 		require.NoError(t, err)
+	})
+}
+
+func TestCheckViewFunctionWithErrors(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("index assignment", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            view fun foo() {
+                a[b] = 1
+            }`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		assert.IsType(t, &sema.PurityError{}, errs[1])
+	})
+
+	t.Run("member assignment", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            view fun foo() {
+                a.b = 1
+            }`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		assert.IsType(t, &sema.PurityError{}, errs[1])
 	})
 }

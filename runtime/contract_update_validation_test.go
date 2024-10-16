@@ -395,6 +395,54 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		assertExtraneousFieldError(t, cause, "TestResource", "c")
 	})
 
+	testWithValidators(t, "remove field from nested decl", func(t *testing.T, config Config) {
+
+		const oldCode = `
+            access(all) contract Test {
+
+                access(all) var a: @TestResource
+
+                init() {
+                    self.a <- create Test.TestResource()
+                }
+
+                access(all) resource TestResource {
+
+                    access(all) var b: String
+                    access(all) var c: Int
+
+                    init() {
+                        self.b = "hello"
+                        self.c = 0
+                    }
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+
+                access(all) var a: @Test.TestResource
+
+                init() {
+                    self.a <- create Test.TestResource()
+                }
+
+                access(all) resource TestResource {
+
+                    access(all) var b: String
+
+                    init() {
+                        self.b = "hello"
+                    }
+                }
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+		require.NoError(t, err)
+	})
+
 	testWithValidators(t, "change indirect field type", func(t *testing.T, config Config) {
 
 		const oldCode = `
@@ -2434,6 +2482,45 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		require.NoError(t, err)
 	})
+
+	testWithValidators(t, "Add event", func(t *testing.T, config Config) {
+
+		const oldCode = `
+            access(all) contract Test {
+                access(all) event Foo()
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) event Foo()
+                access(all) event Bar()
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+		require.NoError(t, err)
+	})
+
+	testWithValidators(t, "Update event", func(t *testing.T, config Config) {
+
+		const oldCode = `
+            access(all) contract Test {
+                access(all) event Foo()
+                access(all) event Bar()
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) event Foo(a: Int)
+                access(all) event Bar(b: String)
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+		require.NoError(t, err)
+	})
 }
 
 func assertContractRemovalError(t *testing.T, err error, name string) {
@@ -3578,4 +3665,102 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
 			require.ErrorAs(t, err, &expectedErr)
 		},
 	)
+}
+
+func TestRuntimeContractUpdateErrorsInOldProgram(t *testing.T) {
+
+	t.Parallel()
+
+	testWithValidatorsAndTypeRemovalEnabled(t,
+		"invalid #removedType pragma in old code",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                    // invalid type removal pragma in old code
+                    #removedType(R, R2)
+                    access(all) resource R {}
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    access(all) resource R {}
+                }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+
+			// Should not report any errors for the type invalid removal pragma in the old code.
+			require.NoError(t, err)
+		},
+	)
+
+	testWithValidators(t, "invalid old program", func(t *testing.T, config Config) {
+
+		runtime := NewTestInterpreterRuntime()
+
+		var events []cadence.Event
+
+		address := common.MustBytesToAddress([]byte{0x2})
+
+		location := common.AddressLocation{
+			Name:    "Test",
+			Address: address,
+		}
+
+		const oldCode = `
+		    access(all) fun main() {
+                // some lines to increase program length
+            }
+		`
+
+		accountCodes := map[Location][]byte{
+			location: []byte(oldCode),
+		}
+
+		runtimeInterface := &TestRuntimeInterface{
+			OnGetCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location], nil
+			},
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{address}, nil
+			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				return accountCodes[location], nil
+			},
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		const newCode = `
+			access(all) contract Test {}
+		`
+
+		updateTransaction := []byte(newContractUpdateTransaction("Test", newCode))
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: updateTransaction,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		RequireError(t, err)
+		oldProgramError := &stdlib.OldProgramError{}
+		require.ErrorAs(t, err, &oldProgramError)
+	})
 }

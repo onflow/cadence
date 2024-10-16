@@ -240,19 +240,19 @@ func TestStaticTypeMigration(t *testing.T) {
 
 		actual := migrate(t,
 			staticTypeMigration,
-			&interpreter.PathCapabilityValue{ //nolint:staticcheck
-				BorrowType: nil,
-				Path:       path,
-				Address:    interpreter.AddressValue(testAddress),
-			},
+			interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+				nil,
+				interpreter.AddressValue(testAddress),
+				path,
+			),
 			true,
 		)
 		assert.Equal(t,
-			&interpreter.PathCapabilityValue{ //nolint:staticcheck
-				BorrowType: nil,
-				Path:       path,
-				Address:    interpreter.AddressValue(testAddress),
-			},
+			interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+				nil,
+				interpreter.AddressValue(testAddress),
+				path,
+			),
 			actual,
 		)
 	})
@@ -866,6 +866,7 @@ func TestMigratingNestedContainers(t *testing.T) {
 			false,
 			nil,
 			nil,
+			true, // standalone values doesn't have a parent container.
 		)
 
 		inter.WriteStored(
@@ -1324,6 +1325,7 @@ func TestOptionalTypeRehash(t *testing.T) {
 				false,
 				nil,
 				nil,
+				false,
 			),
 		)
 

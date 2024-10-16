@@ -592,6 +592,8 @@ func TestAccountTypeInNestedTypeValueMigration(t *testing.T) {
 	fooAddressLocation := common.NewAddressLocation(nil, account, "Foo")
 	const fooBarQualifiedIdentifier = "Foo.Bar"
 
+	locationRange := interpreter.EmptyLocationRange
+
 	testCases := map[string]testCase{
 		"account_some_value": {
 			storedValue: func(_ *interpreter.Interpreter) interpreter.Value {
@@ -613,7 +615,7 @@ func TestAccountTypeInNestedTypeValueMigration(t *testing.T) {
 			storedValue: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewArrayValue(
 					inter,
-					interpreter.EmptyLocationRange,
+					locationRange,
 					interpreter.NewVariableSizedStaticType(nil, interpreter.PrimitiveStaticTypeAnyStruct),
 					common.ZeroAddress,
 					stringTypeValue,
@@ -626,7 +628,7 @@ func TestAccountTypeInNestedTypeValueMigration(t *testing.T) {
 			expectedValue: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewArrayValue(
 					inter,
-					interpreter.EmptyLocationRange,
+					locationRange,
 					interpreter.NewVariableSizedStaticType(nil, interpreter.PrimitiveStaticTypeAnyStruct),
 					common.ZeroAddress,
 					stringTypeValue,
@@ -642,7 +644,7 @@ func TestAccountTypeInNestedTypeValueMigration(t *testing.T) {
 			storedValue: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewArrayValue(
 					inter,
-					interpreter.EmptyLocationRange,
+					locationRange,
 					interpreter.NewVariableSizedStaticType(nil, interpreter.PrimitiveStaticTypeAnyStruct),
 					common.ZeroAddress,
 					stringTypeValue,
@@ -657,7 +659,7 @@ func TestAccountTypeInNestedTypeValueMigration(t *testing.T) {
 			storedValue: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewDictionaryValue(
 					inter,
-					interpreter.EmptyLocationRange,
+					locationRange,
 					interpreter.NewDictionaryStaticType(
 						nil,
 						interpreter.PrimitiveStaticTypeInt8,
@@ -672,7 +674,7 @@ func TestAccountTypeInNestedTypeValueMigration(t *testing.T) {
 			expectedValue: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewDictionaryValue(
 					inter,
-					interpreter.EmptyLocationRange,
+					locationRange,
 					interpreter.NewDictionaryStaticType(
 						nil,
 						interpreter.PrimitiveStaticTypeInt8,
@@ -690,7 +692,7 @@ func TestAccountTypeInNestedTypeValueMigration(t *testing.T) {
 			storedValue: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewDictionaryValue(
 					inter,
-					interpreter.EmptyLocationRange,
+					locationRange,
 					interpreter.NewDictionaryStaticType(
 						nil,
 						interpreter.PrimitiveStaticTypeInt8,
@@ -703,7 +705,7 @@ func TestAccountTypeInNestedTypeValueMigration(t *testing.T) {
 			expectedValue: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewDictionaryValue(
 					inter,
-					interpreter.EmptyLocationRange,
+					locationRange,
 					interpreter.NewDictionaryStaticType(
 						nil,
 						interpreter.PrimitiveStaticTypeInt8,
@@ -719,7 +721,7 @@ func TestAccountTypeInNestedTypeValueMigration(t *testing.T) {
 			storedValue: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewDictionaryValue(
 					inter,
-					interpreter.EmptyLocationRange,
+					locationRange,
 					interpreter.NewDictionaryStaticType(
 						nil,
 						interpreter.PrimitiveStaticTypeMetaType,
@@ -737,7 +739,7 @@ func TestAccountTypeInNestedTypeValueMigration(t *testing.T) {
 			expectedValue: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewDictionaryValue(
 					inter,
-					interpreter.EmptyLocationRange,
+					locationRange,
 					interpreter.NewDictionaryStaticType(
 						nil,
 						interpreter.PrimitiveStaticTypeMetaType,
@@ -753,7 +755,7 @@ func TestAccountTypeInNestedTypeValueMigration(t *testing.T) {
 			storedValue: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewDictionaryValue(
 					inter,
-					interpreter.EmptyLocationRange,
+					locationRange,
 					interpreter.NewDictionaryStaticType(
 						nil,
 						interpreter.PrimitiveStaticTypeMetaType,
@@ -771,7 +773,7 @@ func TestAccountTypeInNestedTypeValueMigration(t *testing.T) {
 			expectedValue: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewDictionaryValue(
 					inter,
-					interpreter.EmptyLocationRange,
+					locationRange,
 					interpreter.NewDictionaryStaticType(
 						nil,
 						interpreter.PrimitiveStaticTypeMetaType,
@@ -787,7 +789,7 @@ func TestAccountTypeInNestedTypeValueMigration(t *testing.T) {
 			storedValue: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewCompositeValue(
 					inter,
-					interpreter.EmptyLocationRange,
+					locationRange,
 					fooAddressLocation,
 					fooBarQualifiedIdentifier,
 					common.CompositeKindResource,
@@ -801,7 +803,7 @@ func TestAccountTypeInNestedTypeValueMigration(t *testing.T) {
 			expectedValue: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewCompositeValue(
 					inter,
-					interpreter.EmptyLocationRange,
+					locationRange,
 					fooAddressLocation,
 					fooBarQualifiedIdentifier,
 					common.CompositeKindResource,
@@ -839,11 +841,12 @@ func TestAccountTypeInNestedTypeValueMigration(t *testing.T) {
 
 			transferredValue := testCase.storedValue(inter).Transfer(
 				inter,
-				interpreter.EmptyLocationRange,
+				locationRange,
 				atree.Address(account),
 				false,
 				nil,
 				nil,
+				true, // storedValue is standalone
 			)
 
 			inter.WriteStored(
@@ -913,12 +916,14 @@ func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 		validateStorage bool
 	}
 
+	locationRange := interpreter.EmptyLocationRange
+
 	testCases := map[string]testCase{
 		"dictionary_value": {
 			storedValue: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewDictionaryValue(
 					inter,
-					interpreter.EmptyLocationRange,
+					locationRange,
 					interpreter.NewDictionaryStaticType(
 						nil,
 						interpreter.PrimitiveStaticTypeString,
@@ -929,7 +934,7 @@ func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 			expectedValue: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewDictionaryValue(
 					inter,
-					interpreter.EmptyLocationRange,
+					locationRange,
 					interpreter.NewDictionaryStaticType(
 						nil,
 						interpreter.PrimitiveStaticTypeString,
@@ -944,7 +949,7 @@ func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 			storedValue: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewArrayValue(
 					inter,
-					interpreter.EmptyLocationRange,
+					locationRange,
 					interpreter.NewVariableSizedStaticType(
 						nil,
 						interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
@@ -955,7 +960,7 @@ func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 			expectedValue: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewArrayValue(
 					inter,
-					interpreter.EmptyLocationRange,
+					locationRange,
 					interpreter.NewVariableSizedStaticType(
 						nil,
 						unauthorizedAccountReferenceType,
@@ -1059,18 +1064,18 @@ func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 		},
 		"path_capability_value": {
 			storedValue: func(_ *interpreter.Interpreter) interpreter.Value {
-				return &interpreter.PathCapabilityValue{ //nolint:staticcheck
-					Address:    interpreter.NewAddressValue(nil, common.Address{0x42}),
-					Path:       interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
-					BorrowType: interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
-				}
+				return interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+					interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+					interpreter.NewAddressValue(nil, common.Address{0x42}),
+					interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
+				)
 			},
 			expectedValue: func(_ *interpreter.Interpreter) interpreter.Value {
-				return &interpreter.PathCapabilityValue{ //nolint:staticcheck
-					Address:    interpreter.NewAddressValue(nil, common.Address{0x42}),
-					Path:       interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
-					BorrowType: unauthorizedAccountReferenceType,
-				}
+				return interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+					unauthorizedAccountReferenceType,
+					interpreter.NewAddressValue(nil, common.Address{0x42}),
+					interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
+				)
 			},
 			validateStorage: true,
 		},
@@ -1078,7 +1083,7 @@ func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 			storedValue: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewDictionaryValue(
 					inter,
-					interpreter.EmptyLocationRange,
+					locationRange,
 					interpreter.NewDictionaryStaticType(
 						nil,
 						interpreter.PrimitiveStaticTypeString,
@@ -1099,7 +1104,7 @@ func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 			expectedValue: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewDictionaryValue(
 					inter,
-					interpreter.EmptyLocationRange,
+					locationRange,
 					interpreter.NewDictionaryStaticType(
 						nil,
 						interpreter.PrimitiveStaticTypeString,
@@ -1145,11 +1150,12 @@ func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 
 			transferredValue := testCase.storedValue(inter).Transfer(
 				inter,
-				interpreter.EmptyLocationRange,
+				locationRange,
 				atree.Address(account),
 				false,
 				nil,
 				nil,
+				true, // storedValue is standalone
 			)
 
 			inter.WriteStored(
@@ -1285,6 +1291,7 @@ func TestAccountTypeRehash(t *testing.T) {
 						false,
 						nil,
 						nil,
+						true, // dictValue is standalone
 					),
 				)
 
@@ -1349,11 +1356,15 @@ func TestAccountTypeRehash(t *testing.T) {
 				dictValue := storedValue.(*interpreter.DictionaryValue)
 
 				var existingKeys []interpreter.Value
-				dictValue.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
-					existingKeys = append(existingKeys, key)
-					// continue iteration
-					return true
-				}, interpreter.EmptyLocationRange)
+				dictValue.Iterate(
+					inter,
+					interpreter.EmptyLocationRange,
+					func(key, value interpreter.Value) (resume bool) {
+						existingKeys = append(existingKeys, key)
+						// continue iteration
+						return true
+					},
+				)
 
 				require.Len(t, existingKeys, 1)
 

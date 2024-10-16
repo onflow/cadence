@@ -45,9 +45,9 @@ type InterpretedFunctionValue struct {
 	Type             *sema.FunctionType
 	Activation       *VariableActivation
 	BeforeStatements []ast.Statement
-	PreConditions    ast.Conditions
+	PreConditions    []ast.Condition
 	Statements       []ast.Statement
-	PostConditions   ast.Conditions
+	PostConditions   []ast.Condition
 }
 
 func NewInterpretedFunctionValue(
@@ -56,9 +56,9 @@ func NewInterpretedFunctionValue(
 	functionType *sema.FunctionType,
 	lexicalScope *VariableActivation,
 	beforeStatements []ast.Statement,
-	preConditions ast.Conditions,
+	preConditions []ast.Condition,
 	statements []ast.Statement,
-	postConditions ast.Conditions,
+	postConditions []ast.Condition,
 ) *InterpretedFunctionValue {
 
 	common.UseMemory(interpreter, common.InterpretedFunctionValueMemoryUsage)
@@ -151,7 +151,8 @@ func (f *InterpretedFunctionValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
-	_ map[atree.StorageID]struct{},
+	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
@@ -164,7 +165,7 @@ func (f *InterpretedFunctionValue) Clone(_ *Interpreter) Value {
 	return f
 }
 
-func (*InterpretedFunctionValue) DeepRemove(_ *Interpreter) {
+func (*InterpretedFunctionValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -303,7 +304,8 @@ func (f *HostFunctionValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
-	_ map[atree.StorageID]struct{},
+	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
@@ -316,7 +318,7 @@ func (f *HostFunctionValue) Clone(_ *Interpreter) Value {
 	return f
 }
 
-func (*HostFunctionValue) DeepRemove(_ *Interpreter) {
+func (*HostFunctionValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -328,9 +330,9 @@ func (v *HostFunctionValue) SetNestedVariables(variables map[string]Variable) {
 type BoundFunctionValue struct {
 	Function           FunctionValue
 	Base               *EphemeralReferenceValue
-	Self               *Value
 	BoundAuthorization Authorization
-	selfRef            ReferenceValue
+	SelfReference      ReferenceValue
+	selfIsReference    bool
 }
 
 var _ Value = BoundFunctionValue{}
@@ -344,6 +346,35 @@ func NewBoundFunctionValue(
 	boundAuth Authorization,
 ) BoundFunctionValue {
 
+	// Since 'self' work as an implicit reference, create an explicit one and hold it.
+	// This reference is later used to check the validity of the referenced value/resource.
+	// For attachments, 'self' is already a reference. So no need to create a reference again.
+
+	selfRef, selfIsRef := (*self).(ReferenceValue)
+	if !selfIsRef {
+		semaType := interpreter.MustSemaTypeOfValue(*self)
+		selfRef = NewEphemeralReferenceValue(interpreter, boundAuth, *self, semaType, EmptyLocationRange)
+	}
+
+	return NewBoundFunctionValueFromSelfReference(
+		interpreter,
+		function,
+		selfRef,
+		selfIsRef,
+		base,
+		boundAuth,
+	)
+}
+
+func NewBoundFunctionValueFromSelfReference(
+	interpreter *Interpreter,
+	function FunctionValue,
+	selfReference ReferenceValue,
+	selfIsReference bool,
+	base *EphemeralReferenceValue,
+	boundAuth Authorization,
+) BoundFunctionValue {
+
 	// If the function is already a bound function, then do not re-wrap.
 	if boundFunc, isBoundFunc := function.(BoundFunctionValue); isBoundFunc {
 		return boundFunc
@@ -351,22 +382,10 @@ func NewBoundFunctionValue(
 
 	common.UseMemory(interpreter, common.BoundFunctionValueMemoryUsage)
 
-	// Since 'self' work as an implicit reference, create an explicit one and hold it.
-	// This reference is later used to check the validity of the referenced value/resource.
-	var selfRef ReferenceValue
-	if reference, isReference := (*self).(ReferenceValue); isReference {
-		// For attachments, 'self' is already a reference.
-		// So no need to create a reference again.
-		selfRef = reference
-	} else {
-		semaType := interpreter.MustSemaTypeOfValue(*self)
-		selfRef = NewEphemeralReferenceValue(interpreter, boundAuth, *self, semaType, EmptyLocationRange)
-	}
-
 	return BoundFunctionValue{
 		Function:           function,
-		Self:               self,
-		selfRef:            selfRef,
+		SelfReference:      selfReference,
+		selfIsReference:    selfIsReference,
 		Base:               base,
 		BoundAuthorization: boundAuth,
 	}
@@ -409,44 +428,41 @@ func (f BoundFunctionValue) FunctionType() *sema.FunctionType {
 }
 
 func (f BoundFunctionValue) invoke(invocation Invocation) Value {
-	invocation.Self = f.Self
+
 	invocation.Base = f.Base
 	invocation.BoundAuthorization = f.BoundAuthorization
 
 	locationRange := invocation.LocationRange
 	inter := invocation.Interpreter
 
-	// Check if the 'self' is not invalidated.
-	if storageRef, isStorageRef := f.selfRef.(*StorageReferenceValue); isStorageRef {
-		inter.checkInvalidatedStorageReference(storageRef, locationRange)
+	// If the `self` is already a reference to begin with (e.g: attachments),
+	// then pass the reference as-is to the invocation.
+	// Otherwise, always dereference, at the time of the invocation.
+
+	if f.selfIsReference {
+		var self Value = f.SelfReference
+		invocation.Self = &self
 	} else {
-		inter.checkInvalidatedResourceOrResourceReference(f.selfRef, locationRange)
+		invocation.Self = f.SelfReference.ReferencedValue(
+			inter,
+			EmptyLocationRange,
+			true,
+		)
+	}
+
+	if _, isStorageRef := f.SelfReference.(*StorageReferenceValue); isStorageRef {
+		// `storageRef.ReferencedValue` above already checks for the type validity, if it's not nil.
+		// If nil, that means the value has been moved out of storage.
+		if invocation.Self == nil {
+			panic(ReferencedValueChangedError{
+				LocationRange: locationRange,
+			})
+		}
+	} else {
+		inter.checkInvalidatedResourceOrResourceReference(f.SelfReference, locationRange)
 	}
 
 	return f.Function.invoke(invocation)
-}
-
-// checkInvalidatedStorageReference checks whether a storage reference is valid, by
-// comparing the referenced-value against the cached-referenced-value.
-// A storage reference can be invalid for both resources and non-resource values.
-func (interpreter *Interpreter) checkInvalidatedStorageReference(
-	storageRef *StorageReferenceValue,
-	locationRange LocationRange,
-) {
-
-	referencedValue := storageRef.ReferencedValue(
-		interpreter,
-		locationRange,
-		true,
-	)
-
-	// `storageRef.ReferencedValue` above already checks for the type validity, if it's not nil.
-	// If nil, that means the value has been moved out of storage.
-	if referencedValue == nil {
-		panic(ReferencedValueChangedError{
-			LocationRange: locationRange,
-		})
-	}
 }
 
 func (f BoundFunctionValue) ConformsToStaticType(
@@ -479,7 +495,8 @@ func (f BoundFunctionValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
-	_ map[atree.StorageID]struct{},
+	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
@@ -492,19 +509,27 @@ func (f BoundFunctionValue) Clone(_ *Interpreter) Value {
 	return f
 }
 
-func (BoundFunctionValue) DeepRemove(_ *Interpreter) {
+func (BoundFunctionValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
 // NewBoundHostFunctionValue creates a bound-function value for a host-function.
-func NewBoundHostFunctionValue(
+func NewBoundHostFunctionValue[T Value](
 	interpreter *Interpreter,
 	self Value,
 	funcType *sema.FunctionType,
-	function HostFunction,
+	function func(self T, invocation Invocation) Value,
 ) BoundFunctionValue {
 
-	hostFunc := NewStaticHostFunctionValue(interpreter, funcType, function)
+	wrappedFunction := func(invocation Invocation) Value {
+		self, ok := (*invocation.Self).(T)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		return function(self, invocation)
+	}
+
+	hostFunc := NewStaticHostFunctionValue(interpreter, funcType, wrappedFunction)
 
 	return NewBoundFunctionValue(
 		interpreter,

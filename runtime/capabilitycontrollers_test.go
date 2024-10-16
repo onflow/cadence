@@ -191,9 +191,11 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			},
 		)
 
-		storage, _, _ = rt.Storage(Context{
+		var storageErr error
+		storage, _, storageErr = rt.Storage(Context{
 			Interface: runtimeInterface,
 		})
+		require.NoError(t, storageErr)
 
 		return
 	}
@@ -2034,6 +2036,48 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				nonDeploymentEventStrings(events),
 			)
 		})
+
+		t.Run("forEachController, box and convert argument", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _, _ := test(
+				t,
+				// language=cadence
+				`
+                  import Test from 0x1
+
+                  transaction {
+                      prepare(signer: auth(Capabilities) &Account) {
+                          let storagePath = /storage/r
+
+                          // Arrange
+						  signer.capabilities.storage.issue<&Test.R>(storagePath)
+
+                          // Act
+                          var res: String? = nil
+                          signer.capabilities.storage.forEachController(
+                              forPath: storagePath,
+                              // NOTE: The function has a parameter of type &StorageCapabilityController?
+                              // instead of just &StorageCapabilityController
+                              fun (controller: &StorageCapabilityController?): Bool {
+                                  // The map should call Optional.map, not fail,
+                                  // because path is PublicPath?, not PublicPath
+                                  res = controller.map(fun(string: AnyStruct): String {
+                                      return "Optional.map"
+                                  })
+                                  return true
+                              }
+                          )
+
+                          // Assert
+                          assert(res == "Optional.map")
+                      }
+                  }
+                `,
+			)
+			require.NoError(t, err)
+		})
 	})
 
 	t.Run("Account.AccountCapabilities", func(t *testing.T) {
@@ -2603,6 +2647,45 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				},
 				nonDeploymentEventStrings(events),
 			)
+		})
+
+		t.Run("forEachController, box and convert argument", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _, _ := test(
+				t,
+				// language=cadence
+				`
+                  import Test from 0x1
+
+                  transaction {
+                      prepare(signer: auth(Capabilities) &Account) {
+                          // Arrange
+						  signer.capabilities.account.issue<&Account>()
+
+                          // Act
+                          var res: String? = nil
+                          signer.capabilities.account.forEachController(
+                              // NOTE: The function has a parameter of type &AccountCapabilityController?
+                              // instead of just &AccountCapabilityController
+                              fun (controller: &AccountCapabilityController?): Bool {
+                                  // The map should call Optional.map, not fail,
+                                  // because path is PublicPath?, not PublicPath
+                                  res = controller.map(fun(string: AnyStruct): String {
+                                      return "Optional.map"
+                                  })
+                                  return true
+                              }
+                          )
+
+                          // Assert
+                          assert(res == "Optional.map")
+                      }
+                  }
+                `,
+			)
+			require.NoError(t, err)
 		})
 	})
 
@@ -3737,4 +3820,301 @@ func TestRuntimeCapabilityControllerOperationAfterDeletion(t *testing.T) {
 			test(testCase, operation)
 		}
 	}
+}
+
+func TestRuntimeCapabilitiesGetBackwardCompatibility(t *testing.T) {
+	t.Parallel()
+
+	testAddress := common.MustBytesToAddress([]byte{0x1})
+
+	test := func(t *testing.T, value interpreter.Value) {
+
+		rt := NewTestInterpreterRuntime()
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+		}
+
+		storage, inter, err := rt.Storage(Context{
+			Interface: runtimeInterface,
+		})
+		require.NoError(t, err)
+
+		publicStorageMap := storage.GetStorageMap(
+			testAddress,
+			common.PathDomainPublic.Identifier(),
+			true,
+		)
+
+		publicStorageMap.SetValue(
+			inter,
+			interpreter.StringStorageMapKey("test"),
+			value,
+		)
+
+		err = storage.Commit(inter, false)
+		require.NoError(t, err)
+
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		_, err = rt.ExecuteScript(
+			Script{
+				Source: []byte(`
+                  access(all) fun main() {
+                      let capabilities = getAccount(0x1).capabilities
+                      let path = /public/test
+                      assert(capabilities.get<&AnyStruct>(path).id == 0)
+                      assert(capabilities.borrow<&AnyStruct>(path) == nil)
+                  }
+                `),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextScriptLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+	}
+
+	t.Run("path capability, typed", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+			&interpreter.ReferenceStaticType{
+				Authorization:  interpreter.UnauthorizedAccess,
+				ReferencedType: interpreter.PrimitiveStaticTypeInt,
+			},
+			interpreter.AddressValue(testAddress),
+			interpreter.PathValue{
+				Domain:     common.PathDomainStorage,
+				Identifier: "test",
+			},
+		))
+	})
+
+	t.Run("path capability, untyped", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+			// NOTE: no borrow type
+			nil,
+			interpreter.AddressValue(testAddress),
+			interpreter.PathValue{
+				Domain:     common.PathDomainStorage,
+				Identifier: "test",
+			},
+		))
+	})
+
+	t.Run("path link", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, interpreter.PathLinkValue{ //nolint:staticcheck
+			Type: &interpreter.ReferenceStaticType{
+				Authorization:  interpreter.UnauthorizedAccess,
+				ReferencedType: interpreter.PrimitiveStaticTypeInt,
+			},
+			TargetPath: interpreter.PathValue{
+				Domain:     common.PathDomainStorage,
+				Identifier: "test",
+			},
+		})
+	})
+}
+
+func TestRuntimeCapabilitiesPublishBackwardCompatibility(t *testing.T) {
+	t.Parallel()
+
+	testAddress := common.MustBytesToAddress([]byte{0x1})
+
+	test := func(t *testing.T, value interpreter.Value) {
+
+		rt := NewTestInterpreterRuntime()
+
+		var events []cadence.Event
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnEmitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+		}
+
+		storage, inter, err := rt.Storage(Context{
+			Interface: runtimeInterface,
+		})
+		require.NoError(t, err)
+
+		publicStorageMap := storage.GetStorageMap(
+			testAddress,
+			common.PathDomainStorage.Identifier(),
+			true,
+		)
+
+		publicStorageMap.SetValue(
+			inter,
+			interpreter.StringStorageMapKey("cap"),
+			value,
+		)
+
+		err = storage.Commit(inter, false)
+		require.NoError(t, err)
+
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		_, err = rt.ExecuteScript(
+			Script{
+				Source: []byte(`
+                  access(all) fun main() {
+                      let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
+                      let capability = account.storage.load<Capability>(from: /storage/cap)!
+                      account.capabilities.publish(capability, at: /public/test)
+                  }
+                `),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextScriptLocation(),
+			},
+		)
+		require.NoError(t, err)
+	}
+
+	t.Run("path capability, untyped", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+			// NOTE: no borrow type
+			nil,
+			interpreter.AddressValue(testAddress),
+			interpreter.PathValue{
+				Domain:     common.PathDomainStorage,
+				Identifier: "test",
+			},
+		))
+	})
+
+	t.Run("path capability, typed", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+			&interpreter.ReferenceStaticType{
+				Authorization:  interpreter.UnauthorizedAccess,
+				ReferencedType: interpreter.PrimitiveStaticTypeInt,
+			},
+			interpreter.AddressValue(testAddress),
+			interpreter.PathValue{
+				Domain:     common.PathDomainStorage,
+				Identifier: "test",
+			},
+		))
+	})
+}
+
+func TestRuntimeCapabilitiesUnpublishBackwardCompatibility(t *testing.T) {
+	t.Parallel()
+
+	testAddress := common.MustBytesToAddress([]byte{0x1})
+
+	test := func(t *testing.T, value interpreter.Value) {
+
+		rt := NewTestInterpreterRuntime()
+
+		var events []cadence.Event
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnEmitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+		}
+
+		storage, inter, err := rt.Storage(Context{
+			Interface: runtimeInterface,
+		})
+		require.NoError(t, err)
+
+		publicStorageMap := storage.GetStorageMap(
+			testAddress,
+			common.PathDomainPublic.Identifier(),
+			true,
+		)
+
+		publicStorageMap.SetValue(
+			inter,
+			interpreter.StringStorageMapKey("test"),
+			value,
+		)
+
+		err = storage.Commit(inter, false)
+		require.NoError(t, err)
+
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		_, err = rt.ExecuteScript(
+			Script{
+				Source: []byte(`
+                  access(all) fun main() {
+                      let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
+                      let capability = account.capabilities.unpublish(/public/test)!
+                      assert(capability.id == 0)
+                  }
+                `),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextScriptLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+	}
+
+	t.Run("path capability, untyped", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+			// NOTE: no borrow type
+			nil,
+			interpreter.AddressValue(testAddress),
+			interpreter.PathValue{
+				Domain:     common.PathDomainStorage,
+				Identifier: "test",
+			},
+		))
+	})
+
+	t.Run("path capability, typed", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+			&interpreter.ReferenceStaticType{
+				Authorization:  interpreter.UnauthorizedAccess,
+				ReferencedType: interpreter.PrimitiveStaticTypeInt,
+			},
+			interpreter.AddressValue(testAddress),
+			interpreter.PathValue{
+				Domain:     common.PathDomainStorage,
+				Identifier: "test",
+			},
+		))
+	})
+
+	t.Run("path link", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, interpreter.PathLinkValue{ //nolint:staticcheck
+			Type: &interpreter.ReferenceStaticType{
+				Authorization:  interpreter.UnauthorizedAccess,
+				ReferencedType: interpreter.PrimitiveStaticTypeInt,
+			},
+			TargetPath: interpreter.PathValue{
+				Domain:     common.PathDomainStorage,
+				Identifier: "test",
+			},
+		})
+	})
 }

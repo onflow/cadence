@@ -94,6 +94,9 @@ func NewREPL() (*REPL, error) {
 			return baseActivation
 		},
 		OnEventEmitted: standardLibraryHandler.NewOnEventEmittedHandler(),
+		ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+			panic(fmt.Errorf("cannot import %s: Importing programs is not supported yet", location.ID()))
+		},
 	}
 
 	inter, err := interpreter.NewInterpreter(
@@ -254,8 +257,11 @@ func (r *REPL) Accept(code []byte, eval bool) (inputIsComplete bool, err error) 
 		code = prefixedCode
 	}
 
-	tokens := lexer.Lex(code, nil)
+	tokens, err := lexer.Lex(code, nil)
 	defer tokens.Reclaim()
+	if err != nil {
+		return
+	}
 
 	inputIsComplete = isInputComplete(tokens)
 

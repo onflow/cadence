@@ -220,45 +220,57 @@ func TestFunctionBlock_MarshalJSON(t *testing.T) {
 				},
 			},
 			PreConditions: &Conditions{
-				&TestCondition{
-					Test: &BoolExpression{
-						Value: false,
-						Range: Range{
-							StartPos: Position{Offset: 7, Line: 8, Column: 9},
-							EndPos:   Position{Offset: 10, Line: 11, Column: 12},
-						},
-					},
-					Message: &StringExpression{
-						Value: "Pre failed",
-						Range: Range{
-							StartPos: Position{Offset: 13, Line: 14, Column: 15},
-							EndPos:   Position{Offset: 16, Line: 17, Column: 18},
-						},
-					},
+				Range: Range{
+					StartPos: Position{Offset: 44, Line: 45, Column: 46},
+					EndPos:   Position{Offset: 47, Line: 48, Column: 49},
 				},
-				&EmitCondition{
-					InvocationExpression: &InvocationExpression{
-						InvokedExpression: &IdentifierExpression{
-							Identifier: Identifier{
-								Identifier: "foobar",
-								Pos:        Position{Offset: 31, Line: 32, Column: 33},
+				Conditions: []Condition{
+					&TestCondition{
+						Test: &BoolExpression{
+							Value: false,
+							Range: Range{
+								StartPos: Position{Offset: 7, Line: 8, Column: 9},
+								EndPos:   Position{Offset: 10, Line: 11, Column: 12},
 							},
 						},
-						TypeArguments:     []*TypeAnnotation{},
-						Arguments:         []*Argument{},
-						ArgumentsStartPos: Position{Offset: 34, Line: 35, Column: 36},
-						EndPos:            Position{Offset: 37, Line: 38, Column: 39},
+						Message: &StringExpression{
+							Value: "Pre failed",
+							Range: Range{
+								StartPos: Position{Offset: 13, Line: 14, Column: 15},
+								EndPos:   Position{Offset: 16, Line: 17, Column: 18},
+							},
+						},
 					},
-					StartPos: Position{Offset: 40, Line: 41, Column: 42},
+					&EmitCondition{
+						InvocationExpression: &InvocationExpression{
+							InvokedExpression: &IdentifierExpression{
+								Identifier: Identifier{
+									Identifier: "foobar",
+									Pos:        Position{Offset: 31, Line: 32, Column: 33},
+								},
+							},
+							TypeArguments:     []*TypeAnnotation{},
+							Arguments:         []*Argument{},
+							ArgumentsStartPos: Position{Offset: 34, Line: 35, Column: 36},
+							EndPos:            Position{Offset: 37, Line: 38, Column: 39},
+						},
+						StartPos: Position{Offset: 40, Line: 41, Column: 42},
+					},
 				},
 			},
 			PostConditions: &Conditions{
-				&TestCondition{
-					Test: &BoolExpression{
-						Value: true,
-						Range: Range{
-							StartPos: Position{Offset: 19, Line: 20, Column: 21},
-							EndPos:   Position{Offset: 22, Line: 23, Column: 24},
+				Range: Range{
+					StartPos: Position{Offset: 50, Line: 51, Column: 52},
+					EndPos:   Position{Offset: 53, Line: 54, Column: 55},
+				},
+				Conditions: []Condition{
+					&TestCondition{
+						Test: &BoolExpression{
+							Value: true,
+							Range: Range{
+								StartPos: Position{Offset: 19, Line: 20, Column: 21},
+								EndPos:   Position{Offset: 22, Line: 23, Column: 24},
+							},
 						},
 					},
 				},
@@ -279,62 +291,70 @@ func TestFunctionBlock_MarshalJSON(t *testing.T) {
 								"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
 								"EndPos": {"Offset": 4, "Line": 5, "Column": 6}
 							},
-							"PreConditions": [
-								{
-									"Type": "TestCondition",
-									"Test": {
-										"Type": "BoolExpression",
-										"Value": false,
+							"PreConditions": {
+							    "StartPos": {"Offset": 44, "Line": 45, "Column": 46},
+							    "EndPos": {"Offset": 47, "Line": 48, "Column": 49},
+							    "Conditions": [
+									{
+										"Type": "TestCondition",
+										"Test": {
+											"Type": "BoolExpression",
+											"Value": false,
+											"StartPos": {"Offset": 7, "Line": 8, "Column": 9},
+											"EndPos": {"Offset": 10, "Line": 11, "Column": 12}
+										},
+										"Message": {
+											"Type": "StringExpression",
+											"Value": "Pre failed",
+											"StartPos": {"Offset": 13, "Line": 14, "Column": 15},
+											"EndPos": {"Offset": 16, "Line": 17, "Column": 18}
+										},
 										"StartPos": {"Offset": 7, "Line": 8, "Column": 9},
-										"EndPos": {"Offset": 10, "Line": 11, "Column": 12}
-									},
-									"Message": {
-										"Type": "StringExpression",
-										"Value": "Pre failed",
-										"StartPos": {"Offset": 13, "Line": 14, "Column": 15},
 										"EndPos": {"Offset": 16, "Line": 17, "Column": 18}
 									},
-									"StartPos": {"Offset": 7, "Line": 8, "Column": 9},
-									"EndPos": {"Offset": 16, "Line": 17, "Column": 18}
-								},
-								{
-									"Type": "EmitCondition",
-									"InvocationExpression": {
-										"Type": "InvocationExpression",
-										"InvokedExpression": {
-										   "Type": "IdentifierExpression",
-										   "Identifier": {
-											   "Identifier": "foobar",
+									{
+										"Type": "EmitCondition",
+										"InvocationExpression": {
+											"Type": "InvocationExpression",
+											"InvokedExpression": {
+											   "Type": "IdentifierExpression",
+											   "Identifier": {
+												   "Identifier": "foobar",
+												   "StartPos": {"Offset": 31, "Line": 32, "Column": 33},
+												   "EndPos": {"Offset": 36, "Line": 32, "Column": 38}
+											   },
 											   "StartPos": {"Offset": 31, "Line": 32, "Column": 33},
 											   "EndPos": {"Offset": 36, "Line": 32, "Column": 38}
-										   },
-										   "StartPos": {"Offset": 31, "Line": 32, "Column": 33},
-										   "EndPos": {"Offset": 36, "Line": 32, "Column": 38}
+											},
+											"TypeArguments": [],
+											"Arguments": [],
+											"ArgumentsStartPos": {"Offset": 34, "Line": 35, "Column": 36},
+											"StartPos": {"Offset": 31, "Line": 32, "Column": 33},
+											"EndPos": {"Offset": 37, "Line": 38, "Column": 39}
 										},
-										"TypeArguments": [],
-										"Arguments": [],
-										"ArgumentsStartPos": {"Offset": 34, "Line": 35, "Column": 36},
-										"StartPos": {"Offset": 31, "Line": 32, "Column": 33},
+										"StartPos": {"Offset": 40, "Line": 41, "Column": 42},
 										"EndPos": {"Offset": 37, "Line": 38, "Column": 39}
-									},
-									"StartPos": {"Offset": 40, "Line": 41, "Column": 42},
-									"EndPos": {"Offset": 37, "Line": 38, "Column": 39}
-								}
-							],
-							"PostConditions": [
-								{
-									"Type": "TestCondition",
-									"Test": {
-										"Type": "BoolExpression",
-										"Value": true,
+									}
+								]
+							},
+							"PostConditions": {
+							    "StartPos": {"Offset": 50, "Line": 51, "Column": 52},
+							    "EndPos": {"Offset": 53, "Line": 54, "Column": 55},
+							    "Conditions": [
+									{
+										"Type": "TestCondition",
+										"Test": {
+											"Type": "BoolExpression",
+											"Value": true,
+											"StartPos": {"Offset": 19, "Line": 20, "Column": 21},
+											"EndPos": {"Offset": 22, "Line": 23, "Column": 24}
+										},
+										"Message": null,
 										"StartPos": {"Offset": 19, "Line": 20, "Column": 21},
 										"EndPos": {"Offset": 22, "Line": 23, "Column": 24}
-									},
-									"Message": null,
-									"StartPos": {"Offset": 19, "Line": 20, "Column": 21},
-									"EndPos": {"Offset": 22, "Line": 23, "Column": 24}
-								}
-							],
+									}
+								]
+							},
 							"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
 							"EndPos": {"Offset": 4, "Line": 5, "Column": 6}
 						}
@@ -407,28 +427,32 @@ func TestFunctionBlock_Doc(t *testing.T) {
 				},
 			},
 			PreConditions: &Conditions{
-				&TestCondition{
-					Test: &BoolExpression{
-						Value: false,
+				Conditions: []Condition{
+					&TestCondition{
+						Test: &BoolExpression{
+							Value: false,
+						},
+						Message: &StringExpression{
+							Value: "Pre failed",
+						},
 					},
-					Message: &StringExpression{
-						Value: "Pre failed",
-					},
-				},
-				&EmitCondition{
-					InvocationExpression: &InvocationExpression{
-						InvokedExpression: &IdentifierExpression{
-							Identifier: Identifier{
-								Identifier: "Foo",
+					&EmitCondition{
+						InvocationExpression: &InvocationExpression{
+							InvokedExpression: &IdentifierExpression{
+								Identifier: Identifier{
+									Identifier: "Foo",
+								},
 							},
 						},
 					},
 				},
 			},
 			PostConditions: &Conditions{
-				&TestCondition{
-					Test: &BoolExpression{
-						Value: true,
+				Conditions: []Condition{
+					&TestCondition{
+						Test: &BoolExpression{
+							Value: true,
+						},
 					},
 				},
 			},
@@ -561,22 +585,26 @@ func TestFunctionBlock_String(t *testing.T) {
 				},
 			},
 			PreConditions: &Conditions{
-				&TestCondition{
-					Test: &BoolExpression{
-						Value: false,
-					},
-					Message: &StringExpression{
-						Value: "Pre failed",
+				Conditions: []Condition{
+					&TestCondition{
+						Test: &BoolExpression{
+							Value: false,
+						},
+						Message: &StringExpression{
+							Value: "Pre failed",
+						},
 					},
 				},
 			},
 			PostConditions: &Conditions{
-				&TestCondition{
-					Test: &BoolExpression{
-						Value: true,
-					},
-					Message: &StringExpression{
-						Value: "Post failed",
+				Conditions: []Condition{
+					&TestCondition{
+						Test: &BoolExpression{
+							Value: true,
+						},
+						Message: &StringExpression{
+							Value: "Post failed",
+						},
 					},
 				},
 			},

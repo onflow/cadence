@@ -204,7 +204,8 @@ func (v *StorageCapabilityControllerValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
-	_ map[atree.StorageID]struct{},
+	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -220,7 +221,7 @@ func (v *StorageCapabilityControllerValue) Clone(interpreter *Interpreter) Value
 	}
 }
 
-func (v *StorageCapabilityControllerValue) DeepRemove(_ *Interpreter) {
+func (v *StorageCapabilityControllerValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -364,7 +365,7 @@ func (v *StorageCapabilityControllerValue) newHostFunctionValue(
 			inter,
 			v,
 			funcType,
-			func(invocation Invocation) Value {
+			func(v *StorageCapabilityControllerValue, invocation Invocation) Value {
 				// NOTE: check if controller is already deleted
 				v.checkDeleted()
 

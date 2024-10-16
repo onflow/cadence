@@ -3031,3 +3031,29 @@ func TestContractUpgrade(t *testing.T) {
 	cause := getSingleContractUpdateErrorCause(t, err, "Test")
 	assertFieldAuthorizationMismatchError(t, cause, "A", "cap", "all", "E")
 }
+
+func TestContractUpgradeWrongName(t *testing.T) {
+
+	t.Parallel()
+
+	const oldCode = `
+        access(all)
+        contract Test {}
+    `
+
+	const newCode = `
+        access(all)
+        contract Bad {}
+    `
+
+	err := testContractUpdate(t, oldCode, newCode)
+	require.Error(t, err)
+
+	err = getSingleContractUpdateErrorCause(t, err, "Test")
+
+	var nameMismatchError *stdlib.NameMismatchError
+	require.ErrorAs(t, err, &nameMismatchError)
+
+	assert.Equal(t, "Test", nameMismatchError.OldName)
+	assert.Equal(t, "Bad", nameMismatchError.NewName)
+}

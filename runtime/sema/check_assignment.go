@@ -148,7 +148,13 @@ func (checker *Checker) rootOfAccessChain(target ast.Expression) (baseVariable *
 			inAccessChain = false
 		case *ast.IndexExpression:
 			target = targetExp.TargetExpression
-			elementType := checker.Elaboration.IndexExpressionTypes(targetExp).IndexedType.ElementType(true)
+			indexExprTypes, ok := checker.Elaboration.IndexExpressionTypes(targetExp)
+			var elementType Type
+			if !ok {
+				elementType = InvalidType
+			} else {
+				elementType = indexExprTypes.IndexedType.ElementType(true)
+			}
 			accessChain = append(accessChain, elementType)
 		case *ast.MemberExpression:
 			target = targetExp.Expression
@@ -361,7 +367,11 @@ func (checker *Checker) visitIndexExpressionAssignment(
 		return checker.visitIndexExpression(indexExpression, true)
 	})
 
-	indexExprTypes := checker.Elaboration.IndexExpressionTypes(indexExpression)
+	indexExprTypes, ok := checker.Elaboration.IndexExpressionTypes(indexExpression)
+	if !ok {
+		return InvalidType
+	}
+
 	indexedRefType, isReference := MaybeReferenceType(indexExprTypes.IndexedType)
 
 	if isReference &&
@@ -490,22 +500,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 		reportAssignmentToConstant()
 	}
 
-	if memberType.IsResourceType() {
-		// if the member is a resource, check that it is not captured in a function,
-		// based off the activation depth of the root of the access chain, i.e. `a` in `a.b.c`
-		// we only want to make this check for transactions, as they are the only "resource-like" types
-		// (that can contain resources and must destroy them in their `execute` blocks), that are themselves
-		// not checked by the capturing logic, since they are not themselves resources.
-		baseVariable, _ := checker.rootOfAccessChain(target)
-
-		if baseVariable == nil {
-			return
-		}
-
-		if _, isTransaction := baseVariable.Type.(*TransactionType); isTransaction {
-			checker.checkResourceVariableCapturingInFunction(baseVariable, member.Identifier)
-		}
-	}
+	checker.checkResourceMemberCapturingInFunction(target, member, memberType)
 
 	return
 }

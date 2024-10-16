@@ -315,7 +315,7 @@ func (m *StorageMigration) MigrateNestedValue(
 			)
 
 			interpreter.StoredValue(inter, existingStorable, m.storage).
-				DeepRemove(inter)
+				DeepRemove(inter, false)
 			inter.RemoveReferencedSlab(existingStorable)
 
 			array.InsertWithoutTransfer(
@@ -509,9 +509,10 @@ func (m *StorageMigration) migrateDictionaryKeys(
 
 	var existingKeys []interpreter.Value
 
-	dictionary.IterateKeys(
+	dictionary.IterateReadOnly(
 		inter,
-		func(key interpreter.Value) (resume bool) {
+		emptyLocationRange,
+		func(key, _ interpreter.Value) (resume bool) {
 
 			existingKeys = append(existingKeys, key)
 
@@ -578,7 +579,7 @@ func (m *StorageMigration) migrateDictionaryKeys(
 
 		// Remove existing key since old key is migrated
 		interpreter.StoredValue(inter, existingKeyStorable, m.storage).
-			DeepRemove(inter)
+			DeepRemove(inter, false)
 		inter.RemoveReferencedSlab(existingKeyStorable)
 
 		// Convert removed value storable to Value.
@@ -629,7 +630,7 @@ func (m *StorageMigration) migrateDictionaryKeys(
 				valueToSet = newValue
 
 				// Remove existing value since value is migrated.
-				existingValue.DeepRemove(inter)
+				existingValue.DeepRemove(inter, false)
 				inter.RemoveReferencedSlab(existingValueStorable)
 			}
 
@@ -709,6 +710,7 @@ func (m *StorageMigration) migrateDictionaryValues(
 
 	dictionary.Iterate(
 		inter,
+		emptyLocationRange,
 		func(key, value interpreter.Value) (resume bool) {
 
 			existingKeysAndValues = append(
@@ -722,7 +724,6 @@ func (m *StorageMigration) migrateDictionaryValues(
 			// Continue iteration
 			return true
 		},
-		emptyLocationRange,
 	)
 
 	for _, existingKeyAndValue := range existingKeysAndValues {
@@ -770,7 +771,7 @@ func (m *StorageMigration) migrateDictionaryValues(
 
 		// Remove existing value since value is migrated
 		interpreter.StoredValue(inter, existingValueStorable, m.storage).
-			DeepRemove(inter)
+			DeepRemove(inter, false)
 		inter.RemoveReferencedSlab(existingValueStorable)
 	}
 }

@@ -30,6 +30,7 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 	arguments []Value,
 	argumentTypes []sema.Type,
 	parameterTypes []sema.Type,
+	returnType sema.Type,
 	invocationPosition ast.HasPosition,
 ) (
 	value Value,
@@ -47,6 +48,7 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 		nil,
 		argumentTypes,
 		parameterTypes,
+		returnType,
 		nil,
 		invocationPosition,
 	), nil
@@ -58,6 +60,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 	expressions []ast.Expression,
 	argumentTypes []sema.Type,
 	parameterTypes []sema.Type,
+	returnType sema.Type,
 	typeParameterTypes *sema.TypeParameterTypeOrderedMap,
 	invocationPosition ast.HasPosition,
 ) Value {
@@ -101,6 +104,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 					false,
 					nil,
 					nil,
+					true, // argument is standalone.
 				)
 			}
 		}
@@ -122,7 +126,35 @@ func (interpreter *Interpreter) invokeFunctionValue(
 		locationRange,
 	)
 
-	return function.invoke(invocation)
+	resultValue := function.invoke(invocation)
+
+	functionReturnType := function.FunctionType().ReturnTypeAnnotation.Type
+
+	// Only convert and box.
+	// No need to transfer, since transfer would happen later, when the return value gets assigned.
+	//
+	// The conversion is needed because, the runtime function's return type could be a
+	// subtype of the invocation's return type.
+	// e.g:
+	//   struct interface I {
+	//     fun foo(): T?
+	//   }
+	//
+	//   struct S: I {
+	//     fun foo(): T {...}
+	//   }
+	//
+	//   var i: {I} = S()
+	//   return i.foo()?.bar
+	//
+	// Here runtime function's return type is `T`, but invocation's return type is `T?`.
+
+	return interpreter.ConvertAndBox(
+		locationRange,
+		resultValue,
+		functionReturnType,
+		returnType,
+	)
 }
 
 func (interpreter *Interpreter) invokeInterpretedFunction(

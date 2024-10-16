@@ -25,8 +25,10 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
 
@@ -68,17 +70,17 @@ type Interface interface {
 	SetValue(owner, key, value []byte) (err error)
 	// ValueExists returns true if the given key exists in the storage, owned by the given account.
 	ValueExists(owner, key []byte) (exists bool, err error)
-	// AllocateStorageIndex allocates a new storage index under the given account.
-	AllocateStorageIndex(owner []byte) (atree.StorageIndex, error)
+	// AllocateSlabIndex allocates a new slab index under the given account.
+	AllocateSlabIndex(owner []byte) (atree.SlabIndex, error)
 	// CreateAccount creates a new account.
 	CreateAccount(payer Address) (address Address, err error)
 	// AddAccountKey appends a key to an account.
 	AddAccountKey(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error)
 	// GetAccountKey retrieves a key from an account by index.
-	GetAccountKey(address Address, index int) (*AccountKey, error)
-	AccountKeysCount(address Address) (uint64, error)
+	GetAccountKey(address Address, index uint32) (*AccountKey, error)
+	AccountKeysCount(address Address) (uint32, error)
 	// RevokeAccountKey removes a key from an account by index.
-	RevokeAccountKey(address Address, index int) (*AccountKey, error)
+	RevokeAccountKey(address Address, index uint32) (*AccountKey, error)
 	// UpdateAccountContractCode updates the code associated with an account contract.
 	UpdateAccountContractCode(location common.AddressLocation, code []byte) (err error)
 	// GetAccountContractCode returns the code associated with an account contract.
@@ -144,6 +146,22 @@ type Interface interface {
 	)
 	// GenerateAccountID generates a new, *non-zero*, unique ID for the given account.
 	GenerateAccountID(address common.Address) (uint64, error)
+	RecoverProgram(program *ast.Program, location common.Location) ([]byte, error)
+	ValidateAccountCapabilitiesGet(
+		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
+		address interpreter.AddressValue,
+		path interpreter.PathValue,
+		wantedBorrowType *sema.ReferenceType,
+		capabilityBorrowType *sema.ReferenceType,
+	) (bool, error)
+	ValidateAccountCapabilitiesPublish(
+		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
+		address interpreter.AddressValue,
+		path interpreter.PathValue,
+		capabilityBorrowType *interpreter.ReferenceStaticType,
+	) (bool, error)
 	CompileWebAssembly(bytes []byte) (stdlib.WebAssemblyModule, error)
 }
 

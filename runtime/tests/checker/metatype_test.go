@@ -35,33 +35,23 @@ func TestCheckMetaType(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
+		_, err := ParseAndCheck(t, `
           let type: Type = Type<[Int]>()
         `)
 
 		require.NoError(t, err)
-
-		assert.Equal(t,
-			sema.MetaType,
-			RequireGlobalValue(t, checker.Elaboration, "type"),
-		)
 	})
 
 	t.Run("identifier", func(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
-          let type = Type<[Int]>()
-          let identifier = type.identifier
+		_, err := ParseAndCheck(t, `
+          let type: Type = Type<[Int]>()
+          let identifier: String = type.identifier
         `)
 
 		require.NoError(t, err)
-
-		assert.Equal(t,
-			sema.MetaType,
-			RequireGlobalValue(t, checker.Elaboration, "type"),
-		)
 	})
 }
 
@@ -69,24 +59,26 @@ func TestCheckIsInstance(t *testing.T) {
 
 	t.Parallel()
 
-	cases := []struct {
+	type testCase struct {
 		name              string
 		code              string
 		expectedErrorType error
-	}{
+	}
+
+	cases := []testCase{
 		{
 			name: "string is an instance of string",
 			code: `
-              let stringType = Type<String>()
-              let result = "abc".isInstance(stringType)
+              let stringType: Type = Type<String>()
+              let result: Bool = "abc".isInstance(stringType)
             `,
 			expectedErrorType: nil,
 		},
 		{
 			name: "int is an instance of int",
 			code: `
-              let intType = Type<Int>()
-              let result = (1).isInstance(intType)
+              let intType: Type = Type<Int>()
+              let result: Bool = (1).isInstance(intType)
             `,
 			expectedErrorType: nil,
 		},
@@ -96,50 +88,52 @@ func TestCheckIsInstance(t *testing.T) {
               resource R {}
 
               let r <- create R()
-              let rType = Type<@R>()
-              let result = r.isInstance(rType)
+              let rType: Type = Type<@R>()
+              let result: Bool = r.isInstance(rType)
             `,
 			expectedErrorType: nil,
 		},
 		{
 			name: "1 is an instance of Int?",
 			code: `
-              let result = (1).isInstance(Type<Int?>())
+              let result: Bool = (1).isInstance(Type<Int?>())
             `,
 			expectedErrorType: nil,
 		},
 		{
 			name: "isInstance must take a type",
 			code: `
-              let result = (1).isInstance(3)
+              let result: Bool = (1).isInstance(3)
             `,
 			expectedErrorType: &sema.TypeMismatchError{},
 		},
 		{
 			name: "nil is not a type",
 			code: `
-              let result = (1).isInstance(nil)
+              let result: Bool = (1).isInstance(nil)
             `,
 			expectedErrorType: &sema.TypeMismatchError{},
 		},
 		{
 			name: "argument label",
 			code: `
-              let result = (1).isInstance(type: Type<Int>())
+              let result: Bool = (1).isInstance(type: Type<Int>())
             `,
 			expectedErrorType: &sema.IncorrectArgumentLabelError{},
 		},
 		{
 			name: "too many arguments",
 			code: `
-              let result = (1).isInstance(Type<Int>(), Type<Int>())
+              let result: Bool = (1).isInstance(Type<Int>(), Type<Int>())
             `,
 			expectedErrorType: &sema.ExcessiveArgumentsError{},
 		},
 	}
 
-	for _, testCase := range cases {
+	test := func(testCase testCase) {
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
 			checker, err := ParseAndCheck(t, testCase.code)
 			if testCase.expectedErrorType == nil {
 				require.NoError(t, err)
@@ -154,22 +148,28 @@ func TestCheckIsInstance(t *testing.T) {
 			}
 		})
 	}
+
+	for _, testCase := range cases {
+		test(testCase)
+	}
 }
 
-func TestCheckIsSubtype(t *testing.T) {
+func TestCheckMetaTypeIsSubtype(t *testing.T) {
 
 	t.Parallel()
 
-	cases := []struct {
+	type testCase struct {
 		name              string
 		code              string
 		expectedErrorType error
-	}{
+	}
+
+	cases := []testCase{
 		{
 			name: "string is a subtype of string",
 			code: `
               let stringType = Type<String>()
-              let result = stringType.isSubtype(of: stringType)
+              let result: Bool = stringType.isSubtype(of: stringType)
             `,
 			expectedErrorType: nil,
 		},
@@ -177,7 +177,7 @@ func TestCheckIsSubtype(t *testing.T) {
 			name: "int is a subtype of int",
 			code: `
               let intType = Type<Int>()
-              let result = intType.isSubtype(of: intType)
+              let result: Bool = intType.isSubtype(of: intType)
             `,
 			expectedErrorType: nil,
 		},
@@ -186,14 +186,14 @@ func TestCheckIsSubtype(t *testing.T) {
 			code: `
               resource R {}
               let rType = Type<@R>()
-              let result = rType.isSubtype(of: rType)
+              let result: Bool = rType.isSubtype(of: rType)
             `,
 			expectedErrorType: nil,
 		},
 		{
 			name: "Int is an instance of Int?",
 			code: `
-              let result = Type<Int>().isSubtype(of: Type<Int?>())
+              let result: Bool = Type<Int>().isSubtype(of: Type<Int?>())
             `,
 			expectedErrorType: nil,
 		},
@@ -207,41 +207,43 @@ func TestCheckIsSubtype(t *testing.T) {
 		{
 			name: "isSubtype must take an argument",
 			code: `
-              let result = Type<Int>().isSubtype()
+              let result: Bool = Type<Int>().isSubtype()
             `,
 			expectedErrorType: &sema.InsufficientArgumentsError{},
 		},
 		{
 			name: "isSubtype argument must be named",
 			code: `
-              let result = Type<Int>().isSubtype(Type<Int?>())
+              let result: Bool = Type<Int>().isSubtype(Type<Int?>())
             `,
 			expectedErrorType: &sema.MissingArgumentLabelError{},
 		},
 		{
 			name: "isSubtype must take fewer than two arguments",
 			code: `
-              let result = Type<Int>().isSubtype(of: Type<Int?>(), Type<Int?>())
+              let result: Bool = Type<Int>().isSubtype(of: Type<Int?>(), Type<Int?>())
             `,
 			expectedErrorType: &sema.ExcessiveArgumentsError{},
 		},
 	}
 
-	for _, testCase := range cases {
+	test := func(testCase testCase) {
 		t.Run(testCase.name, func(t *testing.T) {
-			checker, err := ParseAndCheck(t, testCase.code)
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, testCase.code)
 			if testCase.expectedErrorType == nil {
 				require.NoError(t, err)
-				assert.Equal(t,
-					sema.BoolType,
-					RequireGlobalValue(t, checker.Elaboration, "result"),
-				)
 			} else {
 				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, testCase.expectedErrorType, errs[0])
 			}
 		})
+	}
+
+	for _, testCase := range cases {
+		test(testCase)
 	}
 }
 
@@ -264,20 +266,22 @@ func TestCheckGetType(t *testing.T) {
 
 	t.Parallel()
 
-	cases := []struct {
+	type testCase struct {
 		name string
 		code string
-	}{
+	}
+
+	cases := []testCase{
 		{
 			name: "String",
 			code: `
-              let result = "abc".getType()
+              let result: Type = "abc".getType()
             `,
 		},
 		{
 			name: "Int",
 			code: `
-              let result = (1).getType()
+              let result: Type = (1).getType()
             `,
 		},
 		{
@@ -286,20 +290,54 @@ func TestCheckGetType(t *testing.T) {
               resource R {}
 
               let r <- create R()
-              let result = r.getType()
+              let result: Type = r.getType()
             `,
 		},
 	}
 
-	for _, testCase := range cases {
+	test := func(testCase testCase) {
 		t.Run(testCase.name, func(t *testing.T) {
-			checker, err := ParseAndCheck(t, testCase.code)
+			t.Parallel()
 
+			_, err := ParseAndCheck(t, testCase.code)
 			require.NoError(t, err)
-			assert.Equal(t,
-				sema.MetaType,
-				RequireGlobalValue(t, checker.Elaboration, "result"),
-			)
 		})
 	}
+
+	for _, testCase := range cases {
+		test(testCase)
+	}
+}
+
+func TestCheckMetaTypeIsRecovered(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      let type: Type = Type<Int>()
+      let isRecovered: Bool = type.isRecovered
+    `)
+	require.NoError(t, err)
+}
+
+func TestCheckMetaTypeAddress(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      let type: Type = Type<Int>()
+      let address: Address = type.address!
+    `)
+	require.NoError(t, err)
+}
+
+func TestCheckMetaTypeContractName(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      let type: Type = Type<Int>()
+      let contractName: String = type.contractName!
+    `)
+	require.NoError(t, err)
 }

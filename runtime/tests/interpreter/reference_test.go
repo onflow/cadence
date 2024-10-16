@@ -3291,3 +3291,211 @@ func TestInterpretHostFunctionReferenceInvalidation(t *testing.T) {
 		AssertValuesEqual(t, inter, expectedResult, result)
 	})
 }
+
+func TestInterpretStorageReferenceBoundFunction(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("builtin function on container", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, nil, `
+          resource R {
+              access(all) let id: Int
+              init() {
+                  self.id = 1
+              }
+          }
+
+          fun test() {
+              account.storage.save(<- [] as @[R], to: /storage/x)
+
+              let collectionRef = account.storage.borrow<auth(Mutate) &[R]>(from: /storage/x)!
+              var append = collectionRef.append
+
+              // Replace with a new one
+              var old <- account.storage.load<@[R]>(from:/storage/x)!
+              account.storage.save(<- [] as @[R], to:/storage/x)
+
+              append(<- create R())
+
+              var new <- account.storage.load<@[R]>(from:/storage/x)!
+
+              // Index out of bound.
+              // Appended resource is neither in 'old' nor 'new'.
+              var id = new[0].id
+
+              destroy old
+              destroy new
+          }
+        `, sema.Config{})
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("builtin function on simple type", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, nil, `
+          fun test(): String {
+              account.storage.save("abc", to: /storage/x)
+
+              let stringRef = account.storage.borrow<&String>(from: /storage/x)!
+              var concat = stringRef.concat
+
+              // Replace with a new one
+              var old = account.storage.load<String>(from:/storage/x)!
+              account.storage.save("xyz", to:/storage/x)
+
+              // Invoke the function pointer.
+              return concat("def")
+          }
+        `, sema.Config{})
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("xyzdef"),
+			value,
+		)
+	})
+
+	t.Run("user-defined function", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, nil, `
+          resource R {
+              access(all) let collection: @[T]
+              init() {
+                  self.collection <- []
+              }
+              access(all) fun append(_ id: @T) {
+                  self.collection.append( <- id)
+              }
+          }
+
+         resource T {
+              access(all) let id: Int
+              init() {
+                  self.id = 5
+              }
+         }
+
+          fun test(): Int {
+              account.storage.save(<- create R(), to: /storage/x)
+
+              let rRef = account.storage.borrow<&R>(from: /storage/x)!
+              var append = rRef.append
+
+              // Replace with a new one
+              var old <- account.storage.load<@R>(from:/storage/x)!
+              account.storage.save(<- create R(), to:/storage/x)
+
+              append(<- create T())
+
+              var new <- account.storage.load<@R>(from:/storage/x)!
+
+              // Index out of bound.
+              // Appended resource 'T' must be in the 'new' collection.
+              var id = new.collection[0].id
+
+              destroy old
+              destroy new
+              return id
+          }
+        `, sema.Config{})
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(5),
+			value,
+		)
+	})
+}
+
+func TestInterpretCreatingCircularDependentResource(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resource container field", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            access(all) resource A {
+                access(mapping Identity) var b: @[B]
+                init() {
+                    self.b <- []
+                }
+            }
+
+            access(all) resource B {
+                access(all) let a: @A
+                init(_ a: @A) {
+                    self.a <- a
+                }
+            }
+
+            access(all) fun main() {
+                var a <- create A()
+                var b <- create B(<-a)
+                let aRef = &b.a as auth(Mutate) &A
+                aRef.b.append(<-b)
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		assert.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("resource field", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            access(all) resource A {
+                access(self) var b: @B?
+                init() {
+                    self.b <- nil
+                }
+                access(all) fun setB(_ b: @B) {
+                    self.b <-! b
+                }
+            }
+
+            access(all) resource B {
+                access(all) let a: @A
+                init(_ a: @A) {
+                    self.a <- a
+                }
+            }
+
+            access(all) fun main() {
+                var a <- create A()
+                var b <- create B(<-a)
+                let aRef = &b.a as auth(Mutate) &A
+                aRef.setB(<-b)
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		assert.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+}

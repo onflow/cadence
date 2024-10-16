@@ -320,6 +320,76 @@ func TestInterpretTransactions(t *testing.T) {
 			ArrayElements(inter, values.(*interpreter.ArrayValue)),
 		)
 	})
+
+	t.Run("Enum", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			access(all)
+			enum Alpha: Int {
+				access(all)
+				case A
+
+				access(all)
+				case B
+			}
+
+			let a = Alpha.A
+			let b = Alpha.B
+
+			let values: [AnyStruct] = []
+
+			transaction(x: Alpha) {
+
+				prepare(signer: &Account) {
+					values.append(signer.address)
+					values.append(x)
+					if x == Alpha.A {
+						values.append(Alpha.B)
+					} else {
+						values.append(-1) 
+					}
+				}
+			}
+        `)
+
+		arguments := []interpreter.Value{
+			inter.Globals.Get("a").GetValue(inter),
+		}
+
+		address := common.MustBytesToAddress([]byte{0x1})
+
+		account := stdlib.NewAccountReferenceValue(
+			nil,
+			nil,
+			interpreter.AddressValue(address),
+			interpreter.UnauthorizedAccess,
+			interpreter.EmptyLocationRange,
+		)
+
+		prepareArguments := []interpreter.Value{account}
+
+		arguments = append(arguments, prepareArguments...)
+
+		err := inter.InvokeTransaction(0, arguments...)
+		require.NoError(t, err)
+
+		values := inter.Globals.Get("values").GetValue(inter)
+
+		require.IsType(t, &interpreter.ArrayValue{}, values)
+
+		AssertValueSlicesEqual(
+			t,
+			inter,
+			[]interpreter.Value{
+				interpreter.AddressValue(address),
+				inter.Globals.Get("a").GetValue(inter),
+				inter.Globals.Get("b").GetValue(inter),
+			},
+			ArrayElements(inter, values.(*interpreter.ArrayValue)),
+		)
+	})
 }
 
 func TestRuntimeInvalidTransferInExecute(t *testing.T) {
@@ -351,8 +421,10 @@ func TestRuntimeInvalidTransferInExecute(t *testing.T) {
 		}
 	`, ParseCheckAndInterpretOptions{
 		HandleCheckerError: func(err error) {
-			errs := checker.RequireCheckerErrors(t, err, 1)
+			errs := checker.RequireCheckerErrors(t, err, 3)
 			require.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+			require.IsType(t, &sema.ResourceCapturingError{}, errs[1])
+			require.IsType(t, &sema.ResourceCapturingError{}, errs[2])
 		},
 	})
 

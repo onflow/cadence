@@ -26,15 +26,14 @@ import (
 
 	"github.com/onflow/atree"
 
-	"github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/activations"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/pretty"
@@ -202,8 +201,10 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 	if options.Config != nil {
 		config = *options.Config
 	}
-	config.AtreeValueValidationEnabled = true
-	config.AtreeStorageValidationEnabled = true
+	if memoryGauge == nil {
+		config.AtreeValueValidationEnabled = true
+		config.AtreeStorageValidationEnabled = true
+	}
 	if config.UUIDHandler == nil {
 		config.UUIDHandler = func() (uint64, error) {
 			uuid++
@@ -330,6 +331,7 @@ func makeContractValueHandler(
 			arguments,
 			argumentTypes,
 			parameterTypes,
+			compositeType,
 			ast.Range{},
 		)
 		if err != nil {
@@ -825,7 +827,7 @@ func TestInterpretInvalidArrayIndexing(t *testing.T) {
 			assert.Equal(t, index, indexErr.Index)
 			assert.Equal(t, 2, indexErr.Size)
 			assert.Equal(t,
-				ast.Position{Offset: 107, Line: 4, Column: 27},
+				ast.Position{Offset: 106, Line: 4, Column: 26},
 				indexErr.HasPosition.StartPosition(),
 			)
 			assert.Equal(t,
@@ -900,7 +902,7 @@ func TestInterpretInvalidArrayIndexingAssignment(t *testing.T) {
 			assert.Equal(t, index, indexErr.Index)
 			assert.Equal(t, 2, indexErr.Size)
 			assert.Equal(t,
-				ast.Position{Offset: 95, Line: 4, Column: 20},
+				ast.Position{Offset: 94, Line: 4, Column: 19},
 				indexErr.HasPosition.StartPosition(),
 			)
 			assert.Equal(t,
@@ -970,7 +972,7 @@ func TestInterpretInvalidStringIndexing(t *testing.T) {
 			assert.Equal(t, index, indexErr.Index)
 			assert.Equal(t, 2, indexErr.Length)
 			assert.Equal(t,
-				ast.Position{Offset: 93, Line: 4, Column: 20},
+				ast.Position{Offset: 92, Line: 4, Column: 19},
 				indexErr.HasPosition.StartPosition(),
 			)
 			assert.Equal(t,
@@ -3849,6 +3851,8 @@ func TestInterpretOptionalMap(t *testing.T) {
 
 	t.Run("some", func(t *testing.T) {
 
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
           let one: Int? = 42
           let result = one.map(fun (v: Int): String {
@@ -3868,6 +3872,8 @@ func TestInterpretOptionalMap(t *testing.T) {
 
 	t.Run("nil", func(t *testing.T) {
 
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
           let none: Int? = nil
           let result = none.map(fun (v: Int): String {
@@ -3880,6 +3886,46 @@ func TestInterpretOptionalMap(t *testing.T) {
 			inter,
 			interpreter.Nil,
 			inter.Globals.Get("result").GetValue(inter),
+		)
+	})
+
+	t.Run("box and convert argument", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          struct S {
+              fun map(f: fun(AnyStruct): String): String {
+                  return "S.map"
+              }
+          }
+
+          fun test(): String?? {
+              let s: S? = S()
+              // NOTE: The outer map has a parameter of type S? instead of just S
+              return s.map(fun(s2: S?): String? {
+                  // The inner map should call Optional.map, not S.map,
+                  // because s2 is S?, not S
+                  return s2.map(fun(s3: AnyStruct): String {
+                      return "Optional.map"
+                  })
+              })
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewSomeValueNonCopying(
+				nil,
+				interpreter.NewSomeValueNonCopying(
+					nil,
+					interpreter.NewUnmeteredStringValue("Optional.map"),
+				),
+			),
+			value,
 		)
 	})
 }
@@ -5304,6 +5350,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			true,
 			nil,
 			nil,
+			true, // r is standalone.
 		)
 
 		domain := storagePath.Domain.Identifier()
@@ -5418,6 +5465,7 @@ func TestInterpretStructureFunctionBindingInside(t *testing.T) {
 
 	value, err := inter.InvokeFunctionValue(
 		functionValue.(interpreter.FunctionValue),
+		nil,
 		nil,
 		nil,
 		nil,
@@ -6331,86 +6379,130 @@ func TestInterpretDictionaryKeys(t *testing.T) {
 func TestInterpretDictionaryForEachKey(t *testing.T) {
 	t.Parallel()
 
-	type testcase struct {
-		n        int64
-		endPoint int64
-	}
-	testcases := []testcase{
-		{10, 1},
-		{20, 5},
-		{100, 10},
-		{100, 0},
-	}
-	code := `
-	fun testForEachKey(n: Int, stopIter: Int): {Int: Int} {
-		var dict: {Int:Int} = {}
-		var counts: {Int:Int} = {}
-		var i = 0
-		while i < n {
-			dict[i] = i
-			counts[i] = 0
-			i = i + 1
+	t.Run("iter", func(t *testing.T) {
+
+		type testcase struct {
+			n        int64
+			endPoint int64
 		}
-		dict.forEachKey(fun(k: Int): Bool {
-			if k == stopIter {
-				return false
-			}
-			let curVal = counts[k]!
-			counts[k] = curVal + 1
-			return true
-		})
-
-		return counts
-	}`
-	inter := parseCheckAndInterpret(t, code)
-
-	for _, test := range testcases {
-		name := fmt.Sprintf("n = %d", test.n)
-		t.Run(name, func(t *testing.T) {
-			n := test.n
-			endPoint := test.endPoint
-			// t.Parallel()
-
-			nVal := interpreter.NewUnmeteredIntValueFromInt64(n)
-			stopIter := interpreter.NewUnmeteredIntValueFromInt64(endPoint)
-			res, err := inter.Invoke("testForEachKey", nVal, stopIter)
-
-			require.NoError(t, err)
-
-			dict, ok := res.(*interpreter.DictionaryValue)
-			assert.True(t, ok)
-
-			toInt := func(val interpreter.Value) (int, bool) {
-				intVal, ok := val.(interpreter.IntValue)
-				if !ok {
-					return 0, ok
+		testcases := []testcase{
+			{10, 1},
+			{20, 5},
+			{100, 10},
+			{100, 0},
+		}
+		inter := parseCheckAndInterpret(t, `
+			fun testForEachKey(n: Int, stopIter: Int): {Int: Int} {
+				var dict: {Int:Int} = {}
+				var counts: {Int:Int} = {}
+				var i = 0
+				while i < n {
+					dict[i] = i
+					counts[i] = 0
+					i = i + 1
 				}
-				return intVal.ToInt(interpreter.EmptyLocationRange), true
+				dict.forEachKey(fun(k: Int): Bool {
+					if k == stopIter {
+						return false
+					}
+					let curVal = counts[k]!
+					counts[k] = curVal + 1
+					return true
+				})
+
+				return counts
 			}
+		`)
 
-			entries, ok := DictionaryEntries(inter, dict, toInt, toInt)
+		for _, test := range testcases {
+			name := fmt.Sprintf("n = %d", test.n)
+			t.Run(name, func(t *testing.T) {
+				n := test.n
+				endPoint := test.endPoint
 
-			assert.True(t, ok)
+				nVal := interpreter.NewUnmeteredIntValueFromInt64(n)
+				stopIter := interpreter.NewUnmeteredIntValueFromInt64(endPoint)
+				res, err := inter.Invoke("testForEachKey", nVal, stopIter)
 
-			for _, entry := range entries {
-				// iteration order is undefined, so the only thing we can deterministically test is
-				// whether visited keys exist in the dict
-				// and whether iteration is affine
+				require.NoError(t, err)
 
-				key := int64(entry.Key)
-				require.True(t, 0 <= key && key < n, "Visited key not present in the original dictionary: %d", key)
-				// assert that we exited early
-				if int64(entry.Key) == endPoint {
-					AssertEqualWithDiff(t, 0, entry.Value)
-				} else {
-					// make sure no key was visited twice
-					require.LessOrEqual(t, entry.Value, 1, "Dictionary entry visited twice during iteration")
+				dict, ok := res.(*interpreter.DictionaryValue)
+				assert.True(t, ok)
+
+				toInt := func(val interpreter.Value) (int, bool) {
+					intVal, ok := val.(interpreter.IntValue)
+					if !ok {
+						return 0, ok
+					}
+					return intVal.ToInt(interpreter.EmptyLocationRange), true
 				}
 
-			}
+				entries, ok := DictionaryEntries(inter, dict, toInt, toInt)
 
-		})
-	}
+				assert.True(t, ok)
+
+				for _, entry := range entries {
+					// iteration order is undefined, so the only thing we can deterministically test is
+					// whether visited keys exist in the dict
+					// and whether iteration is affine
+
+					key := int64(entry.Key)
+					require.True(t,
+						0 <= key && key < n,
+						"Visited key not present in the original dictionary: %d",
+						key,
+					)
+					// assert that we exited early
+					if int64(entry.Key) == endPoint {
+						AssertEqualWithDiff(t, 0, entry.Value)
+					} else {
+						// make sure no key was visited twice
+						require.LessOrEqual(t,
+							entry.Value,
+							1,
+							"Dictionary entry visited twice during iteration",
+						)
+					}
+
+				}
+
+			})
+		}
+	})
+
+	t.Run("box and convert argument", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          fun test(): String? {
+              let dict = {"answer": 42}
+              var res: String? = nil
+              // NOTE: The function has a parameter of type String? instead of just String
+              dict.forEachKey(fun(key: String?): Bool {
+                  // The map should call Optional.map, not fail,
+                  // because key is String?, not String
+                  res = key.map(fun(string: AnyStruct): String {
+                      return "Optional.map"
+                  })
+                  return true
+              })
+              return res
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewSomeValueNonCopying(
+				nil,
+				interpreter.NewUnmeteredStringValue("Optional.map"),
+			),
+			value,
+		)
+	})
+
 }
 
 func TestInterpretDictionaryValues(t *testing.T) {
@@ -10650,6 +10742,45 @@ func TestInterpretArrayFilter(t *testing.T) {
 			),
 		)
 	})
+
+	t.Run("box and convert argument", func(t *testing.T) {
+		t.Parallel()
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+              struct S {
+                  fun map(f: fun(AnyStruct): String): Bool {
+                      return true
+                  }
+              }
+
+              fun test(): [S] {
+                  let ss = [S()]
+                  // NOTE: The filter has a parameter of type S? instead of just S
+                  return ss.filter(view fun(s2: S?): Bool {
+                      // The map should call Optional.map, not S.map,
+                      // because s2 is S?, not S
+                      return s2.map(fun(s3: AnyStruct): Bool {
+                          return false
+                      })!
+                  })
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				HandleCheckerError: func(err error) {
+					errs := checker.RequireCheckerErrors(t, err, 1)
+					require.IsType(t, &sema.PurityError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.ArrayValue{}, value)
+		array := value.(*interpreter.ArrayValue)
+		require.Equal(t, 0, array.Count())
+	})
 }
 
 func TestInterpretArrayMap(t *testing.T) {
@@ -11122,6 +11253,54 @@ func TestInterpretArrayMap(t *testing.T) {
 				interpreter.NewUnmeteredIntValueFromInt64(2),
 				interpreter.NewUnmeteredIntValueFromInt64(3),
 			),
+		)
+	})
+
+	t.Run("box and convert argument", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          struct S {
+              fun map(f: fun(AnyStruct): String): String {
+                  return "S.map"
+              }
+          }
+
+          fun test(): [String?] {
+              let ss = [S()]
+              // NOTE: The outer map has a parameter of type S? instead of just S
+              return ss.map(fun(s2: S?): String? {
+                  // The inner map should call Optional.map, not S.map,
+                  // because s2 is S?, not S
+                  return s2.map(fun(s3: AnyStruct): String {
+                      return "Optional.map"
+                  })
+              })
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.NewVariableSizedStaticType(
+					nil,
+					interpreter.NewOptionalStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypeString,
+					),
+				),
+				common.ZeroAddress,
+				interpreter.NewSomeValueNonCopying(
+					nil,
+					interpreter.NewUnmeteredStringValue("Optional.map"),
+				),
+			),
+			value,
 		)
 	})
 }
@@ -11682,6 +11861,42 @@ func TestInterpretNilCoalesceReference(t *testing.T) {
 		},
 		variable.GetValue(inter),
 	)
+}
+
+func TestInterpretNilCoalesceAnyResourceAndPanic(t *testing.T) {
+
+	t.Parallel()
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.PanicFunction)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, stdlib.PanicFunction)
+
+	_, err := parseCheckAndInterpretWithOptions(t,
+		`
+          resource R {}
+
+          fun f(): @AnyResource? {
+              return <-create R()
+          }
+
+          let y <- f() ?? panic("no R")
+        `,
+		ParseCheckAndInterpretOptions{
+			CheckerConfig: &sema.Config{
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
+			},
+			Config: &interpreter.Config{
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
 }
 
 func TestInterpretDictionaryDuplicateKey(t *testing.T) {

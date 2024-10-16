@@ -40,7 +40,7 @@ type LinkMigrationReporter interface {
 
 // LinkValueMigration migrates all links to capability controllers.
 type LinkValueMigration struct {
-	CapabilityMapping *CapabilityMapping
+	CapabilityMapping *PathCapabilityMapping
 	IssueHandler      stdlib.CapabilityControllerIssueHandler
 	Handler           stdlib.CapabilityControllerHandler
 	Reporter          LinkMigrationReporter
@@ -129,12 +129,6 @@ func (m *LinkValueMigration) Migrate(
 		panic(errors.NewUnexpectedError("unexpected value type: %T", value))
 	}
 
-	convertedBorrowStaticType := inter.MustConvertStaticToSemaType(borrowStaticType)
-	borrowType, ok := convertedBorrowStaticType.(*sema.ReferenceType)
-	if !ok {
-		panic(errors.NewUnexpectedError("unexpected non-reference borrow type: %T", borrowType))
-	}
-
 	// Get target
 
 	target, _, err := m.getPathCapabilityFinalTarget(
@@ -178,22 +172,22 @@ func (m *LinkValueMigration) Migrate(
 
 		targetPath := interpreter.PathValue(target)
 
-		capabilityID, _ = stdlib.IssueStorageCapabilityController(
+		capabilityID = stdlib.IssueStorageCapabilityController(
 			inter,
 			locationRange,
 			issueHandler,
 			accountAddress,
-			borrowType,
+			borrowStaticType,
 			targetPath,
 		)
 
 	case accountCapabilityTarget:
-		capabilityID, _ = stdlib.IssueAccountCapabilityController(
+		capabilityID = stdlib.IssueAccountCapabilityController(
 			inter,
 			locationRange,
 			issueHandler,
 			accountAddress,
-			borrowType,
+			borrowStaticType,
 		)
 
 	default:
@@ -203,7 +197,7 @@ func (m *LinkValueMigration) Migrate(
 	// Record new capability ID in source path mapping.
 	// The mapping is used later for migrating path capabilities to ID capabilities,
 	// see CapabilityMigration.
-	m.CapabilityMapping.Record(addressPath, capabilityID, borrowType)
+	m.CapabilityMapping.Record(addressPath, capabilityID, borrowStaticType)
 
 	if reporter != nil {
 		reporter.MigratedLink(addressPath, capabilityID)
@@ -345,7 +339,7 @@ func (m *LinkValueMigration) getPathCapabilityFinalTarget(
 				reference := stdlib.GetCheckedCapabilityControllerReference(
 					inter,
 					locationRange,
-					value.Address,
+					value.Address(),
 					value.ID,
 					wantedBorrowType,
 					capabilityBorrowType,
