@@ -7730,8 +7730,6 @@ func BenchmarkRuntimeScriptNoop(b *testing.B) {
 		Environment: environment,
 	}
 
-	require.NotNil(b, stdlib.CryptoChecker())
-
 	runtime := NewTestInterpreterRuntime()
 
 	b.ReportAllocs()
