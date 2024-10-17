@@ -18,7 +18,7 @@
 
 package migrations
 
-import "github.com/onflow/cadence/runtime/interpreter"
+import "github.com/onflow/cadence/interpreter"
 
 type Reporter interface {
 	Migrated(

@@ -21,8 +21,8 @@ package migrations
 import (
 	"strings"
 
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
 )
 
 // LegacyIntersectionType simulates the old, incorrect restricted-type type-ID generation,

@@ -19,8 +19,8 @@
 package statictypes
 
 import (
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
 )
 
 // dummyStaticType is just a wrapper for `interpreter.PrimitiveStaticType`

@@ -23,8 +23,8 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
 )
 
 // LegacyReferenceType simulates the old reference type with the old typeID generation.

@@ -24,8 +24,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
 )
 
 func TestCapabilitiesIteration(t *testing.T) {

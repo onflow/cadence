@@ -21,10 +21,10 @@ package entitlements
 import (
 	"fmt"
 
+	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/migrations"
 	"github.com/onflow/cadence/migrations/statictypes"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/sema"
 )
 
 type EntitlementsMigration struct {

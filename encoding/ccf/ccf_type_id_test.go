@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/onflow/cadence/tests/utils"
 )
 
 func TestCCFTypeID(t *testing.T) {
