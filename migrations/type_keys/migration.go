@@ -19,9 +19,9 @@
 package type_keys
 
 import (
+	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/migrations"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/sema"
 )
 
 type TypeKeyMigration struct{}

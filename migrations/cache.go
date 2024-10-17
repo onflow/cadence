@@ -21,7 +21,7 @@ package migrations
 import (
 	"sync"
 
-	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/interpreter"
 )
 
 type CachedStaticType struct {

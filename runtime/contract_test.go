@@ -27,15 +27,15 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/onflow/cadence/runtime/tests/checker"
-	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
-	. "github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
+	"github.com/onflow/cadence/tests/checker"
+	. "github.com/onflow/cadence/tests/runtime_utils"
+	. "github.com/onflow/cadence/tests/utils"
 )
 
 func TestRuntimeContract(t *testing.T) {

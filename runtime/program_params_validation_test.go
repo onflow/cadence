@@ -26,13 +26,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/json"
 	. "github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/tests/checker"
-	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
-	. "github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/tests/checker"
+	. "github.com/onflow/cadence/tests/runtime_utils"
+	. "github.com/onflow/cadence/tests/utils"
 )
 
 func TestRuntimeScriptParameterTypeValidation(t *testing.T) {

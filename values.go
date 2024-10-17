@@ -25,12 +25,12 @@ import (
 	"unicode/utf8"
 	"unsafe"
 
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/fixedpoint"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/format"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/format"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
 )
 
 // Value

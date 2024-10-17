@@ -19,7 +19,7 @@
 package runtime
 
 import (
-	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/interpreter"
 )
 
 // Config is a constant/read-only configuration of an environment.

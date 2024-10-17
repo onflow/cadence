@@ -1,0 +1,66 @@
+// Code generated from deployment_result.cdc. DO NOT EDIT.
+/*
+ * Cadence - The resource-oriented smart contract programming language
+ *
+ * Copyright Flow Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package sema
+
+import (
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
+)
+
+const DeploymentResultTypeDeployedContractFieldName = "deployedContract"
+
+var DeploymentResultTypeDeployedContractFieldType = &OptionalType{
+	Type: DeployedContractType,
+}
+
+const DeploymentResultTypeDeployedContractFieldDocString = `
+The deployed contract.
+
+If the the deployment was unsuccessfull, this will be nil.
+`
+
+const DeploymentResultTypeName = "DeploymentResult"
+
+var DeploymentResultType = func() *CompositeType {
+	var t = &CompositeType{
+		Identifier:         DeploymentResultTypeName,
+		Kind:               common.CompositeKindStructure,
+		ImportableBuiltin:  false,
+		HasComputedMembers: true,
+	}
+
+	return t
+}()
+
+func init() {
+	var members = []*Member{
+		NewUnmeteredFieldMember(
+			DeploymentResultType,
+			PrimitiveAccess(ast.AccessAll),
+			ast.VariableKindConstant,
+			DeploymentResultTypeDeployedContractFieldName,
+			DeploymentResultTypeDeployedContractFieldType,
+			DeploymentResultTypeDeployedContractFieldDocString,
+		),
+	}
+
+	DeploymentResultType.Members = MembersAsMap(members)
+	DeploymentResultType.Fields = MembersFieldNames(members)
+}

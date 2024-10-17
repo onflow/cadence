@@ -21,7 +21,7 @@ package migrations
 import (
 	"github.com/onflow/atree"
 
-	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/interpreter"
 )
 
 // ShouldFixBrokenCompositeKeyedDictionary returns true if the given value is a dictionary with a composite key type.

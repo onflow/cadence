@@ -21,8 +21,8 @@ package analysis
 import (
 	"golang.org/x/xerrors"
 
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 )
 
 type ParsingCheckingError struct {

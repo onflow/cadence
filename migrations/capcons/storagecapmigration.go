@@ -19,11 +19,11 @@
 package capcons
 
 import (
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/migrations"
 	"github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/stdlib"
 )
 
 type StorageCapabilityMigrationReporter interface {
