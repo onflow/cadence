@@ -4,10 +4,11 @@ import dataclasses
 import html
 import json
 import logging
-import os, stat
+import os
 import re
 import shlex
 import shutil
+import stat
 import subprocess
 import sys
 import textwrap
@@ -111,15 +112,26 @@ class GoTest:
     path: str
     command: str
 
-    def run(self, working_dir: Path, prepare: bool, cadence_version: str, flowgo_version: str) -> bool:
-        cadence_replacement = f'github.com/onflow/cadence@{cadence_version}'
-        flowgo_replacement = f'github.com/onflow/flow-go@{flowgo_version}'
+    def run(self, working_dir: Path, prepare: bool, cadence_version: Optional[str], flowgo_version: Optional[str]) -> bool:
+        if cadence_version:
+            cadence_replacement = f'github.com/onflow/cadence@{cadence_version}'
+        else:
+            cadence_replacement = Path.cwd().parent.absolute().resolve().as_posix()
+
+        if flowgo_version:
+            flowgo_replacement = f'github.com/onflow/flow-go@{flowgo_version}'
+        else:
+            # default flow-go version is 0.37.16 the one corresponding to cadence v1.0.0
+            flowgo_replacement = f'github.com/onflow/flow-go@v0.37.16'
 
         with cwd(working_dir / self.path):
             if prepare:
                 logger.info("Editing dependencies")
                 subprocess.run([
                     "go", "mod", "edit", "-replace", f'github.com/onflow/flow-go={flowgo_replacement}',
+                ])
+                subprocess.run([
+                    "go", "mod", "edit", "-replace", f'github.com/onflow/cadence={cadence_replacement}',
                 ])
                 logger.info("Downloading dependencies")
                 subprocess.run([
@@ -191,9 +203,9 @@ class Description:
         if working_dir.exists():
             for root, dirs, files in os.walk(working_dir):  
                 for dir in dirs:
-                    os.chmod(os.path.join(root, dir), stat.S_IRWXU)
+                    os.chmod(os.path.join(root, dir), stat.S_IRUSR | stat.S_IWUSR)
                 for file in files:
-                    os.chmod(os.path.join(root, file), stat.S_IRWXU)
+                    os.chmod(os.path.join(root, file), stat.S_IRUSR | stat.S_IWUSR)
             shutil.rmtree(working_dir)
 
         logger.info(f"Cloning {self.url} ({self.branch})")
@@ -208,8 +220,8 @@ class Description:
         bench: bool,
         check: bool,
         go_test: bool,
-        cadence_version: str,
-        flowgo_version: str,
+        cadence_version: Optional[str],
+        flowgo_version: Optional[str],
     ) -> (bool, List[Result]):
 
         working_dir = SUITE_PATH / name
@@ -646,12 +658,12 @@ def json_serialize(data) -> str:
 )
 @click.option(
     "--cadence-version",
-    default="v1.0.1",
+    default=None,
     help="version of Cadence for Go tests"
 )
 @click.option(
     "--flowgo-version",
-    default="v0.37.17",
+    default=None,
     help="version of flow-go for Go tests"
 )
 @click.option(
@@ -766,8 +778,7 @@ def run(
 
     all_succeeded = True
 
-    # only flow-go version has an impact, cadence version will be upgraded to match flow-go version
-    logger.info(f'Chosen versions: cadence@{cadence_version}, flow-go@{flowgo_version}')
+    logger.info(f'Chosen versions: cadence@{ cadence_version if cadence_version else "local version" }, flow-go@{flowgo_version if flowgo_version else "v0.37.16"}')
 
     if not names:
         names = load_index(SUITE_PATH / "index.yaml")
