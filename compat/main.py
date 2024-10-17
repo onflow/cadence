@@ -111,18 +111,17 @@ class GoTest:
     path: str
     command: str
 
-    def run(self, working_dir: Path, prepare: bool, go_test_ref: Optional[str]) -> bool:
-        if go_test_ref:
-            replacement = f'github.com/onflow/cadence@{go_test_ref}'
-        else:
-            replacement = f'{Path.cwd().parent.absolute().resolve().as_posix()}'
+    def run(self, working_dir: Path, prepare: bool, cadence_version: str, flowgo_version: str) -> bool:
+        cadence_replacement = f'github.com/onflow/cadence@{cadence_version}'
+        flowgo_replacement = f'github.com/onflow/flow-go@{flowgo_version}'
 
         with cwd(working_dir / self.path):
             if prepare:
-                logger.info("Loading dependencies")
+                logger.info("Editing dependencies")
                 subprocess.run([
-                    "go", "mod", "edit", "-replace", f'github.com/onflow/cadence={replacement}',
+                    "go", "mod", "edit", "-replace", f'github.com/onflow/flow-go={flowgo_replacement}',
                 ])
+                logger.info("Downloading dependencies")
                 subprocess.run([
                     "go", "get", "-t", ".",
                 ])
@@ -209,7 +208,8 @@ class Description:
         bench: bool,
         check: bool,
         go_test: bool,
-        go_test_ref: Optional[str],
+        cadence_version: str,
+        flowgo_version: str,
     ) -> (bool, List[Result]):
 
         working_dir = SUITE_PATH / name
@@ -221,7 +221,7 @@ class Description:
         go_tests_succeeded = True
         if go_test:
             for test in self.go_tests:
-                if not test.run(working_dir, prepare=prepare, go_test_ref=go_test_ref):
+                if not test.run(working_dir, prepare=prepare, cadence_version=cadence_version, flowgo_version=flowgo_version):
                     go_tests_succeeded = False
 
         succeeded = go_tests_succeeded
@@ -613,12 +613,6 @@ Format = Literal["pretty", "json", "markdown"]
 def json_serialize(data) -> str:
     return json.dumps(data, indent=4, cls=EnhancedJSONEncoder)
 
-
-def build_all():
-    for name in ("parse", "check"):
-        build(name)
-
-
 @click.command()
 @click.option(
     "--rerun",
@@ -651,9 +645,14 @@ def build_all():
     help="Run the suite Go tests"
 )
 @click.option(
-    "--go-test-ref",
-    default=None,
-    help="Git ref of Cadence for Go tests"
+    "--cadence-version",
+    default="v1.0.0",
+    help="version of Cadence for Go tests"
+)
+@click.option(
+    "--flowgo-version",
+    default="v0.37.16",
+    help="version of flow-go for Go tests"
 )
 @click.option(
     "--output",
@@ -682,7 +681,8 @@ def main(
         bench: bool,
         check: bool,
         go_test: bool,
-        go_test_ref: Optional[str],
+        cadence_version: str,
+        flowgo_version: str,
         output: Optional[LazyFile],
         other_ref: Optional[str],
         delta_threshold: float,
@@ -707,7 +707,8 @@ def main(
         bench=bench,
         check=check,
         go_test=go_test,
-        go_test_ref=go_test_ref,
+        cadence_version=cadence_version,
+        flowgo_version=flowgo_version,
         names=names
     )
 
@@ -758,11 +759,15 @@ def run(
         bench: bool,
         check: bool,
         go_test: bool,
-        go_test_ref: Optional[str],
+        cadence_version: str,
+        flowgo_version: str,
         names: Collection[str]
 ) -> (bool, List[Result]):
 
     all_succeeded = True
+
+    # only flow-go version has an impact
+    logger.info(f'Chosen versions: cadence@{cadence_version}, flow-go@{flowgo_version}')
 
     if not names:
         names = load_index(SUITE_PATH / "index.yaml")
@@ -780,7 +785,8 @@ def run(
             bench=bench,
             check=check,
             go_test=go_test,
-            go_test_ref=go_test_ref,
+            cadence_version=cadence_version,
+            flowgo_version=flowgo_version,
         )
 
         if not run_succeeded:
