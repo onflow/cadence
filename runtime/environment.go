@@ -1092,14 +1092,32 @@ func (e *interpreterEnvironment) newCompositeValueFunctionsHandler() interpreter
 func (e *interpreterEnvironment) loadContract(
 	inter *interpreter.Interpreter,
 	compositeType *sema.CompositeType,
-	_ func(common.Address) *interpreter.HostFunctionValue,
-	_ ast.Range,
+	constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
+	invocationRange ast.Range,
 ) *interpreter.CompositeValue {
 
-	var storedValue interpreter.Value
+	var contractValue interpreter.Value
 
-	switch location := compositeType.Location.(type) {
-	// TODO: support e.g. CryptoContractLocation
+	location := compositeType.Location
+	switch location := location.(type) {
+	case common.IdentifierLocation:
+		// Identifier locations are used for built-in contracts,
+		// and are not stored in storage
+
+		constructorGenerator := constructorGenerator(common.ZeroAddress)
+		var err error
+		contractValue, err = inter.InvokeFunctionValue(
+			constructorGenerator,
+			nil,
+			nil,
+			nil,
+			compositeType,
+			invocationRange,
+		)
+		if err != nil {
+			panic(err)
+		}
+
 	case common.AddressLocation:
 		storageMap := e.storage.GetStorageMap(
 			location.Address,
@@ -1107,15 +1125,15 @@ func (e *interpreterEnvironment) loadContract(
 			false,
 		)
 		if storageMap != nil {
-			storedValue = storageMap.ReadValue(inter, interpreter.StringStorageMapKey(location.Name))
+			contractValue = storageMap.ReadValue(inter, interpreter.StringStorageMapKey(location.Name))
 		}
 	}
 
-	if storedValue == nil {
-		panic(errors.NewDefaultUserError("failed to load contract: %s", compositeType.Location))
+	if contractValue == nil {
+		panic(errors.NewDefaultUserError("failed to load contract: %s", location))
 	}
 
-	return storedValue.(*interpreter.CompositeValue)
+	return contractValue.(*interpreter.CompositeValue)
 }
 
 func (e *interpreterEnvironment) newOnFunctionInvocationHandler() func(_ *interpreter.Interpreter) {

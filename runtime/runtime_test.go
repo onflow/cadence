@@ -11561,3 +11561,101 @@ func TestResultRedeclared(t *testing.T) {
 	})
 
 }
+func TestRuntimeContractValueLocation(t *testing.T) {
+
+	t.Parallel()
+
+	signerAddress := common.MustBytesToAddress([]byte{0x42})
+
+	const fooContractName = "Foo"
+	fooIdentifierLocation := common.IdentifierLocation(fooContractName)
+
+	fooContract := []byte(`
+      access(all)
+      contract Foo {
+          access(all) var answer: Int
+
+          init() {
+              self.answer = 42
+          }
+      }
+    `)
+
+	accountCodes := map[Location][]byte{}
+	var events []cadence.Event
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAddress}, nil
+		},
+		OnResolveLocation: func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
+			assert.Empty(t, identifiers)
+			assert.Equal(t, fooIdentifierLocation, location)
+
+			return []ResolvedLocation{
+				{
+					Location:    location,
+					Identifiers: identifiers,
+				},
+			}, nil
+		},
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		OnGetCode: func(location Location) ([]byte, error) {
+			assert.Equal(t, fooIdentifierLocation, location)
+			return fooContract, nil
+		},
+	}
+
+	runtime := NewTestInterpreterRuntime()
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	// Deploy
+
+	deploy := DeploymentTransaction(fooContractName, fooContract)
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Test
+
+	result, err := runtime.ExecuteScript(
+		Script{
+			Source: []byte(`
+              import Foo
+
+              access(all)
+              fun main(): Int {
+                  return Foo.answer
+              }
+            `),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextScriptLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, cadence.NewInt(42), result)
+}
