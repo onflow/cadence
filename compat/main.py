@@ -646,12 +646,12 @@ def json_serialize(data) -> str:
 )
 @click.option(
     "--cadence-version",
-    default="v1.0.0",
+    default="v1.0.1",
     help="version of Cadence for Go tests"
 )
 @click.option(
     "--flowgo-version",
-    default="v0.37.16",
+    default="v0.37.17",
     help="version of flow-go for Go tests"
 )
 @click.option(
@@ -766,7 +766,7 @@ def run(
 
     all_succeeded = True
 
-    # only flow-go version has an impact
+    # only flow-go version has an impact, cadence version will be upgraded to match flow-go version
     logger.info(f'Chosen versions: cadence@{cadence_version}, flow-go@{flowgo_version}')
 
     if not names:
