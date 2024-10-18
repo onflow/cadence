@@ -25,7 +25,6 @@ import (
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/parser"
-	"github.com/onflow/cadence/tests/examples"
 )
 
 // TestInspector_Elements compares Inspector against Inspect.
@@ -33,9 +32,30 @@ func TestInspector_Elements(t *testing.T) {
 
 	t.Parallel()
 
+	const code = `
+      access(all) contract interface FungibleToken {
+
+          access(all) resource interface Provider {
+              access(all) fun withdraw(amount: Int): @Vault
+          }
+
+          access(all) resource interface Receiver {
+              access(all) fun deposit(vault: @Vault)
+          }
+
+          access(all) resource interface Vault: Provider, Receiver {
+              access(all) balance: Int
+          }
+
+          access(all) fun absorb(vault: @Vault)
+
+          access(all) fun sprout(balance: Int): @Vault
+      }
+    `
+
 	program, err := parser.ParseProgram(
 		nil,
-		[]byte(examples.FungibleTokenContractInterface),
+		[]byte(code),
 		parser.Config{},
 	)
 	require.NoError(t, err)
