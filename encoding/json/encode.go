@@ -30,8 +30,8 @@ import (
 	_ "unsafe"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/sema"
 )
 
 // An Encoder converts Cadence values into JSON-encoded bytes.

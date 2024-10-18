@@ -22,7 +22,7 @@ package ccf
 
 import (
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/common/bimap"
+	"github.com/onflow/cadence/common/bimap"
 )
 
 // Simple type ID is a compact representation of a type

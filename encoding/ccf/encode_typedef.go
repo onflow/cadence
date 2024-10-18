@@ -20,7 +20,7 @@ package ccf
 
 import (
 	"github.com/onflow/cadence"
-	cadenceErrors "github.com/onflow/cadence/runtime/errors"
+	cadenceErrors "github.com/onflow/cadence/errors"
 )
 
 // encodeCompositeType encodes cadence.CompositeType in type definition as

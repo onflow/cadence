@@ -29,7 +29,7 @@ import (
 
 	"github.com/bytecodealliance/wasmtime-go/v7"
 
-	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/interpreter"
 )
 
 type VM interface {

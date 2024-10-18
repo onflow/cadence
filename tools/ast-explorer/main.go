@@ -26,8 +26,8 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/parser"
 )
 
 type Request struct {

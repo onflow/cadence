@@ -24,8 +24,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/ccf"
-	"github.com/onflow/cadence/runtime/common"
 )
 
 func TestEpochSetupEvent(t *testing.T) {

@@ -29,7 +29,7 @@ import (
 
 	"github.com/turbolent/prettier"
 
-	"github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/parser"
 )
 
 func pretty(code string, maxLineWidth int) string {

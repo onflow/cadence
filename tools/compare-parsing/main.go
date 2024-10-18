@@ -19,7 +19,7 @@
 package main
 
 // Parses all programs in a CSV file with header location,code
-// using am old and new runtime/cmd/parse program.
+// using am old and new `cmd/parse` program.
 //
 // It reports already broken programs, programs that are broken with the new parser,
 // and when parses of the old and new parser differ

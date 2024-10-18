@@ -25,16 +25,16 @@ import (
 	"sort"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/activations"
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/cmd"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/parser"
-	"github.com/onflow/cadence/runtime/parser/lexer"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/cmd"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/parser"
+	"github.com/onflow/cadence/parser/lexer"
+	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 )
 
 type REPL struct {
@@ -254,8 +254,11 @@ func (r *REPL) Accept(code []byte, eval bool) (inputIsComplete bool, err error) 
 		code = prefixedCode
 	}
 
-	tokens := lexer.Lex(code, nil)
+	tokens, err := lexer.Lex(code, nil)
 	defer tokens.Reclaim()
+	if err != nil {
+		return
+	}
 
 	inputIsComplete = isInputComplete(tokens)
 
