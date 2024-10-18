@@ -29,8 +29,8 @@ import (
 	"github.com/fxamacker/cbor/v2"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/common"
-	cadenceErrors "github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/common"
+	cadenceErrors "github.com/onflow/cadence/errors"
 )
 
 // HasMsgPrefix returns true if the msg prefix (first few bytes)

@@ -22,7 +22,7 @@ import (
 	"bytes"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/common"
 )
 
 // bytewiseFieldSorter
