@@ -27,11 +27,7 @@ import (
 
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/parser"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/tests/examples"
-	. "github.com/onflow/cadence/tests/utils"
 )
 
 func constructorArguments(compositeKind common.CompositeKind) string {
@@ -1629,128 +1625,6 @@ func TestCheckInvalidTypeRequirementDeclaration(t *testing.T) {
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 	})
 }
-
-// TODO: re-enable this test with the v2 fungible token contract
-/* func TestCheckContractInterfaceFungibleToken(t *testing.T) {
-
-	t.Parallel()
-
-	const code = examples.FungibleTokenContractInterface
-
-	_, err := ParseAndCheck(t, code)
-	require.NoError(t, err)
-} */
-
-// TODO: re-enable this test with the v2 fungible token contract
-/* func TestCheckContractInterfaceFungibleTokenConformance(t *testing.T) {
-
-	t.Parallel()
-
-	code := examples.FungibleTokenContractInterface + "\n" + examples.ExampleFungibleTokenContract
-
-	_, err := ParseAndCheckWithPanic(t, code)
-	require.NoError(t, err)
-} */
-
-func BenchmarkContractInterfaceFungibleToken(b *testing.B) {
-
-	const code = examples.FungibleTokenContractInterface
-
-	program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		checker, err := sema.NewChecker(
-			program,
-			TestLocation,
-			nil,
-			&sema.Config{
-				AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
-			},
-		)
-		if err != nil {
-			b.Fatal(err)
-		}
-		err = checker.Check()
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-func BenchmarkCheckContractInterfaceFungibleTokenConformance(b *testing.B) {
-
-	code := examples.FungibleTokenContractInterface + "\n" + examples.ExampleFungibleTokenContract
-
-	program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.PanicFunction)
-
-	config := &sema.Config{
-		AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
-		BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-			return baseValueActivation
-		},
-	}
-
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		checker, err := sema.NewChecker(
-			program,
-			TestLocation,
-			nil,
-			config,
-		)
-		if err != nil {
-			b.Fatal(err)
-		}
-		err = checker.Check()
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-// TODO: re-enable this test with the v2 fungible token contract
-/* func TestCheckContractInterfaceFungibleTokenUse(t *testing.T) {
-
-	t.Parallel()
-
-	code := examples.FungibleTokenContractInterface + "\n" +
-		examples.ExampleFungibleTokenContract + "\n" + `
-
-      fun test(): Int {
-          let publisher <- ExampleToken.sprout(balance: 100)
-          let receiver <- ExampleToken.sprout(balance: 0)
-
-          let withdrawn <- publisher.withdraw(amount: 60)
-          receiver.deposit(vault: <-withdrawn)
-
-          let publisherBalance = publisher.balance
-          let receiverBalance = receiver.balance
-
-          destroy publisher
-          destroy receiver
-
-          return receiverBalance
-      }
-    `
-
-	_, err := ParseAndCheckWithPanic(t, code)
-
-	require.NoError(t, err)
-} */
 
 // TestCheckInvalidInterfaceUseAsTypeSuggestion tests that an interface
 // can not be used as a type, and the suggestion to fix it is correct
