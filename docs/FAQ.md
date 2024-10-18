@@ -43,7 +43,7 @@ There are several options to run the analyzer pass with the linter tool:
 
 ## Analyzing Cadence values / state snapshots
 
-To analyze Cadence values (`interpreter.Value`), you can use the function [`interpreter.InspectValue`](https://github.com/onflow/cadence/blob/master/runtime/interpreter/inspect.go#L31).
+To analyze Cadence values (`interpreter.Value`), you can use the function [`interpreter.InspectValue`](https://github.com/onflow/cadence/blob/master/interpreter/inspect.go#L31).
 
 To find static types in Cadence values (e.g. in type values, containers, capabilities), you can see which values contain static types in the [Cadence 1.0 static type migration code](https://github.com/onflow/cadence/blob/master/migrations/statictypes/statictype_migration.go#L67).
 

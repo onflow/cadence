@@ -19,7 +19,7 @@
 package analysis
 
 import (
-	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/common"
 )
 
 func Load(config *Config, locations ...common.Location) (*Programs, error) {

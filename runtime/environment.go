@@ -24,16 +24,16 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/activations"
-	"github.com/onflow/cadence/runtime/old_parser"
+	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/old_parser"
 
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/parser"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/parser"
+	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 )
 
 type Environment interface {

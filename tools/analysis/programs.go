@@ -19,11 +19,11 @@
 package analysis
 
 import (
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/parser"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/parser"
+	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 )
 
 type Programs struct {
