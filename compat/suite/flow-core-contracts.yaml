@@ -1,7 +1,7 @@
 description: Flow Core Contracts
 maintainers:
-- bastian@dapperlabs.com
-- joshua.hannan@dapperlabs.com
+  - bastian.mueller@flowfoundation.org
+  - joshua.hannan@flowfoundation.org
 url: https://github.com/onflow/flow-core-contracts.git
 branch: master
 go_tests:
