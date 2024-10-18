@@ -22,8 +22,11 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func Load(config *Config, locations ...common.Location) (Programs, error) {
-	programs := make(Programs, len(locations))
+func Load(config *Config, locations ...common.Location) (*Programs, error) {
+	programs := &Programs{
+		programs:                  make(map[common.Location]*Program, len(locations)),
+		cryptoContractElaboration: config.CryptoContractElaboration,
+	}
 	for _, location := range locations {
 		err := programs.Load(config, location)
 		if err != nil {

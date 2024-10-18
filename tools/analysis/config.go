@@ -45,6 +45,8 @@ type Config struct {
 	HandleParserError func(err ParsingCheckingError, program *ast.Program) error
 	// HandleCheckerError is called when a checker error occurs instead of returning it
 	HandleCheckerError func(err ParsingCheckingError, checker *sema.Checker) error
+	// CryptoContractElaboration is the elaboration of the Crypto contract
+	CryptoContractElaboration *sema.Elaboration
 }
 
 func NewSimpleConfig(
