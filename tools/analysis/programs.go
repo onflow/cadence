@@ -27,8 +27,8 @@ import (
 )
 
 type Programs struct {
-	programs                  map[common.Location]*Program
-	cryptoContractElaboration *sema.Elaboration
+	Programs                  map[common.Location]*Program
+	CryptoContractElaboration *sema.Elaboration
 }
 
 type importResolutionResults map[common.Location]bool
@@ -53,7 +53,7 @@ func (programs *Programs) load(
 	importRange ast.Range,
 	seenImports importResolutionResults,
 ) error {
-	if programs.programs[location] != nil {
+	if programs.Programs[location] != nil {
 		return nil
 	}
 
@@ -107,7 +107,7 @@ func (programs *Programs) load(
 		}
 	}
 
-	programs.programs[location] = &Program{
+	programs.Programs[location] = &Program{
 		Location:  location,
 		Code:      code,
 		Program:   program,
@@ -157,7 +157,7 @@ func (programs *Programs) check(
 
 				switch importedLocation {
 				case stdlib.CryptoContractLocation:
-					elaboration = programs.cryptoContractElaboration
+					elaboration = programs.CryptoContractElaboration
 
 				default:
 					if seenImports[importedLocation] {
@@ -174,7 +174,7 @@ func (programs *Programs) check(
 						return nil, err
 					}
 
-					program := programs.programs[importedLocation]
+					program := programs.Programs[importedLocation]
 					checker := program.Checker
 
 					// If the imported program has a checker, use its elaboration for the import
@@ -209,13 +209,5 @@ func (programs *Programs) check(
 }
 
 func (programs *Programs) Get(location common.Location) *Program {
-	return programs.programs[location]
-}
-
-func (programs *Programs) All() []*Program {
-	all := make([]*Program, 0, len(programs.programs))
-	for _, program := range programs.programs {
-		all = append(all, program)
-	}
-	return all
+	return programs.Programs[location]
 }

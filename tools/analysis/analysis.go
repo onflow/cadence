@@ -24,8 +24,8 @@ import (
 
 func Load(config *Config, locations ...common.Location) (*Programs, error) {
 	programs := &Programs{
-		programs:                  make(map[common.Location]*Program, len(locations)),
-		cryptoContractElaboration: config.CryptoContractElaboration,
+		Programs:                  make(map[common.Location]*Program, len(locations)),
+		CryptoContractElaboration: config.CryptoContractElaboration,
 	}
 	for _, location := range locations {
 		err := programs.Load(config, location)

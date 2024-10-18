@@ -99,7 +99,7 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 
 	var locationRanges []locationRange
 
-	for _, program := range programs.All() {
+	for _, program := range programs.Programs {
 		require.NotNil(t, program.Program)
 		require.NotNil(t, program.Checker)
 
