@@ -246,6 +246,11 @@ func (compiler *Compiler) VisitFunctionExpression(_ *ast.FunctionExpression) ir.
 	panic(errors.NewUnreachableError())
 }
 
+func (compiler *Compiler) VisitStringTemplateExpression(e *ast.StringTemplateExpression) ir.Expr {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
 func (compiler *Compiler) VisitStringExpression(e *ast.StringExpression) ir.Expr {
 	return &ir.Const{
 		Constant: ir.String{

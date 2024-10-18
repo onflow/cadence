@@ -82,6 +82,7 @@ const (
 	TokenAsExclamationMark
 	TokenAsQuestionMark
 	TokenPragma
+	TokenStringTemplate
 	// NOTE: not an actual token, must be last item
 	TokenMax
 )
@@ -205,6 +206,8 @@ func (t TokenType) String() string {
 		return `'as?'`
 	case TokenPragma:
 		return `'#'`
+	case TokenStringTemplate:
+		return `'\('`
 	default:
 		panic(errors.NewUnreachableError())
 	}
