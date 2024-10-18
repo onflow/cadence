@@ -23,8 +23,8 @@ import (
 	"fmt"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/common"
-	cadenceErrors "github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/common"
+	cadenceErrors "github.com/onflow/cadence/errors"
 )
 
 type rawFieldsWithCCFTypeID struct {
