@@ -21,7 +21,7 @@ GOPATH ?= $(HOME)/go
 # Ensure go bin path is in path (Especially for CI)
 PATH := $(PATH):$(GOPATH)/bin
 
-COVERPKGS := $(shell go list ./... | grep -v /cmd | grep -v /runtime/test | tr "\n" "," | sed 's/,*$$//')
+COVERPKGS := $(shell go list ./... | grep -v /cmd | grep -v /test | tr "\n" "," | sed 's/,*$$//')
 
 
 LINTERS :=
@@ -30,19 +30,19 @@ ifneq ($(linters),)
 endif
 
 .PHONY: build
-build: build-tools ./runtime/cmd/parse/parse ./runtime/cmd/parse/parse.wasm ./runtime/cmd/check/check ./runtime/cmd/main/main
+build: build-tools ./cmd/parse/parse ./cmd/parse/parse.wasm ./cmd/check/check ./cmd/main/main
 
-./runtime/cmd/parse/parse:
-	go build -o $@ ./runtime/cmd/parse
+./cmd/parse/parse:
+	go build -o $@ ./cmd/parse
 
-./runtime/cmd/parse/parse.wasm:
-	GOARCH=wasm GOOS=js go build -o $@ ./runtime/cmd/parse
+./cmd/parse/parse.wasm:
+	GOARCH=wasm GOOS=js go build -o $@ ./cmd/parse
 
-./runtime/cmd/check/check:
-	go build -o $@ ./runtime/cmd/check
+./cmd/check/check:
+	go build -o $@ ./cmd/check
 
-./runtime/cmd/main/main:
-	go build -o $@ ./runtime/cmd/main
+./cmd/main/main:
+	go build -o $@ ./cmd/main
 
 .PHONY: build-tools
 build-tools: build-analysis build-get-contracts
@@ -60,7 +60,7 @@ ci:
 	# test all packages
 	go test -coverprofile=coverage.txt -covermode=atomic -parallel 8 -race -coverpkg $(COVERPKGS) ./...
 	# run interpreter smoke tests. results from run above are reused, so no tests runs are duplicated
-	go test -count=5 ./runtime/tests/interpreter/... -runSmokeTests=true -validateAtree=false
+	go test -count=5 ./tests/interpreter/... -runSmokeTests=true -validateAtree=false
 	# remove coverage of empty functions from report
 	sed -i -e 's/^.* 0 0$$//' coverage.txt
 

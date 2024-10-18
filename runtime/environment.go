@@ -24,16 +24,16 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/activations"
-	"github.com/onflow/cadence/runtime/old_parser"
+	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/old_parser"
 
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/parser"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/parser"
+	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 )
 
 type Environment interface {
@@ -185,16 +185,18 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		// and disable storage validation after each value modification.
 		// Instead, storage is validated after commits (if validation is enabled),
 		// see interpreterEnvironment.CommitStorage
-		AtreeStorageValidationEnabled:    false,
-		Debugger:                         e.config.Debugger,
-		OnStatement:                      e.newOnStatementHandler(),
-		OnMeterComputation:               e.newOnMeterComputation(),
-		OnFunctionInvocation:             e.newOnFunctionInvocationHandler(),
-		OnInvokedFunctionReturn:          e.newOnInvokedFunctionReturnHandler(),
-		CapabilityBorrowHandler:          e.newCapabilityBorrowHandler(),
-		CapabilityCheckHandler:           e.newCapabilityCheckHandler(),
-		LegacyContractUpgradeEnabled:     e.config.LegacyContractUpgradeEnabled,
-		ContractUpdateTypeRemovalEnabled: e.config.ContractUpdateTypeRemovalEnabled,
+		AtreeStorageValidationEnabled:             false,
+		Debugger:                                  e.config.Debugger,
+		OnStatement:                               e.newOnStatementHandler(),
+		OnMeterComputation:                        e.newOnMeterComputation(),
+		OnFunctionInvocation:                      e.newOnFunctionInvocationHandler(),
+		OnInvokedFunctionReturn:                   e.newOnInvokedFunctionReturnHandler(),
+		CapabilityBorrowHandler:                   e.newCapabilityBorrowHandler(),
+		CapabilityCheckHandler:                    e.newCapabilityCheckHandler(),
+		LegacyContractUpgradeEnabled:              e.config.LegacyContractUpgradeEnabled,
+		ContractUpdateTypeRemovalEnabled:          e.config.ContractUpdateTypeRemovalEnabled,
+		ValidateAccountCapabilitiesGetHandler:     e.newValidateAccountCapabilitiesGetHandler(),
+		ValidateAccountCapabilitiesPublishHandler: e.newValidateAccountCapabilitiesPublishHandler(),
 	}
 }
 
@@ -522,9 +524,15 @@ func (e *interpreterEnvironment) parseAndCheckProgram(
 	err error,
 ) {
 	wrapParsingCheckingError := func(err error) error {
-		return &ParsingCheckingError{
-			Err:      err,
-			Location: location,
+		switch err.(type) {
+		// Wrap only parsing and checking errors.
+		case *sema.CheckerError, parser.Error:
+			return &ParsingCheckingError{
+				Err:      err,
+				Location: location,
+			}
+		default:
+			return err
 		}
 	}
 
@@ -939,6 +947,7 @@ func (e *interpreterEnvironment) newContractValueHandler() interpreter.ContractV
 					invocation.ConstructorArguments,
 					invocation.ArgumentTypes,
 					invocation.ParameterTypes,
+					invocation.ContractType,
 					invocationRange,
 				)
 				if err != nil {
@@ -1395,5 +1404,63 @@ func (e *interpreterEnvironment) newCapabilityCheckHandler() interpreter.Capabil
 			capabilityBorrowType,
 			e,
 		)
+	}
+}
+
+func (e *interpreterEnvironment) newValidateAccountCapabilitiesGetHandler() interpreter.ValidateAccountCapabilitiesGetHandlerFunc {
+	return func(
+		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
+		address interpreter.AddressValue,
+		path interpreter.PathValue,
+		wantedBorrowType *sema.ReferenceType,
+		capabilityBorrowType *sema.ReferenceType,
+	) (bool, error) {
+		var (
+			ok  bool
+			err error
+		)
+		errors.WrapPanic(func() {
+			ok, err = e.runtimeInterface.ValidateAccountCapabilitiesGet(
+				inter,
+				locationRange,
+				address,
+				path,
+				wantedBorrowType,
+				capabilityBorrowType,
+			)
+		})
+		if err != nil {
+			err = interpreter.WrappedExternalError(err)
+		}
+		return ok, err
+	}
+}
+
+func (e *interpreterEnvironment) newValidateAccountCapabilitiesPublishHandler() interpreter.ValidateAccountCapabilitiesPublishHandlerFunc {
+	return func(
+		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
+		address interpreter.AddressValue,
+		path interpreter.PathValue,
+		capabilityBorrowType *interpreter.ReferenceStaticType,
+	) (bool, error) {
+		var (
+			ok  bool
+			err error
+		)
+		errors.WrapPanic(func() {
+			ok, err = e.runtimeInterface.ValidateAccountCapabilitiesPublish(
+				inter,
+				locationRange,
+				address,
+				path,
+				capabilityBorrowType,
+			)
+		})
+		if err != nil {
+			err = interpreter.WrappedExternalError(err)
+		}
+		return ok, err
 	}
 }

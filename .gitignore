@@ -34,10 +34,10 @@ suppressions
 
 coverage.txt
 coverage.txt-e
-runtime/cmd/check/check
-runtime/cmd/main/main
-runtime/cmd/parse/parse
-runtime/cmd/parse/parse.wasm
+cmd/check/check
+cmd/main/main
+cmd/parse/parse
+cmd/parse/parse.wasm
 tools/golangci-lint/golangci-lint
 tools/maprange/maprange
 tools/unkeyed/unkeyed
