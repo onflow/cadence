@@ -117,7 +117,10 @@ func (c *ContractsChecker) analyze(
 	config *analysis.Config,
 	locations []common.Location,
 ) {
-	programs := make(analysis.Programs, len(locations))
+	programs := analysis.Programs{
+		Programs:                  make(map[common.Location]*analysis.Program, len(locations)),
+		CryptoContractElaboration: config.CryptoContractElaboration,
+	}
 
 	log.Println("Checking contracts ...")
 
