@@ -1,0 +1,106 @@
+/*
+ * Cadence - The resource-oriented smart contract programming language
+ *
+ * Copyright Flow Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package sema
+
+import (
+	"github.com/onflow/cadence/ast"
+)
+
+func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpression) Type {
+
+	// visit all entries, ensure key are all the same type,
+	// and values are all the same type
+
+	var keyType, valueType Type
+
+	expectedType := UnwrapOptionalType(checker.expectedType)
+
+	if expectedMapType, ok := expectedType.(*DictionaryType); ok {
+		keyType = expectedMapType.KeyType
+		valueType = expectedMapType.ValueType
+	}
+
+	var entryTypes []DictionaryEntryType
+	var keyTypes []Type
+	var valueTypes []Type
+
+	dictionarySize := len(expression.Entries)
+	if dictionarySize > 0 {
+		entryTypes = make([]DictionaryEntryType, dictionarySize)
+		keyTypes = make([]Type, dictionarySize)
+		valueTypes = make([]Type, dictionarySize)
+
+		for i, entry := range expression.Entries {
+			// NOTE: important to check move after each type check,
+			// not combined after both type checks!
+
+			entryKeyType := checker.VisitExpression(entry.Key, expression, keyType)
+			checker.checkResourceMoveOperation(entry.Key, entryKeyType)
+
+			entryValueType := checker.VisitExpression(entry.Value, expression, valueType)
+			checker.checkResourceMoveOperation(entry.Value, entryValueType)
+
+			entryTypes[i] = DictionaryEntryType{
+				KeyType:   entryKeyType,
+				ValueType: entryValueType,
+			}
+
+			keyTypes[i] = entryKeyType
+			valueTypes[i] = entryValueType
+		}
+	}
+
+	if keyType == nil && valueType == nil {
+		// Contextually expected type is not available.
+		// Therefore, find the least common supertype of the keys and values.
+		keyType = checker.leastCommonSuperType(expression, keyTypes...)
+		if keyType == InvalidType {
+			return InvalidType
+		}
+
+		valueType = checker.leastCommonSuperType(expression, valueTypes...)
+		if valueType == InvalidType {
+			return InvalidType
+		}
+	}
+
+	if !IsSubType(keyType, HashableStructType) {
+		checker.report(
+			&InvalidDictionaryKeyTypeError{
+				Type:  keyType,
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression),
+			},
+		)
+	}
+
+	dictionaryType := &DictionaryType{
+		KeyType:   keyType,
+		ValueType: valueType,
+	}
+
+	checker.Elaboration.SetDictionaryExpressionTypes(
+		expression,
+		DictionaryExpressionTypes{
+			EntryTypes:     entryTypes,
+			DictionaryType: dictionaryType,
+		},
+	)
+
+	return dictionaryType
+}

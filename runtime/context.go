@@ -19,7 +19,7 @@
 package runtime
 
 import (
-	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/ast"
 )
 
 type Context struct {

@@ -23,7 +23,7 @@ import (
 	"sort"
 
 	"github.com/onflow/cadence"
-	cadenceErrors "github.com/onflow/cadence/runtime/errors"
+	cadenceErrors "github.com/onflow/cadence/errors"
 )
 
 type encodeTypeFn func(typ cadence.Type, tids ccfTypeIDByCadenceType) error
