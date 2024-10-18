@@ -11561,7 +11561,8 @@ func TestResultRedeclared(t *testing.T) {
 	})
 
 }
-func TestRuntimeContractValueLocation(t *testing.T) {
+
+func TestRuntimeIdentifierLocationToAddressLocationRewrite(t *testing.T) {
 
 	t.Parallel()
 
@@ -11569,6 +11570,10 @@ func TestRuntimeContractValueLocation(t *testing.T) {
 
 	const fooContractName = "Foo"
 	fooIdentifierLocation := common.IdentifierLocation(fooContractName)
+	fooAddressLocation := common.AddressLocation{
+		Address: signerAddress,
+		Name:    fooContractName,
+	}
 
 	fooContract := []byte(`
       access(all)
@@ -11593,6 +11598,9 @@ func TestRuntimeContractValueLocation(t *testing.T) {
 			assert.Empty(t, identifiers)
 			assert.Equal(t, fooIdentifierLocation, location)
 
+			// NOTE: rewrite identifier location to address location
+			location = fooAddressLocation
+
 			return []ResolvedLocation{
 				{
 					Location:    location,
@@ -11612,8 +11620,7 @@ func TestRuntimeContractValueLocation(t *testing.T) {
 			return nil
 		},
 		OnGetCode: func(location Location) ([]byte, error) {
-			assert.Equal(t, fooIdentifierLocation, location)
-			return fooContract, nil
+			return nil, errors.New("GetCode should not be called")
 		},
 	}
 

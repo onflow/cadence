@@ -1092,40 +1092,24 @@ func (e *interpreterEnvironment) newCompositeValueFunctionsHandler() interpreter
 func (e *interpreterEnvironment) loadContract(
 	inter *interpreter.Interpreter,
 	compositeType *sema.CompositeType,
-	constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
-	invocationRange ast.Range,
+	_ func(common.Address) *interpreter.HostFunctionValue,
+	_ ast.Range,
 ) *interpreter.CompositeValue {
 
 	var contractValue interpreter.Value
 
 	location := compositeType.Location
-	switch location := location.(type) {
-	case common.IdentifierLocation:
-		// Identifier locations are used for built-in contracts,
-		// and are not stored in storage
-
-		constructorGenerator := constructorGenerator(common.ZeroAddress)
-		var err error
-		contractValue, err = inter.InvokeFunctionValue(
-			constructorGenerator,
-			nil,
-			nil,
-			nil,
-			compositeType,
-			invocationRange,
-		)
-		if err != nil {
-			panic(err)
-		}
-
-	case common.AddressLocation:
+	if addressLocation, ok := location.(common.AddressLocation); ok {
 		storageMap := e.storage.GetStorageMap(
-			location.Address,
+			addressLocation.Address,
 			StorageDomainContract,
 			false,
 		)
 		if storageMap != nil {
-			contractValue = storageMap.ReadValue(inter, interpreter.StringStorageMapKey(location.Name))
+			contractValue = storageMap.ReadValue(
+				inter,
+				interpreter.StringStorageMapKey(addressLocation.Name),
+			)
 		}
 	}
 
