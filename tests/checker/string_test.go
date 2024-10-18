@@ -742,6 +742,27 @@ func TestCheckStringTemplate(t *testing.T) {
 		assert.IsType(t, &sema.TypeMismatchWithDescriptionError{}, errs[0])
 	})
 
+	t.Run("invalid, struct with tostring", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			access(all)
+			struct SomeStruct {
+				access(all)
+				view fun toString(): String {
+					return "SomeStruct"
+				}
+			}
+			let a = SomeStruct()
+			let x: String = "\(a)" 
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchWithDescriptionError{}, errs[0])
+	})
+
 	t.Run("invalid, array", func(t *testing.T) {
 		t.Parallel()
 
@@ -781,6 +802,20 @@ func TestCheckStringTemplate(t *testing.T) {
 				destroy x
 				return y
 			} 
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchWithDescriptionError{}, errs[0])
+	})
+
+	t.Run("invalid, expression type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			let y: Int = 0
+			let x: String = "\(y > 0 ? "String" : true)"
 		`)
 
 		errs := RequireCheckerErrors(t, err, 1)
