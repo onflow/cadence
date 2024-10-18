@@ -1,0 +1,24 @@
+name: Source Compatibility Suite
+on:
+  schedule:
+    - cron: '0 12 * * *'
+  workflow_dispatch:
+    inputs:
+
+jobs:
+  source-compat:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Clone
+      uses: actions/checkout@v4
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+    - name: Install dependencies
+      working-directory: compat
+      run: pip3 install -r requirements.txt
+    - name: Run
+      working-directory: compat
+      run: "python3 main.py"
