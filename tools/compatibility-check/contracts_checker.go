@@ -31,20 +31,26 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/parser"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 	"github.com/onflow/cadence/tools/analysis"
+
+	"github.com/onflow/flow-go/fvm/systemcontracts"
+	"github.com/onflow/flow-go/model/flow"
 )
 
 const LoadMode = analysis.NeedTypes
 
 type ContractsChecker struct {
+	chain        flow.Chain
 	Codes        map[common.Location][]byte
 	outputWriter io.StringWriter
 }
 
-func NewContractChecker(outputWriter io.StringWriter) *ContractsChecker {
+func NewContractChecker(chain flow.Chain, outputWriter io.StringWriter) *ContractsChecker {
 	checker := &ContractsChecker{
 		Codes:        map[common.Location][]byte{},
 		outputWriter: outputWriter,
+		chain:        chain,
 	}
 
 	return checker
@@ -117,9 +123,17 @@ func (c *ContractsChecker) analyze(
 	config *analysis.Config,
 	locations []common.Location,
 ) {
+
+	sc := systemcontracts.SystemContractsForChain(c.chain.ChainID())
+
 	programs := analysis.Programs{
-		Programs:                  make(map[common.Location]*analysis.Program, len(locations)),
-		CryptoContractElaboration: config.CryptoContractElaboration,
+		Programs: make(map[common.Location]*analysis.Program, len(locations)),
+		CryptoContractLocation: func() common.Location {
+			return common.AddressLocation{
+				Address: common.Address(sc.Crypto.Address),
+				Name:    string(stdlib.CryptoContractLocation),
+			}
+		},
 	}
 
 	log.Println("Checking contracts ...")

@@ -19,6 +19,7 @@
 package analysis
 
 import (
+	"fmt"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/parser"
@@ -29,6 +30,7 @@ import (
 type Programs struct {
 	Programs                  map[common.Location]*Program
 	CryptoContractElaboration *sema.Elaboration
+	CryptoContractLocation    func() common.Location
 }
 
 type importResolutionResults map[common.Location]bool
@@ -157,8 +159,28 @@ func (programs *Programs) check(
 
 				switch importedLocation {
 				case stdlib.CryptoContractLocation:
+					// If the elaboration for the crypto contract is available, take it.
 					elaboration = programs.CryptoContractElaboration
+					if elaboration != nil {
+						break
+					}
 
+					// Otherwise, if the location for the Crypto contract is provided,
+					// then resolve the source code from that location and continue as
+					// any other contract.
+					cryptoLocation := programs.CryptoContractLocation
+					if cryptoLocation == nil {
+						return nil, fmt.Errorf("cannot find crypto contract")
+					}
+
+					importedLocation = cryptoLocation()
+
+					// Memoize the crypto contract's elaboration, for subsequent uses.
+					defer func() {
+						programs.CryptoContractElaboration = elaboration
+					}()
+
+					fallthrough
 				default:
 					if seenImports[importedLocation] {
 						return nil, &sema.CyclicImportsError{

@@ -45,7 +45,7 @@ build: build-tools ./cmd/parse/parse ./cmd/parse/parse.wasm ./cmd/check/check ./
 	go build -o $@ ./cmd/main
 
 .PHONY: build-tools
-build-tools: build-analysis build-get-contracts
+build-tools: build-analysis build-get-contracts build-compatibility-check
 
 .PHONY: build-analysis
 build-analysis:
@@ -54,6 +54,10 @@ build-analysis:
 .PHONY: build-get-contracts
 build-get-contracts:
 	(cd ./tools/get-contracts && go build .)
+
+.PHONY: build-compatibility-check
+build-compatibility-check:
+	(cd ./tools/compatibility-check && go build .)
 
 .PHONY: ci
 ci:
@@ -65,9 +69,18 @@ ci:
 	sed -i -e 's/^.* 0 0$$//' coverage.txt
 
 .PHONY: test
-test:
-	# test all packages
-	go test -parallel 8 ./...
+test: test-all-packages test-tools
+
+.PHONY: test-all-packages
+test-all-packages:
+	(go test -parallel 8 ./...)
+
+.PHONY: test-tools
+test-tools:
+	(cd ./tools/analysis && go test -parallel 8 ./)
+	(cd ./tools/compatibility-check && go test -parallel 8 ./)
+	(cd ./tools/constructorcheck && go test -parallel 8 ./)
+	(cd ./tools/maprange && go test -parallel 8 ./)
 
 .PHONY: lint-github-actions
 lint-github-actions: build-linter

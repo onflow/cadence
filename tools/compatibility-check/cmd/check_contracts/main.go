@@ -24,16 +24,21 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/onflow/cadence/tools/compatibility_check"
+
+	"github.com/onflow/flow-go/model/flow"
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		log.Error().Msg("not enough arguments. Usage: csv_path output_path")
+	if len(os.Args) < 3 {
+		log.Error().Msg("not enough arguments. Usage: <chain_name> <csv_path> <output_path>")
 		return
 	}
 
-	csvPath := os.Args[1]
-	outputPath := os.Args[2]
+	chainName := os.Args[1]
+	csvPath := os.Args[2]
+	outputPath := os.Args[3]
+
+	chain := flow.ChainID(chainName).Chain()
 
 	csvFile, err := os.Open(csvPath)
 	if err != nil {
@@ -53,6 +58,6 @@ func main() {
 		_ = outputFile.Close()
 	}()
 
-	checker := compatibility_check.NewContractChecker(outputFile)
+	checker := compatibility_check.NewContractChecker(chain, outputFile)
 	checker.CheckCSV(csvFile)
 }
