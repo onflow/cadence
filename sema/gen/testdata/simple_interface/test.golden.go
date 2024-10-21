@@ -20,8 +20,8 @@
 package simple_interface
 
 import (
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/sema"
 )
 
 const TestTypeName = "Test"

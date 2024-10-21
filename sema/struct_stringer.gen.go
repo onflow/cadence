@@ -20,8 +20,8 @@
 package sema
 
 import (
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
 )
 
 const StructStringerTypeToStringFunctionName = "toString"
