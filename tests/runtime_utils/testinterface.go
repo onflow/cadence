@@ -40,13 +40,7 @@ import (
 type TestRuntimeInterface struct {
 	Storage TestLedger
 
-	OnResolveLocation func(
-		identifiers []runtime.Identifier,
-		location runtime.Location,
-	) (
-		[]runtime.ResolvedLocation,
-		error,
-	)
+	OnResolveLocation  sema.LocationHandlerFunc
 	OnGetCode          func(_ runtime.Location) ([]byte, error)
 	OnGetAndSetProgram func(
 		location runtime.Location,

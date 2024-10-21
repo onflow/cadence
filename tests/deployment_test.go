@@ -71,6 +71,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			inter,
 			interpreter.EmptyLocationRange,
 			nil,
+			nil,
 			codeHashValue,
 			stdlib.HashType,
 		)
