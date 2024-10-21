@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/errors"
@@ -627,6 +628,7 @@ func TestRuntimeImportValue(t *testing.T) {
 			actual, err := ImportValue(
 				inter,
 				interpreter.EmptyLocationRange,
+				nil,
 				nil,
 				tt.value,
 				tt.expectedType,
@@ -1367,6 +1369,7 @@ func TestImportInclusiveRangeValue(t *testing.T) {
 			inter,
 			interpreter.EmptyLocationRange,
 			nil,
+			nil,
 			value,
 			sema.NewInclusiveRangeType(inter, sema.IntType),
 		)
@@ -1400,6 +1403,7 @@ func TestImportInclusiveRangeValue(t *testing.T) {
 		actual, err := ImportValue(
 			inter,
 			interpreter.EmptyLocationRange,
+			nil,
 			nil,
 			value,
 			sema.AnyStructType,
@@ -1435,6 +1439,7 @@ func TestImportInclusiveRangeValue(t *testing.T) {
 			inter,
 			interpreter.EmptyLocationRange,
 			nil,
+			nil,
 			value,
 			sema.AnyStructType,
 		)
@@ -1464,6 +1469,7 @@ func TestImportInclusiveRangeValue(t *testing.T) {
 		_, err = ImportValue(
 			inter,
 			interpreter.EmptyLocationRange,
+			nil,
 			nil,
 			value,
 			sema.StringType,
@@ -3489,6 +3495,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			inter,
 			interpreter.EmptyLocationRange,
 			nil,
+			nil,
 			value,
 			sema.ByteArrayType,
 		)
@@ -3559,6 +3566,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			inter,
 			interpreter.EmptyLocationRange,
 			nil,
+			nil,
 			value,
 			&sema.VariableSizedType{
 				Type: sema.AnyStructType,
@@ -3603,6 +3611,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 		actual, err := ImportValue(
 			inter,
 			interpreter.EmptyLocationRange,
+			nil,
 			nil,
 			value,
 			sema.AnyStructType,
@@ -3693,6 +3702,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			inter,
 			interpreter.EmptyLocationRange,
 			nil,
+			nil,
 			value,
 			&sema.DictionaryType{
 				KeyType:   sema.StringType,
@@ -3779,6 +3789,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			inter,
 			interpreter.EmptyLocationRange,
 			nil,
+			nil,
 			value,
 			&sema.DictionaryType{
 				KeyType:   sema.StringType,
@@ -3842,6 +3853,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		actual, err := ImportValue(
 			inter,
 			interpreter.EmptyLocationRange,
+			nil,
 			nil,
 			value,
 			sema.AnyStructType,
@@ -3909,6 +3921,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		actual, err := ImportValue(
 			inter,
 			interpreter.EmptyLocationRange,
+			nil,
 			nil,
 			dictionaryWithHeterogenousKeys,
 			sema.AnyStructType,
@@ -5023,6 +5036,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 			inter,
 			interpreter.EmptyLocationRange,
 			nil,
+			nil,
 			externalCompositeValue,
 			semaCompositeType,
 		)
@@ -5551,4 +5565,97 @@ func TestRuntimeExportInterfaceType(t *testing.T) {
 		invalidReturnType := &InvalidScriptReturnTypeError{}
 		require.ErrorAs(t, err, &invalidReturnType)
 	})
+}
+func TestRuntimeImportResolvedLocation(t *testing.T) {
+
+	t.Parallel()
+
+	addressLocation := common.AddressLocation{
+		Address: common.MustBytesToAddress([]byte{42}),
+		Name:    "Test",
+	}
+
+	identifierLocation := common.IdentifierLocation("Test")
+
+	storage := NewUnmeteredInMemoryStorage()
+
+	program := &interpreter.Program{
+		Elaboration: sema.NewElaboration(nil),
+	}
+
+	inter, err := interpreter.NewInterpreter(
+		program,
+		addressLocation,
+		&interpreter.Config{
+			Storage:                       storage,
+			AtreeValueValidationEnabled:   true,
+			AtreeStorageValidationEnabled: true,
+		},
+	)
+	require.NoError(t, err)
+
+	semaCompositeType := &sema.CompositeType{
+		Location:   addressLocation,
+		Identifier: "Foo",
+		Kind:       common.CompositeKindStructure,
+		Members:    &sema.StringMemberOrderedMap{},
+	}
+
+	program.Elaboration.SetCompositeType(
+		semaCompositeType.ID(),
+		semaCompositeType,
+	)
+
+	externalCompositeType := cadence.NewStructType(
+		identifierLocation,
+		"Foo",
+		[]cadence.Field{},
+		nil,
+	)
+
+	externalCompositeValue := cadence.NewStruct(nil).
+		WithType(externalCompositeType)
+
+	resolveLocation := func(
+		identifiers []ast.Identifier,
+		location common.Location,
+	) ([]sema.ResolvedLocation, error) {
+		require.Equal(t, identifierLocation, location)
+
+		location = addressLocation
+
+		return []sema.ResolvedLocation{
+			{
+				Location:    location,
+				Identifiers: identifiers,
+			},
+		}, nil
+	}
+
+	actual, err := ImportValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		nil,
+		resolveLocation,
+		externalCompositeValue,
+		semaCompositeType,
+	)
+	require.NoError(t, err)
+
+	internalCompositeValue := interpreter.NewCompositeValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		addressLocation,
+		"Foo",
+		common.CompositeKindStructure,
+		nil,
+		common.ZeroAddress,
+	)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		internalCompositeValue,
+		actual,
+	)
 }

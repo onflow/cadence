@@ -76,6 +76,8 @@ type Environment interface {
 	)
 	CommitStorage(inter *interpreter.Interpreter) error
 	NewAccountValue(inter *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value
+
+	ResolveLocation(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error)
 }
 
 // interpreterEnvironmentReconfigured is the portion of interpreterEnvironment
@@ -206,7 +208,7 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 		BaseValueActivationHandler:       e.getBaseValueActivation,
 		BaseTypeActivationHandler:        e.getBaseTypeActivation,
 		ValidTopLevelDeclarationsHandler: validTopLevelDeclarations,
-		LocationHandler:                  e.newLocationHandler(),
+		LocationHandler:                  e.ResolveLocation,
 		ImportHandler:                    e.resolveImport,
 		CheckHandler:                     e.newCheckHandler(),
 		AttachmentsEnabled:               e.config.AttachmentsEnabled,
@@ -644,16 +646,20 @@ func (e *interpreterEnvironment) check(
 	return elaboration, nil
 }
 
-func (e *interpreterEnvironment) newLocationHandler() sema.LocationHandlerFunc {
-	return func(identifiers []Identifier, location Location) (res []ResolvedLocation, err error) {
-		errors.WrapPanic(func() {
-			res, err = e.runtimeInterface.ResolveLocation(identifiers, location)
-		})
-		if err != nil {
-			err = interpreter.WrappedExternalError(err)
-		}
-		return
+func (e *interpreterEnvironment) ResolveLocation(
+	identifiers []Identifier,
+	location Location,
+) (
+	res []ResolvedLocation,
+	err error,
+) {
+	errors.WrapPanic(func() {
+		res, err = e.runtimeInterface.ResolveLocation(identifiers, location)
+	})
+	if err != nil {
+		err = interpreter.WrappedExternalError(err)
 	}
+	return
 }
 
 func (e *interpreterEnvironment) newCheckHandler() sema.CheckHandlerFunc {

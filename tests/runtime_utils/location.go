@@ -49,13 +49,7 @@ func NewScriptLocationGenerator() func() common.ScriptLocation {
 	return NewLocationGenerator[common.ScriptLocation]()
 }
 
-func NewSingleIdentifierLocationResolver(t testing.TB) func(
-	identifiers []runtime.Identifier,
-	location runtime.Location,
-) (
-	[]runtime.ResolvedLocation,
-	error,
-) {
+func NewSingleIdentifierLocationResolver(t testing.TB) sema.LocationHandlerFunc {
 	return func(
 		identifiers []runtime.Identifier,
 		location runtime.Location,
