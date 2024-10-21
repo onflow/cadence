@@ -43,7 +43,7 @@ class GoTest:
             flowgo_replacement = f'github.com/onflow/flow-go@{flowgo_version}'
         else:
             # default: use the newest version of flow-go available
-            flowgo_replacement = f'github.com/onflow/flow-go@latest'
+            flowgo_replacement = 'github.com/onflow/flow-go@latest'
 
         with cwd(working_dir / self.path):
             if prepare:
@@ -87,7 +87,7 @@ class Description:
 
     def _clone(self, working_dir: Path):
         if working_dir.exists():
-            for root, dirs, files in os.walk(working_dir):  
+            for root, dirs, files in os.walk(working_dir):
                 for dir in dirs:
                     os.chmod(os.path.join(root, dir), stat.S_IRUSR | stat.S_IWUSR)
                 for file in files:

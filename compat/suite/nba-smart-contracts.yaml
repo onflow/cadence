@@ -1,7 +1,7 @@
 description: NBA Top Shot
 maintainers:
-- bastian@dapperlabs.com
-- joshua.hannan@dapperlabs.com
+  - bastian.mueller@flowfoundation.org
+  - joshua.hannan@flowfoundation.org
 url: https://github.com/dapperlabs/nba-smart-contracts.git
 branch: master
 go_tests:

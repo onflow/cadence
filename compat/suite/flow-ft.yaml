@@ -1,7 +1,7 @@
 description: Flow Fungible Token
 maintainers:
-- bastian@dapperlabs.com
-- joshua.hannan@dapperlabs.com
+  - bastian.mueller@flowfoundation.org
+  - joshua.hannan@flowfoundation.org
 url: https://github.com/onflow/flow-ft.git
 branch: master
 go_tests:
