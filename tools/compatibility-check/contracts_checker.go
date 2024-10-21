@@ -36,6 +36,8 @@ import (
 
 	"github.com/onflow/flow-go/fvm/systemcontracts"
 	"github.com/onflow/flow-go/model/flow"
+
+	"github.com/onflow/flow-core-contracts/lib/go/contracts"
 )
 
 const LoadMode = analysis.NeedTypes
@@ -126,13 +128,18 @@ func (c *ContractsChecker) analyze(
 
 	sc := systemcontracts.SystemContractsForChain(c.chain.ChainID())
 
+	cryptoContractLocation := common.AddressLocation{
+		Address: common.Address(sc.Crypto.Address),
+		Name:    string(stdlib.CryptoContractLocation),
+	}
+
+	// TODO: Remove once the Crypto contract is available on-chain.
+	c.Codes[cryptoContractLocation] = contracts.Crypto()
+
 	programs := analysis.Programs{
 		Programs: make(map[common.Location]*analysis.Program, len(locations)),
 		CryptoContractLocation: func() common.Location {
-			return common.AddressLocation{
-				Address: common.Address(sc.Crypto.Address),
-				Name:    string(stdlib.CryptoContractLocation),
-			}
+			return cryptoContractLocation
 		},
 	}
 

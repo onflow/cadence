@@ -20,12 +20,10 @@ package compatibility_check
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/onflow/flow-go/fvm/systemcontracts"
 	"github.com/onflow/flow-go/model/flow"
 )
 
@@ -69,19 +67,12 @@ func TestCryptoImport(t *testing.T) {
 
 	checker := NewContractChecker(chainID.Chain(), &output)
 
-	sc := systemcontracts.SystemContractsForChain(chainID)
-	cryptoLocation := sc.Crypto.Location()
-
-	contractsCSV := fmt.Sprintf(
-		`location,code
+	contractsCSV := `location,code
 A.0000000000000001.Foo,"import Crypto
 access(all) contract Foo {}"
-%s,"access(all) contract Crypto {}"
 A.0000000000000001.Bar,"import Crypto
 access(all) contract Bar {}"
-`,
-		cryptoLocation.ID(),
-	)
+`
 
 	input.Write([]byte(contractsCSV))
 
