@@ -1436,6 +1436,19 @@ func (v Array) String() string {
 	return format.Array(values)
 }
 
+var ByteArrayType = NewVariableSizedArrayType(PrimitiveType(interpreter.PrimitiveStaticTypeUInt8))
+
+// ByteSliceToByteArray converts a byte slice to a Cadence byte array of type [UInt8].
+func ByteSliceToByteArray(b []byte) Array {
+	values := make([]Value, len(b))
+
+	for i, v := range b {
+		values[i] = UInt8(v)
+	}
+
+	return NewArray(values).WithType(ByteArrayType)
+}
+
 // Dictionary
 
 type Dictionary struct {

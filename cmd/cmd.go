@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
@@ -431,6 +432,17 @@ func (h *StandardLibraryHandler) EndContractAddition(common.AddressLocation) {
 func (h *StandardLibraryHandler) IsContractBeingAdded(common.AddressLocation) bool {
 	// NO-OP
 	return false
+}
+
+func (h *StandardLibraryHandler) ExportValue(
+	_ interpreter.Value,
+	_ *interpreter.Interpreter,
+	_ interpreter.LocationRange,
+) (
+	cadence.Value,
+	error,
+) {
+	return nil, goerrors.New("exporting values is not supported in this environment")
 }
 
 func formatLocationRange(locationRange interpreter.LocationRange) string {
