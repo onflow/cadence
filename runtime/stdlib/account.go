@@ -1679,7 +1679,6 @@ func changeAccountContracts(
 		memoryGauge := invocation.Interpreter.SharedState.Config.MemoryGauge
 		legacyUpgradeEnabled := invocation.Interpreter.SharedState.Config.LegacyContractUpgradeEnabled
 		contractUpdateTypeRemovalEnabled := invocation.Interpreter.SharedState.Config.ContractUpdateTypeRemovalEnabled
-		contractUpdateAttachmentBaseTypeChangeEnabled := invocation.Interpreter.SharedState.Config.ContractUpdateAttachmentBaseTypeChangeEnabled
 
 		var oldProgram *ast.Program
 
@@ -1733,8 +1732,7 @@ func changeAccountContracts(
 		}
 
 		validator = validator.
-			WithTypeRemovalEnabled(contractUpdateTypeRemovalEnabled).
-			WithAttachmentBaseTypeChangeEnabled(contractUpdateAttachmentBaseTypeChangeEnabled)
+			WithTypeRemovalEnabled(contractUpdateTypeRemovalEnabled)
 
 		err = validator.Validate()
 		handleContractUpdateError(err, newCode)

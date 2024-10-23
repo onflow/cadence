@@ -89,17 +89,6 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) WithTypeRemovalEnabled(
 	return validator
 }
 
-func (validator *CadenceV042ToV1ContractUpdateValidator) isAttachmentBaseTypeChangeEnabled() bool {
-	return validator.underlyingUpdateValidator.isAttachmentBaseTypeChangeEnabled()
-}
-
-func (validator *CadenceV042ToV1ContractUpdateValidator) WithAttachmentBaseTypeChangeEnabled(
-	enabled bool,
-) UpdateValidator {
-	validator.underlyingUpdateValidator.WithAttachmentBaseTypeChangeEnabled(enabled)
-	return validator
-}
-
 func (validator *CadenceV042ToV1ContractUpdateValidator) getCurrentDeclaration() ast.Declaration {
 	return validator.underlyingUpdateValidator.getCurrentDeclaration()
 }

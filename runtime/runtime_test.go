@@ -11497,8 +11497,6 @@ func TestRuntimeBuiltInFunctionConfusion(t *testing.T) {
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
-	var currentVersion string
-
 	newRuntimeInterface := func() Interface {
 
 		accountCodes := map[common.AddressLocation][]byte{}
@@ -11526,9 +11524,6 @@ func TestRuntimeBuiltInFunctionConfusion(t *testing.T) {
 			OnProgramLog: func(message string) {
 				loggedMessages = append(loggedMessages, message)
 			},
-			OnMinimumRequiredVersion: func() string {
-				return currentVersion
-			},
 		}
 	}
 
@@ -11536,27 +11531,7 @@ func TestRuntimeBuiltInFunctionConfusion(t *testing.T) {
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
-	// Deploy contract without check enabled
-
 	err := runtime.ExecuteTransaction(
-		Script{
-			Source: DeploymentTransaction(
-				"Foo",
-				[]byte(contract),
-			),
-		},
-		Context{
-			Interface: newRuntimeInterface(),
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
-
-	// Deploy contract with check enabled
-
-	currentVersion = "v1.0.2"
-
-	err = runtime.ExecuteTransaction(
 		Script{
 			Source: DeploymentTransaction(
 				"Foo",

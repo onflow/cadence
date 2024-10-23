@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"golang.org/x/mod/semver"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/activations"
@@ -1467,14 +1466,7 @@ func (e *interpreterEnvironment) configureVersionedFeatures() {
 	errors.WrapPanic(func() {
 		minimumRequiredVersion = e.runtimeInterface.MinimumRequiredVersion()
 	})
-	enableOldBehaviour := useV101Behaviour(minimumRequiredVersion)
 
-	e.CheckerConfig.AttachmentConformancesEnabled = enableOldBehaviour
-	e.CheckerConfig.MemberSiblingTypeOverrideEnabled = enableOldBehaviour
-	e.InterpreterConfig.ContractUpdateAttachmentBaseTypeChangeEnabled = enableOldBehaviour
-}
-
-func useV101Behaviour(currentVersion string) bool {
-	return currentVersion == "" ||
-		semver.Compare(currentVersion, "v1.0.1") <= 0
+	// No feature flags yet
+	_ = minimumRequiredVersion
 }

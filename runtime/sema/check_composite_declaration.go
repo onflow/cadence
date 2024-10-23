@@ -687,29 +687,23 @@ func (checker *Checker) declareCompositeType(declaration ast.CompositeLikeDeclar
 
 	case common.CompositeKindAttachment:
 
-		if checker.Config.AttachmentConformancesEnabled {
-			compositeType.ExplicitInterfaceConformances =
-				checker.explicitInterfaceConformances(declaration, compositeType)
+		// Attachments may not conform to interfaces
 
-		} else {
-			// Attachments may not conform to interfaces
+		conformanceList := declaration.ConformanceList()
+		conformanceCount := len(conformanceList)
+		if conformanceCount > 0 {
+			firstConformance := conformanceList[0]
+			lastConformance := conformanceList[conformanceCount-1]
 
-			conformanceList := declaration.ConformanceList()
-			conformanceCount := len(conformanceList)
-			if conformanceCount > 0 {
-				firstConformance := conformanceList[0]
-				lastConformance := conformanceList[conformanceCount-1]
-
-				checker.report(
-					&InvalidAttachmentConformancesError{
-						Range: ast.NewRange(
-							checker.memoryGauge,
-							firstConformance.StartPosition(),
-							lastConformance.EndPosition(checker.memoryGauge),
-						),
-					},
-				)
-			}
+			checker.report(
+				&InvalidAttachmentConformancesError{
+					Range: ast.NewRange(
+						checker.memoryGauge,
+						firstConformance.StartPosition(),
+						lastConformance.EndPosition(checker.memoryGauge),
+					),
+				},
+			)
 		}
 
 	default:
@@ -1748,7 +1742,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 			}
 		}
 
-		if nestedTypes != nil && !checker.Config.MemberSiblingTypeOverrideEnabled {
+		if nestedTypes != nil {
 			if _, ok := nestedTypes.Get(name); ok {
 				// TODO: provide previous position
 				checker.report(

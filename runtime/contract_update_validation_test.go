@@ -3689,7 +3689,7 @@ func TestAttachmentsUpdates(t *testing.T) {
 	t.Parallel()
 
 	testWithValidators(t,
-		"Keep base type, v1.0.1",
+		"Keep base type",
 		func(t *testing.T, config Config) {
 
 			const oldCode = `
@@ -3704,34 +3704,13 @@ func TestAttachmentsUpdates(t *testing.T) {
                 }
             `
 
-			err := testDeployAndUpdateWithVersion(t, "Test", oldCode, newCode, config, "v1.0.1")
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 			require.NoError(t, err)
 		},
 	)
 
 	testWithValidators(t,
-		"Keep base type, v1.0.2",
-		func(t *testing.T, config Config) {
-
-			const oldCode = `
-                access(all) contract Test {
-                    access(all) attachment A for AnyResource {}
-                }
-            `
-
-			const newCode = `
-                access(all) contract Test {
-                    access(all) attachment A for AnyResource {}
-                }
-            `
-
-			err := testDeployAndUpdateWithVersion(t, "Test", oldCode, newCode, config, "v1.0.2")
-			require.NoError(t, err)
-		},
-	)
-
-	testWithValidators(t,
-		"Change base type, v1.0.1",
+		"Change base type",
 		func(t *testing.T, config Config) {
 
 			const oldCode = `
@@ -3746,27 +3725,7 @@ func TestAttachmentsUpdates(t *testing.T) {
                 }
             `
 
-			err := testDeployAndUpdateWithVersion(t, "Test", oldCode, newCode, config, "v1.0.1")
-			require.NoError(t, err)
-		})
-
-	testWithValidators(t,
-		"Change base type, v1.0.2",
-		func(t *testing.T, config Config) {
-
-			const oldCode = `
-                access(all) contract Test {
-                    access(all) attachment A for AnyResource {}
-                }
-            `
-
-			const newCode = `
-                access(all) contract Test {
-                    access(all) attachment A for AnyStruct {}
-                }
-            `
-
-			err := testDeployAndUpdateWithVersion(t, "Test", oldCode, newCode, config, "v1.0.2")
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 
 			var expectedErr *stdlib.TypeMismatchError
 			require.ErrorAs(t, err, &expectedErr)
