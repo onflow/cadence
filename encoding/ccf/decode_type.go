@@ -610,16 +610,14 @@ func (d *Decoder) decodeReferenceType(
 //
 //	; cbor-tag-intersection-type
 //	#6.143([
-//	  type: inline-type / nil,
-//	  types: [* inline-type]
+//	  types: [+ inline-type]
 //	])
 //
 // intersection-type-value =
 //
 //	; cbor-tag-intersection-type-value
 //	#6.191([
-//	  type: type-value / nil,
-//	  types: [* type-value]
+//	  types: [+ type-value]
 //	])
 //
 // NOTE: decodeTypeFn is responsible for decoding inline-type or type-value.
