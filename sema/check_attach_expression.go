@@ -25,12 +25,6 @@ import (
 
 func (checker *Checker) VisitAttachExpression(expression *ast.AttachExpression) Type {
 
-	if !checker.Config.AttachmentsEnabled {
-		checker.report(&AttachmentsNotEnabledError{
-			Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression),
-		})
-	}
-
 	attachment := expression.Attachment
 	baseExpression := expression.Base
 

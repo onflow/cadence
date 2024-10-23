@@ -5270,7 +5270,7 @@ func TestRuntimeNestedStructArgPassing(t *testing.T) {
 func TestRuntimeDestroyedResourceReferenceExport(t *testing.T) {
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntimeWithAttachments()
+	rt := NewTestInterpreterRuntime()
 
 	script := []byte(`
         access(all) resource S {}

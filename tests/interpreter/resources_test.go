@@ -2537,9 +2537,6 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
 			destroy trollAttachment
 		}	
         `, ParseCheckAndInterpretOptions{
-			CheckerConfig: &sema.Config{
-				AttachmentsEnabled: true,
-			},
 			Config: &interpreter.Config{
 				OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
 					events = append(events, event)
@@ -2588,9 +2585,6 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
 			destroy trollAttachment
 		}	
         `, ParseCheckAndInterpretOptions{
-			CheckerConfig: &sema.Config{
-				AttachmentsEnabled: true,
-			},
 			Config: &interpreter.Config{
 				OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
 					events = append(events, event)

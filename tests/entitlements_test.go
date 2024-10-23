@@ -221,7 +221,7 @@ func TestRuntimeAccountEntitlementAttachment(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntimeWithAttachments()
+	rt := NewTestInterpreterRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -507,7 +507,7 @@ func TestRuntimeAccountEntitlementCapabilityCasting(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntimeWithAttachments()
+	rt := NewTestInterpreterRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -607,7 +607,7 @@ func TestRuntimeAccountEntitlementCapabilityDictionary(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntimeWithAttachments()
+	rt := NewTestInterpreterRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -722,7 +722,7 @@ func TestRuntimeAccountEntitlementGenericCapabilityDictionary(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntimeWithAttachments()
+	rt := NewTestInterpreterRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`

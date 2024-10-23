@@ -1441,9 +1441,9 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 			let i = ref?.foo()
 			return i!
 		}
-		`, sema.Config{
-			AttachmentsEnabled: false,
-		})
+		`,
+			sema.Config{},
+		)
 
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -2534,9 +2534,9 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 				let ref = account.storage.borrow<auth(E) &R>(from: /storage/foo)!
 				return ref[A]!
 			}
-		`, sema.Config{
-			AttachmentsEnabled: true,
-		})
+		`,
+			sema.Config{},
+		)
 
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -2576,9 +2576,9 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 				let ref = account.storage.borrow<auth(X, E, G) &R>(from: /storage/foo)!
 				return ref[A]!.entitled()
 			}
-		`, sema.Config{
-			AttachmentsEnabled: true,
-		})
+		`,
+			sema.Config{},
+		)
 
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -2618,9 +2618,9 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 				let ref = account.storage.borrow<auth(E, X, G) &R>(from: /storage/foo)!
 				return ref[A]!.entitled()
 			}
-		`, sema.Config{
-			AttachmentsEnabled: true,
-		})
+		`,
+			sema.Config{},
+		)
 
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)

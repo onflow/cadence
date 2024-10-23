@@ -3356,7 +3356,7 @@ func TestRuntimeStorageLoadedDestructionConcreteTypeWithAttachment(t *testing.T)
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntimeWithAttachments()
+	runtime := NewTestInterpreterRuntime()
 
 	addressValue := Address{
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
@@ -3486,7 +3486,7 @@ func TestRuntimeStorageLoadedDestructionConcreteTypeWithAttachmentUnloadedContra
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntimeWithAttachments()
+	runtime := NewTestInterpreterRuntime()
 
 	addressValue := Address{
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
@@ -3620,7 +3620,7 @@ func TestRuntimeStorageLoadedDestructionConcreteTypeSameNamedInterface(t *testin
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntimeWithAttachments()
+	runtime := NewTestInterpreterRuntime()
 
 	addressValue := Address{
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
@@ -10560,7 +10560,7 @@ func TestRuntimeNonPublicAccessModifierInInterface(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntimeWithAttachments()
+	runtime := NewTestInterpreterRuntime()
 
 	address1 := common.MustBytesToAddress([]byte{0x1})
 	address2 := common.MustBytesToAddress([]byte{0x2})
@@ -10693,7 +10693,7 @@ func TestRuntimeContractWithInvalidCapability(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntimeWithAttachments()
+	runtime := NewTestInterpreterRuntime()
 
 	address := common.MustBytesToAddress([]byte{0x1})
 

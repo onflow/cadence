@@ -47,7 +47,6 @@ func TestCheckStorable(t *testing.T) {
 					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 						return baseValueActivation
 					},
-					AttachmentsEnabled: true,
 				},
 			},
 		)
