@@ -38,6 +38,7 @@ type CompositeValue struct {
 
 var _ Value = &CompositeValue{}
 var _ MemberAccessibleValue = &CompositeValue{}
+var _ ReferenceTrackedResourceKindedValue = &CompositeValue{}
 
 func NewCompositeValue(
 	location common.Location,
@@ -303,26 +304,9 @@ func (v *CompositeValue) Transfer(
 		// This allows raising an error when the resource is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		//if interpreter.Config.InvalidatedResourceValidationEnabled {
-		//	v.dictionary = nil
-		//} else {
-		//	v.dictionary = dictionary
-		//	res = v
-		//}
+		invalidateReferencedResources(config, v)
 
-		//newStorageID := dictionary.StorageID()
-		//
-		//interpreter.updateReferencedResource(
-		//	currentStorageID,
-		//	newStorageID,
-		//	func(value ReferenceTrackedResourceKindedValue) {
-		//		compositeValue, ok := value.(*CompositeValue)
-		//		if !ok {
-		//			panic(errors.NewUnreachableError())
-		//		}
-		//		compositeValue.dictionary = dictionary
-		//	},
-		//)
+		v.dictionary = nil
 	}
 
 	if res == nil {
@@ -447,4 +431,74 @@ func (v *CompositeValue) NeedsStoreTo(address atree.Address) bool {
 
 func (v *CompositeValue) StorageAddress() atree.Address {
 	return v.dictionary.Address()
+}
+
+func (v *CompositeValue) IsReferenceTrackedResourceKindedValue() {}
+
+func (v *CompositeValue) ValueID() atree.ValueID {
+	return v.dictionary.ValueID()
+}
+
+func (v *CompositeValue) IsStaleResource() bool {
+	return v.dictionary == nil && v.IsResourceKinded()
+}
+
+// ForEachField iterates over all field-name field-value pairs of the composite value.
+// It does NOT iterate over computed fields and functions!
+func (v *CompositeValue) ForEachField(
+	config *Config,
+	f func(fieldName string, fieldValue Value) (resume bool),
+) {
+	iterate := func(fn atree.MapEntryIterationFunc) error {
+		return v.dictionary.Iterate(
+			interpreter.StringAtreeValueComparator,
+			interpreter.StringAtreeValueHashInput,
+			fn,
+		)
+	}
+	v.forEachField(
+		config,
+		iterate,
+		f,
+	)
+}
+
+// ForEachReadOnlyLoadedField iterates over all LOADED field-name field-value pairs of the composite value.
+// It does NOT iterate over computed fields and functions!
+// DO NOT perform storage mutations in the callback!
+func (v *CompositeValue) ForEachReadOnlyLoadedField(
+	config *Config,
+	f func(fieldName string, fieldValue Value) (resume bool),
+) {
+	v.forEachField(
+		config,
+		v.dictionary.IterateReadOnlyLoadedValues,
+		f,
+	)
+}
+
+func (v *CompositeValue) forEachField(
+	config *Config,
+	atreeIterate func(fn atree.MapEntryIterationFunc) error,
+	f func(fieldName string, fieldValue Value) (resume bool),
+) {
+	err := atreeIterate(func(key atree.Value, atreeValue atree.Value) (resume bool, err error) {
+		value := MustConvertStoredValue(
+			config.MemoryGauge,
+			config.Storage,
+			atreeValue,
+		)
+
+		checkInvalidatedResourceOrResourceReference(value)
+
+		resume = f(
+			string(key.(interpreter.StringAtreeValue)),
+			value,
+		)
+		return
+	})
+
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
 }

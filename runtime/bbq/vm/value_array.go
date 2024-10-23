@@ -37,6 +37,7 @@ type ArrayValue struct {
 }
 
 var _ Value = &ArrayValue{}
+var _ ReferenceTrackedResourceKindedValue = &ArrayValue{}
 
 func NewArrayValue(
 	config *Config,
@@ -229,8 +230,7 @@ func (v *ArrayValue) Transfer(config *Config, address atree.Address, remove bool
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		// TODO:
-		//interpreter.invalidateReferencedResources(v, locationRange)
+		invalidateReferencedResources(config, v)
 
 		v.array = nil
 	}
@@ -271,6 +271,12 @@ func (v *ArrayValue) NeedsStoreTo(address atree.Address) bool {
 
 func (v *ArrayValue) IsResourceKinded() bool {
 	return v.isResourceKinded
+}
+
+func (v *ArrayValue) IsReferenceTrackedResourceKindedValue() {}
+
+func (v *ArrayValue) IsStaleResource() bool {
+	return v.array == nil && v.IsResourceKinded()
 }
 
 func (v *ArrayValue) Count() int {
@@ -357,4 +363,69 @@ func (v *ArrayValue) Set(config *Config, index int, element Value) {
 	//existingValue.DeepRemove(interpreter, true) // existingValue is standalone because it was overwritten in parent container.
 
 	RemoveReferencedSlab(config.Storage, existingStorable)
+}
+
+func (v *ArrayValue) Iterate(
+	config *Config,
+	f func(element Value) (resume bool),
+	transferElements bool,
+) {
+	v.iterate(
+		config,
+		v.array.Iterate,
+		f,
+		transferElements,
+	)
+}
+
+// IterateReadOnlyLoaded iterates over all LOADED elements of the array.
+// DO NOT perform storage mutations in the callback!
+func (v *ArrayValue) IterateReadOnlyLoaded(
+	config *Config,
+	f func(element Value) (resume bool),
+) {
+	const transferElements = false
+
+	v.iterate(
+		config,
+		v.array.IterateReadOnlyLoadedValues,
+		f,
+		transferElements,
+	)
+}
+
+func (v *ArrayValue) iterate(
+	config *Config,
+	atreeIterate func(fn atree.ArrayIterationFunc) error,
+	f func(element Value) (resume bool),
+	transferElements bool,
+) {
+	iterate := func() {
+		err := atreeIterate(func(element atree.Value) (resume bool, err error) {
+			// atree.Array iteration provides low-level atree.Value,
+			// convert to high-level interpreter.Value
+			elementValue := MustConvertStoredValue(config, config, element)
+			checkInvalidatedResourceOrResourceReference(elementValue)
+
+			if transferElements {
+				// Each element must be transferred before passing onto the function.
+				elementValue = elementValue.Transfer(
+					config,
+					atree.Address{},
+					false,
+					nil,
+				)
+			}
+
+			resume = f(elementValue)
+
+			return resume, nil
+		})
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+	}
+
+	iterate()
+	//interpreter.withMutationPrevention(v.ValueID(), iterate)
 }

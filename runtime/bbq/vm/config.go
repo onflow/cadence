@@ -37,10 +37,30 @@ type Config struct {
 	// TODO: Move these to a 'shared state'?
 	CapabilityControllerIterations              map[AddressPath]int
 	MutationDuringCapabilityControllerIteration bool
+	referencedResourceKindedValues              ReferencedResourceKindedValues
 
 	// TODO: These are temporary. Remove once storing/reading is supported for VM values.
 	inter      *interpreter.Interpreter
 	TypeLoader func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType
+}
+
+func NewConfig(storage interpreter.Storage) *Config {
+	return &Config{
+		Storage:              storage,
+		MemoryGauge:          nil,
+		ImportHandler:        nil,
+		ContractValueHandler: nil,
+		AccountHandler:       nil,
+
+		CapabilityControllerIterations:              make(map[AddressPath]int),
+		MutationDuringCapabilityControllerIteration: false,
+		referencedResourceKindedValues:              ReferencedResourceKindedValues{},
+	}
+}
+
+func (c *Config) WithAccountHandler(handler stdlib.AccountHandler) *Config {
+	c.AccountHandler = handler
+	return c
 }
 
 // TODO: This is temporary. Remove once storing/reading is supported for VM values.

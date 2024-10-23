@@ -32,28 +32,34 @@ type AccountIDGenerator interface {
 }
 
 func NewAuthAccountReferenceValue(
+	conf *Config,
 	address common.Address,
 ) *EphemeralReferenceValue {
 	return newAccountReferenceValue(
+		conf,
 		address,
 		interpreter.FullyEntitledAccountAccess,
 	)
 }
 
 func NewAccountReferenceValue(
+	conf *Config,
 	address common.Address,
 ) *EphemeralReferenceValue {
 	return newAccountReferenceValue(
+		conf,
 		address,
 		interpreter.UnauthorizedAccess,
 	)
 }
 
 func newAccountReferenceValue(
+	conf *Config,
 	address common.Address,
 	authorization interpreter.Authorization,
 ) *EphemeralReferenceValue {
 	return NewEphemeralReferenceValue(
+		conf,
 		newAccountValue(address),
 		authorization,
 		interpreter.PrimitiveStaticTypeAccount,

@@ -31,6 +31,7 @@ type SomeValue struct {
 
 var _ Value = &SomeValue{}
 var _ MemberAccessibleValue = &SomeValue{}
+var _ ResourceKindedValue = &SomeValue{}
 
 func NewSomeValueNonCopying(value Value) *SomeValue {
 	return &SomeValue{
@@ -66,4 +67,9 @@ func (v *SomeValue) GetMember(config *Config, name string) Value {
 func (v *SomeValue) SetMember(config *Config, name string, value Value) {
 	memberAccessibleValue := (v.value).(MemberAccessibleValue)
 	memberAccessibleValue.SetMember(config, name, value)
+}
+
+func (v *SomeValue) IsResourceKinded() bool {
+	resourceKinded, ok := v.value.(ResourceKindedValue)
+	return ok && resourceKinded.IsResourceKinded()
 }

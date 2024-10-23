@@ -40,3 +40,20 @@ type MemberAccessibleValue interface {
 	GetMember(config *Config, name string) Value
 	SetMember(conf *Config, name string, value Value)
 }
+
+type ResourceKindedValue interface {
+	Value
+	//Destroy(interpreter *Interpreter, locationRange LocationRange)
+	//IsDestroyed() bool
+	//isInvalidatedResource(*Interpreter) bool
+	IsResourceKinded() bool
+}
+
+// ReferenceTrackedResourceKindedValue is a resource-kinded value
+// that must be tracked when a reference of it is taken.
+type ReferenceTrackedResourceKindedValue interface {
+	ResourceKindedValue
+	IsReferenceTrackedResourceKindedValue()
+	ValueID() atree.ValueID
+	IsStaleResource() bool
+}

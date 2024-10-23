@@ -594,6 +594,10 @@ func (c *Compiler) VisitSwitchStatement(_ *ast.SwitchStatement) (_ struct{}) {
 func (c *Compiler) VisitVariableDeclaration(declaration *ast.VariableDeclaration) (_ struct{}) {
 	// TODO: second value
 	c.compileExpression(declaration.Value)
+
+	varDeclTypes := c.Elaboration.VariableDeclarationTypes(declaration)
+	c.emitCheckType(varDeclTypes.TargetType)
+
 	local := c.currentFunction.declareLocal(declaration.Identifier.Identifier)
 	first, second := encodeUint16(local.index)
 	c.emit(opcode.SetLocal, first, second)

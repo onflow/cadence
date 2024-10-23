@@ -443,7 +443,6 @@ func compile(t testing.TB, checker *sema.Checker, programs map[common.Location]c
 	}
 
 	program := comp.Compile()
-	printProgram(program)
 	return program
 }
 
@@ -451,13 +450,12 @@ func compileAndInvoke(t testing.TB, code string, funcName string) (vm.Value, err
 	location := common.ScriptLocation{0x1}
 	program := compileCode(t, code, location, map[common.Location]compiledProgram{})
 	storage := interpreter.NewInMemoryStorage(nil)
-	barVM := vm.NewVM(
+
+	programVM := vm.NewVM(
 		program,
-		&vm.Config{
-			Storage:        storage,
-			AccountHandler: &testAccountHandler{},
-		},
+		vm.NewConfig(storage).
+			WithAccountHandler(&testAccountHandler{}),
 	)
 
-	return barVM.Invoke("test")
+	return programVM.Invoke(funcName)
 }

@@ -20,6 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/atree"
+	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -76,6 +77,9 @@ func (vm *VM) pop() Value {
 	value := vm.stack[lastIndex]
 	vm.stack[lastIndex] = nil
 	vm.stack = vm.stack[:lastIndex]
+
+	checkInvalidatedResourceOrResourceReference(value)
+
 	return value
 }
 
@@ -141,11 +145,22 @@ func (vm *VM) popCallFrame() {
 	vm.callFrame = vm.callFrame.parent
 }
 
-func (vm *VM) Invoke(name string, arguments ...Value) (Value, error) {
+func (vm *VM) Invoke(name string, arguments ...Value) (v Value, err error) {
 	function, ok := vm.globals[name]
 	if !ok {
 		return nil, errors.NewDefaultUserError("unknown function '%s'", name)
 	}
+
+	defer func() {
+		recovered := recover()
+		if recovered == nil {
+			return
+		}
+
+		// TODO: pass proper location
+		codesAndPrograms := runtime.NewCodesAndPrograms()
+		err = runtime.GetWrappedError(recovered, nil, codesAndPrograms)
+	}()
 
 	return vm.invoke(function, arguments)
 }
@@ -565,6 +580,7 @@ func opNewRef(vm *VM) {
 	value := vm.pop()
 
 	ref := NewEphemeralReferenceValue(
+		vm.config,
 		value,
 		borrowedType.Authorization,
 		borrowedType.ReferencedType,

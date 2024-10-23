@@ -33,6 +33,7 @@ type DictionaryValue struct {
 
 var _ Value = &DictionaryValue{}
 var _ MemberAccessibleValue = &DictionaryValue{}
+var _ ReferenceTrackedResourceKindedValue = &DictionaryValue{}
 
 func NewDictionaryValue(
 	config *Config,
@@ -290,8 +291,7 @@ func (v *DictionaryValue) Transfer(
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		// TODO:
-		//interpreter.invalidateReferencedResources(v, locationRange)
+		invalidateReferencedResources(config, v)
 
 		v.dictionary = nil
 	}
@@ -319,6 +319,78 @@ func (v *DictionaryValue) NeedsStoreTo(address atree.Address) bool {
 
 func (v *DictionaryValue) StorageAddress() atree.Address {
 	return v.dictionary.Address()
+}
+
+func (v *DictionaryValue) IsReferenceTrackedResourceKindedValue() {}
+
+func (v *DictionaryValue) ValueID() atree.ValueID {
+	return v.dictionary.ValueID()
+}
+
+func (v *DictionaryValue) IsStaleResource() bool {
+	return v.dictionary == nil && v.IsResourceKinded()
+}
+
+func (v *DictionaryValue) Iterate(
+	config *Config,
+	f func(key, value Value) (resume bool),
+) {
+	valueComparator := newValueComparator(config)
+	hashInputProvider := newHashInputProvider(config)
+	iterate := func(fn atree.MapEntryIterationFunc) error {
+		return v.dictionary.Iterate(
+			valueComparator,
+			hashInputProvider,
+			fn,
+		)
+	}
+	v.iterate(config, iterate, f)
+}
+
+// IterateReadOnlyLoaded iterates over all LOADED key-valye pairs of the array.
+// DO NOT perform storage mutations in the callback!
+func (v *DictionaryValue) IterateReadOnlyLoaded(
+	config *Config,
+	f func(key, value Value) (resume bool),
+) {
+	v.iterate(
+		config,
+		v.dictionary.IterateReadOnlyLoadedValues,
+		f,
+	)
+}
+
+func (v *DictionaryValue) iterate(
+	config *Config,
+	atreeIterate func(fn atree.MapEntryIterationFunc) error,
+	f func(key Value, value Value) (resume bool),
+) {
+	iterate := func() {
+		err := atreeIterate(func(key, value atree.Value) (resume bool, err error) {
+			// atree.OrderedMap iteration provides low-level atree.Value,
+			// convert to high-level interpreter.Value
+
+			keyValue := MustConvertStoredValue(config.MemoryGauge, config.Storage, key)
+			valueValue := MustConvertStoredValue(config.MemoryGauge, config.Storage, value)
+
+			checkInvalidatedResourceOrResourceReference(keyValue)
+			checkInvalidatedResourceOrResourceReference(valueValue)
+
+			resume = f(
+				keyValue,
+				valueValue,
+			)
+
+			return resume, nil
+		})
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+	}
+
+	// TODO:
+	//interpreter.withMutationPrevention(v.ValueID(), iterate)
+	iterate()
 }
 
 func newValueComparator(conf *Config) atree.ValueComparator {

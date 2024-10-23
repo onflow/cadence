@@ -2036,3 +2036,45 @@ func TestArrayLiteral(t *testing.T) {
 		assert.Equal(t, vm.IntValue{SmallInt: 8}, array.Get(vmConfig, 2))
 	})
 }
+
+func TestReference(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("method call", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            struct Foo {
+                var id : String
+
+                init(_ id: String) {
+                    self.id = id
+                }
+
+                fun sayHello(_ id: Int): String {
+                    return self.id
+                }
+            }
+
+            fun test(): String {
+                var foo = Foo("Hello from Foo!")
+                var ref = &foo as &Foo
+                return ref.sayHello(1)
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+		program := comp.Compile()
+
+		vmConfig := vm.NewConfig(nil)
+		vmInstance := vm.NewVM(program, vmConfig)
+
+		result, err := vmInstance.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+
+		require.Equal(t, vm.StringValue{Str: []byte("Hello from Foo!")}, result)
+	})
+}

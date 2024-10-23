@@ -45,15 +45,20 @@ var _ MemberAccessibleValue = &EphemeralReferenceValue{}
 var _ ReferenceValue = &EphemeralReferenceValue{}
 
 func NewEphemeralReferenceValue(
+	conf *Config,
 	value Value,
 	authorization interpreter.Authorization,
 	borrowedType interpreter.StaticType,
 ) *EphemeralReferenceValue {
-	return &EphemeralReferenceValue{
+	ref := &EphemeralReferenceValue{
 		Value:         value,
 		Authorization: authorization,
 		BorrowedType:  borrowedType,
 	}
+
+	maybeTrackReferencedResourceKindedValue(conf, ref)
+
+	return ref
 }
 
 func (*EphemeralReferenceValue) isValue() {}

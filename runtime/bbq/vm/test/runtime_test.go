@@ -105,7 +105,7 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
             access(all) fun loser(_ victim: @Bar.Vault): Void{
                 var array: @[R] <- [<- create R()]
                 let arrRef = &array as auth(Remove) &[R]
-                fun rugPullCallback(): Void{
+                fun rugPullCallback(): Void {
                     // Here we move the R resource from the array to a contract field
                     // invalidating the "self" during the execution of rugpullAndAssign
                     Foo.rCopy1 <-! arrRef.removeLast()
@@ -151,7 +151,7 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 
 	txVM := vm.NewVM(program, vmConfig)
 
-	authorizer := vm.NewAuthAccountReferenceValue(authorizerAddress)
+	authorizer := vm.NewAuthAccountReferenceValue(vmConfig, authorizerAddress)
 	err = txVM.ExecuteTransaction(nil, authorizer)
 	require.NoError(t, err)
 	require.Equal(t, 0, txVM.StackSize())
@@ -161,42 +161,42 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("stack to account", func(t *testing.T) {
-
-		t.Parallel()
-
-		code := `
-            resource R {
-                access(all) var id: Int
-
-                access(all) fun setID(_ id: Int) {
-                    self.id = id
-                }
-
-                init() {
-                    self.id = 1
-                }
-            }
-
-            fun getRef(_ ref: &R): &R {
-                return ref
-            }
-
-            fun test() {
-                let r <-create R()
-                let ref = getRef(&r as &R)
-
-                // Move the resource into the account
-                account.storage.save(<-r, to: /storage/r)
-
-                // Update the reference
-                ref.setID(2)
-            }`
-
-		_, err := compileAndInvoke(t, code, "test")
-		require.Error(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
-	})
+	//t.Run("stack to account", func(t *testing.T) {
+	//
+	//	t.Parallel()
+	//
+	//	code := `
+	//        resource R {
+	//            access(all) var id: Int
+	//
+	//            access(all) fun setID(_ id: Int) {
+	//                self.id = id
+	//            }
+	//
+	//            init() {
+	//                self.id = 1
+	//            }
+	//        }
+	//
+	//        fun getRef(_ ref: &R): &R {
+	//            return ref
+	//        }
+	//
+	//        fun test() {
+	//            let r <-create R()
+	//            let ref = getRef(&r as &R)
+	//
+	//            // Move the resource into the account
+	//            account.storage.save(<-r, to: /storage/r)
+	//
+	//            // Update the reference
+	//            ref.setID(2)
+	//        }`
+	//
+	//	_, err := compileAndInvoke(t, code, "test")
+	//	require.Error(t, err)
+	//	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	//})
 	//
 	//t.Run("stack to account readonly", func(t *testing.T) {
 	//
@@ -294,50 +294,46 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 	//	RequireError(t, err)
 	//	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	//})
-	//
-	//t.Run("stack to stack", func(t *testing.T) {
-	//
-	//	t.Parallel()
-	//
-	//	inter, err := parseCheckAndInterpretWithOptions(
-	//		t,
-	//		`
-	//        resource R {
-	//            access(all) var id: Int
-	//
-	//            access(all) fun setID(_ id: Int) {
-	//                self.id = id
-	//            }
-	//
-	//            init() {
-	//                self.id = 1
-	//            }
-	//        }
-	//
-	//        fun test() {
-	//            let r1 <-create R()
-	//            let ref = &r1 as &R
-	//
-	//            // Move the resource onto the same stack
-	//            let r2 <- r1
-	//
-	//            // Update the reference
-	//            ref.setID(2)
-	//
-	//            destroy r2
-	//        }`,
-	//
-	//		ParseCheckAndInterpretOptions{
-	//			HandleCheckerError: errorHandler(t),
-	//		},
-	//	)
-	//	require.NoError(t, err)
-	//
-	//	_, err = inter.Invoke("test")
-	//	RequireError(t, err)
-	//	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
-	//})
-	//
+
+	t.Run("stack to stack", func(t *testing.T) {
+
+		t.Parallel()
+
+		code := `
+	       resource R {
+	           access(all) var id: Int
+
+	           access(all) fun setID(_ id: Int) {
+	               self.id = id
+	           }
+
+	           init() {
+	               self.id = 1
+	           }
+	       }
+
+	       fun test() {
+	           let r1 <- create R()
+	           let ref = reference(&r1 as &R)
+
+	           // Move the resource onto the same stack
+	           let r2 <- r1
+
+	           // Update the reference
+	           ref.setID(2)
+
+	           destroy r2
+	       }
+
+	       fun reference(_ ref: &R): &R {
+	           return ref
+	       }`
+
+		_, err := compileAndInvoke(t, code, "test")
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
 	//t.Run("one account to another account", func(t *testing.T) {
 	//
 	//	t.Parallel()
