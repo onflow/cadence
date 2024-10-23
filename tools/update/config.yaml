@@ -113,6 +113,6 @@ repos:
         - onflow/cadence-tools/test
         - onflow/cadence-tools/lint
         - onflow/cadence-tools/languageserver
-        - onflow/flixkit-go
+        - onflow/flixkit-go/v2
         - onflow/flowkit/v2
         - onflow/flow-evm-gateway
