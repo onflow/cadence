@@ -604,8 +604,7 @@ func (e *Encoder) encodeReferenceTypeWithRawTag(
 //
 //	; cbor-tag-intersection-type
 //	#6.143([
-//	  type: inline-type / nil,
-//	  types: [* inline-type]
+//	  types: [+ inline-type]
 //	])
 func (e *Encoder) encodeIntersectionType(typ *cadence.IntersectionType, tids ccfTypeIDByCadenceType) error {
 	rawTagNum := []byte{0xd8, CBORTagIntersectionType}

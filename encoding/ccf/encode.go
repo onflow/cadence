@@ -1569,8 +1569,7 @@ func (e *Encoder) encodeReferenceTypeValue(typ *cadence.ReferenceType, visited c
 //
 //	; cbor-tag-intersection-type-value
 //	#6.191([
-//	  type: type-value / nil,
-//	  types: [* type-value]
+//	  types: [+ type-value]
 //	])
 func (e *Encoder) encodeIntersectionTypeValue(typ *cadence.IntersectionType, visited ccfTypeIDByCadenceType) error {
 	rawTagNum := []byte{0xd8, CBORTagIntersectionTypeValue}
