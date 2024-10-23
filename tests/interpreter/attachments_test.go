@@ -1265,9 +1265,6 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 					return nil
 				},
 			},
-			CheckerConfig: &sema.Config{
-				AttachmentsEnabled: true,
-			},
 		})
 		require.NoError(t, err)
 
@@ -1315,9 +1312,6 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 					return nil
 				},
 			},
-			CheckerConfig: &sema.Config{
-				AttachmentsEnabled: true,
-			},
 		})
 		require.NoError(t, err)
 
@@ -1360,9 +1354,6 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 					events = append(events, event)
 					return nil
 				},
-			},
-			CheckerConfig: &sema.Config{
-				AttachmentsEnabled: true,
 			},
 		})
 		require.NoError(t, err)
@@ -1409,9 +1400,6 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 					events = append(events, event)
 					return nil
 				},
-			},
-			CheckerConfig: &sema.Config{
-				AttachmentsEnabled: true,
 			},
 		})
 		require.NoError(t, err)
@@ -1462,9 +1450,6 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 					events = append(events, event)
 					return nil
 				},
-			},
-			CheckerConfig: &sema.Config{
-				AttachmentsEnabled: true,
 			},
 		})
 		require.NoError(t, err)
@@ -1524,9 +1509,6 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 					return nil
 				},
 			},
-			CheckerConfig: &sema.Config{
-				AttachmentsEnabled: true,
-			},
 		})
 		require.NoError(t, err)
 
@@ -1582,9 +1564,9 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		    access(all) fun returnSameRef(_ ref: &A): &A {
 		        return ref
-		    }`, sema.Config{
-			AttachmentsEnabled: true,
-		})
+		    }`,
+			sema.Config{},
+		)
 
 		_, err := inter.Invoke("test")
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
@@ -1611,9 +1593,9 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		    access(all) fun returnSameRef(_ ref: &A): &A {
 		        return ref
-		    }`, sema.Config{
-			AttachmentsEnabled: true,
-		})
+		    }`,
+			sema.Config{},
+		)
 
 		_, err := inter.Invoke("test")
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
@@ -1661,9 +1643,9 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		    access(all) fun returnSameRef(_ ref: &A): &A {
 		        return ref
-		    }`, sema.Config{
-			AttachmentsEnabled: true,
-		})
+		    }`,
+			sema.Config{},
+		)
 
 		_, err := inter.Invoke("test")
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
@@ -1706,9 +1688,9 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 r2.setID(5)
                 authAccount.storage.save(<-r2, to: /storage/foo)
                 return ref!.id
-            }`, sema.Config{
-			AttachmentsEnabled: true,
-		})
+            }`,
+			sema.Config{},
+		)
 
 		_, err := inter.Invoke("test")
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
@@ -1740,9 +1722,9 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		    access(all) fun returnSameRef(_ ref: &A): &A {
 		        return ref
-		    }`, sema.Config{
-			AttachmentsEnabled: true,
-		})
+		    }`,
+			sema.Config{},
+		)
 
 		_, err := inter.Invoke("test")
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
@@ -1784,9 +1766,9 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 a.setID(5)
                 authAccount.storage.save(<-r2, to: /storage/foo)
                 return ref!.id
-            }`, sema.Config{
-			AttachmentsEnabled: true,
-		})
+            }`,
+			sema.Config{},
+		)
 
 		_, err := inter.Invoke("test")
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
@@ -2524,7 +2506,6 @@ func TestInterpretBuiltinCompositeAttachment(t *testing.T) {
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
 				},
-				AttachmentsEnabled: true,
 			},
 			Config: &interpreter.Config{
 				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {

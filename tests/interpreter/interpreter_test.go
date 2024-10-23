@@ -50,12 +50,7 @@ type ParseCheckAndInterpretOptions struct {
 }
 
 func parseCheckAndInterpret(t testing.TB, code string) *interpreter.Interpreter {
-	inter, err := parseCheckAndInterpretWithOptions(t, code, ParseCheckAndInterpretOptions{
-		// attachments should be on by default in tests
-		CheckerConfig: &sema.Config{
-			AttachmentsEnabled: true,
-		},
-	})
+	inter, err := parseCheckAndInterpretWithOptions(t, code, ParseCheckAndInterpretOptions{})
 	require.NoError(t, err)
 	return inter
 }

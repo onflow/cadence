@@ -145,13 +145,6 @@ func (checker *Checker) VisitAttachmentDeclaration(declaration *ast.AttachmentDe
 }
 
 func (checker *Checker) visitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) (_ struct{}) {
-
-	if !checker.Config.AttachmentsEnabled {
-		checker.report(&AttachmentsNotEnabledError{
-			Range: ast.NewRangeFromPositioned(checker.memoryGauge, declaration),
-		})
-	}
-
 	checker.visitCompositeLikeDeclaration(declaration)
 	attachmentType := checker.Elaboration.CompositeDeclarationType(declaration)
 	checker.checkAttachmentMembersAccess(attachmentType)

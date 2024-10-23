@@ -603,8 +603,7 @@ func TestCheckAccessModifierGlobalCompositeDeclaration(t *testing.T) {
 							),
 							ParseAndCheckOptions{
 								Config: &sema.Config{
-									AccessCheckMode:    checkMode,
-									AttachmentsEnabled: true,
+									AccessCheckMode: checkMode,
 								},
 							},
 						)

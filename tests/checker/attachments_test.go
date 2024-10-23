@@ -3816,7 +3816,6 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 				`,
 			ParseAndCheckOptions{Config: &sema.Config{
 				SuggestionsEnabled: true,
-				AttachmentsEnabled: true,
 			}},
 		)
 
@@ -3896,7 +3895,6 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 				`,
 			ParseAndCheckOptions{Config: &sema.Config{
 				SuggestionsEnabled: true,
-				AttachmentsEnabled: true,
 			}},
 		)
 
@@ -3970,7 +3968,6 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 				`,
 			ParseAndCheckOptions{Config: &sema.Config{
 				SuggestionsEnabled: true,
-				AttachmentsEnabled: true,
 			}},
 		)
 
@@ -4386,95 +4383,6 @@ func TestCheckAttachmentsResourceReference(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.InvalidatedResourceReferenceError{}, errs[0])
-	})
-}
-
-func TestCheckAttachmentsNotEnabled(t *testing.T) {
-
-	t.Parallel()
-
-	parseAndCheckWithoutAttachments := func(t *testing.T, code string) (*sema.Checker, error) {
-		return ParseAndCheckWithOptions(t, code, ParseAndCheckOptions{})
-	}
-
-	t.Run("declaration", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := parseAndCheckWithoutAttachments(t,
-			`
-			struct S {}
-			attachment Test for S {}`,
-		)
-
-		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.AttachmentsNotEnabledError{}, errs[0])
-	})
-
-	t.Run("attach", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := parseAndCheckWithoutAttachments(t,
-			`
-			struct S {}
-			let s = attach A() to S() 
-			`,
-		)
-
-		errs := RequireCheckerErrors(t, err, 2)
-		assert.IsType(t, &sema.AttachmentsNotEnabledError{}, errs[0])
-		assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
-	})
-
-	t.Run("remove", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := parseAndCheckWithoutAttachments(t,
-			`
-			struct S {}
-			fun foo() {
-				remove A from S() 
-			}
-			`,
-		)
-
-		errs := RequireCheckerErrors(t, err, 2)
-		assert.IsType(t, &sema.AttachmentsNotEnabledError{}, errs[0])
-		assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
-	})
-
-	t.Run("type indexing", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := parseAndCheckWithoutAttachments(t,
-			`
-			struct S {}
-			attachment A for S {}
-			let s = S()
-			let r = s[A]
-			`,
-		)
-
-		errs := RequireCheckerErrors(t, err, 2)
-		assert.IsType(t, &sema.AttachmentsNotEnabledError{}, errs[0])
-		assert.IsType(t, &sema.AttachmentsNotEnabledError{}, errs[1])
-	})
-
-	t.Run("regular indexing ok", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := parseAndCheckWithoutAttachments(t,
-			`
-			let x = [1, 2, 3]
-			let y = x[2]
-			`,
-		)
-
-		require.NoError(t, err)
 	})
 }
 

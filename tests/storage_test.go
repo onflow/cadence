@@ -5941,7 +5941,7 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 	t.Run("struct", func(t *testing.T) {
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntimeWithAttachments()
+		runtime := NewTestInterpreterRuntime()
 
 		tx := []byte(`
             transaction {

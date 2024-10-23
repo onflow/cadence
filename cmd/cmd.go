@@ -119,7 +119,6 @@ func DefaultCheckerConfig(
 				Elaboration: importedChecker.Elaboration,
 			}, nil
 		},
-		AttachmentsEnabled: true,
 	}
 }
 

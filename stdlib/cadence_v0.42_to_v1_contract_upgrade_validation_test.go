@@ -49,8 +49,7 @@ func testContractUpdate(t *testing.T, oldCode string, newCode string) error {
 		utils.TestLocation,
 		nil,
 		&sema.Config{
-			AccessCheckMode:    sema.AccessCheckModeStrict,
-			AttachmentsEnabled: true,
+			AccessCheckMode: sema.AccessCheckModeStrict,
 		})
 	require.NoError(t, err)
 
@@ -130,8 +129,7 @@ func parseAndCheckPrograms(
 			location,
 			nil,
 			&sema.Config{
-				AccessCheckMode:    sema.AccessCheckModeStrict,
-				AttachmentsEnabled: true,
+				AccessCheckMode: sema.AccessCheckModeStrict,
 			},
 		)
 
@@ -171,7 +169,6 @@ func parseAndCheckPrograms(
 
 				return
 			},
-			AttachmentsEnabled: true,
 		})
 	require.NoError(t, err)
 

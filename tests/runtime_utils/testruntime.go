@@ -38,17 +38,10 @@ func NewTestInterpreterRuntimeWithConfig(config runtime.Config) TestInterpreterR
 
 var DefaultTestInterpreterConfig = runtime.Config{
 	AtreeValidationEnabled: true,
-	AttachmentsEnabled:     true,
 }
 
 func NewTestInterpreterRuntime() TestInterpreterRuntime {
 	return NewTestInterpreterRuntimeWithConfig(DefaultTestInterpreterConfig)
-}
-
-func NewTestInterpreterRuntimeWithAttachments() TestInterpreterRuntime {
-	config := DefaultTestInterpreterConfig
-	config.AttachmentsEnabled = true
-	return NewTestInterpreterRuntimeWithConfig(config)
 }
 
 func (r TestInterpreterRuntime) ExecuteTransaction(script runtime.Script, context runtime.Context) error {
