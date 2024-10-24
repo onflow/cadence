@@ -22,9 +22,9 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/sema"
 )
 
 // A Config specifies details about how programs should be loaded.
@@ -45,6 +45,8 @@ type Config struct {
 	HandleParserError func(err ParsingCheckingError, program *ast.Program) error
 	// HandleCheckerError is called when a checker error occurs instead of returning it
 	HandleCheckerError func(err ParsingCheckingError, checker *sema.Checker) error
+	// CryptoContractElaboration is the elaboration of the Crypto contract
+	CryptoContractElaboration *sema.Elaboration
 }
 
 func NewSimpleConfig(

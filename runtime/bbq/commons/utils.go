@@ -21,8 +21,8 @@ package commons
 import (
 	"bytes"
 
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
 )
 
 func TypeQualifiedName(typeName, functionName string) string {

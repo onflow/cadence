@@ -20,9 +20,9 @@ package vm
 
 import (
 	"github.com/onflow/atree"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/format"
-	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/format"
+	"github.com/onflow/cadence/interpreter"
 )
 
 type NilValue struct{}

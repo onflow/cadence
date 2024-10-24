@@ -21,9 +21,9 @@ package compiler
 import (
 	"math"
 
-	"github.com/onflow/cadence/runtime/activations"
+	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/runtime/bbq/opcode"
-	"github.com/onflow/cadence/runtime/errors"
 )
 
 type function struct {

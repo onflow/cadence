@@ -19,9 +19,9 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
 )
 
 // Utility methods to convert between old and new values.
@@ -39,7 +39,7 @@ func InterpreterValueToVMValue(storage interpreter.Storage, value interpreter.Va
 		return StringValue{Str: []byte(value.Str)}
 	case *interpreter.CompositeValue:
 		return newCompositeValueFromOrderedMap(
-			value.Dictionary,
+			value.AtreeMap(),
 			value.Location,
 			value.QualifiedIdentifier,
 			value.Kind,
@@ -78,7 +78,7 @@ func InterpreterValueToVMValue(storage interpreter.Storage, value interpreter.Va
 		)
 	case *interpreter.IDCapabilityValue:
 		return NewCapabilityValue(
-			AddressValue(value.Address),
+			AddressValue(value.Address()),
 			NewIntValue(int64(value.ID.ToInt(interpreter.EmptyLocationRange))),
 			value.BorrowType,
 		)

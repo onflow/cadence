@@ -23,7 +23,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/bbq"
 
-	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/common"
 )
 
 type LinkedGlobals struct {

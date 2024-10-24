@@ -18,7 +18,7 @@
 
 package vm
 
-import "github.com/onflow/cadence/runtime/interpreter"
+import "github.com/onflow/cadence/interpreter"
 
 type StaticType = interpreter.StaticType
 

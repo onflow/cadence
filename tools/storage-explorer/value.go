@@ -23,9 +23,9 @@ import (
 	"sort"
 
 	jsoncdc "github.com/onflow/cadence/encoding/json"
+	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/sema"
 )
 
 type Value interface {
@@ -242,20 +242,24 @@ func prepareValue(value interpreter.Value, inter *interpreter.Interpreter) (Valu
 
 		var err error
 
-		value.IterateKeys(inter, func(key interpreter.Value) (resume bool) {
-			var preparedKey Value
-			preparedKey, err = prepareValue(key, inter)
-			if err != nil {
-				return false
-			}
+		value.IterateKeys(
+			inter,
+			interpreter.EmptyLocationRange,
+			func(key interpreter.Value) (resume bool) {
+				var preparedKey Value
+				preparedKey, err = prepareValue(key, inter)
+				if err != nil {
+					return false
+				}
 
-			keys = append(keys, DictionaryKey{
-				Description: key.String(),
-				Value:       preparedKey,
-			})
+				keys = append(keys, DictionaryKey{
+					Description: key.String(),
+					Value:       preparedKey,
+				})
 
-			return true
-		})
+				return true
+			},
+		)
 
 		if err != nil {
 			return nil, err

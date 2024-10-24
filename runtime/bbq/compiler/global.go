@@ -18,7 +18,7 @@
 
 package compiler
 
-import "github.com/onflow/cadence/runtime/common"
+import "github.com/onflow/cadence/common"
 
 type global struct {
 	name     string

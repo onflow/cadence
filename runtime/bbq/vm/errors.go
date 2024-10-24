@@ -20,7 +20,7 @@ package vm
 
 import (
 	"fmt"
-	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/errors"
 )
 
 type LinkerError struct {

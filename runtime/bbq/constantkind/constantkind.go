@@ -19,8 +19,8 @@
 package constantkind
 
 import (
-	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/sema"
 )
 
 //go:generate go run golang.org/x/tools/cmd/stringer -type=ConstantKind

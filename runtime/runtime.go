@@ -23,12 +23,12 @@ import (
 	"time"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 )
 
 type Script struct {
@@ -357,6 +357,7 @@ func UserPanicToError(f func()) (returnedError error) {
 
 type ArgumentDecoder interface {
 	stdlib.StandardLibraryHandler
+	ResolveLocation(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error)
 
 	// DecodeArgument decodes a transaction/script argument against the given type.
 	DecodeArgument(argument []byte, argumentType cadence.Type) (cadence.Value, error)
@@ -414,6 +415,7 @@ func validateArgumentParams(
 				inter,
 				locationRange,
 				decoder,
+				decoder.ResolveLocation,
 				value,
 				parameterType,
 			)

@@ -19,8 +19,8 @@
 package commons
 
 import (
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/errors"
 )
 
 const (

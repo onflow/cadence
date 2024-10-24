@@ -25,9 +25,10 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
 )
 
 // EmptyRuntimeInterface is an empty implementation of runtime.Interface.
@@ -235,6 +236,27 @@ func (EmptyRuntimeInterface) GenerateAccountID(_ common.Address) (uint64, error)
 	panic("unexpected call to GenerateAccountID")
 }
 
-func (EmptyRuntimeInterface) RecoverProgram(_ *ast.Program, _ common.Location) (*ast.Program, error) {
+func (EmptyRuntimeInterface) RecoverProgram(_ *ast.Program, _ common.Location) ([]byte, error) {
 	panic("unexpected call to RecoverProgram")
+}
+
+func (EmptyRuntimeInterface) ValidateAccountCapabilitiesGet(
+	_ *interpreter.Interpreter,
+	_ interpreter.LocationRange,
+	_ interpreter.AddressValue,
+	_ interpreter.PathValue,
+	_ *sema.ReferenceType,
+	_ *sema.ReferenceType,
+) (bool, error) {
+	panic("unexpected call to ValidateAccountCapabilitiesGet")
+}
+
+func (EmptyRuntimeInterface) ValidateAccountCapabilitiesPublish(
+	_ *interpreter.Interpreter,
+	_ interpreter.LocationRange,
+	_ interpreter.AddressValue,
+	_ interpreter.PathValue,
+	_ *interpreter.ReferenceStaticType,
+) (bool, error) {
+	panic("unexpected call to ValidateAccountCapabilitiesPublish")
 }

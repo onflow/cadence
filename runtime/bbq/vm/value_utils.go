@@ -18,7 +18,7 @@
 
 package vm
 
-import "github.com/onflow/cadence/runtime/interpreter"
+import "github.com/onflow/cadence/interpreter"
 
 const goIntSize = 32 << (^uint(0) >> 63) // 32 or 64
 const goMaxInt = 1<<(goIntSize-1) - 1

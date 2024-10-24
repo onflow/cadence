@@ -29,8 +29,8 @@ import (
 	"github.com/fxamacker/cbor/v2"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/common"
-	cadenceErrors "github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/common"
+	cadenceErrors "github.com/onflow/cadence/errors"
 )
 
 // HasMsgPrefix returns true if the msg prefix (first few bytes)
@@ -369,8 +369,7 @@ func (d *Decoder) decodeTypeAndValue(types *cadenceTypeByCCFTypeID) (cadence.Val
 //	/ dict-value
 //	/ composite-value
 //	/ path-value
-//	/ path-capability-value
-//	/ id-capability-value
+//	/ capability-value
 //	/ inclusiverange-value
 //	/ function-value
 //	/ type-value
@@ -1446,22 +1445,10 @@ func (d *Decoder) decodePath() (cadence.Value, error) {
 // decodeCapability decodes encoded capability-value as
 // language=CDDL
 //
-// capability-value =
-//
-//	id-capability-value
-//	/ path-capability-value
-//
-// id-capability-value = [
+// capability-value = [
 //
 //	address: address-value,
 //	id: uint64-value
-//
-// ]
-//
-// path-capability-value = [
-//
-//	address: address-value,
-//	path: path-value
 //
 // ]
 func (d *Decoder) decodeCapability(typ *cadence.CapabilityType, types *cadenceTypeByCCFTypeID) (cadence.Value, error) {

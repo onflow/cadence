@@ -19,7 +19,7 @@
 package compiler
 
 import (
-	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/sema"
 
 	"github.com/onflow/cadence/runtime/bbq/commons"
 )

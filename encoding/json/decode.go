@@ -25,13 +25,14 @@ import (
 	"io"
 	"math/big"
 	"strconv"
+	"unicode/utf8"
 	_ "unsafe"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
 )
 
 // A Decoder decodes JSON-encoded representations of Cadence values.
@@ -323,11 +324,19 @@ func (d *Decoder) decodeAddress(valueJSON any) cadence.Address {
 	// must include 0x prefix
 	actualPrefix := v[:prefixLength]
 	if actualPrefix != addressPrefix {
-		panic(errors.NewDefaultUserError(
-			"invalid address prefix: (shown as hex) expected %x, got %x", // hex encoding user input (actualPrefix) avoids invalid UTF-8.
-			addressPrefix,
-			actualPrefix,
-		))
+		if utf8.ValidString(actualPrefix) {
+			panic(errors.NewDefaultUserError(
+				"invalid address prefix: expected %s, got %s",
+				addressPrefix,
+				actualPrefix,
+			))
+		} else {
+			panic(errors.NewDefaultUserError(
+				"invalid address prefix: (shown as hex) expected %x, got %x", // hex encoding user input (actualPrefix) avoids invalid UTF-8.
+				addressPrefix,
+				actualPrefix,
+			))
+		}
 	}
 
 	b, err := hex.DecodeString(v[prefixLength:])

@@ -24,16 +24,16 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/activations"
-	"github.com/onflow/cadence/runtime/old_parser"
+	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/old_parser"
 
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/parser"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/parser"
+	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 )
 
 type Environment interface {
@@ -76,6 +76,8 @@ type Environment interface {
 	)
 	CommitStorage(inter *interpreter.Interpreter) error
 	NewAccountValue(inter *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value
+
+	ResolveLocation(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error)
 }
 
 // interpreterEnvironmentReconfigured is the portion of interpreterEnvironment
@@ -185,16 +187,18 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		// and disable storage validation after each value modification.
 		// Instead, storage is validated after commits (if validation is enabled),
 		// see interpreterEnvironment.CommitStorage
-		AtreeStorageValidationEnabled:    false,
-		Debugger:                         e.config.Debugger,
-		OnStatement:                      e.newOnStatementHandler(),
-		OnMeterComputation:               e.newOnMeterComputation(),
-		OnFunctionInvocation:             e.newOnFunctionInvocationHandler(),
-		OnInvokedFunctionReturn:          e.newOnInvokedFunctionReturnHandler(),
-		CapabilityBorrowHandler:          e.newCapabilityBorrowHandler(),
-		CapabilityCheckHandler:           e.newCapabilityCheckHandler(),
-		LegacyContractUpgradeEnabled:     e.config.LegacyContractUpgradeEnabled,
-		ContractUpdateTypeRemovalEnabled: e.config.ContractUpdateTypeRemovalEnabled,
+		AtreeStorageValidationEnabled:             false,
+		Debugger:                                  e.config.Debugger,
+		OnStatement:                               e.newOnStatementHandler(),
+		OnMeterComputation:                        e.newOnMeterComputation(),
+		OnFunctionInvocation:                      e.newOnFunctionInvocationHandler(),
+		OnInvokedFunctionReturn:                   e.newOnInvokedFunctionReturnHandler(),
+		CapabilityBorrowHandler:                   e.newCapabilityBorrowHandler(),
+		CapabilityCheckHandler:                    e.newCapabilityCheckHandler(),
+		LegacyContractUpgradeEnabled:              e.config.LegacyContractUpgradeEnabled,
+		ContractUpdateTypeRemovalEnabled:          e.config.ContractUpdateTypeRemovalEnabled,
+		ValidateAccountCapabilitiesGetHandler:     e.newValidateAccountCapabilitiesGetHandler(),
+		ValidateAccountCapabilitiesPublishHandler: e.newValidateAccountCapabilitiesPublishHandler(),
 	}
 }
 
@@ -204,10 +208,9 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 		BaseValueActivationHandler:       e.getBaseValueActivation,
 		BaseTypeActivationHandler:        e.getBaseTypeActivation,
 		ValidTopLevelDeclarationsHandler: validTopLevelDeclarations,
-		LocationHandler:                  e.newLocationHandler(),
+		LocationHandler:                  e.ResolveLocation,
 		ImportHandler:                    e.resolveImport,
 		CheckHandler:                     e.newCheckHandler(),
-		AttachmentsEnabled:               e.config.AttachmentsEnabled,
 	}
 }
 
@@ -505,6 +508,8 @@ func (e *interpreterEnvironment) parseAndCheckProgramWithRecovery(
 		return program, elaboration, err
 	}
 
+	recoveredElaboration.IsRecovered = true
+
 	// If recovery succeeded, return the recovered program and elaboration
 	return recoveredProgram, recoveredElaboration, nil
 }
@@ -520,9 +525,15 @@ func (e *interpreterEnvironment) parseAndCheckProgram(
 	err error,
 ) {
 	wrapParsingCheckingError := func(err error) error {
-		return &ParsingCheckingError{
-			Err:      err,
-			Location: location,
+		switch err.(type) {
+		// Wrap only parsing and checking errors.
+		case *sema.CheckerError, parser.Error:
+			return &ParsingCheckingError{
+				Err:      err,
+				Location: location,
+			}
+		default:
+			return err
 		}
 	}
 
@@ -554,7 +565,7 @@ func (e *interpreterEnvironment) parseAndCheckProgram(
 // recoverProgram parses and checks the given program with the old parser,
 // and recovers the elaboration from the old program.
 func (e *interpreterEnvironment) recoverProgram(
-	code []byte,
+	oldCode []byte,
 	location common.Location,
 	checkedImports importResolutionResults,
 ) (
@@ -566,7 +577,7 @@ func (e *interpreterEnvironment) recoverProgram(
 	var err error
 	reportMetric(
 		func() {
-			program, err = old_parser.ParseProgram(e, code, old_parser.Config{})
+			program, err = old_parser.ParseProgram(e, oldCode, old_parser.Config{})
 		},
 		e.runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
@@ -579,10 +590,18 @@ func (e *interpreterEnvironment) recoverProgram(
 
 	// Recover elaboration from the old program
 
+	var newCode []byte
 	errors.WrapPanic(func() {
-		program, err = e.runtimeInterface.RecoverProgram(program, location)
+		newCode, err = e.runtimeInterface.RecoverProgram(program, location)
 	})
-	if err != nil || program == nil {
+	if err != nil || newCode == nil {
+		return nil, nil
+	}
+
+	// Parse and check the recovered program
+
+	program, err = parser.ParseProgram(e, newCode, parser.Config{})
+	if err != nil {
 		return nil, nil
 	}
 
@@ -590,6 +609,8 @@ func (e *interpreterEnvironment) recoverProgram(
 	if err != nil || elaboration == nil {
 		return nil, nil
 	}
+
+	e.codesAndPrograms.setCode(location, newCode)
 
 	return program, elaboration
 }
@@ -624,16 +645,20 @@ func (e *interpreterEnvironment) check(
 	return elaboration, nil
 }
 
-func (e *interpreterEnvironment) newLocationHandler() sema.LocationHandlerFunc {
-	return func(identifiers []Identifier, location Location) (res []ResolvedLocation, err error) {
-		errors.WrapPanic(func() {
-			res, err = e.runtimeInterface.ResolveLocation(identifiers, location)
-		})
-		if err != nil {
-			err = interpreter.WrappedExternalError(err)
-		}
-		return
+func (e *interpreterEnvironment) ResolveLocation(
+	identifiers []Identifier,
+	location Location,
+) (
+	res []ResolvedLocation,
+	err error,
+) {
+	errors.WrapPanic(func() {
+		res, err = e.runtimeInterface.ResolveLocation(identifiers, location)
+	})
+	if err != nil {
+		err = interpreter.WrappedExternalError(err)
 	}
+	return
 }
 
 func (e *interpreterEnvironment) newCheckHandler() sema.CheckHandlerFunc {
@@ -654,40 +679,29 @@ func (e *interpreterEnvironment) resolveImport(
 	importRange ast.Range,
 ) (sema.Import, error) {
 
-	var elaboration *sema.Elaboration
-	switch importedLocation {
-	case stdlib.CryptoCheckerLocation:
-		cryptoChecker := stdlib.CryptoChecker()
-		elaboration = cryptoChecker.Elaboration
-
-	default:
-
-		// Check for cyclic imports
-		if e.checkedImports[importedLocation] {
-			return nil, &sema.CyclicImportsError{
-				Location: importedLocation,
-				Range:    importRange,
-			}
-		} else {
-			e.checkedImports[importedLocation] = true
-			defer delete(e.checkedImports, importedLocation)
+	// Check for cyclic imports
+	if e.checkedImports[importedLocation] {
+		return nil, &sema.CyclicImportsError{
+			Location: importedLocation,
+			Range:    importRange,
 		}
+	} else {
+		e.checkedImports[importedLocation] = true
+		defer delete(e.checkedImports, importedLocation)
+	}
 
-		const getAndSetProgram = true
-		program, err := e.GetProgram(
-			importedLocation,
-			getAndSetProgram,
-			e.checkedImports,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		elaboration = program.Elaboration
+	const getAndSetProgram = true
+	program, err := e.GetProgram(
+		importedLocation,
+		getAndSetProgram,
+		e.checkedImports,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	return sema.ElaborationImport{
-		Elaboration: elaboration,
+		Elaboration: program.Elaboration,
 	}, nil
 }
 
@@ -927,6 +941,7 @@ func (e *interpreterEnvironment) newContractValueHandler() interpreter.ContractV
 					invocation.ConstructorArguments,
 					invocation.ArgumentTypes,
 					invocation.ParameterTypes,
+					invocation.ContractType,
 					invocationRange,
 				)
 				if err != nil {
@@ -985,36 +1000,30 @@ func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter
 		compositeKind common.CompositeKind,
 	) map[string]interpreter.Value {
 
-		switch location {
-		case stdlib.CryptoCheckerLocation:
-			return nil
+		switch compositeKind {
+		case common.CompositeKindContract:
+			var address Address
 
-		default:
-			switch compositeKind {
-			case common.CompositeKindContract:
-				var address Address
+			switch location := location.(type) {
+			case common.AddressLocation:
+				address = location.Address
+			default:
+				return nil
+			}
 
-				switch location := location.(type) {
-				case common.AddressLocation:
-					address = location.Address
-				default:
-					return nil
-				}
+			addressValue := interpreter.NewAddressValue(
+				inter,
+				address,
+			)
 
-				addressValue := interpreter.NewAddressValue(
+			return map[string]interpreter.Value{
+				sema.ContractAccountFieldName: stdlib.NewAccountReferenceValue(
 					inter,
-					address,
-				)
-
-				return map[string]interpreter.Value{
-					sema.ContractAccountFieldName: stdlib.NewAccountReferenceValue(
-						inter,
-						e,
-						addressValue,
-						interpreter.FullyEntitledAccountAccess,
-						interpreter.EmptyLocationRange,
-					),
-				}
+					e,
+					addressValue,
+					interpreter.FullyEntitledAccountAccess,
+					interpreter.EmptyLocationRange,
+				),
 			}
 		}
 
@@ -1025,36 +1034,22 @@ func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter
 func (e *interpreterEnvironment) newImportLocationHandler() interpreter.ImportLocationHandlerFunc {
 	return func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 
-		switch location {
-		case stdlib.CryptoCheckerLocation:
-			cryptoChecker := stdlib.CryptoChecker()
-			program := interpreter.ProgramFromChecker(cryptoChecker)
-			subInterpreter, err := inter.NewSubInterpreter(program, location)
-			if err != nil {
-				panic(err)
-			}
-			return interpreter.InterpreterImport{
-				Interpreter: subInterpreter,
-			}
+		const getAndSetProgram = true
+		program, err := e.GetProgram(
+			location,
+			getAndSetProgram,
+			importResolutionResults{},
+		)
+		if err != nil {
+			panic(err)
+		}
 
-		default:
-			const getAndSetProgram = true
-			program, err := e.GetProgram(
-				location,
-				getAndSetProgram,
-				importResolutionResults{},
-			)
-			if err != nil {
-				panic(err)
-			}
-
-			subInterpreter, err := inter.NewSubInterpreter(program, location)
-			if err != nil {
-				panic(err)
-			}
-			return interpreter.InterpreterImport{
-				Interpreter: subInterpreter,
-			}
+		subInterpreter, err := inter.NewSubInterpreter(program, location)
+		if err != nil {
+			panic(err)
+		}
+		return interpreter.InterpreterImport{
+			Interpreter: subInterpreter,
 		}
 	}
 }
@@ -1102,45 +1097,32 @@ func (e *interpreterEnvironment) newCompositeValueFunctionsHandler() interpreter
 func (e *interpreterEnvironment) loadContract(
 	inter *interpreter.Interpreter,
 	compositeType *sema.CompositeType,
-	constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
-	invocationRange ast.Range,
+	_ func(common.Address) *interpreter.HostFunctionValue,
+	_ ast.Range,
 ) *interpreter.CompositeValue {
 
-	switch compositeType.Location {
-	case stdlib.CryptoCheckerLocation:
-		contract, err := stdlib.NewCryptoContract(
-			inter,
-			constructorGenerator(common.ZeroAddress),
-			invocationRange,
+	var contractValue interpreter.Value
+
+	location := compositeType.Location
+	if addressLocation, ok := location.(common.AddressLocation); ok {
+		storageMap := e.storage.GetStorageMap(
+			addressLocation.Address,
+			StorageDomainContract,
+			false,
 		)
-		if err != nil {
-			panic(err)
-		}
-		return contract
-
-	default:
-
-		var storedValue interpreter.Value
-
-		switch location := compositeType.Location.(type) {
-
-		case common.AddressLocation:
-			storageMap := e.storage.GetStorageMap(
-				location.Address,
-				StorageDomainContract,
-				false,
+		if storageMap != nil {
+			contractValue = storageMap.ReadValue(
+				inter,
+				interpreter.StringStorageMapKey(addressLocation.Name),
 			)
-			if storageMap != nil {
-				storedValue = storageMap.ReadValue(inter, interpreter.StringStorageMapKey(location.Name))
-			}
 		}
-
-		if storedValue == nil {
-			panic(errors.NewDefaultUserError("failed to load contract: %s", compositeType.Location))
-		}
-
-		return storedValue.(*interpreter.CompositeValue)
 	}
+
+	if contractValue == nil {
+		panic(errors.NewDefaultUserError("failed to load contract: %s", location))
+	}
+
+	return contractValue.(*interpreter.CompositeValue)
 }
 
 func (e *interpreterEnvironment) newOnFunctionInvocationHandler() func(_ *interpreter.Interpreter) {
@@ -1383,5 +1365,63 @@ func (e *interpreterEnvironment) newCapabilityCheckHandler() interpreter.Capabil
 			capabilityBorrowType,
 			e,
 		)
+	}
+}
+
+func (e *interpreterEnvironment) newValidateAccountCapabilitiesGetHandler() interpreter.ValidateAccountCapabilitiesGetHandlerFunc {
+	return func(
+		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
+		address interpreter.AddressValue,
+		path interpreter.PathValue,
+		wantedBorrowType *sema.ReferenceType,
+		capabilityBorrowType *sema.ReferenceType,
+	) (bool, error) {
+		var (
+			ok  bool
+			err error
+		)
+		errors.WrapPanic(func() {
+			ok, err = e.runtimeInterface.ValidateAccountCapabilitiesGet(
+				inter,
+				locationRange,
+				address,
+				path,
+				wantedBorrowType,
+				capabilityBorrowType,
+			)
+		})
+		if err != nil {
+			err = interpreter.WrappedExternalError(err)
+		}
+		return ok, err
+	}
+}
+
+func (e *interpreterEnvironment) newValidateAccountCapabilitiesPublishHandler() interpreter.ValidateAccountCapabilitiesPublishHandlerFunc {
+	return func(
+		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
+		address interpreter.AddressValue,
+		path interpreter.PathValue,
+		capabilityBorrowType *interpreter.ReferenceStaticType,
+	) (bool, error) {
+		var (
+			ok  bool
+			err error
+		)
+		errors.WrapPanic(func() {
+			ok, err = e.runtimeInterface.ValidateAccountCapabilitiesPublish(
+				inter,
+				locationRange,
+				address,
+				path,
+				capabilityBorrowType,
+			)
+		})
+		if err != nil {
+			err = interpreter.WrappedExternalError(err)
+		}
+		return ok, err
 	}
 }

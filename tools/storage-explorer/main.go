@@ -35,10 +35,11 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/rs/zerolog"
 
+	"github.com/onflow/cadence/interpreter"
+
+	"github.com/onflow/cadence/common"
 	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
 )
 
 func main() {

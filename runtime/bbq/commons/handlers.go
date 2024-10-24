@@ -19,10 +19,10 @@
 package commons
 
 import (
-	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/runtime/bbq"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/sema"
 )
 
 type ImportHandler func(location common.Location) *bbq.Program
