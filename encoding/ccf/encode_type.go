@@ -376,14 +376,14 @@ func (e *Encoder) encodeReferenceType(
 //
 //	; cbor-tag-entitlement-set-authorization-type
 //	#6.146([
-//	    kind: uint8,
-//	    entitlements: +[string]
+//	    kind: uint,
+//	    entitlements: [+ tstr],
 //	])
 //
 // entitlement-map-authorization-type =
 //
 //	; cbor-tag-entitlement-map-authorization-type
-//	#6.147(entitlement: string)
+//	#6.147(tstr)
 //
 // authorization-type-value =
 //
@@ -397,8 +397,8 @@ func (e *Encoder) encodeReferenceType(
 //
 //	; cbor-tag-entitlement-set-authorization-type-value
 //	#6.195([
-//	    kind: uint8,
-//	    entitlements: +[string]
+//	    kind: uint,
+//	    entitlements: [+ tstr],
 //	])
 //
 // entitlement-map-authorization-type-value =
@@ -442,8 +442,8 @@ func (e *Encoder) encodeAuthorization(
 //
 //	; cbor-tag-entitlement-set-authorization-type
 //	#6.146([
-//	    kind: uint8,
-//	    entitlements: +[string]
+//	    kind: uint,
+//	    entitlements: [+ tstr],
 //	])
 //
 // or
@@ -452,8 +452,8 @@ func (e *Encoder) encodeAuthorization(
 //
 //	; cbor-tag-entitlement-set-authorization-type-value
 //	#6.195([
-//	    kind: uint8,
-//	    entitlements: +[string]
+//	    kind: uint,
+//	    entitlements: [+ tstr],
 //	])
 func (e *Encoder) encodeEntitlementSetAuthorizationWithRawTag(
 	auth *cadence.EntitlementSetAuthorization,
