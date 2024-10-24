@@ -22,8 +22,8 @@ import (
 	"math"
 
 	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/runtime/bbq/opcode"
 )
 
 type function struct {

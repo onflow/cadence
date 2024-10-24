@@ -21,7 +21,7 @@ package compiler
 import (
 	"github.com/onflow/cadence/sema"
 
-	"github.com/onflow/cadence/runtime/bbq/commons"
+	"github.com/onflow/cadence/bbq/commons"
 )
 
 var indexedNativeFunctions = make(map[string]*global)

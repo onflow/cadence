@@ -19,7 +19,7 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/runtime/bbq"
+	"github.com/onflow/cadence/bbq"
 )
 
 // Context is the context of a program.

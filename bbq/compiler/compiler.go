@@ -28,11 +28,11 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 
-	"github.com/onflow/cadence/runtime/bbq"
-	"github.com/onflow/cadence/runtime/bbq/commons"
-	"github.com/onflow/cadence/runtime/bbq/constantkind"
-	"github.com/onflow/cadence/runtime/bbq/leb128"
-	"github.com/onflow/cadence/runtime/bbq/opcode"
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/commons"
+	"github.com/onflow/cadence/bbq/constantkind"
+	"github.com/onflow/cadence/bbq/leb128"
+	"github.com/onflow/cadence/bbq/opcode"
 )
 
 type Compiler struct {

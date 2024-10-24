@@ -18,7 +18,7 @@
 
 package compiler
 
-import "github.com/onflow/cadence/runtime/bbq/constantkind"
+import "github.com/onflow/cadence/bbq/constantkind"
 
 type constant struct {
 	index uint16

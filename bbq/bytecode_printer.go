@@ -22,12 +22,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/onflow/cadence/bbq/constantkind"
+	"github.com/onflow/cadence/bbq/leb128"
+	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/runtime/bbq/constantkind"
-	"github.com/onflow/cadence/runtime/bbq/leb128"
-	"github.com/onflow/cadence/runtime/bbq/opcode"
 )
 
 type BytecodePrinter struct {

@@ -23,9 +23,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/bbq"
-	"github.com/onflow/cadence/runtime/bbq/constantkind"
-	"github.com/onflow/cadence/runtime/bbq/opcode"
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/constantkind"
+	"github.com/onflow/cadence/bbq/opcode"
 	. "github.com/onflow/cadence/tests/checker"
 )
 

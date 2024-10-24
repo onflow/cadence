@@ -20,13 +20,13 @@ package test
 
 import (
 	"fmt"
-	"github.com/onflow/cadence/runtime/bbq"
+	"github.com/onflow/cadence/bbq"
 	"github.com/stretchr/testify/assert"
 	"testing"
 
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/runtime/bbq/vm"
 	"github.com/stretchr/testify/require"
 )
 

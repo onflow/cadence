@@ -20,8 +20,8 @@ package commons
 
 import (
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/runtime/bbq"
 	"github.com/onflow/cadence/sema"
 )
 

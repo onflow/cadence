@@ -21,7 +21,7 @@ package vm
 import (
 	"fmt"
 
-	"github.com/onflow/cadence/runtime/bbq"
+	"github.com/onflow/cadence/bbq"
 
 	"github.com/onflow/cadence/common"
 )

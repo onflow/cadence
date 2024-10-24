@@ -16,11 +16,42 @@
  * limitations under the License.
  */
 
-package bbq
+package vm
 
-import "github.com/onflow/cadence/runtime/bbq/constantkind"
+import (
+	"github.com/onflow/cadence/bbq"
+)
 
-type Constant struct {
-	Data []byte
-	Kind constantkind.ConstantKind
+type callFrame struct {
+	parent   *callFrame
+	context  *Context
+	locals   []Value
+	function *bbq.Function
+	ip       uint16
+}
+
+func (f *callFrame) getUint16() uint16 {
+	first := f.function.Code[f.ip]
+	last := f.function.Code[f.ip+1]
+	f.ip += 2
+	return uint16(first)<<8 | uint16(last)
+}
+
+func (f *callFrame) getByte() byte {
+	byt := f.function.Code[f.ip]
+	f.ip++
+	return byt
+}
+
+func (f *callFrame) getBool() bool {
+	byt := f.function.Code[f.ip]
+	f.ip++
+	return byt == 1
+}
+
+func (f *callFrame) getString() string {
+	strLen := f.getUint16()
+	str := string(f.function.Code[f.ip : f.ip+strLen])
+	f.ip = f.ip + strLen
+	return str
 }
