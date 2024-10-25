@@ -38,7 +38,6 @@ type VM struct {
 	stack              []Value
 	config             *Config
 	linkedGlobalsCache map[common.Location]LinkedGlobals
-	contextCache       map[common.Location]*Context
 }
 
 func NewVM(
@@ -66,7 +65,6 @@ func NewVM(
 	vm := &VM{
 		linkedGlobalsCache: linkedGlobalsCache,
 		config:             conf,
-		contextCache:       make(map[common.Location]*Context),
 	}
 
 	// Link global variables and functions.
@@ -140,17 +138,17 @@ func (vm *VM) replaceTop(value Value) {
 	vm.stack[lastIndex] = value
 }
 
-func (vm *VM) pushCallFrame(ctx *Context, function *bbq.Function, arguments []Value) {
-	locals := make([]Value, function.LocalCount)
+func (vm *VM) pushCallFrame(functionValue FunctionValue, arguments []Value) {
+	locals := make([]Value, functionValue.Function.LocalCount)
 	for i, argument := range arguments {
 		locals[i] = argument
 	}
 
 	callFrame := &callFrame{
-		parent:   vm.callFrame,
-		locals:   locals,
-		function: function,
-		context:  ctx,
+		parent:     vm.callFrame,
+		locals:     locals,
+		function:   functionValue.Function,
+		executable: functionValue.Executable,
 	}
 	vm.callFrame = callFrame
 }
@@ -193,7 +191,7 @@ func (vm *VM) invoke(function Value, arguments []Value) (Value, error) {
 		)
 	}
 
-	vm.pushCallFrame(functionValue.Context, functionValue.Function, arguments)
+	vm.pushCallFrame(functionValue, arguments)
 
 	vm.run()
 
@@ -323,7 +321,7 @@ func opFalse(vm *VM) {
 func opGetConstant(vm *VM) {
 	callFrame := vm.callFrame
 	index := callFrame.getUint16()
-	constant := callFrame.context.Constants[index]
+	constant := callFrame.executable.Constants[index]
 	if constant == nil {
 		constant = vm.initializeConstant(index)
 	}
@@ -346,13 +344,13 @@ func opSetLocal(vm *VM) {
 func opGetGlobal(vm *VM) {
 	callFrame := vm.callFrame
 	index := callFrame.getUint16()
-	vm.push(callFrame.context.Globals[index])
+	vm.push(callFrame.executable.Globals[index])
 }
 
 func opSetGlobal(vm *VM) {
 	callFrame := vm.callFrame
 	index := callFrame.getUint16()
-	callFrame.context.Globals[index] = vm.pop()
+	callFrame.executable.Globals[index] = vm.pop()
 }
 
 func opSetIndex(vm *VM) {
@@ -381,7 +379,7 @@ func opInvoke(vm *VM) {
 	case FunctionValue:
 		parameterCount := int(value.Function.ParameterCount)
 		arguments := vm.stack[stackHeight-parameterCount:]
-		vm.pushCallFrame(value.Context, value.Function, arguments)
+		vm.pushCallFrame(value, arguments)
 		vm.dropN(parameterCount)
 	case NativeFunctionValue:
 		parameterCount := value.ParameterCount
@@ -437,7 +435,7 @@ func opInvokeDynamic(vm *VM) {
 
 	parameterCount := int(functionValue.Function.ParameterCount)
 	arguments := vm.stack[stackHeight-parameterCount:]
-	vm.pushCallFrame(functionValue.Context, functionValue.Function, arguments)
+	vm.pushCallFrame(functionValue, arguments)
 	vm.dropN(parameterCount)
 }
 
@@ -695,9 +693,9 @@ func (vm *VM) run() {
 }
 
 func (vm *VM) initializeConstant(index uint16) (value Value) {
-	ctx := vm.callFrame.context
+	executable := vm.callFrame.executable
 
-	constant := ctx.Program.Constants[index]
+	constant := executable.Program.Constants[index]
 	switch constant.Kind {
 	case constantkind.Int:
 		// TODO:
@@ -710,15 +708,17 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 		panic(errors.NewUnexpectedError("unsupported constant kind '%s'", constant.Kind.String()))
 	}
 
-	ctx.Constants[index] = value
+	executable.Constants[index] = value
 	return value
 }
 
 func (vm *VM) loadType() StaticType {
 	callframe := vm.callFrame
 	index := callframe.getUint16()
-	staticType := callframe.context.StaticTypes[index]
+	staticType := callframe.executable.StaticTypes[index]
 	if staticType == nil {
+		// TODO: Remove. Should never reach because of the
+		// pre loading-decoding of types.
 		staticType = vm.initializeType(index)
 	}
 
@@ -726,15 +726,19 @@ func (vm *VM) loadType() StaticType {
 }
 
 func (vm *VM) initializeType(index uint16) interpreter.StaticType {
-	ctx := vm.callFrame.context
-	typeBytes := ctx.Program.Types[index]
+	executable := vm.callFrame.executable
+	typeBytes := executable.Program.Types[index]
+	staticType := decodeType(typeBytes)
+	executable.StaticTypes[index] = staticType
+	return staticType
+}
+
+func decodeType(typeBytes []byte) interpreter.StaticType {
 	dec := interpreter.CBORDecMode.NewByteStreamDecoder(typeBytes)
 	staticType, err := interpreter.NewTypeDecoder(dec, nil).DecodeStaticType()
 	if err != nil {
 		panic(err)
 	}
-
-	ctx.StaticTypes[index] = staticType
 	return staticType
 }
 
@@ -759,33 +763,25 @@ func (vm *VM) lookupFunction(location common.Location, name string) FunctionValu
 	// TODO: This currently link all functions in program, unnecessarily.
 	//   Link only the requested function.
 	program := vm.config.ImportHandler(location)
-	ctx := vm.NewProgramContext(location, program)
+
+	// TODO: Instead of creating the executable here, maybe cache it,
+	//  and the `ImportHandler` could return the executable itself.
+	executable := NewLoadedExecutableProgram(location, program)
 
 	indexedGlobals := make(map[string]Value, len(program.Functions))
 	for _, function := range program.Functions {
 		indexedGlobals[function.Name] = FunctionValue{
-			Function: function,
-			Context:  ctx,
+			Function:   function,
+			Executable: executable,
 		}
 	}
 
 	vm.linkedGlobalsCache[location] = LinkedGlobals{
-		context:        ctx,
+		executable:     executable,
 		indexedGlobals: indexedGlobals,
 	}
 
 	return indexedGlobals[name].(FunctionValue)
-}
-
-func (vm *VM) NewProgramContext(location common.Location, program *bbq.Program) *Context {
-	// Only one context needs to be created per Program.
-	ctx, ok := vm.contextCache[location]
-	if !ok {
-		ctx = NewContext(program, nil)
-		vm.contextCache[location] = ctx
-	}
-
-	return ctx
 }
 
 func decodeLocation(locationBytes []byte) common.Location {

@@ -23,11 +23,11 @@ import (
 )
 
 type callFrame struct {
-	parent   *callFrame
-	context  *Context
-	locals   []Value
-	function *bbq.Function
-	ip       uint16
+	parent     *callFrame
+	executable *ExecutableProgram
+	locals     []Value
+	function   *bbq.Function
+	ip         uint16
 }
 
 func (f *callFrame) getUint16() uint16 {

@@ -27,8 +27,8 @@ import (
 )
 
 type FunctionValue struct {
-	Function *bbq.Function
-	Context  *Context
+	Function   *bbq.Function
+	Executable *ExecutableProgram
 }
 
 var _ Value = FunctionValue{}

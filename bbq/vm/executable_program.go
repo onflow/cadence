@@ -20,25 +20,44 @@ package vm
 
 import (
 	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/common"
 )
 
-// Context is the context of a program.
+// ExecutableProgram is the 'executable' version of a `bbq.Program`.
 // It holds information that are accessible to a given program,
 // such as constants, static-types, and global variables.
 // These info are accessed by the opcodes of the program.
-// i.e: indexes used in opcodes refer to the indexes of its context.
-type Context struct {
+// i.e: indexes used in opcodes refer to the indexes of its ExecutableProgram.
+type ExecutableProgram struct {
+	Location    common.Location
 	Program     *bbq.Program
 	Globals     []Value
 	Constants   []Value
 	StaticTypes []StaticType
 }
 
-func NewContext(program *bbq.Program, globals []Value) *Context {
-	return &Context{
+func NewExecutableProgram(
+	location common.Location,
+	program *bbq.Program,
+	globals []Value,
+) *ExecutableProgram {
+	return &ExecutableProgram{
+		Location:    location,
 		Program:     program,
 		Globals:     globals,
 		Constants:   make([]Value, len(program.Constants)),
 		StaticTypes: make([]StaticType, len(program.Types)),
 	}
+}
+
+func NewLoadedExecutableProgram(location common.Location, program *bbq.Program) *ExecutableProgram {
+	executable := NewExecutableProgram(location, program, nil)
+
+	// Optimization: Pre load/decode types
+	for index, bytes := range program.Types {
+		staticType := decodeType(bytes)
+		executable.StaticTypes[index] = staticType
+	}
+
+	return executable
 }

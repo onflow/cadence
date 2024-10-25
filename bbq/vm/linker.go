@@ -28,7 +28,7 @@ import (
 
 type LinkedGlobals struct {
 	// context shared by the globals in the program.
-	context *Context
+	executable *ExecutableProgram
 
 	// globals defined in the program, indexed by name.
 	indexedGlobals map[string]Value
@@ -74,7 +74,7 @@ func (vm *VM) LinkGlobals(
 					contractValue := conf.ContractValueHandler(conf, location)
 					// Update the globals - both the context and the mapping.
 					// Contract value is always at the zero-th index.
-					linkedGlobals.context.Globals[0] = contractValue
+					linkedGlobals.executable.Globals[0] = contractValue
 					linkedGlobals.indexedGlobals[contract.Name] = contractValue
 				}
 			}
@@ -91,7 +91,7 @@ func (vm *VM) LinkGlobals(
 		importedGlobals = append(importedGlobals, importedGlobal)
 	}
 
-	ctx := vm.NewProgramContext(location, program)
+	executable := NewLoadedExecutableProgram(location, program)
 
 	globals := make([]Value, 0)
 	indexedGlobals := make(map[string]Value, 0)
@@ -113,8 +113,8 @@ func (vm *VM) LinkGlobals(
 	// TODO: include non-function globals
 	for _, function := range program.Functions {
 		value := FunctionValue{
-			Function: function,
-			Context:  ctx,
+			Function:   function,
+			Executable: executable,
 		}
 
 		globals = append(globals, value)
@@ -124,13 +124,13 @@ func (vm *VM) LinkGlobals(
 	// Globals of the current program are added first.
 	// This is the same order as they are added in the compiler.
 	// e.g: [global1, global2, ... [importedGlobal1, importedGlobal2, ...]]
-	ctx.Globals = globals
-	ctx.Globals = append(ctx.Globals, importedGlobals...)
+	executable.Globals = globals
+	executable.Globals = append(executable.Globals, importedGlobals...)
 
 	// Return only the globals defined in the current program.
 	// Because the importer/caller doesn't need to know globals of nested imports.
 	return LinkedGlobals{
-		context:        ctx,
+		executable:     executable,
 		indexedGlobals: indexedGlobals,
 	}
 }
