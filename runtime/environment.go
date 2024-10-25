@@ -1462,10 +1462,16 @@ func (e *interpreterEnvironment) newValidateAccountCapabilitiesPublishHandler() 
 }
 
 func (e *interpreterEnvironment) configureVersionedFeatures() {
-	var minimumRequiredVersion string
+	var (
+		minimumRequiredVersion string
+		err                    error
+	)
 	errors.WrapPanic(func() {
-		minimumRequiredVersion = e.runtimeInterface.MinimumRequiredVersion()
+		minimumRequiredVersion, err = e.runtimeInterface.MinimumRequiredVersion()
 	})
+	if err != nil {
+		panic(err)
+	}
 
 	// No feature flags yet
 	_ = minimumRequiredVersion
