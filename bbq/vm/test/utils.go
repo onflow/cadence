@@ -20,21 +20,23 @@ package test
 
 import (
 	"fmt"
-	"github.com/onflow/cadence/bbq/vm"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/ast"
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/commons"
-	"github.com/onflow/cadence/bbq/compiler"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	"github.com/onflow/cadence/tests/checker"
+	"github.com/onflow/cadence/tests/runtime_utils"
+
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/commons"
+	"github.com/onflow/cadence/bbq/compiler"
+	"github.com/onflow/cadence/bbq/vm"
 )
 
 type testAccountHandler struct {
@@ -469,7 +471,10 @@ func compileAndInvoke(t testing.TB, code string, funcName string) (vm.Value, err
 	program := compileCode(t, code, location, map[common.Location]compiledProgram{})
 	storage := interpreter.NewInMemoryStorage(nil)
 
+	scriptLocation := runtime_utils.NewScriptLocationGenerator()
+
 	programVM := vm.NewVM(
+		scriptLocation(),
 		program,
 		vm.NewConfig(storage).
 			WithAccountHandler(&testAccountHandler{}),

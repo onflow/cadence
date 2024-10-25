@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/tests/runtime_utils"
 )
 
 func TestFTTransfer(t *testing.T) {
@@ -42,6 +43,9 @@ func TestFTTransfer(t *testing.T) {
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
 	senderAddress := common.MustBytesToAddress([]byte{0x2})
 	receiverAddress := common.MustBytesToAddress([]byte{0x3})
+
+	txLocation := runtime_utils.NewTransactionLocationGenerator()
+	scriptLocation := runtime_utils.NewScriptLocationGenerator()
 
 	ftLocation := common.NewAddressLocation(nil, contractsAddress, "FungibleToken")
 
@@ -59,6 +63,7 @@ func TestFTTransfer(t *testing.T) {
 	}
 
 	flowTokenVM := vm.NewVM(
+		flowTokenLocation,
 		flowTokenProgram,
 		config,
 	)
@@ -114,7 +119,7 @@ func TestFTTransfer(t *testing.T) {
 	} {
 		program := compileCode(t, realSetupFlowTokenAccountTransaction, nil, programs)
 
-		setupTxVM := vm.NewVM(program, vmConfig)
+		setupTxVM := vm.NewVM(txLocation(), program, vmConfig)
 
 		authorizer := vm.NewAuthAccountReferenceValue(vmConfig, address)
 		err = setupTxVM.ExecuteTransaction(nil, authorizer)
@@ -126,7 +131,7 @@ func TestFTTransfer(t *testing.T) {
 
 	program := compileCode(t, realMintFlowTokenTransaction, nil, programs)
 
-	mintTxVM := vm.NewVM(program, vmConfig)
+	mintTxVM := vm.NewVM(txLocation(), program, vmConfig)
 
 	total := int64(1000000)
 
@@ -144,7 +149,7 @@ func TestFTTransfer(t *testing.T) {
 
 	tokenTransferTxProgram := compileCode(t, realFlowTokenTransferTransaction, nil, programs)
 
-	tokenTransferTxVM := vm.NewVM(tokenTransferTxProgram, vmConfig)
+	tokenTransferTxVM := vm.NewVM(txLocation(), tokenTransferTxProgram, vmConfig)
 
 	transferAmount := int64(1)
 
@@ -166,7 +171,7 @@ func TestFTTransfer(t *testing.T) {
 	} {
 		program := compileCode(t, realFlowTokenBalanceScript, nil, programs)
 
-		validationScriptVM := vm.NewVM(program, vmConfig)
+		validationScriptVM := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		addressValue := vm.AddressValue(address)
 		result, err := validationScriptVM.Invoke("main", addressValue)
@@ -192,6 +197,8 @@ func BenchmarkFTTransfer(b *testing.B) {
 	senderAddress := common.MustBytesToAddress([]byte{0x2})
 	receiverAddress := common.MustBytesToAddress([]byte{0x3})
 
+	txLocation := runtime_utils.NewTransactionLocationGenerator()
+
 	ftLocation := common.NewAddressLocation(nil, contractsAddress, "FungibleToken")
 	_ = compileCode(b, realFungibleTokenContractInterface, ftLocation, programs)
 
@@ -206,6 +213,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 	}
 
 	flowTokenVM := vm.NewVM(
+		flowTokenLocation,
 		flowTokenProgram,
 		config,
 	)
@@ -262,7 +270,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 	} {
 		program := compileCode(b, realSetupFlowTokenAccountTransaction, nil, programs)
 
-		setupTxVM := vm.NewVM(program, vmConfig)
+		setupTxVM := vm.NewVM(txLocation(), program, vmConfig)
 
 		authorizer := vm.NewAuthAccountReferenceValue(vmConfig, address)
 		err = setupTxVM.ExecuteTransaction(nil, authorizer)
@@ -274,7 +282,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	program := compileCode(b, realMintFlowTokenTransaction, nil, programs)
 
-	mintTxVM := vm.NewVM(program, vmConfig)
+	mintTxVM := vm.NewVM(txLocation(), program, vmConfig)
 
 	total := int64(1000000)
 
@@ -290,8 +298,6 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	// ----- Run token transfer transaction -----
 
-	tokenTransferTxChecker := parseAndCheck(b, realFlowTokenTransferTransaction, nil, programs)
-
 	transferAmount := int64(1)
 
 	tokenTransferTxArgs := []vm.Value{
@@ -301,13 +307,14 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	tokenTransferTxAuthorizer := vm.NewAuthAccountReferenceValue(vmConfig, senderAddress)
 
+	tokenTransferTxChecker := parseAndCheck(b, realFlowTokenTransferTransaction, nil, programs)
+	tokenTransferTxProgram := compile(b, tokenTransferTxChecker, programs)
+	tokenTransferTxVM := vm.NewVM(txLocation(), tokenTransferTxProgram, vmConfig)
+
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		tokenTransferTxProgram := compile(b, tokenTransferTxChecker, programs)
-
-		tokenTransferTxVM := vm.NewVM(tokenTransferTxProgram, vmConfig)
 		err = tokenTransferTxVM.ExecuteTransaction(tokenTransferTxArgs, tokenTransferTxAuthorizer)
 		require.NoError(b, err)
 	}

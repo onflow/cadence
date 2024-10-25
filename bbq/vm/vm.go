@@ -38,9 +38,14 @@ type VM struct {
 	stack              []Value
 	config             *Config
 	linkedGlobalsCache map[common.Location]LinkedGlobals
+	contextCache       map[common.Location]*Context
 }
 
-func NewVM(program *bbq.Program, conf *Config) *VM {
+func NewVM(
+	location common.Location,
+	program *bbq.Program,
+	conf *Config,
+) *VM {
 	// TODO: Remove initializing config. Following is for testing purpose only.
 	if conf == nil {
 		conf = &Config{}
@@ -58,14 +63,23 @@ func NewVM(program *bbq.Program, conf *Config) *VM {
 		},
 	}
 
-	// Link global variables and functions.
-	linkedGlobals := LinkGlobals(program, conf, linkedGlobalsCache)
-
-	return &VM{
-		globals:            linkedGlobals.indexedGlobals,
+	vm := &VM{
 		linkedGlobalsCache: linkedGlobalsCache,
 		config:             conf,
+		contextCache:       make(map[common.Location]*Context),
 	}
+
+	// Link global variables and functions.
+	linkedGlobals := vm.LinkGlobals(
+		location,
+		program,
+		conf,
+		linkedGlobalsCache,
+	)
+
+	vm.globals = linkedGlobals.indexedGlobals
+
+	return vm
 }
 
 func (vm *VM) push(value Value) {
@@ -745,7 +759,7 @@ func (vm *VM) lookupFunction(location common.Location, name string) FunctionValu
 	// TODO: This currently link all functions in program, unnecessarily.
 	//   Link only the requested function.
 	program := vm.config.ImportHandler(location)
-	ctx := NewContext(program, nil)
+	ctx := vm.NewProgramContext(location, program)
 
 	indexedGlobals := make(map[string]Value, len(program.Functions))
 	for _, function := range program.Functions {
@@ -761,6 +775,17 @@ func (vm *VM) lookupFunction(location common.Location, name string) FunctionValu
 	}
 
 	return indexedGlobals[name].(FunctionValue)
+}
+
+func (vm *VM) NewProgramContext(location common.Location, program *bbq.Program) *Context {
+	// Only one context needs to be created per Program.
+	ctx, ok := vm.contextCache[location]
+	if !ok {
+		ctx = NewContext(program, nil)
+		vm.contextCache[location] = ctx
+	}
+
+	return ctx
 }
 
 func decodeLocation(locationBytes []byte) common.Location {

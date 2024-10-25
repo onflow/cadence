@@ -20,14 +20,17 @@ package test
 
 import (
 	"fmt"
-	"github.com/onflow/cadence/bbq"
-	"github.com/stretchr/testify/assert"
 	"testing"
 
-	"github.com/onflow/cadence/bbq/vm"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
-	"github.com/stretchr/testify/require"
+	"github.com/onflow/cadence/tests/runtime_utils"
+
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/vm"
 )
 
 func TestResourceLossViaSelfRugPull(t *testing.T) {
@@ -82,6 +85,7 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 	barProgram := compileCode(t, contractCode, barLocation, programs)
 
 	barVM := vm.NewVM(
+		barLocation,
 		barProgram,
 		&vm.Config{
 			Storage:        storage,
@@ -167,7 +171,9 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 		},
 	}
 
-	txVM := vm.NewVM(program, vmConfig)
+	txLocation := runtime_utils.NewTransactionLocationGenerator()
+
+	txVM := vm.NewVM(txLocation(), program, vmConfig)
 
 	authorizer := vm.NewAuthAccountReferenceValue(vmConfig, authorizerAddress)
 	err = txVM.ExecuteTransaction(nil, authorizer)

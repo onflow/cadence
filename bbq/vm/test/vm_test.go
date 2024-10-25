@@ -25,20 +25,18 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/atree"
-
 	"github.com/onflow/cadence/ast"
-	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/tests/checker"
+	"github.com/onflow/cadence/tests/runtime_utils"
 	"github.com/onflow/cadence/tests/utils"
 
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/compiler"
+	"github.com/onflow/cadence/bbq/vm"
 )
 
 const recursiveFib = `
@@ -49,6 +47,11 @@ const recursiveFib = `
       return fib(n - 1) + fib(n - 2)
   }
 `
+
+func scriptLocation() common.Location {
+	scriptLocation := runtime_utils.NewScriptLocationGenerator()
+	return scriptLocation()
+}
 
 func TestRecursionFib(t *testing.T) {
 
@@ -61,7 +64,7 @@ func TestRecursionFib(t *testing.T) {
 	program := comp.Compile()
 
 	vmConfig := &vm.Config{}
-	vmInstance := vm.NewVM(program, vmConfig)
+	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 	result, err := vmInstance.Invoke(
 		"fib",
@@ -70,33 +73,6 @@ func TestRecursionFib(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, vm.IntValue{SmallInt: 13}, result)
 	require.Equal(t, 0, vmInstance.StackSize())
-}
-
-func BenchmarkRecursionFib(b *testing.B) {
-
-	checker, err := ParseAndCheck(b, recursiveFib)
-	require.NoError(b, err)
-
-	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
-	program := comp.Compile()
-
-	vmConfig := &vm.Config{}
-	vmInstance := vm.NewVM(program, vmConfig)
-
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	expected := vm.IntValue{SmallInt: 377}
-
-	for i := 0; i < b.N; i++ {
-
-		result, err := vmInstance.Invoke(
-			"fib",
-			vm.IntValue{SmallInt: 14},
-		)
-		require.NoError(b, err)
-		require.Equal(b, expected, result)
-	}
 }
 
 const imperativeFib = `
@@ -126,7 +102,7 @@ func TestImperativeFib(t *testing.T) {
 	program := comp.Compile()
 
 	vmConfig := &vm.Config{}
-	vmInstance := vm.NewVM(program, vmConfig)
+	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 	result, err := vmInstance.Invoke(
 		"fib",
@@ -135,28 +111,6 @@ func TestImperativeFib(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, vm.IntValue{SmallInt: 13}, result)
 	require.Equal(t, 0, vmInstance.StackSize())
-}
-
-func BenchmarkImperativeFib(b *testing.B) {
-
-	checker, err := ParseAndCheck(b, imperativeFib)
-	require.NoError(b, err)
-
-	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
-	program := comp.Compile()
-
-	vmConfig := &vm.Config{}
-	vmInstance := vm.NewVM(program, vmConfig)
-
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	var value vm.Value = vm.IntValue{SmallInt: 14}
-
-	for i := 0; i < b.N; i++ {
-		_, err := vmInstance.Invoke("fib", value)
-		require.NoError(b, err)
-	}
 }
 
 func TestBreak(t *testing.T) {
@@ -181,7 +135,7 @@ func TestBreak(t *testing.T) {
 	program := comp.Compile()
 
 	vmConfig := &vm.Config{}
-	vmInstance := vm.NewVM(program, vmConfig)
+	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 	result, err := vmInstance.Invoke("test")
 	require.NoError(t, err)
@@ -213,7 +167,7 @@ func TestContinue(t *testing.T) {
 	program := comp.Compile()
 
 	vmConfig := &vm.Config{}
-	vmInstance := vm.NewVM(program, vmConfig)
+	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 	result, err := vmInstance.Invoke("test")
 	require.NoError(t, err)
@@ -242,7 +196,7 @@ func TestNilCoalesce(t *testing.T) {
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{}
-		vmInstance := vm.NewVM(program, vmConfig)
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
@@ -268,7 +222,7 @@ func TestNilCoalesce(t *testing.T) {
 		printProgram(program)
 
 		vmConfig := &vm.Config{}
-		vmInstance := vm.NewVM(program, vmConfig)
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
@@ -308,7 +262,7 @@ func TestNewStruct(t *testing.T) {
 	program := comp.Compile()
 
 	vmConfig := &vm.Config{}
-	vmInstance := vm.NewVM(program, vmConfig)
+	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 	result, err := vmInstance.Invoke("test", vm.IntValue{SmallInt: 10})
 	require.NoError(t, err)
@@ -353,118 +307,13 @@ func TestStructMethodCall(t *testing.T) {
 	program := comp.Compile()
 
 	vmConfig := &vm.Config{}
-	vmInstance := vm.NewVM(program, vmConfig)
+	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 	result, err := vmInstance.Invoke("test")
 	require.NoError(t, err)
 	require.Equal(t, 0, vmInstance.StackSize())
 
 	require.Equal(t, vm.StringValue{Str: []byte("Hello from Foo!")}, result)
-}
-
-func BenchmarkNewStruct(b *testing.B) {
-
-	checker, err := ParseAndCheck(b, `
-      struct Foo {
-          var id : Int
-
-          init(_ id: Int) {
-              self.id = id
-          }
-      }
-
-      fun test(count: Int): Foo {
-          var i = 0
-          var r = Foo(0)
-          while i < count {
-              i = i + 1
-              r = Foo(i)
-          }
-          return r
-      }
-  `)
-	require.NoError(b, err)
-
-	value := vm.IntValue{SmallInt: 1}
-
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
-	program := comp.Compile()
-
-	vmConfig := &vm.Config{}
-	vmInstance := vm.NewVM(program, vmConfig)
-
-	for i := 0; i < b.N; i++ {
-		_, err := vmInstance.Invoke("test", value)
-		require.NoError(b, err)
-	}
-}
-
-func BenchmarkNewResource(b *testing.B) {
-
-	checker, err := ParseAndCheck(b, `
-      resource Foo {
-          var id : Int
-
-          init(_ id: Int) {
-              self.id = id
-          }
-      }
-
-      fun test(count: Int): @Foo {
-          var i = 0
-          var r <- create Foo(0)
-          while i < count {
-              i = i + 1
-              destroy create Foo(i)
-          }
-          return <- r
-      }
-  `)
-	require.NoError(b, err)
-
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	value := vm.IntValue{SmallInt: 9}
-
-	for i := 0; i < b.N; i++ {
-		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
-		program := comp.Compile()
-
-		vmConfig := &vm.Config{}
-		vmInstance := vm.NewVM(program, vmConfig)
-		_, err := vmInstance.Invoke("test", value)
-		require.NoError(b, err)
-	}
-}
-
-func BenchmarkNewStructRaw(b *testing.B) {
-
-	storage := interpreter.NewInMemoryStorage(nil)
-	vmConfig := &vm.Config{
-		Storage: storage,
-	}
-
-	fieldValue := vm.IntValue{SmallInt: 7}
-
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		for j := 0; j < 1; j++ {
-			structValue := vm.NewCompositeValue(
-				nil,
-				"Foo",
-				common.CompositeKindStructure,
-				common.Address{},
-				storage.BasicSlabStorage,
-			)
-			structValue.SetMember(vmConfig, "id", fieldValue)
-			structValue.Transfer(vmConfig, atree.Address{}, false, nil)
-		}
-	}
 }
 
 func TestImport(t *testing.T) {
@@ -533,7 +382,7 @@ func TestImport(t *testing.T) {
 		},
 	}
 
-	vmInstance := vm.NewVM(program, vmConfig)
+	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 	result, err := vmInstance.Invoke("test")
 	require.NoError(t, err)
@@ -547,6 +396,8 @@ func TestContractImport(t *testing.T) {
 	t.Parallel()
 
 	t.Run("nested type def", func(t *testing.T) {
+
+		importLocation := common.NewAddressLocation(nil, common.Address{0x1}, "MyContract")
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
@@ -573,7 +424,7 @@ func TestContractImport(t *testing.T) {
       }
         `,
 			ParseAndCheckOptions{
-				Location: common.NewAddressLocation(nil, common.Address{0x1}, "MyContract"),
+				Location: importLocation,
 			},
 		)
 		require.NoError(t, err)
@@ -581,7 +432,7 @@ func TestContractImport(t *testing.T) {
 		importCompiler := compiler.NewCompiler(importedChecker.Program, importedChecker.Elaboration)
 		importedProgram := importCompiler.Compile()
 
-		vmInstance := vm.NewVM(importedProgram, nil)
+		vmInstance := vm.NewVM(importLocation, importedProgram, nil)
 		importedContractValue, err := vmInstance.InitializeContract()
 		require.NoError(t, err)
 
@@ -621,7 +472,7 @@ func TestContractImport(t *testing.T) {
 			},
 		}
 
-		vmInstance = vm.NewVM(program, vmConfig)
+		vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
 
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
@@ -631,6 +482,7 @@ func TestContractImport(t *testing.T) {
 	})
 
 	t.Run("contract function", func(t *testing.T) {
+		importLocation := common.NewAddressLocation(nil, common.Address{0x1}, "MyContract")
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
@@ -648,7 +500,7 @@ func TestContractImport(t *testing.T) {
       }
         `,
 			ParseAndCheckOptions{
-				Location: common.NewAddressLocation(nil, common.Address{0x1}, "MyContract"),
+				Location: importLocation,
 			},
 		)
 		require.NoError(t, err)
@@ -656,7 +508,7 @@ func TestContractImport(t *testing.T) {
 		importCompiler := compiler.NewCompiler(importedChecker.Program, importedChecker.Elaboration)
 		importedProgram := importCompiler.Compile()
 
-		vmInstance := vm.NewVM(importedProgram, nil)
+		vmInstance := vm.NewVM(importLocation, importedProgram, nil)
 		importedContractValue, err := vmInstance.InitializeContract()
 		require.NoError(t, err)
 
@@ -695,7 +547,7 @@ func TestContractImport(t *testing.T) {
 			},
 		}
 
-		vmInstance = vm.NewVM(program, vmConfig)
+		vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
 
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
@@ -734,7 +586,7 @@ func TestContractImport(t *testing.T) {
 		fooCompiler := compiler.NewCompiler(fooChecker.Program, fooChecker.Elaboration)
 		fooProgram := fooCompiler.Compile()
 
-		vmInstance := vm.NewVM(fooProgram, nil)
+		vmInstance := vm.NewVM(fooLocation, fooProgram, nil)
 		fooContractValue, err := vmInstance.InitializeContract()
 		require.NoError(t, err)
 
@@ -790,7 +642,7 @@ func TestContractImport(t *testing.T) {
 			},
 		}
 
-		vmInstance = vm.NewVM(barProgram, vmConfig)
+		vmInstance = vm.NewVM(barLocation, barProgram, vmConfig)
 		barContractValue, err := vmInstance.InitializeContract()
 		require.NoError(t, err)
 
@@ -868,7 +720,7 @@ func TestContractImport(t *testing.T) {
 			},
 		}
 
-		vmInstance = vm.NewVM(program, vmConfig)
+		vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
 
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
@@ -961,7 +813,7 @@ func TestContractImport(t *testing.T) {
 			//},
 		}
 
-		vmInstance := vm.NewVM(barProgram, vmConfig)
+		vmInstance := vm.NewVM(barLocation, barProgram, vmConfig)
 		barContractValue, err := vmInstance.InitializeContract()
 		require.NoError(t, err)
 
@@ -1039,7 +891,7 @@ func TestContractImport(t *testing.T) {
 			},
 		}
 
-		vmInstance = vm.NewVM(program, vmConfig)
+		vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
 
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
@@ -1047,101 +899,6 @@ func TestContractImport(t *testing.T) {
 
 		require.Equal(t, vm.StringValue{Str: []byte("Successfully withdrew")}, result)
 	})
-}
-
-func BenchmarkContractImport(b *testing.B) {
-
-	importedChecker, err := ParseAndCheckWithOptions(b,
-		`
-      contract MyContract {
-          var s: String
-
-          fun helloText(): String {
-              return self.s
-          }
-
-          init() {
-              self.s = "contract function of the imported program"
-          }
-
-          struct Foo {
-              var id : String
-
-              init(_ id: String) {
-                  self.id = id
-              }
-
-              fun sayHello(_ id: Int): String {
-                  // return self.id
-                  return MyContract.helloText()
-              }
-          }
-      }
-        `,
-		ParseAndCheckOptions{
-			Location: common.NewAddressLocation(nil, common.Address{0x1}, "MyContract"),
-		},
-	)
-	require.NoError(b, err)
-
-	importCompiler := compiler.NewCompiler(importedChecker.Program, importedChecker.Elaboration)
-	importedProgram := importCompiler.Compile()
-
-	vmInstance := vm.NewVM(importedProgram, nil)
-	importedContractValue, err := vmInstance.InitializeContract()
-	require.NoError(b, err)
-
-	vmConfig := &vm.Config{
-		ImportHandler: func(location common.Location) *bbq.Program {
-			return importedProgram
-		},
-		ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *vm.CompositeValue {
-			return importedContractValue
-		},
-	}
-
-	b.ResetTimer()
-	b.ReportAllocs()
-
-	value := vm.IntValue{SmallInt: 7}
-
-	for i := 0; i < b.N; i++ {
-		checker, err := ParseAndCheckWithOptions(b, `
-      import MyContract from 0x01
-
-      fun test(count: Int): String {
-          var i = 0
-          var r = MyContract.Foo("Hello from Foo!")
-          while i < count {
-              i = i + 1
-              r = MyContract.Foo("Hello from Foo!")
-              r.sayHello(1)
-          }
-          return r.sayHello(1)
-      }
-  `,
-			ParseAndCheckOptions{
-				Config: &sema.Config{
-					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
-						return sema.ElaborationImport{
-							Elaboration: importedChecker.Elaboration,
-						}, nil
-					},
-				},
-			},
-		)
-		require.NoError(b, err)
-
-		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
-		comp.Config.ImportHandler = func(location common.Location) *bbq.Program {
-			return importedProgram
-		}
-		program := comp.Compile()
-
-		vmInstance := vm.NewVM(program, vmConfig)
-		_, err = vmInstance.Invoke("test", value)
-		require.NoError(b, err)
-	}
 }
 
 func TestInitializeContract(t *testing.T) {
@@ -1165,7 +922,7 @@ func TestInitializeContract(t *testing.T) {
 	program := comp.Compile()
 
 	vmConfig := &vm.Config{}
-	vmInstance := vm.NewVM(program, vmConfig)
+	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 	contractValue, err := vmInstance.InitializeContract()
 	require.NoError(t, err)
 
@@ -1202,7 +959,7 @@ func TestContractAccessDuringInit(t *testing.T) {
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{}
-		vmInstance := vm.NewVM(program, vmConfig)
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 		contractValue, err := vmInstance.InitializeContract()
 		require.NoError(t, err)
 
@@ -1235,7 +992,7 @@ func TestContractAccessDuringInit(t *testing.T) {
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{}
-		vmInstance := vm.NewVM(program, vmConfig)
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 		contractValue, err := vmInstance.InitializeContract()
 		require.NoError(t, err)
 
@@ -1269,7 +1026,7 @@ func TestFunctionOrder(t *testing.T) {
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{}
-		vmInstance := vm.NewVM(program, vmConfig)
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
@@ -1325,7 +1082,7 @@ func TestFunctionOrder(t *testing.T) {
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{}
-		vmInstance := vm.NewVM(program, vmConfig)
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		result, err := vmInstance.Invoke("init")
 		require.NoError(t, err)
@@ -1340,6 +1097,7 @@ func TestContractField(t *testing.T) {
 	t.Parallel()
 
 	t.Run("get", func(t *testing.T) {
+		importLocation := common.NewAddressLocation(nil, common.Address{0x1}, "MyContract")
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
@@ -1360,7 +1118,7 @@ func TestContractField(t *testing.T) {
 		importCompiler := compiler.NewCompiler(importedChecker.Program, importedChecker.Elaboration)
 		importedProgram := importCompiler.Compile()
 
-		vmInstance := vm.NewVM(importedProgram, nil)
+		vmInstance := vm.NewVM(importLocation, importedProgram, nil)
 		importedContractValue, err := vmInstance.InitializeContract()
 		require.NoError(t, err)
 
@@ -1399,7 +1157,7 @@ func TestContractField(t *testing.T) {
 			},
 		}
 
-		vmInstance = vm.NewVM(program, vmConfig)
+		vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
@@ -1408,6 +1166,7 @@ func TestContractField(t *testing.T) {
 	})
 
 	t.Run("set", func(t *testing.T) {
+		importLocation := common.NewAddressLocation(nil, common.Address{0x1}, "MyContract")
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
@@ -1428,7 +1187,7 @@ func TestContractField(t *testing.T) {
 		importCompiler := compiler.NewCompiler(importedChecker.Program, importedChecker.Elaboration)
 		importedProgram := importCompiler.Compile()
 
-		vmInstance := vm.NewVM(importedProgram, nil)
+		vmInstance := vm.NewVM(importLocation, importedProgram, nil)
 		importedContractValue, err := vmInstance.InitializeContract()
 		require.NoError(t, err)
 
@@ -1468,7 +1227,7 @@ func TestContractField(t *testing.T) {
 			},
 		}
 
-		vmInstance = vm.NewVM(program, vmConfig)
+		vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
 
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
@@ -1527,7 +1286,7 @@ func TestNativeFunctions(t *testing.T) {
 		printProgram(program)
 
 		vmConfig := &vm.Config{}
-		vmInstance := vm.NewVM(program, vmConfig)
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		_, err = vmInstance.Invoke("test")
 		require.NoError(t, err)
@@ -1547,7 +1306,7 @@ func TestNativeFunctions(t *testing.T) {
 		printProgram(program)
 
 		vmConfig := &vm.Config{}
-		vmInstance := vm.NewVM(program, vmConfig)
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
@@ -1581,7 +1340,7 @@ func TestTransaction(t *testing.T) {
 		printProgram(program)
 
 		vmConfig := &vm.Config{}
-		vmInstance := vm.NewVM(program, vmConfig)
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		err = vmInstance.ExecuteTransaction(nil)
 		require.NoError(t, err)
@@ -1633,7 +1392,7 @@ func TestTransaction(t *testing.T) {
 		printProgram(program)
 
 		vmConfig := &vm.Config{}
-		vmInstance := vm.NewVM(program, vmConfig)
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		args := []vm.Value{
 			vm.StringValue{[]byte("Hello!")},
@@ -1713,7 +1472,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 	importCompiler := compiler.NewCompiler(importedChecker.Program, importedChecker.Elaboration)
 	importedProgram := importCompiler.Compile()
 
-	vmInstance := vm.NewVM(importedProgram, nil)
+	vmInstance := vm.NewVM(location, importedProgram, nil)
 	importedContractValue, err := vmInstance.InitializeContract()
 	require.NoError(t, err)
 
@@ -1759,197 +1518,12 @@ func TestInterfaceMethodCall(t *testing.T) {
 		},
 	}
 
-	vmInstance = vm.NewVM(program, vmConfig)
+	vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
 	result, err := vmInstance.Invoke("test")
 	require.NoError(t, err)
 	require.Equal(t, 0, vmInstance.StackSize())
 
 	require.Equal(t, vm.StringValue{Str: []byte("Hello from Foo!")}, result)
-}
-
-func BenchmarkMethodCall(b *testing.B) {
-
-	b.Run("interface method call", func(b *testing.B) {
-
-		importedChecker, err := ParseAndCheckWithOptions(b,
-			`
-      contract MyContract {
-          struct Foo: Greetings {
-              var id : String
-
-              init(_ id: String) {
-                  self.id = id
-              }
-
-              fun sayHello(_ id: Int): String {
-                  return self.id
-              }
-          }
-
-          struct interface Greetings {
-              fun sayHello(_ id: Int): String
-          }
-
-          struct interface SomethingElse {
-          }
-      }
-        `,
-			ParseAndCheckOptions{
-				Location: common.NewAddressLocation(nil, common.Address{0x1}, "MyContract"),
-			},
-		)
-		require.NoError(b, err)
-
-		importCompiler := compiler.NewCompiler(importedChecker.Program, importedChecker.Elaboration)
-		importedProgram := importCompiler.Compile()
-
-		vmInstance := vm.NewVM(importedProgram, nil)
-		importedContractValue, err := vmInstance.InitializeContract()
-		require.NoError(b, err)
-
-		checker, err := ParseAndCheckWithOptions(b, `
-        import MyContract from 0x01
-
-        fun test(count: Int) {
-            var r: {MyContract.Greetings} = MyContract.Foo("Hello from Foo!")
-            var i = 0
-            while i < count {
-                i = i + 1
-                r.sayHello(1)
-            }
-        }`,
-
-			ParseAndCheckOptions{
-				Config: &sema.Config{
-					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
-						return sema.ElaborationImport{
-							Elaboration: importedChecker.Elaboration,
-						}, nil
-					},
-				},
-			},
-		)
-		require.NoError(b, err)
-
-		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
-		comp.Config.ImportHandler = func(location common.Location) *bbq.Program {
-			return importedProgram
-		}
-
-		program := comp.Compile()
-
-		vmConfig := &vm.Config{
-			ImportHandler: func(location common.Location) *bbq.Program {
-				return importedProgram
-			},
-			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *vm.CompositeValue {
-				return importedContractValue
-			},
-		}
-
-		vmInstance = vm.NewVM(program, vmConfig)
-
-		value := vm.IntValue{SmallInt: 10}
-
-		b.ResetTimer()
-		b.ReportAllocs()
-
-		for i := 0; i < b.N; i++ {
-			_, err := vmInstance.Invoke("test", value)
-			require.NoError(b, err)
-		}
-	})
-
-	b.Run("concrete type method call", func(b *testing.B) {
-
-		importedChecker, err := ParseAndCheckWithOptions(b,
-			`
-      contract MyContract {
-          struct Foo: Greetings {
-              var id : String
-
-              init(_ id: String) {
-                  self.id = id
-              }
-
-              fun sayHello(_ id: Int): String {
-                  return self.id
-              }
-          }
-
-          struct interface Greetings {
-              fun sayHello(_ id: Int): String
-          }
-
-          struct interface SomethingElse {
-          }
-      }
-        `,
-			ParseAndCheckOptions{
-				Location: common.NewAddressLocation(nil, common.Address{0x1}, "MyContract"),
-			},
-		)
-		require.NoError(b, err)
-
-		importCompiler := compiler.NewCompiler(importedChecker.Program, importedChecker.Elaboration)
-		importedProgram := importCompiler.Compile()
-
-		vmInstance := vm.NewVM(importedProgram, nil)
-		importedContractValue, err := vmInstance.InitializeContract()
-		require.NoError(b, err)
-
-		checker, err := ParseAndCheckWithOptions(b, `
-        import MyContract from 0x01
-
-        fun test(count: Int) {
-            var r: MyContract.Foo = MyContract.Foo("Hello from Foo!")
-            var i = 0
-            while i < count {
-                i = i + 1
-                r.sayHello(1)
-            }
-        }`,
-
-			ParseAndCheckOptions{
-				Config: &sema.Config{
-					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
-						return sema.ElaborationImport{
-							Elaboration: importedChecker.Elaboration,
-						}, nil
-					},
-				},
-			},
-		)
-		require.NoError(b, err)
-
-		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
-		comp.Config.ImportHandler = func(location common.Location) *bbq.Program {
-			return importedProgram
-		}
-
-		program := comp.Compile()
-
-		vmConfig := &vm.Config{
-			ImportHandler: func(location common.Location) *bbq.Program {
-				return importedProgram
-			},
-			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *vm.CompositeValue {
-				return importedContractValue
-			},
-		}
-
-		vmInstance = vm.NewVM(program, vmConfig)
-
-		value := vm.IntValue{SmallInt: 10}
-
-		b.ResetTimer()
-		b.ReportAllocs()
-
-		for i := 0; i < b.N; i++ {
-			_, err := vmInstance.Invoke("test", value)
-			require.NoError(b, err)
-		}
-	})
 }
 
 func TestArrayLiteral(t *testing.T) {
@@ -1970,7 +1544,7 @@ func TestArrayLiteral(t *testing.T) {
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{}
-		vmInstance := vm.NewVM(program, vmConfig)
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
@@ -1998,7 +1572,7 @@ func TestArrayLiteral(t *testing.T) {
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{}
-		vmInstance := vm.NewVM(program, vmConfig)
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
@@ -2022,7 +1596,7 @@ func TestArrayLiteral(t *testing.T) {
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{}
-		vmInstance := vm.NewVM(program, vmConfig)
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
@@ -2069,7 +1643,8 @@ func TestReference(t *testing.T) {
 		program := comp.Compile()
 
 		vmConfig := vm.NewConfig(nil)
-		vmInstance := vm.NewVM(program, vmConfig)
+
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)

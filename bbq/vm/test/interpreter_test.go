@@ -6,6 +6,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
@@ -19,8 +22,6 @@ import (
 	"github.com/onflow/cadence/tests/checker"
 	"github.com/onflow/cadence/tests/runtime_utils"
 	"github.com/onflow/cadence/tests/utils"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type ParseCheckAndInterpretOptions struct {
@@ -81,10 +82,7 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 	if options.Config != nil {
 		config = *options.Config
 	}
-	if memoryGauge == nil {
-		config.AtreeValueValidationEnabled = true
-		config.AtreeStorageValidationEnabled = true
-	}
+
 	if config.UUIDHandler == nil {
 		config.UUIDHandler = func() (uint64, error) {
 			uuid++
@@ -777,6 +775,11 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 		interpreter.EmptyLocationRange,
 	)
 
+	transferAmount := int64(1)
+
+	amount := interpreter.NewUnmeteredIntValueFromInt64(transferAmount)
+	receiver := interpreter.AddressValue(receiverAddress)
+
 	inter, err = parseCheckAndInterpretWithOptions(
 		b,
 		realFlowTokenTransferTransaction,
@@ -787,11 +790,6 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 		},
 	)
 	require.NoError(b, err)
-
-	transferAmount := int64(1)
-
-	amount := interpreter.NewUnmeteredIntValueFromInt64(transferAmount)
-	receiver := interpreter.AddressValue(receiverAddress)
 
 	b.ReportAllocs()
 	b.ResetTimer()
