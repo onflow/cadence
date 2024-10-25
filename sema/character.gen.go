@@ -59,6 +59,7 @@ var CharacterType = &SimpleType{
 	Exportable:    true,
 	Importable:    true,
 	ContainFields: false,
+	conformances:  []*InterfaceType{StructStringerType},
 }
 
 func init() {
