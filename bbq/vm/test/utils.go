@@ -383,17 +383,17 @@ func printProgram(program *bbq.Program) {
 	fmt.Println(byteCodePrinter.PrintProgram(program))
 }
 
-func baseActivation(common.Location) *sema.VariableActivation {
+func baseValueActivation(common.Location) *sema.VariableActivation {
 	// Only need to make the checker happy
-	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.PanicFunction)
-	baseValueActivation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
+	activation := sema.NewVariableActivation(sema.BaseValueActivation)
+	activation.DeclareValue(stdlib.PanicFunction)
+	activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
 		"getAccount",
 		stdlib.GetAccountFunctionType,
 		"",
 		nil,
 	))
-	return baseValueActivation
+	return activation
 }
 
 type compiledProgram struct {
@@ -441,7 +441,7 @@ func parseAndCheck(
 					}, nil
 				},
 				LocationHandler:            singleIdentifierLocationResolver(t),
-				BaseValueActivationHandler: baseActivation,
+				BaseValueActivationHandler: baseValueActivation,
 			},
 		},
 	)
