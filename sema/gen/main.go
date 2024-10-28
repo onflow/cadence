@@ -609,7 +609,7 @@ func (g *generator) VisitCompositeOrInterfaceDeclaration(decl ast.ConformingDecl
 	if generateSimpleType {
 		typeVarDecl = simpleTypeLiteral(typeDec)
 	} else {
-		typeVarDecl = compositeOrInterfaceTypeExpr(typeDec, isCompositeType)
+		typeVarDecl = compositeOrInterfaceTypeExpr(typeDec, isInterfaceType)
 	}
 
 	fullTypeName := typeDec.fullTypeName
@@ -2065,7 +2065,7 @@ func compositeOrInterfaceTypeExpr(ty *typeDecl, isInterfaceType bool) dst.Expr {
 		&dst.DeclStmt{
 			Decl: goVarDecl(
 				typeVarName,
-				compositeOrInterfaceTypeLiteral(ty, isCompositeType),
+				compositeOrInterfaceTypeLiteral(ty, isInterfaceType),
 			),
 		},
 	}
