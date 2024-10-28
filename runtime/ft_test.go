@@ -234,9 +234,9 @@ access(all) contract interface FungibleToken {
 
     /// createEmptyVault allows any user to create a new Vault that has a zero balance
     ///
-    access(all) fun createEmptyVault(): @{FungibleToken.Vault} {
+    access(all) fun createEmptyVault(vaultType: Type): @{FungibleToken.Vault} {
         post {
-            // result.getType() == vaultType: "The returned vault does not match the desired type"
+            result.getType() == vaultType: "The returned vault does not match the desired type"
             result.balance == 0.0: "The newly created Vault must have zero balance"
         }
     }
@@ -388,7 +388,7 @@ access(all) contract FlowToken: FungibleToken {
     // and store the returned Vault in their storage in order to allow their
     // account to be able to receive deposits of this token type.
     //
-    access(all) fun createEmptyVault(): @FlowToken.Vault {
+    access(all) fun createEmptyVault(vaultType: Type): @FlowToken.Vault {
         return <-create Vault(balance: 0.0)
     }
 
