@@ -155,7 +155,6 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 	}
 
 	program := compileCode(t, tx, nil, programs)
-	printProgram(program)
 
 	vmConfig := &vm.Config{
 		Storage:       storage,

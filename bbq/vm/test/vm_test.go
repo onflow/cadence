@@ -219,7 +219,6 @@ func TestNilCoalesce(t *testing.T) {
 
 		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
 		program := comp.Compile()
-		printProgram(program)
 
 		vmConfig := &vm.Config{}
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
@@ -1283,7 +1282,6 @@ func TestNativeFunctions(t *testing.T) {
 
 		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
 		program := comp.Compile()
-		printProgram(program)
 
 		vmConfig := &vm.Config{}
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
@@ -1303,7 +1301,6 @@ func TestNativeFunctions(t *testing.T) {
 
 		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
 		program := comp.Compile()
-		printProgram(program)
 
 		vmConfig := &vm.Config{}
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
@@ -1337,7 +1334,6 @@ func TestTransaction(t *testing.T) {
 
 		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
 		program := comp.Compile()
-		printProgram(program)
 
 		vmConfig := &vm.Config{}
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
@@ -1389,7 +1385,6 @@ func TestTransaction(t *testing.T) {
 
 		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
 		program := comp.Compile()
-		printProgram(program)
 
 		vmConfig := &vm.Config{}
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)

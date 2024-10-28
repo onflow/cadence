@@ -380,8 +380,9 @@ func singleIdentifierLocationResolver(t testing.TB) func(
 	}
 }
 
-func printProgram(program *bbq.Program) {
+func printProgram(name string, program *bbq.Program) {
 	byteCodePrinter := &bbq.BytecodePrinter{}
+	fmt.Println("===================", name, "===================")
 	fmt.Println(byteCodePrinter.PrintProgram(program))
 }
 
