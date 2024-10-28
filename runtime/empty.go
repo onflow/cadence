@@ -262,5 +262,5 @@ func (EmptyRuntimeInterface) ValidateAccountCapabilitiesPublish(
 }
 
 func (EmptyRuntimeInterface) MinimumRequiredVersion() (string, error) {
-	panic("unexpected call to MinimumRequiredVersion")
+	return "", nil
 }
