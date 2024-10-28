@@ -438,7 +438,7 @@ func (g *generator) VisitCompositeOrInterfaceDeclaration(decl ast.ConformingDecl
 	var typeDec *typeDecl
 	var members []ast.Declaration
 	var conformances []*ast.NominalType
-	var isCompositeType bool
+	var isInterfaceType bool
 
 	switch actualDecl := decl.(type) {
 	case *ast.CompositeDeclaration:
@@ -451,7 +451,7 @@ func (g *generator) VisitCompositeOrInterfaceDeclaration(decl ast.ConformingDecl
 		}
 		members = actualDecl.Members.Declarations()
 		conformances = actualDecl.Conformances
-		isCompositeType = true
+		isInterfaceType = false
 	case *ast.InterfaceDeclaration:
 		compositeKind = actualDecl.Kind()
 		typeName = actualDecl.Identifier.Identifier
@@ -461,7 +461,7 @@ func (g *generator) VisitCompositeOrInterfaceDeclaration(decl ast.ConformingDecl
 			compositeKind: compositeKind,
 		}
 		members = actualDecl.Members.Declarations()
-		isCompositeType = false
+		isInterfaceType = true
 	default:
 		panic("Expected composite or interface declaration")
 	}
@@ -499,7 +499,7 @@ func (g *generator) VisitCompositeOrInterfaceDeclaration(decl ast.ConformingDecl
 	// Check if the declaration is explicitly marked to be generated as a composite type.
 	if _, ok := g.leadingPragma["compositeType"]; ok {
 		generateSimpleType = false
-	} else if !isCompositeType {
+	} else if isInterfaceType {
 		generateSimpleType = false
 	} else {
 		// If not, decide what to generate depending on the type.
@@ -2035,7 +2035,7 @@ func stringMemberResolverMapType() *dst.MapType {
 	}
 }
 
-func compositeOrInterfaceTypeExpr(ty *typeDecl, isCompositeType bool) dst.Expr {
+func compositeOrInterfaceTypeExpr(ty *typeDecl, isInterfaceType bool) dst.Expr {
 
 	// func() *CompositeType {
 	// 	var t = &CompositeType {
@@ -2097,9 +2097,9 @@ func compositeOrInterfaceTypeExpr(ty *typeDecl, isCompositeType bool) dst.Expr {
 		},
 	)
 
-	name := "InterfaceType"
-	if isCompositeType {
-		name = "CompositeType"
+	name := "CompositeType"
+	if isInterfaceType {
+		name = "InterfaceType"
 	}
 
 	return &dst.CallExpr{
@@ -2126,7 +2126,7 @@ func compositeOrInterfaceTypeExpr(ty *typeDecl, isCompositeType bool) dst.Expr {
 	}
 }
 
-func compositeOrInterfaceTypeLiteral(ty *typeDecl, isCompositeType bool) dst.Expr {
+func compositeOrInterfaceTypeLiteral(ty *typeDecl, isInterfaceType bool) dst.Expr {
 	kind := compositeKindExpr(ty.compositeKind)
 
 	elements := []dst.Expr{
@@ -2134,15 +2134,15 @@ func compositeOrInterfaceTypeLiteral(ty *typeDecl, isCompositeType bool) dst.Exp
 	}
 
 	name := "InterfaceType"
-	if isCompositeType {
+	if isInterfaceType {
+		elements = append(elements,
+			goKeyValue("CompositeKind", kind))
+	} else {
 		name = "CompositeType"
 		elements = append(elements,
 			goKeyValue("Kind", kind),
 			goKeyValue("ImportableBuiltin", goBoolLit(ty.importable)),
 			goKeyValue("HasComputedMembers", goBoolLit(true)))
-	} else {
-		elements = append(elements,
-			goKeyValue("CompositeKind", kind))
 	}
 
 	return &dst.UnaryExpr{
