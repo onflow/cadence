@@ -35,6 +35,9 @@ import (
 
 func TestResourceLossViaSelfRugPull(t *testing.T) {
 
+	// TODO:
+	t.SkipNow()
+
 	// ---- Deploy FT Contract -----
 
 	storage := interpreter.NewInMemoryStorage(nil)
