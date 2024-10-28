@@ -39,7 +39,7 @@ import (
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/tests/checker"
+	. "github.com/onflow/cadence/tests/sema_utils"
 	. "github.com/onflow/cadence/tests/utils"
 )
 
@@ -168,9 +168,9 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 	err error,
 ) {
 
-	checker, err := checker.ParseAndCheckWithOptionsAndMemoryMetering(t,
+	checker, err := ParseAndCheckWithOptionsAndMemoryMetering(t,
 		code,
-		checker.ParseAndCheckOptions{
+		ParseAndCheckOptions{
 			Config: options.CheckerConfig,
 		},
 		memoryGauge,
@@ -1208,7 +1208,7 @@ func TestInterpretReturns(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			HandleCheckerError: func(err error) {
-				errs := checker.RequireCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 			},
@@ -4207,19 +4207,19 @@ func TestInterpretImport(t *testing.T) {
 
 	t.Parallel()
 
-	importedChecker, err := checker.ParseAndCheckWithOptions(t,
+	importedChecker, err := ParseAndCheckWithOptions(t,
 		`
           access(all) fun answer(): Int {
               return 42
           }
         `,
-		checker.ParseAndCheckOptions{
+		ParseAndCheckOptions{
 			Location: ImportedLocation,
 		},
 	)
 	require.NoError(t, err)
 
-	importingChecker, err := checker.ParseAndCheckWithOptions(t,
+	importingChecker, err := ParseAndCheckWithOptions(t,
 		`
           import answer from "imported"
 
@@ -4227,7 +4227,7 @@ func TestInterpretImport(t *testing.T) {
               return answer()
           }
         `,
-		checker.ParseAndCheckOptions{
+		ParseAndCheckOptions{
 			Config: &sema.Config{
 				ImportHandler: func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 					assert.Equal(t,
@@ -4298,9 +4298,9 @@ func TestInterpretImportError(t *testing.T) {
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
 	parseAndCheck := func(code string, location common.Location) *sema.Checker {
-		checker, err := checker.ParseAndCheckWithOptions(t,
+		checker, err := ParseAndCheckWithOptions(t,
 			code,
-			checker.ParseAndCheckOptions{
+			ParseAndCheckOptions{
 				Location: location,
 				Config: &sema.Config{
 					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
@@ -6823,7 +6823,7 @@ func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) 
 
 	t.Parallel()
 
-	importedChecker, err := checker.ParseAndCheckWithOptions(t,
+	importedChecker, err := ParseAndCheckWithOptions(t,
 		`
           // function must have arguments
           access(all) fun x(x: Int) {}
@@ -6836,13 +6836,13 @@ func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) 
               }
           }
         `,
-		checker.ParseAndCheckOptions{
+		ParseAndCheckOptions{
 			Location: ImportedLocation,
 		},
 	)
 	require.NoError(t, err)
 
-	importingChecker, err := checker.ParseAndCheckWithOptions(t,
+	importingChecker, err := ParseAndCheckWithOptions(t,
 		`
           import Y from "imported"
 
@@ -6851,7 +6851,7 @@ func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) 
               Y().x()
           }
         `,
-		checker.ParseAndCheckOptions{
+		ParseAndCheckOptions{
 			Config: &sema.Config{
 				ImportHandler: func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 					assert.Equal(t,
@@ -7277,8 +7277,8 @@ func TestInterpretEmitEvent(t *testing.T) {
 	_, err = inter.Invoke("test")
 	require.NoError(t, err)
 
-	transferEventType := checker.RequireGlobalType(t, inter.Program.Elaboration, "Transfer")
-	transferAmountEventType := checker.RequireGlobalType(t, inter.Program.Elaboration, "TransferAmount")
+	transferEventType := RequireGlobalType(t, inter.Program.Elaboration, "Transfer")
+	transferAmountEventType := RequireGlobalType(t, inter.Program.Elaboration, "TransferAmount")
 
 	fields1 := []interpreter.CompositeField{
 		{
@@ -7420,7 +7420,7 @@ func TestInterpretReferenceEventParameter(t *testing.T) {
 	_, err = inter.Invoke("test", ref)
 	require.NoError(t, err)
 
-	eventType := checker.RequireGlobalType(t, inter.Program.Elaboration, "TestEvent")
+	eventType := RequireGlobalType(t, inter.Program.Elaboration, "TestEvent")
 
 	expectedEvents := []interpreter.Value{
 		interpreter.NewCompositeValue(
@@ -7758,7 +7758,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			_, err = inter.Invoke("test")
 			require.NoError(t, err)
 
-			testType := checker.RequireGlobalType(t, inter.Program.Elaboration, "Test")
+			testType := RequireGlobalType(t, inter.Program.Elaboration, "Test")
 
 			fields := []interpreter.CompositeField{
 				{
@@ -8613,7 +8613,7 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
 
 	t.Parallel()
 
-	importedChecker, err := checker.ParseAndCheckWithOptions(t,
+	importedChecker, err := ParseAndCheckWithOptions(t,
 		`
           struct interface Foo {
               fun check(answer: Int) {
@@ -8623,13 +8623,13 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
               }
           }
         `,
-		checker.ParseAndCheckOptions{
+		ParseAndCheckOptions{
 			Location: ImportedLocation,
 		},
 	)
 	require.NoError(t, err)
 
-	importingChecker, err := checker.ParseAndCheckWithOptions(t,
+	importingChecker, err := ParseAndCheckWithOptions(t,
 		`
           import Foo from "imported"
 
@@ -8642,7 +8642,7 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
               bar.check(answer: 1)
           }
         `,
-		checker.ParseAndCheckOptions{
+		ParseAndCheckOptions{
 			Config: &sema.Config{
 				ImportHandler: func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 					assert.Equal(t,
@@ -10686,7 +10686,7 @@ func TestInterpretArrayFilter(t *testing.T) {
             `,
 			ParseCheckAndInterpretOptions{
 				HandleCheckerError: func(err error) {
-					errs := checker.RequireCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 					require.IsType(t, &sema.PurityError{}, errs[0])
 				},
 			},

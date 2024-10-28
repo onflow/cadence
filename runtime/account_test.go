@@ -35,8 +35,8 @@ import (
 	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/tests/checker"
 	. "github.com/onflow/cadence/tests/runtime_utils"
+	. "github.com/onflow/cadence/tests/sema_utils"
 	"github.com/onflow/cadence/tests/utils"
 	. "github.com/onflow/cadence/tests/utils"
 )
@@ -1717,7 +1717,7 @@ func TestRuntimePublicKey(t *testing.T) {
 		}
 
 		_, err := executeScript(script, runtimeInterface)
-		errs := checker.RequireCheckerErrors(t, err, 4)
+		errs := RequireCheckerErrors(t, err, 4)
 
 		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[0])
 		assert.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[1])
@@ -2360,7 +2360,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			},
 		)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.UnauthorizedReferenceAssignmentError{}, errs[0])
 	})
@@ -2402,7 +2402,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			},
 		)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.UnauthorizedReferenceAssignmentError{}, errs[0])
 	})
@@ -2614,7 +2614,7 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 			},
 		)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
@@ -2642,7 +2642,7 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 			},
 		)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InsufficientArgumentsError{}, errs[0])
 	})
@@ -2669,7 +2669,7 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 				Location:  common.ScriptLocation{0x1},
 			},
 		)
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ExcessiveArgumentsError{}, errs[0])
 	})
@@ -2704,7 +2704,7 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 			},
 		)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})

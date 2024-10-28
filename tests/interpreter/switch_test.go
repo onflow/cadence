@@ -24,11 +24,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	. "github.com/onflow/cadence/tests/sema_utils"
 	. "github.com/onflow/cadence/tests/utils"
 
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/checker"
 )
 
 func TestInterpretSwitchStatement(t *testing.T) {
@@ -53,7 +53,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
             `,
 			ParseCheckAndInterpretOptions{
 				HandleCheckerError: func(err error) {
-					errs := checker.RequireCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 				},
@@ -91,7 +91,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
             `,
 			ParseCheckAndInterpretOptions{
 				HandleCheckerError: func(err error) {
-					errs := checker.RequireCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 				},
@@ -132,7 +132,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
             `,
 			ParseCheckAndInterpretOptions{
 				HandleCheckerError: func(err error) {
-					errs := checker.RequireCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 				},
@@ -219,7 +219,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
             `,
 			ParseCheckAndInterpretOptions{
 				HandleCheckerError: func(err error) {
-					errs := checker.RequireCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 				},

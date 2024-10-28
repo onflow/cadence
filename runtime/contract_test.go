@@ -33,8 +33,8 @@ import (
 	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/tests/checker"
 	. "github.com/onflow/cadence/tests/runtime_utils"
+	. "github.com/onflow/cadence/tests/sema_utils"
 	. "github.com/onflow/cadence/tests/utils"
 )
 
@@ -1234,7 +1234,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 		)
 		RequireError(t, err)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		var notExportedError *sema.NotExportedError
 		require.ErrorAs(t, errs[0], &notExportedError)
 	})

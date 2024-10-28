@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/onflow/cadence/activations"
+	. "github.com/onflow/cadence/tests/sema_utils"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,7 +33,6 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/tests/checker"
 	"github.com/onflow/cadence/tests/utils"
 )
 
@@ -8147,11 +8147,11 @@ func TestInterpretASTMetering(t *testing.T) {
           #pragma
         `
 
-		importedChecker, err := checker.ParseAndCheckWithOptions(t,
+		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
               let Foo = 1
             `,
-			checker.ParseAndCheckOptions{
+			ParseAndCheckOptions{
 				Location: utils.ImportedLocation,
 			},
 		)
@@ -8444,12 +8444,12 @@ func TestInterpretASTMetering(t *testing.T) {
           import B from "string-location"
         `
 
-		importedChecker, err := checker.ParseAndCheckWithOptions(t,
+		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
               let A = 1
               let B = 1
             `,
-			checker.ParseAndCheckOptions{
+			ParseAndCheckOptions{
 				Location: utils.ImportedLocation,
 			},
 		)

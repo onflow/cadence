@@ -28,8 +28,8 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/checker"
 	. "github.com/onflow/cadence/tests/runtime_utils"
+	. "github.com/onflow/cadence/tests/sema_utils"
 	. "github.com/onflow/cadence/tests/utils"
 )
 
@@ -497,7 +497,7 @@ func TestRuntimeAccountEntitlementNamingConflict(t *testing.T) {
 	var checkerErr *sema.CheckerError
 	require.ErrorAs(t, err, &checkerErr)
 
-	errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+	errs := RequireCheckerErrors(t, checkerErr, 1)
 
 	var accessError *sema.InvalidAccessError
 	require.ErrorAs(t, errs[0], &accessError)

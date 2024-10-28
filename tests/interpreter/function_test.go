@@ -27,7 +27,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/checker"
+	. "github.com/onflow/cadence/tests/sema_utils"
 	"github.com/onflow/cadence/tests/utils"
 )
 
@@ -221,7 +221,7 @@ func TestInterpretResultVariable(t *testing.T) {
 		)
 		require.NoError(t, err)
 		require.Len(t, checkerErrors, 1)
-		checkerError := checker.RequireCheckerErrors(t, checkerErrors[0], 1)
+		checkerError := RequireCheckerErrors(t, checkerErrors[0], 1)
 		require.IsType(t, &sema.PurityError{}, checkerError[0])
 
 		_, err = inter.Invoke("main")
@@ -280,7 +280,7 @@ func TestInterpretResultVariable(t *testing.T) {
 		)
 		require.NoError(t, err)
 		require.Len(t, checkerErrors, 1)
-		checkerError := checker.RequireCheckerErrors(t, checkerErrors[0], 1)
+		checkerError := RequireCheckerErrors(t, checkerErrors[0], 1)
 		require.IsType(t, &sema.PurityError{}, checkerError[0])
 
 		_, err = inter.Invoke("main")

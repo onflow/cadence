@@ -28,7 +28,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/checker"
+	. "github.com/onflow/cadence/tests/sema_utils"
 	. "github.com/onflow/cadence/tests/utils"
 )
 
@@ -530,7 +530,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 	errorHandler := func(tt *testing.T) func(err error) {
 		return func(err error) {
-			errors := checker.RequireCheckerErrors(tt, err, 1)
+			errors := RequireCheckerErrors(tt, err, 1)
 			invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 			assert.ErrorAs(tt, errors[0], &invalidatedRefError)
 		}
@@ -637,7 +637,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		address := common.Address{0x1}
 
-		rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
+		rType := RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
 
 		array := interpreter.NewArrayValue(
 			inter,
@@ -742,7 +742,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
             }
         `)
 
-		rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
+		rType := RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
 
 		// Resource array in account 0x01
 
@@ -843,7 +843,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		address := common.Address{0x1}
 
-		rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
+		rType := RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
 
 		array := interpreter.NewArrayValue(
 			inter,
@@ -969,7 +969,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		address := common.Address{0x1}
 
-		rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
+		rType := RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
 
 		array := interpreter.NewArrayValue(
 			inter,
@@ -1524,7 +1524,7 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 
 	errorHandler := func(tt *testing.T) func(err error) {
 		return func(err error) {
-			errors := checker.RequireCheckerErrors(tt, err, 1)
+			errors := RequireCheckerErrors(tt, err, 1)
 			invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 			assert.ErrorAs(tt, errors[0], &invalidatedRefError)
 		}
@@ -1747,7 +1747,7 @@ func TestInterpretReferenceToReference(t *testing.T) {
             }
         `, ParseCheckAndInterpretOptions{
 			HandleCheckerError: func(err error) {
-				errs := checker.RequireCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 				require.IsType(t, &sema.NestedReferenceError{}, errs[0])
 			},
 		})
@@ -1787,7 +1787,7 @@ func TestInterpretReferenceToReference(t *testing.T) {
             }
         `, ParseCheckAndInterpretOptions{
 			HandleCheckerError: func(err error) {
-				errs := checker.RequireCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 				require.IsType(t, &sema.NestedReferenceError{}, errs[0])
 			},
 		})
@@ -3040,7 +3040,7 @@ func TestInterpretDereference(t *testing.T) {
                 `,
 				ParseCheckAndInterpretOptions{
 					HandleCheckerError: func(err error) {
-						errs := checker.RequireCheckerErrors(t, err, 1)
+						errs := RequireCheckerErrors(t, err, 1)
 
 						require.IsType(t, &sema.InvalidUnaryOperandError{}, errs[0])
 					},
@@ -3071,7 +3071,7 @@ func TestInterpretDereference(t *testing.T) {
                 `,
 				ParseCheckAndInterpretOptions{
 					HandleCheckerError: func(err error) {
-						errs := checker.RequireCheckerErrors(t, err, 1)
+						errs := RequireCheckerErrors(t, err, 1)
 
 						require.IsType(t, &sema.InvalidUnaryOperandError{}, errs[0])
 					},
@@ -3208,7 +3208,7 @@ func TestInterpretHostFunctionReferenceInvalidation(t *testing.T) {
 		result, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S").(*sema.CompositeType)
+		sType := RequireGlobalType(t, inter.Program.Elaboration, "S").(*sema.CompositeType)
 
 		expectedResult := interpreter.NewArrayValue(
 			inter,
@@ -3281,7 +3281,7 @@ func TestInterpretHostFunctionReferenceInvalidation(t *testing.T) {
 		result, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S").(*sema.CompositeType)
+		sType := RequireGlobalType(t, inter.Program.Elaboration, "S").(*sema.CompositeType)
 
 		expectedResult := interpreter.NewTypeValue(
 			inter,

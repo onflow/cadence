@@ -43,8 +43,8 @@ import (
 	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/tests/checker"
 	. "github.com/onflow/cadence/tests/runtime_utils"
+	. "github.com/onflow/cadence/tests/sema_utils"
 	. "github.com/onflow/cadence/tests/utils"
 )
 
@@ -1773,7 +1773,7 @@ func TestRuntimeStorageMultipleTransactionsInclusiveRangeFunction(t *testing.T) 
 	var checkerErr *sema.CheckerError
 	require.ErrorAs(t, err, &checkerErr)
 
-	errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+	errs := RequireCheckerErrors(t, checkerErr, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 
@@ -4883,7 +4883,7 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 		var checkerErr *sema.CheckerError
 		require.ErrorAs(t, err, &checkerErr)
 
-		errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+		errs := RequireCheckerErrors(t, checkerErr, 1)
 
 		assert.IsType(t, &sema.InvalidTopLevelDeclarationError{}, errs[0])
 	})
@@ -7766,7 +7766,7 @@ func TestRuntimeImportTestStdlib(t *testing.T) {
 
 	RequireError(t, err)
 
-	errs := checker.RequireCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	notDeclaredErr := &sema.NotDeclaredError{}
 	require.ErrorAs(t, errs[0], &notDeclaredErr)
@@ -8539,7 +8539,7 @@ func TestRuntimeOptionalReferenceAttack(t *testing.T) {
 	var checkerErr *sema.CheckerError
 	require.ErrorAs(t, err, &checkerErr)
 
-	errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+	errs := RequireCheckerErrors(t, checkerErr, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -9070,7 +9070,7 @@ func TestRuntimeTypesAndConversions(t *testing.T) {
 		})
 	}
 
-	for name, ty := range checker.AllBaseSemaTypes() {
+	for name, ty := range AllBaseSemaTypes() {
 		// Inclusive range is a dynamically created type.
 		if _, isInclusiveRange := ty.(*sema.InclusiveRangeType); isInclusiveRange {
 			continue
@@ -9842,7 +9842,7 @@ func TestRuntimePreconditionDuplication(t *testing.T) {
 	var checkerErr *sema.CheckerError
 	require.ErrorAs(t, err, &checkerErr)
 
-	errs := checker.RequireCheckerErrors(t, checkerErr, 3)
+	errs := RequireCheckerErrors(t, checkerErr, 3)
 
 	assert.IsType(t, &sema.PurityError{}, errs[0])
 	assert.IsType(t, &sema.InvalidInterfaceConditionResourceInvalidationError{}, errs[1])

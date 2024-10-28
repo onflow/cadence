@@ -31,7 +31,7 @@ import (
 	"github.com/onflow/cadence/parser"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/tests/checker"
+	"github.com/onflow/cadence/tests/sema_utils"
 )
 
 type command struct {
@@ -80,7 +80,7 @@ var commands = map[string]command{
 
 func dumpBuiltinTypes() {
 
-	allBaseSemaTypes := checker.AllBaseSemaTypes()
+	allBaseSemaTypes := sema_utils.AllBaseSemaTypes()
 
 	types := make([]sema.Type, 0, len(allBaseSemaTypes))
 
@@ -239,7 +239,7 @@ func dumpBuiltinValues() {
 		ty   sema.Type
 	}
 
-	allBaseSemaValueTypes := checker.AllBaseSemaValueTypes()
+	allBaseSemaValueTypes := sema_utils.AllBaseSemaValueTypes()
 	standardLibraryValues := stdlib.DefaultScriptStandardLibraryValues(nil)
 
 	valueTypes := make([]valueType, 0, len(allBaseSemaValueTypes)+len(standardLibraryValues))

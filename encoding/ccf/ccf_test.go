@@ -38,8 +38,8 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/checker"
 	"github.com/onflow/cadence/tests/runtime_utils"
+	. "github.com/onflow/cadence/tests/sema_utils"
 	"github.com/onflow/cadence/tests/utils"
 )
 
@@ -4949,7 +4949,7 @@ func TestEncodeSortedDictionary(t *testing.T) {
 }
 
 func exportFromScript(t *testing.T, code string) cadence.Value {
-	checker, err := checker.ParseAndCheck(t, code)
+	checker, err := ParseAndCheck(t, code)
 	require.NoError(t, err)
 
 	var uuid uint64

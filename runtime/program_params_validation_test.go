@@ -30,8 +30,8 @@ import (
 	"github.com/onflow/cadence/encoding/json"
 	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/checker"
 	. "github.com/onflow/cadence/tests/runtime_utils"
+	. "github.com/onflow/cadence/tests/sema_utils"
 	. "github.com/onflow/cadence/tests/utils"
 )
 
@@ -346,7 +346,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		var checkerError *sema.CheckerError
 		require.ErrorAs(t, err, &checkerError)
 
-		errs := checker.RequireCheckerErrors(t, checkerError, 1)
+		errs := RequireCheckerErrors(t, checkerError, 1)
 		assert.IsType(t, &sema.InvalidTypeArgumentError{}, errs[0])
 	})
 
@@ -385,7 +385,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		var checkerError *sema.CheckerError
 		require.ErrorAs(t, err, &checkerError)
 
-		errs := checker.RequireCheckerErrors(t, checkerError, 1)
+		errs := RequireCheckerErrors(t, checkerError, 1)
 		assert.IsType(t, &sema.InvalidTypeArgumentError{}, errs[0])
 	})
 
@@ -811,7 +811,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 		err := executeTransaction(t, script, contracts, cadence.NewOptional(nil))
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.InvalidNonImportableTransactionParameterTypeError{}, errs[0])
 	})
@@ -876,7 +876,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 		err := executeTransaction(t, script, contracts, cadence.NewOptional(nil))
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.InvalidNonImportableTransactionParameterTypeError{}, errs[0])
 	})
@@ -903,7 +903,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 		err := executeTransaction(t, script, contracts, cadence.NewOptional(nil))
 
-		errs := checker.RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		require.IsType(t, &sema.InvalidNonImportableTransactionParameterTypeError{}, errs[0])
 		require.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -918,7 +918,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 		err := executeTransaction(t, script, nil, cadence.NewOptional(nil))
 
-		errs := checker.RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		require.IsType(t, &sema.InvalidNonImportableTransactionParameterTypeError{}, errs[0])
 		require.IsType(t, &sema.ResourceLossError{}, errs[1])
@@ -943,7 +943,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 		err := executeTransaction(t, script, contracts, cadence.NewOptional(nil))
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.InvalidNonImportableTransactionParameterTypeError{}, errs[0])
 	})
@@ -968,7 +968,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 		err := executeTransaction(t, script, nil, cadence.NewArray([]cadence.Value{}))
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.InvalidNonImportableTransactionParameterTypeError{}, errs[0])
 	})
@@ -1004,7 +1004,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 		err := executeTransaction(t, script, nil, cadence.NewArray([]cadence.Value{}))
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.InvalidNonImportableTransactionParameterTypeError{}, errs[0])
 	})
@@ -1110,7 +1110,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 				if test.expectErrors {
 
-					errs := checker.RequireCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
 					require.IsType(t, &sema.InvalidNonImportableTransactionParameterTypeError{}, errs[0])
 				} else {

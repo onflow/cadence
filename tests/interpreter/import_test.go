@@ -29,7 +29,7 @@ import (
 	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/checker"
+	. "github.com/onflow/cadence/tests/sema_utils"
 	. "github.com/onflow/cadence/tests/utils"
 )
 
@@ -154,7 +154,7 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
-	importedCheckerA, err := checker.ParseAndCheckWithOptions(t,
+	importedCheckerA, err := ParseAndCheckWithOptions(t,
 		`
           // this function *SHOULD* be imported in the importing program
           access(all) fun a(): Int {
@@ -166,7 +166,7 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
               return 11
           }
         `,
-		checker.ParseAndCheckOptions{
+		ParseAndCheckOptions{
 			Location: common.AddressLocation{
 				Address: address,
 				Name:    "a",
@@ -175,7 +175,7 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	importedCheckerB, err := checker.ParseAndCheckWithOptions(t,
+	importedCheckerB, err := ParseAndCheckWithOptions(t,
 		`
           // this function *SHOULD* be imported in the importing program
           access(all) fun b(): Int {
@@ -187,7 +187,7 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
               return 22
           }
         `,
-		checker.ParseAndCheckOptions{
+		ParseAndCheckOptions{
 			Location: common.AddressLocation{
 				Address: address,
 				Name:    "b",
@@ -196,7 +196,7 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	importingChecker, err := checker.ParseAndCheckWithOptions(t,
+	importingChecker, err := ParseAndCheckWithOptions(t,
 		`
           import a, b from 0x1
 
@@ -204,7 +204,7 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
               return a() + b()
           }
         `,
-		checker.ParseAndCheckOptions{
+		ParseAndCheckOptions{
 			Config: &sema.Config{
 				LocationHandler: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
 
@@ -316,11 +316,11 @@ func TestInterpretResourceConstructionThroughIndirectImport(t *testing.T) {
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
-	importedChecker, err := checker.ParseAndCheckWithOptions(t,
+	importedChecker, err := ParseAndCheckWithOptions(t,
 		`
           resource R {}
         `,
-		checker.ParseAndCheckOptions{
+		ParseAndCheckOptions{
 			Location: common.AddressLocation{
 				Address: address,
 			},
@@ -328,7 +328,7 @@ func TestInterpretResourceConstructionThroughIndirectImport(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	importingChecker, err := checker.ParseAndCheckWithOptions(t,
+	importingChecker, err := ParseAndCheckWithOptions(t,
 		`
           import R from 0x1
 
@@ -337,7 +337,7 @@ func TestInterpretResourceConstructionThroughIndirectImport(t *testing.T) {
               destroy r
           }
         `,
-		checker.ParseAndCheckOptions{
+		ParseAndCheckOptions{
 			Config: &sema.Config{
 				ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 					require.IsType(t, common.AddressLocation{}, importedLocation)
@@ -396,7 +396,7 @@ func TestInterpretResourceConstructionThroughIndirectImport(t *testing.T) {
 	require.ErrorAs(t, err, &resourceConstructionError)
 
 	assert.Equal(t,
-		checker.RequireGlobalType(t, importedChecker.Elaboration, "R"),
+		RequireGlobalType(t, importedChecker.Elaboration, "R"),
 		resourceConstructionError.CompositeType,
 	)
 }

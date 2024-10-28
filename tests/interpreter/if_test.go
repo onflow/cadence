@@ -24,11 +24,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	. "github.com/onflow/cadence/tests/sema_utils"
 	. "github.com/onflow/cadence/tests/utils"
 
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/checker"
 )
 
 func TestInterpretIfStatement(t *testing.T) {
@@ -83,7 +83,7 @@ func TestInterpretIfStatement(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			HandleCheckerError: func(err error) {
-				errs := checker.RequireCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 				assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])

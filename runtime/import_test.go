@@ -30,8 +30,8 @@ import (
 	"github.com/onflow/cadence/encoding/json"
 	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/checker"
 	. "github.com/onflow/cadence/tests/runtime_utils"
+	. "github.com/onflow/cadence/tests/sema_utils"
 	. "github.com/onflow/cadence/tests/utils"
 )
 
@@ -91,7 +91,7 @@ func TestRuntimeCyclicImport(t *testing.T) {
 	var checkerErr *sema.CheckerError
 	require.ErrorAs(t, err, &checkerErr)
 
-	errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+	errs := RequireCheckerErrors(t, checkerErr, 1)
 
 	var importedProgramErr *sema.ImportedProgramError
 	require.ErrorAs(t, errs[0], &importedProgramErr)
@@ -101,7 +101,7 @@ func TestRuntimeCyclicImport(t *testing.T) {
 	var checkerErr2 *sema.CheckerError
 	require.ErrorAs(t, importedProgramErr.Err, &checkerErr2)
 
-	errs = checker.RequireCheckerErrors(t, checkerErr2, 1)
+	errs = RequireCheckerErrors(t, checkerErr2, 1)
 
 	var importedProgramErr2 *sema.ImportedProgramError
 	require.ErrorAs(t, errs[0], &importedProgramErr2)
@@ -111,7 +111,7 @@ func TestRuntimeCyclicImport(t *testing.T) {
 	var checkerErr3 *sema.CheckerError
 	require.ErrorAs(t, importedProgramErr2.Err, &checkerErr3)
 
-	errs = checker.RequireCheckerErrors(t, checkerErr3, 1)
+	errs = RequireCheckerErrors(t, checkerErr3, 1)
 
 	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
 }
@@ -201,7 +201,7 @@ func TestRuntimeCheckCyclicImportsAfterUpdate(t *testing.T) {
 	var checkerErr *sema.CheckerError
 	require.ErrorAs(t, err, &checkerErr)
 
-	errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+	errs := RequireCheckerErrors(t, checkerErr, 1)
 
 	var importedProgramErr *sema.ImportedProgramError
 	require.ErrorAs(t, errs[0], &importedProgramErr)
@@ -209,7 +209,7 @@ func TestRuntimeCheckCyclicImportsAfterUpdate(t *testing.T) {
 	var nestedCheckerErr *sema.CheckerError
 	require.ErrorAs(t, importedProgramErr.Err, &nestedCheckerErr)
 
-	errs = checker.RequireCheckerErrors(t, nestedCheckerErr, 1)
+	errs = RequireCheckerErrors(t, nestedCheckerErr, 1)
 	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
 }
 
@@ -318,7 +318,7 @@ func TestRuntimeCheckCyclicImportAddress(t *testing.T) {
 	var checkerErr *sema.CheckerError
 	require.ErrorAs(t, err, &checkerErr)
 
-	errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+	errs := RequireCheckerErrors(t, checkerErr, 1)
 
 	// Direct cycle, by importing `Foo` in `Foo`
 	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
@@ -403,7 +403,7 @@ func TestRuntimeCheckCyclicImportToSelfDuringDeploy(t *testing.T) {
 	var checkerErr *sema.CheckerError
 	require.ErrorAs(t, err, &checkerErr)
 
-	errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+	errs := RequireCheckerErrors(t, checkerErr, 1)
 	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
 }
 

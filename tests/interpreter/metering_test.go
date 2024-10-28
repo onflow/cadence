@@ -28,7 +28,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/checker"
+	. "github.com/onflow/cadence/tests/sema_utils"
 	"github.com/onflow/cadence/tests/utils"
 )
 
@@ -36,20 +36,20 @@ func TestInterpretStatementHandler(t *testing.T) {
 
 	t.Parallel()
 
-	importedChecker, err := checker.ParseAndCheckWithOptions(t,
+	importedChecker, err := ParseAndCheckWithOptions(t,
 		`
           access(all) fun a() {
               true
               true
           }
         `,
-		checker.ParseAndCheckOptions{
+		ParseAndCheckOptions{
 			Location: utils.ImportedLocation,
 		},
 	)
 	require.NoError(t, err)
 
-	importingChecker, err := checker.ParseAndCheckWithOptions(t,
+	importingChecker, err := ParseAndCheckWithOptions(t,
 		`
           import a from "imported"
 
@@ -69,7 +69,7 @@ func TestInterpretStatementHandler(t *testing.T) {
               true
           }
         `,
-		checker.ParseAndCheckOptions{
+		ParseAndCheckOptions{
 			Config: &sema.Config{
 				ImportHandler: func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 					assert.Equal(t,
@@ -163,7 +163,7 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
 
 	t.Parallel()
 
-	importedChecker, err := checker.ParseAndCheckWithOptions(t,
+	importedChecker, err := ParseAndCheckWithOptions(t,
 		`
           access(all) fun a() {
               var i = 1
@@ -174,11 +174,11 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
               for n in [1, 2, 3, 4, 5] {}
           }
         `,
-		checker.ParseAndCheckOptions{},
+		ParseAndCheckOptions{},
 	)
 	require.NoError(t, err)
 
-	importingChecker, err := checker.ParseAndCheckWithOptions(t,
+	importingChecker, err := ParseAndCheckWithOptions(t,
 		`
           import a from "imported"
 
@@ -193,7 +193,7 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
               a()
           }
         `,
-		checker.ParseAndCheckOptions{
+		ParseAndCheckOptions{
 			Config: &sema.Config{
 				ImportHandler: func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 					assert.Equal(t,
@@ -290,7 +290,7 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
 
 	t.Parallel()
 
-	importedChecker, err := checker.ParseAndCheckWithOptions(t,
+	importedChecker, err := ParseAndCheckWithOptions(t,
 		`
           access(all) fun a() {}
 
@@ -302,13 +302,13 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
               true
           }
         `,
-		checker.ParseAndCheckOptions{
+		ParseAndCheckOptions{
 			Location: utils.ImportedLocation,
 		},
 	)
 	require.NoError(t, err)
 
-	importingChecker, err := checker.ParseAndCheckWithOptions(t,
+	importingChecker, err := ParseAndCheckWithOptions(t,
 		`
           import b from "imported"
 
@@ -328,7 +328,7 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
               true
           }
         `,
-		checker.ParseAndCheckOptions{
+		ParseAndCheckOptions{
 			Config: &sema.Config{
 				ImportHandler: func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 					assert.Equal(t,

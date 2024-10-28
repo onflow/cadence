@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/checker"
+	. "github.com/onflow/cadence/tests/sema_utils"
 	. "github.com/onflow/cadence/tests/utils"
 
 	"github.com/onflow/cadence/interpreter"
@@ -321,7 +321,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -367,7 +367,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -413,7 +413,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -459,7 +459,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -502,7 +502,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -542,7 +542,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -582,7 +582,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -622,7 +622,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -664,7 +664,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -705,7 +705,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -743,7 +743,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -776,7 +776,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -809,7 +809,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -840,7 +840,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -891,7 +891,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -936,7 +936,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -981,7 +981,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -1026,7 +1026,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -1067,7 +1067,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -1105,7 +1105,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -1143,7 +1143,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -1181,7 +1181,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -1222,7 +1222,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -1262,7 +1262,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -1300,7 +1300,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -1332,7 +1332,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -1364,7 +1364,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -1396,7 +1396,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                     `,
 					ParseCheckAndInterpretOptions{
 						HandleCheckerError: func(err error) {
-							errs := checker.RequireCheckerErrors(t, err, 1)
+							errs := RequireCheckerErrors(t, err, 1)
 							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 						},
 					},
@@ -1430,7 +1430,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				HandleCheckerError: func(err error) {
-					errs := checker.RequireCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 				},
 			},
@@ -1458,7 +1458,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				HandleCheckerError: func(err error) {
-					errs := checker.RequireCheckerErrors(t, err, 2)
+					errs := RequireCheckerErrors(t, err, 2)
 					require.IsType(t, &sema.ResourceLossError{}, errs[0])
 					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[1])
 				},
@@ -1491,7 +1491,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				HandleCheckerError: func(err error) {
-					errs := checker.RequireCheckerErrors(t, err, 6)
+					errs := RequireCheckerErrors(t, err, 6)
 					require.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[0])
 					require.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[1])
 					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[2])
@@ -1525,7 +1525,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				HandleCheckerError: func(err error) {
-					errs := checker.RequireCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 				},
 			},
@@ -1553,7 +1553,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				HandleCheckerError: func(err error) {
-					errs := checker.RequireCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 				},
 			},
@@ -1585,7 +1585,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				HandleCheckerError: func(err error) {
-					errs := checker.RequireCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 				},
 			},
@@ -1614,7 +1614,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				HandleCheckerError: func(err error) {
-					errs := checker.RequireCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 				},
 			},
@@ -1643,7 +1643,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				HandleCheckerError: func(err error) {
-					errs := checker.RequireCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 				},
 			},
@@ -1675,7 +1675,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				HandleCheckerError: func(err error) {
-					errs := checker.RequireCheckerErrors(t, err, 2)
+					errs := RequireCheckerErrors(t, err, 2)
 					require.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[0])
 					require.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[1])
 				},
@@ -1708,7 +1708,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				HandleCheckerError: func(err error) {
-					errs := checker.RequireCheckerErrors(t, err, 2)
+					errs := RequireCheckerErrors(t, err, 2)
 					require.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[0])
 					require.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[1])
 				},
@@ -1740,7 +1740,7 @@ func TestInterpretResourceInvalidationWithConditionalExprInDestroy(t *testing.T)
         }`,
 		ParseCheckAndInterpretOptions{
 			HandleCheckerError: func(err error) {
-				errs := checker.RequireCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 				require.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[0])
 				require.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[0])
 			},
@@ -1782,7 +1782,7 @@ func TestInterpretResourceUseAfterInvalidation(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				HandleCheckerError: func(err error) {
-					errs := checker.RequireCheckerErrors(t, err, 2)
+					errs := RequireCheckerErrors(t, err, 2)
 					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[1])
 				},
@@ -1820,7 +1820,7 @@ func TestInterpretResourceUseAfterInvalidation(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				HandleCheckerError: func(err error) {
-					errs := checker.RequireCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 				},
 			},
@@ -2158,7 +2158,7 @@ func TestInterpretResourceDestroyedInPreCondition(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			HandleCheckerError: func(err error) {
-				errs := checker.RequireCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 				require.IsType(t, &sema.PurityError{}, errs[0])
 				require.IsType(t, &sema.InvalidInterfaceConditionResourceInvalidationError{}, errs[1])
 			},
@@ -2633,7 +2633,7 @@ func TestInterpretDefaultDestroyEventArgumentScoping(t *testing.T) {
 			},
 		},
 		HandleCheckerError: func(err error) {
-			errs := checker.RequireCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 			assert.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
 			assert.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.InvalidIdentifier)
 			// ...
@@ -2857,7 +2857,7 @@ func TestInterpretMovedResourceInOptionalBinding(t *testing.T) {
         }
     `, ParseCheckAndInterpretOptions{
 		HandleCheckerError: func(err error) {
-			errs := checker.RequireCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 			assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 		},
 	})
@@ -2900,7 +2900,7 @@ func TestInterpretMovedResourceInSecondValue(t *testing.T) {
         }
     `, ParseCheckAndInterpretOptions{
 		HandleCheckerError: func(err error) {
-			errs := checker.RequireCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1)
 			assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 		},
 	})
@@ -3032,7 +3032,7 @@ func TestInterpretPreConditionResourceMove(t *testing.T) {
         }`,
 		ParseCheckAndInterpretOptions{
 			HandleCheckerError: func(err error) {
-				checkerErrors := checker.RequireCheckerErrors(t, err, 3)
+				checkerErrors := RequireCheckerErrors(t, err, 3)
 				require.IsType(t, &sema.PurityError{}, checkerErrors[0])
 				require.IsType(t, &sema.InvalidInterfaceConditionResourceInvalidationError{}, checkerErrors[1])
 				require.IsType(t, &sema.PurityError{}, checkerErrors[2])
@@ -3566,7 +3566,7 @@ func TestInterpretInvalidNilCoalescingResourceDuplication(t *testing.T) {
 	    `,
 		ParseCheckAndInterpretOptions{
 			HandleCheckerError: func(err error) {
-				errs := checker.RequireCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 				assert.IsType(t, &sema.InvalidNilCoalescingRightResourceOperandError{}, errs[0])
 			},
 		},

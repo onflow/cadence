@@ -29,7 +29,7 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/tests/checker"
+	. "github.com/onflow/cadence/tests/sema_utils"
 	. "github.com/onflow/cadence/tests/utils"
 )
 
@@ -420,7 +420,7 @@ func TestRuntimeInvalidTransferInExecute(t *testing.T) {
 		}
 	`, ParseCheckAndInterpretOptions{
 		HandleCheckerError: func(err error) {
-			errs := checker.RequireCheckerErrors(t, err, 3)
+			errs := RequireCheckerErrors(t, err, 3)
 			require.IsType(t, &sema.ResourceCapturingError{}, errs[0])
 			require.IsType(t, &sema.ResourceCapturingError{}, errs[1])
 			require.IsType(t, &sema.ResourceCapturingError{}, errs[2])

@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/tests/checker"
+	. "github.com/onflow/cadence/tests/sema_utils"
 	. "github.com/onflow/cadence/tests/utils"
 )
 
@@ -407,7 +407,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				value, err := inter.Invoke("S")
 				require.NoError(t, err)
 
-				sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S")
+				sType := RequireGlobalType(t, inter.Program.Elaboration, "S")
 
 				ref := interpreter.NewUnmeteredEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, value, sType, interpreter.EmptyLocationRange)
 
@@ -454,7 +454,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				value, err := inter.Invoke("S2")
 				require.NoError(t, err)
 
-				sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S")
+				sType := RequireGlobalType(t, inter.Program.Elaboration, "S")
 
 				ref := interpreter.NewUnmeteredEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, value, sType, interpreter.EmptyLocationRange)
 
@@ -496,7 +496,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				value, err := inter.Invoke("S")
 				require.NoError(t, err)
 
-				sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S")
+				sType := RequireGlobalType(t, inter.Program.Elaboration, "S")
 
 				ref := interpreter.NewUnmeteredEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, value, sType, interpreter.EmptyLocationRange)
 
@@ -541,7 +541,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				value, err := inter.Invoke("S2")
 				require.NoError(t, err)
 
-				sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S")
+				sType := RequireGlobalType(t, inter.Program.Elaboration, "S")
 
 				ref := interpreter.NewUnmeteredEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, value, sType, interpreter.EmptyLocationRange)
 

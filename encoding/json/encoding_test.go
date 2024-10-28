@@ -31,7 +31,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/tests/checker"
+	. "github.com/onflow/cadence/tests/sema_utils"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/sema"
@@ -1123,7 +1123,7 @@ func TestEncodeDictionary(t *testing.T) {
 }
 
 func exportFromScript(t *testing.T, code string) cadence.Value {
-	checker, err := checker.ParseAndCheck(t, code)
+	checker, err := ParseAndCheck(t, code)
 	require.NoError(t, err)
 
 	var uuid uint64 = 0

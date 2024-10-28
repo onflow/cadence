@@ -31,7 +31,7 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/tests/checker"
+	. "github.com/onflow/cadence/tests/sema_utils"
 	. "github.com/onflow/cadence/tests/utils"
 )
 
@@ -855,7 +855,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 							)
 					}
 
-					checker, err := checker.ParseAndCheck(t,
+					checker, err := ParseAndCheck(t,
 						fmt.Sprintf(
 							`
                                  access(all)

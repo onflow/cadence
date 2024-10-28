@@ -28,7 +28,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/checker"
+	. "github.com/onflow/cadence/tests/sema_utils"
 	. "github.com/onflow/cadence/tests/utils"
 )
 
@@ -36,7 +36,7 @@ func TestInterpretResourceUUID(t *testing.T) {
 
 	t.Parallel()
 
-	importedChecker, err := checker.ParseAndCheckWithOptions(t,
+	importedChecker, err := ParseAndCheckWithOptions(t,
 		`
           access(all) resource R {}
 
@@ -44,13 +44,13 @@ func TestInterpretResourceUUID(t *testing.T) {
               return <- create R()
           }
         `,
-		checker.ParseAndCheckOptions{
+		ParseAndCheckOptions{
 			Location: ImportedLocation,
 		},
 	)
 	require.NoError(t, err)
 
-	importingChecker, err := checker.ParseAndCheckWithOptions(t,
+	importingChecker, err := ParseAndCheckWithOptions(t,
 		`
           import createR from "imported"
 
@@ -63,7 +63,7 @@ func TestInterpretResourceUUID(t *testing.T) {
               ]
           }
         `,
-		checker.ParseAndCheckOptions{
+		ParseAndCheckOptions{
 			Config: &sema.Config{
 				ImportHandler: func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 					assert.Equal(t,
