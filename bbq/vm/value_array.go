@@ -24,12 +24,10 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/sema"
 )
 
 type ArrayValue struct {
 	Type             interpreter.ArrayStaticType
-	semaType         sema.ArrayType
 	array            *atree.Array
 	isResourceKinded bool
 	elementSize      uint
@@ -242,7 +240,6 @@ func (v *ArrayValue) Transfer(config *Config, address atree.Address, remove bool
 		array,
 	)
 
-	res.semaType = v.semaType
 	res.isResourceKinded = v.isResourceKinded
 	res.isDestroyed = v.isDestroyed
 

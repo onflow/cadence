@@ -233,9 +233,9 @@ access(all) contract interface FungibleToken {
 
     /// createEmptyVault allows any user to create a new Vault that has a zero balance
     ///
-    access(all) fun createEmptyVault(): @{FungibleToken.Vault} {
+    access(all) fun createEmptyVault(vaultType: Type): @{FungibleToken.Vault} {
         post {
-            // result.getType() == vaultType: "The returned vault does not match the desired type"
+            result.getType() == vaultType: "The returned vault does not match the desired type"
             result.balance == 0.0: "The newly created Vault must have zero balance"
         }
     }
@@ -387,7 +387,7 @@ access(all) contract FlowToken: FungibleToken {
     // and store the returned Vault in their storage in order to allow their
     // account to be able to receive deposits of this token type.
     //
-    access(all) fun createEmptyVault(): @FlowToken.Vault {
+    access(all) fun createEmptyVault(vaultType: Type): @FlowToken.Vault {
         return <-create Vault(balance: 0.0)
     }
 
@@ -470,34 +470,35 @@ import FlowToken from 0x1
 
 transaction {
 
-    prepare(signer: auth(BorrowValue, IssueStorageCapabilityController, PublishCapability, SaveValue) &Account) {
+    prepare(signer: auth(Storage, Capabilities) &Account) {
 
-        var storagePath = /storage/flowTokenVault
+        if signer.storage.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault) == nil {
+            // Create a new flowToken Vault and put it in storage
+            var vault <- FlowToken.createEmptyVault(vaultType: Type<@FlowToken.Vault>())
+            signer.storage.save(<- vault, to: /storage/flowTokenVault)
 
-        if signer.storage.borrow<&FlowToken.Vault>(from: storagePath) != nil {
-            return
+            // Create a public capability to the Vault that only exposes
+            // the deposit function through the Receiver interface
+            let vaultCap = signer.capabilities.storage.issue<&FlowToken.Vault>(
+                /storage/flowTokenVault
+            )
+
+            signer.capabilities.publish(
+                vaultCap,
+                at: /public/flowTokenReceiver
+            )
+
+            // Create a public capability to the Vault that only exposes
+            // the balance field through the Balance interface
+            let balanceCap = signer.capabilities.storage.issue<&FlowToken.Vault>(
+                /storage/flowTokenVault
+            )
+
+            signer.capabilities.publish(
+                balanceCap,
+                at: /public/flowTokenBalance
+            )
         }
-
-        // Create a new flowToken Vault and put it in storage
-        signer.storage.save(<-FlowToken.createEmptyVault(), to: storagePath)
-
-        // Create a public capability to the Vault that only exposes
-        // the deposit function through the Receiver interface
-        let vaultCap = signer.capabilities.storage.issue<&FlowToken.Vault>(storagePath)
-
-        signer.capabilities.publish(
-            vaultCap,
-            at: /public/flowTokenReceiver
-        )
-
-        // Create a public capability to the Vault that only exposes
-        // the balance field through the Balance interface
-        let balanceCap = signer.capabilities.storage.issue<&FlowToken.Vault>(storagePath)
-
-        signer.capabilities.publish(
-            balanceCap,
-            at: /public/flowTokenBalance
-        )
     }
 }
 `
@@ -509,8 +510,6 @@ import FlowToken from 0x1
 transaction(recipient: Address, amount: UFix64) {
 
     let tokenAdmin: &FlowToken.Administrator
-
-    /// Reference to the Fungible Token Receiver of the recipient
     let tokenReceiver: &{FungibleToken.Receiver}
 
     prepare(signer: auth(BorrowValue) &Account) {
@@ -540,6 +539,8 @@ import FungibleToken from 0x1
 import FlowToken from 0x1
 
 transaction(amount: UFix64, to: Address) {
+
+    // The Vault resource that holds the tokens that are being transferred
     let sentVault: @{FungibleToken.Vault}
 
     prepare(signer: auth(BorrowValue) &Account) {
@@ -553,6 +554,7 @@ transaction(amount: UFix64, to: Address) {
     }
 
     execute {
+
         // Get a reference to the recipient's Receiver
         let receiverRef =  getAccount(to)
             .capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)

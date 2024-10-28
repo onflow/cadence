@@ -61,14 +61,16 @@ func TestCompileRecursionFib(t *testing.T) {
 			byte(opcode.GetLocal), 0, 0,
 			byte(opcode.GetConstant), 0, 1,
 			byte(opcode.IntSubtract),
+			byte(opcode.Transfer), 0, 0,
 			byte(opcode.GetGlobal), 0, 0,
-			byte(opcode.Invoke),
+			byte(opcode.Invoke), 0, 0,
 			// fib(n - 2)
 			byte(opcode.GetLocal), 0, 0,
-			byte(opcode.GetConstant), 0, 2,
+			byte(opcode.GetConstant), 0, 0,
 			byte(opcode.IntSubtract),
+			byte(opcode.Transfer), 0, 0,
 			byte(opcode.GetGlobal), 0, 0,
-			byte(opcode.Invoke),
+			byte(opcode.Invoke), 0, 0,
 			// return sum
 			byte(opcode.IntAdd),
 			byte(opcode.ReturnValue),
@@ -84,10 +86,6 @@ func TestCompileRecursionFib(t *testing.T) {
 			},
 			{
 				Data: []byte{0x1},
-				Kind: constantkind.Int,
-			},
-			{
-				Data: []byte{0x2},
 				Kind: constantkind.Int,
 			},
 		},
@@ -124,39 +122,47 @@ func TestCompileImperativeFib(t *testing.T) {
 		[]byte{
 			// var fib1 = 1
 			byte(opcode.GetConstant), 0, 0,
+			byte(opcode.Transfer), 0, 0,
 			byte(opcode.SetLocal), 0, 1,
 			// var fib2 = 1
-			byte(opcode.GetConstant), 0, 1,
+			byte(opcode.GetConstant), 0, 0,
+			byte(opcode.Transfer), 0, 0,
 			byte(opcode.SetLocal), 0, 2,
 			// var fibonacci = fib1
 			byte(opcode.GetLocal), 0, 1,
+			byte(opcode.Transfer), 0, 0,
 			byte(opcode.SetLocal), 0, 3,
 			// var i = 2
-			byte(opcode.GetConstant), 0, 2,
+			byte(opcode.GetConstant), 0, 1,
+			byte(opcode.Transfer), 0, 0,
 			byte(opcode.SetLocal), 0, 4,
 			// while i < n
 			byte(opcode.GetLocal), 0, 4,
 			byte(opcode.GetLocal), 0, 0,
 			byte(opcode.IntLess),
-			byte(opcode.JumpIfFalse), 0, 69,
+			byte(opcode.JumpIfFalse), 0, 93,
 			// fibonacci = fib1 + fib2
 			byte(opcode.GetLocal), 0, 1,
 			byte(opcode.GetLocal), 0, 2,
 			byte(opcode.IntAdd),
+			byte(opcode.Transfer), 0, 0,
 			byte(opcode.SetLocal), 0, 3,
 			// fib1 = fib2
 			byte(opcode.GetLocal), 0, 2,
+			byte(opcode.Transfer), 0, 0,
 			byte(opcode.SetLocal), 0, 1,
 			// fib2 = fibonacci
 			byte(opcode.GetLocal), 0, 3,
+			byte(opcode.Transfer), 0, 0,
 			byte(opcode.SetLocal), 0, 2,
 			// i = i + 1
 			byte(opcode.GetLocal), 0, 4,
-			byte(opcode.GetConstant), 0, 3,
+			byte(opcode.GetConstant), 0, 0,
 			byte(opcode.IntAdd),
+			byte(opcode.Transfer), 0, 0,
 			byte(opcode.SetLocal), 0, 4,
 			// continue loop
-			byte(opcode.Jump), 0, 24,
+			byte(opcode.Jump), 0, 36,
 			// return fibonacci
 			byte(opcode.GetLocal), 0, 3,
 			byte(opcode.ReturnValue),
@@ -171,15 +177,7 @@ func TestCompileImperativeFib(t *testing.T) {
 				Kind: constantkind.Int,
 			},
 			{
-				Data: []byte{0x1},
-				Kind: constantkind.Int,
-			},
-			{
 				Data: []byte{0x2},
-				Kind: constantkind.Int,
-			},
-			{
-				Data: []byte{0x1},
 				Kind: constantkind.Int,
 			},
 		},
@@ -213,24 +211,26 @@ func TestCompileBreak(t *testing.T) {
 		[]byte{
 			// var i = 0
 			byte(opcode.GetConstant), 0, 0,
+			byte(opcode.Transfer), 0, 0,
 			byte(opcode.SetLocal), 0, 0,
 			// while true
 			byte(opcode.True),
-			byte(opcode.JumpIfFalse), 0, 36,
+			byte(opcode.JumpIfFalse), 0, 42,
 			// if i > 3
 			byte(opcode.GetLocal), 0, 0,
 			byte(opcode.GetConstant), 0, 1,
 			byte(opcode.IntGreater),
-			byte(opcode.JumpIfFalse), 0, 23,
+			byte(opcode.JumpIfFalse), 0, 26,
 			// break
-			byte(opcode.Jump), 0, 36,
+			byte(opcode.Jump), 0, 42,
 			// i = i + 1
 			byte(opcode.GetLocal), 0, 0,
 			byte(opcode.GetConstant), 0, 2,
 			byte(opcode.IntAdd),
+			byte(opcode.Transfer), 0, 0,
 			byte(opcode.SetLocal), 0, 0,
 			// repeat
-			byte(opcode.Jump), 0, 6,
+			byte(opcode.Jump), 0, 9,
 			// return i
 			byte(opcode.GetLocal), 0, 0,
 			byte(opcode.ReturnValue),
@@ -284,26 +284,28 @@ func TestCompileContinue(t *testing.T) {
 		[]byte{
 			// var i = 0
 			byte(opcode.GetConstant), 0, 0,
+			byte(opcode.Transfer), 0, 0,
 			byte(opcode.SetLocal), 0, 0,
 			// while true
 			byte(opcode.True),
-			byte(opcode.JumpIfFalse), 0, 39,
+			byte(opcode.JumpIfFalse), 0, 45,
 			// i = i + 1
 			byte(opcode.GetLocal), 0, 0,
 			byte(opcode.GetConstant), 0, 1,
 			byte(opcode.IntAdd),
+			byte(opcode.Transfer), 0, 0,
 			byte(opcode.SetLocal), 0, 0,
 			// if i < 3
 			byte(opcode.GetLocal), 0, 0,
 			byte(opcode.GetConstant), 0, 2,
 			byte(opcode.IntLess),
-			byte(opcode.JumpIfFalse), 0, 33,
+			byte(opcode.JumpIfFalse), 0, 39,
 			// continue
-			byte(opcode.Jump), 0, 6,
+			byte(opcode.Jump), 0, 9,
 			// break
-			byte(opcode.Jump), 0, 39,
+			byte(opcode.Jump), 0, 45,
 			// repeat
-			byte(opcode.Jump), 0, 6,
+			byte(opcode.Jump), 0, 9,
 			// return i
 			byte(opcode.GetLocal), 0, 0,
 			byte(opcode.ReturnValue),
