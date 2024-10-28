@@ -2322,7 +2322,7 @@ func TestRuntimeExportCompositeValueWithFunctionValueField(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-//go:embed ../tests/test-export-json-deterministic.txt
+//go:embed test-export-json-deterministic.json
 var exportJsonDeterministicExpected string
 
 func TestRuntimeExportJsonDeterministic(t *testing.T) {
