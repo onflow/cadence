@@ -73,7 +73,7 @@ contains command-line tools that are useful when working on the implementation f
    ```
 
    ```
-   $ echo 'pub fun main () { log("Hello, world!") }' > hello.cdc
+   $ echo 'access(all) fun main () { log("Hello, world!") }' > hello.cdc
    $ go run ./cmd/main hello.cdc
    "Hello, world!"
    ```
