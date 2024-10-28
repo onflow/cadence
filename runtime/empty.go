@@ -262,5 +262,5 @@ func (EmptyRuntimeInterface) ValidateAccountCapabilitiesPublish(
 }
 
 func (EmptyRuntimeInterface) MinimumRequiredVersion() (string, error) {
-	return "", nil
+	return "0.0.0", nil
 }
