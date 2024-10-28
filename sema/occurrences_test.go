@@ -27,7 +27,6 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/tests/sema_utils"
-	. "github.com/onflow/cadence/tests/utils"
 )
 
 // TODO: implement occurrences for type references

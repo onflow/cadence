@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package utils
+package sema_test
 
 import (
 	"github.com/onflow/cadence/common"
