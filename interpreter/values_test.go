@@ -36,7 +36,8 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 )
 
 // TODO: make these program args?
@@ -64,7 +65,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 			Program:     ast.NewProgram(nil, []ast.Declaration{}),
 			Elaboration: sema.NewElaboration(nil),
 		},
-		utils.TestLocation,
+		TestLocation,
 		&interpreter.Config{
 			Storage: storage,
 			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
@@ -119,7 +120,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 
 			value, found := testMap.Get(inter, interpreter.EmptyLocationRange, orgKey)
 			require.True(t, found)
-			utils.AssertValuesEqual(t, inter, orgValue, value)
+			AssertValuesEqual(t, inter, orgValue, value)
 
 			return false
 		})
@@ -138,7 +139,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 				orgValue, ok := entries.get(inter, key)
 				require.True(t, ok, "cannot find key: %v", key)
 
-				utils.AssertValuesEqual(t, inter, orgValue, value)
+				AssertValuesEqual(t, inter, orgValue, value)
 				return true
 			},
 		)
@@ -164,7 +165,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 
 			value, found := copyOfTestMap.Get(inter, interpreter.EmptyLocationRange, orgKey)
 			require.True(t, found)
-			utils.AssertValuesEqual(t, inter, orgValue, value)
+			AssertValuesEqual(t, inter, orgValue, value)
 
 			return false
 		})
@@ -192,7 +193,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 
 			value, found := testMap.Get(inter, interpreter.EmptyLocationRange, orgKey)
 			require.True(t, found)
-			utils.AssertValuesEqual(t, inter, orgValue, value)
+			AssertValuesEqual(t, inter, orgValue, value)
 
 			return false
 		})
@@ -233,7 +234,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 
 			value, found := dictionary.Get(inter, interpreter.EmptyLocationRange, orgKey)
 			require.True(t, found)
-			utils.AssertValuesEqual(t, inter, orgValue, value)
+			AssertValuesEqual(t, inter, orgValue, value)
 
 			return false
 		})
@@ -284,7 +285,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 
 			// Removed value must be same as the original value
 			innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
-			utils.AssertValuesEqual(t, inter, orgValue, innerValue)
+			AssertValuesEqual(t, inter, orgValue, innerValue)
 
 			return false
 		})
@@ -344,7 +345,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 
 			// Removed value must be same as the original value
 			innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
-			utils.AssertValuesEqual(t, inter, orgValue, innerValue)
+			AssertValuesEqual(t, inter, orgValue, innerValue)
 
 			return false
 		})
@@ -412,7 +413,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 
 			// Removed value must be same as the original value
 			innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
-			utils.AssertValuesEqual(t, inter, value1, innerValue)
+			AssertValuesEqual(t, inter, value1, innerValue)
 		}
 
 		// Check the values
@@ -428,7 +429,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 
 			// Read value must be updated value
 			innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
-			utils.AssertValuesEqual(t, inter, value2, innerValue)
+			AssertValuesEqual(t, inter, value2, innerValue)
 		}
 	})
 
@@ -515,7 +516,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 
 				// Removed value must be same as the original value
 				innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
-				utils.AssertValuesEqual(t, inter, orgValue, innerValue)
+				AssertValuesEqual(t, inter, orgValue, innerValue)
 
 				deleteCount++
 			}
@@ -583,7 +584,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 
 			value, found := movedDictionary.Get(inter, interpreter.EmptyLocationRange, orgKey)
 			require.True(t, found)
-			utils.AssertValuesEqual(t, inter, orgValue, value)
+			AssertValuesEqual(t, inter, orgValue, value)
 
 			return false
 		})
@@ -607,7 +608,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 			Program:     ast.NewProgram(nil, []ast.Declaration{}),
 			Elaboration: sema.NewElaboration(nil),
 		},
-		utils.TestLocation,
+		TestLocation,
 		&interpreter.Config{
 			Storage: storage,
 			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
@@ -651,7 +652,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 		for index, orgElement := range elements {
 			element := testArray.Get(inter, interpreter.EmptyLocationRange, index)
-			utils.AssertValuesEqual(t, inter, orgElement, element)
+			AssertValuesEqual(t, inter, orgElement, element)
 		}
 
 		owner := testArray.GetOwner()
@@ -666,10 +667,10 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 			inter,
 			func(element interpreter.Value) (resume bool) {
 				orgElement := elements[index]
-				utils.AssertValuesEqual(t, inter, orgElement, element)
+				AssertValuesEqual(t, inter, orgElement, element)
 
 				elementByIndex := testArray.Get(inter, interpreter.EmptyLocationRange, index)
-				utils.AssertValuesEqual(t, inter, element, elementByIndex)
+				AssertValuesEqual(t, inter, element, elementByIndex)
 
 				index++
 				return true
@@ -695,7 +696,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 		for index, orgElement := range elements {
 			element := copyOfTestArray.Get(inter, interpreter.EmptyLocationRange, index)
-			utils.AssertValuesEqual(t, inter, orgElement, element)
+			AssertValuesEqual(t, inter, orgElement, element)
 		}
 
 		owner := copyOfTestArray.GetOwner()
@@ -717,7 +718,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		// go over original elements again and check no missing data (no side effect should be found)
 		for index, orgElement := range elements {
 			element := testArray.Get(inter, interpreter.EmptyLocationRange, index)
-			utils.AssertValuesEqual(t, inter, orgElement, element)
+			AssertValuesEqual(t, inter, orgElement, element)
 		}
 
 		owner := testArray.GetOwner()
@@ -755,7 +756,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		// Go over original values again and check no missing data (no side effect should be found)
 		for index, element := range newElements {
 			value := testArray.Get(inter, interpreter.EmptyLocationRange, index)
-			utils.AssertValuesEqual(t, inter, element, value)
+			AssertValuesEqual(t, inter, element, value)
 		}
 	})
 
@@ -789,7 +790,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		// Go over original values again and check no missing data (no side effect should be found)
 		for index, element := range newElements {
 			value := testArray.Get(inter, interpreter.EmptyLocationRange, index)
-			utils.AssertValuesEqual(t, inter, element, value)
+			AssertValuesEqual(t, inter, element, value)
 		}
 	})
 
@@ -831,7 +832,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 			removedValue := testArray.Remove(inter, interpreter.EmptyLocationRange, 0)
 
 			// Removed value must be same as the original value
-			utils.AssertValuesEqual(t, inter, element, removedValue)
+			AssertValuesEqual(t, inter, element, removedValue)
 		}
 
 		// Array must be empty
@@ -896,7 +897,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 				removedValue := testArray.RemoveFirst(inter, interpreter.EmptyLocationRange)
 
 				// Removed value must be same as the original value
-				utils.AssertValuesEqual(t, inter, orgValue, removedValue)
+				AssertValuesEqual(t, inter, orgValue, removedValue)
 
 				deleteCount++
 			}
@@ -957,7 +958,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		// Check the elements
 		for index, orgElement := range elements {
 			element := movedArray.Get(inter, interpreter.EmptyLocationRange, index)
-			utils.AssertValuesEqual(t, inter, orgElement, element)
+			AssertValuesEqual(t, inter, orgElement, element)
 		}
 
 		owner = movedArray.GetOwner()
@@ -979,7 +980,7 @@ func TestInterpretRandomCompositeValueOperations(t *testing.T) {
 			Program:     ast.NewProgram(nil, []ast.Declaration{}),
 			Elaboration: sema.NewElaboration(nil),
 		},
-		utils.TestLocation,
+		TestLocation,
 		&interpreter.Config{
 			Storage: storage,
 			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
@@ -1005,7 +1006,7 @@ func TestInterpretRandomCompositeValueOperations(t *testing.T) {
 
 		for fieldName, orgFieldValue := range orgFields {
 			fieldValue := testComposite.GetField(inter, interpreter.EmptyLocationRange, fieldName)
-			utils.AssertValuesEqual(t, inter, orgFieldValue, fieldValue)
+			AssertValuesEqual(t, inter, orgFieldValue, fieldValue)
 		}
 
 		owner := testComposite.GetOwner()
@@ -1017,7 +1018,7 @@ func TestInterpretRandomCompositeValueOperations(t *testing.T) {
 		testComposite.ForEachField(inter, func(name string, value interpreter.Value) (resume bool) {
 			orgValue, ok := orgFields[name]
 			require.True(t, ok)
-			utils.AssertValuesEqual(t, inter, orgValue, value)
+			AssertValuesEqual(t, inter, orgValue, value)
 			fieldCount++
 
 			// continue iteration
@@ -1042,7 +1043,7 @@ func TestInterpretRandomCompositeValueOperations(t *testing.T) {
 
 		for name, orgValue := range orgFields {
 			value := copyOfTestComposite.GetField(inter, interpreter.EmptyLocationRange, name)
-			utils.AssertValuesEqual(t, inter, orgValue, value)
+			AssertValuesEqual(t, inter, orgValue, value)
 		}
 
 		owner := copyOfTestComposite.GetOwner()
@@ -1062,7 +1063,7 @@ func TestInterpretRandomCompositeValueOperations(t *testing.T) {
 		// go over original values again and check no missing data (no side effect should be found)
 		for name, orgValue := range orgFields {
 			value := testComposite.GetField(inter, interpreter.EmptyLocationRange, name)
-			utils.AssertValuesEqual(t, inter, orgValue, value)
+			AssertValuesEqual(t, inter, orgValue, value)
 		}
 
 		owner := testComposite.GetOwner()
@@ -1115,7 +1116,7 @@ func TestInterpretRandomCompositeValueOperations(t *testing.T) {
 		// Check the elements
 		for fieldName, orgFieldValue := range fields {
 			fieldValue := movedComposite.GetField(inter, interpreter.EmptyLocationRange, fieldName)
-			utils.AssertValuesEqual(t, inter, orgFieldValue, fieldValue)
+			AssertValuesEqual(t, inter, orgFieldValue, fieldValue)
 		}
 
 		owner = composite.GetOwner()
@@ -1714,7 +1715,7 @@ func TestCheckStorageHealthInMiddleOfDeepRemove(t *testing.T) {
 			Program:     ast.NewProgram(nil, []ast.Declaration{}),
 			Elaboration: sema.NewElaboration(nil),
 		},
-		utils.TestLocation,
+		TestLocation,
 		&interpreter.Config{
 			Storage: storage,
 			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
@@ -1792,7 +1793,7 @@ func TestCheckStorageHealthInMiddleOfTransferAndRemove(t *testing.T) {
 			Program:     ast.NewProgram(nil, []ast.Declaration{}),
 			Elaboration: sema.NewElaboration(nil),
 		},
-		utils.TestLocation,
+		TestLocation,
 		&interpreter.Config{
 			Storage: storage,
 			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {

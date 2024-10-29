@@ -28,7 +28,7 @@ import (
 	"github.com/onflow/cadence/common"
 	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 func TestRuntimeExportRecursiveType(t *testing.T) {
@@ -36,7 +36,7 @@ func TestRuntimeExportRecursiveType(t *testing.T) {
 	t.Parallel()
 
 	ty := &sema.CompositeType{
-		Location:   utils.TestLocation,
+		Location:   TestLocation,
 		Identifier: "Foo",
 		Kind:       common.CompositeKindResource,
 		Members:    &sema.StringMemberOrderedMap{},
@@ -60,7 +60,7 @@ func TestRuntimeExportRecursiveType(t *testing.T) {
 	}
 
 	expected := cadence.NewResourceType(
-		utils.TestLocation,
+		TestLocation,
 		"Foo",
 		fields,
 		nil,
@@ -94,7 +94,7 @@ func BenchmarkExportType(b *testing.B) {
 	b.Run("composite type", func(b *testing.B) {
 
 		ty := &sema.CompositeType{
-			Location:   utils.TestLocation,
+			Location:   TestLocation,
 			Identifier: "Foo",
 			Kind:       common.CompositeKindResource,
 			Members:    &sema.StringMemberOrderedMap{},
@@ -118,7 +118,7 @@ func BenchmarkExportType(b *testing.B) {
 		}
 
 		expected := cadence.NewResourceType(
-			utils.TestLocation,
+			TestLocation,
 			"Foo",
 			fields,
 			nil,

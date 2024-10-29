@@ -19,11 +19,10 @@
 package interpreter
 
 import (
+	"encoding/binary"
 	"math"
 	"math/big"
 	"unsafe"
-
-	"encoding/binary"
 
 	"github.com/onflow/atree"
 

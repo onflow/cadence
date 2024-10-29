@@ -27,7 +27,7 @@ import (
 
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 func TestValueDeepCopyAndDeepRemove(t *testing.T) {
@@ -40,7 +40,7 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 
 	inter, err := interpreter.NewInterpreter(
 		nil,
-		utils.TestLocation,
+		TestLocation,
 		&interpreter.Config{
 			Storage: storage,
 		},

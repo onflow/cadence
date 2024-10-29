@@ -35,10 +35,10 @@ import (
 	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	. "github.com/onflow/cadence/tests/runtime_utils"
-	. "github.com/onflow/cadence/tests/sema_utils"
-	"github.com/onflow/cadence/tests/utils"
-	. "github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestRuntimeAccountKeyConstructor(t *testing.T) {
@@ -998,7 +998,7 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 
 		value, err := test.executeScript(testEnv.runtime, testEnv.runtimeInterface)
 		require.NoError(t, err)
-		utils.AssertEqualWithDiff(t, cadence.Void{}, value)
+		AssertEqualWithDiff(t, cadence.Void{}, value)
 
 		keys := make(map[int]*AccountKey, len(testEnv.storage.keys))
 		for _, key := range testEnv.storage.keys {
@@ -1043,7 +1043,7 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 
 		value, err := test.executeScript(testEnv.runtime, testEnv.runtimeInterface)
 		require.NoError(t, err)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			cadence.NewOptional(cadence.String("Optional.map")),
 			value,
 		)

@@ -34,8 +34,8 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/parser"
 	"github.com/onflow/cadence/sema"
-	. "github.com/onflow/cadence/tests/sema_utils"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func newTestContractInterpreter(t *testing.T, code string) (*interpreter.Interpreter, error) {
@@ -65,7 +65,7 @@ func newTestContractInterpreterWithTestFramework(
 
 	checker, err := sema.NewChecker(
 		program,
-		utils.TestLocation,
+		TestLocation,
 		nil,
 		&sema.Config{
 			BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {

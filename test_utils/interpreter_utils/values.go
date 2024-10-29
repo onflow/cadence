@@ -16,113 +16,37 @@
  * limitations under the License.
  */
 
-package utils
+package interpreter_utils
 
 import (
-	"encoding/hex"
 	"fmt"
 	"strings"
 	"testing"
 
-	"github.com/k0kubun/pp"
 	"github.com/kr/pretty"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/ast"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
-
-	"github.com/onflow/cadence/common"
 )
 
-func init() {
-	pp.ColoringEnabled = false
-}
-
-// TestLocation is used as the default location for programs in tests.
-const TestLocation = common.StringLocation("test")
-
-// ImportedLocation is used as the default location for imported programs in tests.
-const ImportedLocation = common.StringLocation("imported")
-
-// AssertEqualWithDiff asserts that two objects are equal.
-//
-// If the objects are not equal, this function prints a human-readable diff.
-func AssertEqualWithDiff(t *testing.T, expected, actual any) {
-
-	// the maximum levels of a struct to recurse into
-	// this prevents infinite recursion from circular references
-	diff := pretty.Diff(expected, actual)
-
-	if len(diff) != 0 {
-		s := strings.Builder{}
-
-		for i, d := range diff {
-			if i == 0 {
-				s.WriteString("diff    : ")
-			} else {
-				s.WriteString("          ")
-			}
-
-			s.WriteString(d)
-			s.WriteString("\n")
-		}
-
-		t.Errorf(
-			"Not equal: \n"+
-				"expected: %s\n"+
-				"actual  : %s\n\n"+
-				"%s",
-			pp.Sprint(expected),
-			pp.Sprint(actual),
-			s.String(),
-		)
+func RequireValuesEqual(t testing.TB, inter *interpreter.Interpreter, expected, actual interpreter.Value) {
+	if !AssertValuesEqual(t, inter, expected, actual) {
+		t.FailNow()
 	}
 }
 
-func DeploymentTransaction(name string, contract []byte) []byte {
-	return []byte(fmt.Sprintf(
-		`
-          transaction {
+func AssertValueSlicesEqual(t testing.TB, inter *interpreter.Interpreter, expected, actual []interpreter.Value) bool {
+	if !assert.Equal(t, len(expected), len(actual)) {
+		return false
+	}
 
-              prepare(signer: auth(Contracts) &Account) {
-                  signer.contracts.add(name: "%s", code: "%s".decodeHex())
-              }
-          }
-        `,
-		name,
-		hex.EncodeToString(contract),
-	))
-}
+	for i, value := range expected {
+		if !AssertValuesEqual(t, inter, value, actual[i]) {
+			return false
+		}
+	}
 
-func RemovalTransaction(name string) []byte {
-	return []byte(fmt.Sprintf(
-		`
-          transaction {
-
-              prepare(signer: auth(Contracts) &Account) {
-                  signer.contracts.remove(name: "%s")
-              }
-          }
-        `,
-		name,
-	))
-}
-
-func UpdateTransaction(name string, contract []byte) []byte {
-	return []byte(fmt.Sprintf(
-		`
-          transaction {
-
-              prepare(signer: auth(Contracts) &Account) {
-                  signer.contracts.update(name: "%s", code: "%s".decodeHex())
-              }
-          }
-        `,
-		name,
-		hex.EncodeToString(contract),
-	))
+	return true
 }
 
 func ValuesAreEqual(inter *interpreter.Interpreter, expected, actual interpreter.Value) bool {
@@ -171,59 +95,6 @@ func AssertValuesEqual(t testing.TB, interpreter *interpreter.Interpreter, expec
 	}
 
 	return true
-}
-
-func RequireValuesEqual(t testing.TB, inter *interpreter.Interpreter, expected, actual interpreter.Value) {
-	if !AssertValuesEqual(t, inter, expected, actual) {
-		t.FailNow()
-	}
-}
-
-func AssertValueSlicesEqual(t testing.TB, inter *interpreter.Interpreter, expected, actual []interpreter.Value) bool {
-	if !assert.Equal(t, len(expected), len(actual)) {
-		return false
-	}
-
-	for i, value := range expected {
-		if !AssertValuesEqual(t, inter, value, actual[i]) {
-			return false
-		}
-	}
-
-	return true
-}
-
-// RequireError is a wrapper around require.Error which also ensures
-// that the error message, the secondary message (if any),
-// and the error notes' (if any) messages can be successfully produced
-func RequireError(t *testing.T, err error) {
-	require.Error(t, err)
-
-	_ = err.Error()
-
-	if hasImportLocation, ok := err.(common.HasLocation); ok {
-		location := hasImportLocation.ImportLocation()
-		assert.NotNil(t, location)
-	}
-
-	if hasPosition, ok := err.(ast.HasPosition); ok {
-		_ = hasPosition.StartPosition()
-		_ = hasPosition.EndPosition(nil)
-	}
-
-	if hasErrorNotes, ok := err.(errors.ErrorNotes); ok {
-		for _, note := range hasErrorNotes.ErrorNotes() {
-			_ = note.Message()
-		}
-	}
-
-	if hasSecondaryError, ok := err.(errors.SecondaryError); ok {
-		_ = hasSecondaryError.SecondaryError()
-	}
-
-	if hasSuggestedFixes, ok := err.(errors.HasSuggestedFixes[ast.TextEdit]); ok {
-		_ = hasSuggestedFixes.SuggestFixes("")
-	}
 }
 
 func ArrayElements(inter *interpreter.Interpreter, array *interpreter.ArrayValue) []interpreter.Value {

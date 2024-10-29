@@ -29,7 +29,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
-	. "github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 )
 
 var integerTestValues = map[string]interpreter.NumberValue{

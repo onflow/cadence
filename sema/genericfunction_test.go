@@ -30,7 +30,7 @@ import (
 	"github.com/onflow/cadence/parser"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	. "github.com/onflow/cadence/tests/sema_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func parseAndCheckWithTestValue(t *testing.T, code string, ty sema.Type) (*sema.Checker, error) {

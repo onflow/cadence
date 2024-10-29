@@ -28,8 +28,8 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
-	. "github.com/onflow/cadence/tests/sema_utils"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestInterpretStatementHandler(t *testing.T) {
@@ -44,7 +44,7 @@ func TestInterpretStatementHandler(t *testing.T) {
           }
         `,
 		ParseAndCheckOptions{
-			Location: utils.ImportedLocation,
+			Location: ImportedLocation,
 		},
 	)
 	require.NoError(t, err)
@@ -73,7 +73,7 @@ func TestInterpretStatementHandler(t *testing.T) {
 			Config: &sema.Config{
 				ImportHandler: func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 					assert.Equal(t,
-						utils.ImportedLocation,
+						ImportedLocation,
 						importedLocation,
 					)
 
@@ -116,7 +116,7 @@ func TestInterpretStatementHandler(t *testing.T) {
 			},
 			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				assert.Equal(t,
-					utils.ImportedLocation,
+					ImportedLocation,
 					location,
 				)
 
@@ -197,7 +197,7 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
 			Config: &sema.Config{
 				ImportHandler: func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 					assert.Equal(t,
-						utils.ImportedLocation,
+						ImportedLocation,
 						importedLocation,
 					)
 
@@ -241,7 +241,7 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
 			},
 			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				assert.Equal(t,
-					utils.ImportedLocation,
+					ImportedLocation,
 					location,
 				)
 
@@ -303,7 +303,7 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
           }
         `,
 		ParseAndCheckOptions{
-			Location: utils.ImportedLocation,
+			Location: ImportedLocation,
 		},
 	)
 	require.NoError(t, err)
@@ -332,7 +332,7 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
 			Config: &sema.Config{
 				ImportHandler: func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 					assert.Equal(t,
-						utils.ImportedLocation,
+						ImportedLocation,
 						importedLocation,
 					)
 
@@ -368,7 +368,7 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
 			},
 			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				assert.Equal(t,
-					utils.ImportedLocation,
+					ImportedLocation,
 					location,
 				)
 

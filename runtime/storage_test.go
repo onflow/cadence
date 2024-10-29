@@ -36,8 +36,9 @@ import (
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
-	. "github.com/onflow/cadence/tests/runtime_utils"
-	. "github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
 )
 
 func withWritesToStorage(

@@ -43,7 +43,7 @@ import (
 	_ "github.com/onflow/cadence/sema/gen/testdata/simple_struct"
 	_ "github.com/onflow/cadence/sema/gen/testdata/storable"
 	"github.com/onflow/cadence/stdlib"
-	. "github.com/onflow/cadence/tests/sema_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestConstructor(t *testing.T) {

@@ -28,8 +28,8 @@ import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/sema"
-	. "github.com/onflow/cadence/tests/sema_utils"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 var dynamicCastingOperations = []ast.Operation{
@@ -1207,7 +1207,7 @@ func TestCheckDynamicCastingCapability(t *testing.T) {
 	t.Parallel()
 
 	structType := &sema.CompositeType{
-		Location:   utils.TestLocation,
+		Location:   TestLocation,
 		Identifier: "S",
 		Kind:       common.CompositeKindStructure,
 	}

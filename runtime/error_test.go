@@ -31,7 +31,7 @@ import (
 	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	. "github.com/onflow/cadence/tests/runtime_utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
 )
 
 func TestRuntimeError(t *testing.T) {

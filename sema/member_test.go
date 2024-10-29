@@ -27,7 +27,7 @@ import (
 
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
-	. "github.com/onflow/cadence/tests/sema_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestCheckOptionalChainingNonOptionalFieldRead(t *testing.T) {

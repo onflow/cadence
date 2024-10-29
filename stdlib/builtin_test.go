@@ -21,17 +21,16 @@ package stdlib
 import (
 	"testing"
 
-	"github.com/onflow/cadence/activations"
-	"github.com/onflow/cadence/common"
-	. "github.com/onflow/cadence/tests/sema_utils"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/parser"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func newUnmeteredInMemoryStorage() interpreter.InMemoryStorage {
@@ -53,7 +52,7 @@ func newInterpreter(t *testing.T, code string, valueDeclarations ...StandardLibr
 
 	checker, err := sema.NewChecker(
 		program,
-		utils.TestLocation,
+		TestLocation,
 		nil,
 		&sema.Config{
 			BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
@@ -184,7 +183,7 @@ func TestInterpretAssert(t *testing.T) {
 			Err: AssertionError{
 				Message: "oops",
 			},
-			Location: utils.TestLocation,
+			Location: TestLocation,
 		},
 		err,
 	)
@@ -195,7 +194,7 @@ func TestInterpretAssert(t *testing.T) {
 			Err: AssertionError{
 				Message: "",
 			},
-			Location: utils.TestLocation,
+			Location: TestLocation,
 		},
 		err)
 
@@ -278,7 +277,7 @@ func TestInterpretPanic(t *testing.T) {
 			Err: PanicError{
 				Message: "oops",
 			},
-			Location: utils.TestLocation,
+			Location: TestLocation,
 		},
 		err,
 	)

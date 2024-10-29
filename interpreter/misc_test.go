@@ -39,8 +39,9 @@ import (
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	. "github.com/onflow/cadence/tests/sema_utils"
-	. "github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 type ParseCheckAndInterpretOptions struct {
@@ -5257,7 +5258,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			func(invocation interpreter.Invocation) interpreter.Value {
 				authorized := bool(invocation.Arguments[0].(interpreter.BoolValue))
 
-				var auth interpreter.Authorization = interpreter.UnauthorizedAccess
+				var auth = interpreter.UnauthorizedAccess
 				if authorized {
 					auth = interpreter.ConvertSemaAccessToStaticAuthorization(
 						invocation.Interpreter,

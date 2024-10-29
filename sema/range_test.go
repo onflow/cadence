@@ -27,8 +27,8 @@ import (
 
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/sema"
-	. "github.com/onflow/cadence/tests/sema_utils"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestCheckRange(t *testing.T) {
@@ -96,7 +96,7 @@ func TestCheckRange(t *testing.T) {
 	// assert that the unordered repr of expected matches that of ranges
 	assertSetsEqual := func(t *testing.T, expected []sema.Range, ranges map[sema.Range]int) {
 		bag := getCounts(expected)
-		utils.AssertEqualWithDiff(t, bag, ranges)
+		AssertEqualWithDiff(t, bag, ranges)
 	}
 
 	barTypeVariable, ok := checker.Elaboration.GetGlobalType("_TEST_Bar")

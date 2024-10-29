@@ -28,8 +28,8 @@ import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/sema"
-	. "github.com/onflow/cadence/tests/sema_utils"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestCheckReference(t *testing.T) {
@@ -1067,7 +1067,7 @@ func TestCheckReferenceExpressionReferenceType(t *testing.T) {
 
 			refValueType := RequireGlobalValue(t, checker.Elaboration, "ref")
 			xType := RequireGlobalType(t, checker.Elaboration, "X").(*sema.EntitlementType)
-			var access sema.Access = sema.UnauthorizedAccess
+			var access = sema.UnauthorizedAccess
 			if !auth.Equal(sema.UnauthorizedAccess) {
 				access = sema.NewEntitlementSetAccess([]*sema.EntitlementType{xType}, sema.Conjunction)
 			}
@@ -1089,7 +1089,7 @@ func TestCheckReferenceExpressionReferenceType(t *testing.T) {
 		for _, auth := range []sema.Access{
 			sema.UnauthorizedAccess,
 			sema.NewEntitlementSetAccess([]*sema.EntitlementType{{
-				Location:   utils.TestLocation,
+				Location:   TestLocation,
 				Identifier: "X",
 			}}, sema.Conjunction),
 		} {
@@ -1930,7 +1930,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                     }
                 `,
 			ParseAndCheckOptions{
-				Location: utils.ImportedLocation,
+				Location: ImportedLocation,
 			},
 		)
 

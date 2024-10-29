@@ -22,13 +22,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/utils"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	. "github.com/onflow/cadence/tests/sema_utils"
+	"github.com/onflow/cadence/sema"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestCheckCapability(t *testing.T) {
@@ -94,7 +93,7 @@ func TestCheckCapability_borrow(t *testing.T) {
 
 	for _, auth := range []sema.Access{sema.UnauthorizedAccess,
 		sema.NewEntitlementSetAccess([]*sema.EntitlementType{{
-			Location:   utils.TestLocation,
+			Location:   TestLocation,
 			Identifier: "X",
 		}}, sema.Conjunction),
 	} {
@@ -321,7 +320,7 @@ func TestCheckCapability_check(t *testing.T) {
 
 	for _, auth := range []sema.Access{sema.UnauthorizedAccess,
 		sema.NewEntitlementSetAccess([]*sema.EntitlementType{{
-			Location:   utils.TestLocation,
+			Location:   TestLocation,
 			Identifier: "X",
 		}}, sema.Conjunction),
 	} {
