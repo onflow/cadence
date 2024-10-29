@@ -30,8 +30,8 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/parser"
 	"github.com/onflow/cadence/sema"
-	. "github.com/onflow/cadence/tests/sema_utils"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestCheckInvalidImport(t *testing.T) {
@@ -57,7 +57,7 @@ func TestCheckRepeatedImport(t *testing.T) {
           access(all) let y = 2
         `,
 		ParseAndCheckOptions{
-			Location: utils.ImportedLocation,
+			Location: ImportedLocation,
 		},
 	)
 	require.NoError(t, err)
@@ -170,7 +170,7 @@ func TestCheckInvalidRepeatedImport(t *testing.T) {
           access(all) let x = 1
         `,
 		ParseAndCheckOptions{
-			Location: utils.ImportedLocation,
+			Location: ImportedLocation,
 		},
 	)
 
@@ -288,7 +288,7 @@ func TestCheckImportAll(t *testing.T) {
           }
         `,
 		ParseAndCheckOptions{
-			Location: utils.ImportedLocation,
+			Location: ImportedLocation,
 		},
 	)
 
@@ -323,7 +323,7 @@ func TestCheckInvalidImportUnexported(t *testing.T) {
            access(all) let x = 1
         `,
 		ParseAndCheckOptions{
-			Location: utils.ImportedLocation,
+			Location: ImportedLocation,
 		},
 	)
 
@@ -364,7 +364,7 @@ func TestCheckImportSome(t *testing.T) {
           access(all) let x = 1
         `,
 		ParseAndCheckOptions{
-			Location: utils.ImportedLocation,
+			Location: ImportedLocation,
 		},
 	)
 
@@ -447,7 +447,7 @@ func TestCheckImportTypes(t *testing.T) {
 					body,
 				),
 				ParseAndCheckOptions{
-					Location: utils.ImportedLocation,
+					Location: ImportedLocation,
 				},
 			)
 
@@ -553,7 +553,7 @@ func TestCheckInvalidImportCycleSelf(t *testing.T) {
 		return err
 	}
 
-	err = check(code, utils.TestLocation)
+	err = check(code, TestLocation)
 
 	errs := RequireCheckerErrors(t, err, 1)
 
@@ -740,7 +740,7 @@ func TestCheckImportContract(t *testing.T) {
                 }
             }`,
 			ParseAndCheckOptions{
-				Location: utils.ImportedLocation,
+				Location: ImportedLocation,
 			},
 		)
 
@@ -788,7 +788,7 @@ func TestCheckImportContract(t *testing.T) {
                 }
             }`,
 			ParseAndCheckOptions{
-				Location: utils.ImportedLocation,
+				Location: ImportedLocation,
 			},
 		)
 

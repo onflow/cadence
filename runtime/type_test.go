@@ -27,7 +27,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/common"
 	. "github.com/onflow/cadence/runtime"
-	. "github.com/onflow/cadence/tests/runtime_utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
 )
 
 func TestRuntimeTypeStorage(t *testing.T) {

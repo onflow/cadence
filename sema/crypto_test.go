@@ -27,7 +27,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	. "github.com/onflow/cadence/tests/sema_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestCheckHashAlgorithmCases(t *testing.T) {

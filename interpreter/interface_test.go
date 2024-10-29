@@ -29,7 +29,7 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
@@ -456,7 +456,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		// Implementation should satisfy inherited conditions
 		_, err = inter.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(5))
-		utils.RequireError(t, err)
+		RequireError(t, err)
 		assert.ErrorAs(t, err, &interpreter.ConditionError{})
 	})
 
@@ -496,7 +496,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		// Implementation should satisfy inherited conditions
 		_, err = inter.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(5))
-		utils.RequireError(t, err)
+		RequireError(t, err)
 		assert.ErrorAs(t, err, &interpreter.ConditionError{})
 	})
 
@@ -539,11 +539,11 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		// Implementation should satisfy both inherited conditions
 
 		_, err = inter.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(5))
-		utils.RequireError(t, err)
+		RequireError(t, err)
 		assert.ErrorAs(t, err, &interpreter.ConditionError{})
 
 		_, err = inter.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(25))
-		utils.RequireError(t, err)
+		RequireError(t, err)
 		assert.ErrorAs(t, err, &interpreter.ConditionError{})
 	})
 
@@ -588,11 +588,11 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		// Implementation should satisfy both inherited conditions
 
 		_, err = inter.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(5))
-		utils.RequireError(t, err)
+		RequireError(t, err)
 		assert.ErrorAs(t, err, &interpreter.ConditionError{})
 
 		_, err = inter.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(25))
-		utils.RequireError(t, err)
+		RequireError(t, err)
 		assert.ErrorAs(t, err, &interpreter.ConditionError{})
 	})
 

@@ -29,7 +29,7 @@ import (
 
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 type valueTestCase struct {
@@ -242,7 +242,7 @@ func newValueTestCases() map[string]valueTestCase {
 		"struct": {
 			value: NewStruct([]Value{String("bar")}),
 			exampleType: NewStructType(
-				utils.TestLocation,
+				TestLocation,
 				"FooStruct",
 				[]Field{
 					{
@@ -260,7 +260,7 @@ func newValueTestCases() map[string]valueTestCase {
 		"resource": {
 			value: NewResource([]Value{NewInt(1)}),
 			exampleType: NewResourceType(
-				utils.TestLocation,
+				TestLocation,
 				"FooResource",
 				[]Field{
 					{
@@ -283,7 +283,7 @@ func newValueTestCases() map[string]valueTestCase {
 				},
 			),
 			exampleType: NewEventType(
-				utils.TestLocation,
+				TestLocation,
 				"FooEvent",
 				[]Field{
 					{
@@ -305,7 +305,7 @@ func newValueTestCases() map[string]valueTestCase {
 		"contract": {
 			value: NewContract([]Value{String("bar")}),
 			exampleType: NewContractType(
-				utils.TestLocation,
+				TestLocation,
 				"FooContract",
 				[]Field{
 					{
@@ -323,7 +323,7 @@ func newValueTestCases() map[string]valueTestCase {
 		"enum": {
 			value: NewEnum([]Value{UInt8(1)}),
 			exampleType: NewEnumType(
-				utils.TestLocation,
+				TestLocation,
 				"FooEnum",
 				nil,
 				[]Field{
@@ -342,7 +342,7 @@ func newValueTestCases() map[string]valueTestCase {
 		"attachment": {
 			value: NewAttachment([]Value{NewInt(1)}),
 			exampleType: NewAttachmentType(
-				utils.TestLocation,
+				TestLocation,
 				"FooAttachment",
 				nil,
 				[]Field{
@@ -960,7 +960,7 @@ func TestEvent_GetFieldByName(t *testing.T) {
 	assert.Nil(t, SearchFieldByName(simpleEvent, "a"))
 
 	simpleEventWithType := simpleEvent.WithType(NewEventType(
-		utils.TestLocation,
+		TestLocation,
 		"SimpleEvent",
 		[]Field{
 			{

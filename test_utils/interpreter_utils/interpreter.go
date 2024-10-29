@@ -16,53 +16,34 @@
  * limitations under the License.
  */
 
-package fuzz
+package interpreter_utils
 
 import (
-	"os"
-	"path"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/interpreter"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
-const crashersDir = "../../../crashers"
+func NewTestInterpreter(tb testing.TB) *interpreter.Interpreter {
+	storage := NewUnmeteredInMemoryStorage()
 
-func TestCrashers(t *testing.T) {
+	inter, err := interpreter.NewInterpreter(
+		nil,
+		TestLocation,
+		&interpreter.Config{
+			Storage:                       storage,
+			AtreeValueValidationEnabled:   true,
+			AtreeStorageValidationEnabled: true,
+		},
+	)
+	require.NoError(tb, err)
 
-	t.Parallel()
+	return inter
+}
 
-	files, err := os.ReadDir(crashersDir)
-	if err != nil {
-		return
-	}
-
-	for _, file := range files {
-
-		name := file.Name()
-		if path.Ext(name) != "" {
-			continue
-		}
-
-		t.Run(name, func(t *testing.T) {
-
-			t.Parallel()
-
-			var data []byte
-			data, err = os.ReadFile(path.Join(crashersDir, name))
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			assert.NotPanics(t,
-				func() {
-					cadence.Fuzz(data)
-				},
-				string(data),
-			)
-		})
-
-	}
+func NewUnmeteredInMemoryStorage() interpreter.Storage {
+	return interpreter.NewInMemoryStorage(nil)
 }

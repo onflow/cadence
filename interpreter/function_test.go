@@ -27,8 +27,8 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
-	. "github.com/onflow/cadence/tests/sema_utils"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestInterpretResultVariable(t *testing.T) {
@@ -60,7 +60,7 @@ func TestInterpretResultVariable(t *testing.T) {
 		require.IsType(t, &interpreter.CompositeValue{}, result)
 		resource := result.(*interpreter.CompositeValue)
 		assert.Equal(t, common.CompositeKindResource, resource.Kind)
-		utils.AssertValuesEqual(
+		AssertValuesEqual(
 			t,
 			inter,
 			interpreter.UInt8Value(1),
@@ -98,7 +98,7 @@ func TestInterpretResultVariable(t *testing.T) {
 
 		resource := innerValue.(*interpreter.CompositeValue)
 		assert.Equal(t, common.CompositeKindResource, resource.Kind)
-		utils.AssertValuesEqual(
+		AssertValuesEqual(
 			t,
 			inter,
 			interpreter.UInt8Value(1),
@@ -162,7 +162,7 @@ func TestInterpretResultVariable(t *testing.T) {
 
 		resource := innerValue.(*interpreter.CompositeValue)
 		assert.Equal(t, common.CompositeKindResource, resource.Kind)
-		utils.AssertValuesEqual(
+		AssertValuesEqual(
 			t,
 			inter,
 			interpreter.UInt8Value(1),
@@ -316,7 +316,7 @@ func TestInterpretFunctionSubtyping(t *testing.T) {
 	result, err := inter.Invoke("main")
 	require.NoError(t, err)
 
-	utils.AssertValuesEqual(
+	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredSomeValueNonCopying(interpreter.UInt8Value(4)),

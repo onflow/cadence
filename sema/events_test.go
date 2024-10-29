@@ -29,8 +29,8 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
-	. "github.com/onflow/cadence/tests/sema_utils"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestCheckEventDeclaration(t *testing.T) {
@@ -295,7 +295,7 @@ func TestCheckEmitEvent(t *testing.T) {
               access(all) event Transfer(to: Int, from: Int)
             `,
 			ParseAndCheckOptions{
-				Location: utils.ImportedLocation,
+				Location: ImportedLocation,
 			},
 		)
 		require.NoError(t, err)

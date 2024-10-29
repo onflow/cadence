@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"github.com/onflow/cadence/activations"
-	. "github.com/onflow/cadence/tests/sema_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,7 +33,7 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 type assumeValidPublicKeyValidator struct{}
@@ -8152,7 +8152,7 @@ func TestInterpretASTMetering(t *testing.T) {
               let Foo = 1
             `,
 			ParseAndCheckOptions{
-				Location: utils.ImportedLocation,
+				Location: ImportedLocation,
 			},
 		)
 		require.NoError(t, err)
@@ -8450,7 +8450,7 @@ func TestInterpretASTMetering(t *testing.T) {
               let B = 1
             `,
 			ParseAndCheckOptions{
-				Location: utils.ImportedLocation,
+				Location: ImportedLocation,
 			},
 		)
 		require.NoError(t, err)
@@ -8960,7 +8960,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 			interpreter.NewUnmeteredCapabilityValue(
 				4,
 				interpreter.AddressValue{1},
-				interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "Bar"),
+				interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "Bar"),
 			))
 	})
 

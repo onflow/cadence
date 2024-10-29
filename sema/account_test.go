@@ -27,8 +27,8 @@ import (
 
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/sema"
-	. "github.com/onflow/cadence/tests/sema_utils"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestCheckAccountStorageSave(t *testing.T) {
@@ -888,7 +888,7 @@ func TestCheckAccountStorageBorrow(t *testing.T) {
 			sema.NewEntitlementSetAccess(
 				[]*sema.EntitlementType{
 					{
-						Location:   utils.TestLocation,
+						Location:   TestLocation,
 						Identifier: "X",
 					},
 				},

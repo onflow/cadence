@@ -33,8 +33,8 @@ import (
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/tests/runtime_utils"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
 )
 
 func testContractUpdate(t *testing.T, oldCode string, newCode string) error {
@@ -46,7 +46,7 @@ func testContractUpdate(t *testing.T, oldCode string, newCode string) error {
 
 	checker, err := sema.NewChecker(
 		newProgram,
-		utils.TestLocation,
+		TestLocation,
 		nil,
 		&sema.Config{
 			AccessCheckMode: sema.AccessCheckModeStrict,
@@ -59,13 +59,13 @@ func testContractUpdate(t *testing.T, oldCode string, newCode string) error {
 	program := interpreter.ProgramFromChecker(checker)
 
 	upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
-		utils.TestLocation,
+		TestLocation,
 		"Test",
-		&runtime_utils.TestRuntimeInterface{},
+		&TestRuntimeInterface{},
 		oldProgram,
 		program,
 		map[common.Location]*sema.Elaboration{
-			utils.TestLocation: checker.Elaboration,
+			TestLocation: checker.Elaboration,
 		})
 	return upgradeValidator.Validate()
 }
@@ -87,7 +87,7 @@ func testContractUpdateWithImports(
 	upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
 		location,
 		contractName,
-		&runtime_utils.TestRuntimeInterface{
+		&TestRuntimeInterface{
 			OnGetAccountContractNames: func(address runtime.Address) ([]string, error) {
 				return []string{"TestImport"}, nil
 			},
@@ -744,7 +744,7 @@ func TestContractUpgradeFieldType(t *testing.T) {
 		upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
 			location,
 			contractName,
-			&runtime_utils.TestRuntimeInterface{
+			&TestRuntimeInterface{
 				OnGetAccountContractNames: func(address runtime.Address) ([]string, error) {
 					return []string{"TestImport"}, nil
 				},
@@ -818,7 +818,7 @@ func TestContractUpgradeFieldType(t *testing.T) {
 		upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
 			location,
 			contractName,
-			&runtime_utils.TestRuntimeInterface{
+			&TestRuntimeInterface{
 				OnGetAccountContractNames: func(address runtime.Address) ([]string, error) {
 					return []string{"TestImport"}, nil
 				},
@@ -896,7 +896,7 @@ func TestContractUpgradeFieldType(t *testing.T) {
 		upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
 			location,
 			contractName,
-			&runtime_utils.TestRuntimeInterface{
+			&TestRuntimeInterface{
 				OnGetAccountContractNames: func(address runtime.Address) ([]string, error) {
 					return []string{"TestImport"}, nil
 				},
@@ -919,7 +919,7 @@ func TestContractUpgradeFieldType(t *testing.T) {
 
 		// This should be an error.
 		// If there are custom rules, they MUST be followed.
-		utils.RequireError(t, err)
+		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		var fieldMismatchError *stdlib.FieldMismatchError
@@ -1031,7 +1031,7 @@ func TestContractUpgradeFieldType(t *testing.T) {
 		upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
 			location,
 			contractName,
-			&runtime_utils.TestRuntimeInterface{
+			&TestRuntimeInterface{
 				OnGetAccountContractNames: func(address runtime.Address) ([]string, error) {
 					return []string{"TestImport"}, nil
 				},
@@ -1161,7 +1161,7 @@ func TestContractUpgradeFieldType(t *testing.T) {
 		upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
 			location,
 			contractName,
-			&runtime_utils.TestRuntimeInterface{
+			&TestRuntimeInterface{
 				OnGetAccountContractNames: func(address runtime.Address) ([]string, error) {
 					return []string{"TestImport"}, nil
 				},
@@ -1257,7 +1257,7 @@ func TestContractUpgradeFieldType(t *testing.T) {
 		upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
 			location,
 			contractName,
-			&runtime_utils.TestRuntimeInterface{
+			&TestRuntimeInterface{
 				OnGetAccountContractNames: func(address runtime.Address) ([]string, error) {
 					return []string{"TestImport"}, nil
 				},
@@ -2443,7 +2443,7 @@ func TestInterfaceConformanceChange(t *testing.T) {
 		upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
 			location,
 			contractName,
-			&runtime_utils.TestRuntimeInterface{
+			&TestRuntimeInterface{
 				OnGetAccountContractNames: func(address runtime.Address) ([]string, error) {
 					return []string{"TestImport"}, nil
 				},
@@ -2528,7 +2528,7 @@ func TestInterfaceConformanceChange(t *testing.T) {
 		upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
 			location,
 			contractName,
-			&runtime_utils.TestRuntimeInterface{
+			&TestRuntimeInterface{
 				OnGetAccountContractNames: func(address runtime.Address) ([]string, error) {
 					return []string{"TestImport"}, nil
 				},
@@ -2602,7 +2602,7 @@ func TestInterfaceConformanceChange(t *testing.T) {
 		upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
 			location,
 			contractName,
-			&runtime_utils.TestRuntimeInterface{
+			&TestRuntimeInterface{
 				OnGetAccountContractNames: func(address runtime.Address) ([]string, error) {
 					return []string{"TestImport"}, nil
 				},
@@ -2626,7 +2626,7 @@ func TestInterfaceConformanceChange(t *testing.T) {
 
 		// This should be an error.
 		// If there are custom rules, they MUST be followed.
-		utils.RequireError(t, err)
+		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		var conformanceMismatchError *stdlib.ConformanceMismatchError
@@ -2742,7 +2742,7 @@ func TestEnumUpdates(t *testing.T) {
         `
 
 		err := testContractUpdate(t, oldCode, newCode)
-		utils.RequireError(t, err)
+		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		var conformanceMismatchError *stdlib.ConformanceMismatchError
@@ -2773,7 +2773,7 @@ func TestEnumUpdates(t *testing.T) {
         `
 
 		err := testContractUpdate(t, oldCode, newCode)
-		utils.RequireError(t, err)
+		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		var missingEnumCasesError *stdlib.MissingEnumCasesError

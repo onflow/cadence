@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/onflow/cadence/sema"
-	. "github.com/onflow/cadence/tests/sema_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestCheckSpuriousIdentifierAssignmentInvalidValueTypeMismatch(t *testing.T) {

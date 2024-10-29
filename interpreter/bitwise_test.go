@@ -24,7 +24,7 @@ import (
 
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
-	. "github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 )
 
 var bitwiseTestValueFunctions = map[string]func(int) interpreter.NumberValue{

@@ -28,7 +28,7 @@ import (
 	"go.uber.org/goleak"
 
 	"github.com/onflow/cadence/ast"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 func TestMain(m *testing.M) {
@@ -67,7 +67,7 @@ func testLex(t *testing.T, input string, expected []token) {
 	require.NoError(t, err)
 
 	withTokens(tokenStream, func(actualTokens []Token) {
-		utils.AssertEqualWithDiff(t, expectedTokens, actualTokens)
+		AssertEqualWithDiff(t, expectedTokens, actualTokens)
 
 		require.Len(t, actualTokens, len(expectedTokens))
 		for i, expectedToken := range expected {

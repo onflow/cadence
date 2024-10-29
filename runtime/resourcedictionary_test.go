@@ -29,8 +29,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/common"
 	. "github.com/onflow/cadence/runtime"
-	. "github.com/onflow/cadence/tests/runtime_utils"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
 )
 
 const resourceDictionaryContract = `
@@ -94,7 +93,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
 	contract := []byte(resourceDictionaryContract)
 
-	deploy := utils.DeploymentTransaction("Test", contract)
+	deploy := DeploymentTransaction("Test", contract)
 
 	setupTx := []byte(`
      import Test from 0xCADE
@@ -450,7 +449,7 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
      }
    `)
 
-	deploy := utils.DeploymentTransaction("Test", contract)
+	deploy := DeploymentTransaction("Test", contract)
 
 	setupTx := []byte(`
      import Test from 0xCADE
@@ -754,7 +753,7 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 
 	contract := []byte(resourceDictionaryContract)
 
-	deployTx := utils.DeploymentTransaction("Test", contract)
+	deployTx := DeploymentTransaction("Test", contract)
 
 	setupTx := []byte(`
      import Test from 0x1
@@ -883,7 +882,7 @@ func TestRuntimeResourceDictionaryValues_Destruction(t *testing.T) {
 
 	contract := []byte(resourceDictionaryContract)
 
-	deployTx := utils.DeploymentTransaction("Test", contract)
+	deployTx := DeploymentTransaction("Test", contract)
 
 	setupTx := []byte(`
      import Test from 0x1
@@ -996,7 +995,7 @@ func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {
 
 	contract := []byte(resourceDictionaryContract)
 
-	deployTx := utils.DeploymentTransaction("Test", contract)
+	deployTx := DeploymentTransaction("Test", contract)
 
 	setupTx := []byte(`
      import Test from 0x1
@@ -1137,7 +1136,7 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 
 	contract := []byte(resourceDictionaryContract)
 
-	deployTx := utils.DeploymentTransaction("Test", contract)
+	deployTx := DeploymentTransaction("Test", contract)
 
 	setupTx := []byte(`
      import Test from 0x1
@@ -1330,7 +1329,7 @@ func BenchmarkRuntimeResourceDictionaryValues(b *testing.B) {
      }
    `)
 
-	deploy := utils.DeploymentTransaction("Test", contract)
+	deploy := DeploymentTransaction("Test", contract)
 
 	setupTx := []byte(`
      import Test from 0xCADE

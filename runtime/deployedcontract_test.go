@@ -26,8 +26,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/common"
 	. "github.com/onflow/cadence/runtime"
-	. "github.com/onflow/cadence/tests/runtime_utils"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
 )
 
 func TestRuntimeDeployedContracts(t *testing.T) {
@@ -104,7 +103,7 @@ func TestRuntimeDeployedContracts(t *testing.T) {
 	// deploy the contract
 	err := rt.ExecuteTransaction(
 		Script{
-			Source: utils.DeploymentTransaction("Test", []byte(contractCode)),
+			Source: DeploymentTransaction("Test", []byte(contractCode)),
 		},
 		newContext(),
 	)

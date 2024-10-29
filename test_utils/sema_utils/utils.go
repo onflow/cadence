@@ -25,7 +25,6 @@ import (
 	"testing"
 
 	gopretty "github.com/kr/pretty"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -33,7 +32,7 @@ import (
 	"github.com/onflow/cadence/parser"
 	"github.com/onflow/cadence/pretty"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 func ParseAndCheck(t testing.TB, code string) (*sema.Checker, error) {
@@ -69,7 +68,7 @@ func ParseAndCheckWithOptionsAndMemoryMetering(
 ) (*sema.Checker, error) {
 
 	if options.Location == nil {
-		options.Location = utils.TestLocation
+		options.Location = TestLocation
 	}
 
 	program, err := parser.ParseProgram(memoryGauge, []byte(code), options.ParseOptions)
@@ -170,7 +169,7 @@ func RequireCheckerErrors(t *testing.T, err error, count int) []error {
 		return nil
 	}
 
-	utils.RequireError(t, err)
+	RequireError(t, err)
 
 	var checkerErr *sema.CheckerError
 	require.ErrorAs(t, err, &checkerErr)
@@ -182,7 +181,7 @@ func RequireCheckerErrors(t *testing.T, err error, count int) []error {
 	// Get the error message, to check that it can be successfully generated
 
 	for _, checkerErr := range errs {
-		utils.RequireError(t, checkerErr)
+		RequireError(t, checkerErr)
 	}
 
 	return errs

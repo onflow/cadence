@@ -26,7 +26,8 @@ import (
 
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
-	. "github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 )
 
 func TestInterpretRecursiveValueString(t *testing.T) {
