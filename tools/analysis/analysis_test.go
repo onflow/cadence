@@ -29,7 +29,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/parser"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/checker"
+	. "github.com/onflow/cadence/tests/sema_utils"
 	"github.com/onflow/cadence/tools/analysis"
 )
 
@@ -558,7 +558,7 @@ func TestCyclicImports(t *testing.T) {
 	var checkerError *sema.CheckerError
 	require.ErrorAs(t, err, &checkerError)
 
-	errs := checker.RequireCheckerErrors(t, checkerError, 1)
+	errs := RequireCheckerErrors(t, checkerError, 1)
 
 	var importedProgramErr *sema.ImportedProgramError
 	require.ErrorAs(t, errs[0], &importedProgramErr)
@@ -566,6 +566,6 @@ func TestCyclicImports(t *testing.T) {
 	var nestedCheckerErr *sema.CheckerError
 	require.ErrorAs(t, importedProgramErr.Err, &nestedCheckerErr)
 
-	errs = checker.RequireCheckerErrors(t, nestedCheckerErr, 1)
+	errs = RequireCheckerErrors(t, nestedCheckerErr, 1)
 	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
 }

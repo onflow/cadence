@@ -83,7 +83,7 @@ contains command-line tools that are useful when working on the implementation f
 Run the checker tests with the `cadence.checkConcurrently` flag, e.g.
 
 ```shell
-go test -race -v ./tests/checker -cadence.checkConcurrently=10
+go test -race -v ./sema/... -cadence.checkConcurrently=10
 ```
 
 This runs each check of a checker test 10 times, concurrently,

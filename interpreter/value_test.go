@@ -36,7 +36,7 @@ import (
 	. "github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	checkerUtils "github.com/onflow/cadence/tests/checker"
+	. "github.com/onflow/cadence/tests/sema_utils"
 	"github.com/onflow/cadence/tests/utils"
 )
 
@@ -1898,9 +1898,9 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
             }
         }`
 
-	checker, err := checkerUtils.ParseAndCheckWithOptions(t,
+	checker, err := ParseAndCheckWithOptions(t,
 		code,
-		checkerUtils.ParseAndCheckOptions{},
+		ParseAndCheckOptions{},
 	)
 
 	require.NoError(t, err)
@@ -3622,9 +3622,9 @@ func TestNonStorable(t *testing.T) {
       }
     `
 
-	checker, err := checkerUtils.ParseAndCheckWithOptions(t,
+	checker, err := ParseAndCheckWithOptions(t,
 		code,
-		checkerUtils.ParseAndCheckOptions{},
+		ParseAndCheckOptions{},
 	)
 
 	require.NoError(t, err)

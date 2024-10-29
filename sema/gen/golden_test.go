@@ -43,7 +43,7 @@ import (
 	_ "github.com/onflow/cadence/sema/gen/testdata/simple_struct"
 	_ "github.com/onflow/cadence/sema/gen/testdata/storable"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/tests/checker"
+	. "github.com/onflow/cadence/tests/sema_utils"
 )
 
 func TestConstructor(t *testing.T) {
@@ -57,11 +57,11 @@ func TestConstructor(t *testing.T) {
 		Kind: common.DeclarationKindFunction,
 	})
 
-	_, err := checker.ParseAndCheckWithOptions(t,
+	_, err := ParseAndCheckWithOptions(t,
 		`
           let x = Foo(bar: 1)
         `,
-		checker.ParseAndCheckOptions{
+		ParseAndCheckOptions{
 			Config: &sema.Config{
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
@@ -83,11 +83,11 @@ func TestContract(t *testing.T) {
 		Kind: common.DeclarationKindContract,
 	})
 
-	_, err := checker.ParseAndCheckWithOptions(t,
+	_, err := ParseAndCheckWithOptions(t,
 		`
           let x = Test.Foo(bar: 1)
         `,
-		checker.ParseAndCheckOptions{
+		ParseAndCheckOptions{
 			Config: &sema.Config{
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation

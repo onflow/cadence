@@ -23,7 +23,7 @@ import (
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/tests/checker"
+	. "github.com/onflow/cadence/tests/sema_utils"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -100,9 +100,9 @@ func TestCheckAssert(t *testing.T) {
 	baseValueActivation.DeclareValue(AssertFunction)
 
 	parseAndCheck := func(t *testing.T, code string) (*sema.Checker, error) {
-		return checker.ParseAndCheckWithOptions(t,
+		return ParseAndCheckWithOptions(t,
 			code,
-			checker.ParseAndCheckOptions{
+			ParseAndCheckOptions{
 				Config: &sema.Config{
 					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 						return baseValueActivation
@@ -116,7 +116,7 @@ func TestCheckAssert(t *testing.T) {
 
 		_, err := parseAndCheck(t, `let _ = assert()`)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, errs[0], &sema.InsufficientArgumentsError{})
 	})
 
@@ -124,7 +124,7 @@ func TestCheckAssert(t *testing.T) {
 
 		_, err := parseAndCheck(t, `let _ = assert(1)`)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, errs[0], &sema.TypeMismatchError{})
 	})
 
@@ -146,7 +146,7 @@ func TestCheckAssert(t *testing.T) {
 
 		_, err := parseAndCheck(t, `let _ = assert(true, message: 1)`)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, errs[0], &sema.TypeMismatchError{})
 	})
 
@@ -154,7 +154,7 @@ func TestCheckAssert(t *testing.T) {
 
 		_, err := parseAndCheck(t, `let _ = assert(true, "")`)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, errs[0], &sema.MissingArgumentLabelError{})
 	})
 
@@ -162,7 +162,7 @@ func TestCheckAssert(t *testing.T) {
 
 		_, err := parseAndCheck(t, `let _ = assert(true, message: "foo", true)`)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, errs[0], &sema.ExcessiveArgumentsError{})
 	})
 }
@@ -218,9 +218,9 @@ func TestCheckPanic(t *testing.T) {
 	baseValueActivation.DeclareValue(PanicFunction)
 
 	parseAndCheck := func(t *testing.T, code string) (*sema.Checker, error) {
-		return checker.ParseAndCheckWithOptions(t,
+		return ParseAndCheckWithOptions(t,
 			code,
-			checker.ParseAndCheckOptions{
+			ParseAndCheckOptions{
 				Config: &sema.Config{
 					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 						return baseValueActivation
@@ -234,7 +234,7 @@ func TestCheckPanic(t *testing.T) {
 
 		_, err := parseAndCheck(t, `let _ = panic()`)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, errs[0], &sema.InsufficientArgumentsError{})
 	})
 
@@ -250,7 +250,7 @@ func TestCheckPanic(t *testing.T) {
 
 		_, err := parseAndCheck(t, `let _ = panic(true)`)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, errs[0], &sema.TypeMismatchError{})
 	})
 
@@ -258,7 +258,7 @@ func TestCheckPanic(t *testing.T) {
 
 		_, err := parseAndCheck(t, `let _ = panic("test", 1)`)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, errs[0], &sema.ExcessiveArgumentsError{})
 	})
 }

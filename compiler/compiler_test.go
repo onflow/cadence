@@ -24,12 +24,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/compiler/ir"
-	"github.com/onflow/cadence/tests/checker"
+	. "github.com/onflow/cadence/tests/sema_utils"
 )
 
 func TestCompilerSimple(t *testing.T) {
 
-	checker, err := checker.ParseAndCheck(t, `
+	checker, err := ParseAndCheck(t, `
       fun inc(a: Int): Int {
           let mod = 1
           return a + mod
