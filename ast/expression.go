@@ -1491,7 +1491,7 @@ func FunctionDocument(
 	}
 
 	// NOTE: not all functions have a parameter list,
-	// e.g. the `destroy` special function
+	// e.g. the `init` (initializer, special function)
 	if parameterList != nil {
 
 		signatureDoc = append(

@@ -1440,6 +1440,23 @@ func (e *InvalidEnumConformancesError) Error() string {
 	return "enums cannot conform to interfaces"
 }
 
+// InvalidAttachmentConformancesError
+
+type InvalidAttachmentConformancesError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidAttachmentConformancesError{}
+var _ errors.UserError = &InvalidAttachmentConformancesError{}
+
+func (*InvalidAttachmentConformancesError) isSemanticError() {}
+
+func (*InvalidAttachmentConformancesError) IsUserError() {}
+
+func (e *InvalidAttachmentConformancesError) Error() string {
+	return "attachments cannot conform to interfaces"
+}
+
 // ConformanceError
 
 // TODO: report each missing member and mismatch as note

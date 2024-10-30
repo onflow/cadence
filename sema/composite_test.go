@@ -2299,3 +2299,55 @@ func TestCheckKeywordsAsFieldNames(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckInvalidFunctionNestedTypeClash(t *testing.T) {
+
+	t.Parallel()
+	interfacePossibilities := []bool{true, false}
+
+	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		for _, isInterface := range interfacePossibilities {
+
+			interfaceKeyword := ""
+			if isInterface {
+				interfaceKeyword = "interface"
+			}
+
+			var baseType string
+
+			switch kind {
+			case common.CompositeKindContract:
+				// Cannot nest contracts
+				continue
+
+			case common.CompositeKindAttachment:
+				if isInterface {
+					continue
+				}
+				baseType = "for AnyStruct"
+			}
+
+			testName := fmt.Sprintf("%s_%s", kind.Keyword(), interfaceKeyword)
+
+			t.Run(testName, func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          contract C {
+                              %s %s getType %s {}
+                          }
+                        `,
+						kind.Keyword(),
+						interfaceKeyword,
+						baseType,
+					),
+				)
+
+				errs := RequireCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.RedeclarationError{}, errs[0])
+			})
+		}
+	}
+}

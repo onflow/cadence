@@ -53,9 +53,6 @@ type UpdateValidator interface {
 		oldDeclaration ast.Declaration,
 		newDeclaration ast.Declaration,
 	) bool
-
-	isTypeRemovalEnabled() bool
-	WithTypeRemovalEnabled(enabled bool) UpdateValidator
 }
 
 type checkConformanceFunc func(
@@ -74,7 +71,6 @@ type ContractUpdateValidator struct {
 	importLocations              map[ast.Identifier]common.Location
 	accountContractNamesProvider AccountContractNamesProvider
 	errors                       []error
-	typeRemovalEnabled           bool
 }
 
 // ContractUpdateValidator should implement ast.TypeEqualityChecker
@@ -104,15 +100,6 @@ func NewContractUpdateValidator(
 
 func (validator *ContractUpdateValidator) Location() common.Location {
 	return validator.location
-}
-
-func (validator *ContractUpdateValidator) isTypeRemovalEnabled() bool {
-	return validator.typeRemovalEnabled
-}
-
-func (validator *ContractUpdateValidator) WithTypeRemovalEnabled(enabled bool) UpdateValidator {
-	validator.typeRemovalEnabled = enabled
-	return validator
 }
 
 func (validator *ContractUpdateValidator) getCurrentDeclaration() ast.Declaration {
@@ -149,6 +136,7 @@ func (validator *ContractUpdateValidator) Validate() error {
 
 	checkDeclarationUpdatability(
 		validator,
+		validator.TypeComparator,
 		oldRootDecl,
 		newRootDecl,
 		validator.checkConformance,
@@ -299,6 +287,7 @@ func collectRemovedTypePragmas(
 
 func checkDeclarationUpdatability(
 	validator UpdateValidator,
+	typeComparator *TypeComparator,
 	oldDeclaration ast.Declaration,
 	newDeclaration ast.Declaration,
 	checkConformance checkConformanceFunc,
@@ -327,11 +316,33 @@ func checkDeclarationUpdatability(
 
 	checkFields(validator, oldDeclaration, newDeclaration)
 
-	checkNestedDeclarations(validator, oldDeclaration, newDeclaration, checkConformance)
+	checkNestedDeclarations(
+		validator,
+		typeComparator,
+		oldDeclaration,
+		newDeclaration,
+		checkConformance,
+	)
 
 	if newDecl, ok := newDeclaration.(*ast.CompositeDeclaration); ok {
 		if oldDecl, ok := oldDeclaration.(*ast.CompositeDeclaration); ok {
 			checkConformance(oldDecl, newDecl)
+		}
+	}
+
+	// Check if the base type of the attachment has changed.
+	if oldAttachment, ok := oldDeclaration.(*ast.AttachmentDeclaration); ok &&
+		oldAttachment.DeclarationKind() == common.DeclarationKindAttachment {
+
+		// NOTE: no need to check declaration kinds match, already checked above
+		if newAttachment, ok := newDeclaration.(*ast.AttachmentDeclaration); ok {
+			err := typeComparator.CheckNominalTypeEquality(
+				oldAttachment.BaseType,
+				newAttachment.BaseType,
+			)
+			if err != nil {
+				validator.report(err)
+			}
 		}
 	}
 }
@@ -412,12 +423,10 @@ func (validator *ContractUpdateValidator) checkNestedDeclarationRemoval(
 		return
 	}
 
-	if validator.typeRemovalEnabled {
-		// OK to remove a type if it is included in a #removedType pragma, and it is not an interface
-		if removedTypes.Contains(nestedDeclaration.DeclarationIdentifier().Identifier) &&
-			!declarationKind.IsInterfaceDeclaration() {
-			return
-		}
+	// OK to remove a type if it is included in a #removedType pragma, and it is not an interface
+	if removedTypes.Contains(nestedDeclaration.DeclarationIdentifier().Identifier) &&
+		!declarationKind.IsInterfaceDeclaration() {
+		return
 	}
 
 	validator.report(&MissingDeclarationError{
@@ -443,10 +452,6 @@ func checkTypeNotRemoved(
 	newDeclaration ast.Declaration,
 	removedTypes *orderedmap.OrderedMap[string, struct{}],
 ) {
-	if !validator.isTypeRemovalEnabled() {
-		return
-	}
-
 	if removedTypes.Contains(newDeclaration.DeclarationIdentifier().Identifier) {
 		validator.report(&UseOfRemovedTypeError{
 			Declaration: newDeclaration,
@@ -457,39 +462,39 @@ func checkTypeNotRemoved(
 
 func checkNestedDeclarations(
 	validator UpdateValidator,
+	typeComparator *TypeComparator,
 	oldDeclaration ast.Declaration,
 	newDeclaration ast.Declaration,
 	checkConformance checkConformanceFunc,
 ) {
 
 	var removedTypes *orderedmap.OrderedMap[string, struct{}]
-	if validator.isTypeRemovalEnabled() {
-		// process pragmas first, as they determine whether types can later be removed
-		oldRemovedTypes := collectRemovedTypePragmas(
-			validator,
-			oldDeclaration.DeclarationMembers().Pragmas(),
-			// Do not report errors for pragmas in the old code.
-			// We are only interested in collecting the pragmas in old code.
-			// This also avoid reporting mixed errors from both old and new codes.
-			false,
-		)
 
-		removedTypes = collectRemovedTypePragmas(
-			validator,
-			newDeclaration.DeclarationMembers().Pragmas(),
-			true,
-		)
+	// process pragmas first, as they determine whether types can later be removed
+	oldRemovedTypes := collectRemovedTypePragmas(
+		validator,
+		oldDeclaration.DeclarationMembers().Pragmas(),
+		// Do not report errors for pragmas in the old code.
+		// We are only interested in collecting the pragmas in old code.
+		// This also avoid reporting mixed errors from both old and new codes.
+		false,
+	)
 
-		// #typeRemoval pragmas cannot be removed, so any that appear in the old program must appear in the new program
-		// they can however, be added, so use the new program's type removals for the purposes of checking the upgrade
-		oldRemovedTypes.Foreach(func(oldRemovedType string, _ struct{}) {
-			if !removedTypes.Contains(oldRemovedType) {
-				validator.report(&TypeRemovalPragmaRemovalError{
-					RemovedType: oldRemovedType,
-				})
-			}
-		})
-	}
+	removedTypes = collectRemovedTypePragmas(
+		validator,
+		newDeclaration.DeclarationMembers().Pragmas(),
+		true,
+	)
+
+	// #typeRemoval pragmas cannot be removed, so any that appear in the old program must appear in the new program
+	// they can however, be added, so use the new program's type removals for the purposes of checking the upgrade
+	oldRemovedTypes.Foreach(func(oldRemovedType string, _ struct{}) {
+		if !removedTypes.Contains(oldRemovedType) {
+			validator.report(&TypeRemovalPragmaRemovalError{
+				RemovedType: oldRemovedType,
+			})
+		}
+	})
 
 	oldNominalTypeDecls := getNestedNominalTypeDecls(oldDeclaration)
 
@@ -503,7 +508,13 @@ func checkNestedDeclarations(
 			continue
 		}
 
-		checkDeclarationUpdatability(validator, oldNestedDecl, newNestedDecl, checkConformance)
+		checkDeclarationUpdatability(
+			validator,
+			typeComparator,
+			oldNestedDecl,
+			newNestedDecl,
+			checkConformance,
+		)
 
 		// If there's a matching new decl, then remove the old one from the map.
 		delete(oldNominalTypeDecls, newNestedDecl.Identifier.Identifier)
@@ -519,7 +530,13 @@ func checkNestedDeclarations(
 			continue
 		}
 
-		checkDeclarationUpdatability(validator, oldNestedDecl, newNestedDecl, checkConformance)
+		checkDeclarationUpdatability(
+			validator,
+			typeComparator,
+			oldNestedDecl,
+			newNestedDecl,
+			checkConformance,
+		)
 
 		// If there's a matching new decl, then remove the old one from the map.
 		delete(oldNominalTypeDecls, newNestedDecl.Identifier.Identifier)
@@ -535,7 +552,13 @@ func checkNestedDeclarations(
 			continue
 		}
 
-		checkDeclarationUpdatability(validator, oldNestedDecl, newNestedDecl, checkConformance)
+		checkDeclarationUpdatability(
+			validator,
+			typeComparator,
+			oldNestedDecl,
+			newNestedDecl,
+			checkConformance,
+		)
 
 		// If there's a matching new decl, then remove the old one from the map.
 		delete(oldNominalTypeDecls, newNestedDecl.Identifier.Identifier)
