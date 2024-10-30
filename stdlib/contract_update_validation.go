@@ -136,6 +136,7 @@ func (validator *ContractUpdateValidator) Validate() error {
 
 	checkDeclarationUpdatability(
 		validator,
+		validator.TypeComparator,
 		oldRootDecl,
 		newRootDecl,
 		validator.checkConformance,
@@ -286,6 +287,7 @@ func collectRemovedTypePragmas(
 
 func checkDeclarationUpdatability(
 	validator UpdateValidator,
+	typeComparator *TypeComparator,
 	oldDeclaration ast.Declaration,
 	newDeclaration ast.Declaration,
 	checkConformance checkConformanceFunc,
@@ -314,11 +316,33 @@ func checkDeclarationUpdatability(
 
 	checkFields(validator, oldDeclaration, newDeclaration)
 
-	checkNestedDeclarations(validator, oldDeclaration, newDeclaration, checkConformance)
+	checkNestedDeclarations(
+		validator,
+		typeComparator,
+		oldDeclaration,
+		newDeclaration,
+		checkConformance,
+	)
 
 	if newDecl, ok := newDeclaration.(*ast.CompositeDeclaration); ok {
 		if oldDecl, ok := oldDeclaration.(*ast.CompositeDeclaration); ok {
 			checkConformance(oldDecl, newDecl)
+		}
+	}
+
+	// Check if the base type of the attachment has changed.
+	if oldAttachment, ok := oldDeclaration.(*ast.AttachmentDeclaration); ok &&
+		oldAttachment.DeclarationKind() == common.DeclarationKindAttachment {
+
+		// NOTE: no need to check declaration kinds match, already checked above
+		if newAttachment, ok := newDeclaration.(*ast.AttachmentDeclaration); ok {
+			err := typeComparator.CheckNominalTypeEquality(
+				oldAttachment.BaseType,
+				newAttachment.BaseType,
+			)
+			if err != nil {
+				validator.report(err)
+			}
 		}
 	}
 }
@@ -438,6 +462,7 @@ func checkTypeNotRemoved(
 
 func checkNestedDeclarations(
 	validator UpdateValidator,
+	typeComparator *TypeComparator,
 	oldDeclaration ast.Declaration,
 	newDeclaration ast.Declaration,
 	checkConformance checkConformanceFunc,
@@ -483,7 +508,13 @@ func checkNestedDeclarations(
 			continue
 		}
 
-		checkDeclarationUpdatability(validator, oldNestedDecl, newNestedDecl, checkConformance)
+		checkDeclarationUpdatability(
+			validator,
+			typeComparator,
+			oldNestedDecl,
+			newNestedDecl,
+			checkConformance,
+		)
 
 		// If there's a matching new decl, then remove the old one from the map.
 		delete(oldNominalTypeDecls, newNestedDecl.Identifier.Identifier)
@@ -499,7 +530,13 @@ func checkNestedDeclarations(
 			continue
 		}
 
-		checkDeclarationUpdatability(validator, oldNestedDecl, newNestedDecl, checkConformance)
+		checkDeclarationUpdatability(
+			validator,
+			typeComparator,
+			oldNestedDecl,
+			newNestedDecl,
+			checkConformance,
+		)
 
 		// If there's a matching new decl, then remove the old one from the map.
 		delete(oldNominalTypeDecls, newNestedDecl.Identifier.Identifier)
@@ -515,7 +552,13 @@ func checkNestedDeclarations(
 			continue
 		}
 
-		checkDeclarationUpdatability(validator, oldNestedDecl, newNestedDecl, checkConformance)
+		checkDeclarationUpdatability(
+			validator,
+			typeComparator,
+			oldNestedDecl,
+			newNestedDecl,
+			checkConformance,
+		)
 
 		// If there's a matching new decl, then remove the old one from the map.
 		delete(oldNominalTypeDecls, newNestedDecl.Identifier.Identifier)

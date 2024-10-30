@@ -114,6 +114,7 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) Validate() error {
 
 	checkDeclarationUpdatability(
 		validator,
+		validator.TypeComparator,
 		oldRootDecl,
 		newRootDecl,
 		validator.checkConformanceV1,

@@ -95,6 +95,36 @@ func TestCheckInvalidContractInterfaceAccountFunction(t *testing.T) {
 	assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
 }
 
+func TestCheckInvalidContractAccountType(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      contract Test {
+          struct account {}
+      }
+    `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
+}
+
+func TestCheckInvalidContractInterfaceAccountType(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      contract interface Test {
+          struct interface account {}
+      }
+    `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
+}
+
 func TestCheckContractAccountFieldUse(t *testing.T) {
 
 	t.Parallel()

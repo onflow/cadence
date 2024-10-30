@@ -241,6 +241,8 @@ func (e *interpreterEnvironment) Configure(
 	e.InterpreterConfig.Storage = storage
 	e.coverageReport = coverageReport
 	e.stackDepthLimiter.depth = 0
+
+	e.configureVersionedFeatures()
 }
 
 func (e *interpreterEnvironment) DeclareValue(valueDeclaration stdlib.StandardLibraryValue, location common.Location) {
@@ -1423,4 +1425,20 @@ func (e *interpreterEnvironment) newValidateAccountCapabilitiesPublishHandler() 
 		}
 		return ok, err
 	}
+}
+
+func (e *interpreterEnvironment) configureVersionedFeatures() {
+	var (
+		minimumRequiredVersion string
+		err                    error
+	)
+	errors.WrapPanic(func() {
+		minimumRequiredVersion, err = e.runtimeInterface.MinimumRequiredVersion()
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	// No feature flags yet
+	_ = minimumRequiredVersion
 }
