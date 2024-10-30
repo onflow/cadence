@@ -85,4 +85,5 @@ const (
 	ElementTypeForceExpression
 	ElementTypePathExpression
 	ElementTypeAttachExpression
+	ElementTypeStringTemplateExpression
 )

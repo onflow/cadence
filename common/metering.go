@@ -795,6 +795,13 @@ func NewArrayExpressionMemoryUsage(length int) MemoryUsage {
 	}
 }
 
+func NewStringTemplateExpressionMemoryUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindStringTemplateExpression,
+		Amount: uint64(length),
+	}
+}
+
 func NewDictionaryExpressionMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
 		Kind: MemoryKindDictionaryExpression,

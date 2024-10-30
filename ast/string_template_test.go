@@ -16,24 +16,33 @@
  * limitations under the License.
  */
 
-package sema
+package ast
 
-// BoolType represents the boolean type
-var BoolType = &SimpleType{
-	Name:          "Bool",
-	QualifiedName: "Bool",
-	TypeID:        "Bool",
-	TypeTag:       BoolTypeTag,
-	IsResource:    false,
-	Storable:      true,
-	Primitive:     true,
-	Equatable:     true,
-	Comparable:    true,
-	Exportable:    true,
-	Importable:    true,
-	conformances: []*InterfaceType{
-		StructStringerType,
-	},
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/turbolent/prettier"
+)
+
+func TestStringTemplate_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	stmt := &StringTemplateExpression{
+		Values: []string{
+			"abc",
+		},
+		Expressions: []Expression{},
+		Range: Range{
+			StartPos: Position{Offset: 4, Line: 2, Column: 3},
+			EndPos:   Position{Offset: 11, Line: 2, Column: 10},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Text("\"abc\""),
+		stmt.Doc(),
+	)
 }
-
-var BoolTypeAnnotation = NewTypeAnnotation(BoolType)
