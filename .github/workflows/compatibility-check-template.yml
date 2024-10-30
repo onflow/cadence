@@ -108,6 +108,7 @@ jobs:
           path: |
             ./tmp/output-old.txt
             ./tmp/output-new.txt
+            ./tmp/contracts.csv
 
       # Check Diff
 
