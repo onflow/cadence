@@ -4,6 +4,8 @@ go 1.22
 
 require (
 	github.com/onflow/cadence v1.1.1-0.20241018202510-7f1b6fbc57c2
+	github.com/onflow/flow-core-contracts/lib/go/contracts v1.4.0
+	github.com/onflow/flow-go v0.38.0-preview.0.0.20241018215103-774056466e36
 	github.com/rs/zerolog v1.29.0
 	github.com/stretchr/testify v1.9.0
 )
@@ -43,11 +45,9 @@ require (
 	github.com/multiformats/go-varint v0.0.7 // indirect
 	github.com/onflow/atree v0.8.0 // indirect
 	github.com/onflow/crypto v0.25.2 // indirect
-	github.com/onflow/flow-core-contracts/lib/go/contracts v1.4.0 // indirect
 	github.com/onflow/flow-core-contracts/lib/go/templates v1.3.3-0.20241017220455-79fdc6c8ba53 // indirect
 	github.com/onflow/flow-ft/lib/go/contracts v1.0.1 // indirect
 	github.com/onflow/flow-ft/lib/go/templates v1.0.1 // indirect
-	github.com/onflow/flow-go v0.38.0-preview.0.0.20241018215103-774056466e36 // indirect
 	github.com/onflow/flow-go-sdk v1.1.0 // indirect
 	github.com/onflow/flow-nft/lib/go/contracts v1.2.2 // indirect
 	github.com/onflow/flow-nft/lib/go/templates v1.2.1 // indirect
@@ -75,10 +75,10 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/zeebo/blake3 v0.2.3 // indirect
 	go.opentelemetry.io/otel v1.24.0 // indirect
-	golang.org/x/crypto v0.26.0 // indirect
+	golang.org/x/crypto v0.28.0 // indirect
 	golang.org/x/exp v0.0.0-20240119083558-1b970713d09a // indirect
-	golang.org/x/sys v0.23.0 // indirect
-	golang.org/x/text v0.17.0 // indirect
+	golang.org/x/sys v0.26.0 // indirect
+	golang.org/x/text v0.19.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	gonum.org/v1/gonum v0.14.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect

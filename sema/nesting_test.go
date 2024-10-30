@@ -259,9 +259,10 @@ func TestCheckInvalidCompositeDeclarationNestedDuplicateNames(t *testing.T) {
       }
     `)
 
-	errs := RequireCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
+	assert.IsType(t, &sema.RedeclarationError{}, errs[1])
 }
 
 func TestCheckCompositeDeclarationNestedConstructorAndType(t *testing.T) {
