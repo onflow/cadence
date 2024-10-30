@@ -82,17 +82,6 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) WithUserDefinedTypeChan
 	return validator
 }
 
-func (validator *CadenceV042ToV1ContractUpdateValidator) isTypeRemovalEnabled() bool {
-	return validator.underlyingUpdateValidator.isTypeRemovalEnabled()
-}
-
-func (validator *CadenceV042ToV1ContractUpdateValidator) WithTypeRemovalEnabled(
-	enabled bool,
-) UpdateValidator {
-	validator.underlyingUpdateValidator.WithTypeRemovalEnabled(enabled)
-	return validator
-}
-
 func (validator *CadenceV042ToV1ContractUpdateValidator) getCurrentDeclaration() ast.Declaration {
 	return validator.underlyingUpdateValidator.getCurrentDeclaration()
 }

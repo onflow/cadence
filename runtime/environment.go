@@ -196,7 +196,6 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		CapabilityBorrowHandler:                   e.newCapabilityBorrowHandler(),
 		CapabilityCheckHandler:                    e.newCapabilityCheckHandler(),
 		LegacyContractUpgradeEnabled:              e.config.LegacyContractUpgradeEnabled,
-		ContractUpdateTypeRemovalEnabled:          e.config.ContractUpdateTypeRemovalEnabled,
 		ValidateAccountCapabilitiesGetHandler:     e.newValidateAccountCapabilitiesGetHandler(),
 		ValidateAccountCapabilitiesPublishHandler: e.newValidateAccountCapabilitiesPublishHandler(),
 	}
