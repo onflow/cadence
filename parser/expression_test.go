@@ -34,7 +34,6 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/parser/lexer"
-	"github.com/onflow/cadence/runtime/tests/utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
@@ -6331,7 +6330,7 @@ func TestParseStringTemplate(t *testing.T) {
 		}
 
 		require.Error(t, err)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected token ')'",
@@ -6543,7 +6542,7 @@ func TestParseStringTemplate(t *testing.T) {
 			},
 		}
 
-		utils.AssertEqualWithDiff(t, expected, actual)
+		AssertEqualWithDiff(t, expected, actual)
 	})
 }
 
