@@ -21,17 +21,16 @@ package stdlib
 import (
 	"testing"
 
-	"github.com/onflow/cadence/activations"
-	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/tests/checker"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/parser"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func newUnmeteredInMemoryStorage() interpreter.InMemoryStorage {
@@ -53,7 +52,7 @@ func newInterpreter(t *testing.T, code string, valueDeclarations ...StandardLibr
 
 	checker, err := sema.NewChecker(
 		program,
-		utils.TestLocation,
+		TestLocation,
 		nil,
 		&sema.Config{
 			BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
@@ -100,9 +99,9 @@ func TestCheckAssert(t *testing.T) {
 	baseValueActivation.DeclareValue(AssertFunction)
 
 	parseAndCheck := func(t *testing.T, code string) (*sema.Checker, error) {
-		return checker.ParseAndCheckWithOptions(t,
+		return ParseAndCheckWithOptions(t,
 			code,
-			checker.ParseAndCheckOptions{
+			ParseAndCheckOptions{
 				Config: &sema.Config{
 					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 						return baseValueActivation
@@ -116,7 +115,7 @@ func TestCheckAssert(t *testing.T) {
 
 		_, err := parseAndCheck(t, `let _ = assert()`)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, errs[0], &sema.InsufficientArgumentsError{})
 	})
 
@@ -124,7 +123,7 @@ func TestCheckAssert(t *testing.T) {
 
 		_, err := parseAndCheck(t, `let _ = assert(1)`)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, errs[0], &sema.TypeMismatchError{})
 	})
 
@@ -146,7 +145,7 @@ func TestCheckAssert(t *testing.T) {
 
 		_, err := parseAndCheck(t, `let _ = assert(true, message: 1)`)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, errs[0], &sema.TypeMismatchError{})
 	})
 
@@ -154,7 +153,7 @@ func TestCheckAssert(t *testing.T) {
 
 		_, err := parseAndCheck(t, `let _ = assert(true, "")`)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, errs[0], &sema.MissingArgumentLabelError{})
 	})
 
@@ -162,7 +161,7 @@ func TestCheckAssert(t *testing.T) {
 
 		_, err := parseAndCheck(t, `let _ = assert(true, message: "foo", true)`)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, errs[0], &sema.ExcessiveArgumentsError{})
 	})
 }
@@ -184,7 +183,7 @@ func TestInterpretAssert(t *testing.T) {
 			Err: AssertionError{
 				Message: "oops",
 			},
-			Location: utils.TestLocation,
+			Location: TestLocation,
 		},
 		err,
 	)
@@ -195,7 +194,7 @@ func TestInterpretAssert(t *testing.T) {
 			Err: AssertionError{
 				Message: "",
 			},
-			Location: utils.TestLocation,
+			Location: TestLocation,
 		},
 		err)
 
@@ -218,9 +217,9 @@ func TestCheckPanic(t *testing.T) {
 	baseValueActivation.DeclareValue(PanicFunction)
 
 	parseAndCheck := func(t *testing.T, code string) (*sema.Checker, error) {
-		return checker.ParseAndCheckWithOptions(t,
+		return ParseAndCheckWithOptions(t,
 			code,
-			checker.ParseAndCheckOptions{
+			ParseAndCheckOptions{
 				Config: &sema.Config{
 					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 						return baseValueActivation
@@ -234,7 +233,7 @@ func TestCheckPanic(t *testing.T) {
 
 		_, err := parseAndCheck(t, `let _ = panic()`)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, errs[0], &sema.InsufficientArgumentsError{})
 	})
 
@@ -250,7 +249,7 @@ func TestCheckPanic(t *testing.T) {
 
 		_, err := parseAndCheck(t, `let _ = panic(true)`)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, errs[0], &sema.TypeMismatchError{})
 	})
 
@@ -258,7 +257,7 @@ func TestCheckPanic(t *testing.T) {
 
 		_, err := parseAndCheck(t, `let _ = panic("test", 1)`)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, errs[0], &sema.ExcessiveArgumentsError{})
 	})
 }
@@ -278,7 +277,7 @@ func TestInterpretPanic(t *testing.T) {
 			Err: PanicError{
 				Message: "oops",
 			},
-			Location: utils.TestLocation,
+			Location: TestLocation,
 		},
 		err,
 	)

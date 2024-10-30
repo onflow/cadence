@@ -26,8 +26,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/common"
-	. "github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/tests/utils"
+	"github.com/onflow/cadence/interpreter"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 func TestValueDeepCopyAndDeepRemove(t *testing.T) {
@@ -38,49 +38,49 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	inter, err := NewInterpreter(
+	inter, err := interpreter.NewInterpreter(
 		nil,
-		utils.TestLocation,
-		&Config{
+		TestLocation,
+		&interpreter.Config{
 			Storage: storage,
 		},
 	)
 	require.NoError(t, err)
 
-	dictionaryStaticType := &DictionaryStaticType{
-		KeyType:   PrimitiveStaticTypeString,
-		ValueType: PrimitiveStaticTypeInt256,
+	dictionaryStaticType := &interpreter.DictionaryStaticType{
+		KeyType:   interpreter.PrimitiveStaticTypeString,
+		ValueType: interpreter.PrimitiveStaticTypeInt256,
 	}
 
-	dictValueKey := NewUnmeteredStringValue(
+	dictValueKey := interpreter.NewUnmeteredStringValue(
 		strings.Repeat("x", int(atree.MaxInlineMapKeySize()+1)),
 	)
 
-	dictValueValue := NewUnmeteredInt256ValueFromInt64(1)
-	dictValue := NewDictionaryValue(
+	dictValueValue := interpreter.NewUnmeteredInt256ValueFromInt64(1)
+	dictValue := interpreter.NewDictionaryValue(
 		inter,
-		EmptyLocationRange,
+		interpreter.EmptyLocationRange,
 		dictionaryStaticType,
 		dictValueKey, dictValueValue,
 	)
 
-	arrayValue := NewArrayValue(
+	arrayValue := interpreter.NewArrayValue(
 		inter,
-		EmptyLocationRange,
-		&VariableSizedStaticType{
+		interpreter.EmptyLocationRange,
+		&interpreter.VariableSizedStaticType{
 			Type: dictionaryStaticType,
 		},
 		common.ZeroAddress,
 		dictValue,
 	)
 
-	optionalValue := NewUnmeteredSomeValueNonCopying(arrayValue)
+	optionalValue := interpreter.NewUnmeteredSomeValueNonCopying(arrayValue)
 
 	compositeValue := newTestCompositeValue(inter, address)
 
 	compositeValue.SetMember(
 		inter,
-		EmptyLocationRange,
+		interpreter.EmptyLocationRange,
 		"value",
 		optionalValue,
 	)
@@ -98,8 +98,4 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 	}
 
 	require.Equal(t, 1, count)
-}
-
-func newUnmeteredInMemoryStorage() InMemoryStorage {
-	return NewInMemoryStorage(nil)
 }

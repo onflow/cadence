@@ -24,10 +24,10 @@ import (
 
 	"github.com/onflow/atree"
 
-	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/stdlib"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 type KnownStorageMap struct {

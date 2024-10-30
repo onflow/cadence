@@ -19,32 +19,39 @@
 package compatibility_check
 
 import (
+	"encoding/csv"
 	"fmt"
 	"io"
 	"log"
 	"reflect"
 	"strings"
 
-	"encoding/csv"
-
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/parser"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 	"github.com/onflow/cadence/tools/analysis"
+
+	"github.com/onflow/flow-go/fvm/systemcontracts"
+	"github.com/onflow/flow-go/model/flow"
+
+	"github.com/onflow/flow-core-contracts/lib/go/contracts"
 )
 
 const LoadMode = analysis.NeedTypes
 
 type ContractsChecker struct {
+	chain        flow.Chain
 	Codes        map[common.Location][]byte
 	outputWriter io.StringWriter
 }
 
-func NewContractChecker(outputWriter io.StringWriter) *ContractsChecker {
+func NewContractChecker(chain flow.Chain, outputWriter io.StringWriter) *ContractsChecker {
 	checker := &ContractsChecker{
 		Codes:        map[common.Location][]byte{},
 		outputWriter: outputWriter,
+		chain:        chain,
 	}
 
 	return checker
@@ -117,7 +124,23 @@ func (c *ContractsChecker) analyze(
 	config *analysis.Config,
 	locations []common.Location,
 ) {
-	programs := make(analysis.Programs, len(locations))
+
+	sc := systemcontracts.SystemContractsForChain(c.chain.ChainID())
+
+	cryptoContractLocation := common.AddressLocation{
+		Address: common.Address(sc.Crypto.Address),
+		Name:    string(stdlib.CryptoContractLocation),
+	}
+
+	// TODO: Remove once the Crypto contract is available on-chain.
+	c.Codes[cryptoContractLocation] = contracts.Crypto()
+
+	programs := analysis.Programs{
+		Programs: make(map[common.Location]*analysis.Program, len(locations)),
+		CryptoContractLocation: func() common.Location {
+			return cryptoContractLocation
+		},
+	}
 
 	log.Println("Checking contracts ...")
 

@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	. "github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 func TestOverwriteError_Error(t *testing.T) {
@@ -47,11 +47,11 @@ func TestErrorOutputIncludesLocationRage(t *testing.T) {
 	t.Parallel()
 	require.Equal(t,
 		Error{
-			Location: utils.TestLocation,
+			Location: TestLocation,
 			Err: DereferenceError{
 				Cause: "the value being referenced has been destroyed or moved",
 				LocationRange: LocationRange{
-					Location: utils.TestLocation,
+					Location: TestLocation,
 					HasPosition: ast.Range{
 						StartPos: ast.Position{Offset: 0, Column: 0, Line: 0},
 						EndPos:   ast.Position{Offset: 0, Column: 0, Line: 0},

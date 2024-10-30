@@ -423,8 +423,7 @@ func (e *Encoder) encodeTypeDefs(types []cadence.Type, tids ccfTypeIDByCadenceTy
 //	/ dict-value
 //	/ composite-value
 //	/ path-value
-//	/ path-capability-value
-//	/ id-capability-value
+//	/ capability-value
 //	/ inclusiverange-value
 //	/ function-value
 //	/ type-value
@@ -1030,7 +1029,13 @@ func encodeAndSortKeyValuePairs(
 
 // encodeInclusiveRange encodes cadence.InclusiveRange as
 // language=CDDL
-// inclusiverange-value = [3*3 (key: value, value: value)]
+// inclusiverange-value = [
+//
+//	start: value,
+//	stop: value,
+//	step: value,
+//
+// ]
 func (e *Encoder) encodeInclusiveRange(v *cadence.InclusiveRange, tids ccfTypeIDByCadenceType) error {
 	staticElementType := v.InclusiveRangeType.ElementType
 
@@ -1240,7 +1245,7 @@ func (e *Encoder) encodePath(x cadence.Path) error {
 
 // encodeCapability encodes cadence.Capability as
 // language=CDDL
-// id-capability-value = [
+// capability-value = [
 //
 //	address: address-value,
 //	id: uint64-value
@@ -1569,8 +1574,7 @@ func (e *Encoder) encodeReferenceTypeValue(typ *cadence.ReferenceType, visited c
 //
 //	; cbor-tag-intersection-type-value
 //	#6.191([
-//	  type: type-value / nil,
-//	  types: [* type-value]
+//	  types: [+ type-value]
 //	])
 func (e *Encoder) encodeIntersectionTypeValue(typ *cadence.IntersectionType, visited ccfTypeIDByCadenceType) error {
 	rawTagNum := []byte{0xd8, CBORTagIntersectionTypeValue}

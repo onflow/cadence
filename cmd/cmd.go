@@ -97,13 +97,6 @@ func DefaultCheckerConfig(
 			importedLocation common.Location,
 			_ ast.Range,
 		) (sema.Import, error) {
-			if importedLocation == stdlib.CryptoCheckerLocation {
-				cryptoChecker := stdlib.CryptoChecker()
-				return sema.ElaborationImport{
-					Elaboration: cryptoChecker.Elaboration,
-				}, nil
-			}
-
 			stringLocation, ok := importedLocation.(common.StringLocation)
 			if !ok {
 				return nil, &sema.CheckerError{
@@ -126,7 +119,6 @@ func DefaultCheckerConfig(
 				Elaboration: importedChecker.Elaboration,
 			}, nil
 		},
-		AttachmentsEnabled: true,
 	}
 }
 

@@ -19,110 +19,12 @@
 package stdlib
 
 import (
-	"sync"
-
-	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/parser"
-	"github.com/onflow/cadence/stdlib/contracts"
-
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
 
-const CryptoCheckerLocation = common.IdentifierLocation("Crypto")
-
-var cryptoOnce sync.Once
-
-// Deprecated: Use CryptoChecker instead
-var cryptoChecker *sema.Checker
-
-// Deprecated: Use CryptoContractType instead
-var cryptoContractType *sema.CompositeType
-
-// Deprecated: Use CryptoContractInitializerTypes
-var cryptoContractInitializerTypes []sema.Type
-
-func CryptoChecker() *sema.Checker {
-	cryptoOnce.Do(initCrypto)
-	return cryptoChecker
-}
-
-func CryptoContractType() *sema.CompositeType {
-	cryptoOnce.Do(initCrypto)
-	return cryptoContractType
-}
-
-func CryptoContractInitializerTypes() []sema.Type {
-	cryptoOnce.Do(initCrypto)
-	return cryptoContractInitializerTypes
-}
-
-func initCrypto() {
-	program, err := parser.ParseProgram(
-		nil,
-		contracts.Crypto,
-		parser.Config{},
-	)
-	if err != nil {
-		panic(err)
-	}
-
-	cryptoChecker, err = sema.NewChecker(
-		program,
-		CryptoCheckerLocation,
-		nil,
-		&sema.Config{
-			AccessCheckMode: sema.AccessCheckModeStrict,
-		},
-	)
-	if err != nil {
-		panic(err)
-	}
-
-	err = cryptoChecker.Check()
-	if err != nil {
-		panic(err)
-	}
-
-	variable, ok := cryptoChecker.Elaboration.GetGlobalType("Crypto")
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	cryptoContractType = variable.Type.(*sema.CompositeType)
-
-	cryptoContractInitializerTypes = make([]sema.Type, len(cryptoContractType.ConstructorParameters))
-	for i, parameter := range cryptoContractType.ConstructorParameters {
-		cryptoContractInitializerTypes[i] = parameter.TypeAnnotation.Type
-	}
-}
-
-func NewCryptoContract(
-	inter *interpreter.Interpreter,
-	constructor interpreter.FunctionValue,
-	invocationRange ast.Range,
-) (
-	*interpreter.CompositeValue,
-	error,
-) {
-	initializerTypes := CryptoContractInitializerTypes()
-	value, err := inter.InvokeFunctionValue(
-		constructor,
-		nil,
-		initializerTypes,
-		initializerTypes,
-		CryptoContractType(),
-		invocationRange,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	compositeValue := value.(*interpreter.CompositeValue)
-
-	return compositeValue, nil
-}
+const CryptoContractLocation = common.IdentifierLocation("Crypto")
 
 func cryptoAlgorithmEnumConstructorType[T sema.CryptoAlgorithm](
 	enumType *sema.CompositeType,
