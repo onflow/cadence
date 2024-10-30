@@ -161,6 +161,8 @@ type Interface interface {
 		path interpreter.PathValue,
 		capabilityBorrowType *interpreter.ReferenceStaticType,
 	) (bool, error)
+
+	MinimumRequiredVersion() (string, error)
 }
 
 type MeterInterface interface {

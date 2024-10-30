@@ -83,6 +83,10 @@ func newContractRemovalTransaction(contractName string) string {
 }
 
 func newContractDeploymentTransactor(t *testing.T, config Config) func(code string) error {
+	return newContractDeploymentTransactorWithVersion(t, config, "")
+}
+
+func newContractDeploymentTransactorWithVersion(t *testing.T, config Config, version string) func(code string) error {
 
 	rt := NewTestInterpreterRuntimeWithConfig(config)
 
@@ -112,6 +116,9 @@ func newContractDeploymentTransactor(t *testing.T, config Config) func(code stri
 			events = append(events, event)
 			return nil
 		},
+		OnMinimumRequiredVersion: func() (string, error) {
+			return version, nil
+		},
 	}
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
@@ -132,7 +139,18 @@ func newContractDeploymentTransactor(t *testing.T, config Config) func(code stri
 // testDeployAndUpdate deploys a contract in one transaction,
 // then updates the contract in another transaction
 func testDeployAndUpdate(t *testing.T, name string, oldCode string, newCode string, config Config) error {
-	executeTransaction := newContractDeploymentTransactor(t, config)
+	return testDeployAndUpdateWithVersion(t, name, oldCode, newCode, config, "")
+}
+
+func testDeployAndUpdateWithVersion(
+	t *testing.T,
+	name string,
+	oldCode string,
+	newCode string,
+	config Config,
+	version string,
+) error {
+	executeTransaction := newContractDeploymentTransactorWithVersion(t, config, version)
 	err := executeTransaction(newContractAddTransaction(name, oldCode))
 	require.NoError(t, err)
 
@@ -3665,4 +3683,51 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
 			require.ErrorAs(t, err, &expectedErr)
 		},
 	)
+}
+
+func TestAttachmentsUpdates(t *testing.T) {
+	t.Parallel()
+
+	testWithValidators(t,
+		"Keep base type",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                    access(all) attachment A for AnyResource {}
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    access(all) attachment A for AnyResource {}
+                }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			require.NoError(t, err)
+		},
+	)
+
+	testWithValidators(t,
+		"Change base type",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                    access(all) attachment A for AnyResource {}
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    access(all) attachment A for AnyStruct {}
+                }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+
+			var expectedErr *stdlib.TypeMismatchError
+			require.ErrorAs(t, err, &expectedErr)
+		})
 }

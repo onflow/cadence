@@ -1731,7 +1731,8 @@ func changeAccountContracts(
 			)
 		}
 
-		validator = validator.WithTypeRemovalEnabled(contractUpdateTypeRemovalEnabled)
+		validator = validator.
+			WithTypeRemovalEnabled(contractUpdateTypeRemovalEnabled)
 
 		err = validator.Validate()
 		handleContractUpdateError(err, newCode)
