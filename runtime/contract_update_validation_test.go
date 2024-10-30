@@ -177,31 +177,14 @@ func testWithValidatorsAndTypeRemovalEnabled(
 		withC1Upgrade := withC1Upgrade
 		name := name
 
-		for _, withTypeRemovalEnabled := range []bool{true, false} {
-			withTypeRemovalEnabled := withTypeRemovalEnabled
-			name := name
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-			switch {
-			case withC1Upgrade && withTypeRemovalEnabled:
-				name = fmt.Sprintf("%s (with C1 validator and type removal enabled)", name)
+			config := DefaultTestInterpreterConfig
+			config.LegacyContractUpgradeEnabled = withC1Upgrade
 
-			case withC1Upgrade:
-				name = fmt.Sprintf("%s (with C1 validator)", name)
-
-			case withTypeRemovalEnabled:
-				name = fmt.Sprintf("%s (with type removal enabled)", name)
-			}
-
-			t.Run(name, func(t *testing.T) {
-				t.Parallel()
-
-				config := DefaultTestInterpreterConfig
-				config.LegacyContractUpgradeEnabled = withC1Upgrade
-				config.ContractUpdateTypeRemovalEnabled = withTypeRemovalEnabled
-
-				testFunc(t, config)
-			})
-		}
+			testFunc(t, config)
+		})
 	}
 }
 
@@ -3230,13 +3213,8 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
             `
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-
-			if config.ContractUpdateTypeRemovalEnabled {
-				var expectedErr *stdlib.TypeRemovalPragmaRemovalError
-				require.ErrorAs(t, err, &expectedErr)
-			} else {
-				require.NoError(t, err)
-			}
+			var expectedErr *stdlib.TypeRemovalPragmaRemovalError
+			require.ErrorAs(t, err, &expectedErr)
 		},
 	)
 
@@ -3262,13 +3240,8 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
             `
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-
-			if config.ContractUpdateTypeRemovalEnabled {
-				var expectedErr *stdlib.TypeRemovalPragmaRemovalError
-				require.ErrorAs(t, err, &expectedErr)
-			} else {
-				require.NoError(t, err)
-			}
+			var expectedErr *stdlib.TypeRemovalPragmaRemovalError
+			require.ErrorAs(t, err, &expectedErr)
 		},
 	)
 
@@ -3313,13 +3286,8 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
             `
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-
-			if config.ContractUpdateTypeRemovalEnabled {
-				var expectedErr *stdlib.InvalidTypeRemovalPragmaError
-				require.ErrorAs(t, err, &expectedErr)
-			} else {
-				require.NoError(t, err)
-			}
+			var expectedErr *stdlib.InvalidTypeRemovalPragmaError
+			require.ErrorAs(t, err, &expectedErr)
 		},
 	)
 
@@ -3342,13 +3310,8 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
             `
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-
-			if config.ContractUpdateTypeRemovalEnabled {
-				var expectedErr *stdlib.InvalidTypeRemovalPragmaError
-				require.ErrorAs(t, err, &expectedErr)
-			} else {
-				require.NoError(t, err)
-			}
+			var expectedErr *stdlib.InvalidTypeRemovalPragmaError
+			require.ErrorAs(t, err, &expectedErr)
 		},
 	)
 
@@ -3368,14 +3331,8 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
             `
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-
-			if config.ContractUpdateTypeRemovalEnabled {
-
-				var expectedErr *stdlib.InvalidTypeRemovalPragmaError
-				require.ErrorAs(t, err, &expectedErr)
-			} else {
-				require.NoError(t, err)
-			}
+			var expectedErr *stdlib.InvalidTypeRemovalPragmaError
+			require.ErrorAs(t, err, &expectedErr)
 		},
 	)
 
@@ -3395,13 +3352,8 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
             `
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-
-			if config.ContractUpdateTypeRemovalEnabled {
-				var expectedErr *stdlib.InvalidTypeRemovalPragmaError
-				require.ErrorAs(t, err, &expectedErr)
-			} else {
-				require.NoError(t, err)
-			}
+			var expectedErr *stdlib.InvalidTypeRemovalPragmaError
+			require.ErrorAs(t, err, &expectedErr)
 		},
 	)
 
@@ -3422,13 +3374,7 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
             `
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-
-			if config.ContractUpdateTypeRemovalEnabled {
-				require.NoError(t, err)
-			} else {
-				var expectedErr *stdlib.MissingDeclarationError
-				require.ErrorAs(t, err, &expectedErr)
-			}
+			require.NoError(t, err)
 		},
 	)
 
@@ -3451,13 +3397,7 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
             `
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-
-			if config.ContractUpdateTypeRemovalEnabled {
-				require.NoError(t, err)
-			} else {
-				var expectedErr *stdlib.MissingDeclarationError
-				require.ErrorAs(t, err, &expectedErr)
-			}
+			require.NoError(t, err)
 		},
 	)
 
@@ -3526,13 +3466,7 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
             `
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-
-			if config.ContractUpdateTypeRemovalEnabled {
-				require.NoError(t, err)
-			} else {
-				var expectedErr *stdlib.MissingDeclarationError
-				require.ErrorAs(t, err, &expectedErr)
-			}
+			require.NoError(t, err)
 		},
 	)
 
@@ -3574,13 +3508,8 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
             `
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-
-			if config.ContractUpdateTypeRemovalEnabled {
-				var expectedErr *stdlib.UseOfRemovedTypeError
-				require.ErrorAs(t, err, &expectedErr)
-			} else {
-				require.NoError(t, err)
-			}
+			var expectedErr *stdlib.UseOfRemovedTypeError
+			require.ErrorAs(t, err, &expectedErr)
 		},
 	)
 
@@ -3602,13 +3531,8 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
             `
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-
-			if config.ContractUpdateTypeRemovalEnabled {
-				var expectedErr *stdlib.UseOfRemovedTypeError
-				require.ErrorAs(t, err, &expectedErr)
-			} else {
-				require.NoError(t, err)
-			}
+			var expectedErr *stdlib.UseOfRemovedTypeError
+			require.ErrorAs(t, err, &expectedErr)
 		},
 	)
 
@@ -3630,13 +3554,8 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
             `
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-
-			if config.ContractUpdateTypeRemovalEnabled {
-				var expectedErr *stdlib.UseOfRemovedTypeError
-				require.ErrorAs(t, err, &expectedErr)
-			} else {
-				require.NoError(t, err)
-			}
+			var expectedErr *stdlib.UseOfRemovedTypeError
+			require.ErrorAs(t, err, &expectedErr)
 		},
 	)
 

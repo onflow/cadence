@@ -53,9 +53,6 @@ type UpdateValidator interface {
 		oldDeclaration ast.Declaration,
 		newDeclaration ast.Declaration,
 	) bool
-
-	isTypeRemovalEnabled() bool
-	WithTypeRemovalEnabled(enabled bool) UpdateValidator
 }
 
 type checkConformanceFunc func(
@@ -74,7 +71,6 @@ type ContractUpdateValidator struct {
 	importLocations              map[ast.Identifier]common.Location
 	accountContractNamesProvider AccountContractNamesProvider
 	errors                       []error
-	typeRemovalEnabled           bool
 }
 
 // ContractUpdateValidator should implement ast.TypeEqualityChecker
@@ -104,15 +100,6 @@ func NewContractUpdateValidator(
 
 func (validator *ContractUpdateValidator) Location() common.Location {
 	return validator.location
-}
-
-func (validator *ContractUpdateValidator) isTypeRemovalEnabled() bool {
-	return validator.typeRemovalEnabled
-}
-
-func (validator *ContractUpdateValidator) WithTypeRemovalEnabled(enabled bool) UpdateValidator {
-	validator.typeRemovalEnabled = enabled
-	return validator
 }
 
 func (validator *ContractUpdateValidator) getCurrentDeclaration() ast.Declaration {
@@ -412,12 +399,10 @@ func (validator *ContractUpdateValidator) checkNestedDeclarationRemoval(
 		return
 	}
 
-	if validator.typeRemovalEnabled {
-		// OK to remove a type if it is included in a #removedType pragma, and it is not an interface
-		if removedTypes.Contains(nestedDeclaration.DeclarationIdentifier().Identifier) &&
-			!declarationKind.IsInterfaceDeclaration() {
-			return
-		}
+	// OK to remove a type if it is included in a #removedType pragma, and it is not an interface
+	if removedTypes.Contains(nestedDeclaration.DeclarationIdentifier().Identifier) &&
+		!declarationKind.IsInterfaceDeclaration() {
+		return
 	}
 
 	validator.report(&MissingDeclarationError{
@@ -443,10 +428,6 @@ func checkTypeNotRemoved(
 	newDeclaration ast.Declaration,
 	removedTypes *orderedmap.OrderedMap[string, struct{}],
 ) {
-	if !validator.isTypeRemovalEnabled() {
-		return
-	}
-
 	if removedTypes.Contains(newDeclaration.DeclarationIdentifier().Identifier) {
 		validator.report(&UseOfRemovedTypeError{
 			Declaration: newDeclaration,
@@ -463,33 +444,32 @@ func checkNestedDeclarations(
 ) {
 
 	var removedTypes *orderedmap.OrderedMap[string, struct{}]
-	if validator.isTypeRemovalEnabled() {
-		// process pragmas first, as they determine whether types can later be removed
-		oldRemovedTypes := collectRemovedTypePragmas(
-			validator,
-			oldDeclaration.DeclarationMembers().Pragmas(),
-			// Do not report errors for pragmas in the old code.
-			// We are only interested in collecting the pragmas in old code.
-			// This also avoid reporting mixed errors from both old and new codes.
-			false,
-		)
 
-		removedTypes = collectRemovedTypePragmas(
-			validator,
-			newDeclaration.DeclarationMembers().Pragmas(),
-			true,
-		)
+	// process pragmas first, as they determine whether types can later be removed
+	oldRemovedTypes := collectRemovedTypePragmas(
+		validator,
+		oldDeclaration.DeclarationMembers().Pragmas(),
+		// Do not report errors for pragmas in the old code.
+		// We are only interested in collecting the pragmas in old code.
+		// This also avoid reporting mixed errors from both old and new codes.
+		false,
+	)
 
-		// #typeRemoval pragmas cannot be removed, so any that appear in the old program must appear in the new program
-		// they can however, be added, so use the new program's type removals for the purposes of checking the upgrade
-		oldRemovedTypes.Foreach(func(oldRemovedType string, _ struct{}) {
-			if !removedTypes.Contains(oldRemovedType) {
-				validator.report(&TypeRemovalPragmaRemovalError{
-					RemovedType: oldRemovedType,
-				})
-			}
-		})
-	}
+	removedTypes = collectRemovedTypePragmas(
+		validator,
+		newDeclaration.DeclarationMembers().Pragmas(),
+		true,
+	)
+
+	// #typeRemoval pragmas cannot be removed, so any that appear in the old program must appear in the new program
+	// they can however, be added, so use the new program's type removals for the purposes of checking the upgrade
+	oldRemovedTypes.Foreach(func(oldRemovedType string, _ struct{}) {
+		if !removedTypes.Contains(oldRemovedType) {
+			validator.report(&TypeRemovalPragmaRemovalError{
+				RemovedType: oldRemovedType,
+			})
+		}
+	})
 
 	oldNominalTypeDecls := getNestedNominalTypeDecls(oldDeclaration)
 
