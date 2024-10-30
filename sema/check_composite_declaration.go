@@ -674,9 +674,32 @@ func (checker *Checker) declareCompositeType(declaration ast.CompositeLikeDeclar
 
 	// Resolve conformances
 
-	if declaration.Kind() == common.CompositeKindEnum {
+	switch declaration.Kind() {
+	case common.CompositeKindEnum:
 		compositeType.EnumRawType = checker.enumRawType(declaration.(*ast.CompositeDeclaration))
-	} else {
+
+	case common.CompositeKindAttachment:
+
+		// Attachments may not conform to interfaces
+
+		conformanceList := declaration.ConformanceList()
+		conformanceCount := len(conformanceList)
+		if conformanceCount > 0 {
+			firstConformance := conformanceList[0]
+			lastConformance := conformanceList[conformanceCount-1]
+
+			checker.report(
+				&InvalidAttachmentConformancesError{
+					Range: ast.NewRange(
+						checker.memoryGauge,
+						firstConformance.StartPosition(),
+						lastConformance.EndPosition(checker.memoryGauge),
+					),
+				},
+			)
+		}
+
+	default:
 		compositeType.ExplicitInterfaceConformances =
 			checker.explicitInterfaceConformances(declaration, compositeType)
 	}
@@ -1681,39 +1704,84 @@ func (checker *Checker) defaultMembersAndOrigins(
 	}
 
 	predeclaredMembers := checker.predeclaredMembers(containerType)
-	invalidIdentifiers := make(map[string]bool, len(predeclaredMembers))
-
+	predeclaredMemberNames := make(map[string]struct{}, len(predeclaredMembers))
 	for _, predeclaredMember := range predeclaredMembers {
 		name := predeclaredMember.Identifier.Identifier
-		members.Set(name, predeclaredMember)
-		invalidIdentifiers[name] = true
-
-		if predeclaredMember.DeclarationKind == common.DeclarationKindField {
-			fieldNames = append(fieldNames, name)
-		}
+		predeclaredMemberNames[name] = struct{}{}
 	}
 
-	checkInvalidIdentifier := func(declaration ast.Declaration) bool {
-		identifier := declaration.DeclarationIdentifier()
-		if invalidIdentifiers == nil || !invalidIdentifiers[identifier.Identifier] {
-			return true
+	var nestedTypes *StringTypeOrderedMap
+	if containerType, ok := containerType.(ContainerType); ok {
+		nestedTypes = containerType.GetNestedTypes()
+	}
+
+	checkRedeclaration := func(
+		identifier ast.Identifier,
+		declarationKind common.DeclarationKind,
+		isPredeclared bool,
+	) bool {
+		name := identifier.Identifier
+
+		if !isPredeclared {
+			if _, ok := predeclaredMemberNames[name]; ok {
+				checker.report(
+					&InvalidDeclarationError{
+						Identifier: identifier.Identifier,
+						Kind:       declarationKind,
+						Range:      ast.NewRangeFromPositioned(checker.memoryGauge, identifier),
+					},
+				)
+				return false
+			}
 		}
 
-		checker.report(
-			&InvalidDeclarationError{
-				Identifier: identifier.Identifier,
-				Kind:       declaration.DeclarationKind(),
-				Range:      ast.NewRangeFromPositioned(checker.memoryGauge, identifier),
-			},
-		)
+		if nestedTypes != nil {
+			if _, ok := nestedTypes.Get(name); ok {
+				// TODO: provide previous position
+				checker.report(
+					&RedeclarationError{
+						Name: name,
+						Kind: declarationKind,
+						Pos:  identifier.Pos,
+					},
+				)
 
-		return false
+				return false
+			}
+		}
+
+		return true
+	}
+
+	// declare all predeclared members (built-in functions and fields)
+	for _, predeclaredMember := range predeclaredMembers {
+		identifier := predeclaredMember.Identifier
+		name := identifier.Identifier
+		declarationKind := predeclaredMember.DeclarationKind
+
+		if !checkRedeclaration(
+			identifier,
+			declarationKind,
+			true,
+		) {
+			continue
+		}
+
+		members.Set(name, predeclaredMember)
+
+		if declarationKind == common.DeclarationKindField {
+			fieldNames = append(fieldNames, name)
+		}
 	}
 
 	// declare a member for each field
 	for _, field := range fields {
 
-		if !checkInvalidIdentifier(field) {
+		if !checkRedeclaration(
+			field.Identifier,
+			field.DeclarationKind(),
+			false,
+		) {
 			continue
 		}
 
@@ -1785,7 +1853,12 @@ func (checker *Checker) defaultMembersAndOrigins(
 
 	// declare a member for each function
 	for _, function := range functions {
-		if !checkInvalidIdentifier(function) {
+
+		if !checkRedeclaration(
+			function.Identifier,
+			function.DeclarationKind(),
+			false,
+		) {
 			continue
 		}
 
@@ -2399,7 +2472,7 @@ func (checker *Checker) declareBaseValue(fnAccess Access, baseType Type, attachm
 }
 
 // checkNestedIdentifiers checks that nested identifiers, i.e. fields, functions,
-// and nested interfaces and composites, are unique and aren't named `init` or `destroy`
+// and nested interfaces and composites, are unique and aren't named `init`
 func (checker *Checker) checkNestedIdentifiers(members *ast.Members) {
 	positions := map[string]ast.Position{}
 
@@ -2423,7 +2496,7 @@ func (checker *Checker) checkNestedIdentifiers(members *ast.Members) {
 }
 
 // checkNestedIdentifier checks that the nested identifier is unique
-// and isn't named `init` or `destroy`
+// and isn't named `init`
 func (checker *Checker) checkNestedIdentifier(
 	identifier ast.Identifier,
 	kind common.DeclarationKind,

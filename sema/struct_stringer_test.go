@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package checker
+package sema_test
 
 import (
 	"testing"
@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/onflow/cadence/sema"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestCheckStringer(t *testing.T) {

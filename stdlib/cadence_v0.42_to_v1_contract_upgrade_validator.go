@@ -75,21 +75,10 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) Location() common.Locat
 	return validator.underlyingUpdateValidator.location
 }
 
-func (validator *CadenceV042ToV1ContractUpdateValidator) isTypeRemovalEnabled() bool {
-	return validator.underlyingUpdateValidator.isTypeRemovalEnabled()
-}
-
 func (validator *CadenceV042ToV1ContractUpdateValidator) WithUserDefinedTypeChangeChecker(
 	typeChangeCheckFunc func(oldTypeID common.TypeID, newTypeID common.TypeID) (checked, valid bool),
 ) *CadenceV042ToV1ContractUpdateValidator {
 	validator.checkUserDefinedType = typeChangeCheckFunc
-	return validator
-}
-
-func (validator *CadenceV042ToV1ContractUpdateValidator) WithTypeRemovalEnabled(
-	enabled bool,
-) UpdateValidator {
-	validator.underlyingUpdateValidator.WithTypeRemovalEnabled(enabled)
 	return validator
 }
 
@@ -125,6 +114,7 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) Validate() error {
 
 	checkDeclarationUpdatability(
 		validator,
+		validator.TypeComparator,
 		oldRootDecl,
 		newRootDecl,
 		validator.checkConformanceV1,
