@@ -6082,7 +6082,7 @@ func TestParseStringTemplate(t *testing.T) {
 			},
 		}
 
-		utils.AssertEqualWithDiff(t, expected, actual)
+		AssertEqualWithDiff(t, expected, actual)
 	})
 
 	t.Run("multi", func(t *testing.T) {
@@ -6128,7 +6128,7 @@ func TestParseStringTemplate(t *testing.T) {
 			},
 		}
 
-		utils.AssertEqualWithDiff(t, expected, actual)
+		AssertEqualWithDiff(t, expected, actual)
 	})
 
 	t.Run("missing end", func(t *testing.T) {
@@ -6147,7 +6147,7 @@ func TestParseStringTemplate(t *testing.T) {
 		}
 
 		require.Error(t, err)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid end of string literal: missing '\"'",
@@ -6174,7 +6174,7 @@ func TestParseStringTemplate(t *testing.T) {
 		}
 
 		require.Error(t, err)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token in expression: '.'",
@@ -6201,7 +6201,7 @@ func TestParseStringTemplate(t *testing.T) {
 		}
 
 		require.Error(t, err)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected identifier got: 2 + 2",
@@ -6248,7 +6248,7 @@ func TestParseStringTemplate(t *testing.T) {
 			},
 		}
 
-		utils.AssertEqualWithDiff(t, expected, actual)
+		AssertEqualWithDiff(t, expected, actual)
 
 	})
 	t.Run("invalid, empty", func(t *testing.T) {
@@ -6267,7 +6267,7 @@ func TestParseStringTemplate(t *testing.T) {
 		}
 
 		require.Error(t, err)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token in expression: ')'",
@@ -6294,7 +6294,7 @@ func TestParseStringTemplate(t *testing.T) {
 		}
 
 		require.Error(t, err)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected identifier got: add()",
@@ -6321,7 +6321,7 @@ func TestParseStringTemplate(t *testing.T) {
 		}
 
 		require.Error(t, err)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected token ')'",
@@ -6348,7 +6348,7 @@ func TestParseStringTemplate(t *testing.T) {
 		}
 
 		require.Error(t, err)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected token ')'",
@@ -6395,7 +6395,7 @@ func TestParseStringTemplate(t *testing.T) {
 			},
 		}
 
-		utils.AssertEqualWithDiff(t, expected, actual)
+		AssertEqualWithDiff(t, expected, actual)
 	})
 
 	t.Run("valid, surrounded", func(t *testing.T) {
@@ -6441,7 +6441,7 @@ func TestParseStringTemplate(t *testing.T) {
 			},
 		}
 
-		utils.AssertEqualWithDiff(t, expected, actual)
+		AssertEqualWithDiff(t, expected, actual)
 	})
 
 	t.Run("valid, adjacent", func(t *testing.T) {
@@ -6494,7 +6494,7 @@ func TestParseStringTemplate(t *testing.T) {
 			},
 		}
 
-		utils.AssertEqualWithDiff(t, expected, actual)
+		AssertEqualWithDiff(t, expected, actual)
 	})
 }
 
