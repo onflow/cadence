@@ -33,7 +33,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/parser/lexer"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 func TestMain(m *testing.M) {
@@ -240,7 +240,7 @@ func TestParseBuffering(t *testing.T) {
 			Config{},
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected token identifier with string value c",
@@ -483,7 +483,7 @@ func TestParseBuffering(t *testing.T) {
 			Config{},
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected token identifier with string value d",
@@ -511,7 +511,7 @@ func TestParseBuffering(t *testing.T) {
           }
         `
 		_, err := testParseProgram(code)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected token identifier",
@@ -536,7 +536,7 @@ func TestParseBuffering(t *testing.T) {
         `
 		_, err := testParseProgram(code)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&RestrictedTypeError{
 					Range: ast.Range{
@@ -705,7 +705,7 @@ func TestParseArgumentList(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseArgumentList(`xyz`)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected token '('",
@@ -724,7 +724,7 @@ func TestParseArgumentList(t *testing.T) {
 
 		var expected ast.Arguments
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			expected,
 			result,
 		)
@@ -750,7 +750,7 @@ func TestParseArgumentList(t *testing.T) {
 		result, errs := testParseArgumentList(`(1, b: true)`)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			ast.Arguments{
 				{
 					Label:         "",
@@ -835,7 +835,7 @@ func TestParseBufferedErrors(t *testing.T) {
 	// there is another error (missing closing parenthesis after).
 
 	_, errs := testParseExpression("a<b,>(")
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]error{
 			&SyntaxError{
 				Message: "missing type annotation after comma",
@@ -874,7 +874,7 @@ func TestParseExpressionDepthLimit(t *testing.T) {
 	_, err := testParseProgram(code)
 	require.Error(t, err)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]error{
 			ExpressionDepthLimitReachedError{
 				Pos: ast.Position{
@@ -910,7 +910,7 @@ func TestParseTypeDepthLimit(t *testing.T) {
 	_, err := testParseProgram(code)
 	require.Error(t, err)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]error{
 			TypeDepthLimitReachedError{
 				Pos: ast.Position{
@@ -936,7 +936,7 @@ func TestParseLocalReplayLimit(t *testing.T) {
 
 	code := []byte(builder.String())
 	_, err := ParseProgram(nil, code, Config{})
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		Error{
 			Code: code,
 			Errors: []error{
@@ -971,7 +971,7 @@ func TestParseGlobalReplayLimit(t *testing.T) {
 
 	code := []byte(builder.String())
 	_, err := ParseProgram(nil, code, Config{})
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		Error{
 			Code: code,
 			Errors: []error{

@@ -20,9 +20,11 @@ package runtime
 
 import (
 	"math/big"
+	"strings"
 	_ "unsafe"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -792,6 +794,7 @@ type valueImporter struct {
 	inter                  *interpreter.Interpreter
 	locationRange          interpreter.LocationRange
 	standardLibraryHandler stdlib.StandardLibraryHandler
+	resolveLocation        sema.LocationHandlerFunc
 }
 
 // ImportValue converts a Cadence value to a runtime value.
@@ -799,6 +802,7 @@ func ImportValue(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
 	standardLibraryHandler stdlib.StandardLibraryHandler,
+	resolveLocation sema.LocationHandlerFunc,
 	value cadence.Value,
 	expectedType sema.Type,
 ) (interpreter.Value, error) {
@@ -806,6 +810,7 @@ func ImportValue(
 		inter:                  inter,
 		locationRange:          locationRange,
 		standardLibraryHandler: standardLibraryHandler,
+		resolveLocation:        resolveLocation,
 	}.importValue(value, expectedType)
 }
 
@@ -1508,6 +1513,33 @@ func (i valueImporter) importCompositeValue(
 
 	inter := i.inter
 	locationRange := i.locationRange
+
+	// Resolve the location if it is not nil (not a built-in type)
+
+	if location != nil {
+		resolveLocation := i.resolveLocation
+		if resolveLocation != nil {
+
+			rootIdentifier := strings.SplitN(qualifiedIdentifier, ".", 2)[0]
+
+			resolvedLocations, err := resolveLocation(
+				[]ast.Identifier{{Identifier: rootIdentifier}},
+				location,
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			if len(resolvedLocations) != 1 {
+				return nil, errors.NewDefaultUserError(
+					"cannot import value of type %s: location resolution failed",
+					qualifiedIdentifier,
+				)
+			}
+
+			location = resolvedLocations[0].Location
+		}
+	}
 
 	typeID := common.NewTypeIDFromQualifiedName(inter, location, qualifiedIdentifier)
 	compositeType, typeErr := inter.GetCompositeType(location, qualifiedIdentifier, typeID)

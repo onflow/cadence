@@ -30,12 +30,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/common"
 	. "github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
-
-	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/tests/utils"
-	. "github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 )
 
 type encodeDecodeTest struct {
@@ -492,7 +491,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 		expected := NewCompositeValue(
 			inter,
 			EmptyLocationRange,
-			utils.TestLocation,
+			TestLocation,
 			"TestStruct",
 			common.CompositeKindStructure,
 			nil,
@@ -530,7 +529,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 		expected := NewCompositeValue(
 			inter,
 			EmptyLocationRange,
-			utils.TestLocation,
+			TestLocation,
 			"TestResource",
 			common.CompositeKindResource,
 			fields,
@@ -4256,7 +4255,7 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 			BorrowType: &ReferenceStaticType{
 				ReferencedType: NewCompositeStaticTypeComputeTypeID(
 					nil,
-					utils.TestLocation,
+					TestLocation,
 					"SimpleStruct",
 				),
 				Authorization: UnauthorizedAccess,
@@ -4305,7 +4304,7 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 		value := &StorageCapabilityControllerValue{
 			TargetPath: publicPathValue,
 			BorrowType: &ReferenceStaticType{
-				ReferencedType: NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "SimpleInterface"),
+				ReferencedType: NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "SimpleInterface"),
 				Authorization:  UnauthorizedAccess,
 			},
 			CapabilityID: capabilityID,
@@ -4485,8 +4484,8 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 			BorrowType: &ReferenceStaticType{
 				ReferencedType: &IntersectionStaticType{
 					Types: []*InterfaceStaticType{
-						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "I1"),
-						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "I2"),
+						NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "I1"),
+						NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "I2"),
 					},
 				},
 				Authorization: UnauthorizedAccess,
@@ -4705,7 +4704,7 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 			BorrowType: &ReferenceStaticType{
 				ReferencedType: &IntersectionStaticType{
 					Types: []*InterfaceStaticType{
-						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "SimpleInterface"),
+						NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "SimpleInterface"),
 					},
 				},
 				Authorization: UnauthorizedAccess,

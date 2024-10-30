@@ -330,7 +330,7 @@ func (d *Decoder) decodeTypeDef(
 //	fields: [
 //	    * [
 //	        field-name: tstr,
-//	        field-type: inline-type
+//	        field-type: inline-type,
 //	    ]
 //	]
 //

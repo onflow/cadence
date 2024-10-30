@@ -369,8 +369,7 @@ func (d *Decoder) decodeTypeAndValue(types *cadenceTypeByCCFTypeID) (cadence.Val
 //	/ dict-value
 //	/ composite-value
 //	/ path-value
-//	/ path-capability-value
-//	/ id-capability-value
+//	/ capability-value
 //	/ inclusiverange-value
 //	/ function-value
 //	/ type-value
@@ -1446,22 +1445,10 @@ func (d *Decoder) decodePath() (cadence.Value, error) {
 // decodeCapability decodes encoded capability-value as
 // language=CDDL
 //
-// capability-value =
-//
-//	id-capability-value
-//	/ path-capability-value
-//
-// id-capability-value = [
+// capability-value = [
 //
 //	address: address-value,
 //	id: uint64-value
-//
-// ]
-//
-// path-capability-value = [
-//
-//	address: address-value,
-//	path: path-value
 //
 // ]
 func (d *Decoder) decodeCapability(typ *cadence.CapabilityType, types *cadenceTypeByCCFTypeID) (cadence.Value, error) {

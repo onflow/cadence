@@ -76,6 +76,8 @@ type Environment interface {
 	)
 	CommitStorage(inter *interpreter.Interpreter) error
 	NewAccountValue(inter *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value
+
+	ResolveLocation(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error)
 }
 
 // interpreterEnvironmentReconfigured is the portion of interpreterEnvironment
@@ -206,10 +208,9 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 		BaseValueActivationHandler:       e.getBaseValueActivation,
 		BaseTypeActivationHandler:        e.getBaseTypeActivation,
 		ValidTopLevelDeclarationsHandler: validTopLevelDeclarations,
-		LocationHandler:                  e.newLocationHandler(),
+		LocationHandler:                  e.ResolveLocation,
 		ImportHandler:                    e.resolveImport,
 		CheckHandler:                     e.newCheckHandler(),
-		AttachmentsEnabled:               e.config.AttachmentsEnabled,
 	}
 }
 
@@ -644,16 +645,20 @@ func (e *interpreterEnvironment) check(
 	return elaboration, nil
 }
 
-func (e *interpreterEnvironment) newLocationHandler() sema.LocationHandlerFunc {
-	return func(identifiers []Identifier, location Location) (res []ResolvedLocation, err error) {
-		errors.WrapPanic(func() {
-			res, err = e.runtimeInterface.ResolveLocation(identifiers, location)
-		})
-		if err != nil {
-			err = interpreter.WrappedExternalError(err)
-		}
-		return
+func (e *interpreterEnvironment) ResolveLocation(
+	identifiers []Identifier,
+	location Location,
+) (
+	res []ResolvedLocation,
+	err error,
+) {
+	errors.WrapPanic(func() {
+		res, err = e.runtimeInterface.ResolveLocation(identifiers, location)
+	})
+	if err != nil {
+		err = interpreter.WrappedExternalError(err)
 	}
+	return
 }
 
 func (e *interpreterEnvironment) newCheckHandler() sema.CheckHandlerFunc {
@@ -674,40 +679,29 @@ func (e *interpreterEnvironment) resolveImport(
 	importRange ast.Range,
 ) (sema.Import, error) {
 
-	var elaboration *sema.Elaboration
-	switch importedLocation {
-	case stdlib.CryptoCheckerLocation:
-		cryptoChecker := stdlib.CryptoChecker()
-		elaboration = cryptoChecker.Elaboration
-
-	default:
-
-		// Check for cyclic imports
-		if e.checkedImports[importedLocation] {
-			return nil, &sema.CyclicImportsError{
-				Location: importedLocation,
-				Range:    importRange,
-			}
-		} else {
-			e.checkedImports[importedLocation] = true
-			defer delete(e.checkedImports, importedLocation)
+	// Check for cyclic imports
+	if e.checkedImports[importedLocation] {
+		return nil, &sema.CyclicImportsError{
+			Location: importedLocation,
+			Range:    importRange,
 		}
+	} else {
+		e.checkedImports[importedLocation] = true
+		defer delete(e.checkedImports, importedLocation)
+	}
 
-		const getAndSetProgram = true
-		program, err := e.GetProgram(
-			importedLocation,
-			getAndSetProgram,
-			e.checkedImports,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		elaboration = program.Elaboration
+	const getAndSetProgram = true
+	program, err := e.GetProgram(
+		importedLocation,
+		getAndSetProgram,
+		e.checkedImports,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	return sema.ElaborationImport{
-		Elaboration: elaboration,
+		Elaboration: program.Elaboration,
 	}, nil
 }
 
@@ -1006,36 +1000,30 @@ func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter
 		compositeKind common.CompositeKind,
 	) map[string]interpreter.Value {
 
-		switch location {
-		case stdlib.CryptoCheckerLocation:
-			return nil
+		switch compositeKind {
+		case common.CompositeKindContract:
+			var address Address
 
-		default:
-			switch compositeKind {
-			case common.CompositeKindContract:
-				var address Address
+			switch location := location.(type) {
+			case common.AddressLocation:
+				address = location.Address
+			default:
+				return nil
+			}
 
-				switch location := location.(type) {
-				case common.AddressLocation:
-					address = location.Address
-				default:
-					return nil
-				}
+			addressValue := interpreter.NewAddressValue(
+				inter,
+				address,
+			)
 
-				addressValue := interpreter.NewAddressValue(
+			return map[string]interpreter.Value{
+				sema.ContractAccountFieldName: stdlib.NewAccountReferenceValue(
 					inter,
-					address,
-				)
-
-				return map[string]interpreter.Value{
-					sema.ContractAccountFieldName: stdlib.NewAccountReferenceValue(
-						inter,
-						e,
-						addressValue,
-						interpreter.FullyEntitledAccountAccess,
-						interpreter.EmptyLocationRange,
-					),
-				}
+					e,
+					addressValue,
+					interpreter.FullyEntitledAccountAccess,
+					interpreter.EmptyLocationRange,
+				),
 			}
 		}
 
@@ -1046,36 +1034,22 @@ func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter
 func (e *interpreterEnvironment) newImportLocationHandler() interpreter.ImportLocationHandlerFunc {
 	return func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 
-		switch location {
-		case stdlib.CryptoCheckerLocation:
-			cryptoChecker := stdlib.CryptoChecker()
-			program := interpreter.ProgramFromChecker(cryptoChecker)
-			subInterpreter, err := inter.NewSubInterpreter(program, location)
-			if err != nil {
-				panic(err)
-			}
-			return interpreter.InterpreterImport{
-				Interpreter: subInterpreter,
-			}
+		const getAndSetProgram = true
+		program, err := e.GetProgram(
+			location,
+			getAndSetProgram,
+			importResolutionResults{},
+		)
+		if err != nil {
+			panic(err)
+		}
 
-		default:
-			const getAndSetProgram = true
-			program, err := e.GetProgram(
-				location,
-				getAndSetProgram,
-				importResolutionResults{},
-			)
-			if err != nil {
-				panic(err)
-			}
-
-			subInterpreter, err := inter.NewSubInterpreter(program, location)
-			if err != nil {
-				panic(err)
-			}
-			return interpreter.InterpreterImport{
-				Interpreter: subInterpreter,
-			}
+		subInterpreter, err := inter.NewSubInterpreter(program, location)
+		if err != nil {
+			panic(err)
+		}
+		return interpreter.InterpreterImport{
+			Interpreter: subInterpreter,
 		}
 	}
 }
@@ -1123,45 +1097,32 @@ func (e *interpreterEnvironment) newCompositeValueFunctionsHandler() interpreter
 func (e *interpreterEnvironment) loadContract(
 	inter *interpreter.Interpreter,
 	compositeType *sema.CompositeType,
-	constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
-	invocationRange ast.Range,
+	_ func(common.Address) *interpreter.HostFunctionValue,
+	_ ast.Range,
 ) *interpreter.CompositeValue {
 
-	switch compositeType.Location {
-	case stdlib.CryptoCheckerLocation:
-		contract, err := stdlib.NewCryptoContract(
-			inter,
-			constructorGenerator(common.ZeroAddress),
-			invocationRange,
+	var contractValue interpreter.Value
+
+	location := compositeType.Location
+	if addressLocation, ok := location.(common.AddressLocation); ok {
+		storageMap := e.storage.GetStorageMap(
+			addressLocation.Address,
+			StorageDomainContract,
+			false,
 		)
-		if err != nil {
-			panic(err)
-		}
-		return contract
-
-	default:
-
-		var storedValue interpreter.Value
-
-		switch location := compositeType.Location.(type) {
-
-		case common.AddressLocation:
-			storageMap := e.storage.GetStorageMap(
-				location.Address,
-				StorageDomainContract,
-				false,
+		if storageMap != nil {
+			contractValue = storageMap.ReadValue(
+				inter,
+				interpreter.StringStorageMapKey(addressLocation.Name),
 			)
-			if storageMap != nil {
-				storedValue = storageMap.ReadValue(inter, interpreter.StringStorageMapKey(location.Name))
-			}
 		}
-
-		if storedValue == nil {
-			panic(errors.NewDefaultUserError("failed to load contract: %s", compositeType.Location))
-		}
-
-		return storedValue.(*interpreter.CompositeValue)
 	}
+
+	if contractValue == nil {
+		panic(errors.NewDefaultUserError("failed to load contract: %s", location))
+	}
+
+	return contractValue.(*interpreter.CompositeValue)
 }
 
 func (e *interpreterEnvironment) newOnFunctionInvocationHandler() func(_ *interpreter.Interpreter) {

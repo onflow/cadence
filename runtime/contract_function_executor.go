@@ -273,6 +273,7 @@ func (executor *interpreterContractFunctionExecutor) convertArgument(
 		inter,
 		locationRange,
 		environment,
+		environment.ResolveLocation,
 		argument,
 		argumentType,
 	)

@@ -24,7 +24,7 @@ import (
 
 	"github.com/onflow/flow-go/cmd/util/ledger/util/registers"
 
-	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/runtime/common"
 )
 
 func addressesJSON(registersByAccount *registers.ByAccount) ([]byte, error) {

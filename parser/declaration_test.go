@@ -29,7 +29,7 @@ import (
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 func TestParseVariableDeclaration(t *testing.T) {
@@ -43,7 +43,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations("var x = 1")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.VariableDeclaration{
 					Access:     ast.AccessNotSpecified,
@@ -79,7 +79,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations(" access(all) var x = 1")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.VariableDeclaration{
 					Value: &ast.IntegerExpression{
@@ -136,7 +136,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations("let x = 1")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.VariableDeclaration{
 					Access:     ast.AccessNotSpecified,
@@ -172,7 +172,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations("let x <- 1")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.VariableDeclaration{
 					Access:     ast.AccessNotSpecified,
@@ -208,7 +208,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations("let r2: @R <- r")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.VariableDeclaration{
 					Access:     ast.AccessNotSpecified,
@@ -251,7 +251,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 		result, errs := testParseStatements("var x <- y <- z")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.VariableDeclaration{
 					Access:     ast.AccessNotSpecified,
@@ -292,7 +292,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseDeclarations("view var x = 1")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid view modifier for variable",
@@ -314,7 +314,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 				StaticModifierEnabled: true,
 			},
 		)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid static modifier for variable",
@@ -330,7 +330,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseDeclarations("static var x = 1")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token: identifier",
@@ -352,7 +352,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 				NativeModifierEnabled: true,
 			},
 		)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid native modifier for variable",
@@ -368,7 +368,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseDeclarations("native var x = 1")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token: identifier",
@@ -402,7 +402,7 @@ func TestParseParameterList(t *testing.T) {
 		result, errs := parse("()")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.ParameterList{
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -420,7 +420,7 @@ func TestParseParameterList(t *testing.T) {
 		result, errs := parse(" (   )")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.ParameterList{
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -438,7 +438,7 @@ func TestParseParameterList(t *testing.T) {
 		result, errs := parse("( a : Int )")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.ParameterList{
 				Parameters: []*ast.Parameter{
 					{
@@ -476,7 +476,7 @@ func TestParseParameterList(t *testing.T) {
 		result, errs := parse("( a b : Int )")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.ParameterList{
 				Parameters: []*ast.Parameter{
 					{
@@ -514,7 +514,7 @@ func TestParseParameterList(t *testing.T) {
 		result, errs := parse("( a b : Int , c : Int )")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.ParameterList{
 				Parameters: []*ast.Parameter{
 					{
@@ -568,7 +568,7 @@ func TestParseParameterList(t *testing.T) {
 		t.Parallel()
 
 		_, errs := parse("( a b : Int   c : Int )")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&MissingCommaInParameterListError{
 					Pos: ast.Position{Offset: 14, Line: 1, Column: 14},
@@ -590,7 +590,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations("fun foo () { }")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
 					Access: ast.AccessNotSpecified,
@@ -628,7 +628,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations("access(all) fun foo () { }")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
 					ParameterList: &ast.ParameterList{
@@ -688,7 +688,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations("fun foo (): X { }")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
 					Access: ast.AccessNotSpecified,
@@ -747,7 +747,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
         `)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.FunctionDeclaration{
 					Access: ast.AccessNotSpecified,
@@ -870,7 +870,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations("/// Test\nfun foo() {}")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
 					Access: ast.AccessNotSpecified,
@@ -908,7 +908,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations("\n  /// First line\n  \n/// Second line\n\n\nfun foo() {}")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
 					Access: ast.AccessNotSpecified,
@@ -946,7 +946,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations("\n    /** Cool dogs.\n\n Cool cats!! */\n\n\nfun foo() {}")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
 					Access: ast.AccessNotSpecified,
@@ -989,7 +989,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations("fun main(): Int{ return 1 }")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
 					Access: ast.AccessNotSpecified,
@@ -1052,7 +1052,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations("view fun foo (): X { }")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
 					Access: ast.AccessNotSpecified,
@@ -1105,7 +1105,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
 					Access: ast.AccessNotSpecified,
@@ -1154,7 +1154,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		_, errs := testParseDeclarations("native fun foo() {}")
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token: identifier",
@@ -1178,7 +1178,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
 					Access: ast.AccessNotSpecified,
@@ -1215,7 +1215,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		_, errs := testParseDeclarations("static fun foo() {}")
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token: identifier",
@@ -1240,7 +1240,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
 					Access: ast.AccessNotSpecified,
@@ -1277,7 +1277,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		_, errs := testParseDeclarations("static native fun foo() {}")
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token: identifier",
@@ -1300,7 +1300,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 				NativeModifierEnabled: true,
 			},
 		)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid static modifier after native modifier",
@@ -1317,7 +1317,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		_, errs := testParseDeclarations("native static fun foo() {}")
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token: identifier",
@@ -1342,7 +1342,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
 					Purity:            0,
@@ -1408,7 +1408,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		_, errs := testParseDeclarations("access(all) static native fun foo() {}")
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token: identifier",
@@ -1436,7 +1436,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
 					Access: ast.AccessNotSpecified,
@@ -1486,7 +1486,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
 					Access: ast.AccessNotSpecified,
@@ -1543,7 +1543,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
 					Access: ast.AccessNotSpecified,
@@ -1608,7 +1608,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		_, errs := testParseDeclarations("fun foo<A>() {}")
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected '(' as start of parameter list, got '<'",
@@ -1631,7 +1631,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			},
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "missing '>' at end of type parameter list",
@@ -1654,7 +1654,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			},
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&MissingCommaInParameterListError{
 					Pos: ast.Position{Offset: 13, Line: 1, Column: 13},
@@ -1686,7 +1686,7 @@ func TestParseAccess(t *testing.T) {
 		result, errs := parse("access ( all )")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			ast.AccessAll,
 			result,
 		)
@@ -1699,7 +1699,7 @@ func TestParseAccess(t *testing.T) {
 		result, errs := parse("access ( account )")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			ast.AccessAccount,
 			result,
 		)
@@ -1712,7 +1712,7 @@ func TestParseAccess(t *testing.T) {
 		result, errs := parse("access ( contract )")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			ast.AccessContract,
 			result,
 		)
@@ -1725,7 +1725,7 @@ func TestParseAccess(t *testing.T) {
 		result, errs := parse("access ( self )")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			ast.AccessSelf,
 			result,
 		)
@@ -1736,7 +1736,7 @@ func TestParseAccess(t *testing.T) {
 		t.Parallel()
 
 		result, errs := parse("access ( ")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected keyword \"all\", \"account\", \"contract\", or \"self\", got EOF",
@@ -1746,7 +1746,7 @@ func TestParseAccess(t *testing.T) {
 			errs,
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			ast.AccessNotSpecified,
 			result,
 		)
@@ -1757,7 +1757,7 @@ func TestParseAccess(t *testing.T) {
 		t.Parallel()
 
 		result, errs := parse("access ( self ")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected token ')'",
@@ -1767,7 +1767,7 @@ func TestParseAccess(t *testing.T) {
 			errs,
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			ast.AccessNotSpecified,
 			result,
 		)
@@ -1780,7 +1780,7 @@ func TestParseAccess(t *testing.T) {
 		result, errs := parse("access ( foo )")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			ast.EntitlementAccess{
 				EntitlementSet: &ast.ConjunctiveEntitlementSet{
 					Elements: []*ast.NominalType{
@@ -1804,7 +1804,7 @@ func TestParseAccess(t *testing.T) {
 		result, errs := parse("access ( foo , bar )")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			ast.EntitlementAccess{
 				EntitlementSet: &ast.ConjunctiveEntitlementSet{
 					Elements: []*ast.NominalType{
@@ -1834,7 +1834,7 @@ func TestParseAccess(t *testing.T) {
 		result, errs := parse("access ( foo | bar )")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			ast.EntitlementAccess{
 				EntitlementSet: &ast.DisjunctiveEntitlementSet{
 					Elements: []*ast.NominalType{
@@ -1862,7 +1862,7 @@ func TestParseAccess(t *testing.T) {
 		t.Parallel()
 
 		result, errs := parse("access ( foo | bar , baz )")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token: got ',', expected '|' or ')'",
@@ -1872,7 +1872,7 @@ func TestParseAccess(t *testing.T) {
 			errs,
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			ast.AccessNotSpecified,
 			result,
 		)
@@ -1883,7 +1883,7 @@ func TestParseAccess(t *testing.T) {
 		t.Parallel()
 
 		result, errs := parse("access ( foo , bar | baz )")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token: got '|', expected ',' or ')'",
@@ -1893,7 +1893,7 @@ func TestParseAccess(t *testing.T) {
 			errs,
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			ast.AccessNotSpecified,
 			result,
 		)
@@ -1904,7 +1904,7 @@ func TestParseAccess(t *testing.T) {
 		t.Parallel()
 
 		result, errs := parse("access ( self , bar )")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected token ')'",
@@ -1914,7 +1914,7 @@ func TestParseAccess(t *testing.T) {
 			errs,
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			ast.AccessNotSpecified,
 			result,
 		)
@@ -1925,7 +1925,7 @@ func TestParseAccess(t *testing.T) {
 		t.Parallel()
 
 		result, errs := parse("access ( self | bar )")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected token ')'",
@@ -1935,7 +1935,7 @@ func TestParseAccess(t *testing.T) {
 			errs,
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			ast.AccessNotSpecified,
 			result,
 		)
@@ -1946,7 +1946,7 @@ func TestParseAccess(t *testing.T) {
 		t.Parallel()
 
 		result, errs := parse("access ( foo , self )")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected non-nominal type: self",
@@ -1956,7 +1956,7 @@ func TestParseAccess(t *testing.T) {
 			errs,
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			ast.AccessNotSpecified,
 			result,
 		)
@@ -1967,7 +1967,7 @@ func TestParseAccess(t *testing.T) {
 		t.Parallel()
 
 		result, errs := parse("access ( foo | self )")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected non-nominal type: self",
@@ -1977,7 +1977,7 @@ func TestParseAccess(t *testing.T) {
 			errs,
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			ast.AccessNotSpecified,
 			result,
 		)
@@ -1988,7 +1988,7 @@ func TestParseAccess(t *testing.T) {
 		t.Parallel()
 
 		result, errs := parse("access ( foo bar )")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected entitlement separator identifier",
@@ -1998,7 +1998,7 @@ func TestParseAccess(t *testing.T) {
 			errs,
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			ast.AccessNotSpecified,
 			result,
 		)
@@ -2009,7 +2009,7 @@ func TestParseAccess(t *testing.T) {
 		t.Parallel()
 
 		result, errs := parse("access ( foo & bar )")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected entitlement separator '&'",
@@ -2019,7 +2019,7 @@ func TestParseAccess(t *testing.T) {
 			errs,
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			ast.AccessNotSpecified,
 			result,
 		)
@@ -2032,7 +2032,7 @@ func TestParseAccess(t *testing.T) {
 		result, errs := parse("access ( mapping foo )")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.MappedAccess{
 				EntitlementMap: &ast.NominalType{
 					Identifier: ast.Identifier{
@@ -2051,7 +2051,7 @@ func TestParseAccess(t *testing.T) {
 		t.Parallel()
 
 		result, errs := parse("access ( mapping )")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token in type: ')'",
@@ -2061,7 +2061,7 @@ func TestParseAccess(t *testing.T) {
 			errs,
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			ast.AccessNotSpecified,
 			result,
 		)
@@ -2078,7 +2078,7 @@ func TestParseImportDeclaration(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseDeclarations(` import`)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected end in import declaration: expected string, address, or identifier",
@@ -2090,7 +2090,7 @@ func TestParseImportDeclaration(t *testing.T) {
 
 		var expected []ast.Declaration
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			expected,
 			result,
 		)
@@ -2103,7 +2103,7 @@ func TestParseImportDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations(` import "foo"`)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.ImportDeclaration{
 					Identifiers: nil,
@@ -2126,7 +2126,7 @@ func TestParseImportDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations(` import 0x42`)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.ImportDeclaration{
 					Identifiers: nil,
@@ -2149,7 +2149,7 @@ func TestParseImportDeclaration(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseDeclarations(` import 0x10000000000000001`)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "address too large",
@@ -2173,7 +2173,7 @@ func TestParseImportDeclaration(t *testing.T) {
 			},
 		}
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			expected,
 			result,
 		)
@@ -2184,7 +2184,7 @@ func TestParseImportDeclaration(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseDeclarations(` import 1`)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token in import declaration: " +
@@ -2197,7 +2197,7 @@ func TestParseImportDeclaration(t *testing.T) {
 
 		var expected []ast.Declaration
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			expected,
 			result,
 		)
@@ -2211,7 +2211,7 @@ func TestParseImportDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations(` import foo from "bar"`)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.ImportDeclaration{
 					Identifiers: []ast.Identifier{
@@ -2237,7 +2237,7 @@ func TestParseImportDeclaration(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseDeclarations(` import foo "bar"`)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token in import declaration: " +
@@ -2250,7 +2250,7 @@ func TestParseImportDeclaration(t *testing.T) {
 
 		var expected []ast.Declaration
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			expected,
 			result,
 		)
@@ -2263,7 +2263,7 @@ func TestParseImportDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations(` import foo , bar , baz from 0x42`)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.ImportDeclaration{
 					Identifiers: []ast.Identifier{
@@ -2299,7 +2299,7 @@ func TestParseImportDeclaration(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseDeclarations(` import foo , bar , from 0x42`)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: `expected identifier, got keyword "from"`,
@@ -2311,7 +2311,7 @@ func TestParseImportDeclaration(t *testing.T) {
 
 		var expected []ast.Declaration
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			expected,
 			result,
 		)
@@ -2321,7 +2321,7 @@ func TestParseImportDeclaration(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseDeclarations(`import foo, , bar from 0xaaaa`)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Pos:     ast.Position{Line: 1, Column: 12, Offset: 12},
@@ -2332,7 +2332,7 @@ func TestParseImportDeclaration(t *testing.T) {
 		)
 		var expected []ast.Declaration
 
-		utils.AssertEqualWithDiff(t, expected, result)
+		AssertEqualWithDiff(t, expected, result)
 	})
 
 	t.Run("no identifiers, identifier location", func(t *testing.T) {
@@ -2342,7 +2342,7 @@ func TestParseImportDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations(` import foo`)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.ImportDeclaration{
 					Identifiers: nil,
@@ -2363,7 +2363,7 @@ func TestParseImportDeclaration(t *testing.T) {
 
 		_, errs := testParseDeclarations(`import foo, bar, baz, @ from 0x42`)
 
-		utils.AssertEqualWithDiff(t, []error{
+		AssertEqualWithDiff(t, []error{
 			&SyntaxError{
 				Pos:     ast.Position{Line: 1, Column: 22, Offset: 22},
 				Message: `unexpected token in import declaration: got '@', expected keyword "from" or ','`,
@@ -2381,7 +2381,7 @@ func TestParseImportDeclaration(t *testing.T) {
 		`)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.ImportDeclaration{
 					Identifiers: []ast.Identifier{
@@ -2444,7 +2444,7 @@ func TestParseEvent(t *testing.T) {
 		result, errs := testParseDeclarations("event E()")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.CompositeDeclaration{
 					Access:        ast.AccessNotSpecified,
@@ -2487,7 +2487,7 @@ func TestParseEvent(t *testing.T) {
 		result, errs := testParseDeclarations(" access(self) event E2 ( a : Int , b : String )")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.CompositeDeclaration{
 					Members: ast.NewUnmeteredMembers(
@@ -2620,7 +2620,7 @@ func TestParseEvent(t *testing.T) {
 		result, errs := testParseDeclarations(` access(all) event ResourceDestroyed ( a : String = "foo")`)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.CompositeDeclaration{
 					Members: ast.NewUnmeteredMembers(
@@ -2735,7 +2735,7 @@ func TestParseEvent(t *testing.T) {
 
 		_, errs := testParseDeclarations(" access(all) event ResourceDestroyed ( a : Int )")
 
-		utils.AssertEqualWithDiff(t, []error{
+		AssertEqualWithDiff(t, []error{
 			&SyntaxError{
 				Pos:     ast.Position{Line: 1, Column: 47, Offset: 47},
 				Message: "expected a default argument after type annotation, got ')'",
@@ -2749,7 +2749,7 @@ func TestParseEvent(t *testing.T) {
 
 		_, errs := testParseDeclarations(" access(all) event Foo ( a : Int = 3)")
 
-		utils.AssertEqualWithDiff(t, []error{
+		AssertEqualWithDiff(t, []error{
 			&SyntaxError{
 				Pos:     ast.Position{Line: 1, Column: 33, Offset: 33},
 				Message: "cannot use a default argument for this function",
@@ -2760,7 +2760,7 @@ func TestParseEvent(t *testing.T) {
 	t.Run("invalid event name", func(t *testing.T) {
 		_, errs := testParseDeclarations(`event continue {}`)
 
-		utils.AssertEqualWithDiff(t, []error{
+		AssertEqualWithDiff(t, []error{
 			&SyntaxError{
 				Pos:     ast.Position{Line: 1, Column: 6, Offset: 6},
 				Message: "expected identifier after start of event declaration, got keyword continue",
@@ -2798,7 +2798,7 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 		result, errs := parse("var x : Int")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.FieldDeclaration{
 				Access:       ast.AccessNotSpecified,
 				VariableKind: ast.VariableKindVariable,
@@ -2832,7 +2832,7 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 		result, errs := parse("let x : Int")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.FieldDeclaration{
 				Access:       ast.AccessNotSpecified,
 				VariableKind: ast.VariableKindConstant,
@@ -2890,7 +2890,7 @@ func TestParseField(t *testing.T) {
 		)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.FieldDeclaration{
 				Access:       ast.AccessNotSpecified,
 				Flags:        ast.FieldDeclarationFlagsIsNative,
@@ -2923,7 +2923,7 @@ func TestParseField(t *testing.T) {
 
 		_, errs := parse("native let foo: Int", Config{})
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected identifier",
@@ -2946,7 +2946,7 @@ func TestParseField(t *testing.T) {
 		)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.FieldDeclaration{
 				Access:       ast.AccessNotSpecified,
 				Flags:        ast.FieldDeclarationFlagsIsStatic,
@@ -2982,7 +2982,7 @@ func TestParseField(t *testing.T) {
 			Config{},
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected identifier",
@@ -3006,7 +3006,7 @@ func TestParseField(t *testing.T) {
 		)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.FieldDeclaration{
 				Access:       ast.AccessNotSpecified,
 				Flags:        ast.FieldDeclarationFlagsIsStatic | ast.FieldDeclarationFlagsIsNative,
@@ -3039,7 +3039,7 @@ func TestParseField(t *testing.T) {
 
 		_, errs := parse("static native let foo: Int", Config{})
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected identifier",
@@ -3062,7 +3062,7 @@ func TestParseField(t *testing.T) {
 			},
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid static modifier after native modifier",
@@ -3086,7 +3086,7 @@ func TestParseField(t *testing.T) {
 		)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.FieldDeclaration{
 				TypeAnnotation: &ast.TypeAnnotation{
 					Type: &ast.NominalType{
@@ -3140,7 +3140,7 @@ func TestParseField(t *testing.T) {
 
 		_, errs := parse("access(all) static native let foo: Int", Config{})
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected identifier",
@@ -3164,7 +3164,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations(" access(all) struct S { }")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.CompositeDeclaration{
 					Members: ast.NewUnmeteredMembers(nil),
@@ -3203,7 +3203,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations(" access(all) resource R : RI { }")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.CompositeDeclaration{
 					Access:        ast.AccessAll,
@@ -3251,7 +3251,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.CompositeDeclaration{
 					Members: ast.NewUnmeteredMembers(
@@ -3579,7 +3579,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 		}`)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.CompositeDeclaration{
 					Access:        ast.AccessNotSpecified,
@@ -3632,7 +3632,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 		}`)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.CompositeDeclaration{
 					Access:        ast.AccessNotSpecified,
@@ -3687,7 +3687,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 			view foo: Int
 		}`)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid view modifier for variable",
@@ -3720,7 +3720,7 @@ func TestParseInvalidCompositeFunctionWithSelfParameter(t *testing.T) {
 
 			_, err := testParseDeclarations(code)
 
-			utils.AssertEqualWithDiff(
+			AssertEqualWithDiff(
 				t,
 				[]error{
 					&SyntaxError{
@@ -3739,7 +3739,7 @@ func TestParseInvalidParameterWithoutLabel(t *testing.T) {
 
 	_, errs := testParseDeclarations(`access(all) fun foo(continue: Int) {}`)
 
-	utils.AssertEqualWithDiff(t, []error{
+	AssertEqualWithDiff(t, []error{
 		&SyntaxError{
 			Pos:     ast.Position{Line: 1, Column: 20, Offset: 20},
 			Message: "expected identifier for argument label or parameter name, got keyword continue",
@@ -3752,7 +3752,7 @@ func TestParseParametersWithExtraLabels(t *testing.T) {
 
 	_, errs := testParseDeclarations(`access(all) fun foo(_ foo: String, label fable table: Int) {}`)
 
-	utils.AssertEqualWithDiff(t, []error{
+	AssertEqualWithDiff(t, []error{
 		&SyntaxError{
 			Pos:     ast.Position{Line: 1, Column: 47, Offset: 47},
 			Message: "expected ':' after parameter name, got identifier",
@@ -3771,7 +3771,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations("access(all) attachment E for S {} ")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.AttachmentDeclaration{
 					Access: ast.AccessAll,
@@ -3806,7 +3806,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		}`)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.CompositeDeclaration{
 					Access:        ast.AccessNotSpecified,
@@ -3852,7 +3852,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseDeclarations("attachment E {} ")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected 'for', got '{'",
@@ -3870,7 +3870,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations("access(all) attachment E for S: I {} ")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.AttachmentDeclaration{
 					Access: ast.AccessAll,
@@ -3912,7 +3912,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations("access(all) attachment E for S: I1, I2 {} ")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.AttachmentDeclaration{
 					Access: ast.AccessAll,
@@ -3986,7 +3986,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		}`)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.AttachmentDeclaration{
 					Access: ast.AccessAll,
@@ -4193,7 +4193,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		_, errs := testParseDeclarations(`access(all) attachment E for S {
 			require entitlement X
 		}`)
-		utils.AssertEqualWithDiff(t, []error{
+		AssertEqualWithDiff(t, []error{
 			&SyntaxError{
 				Pos:     ast.Position{Line: 2, Column: 3, Offset: 36},
 				Message: "unexpected identifier",
@@ -4210,7 +4210,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		}`)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.AttachmentDeclaration{
 					Access: ast.AccessAll,
@@ -4323,7 +4323,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations(" access(all) struct interface S { }")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.InterfaceDeclaration{
 					Access:        ast.AccessAll,
@@ -4348,7 +4348,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseDeclarations(" access(all) struct interface interface { }")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected interface name, got keyword \"interface\"",
@@ -4360,7 +4360,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 
 		var expected []ast.Declaration
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			expected,
 			result,
 		)
@@ -4384,7 +4384,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.InterfaceDeclaration{
 					Members: ast.NewUnmeteredMembers(
@@ -4647,7 +4647,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 	t.Run("invalid interface name", func(t *testing.T) {
 		_, errs := testParseDeclarations(`access(all) struct interface continue {}`)
 
-		utils.AssertEqualWithDiff(t, []error{
+		AssertEqualWithDiff(t, []error{
 			&SyntaxError{
 				Pos:     ast.Position{Line: 1, Column: 29, Offset: 29},
 				Message: "expected identifier following struct declaration, got keyword continue",
@@ -4664,7 +4664,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 		}`)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.InterfaceDeclaration{
 					Access:        ast.AccessNotSpecified,
@@ -4720,7 +4720,7 @@ func TestParseEnumDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations(" access(all) enum E { case c ; access(all) case d }")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.CompositeDeclaration{
 					Access:        ast.AccessAll,
@@ -4764,7 +4764,7 @@ func TestParseEnumDeclaration(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseDeclarations(" enum E { view case e }")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid view modifier for enum case",
@@ -4786,7 +4786,7 @@ func TestParseEnumDeclaration(t *testing.T) {
 				StaticModifierEnabled: true,
 			},
 		)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid static modifier for enum case",
@@ -4803,7 +4803,7 @@ func TestParseEnumDeclaration(t *testing.T) {
 
 		_, errs := testParseDeclarations(" enum E { static case e }")
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected identifier",
@@ -4825,7 +4825,7 @@ func TestParseEnumDeclaration(t *testing.T) {
 				NativeModifierEnabled: true,
 			},
 		)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid native modifier for enum case",
@@ -4842,7 +4842,7 @@ func TestParseEnumDeclaration(t *testing.T) {
 
 		_, errs := testParseDeclarations(" enum E { native case e }")
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected identifier",
@@ -4865,7 +4865,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations("transaction { execute {} }")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.TransactionDeclaration{
 					Execute: &ast.SpecialFunctionDeclaration{
@@ -4905,7 +4905,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 		result, errs := testParseProgram(code)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.TransactionDeclaration{
 					Fields:         nil,
@@ -4941,7 +4941,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 		result, errs := testParseProgram(code)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.TransactionDeclaration{
 					Fields: []*ast.FieldDeclaration{
@@ -5141,7 +5141,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 		result, errs := testParseProgram(code)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.TransactionDeclaration{
 					Fields: []*ast.FieldDeclaration{
@@ -5388,7 +5388,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 		result, errs := testParseProgram(code)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.TransactionDeclaration{
 					Fields: []*ast.FieldDeclaration{
@@ -5628,7 +5628,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 
 		_, errs := testParseDeclarations(code)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			`unexpected identifier, expected keyword "prepare" or "execute", got "uwu"`,
 			errs[0].Error(),
 		)
@@ -5644,7 +5644,7 @@ func TestParseFunctionAndBlock(t *testing.T) {
 	`)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -5690,7 +5690,7 @@ func TestParseFunctionParameterWithoutLabel(t *testing.T) {
 	`)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -5748,7 +5748,7 @@ func TestParseFunctionParameterWithLabel(t *testing.T) {
 	`)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -5817,7 +5817,7 @@ func TestParseStructure(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.CompositeDeclaration{
 				Members: ast.NewUnmeteredMembers(
@@ -6144,7 +6144,7 @@ func TestParseStructureWithConformances(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.CompositeDeclaration{
 				Access:        ast.AccessNotSpecified,
@@ -6205,7 +6205,7 @@ func TestParseInvalidMember(t *testing.T) {
 			IgnoreLeadingIdentifierEnabled: false,
 		})
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected identifier",
@@ -6236,7 +6236,7 @@ func TestParsePreAndPostConditions(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -6393,7 +6393,7 @@ func TestParseConditionMessage(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -6507,7 +6507,7 @@ func TestParseInvalidEmitConditionNonInvocation(t *testing.T) {
           }
 	    `)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected token '('",
@@ -6530,7 +6530,7 @@ func TestParseInvalidEmitConditionNonInvocation(t *testing.T) {
           }
         `)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected token '('",
@@ -6562,7 +6562,7 @@ func TestParseEmitAndTestCondition(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -6833,7 +6833,7 @@ func TestParseInterface(t *testing.T) {
 			},
 		}
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{test},
 			actual.Declarations(),
 		)
@@ -6851,7 +6851,7 @@ func TestParsePragmaNoArguments(t *testing.T) {
 		result, errs := testParseDeclarations(`#pedantic`)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.PragmaDeclaration{
 					Expression: &ast.IdentifierExpression{
@@ -6875,7 +6875,7 @@ func TestParsePragmaNoArguments(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseDeclarations("view #foo")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid view modifier for pragma",
@@ -6897,7 +6897,7 @@ func TestParsePragmaNoArguments(t *testing.T) {
 				StaticModifierEnabled: true,
 			},
 		)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid static modifier for pragma",
@@ -6913,7 +6913,7 @@ func TestParsePragmaNoArguments(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseDeclarations("static #foo")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token: identifier",
@@ -6935,7 +6935,7 @@ func TestParsePragmaNoArguments(t *testing.T) {
 				NativeModifierEnabled: true,
 			},
 		)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid native modifier for pragma",
@@ -6951,7 +6951,7 @@ func TestParsePragmaNoArguments(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseDeclarations("native #foo")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token: identifier",
@@ -6971,7 +6971,7 @@ func TestParsePragmaArguments(t *testing.T) {
 	actual, err := testParseProgram(code)
 	require.NoError(t, err)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.PragmaDeclaration{
 				Expression: &ast.InvocationExpression{
@@ -7016,7 +7016,7 @@ func TestParseImportWithString(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.ImportDeclaration{
 				Identifiers: nil,
@@ -7042,7 +7042,7 @@ func TestParseImportWithAddress(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.ImportDeclaration{
 				Identifiers: nil,
@@ -7070,7 +7070,7 @@ func TestParseImportWithIdentifiers(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.ImportDeclaration{
 				Identifiers: []ast.Identifier{
@@ -7109,7 +7109,7 @@ func TestParseFieldWithFromIdentifier(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.CompositeDeclaration{
 				Access:        ast.AccessNotSpecified,
@@ -7174,7 +7174,7 @@ func TestParseImportWithFromIdentifier(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.ImportDeclaration{
 				Identifiers: []ast.Identifier{
@@ -7206,7 +7206,7 @@ func TestParseInvalidImportWithPurity(t *testing.T) {
 	`
 	_, errs := testParseDeclarations(code)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]error{
 			&SyntaxError{
 				Message: "invalid view modifier for import",
@@ -7227,7 +7227,7 @@ func TestParseInvalidDefaultArgument(t *testing.T) {
 
 		_, errs := testParseDeclarations(" access(all) fun foo ( a : Int = 3) { } ")
 
-		utils.AssertEqualWithDiff(t, []error{
+		AssertEqualWithDiff(t, []error{
 			&SyntaxError{
 				Pos:     ast.Position{Line: 1, Column: 31, Offset: 31},
 				Message: "cannot use a default argument for this function",
@@ -7241,7 +7241,7 @@ func TestParseInvalidDefaultArgument(t *testing.T) {
 
 		_, errs := testParseDeclarations(" let foo = fun ( a : Int = 3) { } ")
 
-		utils.AssertEqualWithDiff(t, []error{
+		AssertEqualWithDiff(t, []error{
 			&SyntaxError{
 				Pos:     ast.Position{Line: 1, Column: 25, Offset: 25},
 				Message: "cannot use a default argument for this function",
@@ -7259,7 +7259,7 @@ func TestParseInvalidEventWithPurity(t *testing.T) {
 	`
 	_, errs := testParseDeclarations(code)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]error{
 			&SyntaxError{
 				Message: "invalid view modifier for event",
@@ -7279,7 +7279,7 @@ func TestParseInvalidCompositeWithPurity(t *testing.T) {
 	`
 	_, errs := testParseDeclarations(code)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]error{
 			&SyntaxError{
 				Message: "invalid view modifier for struct",
@@ -7299,7 +7299,7 @@ func TestParseInvalidTransactionWithPurity(t *testing.T) {
 	`
 	_, errs := testParseDeclarations(code)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]error{
 			&SyntaxError{
 				Message: "invalid view modifier for transaction",
@@ -7332,7 +7332,7 @@ func TestParseResource(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.CompositeDeclaration{
 				Access:        ast.AccessNotSpecified,
@@ -7362,7 +7362,7 @@ func TestParseEventDeclaration(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.CompositeDeclaration{
 				Access:        ast.AccessNotSpecified,
@@ -7448,7 +7448,7 @@ func TestParseEventEmitStatement(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -7534,7 +7534,7 @@ func TestParseResourceReturnType(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -7583,7 +7583,7 @@ func TestParseMovingVariableDeclaration(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
 				Access:     ast.AccessNotSpecified,
@@ -7619,7 +7619,7 @@ func TestParseResourceParameterType(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -7678,7 +7678,7 @@ func TestParseMovingVariableDeclarationWithTypeAnnotation(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
 				Access:     ast.AccessNotSpecified,
@@ -7724,7 +7724,7 @@ func TestParseFieldDeclarationWithMoveTypeAnnotation(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.CompositeDeclaration{
 				Access:        ast.AccessNotSpecified,
@@ -7779,7 +7779,7 @@ func TestParseDestructor(t *testing.T) {
         }
 	`
 	_, errs := testParseDeclarations(code)
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]error{
 			&CustomDestructorError{
 				Pos: ast.Position{Offset: 37, Line: 3, Column: 12},
@@ -7799,7 +7799,7 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.CompositeDeclaration{
 				Access:        ast.AccessNotSpecified,
@@ -7965,7 +7965,7 @@ func TestParseInvalidCompositeFunctionNames(t *testing.T) {
 				assert.True(t, ok, "Parser error does not conform to parser.Error")
 				syntaxErr := errs.Errors[0].(*SyntaxError)
 
-				utils.AssertEqualWithDiff(
+				AssertEqualWithDiff(
 					t,
 					"expected identifier after start of function declaration, got keyword init",
 					syntaxErr.Message,
@@ -8075,7 +8075,7 @@ func TestParsePreconditionWithUnaryNegation(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -8157,7 +8157,7 @@ func TestParseInvalidAccessModifiers(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseDeclarations("access(all) #test")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid access modifier for pragma",
@@ -8173,7 +8173,7 @@ func TestParseInvalidAccessModifiers(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseDeclarations("access(all) transaction {}")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid access modifier for transaction",
@@ -8189,7 +8189,7 @@ func TestParseInvalidAccessModifiers(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseDeclarations("access(all) access(self) let x = 1")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid second access modifier",
@@ -8219,7 +8219,7 @@ func TestParseInvalidImportWithModifier(t *testing.T) {
 			},
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid static modifier for import",
@@ -8238,7 +8238,7 @@ func TestParseInvalidImportWithModifier(t *testing.T) {
             static import x from 0x1
 	    `)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token: identifier",
@@ -8263,7 +8263,7 @@ func TestParseInvalidImportWithModifier(t *testing.T) {
 			},
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid native modifier for import",
@@ -8282,7 +8282,7 @@ func TestParseInvalidImportWithModifier(t *testing.T) {
             native import x from 0x1
 	    `)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token: identifier",
@@ -8312,7 +8312,7 @@ func TestParseInvalidEventWithModifier(t *testing.T) {
 			},
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid static modifier for event",
@@ -8331,7 +8331,7 @@ func TestParseInvalidEventWithModifier(t *testing.T) {
             static event Foo()
 	    `)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token: identifier",
@@ -8356,7 +8356,7 @@ func TestParseInvalidEventWithModifier(t *testing.T) {
 			},
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid native modifier for event",
@@ -8375,7 +8375,7 @@ func TestParseInvalidEventWithModifier(t *testing.T) {
             native event Foo()
 	    `)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token: identifier",
@@ -8406,7 +8406,7 @@ func TestParseCompositeWithModifier(t *testing.T) {
 			},
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid static modifier for structure",
@@ -8425,7 +8425,7 @@ func TestParseCompositeWithModifier(t *testing.T) {
             static struct Foo()
 	    `)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token: identifier",
@@ -8450,7 +8450,7 @@ func TestParseCompositeWithModifier(t *testing.T) {
 			},
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid native modifier for structure",
@@ -8469,7 +8469,7 @@ func TestParseCompositeWithModifier(t *testing.T) {
             native struct Foo()
 	    `)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token: identifier",
@@ -8499,7 +8499,7 @@ func TestParseTransactionWithModifier(t *testing.T) {
 			},
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid static modifier for transaction",
@@ -8518,7 +8518,7 @@ func TestParseTransactionWithModifier(t *testing.T) {
             static transaction {}
 	    `)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token: identifier",
@@ -8543,7 +8543,7 @@ func TestParseTransactionWithModifier(t *testing.T) {
 			},
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid native modifier for transaction",
@@ -8562,7 +8562,7 @@ func TestParseTransactionWithModifier(t *testing.T) {
             native transaction {}
 	    `)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token: identifier",
@@ -8603,7 +8603,7 @@ func TestParseNestedPragma(t *testing.T) {
 			},
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid native modifier for pragma",
@@ -8620,7 +8620,7 @@ func TestParseNestedPragma(t *testing.T) {
 
 		_, errs := parse("native #pragma", Config{})
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token: identifier",
@@ -8641,7 +8641,7 @@ func TestParseNestedPragma(t *testing.T) {
 				StaticModifierEnabled: true,
 			},
 		)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid static modifier for pragma",
@@ -8661,7 +8661,7 @@ func TestParseNestedPragma(t *testing.T) {
 			Config{},
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token: identifier",
@@ -8683,7 +8683,7 @@ func TestParseNestedPragma(t *testing.T) {
 				NativeModifierEnabled: true,
 			},
 		)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid static modifier for pragma",
@@ -8700,7 +8700,7 @@ func TestParseNestedPragma(t *testing.T) {
 
 		_, errs := parse("static native #pragma", Config{})
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected identifier",
@@ -8723,7 +8723,7 @@ func TestParseNestedPragma(t *testing.T) {
 			},
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid static modifier after native modifier",
@@ -8740,7 +8740,7 @@ func TestParseNestedPragma(t *testing.T) {
 
 		_, errs := parse("access(all) #pragma", Config{})
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid access modifier for pragma",
@@ -8762,7 +8762,7 @@ func TestParseNestedPragma(t *testing.T) {
 				NativeModifierEnabled: true,
 			},
 		)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid access modifier for pragma",
@@ -8779,7 +8779,7 @@ func TestParseNestedPragma(t *testing.T) {
 
 		_, errs := parse("access(all) static native #pragma", Config{})
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected identifier",
@@ -8803,7 +8803,7 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations(" access(all) entitlement ABC ")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.EntitlementDeclaration{
 					Access: ast.AccessAll,
@@ -8834,7 +8834,7 @@ func TestParseEntitlementDeclaration(t *testing.T) {
         `)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.CompositeDeclaration{
 					Members: ast.NewUnmeteredMembers(
@@ -8897,7 +8897,7 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseDeclarations(" access(all) entitlement")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected identifier, got EOF",
@@ -8913,7 +8913,7 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseDeclarations(" access(all) view entitlement E")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid view modifier for entitlement",
@@ -8949,7 +8949,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.CompositeDeclaration{
 					Access:        ast.AccessNotSpecified,
@@ -9062,7 +9062,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.CompositeDeclaration{
 					Access:        ast.AccessNotSpecified,
@@ -9134,7 +9134,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations(" access(all) entitlement mapping M { } ")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.EntitlementMappingDeclaration{
 					Access: ast.AccessAll,
@@ -9162,7 +9162,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		} `)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.EntitlementMappingDeclaration{
 					Access:    ast.AccessAll,
@@ -9251,7 +9251,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		} `)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.EntitlementMappingDeclaration{
 					Access:    ast.AccessAll,
@@ -9356,7 +9356,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		} `)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.EntitlementMappingDeclaration{
 					Access: ast.AccessAll,
@@ -9437,7 +9437,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseDeclarations(" access(all) mapping M {} ")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token: identifier",
@@ -9453,7 +9453,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseDeclarations(" access(all) entitlement M {} ")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token: '{'",
@@ -9469,7 +9469,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseDeclarations(" access(all) entitlement mapping M ")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected token '{'",
@@ -9485,7 +9485,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseDeclarations(" access(all) entitlement mapping M {")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected token '}'",
@@ -9501,7 +9501,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseDeclarations(" access(all) entitlement mapping M }")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected token '{'",
@@ -9517,7 +9517,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseDeclarations(" access(all) entitlement mapping {}")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected identifier following entitlement mapping declaration, got '{'",
@@ -9536,7 +9536,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 			&A -> B
 		} `)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected nominal type, got &A",
@@ -9555,7 +9555,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 			A -> [B]
 		} `)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected nominal type, got [B]",
@@ -9574,7 +9574,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 			A B
 		} `)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected token '->'",
@@ -9593,7 +9593,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 			A - B
 		} `)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected token '->'",
@@ -9612,7 +9612,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 			include &A
 		} `)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected nominal type, got &A",
@@ -9631,7 +9631,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 			include -> B
 		} `)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected token in type: '->'",
@@ -9653,7 +9653,7 @@ func TestParseInvalidSpecialFunctionReturnTypeAnnotation(t *testing.T) {
           init(): Int
       }
 	`)
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]error{
 			&SyntaxError{
 				Message: "invalid return type for initializer",
@@ -9709,7 +9709,7 @@ func TestSoftKeywordsInFunctionDeclaration(t *testing.T) {
 					},
 				},
 			}
-			utils.AssertEqualWithDiff(t, expected, result)
+			AssertEqualWithDiff(t, expected, result)
 
 		})
 	}
@@ -9728,7 +9728,7 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseDeclarations(" pub fun foo ( ) { }")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxErrorWithSuggestedReplacement{
 					Message: "`pub` is no longer a valid access keyword",
@@ -9749,7 +9749,7 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseDeclarations(" priv fun foo ( ) { }")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxErrorWithSuggestedReplacement{
 					Message: "`priv` is no longer a valid access keyword",
@@ -9770,7 +9770,7 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseDeclarations(" pub(set) fun foo ( ) { }")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "`pub(set)` is no longer a valid access keyword",

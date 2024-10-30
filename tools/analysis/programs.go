@@ -19,6 +19,8 @@
 package analysis
 
 import (
+	"fmt"
+
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/parser"
@@ -26,11 +28,15 @@ import (
 	"github.com/onflow/cadence/stdlib"
 )
 
-type Programs map[common.Location]*Program
+type Programs struct {
+	Programs                  map[common.Location]*Program
+	CryptoContractElaboration *sema.Elaboration
+	CryptoContractLocation    func() common.Location
+}
 
 type importResolutionResults map[common.Location]bool
 
-func (programs Programs) Load(config *Config, location common.Location) error {
+func (programs *Programs) Load(config *Config, location common.Location) error {
 	return programs.load(
 		config,
 		location,
@@ -43,14 +49,14 @@ func (programs Programs) Load(config *Config, location common.Location) error {
 	)
 }
 
-func (programs Programs) load(
+func (programs *Programs) load(
 	config *Config,
 	location common.Location,
 	importingLocation common.Location,
 	importRange ast.Range,
 	seenImports importResolutionResults,
 ) error {
-	if programs[location] != nil {
+	if programs.Programs[location] != nil {
 		return nil
 	}
 
@@ -104,7 +110,7 @@ func (programs Programs) load(
 		}
 	}
 
-	programs[location] = &Program{
+	programs.Programs[location] = &Program{
 		Location:  location,
 		Code:      code,
 		Program:   program,
@@ -115,7 +121,7 @@ func (programs Programs) load(
 	return nil
 }
 
-func (programs Programs) check(
+func (programs *Programs) check(
 	config *Config,
 	program *ast.Program,
 	location common.Location,
@@ -153,10 +159,29 @@ func (programs Programs) check(
 				var loadError error
 
 				switch importedLocation {
-				case stdlib.CryptoCheckerLocation:
-					cryptoChecker := stdlib.CryptoChecker()
-					elaboration = cryptoChecker.Elaboration
+				case stdlib.CryptoContractLocation:
+					// If the elaboration for the crypto contract is available, take it.
+					elaboration = programs.CryptoContractElaboration
+					if elaboration != nil {
+						break
+					}
 
+					// Otherwise, if the location for the Crypto contract is provided,
+					// then resolve the source code from that location and continue as
+					// any other contract.
+					cryptoLocation := programs.CryptoContractLocation
+					if cryptoLocation == nil {
+						return nil, fmt.Errorf("cannot find crypto contract")
+					}
+
+					importedLocation = cryptoLocation()
+
+					// Memoize the crypto contract's elaboration, for subsequent uses.
+					defer func() {
+						programs.CryptoContractElaboration = elaboration
+					}()
+
+					fallthrough
 				default:
 					if seenImports[importedLocation] {
 						return nil, &sema.CyclicImportsError{
@@ -172,7 +197,7 @@ func (programs Programs) check(
 						return nil, err
 					}
 
-					program := programs[importedLocation]
+					program := programs.Programs[importedLocation]
 					checker := program.Checker
 
 					// If the imported program has a checker, use its elaboration for the import
@@ -204,4 +229,8 @@ func (programs Programs) check(
 	}
 
 	return checker, nil
+}
+
+func (programs *Programs) Get(location common.Location) *Program {
+	return programs.Programs[location]
 }

@@ -29,7 +29,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/parser"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/checker"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 	"github.com/onflow/cadence/tools/analysis"
 )
 
@@ -89,8 +89,8 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 	programs, err := analysis.Load(config, txLocation)
 	require.NoError(t, err)
 
-	require.NotNil(t, programs[txLocation])
-	require.NotNil(t, programs[contractLocation])
+	require.NotNil(t, programs.Get(txLocation))
+	require.NotNil(t, programs.Get(contractLocation))
 
 	type locationRange struct {
 		location common.Location
@@ -99,7 +99,7 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 
 	var locationRanges []locationRange
 
-	for _, program := range programs {
+	for _, program := range programs.Programs {
 		require.NotNil(t, program.Program)
 		require.NotNil(t, program.Checker)
 
@@ -309,7 +309,10 @@ func TestHandledParserError(t *testing.T) {
 	require.Equal(t, 1, handlerCalls)
 
 	var parserError parser.Error
-	require.ErrorAs(t, programs[contractLocation].LoadError, &parserError)
+	require.ErrorAs(t,
+		programs.Get(contractLocation).LoadError,
+		&parserError,
+	)
 }
 
 func TestHandledCheckerError(t *testing.T) {
@@ -361,7 +364,10 @@ func TestHandledCheckerError(t *testing.T) {
 	require.NoError(t, err)
 
 	var checkerError *sema.CheckerError
-	require.ErrorAs(t, programs[contractLocation].LoadError, &checkerError)
+	require.ErrorAs(t,
+		programs.Get(contractLocation).LoadError,
+		&checkerError,
+	)
 }
 
 // Tests that an error handled by the custom error handler is not returned
@@ -429,12 +435,21 @@ func TestHandledLoadErrorImportedProgram(t *testing.T) {
 	require.NoError(t, err)
 
 	var checkerError *sema.CheckerError
-	require.ErrorAs(t, programs[contract1Location].LoadError, &checkerError)
-	require.ErrorAs(t, programs[contract2Location].LoadError, &checkerError)
+	require.ErrorAs(t,
+		programs.Get(contract1Location).LoadError,
+		&checkerError,
+	)
+	require.ErrorAs(t,
+		programs.Get(contract2Location).LoadError,
+		&checkerError,
+	)
 
 	// Validate that parent checker receives the imported program error despite it being handled
 	var importedProgramErr *sema.ImportedProgramError
-	require.ErrorAs(t, programs[contract1Location].LoadError, &importedProgramErr)
+	require.ErrorAs(t,
+		programs.Get(contract1Location).LoadError,
+		&importedProgramErr,
+	)
 }
 
 func TestStdlib(t *testing.T) {
@@ -543,7 +558,7 @@ func TestCyclicImports(t *testing.T) {
 	var checkerError *sema.CheckerError
 	require.ErrorAs(t, err, &checkerError)
 
-	errs := checker.RequireCheckerErrors(t, checkerError, 1)
+	errs := RequireCheckerErrors(t, checkerError, 1)
 
 	var importedProgramErr *sema.ImportedProgramError
 	require.ErrorAs(t, errs[0], &importedProgramErr)
@@ -551,6 +566,6 @@ func TestCyclicImports(t *testing.T) {
 	var nestedCheckerErr *sema.CheckerError
 	require.ErrorAs(t, importedProgramErr.Err, &nestedCheckerErr)
 
-	errs = checker.RequireCheckerErrors(t, nestedCheckerErr, 1)
+	errs = RequireCheckerErrors(t, nestedCheckerErr, 1)
 	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
 }
