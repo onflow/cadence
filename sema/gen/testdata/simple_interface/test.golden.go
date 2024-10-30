@@ -1,3 +1,4 @@
+// Code generated from testdata/simple_interface/test.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -16,24 +17,20 @@
  * limitations under the License.
  */
 
-package sema
+package simple_interface
 
-// BoolType represents the boolean type
-var BoolType = &SimpleType{
-	Name:          "Bool",
-	QualifiedName: "Bool",
-	TypeID:        "Bool",
-	TypeTag:       BoolTypeTag,
-	IsResource:    false,
-	Storable:      true,
-	Primitive:     true,
-	Equatable:     true,
-	Comparable:    true,
-	Exportable:    true,
-	Importable:    true,
-	conformances: []*InterfaceType{
-		StructStringerType,
-	},
-}
+import (
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/sema"
+)
 
-var BoolTypeAnnotation = NewTypeAnnotation(BoolType)
+const TestTypeName = "Test"
+
+var TestType = func() *sema.InterfaceType {
+	var t = &sema.InterfaceType{
+		Identifier:    TestTypeName,
+		CompositeKind: common.CompositeKindStructure,
+	}
+
+	return t
+}()

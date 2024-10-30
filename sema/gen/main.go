@@ -164,6 +164,9 @@ type typeDecl struct {
 	memberDeclarations []ast.Declaration
 	nestedTypes        []*typeDecl
 	hasConstructor     bool
+
+	// used in simpleType generation
+	conformances []*sema.InterfaceType
 }
 
 type generator struct {
@@ -429,9 +432,40 @@ func (g *generator) addConstructorDocStringDeclaration(
 	)
 }
 
-func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_ struct{}) {
+func (g *generator) VisitCompositeOrInterfaceDeclaration(decl ast.ConformingDeclaration) (_ struct{}) {
+	var compositeKind common.CompositeKind
+	var typeName string
+	var typeDec *typeDecl
+	var members []ast.Declaration
+	var conformances []*ast.NominalType
+	var isInterfaceType bool
 
-	compositeKind := decl.CompositeKind
+	switch actualDecl := decl.(type) {
+	case *ast.CompositeDeclaration:
+		compositeKind = actualDecl.Kind()
+		typeName = actualDecl.Identifier.Identifier
+		typeDec = &typeDecl{
+			typeName:      typeName,
+			fullTypeName:  g.newFullTypeName(typeName),
+			compositeKind: compositeKind,
+		}
+		members = actualDecl.Members.Declarations()
+		conformances = actualDecl.Conformances
+		isInterfaceType = false
+	case *ast.InterfaceDeclaration:
+		compositeKind = actualDecl.Kind()
+		typeName = actualDecl.Identifier.Identifier
+		typeDec = &typeDecl{
+			typeName:      typeName,
+			fullTypeName:  g.newFullTypeName(typeName),
+			compositeKind: compositeKind,
+		}
+		members = actualDecl.Members.Declarations()
+		isInterfaceType = true
+	default:
+		panic("Expected composite or interface declaration")
+	}
+
 	switch compositeKind {
 	case common.CompositeKindStructure,
 		common.CompositeKindResource,
@@ -441,25 +475,17 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 		panic(fmt.Sprintf("%s declarations are not supported", compositeKind.Name()))
 	}
 
-	typeName := decl.Identifier.Identifier
-
-	typeDecl := &typeDecl{
-		typeName:      typeName,
-		fullTypeName:  g.newFullTypeName(typeName),
-		compositeKind: compositeKind,
-	}
-
 	if len(g.typeStack) > 0 {
 		parentType := g.typeStack[len(g.typeStack)-1]
 		parentType.nestedTypes = append(
 			parentType.nestedTypes,
-			typeDecl,
+			typeDec,
 		)
 	}
 
 	g.typeStack = append(
 		g.typeStack,
-		typeDecl,
+		typeDec,
 	)
 	defer func() {
 		// Pop
@@ -472,6 +498,8 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 
 	// Check if the declaration is explicitly marked to be generated as a composite type.
 	if _, ok := g.leadingPragma["compositeType"]; ok {
+		generateSimpleType = false
+	} else if isInterfaceType {
 		generateSimpleType = false
 	} else {
 		// If not, decide what to generate depending on the type.
@@ -492,13 +520,13 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 		}
 	}
 
-	for _, memberDeclaration := range decl.Members.Declarations() {
+	for _, memberDeclaration := range members {
 		generateDeclaration(g, memberDeclaration)
 
 		// Visiting unsupported declarations panics,
 		// so only supported member declarations are added
-		typeDecl.memberDeclarations = append(
-			typeDecl.memberDeclarations,
+		typeDec.memberDeclarations = append(
+			typeDec.memberDeclarations,
 			memberDeclaration,
 		)
 
@@ -514,7 +542,7 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 		}
 	}
 
-	for _, conformance := range decl.Conformances {
+	for _, conformance := range conformances {
 		switch conformance.Identifier.Identifier {
 		case "Storable":
 			if !generateSimpleType {
@@ -523,7 +551,7 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 					g.currentTypeID(),
 				))
 			}
-			typeDecl.storable = true
+			typeDec.storable = true
 
 		case "Primitive":
 			if !generateSimpleType {
@@ -532,7 +560,7 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 					g.currentTypeID(),
 				))
 			}
-			typeDecl.primitive = true
+			typeDec.primitive = true
 
 		case "Equatable":
 			if !generateSimpleType {
@@ -541,7 +569,7 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 					g.currentTypeID(),
 				))
 			}
-			typeDecl.equatable = true
+			typeDec.equatable = true
 
 		case "Comparable":
 			if !generateSimpleType {
@@ -550,7 +578,7 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 					g.currentTypeID(),
 				))
 			}
-			typeDecl.comparable = true
+			typeDec.comparable = true
 
 		case "Exportable":
 			if !generateSimpleType {
@@ -559,10 +587,10 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 					g.currentTypeID(),
 				))
 			}
-			typeDecl.exportable = true
+			typeDec.exportable = true
 
 		case "Importable":
-			typeDecl.importable = true
+			typeDec.importable = true
 
 		case "ContainFields":
 			if !generateSimpleType {
@@ -571,18 +599,20 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 					g.currentTypeID(),
 				))
 			}
-			typeDecl.memberAccessible = true
+			typeDec.memberAccessible = true
+		case "StructStringer":
+			typeDec.conformances = append(typeDec.conformances, sema.StructStringerType)
 		}
 	}
 
 	var typeVarDecl dst.Expr
 	if generateSimpleType {
-		typeVarDecl = simpleTypeLiteral(typeDecl)
+		typeVarDecl = simpleTypeLiteral(typeDec)
 	} else {
-		typeVarDecl = compositeTypeExpr(typeDecl)
+		typeVarDecl = compositeOrInterfaceTypeExpr(typeDec, isInterfaceType)
 	}
 
-	fullTypeName := typeDecl.fullTypeName
+	fullTypeName := typeDec.fullTypeName
 
 	tyVarName := typeVarName(fullTypeName)
 
@@ -597,7 +627,7 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 		),
 	)
 
-	memberDeclarations := typeDecl.memberDeclarations
+	memberDeclarations := typeDec.memberDeclarations
 
 	if len(memberDeclarations) > 0 {
 
@@ -700,7 +730,7 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 				},
 			}
 
-			if typeDecl.hasConstructor {
+			if typeDec.hasConstructor {
 				stmts = append(
 					stmts,
 					&dst.AssignStmt{
@@ -736,8 +766,12 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 	return
 }
 
-func (*generator) VisitInterfaceDeclaration(_ *ast.InterfaceDeclaration) struct{} {
-	panic("interface declarations are not supported")
+func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_ struct{}) {
+	return g.VisitCompositeOrInterfaceDeclaration(decl)
+}
+
+func (g *generator) VisitInterfaceDeclaration(decl *ast.InterfaceDeclaration) (_ struct{}) {
+	return g.VisitCompositeOrInterfaceDeclaration(decl)
 }
 
 func (*generator) VisitAttachmentDeclaration(_ *ast.AttachmentDeclaration) struct{} {
@@ -1591,6 +1625,9 @@ func simpleTypeLiteral(ty *typeDecl) dst.Expr {
 	//	Comparable:    false,
 	//	Exportable:    false,
 	//	Importable:    false,
+	//  comformances:  []*InterfaceType {
+	//      StructStringerType,
+	//  }
 	//}
 
 	isResource := ty.compositeKind == common.CompositeKindResource
@@ -1607,6 +1644,33 @@ func simpleTypeLiteral(ty *typeDecl) dst.Expr {
 		goKeyValue("Exportable", goBoolLit(ty.exportable)),
 		goKeyValue("Importable", goBoolLit(ty.importable)),
 		goKeyValue("ContainFields", goBoolLit(ty.memberAccessible)),
+	}
+
+	if len(ty.conformances) > 0 {
+		var elts = []dst.Expr{}
+		for _, conformance := range ty.conformances {
+			var name = ""
+			switch conformance {
+			case sema.StructStringerType:
+				name = "StructStringerType"
+			default:
+				panic("Unsupported conformance typeID")
+			}
+			elts = append(elts, &dst.Ident{
+				Name: name,
+				Path: semaPath,
+			})
+		}
+		elements = append(elements, goKeyValue("conformances", &dst.CompositeLit{
+			Type: &dst.ArrayType{
+				Elt: &dst.StarExpr{
+					X: &dst.Ident{
+						Name: "InterfaceType",
+					},
+				},
+			},
+			Elts: elts,
+		}))
 	}
 
 	return &dst.UnaryExpr{
@@ -1971,14 +2035,24 @@ func stringMemberResolverMapType() *dst.MapType {
 	}
 }
 
-func compositeTypeExpr(ty *typeDecl) dst.Expr {
+func compositeOrInterfaceTypeExpr(ty *typeDecl, isInterfaceType bool) dst.Expr {
 
 	// func() *CompositeType {
-	// 	var t = &CompositeType{
+	// 	var t = &CompositeType {
 	// 		Identifier:         FooTypeName,
 	// 		Kind:               common.CompositeKindStructure,
 	// 		ImportableBuiltin:  false,
 	// 		HasComputedMembers: true,
+	// 	}
+	//
+	// 	t.SetNestedType(FooBarTypeName, FooBarType)
+	// 	return t
+	// }()
+
+	// func() *InterfaceType {
+	// 	var t = &InterfaceType{
+	// 		Identifier:         FooTypeName,
+	// 		CompositeKind:      common.CompositeKindStructure,
 	// 	}
 	//
 	// 	t.SetNestedType(FooBarTypeName, FooBarType)
@@ -1991,7 +2065,7 @@ func compositeTypeExpr(ty *typeDecl) dst.Expr {
 		&dst.DeclStmt{
 			Decl: goVarDecl(
 				typeVarName,
-				compositeTypeLiteral(ty),
+				compositeOrInterfaceTypeLiteral(ty, isInterfaceType),
 			),
 		},
 	}
@@ -2023,6 +2097,11 @@ func compositeTypeExpr(ty *typeDecl) dst.Expr {
 		},
 	)
 
+	name := "CompositeType"
+	if isInterfaceType {
+		name = "InterfaceType"
+	}
+
 	return &dst.CallExpr{
 		Fun: &dst.FuncLit{
 			Type: &dst.FuncType{
@@ -2032,7 +2111,7 @@ func compositeTypeExpr(ty *typeDecl) dst.Expr {
 						{
 							Type: &dst.StarExpr{
 								X: &dst.Ident{
-									Name: "CompositeType",
+									Name: name,
 									Path: semaPath,
 								},
 							},
@@ -2047,21 +2126,30 @@ func compositeTypeExpr(ty *typeDecl) dst.Expr {
 	}
 }
 
-func compositeTypeLiteral(ty *typeDecl) dst.Expr {
+func compositeOrInterfaceTypeLiteral(ty *typeDecl, isInterfaceType bool) dst.Expr {
 	kind := compositeKindExpr(ty.compositeKind)
 
 	elements := []dst.Expr{
 		goKeyValue("Identifier", typeNameVarIdent(ty.fullTypeName)),
-		goKeyValue("Kind", kind),
-		goKeyValue("ImportableBuiltin", goBoolLit(ty.importable)),
-		goKeyValue("HasComputedMembers", goBoolLit(true)),
+	}
+
+	name := "InterfaceType"
+	if isInterfaceType {
+		elements = append(elements,
+			goKeyValue("CompositeKind", kind))
+	} else {
+		name = "CompositeType"
+		elements = append(elements,
+			goKeyValue("Kind", kind),
+			goKeyValue("ImportableBuiltin", goBoolLit(ty.importable)),
+			goKeyValue("HasComputedMembers", goBoolLit(true)))
 	}
 
 	return &dst.UnaryExpr{
 		Op: token.AND,
 		X: &dst.CompositeLit{
 			Type: &dst.Ident{
-				Name: "CompositeType",
+				Name: name,
 				Path: semaPath,
 			},
 			Elts: elements,

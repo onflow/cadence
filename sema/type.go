@@ -312,6 +312,12 @@ func TypeActivationNestedType(typeActivation *VariableActivation, qualifiedIdent
 	return ty
 }
 
+// ConformingType is a type that can conform to interfaces
+type ConformingType interface {
+	Type
+	EffectiveInterfaceConformanceSet() *InterfaceSet
+}
+
 // CompositeKindedType is a type which has a composite kind
 type CompositeKindedType interface {
 	Type
@@ -1197,7 +1203,9 @@ var _ IntegerRangedType = &NumericType{}
 var _ SaturatingArithmeticType = &NumericType{}
 
 func NewNumericType(typeName string) *NumericType {
-	return &NumericType{name: typeName}
+	return &NumericType{
+		name: typeName,
+	}
 }
 
 func (t *NumericType) Tag() TypeTag {
@@ -1373,6 +1381,17 @@ func (t *NumericType) IsSuperType() bool {
 
 func (*NumericType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
 	// NO-OP
+}
+
+var numericTypeEffectiveInterfaceConformanceSet *InterfaceSet
+
+func init() {
+	numericTypeEffectiveInterfaceConformanceSet = NewInterfaceSet()
+	numericTypeEffectiveInterfaceConformanceSet.Add(StructStringerType)
+}
+
+func (t *NumericType) EffectiveInterfaceConformanceSet() *InterfaceSet {
+	return numericTypeEffectiveInterfaceConformanceSet
 }
 
 // FixedPointNumericType represents all the types in the fixed-point range.
@@ -4210,6 +4229,7 @@ func init() {
 			DeploymentResultType,
 			HashableStructType,
 			&InclusiveRangeType{},
+			StructStringerType,
 		},
 	)
 
@@ -7405,6 +7425,16 @@ func (t *AddressType) initializeMemberResolvers() {
 	})
 }
 
+var addressTypeEffectiveInterfaceConformanceSet *InterfaceSet
+
+func init() {
+	addressTypeEffectiveInterfaceConformanceSet = NewInterfaceSet()
+	addressTypeEffectiveInterfaceConformanceSet.Add(StructStringerType)
+}
+func (t *AddressType) AddressInterfaceConformanceSet() *InterfaceSet {
+	return numericTypeEffectiveInterfaceConformanceSet
+}
+
 func IsPrimitiveOrContainerOfPrimitive(referencedType Type) bool {
 	switch ty := referencedType.(type) {
 	case *VariableSizedType:
@@ -7821,7 +7851,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 						IsSubsetOf(intersectionSubtype.EffectiveInterfaceConformanceSet())
 				}
 
-			case *CompositeType:
+			case ConformingType:
 				// A type `T`
 				// is a subtype of an intersection type `AnyResource{Us}` / `AnyStruct{Us}` / `Any{Us}`:
 				// if `T` is a subtype of the intersection supertype,
@@ -9511,10 +9541,49 @@ func (t *EntitlementMapType) CheckInstantiated(_ ast.HasPosition, _ common.Memor
 	// NO-OP
 }
 
+func extractNativeTypes(
+	types []Type,
+) {
+	for len(types) > 0 {
+		lastIndex := len(types) - 1
+		curType := types[lastIndex]
+		types[lastIndex] = nil
+		types = types[:lastIndex]
+
+		switch actualType := curType.(type) {
+		case *CompositeType:
+			NativeCompositeTypes[actualType.QualifiedIdentifier()] = actualType
+
+			nestedTypes := actualType.NestedTypes
+			if nestedTypes == nil {
+				continue
+			}
+
+			nestedTypes.Foreach(func(_ string, nestedType Type) {
+				types = append(types, nestedType)
+			})
+		case *InterfaceType:
+			NativeInterfaceTypes[actualType.QualifiedIdentifier()] = actualType
+
+			nestedTypes := actualType.NestedTypes
+			if nestedTypes == nil {
+				continue
+			}
+
+			nestedTypes.Foreach(func(_ string, nestedType Type) {
+				types = append(types, nestedType)
+			})
+		default:
+			panic("Expected only composite or interface type")
+		}
+
+	}
+}
+
 var NativeCompositeTypes = map[string]*CompositeType{}
 
 func init() {
-	compositeTypes := []*CompositeType{
+	compositeTypes := []Type{
 		AccountKeyType,
 		PublicKeyType,
 		HashAlgorithmType,
@@ -9523,26 +9592,15 @@ func init() {
 		DeploymentResultType,
 	}
 
-	for len(compositeTypes) > 0 {
-		lastIndex := len(compositeTypes) - 1
-		compositeType := compositeTypes[lastIndex]
-		compositeTypes[lastIndex] = nil
-		compositeTypes = compositeTypes[:lastIndex]
+	extractNativeTypes(compositeTypes)
+}
 
-		NativeCompositeTypes[compositeType.QualifiedIdentifier()] = compositeType
+var NativeInterfaceTypes = map[string]*InterfaceType{}
 
-		nestedTypes := compositeType.NestedTypes
-		if nestedTypes == nil {
-			continue
-		}
-
-		nestedTypes.Foreach(func(_ string, nestedType Type) {
-			nestedCompositeType, ok := nestedType.(*CompositeType)
-			if !ok {
-				return
-			}
-
-			compositeTypes = append(compositeTypes, nestedCompositeType)
-		})
+func init() {
+	interfaceTypes := []Type{
+		StructStringerType,
 	}
+
+	extractNativeTypes(interfaceTypes)
 }
