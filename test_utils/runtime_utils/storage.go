@@ -31,7 +31,7 @@ func CheckAtreeStorageHealth(tb testing.TB, storage atree.SlabStorage, expectedR
 
 	nonTempRootSlabIDs := make([]atree.SlabID, 0, len(rootSlabIDs))
 
-	for rootSlabID := range rootSlabIDs {
+	for rootSlabID := range rootSlabIDs { //nolint:maprange
 		if rootSlabID.HasTempAddress() {
 			continue
 		}
