@@ -12380,3 +12380,133 @@ func TestInterpretOptionalAddressInConditional(t *testing.T) {
 		value,
 	)
 }
+
+func TestInterpretStringTemplates(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("int", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let x = 123
+			let y = "x = \(x)"
+		`)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(123),
+			inter.Globals.Get("x").GetValue(inter),
+		)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("x = 123"),
+			inter.Globals.Get("y").GetValue(inter),
+		)
+	})
+
+	t.Run("multiple", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let x = 123.321
+			let y = "abc"
+			let z = "\(y) and \(x)"
+		`)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("abc and 123.32100000"),
+			inter.Globals.Get("z").GetValue(inter),
+		)
+	})
+
+	t.Run("nested template", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let x = "{}"
+			let y = "[\(x)]"
+			let z = "(\(y))"
+		`)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("([{}])"),
+			inter.Globals.Get("z").GetValue(inter),
+		)
+	})
+
+	t.Run("boolean", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let x = false
+			let y = "\(x)"
+		`)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("false"),
+			inter.Globals.Get("y").GetValue(inter),
+		)
+	})
+
+	t.Run("func extracted", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let add = fun(): Int {
+				return 2+2
+			}
+			let y = add()
+			let x: String = "\(y)"
+		`)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("4"),
+			inter.Globals.Get("x").GetValue(inter),
+		)
+	})
+
+	t.Run("path expr", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let a = /public/foo
+			let x = "file at \(a)"
+		`)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("file at /public/foo"),
+			inter.Globals.Get("x").GetValue(inter),
+		)
+	})
+
+	t.Run("consecutive", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let c = "C"
+			let a: Character = "A"
+			let n = "N"
+			let x = "\(c)\(a)\(n)"
+		`)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("CAN"),
+			inter.Globals.Get("x").GetValue(inter),
+		)
+	})
+}

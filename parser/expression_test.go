@@ -6042,6 +6042,462 @@ func TestParseStringWithUnicode(t *testing.T) {
 	AssertEqualWithDiff(t, expected, actual)
 }
 
+func TestParseStringTemplate(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual, errs := testParseExpression(`
+		"\(test)"
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.NoError(t, err)
+
+		expected := &ast.StringTemplateExpression{
+			Values: []string{
+				"",
+				"",
+			},
+			Expressions: []ast.Expression{
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "test",
+						Pos:        ast.Position{Offset: 6, Line: 2, Column: 5},
+					},
+				},
+			},
+			Range: ast.Range{
+				StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
+				EndPos:   ast.Position{Offset: 11, Line: 2, Column: 10},
+			},
+		}
+
+		AssertEqualWithDiff(t, expected, actual)
+	})
+
+	t.Run("multi", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual, errs := testParseExpression(`
+		"this is a test \(abc)\(def) test"
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.NoError(t, err)
+
+		expected := &ast.StringTemplateExpression{
+			Values: []string{
+				"this is a test ",
+				"",
+				" test",
+			},
+			Expressions: []ast.Expression{
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "abc",
+						Pos:        ast.Position{Offset: 21, Line: 2, Column: 20},
+					},
+				},
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "def",
+						Pos:        ast.Position{Offset: 27, Line: 2, Column: 27},
+					},
+				},
+			},
+			Range: ast.Range{
+				StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
+				EndPos:   ast.Position{Offset: 36, Line: 2, Column: 36},
+			},
+		}
+
+		AssertEqualWithDiff(t, expected, actual)
+	})
+
+	t.Run("missing end", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression(`
+		  "this is a test \(FOO)
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.Error(t, err)
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid end of string literal: missing '\"'",
+					Pos:     ast.Position{Offset: 27, Line: 2, Column: 27},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression(`
+		  "\(.)"
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.Error(t, err)
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token in expression: '.'",
+					Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid, num", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression(`
+		  "\(2 + 2) is a"
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.Error(t, err)
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected identifier got: 2 + 2",
+					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("valid, nested identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual, errs := testParseExpression(`
+		  "\((a))"
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.NoError(t, err)
+
+		expected := &ast.StringTemplateExpression{
+			Values: []string{
+				"",
+				"",
+			},
+			Expressions: []ast.Expression{
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "a",
+						Pos:        ast.Position{Offset: 9, Line: 2, Column: 8},
+					},
+				},
+			},
+			Range: ast.Range{
+				StartPos: ast.Position{Offset: 5, Line: 2, Column: 4},
+				EndPos:   ast.Position{Offset: 12, Line: 2, Column: 11},
+			},
+		}
+
+		AssertEqualWithDiff(t, expected, actual)
+
+	})
+	t.Run("invalid, empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression(`
+		  "\()"
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.Error(t, err)
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token in expression: ')'",
+					Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid, function identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression(`
+			"\(add())"
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.Error(t, err)
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected identifier got: add()",
+					Pos:     ast.Position{Offset: 12, Line: 2, Column: 11},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid, unbalanced paren", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression(`
+			"\(add"
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.Error(t, err)
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token ')'",
+					Pos:     ast.Position{Offset: 10, Line: 2, Column: 9},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid, nested templates", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression(`
+			"outer string \( "\(inner template)" )"
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.Error(t, err)
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token ')'",
+					Pos:     ast.Position{Offset: 30, Line: 2, Column: 29},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("valid, alternating", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual, errs := testParseExpression(`
+			"a\(b)c"
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.NoError(t, err)
+
+		expected := &ast.StringTemplateExpression{
+			Values: []string{
+				"a",
+				"c",
+			},
+			Expressions: []ast.Expression{
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "b",
+						Pos:        ast.Position{Offset: 8, Line: 2, Column: 7},
+					},
+				},
+			},
+			Range: ast.Range{
+				StartPos: ast.Position{Offset: 4, Line: 2, Column: 3},
+				EndPos:   ast.Position{Offset: 11, Line: 2, Column: 10},
+			},
+		}
+
+		AssertEqualWithDiff(t, expected, actual)
+	})
+
+	t.Run("valid, surrounded", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual, errs := testParseExpression(`
+			"\(a)b\(c)"
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.NoError(t, err)
+
+		expected := &ast.StringTemplateExpression{
+			Values: []string{
+				"",
+				"b",
+				"",
+			},
+			Expressions: []ast.Expression{
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "a",
+						Pos:        ast.Position{Offset: 7, Line: 2, Column: 6},
+					},
+				},
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "c",
+						Pos:        ast.Position{Offset: 12, Line: 2, Column: 11},
+					},
+				},
+			},
+			Range: ast.Range{
+				StartPos: ast.Position{Offset: 4, Line: 2, Column: 3},
+				EndPos:   ast.Position{Offset: 14, Line: 2, Column: 13},
+			},
+		}
+
+		AssertEqualWithDiff(t, expected, actual)
+	})
+
+	t.Run("valid, adjacent", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual, errs := testParseExpression(`
+			"\(a)\(b)\(c)"
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.NoError(t, err)
+
+		expected := &ast.StringTemplateExpression{
+			Values: []string{
+				"",
+				"",
+				"",
+				"",
+			},
+			Expressions: []ast.Expression{
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "a",
+						Pos:        ast.Position{Offset: 7, Line: 2, Column: 6},
+					},
+				},
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "b",
+						Pos:        ast.Position{Offset: 11, Line: 2, Column: 11},
+					},
+				},
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "c",
+						Pos:        ast.Position{Offset: 15, Line: 2, Column: 16},
+					},
+				},
+			},
+			Range: ast.Range{
+				StartPos: ast.Position{Offset: 4, Line: 2, Column: 3},
+				EndPos:   ast.Position{Offset: 17, Line: 2, Column: 18},
+			},
+		}
+
+		AssertEqualWithDiff(t, expected, actual)
+	})
+}
+
 func TestParseNilCoalescing(t *testing.T) {
 
 	t.Parallel()

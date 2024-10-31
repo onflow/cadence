@@ -1,6 +1,6 @@
 
 access(all)
-struct Character: Storable, Primitive, Equatable, Comparable, Exportable, Importable {
+struct Character: Storable, Primitive, Equatable, Comparable, Exportable, Importable, StructStringer {
 
     /// The byte array of the UTF-8 encoding.
     access(all)

@@ -49,6 +49,13 @@ type position struct {
 	column int
 }
 
+type lexerMode uint8
+
+const (
+	lexerModeNormal lexerMode = iota
+	lexerModeStringInterpolation
+)
+
 type lexer struct {
 	// memoryGauge is used for metering memory usage
 	memoryGauge common.MemoryGauge
@@ -74,6 +81,10 @@ type lexer struct {
 	prev rune
 	// canBackup indicates whether stepping back is allowed
 	canBackup bool
+	// lexer mode is used for string templates
+	mode lexerMode
+	// counts the number of unclosed brackets for string templates \((()))
+	openBrackets int
 }
 
 var _ TokenStream = &lexer{}
@@ -130,6 +141,8 @@ func (l *lexer) clear() {
 	l.cursor = 0
 	l.tokens = l.tokens[:0]
 	l.tokenCount = 0
+	l.mode = lexerModeNormal
+	l.openBrackets = 0
 }
 
 func (l *lexer) Reclaim() {
@@ -404,8 +417,19 @@ func (l *lexer) scanString(quote rune) {
 			l.backupOne()
 			return
 		case '\\':
+			// might have to backup twice due to string template
+			tmpBackupOffset := l.prevEndOffset
+			tmpBackup := l.prev
 			r = l.next()
 			switch r {
+			case '(':
+				// string template, stop and set mode
+				l.mode = lexerModeStringInterpolation
+				// no need to update prev values because these next tokens will not backup
+				l.endOffset = tmpBackupOffset
+				l.current = tmpBackup
+				l.canBackup = false
+				return
 			case '\n', EOF:
 				// NOTE: invalid end of string handled by parser
 				l.backupOne()

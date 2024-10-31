@@ -18,22 +18,4 @@
 
 package sema
 
-// BoolType represents the boolean type
-var BoolType = &SimpleType{
-	Name:          "Bool",
-	QualifiedName: "Bool",
-	TypeID:        "Bool",
-	TypeTag:       BoolTypeTag,
-	IsResource:    false,
-	Storable:      true,
-	Primitive:     true,
-	Equatable:     true,
-	Comparable:    true,
-	Exportable:    true,
-	Importable:    true,
-	conformances: []*InterfaceType{
-		StructStringerType,
-	},
-}
-
-var BoolTypeAnnotation = NewTypeAnnotation(BoolType)
+//go:generate go run ./gen struct_stringer.cdc struct_stringer.gen.go
