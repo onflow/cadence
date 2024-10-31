@@ -31,6 +31,7 @@ import (
 
 type TestLedger struct {
 	StoredValues        map[string][]byte
+	StorageIndices      map[string]uint64
 	OnValueExists       func(owner, key []byte) (exists bool, err error)
 	OnGetValue          func(owner, key []byte) (value []byte, err error)
 	OnSetValue          func(owner, key, value []byte) (err error)
@@ -92,9 +93,30 @@ func (s TestLedger) Dump() {
 	}
 }
 
+type LedgerOnRead func(owner, key, value []byte)
+type LedgerOnWrite func(owner, key, value []byte)
+
+type OwnerKeyValue struct {
+	Owner, Key, Value []byte
+}
+
+var LedgerOnWriteCounter = func(counter *int) LedgerOnWrite {
+	return func(_, _, _ []byte) {
+		(*counter)++
+	}
+}
+
+var LedgerOnWriteEntries = func(entries *[]OwnerKeyValue) LedgerOnWrite {
+	return func(owner, key, value []byte) {
+		*entries = append(
+			*entries,
+			OwnerKeyValue{Owner: owner, Key: key, Value: value})
+	}
+}
+
 func NewTestLedger(
-	onRead func(owner, key, value []byte),
-	onWrite func(owner, key, value []byte),
+	onRead LedgerOnRead,
+	onWrite LedgerOnWrite,
 ) TestLedger {
 
 	storedValues := map[string][]byte{}
@@ -102,7 +124,8 @@ func NewTestLedger(
 	storageIndices := map[string]uint64{}
 
 	return TestLedger{
-		StoredValues: storedValues,
+		StoredValues:   storedValues,
+		StorageIndices: storageIndices,
 		OnValueExists: func(owner, key []byte) (bool, error) {
 			value := storedValues[TestStorageKey(string(owner), string(key))]
 			return len(value) > 0, nil
@@ -142,7 +165,8 @@ func NewTestLedgerWithData(
 	}
 
 	return TestLedger{
-		StoredValues: storedValues,
+		StoredValues:   storedValues,
+		StorageIndices: storageIndices,
 		OnValueExists: func(owner, key []byte) (bool, error) {
 			value := storedValues[storageKey(string(owner), string(key))]
 			return len(value) > 0, nil

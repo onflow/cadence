@@ -130,7 +130,7 @@ func (k StorageKey) IsLess(o StorageKey) bool {
 // InMemoryStorage
 type InMemoryStorage struct {
 	*atree.BasicSlabStorage
-	StorageMaps map[StorageKey]*StorageMap
+	StorageMaps map[StorageKey]*DomainStorageMap
 	memoryGauge common.MemoryGauge
 }
 
@@ -158,22 +158,23 @@ func NewInMemoryStorage(memoryGauge common.MemoryGauge) InMemoryStorage {
 
 	return InMemoryStorage{
 		BasicSlabStorage: slabStorage,
-		StorageMaps:      make(map[StorageKey]*StorageMap),
+		StorageMaps:      make(map[StorageKey]*DomainStorageMap),
 		memoryGauge:      memoryGauge,
 	}
 }
 
 func (i InMemoryStorage) GetStorageMap(
+	_ *Interpreter,
 	address common.Address,
 	domain string,
 	createIfNotExists bool,
 ) (
-	storageMap *StorageMap,
+	storageMap *DomainStorageMap,
 ) {
 	key := NewStorageKey(i.memoryGauge, address, domain)
 	storageMap = i.StorageMaps[key]
 	if storageMap == nil && createIfNotExists {
-		storageMap = NewStorageMap(i.memoryGauge, i, atree.Address(address))
+		storageMap = NewDomainStorageMap(i.memoryGauge, i, atree.Address(address))
 		i.StorageMaps[key] = storageMap
 	}
 	return storageMap

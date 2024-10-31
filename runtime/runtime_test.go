@@ -5780,20 +5780,27 @@ func TestRuntimeContractWriteback(t *testing.T) {
 
 	assert.Equal(t,
 		[]ownerKeyPair{
-			// storage index to contract domain storage map
+			// storage index to account storage map
 			{
 				addressValue[:],
-				[]byte("contract"),
+				[]byte(AccountStorageKey),
 			},
 			// contract value
+			// NOTE: contract value is empty because it is inlined in contract domain storage map
 			{
 				addressValue[:],
 				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
 			},
 			// contract domain storage map
+			// NOTE: contract domain storage map is empty because it is inlined in account storage map
 			{
 				addressValue[:],
 				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+			},
+			// account storage map
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3},
 			},
 		},
 		writes,
@@ -5829,8 +5836,10 @@ func TestRuntimeContractWriteback(t *testing.T) {
 
 	assert.Equal(t,
 		[]ownerKeyPair{
-			// Storage map is modified because contract value is inlined in contract storage map.
-			// NOTE: contract value slab doesn't exist.
+			// Account storage map is modified because:
+			// - contract value is inlined in contract storage map, and
+			// - contract storage map is inlined in account storage map.
+			// NOTE: both contract storage map slab and contract value slab don't exist.
 			{
 				addressValue[:],
 				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
@@ -5927,10 +5936,10 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
 	assert.Equal(t,
 		[]ownerKeyPair{
-			// storage index to contract domain storage map
+			// storage index to account storage map
 			{
 				addressValue[:],
-				[]byte("contract"),
+				[]byte(AccountStorageKey),
 			},
 			// contract value
 			// NOTE: contract value slab is empty because it is inlined in contract domain storage map
@@ -5939,9 +5948,15 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
 			},
 			// contract domain storage map
+			// NOTE: contract domain storage map is empty because it is inlined in account storage map
 			{
 				addressValue[:],
 				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+			},
+			// account storage map
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3},
 			},
 		},
 		writes,
@@ -5971,22 +5986,23 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
 	assert.Equal(t,
 		[]ownerKeyPair{
-			// storage index to storage domain storage map
+			// account storage map
+			// NOTE: account storage map is updated with new storage domain storage map (inlined).
 			{
 				addressValue[:],
-				[]byte("storage"),
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
 			},
 			// resource value
 			// NOTE: resource value slab is empty because it is inlined in storage domain storage map
 			{
 				addressValue[:],
-				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3},
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4},
 			},
 			// storage domain storage map
-			// NOTE: resource value slab is inlined.
+			// NOTE: storage domain storage map is empty because it is inlined in account storage map.
 			{
 				addressValue[:],
-				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4},
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x5},
 			},
 		},
 		writes,
@@ -6045,11 +6061,12 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
 	assert.Equal(t,
 		[]ownerKeyPair{
-			// Storage map is modified because resource value is inlined in storage map
+			// Account storage map is modified because resource value is inlined in storage map,
+			// and storage map is inlined in account storage map.
 			// NOTE: resource value slab is empty.
 			{
 				addressValue[:],
-				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4},
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
 			},
 		},
 		writes,
@@ -7562,7 +7579,7 @@ func TestRuntimeComputationMetring(t *testing.T) {
         `,
 			ok:        true,
 			hits:      3,
-			intensity: 76,
+			intensity: 115,
 		},
 	}
 

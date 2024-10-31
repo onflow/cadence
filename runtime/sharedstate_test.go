@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
 )
 
@@ -211,14 +212,62 @@ func TestRuntimeSharedState(t *testing.T) {
 
 	require.Equal(t,
 		[]ownerKeyPair{
+			// Read account domain register to check if it is a migrated account
+			// Read returns no value.
+			{
+				owner: signerAddress[:],
+				key:   []byte(AccountStorageKey),
+			},
+			// Read contract domain register to check if it is a unmigrated account
+			// Read returns no value.
 			{
 				owner: signerAddress[:],
 				key:   []byte(StorageDomainContract),
+			},
+			// Read all available domain registers to check if it is a new account
+			// Read returns no value.
+			{
+				owner: signerAddress[:],
+				key:   []byte(common.PathDomainStorage.Identifier()),
+			},
+			{
+				owner: signerAddress[:],
+				key:   []byte(common.PathDomainPrivate.Identifier()),
+			},
+			{
+				owner: signerAddress[:],
+				key:   []byte(common.PathDomainPublic.Identifier()),
 			},
 			{
 				owner: signerAddress[:],
 				key:   []byte(StorageDomainContract),
 			},
+			{
+				owner: signerAddress[:],
+				key:   []byte(stdlib.InboxStorageDomain),
+			},
+			{
+				owner: signerAddress[:],
+				key:   []byte(stdlib.CapabilityControllerStorageDomain),
+			},
+			{
+				owner: signerAddress[:],
+				key:   []byte(stdlib.CapabilityControllerTagStorageDomain),
+			},
+			{
+				owner: signerAddress[:],
+				key:   []byte(stdlib.PathCapabilityStorageDomain),
+			},
+			{
+				owner: signerAddress[:],
+				key:   []byte(stdlib.AccountCapabilityStorageDomain),
+			},
+			// Read account domain register
+			{
+				owner: signerAddress[:],
+				key:   []byte(AccountStorageKey),
+			},
+			// Read account storage map
 			{
 				owner: signerAddress[:],
 				key:   []byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},

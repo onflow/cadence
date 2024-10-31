@@ -1106,6 +1106,7 @@ func (e *interpreterEnvironment) loadContract(
 	location := compositeType.Location
 	if addressLocation, ok := location.(common.AddressLocation); ok {
 		storageMap := e.storage.GetStorageMap(
+			inter,
 			addressLocation.Address,
 			StorageDomainContract,
 			false,
