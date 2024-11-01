@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/constantkind"
 	"github.com/onflow/cadence/bbq/opcode"
-	. "github.com/onflow/cadence/tests/checker"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestCompileRecursionFib(t *testing.T) {

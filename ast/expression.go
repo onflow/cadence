@@ -220,6 +220,81 @@ func (*StringExpression) precedence() precedence {
 	return precedenceLiteral
 }
 
+// StringTemplateExpression
+
+type StringTemplateExpression struct {
+	// Values and Expressions are assumed to be interleaved, V[0] + E[0] + V[1] + ... + E[n-1] + V[n]
+	// this is enforced in the parser e.g. "a\(b)c" will be parsed as follows
+	// Values: 			[]string{"a","c"}
+	// Expressions:		[]Expression{b}
+	Values      []string
+	Expressions []Expression
+	Range
+}
+
+var _ Expression = &StringTemplateExpression{}
+
+func NewStringTemplateExpression(
+	gauge common.MemoryGauge,
+	values []string,
+	exprs []Expression,
+	exprRange Range,
+) *StringTemplateExpression {
+	common.UseMemory(gauge, common.NewStringTemplateExpressionMemoryUsage(len(values)+len(exprs)))
+	if len(values) != len(exprs)+1 {
+		// assert string template alternating structure
+		panic(errors.NewUnreachableError())
+	}
+	return &StringTemplateExpression{
+		Values:      values,
+		Expressions: exprs,
+		Range:       exprRange,
+	}
+}
+
+var _ Element = &StringExpression{}
+var _ Expression = &StringExpression{}
+
+func (*StringTemplateExpression) ElementType() ElementType {
+	return ElementTypeStringTemplateExpression
+}
+
+func (*StringTemplateExpression) isExpression() {}
+
+func (*StringTemplateExpression) isIfStatementTest() {}
+
+func (e *StringTemplateExpression) Walk(walkChild func(Element)) {
+	walkExpressions(walkChild, e.Expressions)
+}
+
+func (e *StringTemplateExpression) String() string {
+	return Prettier(e)
+}
+
+func (e *StringTemplateExpression) Doc() prettier.Doc {
+	if len(e.Expressions) == 0 {
+		return prettier.Text(QuoteString(e.Values[0]))
+	}
+
+	// TODO: must reproduce expressions as literals
+	panic("not implemented")
+}
+
+func (e *StringTemplateExpression) MarshalJSON() ([]byte, error) {
+	type Alias StringTemplateExpression
+	return json.Marshal(&struct {
+		*Alias
+		Type string
+	}{
+		Type:  "StringTemplateExpression",
+		Alias: (*Alias)(e),
+	})
+}
+
+func (*StringTemplateExpression) precedence() precedence {
+	return precedenceLiteral
+}
+
 // IntegerExpression
 
 type IntegerExpression struct {
@@ -1416,7 +1491,7 @@ func FunctionDocument(
 	}
 
 	// NOTE: not all functions have a parameter list,
-	// e.g. the `destroy` special function
+	// e.g. the `init` (initializer, special function)
 	if parameterList != nil {
 
 		signatureDoc = append(

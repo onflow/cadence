@@ -3,6 +3,9 @@ package test
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/onflow/cadence/test_utils/interpreter_utils"
+	"github.com/onflow/cadence/test_utils/runtime_utils"
+	"github.com/onflow/cadence/test_utils/sema_utils"
 	"strings"
 	"testing"
 
@@ -19,9 +22,6 @@ import (
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/tests/checker"
-	"github.com/onflow/cadence/tests/runtime_utils"
-	"github.com/onflow/cadence/tests/utils"
 )
 
 type ParseCheckAndInterpretOptions struct {
@@ -53,9 +53,9 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 	err error,
 ) {
 
-	checker, err := checker.ParseAndCheckWithOptionsAndMemoryMetering(t,
+	checker, err := sema_utils.ParseAndCheckWithOptionsAndMemoryMetering(t,
 		code,
-		checker.ParseAndCheckOptions{
+		sema_utils.ParseAndCheckOptions{
 			Location: location,
 			Config:   options.CheckerConfig,
 		},
@@ -854,7 +854,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	err := interpreterRuntime.ExecuteTransaction(
 		runtime.Script{
-			Source: utils.DeploymentTransaction(
+			Source: runtime_utils.DeploymentTransaction(
 				"FungibleToken",
 				[]byte(realFungibleTokenContractInterface),
 			),
@@ -968,7 +968,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	sum := interpreter.NewUnmeteredIntValueFromInt64(0)
 
-	inter := runtime_utils.NewTestInterpreter(b)
+	inter := interpreter_utils.NewTestInterpreter(b)
 
 	nextScriptLocation := runtime_utils.NewScriptLocationGenerator()
 
@@ -999,7 +999,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 		sum = sum.Plus(inter, value, interpreter.EmptyLocationRange).(interpreter.IntValue)
 	}
 
-	utils.RequireValuesEqual(b, nil, mintAmountValue, sum)
+	interpreter_utils.RequireValuesEqual(b, nil, mintAmountValue, sum)
 }
 
 func encodeArgs(argValues []cadence.Value) [][]byte {
@@ -1012,4 +1012,48 @@ func encodeArgs(argValues []cadence.Value) [][]byte {
 		}
 	}
 	return args
+}
+
+func TestInterpreterImperativeFib(t *testing.T) {
+
+	t.Parallel()
+
+	scriptLocation := runtime_utils.NewScriptLocationGenerator()
+
+	inter, err := parseCheckAndInterpretWithOptions(
+		t,
+		imperativeFib,
+		scriptLocation(),
+		ParseCheckAndInterpretOptions{},
+	)
+	require.NoError(t, err)
+
+	var value interpreter.Value = interpreter.NewUnmeteredIntValueFromInt64(7)
+
+	result, err := inter.Invoke("fib", value)
+	require.NoError(t, err)
+	require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(13), result)
+}
+
+func BenchmarkInterpreterImperativeFib(b *testing.B) {
+
+	scriptLocation := runtime_utils.NewScriptLocationGenerator()
+
+	inter, err := parseCheckAndInterpretWithOptions(
+		b,
+		imperativeFib,
+		scriptLocation(),
+		ParseCheckAndInterpretOptions{},
+	)
+	require.NoError(b, err)
+
+	var value interpreter.Value = interpreter.NewUnmeteredIntValueFromInt64(14)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, err := inter.Invoke("fib", value)
+		require.NoError(b, err)
+	}
 }

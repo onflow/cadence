@@ -64,7 +64,7 @@ ci:
 	# test all packages
 	go test -coverprofile=coverage.txt -covermode=atomic -parallel 8 -race -coverpkg $(COVERPKGS) ./...
 	# run interpreter smoke tests. results from run above are reused, so no tests runs are duplicated
-	go test -count=5 ./tests/interpreter/... -runSmokeTests=true -validateAtree=false
+	go test -count=5 ./interpreter/... -runSmokeTests=true -validateAtree=false
 	# remove coverage of empty functions from report
 	sed -i -e 's/^.* 0 0$$//' coverage.txt
 

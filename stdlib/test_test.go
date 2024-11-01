@@ -34,8 +34,8 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/parser"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/checker"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func newTestContractInterpreter(t *testing.T, code string) (*interpreter.Interpreter, error) {
@@ -65,7 +65,7 @@ func newTestContractInterpreterWithTestFramework(
 
 	checker, err := sema.NewChecker(
 		program,
-		utils.TestLocation,
+		TestLocation,
 		nil,
 		&sema.Config{
 			BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
@@ -288,7 +288,7 @@ func TestTestNewMatcher(t *testing.T) {
 
 		_, err := newTestContractInterpreter(t, script)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
@@ -334,7 +334,7 @@ func TestTestNewMatcher(t *testing.T) {
 
 		_, err := newTestContractInterpreter(t, script)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
@@ -461,7 +461,7 @@ func TestTestEqualMatcher(t *testing.T) {
 		_, err := newTestContractInterpreter(t, script)
 		require.Error(t, err)
 
-		errs := checker.RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
@@ -499,7 +499,7 @@ func TestTestEqualMatcher(t *testing.T) {
 
 		_, err := newTestContractInterpreter(t, script)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
@@ -671,7 +671,7 @@ func TestTestEqualMatcher(t *testing.T) {
 
 		_, err := newTestContractInterpreter(t, script)
 
-		errs := checker.RequireCheckerErrors(t, err, 4)
+		errs := RequireCheckerErrors(t, err, 4)
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
@@ -705,7 +705,7 @@ func TestTestEqualMatcher(t *testing.T) {
 
 		_, err := newTestContractInterpreter(t, script)
 
-		errs := checker.RequireCheckerErrors(t, err, 3)
+		errs := RequireCheckerErrors(t, err, 3)
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
@@ -990,7 +990,7 @@ func TestAssertEqual(t *testing.T) {
 
 		_, err := newTestContractInterpreter(t, script)
 
-		errs := checker.RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
@@ -1016,7 +1016,7 @@ func TestAssertEqual(t *testing.T) {
 
 		_, err := newTestContractInterpreter(t, script)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
@@ -1041,7 +1041,7 @@ func TestAssertEqual(t *testing.T) {
 
 		_, err := newTestContractInterpreter(t, script)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 }
@@ -1931,7 +1931,7 @@ func TestTestExpect(t *testing.T) {
 
 		_, err := newTestContractInterpreter(t, script)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
@@ -1955,7 +1955,7 @@ func TestTestExpect(t *testing.T) {
 
 		_, err := newTestContractInterpreter(t, script)
 
-		errs := checker.RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 2)
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
@@ -1981,7 +1981,7 @@ func TestTestExpect(t *testing.T) {
 
 		_, err := newTestContractInterpreter(t, script)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
@@ -2006,7 +2006,7 @@ func TestTestExpect(t *testing.T) {
 
 		_, err := newTestContractInterpreter(t, script)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 }
@@ -2176,7 +2176,7 @@ func TestTestExpectFailure(t *testing.T) {
         `
 
 		_, err := newTestContractInterpreter(t, script)
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
@@ -2213,7 +2213,7 @@ func TestTestExpectFailure(t *testing.T) {
         `
 
 		_, err := newTestContractInterpreter(t, script)
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 }
@@ -2377,7 +2377,7 @@ func TestBlockchain(t *testing.T) {
 		}
 
 		_, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		assert.False(t, resetInvoked)
 	})
@@ -2481,7 +2481,7 @@ func TestBlockchain(t *testing.T) {
 		}
 
 		_, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		assert.False(t, moveTimeInvoked)
 	})

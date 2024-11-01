@@ -29,9 +29,9 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	. "github.com/onflow/cadence/tests/checker"
-	"github.com/onflow/cadence/tests/runtime_utils"
-	"github.com/onflow/cadence/tests/utils"
+	"github.com/onflow/cadence/test_utils/common_utils"
+	"github.com/onflow/cadence/test_utils/runtime_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
@@ -340,7 +340,7 @@ func TestImport(t *testing.T) {
 
         `,
 		ParseAndCheckOptions{
-			Location: utils.ImportedLocation,
+			Location: common_utils.ImportedLocation,
 		},
 	)
 	require.NoError(t, err)

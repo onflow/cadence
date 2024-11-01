@@ -972,6 +972,11 @@ func (c *Compiler) VisitStringExpression(expression *ast.StringExpression) (_ st
 	return
 }
 
+func (c *Compiler) VisitStringTemplateExpression(_ *ast.StringTemplateExpression) (_ struct{}) {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
 func (c *Compiler) VisitCastingExpression(expression *ast.CastingExpression) (_ struct{}) {
 	c.compileExpression(expression.Expression)
 

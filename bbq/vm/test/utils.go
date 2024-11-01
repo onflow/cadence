@@ -30,8 +30,8 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/tests/checker"
-	"github.com/onflow/cadence/tests/runtime_utils"
+	"github.com/onflow/cadence/test_utils/runtime_utils"
+	"github.com/onflow/cadence/test_utils/sema_utils"
 
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
@@ -427,10 +427,10 @@ func parseAndCheck(
 	location common.Location,
 	programs map[common.Location]compiledProgram,
 ) *sema.Checker {
-	checker, err := checker.ParseAndCheckWithOptions(
+	checker, err := sema_utils.ParseAndCheckWithOptions(
 		t,
 		code,
-		checker.ParseAndCheckOptions{
+		sema_utils.ParseAndCheckOptions{
 			Location: location,
 			Config: &sema.Config{
 				ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {

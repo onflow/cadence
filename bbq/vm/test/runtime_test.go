@@ -27,7 +27,7 @@ import (
 
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/tests/runtime_utils"
+	"github.com/onflow/cadence/test_utils/runtime_utils"
 
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/vm"

@@ -183,6 +183,7 @@ type ExpressionVisitor[T any] interface {
 	VisitNilExpression(*NilExpression) T
 	VisitBoolExpression(*BoolExpression) T
 	VisitStringExpression(*StringExpression) T
+	VisitStringTemplateExpression(*StringTemplateExpression) T
 	VisitIntegerExpression(*IntegerExpression) T
 	VisitFixedPointExpression(*FixedPointExpression) T
 	VisitDictionaryExpression(*DictionaryExpression) T
@@ -218,6 +219,9 @@ func AcceptExpression[T any](expression Expression, visitor ExpressionVisitor[T]
 
 	case ElementTypeStringExpression:
 		return visitor.VisitStringExpression(expression.(*StringExpression))
+
+	case ElementTypeStringTemplateExpression:
+		return visitor.VisitStringTemplateExpression(expression.(*StringTemplateExpression))
 
 	case ElementTypeIntegerExpression:
 		return visitor.VisitIntegerExpression(expression.(*IntegerExpression))

@@ -27,7 +27,7 @@ import (
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 func TestParseNominalType(t *testing.T) {
@@ -41,7 +41,7 @@ func TestParseNominalType(t *testing.T) {
 		result, errs := testParseType("Int")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.NominalType{
 				Identifier: ast.Identifier{
 					Identifier: "Int",
@@ -59,7 +59,7 @@ func TestParseNominalType(t *testing.T) {
 		result, errs := testParseType("Foo.Bar")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.NominalType{
 				Identifier: ast.Identifier{
 					Identifier: "Foo",
@@ -88,7 +88,7 @@ func TestParseArrayType(t *testing.T) {
 		result, errs := testParseType("[Int]")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.VariableSizedType{
 				Type: &ast.NominalType{
 					Identifier: ast.Identifier{
@@ -112,7 +112,7 @@ func TestParseArrayType(t *testing.T) {
 		result, errs := testParseType("[Int ; 2 ]")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.ConstantSizedType{
 				Type: &ast.NominalType{
 					Identifier: ast.Identifier{
@@ -143,7 +143,7 @@ func TestParseArrayType(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseType("[Int ; -2 ]")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: `expected positive integer size for constant sized type`,
@@ -166,7 +166,7 @@ func TestParseArrayType(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseType("[Int ; X ]")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: `expected positive integer size for constant sized type`,
@@ -176,7 +176,7 @@ func TestParseArrayType(t *testing.T) {
 			errs,
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.VariableSizedType{
 				Type: &ast.NominalType{
 					Identifier: ast.Identifier{
@@ -206,7 +206,7 @@ func TestParseOptionalType(t *testing.T) {
 		result, errs := testParseType("Int?")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.OptionalType{
 				Type: &ast.NominalType{
 					Identifier: ast.Identifier{
@@ -227,7 +227,7 @@ func TestParseOptionalType(t *testing.T) {
 		result, errs := testParseType("Int??")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.OptionalType{
 				Type: &ast.OptionalType{
 					Type: &ast.NominalType{
@@ -251,7 +251,7 @@ func TestParseOptionalType(t *testing.T) {
 		result, errs := testParseType("Int???")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.OptionalType{
 				Type: &ast.OptionalType{
 					Type: &ast.OptionalType{
@@ -283,7 +283,7 @@ func TestParseReferenceType(t *testing.T) {
 		result, errs := testParseType("&Int")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.ReferenceType{
 				Authorization: nil,
 				Type: &ast.NominalType{
@@ -305,7 +305,7 @@ func TestParseReferenceType(t *testing.T) {
 		result, errs := testParseType("auth &Int")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.ReferenceType{
 				Authorization:    nil,
 				LegacyAuthorized: true,
@@ -333,7 +333,7 @@ func TestParseOptionalReferenceType(t *testing.T) {
 		result, errs := testParseType("&Int?")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.OptionalType{
 				Type: &ast.ReferenceType{
 					Authorization: nil,
@@ -363,7 +363,7 @@ func TestParseRestrictedType(t *testing.T) {
 		result, errs := testParseType("T{}")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.IntersectionType{
 				LegacyRestrictedType: &ast.NominalType{
 					NestedIdentifiers: nil,
@@ -388,7 +388,7 @@ func TestParseRestrictedType(t *testing.T) {
 		result, errs := testParseType("T{U}")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.IntersectionType{
 				LegacyRestrictedType: &ast.NominalType{
 					NestedIdentifiers: nil,
@@ -421,7 +421,7 @@ func TestParseRestrictedType(t *testing.T) {
 		result, errs := testParseType("T{U , V }")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.IntersectionType{
 				LegacyRestrictedType: &ast.NominalType{
 					NestedIdentifiers: nil,
@@ -460,7 +460,7 @@ func TestParseRestrictedType(t *testing.T) {
 		result, errs := testParseType("{}")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.IntersectionType{
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -478,7 +478,7 @@ func TestParseRestrictedType(t *testing.T) {
 		result, errs := testParseType("{ T }")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.IntersectionType{
 				Types: []*ast.NominalType{
 					{
@@ -502,7 +502,7 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseType("{ T , }")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "missing type after comma",
@@ -512,7 +512,7 @@ func TestParseRestrictedType(t *testing.T) {
 			errs,
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.IntersectionType{
 				Types: []*ast.NominalType{
 					{
@@ -536,7 +536,7 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseType("{ T U }")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected type",
@@ -555,7 +555,7 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseType("{ T , U : V }")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected colon in restricted type",
@@ -574,7 +574,7 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseType("T{U , V : W }")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: `unexpected token: got ':', expected ',' or '}'`,
@@ -593,7 +593,7 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseType("{[T]}")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "non-nominal type in restriction list: [T]",
@@ -612,7 +612,7 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseType("T{[U]}")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected non-nominal type: [U]",
@@ -631,7 +631,7 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseType("{T, [U]}")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "non-nominal type in restriction list: [U]",
@@ -650,7 +650,7 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseType("T{U, [V]}")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected non-nominal type: [V]",
@@ -669,7 +669,7 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseType("{")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid end of input, expected type",
@@ -687,7 +687,7 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseType("T{")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid end of input, expected type",
@@ -705,7 +705,7 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseType("{U")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid end of input, expected '}'",
@@ -723,7 +723,7 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseType("T{U")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid end of input, expected '}'",
@@ -741,7 +741,7 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseType("{U,")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid end of input, expected type",
@@ -759,7 +759,7 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseType("T{U,")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid end of input, expected type",
@@ -777,7 +777,7 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseType("{,}")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected comma in restricted type",
@@ -795,7 +795,7 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseType("T{,}")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected comma",
@@ -820,7 +820,7 @@ func TestParseDictionaryType(t *testing.T) {
 		result, errs := testParseType("{T: U}")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.DictionaryType{
 				KeyType: &ast.NominalType{
 					Identifier: ast.Identifier{
@@ -848,7 +848,7 @@ func TestParseDictionaryType(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseType("{T:}")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "missing dictionary value type",
@@ -858,7 +858,7 @@ func TestParseDictionaryType(t *testing.T) {
 			errs,
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.DictionaryType{
 				KeyType: &ast.NominalType{
 					Identifier: ast.Identifier{
@@ -881,7 +881,7 @@ func TestParseDictionaryType(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseType("{:}")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected colon in dictionary type",
@@ -899,7 +899,7 @@ func TestParseDictionaryType(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseType("{:U}")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected colon in dictionary type",
@@ -918,7 +918,7 @@ func TestParseDictionaryType(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseType("{T:U,}")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected comma in dictionary type",
@@ -937,7 +937,7 @@ func TestParseDictionaryType(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseType("{T:U:}")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected colon in dictionary type",
@@ -956,7 +956,7 @@ func TestParseDictionaryType(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseType("{T::U}")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected colon in dictionary type",
@@ -975,7 +975,7 @@ func TestParseDictionaryType(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseType("{T:")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid end of input, expected type",
@@ -993,7 +993,7 @@ func TestParseDictionaryType(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseType("{T:U")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "invalid end of input, expected '}'",
@@ -1018,7 +1018,7 @@ func TestParseFunctionType(t *testing.T) {
 		result, errs := testParseType("(():Void)")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.FunctionType{
 				ParameterTypeAnnotations: nil,
 				ReturnTypeAnnotation: &ast.TypeAnnotation{
@@ -1047,7 +1047,7 @@ func TestParseFunctionType(t *testing.T) {
 		result, errs := testParseType("( ( String , Bool , @R ) : Int)")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.FunctionType{
 				ParameterTypeAnnotations: []*ast.TypeAnnotation{
 					{
@@ -1112,7 +1112,7 @@ func TestParseInstantiationType(t *testing.T) {
 		result, errs := testParseType("T<>")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.InstantiationType{
 				Type: &ast.NominalType{
 					Identifier: ast.Identifier{
@@ -1134,7 +1134,7 @@ func TestParseInstantiationType(t *testing.T) {
 		result, errs := testParseType("T<U>")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.InstantiationType{
 				Type: &ast.NominalType{
 					Identifier: ast.Identifier{
@@ -1168,7 +1168,7 @@ func TestParseInstantiationType(t *testing.T) {
 		result, errs := testParseType("T< U >")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.InstantiationType{
 				Type: &ast.NominalType{
 					Identifier: ast.Identifier{
@@ -1202,7 +1202,7 @@ func TestParseInstantiationType(t *testing.T) {
 		result, errs := testParseType("T< U , @V >")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.InstantiationType{
 				Type: &ast.NominalType{
 					Identifier: ast.Identifier{
@@ -1246,7 +1246,7 @@ func TestParseInstantiationType(t *testing.T) {
 		result, errs := testParseType("T<U>")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.InstantiationType{
 				Type: &ast.NominalType{
 					Identifier: ast.Identifier{
@@ -1280,7 +1280,7 @@ func TestParseInstantiationType(t *testing.T) {
 		result, errs := testParseType("T< U< V >  >")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.InstantiationType{
 				Type: &ast.NominalType{
 					Identifier: ast.Identifier{
@@ -1334,7 +1334,7 @@ func TestParseParametersAndArrayTypes(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
 				Access: ast.AccessAll,
@@ -1483,7 +1483,7 @@ func TestParseDictionaryTypeInVariableDeclaration(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
 				Access:     ast.AccessNotSpecified,
@@ -1805,7 +1805,7 @@ func TestParseIntegerTypes(t *testing.T) {
 		StartPos: ast.Position{Offset: 137, Line: 9, Column: 2},
 	}
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{a, b, c, d, e, f, g, h},
 		result.Declarations(),
 	)
@@ -1821,7 +1821,7 @@ func TestParseFunctionTypeInVariableDeclaration(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -1899,7 +1899,7 @@ func TestParseFunctionArrayType(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -1983,7 +1983,7 @@ func TestParseFunctionTypeWithArrayReturnType(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -2066,7 +2066,7 @@ func TestParseFunctionTypeWithFunctionReturnTypeInParentheses(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -2156,7 +2156,7 @@ func TestParseFunctionTypeWithFunctionReturnType(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -2246,7 +2246,7 @@ func TestParseOptionalTypeDouble(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
 				Access:     ast.AccessNotSpecified,
@@ -2301,7 +2301,7 @@ func TestParseFunctionTypeWithResourceTypeAnnotation(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
 				Access:     ast.AccessNotSpecified,
@@ -2358,7 +2358,7 @@ func TestParseReferenceTypeInVariableDeclaration(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
 				Access:     ast.AccessNotSpecified,
@@ -2419,7 +2419,7 @@ func TestParseOptionalReference(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
 				Access:     ast.AccessNotSpecified,
@@ -2474,7 +2474,7 @@ func TestParseRestrictedReferenceTypeWithBaseType(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
 				Access:     ast.AccessNotSpecified,
@@ -2541,7 +2541,7 @@ func TestParseRestrictedReferenceTypeWithoutBaseType(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
 				Access:     ast.AccessNotSpecified,
@@ -2601,7 +2601,7 @@ func TestParseOptionalRestrictedType(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
 				Access:     ast.AccessNotSpecified,
@@ -2668,7 +2668,7 @@ func TestParseOptionalRestrictedTypeOnlyRestrictions(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
 				Access:     ast.AccessNotSpecified,
@@ -2728,7 +2728,7 @@ func TestParseAuthorizedReferenceType(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
 				Access:     ast.AccessNotSpecified,
@@ -2783,7 +2783,7 @@ func TestParseInstantiationTypeInVariableDeclaration(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
 				Access:     ast.AccessNotSpecified,
@@ -2859,7 +2859,7 @@ func TestParseConstantSizedSizedArrayWithTrailingUnderscoreSize(t *testing.T) {
 	  let T:[d;0_]=0
 	`)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]error{
 			&InvalidIntegerLiteralError{
 				Literal:                   "0_",

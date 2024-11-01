@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 func TestSemaCheckPathLiteralForInternalStorageDomains(t *testing.T) {
@@ -75,7 +75,7 @@ func TestCanBorrow(t *testing.T) {
     `)
 
 	typeID := func(qualifiedIdentifier string) sema.TypeID {
-		return utils.TestLocation.TypeID(nil, qualifiedIdentifier)
+		return TestLocation.TypeID(nil, qualifiedIdentifier)
 	}
 
 	entitlementE := inter.Program.Elaboration.EntitlementType(typeID("E"))

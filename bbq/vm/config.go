@@ -24,7 +24,7 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/tests/utils"
+	"github.com/onflow/cadence/test_utils/common_utils"
 )
 
 type Config struct {
@@ -68,7 +68,7 @@ func (c *Config) interpreter() *interpreter.Interpreter {
 	if c.inter == nil {
 		inter, err := interpreter.NewInterpreter(
 			nil,
-			utils.TestLocation,
+			common_utils.TestLocation,
 			&interpreter.Config{
 				Storage:               c.Storage,
 				ImportLocationHandler: nil,

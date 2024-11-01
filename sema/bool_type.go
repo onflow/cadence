@@ -31,6 +31,9 @@ var BoolType = &SimpleType{
 	Comparable:    true,
 	Exportable:    true,
 	Importable:    true,
+	conformances: []*InterfaceType{
+		StructStringerType,
+	},
 }
 
 var BoolTypeAnnotation = NewTypeAnnotation(BoolType)

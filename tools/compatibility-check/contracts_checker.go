@@ -19,13 +19,12 @@
 package compatibility_check
 
 import (
+	"encoding/csv"
 	"fmt"
 	"io"
 	"log"
 	"reflect"
 	"strings"
-
-	"encoding/csv"
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"

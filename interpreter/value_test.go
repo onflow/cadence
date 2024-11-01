@@ -36,15 +36,15 @@ import (
 	. "github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	checkerUtils "github.com/onflow/cadence/tests/checker"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func newTestCompositeValue(inter *Interpreter, owner common.Address) *CompositeValue {
 	return NewCompositeValue(
 		inter,
 		EmptyLocationRange,
-		utils.TestLocation,
+		TestLocation,
 		"Test",
 		common.CompositeKindStructure,
 		nil,
@@ -53,7 +53,7 @@ func newTestCompositeValue(inter *Interpreter, owner common.Address) *CompositeV
 }
 
 var testCompositeValueType = &sema.CompositeType{
-	Location:   utils.TestLocation,
+	Location:   TestLocation,
 	Identifier: "Test",
 	Kind:       common.CompositeKindStructure,
 	Members:    &sema.StringMemberOrderedMap{},
@@ -94,7 +94,7 @@ func TestOwnerNewArray(t *testing.T) {
 		&Program{
 			Elaboration: elaboration,
 		},
-		utils.TestLocation,
+		TestLocation,
 		&Config{Storage: storage},
 	)
 	require.NoError(t, err)
@@ -137,7 +137,7 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 		&Program{
 			Elaboration: elaboration,
 		},
-		utils.TestLocation,
+		TestLocation,
 		&Config{
 			Storage: storage,
 			OnMeterComputation: getMeterCompFuncWithExpectedKinds(t,
@@ -206,7 +206,7 @@ func TestOwnerArrayElement(t *testing.T) {
 		&Program{
 			Elaboration: elaboration,
 		},
-		utils.TestLocation,
+		TestLocation,
 		&Config{Storage: storage},
 	)
 	require.NoError(t, err)
@@ -248,7 +248,7 @@ func TestOwnerArraySetIndex(t *testing.T) {
 		&Program{
 			Elaboration: elaboration,
 		},
-		utils.TestLocation,
+		TestLocation,
 		&Config{Storage: storage},
 	)
 	require.NoError(t, err)
@@ -300,7 +300,7 @@ func TestOwnerArrayAppend(t *testing.T) {
 		&Program{
 			Elaboration: elaboration,
 		},
-		utils.TestLocation,
+		TestLocation,
 		&Config{Storage: storage},
 	)
 	require.NoError(t, err)
@@ -346,7 +346,7 @@ func TestOwnerArrayInsert(t *testing.T) {
 		&Program{
 			Elaboration: elaboration,
 		},
-		utils.TestLocation,
+		TestLocation,
 		&Config{Storage: storage},
 	)
 	require.NoError(t, err)
@@ -392,7 +392,7 @@ func TestOwnerArrayRemove(t *testing.T) {
 		&Program{
 			Elaboration: elaboration,
 		},
-		utils.TestLocation,
+		TestLocation,
 		&Config{Storage: storage},
 	)
 	require.NoError(t, err)
@@ -436,7 +436,7 @@ func TestOwnerNewDictionary(t *testing.T) {
 		&Program{
 			Elaboration: elaboration,
 		},
-		utils.TestLocation,
+		TestLocation,
 		&Config{Storage: storage},
 	)
 	require.NoError(t, err)
@@ -483,7 +483,7 @@ func TestOwnerDictionary(t *testing.T) {
 		&Program{
 			Elaboration: elaboration,
 		},
-		utils.TestLocation,
+		TestLocation,
 		&Config{Storage: storage},
 	)
 	require.NoError(t, err)
@@ -530,7 +530,7 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 		&Program{
 			Elaboration: elaboration,
 		},
-		utils.TestLocation,
+		TestLocation,
 		&Config{
 			Storage: storage,
 			OnMeterComputation: getMeterCompFuncWithExpectedKinds(t,
@@ -603,7 +603,7 @@ func TestOwnerDictionarySetSome(t *testing.T) {
 		&Program{
 			Elaboration: elaboration,
 		},
-		utils.TestLocation,
+		TestLocation,
 		&Config{Storage: storage},
 	)
 	require.NoError(t, err)
@@ -657,7 +657,7 @@ func TestOwnerDictionaryInsertNonExisting(t *testing.T) {
 		&Program{
 			Elaboration: elaboration,
 		},
-		utils.TestLocation,
+		TestLocation,
 		&Config{Storage: storage},
 	)
 	require.NoError(t, err)
@@ -712,7 +712,7 @@ func TestOwnerDictionaryRemove(t *testing.T) {
 		&Program{
 			Elaboration: elaboration,
 		},
-		utils.TestLocation,
+		TestLocation,
 		&Config{Storage: storage},
 	)
 	require.NoError(t, err)
@@ -773,7 +773,7 @@ func TestOwnerDictionaryInsertExisting(t *testing.T) {
 		&Program{
 			Elaboration: elaboration,
 		},
-		utils.TestLocation,
+		TestLocation,
 		&Config{Storage: storage},
 	)
 	require.NoError(t, err)
@@ -1115,7 +1115,7 @@ func TestStringer(t *testing.T) {
 				return NewCompositeValue(
 					inter,
 					EmptyLocationRange,
-					utils.TestLocation,
+					TestLocation,
 					"Foo",
 					common.CompositeKindResource,
 					fields,
@@ -1137,7 +1137,7 @@ func TestStringer(t *testing.T) {
 				compositeValue := NewCompositeValue(
 					inter,
 					EmptyLocationRange,
-					utils.TestLocation,
+					TestLocation,
 					"Foo",
 					common.CompositeKindResource,
 					fields,
@@ -1410,7 +1410,7 @@ func TestVisitor(t *testing.T) {
 	value = NewCompositeValue(
 		inter,
 		EmptyLocationRange,
-		utils.TestLocation,
+		TestLocation,
 		"Foo",
 		common.CompositeKindStructure,
 		fields,
@@ -1742,7 +1742,7 @@ func TestGetHashInput(t *testing.T) {
 				return NewCompositeValue(
 					inter,
 					EmptyLocationRange,
-					utils.TestLocation,
+					TestLocation,
 					"Foo",
 					common.CompositeKindEnum,
 					fields,
@@ -1770,7 +1770,7 @@ func TestGetHashInput(t *testing.T) {
 				return NewCompositeValue(
 					inter,
 					EmptyLocationRange,
-					utils.TestLocation,
+					TestLocation,
 					strings.Repeat("a", 32),
 					common.CompositeKindEnum,
 					fields,
@@ -1898,9 +1898,9 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
             }
         }`
 
-	checker, err := checkerUtils.ParseAndCheckWithOptions(t,
+	checker, err := ParseAndCheckWithOptions(t,
 		code,
-		checkerUtils.ParseAndCheckOptions{},
+		ParseAndCheckOptions{},
 	)
 
 	require.NoError(t, err)
@@ -2959,7 +2959,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 			NewCompositeValue(
 				inter,
 				EmptyLocationRange,
-				utils.TestLocation,
+				TestLocation,
 				"X",
 				common.CompositeKindStructure,
 				fields1,
@@ -2970,7 +2970,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				NewCompositeValue(
 					inter,
 					EmptyLocationRange,
-					utils.TestLocation,
+					TestLocation,
 					"X",
 					common.CompositeKindStructure,
 					fields2,
@@ -3384,7 +3384,7 @@ func TestPublicKeyValue(t *testing.T) {
 
 		inter, err := NewInterpreter(
 			nil,
-			utils.TestLocation,
+			TestLocation,
 			&Config{
 				Storage: storage,
 			},
@@ -3433,7 +3433,7 @@ func TestPublicKeyValue(t *testing.T) {
 
 		inter, err := NewInterpreter(
 			nil,
-			utils.TestLocation,
+			TestLocation,
 			&Config{
 				Storage: storage,
 			},
@@ -3589,7 +3589,7 @@ func newTestInterpreter(tb testing.TB) *Interpreter {
 
 	inter, err := NewInterpreter(
 		nil,
-		utils.TestLocation,
+		TestLocation,
 		&Config{
 			Storage:                       storage,
 			AtreeValueValidationEnabled:   true,
@@ -3622,9 +3622,9 @@ func TestNonStorable(t *testing.T) {
       }
     `
 
-	checker, err := checkerUtils.ParseAndCheckWithOptions(t,
+	checker, err := ParseAndCheckWithOptions(t,
 		code,
-		checkerUtils.ParseAndCheckOptions{},
+		ParseAndCheckOptions{},
 	)
 
 	require.NoError(t, err)
@@ -3756,7 +3756,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		return NewCompositeValue(
 			inter,
 			EmptyLocationRange,
-			utils.TestLocation,
+			TestLocation,
 			"Test",
 			common.CompositeKindStructure,
 			fields,
@@ -3775,7 +3775,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		members := &sema.StringMemberOrderedMap{}
 
 		compositeType := &sema.CompositeType{
-			Location:   utils.TestLocation,
+			Location:   TestLocation,
 			Identifier: "Test",
 			Kind:       common.CompositeKindStructure,
 			Members:    members,
@@ -3801,7 +3801,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 			&Program{
 				Elaboration: elaboration,
 			},
-			utils.TestLocation,
+			TestLocation,
 			&Config{Storage: storage},
 		)
 		require.NoError(t, err)
@@ -4493,7 +4493,7 @@ func TestOverwriteDictionaryValueWhereKeyIsStoredInSeparateAtreeSlab(t *testing.
 			return NewCompositeValue(
 				inter,
 				EmptyLocationRange,
-				utils.TestLocation,
+				TestLocation,
 				"Test",
 				common.CompositeKindEnum,
 				[]CompositeField{
@@ -4518,7 +4518,7 @@ func TestOverwriteDictionaryValueWhereKeyIsStoredInSeparateAtreeSlab(t *testing.
 			&Program{
 				Elaboration: elaboration,
 			},
-			utils.TestLocation,
+			TestLocation,
 			&Config{
 				Storage:                       storage,
 				AtreeValueValidationEnabled:   true,
@@ -4594,7 +4594,7 @@ func TestOverwriteDictionaryValueWhereKeyIsStoredInSeparateAtreeSlab(t *testing.
 			&Program{
 				Elaboration: elaboration,
 			},
-			utils.TestLocation,
+			TestLocation,
 			&Config{
 				Storage:                       storage,
 				AtreeValueValidationEnabled:   true,

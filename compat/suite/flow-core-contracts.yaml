@@ -7,3 +7,6 @@ branch: master
 go_tests:
 - path: lib/go/test
   command: make test
+cadence_tests:
+- path: .
+  command: flow test tests/*.cdc

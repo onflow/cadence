@@ -28,7 +28,7 @@ import (
 
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 func setupInterpreterWithTracingCallBack(
@@ -38,7 +38,7 @@ func setupInterpreterWithTracingCallBack(
 	storage := newUnmeteredInMemoryStorage()
 	inter, err := interpreter.NewInterpreter(
 		nil,
-		utils.TestLocation,
+		TestLocation,
 		&interpreter.Config{
 			OnRecordTrace: func(inter *interpreter.Interpreter,
 				operationName string,
