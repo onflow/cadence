@@ -20,7 +20,7 @@ package ccf
 
 import (
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/common/bimap"
+	"github.com/onflow/cadence/common/bimap"
 )
 
 // CCF uses CBOR tag numbers 128-255, which are unassigned by [IANA]
@@ -125,7 +125,7 @@ const (
 	CBORTagIntersectionTypeValue
 	CBORTagCapabilityTypeValue
 	CBORTagFunctionTypeValue
-	CBORTagInclusiveRangeTypeValue // InclusiveRange is stored as a composite value.
+	CBORTagInclusiveRangeTypeValue
 	CBORTagEntitlementSetAuthorizationAccessTypeValue
 	CBORTagEntitlementMapAuthorizationAccessTypeValue
 	_

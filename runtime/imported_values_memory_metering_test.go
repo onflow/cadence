@@ -26,11 +26,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/json"
 	. "github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/common"
-	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
 )
 
 func testUseMemory(meter map[common.MemoryKind]uint64) func(common.MemoryUsage) error {
@@ -628,7 +628,7 @@ func TestRuntimeScriptDecodedLocationMetering(t *testing.T) {
 				},
 			)
 
-			utils.RequireError(t, err)
+			RequireError(t, err)
 
 			var entryPointErr *InvalidEntryPointArgumentError
 			require.ErrorAs(t, err, &entryPointErr)

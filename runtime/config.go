@@ -19,7 +19,7 @@
 package runtime
 
 import (
-	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/interpreter"
 )
 
 // Config is a constant/read-only configuration of an environment.
@@ -35,12 +35,8 @@ type Config struct {
 	ResourceOwnerChangeHandlerEnabled bool
 	// CoverageReport enables and collects coverage reporting metrics
 	CoverageReport *CoverageReport
-	// AttachmentsEnabled specifies if attachments are enabled
-	AttachmentsEnabled bool
 	// LegacyContractUpgradeEnabled enabled specifies whether to use the old parser when parsing an old contract
 	LegacyContractUpgradeEnabled bool
-	// ContractUpdateTypeRemovalEnabled specifies if type removal is enabled in contract updates
-	ContractUpdateTypeRemovalEnabled bool
 	// WebAssemblyEnabled specifies if the WebAssembly API is enabled
 	WebAssemblyEnabled bool
 }

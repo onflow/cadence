@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 func TestCCFTypeID(t *testing.T) {
@@ -117,7 +117,7 @@ func TestCadenceTypeByCCFTypeID(t *testing.T) {
 
 func simpleStructType() *cadence.StructType {
 	return cadence.NewStructType(
-		utils.TestLocation,
+		TestLocation,
 		"FooStruct",
 		[]cadence.Field{
 			{
@@ -131,7 +131,7 @@ func simpleStructType() *cadence.StructType {
 
 func simpleStructType2() *cadence.StructType {
 	return cadence.NewStructType(
-		utils.TestLocation,
+		TestLocation,
 		"FooStruct2",
 		[]cadence.Field{
 			{

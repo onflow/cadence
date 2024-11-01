@@ -24,8 +24,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
 )
 
 // LocationCoverage records coverage information for a location.

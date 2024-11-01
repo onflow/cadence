@@ -1,3 +1,13 @@
+# Versioning
+
+Versioning of Cadence releases follows the below strategy:
+- A language-breaking change (which is rare) would be a major version change.
+  - e.g: If the current version is `1.0.0` then the new version should be `v2.0.0`.
+- Any other changes that are not bug fixes, (feature additions, Go API changes, etc.) would be a minor version change.
+  - e.g: If the current version is `1.0.0` then the new version should be `v1.1.0`.
+- Bug fixes are patch versions.
+  - e.g: If the current version is `1.0.0` then the new version should be `v1.0.1`.
+
 # Release Process
 
 Assume releasing Cadence version `v0.21.2` from `master` branch.

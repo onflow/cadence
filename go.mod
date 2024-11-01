@@ -21,10 +21,10 @@ require (
 	github.com/turbolent/prettier v0.0.0-20220320183459-661cc755135d
 	go.opentelemetry.io/otel v1.8.0
 	go.uber.org/goleak v1.1.10
-	golang.org/x/crypto v0.1.0
-	golang.org/x/mod v0.14.0
-	golang.org/x/text v0.4.0
-	golang.org/x/tools v0.16.0
+	golang.org/x/crypto v0.28.0
+	golang.org/x/mod v0.17.0
+	golang.org/x/text v0.19.0
+	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 )
 
@@ -56,8 +56,9 @@ require (
 	github.com/zeebo/assert v1.3.0 // indirect
 	github.com/zeebo/blake3 v0.2.3 // indirect
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
-	golang.org/x/sys v0.15.0 // indirect
-	golang.org/x/term v0.6.0 // indirect
+	golang.org/x/sync v0.8.0 // indirect
+	golang.org/x/sys v0.26.0 // indirect
+	golang.org/x/term v0.25.0 // indirect
 	gonum.org/v1/gonum v0.6.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

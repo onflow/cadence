@@ -1,6 +1,6 @@
 {
   "name": "@onflow/cadence-parser",
-  "version": "1.0.0-preview.52",
+  "version": "1.2.2",
   "description": "The Cadence parser",
   "homepage": "https://github.com/onflow/cadence",
   "repository": {
@@ -18,7 +18,7 @@
     }
   },
   "scripts": {
-    "build": "npm run build:types && npm run build:esm && npm run build:cjs && GOARCH=wasm GOOS=js go build -o ./dist/cadence-parser.wasm ../../runtime/cmd/parse",
+    "build": "npm run build:types && npm run build:esm && npm run build:cjs && GOARCH=wasm GOOS=js go build -o ./dist/cadence-parser.wasm ../../cmd/parse",
     "build:types": "tsc --emitDeclarationOnly --module system --outDir dist/types",
     "build:esm": "esbuild src/index.ts --bundle --sourcemap --format=esm --outfile=dist/esm/index.mjs",
     "build:cjs": "tsc --module commonjs --target es6 --outDir dist/cjs --declaration false",

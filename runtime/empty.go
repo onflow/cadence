@@ -25,11 +25,11 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 )
 
 // EmptyRuntimeInterface is an empty implementation of runtime.Interface.
@@ -264,6 +264,10 @@ func (EmptyRuntimeInterface) ValidateAccountCapabilitiesPublish(
 	_ *interpreter.ReferenceStaticType,
 ) (bool, error) {
 	panic("unexpected call to ValidateAccountCapabilitiesPublish")
+}
+
+func (EmptyRuntimeInterface) MinimumRequiredVersion() (string, error) {
+	return "0.0.0", nil
 }
 
 func (EmptyRuntimeInterface) CompileWebAssembly(_ []byte) (stdlib.WebAssemblyModule, error) {

@@ -25,8 +25,8 @@ import (
 	"github.com/fxamacker/cbor/v2"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/sema"
 )
 
 type cadenceTypeID string
@@ -361,14 +361,14 @@ func (d *Decoder) decodeCapabilityType(
 //
 //	; cbor-tag-entitlement-set-authorization-type
 //	#6.146([
-//	    kind: uint8,
-//	    entitlements: +[string]
+//	    kind: uint,
+//	    entitlements: [+ tstr],
 //	])
 //
 // entitlement-map-authorization-type =
 //
 //	; cbor-tag-entitlement-map-authorization-type
-//	#6.147(entitlement: string)
+//	#6.147(tstr)
 //
 // authorization-type-value =
 //
@@ -382,14 +382,14 @@ func (d *Decoder) decodeCapabilityType(
 //
 //	; cbor-tag-entitlement-set-authorization-type-value
 //	#6.195([
-//	    kind: uint8,
-//	    entitlements: +[string]
+//	    kind: uint,
+//	    entitlements: [+ tstr],
 //	])
 //
 // entitlement-map-authorization-type-value =
 //
 //	; cbor-tag-entitlement-map-authorization-type-value
-//	#6.196(entitlement: string)
+//	#6.196(tstr)
 func (d *Decoder) decodeAuthorization(isType bool) (cadence.Authorization, error) {
 	nt, err := d.dec.NextType()
 	if err != nil {
@@ -454,8 +454,8 @@ const entitlementSetAuthorizationArraySize = 2
 //
 //	; cbor-tag-entitlement-set-authorization-type
 //	#6.146([
-//	    kind: uint8,
-//	    entitlements: +[string]
+//	    kind: uint,
+//	    entitlements: [+ tstr],
 //	])
 func (d *Decoder) decodeEntitlementSetAuthorization() (cadence.Authorization, error) {
 
@@ -569,7 +569,7 @@ func (d *Decoder) decodeEntitlementMapAuthorization() (cadence.Authorization, er
 //
 //	; cbor-tag-reference-type-value
 //	#6.190([
-//	  authorized: authorization-type,
+//	  authorized: authorization-type-value,
 //	  type: type-value,
 //	])
 //
@@ -610,16 +610,14 @@ func (d *Decoder) decodeReferenceType(
 //
 //	; cbor-tag-intersection-type
 //	#6.143([
-//	  type: inline-type / nil,
-//	  types: [* inline-type]
+//	  types: [+ inline-type]
 //	])
 //
 // intersection-type-value =
 //
 //	; cbor-tag-intersection-type-value
 //	#6.191([
-//	  type: type-value / nil,
-//	  types: [* type-value]
+//	  types: [+ type-value]
 //	])
 //
 // NOTE: decodeTypeFn is responsible for decoding inline-type or type-value.

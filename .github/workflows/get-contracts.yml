@@ -1,0 +1,52 @@
+name: Get contracts
+
+on:
+  workflow_call:
+    inputs:
+      chain:
+        required: true
+        type: string
+    secrets:
+      FLOWDIVER_API_KEY:
+        required: true
+
+env:
+  GO_VERSION: '1.22'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.run_id }}-${{ inputs.chain }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Make output dirs
+        run: |
+          mkdir tmp
+
+      # Get contracts
+
+      - name: Download contracts
+        env:
+          FLOWDIVER_API_KEY: ${{ secrets.FLOWDIVER_API_KEY }}
+        working-directory: ./tools/get-contracts
+        run: |
+          go run . --chain=${{ inputs.chain }} --apiKey="$FLOWDIVER_API_KEY" > ../../tmp/contracts.csv
+
+      # Upload
+
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.chain }}-contracts
+          path: |
+            ./tmp/contracts.csv

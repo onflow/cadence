@@ -1,63 +1,9 @@
 description: Flow Non-Fungible Token
 maintainers:
-- bastian@dapperlabs.com
-- joshua.hannan@dapperlabs.com
+  - bastian.mueller@flowfoundation.org
+  - joshua.hannan@flowfoundation.org
 url: https://github.com/onflow/flow-nft.git
 branch: master
 go_tests:
 - path: lib/go/test
   command: make test
-files:
-- path: contracts/NonFungibleToken.cdc
-- path: contracts/ExampleNFT.cdc
-  # language=Python prefix="replace: Callable[[str, str], None]\n"
-  prepare: |
-    from pathlib import Path
-
-    replace(
-      'import NonFungibleToken from 0x02',
-      f'import NonFungibleToken from "{Path("NonFungibleToken.cdc").resolve()}"'
-    )
-
-
-- path: transactions/mint_nft.cdc
-  # language=Python prefix="replace: Callable[[str, str], None]\n"
-  prepare: |
-    from pathlib import Path
-
-    replace(
-      'import NonFungibleToken from 0xNFTADDRESS',
-      f'import NonFungibleToken from "{Path("../contracts/NonFungibleToken.cdc").resolve()}"'
-    )
-    replace(
-      'import ExampleNFT from 0xNFTCONTRACTADDRESS',
-      f'import ExampleNFT from "{Path("../contracts/ExampleNFT.cdc").resolve()}"'
-    )
-
-- path: transactions/setup_account.cdc
-  # language=Python prefix="replace: Callable[[str, str], None]\n"
-  prepare: |
-    from pathlib import Path
-
-    replace(
-      'import NonFungibleToken from 0xNFTADDRESS',
-      f'import NonFungibleToken from "{Path("../contracts/NonFungibleToken.cdc").resolve()}"'
-    )
-    replace(
-      'import ExampleNFT from 0xNFTCONTRACTADDRESS',
-      f'import ExampleNFT from "{Path("../contracts/ExampleNFT.cdc").resolve()}"'
-    )
-
-- path: transactions/transfer_nft.cdc
-  # language=Python prefix="replace: Callable[[str, str], None]\n"
-  prepare: |
-    from pathlib import Path
-
-    replace(
-      'import NonFungibleToken from 0xNFTADDRESS',
-      f'import NonFungibleToken from "{Path("../contracts/NonFungibleToken.cdc").resolve()}"'
-    )
-    replace(
-      'import ExampleNFT from 0xNFTCONTRACTADDRESS',
-      f'import ExampleNFT from "{Path("../contracts/ExampleNFT.cdc").resolve()}"'
-    )

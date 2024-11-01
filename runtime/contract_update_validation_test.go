@@ -27,14 +27,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
-	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
-	. "github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
 )
 
 func newContractDeployTransaction(function, name, code string) string {
@@ -83,6 +83,10 @@ func newContractRemovalTransaction(contractName string) string {
 }
 
 func newContractDeploymentTransactor(t *testing.T, config Config) func(code string) error {
+	return newContractDeploymentTransactorWithVersion(t, config, "")
+}
+
+func newContractDeploymentTransactorWithVersion(t *testing.T, config Config, version string) func(code string) error {
 
 	rt := NewTestInterpreterRuntimeWithConfig(config)
 
@@ -112,6 +116,9 @@ func newContractDeploymentTransactor(t *testing.T, config Config) func(code stri
 			events = append(events, event)
 			return nil
 		},
+		OnMinimumRequiredVersion: func() (string, error) {
+			return version, nil
+		},
 	}
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
@@ -132,7 +139,18 @@ func newContractDeploymentTransactor(t *testing.T, config Config) func(code stri
 // testDeployAndUpdate deploys a contract in one transaction,
 // then updates the contract in another transaction
 func testDeployAndUpdate(t *testing.T, name string, oldCode string, newCode string, config Config) error {
-	executeTransaction := newContractDeploymentTransactor(t, config)
+	return testDeployAndUpdateWithVersion(t, name, oldCode, newCode, config, "")
+}
+
+func testDeployAndUpdateWithVersion(
+	t *testing.T,
+	name string,
+	oldCode string,
+	newCode string,
+	config Config,
+	version string,
+) error {
+	executeTransaction := newContractDeploymentTransactorWithVersion(t, config, version)
 	err := executeTransaction(newContractAddTransaction(name, oldCode))
 	require.NoError(t, err)
 
@@ -177,31 +195,14 @@ func testWithValidatorsAndTypeRemovalEnabled(
 		withC1Upgrade := withC1Upgrade
 		name := name
 
-		for _, withTypeRemovalEnabled := range []bool{true, false} {
-			withTypeRemovalEnabled := withTypeRemovalEnabled
-			name := name
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-			switch {
-			case withC1Upgrade && withTypeRemovalEnabled:
-				name = fmt.Sprintf("%s (with C1 validator and type removal enabled)", name)
+			config := DefaultTestInterpreterConfig
+			config.LegacyContractUpgradeEnabled = withC1Upgrade
 
-			case withC1Upgrade:
-				name = fmt.Sprintf("%s (with C1 validator)", name)
-
-			case withTypeRemovalEnabled:
-				name = fmt.Sprintf("%s (with type removal enabled)", name)
-			}
-
-			t.Run(name, func(t *testing.T) {
-				t.Parallel()
-
-				config := DefaultTestInterpreterConfig
-				config.LegacyContractUpgradeEnabled = withC1Upgrade
-				config.ContractUpdateTypeRemovalEnabled = withTypeRemovalEnabled
-
-				testFunc(t, config)
-			})
-		}
+			testFunc(t, config)
+		})
 	}
 }
 
@@ -3230,13 +3231,8 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
             `
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-
-			if config.ContractUpdateTypeRemovalEnabled {
-				var expectedErr *stdlib.TypeRemovalPragmaRemovalError
-				require.ErrorAs(t, err, &expectedErr)
-			} else {
-				require.NoError(t, err)
-			}
+			var expectedErr *stdlib.TypeRemovalPragmaRemovalError
+			require.ErrorAs(t, err, &expectedErr)
 		},
 	)
 
@@ -3262,13 +3258,8 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
             `
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-
-			if config.ContractUpdateTypeRemovalEnabled {
-				var expectedErr *stdlib.TypeRemovalPragmaRemovalError
-				require.ErrorAs(t, err, &expectedErr)
-			} else {
-				require.NoError(t, err)
-			}
+			var expectedErr *stdlib.TypeRemovalPragmaRemovalError
+			require.ErrorAs(t, err, &expectedErr)
 		},
 	)
 
@@ -3313,13 +3304,8 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
             `
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-
-			if config.ContractUpdateTypeRemovalEnabled {
-				var expectedErr *stdlib.InvalidTypeRemovalPragmaError
-				require.ErrorAs(t, err, &expectedErr)
-			} else {
-				require.NoError(t, err)
-			}
+			var expectedErr *stdlib.InvalidTypeRemovalPragmaError
+			require.ErrorAs(t, err, &expectedErr)
 		},
 	)
 
@@ -3342,13 +3328,8 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
             `
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-
-			if config.ContractUpdateTypeRemovalEnabled {
-				var expectedErr *stdlib.InvalidTypeRemovalPragmaError
-				require.ErrorAs(t, err, &expectedErr)
-			} else {
-				require.NoError(t, err)
-			}
+			var expectedErr *stdlib.InvalidTypeRemovalPragmaError
+			require.ErrorAs(t, err, &expectedErr)
 		},
 	)
 
@@ -3368,14 +3349,8 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
             `
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-
-			if config.ContractUpdateTypeRemovalEnabled {
-
-				var expectedErr *stdlib.InvalidTypeRemovalPragmaError
-				require.ErrorAs(t, err, &expectedErr)
-			} else {
-				require.NoError(t, err)
-			}
+			var expectedErr *stdlib.InvalidTypeRemovalPragmaError
+			require.ErrorAs(t, err, &expectedErr)
 		},
 	)
 
@@ -3395,13 +3370,8 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
             `
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-
-			if config.ContractUpdateTypeRemovalEnabled {
-				var expectedErr *stdlib.InvalidTypeRemovalPragmaError
-				require.ErrorAs(t, err, &expectedErr)
-			} else {
-				require.NoError(t, err)
-			}
+			var expectedErr *stdlib.InvalidTypeRemovalPragmaError
+			require.ErrorAs(t, err, &expectedErr)
 		},
 	)
 
@@ -3422,13 +3392,7 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
             `
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-
-			if config.ContractUpdateTypeRemovalEnabled {
-				require.NoError(t, err)
-			} else {
-				var expectedErr *stdlib.MissingDeclarationError
-				require.ErrorAs(t, err, &expectedErr)
-			}
+			require.NoError(t, err)
 		},
 	)
 
@@ -3451,13 +3415,7 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
             `
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-
-			if config.ContractUpdateTypeRemovalEnabled {
-				require.NoError(t, err)
-			} else {
-				var expectedErr *stdlib.MissingDeclarationError
-				require.ErrorAs(t, err, &expectedErr)
-			}
+			require.NoError(t, err)
 		},
 	)
 
@@ -3526,13 +3484,7 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
             `
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-
-			if config.ContractUpdateTypeRemovalEnabled {
-				require.NoError(t, err)
-			} else {
-				var expectedErr *stdlib.MissingDeclarationError
-				require.ErrorAs(t, err, &expectedErr)
-			}
+			require.NoError(t, err)
 		},
 	)
 
@@ -3574,13 +3526,8 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
             `
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-
-			if config.ContractUpdateTypeRemovalEnabled {
-				var expectedErr *stdlib.UseOfRemovedTypeError
-				require.ErrorAs(t, err, &expectedErr)
-			} else {
-				require.NoError(t, err)
-			}
+			var expectedErr *stdlib.UseOfRemovedTypeError
+			require.ErrorAs(t, err, &expectedErr)
 		},
 	)
 
@@ -3602,13 +3549,8 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
             `
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-
-			if config.ContractUpdateTypeRemovalEnabled {
-				var expectedErr *stdlib.UseOfRemovedTypeError
-				require.ErrorAs(t, err, &expectedErr)
-			} else {
-				require.NoError(t, err)
-			}
+			var expectedErr *stdlib.UseOfRemovedTypeError
+			require.ErrorAs(t, err, &expectedErr)
 		},
 	)
 
@@ -3630,13 +3572,8 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
             `
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-
-			if config.ContractUpdateTypeRemovalEnabled {
-				var expectedErr *stdlib.UseOfRemovedTypeError
-				require.ErrorAs(t, err, &expectedErr)
-			} else {
-				require.NoError(t, err)
-			}
+			var expectedErr *stdlib.UseOfRemovedTypeError
+			require.ErrorAs(t, err, &expectedErr)
 		},
 	)
 
@@ -3763,4 +3700,52 @@ func TestRuntimeContractUpdateErrorsInOldProgram(t *testing.T) {
 		oldProgramError := &stdlib.OldProgramError{}
 		require.ErrorAs(t, err, &oldProgramError)
 	})
+}
+
+func TestAttachmentsUpdates(t *testing.T) {
+	t.Parallel()
+
+	testWithValidators(t,
+		"Keep base type",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                    access(all) attachment A for AnyResource {}
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    access(all) attachment A for AnyResource {}
+                }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			require.NoError(t, err)
+		},
+	)
+
+	testWithValidators(t,
+		"Change base type",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                    access(all) attachment A for AnyResource {}
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    access(all) attachment A for AnyStruct {}
+                }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+
+			var expectedErr *stdlib.TypeMismatchError
+			require.ErrorAs(t, err, &expectedErr)
+		},
+	)
 }

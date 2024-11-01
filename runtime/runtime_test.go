@@ -34,18 +34,18 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/json"
+	runtimeErrors "github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/parser"
 	. "github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-	runtimeErrors "github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/parser"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/onflow/cadence/runtime/tests/checker"
-	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
-	. "github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestRuntimeImport(t *testing.T) {
@@ -1773,7 +1773,7 @@ func TestRuntimeStorageMultipleTransactionsInclusiveRangeFunction(t *testing.T) 
 	var checkerErr *sema.CheckerError
 	require.ErrorAs(t, err, &checkerErr)
 
-	errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+	errs := RequireCheckerErrors(t, checkerErr, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 
@@ -3356,7 +3356,7 @@ func TestRuntimeStorageLoadedDestructionConcreteTypeWithAttachment(t *testing.T)
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntimeWithAttachments()
+	runtime := NewTestInterpreterRuntime()
 
 	addressValue := Address{
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
@@ -3486,7 +3486,7 @@ func TestRuntimeStorageLoadedDestructionConcreteTypeWithAttachmentUnloadedContra
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntimeWithAttachments()
+	runtime := NewTestInterpreterRuntime()
 
 	addressValue := Address{
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
@@ -3620,7 +3620,7 @@ func TestRuntimeStorageLoadedDestructionConcreteTypeSameNamedInterface(t *testin
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntimeWithAttachments()
+	runtime := NewTestInterpreterRuntime()
 
 	addressValue := Address{
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
@@ -4883,7 +4883,7 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 		var checkerErr *sema.CheckerError
 		require.ErrorAs(t, err, &checkerErr)
 
-		errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+		errs := RequireCheckerErrors(t, checkerErr, 1)
 
 		assert.IsType(t, &sema.InvalidTopLevelDeclarationError{}, errs[0])
 	})
@@ -7730,8 +7730,6 @@ func BenchmarkRuntimeScriptNoop(b *testing.B) {
 		Environment: environment,
 	}
 
-	require.NotNil(b, stdlib.CryptoChecker())
-
 	runtime := NewTestInterpreterRuntime()
 
 	b.ReportAllocs()
@@ -7768,7 +7766,7 @@ func TestRuntimeImportTestStdlib(t *testing.T) {
 
 	RequireError(t, err)
 
-	errs := checker.RequireCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	notDeclaredErr := &sema.NotDeclaredError{}
 	require.ErrorAs(t, errs[0], &notDeclaredErr)
@@ -8541,7 +8539,7 @@ func TestRuntimeOptionalReferenceAttack(t *testing.T) {
 	var checkerErr *sema.CheckerError
 	require.ErrorAs(t, err, &checkerErr)
 
-	errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+	errs := RequireCheckerErrors(t, checkerErr, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -9072,7 +9070,7 @@ func TestRuntimeTypesAndConversions(t *testing.T) {
 		})
 	}
 
-	for name, ty := range checker.AllBaseSemaTypes() {
+	for name, ty := range AllBaseSemaTypes() {
 		// Inclusive range is a dynamically created type.
 		if _, isInclusiveRange := ty.(*sema.InclusiveRangeType); isInclusiveRange {
 			continue
@@ -9844,7 +9842,7 @@ func TestRuntimePreconditionDuplication(t *testing.T) {
 	var checkerErr *sema.CheckerError
 	require.ErrorAs(t, err, &checkerErr)
 
-	errs := checker.RequireCheckerErrors(t, checkerErr, 3)
+	errs := RequireCheckerErrors(t, checkerErr, 3)
 
 	assert.IsType(t, &sema.PurityError{}, errs[0])
 	assert.IsType(t, &sema.InvalidInterfaceConditionResourceInvalidationError{}, errs[1])
@@ -10562,7 +10560,7 @@ func TestRuntimeNonPublicAccessModifierInInterface(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntimeWithAttachments()
+	runtime := NewTestInterpreterRuntime()
 
 	address1 := common.MustBytesToAddress([]byte{0x1})
 	address2 := common.MustBytesToAddress([]byte{0x2})
@@ -10695,7 +10693,7 @@ func TestRuntimeContractWithInvalidCapability(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntimeWithAttachments()
+	runtime := NewTestInterpreterRuntime()
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
@@ -11562,4 +11560,177 @@ func TestResultRedeclared(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+}
+
+func TestRuntimeIdentifierLocationToAddressLocationRewrite(t *testing.T) {
+
+	t.Parallel()
+
+	signerAddress := common.MustBytesToAddress([]byte{0x42})
+
+	const fooContractName = "Foo"
+	fooIdentifierLocation := common.IdentifierLocation(fooContractName)
+	fooAddressLocation := common.AddressLocation{
+		Address: signerAddress,
+		Name:    fooContractName,
+	}
+
+	fooContract := []byte(`
+      access(all)
+      contract Foo {
+          access(all) var answer: Int
+
+          init() {
+              self.answer = 42
+          }
+      }
+    `)
+
+	accountCodes := map[Location][]byte{}
+	var events []cadence.Event
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAddress}, nil
+		},
+		OnResolveLocation: func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
+			assert.Empty(t, identifiers)
+			assert.Equal(t, fooIdentifierLocation, location)
+
+			// NOTE: rewrite identifier location to address location
+			location = fooAddressLocation
+
+			return []ResolvedLocation{
+				{
+					Location:    location,
+					Identifiers: identifiers,
+				},
+			}, nil
+		},
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		OnGetCode: func(location Location) ([]byte, error) {
+			return nil, errors.New("GetCode should not be called")
+		},
+	}
+
+	runtime := NewTestInterpreterRuntime()
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	// Deploy
+
+	deploy := DeploymentTransaction(fooContractName, fooContract)
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Test
+
+	result, err := runtime.ExecuteScript(
+		Script{
+			Source: []byte(`
+              import Foo
+
+              access(all)
+              fun main(): Int {
+                  return Foo.answer
+              }
+            `),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextScriptLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, cadence.NewInt(42), result)
+}
+
+func TestRuntimeBuiltInFunctionConfusion(t *testing.T) {
+
+	t.Parallel()
+
+	const contract = `
+      access(all) contract Foo {
+          access(all) resource getType {}
+
+          init() {
+              Foo.getType()
+          }
+      }
+    `
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	newRuntimeInterface := func() Interface {
+
+		accountCodes := map[common.AddressLocation][]byte{}
+		var events []cadence.Event
+		var loggedMessages []string
+
+		return &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]common.Address, error) {
+				return []common.Address{address}, nil
+			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				code = accountCodes[location]
+				return code, nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+			OnProgramLog: func(message string) {
+				loggedMessages = append(loggedMessages, message)
+			},
+		}
+	}
+
+	runtime := NewTestInterpreterRuntime()
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: DeploymentTransaction(
+				"Foo",
+				[]byte(contract),
+			),
+		},
+		Context{
+			Interface: newRuntimeInterface(),
+			Location:  nextTransactionLocation(),
+		},
+	)
+	RequireError(t, err)
+
+	var redeclarationError *sema.RedeclarationError
+	require.ErrorAs(t, err, &redeclarationError)
 }

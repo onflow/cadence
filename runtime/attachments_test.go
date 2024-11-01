@@ -25,18 +25,17 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
-	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
-	. "github.com/onflow/cadence/runtime/tests/utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
 )
 
 func TestRuntimeAccountAttachmentSaveAndLoad(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntimeWithAttachments()
+	rt := NewTestInterpreterRuntime()
 
 	var logs []string
 	var events []string
@@ -147,7 +146,7 @@ func TestRuntimeAccountAttachmentExportFailure(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntimeWithAttachments()
+	rt := NewTestInterpreterRuntime()
 
 	logs := make([]string, 0)
 	events := make([]string, 0)
@@ -238,7 +237,7 @@ func TestRuntimeAccountAttachmentExport(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntimeWithAttachments()
+	rt := NewTestInterpreterRuntime()
 
 	var logs []string
 	var events []string
@@ -323,7 +322,7 @@ func TestRuntimeAccountAttachedExport(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntimeWithAttachments()
+	rt := NewTestInterpreterRuntime()
 
 	var logs []string
 	var events []string
@@ -411,7 +410,7 @@ func TestRuntimeAccountAttachmentSaveAndBorrow(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntimeWithAttachments()
+	rt := NewTestInterpreterRuntime()
 
 	var logs []string
 	var events []string
@@ -525,7 +524,7 @@ func TestRuntimeAccountAttachmentCapability(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntimeWithAttachments()
+	rt := NewTestInterpreterRuntime()
 
 	var logs []string
 	var events []string
@@ -666,7 +665,7 @@ func TestRuntimeAttachmentStorage(t *testing.T) {
 	address := common.MustBytesToAddress([]byte{0x1})
 
 	newRuntime := func() (TestInterpreterRuntime, *TestRuntimeInterface) {
-		runtime := NewTestInterpreterRuntimeWithAttachments()
+		runtime := NewTestInterpreterRuntime()
 
 		accountCodes := map[common.Location][]byte{}
 

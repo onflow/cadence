@@ -25,14 +25,15 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/json"
+	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
-	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/onflow/cadence/sema"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
 )
 
 const modifiedFungibleTokenContractInterface = `
@@ -627,7 +628,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	err := runtime.ExecuteTransaction(
 		Script{
-			Source: utils.DeploymentTransaction(
+			Source: DeploymentTransaction(
 				"FungibleToken",
 				[]byte(modifiedFungibleTokenContractInterface),
 			),
@@ -644,7 +645,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	err = runtime.ExecuteTransaction(
 		Script{
-			Source: utils.DeploymentTransaction("FlowToken", []byte(modifiedFlowContract)),
+			Source: DeploymentTransaction("FlowToken", []byte(modifiedFlowContract)),
 		},
 		Context{
 			Interface:   runtimeInterface,
@@ -767,7 +768,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 		sum = sum.Plus(inter, value, interpreter.EmptyLocationRange).(interpreter.UFix64Value)
 	}
 
-	utils.RequireValuesEqual(b, nil, mintAmountValue, sum)
+	RequireValuesEqual(b, nil, mintAmountValue, sum)
 }
 
 const oldExampleToken = `
@@ -1043,7 +1044,7 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 
 	err := runtime.ExecuteTransaction(
 		Script{
-			Source: utils.DeploymentTransaction(
+			Source: DeploymentTransaction(
 				"FungibleToken",
 				[]byte(modifiedFungibleTokenContractInterface),
 			),
@@ -1222,7 +1223,7 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 			Environment: environment,
 		},
 	)
-	utils.RequireError(t, err)
+	RequireError(t, err)
 	require.ErrorContains(t, err, "Vault.withdraw is not available in recovered program")
 	t.Log(err.Error())
 
