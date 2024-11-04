@@ -84,6 +84,11 @@ func TestMigrateDomainRegisters(t *testing.T) {
 		migratedAccounts, err := migrator.MigrateAccounts(nil, alwaysMigrate)
 		require.NoError(t, err)
 		require.True(t, migratedAccounts == nil || migratedAccounts.Len() == 0)
+
+		err = storage.FastCommit(goruntime.NumCPU())
+		require.NoError(t, err)
+
+		require.Equal(t, 0, len(ledger.StoredValues))
 	})
 
 	t.Run("accounts without domain registers", func(t *testing.T) {
@@ -100,32 +105,12 @@ func TestMigrateDomainRegisters(t *testing.T) {
 
 		migratedAccounts, err := migrator.MigrateAccounts(accounts, alwaysMigrate)
 		require.NoError(t, err)
-		require.NotNil(t, migratedAccounts)
-		require.Equal(t, accounts.Len(), migratedAccounts.Len())
-		require.Equal(t, address2, migratedAccounts.Oldest().Key)
-		require.Equal(t, address1, migratedAccounts.Newest().Key)
+		require.True(t, migratedAccounts == nil || migratedAccounts.Len() == 0)
 
 		err = storage.FastCommit(goruntime.NumCPU())
 		require.NoError(t, err)
 
-		// Check non-atree registers
-		nonAtreeRegisters := getNonAtreeRegisters(ledger.StoredValues)
-		require.Equal(t, accounts.Len(), len(nonAtreeRegisters))
-		require.Contains(t, nonAtreeRegisters, string(address1[:])+"|"+runtime.AccountStorageKey)
-		require.Contains(t, nonAtreeRegisters, string(address2[:])+"|"+runtime.AccountStorageKey)
-
-		// Check atree storage
-		expectedRootSlabIDs := make([]atree.SlabID, 0, migratedAccounts.Len())
-		for pair := migratedAccounts.Oldest(); pair != nil; pair = pair.Next() {
-			accountStorageMap := pair.Value
-			expectedRootSlabIDs = append(expectedRootSlabIDs, accountStorageMap.SlabID())
-		}
-
-		CheckAtreeStorageHealth(t, storage, expectedRootSlabIDs)
-
-		// Check account storage map data
-		checkAccountStorageMapData(t, ledger.StoredValues, ledger.StorageIndices, address1, make(accountStorageMapValues))
-		checkAccountStorageMapData(t, ledger.StoredValues, ledger.StorageIndices, address2, make(accountStorageMapValues))
+		require.Equal(t, 0, len(ledger.StoredValues))
 	})
 
 	t.Run("accounts with domain registers", func(t *testing.T) {

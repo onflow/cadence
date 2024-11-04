@@ -98,6 +98,10 @@ func (m *DomainRegisterMigration) MigrateAccounts(
 			return nil, err
 		}
 
+		if accountStorageMap == nil {
+			continue
+		}
+
 		if migratedAccounts == nil {
 			migratedAccounts = &orderedmap.OrderedMap[common.Address, *interpreter.AccountStorageMap]{}
 		}
@@ -110,13 +114,16 @@ func (m *DomainRegisterMigration) MigrateAccounts(
 func (m *DomainRegisterMigration) MigrateAccount(
 	address common.Address,
 ) (*interpreter.AccountStorageMap, error) {
-	// Create account storage map
-	accountStorageMap := interpreter.NewAccountStorageMap(m.memoryGauge, m.storage, atree.Address(address))
 
 	// Migrate existing domains
-	err := m.migrateDomains(address, accountStorageMap)
+	accountStorageMap, err := m.migrateDomains(address)
 	if err != nil {
 		return nil, err
+	}
+
+	if accountStorageMap == nil {
+		// Nothing migrated
+		return nil, nil
 	}
 
 	accountStorageMapSlabIndex := accountStorageMap.SlabID().Index()
@@ -139,13 +146,15 @@ func (m *DomainRegisterMigration) MigrateAccount(
 // migrateDomains migrates existing domain storage maps and removes domain registers.
 func (m *DomainRegisterMigration) migrateDomains(
 	address common.Address,
-	accountStorageMap *interpreter.AccountStorageMap,
-) error {
+) (*interpreter.AccountStorageMap, error) {
+
+	var accountStorageMap *interpreter.AccountStorageMap
+
 	for _, domain := range AccountDomains {
 
 		domainStorageMap, err := m.getDomainStorageMap(m.ledger, m.storage, address, domain)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		if domainStorageMap == nil {
@@ -153,11 +162,15 @@ func (m *DomainRegisterMigration) migrateDomains(
 			continue
 		}
 
+		if accountStorageMap == nil {
+			accountStorageMap = interpreter.NewAccountStorageMap(m.memoryGauge, m.storage, atree.Address(address))
+		}
+
 		// Migrate (insert) existing domain storage map to account storage map
 		existed := accountStorageMap.WriteDomain(m.inter, domain, domainStorageMap)
 		if existed {
 			// This shouldn't happen because we are inserting domain storage map into empty account storage map.
-			return errors.NewUnexpectedError(
+			return nil, errors.NewUnexpectedError(
 				"failed to migrate domain %s for account %x: domain already exists in account storage map", domain, address,
 			)
 		}
@@ -171,11 +184,11 @@ func (m *DomainRegisterMigration) migrateDomains(
 				nil)
 		})
 		if err != nil {
-			return interpreter.WrappedExternalError(err)
+			return nil, interpreter.WrappedExternalError(err)
 		}
 	}
 
-	return nil
+	return accountStorageMap, nil
 }
 
 func isMigrated(ledger atree.Ledger, address common.Address) (bool, error) {
