@@ -93,7 +93,7 @@ func (m *DomainRegisterMigration) MigrateAccounts(
 			continue
 		}
 
-		accountStorageMap, err := m.migrateAccount(address)
+		accountStorageMap, err := m.MigrateAccount(address)
 		if err != nil {
 			return nil, err
 		}
@@ -107,7 +107,7 @@ func (m *DomainRegisterMigration) MigrateAccounts(
 	return migratedAccounts, nil
 }
 
-func (m *DomainRegisterMigration) migrateAccount(
+func (m *DomainRegisterMigration) MigrateAccount(
 	address common.Address,
 ) (*interpreter.AccountStorageMap, error) {
 	// Create account storage map
