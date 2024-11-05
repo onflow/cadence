@@ -163,12 +163,12 @@ func (s *AccountStorageMap) NewDomain(
 func (s *AccountStorageMap) WriteDomain(
 	interpreter *Interpreter,
 	domain string,
-	storageMap *DomainStorageMap,
+	domainStorageMap *DomainStorageMap,
 ) (existed bool) {
-	if storageMap == nil {
+	if domainStorageMap == nil {
 		return s.removeDomain(interpreter, domain)
 	}
-	return s.setDomain(interpreter, domain, storageMap)
+	return s.setDomain(interpreter, domain, domainStorageMap)
 }
 
 // setDomain sets domain storage map in the account storage map and returns true if domain previously existed.
@@ -176,7 +176,7 @@ func (s *AccountStorageMap) WriteDomain(
 func (s *AccountStorageMap) setDomain(
 	interpreter *Interpreter,
 	domain string,
-	storageMap *DomainStorageMap,
+	newDomainStorageMap *DomainStorageMap,
 ) (existed bool) {
 	interpreter.recordStorageMutation()
 
@@ -186,7 +186,7 @@ func (s *AccountStorageMap) setDomain(
 		key.AtreeValueCompare,
 		key.AtreeValueHashInput,
 		key.AtreeValue(),
-		storageMap.orderedMap,
+		newDomainStorageMap.orderedMap,
 	)
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -195,10 +195,10 @@ func (s *AccountStorageMap) setDomain(
 	existed = existingValueStorable != nil
 	if existed {
 		// Create domain storage map from overwritten storable
-		domainStorageMap := newDomainStorageMapWithAtreeStorable(s.orderedMap.Storage, existingValueStorable)
+		existingDomainStorageMap := newDomainStorageMapWithAtreeStorable(s.orderedMap.Storage, existingValueStorable)
 
 		// Deep remove elements in domain storage map
-		domainStorageMap.DeepRemove(interpreter, true)
+		existingDomainStorageMap.DeepRemove(interpreter, true)
 
 		// Remove domain storage map slab
 		interpreter.RemoveReferencedSlab(existingValueStorable)

@@ -3253,7 +3253,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				// Use *interpreter.Interpreter(nil) here because createIfNotExists is false.
 
-				storageMap := storage.GetStorageMap(
+				storageMap := storage.GetDomainStorageMap(
 					nil,
 					common.MustBytesToAddress([]byte{0x1}),
 					stdlib.PathCapabilityStorageDomain,
@@ -3843,7 +3843,7 @@ func TestRuntimeCapabilitiesGetBackwardCompatibility(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		publicStorageMap := storage.GetStorageMap(
+		publicStorageMap := storage.GetDomainStorageMap(
 			inter,
 			testAddress,
 			common.PathDomainPublic.Identifier(),
@@ -3951,7 +3951,7 @@ func TestRuntimeCapabilitiesPublishBackwardCompatibility(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		publicStorageMap := storage.GetStorageMap(
+		publicStorageMap := storage.GetDomainStorageMap(
 			inter,
 			testAddress,
 			common.PathDomainStorage.Identifier(),
@@ -4042,7 +4042,7 @@ func TestRuntimeCapabilitiesUnpublishBackwardCompatibility(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		publicStorageMap := storage.GetStorageMap(
+		publicStorageMap := storage.GetDomainStorageMap(
 			inter,
 			testAddress,
 			common.PathDomainPublic.Identifier(),

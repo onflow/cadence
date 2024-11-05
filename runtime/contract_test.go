@@ -223,7 +223,7 @@ func TestRuntimeContract(t *testing.T) {
 
 		getContractValueExists := func() bool {
 			storageMap := NewStorage(storage, nil).
-				GetStorageMap(inter, signerAddress, StorageDomainContract, false)
+				GetDomainStorageMap(inter, signerAddress, StorageDomainContract, false)
 			if storageMap == nil {
 				return false
 			}

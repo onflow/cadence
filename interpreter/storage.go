@@ -130,8 +130,8 @@ func (k StorageKey) IsLess(o StorageKey) bool {
 // InMemoryStorage
 type InMemoryStorage struct {
 	*atree.BasicSlabStorage
-	StorageMaps map[StorageKey]*DomainStorageMap
-	memoryGauge common.MemoryGauge
+	DomainStorageMaps map[StorageKey]*DomainStorageMap
+	memoryGauge       common.MemoryGauge
 }
 
 var _ Storage = InMemoryStorage{}
@@ -157,27 +157,27 @@ func NewInMemoryStorage(memoryGauge common.MemoryGauge) InMemoryStorage {
 	)
 
 	return InMemoryStorage{
-		BasicSlabStorage: slabStorage,
-		StorageMaps:      make(map[StorageKey]*DomainStorageMap),
-		memoryGauge:      memoryGauge,
+		BasicSlabStorage:  slabStorage,
+		DomainStorageMaps: make(map[StorageKey]*DomainStorageMap),
+		memoryGauge:       memoryGauge,
 	}
 }
 
-func (i InMemoryStorage) GetStorageMap(
+func (i InMemoryStorage) GetDomainStorageMap(
 	_ *Interpreter,
 	address common.Address,
 	domain string,
 	createIfNotExists bool,
 ) (
-	storageMap *DomainStorageMap,
+	domainStorageMap *DomainStorageMap,
 ) {
 	key := NewStorageKey(i.memoryGauge, address, domain)
-	storageMap = i.StorageMaps[key]
-	if storageMap == nil && createIfNotExists {
-		storageMap = NewDomainStorageMap(i.memoryGauge, i, atree.Address(address))
-		i.StorageMaps[key] = storageMap
+	domainStorageMap = i.DomainStorageMaps[key]
+	if domainStorageMap == nil && createIfNotExists {
+		domainStorageMap = NewDomainStorageMap(i.memoryGauge, i, atree.Address(address))
+		i.DomainStorageMaps[key] = domainStorageMap
 	}
-	return storageMap
+	return domainStorageMap
 }
 
 func (i InMemoryStorage) CheckHealth() error {

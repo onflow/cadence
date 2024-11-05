@@ -110,7 +110,7 @@ func NewDomainStorageMapWithAtreeValue(value atree.Value) *DomainStorageMap {
 }
 
 // ValueExists returns true if the given key exists in the storage map.
-func (s DomainStorageMap) ValueExists(key StorageMapKey) bool {
+func (s *DomainStorageMap) ValueExists(key StorageMapKey) bool {
 	exists, err := s.orderedMap.Has(
 		key.AtreeValueCompare,
 		key.AtreeValueHashInput,
@@ -125,7 +125,7 @@ func (s DomainStorageMap) ValueExists(key StorageMapKey) bool {
 
 // ReadValue returns the value for the given key.
 // Returns nil if the key does not exist.
-func (s DomainStorageMap) ReadValue(gauge common.MemoryGauge, key StorageMapKey) Value {
+func (s *DomainStorageMap) ReadValue(gauge common.MemoryGauge, key StorageMapKey) Value {
 	storedValue, err := s.orderedMap.Get(
 		key.AtreeValueCompare,
 		key.AtreeValueHashInput,
@@ -146,7 +146,7 @@ func (s DomainStorageMap) ReadValue(gauge common.MemoryGauge, key StorageMapKey)
 // If the given value is nil, the key is removed.
 // If the given value is non-nil, the key is added/updated.
 // Returns true if a value previously existed at the given key.
-func (s DomainStorageMap) WriteValue(interpreter *Interpreter, key StorageMapKey, value atree.Value) (existed bool) {
+func (s *DomainStorageMap) WriteValue(interpreter *Interpreter, key StorageMapKey, value atree.Value) (existed bool) {
 	if value == nil {
 		return s.RemoveValue(interpreter, key)
 	} else {
@@ -157,7 +157,7 @@ func (s DomainStorageMap) WriteValue(interpreter *Interpreter, key StorageMapKey
 // SetValue sets a value in the storage map.
 // If the given key already stores a value, it is overwritten.
 // Returns true if given key already exists and existing value is overwritten.
-func (s DomainStorageMap) SetValue(interpreter *Interpreter, key StorageMapKey, value atree.Value) (existed bool) {
+func (s *DomainStorageMap) SetValue(interpreter *Interpreter, key StorageMapKey, value atree.Value) (existed bool) {
 	interpreter.recordStorageMutation()
 
 	existingStorable, err := s.orderedMap.Set(
@@ -184,7 +184,7 @@ func (s DomainStorageMap) SetValue(interpreter *Interpreter, key StorageMapKey, 
 }
 
 // RemoveValue removes a value in the storage map, if it exists.
-func (s DomainStorageMap) RemoveValue(interpreter *Interpreter, key StorageMapKey) (existed bool) {
+func (s *DomainStorageMap) RemoveValue(interpreter *Interpreter, key StorageMapKey) (existed bool) {
 	interpreter.recordStorageMutation()
 
 	existingKeyStorable, existingValueStorable, err := s.orderedMap.Remove(
@@ -270,22 +270,26 @@ func (s *DomainStorageMap) DeepRemove(interpreter *Interpreter, hasNoParentConta
 	}
 }
 
-func (s DomainStorageMap) ValueID() atree.ValueID {
+func (s *DomainStorageMap) SlabID() atree.SlabID {
+	return s.orderedMap.SlabID()
+}
+
+func (s *DomainStorageMap) ValueID() atree.ValueID {
 	return s.orderedMap.ValueID()
 }
 
-func (s DomainStorageMap) Count() uint64 {
+func (s *DomainStorageMap) Count() uint64 {
 	return s.orderedMap.Count()
 }
 
-func (s DomainStorageMap) Inlined() bool {
+func (s *DomainStorageMap) Inlined() bool {
 	// This is only used for testing currently.
 	return s.orderedMap.Inlined()
 }
 
 // Iterator returns an iterator (StorageMapIterator),
 // which allows iterating over the keys and values of the storage map
-func (s DomainStorageMap) Iterator(gauge common.MemoryGauge) DomainStorageMapIterator {
+func (s *DomainStorageMap) Iterator(gauge common.MemoryGauge) DomainStorageMapIterator {
 	mapIterator, err := s.orderedMap.Iterator(
 		StorageMapKeyAtreeValueComparator,
 		StorageMapKeyAtreeValueHashInput,

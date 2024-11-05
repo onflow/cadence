@@ -35,7 +35,6 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
@@ -57,24 +56,27 @@ func withWritesToStorage(
 
 	inter := NewTestInterpreter(tb)
 
-	address := common.MustBytesToAddress([]byte{0x1})
+	// TODO:
+	//address := common.MustBytesToAddress([]byte{0x1})
 
 	for i := 0; i < count; i++ {
 
 		randomIndex := random.Uint32()
 
-		storageKey := interpreter.StorageKey{
-			Address: address,
-			Key:     fmt.Sprintf("%d", randomIndex),
-		}
+		// TODO:
+		//storageKey := interpreter.StorageKey{
+		//	Address: address,
+		//	Key:     fmt.Sprintf("%d", randomIndex),
+		//}
 
 		var slabIndex atree.SlabIndex
 		binary.BigEndian.PutUint32(slabIndex[:], randomIndex)
 
-		if storage.NewAccountStorageMapSlabIndices == nil {
-			storage.NewAccountStorageMapSlabIndices = &orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]{}
-		}
-		storage.NewAccountStorageMapSlabIndices.Set(storageKey, slabIndex)
+		// TODO:
+		//if storage.NewAccountStorageMapSlabIndices == nil {
+		//	storage.NewAccountStorageMapSlabIndices = &orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]{}
+		//}
+		//storage.NewAccountStorageMapSlabIndices.Set(storageKey, slabIndex)
 	}
 
 	handler(storage, inter)
@@ -3110,7 +3112,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	storageMap := storage.GetStorageMap(inter, address, common.PathDomainStorage.Identifier(), false)
+	storageMap := storage.GetDomainStorageMap(inter, address, common.PathDomainStorage.Identifier(), false)
 	require.NotNil(t, storageMap)
 
 	// Read first
@@ -6268,7 +6270,7 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 
 		// Get non-existent domain storage map
 		const createIfNotExists = false
-		domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+		domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 		require.Nil(t, domainStorageMap)
 
 		// Commit changes
@@ -6321,7 +6323,7 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 			for _, domain := range tc.newDomains {
 				// Create new domain storage map
 				const createIfNotExists = true
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 				require.Equal(t, uint64(0), domainStorageMap.Count())
 
@@ -6404,7 +6406,7 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 		{
 			for _, domain := range domains {
 				const createIfNotExists = true
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 				require.Equal(t, uint64(0), domainStorageMap.Count())
 
@@ -6428,7 +6430,7 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 		{
 			for _, domain := range domains {
 				const createIfNotExists = false
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 				require.Equal(t, uint64(0), domainStorageMap.Count())
 
@@ -6454,7 +6456,7 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 		{
 			for _, domain := range domains {
 				const createIfNotExists = false
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 
 				expectedDomainValues := accountValues[domain]
@@ -6486,7 +6488,7 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 		{
 			for _, domain := range domains {
 				const createIfNotExists = false
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 				require.Equal(t, uint64(0), domainStorageMap.Count())
 			}
@@ -6561,7 +6563,7 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 
 		// Get non-existent domain storage map
 		const createIfNotExists = false
-		domainStorageMap := storage.GetStorageMap(inter, address, nonexistentDomain, createIfNotExists)
+		domainStorageMap := storage.GetDomainStorageMap(inter, address, nonexistentDomain, createIfNotExists)
 		require.Nil(t, domainStorageMap)
 
 		// Commit changes
@@ -6607,7 +6609,7 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 
 			// Read existing domain storage map
 			for domain, domainValues := range accountValues {
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, tc.createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, tc.createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 				require.Equal(t, uint64(len(domainValues)), domainStorageMap.Count())
 
@@ -6696,7 +6698,7 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 			// Create and write to domain storage map (createIfNotExists is true)
 			for _, domain := range tc.newDomains {
 				const createIfNotExists = true
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 				require.Equal(t, uint64(0), domainStorageMap.Count())
 
@@ -6779,7 +6781,7 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 		// Write to existing domain storage map (createIfNotExists is false)
 		for _, domain := range existingDomains {
 			const createIfNotExists = false
-			domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+			domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 			require.NotNil(t, domainStorageMap)
 
 			domainValues := accountValues[domain]
@@ -6873,7 +6875,7 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 		{
 			for _, domain := range domains {
 				const createIfNotExists = false
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 
 				domainValues := accountValues[domain]
@@ -6904,7 +6906,7 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 		{
 			for _, domain := range domains {
 				const createIfNotExists = false
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 
 				domainValues := accountValues[domain]
@@ -6935,7 +6937,7 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 		{
 			for _, domain := range domains {
 				const createIfNotExists = false
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 
 				expectedDomainValues := accountValues[domain]
@@ -6967,7 +6969,7 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 		{
 			for _, domain := range domains {
 				const createIfNotExists = false
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 				require.Equal(t, uint64(0), domainStorageMap.Count())
 			}
@@ -7069,7 +7071,7 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 		// Get non-existent domain storage map
 		const createIfNotExists = false
 		nonexistingDomain := common.PathDomainPublic.Identifier()
-		domainStorageMap := storage.GetStorageMap(inter, address, nonexistingDomain, createIfNotExists)
+		domainStorageMap := storage.GetDomainStorageMap(inter, address, nonexistingDomain, createIfNotExists)
 		require.Nil(t, domainStorageMap)
 
 		// Commit changes
@@ -7115,11 +7117,11 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 
 			// Read existing domain storage map
 			for domain, domainValues := range accountValues {
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, tc.createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, tc.createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 				require.Equal(t, uint64(len(domainValues)), domainStorageMap.Count())
 
-				// Read elements to to domain storage map
+				// Read elements to domain storage map
 				for k, expectedV := range domainValues {
 					v := domainStorageMap.ReadValue(nil, k)
 					ev, ok := v.(interpreter.EquatableValue)
@@ -7206,7 +7208,7 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 			// Create and write to new domain storage map
 			for _, domain := range tc.newDomains {
 				const createIfNotExists = true
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 				require.Equal(t, uint64(0), domainStorageMap.Count())
 
@@ -7297,7 +7299,7 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 		// write to existing domain storage map (createIfNotExists is false)
 		for _, domain := range domains {
 			const createIfNotExists = false
-			domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+			domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 			require.NotNil(t, domainStorageMap)
 
 			domainValues := accountValues[domain]
@@ -7377,7 +7379,7 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 		checkAccountStorageMapData(t, ledger.StoredValues, ledger.StorageIndices, address, accountValues)
 	})
 
-	// This test test storage map operations (including account migration) with intermittent Commit()
+	// This test storage map operations (including account migration) with intermittent Commit()
 	// - read domain storage map and commit
 	// - write to domain storage map and commit (including account migration)
 	// - remove all elements from domain storage map and commit
@@ -7407,7 +7409,7 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 		{
 			for _, domain := range domains {
 				const createIfNotExists = false
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 
 				domainValues := accountValues[domain]
@@ -7436,7 +7438,7 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 			// update existing domain storage map (loaded from storage)
 			for _, domain := range domains {
 				const createIfNotExists = false
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 
 				domainValues := accountValues[domain]
@@ -7507,7 +7509,7 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 		{
 			for _, domain := range domains {
 				const createIfNotExists = false
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 
 				domainValues := accountValues[domain]
@@ -7556,7 +7558,7 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 		{
 			for _, domain := range domains {
 				const createIfNotExists = false
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 
 				domainValues := accountValues[domain]
@@ -7616,7 +7618,7 @@ func TestRuntimeStorageDomainStorageMapInlinedState(t *testing.T) {
 
 		// Create domain storage map
 		const createIfNotExists = true
-		domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+		domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 		require.NotNil(t, domainStorageMap)
 		require.True(t, domainStorageMap.Inlined())
 
@@ -7738,7 +7740,7 @@ func TestRuntimeStorageLargeDomainValues(t *testing.T) {
 
 		// Create domain storage map
 		const createIfNotExists = true
-		domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+		domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 		require.NotNil(t, domainStorageMap)
 		require.True(t, domainStorageMap.Inlined())
 
@@ -7865,7 +7867,7 @@ func TestDomainRegisterMigrationForLargeAccount(t *testing.T) {
 	// Create new domain storage map
 	const createIfNotExists = true
 	domain := stdlib.InboxStorageDomain
-	domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+	domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 	require.NotNil(t, domainStorageMap)
 
 	accountValues[domain] = make(domainStorageMapValues)
@@ -7921,7 +7923,7 @@ func createAndWriteAccountStorageMap(
 	// Create domain storage map
 	for _, domain := range domains {
 		const createIfNotExists = true
-		domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+		domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 		require.NotNil(t, domainStorageMap)
 		require.Equal(t, uint64(0), domainStorageMap.Count())
 
