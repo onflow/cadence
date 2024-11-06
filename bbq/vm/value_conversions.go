@@ -40,8 +40,7 @@ func InterpreterValueToVMValue(storage interpreter.Storage, value interpreter.Va
 	case *interpreter.CompositeValue:
 		return newCompositeValueFromOrderedMap(
 			value.AtreeMap(),
-			value.Location,
-			value.QualifiedIdentifier,
+			value.StaticType(nil).(*interpreter.CompositeStaticType),
 			value.Kind,
 		)
 	//case interpreter.LinkValue:
@@ -112,11 +111,12 @@ func VMValueToInterpreterValue(config *Config, value Value) interpreter.Value {
 	case StringValue:
 		return interpreter.NewUnmeteredStringValue(string(value.Str))
 	case *CompositeValue:
+		compositeType := value.CompositeType
 		return interpreter.NewCompositeValueFromAtreeMap(
 			nil,
 			interpreter.CompositeTypeInfo{
-				Location:            value.Location,
-				QualifiedIdentifier: value.QualifiedIdentifier,
+				Location:            compositeType.Location,
+				QualifiedIdentifier: compositeType.QualifiedIdentifier,
 				Kind:                value.Kind,
 			},
 			value.dictionary,

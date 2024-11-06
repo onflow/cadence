@@ -269,8 +269,9 @@ func TestNewStruct(t *testing.T) {
 
 	require.IsType(t, &vm.CompositeValue{}, result)
 	structValue := result.(*vm.CompositeValue)
+	compositeType := structValue.CompositeType
 
-	require.Equal(t, "Foo", structValue.QualifiedIdentifier)
+	require.Equal(t, "Foo", compositeType.QualifiedIdentifier)
 	require.Equal(
 		t,
 		vm.IntValue{SmallInt: 12},

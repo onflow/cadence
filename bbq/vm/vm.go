@@ -429,9 +429,10 @@ func opInvokeDynamic(vm *VM) {
 	}
 
 	compositeValue := receiver.(*CompositeValue)
+	compositeType := compositeValue.CompositeType
 
-	qualifiedFuncName := commons.TypeQualifiedName(compositeValue.QualifiedIdentifier, funcName)
-	var functionValue = vm.lookupFunction(compositeValue.Location, qualifiedFuncName)
+	qualifiedFuncName := commons.TypeQualifiedName(compositeType.QualifiedIdentifier, funcName)
+	var functionValue = vm.lookupFunction(compositeType.Location, qualifiedFuncName)
 
 	parameterCount := int(functionValue.Function.ParameterCount)
 	arguments := vm.stack[stackHeight-parameterCount:]
@@ -455,18 +456,14 @@ func opNew(vm *VM) {
 	compositeKind := common.CompositeKind(kind)
 
 	// decode location
-	locationLen := callframe.getUint16()
-	locationBytes := callframe.function.Code[callframe.ip : callframe.ip+locationLen]
-	callframe.ip = callframe.ip + locationLen
-	location := decodeLocation(locationBytes)
+	staticType := vm.loadType()
 
-	typeName := callframe.getString()
+	// TODO: Support inclusive-range type
+	compositeStaticType := staticType.(*interpreter.CompositeStaticType)
 
 	value := NewCompositeValue(
-		location,
-		typeName,
 		compositeKind,
-		common.Address{},
+		compositeStaticType,
 		vm.config.Storage,
 	)
 	vm.push(value)

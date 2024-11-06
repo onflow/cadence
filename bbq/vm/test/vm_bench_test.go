@@ -169,10 +169,12 @@ func BenchmarkNewStructRaw(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		for j := 0; j < 1; j++ {
 			structValue := vm.NewCompositeValue(
-				nil,
-				"Foo",
 				common.CompositeKindStructure,
-				common.Address{},
+				interpreter.NewCompositeStaticTypeComputeTypeID(
+					nil,
+					common.NewAddressLocation(nil, common.ZeroAddress, "Foo"),
+					"Foo",
+				),
 				storage.BasicSlabStorage,
 			)
 			structValue.SetMember(vmConfig, "id", fieldValue)

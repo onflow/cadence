@@ -37,6 +37,8 @@ type BytecodePrinter struct {
 func (p *BytecodePrinter) PrintProgram(program *Program) string {
 	p.printImports(program.Imports)
 	p.printConstantPool(program.Constants)
+	p.printTypePool(program.Types)
+
 	for _, function := range program.Functions {
 		p.printFunction(function)
 		p.stringBuilder.WriteRune('\n')
@@ -73,20 +75,10 @@ func (p *BytecodePrinter) printCode(codes []byte) {
 			p.stringBuilder.WriteString(" " + fmt.Sprint(operand))
 
 		case opcode.New:
-			var kind int
+			var kind, typeIndex int
 			kind, i = p.getIntOperand(codes, i)
-
-			var location common.Location
-			location, i = p.getLocation(codes, i)
-
-			var typeName string
-			typeName, i = p.getStringOperand(codes, i)
-
-			if location != nil {
-				typeName = string(location.TypeID(nil, typeName))
-			}
-
-			p.stringBuilder.WriteString(" " + fmt.Sprint(kind) + " " + typeName)
+			typeIndex, i = p.getIntOperand(codes, i)
+			p.stringBuilder.WriteString(" " + fmt.Sprint(kind) + " " + fmt.Sprint(typeIndex))
 
 		case opcode.Cast:
 			var typeIndex int
@@ -184,6 +176,26 @@ func (p *BytecodePrinter) printConstantPool(constants []*Constant) {
 		p.stringBuilder.WriteString(constant.Kind.String())
 		p.stringBuilder.WriteString(" | ")
 		p.stringBuilder.WriteString(constantStr)
+		p.stringBuilder.WriteRune('\n')
+	}
+
+	p.stringBuilder.WriteRune('\n')
+}
+
+func (p *BytecodePrinter) printTypePool(types [][]byte) {
+	p.stringBuilder.WriteString("-- Type Pool --\n")
+
+	for index, typeBytes := range types {
+		dec := interpreter.CBORDecMode.NewByteStreamDecoder(typeBytes)
+		typeDecoder := interpreter.NewTypeDecoder(dec, nil)
+		staticType, err := typeDecoder.DecodeStaticType()
+		if err != nil {
+			panic(err)
+		}
+
+		p.stringBuilder.WriteString(fmt.Sprint(index))
+		p.stringBuilder.WriteString(" | ")
+		p.stringBuilder.WriteString(string(staticType.ID()))
 		p.stringBuilder.WriteRune('\n')
 	}
 

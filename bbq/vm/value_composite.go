@@ -29,12 +29,9 @@ import (
 )
 
 type CompositeValue struct {
-	dictionary          *atree.OrderedMap
-	Location            common.Location
-	QualifiedIdentifier string
-	typeID              common.TypeID
-	staticType          StaticType
-	Kind                common.CompositeKind
+	dictionary    *atree.OrderedMap
+	CompositeType *interpreter.CompositeStaticType
+	Kind          common.CompositeKind
 }
 
 var _ Value = &CompositeValue{}
@@ -42,21 +39,25 @@ var _ MemberAccessibleValue = &CompositeValue{}
 var _ ReferenceTrackedResourceKindedValue = &CompositeValue{}
 
 func NewCompositeValue(
-	location common.Location,
-	qualifiedIdentifier string,
 	kind common.CompositeKind,
-	address common.Address,
+	staticType *interpreter.CompositeStaticType,
 	storage atree.SlabStorage,
 ) *CompositeValue {
 
+	// Newly created values are always on stack.
+	// Need to 'Transfer' if needed to be stored in an account.
+	address := common.ZeroAddress
+
 	dictionary, err := atree.NewMap(
 		storage,
+
 		atree.Address(address),
+
 		atree.NewDefaultDigesterBuilder(),
 		interpreter.NewCompositeTypeInfo(
 			nil,
-			location,
-			qualifiedIdentifier,
+			staticType.Location,
+			staticType.QualifiedIdentifier,
 			kind,
 		),
 	)
@@ -66,41 +67,28 @@ func NewCompositeValue(
 	}
 
 	return &CompositeValue{
-		QualifiedIdentifier: qualifiedIdentifier,
-		Location:            location,
-		dictionary:          dictionary,
-		Kind:                kind,
+		CompositeType: staticType,
+		dictionary:    dictionary,
+		Kind:          kind,
 	}
 }
 
 func newCompositeValueFromOrderedMap(
 	dict *atree.OrderedMap,
-	location common.Location,
-	qualifiedIdentifier string,
+	staticType *interpreter.CompositeStaticType,
 	kind common.CompositeKind,
 ) *CompositeValue {
 	return &CompositeValue{
-		dictionary:          dict,
-		Location:            location,
-		QualifiedIdentifier: qualifiedIdentifier,
-		Kind:                kind,
+		dictionary:    dict,
+		CompositeType: staticType,
+		Kind:          kind,
 	}
 }
 
 func (*CompositeValue) isValue() {}
 
-func (v *CompositeValue) StaticType(memoryGauge common.MemoryGauge) StaticType {
-	if v.staticType == nil {
-		// NOTE: Instead of using NewCompositeStaticType, which always generates the type ID,
-		// use the TypeID accessor, which may return an already computed type ID
-		v.staticType = interpreter.NewCompositeStaticType(
-			memoryGauge,
-			v.Location,
-			v.QualifiedIdentifier,
-			v.TypeID(),
-		)
-	}
-	return v.staticType
+func (v *CompositeValue) StaticType(common.MemoryGauge) StaticType {
+	return v.CompositeType
 }
 
 func (v *CompositeValue) GetMember(config *Config, name string) Value {
@@ -164,17 +152,7 @@ func (v *CompositeValue) SlabID() atree.SlabID {
 }
 
 func (v *CompositeValue) TypeID() common.TypeID {
-	if v.typeID == "" {
-		location := v.Location
-		qualifiedIdentifier := v.QualifiedIdentifier
-		if location == nil {
-			return common.TypeID(qualifiedIdentifier)
-		}
-
-		// TODO: TypeID metering
-		v.typeID = location.TypeID(nil, qualifiedIdentifier)
-	}
-	return v.typeID
+	return v.CompositeType.TypeID
 }
 
 func (v *CompositeValue) IsResourceKinded() bool {
@@ -311,20 +289,11 @@ func (v *CompositeValue) Transfer(
 	}
 
 	if res == nil {
-		typeInfo := interpreter.NewCompositeTypeInfo(
-			config.MemoryGauge,
-			v.Location,
-			v.QualifiedIdentifier,
+		res = newCompositeValueFromOrderedMap(
+			dictionary,
+			v.CompositeType,
 			v.Kind,
 		)
-		res = &CompositeValue{
-			dictionary:          dictionary,
-			Location:            typeInfo.Location,
-			QualifiedIdentifier: typeInfo.QualifiedIdentifier,
-			Kind:                typeInfo.Kind,
-			typeID:              v.typeID,
-			staticType:          v.staticType,
-		}
 
 		//res.InjectedFields = v.InjectedFields
 		//res.ComputedFields = v.ComputedFields

@@ -53,7 +53,7 @@ type Compiler struct {
 	staticTypes         [][]byte
 
 	// Cache alike for staticTypes and constants in the pool.
-	typesInPool     map[sema.Type]uint16
+	typesInPool     map[sema.TypeID]uint16
 	constantsInPool map[constantsCacheKey]*constant
 
 	// TODO: initialize
@@ -104,7 +104,7 @@ func NewCompiler(
 		Config:          &Config{},
 		globals:         make(map[string]*global),
 		importedGlobals: indexedNativeFunctions,
-		typesInPool:     make(map[sema.Type]uint16),
+		typesInPool:     make(map[sema.TypeID]uint16),
 		constantsInPool: make(map[constantsCacheKey]*constant),
 		compositeTypeStack: &Stack[*sema.CompositeType]{
 			elements: make([]*sema.CompositeType, 0),
@@ -1087,34 +1087,19 @@ func (c *Compiler) compileInitializer(declaration *ast.SpecialFunctionDeclaratio
 	// i.e: `self = New()`
 
 	enclosingCompositeType := c.compositeTypeStack.top()
-	locationBytes, err := commons.LocationToBytes(enclosingCompositeType.Location)
-	if err != nil {
-		panic(err)
-	}
-
-	byteSize := 2 + // two bytes for composite kind
-		2 + // 2 bytes for location size
-		len(locationBytes) + // location
-		2 + // 2 bytes for type name size
-		len(enclosingCompositeTypeName) // type name
-
-	args := make([]byte, 0, byteSize)
 
 	// Write composite kind
+	// TODO: Maybe get/include this from static-type. Then no need to provide separately.
 	kindFirst, kindSecond := encodeUint16(uint16(enclosingCompositeType.Kind))
-	args = append(args, kindFirst, kindSecond)
 
-	// Write location
-	locationSizeFirst, locationSizeSecond := encodeUint16(uint16(len(locationBytes)))
-	args = append(args, locationSizeFirst, locationSizeSecond)
-	args = append(args, locationBytes...)
+	index := c.getOrAddType(enclosingCompositeType)
+	typeFirst, typeSecond := encodeUint16(index)
 
-	// Write composite name
-	typeNameSizeFirst, typeNameSizeSecond := encodeUint16(uint16(len(enclosingCompositeTypeName)))
-	args = append(args, typeNameSizeFirst, typeNameSizeSecond)
-	args = append(args, enclosingCompositeTypeName...)
-
-	c.emit(opcode.New, args...)
+	c.emit(
+		opcode.New,
+		kindFirst, kindSecond,
+		typeFirst, typeSecond,
+	)
 
 	if enclosingType.Kind == common.CompositeKindContract {
 		// During contract init, update the global variable with the newly initialized contract value.
@@ -1290,7 +1275,7 @@ func (c *Compiler) emitCheckType(targetType sema.Type) {
 
 func (c *Compiler) getOrAddType(targetType sema.Type) uint16 {
 	// Optimization: Re-use types in the pool.
-	index, ok := c.typesInPool[targetType]
+	index, ok := c.typesInPool[targetType.ID()]
 	if !ok {
 		staticType := interpreter.ConvertSemaToStaticType(c.memoryGauge, targetType)
 		bytes, err := interpreter.StaticTypeToBytes(staticType)
@@ -1298,7 +1283,7 @@ func (c *Compiler) getOrAddType(targetType sema.Type) uint16 {
 			panic(err)
 		}
 		index = c.addType(bytes)
-		c.typesInPool[targetType] = index
+		c.typesInPool[targetType.ID()] = index
 	}
 	return index
 }
