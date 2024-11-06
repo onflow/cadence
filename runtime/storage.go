@@ -54,8 +54,7 @@ type Storage struct {
 	memoryGauge common.MemoryGauge
 
 	accountStorageV1 *AccountStorageV1
-	// TODO:
-	//accountStorageV2 *AccountStorageV2
+	accountStorageV2 *AccountStorageV2
 }
 
 var _ atree.SlabStorage = &Storage{}
@@ -96,17 +95,18 @@ func NewStorage(ledger atree.Ledger, memoryGauge common.MemoryGauge) *Storage {
 		persistentSlabStorage,
 		memoryGauge,
 	)
-	// TODO:
-	//accountStorageV2 := NewAccountStorageV2(ledger, memoryGauge)
+	accountStorageV2 := NewAccountStorageV2(
+		ledger,
+		persistentSlabStorage,
+		memoryGauge,
+	)
 
 	return &Storage{
-		PersistentSlabStorage:   persistentSlabStorage,
-		cachedDomainStorageMaps: map[interpreter.StorageKey]*interpreter.DomainStorageMap{},
-		Ledger:                  ledger,
-		memoryGauge:             memoryGauge,
-		accountStorageV1:        accountStorageV1,
-		// TODO:
-		//accountStorageV2:        accountStorageV2,
+		Ledger:                ledger,
+		PersistentSlabStorage: persistentSlabStorage,
+		memoryGauge:           memoryGauge,
+		accountStorageV1:      accountStorageV1,
+		accountStorageV2:      accountStorageV2,
 	}
 }
 
@@ -125,87 +125,52 @@ func (s *Storage) GetDomainStorageMap(
 
 	domainStorageKey := interpreter.NewStorageKey(s.memoryGauge, address, domain)
 
-	domainStorageMap = s.cachedDomainStorageMaps[domainStorageKey]
-	if domainStorageMap != nil {
-		return domainStorageMap
+	if s.cachedDomainStorageMaps != nil {
+		domainStorageMap = s.cachedDomainStorageMaps[domainStorageKey]
+		if domainStorageMap != nil {
+			return domainStorageMap
+		}
 	}
 
 	defer func() {
 		// Cache domain storage map
 		if domainStorageMap != nil {
-			s.cachedDomainStorageMaps[domainStorageKey] = domainStorageMap
+			s.cacheDomainStorageMap(
+				domainStorageKey,
+				domainStorageMap,
+			)
 		}
 	}()
 
-	// Account can be migrated account, new account, or unmigrated account.
-	//
-	//
-	// ### Migrated Account
-	//
-	// Migrated account is account with AccountStorageKey register.
-	// Migrated account has account storage map, which contains domain storage maps
-	// with domain as key.
-	//
-	// If domain exists in the account storage map, domain storage map is returned.
-	//
-	// If domain doesn't exist and createIfNotExists is true,
-	// new domain storage map is created, inserted into account storage map, and returned.
-	//
-	// If domain doesn't exist and createIfNotExists is false, nil is returned.
-	//
-	//
-	// ### New Account
-	//
-	// New account is account without AccountStorageKey register and without any domain registers.
-	// NOTE: new account's AccountStorageKey register is persisted in Commit().
-	//
-	// If createIfNotExists is true,
-	// - new account storage map is created
-	// - new domain storage map is created
-	// - domain storage map is inserted into account storage map
-	// - domain storage map is returned
-	//
-	// If createIfNotExists is false, nil is returned.
-	//
-	//
-	// ### Unmigrated Account
-	//
-	// Unmigrated account is account with at least one domain register.
-	// Unmigrated account has domain registers and corresponding domain storage maps.
-	//
-	// If domain exists (domain register exists), domain storage map is loaded and returned.
-	//
-	// If domain doesn't exist and createIfNotExists is true,
-	// new domain storage map is created and returned.
-	// NOTE: given account would be migrated in Commit() since this is write op.
-	//
-	// If domain doesn't exist and createIfNotExists is false, nil is returned.
-	//
-	//
-	// ### Migration of unmigrated accounts
-	//
-	// Migration happens in Commit() if unmigrated account has write ops.
-	// NOTE: Commit() is not called by this function.
-	//
-	// Specifically,
-	// - unmigrated account is migrated in Commit() if there are write ops.
-	//   For example, inserting values in unmigrated account triggers migration in Commit().
-	// - unmigrated account is unchanged if there are only read ops.
-	//   For example, iterating values in unmigrated account doesn't trigger migration,
-	//   and checking if domain exists doesn't trigger migration.
-
-	// Get (or create) domain storage map from existing account storage map
-	// if account is migrated account.
-
 	// TODO:
-	//domainStorageMap = s.accountStorageV2.GetDomainStorageMap(address, domain, createIfNotExists)
-	//if domainStorageMap != nil {
-	//	return domainStorageMap
-	//}
-	//
-	//// At this point, account is either new or unmigrated account.
+	const useV2 = false
 
-	return s.accountStorageV1.GetDomainStorageMap(address, domain, createIfNotExists)
+	if useV2 {
+		domainStorageMap = s.accountStorageV2.GetDomainStorageMap(
+			inter,
+			address,
+			domain,
+			createIfNotExists,
+		)
+	} else {
+		domainStorageMap = s.accountStorageV1.GetDomainStorageMap(
+			address,
+			domain,
+			createIfNotExists,
+		)
+	}
+	return domainStorageMap
+}
+
+func (s *Storage) cacheDomainStorageMap(
+	domainStorageKey interpreter.StorageKey,
+	domainStorageMap *interpreter.DomainStorageMap,
+) {
+	if s.cachedDomainStorageMaps == nil {
+		s.cachedDomainStorageMaps = map[interpreter.StorageKey]*interpreter.DomainStorageMap{}
+	}
+
+	s.cachedDomainStorageMaps[domainStorageKey] = domainStorageMap
 }
 
 // getSlabIndexFromRegisterValue returns register value as atree.SlabIndex.
@@ -336,11 +301,10 @@ func (s *Storage) commit(inter *interpreter.Interpreter, commitContractUpdates b
 		return err
 	}
 
-	// TODO:
-	//err = s.accountStorageV2.commit()
-	//if err != nil {
-	//	return err
-	//}
+	err = s.accountStorageV2.commit()
+	if err != nil {
+		return err
+	}
 
 	// Commit the underlying slab storage's writes
 
