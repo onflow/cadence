@@ -558,7 +558,15 @@ func (r *interpreterRuntime) Storage(context Context) (*Storage, *interpreter.In
 
 	codesAndPrograms := NewCodesAndPrograms()
 
-	storage := NewStorage(context.Interface, context.Interface)
+	runtimeInterface := context.Interface
+
+	storage := NewStorage(
+		runtimeInterface,
+		runtimeInterface,
+		StorageConfig{
+			StorageFormatV2Enabled: r.defaultConfig.StorageFormatV2Enabled,
+		},
+	)
 
 	environment := context.Environment
 	if environment == nil {
@@ -566,7 +574,7 @@ func (r *interpreterRuntime) Storage(context Context) (*Storage, *interpreter.In
 	}
 
 	environment.Configure(
-		context.Interface,
+		runtimeInterface,
 		codesAndPrograms,
 		storage,
 		context.CoverageReport,

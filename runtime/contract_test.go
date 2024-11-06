@@ -44,18 +44,21 @@ func TestRuntimeContract(t *testing.T) {
 	t.Parallel()
 
 	type testCase struct {
-		name        string // the name of the contract used in add/update calls
-		code        string // the code we use to add the contract
-		code2       string // the code we use to update the contract
-		valid       bool
-		isInterface bool
+		name                   string // the name of the contract used in add/update calls
+		code                   string // the code we use to add the contract
+		code2                  string // the code we use to update the contract
+		valid                  bool
+		isInterface            bool
+		storageFormatV2Enabled bool
 	}
 
-	test := func(t *testing.T, tc testCase) {
-
+	runTest := func(t *testing.T, tc testCase) {
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		config := DefaultTestInterpreterConfig
+		config.StorageFormatV2Enabled = tc.storageFormatV2Enabled
+
+		runtime := NewTestInterpreterRuntimeWithConfig(config)
 
 		var loggedMessages []string
 
@@ -222,8 +225,18 @@ func TestRuntimeContract(t *testing.T) {
 		// so getting the storage map here once upfront would result in outdated data
 
 		getContractValueExists := func() bool {
-			storageMap := NewStorage(storage, nil).
-				GetDomainStorageMap(inter, signerAddress, StorageDomainContract, false)
+			storageMap := NewStorage(
+				storage,
+				nil,
+				StorageConfig{
+					StorageFormatV2Enabled: tc.storageFormatV2Enabled,
+				},
+			).GetDomainStorageMap(
+				inter,
+				signerAddress,
+				StorageDomainContract,
+				false,
+			)
 			if storageMap == nil {
 				return false
 			}
@@ -512,6 +525,18 @@ func TestRuntimeContract(t *testing.T) {
 			}
 		})
 
+	}
+
+	test := func(t *testing.T, tc testCase) {
+		t.Run("storage format V2 disabled", func(t *testing.T) {
+			tc.storageFormatV2Enabled = false
+			runTest(t, tc)
+		})
+
+		t.Run("storage format V2 enabled", func(t *testing.T) {
+			tc.storageFormatV2Enabled = true
+			runTest(t, tc)
+		})
 	}
 
 	t.Run("valid contract, correct name", func(t *testing.T) {

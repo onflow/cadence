@@ -40,6 +40,7 @@ import (
 )
 
 func TestMigrateDomainRegisters(t *testing.T) {
+	t.Parallel()
 
 	alwaysMigrate := func(common.Address) bool {
 		return true
@@ -74,8 +75,16 @@ func TestMigrateDomainRegisters(t *testing.T) {
 	address2 := common.MustBytesToAddress([]byte{0x2})
 
 	t.Run("no accounts", func(t *testing.T) {
+		t.Parallel()
+
 		ledger := NewTestLedger(nil, nil)
-		storage := runtime.NewStorage(ledger, nil)
+		storage := runtime.NewStorage(
+			ledger,
+			nil,
+			runtime.StorageConfig{
+				StorageFormatV2Enabled: true,
+			},
+		)
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -92,8 +101,16 @@ func TestMigrateDomainRegisters(t *testing.T) {
 	})
 
 	t.Run("accounts without domain registers", func(t *testing.T) {
+		t.Parallel()
+
 		ledger := NewTestLedger(nil, nil)
-		storage := runtime.NewStorage(ledger, nil)
+		storage := runtime.NewStorage(
+			ledger,
+			nil,
+			runtime.StorageConfig{
+				StorageFormatV2Enabled: true,
+			},
+		)
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -114,6 +131,7 @@ func TestMigrateDomainRegisters(t *testing.T) {
 	})
 
 	t.Run("accounts with domain registers", func(t *testing.T) {
+		t.Parallel()
 
 		accountsInfo := []accountInfo{
 			{
@@ -132,7 +150,13 @@ func TestMigrateDomainRegisters(t *testing.T) {
 		}
 
 		ledger, accountsValues := newTestLedgerWithUnmigratedAccounts(t, nil, nil, accountsInfo)
-		storage := runtime.NewStorage(ledger, nil)
+		storage := runtime.NewStorage(
+			ledger,
+			nil,
+			runtime.StorageConfig{
+				StorageFormatV2Enabled: true,
+			},
+		)
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -174,6 +198,8 @@ func TestMigrateDomainRegisters(t *testing.T) {
 	})
 
 	t.Run("migrated accounts", func(t *testing.T) {
+		t.Parallel()
+
 		accountsInfo := []accountInfo{
 			{
 				address: address1,
@@ -191,7 +217,13 @@ func TestMigrateDomainRegisters(t *testing.T) {
 		}
 
 		ledger, accountsValues := newTestLedgerWithMigratedAccounts(t, nil, nil, accountsInfo)
-		storage := runtime.NewStorage(ledger, nil)
+		storage := runtime.NewStorage(
+			ledger,
+			nil,
+			runtime.StorageConfig{
+				StorageFormatV2Enabled: true,
+			},
+		)
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -212,6 +244,7 @@ func TestMigrateDomainRegisters(t *testing.T) {
 	})
 
 	t.Run("never migration predicate", func(t *testing.T) {
+		t.Parallel()
 
 		accountsInfo := []accountInfo{
 			{
@@ -229,7 +262,13 @@ func TestMigrateDomainRegisters(t *testing.T) {
 		}
 
 		ledger, _ := newTestLedgerWithUnmigratedAccounts(t, nil, nil, accountsInfo)
-		storage := runtime.NewStorage(ledger, nil)
+		storage := runtime.NewStorage(
+			ledger,
+			nil,
+			runtime.StorageConfig{
+				StorageFormatV2Enabled: true,
+			},
+		)
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -245,6 +284,7 @@ func TestMigrateDomainRegisters(t *testing.T) {
 	})
 
 	t.Run("selective migration predicate", func(t *testing.T) {
+		t.Parallel()
 
 		accountsInfo := []accountInfo{
 			{
@@ -262,7 +302,13 @@ func TestMigrateDomainRegisters(t *testing.T) {
 		}
 
 		ledger, _ := newTestLedgerWithUnmigratedAccounts(t, nil, nil, accountsInfo)
-		storage := runtime.NewStorage(ledger, nil)
+		storage := runtime.NewStorage(
+			ledger,
+			nil,
+			runtime.StorageConfig{
+				StorageFormatV2Enabled: true,
+			},
+		)
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -298,7 +344,13 @@ func newTestLedgerWithUnmigratedAccounts(
 	accounts []accountInfo,
 ) (TestLedger, map[common.Address]accountStorageMapValues) {
 	ledger := NewTestLedger(nil, nil)
-	storage := runtime.NewStorage(ledger, nil)
+	storage := runtime.NewStorage(
+		ledger,
+		nil,
+		runtime.StorageConfig{
+			StorageFormatV2Enabled: true,
+		},
+	)
 
 	// Turn off AtreeStorageValidationEnabled and explicitly check atree storage health at the end of test.
 	// This is because DomainStorageMap isn't created through runtime.Storage, so there isn't any
@@ -382,7 +434,13 @@ func newTestLedgerWithMigratedAccounts(
 	accounts []accountInfo,
 ) (TestLedger, map[common.Address]accountStorageMapValues) {
 	ledger := NewTestLedger(nil, nil)
-	storage := runtime.NewStorage(ledger, nil)
+	storage := runtime.NewStorage(
+		ledger,
+		nil,
+		runtime.StorageConfig{
+			StorageFormatV2Enabled: true,
+		},
+	)
 
 	// Turn off AtreeStorageValidationEnabled and explicitly check atree storage health at the end of test.
 	// This is because DomainStorageMap isn't created through runtime.Storage, so there isn't any

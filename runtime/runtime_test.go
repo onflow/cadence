@@ -5683,7 +5683,9 @@ func TestRuntimeContractWriteback(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	config := DefaultTestInterpreterConfig
+	config.StorageFormatV2Enabled = true
+	runtime := NewTestInterpreterRuntimeWithConfig(config)
 
 	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
@@ -5853,7 +5855,9 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	config := DefaultTestInterpreterConfig
+	config.StorageFormatV2Enabled = true
+	runtime := NewTestInterpreterRuntimeWithConfig(config)
 
 	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
@@ -7600,7 +7604,9 @@ func TestRuntimeComputationMetring(t *testing.T) {
 				),
 			)
 
-			runtime := NewTestInterpreterRuntime()
+			config := DefaultTestInterpreterConfig
+			config.StorageFormatV2Enabled = true
+			runtime := NewTestInterpreterRuntimeWithConfig(config)
 
 			compErr := errors.New("computation exceeded limit")
 			var hits, totalIntensity uint

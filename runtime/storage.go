@@ -38,6 +38,10 @@ const (
 	AccountStorageKey     = "stored"
 )
 
+type StorageConfig struct {
+	StorageFormatV2Enabled bool
+}
+
 type Storage struct {
 	*atree.PersistentSlabStorage
 
@@ -53,17 +57,24 @@ type Storage struct {
 
 	memoryGauge common.MemoryGauge
 
+	Config StorageConfig
+
 	AccountStorageV1 *AccountStorageV1
 	AccountStorageV2 *AccountStorageV2
 
-	// v1Accounts are accounts that are in account storage format v1
-	v1Accounts *orderedmap.OrderedMap[common.Address, struct{}]
+	// v1Accounts contains the cached result of determining
+	// if the account is in storage format v1 or not.
+	v1Accounts *orderedmap.OrderedMap[common.Address, bool]
 }
 
 var _ atree.SlabStorage = &Storage{}
 var _ interpreter.Storage = &Storage{}
 
-func NewStorage(ledger atree.Ledger, memoryGauge common.MemoryGauge) *Storage {
+func NewStorage(
+	ledger atree.Ledger,
+	memoryGauge common.MemoryGauge,
+	config StorageConfig,
+) *Storage {
 	decodeStorable := func(
 		decoder *cbor.StreamDecoder,
 		slabID atree.SlabID,
@@ -108,6 +119,7 @@ func NewStorage(ledger atree.Ledger, memoryGauge common.MemoryGauge) *Storage {
 		Ledger:                ledger,
 		PersistentSlabStorage: persistentSlabStorage,
 		memoryGauge:           memoryGauge,
+		Config:                config,
 		AccountStorageV1:      accountStorageV1,
 		AccountStorageV2:      accountStorageV2,
 	}
@@ -145,30 +157,35 @@ func (s *Storage) GetDomainStorageMap(
 		}
 	}()
 
-	// TODO:
-	const useV2 = true
+	if s.IsV1Account(address) ||
+		!s.Config.StorageFormatV2Enabled {
 
-	if useV2 {
-		domainStorageMap = s.AccountStorageV2.GetDomainStorageMap(
-			inter,
-			address,
-			domain,
-			createIfNotExists,
-		)
-	} else {
 		domainStorageMap = s.AccountStorageV1.GetDomainStorageMap(
 			address,
 			domain,
 			createIfNotExists,
 		)
 
+		// If the account was not in storage format v1,
+		// but the domain storage map was created,
+		// mark the account as in storage format v1.
+
 		if domainStorageMap != nil {
-			if s.v1Accounts == nil {
-				s.v1Accounts = &orderedmap.OrderedMap[common.Address, struct{}]{}
-			}
-			s.v1Accounts.Set(address, struct{}{})
+			s.v1Accounts.Set(address, true)
 		}
+
+	} else {
+		// The account is not in storage format v1,
+		// so use the new account storage format v2.
+
+		domainStorageMap = s.AccountStorageV2.GetDomainStorageMap(
+			inter,
+			address,
+			domain,
+			createIfNotExists,
+		)
 	}
+
 	return domainStorageMap
 }
 
@@ -181,6 +198,43 @@ func (s *Storage) cacheDomainStorageMap(
 	}
 
 	s.cachedDomainStorageMaps[domainStorageKey] = domainStorageMap
+}
+
+// IsV1Account returns true if given account is in account storage format v1.
+func (s *Storage) IsV1Account(address common.Address) (isV1 bool) {
+
+	// Check cache
+
+	if s.v1Accounts != nil {
+		var present bool
+		isV1, present = s.v1Accounts.Get(address)
+		if present {
+			return isV1
+		}
+	}
+
+	// Cache result
+
+	defer func() {
+		if s.v1Accounts == nil {
+			s.v1Accounts = &orderedmap.OrderedMap[common.Address, bool]{}
+		}
+		s.v1Accounts.Set(address, isV1)
+	}()
+
+	// Check if a storage map register exists for any of the domains.
+	// Check the most frequently used domains first, such as storage, public, private.
+	for _, domain := range AccountDomains {
+		_, domainExists, err := getSlabIndexFromRegisterValue(s.Ledger, address, []byte(domain))
+		if err != nil {
+			panic(err)
+		}
+		if domainExists {
+			return true
+		}
+	}
+
+	return false
 }
 
 // getSlabIndexFromRegisterValue returns register value as atree.SlabIndex.
@@ -449,14 +503,16 @@ func (s *Storage) CheckHealth() error {
 	for storageKey, storageMap := range s.cachedDomainStorageMaps { //nolint:maprange
 		address := storageKey.Address
 
-		if s.v1Accounts != nil &&
-			s.v1Accounts.Contains(address) {
-
-			storageMapStorageIDs = append(
-				storageMapStorageIDs,
-				storageMap.SlabID(),
-			)
+		// Only accounts in storage format v1 store domain storage maps
+		// directly at the root of the account
+		if !s.IsV1Account(address) {
+			continue
 		}
+
+		storageMapStorageIDs = append(
+			storageMapStorageIDs,
+			storageMap.SlabID(),
+		)
 	}
 
 	sort.Slice(

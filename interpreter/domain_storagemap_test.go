@@ -40,8 +40,14 @@ func TestDomainStorageMapValueExists(t *testing.T) {
 	address := common.MustBytesToAddress([]byte{0x1})
 
 	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+
 		ledger := NewTestLedger(nil, nil)
-		storage := runtime.NewStorage(ledger, nil)
+		storage := runtime.NewStorage(
+			ledger,
+			nil,
+			runtime.StorageConfig{},
+		)
 
 		domainStorageMap := interpreter.NewDomainStorageMap(nil, storage, atree.Address(address))
 		require.NotNil(t, domainStorageMap)
@@ -56,10 +62,16 @@ func TestDomainStorageMapValueExists(t *testing.T) {
 	})
 
 	t.Run("non-empty", func(t *testing.T) {
+		t.Parallel()
+
 		random := rand.New(rand.NewSource(42))
 
 		ledger := NewTestLedger(nil, nil)
-		storage := runtime.NewStorage(ledger, nil)
+		storage := runtime.NewStorage(
+			ledger,
+			nil,
+			runtime.StorageConfig{},
+		)
 
 		// Turn off AtreeStorageValidationEnabled and explicitly check atree storage health at the end of test.
 		// This is because DomainStorageMap isn't created through runtime.Storage, so there isn't any
@@ -103,8 +115,14 @@ func TestDomainStorageMapReadValue(t *testing.T) {
 	address := common.MustBytesToAddress([]byte{0x1})
 
 	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+
 		ledger := NewTestLedger(nil, nil)
-		storage := runtime.NewStorage(ledger, nil)
+		storage := runtime.NewStorage(
+			ledger,
+			nil,
+			runtime.StorageConfig{},
+		)
 
 		domainStorageMap := interpreter.NewDomainStorageMap(nil, storage, atree.Address(address))
 		require.NotNil(t, domainStorageMap)
@@ -119,10 +137,16 @@ func TestDomainStorageMapReadValue(t *testing.T) {
 	})
 
 	t.Run("non-empty", func(t *testing.T) {
+		t.Parallel()
+
 		random := rand.New(rand.NewSource(42))
 
 		ledger := NewTestLedger(nil, nil)
-		storage := runtime.NewStorage(ledger, nil)
+		storage := runtime.NewStorage(
+			ledger,
+			nil,
+			runtime.StorageConfig{},
+		)
 
 		// Turn off AtreeStorageValidationEnabled and explicitly check atree storage health at the end of test.
 		// This is because DomainStorageMap isn't created through runtime.Storage, so there isn't any
@@ -169,10 +193,16 @@ func TestDomainStorageMapSetAndUpdateValue(t *testing.T) {
 	address := common.MustBytesToAddress([]byte{0x1})
 
 	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+
 		random := rand.New(rand.NewSource(42))
 
 		ledger := NewTestLedger(nil, nil)
-		storage := runtime.NewStorage(ledger, nil)
+		storage := runtime.NewStorage(
+			ledger,
+			nil,
+			runtime.StorageConfig{},
+		)
 
 		// Turn off AtreeStorageValidationEnabled and explicitly check atree storage health at the end of test.
 		// This is because AccountStorageMap isn't created through runtime.Storage, so there isn't any
@@ -200,10 +230,16 @@ func TestDomainStorageMapSetAndUpdateValue(t *testing.T) {
 	})
 
 	t.Run("non-empty", func(t *testing.T) {
+		t.Parallel()
+
 		random := rand.New(rand.NewSource(42))
 
 		ledger := NewTestLedger(nil, nil)
-		storage := runtime.NewStorage(ledger, nil)
+		storage := runtime.NewStorage(
+			ledger,
+			nil,
+			runtime.StorageConfig{},
+		)
 
 		// Turn off AtreeStorageValidationEnabled and explicitly check atree storage health at the end of test.
 		// This is because AccountStorageMap isn't created through runtime.Storage, so there isn't any
@@ -245,8 +281,14 @@ func TestDomainStorageMapRemoveValue(t *testing.T) {
 	address := common.MustBytesToAddress([]byte{0x1})
 
 	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+
 		ledger := NewTestLedger(nil, nil)
-		storage := runtime.NewStorage(ledger, nil)
+		storage := runtime.NewStorage(
+			ledger,
+			nil,
+			runtime.StorageConfig{},
+		)
 
 		// Turn off AtreeStorageValidationEnabled and explicitly check atree storage health at the end of test.
 		// This is because AccountStorageMap isn't created through runtime.Storage, so there isn't any
@@ -273,10 +315,16 @@ func TestDomainStorageMapRemoveValue(t *testing.T) {
 	})
 
 	t.Run("non-empty", func(t *testing.T) {
+		t.Parallel()
+
 		random := rand.New(rand.NewSource(42))
 
 		ledger := NewTestLedger(nil, nil)
-		storage := runtime.NewStorage(ledger, nil)
+		storage := runtime.NewStorage(
+			ledger,
+			nil,
+			runtime.StorageConfig{},
+		)
 
 		// Turn off AtreeStorageValidationEnabled and explicitly check atree storage health at the end of test.
 		// This is because AccountStorageMap isn't created through runtime.Storage, so there isn't any
@@ -325,8 +373,14 @@ func TestDomainStorageMapIteratorNext(t *testing.T) {
 	address := common.MustBytesToAddress([]byte{0x1})
 
 	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+
 		ledger := NewTestLedger(nil, nil)
-		storage := runtime.NewStorage(ledger, nil)
+		storage := runtime.NewStorage(
+			ledger,
+			nil,
+			runtime.StorageConfig{},
+		)
 
 		// Turn off AtreeStorageValidationEnabled and explicitly check atree storage health at the end of test.
 		// This is because AccountStorageMap isn't created through runtime.Storage, so there isn't any
@@ -362,10 +416,16 @@ func TestDomainStorageMapIteratorNext(t *testing.T) {
 	})
 
 	t.Run("non-empty", func(t *testing.T) {
+		t.Parallel()
+
 		random := rand.New(rand.NewSource(42))
 
 		ledger := NewTestLedger(nil, nil)
-		storage := runtime.NewStorage(ledger, nil)
+		storage := runtime.NewStorage(
+			ledger,
+			nil,
+			runtime.StorageConfig{},
+		)
 
 		// Turn off AtreeStorageValidationEnabled and explicitly check atree storage health at the end of test.
 		// This is because AccountStorageMap isn't created through runtime.Storage, so there isn't any
@@ -422,8 +482,14 @@ func TestDomainStorageMapIteratorNextKey(t *testing.T) {
 	address := common.MustBytesToAddress([]byte{0x1})
 
 	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+
 		ledger := NewTestLedger(nil, nil)
-		storage := runtime.NewStorage(ledger, nil)
+		storage := runtime.NewStorage(
+			ledger,
+			nil,
+			runtime.StorageConfig{},
+		)
 
 		// Turn off AtreeStorageValidationEnabled and explicitly check atree storage health at the end of test.
 		// This is because AccountStorageMap isn't created through runtime.Storage, so there isn't any
@@ -458,10 +524,16 @@ func TestDomainStorageMapIteratorNextKey(t *testing.T) {
 	})
 
 	t.Run("non-empty", func(t *testing.T) {
+		t.Parallel()
+
 		random := rand.New(rand.NewSource(42))
 
 		ledger := NewTestLedger(nil, nil)
-		storage := runtime.NewStorage(ledger, nil)
+		storage := runtime.NewStorage(
+			ledger,
+			nil,
+			runtime.StorageConfig{},
+		)
 
 		// Turn off AtreeStorageValidationEnabled and explicitly check atree storage health at the end of test.
 		// This is because AccountStorageMap isn't created through runtime.Storage, so there isn't any
@@ -515,8 +587,14 @@ func TestDomainStorageMapIteratorNextValue(t *testing.T) {
 	address := common.MustBytesToAddress([]byte{0x1})
 
 	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+
 		ledger := NewTestLedger(nil, nil)
-		storage := runtime.NewStorage(ledger, nil)
+		storage := runtime.NewStorage(
+			ledger,
+			nil,
+			runtime.StorageConfig{},
+		)
 
 		// Turn off AtreeStorageValidationEnabled and explicitly check atree storage health at the end of test.
 		// This is because AccountStorageMap isn't created through runtime.Storage, so there isn't any
@@ -551,10 +629,16 @@ func TestDomainStorageMapIteratorNextValue(t *testing.T) {
 	})
 
 	t.Run("non-empty", func(t *testing.T) {
+		t.Parallel()
+
 		random := rand.New(rand.NewSource(42))
 
 		ledger := NewTestLedger(nil, nil)
-		storage := runtime.NewStorage(ledger, nil)
+		storage := runtime.NewStorage(
+			ledger,
+			nil,
+			runtime.StorageConfig{},
+		)
 
 		// Turn off AtreeStorageValidationEnabled and explicitly check atree storage health at the end of test.
 		// This is because AccountStorageMap isn't created through runtime.Storage, so there isn't any
@@ -615,9 +699,15 @@ func TestDomainStorageMapLoadFromRootSlabID(t *testing.T) {
 	address := common.MustBytesToAddress([]byte{0x1})
 
 	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+
 		init := func() (atree.SlabID, domainStorageMapValues, map[string][]byte, map[string]uint64) {
 			ledger := NewTestLedger(nil, nil)
-			storage := runtime.NewStorage(ledger, nil)
+			storage := runtime.NewStorage(
+				ledger,
+				nil,
+				runtime.StorageConfig{},
+			)
 
 			inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -635,7 +725,11 @@ func TestDomainStorageMapLoadFromRootSlabID(t *testing.T) {
 		domainStorageMapRootSlabID, domainValues, storedValues, storageIndices := init()
 
 		ledger := NewTestLedgerWithData(nil, nil, storedValues, storageIndices)
-		storage := runtime.NewStorage(ledger, nil)
+		storage := runtime.NewStorage(
+			ledger,
+			nil,
+			runtime.StorageConfig{},
+		)
 
 		domainStorageMap := interpreter.NewDomainStorageMapWithRootID(storage, domainStorageMapRootSlabID)
 		require.Equal(t, uint64(0), domainStorageMap.Count())
@@ -648,12 +742,17 @@ func TestDomainStorageMapLoadFromRootSlabID(t *testing.T) {
 	})
 
 	t.Run("non-empty", func(t *testing.T) {
+		t.Parallel()
 
 		init := func() (atree.SlabID, domainStorageMapValues, map[string][]byte, map[string]uint64) {
 			random := rand.New(rand.NewSource(42))
 
 			ledger := NewTestLedger(nil, nil)
-			storage := runtime.NewStorage(ledger, nil)
+			storage := runtime.NewStorage(
+				ledger,
+				nil,
+				runtime.StorageConfig{},
+			)
 
 			// Turn off automatic AtreeStorageValidationEnabled and explicitly check atree storage health directly.
 			// This is because AccountStorageMap isn't created through storage, so there isn't any account register to match AccountStorageMap root slab.
@@ -674,7 +773,11 @@ func TestDomainStorageMapLoadFromRootSlabID(t *testing.T) {
 		domainStorageMapRootSlabID, domainValues, storedValues, storageIndices := init()
 
 		ledger := NewTestLedgerWithData(nil, nil, storedValues, storageIndices)
-		storage := runtime.NewStorage(ledger, nil)
+		storage := runtime.NewStorage(
+			ledger,
+			nil,
+			runtime.StorageConfig{},
+		)
 
 		domainStorageMap := interpreter.NewDomainStorageMapWithRootID(storage, domainStorageMapRootSlabID)
 

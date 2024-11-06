@@ -858,7 +858,9 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 			OnMeterMemory: meter.MeterMemory,
 		}
 
-		runtime := NewTestInterpreterRuntime()
+		config := DefaultTestInterpreterConfig
+		config.StorageFormatV2Enabled = true
+		runtime := NewTestInterpreterRuntimeWithConfig(config)
 
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -904,7 +906,9 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 			},
 		}
 
-		runtime := NewTestInterpreterRuntime()
+		config := DefaultTestInterpreterConfig
+		config.StorageFormatV2Enabled = true
+		runtime := NewTestInterpreterRuntimeWithConfig(config)
 
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -1038,6 +1042,7 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 
 		config := DefaultTestInterpreterConfig
 		config.AtreeValidationEnabled = false
+		config.StorageFormatV2Enabled = true
 		rt := NewTestInterpreterRuntimeWithConfig(config)
 
 		address := common.MustBytesToAddress([]byte{0x1})
@@ -1082,6 +1087,7 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 
 		config := DefaultTestInterpreterConfig
 		config.AtreeValidationEnabled = false
+		config.StorageFormatV2Enabled = true
 		rt := NewTestInterpreterRuntimeWithConfig(config)
 
 		address := common.MustBytesToAddress([]byte{0x1})
@@ -1131,6 +1137,7 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 
 		config := DefaultTestInterpreterConfig
 		config.AtreeValidationEnabled = false
+		config.StorageFormatV2Enabled = true
 		rt := NewTestInterpreterRuntimeWithConfig(config)
 
 		address := common.MustBytesToAddress([]byte{0x1})

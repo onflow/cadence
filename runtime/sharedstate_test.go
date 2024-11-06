@@ -36,7 +36,9 @@ func TestRuntimeSharedState(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	config := DefaultTestInterpreterConfig
+	config.StorageFormatV2Enabled = true
+	runtime := NewTestInterpreterRuntimeWithConfig(config)
 
 	signerAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -111,7 +113,7 @@ func TestRuntimeSharedState(t *testing.T) {
 		},
 	}
 
-	environment := NewBaseInterpreterEnvironment(Config{})
+	environment := NewBaseInterpreterEnvironment(config)
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 

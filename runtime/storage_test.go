@@ -52,7 +52,13 @@ func withWritesToStorage(
 	handler func(*Storage, *interpreter.Interpreter),
 ) {
 	ledger := NewTestLedger(nil, onWrite)
-	storage := NewStorage(ledger, nil)
+	storage := NewStorage(
+		ledger,
+		nil,
+		StorageConfig{
+			StorageFormatV2Enabled: true,
+		},
+	)
 
 	inter := NewTestInterpreter(tb)
 
@@ -154,7 +160,9 @@ func TestRuntimeStorageWrite(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	config := DefaultTestInterpreterConfig
+	config.StorageFormatV2Enabled = true
+	runtime := NewTestInterpreterRuntimeWithConfig(config)
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
@@ -1617,6 +1625,7 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 
 	config := DefaultTestInterpreterConfig
 	config.ResourceOwnerChangeHandlerEnabled = true
+	config.StorageFormatV2Enabled = true
 	runtime := NewTestInterpreterRuntimeWithConfig(config)
 
 	address1 := common.MustBytesToAddress([]byte{0x1})
@@ -6256,7 +6265,13 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 
 		// Create empty storage
 		ledger := NewTestLedger(nil, LedgerOnWriteCounter(&writeCount))
-		storage := NewStorage(ledger, nil)
+		storage := NewStorage(
+			ledger,
+			nil,
+			StorageConfig{
+				StorageFormatV2Enabled: true,
+			},
+		)
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -6305,7 +6320,13 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 
 			// Create empty storage
 			ledger := NewTestLedger(nil, LedgerOnWriteEntries(&writeEntries))
-			storage := NewStorage(ledger, nil)
+			storage := NewStorage(
+				ledger,
+				nil,
+				StorageConfig{
+					StorageFormatV2Enabled: true,
+				},
+			)
 
 			inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -6383,7 +6404,13 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 	t.Run("create, commit, write, commit, remove, commit", func(t *testing.T) {
 		// Create empty storage
 		ledger := NewTestLedger(nil, nil)
-		storage := NewStorage(ledger, nil)
+		storage := NewStorage(
+			ledger,
+			nil,
+			StorageConfig{
+				StorageFormatV2Enabled: true,
+			},
+		)
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -6517,7 +6544,13 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 		domainStorageMapCount int,
 	) (TestLedger, accountStorageMapValues) {
 		ledger := NewTestLedger(nil, nil)
-		storage := NewStorage(ledger, nil)
+		storage := NewStorage(
+			ledger,
+			nil,
+			StorageConfig{
+				StorageFormatV2Enabled: true,
+			},
+		)
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -6551,7 +6584,13 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 			address,
 			existingDomains,
 			domainStorageMapCount)
-		storage := NewStorage(ledger, nil)
+		storage := NewStorage(
+			ledger,
+			nil,
+			StorageConfig{
+				StorageFormatV2Enabled: true,
+			},
+		)
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -6597,7 +6636,13 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 				existingDomains,
 				domainStorageMapCount,
 			)
-			storage := NewStorage(ledger, nil)
+			storage := NewStorage(
+				ledger,
+				nil,
+				StorageConfig{
+					StorageFormatV2Enabled: true,
+				},
+			)
 
 			inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -6681,7 +6726,13 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 				tc.existingDomains,
 				tc.existingDomainStorageMapCount,
 			)
-			storage := NewStorage(ledger, nil)
+			storage := NewStorage(
+				ledger,
+				nil,
+				StorageConfig{
+					StorageFormatV2Enabled: true,
+				},
+			)
 
 			inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -6766,7 +6817,13 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 			existingDomains,
 			existingDomainStorageMapCount,
 		)
-		storage := NewStorage(ledger, nil)
+		storage := NewStorage(
+			ledger,
+			nil,
+			StorageConfig{
+				StorageFormatV2Enabled: true,
+			},
+		)
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -6859,7 +6916,13 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 			domains,
 			domainStorageMapCount,
 		)
-		storage := NewStorage(ledger, nil)
+		storage := NewStorage(
+			ledger,
+			nil,
+			StorageConfig{
+				StorageFormatV2Enabled: true,
+			},
+		)
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -6997,7 +7060,13 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 		domainStorageMapCount int,
 	) (TestLedger, accountStorageMapValues) {
 		ledger := NewTestLedger(nil, nil)
-		storage := NewStorage(ledger, nil)
+		storage := NewStorage(
+			ledger,
+			nil,
+			StorageConfig{
+				StorageFormatV2Enabled: true,
+			},
+		)
 
 		inter := NewTestInterpreter(t)
 
@@ -7058,7 +7127,13 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 			address,
 			existingDomains,
 			domainStorageMapCount)
-		storage := NewStorage(ledger, nil)
+		storage := NewStorage(
+			ledger,
+			nil,
+			StorageConfig{
+				StorageFormatV2Enabled: true,
+			},
+		)
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -7105,7 +7180,13 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 				existingDomains,
 				existingDomainStorageMapCount,
 			)
-			storage := NewStorage(ledger, nil)
+			storage := NewStorage(
+				ledger,
+				nil,
+				StorageConfig{
+					StorageFormatV2Enabled: true,
+				},
+			)
 
 			inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -7193,7 +7274,13 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 				tc.existingDomains,
 				tc.existingDomainStorageMapCount,
 			)
-			storage := NewStorage(ledger, nil)
+			storage := NewStorage(
+				ledger,
+				nil,
+				StorageConfig{
+					StorageFormatV2Enabled: true,
+				},
+			)
 
 			inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -7284,7 +7371,13 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 			domains,
 			existingDomainStorageMapCount,
 		)
-		storage := NewStorage(ledger, nil)
+		storage := NewStorage(
+			ledger,
+			nil,
+			StorageConfig{
+				StorageFormatV2Enabled: true,
+			},
+		)
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -7393,7 +7486,13 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 			domains,
 			domainStorageMapCount,
 		)
-		storage := NewStorage(ledger, nil)
+		storage := NewStorage(
+			ledger,
+			nil,
+			StorageConfig{
+				StorageFormatV2Enabled: true,
+			},
+		)
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -7594,7 +7693,13 @@ func TestRuntimeStorageDomainStorageMapInlinedState(t *testing.T) {
 
 	// Create empty storage
 	ledger := NewTestLedger(nil, nil)
-	storage := NewStorage(ledger, nil)
+	storage := NewStorage(
+		ledger,
+		nil,
+		StorageConfig{
+			StorageFormatV2Enabled: true,
+		},
+	)
 
 	inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -7716,7 +7821,13 @@ func TestRuntimeStorageLargeDomainValues(t *testing.T) {
 
 	// Create empty storage
 	ledger := NewTestLedger(nil, nil)
-	storage := NewStorage(ledger, nil)
+	storage := NewStorage(
+		ledger,
+		nil,
+		StorageConfig{
+			StorageFormatV2Enabled: true,
+		},
+	)
 
 	inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -7852,7 +7963,13 @@ func TestDomainRegisterMigrationForLargeAccount(t *testing.T) {
 		LedgerOnWriteCounter(&writeCount),
 		accountsInfo,
 	)
-	storage := NewStorage(ledger, nil)
+	storage := NewStorage(
+		ledger,
+		nil,
+		StorageConfig{
+			StorageFormatV2Enabled: true,
+		},
+	)
 
 	inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -7960,7 +8077,8 @@ func writeToDomainStorageMap(
 	return domainValues
 }
 
-// checkAccountStorageMapData creates new storage with given storedValues, and compares account storage map values with given expectedAccountValues.
+// checkAccountStorageMapData creates new storage with given storedValues,
+// and compares account storage map values with given expectedAccountValues.
 func checkAccountStorageMapData(
 	tb testing.TB,
 	storedValues map[string][]byte,
@@ -7970,7 +8088,13 @@ func checkAccountStorageMapData(
 ) {
 	// Create storage with given storedValues and storageIndices
 	ledger := NewTestLedgerWithData(nil, nil, storedValues, storageIndices)
-	storage := NewStorage(ledger, nil)
+	storage := NewStorage(
+		ledger,
+		nil,
+		StorageConfig{
+			StorageFormatV2Enabled: true,
+		},
+	)
 
 	inter := NewTestInterpreterWithStorage(tb, storage)
 
