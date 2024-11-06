@@ -210,3 +210,18 @@ func getAccountStorageMapFromRegister(
 
 	return interpreter.NewAccountStorageMapWithRootID(slabStorage, slabID), nil
 }
+
+func (s *AccountStorageV2) cachedRootSlabIDs() []atree.SlabID {
+
+	var slabIDs []atree.SlabID
+
+	// Get cached account storage map slab IDs.
+	for _, storageMap := range s.cachedAccountStorageMaps { //nolint:maprange
+		slabIDs = append(
+			slabIDs,
+			storageMap.SlabID(),
+		)
+	}
+
+	return slabIDs
+}

@@ -55,6 +55,9 @@ type Storage struct {
 
 	AccountStorageV1 *AccountStorageV1
 	AccountStorageV2 *AccountStorageV2
+
+	// v1Accounts are accounts that are in account storage format v1
+	v1Accounts *orderedmap.OrderedMap[common.Address, struct{}]
 }
 
 var _ atree.SlabStorage = &Storage{}
@@ -158,6 +161,13 @@ func (s *Storage) GetDomainStorageMap(
 			domain,
 			createIfNotExists,
 		)
+
+		if domainStorageMap != nil {
+			if s.v1Accounts == nil {
+				s.v1Accounts = &orderedmap.OrderedMap[common.Address, struct{}]{}
+			}
+			s.v1Accounts.Set(address, struct{}{})
+		}
 	}
 	return domainStorageMap
 }
@@ -404,105 +414,101 @@ func commitSlabIndices(
 //}
 
 func (s *Storage) CheckHealth() error {
-	// TODO:
 
-	//// Check slab storage health
-	//rootSlabIDs, err := atree.CheckStorageHealth(s, -1)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//// Find account / non-temporary root slab IDs
-	//
-	//accountRootSlabIDs := make(map[atree.SlabID]struct{}, len(rootSlabIDs))
-	//
-	//// NOTE: map range is safe, as it creates a subset
-	//for rootSlabID := range rootSlabIDs { //nolint:maprange
-	//	if rootSlabID.HasTempAddress() {
-	//		continue
-	//	}
-	//
-	//	accountRootSlabIDs[rootSlabID] = struct{}{}
-	//}
-	//
-	//// Check that account storage maps and unmigrated domain storage maps
-	//// match returned root slabs from atree.CheckStorageHealth.
-	//
-	//var storageMapStorageIDs []atree.SlabID
-	//
-	//// Get cached account storage map slab IDs.
-	//for _, storageMap := range s.cachedAccountStorageMaps { //nolint:maprange
-	//	storageMapStorageIDs = append(
-	//		storageMapStorageIDs,
-	//		storageMap.SlabID(),
-	//	)
-	//}
-	//
-	//// Get cached unmigrated domain storage map slab IDs
-	//for storageKey, storageMap := range s.cachedDomainStorageMaps { //nolint:maprange
-	//	address := storageKey.Address
-	//
-	//	if s.unmigratedAccounts != nil &&
-	//		s.unmigratedAccounts.Contains(address) {
-	//
-	//		domainValueID := storageMap.ValueID()
-	//
-	//		slabID := atree.NewSlabID(
-	//			atree.Address(address),
-	//			atree.SlabIndex(domainValueID[8:]),
-	//		)
-	//
-	//		storageMapStorageIDs = append(
-	//			storageMapStorageIDs,
-	//			slabID,
-	//		)
-	//	}
-	//}
-	//
-	//sort.Slice(storageMapStorageIDs, func(i, j int) bool {
-	//	a := storageMapStorageIDs[i]
-	//	b := storageMapStorageIDs[j]
-	//	return a.Compare(b) < 0
-	//})
-	//
-	//found := map[atree.SlabID]struct{}{}
-	//
-	//for _, storageMapStorageID := range storageMapStorageIDs {
-	//	if _, ok := accountRootSlabIDs[storageMapStorageID]; !ok {
-	//		return errors.NewUnexpectedError("account storage map (and unmigrated domain storage map) points to non-root slab %s", storageMapStorageID)
-	//	}
-	//
-	//	found[storageMapStorageID] = struct{}{}
-	//}
-	//
-	//// Check that all slabs in slab storage
-	//// are referenced by storables in account storage.
-	//// If a slab is not referenced, it is garbage.
-	//
-	//if len(accountRootSlabIDs) > len(found) {
-	//	var unreferencedRootSlabIDs []atree.SlabID
-	//
-	//	for accountRootSlabID := range accountRootSlabIDs { //nolint:maprange
-	//		if _, ok := found[accountRootSlabID]; ok {
-	//			continue
-	//		}
-	//
-	//		unreferencedRootSlabIDs = append(
-	//			unreferencedRootSlabIDs,
-	//			accountRootSlabID,
-	//		)
-	//	}
-	//
-	//	sort.Slice(unreferencedRootSlabIDs, func(i, j int) bool {
-	//		a := unreferencedRootSlabIDs[i]
-	//		b := unreferencedRootSlabIDs[j]
-	//		return a.Compare(b) < 0
-	//	})
-	//
-	//	return UnreferencedRootSlabsError{
-	//		UnreferencedRootSlabIDs: unreferencedRootSlabIDs,
-	//	}
-	//}
+	// Check slab storage health
+	rootSlabIDs, err := atree.CheckStorageHealth(s, -1)
+	if err != nil {
+		return err
+	}
+
+	// Find account / non-temporary root slab IDs
+
+	accountRootSlabIDs := make(map[atree.SlabID]struct{}, len(rootSlabIDs))
+
+	// NOTE: map range is safe, as it creates a subset
+	for rootSlabID := range rootSlabIDs { //nolint:maprange
+		if rootSlabID.HasTempAddress() {
+			continue
+		}
+
+		accountRootSlabIDs[rootSlabID] = struct{}{}
+	}
+
+	// Check that account storage maps and unmigrated domain storage maps
+	// match returned root slabs from atree.CheckStorageHealth.
+
+	var storageMapStorageIDs []atree.SlabID
+
+	// Get cached account storage map slab IDs.
+	storageMapStorageIDs = append(
+		storageMapStorageIDs,
+		s.AccountStorageV2.cachedRootSlabIDs()...,
+	)
+
+	// Get slab IDs of cached domain storage maps that are in account storage format v1.
+	for storageKey, storageMap := range s.cachedDomainStorageMaps { //nolint:maprange
+		address := storageKey.Address
+
+		if s.v1Accounts != nil &&
+			s.v1Accounts.Contains(address) {
+
+			storageMapStorageIDs = append(
+				storageMapStorageIDs,
+				storageMap.SlabID(),
+			)
+		}
+	}
+
+	sort.Slice(
+		storageMapStorageIDs,
+		func(i, j int) bool {
+			a := storageMapStorageIDs[i]
+			b := storageMapStorageIDs[j]
+			return a.Compare(b) < 0
+		},
+	)
+
+	found := map[atree.SlabID]struct{}{}
+
+	for _, storageMapStorageID := range storageMapStorageIDs {
+		if _, ok := accountRootSlabIDs[storageMapStorageID]; !ok {
+			return errors.NewUnexpectedError(
+				"account storage map (and unmigrated domain storage map) points to non-root slab %s",
+				storageMapStorageID,
+			)
+		}
+
+		found[storageMapStorageID] = struct{}{}
+	}
+
+	// Check that all slabs in slab storage
+	// are referenced by storables in account storage.
+	// If a slab is not referenced, it is garbage.
+
+	if len(accountRootSlabIDs) > len(found) {
+		var unreferencedRootSlabIDs []atree.SlabID
+
+		for accountRootSlabID := range accountRootSlabIDs { //nolint:maprange
+			if _, ok := found[accountRootSlabID]; ok {
+				continue
+			}
+
+			unreferencedRootSlabIDs = append(
+				unreferencedRootSlabIDs,
+				accountRootSlabID,
+			)
+		}
+
+		sort.Slice(unreferencedRootSlabIDs, func(i, j int) bool {
+			a := unreferencedRootSlabIDs[i]
+			b := unreferencedRootSlabIDs[j]
+			return a.Compare(b) < 0
+		})
+
+		return UnreferencedRootSlabsError{
+			UnreferencedRootSlabIDs: unreferencedRootSlabIDs,
+		}
+	}
 
 	return nil
 }
