@@ -157,6 +157,11 @@ func (s *AccountStorageV2) storeNewAccountStorageMap(
 	}
 	s.newAccountStorageMapSlabIndices.Set(accountStorageKey, slabIndex)
 
+	s.cacheAccountStorageMap(
+		accountStorageKey,
+		accountStorageMap,
+	)
+
 	return accountStorageMap
 }
 

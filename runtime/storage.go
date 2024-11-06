@@ -143,7 +143,7 @@ func (s *Storage) GetDomainStorageMap(
 	}()
 
 	// TODO:
-	const useV2 = false
+	const useV2 = true
 
 	if useV2 {
 		domainStorageMap = s.accountStorageV2.GetDomainStorageMap(
