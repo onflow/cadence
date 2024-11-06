@@ -115,7 +115,12 @@ func getDomainStorageMapFromLegacyDomainRegister(
 	address common.Address,
 	domain string,
 ) (*interpreter.DomainStorageMap, error) {
-	domainStorageSlabIndex, domainRegisterExists, err := getSlabIndexFromRegisterValue(ledger, address, []byte(domain))
+
+	domainStorageSlabIndex, domainRegisterExists, err := getSlabIndexFromRegisterValue(
+		ledger,
+		address,
+		[]byte(domain),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -123,6 +128,10 @@ func getDomainStorageMapFromLegacyDomainRegister(
 		return nil, nil
 	}
 
-	slabID := atree.NewSlabID(atree.Address(address), domainStorageSlabIndex)
+	slabID := atree.NewSlabID(
+		atree.Address(address),
+		domainStorageSlabIndex,
+	)
+
 	return interpreter.NewDomainStorageMapWithRootID(storage, slabID), nil
 }

@@ -115,24 +115,17 @@ func (s *AccountStorageV2) getAccountStorageMap(
 
 	// Load account storage map if account storage register exists.
 
-	accountStorageSlabIndex, accountStorageRegisterExists, err := getSlabIndexFromRegisterValue(
+	var err error
+	accountStorageMap, err = getAccountStorageMapFromRegister(
 		s.ledger,
+		s.slabStorage,
 		address,
-		[]byte(accountStorageKey.Key),
 	)
 	if err != nil {
 		panic(err)
 	}
-	if !accountStorageRegisterExists {
-		return nil
-	}
 
-	slabID := atree.NewSlabID(
-		atree.Address(address),
-		accountStorageSlabIndex,
-	)
-
-	return interpreter.NewAccountStorageMapWithRootID(s.slabStorage, slabID)
+	return
 }
 
 func (s *AccountStorageV2) cacheAccountStorageMap(
@@ -176,4 +169,32 @@ func (s *AccountStorageV2) commit() error {
 		s.newAccountStorageMapSlabIndices,
 		s.ledger,
 	)
+}
+
+func getAccountStorageMapFromRegister(
+	ledger atree.Ledger,
+	slabStorage atree.SlabStorage,
+	address common.Address,
+) (
+	*interpreter.AccountStorageMap,
+	error,
+) {
+	accountStorageSlabIndex, accountStorageRegisterExists, err := getSlabIndexFromRegisterValue(
+		ledger,
+		address,
+		[]byte(AccountStorageKey),
+	)
+	if err != nil {
+		return nil, err
+	}
+	if !accountStorageRegisterExists {
+		return nil, nil
+	}
+
+	slabID := atree.NewSlabID(
+		atree.Address(address),
+		accountStorageSlabIndex,
+	)
+
+	return interpreter.NewAccountStorageMapWithRootID(slabStorage, slabID), nil
 }
