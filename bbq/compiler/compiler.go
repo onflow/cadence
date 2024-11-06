@@ -984,9 +984,9 @@ func (c *Compiler) VisitCastingExpression(expression *ast.CastingExpression) (_ 
 	index := c.getOrAddType(castingTypes.TargetType)
 	first, second := encodeUint16(index)
 
-	castType := commons.CastTypeFrom(expression.Operation)
+	castKind := commons.CastKindFrom(expression.Operation)
 
-	c.emit(opcode.Cast, first, second, byte(castType))
+	c.emit(opcode.Cast, first, second, byte(castKind))
 	return
 }
 

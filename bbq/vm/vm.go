@@ -536,10 +536,10 @@ func opCast(vm *VM) {
 	callframe := vm.callFrame
 	value := vm.pop()
 	targetType := vm.loadType()
-	castType := commons.CastType(callframe.getByte())
+	castKind := commons.CastKind(callframe.getByte())
 
 	// TODO:
-	_ = castType
+	_ = castKind
 	_ = targetType
 
 	vm.push(value)

@@ -38,15 +38,15 @@ const (
 	TransactionGeneratedParamPrefix = "$_param_"
 )
 
-type CastType byte
+type CastKind byte
 
 const (
-	SimpleCast CastType = iota
+	SimpleCast CastKind = iota
 	FailableCast
 	ForceCast
 )
 
-func CastTypeFrom(operation ast.Operation) CastType {
+func CastKindFrom(operation ast.Operation) CastKind {
 	switch operation {
 	case ast.OperationCast:
 		return SimpleCast

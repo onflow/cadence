@@ -82,10 +82,10 @@ func (p *BytecodePrinter) printCode(codes []byte) {
 
 		case opcode.Cast:
 			var typeIndex int
-			var castType byte
+			var castKind byte
 			typeIndex, i = p.getIntOperand(codes, i)
-			castType, i = p.getByteOperand(codes, i)
-			p.stringBuilder.WriteString(" " + fmt.Sprint(typeIndex) + " " + fmt.Sprint(int8(castType)))
+			castKind, i = p.getByteOperand(codes, i)
+			p.stringBuilder.WriteString(" " + fmt.Sprint(typeIndex) + " " + fmt.Sprint(int8(castKind)))
 
 		case opcode.Path:
 			var identifier string
