@@ -53,8 +53,8 @@ type Storage struct {
 
 	memoryGauge common.MemoryGauge
 
-	accountStorageV1 *AccountStorageV1
-	accountStorageV2 *AccountStorageV2
+	AccountStorageV1 *AccountStorageV1
+	AccountStorageV2 *AccountStorageV2
 }
 
 var _ atree.SlabStorage = &Storage{}
@@ -105,8 +105,8 @@ func NewStorage(ledger atree.Ledger, memoryGauge common.MemoryGauge) *Storage {
 		Ledger:                ledger,
 		PersistentSlabStorage: persistentSlabStorage,
 		memoryGauge:           memoryGauge,
-		accountStorageV1:      accountStorageV1,
-		accountStorageV2:      accountStorageV2,
+		AccountStorageV1:      accountStorageV1,
+		AccountStorageV2:      accountStorageV2,
 	}
 }
 
@@ -146,14 +146,14 @@ func (s *Storage) GetDomainStorageMap(
 	const useV2 = true
 
 	if useV2 {
-		domainStorageMap = s.accountStorageV2.GetDomainStorageMap(
+		domainStorageMap = s.AccountStorageV2.GetDomainStorageMap(
 			inter,
 			address,
 			domain,
 			createIfNotExists,
 		)
 	} else {
-		domainStorageMap = s.accountStorageV1.GetDomainStorageMap(
+		domainStorageMap = s.AccountStorageV1.GetDomainStorageMap(
 			address,
 			domain,
 			createIfNotExists,
@@ -296,12 +296,12 @@ func (s *Storage) commit(inter *interpreter.Interpreter, commitContractUpdates b
 		s.commitContractUpdates(inter)
 	}
 
-	err := s.accountStorageV1.commit()
+	err := s.AccountStorageV1.commit()
 	if err != nil {
 		return err
 	}
 
-	err = s.accountStorageV2.commit()
+	err = s.AccountStorageV2.commit()
 	if err != nil {
 		return err
 	}

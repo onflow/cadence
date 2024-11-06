@@ -152,10 +152,7 @@ func (s *AccountStorageV2) storeNewAccountStorageMap(
 
 	accountStorageKey := s.accountStorageKey(address)
 
-	if s.newAccountStorageMapSlabIndices == nil {
-		s.newAccountStorageMapSlabIndices = &orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]{}
-	}
-	s.newAccountStorageMapSlabIndices.Set(accountStorageKey, slabIndex)
+	s.SetNewAccountStorageMapSlabIndex(accountStorageKey, slabIndex)
 
 	s.cacheAccountStorageMap(
 		accountStorageKey,
@@ -163,6 +160,16 @@ func (s *AccountStorageV2) storeNewAccountStorageMap(
 	)
 
 	return accountStorageMap
+}
+
+func (s *AccountStorageV2) SetNewAccountStorageMapSlabIndex(
+	accountStorageKey interpreter.StorageKey,
+	slabIndex atree.SlabIndex,
+) {
+	if s.newAccountStorageMapSlabIndices == nil {
+		s.newAccountStorageMapSlabIndices = &orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]{}
+	}
+	s.newAccountStorageMapSlabIndices.Set(accountStorageKey, slabIndex)
 }
 
 func (s *AccountStorageV2) commit() error {

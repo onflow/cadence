@@ -56,27 +56,21 @@ func withWritesToStorage(
 
 	inter := NewTestInterpreter(tb)
 
-	// TODO:
-	//address := common.MustBytesToAddress([]byte{0x1})
+	address := common.MustBytesToAddress([]byte{0x1})
 
 	for i := 0; i < count; i++ {
 
 		randomIndex := random.Uint32()
 
-		// TODO:
-		//storageKey := interpreter.StorageKey{
-		//	Address: address,
-		//	Key:     fmt.Sprintf("%d", randomIndex),
-		//}
+		storageKey := interpreter.StorageKey{
+			Address: address,
+			Key:     fmt.Sprintf("%d", randomIndex),
+		}
 
 		var slabIndex atree.SlabIndex
 		binary.BigEndian.PutUint32(slabIndex[:], randomIndex)
 
-		// TODO:
-		//if storage.NewAccountStorageMapSlabIndices == nil {
-		//	storage.NewAccountStorageMapSlabIndices = &orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]{}
-		//}
-		//storage.NewAccountStorageMapSlabIndices.Set(storageKey, slabIndex)
+		storage.AccountStorageV2.SetNewAccountStorageMapSlabIndex(storageKey, slabIndex)
 	}
 
 	handler(storage, inter)
