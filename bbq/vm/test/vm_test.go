@@ -68,10 +68,10 @@ func TestRecursionFib(t *testing.T) {
 
 	result, err := vmInstance.Invoke(
 		"fib",
-		vm.IntValue{SmallInt: 7},
+		vm.NewIntValue(7),
 	)
 	require.NoError(t, err)
-	require.Equal(t, vm.IntValue{SmallInt: 13}, result)
+	require.Equal(t, vm.NewIntValue(13), result)
 	require.Equal(t, 0, vmInstance.StackSize())
 }
 
@@ -106,10 +106,10 @@ func TestImperativeFib(t *testing.T) {
 
 	result, err := vmInstance.Invoke(
 		"fib",
-		vm.IntValue{SmallInt: 7},
+		vm.NewIntValue(7),
 	)
 	require.NoError(t, err)
-	require.Equal(t, vm.IntValue{SmallInt: 13}, result)
+	require.Equal(t, vm.NewIntValue(13), result)
 	require.Equal(t, 0, vmInstance.StackSize())
 }
 
@@ -140,7 +140,7 @@ func TestBreak(t *testing.T) {
 	result, err := vmInstance.Invoke("test")
 	require.NoError(t, err)
 
-	require.Equal(t, vm.IntValue{SmallInt: 4}, result)
+	require.Equal(t, vm.NewIntValue(4), result)
 	require.Equal(t, 0, vmInstance.StackSize())
 }
 
@@ -172,7 +172,7 @@ func TestContinue(t *testing.T) {
 	result, err := vmInstance.Invoke("test")
 	require.NoError(t, err)
 
-	require.Equal(t, vm.IntValue{SmallInt: 3}, result)
+	require.Equal(t, vm.NewIntValue(3), result)
 	require.Equal(t, 0, vmInstance.StackSize())
 }
 
@@ -201,7 +201,7 @@ func TestNilCoalesce(t *testing.T) {
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
 
-		require.Equal(t, vm.IntValue{SmallInt: 2}, result)
+		require.Equal(t, vm.NewIntValue(2), result)
 		require.Equal(t, 0, vmInstance.StackSize())
 	})
 
@@ -226,7 +226,7 @@ func TestNilCoalesce(t *testing.T) {
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
 
-		require.Equal(t, vm.IntValue{SmallInt: 3}, result)
+		require.Equal(t, vm.NewIntValue(3), result)
 		require.Equal(t, 0, vmInstance.StackSize())
 	})
 }
@@ -263,7 +263,7 @@ func TestNewStruct(t *testing.T) {
 	vmConfig := &vm.Config{}
 	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
-	result, err := vmInstance.Invoke("test", vm.IntValue{SmallInt: 10})
+	result, err := vmInstance.Invoke("test", vm.NewIntValue(10))
 	require.NoError(t, err)
 	require.Equal(t, 0, vmInstance.StackSize())
 
@@ -274,7 +274,7 @@ func TestNewStruct(t *testing.T) {
 	require.Equal(t, "Foo", compositeType.QualifiedIdentifier)
 	require.Equal(
 		t,
-		vm.IntValue{SmallInt: 12},
+		vm.NewIntValue(12),
 		structValue.GetMember(vmConfig, "id"),
 	)
 }
@@ -313,7 +313,7 @@ func TestStructMethodCall(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, vmInstance.StackSize())
 
-	require.Equal(t, vm.StringValue{Str: []byte("Hello from Foo!")}, result)
+	require.Equal(t, vm.NewStringValue("Hello from Foo!"), result)
 }
 
 func TestImport(t *testing.T) {
@@ -388,7 +388,7 @@ func TestImport(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, vmInstance.StackSize())
 
-	require.Equal(t, vm.StringValue{Str: []byte("global function of the imported program")}, result)
+	require.Equal(t, vm.NewStringValue("global function of the imported program"), result)
 }
 
 func TestContractImport(t *testing.T) {
@@ -478,7 +478,7 @@ func TestContractImport(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.Equal(t, vm.StringValue{Str: []byte("global function of the imported program")}, result)
+		require.Equal(t, vm.NewStringValue("global function of the imported program"), result)
 	})
 
 	t.Run("contract function", func(t *testing.T) {
@@ -553,7 +553,7 @@ func TestContractImport(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.Equal(t, vm.StringValue{Str: []byte("contract function of the imported program")}, result)
+		require.Equal(t, vm.NewStringValue("contract function of the imported program"), result)
 	})
 
 	t.Run("nested imports", func(t *testing.T) {
@@ -726,7 +726,7 @@ func TestContractImport(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.Equal(t, vm.StringValue{Str: []byte("Hello from Foo!")}, result)
+		require.Equal(t, vm.NewStringValue("Hello from Foo!"), result)
 	})
 
 	t.Run("contract interface", func(t *testing.T) {
@@ -897,7 +897,7 @@ func TestContractImport(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.Equal(t, vm.StringValue{Str: []byte("Successfully withdrew")}, result)
+		require.Equal(t, vm.NewStringValue("Successfully withdrew"), result)
 	})
 }
 
@@ -927,7 +927,7 @@ func TestInitializeContract(t *testing.T) {
 	require.NoError(t, err)
 
 	fieldValue := contractValue.GetMember(vmConfig, "status")
-	assert.Equal(t, vm.StringValue{Str: []byte("PENDING")}, fieldValue)
+	assert.Equal(t, vm.NewStringValue("PENDING"), fieldValue)
 }
 
 func TestContractAccessDuringInit(t *testing.T) {
@@ -964,7 +964,7 @@ func TestContractAccessDuringInit(t *testing.T) {
 		require.NoError(t, err)
 
 		fieldValue := contractValue.GetMember(vmConfig, "status")
-		assert.Equal(t, vm.StringValue{Str: []byte("PENDING")}, fieldValue)
+		assert.Equal(t, vm.NewStringValue("PENDING"), fieldValue)
 	})
 
 	t.Run("using self", func(t *testing.T) {
@@ -997,7 +997,7 @@ func TestContractAccessDuringInit(t *testing.T) {
 		require.NoError(t, err)
 
 		fieldValue := contractValue.GetMember(vmConfig, "status")
-		assert.Equal(t, vm.StringValue{Str: []byte("PENDING")}, fieldValue)
+		assert.Equal(t, vm.NewStringValue("PENDING"), fieldValue)
 	})
 }
 
@@ -1032,7 +1032,7 @@ func TestFunctionOrder(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.Equal(t, vm.IntValue{SmallInt: 5}, result)
+		require.Equal(t, vm.NewIntValue(5), result)
 	})
 
 	t.Run("nested", func(t *testing.T) {
@@ -1162,7 +1162,7 @@ func TestContractField(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.Equal(t, vm.StringValue{Str: []byte("PENDING")}, result)
+		require.Equal(t, vm.NewStringValue("PENDING"), result)
 	})
 
 	t.Run("set", func(t *testing.T) {
@@ -1233,10 +1233,10 @@ func TestContractField(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.Equal(t, vm.StringValue{Str: []byte("UPDATED")}, result)
+		require.Equal(t, vm.NewStringValue("UPDATED"), result)
 
 		fieldValue := importedContractValue.GetMember(vmConfig, "status")
-		assert.Equal(t, vm.StringValue{Str: []byte("UPDATED")}, fieldValue)
+		assert.Equal(t, vm.NewStringValue("UPDATED"), fieldValue)
 	})
 }
 
@@ -1310,7 +1310,7 @@ func TestNativeFunctions(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.Equal(t, vm.StringValue{Str: []byte("Hello, World!")}, result)
+		require.Equal(t, vm.NewStringValue("Hello, World!"), result)
 	})
 }
 
@@ -1359,14 +1359,14 @@ func TestTransaction(t *testing.T) {
 		require.NoError(t, err)
 
 		// Once 'prepare' is called, 'a' is initialized to "Hello!"
-		assert.Equal(t, vm.StringValue{Str: []byte("Hello!")}, compositeValue.GetMember(vmConfig, "a"))
+		assert.Equal(t, vm.NewStringValue("Hello!"), compositeValue.GetMember(vmConfig, "a"))
 
 		// Invoke 'execute'
 		_, err = vmInstance.Invoke(commons.TransactionExecuteFunctionName, transaction)
 		require.NoError(t, err)
 
 		// Once 'execute' is called, 'a' is initialized to "Hello, again!"
-		assert.Equal(t, vm.StringValue{Str: []byte("Hello again!")}, compositeValue.GetMember(vmConfig, "a"))
+		assert.Equal(t, vm.NewStringValue("Hello again!"), compositeValue.GetMember(vmConfig, "a"))
 	})
 
 	t.Run("with params", func(t *testing.T) {
@@ -1391,8 +1391,8 @@ func TestTransaction(t *testing.T) {
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		args := []vm.Value{
-			vm.StringValue{[]byte("Hello!")},
-			vm.StringValue{[]byte("Hello again!")},
+			vm.NewStringValue("Hello!"),
+			vm.NewStringValue("Hello again!"),
 		}
 
 		err = vmInstance.ExecuteTransaction(args)
@@ -1415,14 +1415,14 @@ func TestTransaction(t *testing.T) {
 		require.NoError(t, err)
 
 		// Once 'prepare' is called, 'a' is initialized to "Hello!"
-		assert.Equal(t, vm.StringValue{Str: []byte("Hello!")}, compositeValue.GetMember(vmConfig, "a"))
+		assert.Equal(t, vm.NewStringValue("Hello!"), compositeValue.GetMember(vmConfig, "a"))
 
 		// Invoke 'execute'
 		_, err = vmInstance.Invoke(commons.TransactionExecuteFunctionName, transaction)
 		require.NoError(t, err)
 
 		// Once 'execute' is called, 'a' is initialized to "Hello, again!"
-		assert.Equal(t, vm.StringValue{Str: []byte("Hello again!")}, compositeValue.GetMember(vmConfig, "a"))
+		assert.Equal(t, vm.NewStringValue("Hello again!"), compositeValue.GetMember(vmConfig, "a"))
 	})
 }
 
@@ -1519,7 +1519,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, vmInstance.StackSize())
 
-	require.Equal(t, vm.StringValue{Str: []byte("Hello from Foo!")}, result)
+	require.Equal(t, vm.NewStringValue("Hello from Foo!"), result)
 }
 
 func TestArrayLiteral(t *testing.T) {
@@ -1549,8 +1549,8 @@ func TestArrayLiteral(t *testing.T) {
 		require.IsType(t, &vm.ArrayValue{}, result)
 		array := result.(*vm.ArrayValue)
 		assert.Equal(t, 2, array.Count())
-		assert.Equal(t, vm.IntValue{SmallInt: 2}, array.Get(vmConfig, 0))
-		assert.Equal(t, vm.IntValue{SmallInt: 5}, array.Get(vmConfig, 1))
+		assert.Equal(t, vm.NewIntValue(2), array.Get(vmConfig, 0))
+		assert.Equal(t, vm.NewIntValue(5), array.Get(vmConfig, 1))
 	})
 
 	t.Run("array get", func(t *testing.T) {
@@ -1573,7 +1573,7 @@ func TestArrayLiteral(t *testing.T) {
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
-		assert.Equal(t, vm.IntValue{SmallInt: 5}, result)
+		assert.Equal(t, vm.NewIntValue(5), result)
 	})
 
 	t.Run("array set", func(t *testing.T) {
@@ -1601,9 +1601,9 @@ func TestArrayLiteral(t *testing.T) {
 		require.IsType(t, &vm.ArrayValue{}, result)
 		array := result.(*vm.ArrayValue)
 		assert.Equal(t, 3, array.Count())
-		assert.Equal(t, vm.IntValue{SmallInt: 2}, array.Get(vmConfig, 0))
-		assert.Equal(t, vm.IntValue{SmallInt: 5}, array.Get(vmConfig, 1))
-		assert.Equal(t, vm.IntValue{SmallInt: 8}, array.Get(vmConfig, 2))
+		assert.Equal(t, vm.NewIntValue(2), array.Get(vmConfig, 0))
+		assert.Equal(t, vm.NewIntValue(5), array.Get(vmConfig, 1))
+		assert.Equal(t, vm.NewIntValue(8), array.Get(vmConfig, 2))
 	})
 }
 
@@ -1646,6 +1646,87 @@ func TestReference(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.Equal(t, vm.StringValue{Str: []byte("Hello from Foo!")}, result)
+		require.Equal(t, vm.NewStringValue("Hello from Foo!"), result)
 	})
+}
+
+func TestResource(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("new", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            resource Foo {
+                var id : Int
+
+                init(_ id: Int) {
+                    self.id = id
+                }
+            }
+
+            fun test(): @Foo {
+                var i = 0
+                var r <- create Foo(5)
+                return <- r
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+		program := comp.Compile()
+
+		vmConfig := &vm.Config{}
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		result, err := vmInstance.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+
+		require.IsType(t, &vm.CompositeValue{}, result)
+		structValue := result.(*vm.CompositeValue)
+		compositeType := structValue.CompositeType
+
+		require.Equal(t, "Foo", compositeType.QualifiedIdentifier)
+		require.Equal(
+			t,
+			vm.NewIntValue(5),
+			structValue.GetMember(vmConfig, "id"),
+		)
+	})
+
+	t.Run("destroy", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            resource Foo {
+                var id : Int
+
+                init(_ id: Int) {
+                    self.id = id
+                }
+            }
+
+            fun test() {
+                var i = 0
+                var r <- create Foo(5)
+                destroy r
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+		program := comp.Compile()
+
+		printProgram("", program)
+
+		vmConfig := &vm.Config{}
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		_, err = vmInstance.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+	})
+
 }

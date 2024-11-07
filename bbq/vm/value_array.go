@@ -185,15 +185,7 @@ func (v *ArrayValue) Transfer(config *Config, address atree.Address, remove bool
 
 				element := interpreter.MustConvertStoredValue(config.MemoryGauge, value)
 
-				// TODO: converted value is unused
-				vmElement := InterpreterValueToVMValue(config.Storage, element)
-				vmElement = vmElement.Transfer(
-					config,
-					address,
-					remove,
-					nil,
-				)
-
+				// TODO: Transfer before returning.
 				return element, nil
 			},
 		)

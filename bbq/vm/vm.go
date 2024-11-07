@@ -140,9 +140,8 @@ func (vm *VM) replaceTop(value Value) {
 
 func (vm *VM) pushCallFrame(functionValue FunctionValue, arguments []Value) {
 	locals := make([]Value, functionValue.Function.LocalCount)
-	for i, argument := range arguments {
-		locals[i] = argument
-	}
+
+	copy(locals, arguments)
 
 	callFrame := &callFrame{
 		parent:     vm.callFrame,
@@ -415,6 +414,8 @@ func opInvokeDynamic(vm *VM) {
 		typeArg := vm.loadType()
 		typeArguments = append(typeArguments, typeArg)
 	}
+	// TODO: Just to make the linter happy
+	_ = typeArguments
 
 	switch typedReceiver := receiver.(type) {
 	case *StorageReferenceValue:
@@ -517,7 +518,7 @@ func opTransfer(vm *VM) {
 }
 
 func opDestroy(vm *VM) {
-	value := vm.peek().(*CompositeValue)
+	value := vm.pop().(*CompositeValue)
 	value.Destroy(vm.config)
 }
 
@@ -697,9 +698,9 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 	case constantkind.Int:
 		// TODO:
 		smallInt, _, _ := leb128.ReadInt64(constant.Data)
-		value = IntValue{SmallInt: smallInt}
+		value = NewIntValue(smallInt)
 	case constantkind.String:
-		value = StringValue{Str: constant.Data}
+		value = NewStringValueFromBytes(constant.Data)
 	default:
 		// TODO:
 		panic(errors.NewUnexpectedError("unsupported constant kind '%s'", constant.Kind.String()))
@@ -779,17 +780,6 @@ func (vm *VM) lookupFunction(location common.Location, name string) FunctionValu
 	}
 
 	return indexedGlobals[name].(FunctionValue)
-}
-
-func decodeLocation(locationBytes []byte) common.Location {
-	// TODO: is it possible to re-use decoders?
-	dec := interpreter.CBORDecMode.NewByteStreamDecoder(locationBytes)
-	locationDecoder := interpreter.NewLocationDecoder(dec, nil)
-	location, err := locationDecoder.DecodeLocation()
-	if err != nil {
-		panic(err)
-	}
-	return location
 }
 
 func (vm *VM) StackSize() int {

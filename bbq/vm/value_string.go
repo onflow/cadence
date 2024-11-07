@@ -34,6 +34,18 @@ type StringValue struct {
 
 var _ Value = StringValue{}
 
+func NewStringValue(str string) StringValue {
+	return StringValue{
+		Str: []byte(str),
+	}
+}
+
+func NewStringValueFromBytes(bytes []byte) StringValue {
+	return StringValue{
+		Str: bytes,
+	}
+}
+
 func (StringValue) isValue() {}
 
 func (StringValue) StaticType(common.MemoryGauge) StaticType {
@@ -65,9 +77,7 @@ func init() {
 			var sb strings.Builder
 			sb.Write(first.Str)
 			sb.Write(second.Str)
-			return StringValue{
-				[]byte(sb.String()),
-			}
+			return NewStringValue(sb.String())
 		},
 	})
 }

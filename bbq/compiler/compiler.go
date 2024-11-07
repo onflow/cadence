@@ -411,11 +411,7 @@ func (c *Compiler) exportConstants() []*bbq.Constant {
 }
 
 func (c *Compiler) exportTypes() [][]byte {
-	types := make([][]byte, len(c.staticTypes))
-	for index, typeBytes := range c.staticTypes {
-		types[index] = typeBytes
-	}
-	return types
+	return c.staticTypes
 }
 
 func (c *Compiler) exportImports() []*bbq.Import {
@@ -645,8 +641,15 @@ func (c *Compiler) VisitSwapStatement(_ *ast.SwapStatement) (_ struct{}) {
 
 func (c *Compiler) VisitExpressionStatement(statement *ast.ExpressionStatement) (_ struct{}) {
 	c.compileExpression(statement.Expression)
-	// Drop the expression evaluation result
-	c.emit(opcode.Drop)
+
+	switch statement.Expression.(type) {
+	case *ast.DestroyExpression:
+		// Do nothing. Destroy operation will not produce any result.
+	default:
+		// Otherwise, drop the expression evaluation result.
+		c.emit(opcode.Drop)
+	}
+
 	return
 }
 
@@ -748,11 +751,11 @@ func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpressio
 
 	switch invokedExpr := expression.InvokedExpression.(type) {
 	case *ast.IdentifierExpression:
-		typ := c.Elaboration.IdentifierInInvocationType(invokedExpr)
-		invocationType := typ.(*sema.FunctionType)
-		if invocationType.IsConstructor {
-			// TODO:
-		}
+		// TODO: Does constructors need any special handling?
+		//typ := c.Elaboration.IdentifierInInvocationType(invokedExpr)
+		//invocationType := typ.(*sema.FunctionType)
+		//if invocationType.IsConstructor {
+		//}
 
 		// Load arguments
 		c.loadArguments(expression)

@@ -34,9 +34,9 @@ func InterpreterValueToVMValue(storage interpreter.Storage, value interpreter.Va
 	case interpreter.NilValue:
 		return Nil
 	case interpreter.IntValue:
-		return IntValue{value.BigInt.Int64()}
+		return NewIntValue(value.BigInt.Int64())
 	case *interpreter.StringValue:
-		return StringValue{Str: []byte(value.Str)}
+		return NewStringValue(value.Str)
 	case *interpreter.CompositeValue:
 		return newCompositeValueFromOrderedMap(
 			value.AtreeMap(),
@@ -57,13 +57,9 @@ func InterpreterValueToVMValue(storage interpreter.Storage, value interpreter.Va
 		return AddressValue(value)
 	case *interpreter.SimpleCompositeValue:
 		fields := make(map[string]Value)
-		var fieldNames []string
-
-		for name, field := range value.Fields {
+		for name, field := range value.Fields { //nolint:maprange
 			fields[name] = InterpreterValueToVMValue(storage, field)
-			fieldNames = append(fieldNames, name)
 		}
-
 		return NewSimpleCompositeValue(
 			common.CompositeKindStructure,
 			value.TypeID,
@@ -153,7 +149,8 @@ func VMValueToInterpreterValue(config *Config, value Value) interpreter.Value {
 		fields := make(map[string]interpreter.Value)
 		var fieldNames []string
 
-		for name, field := range value.fields {
+		// TODO: Fields names order matters. However, this is temporary. So ignore for now.
+		for name, field := range value.fields { //nolint:maprange
 			fields[name] = VMValueToInterpreterValue(config, field)
 			fieldNames = append(fieldNames, name)
 		}
@@ -161,7 +158,7 @@ func VMValueToInterpreterValue(config *Config, value Value) interpreter.Value {
 		return interpreter.NewSimpleCompositeValue(
 			nil,
 			value.typeID,
-			nil,
+			value.staticType,
 			fieldNames,
 			fields,
 			nil,

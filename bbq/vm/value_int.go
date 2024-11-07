@@ -54,11 +54,11 @@ func (v IntValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
 }
 
 func (v IntValue) Add(other IntValue) Value {
-	return IntValue{v.SmallInt + other.SmallInt}
+	return NewIntValue(v.SmallInt + other.SmallInt)
 }
 
 func (v IntValue) Subtract(other IntValue) Value {
-	return IntValue{v.SmallInt - other.SmallInt}
+	return NewIntValue(v.SmallInt - other.SmallInt)
 }
 
 func (v IntValue) Less(other IntValue) Value {

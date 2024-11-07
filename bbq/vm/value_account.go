@@ -298,9 +298,7 @@ func IssueStorageCapabilityController(
 		panic(errors.NewUnexpectedError("invalid zero account ID"))
 	}
 
-	capabilityIDValue := IntValue{
-		SmallInt: int64(capabilityID),
-	}
+	capabilityIDValue := NewIntValue(int64(capabilityID))
 
 	controller := NewStorageCapabilityControllerValue(
 		borrowType,

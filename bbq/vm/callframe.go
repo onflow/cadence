@@ -52,6 +52,6 @@ func (f *callFrame) getBool() bool {
 func (f *callFrame) getString() string {
 	strLen := f.getUint16()
 	str := string(f.function.Code[f.ip : f.ip+strLen])
-	f.ip = f.ip + strLen
+	f.ip += strLen
 	return str
 }

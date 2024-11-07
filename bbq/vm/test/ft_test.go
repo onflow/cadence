@@ -140,7 +140,7 @@ func TestFTTransfer(t *testing.T) {
 
 	mintTxArgs := []vm.Value{
 		vm.AddressValue(senderAddress),
-		vm.IntValue{total},
+		vm.NewIntValue(total),
 	}
 
 	mintTxAuthorizer := vm.NewAuthAccountReferenceValue(vmConfig, contractsAddress)
@@ -158,7 +158,7 @@ func TestFTTransfer(t *testing.T) {
 	transferAmount := int64(1)
 
 	tokenTransferTxArgs := []vm.Value{
-		vm.IntValue{transferAmount},
+		vm.NewIntValue(transferAmount),
 		vm.AddressValue(receiverAddress),
 	}
 
@@ -183,9 +183,9 @@ func TestFTTransfer(t *testing.T) {
 		require.Equal(t, 0, validationScriptVM.StackSize())
 
 		if address == senderAddress {
-			assert.Equal(t, vm.IntValue{total - transferAmount}, result)
+			assert.Equal(t, vm.NewIntValue(total-transferAmount), result)
 		} else {
-			assert.Equal(t, vm.IntValue{transferAmount}, result)
+			assert.Equal(t, vm.NewIntValue(transferAmount), result)
 		}
 	}
 }
@@ -292,7 +292,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	mintTxArgs := []vm.Value{
 		vm.AddressValue(senderAddress),
-		vm.IntValue{total},
+		vm.NewIntValue(total),
 	}
 
 	mintTxAuthorizer := vm.NewAuthAccountReferenceValue(vmConfig, contractsAddress)
@@ -305,7 +305,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 	transferAmount := int64(1)
 
 	tokenTransferTxArgs := []vm.Value{
-		vm.IntValue{transferAmount},
+		vm.NewIntValue(transferAmount),
 		vm.AddressValue(receiverAddress),
 	}
 

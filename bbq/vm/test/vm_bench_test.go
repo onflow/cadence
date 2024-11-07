@@ -35,13 +35,13 @@ func BenchmarkRecursionFib(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	expected := vm.IntValue{SmallInt: 377}
+	expected := vm.NewIntValue(377)
 
 	for i := 0; i < b.N; i++ {
 
 		result, err := vmInstance.Invoke(
 			"fib",
-			vm.IntValue{SmallInt: 14},
+			vm.NewIntValue(14),
 		)
 		require.NoError(b, err)
 		require.Equal(b, expected, result)
@@ -64,7 +64,7 @@ func BenchmarkImperativeFib(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	var value vm.Value = vm.IntValue{SmallInt: 14}
+	var value vm.Value = vm.NewIntValue(14)
 
 	for i := 0; i < b.N; i++ {
 		_, err := vmInstance.Invoke("fib", value)
@@ -97,7 +97,7 @@ func BenchmarkNewStruct(b *testing.B) {
   `)
 	require.NoError(b, err)
 
-	value := vm.IntValue{SmallInt: 1}
+	value := vm.NewIntValue(1)
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -140,7 +140,7 @@ func BenchmarkNewResource(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	value := vm.IntValue{SmallInt: 9}
+	value := vm.NewIntValue(9)
 
 	scriptLocation := runtime_utils.NewScriptLocationGenerator()
 
@@ -162,7 +162,7 @@ func BenchmarkNewStructRaw(b *testing.B) {
 		Storage: storage,
 	}
 
-	fieldValue := vm.IntValue{SmallInt: 7}
+	fieldValue := vm.NewIntValue(7)
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -239,7 +239,7 @@ func BenchmarkContractImport(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 
-	value := vm.IntValue{SmallInt: 7}
+	value := vm.NewIntValue(7)
 
 	for i := 0; i < b.N; i++ {
 		checker, err := ParseAndCheckWithOptions(b, `
@@ -367,7 +367,7 @@ func BenchmarkMethodCall(b *testing.B) {
 
 		vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
 
-		value := vm.IntValue{SmallInt: 10}
+		value := vm.NewIntValue(10)
 
 		b.ResetTimer()
 		b.ReportAllocs()
@@ -461,7 +461,7 @@ func BenchmarkMethodCall(b *testing.B) {
 
 		vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
 
-		value := vm.IntValue{SmallInt: 10}
+		value := vm.NewIntValue(10)
 
 		b.ResetTimer()
 		b.ReportAllocs()

@@ -252,15 +252,9 @@ func (v *DictionaryValue) Transfer(
 				}
 
 				key := interpreter.MustConvertStoredValue(config.MemoryGauge, atreeValue)
-				// TODO: converted value is unused
-				vmKey := InterpreterValueToVMValue(config.Storage, key)
-				vmKey = vmKey.Transfer(config, address, remove, nil)
-
 				value := interpreter.MustConvertStoredValue(config.MemoryGauge, atreeValue)
-				// TODO: converted value is unused
-				vmValue := InterpreterValueToVMValue(config.Storage, value)
-				vmValue = vmValue.Transfer(config, address, remove, nil)
 
+				// TODO: Transfer both key and value before returning.
 				return key, value, nil
 			},
 		)
