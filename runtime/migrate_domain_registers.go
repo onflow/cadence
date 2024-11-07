@@ -27,6 +27,8 @@ import (
 	"github.com/onflow/cadence/interpreter"
 )
 
+type AccountStorageMaps = *orderedmap.OrderedMap[common.Address, *interpreter.AccountStorageMap]
+
 type GetDomainStorageMapFunc func(
 	ledger atree.Ledger,
 	storage atree.SlabStorage,
@@ -69,14 +71,14 @@ func (m *DomainRegisterMigration) MigrateAccounts(
 	accounts *orderedmap.OrderedMap[common.Address, struct{}],
 	pred func(common.Address) bool,
 ) (
-	*orderedmap.OrderedMap[common.Address, *interpreter.AccountStorageMap],
+	AccountStorageMaps,
 	error,
 ) {
 	if accounts == nil || accounts.Len() == 0 {
 		return nil, nil
 	}
 
-	var migratedAccounts *orderedmap.OrderedMap[common.Address, *interpreter.AccountStorageMap]
+	var migratedAccounts AccountStorageMaps
 
 	for pair := accounts.Oldest(); pair != nil; pair = pair.Next() {
 		address := pair.Key
