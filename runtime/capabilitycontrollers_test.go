@@ -3253,7 +3253,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				storageMap := storage.GetStorageMap(
 					common.MustBytesToAddress([]byte{0x1}),
-					stdlib.PathCapabilityStorageDomain,
+					common.StorageDomainPathCapability.Identifier(),
 					false,
 				)
 				require.Zero(t, storageMap.Count())

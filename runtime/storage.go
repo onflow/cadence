@@ -32,8 +32,6 @@ import (
 	"github.com/onflow/cadence/interpreter"
 )
 
-const StorageDomainContract = "contract"
-
 type Storage struct {
 	*atree.PersistentSlabStorage
 	NewStorageMaps  *orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]
@@ -216,7 +214,7 @@ func (s *Storage) writeContractUpdate(
 	key interpreter.StorageKey,
 	contractValue *interpreter.CompositeValue,
 ) {
-	storageMap := s.GetStorageMap(key.Address, StorageDomainContract, true)
+	storageMap := s.GetStorageMap(key.Address, common.StorageDomainContract.Identifier(), true)
 	// NOTE: pass nil instead of allocating a Value-typed  interface that points to nil
 	storageMapKey := interpreter.StringStorageMapKey(key.Key)
 	if contractValue == nil {

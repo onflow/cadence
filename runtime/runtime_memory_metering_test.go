@@ -930,7 +930,7 @@ func TestRuntimeMemoryMeteringErrors(t *testing.T) {
 
 	type memoryMeter map[common.MemoryKind]uint64
 
-	runtimeInterface := func(meter memoryMeter) *TestRuntimeInterface {
+	runtimeInterface := func(memoryMeter) *TestRuntimeInterface {
 		return &TestRuntimeInterface{
 			OnMeterMemory: func(usage common.MemoryUsage) error {
 				if usage.Kind == common.MemoryKindStringValue ||

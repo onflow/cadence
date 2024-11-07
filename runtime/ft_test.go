@@ -1085,7 +1085,7 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 
 	contractStorage := storage.GetStorageMap(
 		contractsAddress,
-		StorageDomainContract,
+		common.StorageDomainContract.Identifier(),
 		true,
 	)
 	contractStorage.SetValue(

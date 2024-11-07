@@ -967,7 +967,7 @@ func (interpreter *Interpreter) declareSelfVariable(value Value, locationRange L
 }
 
 func (interpreter *Interpreter) visitAssignment(
-	transferOperation ast.TransferOperation,
+	_ ast.TransferOperation,
 	targetGetterSetter getterSetter, targetType sema.Type,
 	valueExpression ast.Expression, valueType sema.Type,
 	position ast.HasPosition,
@@ -1271,7 +1271,7 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 		functions.Set(resourceDefaultDestroyEventName(compositeType), destroyEventConstructor)
 	}
 
-	applyDefaultFunctions := func(ty *sema.InterfaceType, code WrapperCode) {
+	applyDefaultFunctions := func(_ *sema.InterfaceType, code WrapperCode) {
 
 		// Apply default functions, if conforming type does not provide the function
 
