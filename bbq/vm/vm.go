@@ -68,7 +68,7 @@ func NewVM(
 	}
 
 	// Link global variables and functions.
-	linkedGlobals := vm.LinkGlobals(
+	linkedGlobals := LinkGlobals(
 		location,
 		program,
 		conf,
@@ -749,37 +749,27 @@ func (vm *VM) lookupFunction(location common.Location, name string) FunctionValu
 
 	// If not found, check in already linked imported functions.
 	linkedGlobals, ok := vm.linkedGlobalsCache[location]
-	if ok {
-		value, ok := linkedGlobals.indexedGlobals[name]
-		if ok {
-			return value.(FunctionValue)
-		}
-	}
 
 	// If not found, link the function now, dynamically.
+	if !ok {
+		// TODO: This currently link all functions in program, unnecessarily.
+		//   Link only the requested function.
+		program := vm.config.ImportHandler(location)
 
-	// TODO: This currently link all functions in program, unnecessarily.
-	//   Link only the requested function.
-	program := vm.config.ImportHandler(location)
-
-	// TODO: Instead of creating the executable here, maybe cache it,
-	//  and the `ImportHandler` could return the executable itself.
-	executable := NewLoadedExecutableProgram(location, program)
-
-	indexedGlobals := make(map[string]Value, len(program.Functions))
-	for _, function := range program.Functions {
-		indexedGlobals[function.Name] = FunctionValue{
-			Function:   function,
-			Executable: executable,
-		}
+		linkedGlobals = LinkGlobals(
+			location,
+			program,
+			vm.config,
+			vm.linkedGlobalsCache,
+		)
 	}
 
-	vm.linkedGlobalsCache[location] = LinkedGlobals{
-		executable:     executable,
-		indexedGlobals: indexedGlobals,
+	value, ok = linkedGlobals.indexedGlobals[name]
+	if !ok {
+		panic(errors.NewUnexpectedError("cannot link global: %s", name))
 	}
 
-	return indexedGlobals[name].(FunctionValue)
+	return value.(FunctionValue)
 }
 
 func (vm *VM) StackSize() int {

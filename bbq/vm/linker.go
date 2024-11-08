@@ -35,7 +35,7 @@ type LinkedGlobals struct {
 }
 
 // LinkGlobals performs the linking of global functions and variables for a given program.
-func (vm *VM) LinkGlobals(
+func LinkGlobals(
 	location common.Location,
 	program *bbq.Program,
 	conf *Config,
@@ -52,7 +52,7 @@ func (vm *VM) LinkGlobals(
 			importedProgram := conf.ImportHandler(importLocation)
 
 			// Link and get all globals at the import location.
-			linkedGlobals = vm.LinkGlobals(
+			linkedGlobals = LinkGlobals(
 				importLocation,
 				importedProgram,
 				conf,

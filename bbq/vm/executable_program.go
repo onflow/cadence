@@ -50,6 +50,8 @@ func NewExecutableProgram(
 	}
 }
 
+// NewLoadedExecutableProgram returns an ExecutableProgram with types decoded.
+// Note that the returned program **doesn't** have the globals linked.
 func NewLoadedExecutableProgram(location common.Location, program *bbq.Program) *ExecutableProgram {
 	executable := NewExecutableProgram(location, program, nil)
 

@@ -1430,14 +1430,18 @@ func TestInterfaceMethodCall(t *testing.T) {
 
 	t.Parallel()
 
-	location := common.NewAddressLocation(
-		nil,
-		common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
-		"MyContract",
-	)
+	t.Run("impl in same program", func(t *testing.T) {
 
-	importedChecker, err := ParseAndCheckWithOptions(t,
-		`
+		t.Parallel()
+
+		location := common.NewAddressLocation(
+			nil,
+			common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+			"MyContract",
+		)
+
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
       contract MyContract {
           struct Foo: Greetings {
               var id : String
@@ -1459,20 +1463,20 @@ func TestInterfaceMethodCall(t *testing.T) {
           }
       }
         `,
-		ParseAndCheckOptions{
-			Location: location,
-		},
-	)
-	require.NoError(t, err)
+			ParseAndCheckOptions{
+				Location: location,
+			},
+		)
+		require.NoError(t, err)
 
-	importCompiler := compiler.NewCompiler(importedChecker.Program, importedChecker.Elaboration)
-	importedProgram := importCompiler.Compile()
+		importCompiler := compiler.NewCompiler(importedChecker.Program, importedChecker.Elaboration)
+		importedProgram := importCompiler.Compile()
 
-	vmInstance := vm.NewVM(location, importedProgram, nil)
-	importedContractValue, err := vmInstance.InitializeContract()
-	require.NoError(t, err)
+		vmInstance := vm.NewVM(location, importedProgram, nil)
+		importedContractValue, err := vmInstance.InitializeContract()
+		require.NoError(t, err)
 
-	checker, err := ParseAndCheckWithOptions(t, `
+		checker, err := ParseAndCheckWithOptions(t, `
         import MyContract from 0x01
 
         fun test(): String {
@@ -1484,42 +1488,341 @@ func TestInterfaceMethodCall(t *testing.T) {
             return r.sayHello(1)
         }`,
 
-		ParseAndCheckOptions{
-			Config: &sema.Config{
-				ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
-					return sema.ElaborationImport{
-						Elaboration: importedChecker.Elaboration,
-					}, nil
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+					LocationHandler: singleIdentifierLocationResolver(t),
 				},
-				LocationHandler: singleIdentifierLocationResolver(t),
 			},
-		},
-	)
-	require.NoError(t, err)
+		)
+		require.NoError(t, err)
 
-	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
-	comp.Config.LocationHandler = singleIdentifierLocationResolver(t)
-	comp.Config.ImportHandler = func(location common.Location) *bbq.Program {
-		return importedProgram
-	}
-
-	program := comp.Compile()
-
-	vmConfig := &vm.Config{
-		ImportHandler: func(location common.Location) *bbq.Program {
+		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+		comp.Config.LocationHandler = singleIdentifierLocationResolver(t)
+		comp.Config.ImportHandler = func(location common.Location) *bbq.Program {
 			return importedProgram
-		},
-		ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *vm.CompositeValue {
-			return importedContractValue
-		},
-	}
+		}
 
-	vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
-	result, err := vmInstance.Invoke("test")
-	require.NoError(t, err)
-	require.Equal(t, 0, vmInstance.StackSize())
+		program := comp.Compile()
 
-	require.Equal(t, vm.NewStringValue("Hello from Foo!"), result)
+		vmConfig := &vm.Config{
+			ImportHandler: func(location common.Location) *bbq.Program {
+				return importedProgram
+			},
+			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *vm.CompositeValue {
+				return importedContractValue
+			},
+		}
+
+		vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
+		result, err := vmInstance.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+
+		require.Equal(t, vm.NewStringValue("Hello from Foo!"), result)
+	})
+
+	t.Run("impl in different program", func(t *testing.T) {
+
+		t.Parallel()
+
+		// Define the interface in `Foo`
+
+		fooLocation := common.NewAddressLocation(
+			nil,
+			common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+			"Foo",
+		)
+
+		fooChecker, err := ParseAndCheckWithOptions(t,
+			`
+        contract Foo {
+            struct interface Greetings {
+                fun sayHello(): String
+            }
+        }`,
+			ParseAndCheckOptions{
+				Location: fooLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		interfaceCompiler := compiler.NewCompiler(fooChecker.Program, fooChecker.Elaboration)
+		fooProgram := interfaceCompiler.Compile()
+
+		interfaceVM := vm.NewVM(fooLocation, fooProgram, nil)
+		fooContractValue, err := interfaceVM.InitializeContract()
+		require.NoError(t, err)
+
+		// Deploy the imported `Bar` program
+
+		barLocation := common.NewAddressLocation(
+			nil,
+			common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+			"Bar",
+		)
+
+		barChecker, err := ParseAndCheckWithOptions(t,
+			`
+        contract Bar {
+            fun sayHello(): String {
+                return "Hello from Bar!"
+            }
+        }`,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					LocationHandler: singleIdentifierLocationResolver(t),
+				},
+				Location: barLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		barCompiler := compiler.NewCompiler(barChecker.Program, barChecker.Elaboration)
+		barProgram := barCompiler.Compile()
+
+		barVM := vm.NewVM(barLocation, barProgram, nil)
+		barContractValue, err := barVM.InitializeContract()
+		require.NoError(t, err)
+
+		// Define the implementation
+
+		bazLocation := common.NewAddressLocation(
+			nil,
+			common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3},
+			"Baz",
+		)
+
+		bazChecker, err := ParseAndCheckWithOptions(t,
+			`
+        import Foo from 0x01
+        import Bar from 0x02
+
+        contract Baz {
+            struct GreetingImpl: Foo.Greetings {
+                fun sayHello(): String {
+                    return Bar.sayHello()
+                }
+            }
+        }`,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						var elaboration *sema.Elaboration
+						switch location {
+						case fooLocation:
+							elaboration = fooChecker.Elaboration
+						case barLocation:
+							elaboration = barChecker.Elaboration
+						default:
+							return nil, fmt.Errorf("cannot find import for: %s", location)
+						}
+
+						return sema.ElaborationImport{
+							Elaboration: elaboration,
+						}, nil
+					},
+					LocationHandler: singleIdentifierLocationResolver(t),
+				},
+				Location: bazLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		bazImportHandler := func(location common.Location) *bbq.Program {
+			switch location {
+			case fooLocation:
+				return fooProgram
+			case barLocation:
+				return barProgram
+			default:
+				panic(fmt.Errorf("cannot find import for: %s", location))
+			}
+		}
+
+		bazCompiler := compiler.NewCompiler(bazChecker.Program, bazChecker.Elaboration)
+		bazCompiler.Config.LocationHandler = singleIdentifierLocationResolver(t)
+		bazCompiler.Config.ImportHandler = bazImportHandler
+		bazProgram := bazCompiler.Compile()
+
+		implProgramVMConfig := &vm.Config{
+			ImportHandler: bazImportHandler,
+			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *vm.CompositeValue {
+				switch location {
+				case fooLocation:
+					return fooContractValue
+				case barLocation:
+					return barContractValue
+				default:
+					panic(fmt.Errorf("cannot find contract: %s", location))
+				}
+			},
+		}
+
+		bazVM := vm.NewVM(bazLocation, bazProgram, implProgramVMConfig)
+		bazContractValue, err := bazVM.InitializeContract()
+		require.NoError(t, err)
+
+		// Get `Bar.GreetingsImpl` value
+
+		checker, err := ParseAndCheckWithOptions(t, `
+        import Baz from 0x03
+
+        fun test(): Baz.GreetingImpl {
+            return Baz.GreetingImpl()
+        }`,
+
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						var elaboration *sema.Elaboration
+						switch location {
+						case bazLocation:
+							elaboration = bazChecker.Elaboration
+						default:
+							return nil, fmt.Errorf("cannot find import for: %s", location)
+						}
+
+						return sema.ElaborationImport{
+							Elaboration: elaboration,
+						}, nil
+					},
+					LocationHandler: singleIdentifierLocationResolver(t),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		scriptImportHandler := func(location common.Location) *bbq.Program {
+			switch location {
+			case barLocation:
+				return barProgram
+			case bazLocation:
+				return bazProgram
+			default:
+				panic(fmt.Errorf("cannot find import for: %s", location))
+			}
+		}
+
+		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+		comp.Config.LocationHandler = singleIdentifierLocationResolver(t)
+		comp.Config.ImportHandler = scriptImportHandler
+
+		program := comp.Compile()
+
+		vmConfig := &vm.Config{
+			ImportHandler: scriptImportHandler,
+			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *vm.CompositeValue {
+				switch location {
+				case barLocation:
+					return barContractValue
+				case bazLocation:
+					return bazContractValue
+				default:
+					panic(fmt.Errorf("cannot find contract: %s", location))
+				}
+			},
+		}
+
+		scriptVM := vm.NewVM(scriptLocation(), program, vmConfig)
+		implValue, err := scriptVM.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, scriptVM.StackSize())
+
+		require.IsType(t, &vm.CompositeValue{}, implValue)
+		compositeValue := implValue.(*vm.CompositeValue)
+		require.Equal(
+			t,
+			common.TypeID("A.0000000000000003.Baz.GreetingImpl"),
+			compositeValue.TypeID(),
+		)
+
+		// Test Script. This program only imports `Foo` statically.
+		// But the argument passed into the script is of type `Baz.GreetingImpl`.
+		// So the linking of `Baz` happens dynamically at runtime.
+		// However, `Baz` also has an import to `Bar`. So when the
+		// `Baz` is linked and imported at runtime, its imports also
+		// should get linked at runtime (similar to how static linking works).
+
+		checker, err = ParseAndCheckWithOptions(t, `
+        import Foo from 0x01
+
+        fun test(v: {Foo.Greetings}): String {
+            return v.sayHello()
+        }`,
+
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						var elaboration *sema.Elaboration
+						switch location {
+						case fooLocation:
+							elaboration = fooChecker.Elaboration
+						case bazLocation:
+							elaboration = bazChecker.Elaboration
+						default:
+							return nil, fmt.Errorf("cannot find import for: %s", location)
+						}
+
+						return sema.ElaborationImport{
+							Elaboration: elaboration,
+						}, nil
+					},
+					LocationHandler: singleIdentifierLocationResolver(t),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		scriptImportHandler = func(location common.Location) *bbq.Program {
+			switch location {
+			case fooLocation:
+				return fooProgram
+			case barLocation:
+				return barProgram
+			case bazLocation:
+				return bazProgram
+			default:
+				panic(fmt.Errorf("cannot find import for: %s", location))
+			}
+
+			return fooProgram
+		}
+
+		comp = compiler.NewCompiler(checker.Program, checker.Elaboration)
+		comp.Config.LocationHandler = singleIdentifierLocationResolver(t)
+		comp.Config.ImportHandler = scriptImportHandler
+
+		program = comp.Compile()
+
+		vmConfig = &vm.Config{
+			ImportHandler: scriptImportHandler,
+			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *vm.CompositeValue {
+				switch location {
+				case fooLocation:
+					return fooContractValue
+				case barLocation:
+					return barContractValue
+				case bazLocation:
+					return bazContractValue
+				default:
+					panic(fmt.Errorf("cannot find contract: %s", location))
+				}
+			},
+		}
+
+		scriptVM = vm.NewVM(scriptLocation(), program, vmConfig)
+
+		result, err := scriptVM.Invoke("test", implValue)
+		require.NoError(t, err)
+		require.Equal(t, 0, scriptVM.StackSize())
+
+		require.Equal(t, vm.NewStringValue("Hello from Bar!"), result)
+	})
 }
 
 func TestArrayLiteral(t *testing.T) {
