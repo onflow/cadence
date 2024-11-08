@@ -237,7 +237,7 @@ func (c TypeCodes) Merge(codes TypeCodes) {
 
 type Storage interface {
 	atree.SlabStorage
-	GetStorageMap(address common.Address, domain string, createIfNotExists bool) *StorageMap
+	GetStorageMap(address common.Address, domain common.StorageDomain, createIfNotExists bool) *StorageMap
 	CheckHealth() error
 }
 
@@ -2678,7 +2678,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 
 func (interpreter *Interpreter) StoredValueExists(
 	storageAddress common.Address,
-	domain string,
+	domain common.StorageDomain,
 	identifier StorageMapKey,
 ) bool {
 	accountStorage := interpreter.Storage().GetStorageMap(storageAddress, domain, false)
@@ -2690,7 +2690,7 @@ func (interpreter *Interpreter) StoredValueExists(
 
 func (interpreter *Interpreter) ReadStored(
 	storageAddress common.Address,
-	domain string,
+	domain common.StorageDomain,
 	identifier StorageMapKey,
 ) Value {
 	accountStorage := interpreter.Storage().GetStorageMap(storageAddress, domain, false)
@@ -2702,7 +2702,7 @@ func (interpreter *Interpreter) ReadStored(
 
 func (interpreter *Interpreter) WriteStored(
 	storageAddress common.Address,
-	domain string,
+	domain common.StorageDomain,
 	key StorageMapKey,
 	value Value,
 ) (existed bool) {
@@ -4069,7 +4069,7 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(staticSubType StaticType, su
 }
 
 func (interpreter *Interpreter) domainPaths(address common.Address, domain common.PathDomain) []Value {
-	storageMap := interpreter.Storage().GetStorageMap(address, domain.Identifier(), false)
+	storageMap := interpreter.Storage().GetStorageMap(address, domain.StorageDomain(), false)
 	if storageMap == nil {
 		return []Value{}
 	}
@@ -4164,7 +4164,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 			parameterTypes := fnType.ParameterTypes()
 			returnType := fnType.ReturnTypeAnnotation.Type
 
-			storageMap := config.Storage.GetStorageMap(address, domain.Identifier(), false)
+			storageMap := config.Storage.GetStorageMap(address, domain.StorageDomain(), false)
 			if storageMap == nil {
 				// if nothing is stored, no iteration is required
 				return Void
@@ -4327,7 +4327,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			domain := path.Domain.Identifier()
+			domain := path.Domain.StorageDomain()
 			identifier := path.Identifier
 
 			// Prevent an overwrite
@@ -4390,7 +4390,7 @@ func (interpreter *Interpreter) authAccountTypeFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			domain := path.Domain.Identifier()
+			domain := path.Domain.StorageDomain()
 			identifier := path.Identifier
 
 			storageMapKey := StringStorageMapKey(identifier)
@@ -4448,7 +4448,7 @@ func (interpreter *Interpreter) authAccountReadFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			domain := path.Domain.Identifier()
+			domain := path.Domain.StorageDomain()
 			identifier := path.Identifier
 
 			storageMapKey := StringStorageMapKey(identifier)
@@ -4589,7 +4589,7 @@ func (interpreter *Interpreter) authAccountCheckFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			domain := path.Domain.Identifier()
+			domain := path.Domain.StorageDomain()
 			identifier := path.Identifier
 
 			storageMapKey := StringStorageMapKey(identifier)

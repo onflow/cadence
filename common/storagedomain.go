@@ -19,6 +19,8 @@
 package common
 
 import (
+	"fmt"
+
 	"github.com/onflow/cadence/errors"
 )
 
@@ -27,11 +29,11 @@ type StorageDomain uint8
 const (
 	StorageDomainUnknown StorageDomain = iota
 
-	StorageDomainStorage
+	StorageDomainPathStorage
 
-	StorageDomainPrivate
+	StorageDomainPathPrivate
 
-	StorageDomainPublic
+	StorageDomainPathPublic
 
 	StorageDomainContract
 
@@ -55,9 +57,9 @@ const (
 )
 
 var AllStorageDomains = []StorageDomain{
-	StorageDomainStorage,
-	StorageDomainPrivate,
-	StorageDomainPublic,
+	StorageDomainPathStorage,
+	StorageDomainPathPrivate,
+	StorageDomainPathPublic,
 	StorageDomainContract,
 	StorageDomainInbox,
 	StorageDomainCapabilityController,
@@ -68,10 +70,14 @@ var AllStorageDomains = []StorageDomain{
 
 var AllStorageDomainsByIdentifier = map[string]StorageDomain{}
 
+var allStorageDomainsSet = map[StorageDomain]struct{}{}
+
 func init() {
 	for _, domain := range AllStorageDomains {
 		identifier := domain.Identifier()
 		AllStorageDomainsByIdentifier[identifier] = domain
+
+		allStorageDomainsSet[domain] = struct{}{}
 	}
 }
 
@@ -83,15 +89,24 @@ func StorageDomainFromIdentifier(domain string) (StorageDomain, bool) {
 	return result, true
 }
 
+func StorageDomainFromUint64(i uint64) (StorageDomain, error) {
+	d := StorageDomain(i)
+	_, exists := allStorageDomainsSet[d]
+	if !exists {
+		return StorageDomainUnknown, fmt.Errorf("failed to convert %d to StorageDomain", i)
+	}
+	return d, nil
+}
+
 func (d StorageDomain) Identifier() string {
 	switch d {
-	case StorageDomainStorage:
+	case StorageDomainPathStorage:
 		return PathDomainStorage.Identifier()
 
-	case StorageDomainPrivate:
+	case StorageDomainPathPrivate:
 		return PathDomainPrivate.Identifier()
 
-	case StorageDomainPublic:
+	case StorageDomainPathPublic:
 		return PathDomainPublic.Identifier()
 
 	case StorageDomainContract:

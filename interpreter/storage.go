@@ -101,6 +101,23 @@ func ConvertStoredValue(gauge common.MemoryGauge, value atree.Value) (Value, err
 	}
 }
 
+type StorageDomainKey struct {
+	Domain  common.StorageDomain
+	Address common.Address
+}
+
+func NewStorageDomainKey(
+	memoryGauge common.MemoryGauge,
+	address common.Address,
+	domain common.StorageDomain,
+) StorageDomainKey {
+	common.UseMemory(memoryGauge, common.StorageKeyMemoryUsage)
+	return StorageDomainKey{
+		Address: address,
+		Domain:  domain,
+	}
+}
+
 type StorageKey struct {
 	Key     string
 	Address common.Address
@@ -130,7 +147,7 @@ func (k StorageKey) IsLess(o StorageKey) bool {
 // InMemoryStorage
 type InMemoryStorage struct {
 	*atree.BasicSlabStorage
-	StorageMaps map[StorageKey]*StorageMap
+	StorageMaps map[StorageDomainKey]*StorageMap
 	memoryGauge common.MemoryGauge
 }
 
@@ -158,19 +175,19 @@ func NewInMemoryStorage(memoryGauge common.MemoryGauge) InMemoryStorage {
 
 	return InMemoryStorage{
 		BasicSlabStorage: slabStorage,
-		StorageMaps:      make(map[StorageKey]*StorageMap),
+		StorageMaps:      make(map[StorageDomainKey]*StorageMap),
 		memoryGauge:      memoryGauge,
 	}
 }
 
 func (i InMemoryStorage) GetStorageMap(
 	address common.Address,
-	domain string,
+	domain common.StorageDomain,
 	createIfNotExists bool,
 ) (
 	storageMap *StorageMap,
 ) {
-	key := NewStorageKey(i.memoryGauge, address, domain)
+	key := NewStorageDomainKey(i.memoryGauge, address, domain)
 	storageMap = i.StorageMaps[key]
 	if storageMap == nil && createIfNotExists {
 		storageMap = NewStorageMap(i.memoryGauge, i, atree.Address(address))

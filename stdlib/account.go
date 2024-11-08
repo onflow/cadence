@@ -994,7 +994,7 @@ func newAccountInboxPublishFunction(
 
 				inter.WriteStored(
 					provider,
-					common.StorageDomainInbox.Identifier(),
+					common.StorageDomainInbox,
 					storageMapKey,
 					publishedValue,
 				)
@@ -1027,7 +1027,7 @@ func newAccountInboxUnpublishFunction(
 
 				storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
 
-				readValue := inter.ReadStored(provider, common.StorageDomainInbox.Identifier(), storageMapKey)
+				readValue := inter.ReadStored(provider, common.StorageDomainInbox, storageMapKey)
 				if readValue == nil {
 					return interpreter.Nil
 				}
@@ -1063,7 +1063,7 @@ func newAccountInboxUnpublishFunction(
 
 				inter.WriteStored(
 					provider,
-					common.StorageDomainInbox.Identifier(),
+					common.StorageDomainInbox,
 					storageMapKey,
 					nil,
 				)
@@ -1112,7 +1112,7 @@ func newAccountInboxClaimFunction(
 
 				storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
 
-				readValue := inter.ReadStored(providerAddress, common.StorageDomainInbox.Identifier(), storageMapKey)
+				readValue := inter.ReadStored(providerAddress, common.StorageDomainInbox, storageMapKey)
 				if readValue == nil {
 					return interpreter.Nil
 				}
@@ -1153,7 +1153,7 @@ func newAccountInboxClaimFunction(
 
 				inter.WriteStored(
 					providerAddress,
-					common.StorageDomainInbox.Identifier(),
+					common.StorageDomainInbox,
 					storageMapKey,
 					nil,
 				)
@@ -2992,7 +2992,7 @@ func storeCapabilityController(
 
 	existed := inter.WriteStored(
 		address,
-		common.StorageDomainCapabilityController.Identifier(),
+		common.StorageDomainCapabilityController,
 		storageMapKey,
 		controller,
 	)
@@ -3011,7 +3011,7 @@ func removeCapabilityController(
 
 	existed := inter.WriteStored(
 		address,
-		common.StorageDomainCapabilityController.Identifier(),
+		common.StorageDomainCapabilityController,
 		storageMapKey,
 		nil,
 	)
@@ -3039,7 +3039,7 @@ func getCapabilityController(
 
 	readValue := inter.ReadStored(
 		address,
-		common.StorageDomainCapabilityController.Identifier(),
+		common.StorageDomainCapabilityController,
 		storageMapKey,
 	)
 	if readValue == nil {
@@ -3244,7 +3244,7 @@ func recordStorageCapabilityController(
 
 	storageMap := inter.Storage().GetStorageMap(
 		address,
-		common.StorageDomainPathCapability.Identifier(),
+		common.StorageDomainPathCapability,
 		true,
 	)
 
@@ -3286,7 +3286,7 @@ func getPathCapabilityIDSet(
 
 	storageMap := inter.Storage().GetStorageMap(
 		address,
-		common.StorageDomainPathCapability.Identifier(),
+		common.StorageDomainPathCapability,
 		false,
 	)
 	if storageMap == nil {
@@ -3336,7 +3336,7 @@ func unrecordStorageCapabilityController(
 	if capabilityIDSet.Count() == 0 {
 		storageMap := inter.Storage().GetStorageMap(
 			address,
-			common.StorageDomainPathCapability.Identifier(),
+			common.StorageDomainPathCapability,
 			true,
 		)
 		if storageMap == nil {
@@ -3404,7 +3404,7 @@ func recordAccountCapabilityController(
 
 	storageMap := inter.Storage().GetStorageMap(
 		address,
-		common.StorageDomainAccountCapability.Identifier(),
+		common.StorageDomainAccountCapability,
 		true,
 	)
 
@@ -3431,7 +3431,7 @@ func unrecordAccountCapabilityController(
 
 	storageMap := inter.Storage().GetStorageMap(
 		address,
-		common.StorageDomainAccountCapability.Identifier(),
+		common.StorageDomainAccountCapability,
 		true,
 	)
 
@@ -3450,7 +3450,7 @@ func getAccountCapabilityControllerIDsIterator(
 ) {
 	storageMap := inter.Storage().GetStorageMap(
 		address,
-		common.StorageDomainAccountCapability.Identifier(),
+		common.StorageDomainAccountCapability,
 		false,
 	)
 	if storageMap == nil {
@@ -3517,7 +3517,7 @@ func newAccountCapabilitiesPublishFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				domain := pathValue.Domain.Identifier()
+				domain := pathValue.Domain.StorageDomain()
 				identifier := pathValue.Identifier
 
 				capabilityType, ok := capabilityValue.StaticType(inter).(*interpreter.CapabilityStaticType)
@@ -3636,7 +3636,7 @@ func newAccountCapabilitiesUnpublishFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				domain := pathValue.Domain.Identifier()
+				domain := pathValue.Domain.StorageDomain()
 				identifier := pathValue.Identifier
 
 				// Read/remove capability
@@ -3910,7 +3910,7 @@ func newAccountCapabilitiesGetFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				domain := pathValue.Domain.Identifier()
+				domain := pathValue.Domain.StorageDomain()
 				identifier := pathValue.Identifier
 
 				// Get borrow type type argument
@@ -4095,7 +4095,7 @@ func newAccountCapabilitiesExistsFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				domain := pathValue.Domain.Identifier()
+				domain := pathValue.Domain.StorageDomain()
 				identifier := pathValue.Identifier
 
 				// Read stored capability, if any
@@ -4421,7 +4421,7 @@ func getCapabilityControllerTag(
 
 	value := inter.ReadStored(
 		address,
-		common.StorageDomainCapabilityControllerTag.Identifier(),
+		common.StorageDomainCapabilityControllerTag,
 		interpreter.Uint64StorageMapKey(capabilityID),
 	)
 	if value == nil {
@@ -4483,7 +4483,7 @@ func setCapabilityControllerTag(
 
 	inter.WriteStored(
 		address,
-		common.StorageDomainCapabilityControllerTag.Identifier(),
+		common.StorageDomainCapabilityControllerTag,
 		interpreter.Uint64StorageMapKey(capabilityID),
 		value,
 	)

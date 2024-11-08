@@ -3253,7 +3253,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				storageMap := storage.GetStorageMap(
 					common.MustBytesToAddress([]byte{0x1}),
-					common.StorageDomainPathCapability.Identifier(),
+					common.StorageDomainPathCapability,
 					false,
 				)
 				require.Zero(t, storageMap.Count())
@@ -3842,7 +3842,7 @@ func TestRuntimeCapabilitiesGetBackwardCompatibility(t *testing.T) {
 
 		publicStorageMap := storage.GetStorageMap(
 			testAddress,
-			common.PathDomainPublic.Identifier(),
+			common.PathDomainPublic.StorageDomain(),
 			true,
 		)
 
@@ -3949,7 +3949,7 @@ func TestRuntimeCapabilitiesPublishBackwardCompatibility(t *testing.T) {
 
 		publicStorageMap := storage.GetStorageMap(
 			testAddress,
-			common.PathDomainStorage.Identifier(),
+			common.PathDomainStorage.StorageDomain(),
 			true,
 		)
 
@@ -4039,7 +4039,7 @@ func TestRuntimeCapabilitiesUnpublishBackwardCompatibility(t *testing.T) {
 
 		publicStorageMap := storage.GetStorageMap(
 			testAddress,
-			common.PathDomainPublic.Identifier(),
+			common.PathDomainPublic.StorageDomain(),
 			true,
 		)
 
