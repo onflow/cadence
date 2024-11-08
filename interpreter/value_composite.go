@@ -197,7 +197,7 @@ func NewCompositeValue(
 func newCompositeValueFromConstructor(
 	gauge common.MemoryGauge,
 	count uint64,
-	typeInfo compositeTypeInfo,
+	typeInfo CompositeTypeInfo,
 	constructor func() *atree.OrderedMap,
 ) *CompositeValue {
 
@@ -207,16 +207,16 @@ func newCompositeValueFromConstructor(
 	common.UseMemory(gauge, dataUse)
 	common.UseMemory(gauge, metaDataUse)
 
-	return newCompositeValueFromAtreeMap(
+	return NewCompositeValueFromAtreeMap(
 		gauge,
 		typeInfo,
 		constructor(),
 	)
 }
 
-func newCompositeValueFromAtreeMap(
+func NewCompositeValueFromAtreeMap(
 	gauge common.MemoryGauge,
-	typeInfo compositeTypeInfo,
+	typeInfo CompositeTypeInfo,
 	atreeOrderedMap *atree.OrderedMap,
 ) *CompositeValue {
 
@@ -224,9 +224,9 @@ func newCompositeValueFromAtreeMap(
 
 	return &CompositeValue{
 		dictionary:          atreeOrderedMap,
-		Location:            typeInfo.location,
-		QualifiedIdentifier: typeInfo.qualifiedIdentifier,
-		Kind:                typeInfo.kind,
+		Location:            typeInfo.Location,
+		QualifiedIdentifier: typeInfo.QualifiedIdentifier,
+		Kind:                typeInfo.Kind,
 	}
 }
 
@@ -1317,7 +1317,7 @@ func (v *CompositeValue) Transfer(
 		v.Kind,
 	)
 
-	res := newCompositeValueFromAtreeMap(
+	res := NewCompositeValueFromAtreeMap(
 		interpreter,
 		info,
 		dictionary,
@@ -1937,4 +1937,8 @@ func (v *CompositeValue) ForEach(
 			return
 		}
 	}
+}
+
+func (v *CompositeValue) AtreeMap() *atree.OrderedMap {
+	return v.dictionary
 }

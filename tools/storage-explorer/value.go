@@ -23,9 +23,9 @@ import (
 	"sort"
 
 	jsoncdc "github.com/onflow/cadence/encoding/json"
+	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/sema"
 )
 
 type Value interface {

@@ -2204,7 +2204,7 @@ const getAccountFunctionDocString = `
 Returns the account for the given address
 `
 
-var getAccountFunctionType = sema.NewSimpleFunctionType(
+var GetAccountFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityView,
 	[]sema.Parameter{
 		{
@@ -2219,7 +2219,7 @@ var getAccountFunctionType = sema.NewSimpleFunctionType(
 func NewGetAccountFunction(handler AccountHandler) StandardLibraryValue {
 	return NewStandardLibraryStaticFunction(
 		"getAccount",
-		getAccountFunctionType,
+		GetAccountFunctionType,
 		getAccountFunctionDocString,
 		func(invocation interpreter.Invocation) interpreter.Value {
 
@@ -3025,7 +3025,7 @@ func removeCapabilityController(
 		panic(errors.NewUnreachableError())
 	}
 
-	setCapabilityControllerTag(
+	SetCapabilityControllerTag(
 		inter,
 		address,
 		uint64(capabilityIDValue),
@@ -4487,7 +4487,7 @@ func newCapabilityControllerGetTagFunction(
 	}
 }
 
-func setCapabilityControllerTag(
+func SetCapabilityControllerTag(
 	inter *interpreter.Interpreter,
 	address common.Address,
 	capabilityID uint64,
@@ -4512,7 +4512,7 @@ func newCapabilityControllerSetTagFunction(
 	capabilityIDValue interpreter.UInt64Value,
 ) func(*interpreter.Interpreter, *interpreter.StringValue) {
 	return func(inter *interpreter.Interpreter, tagValue *interpreter.StringValue) {
-		setCapabilityControllerTag(
+		SetCapabilityControllerTag(
 			inter,
 			address,
 			uint64(capabilityIDValue),
