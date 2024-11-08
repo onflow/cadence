@@ -103,7 +103,7 @@ func NewCompiler(
 		Elaboration:     elaboration,
 		Config:          &Config{},
 		globals:         make(map[string]*global),
-		importedGlobals: indexedNativeFunctions,
+		importedGlobals: NativeFunctions(),
 		typesInPool:     make(map[sema.TypeID]uint16),
 		constantsInPool: make(map[constantsCacheKey]*constant),
 		compositeTypeStack: &Stack[*sema.CompositeType]{

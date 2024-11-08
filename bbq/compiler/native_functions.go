@@ -24,8 +24,15 @@ import (
 	"github.com/onflow/cadence/bbq/commons"
 )
 
-var indexedNativeFunctions = make(map[string]*global)
 var nativeFunctions []*global
+
+func NativeFunctions() map[string]*global {
+	funcs := make(map[string]*global, len(nativeFunctions))
+	for _, value := range nativeFunctions {
+		funcs[value.name] = value
+	}
+	return funcs
+}
 
 var builtinTypes = []sema.Type{
 	sema.StringType,
@@ -72,5 +79,4 @@ func addNativeFunction(name string) {
 		name: name,
 	}
 	nativeFunctions = append(nativeFunctions, global)
-	indexedNativeFunctions[name] = global
 }

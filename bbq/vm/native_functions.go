@@ -28,15 +28,23 @@ import (
 	"github.com/onflow/cadence/stdlib"
 )
 
-var NativeFunctions = map[string]Value{}
+var nativeFunctions = map[string]Value{}
 
 // BuiltInLocation is the location of built-in constructs.
 // It's always nil.
 var BuiltInLocation common.Location = nil
 
+func NativeFunctions() map[string]Value {
+	funcs := make(map[string]Value, len(nativeFunctions))
+	for name, value := range nativeFunctions {
+		funcs[name] = value
+	}
+	return funcs
+}
+
 func RegisterFunction(functionName string, functionValue NativeFunctionValue) {
 	functionValue.Name = functionName
-	NativeFunctions[functionName] = functionValue
+	nativeFunctions[functionName] = functionValue
 }
 
 func RegisterTypeBoundFunction(typeName, functionName string, functionValue NativeFunctionValue) {
