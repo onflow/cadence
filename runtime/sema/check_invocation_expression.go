@@ -503,7 +503,13 @@ func (checker *Checker) checkInvocation(
 
 	returnType = functionType.ReturnTypeAnnotation.Type.Resolve(typeArguments)
 	if returnType == nil {
-		// TODO: report error? does `checkTypeParameterInference` below already do that?
+		checker.report(&InvocationReturnTypeInferenceError{
+			Range: ast.NewRangeFromPositioned(
+				checker.memoryGauge,
+				invocationExpression,
+			),
+		})
+
 		returnType = InvalidType
 	}
 

@@ -4826,3 +4826,20 @@ func (*NestedReferenceError) IsUserError() {}
 func (e *NestedReferenceError) Error() string {
 	return fmt.Sprintf("cannot create a nested reference to value of type %s", e.Type.QualifiedString())
 }
+
+// InvocationReturnTypeInferenceError
+
+type InvocationReturnTypeInferenceError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvocationReturnTypeInferenceError{}
+var _ errors.UserError = &InvocationReturnTypeInferenceError{}
+
+func (e *InvocationReturnTypeInferenceError) isSemanticError() {}
+
+func (*InvocationReturnTypeInferenceError) IsUserError() {}
+
+func (e *InvocationReturnTypeInferenceError) Error() string {
+	return "cannot infer return type of invocation"
+}

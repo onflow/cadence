@@ -23,7 +23,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 func TestCheckSpuriousIdentifierAssignmentInvalidValueTypeMismatch(t *testing.T) {
@@ -200,4 +202,48 @@ func TestCheckSpuriousCastWithInvalidValueTypeMismatch(t *testing.T) {
 	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+}
+
+func TestCheckInvalidInvocationFunctionReturnType(t *testing.T) {
+
+	t.Parallel()
+
+	typeParameter := &sema.TypeParameter{
+		Name: "T",
+	}
+
+	fType := &sema.FunctionType{
+		TypeParameters: []*sema.TypeParameter{
+			typeParameter,
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(
+			&sema.GenericType{
+				TypeParameter: typeParameter,
+			},
+		),
+	}
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.StandardLibraryValue{
+		Type: fType,
+		Name: "f",
+		Kind: common.DeclarationKindFunction,
+	})
+
+	_, err := ParseAndCheckWithOptions(t,
+		`
+          let res = [f].reverse()
+        `,
+		ParseAndCheckOptions{
+			Config: &sema.Config{
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
+			},
+		},
+	)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvocationReturnTypeInferenceError{}, errs[0])
 }
