@@ -2611,15 +2611,7 @@ func (checker *Checker) visitExpressionWithForceType(
 
 	actualType = ast.AcceptExpression[Type](expr, checker)
 
-	// Defensive check: If an invalid type was produced,
-	// then also an error should have been reported for the invalid program.
-	//
-	// Check for errors first, which is cheap,
-	// before checking for an invalid type, which is more expensive.
-
-	if len(checker.errors) == 0 && (actualType.IsInvalidType() || (expectedType != nil && expectedType.IsInvalidType())) {
-		panic(errors.NewUnexpectedError("invalid type produced without error"))
-	}
+	checker.checkErrorsForInvalidExpressionTypes(actualType, expectedType)
 
 	if checker.Config.ExtendedElaborationEnabled {
 		checker.Elaboration.SetExpressionTypes(
@@ -2653,6 +2645,20 @@ func (checker *Checker) visitExpressionWithForceType(
 	}
 
 	return actualType, actualType
+}
+
+func (checker *Checker) checkErrorsForInvalidExpressionTypes(actualType Type, expectedType Type) {
+	// Defensive check: If an invalid type was produced,
+	// then also an error should have been reported for the invalid program.
+	//
+	// Check for errors first, which is cheap,
+	// before checking for an invalid type, which is more expensive.
+
+	if len(checker.errors) == 0 &&
+		(actualType.IsInvalidType() || (expectedType != nil && expectedType.IsInvalidType())) {
+
+		panic(errors.NewUnexpectedError("invalid type produced without error"))
+	}
 }
 
 func (checker *Checker) expressionRange(expression ast.Expression) ast.Range {
