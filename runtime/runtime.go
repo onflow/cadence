@@ -612,7 +612,7 @@ func (r *interpreterRuntime) ReadStored(
 
 	pathValue := valueImporter{inter: inter}.importPathValue(path)
 
-	domain := pathValue.Domain.Identifier()
+	domain := pathValue.Domain.StorageDomain()
 	identifier := pathValue.Identifier
 
 	storageMapKey := interpreter.StringStorageMapKey(identifier)

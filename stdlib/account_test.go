@@ -24,6 +24,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
@@ -33,11 +34,11 @@ func TestSemaCheckPathLiteralForInternalStorageDomains(t *testing.T) {
 	t.Parallel()
 
 	internalStorageDomains := []string{
-		InboxStorageDomain,
-		AccountCapabilityStorageDomain,
-		CapabilityControllerStorageDomain,
-		PathCapabilityStorageDomain,
-		CapabilityControllerTagStorageDomain,
+		common.StorageDomainInbox.Identifier(),
+		common.StorageDomainAccountCapability.Identifier(),
+		common.StorageDomainCapabilityController.Identifier(),
+		common.StorageDomainPathCapability.Identifier(),
+		common.StorageDomainCapabilityControllerTag.Identifier(),
 	}
 
 	test := func(domain string) {

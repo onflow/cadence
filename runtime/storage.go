@@ -32,12 +32,10 @@ import (
 	"github.com/onflow/cadence/interpreter"
 )
 
-const StorageDomainContract = "contract"
-
 type Storage struct {
 	*atree.PersistentSlabStorage
-	NewStorageMaps  *orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]
-	storageMaps     map[interpreter.StorageKey]*interpreter.StorageMap
+	NewStorageMaps  *orderedmap.OrderedMap[interpreter.StorageDomainKey, atree.SlabIndex]
+	storageMaps     map[interpreter.StorageDomainKey]*interpreter.StorageMap
 	contractUpdates *orderedmap.OrderedMap[interpreter.StorageKey, *interpreter.CompositeValue]
 	Ledger          atree.Ledger
 	memoryGauge     common.MemoryGauge
@@ -78,7 +76,7 @@ func NewStorage(ledger atree.Ledger, memoryGauge common.MemoryGauge) *Storage {
 	return &Storage{
 		Ledger:                ledger,
 		PersistentSlabStorage: persistentSlabStorage,
-		storageMaps:           map[interpreter.StorageKey]*interpreter.StorageMap{},
+		storageMaps:           map[interpreter.StorageDomainKey]*interpreter.StorageMap{},
 		memoryGauge:           memoryGauge,
 	}
 }
@@ -87,12 +85,12 @@ const storageIndexLength = 8
 
 func (s *Storage) GetStorageMap(
 	address common.Address,
-	domain string,
+	domain common.StorageDomain,
 	createIfNotExists bool,
 ) (
 	storageMap *interpreter.StorageMap,
 ) {
-	key := interpreter.NewStorageKey(s.memoryGauge, address, domain)
+	key := interpreter.NewStorageDomainKey(s.memoryGauge, address, domain)
 
 	storageMap = s.storageMaps[key]
 	if storageMap == nil {
@@ -102,7 +100,10 @@ func (s *Storage) GetStorageMap(
 		var data []byte
 		var err error
 		errors.WrapPanic(func() {
-			data, err = s.Ledger.GetValue(key.Address[:], []byte(key.Key))
+			data, err = s.Ledger.GetValue(
+				key.Address[:],
+				[]byte(key.Domain.Identifier()),
+			)
 		})
 		if err != nil {
 			panic(interpreter.WrappedExternalError(err))
@@ -114,7 +115,7 @@ func (s *Storage) GetStorageMap(
 			// TODO: add dedicated error type?
 			panic(errors.NewUnexpectedError(
 				"invalid storage index for storage map with domain '%s': expected length %d, got %d",
-				domain, storageIndexLength, dataLength,
+				domain.Identifier(), storageIndexLength, dataLength,
 			))
 		}
 
@@ -145,15 +146,15 @@ func (s *Storage) loadExistingStorageMap(address atree.Address, slabIndex atree.
 	return interpreter.NewStorageMapWithRootID(s, slabID)
 }
 
-func (s *Storage) StoreNewStorageMap(address atree.Address, domain string) *interpreter.StorageMap {
+func (s *Storage) StoreNewStorageMap(address atree.Address, domain common.StorageDomain) *interpreter.StorageMap {
 	storageMap := interpreter.NewStorageMap(s.memoryGauge, s, address)
 
 	slabIndex := storageMap.SlabID().Index()
 
-	storageKey := interpreter.NewStorageKey(s.memoryGauge, common.Address(address), domain)
+	storageKey := interpreter.NewStorageDomainKey(s.memoryGauge, common.Address(address), domain)
 
 	if s.NewStorageMaps == nil {
-		s.NewStorageMaps = &orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]{}
+		s.NewStorageMaps = &orderedmap.OrderedMap[interpreter.StorageDomainKey, atree.SlabIndex]{}
 	}
 	s.NewStorageMaps.Set(storageKey, slabIndex)
 
@@ -216,7 +217,7 @@ func (s *Storage) writeContractUpdate(
 	key interpreter.StorageKey,
 	contractValue *interpreter.CompositeValue,
 ) {
-	storageMap := s.GetStorageMap(key.Address, StorageDomainContract, true)
+	storageMap := s.GetStorageMap(key.Address, common.StorageDomainContract, true)
 	// NOTE: pass nil instead of allocating a Value-typed  interface that points to nil
 	storageMapKey := interpreter.StringStorageMapKey(key.Key)
 	if contractValue == nil {
@@ -279,7 +280,7 @@ func (s *Storage) commitNewStorageMaps() error {
 		errors.WrapPanic(func() {
 			err = s.Ledger.SetValue(
 				pair.Key.Address[:],
-				[]byte(pair.Key.Key),
+				[]byte(pair.Key.Domain.Identifier()),
 				pair.Value[:],
 			)
 		})

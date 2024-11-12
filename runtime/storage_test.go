@@ -53,22 +53,23 @@ func withWritesToStorage(
 
 	inter := NewTestInterpreter(tb)
 
-	address := common.MustBytesToAddress([]byte{0x1})
-
 	for i := 0; i < count; i++ {
 
 		randomIndex := random.Uint32()
 
-		storageKey := interpreter.StorageKey{
+		var address common.Address
+		random.Read(address[:])
+
+		storageKey := interpreter.StorageDomainKey{
 			Address: address,
-			Key:     fmt.Sprintf("%d", randomIndex),
+			Domain:  common.StorageDomainPathStorage,
 		}
 
 		var slabIndex atree.SlabIndex
 		binary.BigEndian.PutUint32(slabIndex[:], randomIndex)
 
 		if storage.NewStorageMaps == nil {
-			storage.NewStorageMaps = &orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]{}
+			storage.NewStorageMaps = &orderedmap.OrderedMap[interpreter.StorageDomainKey, atree.SlabIndex]{}
 		}
 		storage.NewStorageMaps.Set(storageKey, slabIndex)
 	}
@@ -3100,7 +3101,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	storageMap := storage.GetStorageMap(address, common.PathDomainStorage.Identifier(), false)
+	storageMap := storage.GetStorageMap(address, common.PathDomainStorage.StorageDomain(), false)
 	require.NotNil(t, storageMap)
 
 	// Read first

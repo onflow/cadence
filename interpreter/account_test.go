@@ -492,7 +492,7 @@ func testAccountWithErrorHandler(
 				}
 				storageKey := storageKey{
 					address: storageMapKey.Address,
-					domain:  storageMapKey.Key,
+					domain:  storageMapKey.Domain.Identifier(),
 					key:     key,
 				}
 				accountValues[storageKey] = value

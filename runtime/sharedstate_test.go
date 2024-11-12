@@ -213,11 +213,11 @@ func TestRuntimeSharedState(t *testing.T) {
 		[]ownerKeyPair{
 			{
 				owner: signerAddress[:],
-				key:   []byte(StorageDomainContract),
+				key:   []byte(common.StorageDomainContract.Identifier()),
 			},
 			{
 				owner: signerAddress[:],
-				key:   []byte(StorageDomainContract),
+				key:   []byte(common.StorageDomainContract.Identifier()),
 			},
 			{
 				owner: signerAddress[:],
