@@ -5349,7 +5349,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			true, // r is standalone.
 		)
 
-		domain := storagePath.Domain.Identifier()
+		domain := storagePath.Domain.StorageDomain()
 		storageMap := storage.GetStorageMap(inter, storageAddress, domain, true)
 		storageMapKey := interpreter.StringStorageMapKey(storagePath.Identifier)
 		storageMap.WriteValue(inter, storageMapKey, r)
