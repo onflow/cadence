@@ -49,7 +49,7 @@ func TestAccountStorageMapDomainExists(t *testing.T) {
 		require.NotNil(t, accountStorageMap)
 		require.Equal(t, uint64(0), accountStorageMap.Count())
 
-		for _, domain := range runtime.AccountDomains {
+		for _, domain := range common.AllStorageDomains {
 			exist := accountStorageMap.DomainExists(domain)
 			require.False(t, exist)
 		}
@@ -75,13 +75,13 @@ func TestAccountStorageMapDomainExists(t *testing.T) {
 			atreeStorageValidationEnabled,
 		)
 
-		existingDomains := []string{common.PathDomainStorage.Identifier()}
+		existingDomains := []common.StorageDomain{common.PathDomainStorage.StorageDomain()}
 
 		const count = 10
 		accountStorageMap, _ := createAccountStorageMap(storage, inter, address, existingDomains, count, random)
 
 		// Check if domain exists
-		for _, domain := range runtime.AccountDomains {
+		for _, domain := range common.AllStorageDomains {
 			exist := accountStorageMap.DomainExists(domain)
 			require.Equal(t, slices.Contains(existingDomains, domain), exist)
 		}
@@ -115,7 +115,7 @@ func TestAccountStorageMapGetDomain(t *testing.T) {
 		require.NotNil(t, accountStorageMap)
 		require.Equal(t, uint64(0), accountStorageMap.Count())
 
-		for _, domain := range runtime.AccountDomains {
+		for _, domain := range common.AllStorageDomains {
 			const createIfNotExists = false
 			storagemap := accountStorageMap.GetDomain(nil, inter, domain, createIfNotExists)
 			require.Nil(t, storagemap)
@@ -142,12 +142,12 @@ func TestAccountStorageMapGetDomain(t *testing.T) {
 			atreeStorageValidationEnabled,
 		)
 
-		existingDomains := []string{common.PathDomainStorage.Identifier()}
+		existingDomains := []common.StorageDomain{common.PathDomainStorage.StorageDomain()}
 
 		const count = 10
 		accountStorageMap, accountValues := createAccountStorageMap(storage, inter, address, existingDomains, count, random)
 
-		for _, domain := range runtime.AccountDomains {
+		for _, domain := range common.AllStorageDomains {
 			const createIfNotExists = false
 			domainStoragemap := accountStorageMap.GetDomain(nil, inter, domain, createIfNotExists)
 			require.Equal(t, slices.Contains(existingDomains, domain), domainStoragemap != nil)
@@ -188,7 +188,7 @@ func TestAccountStorageMapCreateDomain(t *testing.T) {
 		require.NotNil(t, accountStorageMap)
 		require.Equal(t, uint64(0), accountStorageMap.Count())
 
-		for _, domain := range runtime.AccountDomains {
+		for _, domain := range common.AllStorageDomains {
 			const createIfNotExists = true
 			domainStoragemap := accountStorageMap.GetDomain(nil, inter, domain, createIfNotExists)
 			require.NotNil(t, domainStoragemap)
@@ -220,12 +220,12 @@ func TestAccountStorageMapCreateDomain(t *testing.T) {
 			atreeStorageValidationEnabled,
 		)
 
-		existingDomains := []string{common.PathDomainStorage.Identifier()}
+		existingDomains := []common.StorageDomain{common.PathDomainStorage.StorageDomain()}
 
 		const count = 10
 		accountStorageMap, accountValues := createAccountStorageMap(storage, inter, address, existingDomains, count, random)
 
-		for _, domain := range runtime.AccountDomains {
+		for _, domain := range common.AllStorageDomains {
 			const createIfNotExists = true
 			domainStoragemap := accountStorageMap.GetDomain(nil, inter, domain, createIfNotExists)
 			require.NotNil(t, domainStoragemap)
@@ -272,7 +272,7 @@ func TestAccountStorageMapSetAndUpdateDomain(t *testing.T) {
 		require.Equal(t, uint64(0), accountStorageMap.Count())
 
 		const count = 10
-		for _, domain := range runtime.AccountDomains {
+		for _, domain := range common.AllStorageDomains {
 
 			domainStorageMap := interpreter.NewDomainStorageMap(nil, storage, atree.Address(address))
 			domainValues := writeRandomValuesToDomainStorageMap(inter, domainStorageMap, count, random)
@@ -306,12 +306,12 @@ func TestAccountStorageMapSetAndUpdateDomain(t *testing.T) {
 			atreeStorageValidationEnabled,
 		)
 
-		existingDomains := []string{common.PathDomainStorage.Identifier()}
+		existingDomains := []common.StorageDomain{common.PathDomainStorage.StorageDomain()}
 
 		const count = 10
 		accountStorageMap, accountValues := createAccountStorageMap(storage, inter, address, existingDomains, count, random)
 
-		for _, domain := range runtime.AccountDomains {
+		for _, domain := range common.AllStorageDomains {
 
 			domainStorageMap := interpreter.NewDomainStorageMap(nil, storage, atree.Address(address))
 			domainValues := writeRandomValuesToDomainStorageMap(inter, domainStorageMap, count, random)
@@ -355,7 +355,7 @@ func TestAccountStorageMapRemoveDomain(t *testing.T) {
 		require.NotNil(t, accountStorageMap)
 		require.Equal(t, uint64(0), accountStorageMap.Count())
 
-		for _, domain := range runtime.AccountDomains {
+		for _, domain := range common.AllStorageDomains {
 			existed := accountStorageMap.WriteDomain(inter, domain, nil)
 			require.False(t, existed)
 		}
@@ -383,12 +383,12 @@ func TestAccountStorageMapRemoveDomain(t *testing.T) {
 			atreeStorageValidationEnabled,
 		)
 
-		existingDomains := []string{common.PathDomainStorage.Identifier()}
+		existingDomains := []common.StorageDomain{common.PathDomainStorage.StorageDomain()}
 
 		const count = 10
 		accountStorageMap, accountValues := createAccountStorageMap(storage, inter, address, existingDomains, count, random)
 
-		for _, domain := range runtime.AccountDomains {
+		for _, domain := range common.AllStorageDomains {
 
 			existed := accountStorageMap.WriteDomain(inter, domain, nil)
 			require.Equal(t, slices.Contains(existingDomains, domain), existed)
@@ -461,9 +461,9 @@ func TestAccountStorageMapIterator(t *testing.T) {
 			atreeStorageValidationEnabled,
 		)
 
-		existingDomains := []string{
-			common.PathDomainStorage.Identifier(),
-			common.PathDomainPublic.Identifier(),
+		existingDomains := []common.StorageDomain{
+			common.PathDomainStorage.StorageDomain(),
+			common.PathDomainPublic.StorageDomain(),
 		}
 
 		const count = 10
@@ -474,7 +474,7 @@ func TestAccountStorageMapIterator(t *testing.T) {
 		domainCount := 0
 		for {
 			domain, domainStorageMap := iterator.Next()
-			if domain == "" {
+			if domain == common.StorageDomainUnknown {
 				break
 			}
 
@@ -488,7 +488,7 @@ func TestAccountStorageMapIterator(t *testing.T) {
 
 		// Test calling Next() after iterator reaches the end.
 		domain, domainStorageMap := iterator.Next()
-		require.True(t, domain == "")
+		require.Equal(t, common.StorageDomainUnknown, domain)
 		require.Nil(t, domainStorageMap)
 
 		require.Equal(t, len(existingDomains), domainCount)
@@ -530,10 +530,10 @@ func TestAccountStorageMapDomains(t *testing.T) {
 		const atreeStorageValidationEnabled = false
 		inter := NewTestInterpreterWithStorageAndAtreeValidationConfig(t, storage, atreeValueValidationEnabled, atreeStorageValidationEnabled)
 
-		existingDomains := []string{
-			common.PathDomainStorage.Identifier(),
-			common.PathDomainPublic.Identifier(),
-			common.PathDomainPrivate.Identifier(),
+		existingDomains := []common.StorageDomain{
+			common.PathDomainStorage.StorageDomain(),
+			common.PathDomainPublic.StorageDomain(),
+			common.PathDomainPrivate.StorageDomain(),
 		}
 
 		const count = 10
@@ -590,10 +590,10 @@ func TestAccountStorageMapLoadFromRootSlabID(t *testing.T) {
 	})
 
 	t.Run("non-empty", func(t *testing.T) {
-		existingDomains := []string{
-			common.PathDomainStorage.Identifier(),
-			common.PathDomainPublic.Identifier(),
-			common.PathDomainPrivate.Identifier(),
+		existingDomains := []common.StorageDomain{
+			common.PathDomainStorage.StorageDomain(),
+			common.PathDomainPublic.StorageDomain(),
+			common.PathDomainPrivate.StorageDomain(),
 		}
 
 		init := func() (atree.SlabID, accountStorageMapValues, map[string][]byte, map[string]uint64) {
@@ -636,14 +636,14 @@ func TestAccountStorageMapLoadFromRootSlabID(t *testing.T) {
 
 type (
 	domainStorageMapValues  map[interpreter.StorageMapKey]interpreter.Value
-	accountStorageMapValues map[string]domainStorageMapValues
+	accountStorageMapValues map[common.StorageDomain]domainStorageMapValues
 )
 
 func createAccountStorageMap(
 	storage atree.SlabStorage,
 	inter *interpreter.Interpreter,
 	address common.Address,
-	domains []string,
+	domains []common.StorageDomain,
 	count int,
 	random *rand.Rand,
 ) (*interpreter.AccountStorageMap, accountStorageMapValues) {
@@ -710,7 +710,7 @@ func checkAccountStorageMapData(
 	iter := accountStorageMap.Iterator()
 	for {
 		domain, domainStorageMap := iter.Next()
-		if domain == "" {
+		if domain == common.StorageDomainUnknown {
 			break
 		}
 

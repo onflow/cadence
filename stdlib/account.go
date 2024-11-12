@@ -938,8 +938,6 @@ func newAccountKeysRevokeFunction(
 	}
 }
 
-const InboxStorageDomain = "inbox"
-
 func newAccountInboxPublishFunction(
 	inter *interpreter.Interpreter,
 	handler EventEmitter,
@@ -996,7 +994,7 @@ func newAccountInboxPublishFunction(
 
 				inter.WriteStored(
 					provider,
-					InboxStorageDomain,
+					common.StorageDomainInbox,
 					storageMapKey,
 					publishedValue,
 				)
@@ -1029,7 +1027,7 @@ func newAccountInboxUnpublishFunction(
 
 				storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
 
-				readValue := inter.ReadStored(provider, InboxStorageDomain, storageMapKey)
+				readValue := inter.ReadStored(provider, common.StorageDomainInbox, storageMapKey)
 				if readValue == nil {
 					return interpreter.Nil
 				}
@@ -1065,7 +1063,7 @@ func newAccountInboxUnpublishFunction(
 
 				inter.WriteStored(
 					provider,
-					InboxStorageDomain,
+					common.StorageDomainInbox,
 					storageMapKey,
 					nil,
 				)
@@ -1114,7 +1112,7 @@ func newAccountInboxClaimFunction(
 
 				storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
 
-				readValue := inter.ReadStored(providerAddress, InboxStorageDomain, storageMapKey)
+				readValue := inter.ReadStored(providerAddress, common.StorageDomainInbox, storageMapKey)
 				if readValue == nil {
 					return interpreter.Nil
 				}
@@ -1155,7 +1153,7 @@ func newAccountInboxClaimFunction(
 
 				inter.WriteStored(
 					providerAddress,
-					InboxStorageDomain,
+					common.StorageDomainInbox,
 					storageMapKey,
 					nil,
 				)
@@ -2983,10 +2981,6 @@ func IssueAccountCapabilityController(
 	return capabilityIDValue
 }
 
-// CapabilityControllerStorageDomain is the storage domain which stores
-// capability controllers by capability ID
-const CapabilityControllerStorageDomain = "cap_con"
-
 // storeCapabilityController stores a capability controller in the account's capability ID to controller storage map
 func storeCapabilityController(
 	inter *interpreter.Interpreter,
@@ -2998,7 +2992,7 @@ func storeCapabilityController(
 
 	existed := inter.WriteStored(
 		address,
-		CapabilityControllerStorageDomain,
+		common.StorageDomainCapabilityController,
 		storageMapKey,
 		controller,
 	)
@@ -3017,7 +3011,7 @@ func removeCapabilityController(
 
 	existed := inter.WriteStored(
 		address,
-		CapabilityControllerStorageDomain,
+		common.StorageDomainCapabilityController,
 		storageMapKey,
 		nil,
 	)
@@ -3045,7 +3039,7 @@ func getCapabilityController(
 
 	readValue := inter.ReadStored(
 		address,
-		CapabilityControllerStorageDomain,
+		common.StorageDomainCapabilityController,
 		storageMapKey,
 	)
 	if readValue == nil {
@@ -3225,10 +3219,6 @@ var capabilityIDSetStaticType = &interpreter.DictionaryStaticType{
 	ValueType: interpreter.NilStaticType,
 }
 
-// PathCapabilityStorageDomain is the storage domain which stores
-// capability ID dictionaries (sets) by storage path identifier
-const PathCapabilityStorageDomain = "path_cap"
-
 func recordStorageCapabilityController(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
@@ -3255,7 +3245,7 @@ func recordStorageCapabilityController(
 	storageMap := inter.Storage().GetStorageMap(
 		inter,
 		address,
-		PathCapabilityStorageDomain,
+		common.StorageDomainPathCapability,
 		true,
 	)
 
@@ -3298,7 +3288,7 @@ func getPathCapabilityIDSet(
 	storageMap := inter.Storage().GetStorageMap(
 		inter,
 		address,
-		PathCapabilityStorageDomain,
+		common.StorageDomainPathCapability,
 		false,
 	)
 	if storageMap == nil {
@@ -3349,7 +3339,7 @@ func unrecordStorageCapabilityController(
 		storageMap := inter.Storage().GetStorageMap(
 			inter,
 			address,
-			PathCapabilityStorageDomain,
+			common.StorageDomainPathCapability,
 			true,
 		)
 		if storageMap == nil {
@@ -3400,10 +3390,6 @@ func getStorageCapabilityControllerIDsIterator(
 	return
 }
 
-// AccountCapabilityStorageDomain is the storage domain which
-// records active account capability controller IDs
-const AccountCapabilityStorageDomain = "acc_cap"
-
 func recordAccountCapabilityController(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
@@ -3422,7 +3408,7 @@ func recordAccountCapabilityController(
 	storageMap := inter.Storage().GetStorageMap(
 		inter,
 		address,
-		AccountCapabilityStorageDomain,
+		common.StorageDomainAccountCapability,
 		true,
 	)
 
@@ -3450,7 +3436,7 @@ func unrecordAccountCapabilityController(
 	storageMap := inter.Storage().GetStorageMap(
 		inter,
 		address,
-		AccountCapabilityStorageDomain,
+		common.StorageDomainAccountCapability,
 		true,
 	)
 
@@ -3470,7 +3456,7 @@ func getAccountCapabilityControllerIDsIterator(
 	storageMap := inter.Storage().GetStorageMap(
 		inter,
 		address,
-		AccountCapabilityStorageDomain,
+		common.StorageDomainAccountCapability,
 		false,
 	)
 	if storageMap == nil {
@@ -3537,7 +3523,7 @@ func newAccountCapabilitiesPublishFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				domain := pathValue.Domain.Identifier()
+				domain := pathValue.Domain.StorageDomain()
 				identifier := pathValue.Identifier
 
 				capabilityType, ok := capabilityValue.StaticType(inter).(*interpreter.CapabilityStaticType)
@@ -3656,7 +3642,7 @@ func newAccountCapabilitiesUnpublishFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				domain := pathValue.Domain.Identifier()
+				domain := pathValue.Domain.StorageDomain()
 				identifier := pathValue.Identifier
 
 				// Read/remove capability
@@ -3930,7 +3916,7 @@ func newAccountCapabilitiesGetFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				domain := pathValue.Domain.Identifier()
+				domain := pathValue.Domain.StorageDomain()
 				identifier := pathValue.Identifier
 
 				// Get borrow type type argument
@@ -4115,7 +4101,7 @@ func newAccountCapabilitiesExistsFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				domain := pathValue.Domain.Identifier()
+				domain := pathValue.Domain.StorageDomain()
 				identifier := pathValue.Identifier
 
 				// Read stored capability, if any
@@ -4433,10 +4419,6 @@ func newAccountCapabilityControllerDeleteFunction(
 	}
 }
 
-// CapabilityControllerTagStorageDomain is the storage domain which stores
-// capability controller tags by capability ID
-const CapabilityControllerTagStorageDomain = "cap_tag"
-
 func getCapabilityControllerTag(
 	inter *interpreter.Interpreter,
 	address common.Address,
@@ -4445,7 +4427,7 @@ func getCapabilityControllerTag(
 
 	value := inter.ReadStored(
 		address,
-		CapabilityControllerTagStorageDomain,
+		common.StorageDomainCapabilityControllerTag,
 		interpreter.Uint64StorageMapKey(capabilityID),
 	)
 	if value == nil {
@@ -4507,7 +4489,7 @@ func setCapabilityControllerTag(
 
 	inter.WriteStored(
 		address,
-		CapabilityControllerTagStorageDomain,
+		common.StorageDomainCapabilityControllerTag,
 		interpreter.Uint64StorageMapKey(capabilityID),
 		value,
 	)

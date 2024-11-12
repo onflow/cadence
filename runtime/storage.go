@@ -30,12 +30,10 @@ import (
 	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/stdlib"
 )
 
 const (
-	StorageDomainContract = "contract"
-	AccountStorageKey     = "stored"
+	AccountStorageKey = "stored"
 )
 
 type Storage struct {
@@ -55,7 +53,7 @@ type Storage struct {
 
 	// cachedDomainStorageMaps is a cache of domain storage maps.
 	// Key is StorageKey{address, domain} and value is domain storage map.
-	cachedDomainStorageMaps map[interpreter.StorageKey]*interpreter.DomainStorageMap
+	cachedDomainStorageMaps map[interpreter.StorageDomainKey]*interpreter.DomainStorageMap
 
 	// contractUpdates is a cache of contract updates.
 	// Key is StorageKey{contract_address, contract_name} and value is contract composite value.
@@ -102,7 +100,7 @@ func NewStorage(ledger atree.Ledger, memoryGauge common.MemoryGauge) *Storage {
 		Ledger:                   ledger,
 		PersistentSlabStorage:    persistentSlabStorage,
 		cachedAccountStorageMaps: map[interpreter.StorageKey]*interpreter.AccountStorageMap{},
-		cachedDomainStorageMaps:  map[interpreter.StorageKey]*interpreter.DomainStorageMap{},
+		cachedDomainStorageMaps:  map[interpreter.StorageDomainKey]*interpreter.DomainStorageMap{},
 		memoryGauge:              memoryGauge,
 	}
 }
@@ -113,7 +111,7 @@ const storageIndexLength = 8
 func (s *Storage) GetStorageMap(
 	inter *interpreter.Interpreter,
 	address common.Address,
-	domain string,
+	domain common.StorageDomain,
 	createIfNotExists bool,
 ) (
 	storageMap *interpreter.DomainStorageMap,
@@ -178,7 +176,7 @@ func (s *Storage) GetStorageMap(
 
 	// Get cached domain storage map if it exists.
 
-	domainStorageKey := interpreter.NewStorageKey(s.memoryGauge, address, domain)
+	domainStorageKey := interpreter.NewStorageDomainKey(s.memoryGauge, address, domain)
 
 	if domainStorageMap := s.cachedDomainStorageMaps[domainStorageKey]; domainStorageMap != nil {
 		return domainStorageMap
@@ -217,14 +215,6 @@ func (s *Storage) GetStorageMap(
 
 	if domainStorageMap != nil {
 		// This is a unmigrated account with given domain register.
-
-		// Sanity check that domain is among expected domains.
-		if _, exist := accountDomainsSet[domain]; !exist {
-			// TODO: maybe also log unexpected domain.
-			panic(errors.NewUnexpectedError(
-				"unexpected domain %s exists for account %s", domain, address.String(),
-			))
-		}
 
 		// Cache domain storage map
 		s.cachedDomainStorageMaps[domainStorageKey] = domainStorageMap
@@ -324,9 +314,12 @@ func getDomainStorageMapFromLegacyDomainRegister(
 	ledger atree.Ledger,
 	storage atree.SlabStorage,
 	address common.Address,
-	domain string,
+	domain common.StorageDomain,
 ) (*interpreter.DomainStorageMap, error) {
-	domainStorageSlabIndex, domainRegisterExists, err := getSlabIndexFromRegisterValue(ledger, address, []byte(domain))
+	domainStorageSlabIndex, domainRegisterExists, err := getSlabIndexFromRegisterValue(
+		ledger,
+		address,
+		[]byte(domain.Identifier()))
 	if err != nil {
 		return nil, err
 	}
@@ -362,8 +355,11 @@ func (s *Storage) isUnmigratedAccount(address common.Address) (bool, error) {
 	}
 
 	// Check most frequently used domains first, such as storage, public, private.
-	for _, domain := range AccountDomains {
-		_, domainExists, err := getSlabIndexFromRegisterValue(s.Ledger, address, []byte(domain))
+	for _, domain := range common.AllStorageDomains {
+		_, domainExists, err := getSlabIndexFromRegisterValue(
+			s.Ledger,
+			address,
+			[]byte(domain.Identifier()))
 		if err != nil {
 			return false, err
 		}
@@ -470,7 +466,7 @@ func (s *Storage) writeContractUpdate(
 	key interpreter.StorageKey,
 	contractValue *interpreter.CompositeValue,
 ) {
-	storageMap := s.GetStorageMap(inter, key.Address, StorageDomainContract, true)
+	storageMap := s.GetStorageMap(inter, key.Address, common.StorageDomainContract, true)
 	// NOTE: pass nil instead of allocating a Value-typed  interface that points to nil
 	storageMapKey := interpreter.StringStorageMapKey(key.Key)
 	if contractValue == nil {
@@ -571,9 +567,9 @@ func (s *Storage) migrateAccounts(inter *interpreter.Interpreter) error {
 		ledger atree.Ledger,
 		storage atree.SlabStorage,
 		address common.Address,
-		domain string,
+		domain common.StorageDomain,
 	) (*interpreter.DomainStorageMap, error) {
-		domainStorageKey := interpreter.NewStorageKey(s.memoryGauge, address, domain)
+		domainStorageKey := interpreter.NewStorageDomainKey(s.memoryGauge, address, domain)
 
 		// Get cached domain storage map if available.
 		domainStorageMap := s.cachedDomainStorageMaps[domainStorageKey]
@@ -726,23 +722,3 @@ func (UnreferencedRootSlabsError) IsInternalError() {}
 func (e UnreferencedRootSlabsError) Error() string {
 	return fmt.Sprintf("slabs not referenced: %s", e.UnreferencedRootSlabIDs)
 }
-
-var AccountDomains = []string{
-	common.PathDomainStorage.Identifier(),
-	common.PathDomainPrivate.Identifier(),
-	common.PathDomainPublic.Identifier(),
-	StorageDomainContract,
-	stdlib.InboxStorageDomain,
-	stdlib.CapabilityControllerStorageDomain,
-	stdlib.CapabilityControllerTagStorageDomain,
-	stdlib.PathCapabilityStorageDomain,
-	stdlib.AccountCapabilityStorageDomain,
-}
-
-var accountDomainsSet = func() map[string]struct{} {
-	m := make(map[string]struct{})
-	for _, domain := range AccountDomains {
-		m[domain] = struct{}{}
-	}
-	return m
-}()
