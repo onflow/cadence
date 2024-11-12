@@ -300,3 +300,23 @@ func TestCheckInvalidTypeIndexing(t *testing.T) {
 
 	assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 }
+
+func TestCheckInvalidRemove(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      struct S {}
+
+      attachment A for S {}
+
+      fun test() {
+          let s = S()
+          remove B from s
+      }
+    `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+}
