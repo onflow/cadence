@@ -23,7 +23,10 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/rand"
+	"slices"
 	"sort"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/onflow/atree"
@@ -36,6 +39,7 @@ import (
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
@@ -67,10 +71,10 @@ func withWritesToStorage(
 		var slabIndex atree.SlabIndex
 		binary.BigEndian.PutUint32(slabIndex[:], randomIndex)
 
-		if storage.NewStorageMaps == nil {
-			storage.NewStorageMaps = &orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]{}
+		if storage.NewAccountStorageMapSlabIndices == nil {
+			storage.NewAccountStorageMapSlabIndices = &orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]{}
 		}
-		storage.NewStorageMaps.Set(storageKey, slabIndex)
+		storage.NewAccountStorageMapSlabIndices.Set(storageKey, slabIndex)
 	}
 
 	handler(storage, inter)
@@ -197,15 +201,21 @@ func TestRuntimeStorageWrite(t *testing.T) {
 
 	assert.Equal(t,
 		[]ownerKeyPair{
-			// storage index to storage domain storage map
+			// storage index to account storage map
 			{
 				[]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
-				[]byte("storage"),
+				[]byte(AccountStorageKey),
 			},
 			// storage domain storage map
+			// NOTE: storage domain storage map is empty because it is inlined in account storage map
 			{
 				[]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
 				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+			},
+			// account storage map
+			{
+				[]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
 			},
 		},
 		writes,
@@ -1766,18 +1776,18 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 	assert.Equal(t,
 		[]string{
 			// account 0x1:
-			// NOTE: with atree inlining, contract is inlined in contract map
-			//     storage map (domain key + map slab)
-			//   + contract map (domain key + map slab)
+			// NOTE: with account storage map and atree inlining,
+			//   both storage domain storage map (with inlined storage data)
+			//   and contract domain storage map (with inlined contract data)
+			//   are inlined in account storage map.
 			"\x00\x00\x00\x00\x00\x00\x00\x01|$\x00\x00\x00\x00\x00\x00\x00\x02",
-			"\x00\x00\x00\x00\x00\x00\x00\x01|$\x00\x00\x00\x00\x00\x00\x00\x04",
-			"\x00\x00\x00\x00\x00\x00\x00\x01|contract",
-			"\x00\x00\x00\x00\x00\x00\x00\x01|storage",
+			"\x00\x00\x00\x00\x00\x00\x00\x01|stored",
 			// account 0x2
-			// NOTE: with atree inlining, resource is inlined in storage map
-			//     storage map (domain key + map slab)
+			// NOTE: with account storage map and atree inlining,
+			//   storage domain storage map (with inlined resource)
+			//   is inlined in account storage map.
 			"\x00\x00\x00\x00\x00\x00\x00\x02|$\x00\x00\x00\x00\x00\x00\x00\x02",
-			"\x00\x00\x00\x00\x00\x00\x00\x02|storage",
+			"\x00\x00\x00\x00\x00\x00\x00\x02|stored",
 		},
 		nonEmptyKeys,
 	)
@@ -3100,7 +3110,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	storageMap := storage.GetStorageMap(address, common.PathDomainStorage.Identifier(), false)
+	storageMap := storage.GetStorageMap(inter, address, common.PathDomainStorage.Identifier(), false)
 	require.NotNil(t, storageMap)
 
 	// Read first
@@ -6228,4 +6238,1789 @@ func TestRuntimeStorageReferenceAccess(t *testing.T) {
 		RequireError(t, err)
 		require.ErrorAs(t, err, &interpreter.DereferenceError{})
 	})
+}
+
+type (
+	domainStorageMapValues  map[interpreter.StorageMapKey]interpreter.Value
+	accountStorageMapValues map[string]domainStorageMapValues
+)
+
+func TestRuntimeStorageForNewAccount(t *testing.T) {
+	t.Parallel()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	// This test reads non-existent domain storage map and commit changes.
+	// pre-condition: empty storage
+	// post-condition: empty storage
+	// migration: no migration
+	t.Run("read non-existent domain storage map", func(t *testing.T) {
+
+		var writeCount int
+
+		// Create empty storage
+		ledger := NewTestLedger(nil, LedgerOnWriteCounter(&writeCount))
+		storage := NewStorage(ledger, nil)
+
+		inter := NewTestInterpreterWithStorage(t, storage)
+
+		domain := common.PathDomainStorage.Identifier()
+
+		// Get non-existent domain storage map
+		const createIfNotExists = false
+		domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+		require.Nil(t, domainStorageMap)
+
+		// Commit changes
+		const commitContractUpdates = false
+		err := storage.Commit(inter, commitContractUpdates)
+		require.NoError(t, err)
+
+		// Check storage health
+		err = storage.CheckHealth()
+		require.NoError(t, err)
+
+		// Check number of writes to underlying storage
+		require.Equal(t, 0, writeCount)
+	})
+
+	// This test creates and writes to new domain storage map and commit changes.
+	// pre-condition: empty storage
+	// post-condition: storage containing
+	//  - account register
+	//  - account storage map
+	//  - zero or more non-inlined domain storage map
+	// migration: no migraiton for new account.
+	createDomainTestCases := []struct {
+		name                  string
+		newDomains            []string
+		domainStorageMapCount int
+		inlined               bool
+	}{
+		{name: "empty domain storage map", newDomains: []string{common.PathDomainStorage.Identifier()}, domainStorageMapCount: 0, inlined: true},
+		{name: "small domain storage map", newDomains: []string{common.PathDomainStorage.Identifier()}, domainStorageMapCount: 10, inlined: true},
+		{name: "large domain storage map", newDomains: []string{common.PathDomainStorage.Identifier()}, domainStorageMapCount: 20, inlined: false},
+	}
+
+	for _, tc := range createDomainTestCases {
+		t.Run("create "+tc.name, func(t *testing.T) {
+
+			var writeEntries []OwnerKeyValue
+
+			// Create empty storage
+			ledger := NewTestLedger(nil, LedgerOnWriteEntries(&writeEntries))
+			storage := NewStorage(ledger, nil)
+
+			inter := NewTestInterpreterWithStorage(t, storage)
+
+			random := rand.New(rand.NewSource(42))
+
+			accountValues := make(accountStorageMapValues)
+
+			// Create and write to domain storage map (createIfNotExists is true)
+			for _, domain := range tc.newDomains {
+				// Create new domain storage map
+				const createIfNotExists = true
+				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				require.NotNil(t, domainStorageMap)
+				require.Equal(t, uint64(0), domainStorageMap.Count())
+
+				// Write to domain storage map
+				accountValues[domain] = writeToDomainStorageMap(inter, domainStorageMap, tc.domainStorageMapCount, random)
+			}
+
+			// Commit changes
+			const commitContractUpdates = false
+			err := storage.Commit(inter, commitContractUpdates)
+			require.NoError(t, err)
+
+			// Check storage health after commit
+			err = storage.CheckHealth()
+			require.NoError(t, err)
+
+			// Check writes to underlying storage
+			require.Equal(t, 2+len(tc.newDomains), len(writeEntries))
+
+			// writes[0]: account register
+			require.Equal(t, address[:], writeEntries[0].Owner)
+			require.Equal(t, []byte(AccountStorageKey), writeEntries[0].Key)
+			require.Equal(t, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}, writeEntries[0].Value)
+
+			// writes[1]: account storage map
+			require.Equal(t, address[:], writeEntries[1].Owner)
+			require.Equal(t, []byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}, writeEntries[1].Key)
+			require.True(t, len(writeEntries[1].Value) > 0)
+
+			for i := range len(tc.newDomains) {
+				// writes[2+i]: domain storage map
+
+				writeEntryIndex := 2 + i
+				owner := writeEntries[writeEntryIndex].Owner
+				key := writeEntries[writeEntryIndex].Key
+				value := writeEntries[writeEntryIndex].Value
+
+				var slabKey [9]byte
+				slabKey[0] = '$'
+				binary.BigEndian.PutUint64(slabKey[1:], uint64(2+i))
+
+				require.Equal(t, address[:], owner)
+				require.Equal(t, slabKey[:], key)
+
+				// Domain storage map value is empty if it is inlined in account storage map
+				if tc.inlined {
+					require.True(t, len(value) == 0)
+				} else {
+					require.True(t, len(value) > 0)
+				}
+			}
+
+			// Verify account storage map data
+			checkAccountStorageMapData(t, ledger.StoredValues, ledger.StorageIndices, address, accountValues)
+		})
+	}
+
+	// This test tests storage map operations with intermittent Commit():
+	// - create domain storage map and commit
+	// - write to domain storage map and commit
+	// - remove all elements from domain storage map and commit
+	// - read domain storage map and commit
+	t.Run("create, commit, write, commit, remove, commit", func(t *testing.T) {
+		// Create empty storage
+		ledger := NewTestLedger(nil, nil)
+		storage := NewStorage(ledger, nil)
+
+		inter := NewTestInterpreterWithStorage(t, storage)
+
+		random := rand.New(rand.NewSource(42))
+
+		accountValues := make(accountStorageMapValues)
+
+		domains := []string{
+			common.PathDomainStorage.Identifier(),
+			common.PathDomainPublic.Identifier(),
+		}
+
+		// Create empty domain storage map and commit
+		{
+			for _, domain := range domains {
+				const createIfNotExists = true
+				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				require.NotNil(t, domainStorageMap)
+				require.Equal(t, uint64(0), domainStorageMap.Count())
+
+				accountValues[domain] = make(domainStorageMapValues)
+			}
+
+			// Commit changes
+			const commitContractUpdates = false
+			err := storage.Commit(inter, commitContractUpdates)
+			require.NoError(t, err)
+
+			// Check storage health after commit
+			err = storage.CheckHealth()
+			require.NoError(t, err)
+
+			// Verify account storage map data
+			checkAccountStorageMapData(t, ledger.StoredValues, ledger.StorageIndices, address, accountValues)
+		}
+
+		// Write to existing domain storage map and commit
+		{
+			for _, domain := range domains {
+				const createIfNotExists = false
+				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				require.NotNil(t, domainStorageMap)
+				require.Equal(t, uint64(0), domainStorageMap.Count())
+
+				// Write to domain storage map
+				const domainStorageMapCount = 2
+				accountValues[domain] = writeToDomainStorageMap(inter, domainStorageMap, domainStorageMapCount, random)
+			}
+
+			// Commit changes
+			const commitContractUpdates = false
+			err := storage.Commit(inter, commitContractUpdates)
+			require.NoError(t, err)
+
+			// Check storage health after commit
+			err = storage.CheckHealth()
+			require.NoError(t, err)
+
+			// Verify account storage map data
+			checkAccountStorageMapData(t, ledger.StoredValues, ledger.StorageIndices, address, accountValues)
+		}
+
+		// Remove all elements from existing domain storage map and commit
+		{
+			for _, domain := range domains {
+				const createIfNotExists = false
+				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				require.NotNil(t, domainStorageMap)
+
+				expectedDomainValues := accountValues[domain]
+				require.Equal(t, uint64(len(expectedDomainValues)), domainStorageMap.Count())
+
+				// Remove elements from domain storage map
+				for k := range expectedDomainValues {
+					existed := domainStorageMap.WriteValue(inter, k, nil)
+					require.True(t, existed)
+
+					delete(expectedDomainValues, k)
+				}
+			}
+
+			// Commit changes
+			const commitContractUpdates = false
+			err := storage.Commit(inter, commitContractUpdates)
+			require.NoError(t, err)
+
+			// Check storage health after commit
+			err = storage.CheckHealth()
+			require.NoError(t, err)
+
+			// Verify account storage map data
+			checkAccountStorageMapData(t, ledger.StoredValues, ledger.StorageIndices, address, accountValues)
+		}
+
+		// Read domain storage map and commit
+		{
+			for _, domain := range domains {
+				const createIfNotExists = false
+				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				require.NotNil(t, domainStorageMap)
+				require.Equal(t, uint64(0), domainStorageMap.Count())
+			}
+
+			// Commit changes
+			const commitContractUpdates = false
+			err := storage.Commit(inter, commitContractUpdates)
+			require.NoError(t, err)
+
+			// Check storage health after commit
+			err = storage.CheckHealth()
+			require.NoError(t, err)
+
+			// Verify account storage map data
+			checkAccountStorageMapData(t, ledger.StoredValues, ledger.StorageIndices, address, accountValues)
+		}
+	})
+}
+
+func TestRuntimeStorageForMigratedAccount(t *testing.T) {
+	t.Parallel()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	// newTestLedgerWithMigratedAccount creates a new TestLedger containing
+	// account storage map with given domains for given address.
+	newTestLedgerWithMigratedAccount := func(
+		onRead LedgerOnRead,
+		onWrite LedgerOnWrite,
+		address common.Address,
+		domains []string,
+		domainStorageMapCount int,
+	) (TestLedger, accountStorageMapValues) {
+		ledger := NewTestLedger(nil, nil)
+		storage := NewStorage(ledger, nil)
+
+		inter := NewTestInterpreterWithStorage(t, storage)
+
+		random := rand.New(rand.NewSource(42))
+
+		accountValues := createAndWriteAccountStorageMap(t, storage, inter, address, domains, domainStorageMapCount, random)
+
+		newLedger := NewTestLedgerWithData(onRead, onWrite, ledger.StoredValues, ledger.StorageIndices)
+
+		return newLedger, accountValues
+	}
+
+	// This test reads non-existent domain storage map and commit changes.
+	// pre-condition: storage contains account register and account storage map
+	// post-condition: no change
+	// migration: none
+	t.Run("read non-existent domain storage map", func(t *testing.T) {
+		existingDomains := []string{
+			common.PathDomainStorage.Identifier(),
+		}
+
+		nonexistentDomain := common.PathDomainPublic.Identifier()
+
+		var writeCount int
+
+		// Create storage with account storage map
+		const domainStorageMapCount = 5
+		ledger, _ := newTestLedgerWithMigratedAccount(
+			nil,
+			LedgerOnWriteCounter(&writeCount),
+			address,
+			existingDomains,
+			domainStorageMapCount)
+		storage := NewStorage(ledger, nil)
+
+		inter := NewTestInterpreterWithStorage(t, storage)
+
+		// Get non-existent domain storage map
+		const createIfNotExists = false
+		domainStorageMap := storage.GetStorageMap(inter, address, nonexistentDomain, createIfNotExists)
+		require.Nil(t, domainStorageMap)
+
+		// Commit changes
+		const commitContractUpdates = false
+		err := storage.Commit(inter, commitContractUpdates)
+		require.NoError(t, err)
+
+		// Check writes to underlying storage
+		require.Equal(t, 0, writeCount)
+	})
+
+	// This test reads existing domain storage map and commit changes.
+	// pre-condition: storage contains account register and account storage map
+	// post-condition: no change
+	// migration: none
+	readExistingDomainTestCases := []struct {
+		name              string
+		createIfNotExists bool
+	}{
+		{name: "(createIfNotExists is true)", createIfNotExists: true},
+		{name: "(createIfNotExists is false)", createIfNotExists: false},
+	}
+
+	for _, tc := range readExistingDomainTestCases {
+		t.Run("read existing domain storage map "+tc.name, func(t *testing.T) {
+
+			existingDomains := []string{common.PathDomainStorage.Identifier()}
+
+			var writeCount int
+
+			// Create storage with account storage map
+			const domainStorageMapCount = 5
+			ledger, accountValues := newTestLedgerWithMigratedAccount(
+				nil,
+				LedgerOnWriteCounter(&writeCount),
+				address,
+				existingDomains,
+				domainStorageMapCount,
+			)
+			storage := NewStorage(ledger, nil)
+
+			inter := NewTestInterpreterWithStorage(t, storage)
+
+			// Read existing domain storage map
+			for domain, domainValues := range accountValues {
+				domainStorageMap := storage.GetStorageMap(inter, address, domain, tc.createIfNotExists)
+				require.NotNil(t, domainStorageMap)
+				require.Equal(t, uint64(len(domainValues)), domainStorageMap.Count())
+
+				for k, expectedV := range domainValues {
+					v := domainStorageMap.ReadValue(nil, k)
+					ev, ok := v.(interpreter.EquatableValue)
+					require.True(t, ok)
+					require.True(t, ev.Equal(inter, interpreter.EmptyLocationRange, expectedV))
+				}
+			}
+
+			// Commit changes
+			const commitContractUpdates = false
+			err := storage.Commit(inter, commitContractUpdates)
+			require.NoError(t, err)
+
+			// Check storage health after commit
+			err = storage.CheckHealth()
+			require.NoError(t, err)
+
+			// Check writes to underlying storage
+			require.Equal(t, 0, writeCount)
+		})
+	}
+
+	// This test creates and writes to new domain storage map and commit changes.
+	// pre-condition: storage contains account register and account storage map
+	// post-condition: storage contains
+	//  - account register
+	//  - account storage map with new domain storage map.
+	createDomainTestCases := []struct {
+		name                          string
+		existingDomains               []string
+		newDomains                    []string
+		existingDomainStorageMapCount int
+		newDomainStorageMapCount      int
+		isNewDomainStorageMapInlined  bool
+	}{
+		{
+			name:                          "empty domain storage map",
+			existingDomains:               []string{common.PathDomainStorage.Identifier()},
+			existingDomainStorageMapCount: 5,
+			newDomains:                    []string{common.PathDomainPublic.Identifier()},
+			newDomainStorageMapCount:      0,
+			isNewDomainStorageMapInlined:  true,
+		},
+		{
+			name:                          "small domain storage map",
+			existingDomains:               []string{common.PathDomainStorage.Identifier()},
+			existingDomainStorageMapCount: 5,
+			newDomains:                    []string{common.PathDomainPublic.Identifier()},
+			newDomainStorageMapCount:      10,
+			isNewDomainStorageMapInlined:  true,
+		},
+		{
+			name:                          "large domain storage map",
+			existingDomains:               []string{common.PathDomainStorage.Identifier()},
+			existingDomainStorageMapCount: 5,
+			newDomains:                    []string{common.PathDomainPublic.Identifier()},
+			newDomainStorageMapCount:      20,
+			isNewDomainStorageMapInlined:  false,
+		},
+	}
+
+	for _, tc := range createDomainTestCases {
+		t.Run("create and write "+tc.name, func(t *testing.T) {
+
+			var writeEntries []OwnerKeyValue
+
+			// Create storage with existing account storage map
+			ledger, accountValues := newTestLedgerWithMigratedAccount(
+				nil,
+				LedgerOnWriteEntries(&writeEntries),
+				address,
+				tc.existingDomains,
+				tc.existingDomainStorageMapCount,
+			)
+			storage := NewStorage(ledger, nil)
+
+			inter := NewTestInterpreterWithStorage(t, storage)
+
+			lastIndex := ledger.StorageIndices[string(address[:])]
+
+			random := rand.New(rand.NewSource(42))
+
+			// Create and write to domain storage map (createIfNotExists is true)
+			for _, domain := range tc.newDomains {
+				const createIfNotExists = true
+				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				require.NotNil(t, domainStorageMap)
+				require.Equal(t, uint64(0), domainStorageMap.Count())
+
+				// Write elements to to domain storage map
+				accountValues[domain] = writeToDomainStorageMap(inter, domainStorageMap, tc.newDomainStorageMapCount, random)
+			}
+
+			// Commit changes
+			const commitContractUpdates = false
+			err := storage.Commit(inter, commitContractUpdates)
+			require.NoError(t, err)
+
+			// Check storage health after commit
+			err = storage.CheckHealth()
+			require.NoError(t, err)
+
+			// Check writes to underlying storage
+			require.Equal(t, 1+len(tc.newDomains), len(writeEntries))
+
+			// writes[0]: account storage map
+			// account storage map is updated to include new domains.
+			require.Equal(t, address[:], writeEntries[0].Owner)
+			require.Equal(t, []byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}, writeEntries[0].Key)
+			require.True(t, len(writeEntries[0].Value) > 0)
+
+			for i := range len(tc.newDomains) {
+				// writes[1+i]: domain storage map
+				// domain storage map value is empty if it is inlined in account storage map
+
+				writeEntryIndex := 1 + i
+				owner := writeEntries[writeEntryIndex].Owner
+				key := writeEntries[writeEntryIndex].Key
+				value := writeEntries[writeEntryIndex].Value
+
+				var slabKey [9]byte
+				slabKey[0] = '$'
+				binary.BigEndian.PutUint64(slabKey[1:], lastIndex+1+uint64(i))
+
+				require.Equal(t, address[:], owner)
+				require.Equal(t, slabKey[:], key)
+
+				if tc.isNewDomainStorageMapInlined {
+					require.True(t, len(value) == 0)
+				} else {
+					require.True(t, len(value) > 0)
+				}
+			}
+
+			// Verify account storage map data
+			checkAccountStorageMapData(t, ledger.StoredValues, ledger.StorageIndices, address, accountValues)
+		})
+	}
+
+	// This test reads and writes to existing domain storage map and commit changes.
+	// pre-condition: storage contains account register and account storage map
+	// post-condition: storage contains
+	//  - account register
+	//  - account storage map with updated domain storage map.
+	t.Run("read and write to existing domain storage map", func(t *testing.T) {
+
+		var writeEntries []OwnerKeyValue
+
+		existingDomains := []string{common.PathDomainStorage.Identifier()}
+		const existingDomainStorageMapCount = 5
+
+		// Create storage with account storage map
+		ledger, accountValues := newTestLedgerWithMigratedAccount(
+			nil,
+			LedgerOnWriteEntries(&writeEntries),
+			address,
+			existingDomains,
+			existingDomainStorageMapCount,
+		)
+		storage := NewStorage(ledger, nil)
+
+		inter := NewTestInterpreterWithStorage(t, storage)
+
+		random := rand.New(rand.NewSource(42))
+
+		// Write to existing domain storage map (createIfNotExists is false)
+		for _, domain := range existingDomains {
+			const createIfNotExists = false
+			domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+			require.NotNil(t, domainStorageMap)
+
+			domainValues := accountValues[domain]
+
+			require.Equal(t, uint64(len(domainValues)), domainStorageMap.Count())
+
+			domainKeys := make([]interpreter.StorageMapKey, 0, len(domainValues))
+			for k := range domainValues { //nolint:maprange
+				domainKeys = append(domainKeys, k)
+			}
+
+			// Update or remove existing elements
+			for i, k := range domainKeys {
+				if i%2 == 0 {
+					n := random.Int()
+					newValue := interpreter.NewUnmeteredIntValueFromInt64(int64(n))
+
+					// Update existing element
+					existed := domainStorageMap.WriteValue(inter, k, newValue)
+					require.True(t, existed)
+
+					domainValues[k] = newValue
+				} else {
+					// Remove existing element
+					existed := domainStorageMap.WriteValue(inter, k, nil)
+					require.True(t, existed)
+
+					delete(domainValues, k)
+				}
+			}
+
+			// Write new elements
+			const newElementCount = 2
+			newDomainValues := writeToDomainStorageMap(inter, domainStorageMap, newElementCount, random)
+
+			for k, v := range newDomainValues {
+				domainValues[k] = v
+			}
+		}
+
+		// Commit changes
+		const commitContractUpdates = false
+		err := storage.Commit(inter, commitContractUpdates)
+		require.NoError(t, err)
+
+		// Check storage health after commit
+		err = storage.CheckHealth()
+		require.NoError(t, err)
+
+		// Check writes to underlying storage
+		require.Equal(t, 1, len(writeEntries))
+
+		// writes[0]: account storage map
+		// account storage map is updated because inlined domain storage map is updated.
+		require.Equal(t, address[:], writeEntries[0].Owner)
+		require.Equal(t, []byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}, writeEntries[0].Key)
+		require.True(t, len(writeEntries[0].Value) > 0)
+
+		// Verify account storage map data
+		checkAccountStorageMapData(t, ledger.StoredValues, ledger.StorageIndices, address, accountValues)
+	})
+
+	// This test tests storage map operations with intermittent Commit():
+	// - read domain storage map and commit
+	// - write to domain storage map and commit
+	// - remove all elements from domain storage map and commit
+	// - read domain storage map and commit
+	t.Run("read, commit, update, commit, remove, commit", func(t *testing.T) {
+
+		domains := []string{
+			common.PathDomainStorage.Identifier(),
+			common.PathDomainPublic.Identifier(),
+		}
+		const domainStorageMapCount = 5
+
+		// Create storage with existing account storage map
+		ledger, accountValues := newTestLedgerWithMigratedAccount(
+			nil,
+			nil,
+			address,
+			domains,
+			domainStorageMapCount,
+		)
+		storage := NewStorage(ledger, nil)
+
+		inter := NewTestInterpreterWithStorage(t, storage)
+
+		random := rand.New(rand.NewSource(42))
+
+		// Read domain storage map and commit
+		{
+			for _, domain := range domains {
+				const createIfNotExists = false
+				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				require.NotNil(t, domainStorageMap)
+
+				domainValues := accountValues[domain]
+
+				require.Equal(t, uint64(len(domainValues)), domainStorageMap.Count())
+
+				for k, expectedValue := range domainValues {
+					v := domainStorageMap.ReadValue(nil, k)
+					ev := v.(interpreter.EquatableValue)
+					require.True(t, ev.Equal(inter, interpreter.EmptyLocationRange, expectedValue))
+				}
+			}
+
+			// Commit changes
+			const commitContractUpdates = false
+			err := storage.Commit(inter, commitContractUpdates)
+			require.NoError(t, err)
+
+			// Check storage health after commit
+			err = storage.CheckHealth()
+			require.NoError(t, err)
+
+			// Verify account storage map data
+			checkAccountStorageMapData(t, ledger.StoredValues, ledger.StorageIndices, address, accountValues)
+		}
+
+		// Write to existing domain storage map and commit
+		{
+			for _, domain := range domains {
+				const createIfNotExists = false
+				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				require.NotNil(t, domainStorageMap)
+
+				domainValues := accountValues[domain]
+				require.Equal(t, uint64(len(domainValues)), domainStorageMap.Count())
+
+				// Write to domain storage map
+				const domainStorageMapCount = 2
+				newDomainValues := writeToDomainStorageMap(inter, domainStorageMap, domainStorageMapCount, random)
+				for k, v := range newDomainValues {
+					domainValues[k] = v
+				}
+			}
+
+			// Commit changes
+			const commitContractUpdates = false
+			err := storage.Commit(inter, commitContractUpdates)
+			require.NoError(t, err)
+
+			// Check storage health after commit
+			err = storage.CheckHealth()
+			require.NoError(t, err)
+
+			// Verify account storage map data
+			checkAccountStorageMapData(t, ledger.StoredValues, ledger.StorageIndices, address, accountValues)
+		}
+
+		// Remove all elements from existing domain storage map and commit
+		{
+			for _, domain := range domains {
+				const createIfNotExists = false
+				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				require.NotNil(t, domainStorageMap)
+
+				expectedDomainValues := accountValues[domain]
+				require.Equal(t, uint64(len(expectedDomainValues)), domainStorageMap.Count())
+
+				// Remove elements from domain storage map
+				for k := range expectedDomainValues {
+					existed := domainStorageMap.WriteValue(inter, k, nil)
+					require.True(t, existed)
+
+					delete(expectedDomainValues, k)
+				}
+			}
+
+			// Commit changes
+			const commitContractUpdates = false
+			err := storage.Commit(inter, commitContractUpdates)
+			require.NoError(t, err)
+
+			// Check storage health after commit
+			err = storage.CheckHealth()
+			require.NoError(t, err)
+
+			// Verify account storage map data
+			checkAccountStorageMapData(t, ledger.StoredValues, ledger.StorageIndices, address, accountValues)
+		}
+
+		// Read domain storage map
+		{
+			for _, domain := range domains {
+				const createIfNotExists = false
+				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				require.NotNil(t, domainStorageMap)
+				require.Equal(t, uint64(0), domainStorageMap.Count())
+			}
+
+			// Commit changes
+			const commitContractUpdates = false
+			err := storage.Commit(inter, commitContractUpdates)
+			require.NoError(t, err)
+
+			// Check storage health after commit
+			err = storage.CheckHealth()
+			require.NoError(t, err)
+
+			// Verify account storage map data
+			checkAccountStorageMapData(t, ledger.StoredValues, ledger.StorageIndices, address, accountValues)
+		}
+	})
+}
+
+func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
+
+	t.Parallel()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	newTestLedgerWithUnmigratedAccount := func(
+		onRead LedgerOnRead,
+		onWrite LedgerOnWrite,
+		address common.Address,
+		domains []string,
+		domainStorageMapCount int,
+	) (TestLedger, accountStorageMapValues) {
+		ledger := NewTestLedger(nil, nil)
+		storage := NewStorage(ledger, nil)
+
+		inter := NewTestInterpreter(t)
+
+		accountValues := make(accountStorageMapValues)
+
+		random := rand.New(rand.NewSource(42))
+
+		for _, domain := range domains {
+			accountValues[domain] = make(domainStorageMapValues)
+
+			// Create domain storage map
+			domainStorageMap := interpreter.NewDomainStorageMap(nil, storage, atree.Address(address))
+
+			// Write domain register
+			domainStorageMapValueID := domainStorageMap.ValueID()
+			err := ledger.SetValue(address[:], []byte(domain), domainStorageMapValueID[8:])
+			require.NoError(t, err)
+
+			// Write elements to to domain storage map
+			for len(accountValues[domain]) < domainStorageMapCount {
+				n := random.Int()
+				key := interpreter.StringStorageMapKey(strconv.Itoa(n))
+				value := interpreter.NewUnmeteredIntValueFromInt64(int64(n))
+
+				_ = domainStorageMap.WriteValue(inter, key, value)
+
+				accountValues[domain][key] = value
+			}
+		}
+
+		// Commit changes
+		const commitContractUpdates = false
+		err := storage.Commit(inter, commitContractUpdates)
+		require.NoError(t, err)
+
+		// Create a new storage
+		newLedger := NewTestLedgerWithData(onRead, onWrite, ledger.StoredValues, ledger.StorageIndices)
+
+		return newLedger, accountValues
+	}
+
+	// This test reads non-existent domain storage map and commit changes.
+	// pre-condition: storage contains domain register and domain storage map
+	// post-condition: no change
+	// migration: none because only read ops.
+	t.Run("read non-existent domain storage map", func(t *testing.T) {
+		existingDomains := []string{
+			common.PathDomainStorage.Identifier(),
+		}
+
+		var writeCount int
+
+		// Create storage with unmigrated accounts
+		const domainStorageMapCount = 5
+		ledger, _ := newTestLedgerWithUnmigratedAccount(
+			nil,
+			LedgerOnWriteCounter(&writeCount),
+			address,
+			existingDomains,
+			domainStorageMapCount)
+		storage := NewStorage(ledger, nil)
+
+		inter := NewTestInterpreterWithStorage(t, storage)
+
+		// Get non-existent domain storage map
+		const createIfNotExists = false
+		nonexistingDomain := common.PathDomainPublic.Identifier()
+		domainStorageMap := storage.GetStorageMap(inter, address, nonexistingDomain, createIfNotExists)
+		require.Nil(t, domainStorageMap)
+
+		// Commit changes
+		const commitContractUpdates = false
+		err := storage.Commit(inter, commitContractUpdates)
+		require.NoError(t, err)
+
+		// Check there are no writes to underlying storage
+		require.Equal(t, 0, writeCount)
+	})
+
+	// This test reads existing domain storage map and commit changes.
+	// pre-condition: storage contains domain register and domain storage map
+	// post-condition: no change
+	// migration: none because only read ops
+	readExistingDomainTestCases := []struct {
+		name              string
+		createIfNotExists bool
+	}{
+		{name: "(createIfNotExists is true)", createIfNotExists: true},
+		{name: "(createIfNotExists is false)", createIfNotExists: false},
+	}
+
+	for _, tc := range readExistingDomainTestCases {
+		t.Run("read existing domain storage map "+tc.name, func(t *testing.T) {
+
+			var writeCount int
+
+			existingDomains := []string{common.PathDomainStorage.Identifier()}
+			const existingDomainStorageMapCount = 5
+
+			// Create storage with existing domain storage map
+			ledger, accountValues := newTestLedgerWithUnmigratedAccount(
+				nil,
+				LedgerOnWriteCounter(&writeCount),
+				address,
+				existingDomains,
+				existingDomainStorageMapCount,
+			)
+			storage := NewStorage(ledger, nil)
+
+			inter := NewTestInterpreterWithStorage(t, storage)
+
+			// Read existing domain storage map
+			for domain, domainValues := range accountValues {
+				domainStorageMap := storage.GetStorageMap(inter, address, domain, tc.createIfNotExists)
+				require.NotNil(t, domainStorageMap)
+				require.Equal(t, uint64(len(domainValues)), domainStorageMap.Count())
+
+				// Read elements to to domain storage map
+				for k, expectedV := range domainValues {
+					v := domainStorageMap.ReadValue(nil, k)
+					ev, ok := v.(interpreter.EquatableValue)
+					require.True(t, ok)
+					require.True(t, ev.Equal(inter, interpreter.EmptyLocationRange, expectedV))
+				}
+			}
+
+			// Commit changes
+			const commitContractUpdates = false
+			err := storage.Commit(inter, commitContractUpdates)
+			require.NoError(t, err)
+
+			// Check storage health after commit
+			err = storage.CheckHealth()
+			require.NoError(t, err)
+
+			// Check writes to underlying storage
+			require.Equal(t, 0, writeCount)
+		})
+	}
+
+	// This test creates and writes to new domain storage map and commit changes.
+	// pre-condition: storage contains
+	// - domain register
+	// - domain storage map
+	// post-condition: storage contains
+	// - account register
+	// - account storage map with existing and new domain storage map.
+	// migration: yes
+	createDomainTestCases := []struct {
+		name                          string
+		existingDomains               []string
+		newDomains                    []string
+		existingDomainStorageMapCount int
+		newDomainStorageMapCount      int
+		isNewDomainStorageMapInlined  bool
+	}{
+		{
+			name:                          "empty domain storage map",
+			existingDomains:               []string{common.PathDomainStorage.Identifier()},
+			existingDomainStorageMapCount: 5,
+			newDomains:                    []string{common.PathDomainPublic.Identifier()},
+			newDomainStorageMapCount:      0,
+			isNewDomainStorageMapInlined:  true,
+		},
+		{
+			name:                          "small domain storage map",
+			existingDomains:               []string{common.PathDomainStorage.Identifier()},
+			existingDomainStorageMapCount: 5,
+			newDomains:                    []string{common.PathDomainPublic.Identifier()},
+			newDomainStorageMapCount:      10,
+			isNewDomainStorageMapInlined:  true,
+		},
+		{
+			name:                          "large domain storage map",
+			existingDomains:               []string{common.PathDomainStorage.Identifier()},
+			existingDomainStorageMapCount: 5,
+			newDomains:                    []string{common.PathDomainPublic.Identifier()},
+			newDomainStorageMapCount:      20,
+			isNewDomainStorageMapInlined:  false,
+		},
+	}
+
+	for _, tc := range createDomainTestCases {
+		t.Run("create and write "+tc.name, func(t *testing.T) {
+
+			var writeEntries []OwnerKeyValue
+
+			// Create storage with existing account storage map
+			ledger, accountValues := newTestLedgerWithUnmigratedAccount(
+				nil,
+				LedgerOnWriteEntries(&writeEntries),
+				address,
+				tc.existingDomains,
+				tc.existingDomainStorageMapCount,
+			)
+			storage := NewStorage(ledger, nil)
+
+			inter := NewTestInterpreterWithStorage(t, storage)
+
+			random := rand.New(rand.NewSource(42))
+
+			// Create and write to new domain storage map
+			for _, domain := range tc.newDomains {
+				const createIfNotExists = true
+				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				require.NotNil(t, domainStorageMap)
+				require.Equal(t, uint64(0), domainStorageMap.Count())
+
+				// Write elements to to domain storage map
+				accountValues[domain] = writeToDomainStorageMap(inter, domainStorageMap, tc.newDomainStorageMapCount, random)
+			}
+
+			// Commit changes
+			const commitContractUpdates = false
+			err := storage.Commit(inter, commitContractUpdates)
+			require.NoError(t, err)
+
+			// Check storage health after commit
+			err = storage.CheckHealth()
+			require.NoError(t, err)
+
+			// Check writes to underlying storage
+			// writes include:
+			// - empty registers for all existing and new domains
+			// - 1 account register
+			// - 1 account storage map register
+			// - other non-inlined domain storage map
+			require.True(t, len(writeEntries) > 1+len(tc.existingDomains)+len(tc.newDomains))
+
+			i := 0
+			for _, domain := range AccountDomains {
+
+				if slices.Contains(tc.existingDomains, domain) ||
+					slices.Contains(tc.newDomains, domain) {
+
+					// Existing and new domain registers are removed.
+					// Removing new (non-existent) domain registers is no-op.
+					require.Equal(t, address[:], writeEntries[i].Owner)
+					require.Equal(t, []byte(domain), writeEntries[i].Key)
+					require.True(t, len(writeEntries[i].Value) == 0)
+
+					i++
+				}
+			}
+
+			// Account register is created
+			require.Equal(t, address[:], writeEntries[i].Owner)
+			require.Equal(t, []byte(AccountStorageKey), writeEntries[i].Key)
+			require.True(t, len(writeEntries[i].Value) > 0)
+
+			i++
+
+			// Remaining writes are atree slabs (either empty for migrated domain storage map or non-empty for account storage map)
+			for ; i < len(writeEntries); i++ {
+				require.Equal(t, address[:], writeEntries[i].Owner)
+				require.Equal(t, byte('$'), writeEntries[i].Key[0])
+			}
+
+			// Verify account storage map data
+			checkAccountStorageMapData(t, ledger.StoredValues, ledger.StorageIndices, address, accountValues)
+		})
+	}
+
+	// This test reads and writes to existing domain storage map and commit changes.
+	// pre-condition: storage contains
+	// - domain register
+	// - domain storage map
+	// post-condition: storage contains
+	// - account register
+	// - account storage map with updated domain storage map.
+	// migration: yes
+	t.Run("read and write to existing domain storage map", func(t *testing.T) {
+
+		var writeEntries []OwnerKeyValue
+
+		domains := []string{common.PathDomainStorage.Identifier()}
+		const existingDomainStorageMapCount = 5
+
+		// Create storage with existing domain storage maps
+		ledger, accountValues := newTestLedgerWithUnmigratedAccount(
+			nil,
+			LedgerOnWriteEntries(&writeEntries),
+			address,
+			domains,
+			existingDomainStorageMapCount,
+		)
+		storage := NewStorage(ledger, nil)
+
+		inter := NewTestInterpreterWithStorage(t, storage)
+
+		random := rand.New(rand.NewSource(42))
+
+		// write to existing domain storage map (createIfNotExists is false)
+		for _, domain := range domains {
+			const createIfNotExists = false
+			domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+			require.NotNil(t, domainStorageMap)
+
+			domainValues := accountValues[domain]
+			require.Equal(t, uint64(len(domainValues)), domainStorageMap.Count())
+
+			domainKeys := make([]interpreter.StorageMapKey, 0, len(domainValues))
+			for k := range domainValues { //nolint:maprange
+				domainKeys = append(domainKeys, k)
+			}
+
+			// Update or remove elements
+			for i, k := range domainKeys {
+				if i%2 == 0 {
+					n := random.Int()
+					newValue := interpreter.NewUnmeteredIntValueFromInt64(int64(n))
+
+					// Update existing element
+					existed := domainStorageMap.WriteValue(inter, k, newValue)
+					require.True(t, existed)
+
+					domainValues[k] = newValue
+				} else {
+					// Remove existing element
+					existed := domainStorageMap.WriteValue(inter, k, nil)
+					require.True(t, existed)
+
+					delete(domainValues, k)
+				}
+			}
+
+			// Write new elements
+			const newElementCount = 2
+			newDomainValues := writeToDomainStorageMap(inter, domainStorageMap, newElementCount, random)
+
+			for k, v := range newDomainValues {
+				domainValues[k] = v
+			}
+		}
+
+		// Commit changes
+		const commitContractUpdates = false
+		err := storage.Commit(inter, commitContractUpdates)
+		require.NoError(t, err)
+
+		// Check storage health after commit
+		err = storage.CheckHealth()
+		require.NoError(t, err)
+
+		// Check writes to underlying storage
+		require.Equal(t, 4, len(writeEntries))
+
+		// writes[0]: domain register
+		// storage domain register is removed
+		require.Equal(t, address[:], writeEntries[0].Owner)
+		require.Equal(t, []byte(common.PathDomainStorage.Identifier()), writeEntries[0].Key)
+		require.True(t, len(writeEntries[0].Value) == 0)
+
+		// writes[1]: account register
+		// account register is created
+		require.Equal(t, address[:], writeEntries[1].Owner)
+		require.Equal(t, []byte(AccountStorageKey), writeEntries[1].Key)
+		require.True(t, len(writeEntries[1].Value) > 0)
+
+		// writes[2]: storage domain storage map
+		// storage domain storage map is removed because it is inlined in account storage map.
+		require.Equal(t, address[:], writeEntries[2].Owner)
+		require.Equal(t, []byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}, writeEntries[2].Key)
+		require.True(t, len(writeEntries[2].Value) == 0)
+
+		// writes[3]: account storage map
+		// account storage map is created with inlined domain storage map.
+		require.Equal(t, address[:], writeEntries[3].Owner)
+		require.Equal(t, []byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2}, writeEntries[3].Key)
+		require.True(t, len(writeEntries[3].Value) > 0)
+
+		// Verify account storage map data
+		checkAccountStorageMapData(t, ledger.StoredValues, ledger.StorageIndices, address, accountValues)
+	})
+
+	// This test test storage map operations (including account migration) with intermittent Commit()
+	// - read domain storage map and commit
+	// - write to domain storage map and commit (including account migration)
+	// - remove all elements from domain storage map and commit
+	// - read domain storage map and commit
+	t.Run("read, commit, update, commit, remove, commit", func(t *testing.T) {
+
+		var writeEntries []OwnerKeyValue
+
+		domains := []string{common.PathDomainStorage.Identifier()}
+		const domainStorageMapCount = 5
+
+		// Create storage with existing account storage map
+		ledger, accountValues := newTestLedgerWithUnmigratedAccount(
+			nil,
+			LedgerOnWriteEntries(&writeEntries),
+			address,
+			domains,
+			domainStorageMapCount,
+		)
+		storage := NewStorage(ledger, nil)
+
+		inter := NewTestInterpreterWithStorage(t, storage)
+
+		random := rand.New(rand.NewSource(42))
+
+		// Read domain storage map and commit
+		{
+			for _, domain := range domains {
+				const createIfNotExists = false
+				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				require.NotNil(t, domainStorageMap)
+
+				domainValues := accountValues[domain]
+
+				require.Equal(t, uint64(len(domainValues)), domainStorageMap.Count())
+
+				for k, expectedValue := range domainValues {
+					v := domainStorageMap.ReadValue(nil, k)
+					ev := v.(interpreter.EquatableValue)
+					require.True(t, ev.Equal(inter, interpreter.EmptyLocationRange, expectedValue))
+				}
+			}
+
+			// Commit changes
+			const commitContractUpdates = false
+			err := storage.Commit(inter, commitContractUpdates)
+			require.NoError(t, err)
+
+			// Check storage health after commit
+			err = storage.CheckHealth()
+			require.NoError(t, err)
+		}
+
+		// Update domain storage map, and commit changes (account is migrated during commmit)
+		{
+			// update existing domain storage map (loaded from storage)
+			for _, domain := range domains {
+				const createIfNotExists = false
+				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				require.NotNil(t, domainStorageMap)
+
+				domainValues := accountValues[domain]
+
+				require.Equal(t, uint64(len(domainValues)), domainStorageMap.Count())
+
+				domainKeys := make([]interpreter.StorageMapKey, 0, len(domainValues))
+				for k := range domainValues { //nolint:maprange
+					domainKeys = append(domainKeys, k)
+				}
+
+				// Update elements
+				for _, k := range domainKeys {
+					n := random.Int()
+					newValue := interpreter.NewUnmeteredIntValueFromInt64(int64(n))
+
+					// Update existing element
+					existed := domainStorageMap.WriteValue(inter, k, newValue)
+					require.True(t, existed)
+
+					domainValues[k] = newValue
+				}
+			}
+
+			// Commit changes
+			const commitContractUpdates = false
+			err := storage.Commit(inter, commitContractUpdates)
+			require.NoError(t, err)
+
+			// Check storage health after commit
+			err = storage.CheckHealth()
+			require.NoError(t, err)
+
+			// Check writes to underlying storage
+			require.Equal(t, 4, len(writeEntries))
+
+			// writes[0]: storage domain register
+			// Storage domain register is removed
+			require.Equal(t, address[:], writeEntries[0].Owner)
+			require.Equal(t, []byte(common.PathDomainStorage.Identifier()), writeEntries[0].Key)
+			require.True(t, len(writeEntries[0].Value) == 0)
+
+			// writes[1]: account register
+			// Account register is created
+			require.Equal(t, address[:], writeEntries[1].Owner)
+			require.Equal(t, []byte(AccountStorageKey), writeEntries[1].Key)
+			require.True(t, len(writeEntries[1].Value) > 0)
+
+			// writes[2]: storage domain storage map
+			// storage domain storage map is removed because it is inlined in account storage map.
+			require.Equal(t, address[:], writeEntries[2].Owner)
+			require.Equal(t, []byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}, writeEntries[2].Key)
+			require.True(t, len(writeEntries[2].Value) == 0)
+
+			// writes[3]: account storage map
+			// account storage map is created with inlined domain storage map.
+			require.Equal(t, address[:], writeEntries[3].Owner)
+			require.Equal(t, []byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2}, writeEntries[3].Key)
+			require.True(t, len(writeEntries[3].Value) > 0)
+
+			// Verify account storage map data
+			checkAccountStorageMapData(t, ledger.StoredValues, ledger.StorageIndices, address, accountValues)
+
+			writeEntries = nil
+		}
+
+		// Remove all elements from domain storage map, and commit changes
+		{
+			for _, domain := range domains {
+				const createIfNotExists = false
+				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				require.NotNil(t, domainStorageMap)
+
+				domainValues := accountValues[domain]
+
+				require.Equal(t, uint64(len(domainValues)), domainStorageMap.Count())
+
+				domainKeys := make([]interpreter.StorageMapKey, 0, len(domainValues))
+				for k := range domainValues { //nolint:maprange
+					domainKeys = append(domainKeys, k)
+				}
+
+				// Remove elements
+				for _, k := range domainKeys {
+
+					// Update existing element
+					existed := domainStorageMap.WriteValue(inter, k, nil)
+					require.True(t, existed)
+
+					delete(domainValues, k)
+				}
+			}
+
+			// Commit changes
+			const commitContractUpdates = false
+			err := storage.Commit(inter, commitContractUpdates)
+			require.NoError(t, err)
+
+			// Check storage health after commit
+			err = storage.CheckHealth()
+			require.NoError(t, err)
+
+			// Check writes to underlying storage
+			require.Equal(t, 1, len(writeEntries))
+
+			// writes[0]: account storage map
+			// account storage map is modified because inlined domain storage map is modified.
+			require.Equal(t, address[:], writeEntries[0].Owner)
+			require.Equal(t, []byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2}, writeEntries[0].Key)
+			require.True(t, len(writeEntries[0].Value) > 0)
+
+			// Verify account storage map data
+			checkAccountStorageMapData(t, ledger.StoredValues, ledger.StorageIndices, address, accountValues)
+		}
+
+		// Read domain storage map and commit
+		{
+			for _, domain := range domains {
+				const createIfNotExists = false
+				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				require.NotNil(t, domainStorageMap)
+
+				domainValues := accountValues[domain]
+
+				require.Equal(t, uint64(len(domainValues)), domainStorageMap.Count())
+
+				for k, expectedValue := range domainValues {
+					v := domainStorageMap.ReadValue(nil, k)
+					ev := v.(interpreter.EquatableValue)
+					require.True(t, ev.Equal(inter, interpreter.EmptyLocationRange, expectedValue))
+				}
+			}
+
+			// Commit changes
+			const commitContractUpdates = false
+			err := storage.Commit(inter, commitContractUpdates)
+			require.NoError(t, err)
+
+			// Check storage health after commit
+			err = storage.CheckHealth()
+			require.NoError(t, err)
+
+			// Verify account storage map data
+			checkAccountStorageMapData(t, ledger.StoredValues, ledger.StorageIndices, address, accountValues)
+		}
+	})
+}
+
+// TestRuntimeStorageDomainStorageMapInlinedState tests inlined state
+// of domain storage map when large number of elements are inserted,
+// updated, and removed from domain storage map.
+// Initially domain storage map is inlined in account storage map, it
+// becomes un-inlined when large number elements are inserted, and then
+// inlined again when all elements are removed.
+func TestRuntimeStorageDomainStorageMapInlinedState(t *testing.T) {
+	random := rand.New(rand.NewSource(42))
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	// Create empty storage
+	ledger := NewTestLedger(nil, nil)
+	storage := NewStorage(ledger, nil)
+
+	inter := NewTestInterpreterWithStorage(t, storage)
+
+	domains := []string{
+		common.PathDomainStorage.Identifier(),
+		common.PathDomainPublic.Identifier(),
+		common.PathDomainPrivate.Identifier(),
+	}
+
+	const domainStorageMapCount = 500
+
+	accountValues := make(accountStorageMapValues)
+
+	for _, domain := range domains {
+
+		// Create domain storage map
+		const createIfNotExists = true
+		domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+		require.NotNil(t, domainStorageMap)
+		require.True(t, domainStorageMap.Inlined())
+
+		valueID := domainStorageMap.ValueID()
+
+		accountValues[domain] = make(domainStorageMapValues)
+
+		domainValues := accountValues[domain]
+
+		// Insert new values to domain storage map
+		for domainStorageMap.Count() < domainStorageMapCount {
+			n := random.Int()
+			key := interpreter.StringStorageMapKey(strconv.Itoa(n))
+			if _, exists := domainValues[key]; exists {
+				continue
+			}
+			value := interpreter.NewUnmeteredIntValueFromInt64(int64(n))
+
+			existed := domainStorageMap.WriteValue(inter, key, value)
+			require.False(t, existed)
+
+			domainValues[key] = value
+		}
+
+		require.Equal(t, uint64(domainStorageMapCount), domainStorageMap.Count())
+		require.Equal(t, valueID, domainStorageMap.ValueID())
+		require.False(t, domainStorageMap.Inlined())
+
+		// Check storage health
+		err := storage.CheckHealth()
+		require.NoError(t, err)
+
+		// Overwrite values in domain storage map
+		for key := range domainValues {
+			n := random.Int()
+			value := interpreter.NewUnmeteredIntValueFromInt64(int64(n))
+
+			existed := domainStorageMap.WriteValue(inter, key, value)
+			require.True(t, existed)
+
+			domainValues[key] = value
+		}
+
+		require.Equal(t, uint64(domainStorageMapCount), domainStorageMap.Count())
+		require.Equal(t, valueID, domainStorageMap.ValueID())
+		require.False(t, domainStorageMap.Inlined())
+
+		// Check storage health
+		err = storage.CheckHealth()
+		require.NoError(t, err)
+
+		// Remove all values in domain storage map
+		for key := range domainValues {
+			existed := domainStorageMap.WriteValue(inter, key, nil)
+			require.True(t, existed)
+
+			delete(domainValues, key)
+		}
+
+		require.Equal(t, uint64(0), domainStorageMap.Count())
+		require.Equal(t, valueID, domainStorageMap.ValueID())
+		require.True(t, domainStorageMap.Inlined())
+	}
+
+	// Commit changes
+	const commitContractUpdates = false
+	err := storage.Commit(inter, commitContractUpdates)
+	require.NoError(t, err)
+
+	// Check storage health
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
+	// There should be 2 non-empty registers in ledger after commits:
+	// - account register (key is "stored")
+	// - account storage map (atree slab)
+	nonEmptyRegisters := make(map[string][]byte)
+	for k, v := range ledger.StoredValues {
+		if len(v) > 0 {
+			nonEmptyRegisters[k] = v
+		}
+	}
+	require.Equal(t, 2, len(nonEmptyRegisters))
+
+	accountRegisterValue, accountRegisterExists := nonEmptyRegisters[string(address[:])+"|"+AccountStorageKey]
+	require.True(t, accountRegisterExists)
+	require.Equal(t, 8, len(accountRegisterValue))
+
+	_, accountStorageMapRegisterExists := nonEmptyRegisters[string(address[:])+"|$"+string(accountRegisterValue)]
+	require.True(t, accountStorageMapRegisterExists)
+
+	checkAccountStorageMapData(t, ledger.StoredValues, ledger.StorageIndices, address, accountValues)
+}
+
+// TestRuntimeStorageLargeDomainValues tests large values
+// in domain storage map.
+func TestRuntimeStorageLargeDomainValues(t *testing.T) {
+	random := rand.New(rand.NewSource(42))
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	// Create empty storage
+	ledger := NewTestLedger(nil, nil)
+	storage := NewStorage(ledger, nil)
+
+	inter := NewTestInterpreterWithStorage(t, storage)
+
+	domains := []string{
+		common.PathDomainStorage.Identifier(),
+		common.PathDomainPublic.Identifier(),
+		common.PathDomainPrivate.Identifier(),
+	}
+
+	const domainStorageMapCount = 5
+
+	accountValues := make(accountStorageMapValues)
+
+	for _, domain := range domains {
+
+		// Create domain storage map
+		const createIfNotExists = true
+		domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+		require.NotNil(t, domainStorageMap)
+		require.True(t, domainStorageMap.Inlined())
+
+		valueID := domainStorageMap.ValueID()
+
+		accountValues[domain] = make(domainStorageMapValues)
+
+		domainValues := accountValues[domain]
+
+		// Insert new values to domain storage map
+		for domainStorageMap.Count() < domainStorageMapCount {
+			n := random.Int()
+			key := interpreter.StringStorageMapKey(strconv.Itoa(n))
+			if _, exists := domainValues[key]; exists {
+				continue
+			}
+			value := interpreter.NewUnmeteredStringValue(strings.Repeat("a", 1_000))
+
+			existed := domainStorageMap.WriteValue(inter, key, value)
+			require.False(t, existed)
+
+			domainValues[key] = value
+		}
+
+		require.Equal(t, uint64(domainStorageMapCount), domainStorageMap.Count())
+		require.Equal(t, valueID, domainStorageMap.ValueID())
+		require.True(t, domainStorageMap.Inlined())
+
+		// Check storage health
+		err := storage.CheckHealth()
+		require.NoError(t, err)
+
+		// Overwrite values in domain storage map
+		for key := range domainValues {
+			value := interpreter.NewUnmeteredStringValue(strings.Repeat("b", 1_000))
+
+			existed := domainStorageMap.WriteValue(inter, key, value)
+			require.True(t, existed)
+
+			domainValues[key] = value
+		}
+
+		require.Equal(t, uint64(domainStorageMapCount), domainStorageMap.Count())
+		require.Equal(t, valueID, domainStorageMap.ValueID())
+		require.True(t, domainStorageMap.Inlined())
+
+		// Check storage health
+		err = storage.CheckHealth()
+		require.NoError(t, err)
+
+		// Remove all values in domain storage map
+		for key := range domainValues {
+			existed := domainStorageMap.WriteValue(inter, key, nil)
+			require.True(t, existed)
+
+			delete(domainValues, key)
+		}
+
+		require.Equal(t, uint64(0), domainStorageMap.Count())
+		require.Equal(t, valueID, domainStorageMap.ValueID())
+		require.True(t, domainStorageMap.Inlined())
+	}
+
+	// Commit changes
+	const commitContractUpdates = false
+	err := storage.Commit(inter, commitContractUpdates)
+	require.NoError(t, err)
+
+	// Check storage health
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
+	// There should be 2 non-empty registers in ledger after commits:
+	// - account register (key is "stored")
+	// - account storage map (atree slab)
+	nonEmptyRegisters := make(map[string][]byte)
+	for k, v := range ledger.StoredValues {
+		if len(v) > 0 {
+			nonEmptyRegisters[k] = v
+		}
+	}
+	require.Equal(t, 2, len(nonEmptyRegisters))
+
+	accountRegisterValue, accountRegisterExists := nonEmptyRegisters[string(address[:])+"|"+AccountStorageKey]
+	require.True(t, accountRegisterExists)
+	require.Equal(t, 8, len(accountRegisterValue))
+
+	_, accountStorageMapRegisterExists := nonEmptyRegisters[string(address[:])+"|$"+string(accountRegisterValue)]
+	require.True(t, accountStorageMapRegisterExists)
+
+	checkAccountStorageMapData(t, ledger.StoredValues, ledger.StorageIndices, address, accountValues)
+}
+
+func TestDomainRegisterMigrationForLargeAccount(t *testing.T) {
+	t.Parallel()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	var writeCount int
+
+	accountsInfo := []accountInfo{
+		{
+			address: address,
+			domains: []domainInfo{
+				{domain: common.PathDomainStorage.Identifier(), domainStorageMapCount: 100, maxDepth: 3},
+				{domain: common.PathDomainPublic.Identifier(), domainStorageMapCount: 100, maxDepth: 3},
+				{domain: common.PathDomainPrivate.Identifier(), domainStorageMapCount: 100, maxDepth: 3},
+			},
+		},
+	}
+
+	ledger, accountsValues := newTestLedgerWithUnmigratedAccounts(
+		t,
+		nil,
+		LedgerOnWriteCounter(&writeCount),
+		accountsInfo,
+	)
+	storage := NewStorage(ledger, nil)
+
+	inter := NewTestInterpreterWithStorage(t, storage)
+
+	accountValues := accountsValues[address]
+
+	// Create new domain storage map
+	const createIfNotExists = true
+	domain := stdlib.InboxStorageDomain
+	domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+	require.NotNil(t, domainStorageMap)
+
+	accountValues[domain] = make(domainStorageMapValues)
+
+	// Commit changes
+	const commitContractUpdates = false
+	err := storage.Commit(inter, commitContractUpdates)
+	require.NoError(t, err)
+
+	// Check there are writes to underlying storage
+	require.True(t, writeCount > 0)
+
+	// Check there isn't any domain registers
+	nonAtreeRegisters := make(map[string][]byte)
+	for k, v := range ledger.StoredValues {
+		if len(v) == 0 {
+			continue
+		}
+		ks := strings.Split(k, "|")
+		if ks[1][0] != '$' {
+			nonAtreeRegisters[k] = v
+		}
+	}
+
+	require.Equal(t, 1, len(nonAtreeRegisters))
+	for k := range nonAtreeRegisters {
+		ks := strings.Split(k, "|")
+		require.Equal(t, address[:], []byte(ks[0]))
+		require.Equal(t, AccountStorageKey, ks[1])
+	}
+
+	// Check storage health after commit
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
+	// Verify account storage map data
+	checkAccountStorageMapData(t, ledger.StoredValues, ledger.StorageIndices, address, accountValues)
+}
+
+// createAndWriteAccountStorageMap creates account storage map with given domains and writes random values to domain storage map.
+func createAndWriteAccountStorageMap(
+	t testing.TB,
+	storage *Storage,
+	inter *interpreter.Interpreter,
+	address common.Address,
+	domains []string,
+	count int,
+	random *rand.Rand,
+) accountStorageMapValues {
+
+	accountValues := make(accountStorageMapValues)
+
+	// Create domain storage map
+	for _, domain := range domains {
+		const createIfNotExists = true
+		domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+		require.NotNil(t, domainStorageMap)
+		require.Equal(t, uint64(0), domainStorageMap.Count())
+
+		// Write to to domain storage map
+		accountValues[domain] = writeToDomainStorageMap(inter, domainStorageMap, count, random)
+	}
+
+	// Commit changes
+	const commitContractUpdates = false
+	err := storage.Commit(inter, commitContractUpdates)
+	require.NoError(t, err)
+
+	// Check storage health after commit
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
+	return accountValues
+}
+
+func writeToDomainStorageMap(
+	inter *interpreter.Interpreter,
+	domainStorageMap *interpreter.DomainStorageMap,
+	count int,
+	random *rand.Rand,
+) domainStorageMapValues {
+	domainValues := make(domainStorageMapValues)
+
+	for len(domainValues) < count {
+		n := random.Int()
+
+		key := interpreter.StringStorageMapKey(strconv.Itoa(n))
+
+		value := interpreter.NewUnmeteredIntValueFromInt64(int64(n))
+
+		domainStorageMap.WriteValue(inter, key, value)
+
+		domainValues[key] = value
+	}
+
+	return domainValues
+}
+
+// checkAccountStorageMapData creates new storage with given storedValues, and compares account storage map values with given expectedAccountValues.
+func checkAccountStorageMapData(
+	tb testing.TB,
+	storedValues map[string][]byte,
+	storageIndices map[string]uint64,
+	address common.Address,
+	expectedAccountValues accountStorageMapValues,
+) {
+	// Create storage with given storedValues and storageIndices
+	ledger := NewTestLedgerWithData(nil, nil, storedValues, storageIndices)
+	storage := NewStorage(ledger, nil)
+
+	inter := NewTestInterpreterWithStorage(tb, storage)
+
+	// Get account register
+	accountStorageMapSlabIndex, err := ledger.GetValue(address[:], []byte(AccountStorageKey))
+	require.NoError(tb, err)
+	require.Equal(tb, 8, len(accountStorageMapSlabIndex))
+
+	// Load account storage map
+	accountSlabID := atree.NewSlabID(
+		atree.Address(address[:]),
+		atree.SlabIndex(accountStorageMapSlabIndex[:]),
+	)
+	accountStorageMap := interpreter.NewAccountStorageMapWithRootID(storage, accountSlabID)
+	require.NotNil(tb, accountStorageMap)
+	require.Equal(tb, uint64(len(expectedAccountValues)), accountStorageMap.Count())
+
+	domainCount := 0
+	iter := accountStorageMap.Iterator()
+	for {
+		domain, domainStorageMap := iter.Next()
+		if domain == "" {
+			break
+		}
+
+		domainCount++
+
+		expectedDomainValues, exist := expectedAccountValues[domain]
+		require.True(tb, exist)
+		require.Equal(tb, uint64(len(expectedDomainValues)), domainStorageMap.Count())
+
+		// Check values stored in domain storage map
+		for key, expectedValue := range expectedDomainValues {
+			value := domainStorageMap.ReadValue(nil, key)
+
+			ev, ok := value.(interpreter.EquatableValue)
+			require.True(tb, ok)
+			require.True(tb, ev.Equal(inter, interpreter.EmptyLocationRange, expectedValue))
+		}
+	}
+
+	require.Equal(tb, len(expectedAccountValues), domainCount)
+
+	// Check atree storage health
+	rootSlabIDs, err := atree.CheckStorageHealth(storage.PersistentSlabStorage, 1)
+	require.NoError(tb, err)
+	require.Equal(tb, 1, len(rootSlabIDs))
+	require.Contains(tb, rootSlabIDs, accountSlabID)
 }

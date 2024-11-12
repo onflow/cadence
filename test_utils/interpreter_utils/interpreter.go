@@ -29,14 +29,26 @@ import (
 
 func NewTestInterpreter(tb testing.TB) *interpreter.Interpreter {
 	storage := NewUnmeteredInMemoryStorage()
+	return NewTestInterpreterWithStorage(tb, storage)
+}
 
+func NewTestInterpreterWithStorage(tb testing.TB, storage interpreter.Storage) *interpreter.Interpreter {
+	return NewTestInterpreterWithStorageAndAtreeValidationConfig(tb, storage, true, true)
+}
+
+func NewTestInterpreterWithStorageAndAtreeValidationConfig(
+	tb testing.TB,
+	storage interpreter.Storage,
+	atreeValueValidationEnabled bool,
+	atreeStorageValidationEnabled bool,
+) *interpreter.Interpreter {
 	inter, err := interpreter.NewInterpreter(
 		nil,
 		TestLocation,
 		&interpreter.Config{
 			Storage:                       storage,
-			AtreeValueValidationEnabled:   true,
-			AtreeStorageValidationEnabled: true,
+			AtreeValueValidationEnabled:   atreeValueValidationEnabled,
+			AtreeStorageValidationEnabled: atreeStorageValidationEnabled,
 		},
 	)
 	require.NoError(tb, err)

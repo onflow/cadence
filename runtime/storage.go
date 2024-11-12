@@ -30,17 +30,40 @@ import (
 	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/stdlib"
 )
 
-const StorageDomainContract = "contract"
+const (
+	StorageDomainContract = "contract"
+	AccountStorageKey     = "stored"
+)
 
 type Storage struct {
 	*atree.PersistentSlabStorage
-	NewStorageMaps  *orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]
-	storageMaps     map[interpreter.StorageKey]*interpreter.StorageMap
+
+	// NewAccountStorageMapSlabIndices contains root slab index of new accounts' storage map.
+	// The indices are saved using Ledger.SetValue() during Commit().
+	// Key is StorageKey{address, accountStorageKey} and value is 8-byte slab index.
+	NewAccountStorageMapSlabIndices *orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]
+
+	// unmigratedAccounts are accounts that were accessed but not migrated.
+	unmigratedAccounts *orderedmap.OrderedMap[common.Address, struct{}]
+
+	// cachedAccountStorageMaps is a cache of account storage maps.
+	// Key is StorageKey{address, accountStorageKey} and value is account storage map.
+	cachedAccountStorageMaps map[interpreter.StorageKey]*interpreter.AccountStorageMap
+
+	// cachedDomainStorageMaps is a cache of domain storage maps.
+	// Key is StorageKey{address, domain} and value is domain storage map.
+	cachedDomainStorageMaps map[interpreter.StorageKey]*interpreter.DomainStorageMap
+
+	// contractUpdates is a cache of contract updates.
+	// Key is StorageKey{contract_address, contract_name} and value is contract composite value.
 	contractUpdates *orderedmap.OrderedMap[interpreter.StorageKey, *interpreter.CompositeValue]
-	Ledger          atree.Ledger
-	memoryGauge     common.MemoryGauge
+
+	Ledger atree.Ledger
+
+	memoryGauge common.MemoryGauge
 }
 
 var _ atree.SlabStorage = &Storage{}
@@ -76,88 +99,319 @@ func NewStorage(ledger atree.Ledger, memoryGauge common.MemoryGauge) *Storage {
 		decodeTypeInfo,
 	)
 	return &Storage{
-		Ledger:                ledger,
-		PersistentSlabStorage: persistentSlabStorage,
-		storageMaps:           map[interpreter.StorageKey]*interpreter.StorageMap{},
-		memoryGauge:           memoryGauge,
+		Ledger:                   ledger,
+		PersistentSlabStorage:    persistentSlabStorage,
+		cachedAccountStorageMaps: map[interpreter.StorageKey]*interpreter.AccountStorageMap{},
+		cachedDomainStorageMaps:  map[interpreter.StorageKey]*interpreter.DomainStorageMap{},
+		memoryGauge:              memoryGauge,
 	}
 }
 
 const storageIndexLength = 8
 
+// GetStorageMap returns existing or new domain storage map for the given account and domain.
 func (s *Storage) GetStorageMap(
+	inter *interpreter.Interpreter,
 	address common.Address,
 	domain string,
 	createIfNotExists bool,
 ) (
-	storageMap *interpreter.StorageMap,
+	storageMap *interpreter.DomainStorageMap,
 ) {
-	key := interpreter.NewStorageKey(s.memoryGauge, address, domain)
 
-	storageMap = s.storageMaps[key]
-	if storageMap == nil {
+	// Account can be migrated account, new account, or unmigrated account.
+	//
+	//
+	// ### Migrated Account
+	//
+	// Migrated account is account with AccountStorageKey register.
+	// Migrated account has account storage map, which contains domain storage maps
+	// with domain as key.
+	//
+	// If domain exists in the account storage map, domain storage map is returned.
+	//
+	// If domain doesn't exist and createIfNotExists is true,
+	// new domain storage map is created, inserted into account storage map, and returned.
+	//
+	// If domain doesn't exist and createIfNotExists is false, nil is returned.
+	//
+	//
+	// ### New Account
+	//
+	// New account is account without AccountStorageKey register and without any domain registers.
+	// NOTE: new account's AccountStorageKey register is persisted in Commit().
+	//
+	// If createIfNotExists is true,
+	// - new account storage map is created
+	// - new domain storage map is created
+	// - domain storage map is inserted into account storage map
+	// - domain storage map is returned
+	//
+	// If createIfNotExists is false, nil is returned.
+	//
+	//
+	// ### Unmigrated Account
+	//
+	// Unmigrated account is account with at least one domain register.
+	// Unmigrated account has domain registers and corresponding domain storage maps.
+	//
+	// If domain exists (domain register exists), domain storage map is loaded and returned.
+	//
+	// If domain doesn't exist and createIfNotExists is true,
+	// new domain storage map is created and returned.
+	// NOTE: given account would be migrated in Commit() since this is write op.
+	//
+	// If domain doesn't exist and createIfNotExists is false, nil is returned.
+	//
+	//
+	// ### Migration of unmigrated accounts
+	//
+	// Migration happens in Commit() if unmigrated account has write ops.
+	// NOTE: Commit() is not called by this function.
+	//
+	// Specifically,
+	// - unmigrated account is migrated in Commit() if there are write ops.
+	//   For example, inserting values in unmigrated account triggers migration in Commit().
+	// - unmigrated account is unchanged if there are only read ops.
+	//   For example, iterating values in unmigrated account doesn't trigger migration,
+	//   and checking if domain exists doesn't trigger migration.
 
-		// Load data through the runtime interface
+	// Get cached domain storage map if it exists.
 
-		var data []byte
-		var err error
-		errors.WrapPanic(func() {
-			data, err = s.Ledger.GetValue(key.Address[:], []byte(key.Key))
-		})
-		if err != nil {
-			panic(interpreter.WrappedExternalError(err))
+	domainStorageKey := interpreter.NewStorageKey(s.memoryGauge, address, domain)
+
+	if domainStorageMap := s.cachedDomainStorageMaps[domainStorageKey]; domainStorageMap != nil {
+		return domainStorageMap
+	}
+
+	// Get (or create) domain storage map from existing account storage map
+	// if account is migrated account.
+
+	accountStorageKey := interpreter.NewStorageKey(s.memoryGauge, address, AccountStorageKey)
+
+	accountStorageMap, err := s.getAccountStorageMap(accountStorageKey)
+	if err != nil {
+		panic(err)
+	}
+
+	if accountStorageMap != nil {
+		// This is migrated account.
+
+		// Get (or create) domain storage map from account storage map.
+		domainStorageMap := accountStorageMap.GetDomain(s.memoryGauge, inter, domain, createIfNotExists)
+
+		// Cache domain storage map
+		if domainStorageMap != nil {
+			s.cachedDomainStorageMaps[domainStorageKey] = domainStorageMap
 		}
 
-		dataLength := len(data)
-		isStorageIndex := dataLength == storageIndexLength
-		if dataLength > 0 && !isStorageIndex {
-			// TODO: add dedicated error type?
+		return domainStorageMap
+	}
+
+	// At this point, account is either new or unmigrated account.
+
+	domainStorageMap, err := getDomainStorageMapFromLegacyDomainRegister(s.Ledger, s.PersistentSlabStorage, address, domain)
+	if err != nil {
+		panic(err)
+	}
+
+	if domainStorageMap != nil {
+		// This is a unmigrated account with given domain register.
+
+		// Sanity check that domain is among expected domains.
+		if _, exist := accountDomainsSet[domain]; !exist {
+			// TODO: maybe also log unexpected domain.
 			panic(errors.NewUnexpectedError(
-				"invalid storage index for storage map with domain '%s': expected length %d, got %d",
-				domain, storageIndexLength, dataLength,
+				"unexpected domain %s exists for account %s", domain, address.String(),
 			))
 		}
 
-		// Load existing storage or create and store new one
+		// Cache domain storage map
+		s.cachedDomainStorageMaps[domainStorageKey] = domainStorageMap
 
-		atreeAddress := atree.Address(address)
+		// Add account to unmigrated account list
+		s.addUnmigratedAccount(address)
 
-		if isStorageIndex {
-			var slabIndex atree.SlabIndex
-			copy(slabIndex[:], data[:])
-			storageMap = s.loadExistingStorageMap(atreeAddress, slabIndex)
-		} else if createIfNotExists {
-			storageMap = s.StoreNewStorageMap(atreeAddress, domain)
+		return domainStorageMap
+	}
+
+	// At this point, account is either new account or unmigrated account without given domain.
+
+	// Domain doesn't exist.  Return early if createIfNotExists is false.
+
+	if !createIfNotExists {
+		return nil
+	}
+
+	// Handle unmigrated account
+	unmigrated, err := s.isUnmigratedAccount(address)
+	if err != nil {
+		panic(err)
+	}
+	if unmigrated {
+		// Add account to unmigrated account list
+		s.addUnmigratedAccount(address)
+
+		// Create new domain storage map
+		domainStorageMap := interpreter.NewDomainStorageMap(s.memoryGauge, s, atree.Address(address))
+
+		// Cache new domain storage map
+		s.cachedDomainStorageMaps[domainStorageKey] = domainStorageMap
+
+		return domainStorageMap
+	}
+
+	// Handle new account
+
+	// Create account storage map
+	accountStorageMap = interpreter.NewAccountStorageMap(s.memoryGauge, s, atree.Address(address))
+
+	// Cache account storage map
+	s.cachedAccountStorageMaps[accountStorageKey] = accountStorageMap
+
+	// Create new domain storage map as an element in account storage map
+	domainStorageMap = accountStorageMap.NewDomain(s.memoryGauge, inter, domain)
+
+	// Cache domain storage map
+	s.cachedDomainStorageMaps[domainStorageKey] = domainStorageMap
+
+	// Save new account and its account storage map root SlabID to new accout list
+	s.addNewAccount(accountStorageKey, accountStorageMap.SlabID().Index())
+
+	return domainStorageMap
+}
+
+// getAccountStorageMap returns AccountStorageMap if exists, or nil otherwise.
+func (s *Storage) getAccountStorageMap(accountStorageKey interpreter.StorageKey) (*interpreter.AccountStorageMap, error) {
+
+	// Return cached account storage map if available.
+
+	accountStorageMap := s.cachedAccountStorageMaps[accountStorageKey]
+	if accountStorageMap != nil {
+		return accountStorageMap, nil
+	}
+
+	// Load account storage map if account storage register exists.
+
+	accountStorageSlabIndex, accountStorageRegisterExists, err := getSlabIndexFromRegisterValue(
+		s.Ledger,
+		accountStorageKey.Address,
+		[]byte(accountStorageKey.Key),
+	)
+	if err != nil {
+		return nil, err
+	}
+	if !accountStorageRegisterExists {
+		return nil, nil
+	}
+
+	slabID := atree.NewSlabID(
+		atree.Address(accountStorageKey.Address),
+		accountStorageSlabIndex,
+	)
+
+	accountStorageMap = interpreter.NewAccountStorageMapWithRootID(s, slabID)
+
+	// Cache account storage map
+
+	s.cachedAccountStorageMaps[accountStorageKey] = accountStorageMap
+
+	return accountStorageMap, nil
+}
+
+// getDomainStorageMapFromLegacyDomainRegister returns domain storage map from legacy domain register.
+func getDomainStorageMapFromLegacyDomainRegister(
+	ledger atree.Ledger,
+	storage atree.SlabStorage,
+	address common.Address,
+	domain string,
+) (*interpreter.DomainStorageMap, error) {
+	domainStorageSlabIndex, domainRegisterExists, err := getSlabIndexFromRegisterValue(ledger, address, []byte(domain))
+	if err != nil {
+		return nil, err
+	}
+	if !domainRegisterExists {
+		return nil, nil
+	}
+
+	slabID := atree.NewSlabID(atree.Address(address), domainStorageSlabIndex)
+	return interpreter.NewDomainStorageMapWithRootID(storage, slabID), nil
+}
+
+func (s *Storage) addUnmigratedAccount(address common.Address) {
+	if s.unmigratedAccounts == nil {
+		s.unmigratedAccounts = &orderedmap.OrderedMap[common.Address, struct{}]{}
+	}
+	if !s.unmigratedAccounts.Contains(address) {
+		s.unmigratedAccounts.Set(address, struct{}{})
+	}
+}
+
+func (s *Storage) addNewAccount(accountStorageKey interpreter.StorageKey, slabIndex atree.SlabIndex) {
+	if s.NewAccountStorageMapSlabIndices == nil {
+		s.NewAccountStorageMapSlabIndices = &orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]{}
+	}
+	s.NewAccountStorageMapSlabIndices.Set(accountStorageKey, slabIndex)
+}
+
+// isUnmigratedAccount returns true if given account has any domain registers.
+func (s *Storage) isUnmigratedAccount(address common.Address) (bool, error) {
+	if s.unmigratedAccounts != nil &&
+		s.unmigratedAccounts.Contains(address) {
+		return true, nil
+	}
+
+	// Check most frequently used domains first, such as storage, public, private.
+	for _, domain := range AccountDomains {
+		_, domainExists, err := getSlabIndexFromRegisterValue(s.Ledger, address, []byte(domain))
+		if err != nil {
+			return false, err
 		}
-
-		if storageMap != nil {
-			s.storageMaps[key] = storageMap
+		if domainExists {
+			return true, nil
 		}
 	}
 
-	return storageMap
+	return false, nil
 }
 
-func (s *Storage) loadExistingStorageMap(address atree.Address, slabIndex atree.SlabIndex) *interpreter.StorageMap {
-
-	slabID := atree.NewSlabID(address, slabIndex)
-
-	return interpreter.NewStorageMapWithRootID(s, slabID)
-}
-
-func (s *Storage) StoreNewStorageMap(address atree.Address, domain string) *interpreter.StorageMap {
-	storageMap := interpreter.NewStorageMap(s.memoryGauge, s, address)
-
-	slabIndex := storageMap.SlabID().Index()
-
-	storageKey := interpreter.NewStorageKey(s.memoryGauge, common.Address(address), domain)
-
-	if s.NewStorageMaps == nil {
-		s.NewStorageMaps = &orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]{}
+// getSlabIndexFromRegisterValue returns register value as atree.SlabIndex.
+// This function returns error if
+// - underlying ledger panics, or
+// - underlying ledger returns error when retrieving ledger value, or
+// - retrieved ledger value is invalid (for atree.SlabIndex).
+func getSlabIndexFromRegisterValue(
+	ledger atree.Ledger,
+	address common.Address,
+	key []byte,
+) (atree.SlabIndex, bool, error) {
+	var data []byte
+	var err error
+	errors.WrapPanic(func() {
+		data, err = ledger.GetValue(address[:], key)
+	})
+	if err != nil {
+		return atree.SlabIndex{}, false, interpreter.WrappedExternalError(err)
 	}
-	s.NewStorageMaps.Set(storageKey, slabIndex)
 
-	return storageMap
+	dataLength := len(data)
+
+	if dataLength == 0 {
+		return atree.SlabIndex{}, false, nil
+	}
+
+	isStorageIndex := dataLength == storageIndexLength
+	if !isStorageIndex {
+		// Invalid data in register
+
+		// TODO: add dedicated error type?
+		return atree.SlabIndex{}, false, errors.NewUnexpectedError(
+			"invalid storage index for storage map of account '%x': expected length %d, got %d",
+			address[:], storageIndexLength, dataLength,
+		)
+	}
+
+	return atree.SlabIndex(data), true, nil
 }
 
 func (s *Storage) recordContractUpdate(
@@ -216,7 +470,7 @@ func (s *Storage) writeContractUpdate(
 	key interpreter.StorageKey,
 	contractValue *interpreter.CompositeValue,
 ) {
-	storageMap := s.GetStorageMap(key.Address, StorageDomainContract, true)
+	storageMap := s.GetStorageMap(inter, key.Address, StorageDomainContract, true)
 	// NOTE: pass nil instead of allocating a Value-typed  interface that points to nil
 	storageMapKey := interpreter.StringStorageMapKey(key.Key)
 	if contractValue == nil {
@@ -249,6 +503,12 @@ func (s *Storage) commit(inter *interpreter.Interpreter, commitContractUpdates b
 		return err
 	}
 
+	// Migrate accounts that have write ops before calling PersistentSlabStorage.FastCommit().
+	err = s.migrateAccountsIfNeeded(inter)
+	if err != nil {
+		return err
+	}
+
 	// Commit the underlying slab storage's writes
 
 	size := s.PersistentSlabStorage.DeltasSizeWithoutTempAddresses()
@@ -270,11 +530,11 @@ func (s *Storage) commit(inter *interpreter.Interpreter, commitContractUpdates b
 }
 
 func (s *Storage) commitNewStorageMaps() error {
-	if s.NewStorageMaps == nil {
+	if s.NewAccountStorageMapSlabIndices == nil {
 		return nil
 	}
 
-	for pair := s.NewStorageMaps.Oldest(); pair != nil; pair = pair.Next() {
+	for pair := s.NewAccountStorageMapSlabIndices.Oldest(); pair != nil; pair = pair.Next() {
 		var err error
 		errors.WrapPanic(func() {
 			err = s.Ledger.SetValue(
@@ -286,6 +546,68 @@ func (s *Storage) commitNewStorageMaps() error {
 		if err != nil {
 			return interpreter.WrappedExternalError(err)
 		}
+	}
+
+	return nil
+}
+
+func (s *Storage) migrateAccountsIfNeeded(inter *interpreter.Interpreter) error {
+	if s.unmigratedAccounts == nil || s.unmigratedAccounts.Len() == 0 {
+		return nil
+	}
+	return s.migrateAccounts(inter)
+}
+
+func (s *Storage) migrateAccounts(inter *interpreter.Interpreter) error {
+	// Predicate function allows migration for accounts with write ops.
+	migrateAccountPred := func(address common.Address) bool {
+		return s.PersistentSlabStorage.HasUnsavedChanges(atree.Address(address))
+	}
+
+	// getDomainStorageMap function returns cached domain storage map if it is available
+	// before loading domain storage map from storage.
+	// This is necessary to migrate uncommitted (new) but cached domain storage map.
+	getDomainStorageMap := func(
+		ledger atree.Ledger,
+		storage atree.SlabStorage,
+		address common.Address,
+		domain string,
+	) (*interpreter.DomainStorageMap, error) {
+		domainStorageKey := interpreter.NewStorageKey(s.memoryGauge, address, domain)
+
+		// Get cached domain storage map if available.
+		domainStorageMap := s.cachedDomainStorageMaps[domainStorageKey]
+
+		if domainStorageMap != nil {
+			return domainStorageMap, nil
+		}
+
+		return getDomainStorageMapFromLegacyDomainRegister(ledger, storage, address, domain)
+	}
+
+	migrator := NewDomainRegisterMigration(s.Ledger, s.PersistentSlabStorage, inter, s.memoryGauge)
+	migrator.SetGetDomainStorageMapFunc(getDomainStorageMap)
+
+	migratedAccounts, err := migrator.MigrateAccounts(s.unmigratedAccounts, migrateAccountPred)
+	if err != nil {
+		return err
+	}
+
+	if migratedAccounts == nil {
+		return nil
+	}
+
+	// Update internal state with migrated accounts
+	for pair := migratedAccounts.Oldest(); pair != nil; pair = pair.Next() {
+		address := pair.Key
+		accountStorageMap := pair.Value
+
+		// Cache migrated account storage map
+		accountStorageKey := interpreter.NewStorageKey(s.memoryGauge, address, AccountStorageKey)
+		s.cachedAccountStorageMaps[accountStorageKey] = accountStorageMap
+
+		// Remove migrated accounts from unmigratedAccounts
+		s.unmigratedAccounts.Delete(address)
 	}
 
 	return nil
@@ -311,17 +633,38 @@ func (s *Storage) CheckHealth() error {
 		accountRootSlabIDs[rootSlabID] = struct{}{}
 	}
 
-	// Check that each storage map refers to an existing slab.
-
-	found := map[atree.SlabID]struct{}{}
+	// Check that account storage maps and unmigrated domain storage maps
+	// match returned root slabs from atree.CheckStorageHealth.
 
 	var storageMapStorageIDs []atree.SlabID
 
-	for _, storageMap := range s.storageMaps { //nolint:maprange
+	// Get cached account storage map slab IDs.
+	for _, storageMap := range s.cachedAccountStorageMaps { //nolint:maprange
 		storageMapStorageIDs = append(
 			storageMapStorageIDs,
 			storageMap.SlabID(),
 		)
+	}
+
+	// Get cached unmigrated domain storage map slab IDs
+	for storageKey, storageMap := range s.cachedDomainStorageMaps { //nolint:maprange
+		address := storageKey.Address
+
+		if s.unmigratedAccounts != nil &&
+			s.unmigratedAccounts.Contains(address) {
+
+			domainValueID := storageMap.ValueID()
+
+			slabID := atree.NewSlabID(
+				atree.Address(address),
+				atree.SlabIndex(domainValueID[8:]),
+			)
+
+			storageMapStorageIDs = append(
+				storageMapStorageIDs,
+				slabID,
+			)
+		}
 	}
 
 	sort.Slice(storageMapStorageIDs, func(i, j int) bool {
@@ -330,9 +673,11 @@ func (s *Storage) CheckHealth() error {
 		return a.Compare(b) < 0
 	})
 
+	found := map[atree.SlabID]struct{}{}
+
 	for _, storageMapStorageID := range storageMapStorageIDs {
 		if _, ok := accountRootSlabIDs[storageMapStorageID]; !ok {
-			return errors.NewUnexpectedError("account storage map points to non-existing slab %s", storageMapStorageID)
+			return errors.NewUnexpectedError("account storage map (and unmigrated domain storage map) points to non-root slab %s", storageMapStorageID)
 		}
 
 		found[storageMapStorageID] = struct{}{}
@@ -381,3 +726,23 @@ func (UnreferencedRootSlabsError) IsInternalError() {}
 func (e UnreferencedRootSlabsError) Error() string {
 	return fmt.Sprintf("slabs not referenced: %s", e.UnreferencedRootSlabIDs)
 }
+
+var AccountDomains = []string{
+	common.PathDomainStorage.Identifier(),
+	common.PathDomainPrivate.Identifier(),
+	common.PathDomainPublic.Identifier(),
+	StorageDomainContract,
+	stdlib.InboxStorageDomain,
+	stdlib.CapabilityControllerStorageDomain,
+	stdlib.CapabilityControllerTagStorageDomain,
+	stdlib.PathCapabilityStorageDomain,
+	stdlib.AccountCapabilityStorageDomain,
+}
+
+var accountDomainsSet = func() map[string]struct{} {
+	m := make(map[string]struct{})
+	for _, domain := range AccountDomains {
+		m[domain] = struct{}{}
+	}
+	return m
+}()

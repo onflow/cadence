@@ -871,7 +871,7 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 		)
 
 		require.NoError(t, err)
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindAtreeEncodedSlab))
+		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindAtreeEncodedSlab))
 	})
 
 	t.Run("storage used non empty", func(t *testing.T) {
@@ -898,7 +898,7 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 			OnGetStorageUsed: func(_ Address) (uint64, error) {
 				// Before the storageUsed function is invoked, the deltas must have been committed.
 				// So the encoded slabs must have been metered at this point.
-				assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindAtreeEncodedSlab))
+				assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindAtreeEncodedSlab))
 				storageUsedInvoked = true
 				return 1, nil
 			},
@@ -918,7 +918,7 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.True(t, storageUsedInvoked)
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindAtreeEncodedSlab))
+		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindAtreeEncodedSlab))
 	})
 }
 
@@ -1073,7 +1073,7 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 		)
 
 		require.NoError(t, err)
-		assert.Equal(t, 75, int(meter.getMemory(common.MemoryKindBytes)))
+		assert.Equal(t, 114, int(meter.getMemory(common.MemoryKindBytes)))
 	})
 
 	t.Run("string in loop", func(t *testing.T) {
@@ -1122,7 +1122,7 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 		)
 
 		require.NoError(t, err)
-		assert.Equal(t, 61455, int(meter.getMemory(common.MemoryKindBytes)))
+		assert.Equal(t, 61501, int(meter.getMemory(common.MemoryKindBytes)))
 	})
 
 	t.Run("composite", func(t *testing.T) {
@@ -1173,6 +1173,6 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 		)
 
 		require.NoError(t, err)
-		assert.Equal(t, 58323, int(meter.getMemory(common.MemoryKindBytes)))
+		assert.Equal(t, 58369, int(meter.getMemory(common.MemoryKindBytes)))
 	})
 }

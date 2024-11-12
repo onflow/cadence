@@ -3253,6 +3253,7 @@ func recordStorageCapabilityController(
 	storageMapKey := interpreter.StringStorageMapKey(identifier)
 
 	storageMap := inter.Storage().GetStorageMap(
+		inter,
 		address,
 		PathCapabilityStorageDomain,
 		true,
@@ -3295,6 +3296,7 @@ func getPathCapabilityIDSet(
 	storageMapKey := interpreter.StringStorageMapKey(identifier)
 
 	storageMap := inter.Storage().GetStorageMap(
+		inter,
 		address,
 		PathCapabilityStorageDomain,
 		false,
@@ -3345,6 +3347,7 @@ func unrecordStorageCapabilityController(
 
 	if capabilityIDSet.Count() == 0 {
 		storageMap := inter.Storage().GetStorageMap(
+			inter,
 			address,
 			PathCapabilityStorageDomain,
 			true,
@@ -3417,6 +3420,7 @@ func recordAccountCapabilityController(
 	storageMapKey := interpreter.Uint64StorageMapKey(capabilityIDValue)
 
 	storageMap := inter.Storage().GetStorageMap(
+		inter,
 		address,
 		AccountCapabilityStorageDomain,
 		true,
@@ -3444,6 +3448,7 @@ func unrecordAccountCapabilityController(
 	storageMapKey := interpreter.Uint64StorageMapKey(capabilityIDValue)
 
 	storageMap := inter.Storage().GetStorageMap(
+		inter,
 		address,
 		AccountCapabilityStorageDomain,
 		true,
@@ -3463,6 +3468,7 @@ func getAccountCapabilityControllerIDsIterator(
 	count uint64,
 ) {
 	storageMap := inter.Storage().GetStorageMap(
+		inter,
 		address,
 		AccountCapabilityStorageDomain,
 		false,
