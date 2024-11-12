@@ -2617,7 +2617,7 @@ func (checker *Checker) visitExpressionWithForceType(
 	// Check for errors first, which is cheap,
 	// before checking for an invalid type, which is more expensive.
 
-	if len(checker.errors) == 0 && actualType.IsInvalidType() {
+	if len(checker.errors) == 0 && (actualType.IsInvalidType() || (expectedType != nil && expectedType.IsInvalidType())) {
 		panic(errors.NewUnexpectedError("invalid type produced without error"))
 	}
 
