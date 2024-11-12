@@ -284,7 +284,7 @@ func (s *AccountStorageMap) Domains() map[common.StorageDomain]struct{} {
 			break
 		}
 
-		domain := convertKeyToDomain(k)
+		domain := convertAccountStorageMapKeyToStorageDomain(k)
 		domains[domain] = struct{}{}
 	}
 
@@ -326,14 +326,14 @@ func (i *AccountStorageMapIterator) Next() (common.StorageDomain, *DomainStorage
 		return common.StorageDomainUnknown, nil
 	}
 
-	key := convertKeyToDomain(k)
+	key := convertAccountStorageMapKeyToStorageDomain(k)
 
 	value := NewDomainStorageMapWithAtreeValue(v)
 
 	return key, value
 }
 
-func convertKeyToDomain(v atree.Value) common.StorageDomain {
+func convertAccountStorageMapKeyToStorageDomain(v atree.Value) common.StorageDomain {
 	key, ok := v.(Uint64AtreeValue)
 	if !ok {
 		panic(errors.NewUnexpectedError("domain key type %T isn't expected", key))
