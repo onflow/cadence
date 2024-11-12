@@ -22,8 +22,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
@@ -246,4 +248,40 @@ func TestCheckInvalidInvocationFunctionReturnType(t *testing.T) {
 	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvocationReturnTypeInferenceError{}, errs[0])
+}
+
+func TestCheckInvalidTypeDefensiveCheck(t *testing.T) {
+
+	t.Parallel()
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.StandardLibraryValue{
+		Type: sema.InvalidType,
+		Name: "invalid",
+		Kind: common.DeclarationKindConstant,
+	})
+
+	var r any
+	func() {
+		defer func() {
+			r = recover()
+		}()
+
+		_, _ = ParseAndCheckWithOptions(t,
+			`
+                  let res = invalid
+                `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+		)
+	}()
+
+	require.IsType(t, errors.UnexpectedError{}, r)
+	err := r.(errors.UnexpectedError)
+	require.ErrorContains(t, err, "invalid type produced without error")
 }
