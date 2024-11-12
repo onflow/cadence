@@ -285,3 +285,18 @@ func TestCheckInvalidTypeDefensiveCheck(t *testing.T) {
 	err := r.(errors.UnexpectedError)
 	require.ErrorContains(t, err, "invalid type produced without error")
 }
+
+func TestCheckInvalidTypeIndexing(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      struct S {}
+      let s = S()
+      let res = s[[]]
+    `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
+}

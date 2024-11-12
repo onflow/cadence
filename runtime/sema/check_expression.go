@@ -417,20 +417,7 @@ func (checker *Checker) visitIndexExpression(
 			return InvalidType
 		}
 
-		elementType := checker.checkTypeIndexingExpression(typeIndexedType, indexExpression)
-		if elementType == InvalidType {
-			checker.report(
-				&InvalidTypeIndexingError{
-					BaseType:           typeIndexedType,
-					IndexingExpression: indexExpression.IndexingExpression,
-					Range: ast.NewRangeFromPositioned(
-						checker.memoryGauge,
-						indexExpression.IndexingExpression,
-					),
-				},
-			)
-		}
-		return elementType
+		return checker.checkTypeIndexingExpression(typeIndexedType, indexExpression)
 	}
 
 	reportNonIndexable(targetType)
@@ -450,19 +437,35 @@ func (checker *Checker) checkTypeIndexingExpression(
 		})
 	}
 
+	reportInvalid := func() {
+		checker.report(
+			&InvalidTypeIndexingError{
+				BaseType:           targetType,
+				IndexingExpression: indexExpression.IndexingExpression,
+				Range: ast.NewRangeFromPositioned(
+					checker.memoryGauge,
+					indexExpression.IndexingExpression,
+				),
+			},
+		)
+	}
+
 	expressionType := ast.ExpressionAsType(indexExpression.IndexingExpression)
 	if expressionType == nil {
+		reportInvalid()
 		return InvalidType
 	}
 
 	nominalTypeExpression, isNominalType := expressionType.(*ast.NominalType)
 	if !isNominalType {
+		reportInvalid()
 		return InvalidType
 	}
 
 	nominalType := checker.convertNominalType(nominalTypeExpression)
 
 	if !targetType.IsValidIndexingType(nominalType) {
+		reportInvalid()
 		return InvalidType
 	}
 
