@@ -51,16 +51,6 @@ func ErrorMessageExpectedActualTypes(
 	return
 }
 
-// astTypeConversionError
-
-type astTypeConversionError struct {
-	invalidASTType ast.Type
-}
-
-func (e *astTypeConversionError) Error() string {
-	return fmt.Sprintf("cannot convert unsupported AST type: %#+v", e.invalidASTType)
-}
-
 // unsupportedOperation
 
 type unsupportedOperation struct {
@@ -4842,4 +4832,22 @@ func (*InvocationReturnTypeInferenceError) IsUserError() {}
 
 func (e *InvocationReturnTypeInferenceError) Error() string {
 	return "cannot infer return type of invocation"
+}
+
+// UnconvertableTypeError
+
+type UnconvertableTypeError struct {
+	Type ast.Type
+	ast.Range
+}
+
+var _ SemanticError = &UnconvertableTypeError{}
+var _ errors.UserError = &UnconvertableTypeError{}
+
+func (e *UnconvertableTypeError) isSemanticError() {}
+
+func (*UnconvertableTypeError) IsUserError() {}
+
+func (e *UnconvertableTypeError) Error() string {
+	return fmt.Sprintf("cannot convert type `%s`", e.Type)
 }
