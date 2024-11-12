@@ -7579,7 +7579,7 @@ func TestRuntimeComputationMetring(t *testing.T) {
         `,
 			ok:        true,
 			hits:      3,
-			intensity: 115,
+			intensity: 108,
 		},
 	}
 

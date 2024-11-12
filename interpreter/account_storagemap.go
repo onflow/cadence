@@ -76,7 +76,7 @@ func NewAccountStorageMapWithRootID(
 
 // DomainExists returns true if the given domain exists in the account storage map.
 func (s *AccountStorageMap) DomainExists(domain common.StorageDomain) bool {
-	key := StringStorageMapKey(domain.Identifier())
+	key := Uint64StorageMapKey(domain)
 
 	exists, err := s.orderedMap.Has(
 		key.AtreeValueCompare,
@@ -99,7 +99,7 @@ func (s *AccountStorageMap) GetDomain(
 	domain common.StorageDomain,
 	createIfNotExists bool,
 ) *DomainStorageMap {
-	key := StringStorageMapKey(domain.Identifier())
+	key := Uint64StorageMapKey(domain)
 
 	storedValue, err := s.orderedMap.Get(
 		key.AtreeValueCompare,
@@ -135,7 +135,7 @@ func (s *AccountStorageMap) NewDomain(
 
 	domainStorageMap := NewDomainStorageMap(gauge, s.orderedMap.Storage, s.orderedMap.Address())
 
-	key := StringStorageMapKey(domain.Identifier())
+	key := Uint64StorageMapKey(domain)
 
 	existingStorable, err := s.orderedMap.Set(
 		key.AtreeValueCompare,
@@ -181,7 +181,7 @@ func (s *AccountStorageMap) setDomain(
 ) (existed bool) {
 	interpreter.recordStorageMutation()
 
-	key := StringStorageMapKey(domain.Identifier())
+	key := Uint64StorageMapKey(domain)
 
 	existingValueStorable, err := s.orderedMap.Set(
 		key.AtreeValueCompare,
@@ -218,7 +218,7 @@ func (s *AccountStorageMap) setDomain(
 func (s *AccountStorageMap) removeDomain(interpreter *Interpreter, domain common.StorageDomain) (existed bool) {
 	interpreter.recordStorageMutation()
 
-	key := StringStorageMapKey(domain.Identifier())
+	key := Uint64StorageMapKey(domain)
 
 	existingKeyStorable, existingValueStorable, err := s.orderedMap.Remove(
 		key.AtreeValueCompare,
@@ -236,7 +236,7 @@ func (s *AccountStorageMap) removeDomain(interpreter *Interpreter, domain common
 
 	// Key
 
-	// NOTE: Key is just an atree.Value (StringAtreeValue), not an interpreter.Value,
+	// NOTE: Key is just an atree.Value (Uint64AtreeValue), not an interpreter.Value,
 	// so do not need (can) convert and not need to deep remove
 	interpreter.RemoveReferencedSlab(existingKeyStorable)
 
@@ -334,13 +334,13 @@ func (i *AccountStorageMapIterator) Next() (common.StorageDomain, *DomainStorage
 }
 
 func convertKeyToDomain(v atree.Value) common.StorageDomain {
-	key, ok := v.(StringAtreeValue)
+	key, ok := v.(Uint64AtreeValue)
 	if !ok {
 		panic(errors.NewUnexpectedError("domain key type %T isn't expected", key))
 	}
-	domain, found := common.StorageDomainFromIdentifier(string(key))
-	if !found {
-		panic(errors.NewUnexpectedError("domain key %s isn't expected", key))
+	domain, err := common.StorageDomainFromUint64(uint64(key))
+	if err != nil {
+		panic(errors.NewUnexpectedError("domain key %d isn't expected: %w", key, err))
 	}
 	return domain
 }
