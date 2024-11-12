@@ -24,6 +24,19 @@ import (
 	"github.com/onflow/cadence/errors"
 )
 
+// StorageDomain is used to store domain values on chain.
+//
+// !!! *WARNING* !!!
+//
+// Only add new StorageDomain by:
+// - appending to the end.
+//
+// Only remove StorageDomain by:
+// - replacing existing StorageDomain with a placeholder `_`.
+//
+// DO *NOT* REPLACE EXISTING STORAGEDOMAIN!
+// DO *NOT* REMOVE EXISTING STORAGEDOMAIN!
+// DO *NOT* INSERT NEW STORAGEDOMAIN IN BETWEEN!
 type StorageDomain uint8
 
 const (
@@ -54,6 +67,8 @@ const (
 	// StorageDomainAccountCapability is the storage domain which
 	// records active account capability controller IDs
 	StorageDomainAccountCapability
+
+	// Append new StorageDomain here (if needed).
 )
 
 var AllStorageDomains = []StorageDomain{
