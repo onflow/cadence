@@ -592,3 +592,61 @@ func TestCheckArgumentLabels(t *testing.T) {
 
 	})
 }
+
+func TestCheckInvocationWithIncorrectTypeParameter(t *testing.T) {
+
+	t.Parallel()
+
+	// function type has incorrect type-arguments:
+	// 	`fun Foo<T: AnyStruct>(_ a: R)`
+	//
+	funcType := &sema.FunctionType{
+		ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+		TypeParameters: []*sema.TypeParameter{
+			{
+				Name:      "T",
+				TypeBound: sema.AnyStructType,
+			},
+		},
+		Parameters: []sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "a",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					&sema.GenericType{
+						TypeParameter: &sema.TypeParameter{
+							Name:      "R", // This is an incorrect/undefined type-parameter
+							TypeBound: sema.AnyStructType,
+						},
+					},
+				),
+			},
+		},
+		IsConstructor: false,
+	}
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
+		"foo",
+		funcType,
+		"",
+		nil, // no need, we only type-check
+	))
+
+	_, err := ParseAndCheckWithOptions(t,
+		`
+            access(all) fun test() {
+                foo<String>("hello")
+            }
+        `,
+		ParseAndCheckOptions{
+			Config: &sema.Config{
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
+			},
+		},
+	)
+
+	require.Error(t, err)
+}
