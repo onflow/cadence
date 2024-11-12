@@ -426,14 +426,14 @@ func TestCheckAccountStorageLoad(t *testing.T) {
 			if domain == common.PathDomainStorage {
 				errs := RequireCheckerErrors(t, err, 2)
 
-				require.IsType(t, &sema.InvocationReturnTypeInferenceError{}, errs[0])
+				require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
 				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
 
 			} else {
 				errs := RequireCheckerErrors(t, err, 3)
 
 				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-				require.IsType(t, &sema.InvocationReturnTypeInferenceError{}, errs[1])
+				require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[1])
 				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[2])
 			}
 		})
@@ -556,14 +556,14 @@ func TestCheckAccountStorageCopy(t *testing.T) {
 			if domain == common.PathDomainStorage {
 				errs := RequireCheckerErrors(t, err, 2)
 
-				require.IsType(t, &sema.InvocationReturnTypeInferenceError{}, errs[0])
+				require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
 				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
 
 			} else {
 				errs := RequireCheckerErrors(t, err, 3)
 
 				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-				require.IsType(t, &sema.InvocationReturnTypeInferenceError{}, errs[1])
+				require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[1])
 				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[2])
 			}
 		})
@@ -692,14 +692,14 @@ func TestCheckAccountStorageBorrow(t *testing.T) {
 				if domain == common.PathDomainStorage {
 					errs := RequireCheckerErrors(t, err, 2)
 
-					require.IsType(t, &sema.InvocationReturnTypeInferenceError{}, errs[0])
+					require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
 					require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
 
 				} else {
 					errs := RequireCheckerErrors(t, err, 3)
 
 					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-					require.IsType(t, &sema.InvocationReturnTypeInferenceError{}, errs[1])
+					require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[1])
 					require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[2])
 				}
 			})
@@ -722,14 +722,14 @@ func TestCheckAccountStorageBorrow(t *testing.T) {
 				if domain == common.PathDomainStorage {
 					errs := RequireCheckerErrors(t, err, 2)
 
-					require.IsType(t, &sema.InvocationReturnTypeInferenceError{}, errs[0])
+					require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
 					require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
 
 				} else {
 					errs := RequireCheckerErrors(t, err, 3)
 
 					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-					require.IsType(t, &sema.InvocationReturnTypeInferenceError{}, errs[1])
+					require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[1])
 					require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[2])
 				}
 			})
@@ -1036,7 +1036,7 @@ func TestCheckAccountContractsBorrow(t *testing.T) {
 
 		errors := RequireCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.InvocationReturnTypeInferenceError{}, errors[0])
+		assert.IsType(t, &sema.InvocationTypeInferenceError{}, errors[0])
 		assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errors[1])
 	})
 }

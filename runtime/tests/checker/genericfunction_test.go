@@ -454,7 +454,7 @@ func TestCheckGenericFunctionInvocation(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.InvocationReturnTypeInferenceError{}, errs[0])
+		assert.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
 		assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
 	})
 

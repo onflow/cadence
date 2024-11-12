@@ -4817,21 +4817,21 @@ func (e *NestedReferenceError) Error() string {
 	return fmt.Sprintf("cannot create a nested reference to value of type %s", e.Type.QualifiedString())
 }
 
-// InvocationReturnTypeInferenceError
+// InvocationTypeInferenceError
 
-type InvocationReturnTypeInferenceError struct {
+type InvocationTypeInferenceError struct {
 	ast.Range
 }
 
-var _ SemanticError = &InvocationReturnTypeInferenceError{}
-var _ errors.UserError = &InvocationReturnTypeInferenceError{}
+var _ SemanticError = &InvocationTypeInferenceError{}
+var _ errors.UserError = &InvocationTypeInferenceError{}
 
-func (e *InvocationReturnTypeInferenceError) isSemanticError() {}
+func (e *InvocationTypeInferenceError) isSemanticError() {}
 
-func (*InvocationReturnTypeInferenceError) IsUserError() {}
+func (*InvocationTypeInferenceError) IsUserError() {}
 
-func (e *InvocationReturnTypeInferenceError) Error() string {
-	return "cannot infer return type of invocation"
+func (e *InvocationTypeInferenceError) Error() string {
+	return "cannot infer type of invocation"
 }
 
 // UnconvertableTypeError

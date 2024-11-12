@@ -247,7 +247,7 @@ func TestCheckInvalidInvocationFunctionReturnType(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.InvocationReturnTypeInferenceError{}, errs[0])
+	assert.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
 }
 
 func TestCheckInvalidTypeDefensiveCheck(t *testing.T) {

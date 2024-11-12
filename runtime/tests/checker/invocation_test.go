@@ -622,7 +622,6 @@ func TestCheckInvocationWithIncorrectTypeParameter(t *testing.T) {
 				),
 			},
 		},
-		IsConstructor: false,
 	}
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -648,5 +647,7 @@ func TestCheckInvocationWithIncorrectTypeParameter(t *testing.T) {
 		},
 	)
 
-	require.Error(t, err)
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
 }

@@ -11588,6 +11588,6 @@ func TestRuntimeInvocationReturnTypeInferenceFailure(t *testing.T) {
 	)
 	RequireError(t, err)
 
-	var typeErr *sema.InvocationReturnTypeInferenceError
+	var typeErr *sema.InvocationTypeInferenceError
 	require.ErrorAs(t, err, &typeErr)
 }

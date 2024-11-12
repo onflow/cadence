@@ -87,7 +87,7 @@ func TestCheckCapability_borrow(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.InvocationReturnTypeInferenceError{}, errs[0])
+		require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
 		require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
 	})
 
