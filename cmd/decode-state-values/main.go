@@ -234,7 +234,12 @@ type interpreterStorage struct {
 
 var _ interpreter.Storage = &interpreterStorage{}
 
-func (i interpreterStorage) GetDomainStorageMap(_ *interpreter.Interpreter, _ common.Address, _ string, _ bool) *interpreter.DomainStorageMap {
+func (i interpreterStorage) GetDomainStorageMap(
+	_ *interpreter.Interpreter,
+	_ common.Address,
+	_ common.StorageDomain,
+	_ bool,
+) *interpreter.DomainStorageMap {
 	panic("unexpected GetDomainStorageMap call")
 }
 

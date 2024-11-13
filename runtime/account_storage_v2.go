@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/common/orderedmap"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 )
 
@@ -64,7 +65,7 @@ func (s *AccountStorageV2) accountStorageKey(address common.Address) interpreter
 func (s *AccountStorageV2) GetDomainStorageMap(
 	inter *interpreter.Interpreter,
 	address common.Address,
-	domain string,
+	domain common.StorageDomain,
 	createIfNotExists bool,
 ) (
 	domainStorageMap *interpreter.DomainStorageMap,
@@ -177,10 +178,21 @@ func (s *AccountStorageV2) commit() error {
 		return nil
 	}
 
-	return commitSlabIndices(
-		s.newAccountStorageMapSlabIndices,
-		s.ledger,
-	)
+	for pair := s.newAccountStorageMapSlabIndices.Oldest(); pair != nil; pair = pair.Next() {
+		var err error
+		errors.WrapPanic(func() {
+			err = s.ledger.SetValue(
+				pair.Key.Address[:],
+				[]byte(pair.Key.Key),
+				pair.Value[:],
+			)
+		})
+		if err != nil {
+			return interpreter.WrappedExternalError(err)
+		}
+	}
+
+	return nil
 }
 
 func getAccountStorageMapFromRegister(

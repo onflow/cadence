@@ -38,7 +38,6 @@ import (
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
@@ -62,15 +61,16 @@ func withWritesToStorage(
 
 	inter := NewTestInterpreter(tb)
 
-	address := common.MustBytesToAddress([]byte{0x1})
-
 	for i := 0; i < count; i++ {
 
 		randomIndex := random.Uint32()
 
+		var address common.Address
+		random.Read(address[:])
+
 		storageKey := interpreter.StorageKey{
 			Address: address,
-			Key:     fmt.Sprintf("%d", randomIndex),
+			Key:     AccountStorageKey,
 		}
 
 		var slabIndex atree.SlabIndex
@@ -3115,7 +3115,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	storageMap := storage.GetDomainStorageMap(inter, address, common.PathDomainStorage.Identifier(), false)
+	storageMap := storage.GetDomainStorageMap(inter, address, common.PathDomainStorage.StorageDomain(), false)
 	require.NotNil(t, storageMap)
 
 	// Read first
@@ -6247,7 +6247,7 @@ func TestRuntimeStorageReferenceAccess(t *testing.T) {
 
 type (
 	domainStorageMapValues  map[interpreter.StorageMapKey]interpreter.Value
-	accountStorageMapValues map[string]domainStorageMapValues
+	accountStorageMapValues map[common.StorageDomain]domainStorageMapValues
 )
 
 func TestRuntimeStorageForNewAccount(t *testing.T) {
@@ -6275,7 +6275,7 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
-		domain := common.PathDomainStorage.Identifier()
+		domain := common.PathDomainStorage.StorageDomain()
 
 		// Get non-existent domain storage map
 		const createIfNotExists = false
@@ -6304,13 +6304,13 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 	// migration: no migraiton for new account.
 	createDomainTestCases := []struct {
 		name                  string
-		newDomains            []string
+		newDomains            []common.StorageDomain
 		domainStorageMapCount int
 		inlined               bool
 	}{
-		{name: "empty domain storage map", newDomains: []string{common.PathDomainStorage.Identifier()}, domainStorageMapCount: 0, inlined: true},
-		{name: "small domain storage map", newDomains: []string{common.PathDomainStorage.Identifier()}, domainStorageMapCount: 10, inlined: true},
-		{name: "large domain storage map", newDomains: []string{common.PathDomainStorage.Identifier()}, domainStorageMapCount: 20, inlined: false},
+		{name: "empty domain storage map", newDomains: []common.StorageDomain{common.PathDomainStorage.StorageDomain()}, domainStorageMapCount: 0, inlined: true},
+		{name: "small domain storage map", newDomains: []common.StorageDomain{common.PathDomainStorage.StorageDomain()}, domainStorageMapCount: 10, inlined: true},
+		{name: "large domain storage map", newDomains: []common.StorageDomain{common.PathDomainStorage.StorageDomain()}, domainStorageMapCount: 20, inlined: false},
 	}
 
 	for _, tc := range createDomainTestCases {
@@ -6418,9 +6418,9 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 
 		accountValues := make(accountStorageMapValues)
 
-		domains := []string{
-			common.PathDomainStorage.Identifier(),
-			common.PathDomainPublic.Identifier(),
+		domains := []common.StorageDomain{
+			common.PathDomainStorage.StorageDomain(),
+			common.PathDomainPublic.StorageDomain(),
 		}
 
 		// Create empty domain storage map and commit
@@ -6540,7 +6540,7 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 		onRead LedgerOnRead,
 		onWrite LedgerOnWrite,
 		address common.Address,
-		domains []string,
+		domains []common.StorageDomain,
 		domainStorageMapCount int,
 	) (TestLedger, accountStorageMapValues) {
 		ledger := NewTestLedger(nil, nil)
@@ -6568,11 +6568,11 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 	// post-condition: no change
 	// migration: none
 	t.Run("read non-existent domain storage map", func(t *testing.T) {
-		existingDomains := []string{
-			common.PathDomainStorage.Identifier(),
+		existingDomains := []common.StorageDomain{
+			common.PathDomainStorage.StorageDomain(),
 		}
 
-		nonexistentDomain := common.PathDomainPublic.Identifier()
+		nonexistentDomain := common.PathDomainPublic.StorageDomain()
 
 		var writeCount int
 
@@ -6623,7 +6623,7 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 	for _, tc := range readExistingDomainTestCases {
 		t.Run("read existing domain storage map "+tc.name, func(t *testing.T) {
 
-			existingDomains := []string{common.PathDomainStorage.Identifier()}
+			existingDomains := []common.StorageDomain{common.PathDomainStorage.StorageDomain()}
 
 			var writeCount int
 
@@ -6681,33 +6681,33 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 	//  - account storage map with new domain storage map.
 	createDomainTestCases := []struct {
 		name                          string
-		existingDomains               []string
-		newDomains                    []string
+		existingDomains               []common.StorageDomain
+		newDomains                    []common.StorageDomain
 		existingDomainStorageMapCount int
 		newDomainStorageMapCount      int
 		isNewDomainStorageMapInlined  bool
 	}{
 		{
 			name:                          "empty domain storage map",
-			existingDomains:               []string{common.PathDomainStorage.Identifier()},
+			existingDomains:               []common.StorageDomain{common.PathDomainStorage.StorageDomain()},
 			existingDomainStorageMapCount: 5,
-			newDomains:                    []string{common.PathDomainPublic.Identifier()},
+			newDomains:                    []common.StorageDomain{common.PathDomainPublic.StorageDomain()},
 			newDomainStorageMapCount:      0,
 			isNewDomainStorageMapInlined:  true,
 		},
 		{
 			name:                          "small domain storage map",
-			existingDomains:               []string{common.PathDomainStorage.Identifier()},
+			existingDomains:               []common.StorageDomain{common.PathDomainStorage.StorageDomain()},
 			existingDomainStorageMapCount: 5,
-			newDomains:                    []string{common.PathDomainPublic.Identifier()},
+			newDomains:                    []common.StorageDomain{common.PathDomainPublic.StorageDomain()},
 			newDomainStorageMapCount:      10,
 			isNewDomainStorageMapInlined:  true,
 		},
 		{
 			name:                          "large domain storage map",
-			existingDomains:               []string{common.PathDomainStorage.Identifier()},
+			existingDomains:               []common.StorageDomain{common.PathDomainStorage.StorageDomain()},
 			existingDomainStorageMapCount: 5,
-			newDomains:                    []string{common.PathDomainPublic.Identifier()},
+			newDomains:                    []common.StorageDomain{common.PathDomainPublic.StorageDomain()},
 			newDomainStorageMapCount:      20,
 			isNewDomainStorageMapInlined:  false,
 		},
@@ -6806,7 +6806,7 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 
 		var writeEntries []OwnerKeyValue
 
-		existingDomains := []string{common.PathDomainStorage.Identifier()}
+		existingDomains := []common.StorageDomain{common.PathDomainStorage.StorageDomain()}
 		const existingDomainStorageMapCount = 5
 
 		// Create storage with account storage map
@@ -6902,9 +6902,9 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 	// - read domain storage map and commit
 	t.Run("read, commit, update, commit, remove, commit", func(t *testing.T) {
 
-		domains := []string{
-			common.PathDomainStorage.Identifier(),
-			common.PathDomainPublic.Identifier(),
+		domains := []common.StorageDomain{
+			common.PathDomainStorage.StorageDomain(),
+			common.PathDomainPublic.StorageDomain(),
 		}
 		const domainStorageMapCount = 5
 
@@ -7056,7 +7056,7 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 		onRead LedgerOnRead,
 		onWrite LedgerOnWrite,
 		address common.Address,
-		domains []string,
+		domains []common.StorageDomain,
 		domainStorageMapCount int,
 	) (TestLedger, accountStorageMapValues) {
 		ledger := NewTestLedger(nil, nil)
@@ -7082,7 +7082,7 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 
 			// Write domain register
 			domainStorageMapValueID := domainStorageMap.ValueID()
-			err := ledger.SetValue(address[:], []byte(domain), domainStorageMapValueID[8:])
+			err := ledger.SetValue(address[:], []byte(domain.Identifier()), domainStorageMapValueID[8:])
 			require.NoError(t, err)
 
 			// Write elements to to domain storage map
@@ -7113,8 +7113,8 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 	// post-condition: no change
 	// migration: none because only read ops.
 	t.Run("read non-existent domain storage map", func(t *testing.T) {
-		existingDomains := []string{
-			common.PathDomainStorage.Identifier(),
+		existingDomains := []common.StorageDomain{
+			common.PathDomainStorage.StorageDomain(),
 		}
 
 		var writeCount int
@@ -7139,8 +7139,8 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 
 		// Get non-existent domain storage map
 		const createIfNotExists = false
-		nonexistingDomain := common.PathDomainPublic.Identifier()
-		domainStorageMap := storage.GetDomainStorageMap(inter, address, nonexistingDomain, createIfNotExists)
+		nonExistingDomain := common.PathDomainPublic.StorageDomain()
+		domainStorageMap := storage.GetDomainStorageMap(inter, address, nonExistingDomain, createIfNotExists)
 		require.Nil(t, domainStorageMap)
 
 		// Commit changes
@@ -7169,7 +7169,7 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 
 			var writeCount int
 
-			existingDomains := []string{common.PathDomainStorage.Identifier()}
+			existingDomains := []common.StorageDomain{common.PathDomainStorage.StorageDomain()}
 			const existingDomainStorageMapCount = 5
 
 			// Create storage with existing domain storage map
@@ -7229,33 +7229,33 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 	// migration: yes
 	createDomainTestCases := []struct {
 		name                          string
-		existingDomains               []string
-		newDomains                    []string
+		existingDomains               []common.StorageDomain
+		newDomains                    []common.StorageDomain
 		existingDomainStorageMapCount int
 		newDomainStorageMapCount      int
 		isNewDomainStorageMapInlined  bool
 	}{
 		{
 			name:                          "empty domain storage map",
-			existingDomains:               []string{common.PathDomainStorage.Identifier()},
+			existingDomains:               []common.StorageDomain{common.PathDomainStorage.StorageDomain()},
 			existingDomainStorageMapCount: 5,
-			newDomains:                    []string{common.PathDomainPublic.Identifier()},
+			newDomains:                    []common.StorageDomain{common.PathDomainPublic.StorageDomain()},
 			newDomainStorageMapCount:      0,
 			isNewDomainStorageMapInlined:  true,
 		},
 		{
 			name:                          "small domain storage map",
-			existingDomains:               []string{common.PathDomainStorage.Identifier()},
+			existingDomains:               []common.StorageDomain{common.PathDomainStorage.StorageDomain()},
 			existingDomainStorageMapCount: 5,
-			newDomains:                    []string{common.PathDomainPublic.Identifier()},
+			newDomains:                    []common.StorageDomain{common.PathDomainPublic.StorageDomain()},
 			newDomainStorageMapCount:      10,
 			isNewDomainStorageMapInlined:  true,
 		},
 		{
 			name:                          "large domain storage map",
-			existingDomains:               []string{common.PathDomainStorage.Identifier()},
+			existingDomains:               []common.StorageDomain{common.PathDomainStorage.StorageDomain()},
 			existingDomainStorageMapCount: 5,
-			newDomains:                    []string{common.PathDomainPublic.Identifier()},
+			newDomains:                    []common.StorageDomain{common.PathDomainPublic.StorageDomain()},
 			newDomainStorageMapCount:      20,
 			isNewDomainStorageMapInlined:  false,
 		},
@@ -7315,7 +7315,7 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 			require.True(t, len(writeEntries) > 1+len(tc.existingDomains)+len(tc.newDomains))
 
 			i := 0
-			for _, domain := range AccountDomains {
+			for _, domain := range common.AllStorageDomains {
 
 				if slices.Contains(tc.existingDomains, domain) ||
 					slices.Contains(tc.newDomains, domain) {
@@ -7323,7 +7323,7 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 					// Existing and new domain registers are removed.
 					// Removing new (non-existent) domain registers is no-op.
 					require.Equal(t, address[:], writeEntries[i].Owner)
-					require.Equal(t, []byte(domain), writeEntries[i].Key)
+					require.Equal(t, []byte(domain.Identifier()), writeEntries[i].Key)
 					require.True(t, len(writeEntries[i].Value) == 0)
 
 					i++
@@ -7360,7 +7360,7 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 
 		var writeEntries []OwnerKeyValue
 
-		domains := []string{common.PathDomainStorage.Identifier()}
+		domains := []common.StorageDomain{common.PathDomainStorage.StorageDomain()}
 		const existingDomainStorageMapCount = 5
 
 		// Create storage with existing domain storage maps
@@ -7475,7 +7475,7 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 
 		var writeEntries []OwnerKeyValue
 
-		domains := []string{common.PathDomainStorage.Identifier()}
+		domains := []common.StorageDomain{common.PathDomainStorage.StorageDomain()}
 		const domainStorageMapCount = 5
 
 		// Create storage with existing account storage map
@@ -7703,10 +7703,10 @@ func TestRuntimeStorageDomainStorageMapInlinedState(t *testing.T) {
 
 	inter := NewTestInterpreterWithStorage(t, storage)
 
-	domains := []string{
-		common.PathDomainStorage.Identifier(),
-		common.PathDomainPublic.Identifier(),
-		common.PathDomainPrivate.Identifier(),
+	domains := []common.StorageDomain{
+		common.PathDomainStorage.StorageDomain(),
+		common.PathDomainPublic.StorageDomain(),
+		common.PathDomainPrivate.StorageDomain(),
 	}
 
 	const domainStorageMapCount = 500
@@ -7831,10 +7831,10 @@ func TestRuntimeStorageLargeDomainValues(t *testing.T) {
 
 	inter := NewTestInterpreterWithStorage(t, storage)
 
-	domains := []string{
-		common.PathDomainStorage.Identifier(),
-		common.PathDomainPublic.Identifier(),
-		common.PathDomainPrivate.Identifier(),
+	domains := []common.StorageDomain{
+		common.PathDomainStorage.StorageDomain(),
+		common.PathDomainPublic.StorageDomain(),
+		common.PathDomainPrivate.StorageDomain(),
 	}
 
 	const domainStorageMapCount = 5
@@ -7950,9 +7950,9 @@ func TestDomainRegisterMigrationForLargeAccount(t *testing.T) {
 		{
 			address: address,
 			domains: []domainInfo{
-				{domain: common.PathDomainStorage.Identifier(), domainStorageMapCount: 100, maxDepth: 3},
-				{domain: common.PathDomainPublic.Identifier(), domainStorageMapCount: 100, maxDepth: 3},
-				{domain: common.PathDomainPrivate.Identifier(), domainStorageMapCount: 100, maxDepth: 3},
+				{domain: common.PathDomainStorage.StorageDomain(), domainStorageMapCount: 100, maxDepth: 3},
+				{domain: common.PathDomainPublic.StorageDomain(), domainStorageMapCount: 100, maxDepth: 3},
+				{domain: common.PathDomainPrivate.StorageDomain(), domainStorageMapCount: 100, maxDepth: 3},
 			},
 		},
 	}
@@ -7977,7 +7977,7 @@ func TestDomainRegisterMigrationForLargeAccount(t *testing.T) {
 
 	// Create new domain storage map
 	const createIfNotExists = true
-	domain := stdlib.InboxStorageDomain
+	domain := common.StorageDomainInbox
 	domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 	require.NotNil(t, domainStorageMap)
 
@@ -8024,7 +8024,7 @@ func createAndWriteAccountStorageMap(
 	storage *Storage,
 	inter *interpreter.Interpreter,
 	address common.Address,
-	domains []string,
+	domains []common.StorageDomain,
 	count int,
 	random *rand.Rand,
 ) accountStorageMapValues {
@@ -8116,7 +8116,7 @@ func checkAccountStorageMapData(
 	iter := accountStorageMap.Iterator()
 	for {
 		domain, domainStorageMap := iter.Next()
-		if domain == "" {
+		if domain == common.StorageDomainUnknown {
 			break
 		}
 

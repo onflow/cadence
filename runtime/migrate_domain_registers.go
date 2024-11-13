@@ -27,11 +27,13 @@ import (
 	"github.com/onflow/cadence/interpreter"
 )
 
+type AccountStorageMaps = *orderedmap.OrderedMap[common.Address, *interpreter.AccountStorageMap]
+
 type GetDomainStorageMapFunc func(
 	ledger atree.Ledger,
 	storage atree.SlabStorage,
 	address common.Address,
-	domain string,
+	domain common.StorageDomain,
 ) (*interpreter.DomainStorageMap, error)
 
 type DomainRegisterMigration struct {
@@ -69,14 +71,14 @@ func (m *DomainRegisterMigration) MigrateAccounts(
 	accounts *orderedmap.OrderedMap[common.Address, struct{}],
 	pred func(common.Address) bool,
 ) (
-	*orderedmap.OrderedMap[common.Address, *interpreter.AccountStorageMap],
+	AccountStorageMaps,
 	error,
 ) {
 	if accounts == nil || accounts.Len() == 0 {
 		return nil, nil
 	}
 
-	var migratedAccounts *orderedmap.OrderedMap[common.Address, *interpreter.AccountStorageMap]
+	var migratedAccounts AccountStorageMaps
 
 	for pair := accounts.Oldest(); pair != nil; pair = pair.Next() {
 		address := pair.Key
@@ -150,7 +152,7 @@ func (m *DomainRegisterMigration) migrateDomains(
 
 	var accountStorageMap *interpreter.AccountStorageMap
 
-	for _, domain := range AccountDomains {
+	for _, domain := range common.AllStorageDomains {
 
 		domainStorageMap, err := m.getDomainStorageMap(m.ledger, m.storage, address, domain)
 		if err != nil {
@@ -171,7 +173,9 @@ func (m *DomainRegisterMigration) migrateDomains(
 		if existed {
 			// This shouldn't happen because we are inserting domain storage map into empty account storage map.
 			return nil, errors.NewUnexpectedError(
-				"failed to migrate domain %s for account %x: domain already exists in account storage map", domain, address,
+				"failed to migrate domain %s for account %x: domain already exists in account storage map",
+				domain.Identifier(),
+				address,
 			)
 		}
 
@@ -180,7 +184,7 @@ func (m *DomainRegisterMigration) migrateDomains(
 			// NOTE: removing non-existent domain registers is no-op.
 			err = m.ledger.SetValue(
 				address[:],
-				[]byte(domain),
+				[]byte(domain.Identifier()),
 				nil)
 		})
 		if err != nil {

@@ -234,7 +234,7 @@ func TestRuntimeContract(t *testing.T) {
 			).GetDomainStorageMap(
 				inter,
 				signerAddress,
-				StorageDomainContract,
+				common.StorageDomainContract,
 				false,
 			)
 			if storageMap == nil {

@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/common/orderedmap"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 )
 
@@ -34,7 +35,7 @@ type AccountStorageV1 struct {
 	// newDomainStorageMapSlabIndices contains root slab index of new domain storage maps.
 	// The indices are saved using Ledger.SetValue() during Commit().
 	// Key is StorageKey{address, accountStorageKey} and value is 8-byte slab index.
-	newDomainStorageMapSlabIndices *orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]
+	newDomainStorageMapSlabIndices *orderedmap.OrderedMap[interpreter.StorageDomainKey, atree.SlabIndex]
 }
 
 func NewAccountStorageV1(
@@ -51,7 +52,7 @@ func NewAccountStorageV1(
 
 func (s *AccountStorageV1) GetDomainStorageMap(
 	address common.Address,
-	domain string,
+	domain common.StorageDomain,
 	createIfNotExists bool,
 ) (
 	domainStorageMap *interpreter.DomainStorageMap,
@@ -76,7 +77,7 @@ func (s *AccountStorageV1) GetDomainStorageMap(
 
 func (s *AccountStorageV1) storeNewDomainStorageMap(
 	address common.Address,
-	domain string,
+	domain common.StorageDomain,
 ) *interpreter.DomainStorageMap {
 
 	domainStorageMap := interpreter.NewDomainStorageMap(
@@ -87,10 +88,10 @@ func (s *AccountStorageV1) storeNewDomainStorageMap(
 
 	slabIndex := domainStorageMap.SlabID().Index()
 
-	storageKey := interpreter.NewStorageKey(s.memoryGauge, address, domain)
+	storageKey := interpreter.NewStorageDomainKey(s.memoryGauge, address, domain)
 
 	if s.newDomainStorageMapSlabIndices == nil {
-		s.newDomainStorageMapSlabIndices = &orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]{}
+		s.newDomainStorageMapSlabIndices = &orderedmap.OrderedMap[interpreter.StorageDomainKey, atree.SlabIndex]{}
 	}
 	s.newDomainStorageMapSlabIndices.Set(storageKey, slabIndex)
 
@@ -102,10 +103,21 @@ func (s *AccountStorageV1) commit() error {
 		return nil
 	}
 
-	return commitSlabIndices(
-		s.newDomainStorageMapSlabIndices,
-		s.ledger,
-	)
+	for pair := s.newDomainStorageMapSlabIndices.Oldest(); pair != nil; pair = pair.Next() {
+		var err error
+		errors.WrapPanic(func() {
+			err = s.ledger.SetValue(
+				pair.Key.Address[:],
+				[]byte(pair.Key.Domain.Identifier()),
+				pair.Value[:],
+			)
+		})
+		if err != nil {
+			return interpreter.WrappedExternalError(err)
+		}
+	}
+
+	return nil
 }
 
 // getDomainStorageMapFromLegacyDomainRegister returns domain storage map from legacy domain register.
@@ -113,13 +125,13 @@ func getDomainStorageMapFromLegacyDomainRegister(
 	ledger atree.Ledger,
 	storage atree.SlabStorage,
 	address common.Address,
-	domain string,
+	domain common.StorageDomain,
 ) (*interpreter.DomainStorageMap, error) {
 
 	domainStorageSlabIndex, domainRegisterExists, err := getSlabIndexFromRegisterValue(
 		ledger,
 		address,
-		[]byte(domain),
+		[]byte(domain.Identifier()),
 	)
 	if err != nil {
 		return nil, err

@@ -1109,7 +1109,7 @@ func (e *interpreterEnvironment) loadContract(
 		storageMap := e.storage.GetDomainStorageMap(
 			inter,
 			addressLocation.Address,
-			StorageDomainContract,
+			common.StorageDomainContract,
 			false,
 		)
 		if storageMap != nil {

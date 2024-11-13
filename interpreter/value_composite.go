@@ -1658,7 +1658,7 @@ func (v *CompositeValue) getBaseValue(
 	return NewEphemeralReferenceValue(interpreter, functionAuthorization, v.base, baseType, locationRange)
 }
 
-func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeValue) {
+func (v *CompositeValue) setBaseValue(_ *Interpreter, base *CompositeValue) {
 	v.base = base
 }
 

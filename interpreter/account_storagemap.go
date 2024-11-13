@@ -75,8 +75,8 @@ func NewAccountStorageMapWithRootID(
 }
 
 // DomainExists returns true if the given domain exists in the account storage map.
-func (s *AccountStorageMap) DomainExists(domain string) bool {
-	key := StringStorageMapKey(domain)
+func (s *AccountStorageMap) DomainExists(domain common.StorageDomain) bool {
+	key := Uint64StorageMapKey(domain)
 
 	exists, err := s.orderedMap.Has(
 		key.AtreeValueCompare,
@@ -96,10 +96,10 @@ func (s *AccountStorageMap) DomainExists(domain string) bool {
 func (s *AccountStorageMap) GetDomain(
 	gauge common.MemoryGauge,
 	interpreter *Interpreter,
-	domain string,
+	domain common.StorageDomain,
 	createIfNotExists bool,
 ) *DomainStorageMap {
-	key := StringStorageMapKey(domain)
+	key := Uint64StorageMapKey(domain)
 
 	storedValue, err := s.orderedMap.Get(
 		key.AtreeValueCompare,
@@ -129,13 +129,13 @@ func (s *AccountStorageMap) GetDomain(
 func (s *AccountStorageMap) NewDomain(
 	gauge common.MemoryGauge,
 	interpreter *Interpreter,
-	domain string,
+	domain common.StorageDomain,
 ) *DomainStorageMap {
 	interpreter.recordStorageMutation()
 
 	domainStorageMap := NewDomainStorageMap(gauge, s.orderedMap.Storage, s.orderedMap.Address())
 
-	key := StringStorageMapKey(domain)
+	key := Uint64StorageMapKey(domain)
 
 	existingStorable, err := s.orderedMap.Set(
 		key.AtreeValueCompare,
@@ -149,7 +149,8 @@ func (s *AccountStorageMap) NewDomain(
 	if existingStorable != nil {
 		panic(errors.NewUnexpectedError(
 			"account %x domain %s should not exist",
-			s.orderedMap.Address(), domain,
+			s.orderedMap.Address(),
+			domain.Identifier(),
 		))
 	}
 
@@ -162,7 +163,7 @@ func (s *AccountStorageMap) NewDomain(
 // Returns true if domain storage map previously existed at the given domain.
 func (s *AccountStorageMap) WriteDomain(
 	interpreter *Interpreter,
-	domain string,
+	domain common.StorageDomain,
 	domainStorageMap *DomainStorageMap,
 ) (existed bool) {
 	if domainStorageMap == nil {
@@ -175,12 +176,12 @@ func (s *AccountStorageMap) WriteDomain(
 // If the given domain already stores a domain storage map, it is overwritten.
 func (s *AccountStorageMap) setDomain(
 	interpreter *Interpreter,
-	domain string,
+	domain common.StorageDomain,
 	newDomainStorageMap *DomainStorageMap,
 ) (existed bool) {
 	interpreter.recordStorageMutation()
 
-	key := StringStorageMapKey(domain)
+	key := Uint64StorageMapKey(domain)
 
 	existingValueStorable, err := s.orderedMap.Set(
 		key.AtreeValueCompare,
@@ -214,10 +215,10 @@ func (s *AccountStorageMap) setDomain(
 }
 
 // removeDomain removes domain storage map with given domain in account storage map, if it exists.
-func (s *AccountStorageMap) removeDomain(interpreter *Interpreter, domain string) (existed bool) {
+func (s *AccountStorageMap) removeDomain(interpreter *Interpreter, domain common.StorageDomain) (existed bool) {
 	interpreter.recordStorageMutation()
 
-	key := StringStorageMapKey(domain)
+	key := Uint64StorageMapKey(domain)
 
 	existingKeyStorable, existingValueStorable, err := s.orderedMap.Remove(
 		key.AtreeValueCompare,
@@ -235,7 +236,7 @@ func (s *AccountStorageMap) removeDomain(interpreter *Interpreter, domain string
 
 	// Key
 
-	// NOTE: Key is just an atree.Value (StringAtreeValue), not an interpreter.Value,
+	// NOTE: Key is just an atree.Value (Uint64AtreeValue), not an interpreter.Value,
 	// so do not need (can) convert and not need to deep remove
 	interpreter.RemoveReferencedSlab(existingKeyStorable)
 
@@ -268,8 +269,8 @@ func (s *AccountStorageMap) Count() uint64 {
 }
 
 // Domains returns a set of domains in account storage map
-func (s *AccountStorageMap) Domains() map[string]struct{} {
-	domains := make(map[string]struct{})
+func (s *AccountStorageMap) Domains() map[common.StorageDomain]struct{} {
+	domains := make(map[common.StorageDomain]struct{})
 
 	iterator := s.Iterator()
 
@@ -283,7 +284,7 @@ func (s *AccountStorageMap) Domains() map[string]struct{} {
 			break
 		}
 
-		domain := convertKeyToDomain(k)
+		domain := convertAccountStorageMapKeyToStorageDomain(k)
 		domains[domain] = struct{}{}
 	}
 
@@ -314,28 +315,32 @@ type AccountStorageMapIterator struct {
 }
 
 // Next returns the next domain and domain storage map.
-// If there is no more domain, ("", nil) is returned.
-func (i *AccountStorageMapIterator) Next() (string, *DomainStorageMap) {
+// If there is no more domain, (common.StorageDomainUnknown, nil) is returned.
+func (i *AccountStorageMapIterator) Next() (common.StorageDomain, *DomainStorageMap) {
 	k, v, err := i.mapIterator.Next()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
 
 	if k == nil || v == nil {
-		return "", nil
+		return common.StorageDomainUnknown, nil
 	}
 
-	key := convertKeyToDomain(k)
+	key := convertAccountStorageMapKeyToStorageDomain(k)
 
 	value := NewDomainStorageMapWithAtreeValue(v)
 
 	return key, value
 }
 
-func convertKeyToDomain(v atree.Value) string {
-	key, ok := v.(StringAtreeValue)
+func convertAccountStorageMapKeyToStorageDomain(v atree.Value) common.StorageDomain {
+	key, ok := v.(Uint64AtreeValue)
 	if !ok {
 		panic(errors.NewUnexpectedError("domain key type %T isn't expected", key))
 	}
-	return string(key)
+	domain, err := common.StorageDomainFromUint64(uint64(key))
+	if err != nil {
+		panic(errors.NewUnexpectedError("domain key %d isn't expected: %w", key, err))
+	}
+	return domain
 }

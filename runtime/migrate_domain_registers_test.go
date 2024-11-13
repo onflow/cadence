@@ -137,14 +137,14 @@ func TestMigrateDomainRegisters(t *testing.T) {
 			{
 				address: address1,
 				domains: []domainInfo{
-					{domain: common.PathDomainStorage.Identifier(), domainStorageMapCount: 10, maxDepth: 3},
-					{domain: common.PathDomainPrivate.Identifier(), domainStorageMapCount: 10, maxDepth: 3},
+					{domain: common.PathDomainStorage.StorageDomain(), domainStorageMapCount: 10, maxDepth: 3},
+					{domain: common.PathDomainPrivate.StorageDomain(), domainStorageMapCount: 10, maxDepth: 3},
 				},
 			},
 			{
 				address: address2,
 				domains: []domainInfo{
-					{domain: common.PathDomainPublic.Identifier(), domainStorageMapCount: 10, maxDepth: 3},
+					{domain: common.PathDomainPublic.StorageDomain(), domainStorageMapCount: 10, maxDepth: 3},
 				},
 			},
 		}
@@ -204,14 +204,14 @@ func TestMigrateDomainRegisters(t *testing.T) {
 			{
 				address: address1,
 				domains: []domainInfo{
-					{domain: common.PathDomainStorage.Identifier(), domainStorageMapCount: 10, maxDepth: 3},
-					{domain: common.PathDomainPrivate.Identifier(), domainStorageMapCount: 10, maxDepth: 3},
+					{domain: common.PathDomainStorage.StorageDomain(), domainStorageMapCount: 10, maxDepth: 3},
+					{domain: common.PathDomainPrivate.StorageDomain(), domainStorageMapCount: 10, maxDepth: 3},
 				},
 			},
 			{
 				address: address2,
 				domains: []domainInfo{
-					{domain: common.PathDomainPublic.Identifier(), domainStorageMapCount: 10, maxDepth: 3},
+					{domain: common.PathDomainPublic.StorageDomain(), domainStorageMapCount: 10, maxDepth: 3},
 				},
 			},
 		}
@@ -250,13 +250,13 @@ func TestMigrateDomainRegisters(t *testing.T) {
 			{
 				address: address1,
 				domains: []domainInfo{
-					{domain: common.PathDomainStorage.Identifier(), domainStorageMapCount: 10, maxDepth: 3},
+					{domain: common.PathDomainStorage.StorageDomain(), domainStorageMapCount: 10, maxDepth: 3},
 				},
 			},
 			{
 				address: address2,
 				domains: []domainInfo{
-					{domain: common.PathDomainPublic.Identifier(), domainStorageMapCount: 10, maxDepth: 3},
+					{domain: common.PathDomainPublic.StorageDomain(), domainStorageMapCount: 10, maxDepth: 3},
 				},
 			},
 		}
@@ -290,13 +290,13 @@ func TestMigrateDomainRegisters(t *testing.T) {
 			{
 				address: address1,
 				domains: []domainInfo{
-					{domain: common.PathDomainStorage.Identifier(), domainStorageMapCount: 10, maxDepth: 3},
+					{domain: common.PathDomainStorage.StorageDomain(), domainStorageMapCount: 10, maxDepth: 3},
 				},
 			},
 			{
 				address: address2,
 				domains: []domainInfo{
-					{domain: common.PathDomainPublic.Identifier(), domainStorageMapCount: 10, maxDepth: 3},
+					{domain: common.PathDomainPublic.StorageDomain(), domainStorageMapCount: 10, maxDepth: 3},
 				},
 			},
 		}
@@ -327,7 +327,7 @@ func TestMigrateDomainRegisters(t *testing.T) {
 }
 
 type domainInfo struct {
-	domain                string
+	domain                common.StorageDomain
 	domainStorageMapCount int
 	maxDepth              int
 }
@@ -391,7 +391,7 @@ func newTestLedgerWithUnmigratedAccounts(
 
 			// Write domain register
 			domainStorageMapValueID := domainStorageMap.ValueID()
-			err := ledger.SetValue(address[:], []byte(domain), domainStorageMapValueID[8:])
+			err := ledger.SetValue(address[:], []byte(domain.Identifier()), domainStorageMapValueID[8:])
 			require.NoError(tb, err)
 
 			vid := domainStorageMap.ValueID()

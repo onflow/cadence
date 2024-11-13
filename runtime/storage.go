@@ -30,12 +30,10 @@ import (
 	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/stdlib"
 )
 
 const (
-	StorageDomainContract = "contract"
-	AccountStorageKey     = "stored"
+	AccountStorageKey = "stored"
 )
 
 type StorageConfig struct {
@@ -47,7 +45,7 @@ type Storage struct {
 
 	// cachedDomainStorageMaps is a cache of domain storage maps.
 	// Key is StorageKey{address, domain} and value is domain storage map.
-	cachedDomainStorageMaps map[interpreter.StorageKey]*interpreter.DomainStorageMap
+	cachedDomainStorageMaps map[interpreter.StorageDomainKey]*interpreter.DomainStorageMap
 
 	// contractUpdates is a cache of contract updates.
 	// Key is StorageKey{contract_address, contract_name} and value is contract composite value.
@@ -131,14 +129,14 @@ const storageIndexLength = 8
 func (s *Storage) GetDomainStorageMap(
 	inter *interpreter.Interpreter,
 	address common.Address,
-	domain string,
+	domain common.StorageDomain,
 	createIfNotExists bool,
 ) (
 	domainStorageMap *interpreter.DomainStorageMap,
 ) {
 	// Get cached domain storage map if it exists.
 
-	domainStorageKey := interpreter.NewStorageKey(s.memoryGauge, address, domain)
+	domainStorageKey := interpreter.NewStorageDomainKey(s.memoryGauge, address, domain)
 
 	if s.cachedDomainStorageMaps != nil {
 		domainStorageMap = s.cachedDomainStorageMaps[domainStorageKey]
@@ -190,14 +188,14 @@ func (s *Storage) GetDomainStorageMap(
 }
 
 func (s *Storage) cacheDomainStorageMap(
-	domainStorageKey interpreter.StorageKey,
+	storageDomainKey interpreter.StorageDomainKey,
 	domainStorageMap *interpreter.DomainStorageMap,
 ) {
 	if s.cachedDomainStorageMaps == nil {
-		s.cachedDomainStorageMaps = map[interpreter.StorageKey]*interpreter.DomainStorageMap{}
+		s.cachedDomainStorageMaps = map[interpreter.StorageDomainKey]*interpreter.DomainStorageMap{}
 	}
 
-	s.cachedDomainStorageMaps[domainStorageKey] = domainStorageMap
+	s.cachedDomainStorageMaps[storageDomainKey] = domainStorageMap
 }
 
 // IsV1Account returns true if given account is in account storage format v1.
@@ -224,8 +222,12 @@ func (s *Storage) IsV1Account(address common.Address) (isV1 bool) {
 
 	// Check if a storage map register exists for any of the domains.
 	// Check the most frequently used domains first, such as storage, public, private.
-	for _, domain := range AccountDomains {
-		_, domainExists, err := getSlabIndexFromRegisterValue(s.Ledger, address, []byte(domain))
+	for _, domain := range common.AllStorageDomains {
+		_, domainExists, err := getSlabIndexFromRegisterValue(
+			s.Ledger,
+			address,
+			[]byte(domain.Identifier()),
+		)
 		if err != nil {
 			panic(err)
 		}
@@ -332,7 +334,7 @@ func (s *Storage) writeContractUpdate(
 	key interpreter.StorageKey,
 	contractValue *interpreter.CompositeValue,
 ) {
-	storageMap := s.GetDomainStorageMap(inter, key.Address, StorageDomainContract, true)
+	storageMap := s.GetDomainStorageMap(inter, key.Address, common.StorageDomainContract, true)
 	// NOTE: pass nil instead of allocating a Value-typed  interface that points to nil
 	storageMapKey := interpreter.StringStorageMapKey(key.Key)
 	if contractValue == nil {
@@ -390,27 +392,6 @@ func (s *Storage) commit(inter *interpreter.Interpreter, commitContractUpdates b
 	}
 }
 
-func commitSlabIndices(
-	slabIndices *orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex],
-	ledger atree.Ledger,
-) error {
-	for pair := slabIndices.Oldest(); pair != nil; pair = pair.Next() {
-		var err error
-		errors.WrapPanic(func() {
-			err = ledger.SetValue(
-				pair.Key.Address[:],
-				[]byte(pair.Key.Key),
-				pair.Value[:],
-			)
-		})
-		if err != nil {
-			return interpreter.WrappedExternalError(err)
-		}
-	}
-
-	return nil
-}
-
 // TODO:
 //func (s *Storage) migrateAccounts(inter *interpreter.Interpreter) error {
 //	// Predicate function allows migration for accounts with write ops.
@@ -425,9 +406,9 @@ func commitSlabIndices(
 //		ledger atree.Ledger,
 //		storage atree.SlabStorage,
 //		address common.Address,
-//		domain string,
+//		domain common.StorageDomain,
 //	) (*interpreter.DomainStorageMap, error) {
-//		domainStorageKey := interpreter.NewStorageKey(s.memoryGauge, address, domain)
+//		domainStorageKey := interpreter.NewStorageDomainKey(s.memoryGauge, address, domain)
 //
 //		// Get cached domain storage map if available.
 //		domainStorageMap := s.cachedDomainStorageMaps[domainStorageKey]
@@ -580,23 +561,3 @@ func (UnreferencedRootSlabsError) IsInternalError() {}
 func (e UnreferencedRootSlabsError) Error() string {
 	return fmt.Sprintf("slabs not referenced: %s", e.UnreferencedRootSlabIDs)
 }
-
-var AccountDomains = []string{
-	common.PathDomainStorage.Identifier(),
-	common.PathDomainPrivate.Identifier(),
-	common.PathDomainPublic.Identifier(),
-	StorageDomainContract,
-	stdlib.InboxStorageDomain,
-	stdlib.CapabilityControllerStorageDomain,
-	stdlib.CapabilityControllerTagStorageDomain,
-	stdlib.PathCapabilityStorageDomain,
-	stdlib.AccountCapabilityStorageDomain,
-}
-
-var accountDomainsSet = func() map[string]struct{} {
-	m := make(map[string]struct{})
-	for _, domain := range AccountDomains {
-		m[domain] = struct{}{}
-	}
-	return m
-}()

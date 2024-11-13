@@ -1086,7 +1086,7 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 	contractStorage := storage.GetDomainStorageMap(
 		inter,
 		contractsAddress,
-		StorageDomainContract,
+		common.StorageDomainContract,
 		true,
 	)
 	contractStorage.SetValue(
@@ -1122,7 +1122,7 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 	userStorage := storage.GetDomainStorageMap(
 		inter,
 		userAddress,
-		common.PathDomainStorage.Identifier(),
+		common.PathDomainStorage.StorageDomain(),
 		true,
 	)
 	const storagePathIdentifier = "exampleTokenVault"
