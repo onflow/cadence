@@ -6139,14 +6139,7 @@ func TestParseStringTemplate(t *testing.T) {
 		  "this is a test \(FOO)
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.Error(t, err)
+		require.NotEmpty(t, errs)
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -6166,14 +6159,7 @@ func TestParseStringTemplate(t *testing.T) {
 		  "\(.)"
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.Error(t, err)
+		require.NotEmpty(t, errs)
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -6250,14 +6236,7 @@ func TestParseStringTemplate(t *testing.T) {
 		  "\()"
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.Error(t, err)
+		require.NotEmpty(t, errs)
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -6295,14 +6274,7 @@ func TestParseStringTemplate(t *testing.T) {
 			"\(add"
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.Error(t, err)
+		require.NotEmpty(t, errs)
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -6322,14 +6294,7 @@ func TestParseStringTemplate(t *testing.T) {
 			"\((2+2)/2()"
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.Error(t, err)
+		require.NotEmpty(t, errs)
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -6349,14 +6314,7 @@ func TestParseStringTemplate(t *testing.T) {
 			"outer string \( "\(inner template)" )"
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.Error(t, err)
+		require.NotEmpty(t, errs)
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
