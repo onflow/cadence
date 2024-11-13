@@ -20,6 +20,7 @@ package interpreter_test
 
 import (
 	"math/rand"
+	goruntime "runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -188,6 +189,8 @@ func TestAccountStorageMapCreateDomain(t *testing.T) {
 		require.NotNil(t, accountStorageMap)
 		require.Equal(t, uint64(0), accountStorageMap.Count())
 
+		accountStorageMapRootSlabID := accountStorageMap.SlabID()
+
 		for _, domain := range common.AllStorageDomains {
 			const createIfNotExists = true
 			domainStoragemap := accountStorageMap.GetDomain(nil, inter, domain, createIfNotExists)
@@ -199,7 +202,12 @@ func TestAccountStorageMapCreateDomain(t *testing.T) {
 
 		checkAccountStorageMapData(t, inter, accountStorageMap, accountValues)
 
-		CheckAtreeStorageHealth(t, storage, []atree.SlabID{accountStorageMap.SlabID()})
+		CheckAtreeStorageHealth(t, storage, []atree.SlabID{accountStorageMapRootSlabID})
+
+		err := storage.PersistentSlabStorage.FastCommit(goruntime.NumCPU())
+		require.NoError(t, err)
+
+		checkAccountStorageMapDataWithRawData(t, ledger.StoredValues, ledger.StorageIndices, accountStorageMapRootSlabID, accountValues)
 	})
 
 	t.Run("non-empty", func(t *testing.T) {
@@ -225,6 +233,8 @@ func TestAccountStorageMapCreateDomain(t *testing.T) {
 		const count = 10
 		accountStorageMap, accountValues := createAccountStorageMap(storage, inter, address, existingDomains, count, random)
 
+		accountStorageMapRootSlabID := accountStorageMap.SlabID()
+
 		for _, domain := range common.AllStorageDomains {
 			const createIfNotExists = true
 			domainStoragemap := accountStorageMap.GetDomain(nil, inter, domain, createIfNotExists)
@@ -238,7 +248,12 @@ func TestAccountStorageMapCreateDomain(t *testing.T) {
 
 		checkAccountStorageMapData(t, inter, accountStorageMap, accountValues)
 
-		CheckAtreeStorageHealth(t, storage, []atree.SlabID{accountStorageMap.SlabID()})
+		CheckAtreeStorageHealth(t, storage, []atree.SlabID{accountStorageMapRootSlabID})
+
+		err := storage.PersistentSlabStorage.FastCommit(goruntime.NumCPU())
+		require.NoError(t, err)
+
+		checkAccountStorageMapDataWithRawData(t, ledger.StoredValues, ledger.StorageIndices, accountStorageMapRootSlabID, accountValues)
 	})
 }
 
@@ -271,6 +286,8 @@ func TestAccountStorageMapSetAndUpdateDomain(t *testing.T) {
 		require.NotNil(t, accountStorageMap)
 		require.Equal(t, uint64(0), accountStorageMap.Count())
 
+		accountStorageMapRootSlabID := accountStorageMap.SlabID()
+
 		const count = 10
 		for _, domain := range common.AllStorageDomains {
 
@@ -285,7 +302,12 @@ func TestAccountStorageMapSetAndUpdateDomain(t *testing.T) {
 
 		checkAccountStorageMapData(t, inter, accountStorageMap, accountValues)
 
-		CheckAtreeStorageHealth(t, storage, []atree.SlabID{accountStorageMap.SlabID()})
+		CheckAtreeStorageHealth(t, storage, []atree.SlabID{accountStorageMapRootSlabID})
+
+		err := storage.PersistentSlabStorage.FastCommit(goruntime.NumCPU())
+		require.NoError(t, err)
+
+		checkAccountStorageMapDataWithRawData(t, ledger.StoredValues, ledger.StorageIndices, accountStorageMapRootSlabID, accountValues)
 	})
 
 	t.Run("non-empty", func(t *testing.T) {
@@ -311,6 +333,8 @@ func TestAccountStorageMapSetAndUpdateDomain(t *testing.T) {
 		const count = 10
 		accountStorageMap, accountValues := createAccountStorageMap(storage, inter, address, existingDomains, count, random)
 
+		accountStorageMapRootSlabID := accountStorageMap.SlabID()
+
 		for _, domain := range common.AllStorageDomains {
 
 			domainStorageMap := interpreter.NewDomainStorageMap(nil, storage, atree.Address(address))
@@ -324,7 +348,12 @@ func TestAccountStorageMapSetAndUpdateDomain(t *testing.T) {
 
 		checkAccountStorageMapData(t, inter, accountStorageMap, accountValues)
 
-		CheckAtreeStorageHealth(t, storage, []atree.SlabID{accountStorageMap.SlabID()})
+		CheckAtreeStorageHealth(t, storage, []atree.SlabID{accountStorageMapRootSlabID})
+
+		err := storage.PersistentSlabStorage.FastCommit(goruntime.NumCPU())
+		require.NoError(t, err)
+
+		checkAccountStorageMapDataWithRawData(t, ledger.StoredValues, ledger.StorageIndices, accountStorageMapRootSlabID, accountValues)
 	})
 }
 
@@ -355,6 +384,8 @@ func TestAccountStorageMapRemoveDomain(t *testing.T) {
 		require.NotNil(t, accountStorageMap)
 		require.Equal(t, uint64(0), accountStorageMap.Count())
 
+		accountStorageMapRootSlabID := accountStorageMap.SlabID()
+
 		for _, domain := range common.AllStorageDomains {
 			existed := accountStorageMap.WriteDomain(inter, domain, nil)
 			require.False(t, existed)
@@ -362,7 +393,12 @@ func TestAccountStorageMapRemoveDomain(t *testing.T) {
 
 		checkAccountStorageMapData(t, inter, accountStorageMap, accountValues)
 
-		CheckAtreeStorageHealth(t, storage, []atree.SlabID{accountStorageMap.SlabID()})
+		CheckAtreeStorageHealth(t, storage, []atree.SlabID{accountStorageMapRootSlabID})
+
+		err := storage.PersistentSlabStorage.FastCommit(goruntime.NumCPU())
+		require.NoError(t, err)
+
+		checkAccountStorageMapDataWithRawData(t, ledger.StoredValues, ledger.StorageIndices, accountStorageMapRootSlabID, accountValues)
 	})
 
 	t.Run("non-empty", func(t *testing.T) {
@@ -388,6 +424,8 @@ func TestAccountStorageMapRemoveDomain(t *testing.T) {
 		const count = 10
 		accountStorageMap, accountValues := createAccountStorageMap(storage, inter, address, existingDomains, count, random)
 
+		accountStorageMapRootSlabID := accountStorageMap.SlabID()
+
 		for _, domain := range common.AllStorageDomains {
 
 			existed := accountStorageMap.WriteDomain(inter, domain, nil)
@@ -398,7 +436,12 @@ func TestAccountStorageMapRemoveDomain(t *testing.T) {
 
 		checkAccountStorageMapData(t, inter, accountStorageMap, accountValues)
 
-		CheckAtreeStorageHealth(t, storage, []atree.SlabID{accountStorageMap.SlabID()})
+		CheckAtreeStorageHealth(t, storage, []atree.SlabID{accountStorageMapRootSlabID})
+
+		err := storage.PersistentSlabStorage.FastCommit(goruntime.NumCPU())
+		require.NoError(t, err)
+
+		checkAccountStorageMapDataWithRawData(t, ledger.StoredValues, ledger.StorageIndices, accountStorageMapRootSlabID, accountValues)
 	})
 }
 
@@ -575,18 +618,7 @@ func TestAccountStorageMapLoadFromRootSlabID(t *testing.T) {
 
 		accountStorageMapRootSlabID, accountValues, storedValues, storageIndices := init()
 
-		ledger := NewTestLedgerWithData(nil, nil, storedValues, storageIndices)
-		storage := runtime.NewStorage(ledger, nil)
-
-		accountStorageMap := interpreter.NewAccountStorageMapWithRootID(storage, accountStorageMapRootSlabID)
-		require.Equal(t, uint64(0), accountStorageMap.Count())
-		require.Equal(t, accountStorageMapRootSlabID, accountStorageMap.SlabID())
-
-		inter := NewTestInterpreterWithStorage(t, storage)
-
-		checkAccountStorageMapData(t, inter, accountStorageMap, accountValues)
-
-		CheckAtreeStorageHealth(t, storage, []atree.SlabID{accountStorageMap.SlabID()})
+		checkAccountStorageMapDataWithRawData(t, storedValues, storageIndices, accountStorageMapRootSlabID, accountValues)
 	})
 
 	t.Run("non-empty", func(t *testing.T) {
@@ -619,18 +651,7 @@ func TestAccountStorageMapLoadFromRootSlabID(t *testing.T) {
 
 		accountStorageMapRootSlabID, accountValues, storedValues, storageIndices := init()
 
-		ledger := NewTestLedgerWithData(nil, nil, storedValues, storageIndices)
-		storage := runtime.NewStorage(ledger, nil)
-
-		accountStorageMap := interpreter.NewAccountStorageMapWithRootID(storage, accountStorageMapRootSlabID)
-		require.Equal(t, uint64(len(existingDomains)), accountStorageMap.Count())
-		require.Equal(t, accountStorageMapRootSlabID, accountStorageMap.SlabID())
-
-		inter := NewTestInterpreterWithStorage(t, storage)
-
-		checkAccountStorageMapData(t, inter, accountStorageMap, accountValues)
-
-		CheckAtreeStorageHealth(t, storage, []atree.SlabID{accountStorageMap.SlabID()})
+		checkAccountStorageMapDataWithRawData(t, storedValues, storageIndices, accountStorageMapRootSlabID, accountValues)
 	})
 }
 
@@ -695,6 +716,29 @@ func writeRandomValuesToDomainStorageMap(
 	}
 
 	return domainValues
+}
+
+// checkAccountStorageMapDataWithRawData checks loaded account storage map against expected account values.
+func checkAccountStorageMapDataWithRawData(
+	tb testing.TB,
+	storedValues map[string][]byte,
+	storageIndices map[string]uint64,
+	rootSlabID atree.SlabID,
+	expectedAccountValues accountStorageMapValues,
+) {
+	// Create new storage from raw data
+	ledger := NewTestLedgerWithData(nil, nil, storedValues, storageIndices)
+	storage := runtime.NewStorage(ledger, nil)
+
+	inter := NewTestInterpreterWithStorage(tb, storage)
+
+	loadedAccountStorageMap := interpreter.NewAccountStorageMapWithRootID(storage, rootSlabID)
+	require.Equal(tb, uint64(len(expectedAccountValues)), loadedAccountStorageMap.Count())
+	require.Equal(tb, rootSlabID, loadedAccountStorageMap.SlabID())
+
+	checkAccountStorageMapData(tb, inter, loadedAccountStorageMap, expectedAccountValues)
+
+	CheckAtreeStorageHealth(tb, storage, []atree.SlabID{rootSlabID})
 }
 
 // checkAccountStorageMapData iterates account storage map and compares values with given expectedAccountValues.
