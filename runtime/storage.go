@@ -417,7 +417,7 @@ func (s *Storage) commit(inter *interpreter.Interpreter, commitContractUpdates b
 //			return domainStorageMap, nil
 //		}
 //
-//		return getDomainStorageMapFromLegacyDomainRegister(ledger, storage, address, domain)
+//		return getDomainStorageMapFromV1DomainRegister(ledger, storage, address, domain)
 //	}
 //
 //	migrator := NewDomainRegisterMigration(s.Ledger, s.PersistentSlabStorage, inter, s.memoryGauge)

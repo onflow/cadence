@@ -58,7 +58,7 @@ func (s *AccountStorageV1) GetDomainStorageMap(
 	domainStorageMap *interpreter.DomainStorageMap,
 ) {
 	var err error
-	domainStorageMap, err = getDomainStorageMapFromLegacyDomainRegister(
+	domainStorageMap, err = getDomainStorageMapFromV1DomainRegister(
 		s.ledger,
 		s.slabStorage,
 		address,
@@ -120,8 +120,8 @@ func (s *AccountStorageV1) commit() error {
 	return nil
 }
 
-// getDomainStorageMapFromLegacyDomainRegister returns domain storage map from legacy domain register.
-func getDomainStorageMapFromLegacyDomainRegister(
+// getDomainStorageMapFromV1DomainRegister returns domain storage map from legacy domain register.
+func getDomainStorageMapFromV1DomainRegister(
 	ledger atree.Ledger,
 	storage atree.SlabStorage,
 	address common.Address,

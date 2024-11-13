@@ -55,7 +55,7 @@ func NewDomainRegisterMigration(
 		storage:             storage,
 		inter:               inter,
 		memoryGauge:         memoryGauge,
-		getDomainStorageMap: getDomainStorageMapFromLegacyDomainRegister,
+		getDomainStorageMap: getDomainStorageMapFromV1DomainRegister,
 	}
 }
 
