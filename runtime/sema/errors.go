@@ -51,6 +51,16 @@ func ErrorMessageExpectedActualTypes(
 	return
 }
 
+// astTypeConversionError
+
+type astTypeConversionError struct {
+	invalidASTType ast.Type
+}
+
+func (e *astTypeConversionError) Error() string {
+	return fmt.Sprintf("cannot convert unsupported AST type: %#+v", e.invalidASTType)
+}
+
 // unsupportedOperation
 
 type unsupportedOperation struct {

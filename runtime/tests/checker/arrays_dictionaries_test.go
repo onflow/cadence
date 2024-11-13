@@ -1262,44 +1262,64 @@ func TestCheckArrayMapInvalidArgs(t *testing.T) {
 
 	t.Parallel()
 
-	testInvalidArgs := func(code string, expectedErrors []sema.SemanticError) {
-		_, err := ParseAndCheck(t, code)
+	testNotAFunction := func(invalidTypeErrorFixesEnabled bool) {
 
-		errs := RequireCheckerErrors(t, err, len(expectedErrors))
+		name := fmt.Sprintf("not a function, error fixes enabled: %v", invalidTypeErrorFixesEnabled)
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-		for i, e := range expectedErrors {
-			assert.IsType(t, e, errs[i])
-		}
+			_, err := ParseAndCheckWithOptions(t,
+				`
+                  fun test() {
+                      let x = [1, 2, 3]
+                      let y = x.map(100)
+                  }
+                `,
+				ParseAndCheckOptions{
+					Config: &sema.Config{
+						InvalidTypeErrorFixesEnabled: invalidTypeErrorFixesEnabled,
+					},
+				},
+			)
+
+			if invalidTypeErrorFixesEnabled {
+				errs := RequireCheckerErrors(t, err, 3)
+
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.InvocationTypeInferenceError{}, errs[1])    // since we're not passing a function.
+				assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[2]) // since we're not passing a function.
+			} else {
+				errs := RequireCheckerErrors(t, err, 2)
+
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1]) // since we're not passing a function.
+			}
+		})
 	}
 
-	testInvalidArgs(`
-		fun test() {
-			let x = [1, 2, 3]
-			let y = x.map(100)
-		}
-	`,
-		[]sema.SemanticError{
-			&sema.TypeMismatchError{},
-			&sema.InvocationTypeInferenceError{},    // since we're not passing a function.
-			&sema.TypeParameterTypeInferenceError{}, // since we're not passing a function.
-		},
-	)
+	for _, invalidTypeErrorFixesEnabled := range []bool{true, false} {
+		testNotAFunction(invalidTypeErrorFixesEnabled)
+	}
 
-	testInvalidArgs(`
-		fun test() {
-			let x = [1, 2, 3]
-			let trueForEvenInt16 =
-				fun (_ x: Int16): Bool {
-					return x % 2 == 0
-				}
+	t.Run("function, invalid parameter type", func(t *testing.T) {
+		t.Parallel()
 
-			let y: [Bool] = x.map(trueForEvenInt16)
-		}
-	`,
-		[]sema.SemanticError{
-			&sema.TypeMismatchError{},
-		},
-	)
+		_, err := ParseAndCheck(t, `
+          fun test() {
+              let x = [1, 2, 3]
+              let trueForEvenInt16 =
+                  fun (_ x: Int16): Bool {
+                      return x % 2 == 0
+                  }
+
+              let y: [Bool] = x.map(trueForEvenInt16)
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
 }
 
 func TestCheckResourceArrayMapInvalid(t *testing.T) {
@@ -2653,17 +2673,42 @@ func TestCheckArrayToConstantSizedMissingTypeArgument(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-		fun test() {
-			let x: [Int16] = [1, 2, 3]
-			let y = x.toConstantSized()
-		}
-	`)
+	test := func(invalidTypeErrorFixesEnabled bool) {
 
-	errs := RequireCheckerErrors(t, err, 2)
+		name := fmt.Sprintf("fixes enabled: %v", invalidTypeErrorFixesEnabled)
 
-	assert.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
-	assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckWithOptions(t, `
+                  fun test() {
+                      let x: [Int16] = [1, 2, 3]
+                      let y = x.toConstantSized()
+                  }
+                `,
+				ParseAndCheckOptions{
+					Config: &sema.Config{
+						InvalidTypeErrorFixesEnabled: invalidTypeErrorFixesEnabled,
+					},
+				},
+			)
+
+			if invalidTypeErrorFixesEnabled {
+				errs := RequireCheckerErrors(t, err, 2)
+
+				assert.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
+				assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
+			} else {
+				errs := RequireCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+			}
+		})
+	}
+
+	for _, invalidTypeErrorFixesEnabled := range []bool{true, false} {
+		test(invalidTypeErrorFixesEnabled)
+	}
 }
 
 func TestCheckArrayReferenceTypeInference(t *testing.T) {

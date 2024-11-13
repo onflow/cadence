@@ -19,6 +19,7 @@
 package checker
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -31,26 +32,49 @@ func TestCheckIncompleteDictionaryType(t *testing.T) {
 
 	t.Parallel()
 
-	checker, err := ParseAndCheckWithOptions(t,
-		`
-          let dict: {Int:} = {}
-        `,
-		ParseAndCheckOptions{
-			IgnoreParseError: true,
-		},
-	)
+	test := func(invalidTypeErrorFixesEnabled bool) {
 
-	errs := RequireCheckerErrors(t, err, 1)
+		name := fmt.Sprintf(
+			"error fixes enabled: %v",
+			invalidTypeErrorFixesEnabled,
+		)
 
-	assert.IsType(t, errs[0], &sema.UnconvertableTypeError{})
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-	assert.Equal(t,
-		&sema.DictionaryType{
-			KeyType:   sema.IntType,
-			ValueType: sema.InvalidType,
-		},
-		RequireGlobalValue(t, checker.Elaboration, "dict"),
-	)
+			checker, err := ParseAndCheckWithOptions(t,
+				`
+                  let dict: {Int:} = {}
+                `,
+				ParseAndCheckOptions{
+					IgnoreParseError: true,
+					Config: &sema.Config{
+						InvalidTypeErrorFixesEnabled: invalidTypeErrorFixesEnabled,
+					},
+				},
+			)
+
+			if invalidTypeErrorFixesEnabled {
+				errs := RequireCheckerErrors(t, err, 1)
+
+				assert.IsType(t, errs[0], &sema.UnconvertableTypeError{})
+			} else {
+				require.NoError(t, err)
+			}
+
+			assert.Equal(t,
+				&sema.DictionaryType{
+					KeyType:   sema.IntType,
+					ValueType: sema.InvalidType,
+				},
+				RequireGlobalValue(t, checker.Elaboration, "dict"),
+			)
+		})
+	}
+
+	for _, invalidTypeErrorFixesEnabled := range []bool{true, false} {
+		test(invalidTypeErrorFixesEnabled)
+	}
 }
 
 func TestCheckMetaKeyType(t *testing.T) {

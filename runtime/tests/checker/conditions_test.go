@@ -19,6 +19,7 @@
 package checker
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -254,43 +255,87 @@ func TestCheckInvalidFunctionPostConditionWithBeforeAndNoArgument(t *testing.T) 
 
 	t.Parallel()
 
-	t.Run("test condition", func(t *testing.T) {
-		t.Parallel()
+	test := func(invalidTypeErrorFixesEnabled bool) {
 
-		_, err := ParseAndCheck(t, `
-          fun test(x: Int) {
-              post {
-                  before() != 0
-              }
-          }
-        `)
+		name := fmt.Sprintf(
+			"error fixes enabled: %v",
+			invalidTypeErrorFixesEnabled,
+		)
 
-		errs := RequireCheckerErrors(t, err, 3)
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-		assert.IsType(t, &sema.InsufficientArgumentsError{}, errs[0])
-		assert.IsType(t, &sema.InvocationTypeInferenceError{}, errs[1])
-		assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[2])
-	})
+			t.Run("test condition", func(t *testing.T) {
+				t.Parallel()
 
-	t.Run("emit condition", func(t *testing.T) {
-		t.Parallel()
+				_, err := ParseAndCheckWithOptions(t,
+					`
+                      fun test(x: Int) {
+                          post {
+                              before() != 0
+                          }
+                      }
+                    `,
+					ParseAndCheckOptions{
+						Config: &sema.Config{
+							InvalidTypeErrorFixesEnabled: invalidTypeErrorFixesEnabled,
+						},
+					},
+				)
 
-		_, err := ParseAndCheck(t, `
-          event Foo(x: Int)
+				if invalidTypeErrorFixesEnabled {
+					errs := RequireCheckerErrors(t, err, 3)
 
-          fun test(x: Int) {
-              post {
-                  emit Foo(x: before())
-              }
-          }
-        `)
+					assert.IsType(t, &sema.InsufficientArgumentsError{}, errs[0])
+					assert.IsType(t, &sema.InvocationTypeInferenceError{}, errs[1])
+					assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[2])
+				} else {
+					errs := RequireCheckerErrors(t, err, 2)
 
-		errs := RequireCheckerErrors(t, err, 3)
+					assert.IsType(t, &sema.InsufficientArgumentsError{}, errs[0])
+					assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
+				}
+			})
 
-		assert.IsType(t, &sema.InsufficientArgumentsError{}, errs[0])
-		assert.IsType(t, &sema.InvocationTypeInferenceError{}, errs[1])
-		assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[2])
-	})
+			t.Run("emit condition", func(t *testing.T) {
+				t.Parallel()
+
+				_, err := ParseAndCheckWithOptions(t,
+					`
+                      event Foo(x: Int)
+
+                      fun test(x: Int) {
+                          post {
+                              emit Foo(x: before())
+                          }
+                      }
+                    `,
+					ParseAndCheckOptions{
+						Config: &sema.Config{
+							InvalidTypeErrorFixesEnabled: invalidTypeErrorFixesEnabled,
+						},
+					},
+				)
+
+				if invalidTypeErrorFixesEnabled {
+					errs := RequireCheckerErrors(t, err, 3)
+
+					assert.IsType(t, &sema.InsufficientArgumentsError{}, errs[0])
+					assert.IsType(t, &sema.InvocationTypeInferenceError{}, errs[1])
+					assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[2])
+				} else {
+					errs := RequireCheckerErrors(t, err, 2)
+
+					assert.IsType(t, &sema.InsufficientArgumentsError{}, errs[0])
+					assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
+				}
+			})
+		})
+	}
+
+	for _, invalidTypeErrorFixesEnabled := range []bool{true, false} {
+		test(invalidTypeErrorFixesEnabled)
+	}
 }
 
 func TestCheckInvalidFunctionPreConditionWithBefore(t *testing.T) {

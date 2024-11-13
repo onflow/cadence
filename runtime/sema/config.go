@@ -55,4 +55,6 @@ type Config struct {
 	AllowStaticDeclarations bool
 	// AttachmentsEnabled determines if attachments are enabled
 	AttachmentsEnabled bool
+	// InvalidTypeErrorFixesEnabled determines if errors for invalid type errors are reported
+	InvalidTypeErrorFixesEnabled bool
 }

@@ -22,7 +22,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/stretchr/testify/assert"
@@ -76,20 +78,50 @@ func TestCheckCapability_borrow(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("missing type argument", func(t *testing.T) {
+	testMissingTypeArgument := func(invalidTypeErrorFixesEnabled bool) {
 
-		_, err := ParseAndCheckWithPanic(t, `
+		name := fmt.Sprintf(
+			"missing type argument, error fixes enabled: %v",
+			invalidTypeErrorFixesEnabled,
+		)
 
-          let capability: Capability = panic("")
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-          let r = capability.borrow()
-        `)
+			baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+			baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-		errs := RequireCheckerErrors(t, err, 2)
+			_, err := ParseAndCheckWithOptions(t,
+				`
+                  let capability: Capability = panic("")
 
-		require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
-		require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
-	})
+                  let r = capability.borrow()
+                `,
+				ParseAndCheckOptions{
+					Config: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+						InvalidTypeErrorFixesEnabled: invalidTypeErrorFixesEnabled,
+					},
+				},
+			)
+			if invalidTypeErrorFixesEnabled {
+				errs := RequireCheckerErrors(t, err, 2)
+
+				require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
+				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
+			} else {
+				errs := RequireCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+			}
+		})
+	}
+
+	for _, invalidTypeErrorFixesEnabled := range []bool{false, true} {
+		testMissingTypeArgument(invalidTypeErrorFixesEnabled)
+	}
 
 	for _, auth := range []sema.Access{sema.UnauthorizedAccess,
 		sema.NewEntitlementSetAccess([]*sema.EntitlementType{{

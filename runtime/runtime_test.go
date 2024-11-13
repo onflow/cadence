@@ -11553,41 +11553,66 @@ func TestRuntimeInvocationReturnTypeInferenceFailure(t *testing.T) {
 
 	t.Parallel()
 
-	address := common.MustBytesToAddress([]byte{0x1})
+	test := func(invalidTypeErrorFixesEnabled bool) {
 
-	newRuntimeInterface := func() Interface {
+		name := fmt.Sprintf(
+			"error fixes enabled: %v",
+			invalidTypeErrorFixesEnabled,
+		)
 
-		return &TestRuntimeInterface{
-			Storage: NewTestLedger(nil, nil),
-			OnGetSigningAccounts: func() ([]common.Address, error) {
-				return []common.Address{address}, nil
-			},
-		}
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			address := common.MustBytesToAddress([]byte{0x1})
+
+			runtimeInterface := &TestRuntimeInterface{
+				Storage: NewTestLedger(nil, nil),
+				OnGetSigningAccounts: func() ([]common.Address, error) {
+					return []common.Address{address}, nil
+				},
+				OnMinimumRequiredVersion: func() (string, error) {
+					if invalidTypeErrorFixesEnabled {
+						return MinimumRequiredVersionForInvalidTypeErrorFixes, nil
+					}
+					return "", nil
+				},
+			}
+
+			runtime := NewTestInterpreterRuntime()
+
+			nextTransactionLocation := NewTransactionLocationGenerator()
+
+			tx := []byte(`
+              transaction{
+                  prepare(signer: auth(Storage) &Account){
+                      let functions = [signer.storage.save].reverse()
+                  }
+              }
+            `)
+
+			err := runtime.ExecuteTransaction(
+				Script{
+					Source: tx,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+
+			RequireError(t, err)
+
+			if invalidTypeErrorFixesEnabled {
+				var typeErr *sema.InvocationTypeInferenceError
+				require.ErrorAs(t, err, &typeErr)
+			} else {
+				var transferErr interpreter.ValueTransferTypeError
+				require.ErrorAs(t, err, &transferErr)
+			}
+		})
 	}
 
-	runtime := NewTestInterpreterRuntime()
-
-	nextTransactionLocation := NewTransactionLocationGenerator()
-
-	tx := []byte(`
-      transaction{
-          prepare(signer: auth(Storage) &Account){
-              let functions = [signer.storage.save].reverse()
-          }
-      }
-    `)
-
-	err := runtime.ExecuteTransaction(
-		Script{
-			Source: tx,
-		},
-		Context{
-			Interface: newRuntimeInterface(),
-			Location:  nextTransactionLocation(),
-		},
-	)
-	RequireError(t, err)
-
-	var typeErr *sema.InvocationTypeInferenceError
-	require.ErrorAs(t, err, &typeErr)
+	for _, invalidTypeErrorFixesEnabled := range []bool{true, false} {
+		test(invalidTypeErrorFixesEnabled)
+	}
 }

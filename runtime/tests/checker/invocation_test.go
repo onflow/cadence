@@ -19,6 +19,7 @@
 package checker
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -597,57 +598,79 @@ func TestCheckInvocationWithIncorrectTypeParameter(t *testing.T) {
 
 	t.Parallel()
 
-	// function type has incorrect type-arguments:
-	// 	`fun Foo<T: AnyStruct>(_ a: R)`
-	//
-	funcType := &sema.FunctionType{
-		ReturnTypeAnnotation: sema.VoidTypeAnnotation,
-		TypeParameters: []*sema.TypeParameter{
-			{
-				Name:      "T",
-				TypeBound: sema.AnyStructType,
-			},
-		},
-		Parameters: []sema.Parameter{
-			{
-				Label:      sema.ArgumentLabelNotRequired,
-				Identifier: "a",
-				TypeAnnotation: sema.NewTypeAnnotation(
-					&sema.GenericType{
-						TypeParameter: &sema.TypeParameter{
-							Name:      "R", // This is an incorrect/undefined type-parameter
-							TypeBound: sema.AnyStructType,
-						},
+	test := func(invalidTypeErrorFixesEnabled bool) {
+
+		name := fmt.Sprintf(
+			"error fixes enabled: %v",
+			invalidTypeErrorFixesEnabled,
+		)
+
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// function type has incorrect type-arguments:
+			// 	`fun Foo<T: AnyStruct>(_ a: R)`
+			//
+			funcType := &sema.FunctionType{
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+				TypeParameters: []*sema.TypeParameter{
+					{
+						Name:      "T",
+						TypeBound: sema.AnyStructType,
 					},
-				),
-			},
-		},
+				},
+				Parameters: []sema.Parameter{
+					{
+						Label:      sema.ArgumentLabelNotRequired,
+						Identifier: "a",
+						TypeAnnotation: sema.NewTypeAnnotation(
+							&sema.GenericType{
+								TypeParameter: &sema.TypeParameter{
+									Name:      "R", // This is an incorrect/undefined type-parameter
+									TypeBound: sema.AnyStructType,
+								},
+							},
+						),
+					},
+				},
+			}
+
+			baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+			baseValueActivation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
+				"foo",
+				funcType,
+				"",
+				nil, // no need, we only type-check
+			))
+
+			_, err := ParseAndCheckWithOptions(t,
+				`
+                    access(all) fun test() {
+                        foo<String>("hello")
+                    }
+                `,
+				ParseAndCheckOptions{
+					Config: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+						InvalidTypeErrorFixesEnabled: invalidTypeErrorFixesEnabled,
+					},
+				},
+			)
+
+			if invalidTypeErrorFixesEnabled {
+
+				errs := RequireCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
+			} else {
+				require.NoError(t, err)
+			}
+		})
 	}
 
-	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-		"foo",
-		funcType,
-		"",
-		nil, // no need, we only type-check
-	))
-
-	_, err := ParseAndCheckWithOptions(t,
-		`
-            access(all) fun test() {
-                foo<String>("hello")
-            }
-        `,
-		ParseAndCheckOptions{
-			Config: &sema.Config{
-				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-					return baseValueActivation
-				},
-			},
-		},
-	)
-
-	errs := RequireCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
+	for _, invalidTypeErrorFixesEnabled := range []bool{true, false} {
+		test(invalidTypeErrorFixesEnabled)
+	}
 }
