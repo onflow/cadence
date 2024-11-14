@@ -1623,162 +1623,238 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 
 	t.Parallel()
 
-	config := DefaultTestInterpreterConfig
-	config.ResourceOwnerChangeHandlerEnabled = true
-	config.StorageFormatV2Enabled = true
-	runtime := NewTestInterpreterRuntimeWithConfig(config)
+	test := func(
+		storageFormatV2Enabled bool,
+		expectedNonEmptyKeys []string,
+	) {
 
-	address1 := common.MustBytesToAddress([]byte{0x1})
-	address2 := common.MustBytesToAddress([]byte{0x2})
+		name := fmt.Sprintf(
+			"storage format V2 enabled: %v",
+			storageFormatV2Enabled,
+		)
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-	ledger := NewTestLedger(nil, nil)
+			config := DefaultTestInterpreterConfig
+			config.ResourceOwnerChangeHandlerEnabled = true
+			config.StorageFormatV2Enabled = storageFormatV2Enabled
+			runtime := NewTestInterpreterRuntimeWithConfig(config)
 
-	var signers []Address
+			address1 := common.MustBytesToAddress([]byte{0x1})
+			address2 := common.MustBytesToAddress([]byte{0x2})
 
-	deployTx := DeploymentTransaction("Test", []byte(`
-      access(all) contract Test {
+			ledger := NewTestLedger(nil, nil)
 
-          access(all) resource R {}
+			var signers []Address
 
-          access(all) fun createR(): @R {
-              return <-create R()
-          }
-      }
-    `))
+			deployTx := DeploymentTransaction("Test", []byte(`
+              access(all) contract Test {
 
-	type resourceOwnerChange struct {
-		uuid       *interpreter.UInt64Value
-		typeID     common.TypeID
-		oldAddress common.Address
-		newAddress common.Address
-	}
+                  access(all) resource R {}
 
-	accountCodes := map[Location][]byte{}
-	var events []cadence.Event
-	var loggedMessages []string
-	var resourceOwnerChanges []resourceOwnerChange
+                  access(all) fun createR(): @R {
+                      return <-create R()
+                  }
+              }
+            `))
 
-	runtimeInterface := &TestRuntimeInterface{
-		Storage: ledger,
-		OnGetSigningAccounts: func() ([]Address, error) {
-			return signers, nil
-		},
-		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
-		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
-			accountCodes[location] = code
-			return nil
-		},
-		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-			code = accountCodes[location]
-			return code, nil
-		},
-		OnEmitEvent: func(event cadence.Event) error {
-			events = append(events, event)
-			return nil
-		},
-		OnProgramLog: func(message string) {
-			loggedMessages = append(loggedMessages, message)
-		},
-		OnResourceOwnerChanged: func(
-			inter *interpreter.Interpreter,
-			resource *interpreter.CompositeValue,
-			oldAddress common.Address,
-			newAddress common.Address,
-		) {
-			resourceOwnerChanges = append(
-				resourceOwnerChanges,
-				resourceOwnerChange{
-					typeID: resource.TypeID(),
-					// TODO: provide proper location range
-					uuid:       resource.ResourceUUID(inter, interpreter.EmptyLocationRange),
-					oldAddress: oldAddress,
-					newAddress: newAddress,
+			type resourceOwnerChange struct {
+				uuid       *interpreter.UInt64Value
+				typeID     common.TypeID
+				oldAddress common.Address
+				newAddress common.Address
+			}
+
+			accountCodes := map[Location][]byte{}
+			var events []cadence.Event
+			var loggedMessages []string
+			var resourceOwnerChanges []resourceOwnerChange
+
+			runtimeInterface := &TestRuntimeInterface{
+				Storage: ledger,
+				OnGetSigningAccounts: func() ([]Address, error) {
+					return signers, nil
+				},
+				OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+				OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+					accountCodes[location] = code
+					return nil
+				},
+				OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+					code = accountCodes[location]
+					return code, nil
+				},
+				OnEmitEvent: func(event cadence.Event) error {
+					events = append(events, event)
+					return nil
+				},
+				OnProgramLog: func(message string) {
+					loggedMessages = append(loggedMessages, message)
+				},
+				OnResourceOwnerChanged: func(
+					inter *interpreter.Interpreter,
+					resource *interpreter.CompositeValue,
+					oldAddress common.Address,
+					newAddress common.Address,
+				) {
+					resourceOwnerChanges = append(
+						resourceOwnerChanges,
+						resourceOwnerChange{
+							typeID: resource.TypeID(),
+							// TODO: provide proper location range
+							uuid:       resource.ResourceUUID(inter, interpreter.EmptyLocationRange),
+							oldAddress: oldAddress,
+							newAddress: newAddress,
+						},
+					)
+				},
+			}
+
+			nextTransactionLocation := NewTransactionLocationGenerator()
+
+			// Deploy contract
+
+			signers = []Address{address1}
+
+			err := runtime.ExecuteTransaction(
+				Script{
+					Source: deployTx,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
 				},
 			)
-		},
+			require.NoError(t, err)
+
+			// Store
+
+			signers = []Address{address1}
+
+			storeTx := []byte(`
+              import Test from 0x1
+
+              transaction {
+                  prepare(signer: auth(Storage) &Account) {
+                      signer.storage.save(<-Test.createR(), to: /storage/test)
+                  }
+              }
+            `)
+
+			err = runtime.ExecuteTransaction(
+				Script{
+					Source: storeTx,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			require.NoError(t, err)
+
+			// Transfer
+
+			signers = []Address{address1, address2}
+
+			transferTx := []byte(`
+              import Test from 0x1
+
+              transaction {
+                  prepare(
+                      signer1: auth(Storage) &Account,
+                      signer2: auth(Storage) &Account
+                  ) {
+                      let value <- signer1.storage.load<@Test.R>(from: /storage/test)!
+                      signer2.storage.save(<-value, to: /storage/test)
+                  }
+              }
+            `)
+
+			err = runtime.ExecuteTransaction(
+				Script{
+					Source: transferTx,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			require.NoError(t, err)
+
+			var actualNonEmptyKeys []string
+			for key, data := range ledger.StoredValues {
+				if len(data) > 0 {
+					actualNonEmptyKeys = append(actualNonEmptyKeys, key)
+				}
+			}
+
+			sort.Strings(actualNonEmptyKeys)
+
+			assert.Equal(t,
+				expectedNonEmptyKeys,
+				actualNonEmptyKeys,
+			)
+
+			expectedUUID := interpreter.NewUnmeteredUInt64Value(1)
+			assert.Equal(t,
+				[]resourceOwnerChange{
+					{
+						typeID: "A.0000000000000001.Test.R",
+						uuid:   &expectedUUID,
+						oldAddress: common.Address{
+							0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+						},
+						newAddress: common.Address{
+							0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+						},
+					},
+					{
+						typeID: "A.0000000000000001.Test.R",
+						uuid:   &expectedUUID,
+						oldAddress: common.Address{
+							0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+						},
+						newAddress: common.Address{
+							0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+						},
+					},
+					{
+						typeID: "A.0000000000000001.Test.R",
+						uuid:   &expectedUUID,
+						oldAddress: common.Address{
+							0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+						},
+						newAddress: common.Address{
+							0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
+						},
+					},
+				},
+				resourceOwnerChanges,
+			)
+		})
 	}
 
-	nextTransactionLocation := NewTransactionLocationGenerator()
-
-	// Deploy contract
-
-	signers = []Address{address1}
-
-	err := runtime.ExecuteTransaction(
-		Script{
-			Source: deployTx,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
-
-	// Store
-
-	signers = []Address{address1}
-
-	storeTx := []byte(`
-      import Test from 0x1
-
-      transaction {
-          prepare(signer: auth(Storage) &Account) {
-              signer.storage.save(<-Test.createR(), to: /storage/test)
-          }
-      }
-    `)
-
-	err = runtime.ExecuteTransaction(
-		Script{
-			Source: storeTx,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+	test(
+		false,
+		[]string{
+			// account 0x1:
+			// NOTE: with atree inlining, contract is inlined in contract map
+			//     storage map (domain key + map slab)
+			//   + contract map (domain key + map slab)
+			"\x00\x00\x00\x00\x00\x00\x00\x01|$\x00\x00\x00\x00\x00\x00\x00\x02",
+			"\x00\x00\x00\x00\x00\x00\x00\x01|$\x00\x00\x00\x00\x00\x00\x00\x04",
+			"\x00\x00\x00\x00\x00\x00\x00\x01|contract",
+			"\x00\x00\x00\x00\x00\x00\x00\x01|storage",
+			// account 0x2
+			// NOTE: with atree inlining, resource is inlined in storage map
+			//     storage map (domain key + map slab)
+			"\x00\x00\x00\x00\x00\x00\x00\x02|$\x00\x00\x00\x00\x00\x00\x00\x02",
+			"\x00\x00\x00\x00\x00\x00\x00\x02|storage",
 		},
 	)
-	require.NoError(t, err)
 
-	// Transfer
-
-	signers = []Address{address1, address2}
-
-	transferTx := []byte(`
-      import Test from 0x1
-
-      transaction {
-          prepare(
-              signer1: auth(Storage) &Account,
-              signer2: auth(Storage) &Account
-          ) {
-              let value <- signer1.storage.load<@Test.R>(from: /storage/test)!
-              signer2.storage.save(<-value, to: /storage/test)
-          }
-      }
-    `)
-
-	err = runtime.ExecuteTransaction(
-		Script{
-			Source: transferTx,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
-
-	var nonEmptyKeys []string
-	for key, data := range ledger.StoredValues {
-		if len(data) > 0 {
-			nonEmptyKeys = append(nonEmptyKeys, key)
-		}
-	}
-
-	sort.Strings(nonEmptyKeys)
-
-	assert.Equal(t,
+	test(
+		true,
 		[]string{
 			// account 0x1:
 			// NOTE: with account storage map and atree inlining,
@@ -1794,44 +1870,6 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 			"\x00\x00\x00\x00\x00\x00\x00\x02|$\x00\x00\x00\x00\x00\x00\x00\x02",
 			"\x00\x00\x00\x00\x00\x00\x00\x02|stored",
 		},
-		nonEmptyKeys,
-	)
-
-	expectedUUID := interpreter.NewUnmeteredUInt64Value(1)
-	assert.Equal(t,
-		[]resourceOwnerChange{
-			{
-				typeID: "A.0000000000000001.Test.R",
-				uuid:   &expectedUUID,
-				oldAddress: common.Address{
-					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-				},
-				newAddress: common.Address{
-					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-				},
-			},
-			{
-				typeID: "A.0000000000000001.Test.R",
-				uuid:   &expectedUUID,
-				oldAddress: common.Address{
-					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-				},
-				newAddress: common.Address{
-					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-				},
-			},
-			{
-				typeID: "A.0000000000000001.Test.R",
-				uuid:   &expectedUUID,
-				oldAddress: common.Address{
-					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-				},
-				newAddress: common.Address{
-					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
-				},
-			},
-		},
-		resourceOwnerChanges,
 	)
 }
 
