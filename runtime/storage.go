@@ -399,62 +399,6 @@ func (s *Storage) commit(inter *interpreter.Interpreter, commitContractUpdates b
 	}
 }
 
-// TODO:
-//func (s *Storage) migrateAccounts(inter *interpreter.Interpreter) error {
-//	// Predicate function allows migration for accounts with write ops.
-//	migrateAccountPred := func(address common.Address) bool {
-//		return s.PersistentSlabStorage.HasUnsavedChanges(atree.Address(address))
-//	}
-//
-//	// getDomainStorageMap function returns cached domain storage map if it is available
-//	// before loading domain storage map from storage.
-//	// This is necessary to migrate uncommitted (new) but cached domain storage map.
-//	getDomainStorageMap := func(
-//		ledger atree.Ledger,
-//		storage atree.SlabStorage,
-//		address common.Address,
-//		domain common.StorageDomain,
-//	) (*interpreter.DomainStorageMap, error) {
-//		domainStorageKey := interpreter.NewStorageDomainKey(s.memoryGauge, address, domain)
-//
-//		// Get cached domain storage map if available.
-//		domainStorageMap := s.cachedDomainStorageMaps[domainStorageKey]
-//
-//		if domainStorageMap != nil {
-//			return domainStorageMap, nil
-//		}
-//
-//		return getDomainStorageMapFromV1DomainRegister(ledger, storage, address, domain)
-//	}
-//
-//	migrator := NewDomainRegisterMigration(s.Ledger, s.PersistentSlabStorage, inter, s.memoryGauge)
-//	migrator.SetGetDomainStorageMapFunc(getDomainStorageMap)
-//
-//	migratedAccounts, err := migrator.MigrateAccounts(s.unmigratedAccounts, migrateAccountPred)
-//	if err != nil {
-//		return err
-//	}
-//
-//	if migratedAccounts == nil {
-//		return nil
-//	}
-//
-//	// Update internal state with migrated accounts
-//	for pair := migratedAccounts.Oldest(); pair != nil; pair = pair.Next() {
-//		address := pair.Key
-//		accountStorageMap := pair.Value
-//
-//		// Cache migrated account storage map
-//		accountStorageKey := interpreter.NewStorageKey(s.memoryGauge, address, AccountStorageKey)
-//		s.cachedAccountStorageMaps[accountStorageKey] = accountStorageMap
-//
-//		// Remove migrated accounts from unmigratedAccounts
-//		s.unmigratedAccounts.Delete(address)
-//	}
-//
-//	return nil
-//}
-
 func (s *Storage) CheckHealth() error {
 
 	// Check slab storage health

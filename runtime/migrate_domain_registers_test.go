@@ -31,7 +31,6 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/runtime"
@@ -41,20 +40,6 @@ import (
 
 func TestMigrateDomainRegisters(t *testing.T) {
 	t.Parallel()
-
-	alwaysMigrate := func(common.Address) bool {
-		return true
-	}
-
-	neverMigrate := func(common.Address) bool {
-		return false
-	}
-
-	migrateSpecificAccount := func(addressToMigrate common.Address) func(common.Address) bool {
-		return func(address common.Address) bool {
-			return address == addressToMigrate
-		}
-	}
 
 	isAtreeRegister := func(key string) bool {
 		return key[0] == '$' && len(key) == 9
@@ -74,31 +59,7 @@ func TestMigrateDomainRegisters(t *testing.T) {
 	address1 := common.MustBytesToAddress([]byte{0x1})
 	address2 := common.MustBytesToAddress([]byte{0x2})
 
-	t.Run("no accounts", func(t *testing.T) {
-		t.Parallel()
-
-		ledger := NewTestLedger(nil, nil)
-		storage := runtime.NewStorage(
-			ledger,
-			nil,
-			runtime.StorageConfig{
-				StorageFormatV2Enabled: true,
-			},
-		)
-
-		inter := NewTestInterpreterWithStorage(t, storage)
-
-		migrator := runtime.NewDomainRegisterMigration(ledger, storage, inter, nil)
-
-		migratedAccounts, err := migrator.MigrateAccounts(nil, alwaysMigrate)
-		require.NoError(t, err)
-		require.True(t, migratedAccounts == nil || migratedAccounts.Len() == 0)
-
-		err = storage.FastCommit(goruntime.NumCPU())
-		require.NoError(t, err)
-
-		require.Equal(t, 0, len(ledger.StoredValues))
-	})
+	addresses := []common.Address{address2, address1}
 
 	t.Run("accounts without domain registers", func(t *testing.T) {
 		t.Parallel()
@@ -116,15 +77,13 @@ func TestMigrateDomainRegisters(t *testing.T) {
 
 		migrator := runtime.NewDomainRegisterMigration(ledger, storage, inter, nil)
 
-		accounts := &orderedmap.OrderedMap[common.Address, struct{}]{}
-		accounts.Set(address2, struct{}{})
-		accounts.Set(address1, struct{}{})
+		for _, address := range addresses {
+			accountStorageMap, err := migrator.MigrateAccount(address)
+			require.Nil(t, accountStorageMap)
+			require.NoError(t, err)
+		}
 
-		migratedAccounts, err := migrator.MigrateAccounts(accounts, alwaysMigrate)
-		require.NoError(t, err)
-		require.True(t, migratedAccounts == nil || migratedAccounts.Len() == 0)
-
-		err = storage.FastCommit(goruntime.NumCPU())
+		err := storage.FastCommit(goruntime.NumCPU())
 		require.NoError(t, err)
 
 		require.Equal(t, 0, len(ledger.StoredValues))
@@ -162,30 +121,26 @@ func TestMigrateDomainRegisters(t *testing.T) {
 
 		migrator := runtime.NewDomainRegisterMigration(ledger, storage, inter, nil)
 
-		accounts := &orderedmap.OrderedMap[common.Address, struct{}]{}
-		accounts.Set(address2, struct{}{})
-		accounts.Set(address1, struct{}{})
+		var accountStorageMaps []*interpreter.AccountStorageMap
+		for _, address := range addresses {
+			accountStorageMap, err := migrator.MigrateAccount(address)
+			require.NotNil(t, accountStorageMap)
+			require.NoError(t, err)
+			accountStorageMaps = append(accountStorageMaps, accountStorageMap)
+		}
 
-		migratedAccounts, err := migrator.MigrateAccounts(accounts, alwaysMigrate)
-		require.NoError(t, err)
-		require.NotNil(t, migratedAccounts)
-		require.Equal(t, accounts.Len(), migratedAccounts.Len())
-		require.Equal(t, address2, migratedAccounts.Oldest().Key)
-		require.Equal(t, address1, migratedAccounts.Newest().Key)
-
-		err = storage.FastCommit(goruntime.NumCPU())
+		err := storage.FastCommit(goruntime.NumCPU())
 		require.NoError(t, err)
 
 		// Check non-atree registers
 		nonAtreeRegisters := getNonAtreeRegisters(ledger.StoredValues)
-		require.Equal(t, accounts.Len(), len(nonAtreeRegisters))
+		require.Equal(t, len(addresses), len(nonAtreeRegisters))
 		require.Contains(t, nonAtreeRegisters, string(address1[:])+"|"+runtime.AccountStorageKey)
 		require.Contains(t, nonAtreeRegisters, string(address2[:])+"|"+runtime.AccountStorageKey)
 
 		// Check atree storage
-		expectedRootSlabIDs := make([]atree.SlabID, 0, migratedAccounts.Len())
-		for pair := migratedAccounts.Oldest(); pair != nil; pair = pair.Next() {
-			accountStorageMap := pair.Value
+		expectedRootSlabIDs := make([]atree.SlabID, 0, len(accountStorageMaps))
+		for _, accountStorageMap := range accountStorageMaps {
 			expectedRootSlabIDs = append(expectedRootSlabIDs, accountStorageMap.SlabID())
 		}
 
@@ -229,100 +184,22 @@ func TestMigrateDomainRegisters(t *testing.T) {
 
 		migrator := runtime.NewDomainRegisterMigration(ledger, storage, inter, nil)
 
-		accounts := &orderedmap.OrderedMap[common.Address, struct{}]{}
-		accounts.Set(address2, struct{}{})
-		accounts.Set(address1, struct{}{})
-
-		migratedAccounts, err := migrator.MigrateAccounts(accounts, alwaysMigrate)
-		require.NoError(t, err)
-		require.True(t, migratedAccounts == nil || migratedAccounts.Len() == 0)
+		for _, address := range addresses {
+			accountStorageMap, err := migrator.MigrateAccount(address)
+			require.Nil(t, accountStorageMap)
+			require.NoError(t, err)
+		}
 
 		// Check account storage map data
 		for address, accountValues := range accountsValues {
-			checkAccountStorageMapData(t, ledger.StoredValues, ledger.StorageIndices, address, accountValues)
+			checkAccountStorageMapData(
+				t,
+				ledger.StoredValues,
+				ledger.StorageIndices,
+				address,
+				accountValues,
+			)
 		}
-	})
-
-	t.Run("never migration predicate", func(t *testing.T) {
-		t.Parallel()
-
-		accountsInfo := []accountInfo{
-			{
-				address: address1,
-				domains: []domainInfo{
-					{domain: common.PathDomainStorage.StorageDomain(), domainStorageMapCount: 10, maxDepth: 3},
-				},
-			},
-			{
-				address: address2,
-				domains: []domainInfo{
-					{domain: common.PathDomainPublic.StorageDomain(), domainStorageMapCount: 10, maxDepth: 3},
-				},
-			},
-		}
-
-		ledger, _ := newTestLedgerWithUnmigratedAccounts(t, nil, nil, accountsInfo)
-		storage := runtime.NewStorage(
-			ledger,
-			nil,
-			runtime.StorageConfig{
-				StorageFormatV2Enabled: true,
-			},
-		)
-
-		inter := NewTestInterpreterWithStorage(t, storage)
-
-		migrator := runtime.NewDomainRegisterMigration(ledger, storage, inter, nil)
-
-		accounts := &orderedmap.OrderedMap[common.Address, struct{}]{}
-		accounts.Set(address2, struct{}{})
-		accounts.Set(address1, struct{}{})
-
-		migratedAccounts, err := migrator.MigrateAccounts(accounts, neverMigrate)
-		require.NoError(t, err)
-		require.True(t, migratedAccounts == nil || migratedAccounts.Len() == 0)
-	})
-
-	t.Run("selective migration predicate", func(t *testing.T) {
-		t.Parallel()
-
-		accountsInfo := []accountInfo{
-			{
-				address: address1,
-				domains: []domainInfo{
-					{domain: common.PathDomainStorage.StorageDomain(), domainStorageMapCount: 10, maxDepth: 3},
-				},
-			},
-			{
-				address: address2,
-				domains: []domainInfo{
-					{domain: common.PathDomainPublic.StorageDomain(), domainStorageMapCount: 10, maxDepth: 3},
-				},
-			},
-		}
-
-		ledger, _ := newTestLedgerWithUnmigratedAccounts(t, nil, nil, accountsInfo)
-		storage := runtime.NewStorage(
-			ledger,
-			nil,
-			runtime.StorageConfig{
-				StorageFormatV2Enabled: true,
-			},
-		)
-
-		inter := NewTestInterpreterWithStorage(t, storage)
-
-		migrator := runtime.NewDomainRegisterMigration(ledger, storage, inter, nil)
-
-		accounts := &orderedmap.OrderedMap[common.Address, struct{}]{}
-		accounts.Set(address2, struct{}{})
-		accounts.Set(address1, struct{}{})
-
-		migratedAccounts, err := migrator.MigrateAccounts(accounts, migrateSpecificAccount(address2))
-		require.NoError(t, err)
-		require.NotNil(t, migratedAccounts)
-		require.Equal(t, 1, migratedAccounts.Len())
-		require.Equal(t, address2, migratedAccounts.Oldest().Key)
 	})
 }
 
