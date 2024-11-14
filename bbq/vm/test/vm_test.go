@@ -20,6 +20,7 @@ package test
 
 import (
 	"fmt"
+	"github.com/onflow/cadence/interpreter"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -1434,7 +1435,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 
 		t.Parallel()
 
-		location := common.NewAddressLocation(
+		contractLocation := common.NewAddressLocation(
 			nil,
 			common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
 			"MyContract",
@@ -1464,7 +1465,7 @@ func TestInterfaceMethodCall(t *testing.T) {
       }
         `,
 			ParseAndCheckOptions{
-				Location: location,
+				Location: contractLocation,
 			},
 		)
 		require.NoError(t, err)
@@ -1472,7 +1473,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 		importCompiler := compiler.NewCompiler(importedChecker.Program, importedChecker.Elaboration)
 		importedProgram := importCompiler.Compile()
 
-		vmInstance := vm.NewVM(location, importedProgram, nil)
+		vmInstance := vm.NewVM(contractLocation, importedProgram, nil)
 		importedContractValue, err := vmInstance.InitializeContract()
 		require.NoError(t, err)
 
@@ -1515,6 +1516,15 @@ func TestInterfaceMethodCall(t *testing.T) {
 			},
 			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *vm.CompositeValue {
 				return importedContractValue
+			},
+			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
+				elaboration := importedChecker.Elaboration
+				compositeType := elaboration.CompositeType(typeID)
+				if compositeType != nil {
+					return compositeType
+				}
+
+				return elaboration.InterfaceType(typeID)
 			},
 		}
 

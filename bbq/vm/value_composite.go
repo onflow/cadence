@@ -87,7 +87,7 @@ func newCompositeValueFromOrderedMap(
 
 func (*CompositeValue) isValue() {}
 
-func (v *CompositeValue) StaticType(common.MemoryGauge) StaticType {
+func (v *CompositeValue) StaticType(*Config) StaticType {
 	return v.CompositeType
 }
 

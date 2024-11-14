@@ -22,17 +22,8 @@ import "github.com/onflow/cadence/interpreter"
 
 type StaticType = interpreter.StaticType
 
-func IsSubType(sourceType, targetType StaticType) bool {
-	if targetType == interpreter.PrimitiveStaticTypeAny {
-		return true
-	}
-
-	// Optimization: If the static types are equal, then no need to check further.
-	if sourceType.Equal(targetType) {
-		return true
-	}
-
-	// TODO: Add the remaining subType rules
-
-	return true
+func IsSubType(config *Config, sourceType, targetType StaticType) bool {
+	// TODO: Avoid conversion to sema types.
+	inter := config.interpreter()
+	return inter.IsSubType(sourceType, targetType)
 }

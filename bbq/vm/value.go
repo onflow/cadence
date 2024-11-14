@@ -20,13 +20,11 @@ package vm
 
 import (
 	"github.com/onflow/atree"
-
-	"github.com/onflow/cadence/common"
 )
 
 type Value interface {
 	isValue()
-	StaticType(common.MemoryGauge) StaticType
+	StaticType(*Config) StaticType
 	Transfer(
 		config *Config,
 		address atree.Address,

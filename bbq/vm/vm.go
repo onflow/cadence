@@ -420,7 +420,7 @@ func opInvokeDynamic(vm *VM) {
 
 	switch typedReceiver := receiver.(type) {
 	case *StorageReferenceValue:
-		referenced, err := typedReceiver.dereference(vm.config.MemoryGauge)
+		referenced, err := typedReceiver.dereference(vm.config)
 		if err != nil {
 			panic(err)
 		}
@@ -504,14 +504,16 @@ func opTransfer(vm *VM) {
 	targetType := vm.loadType()
 	value := vm.peek()
 
+	config := vm.config
+
 	transferredValue := value.Transfer(
-		vm.config,
+		config,
 		atree.Address{},
 		false, nil,
 	)
 
-	valueType := transferredValue.StaticType(vm.config.MemoryGauge)
-	if !IsSubType(valueType, targetType) {
+	valueType := transferredValue.StaticType(config)
+	if !IsSubType(config, valueType, targetType) {
 		panic(errors.NewUnexpectedError("invalid transfer: expected '%s', found '%s'", targetType, valueType))
 	}
 
@@ -777,18 +779,18 @@ func (vm *VM) StackSize() int {
 	return len(vm.stack)
 }
 
-func getReceiver[T any](receiver Value) T {
+func getReceiver[T any](config *Config, receiver Value) T {
 	switch receiver := receiver.(type) {
 	case *SomeValue:
-		return getReceiver[T](receiver.value)
+		return getReceiver[T](config, receiver.value)
 	case *EphemeralReferenceValue:
-		return getReceiver[T](receiver.Value)
+		return getReceiver[T](config, receiver.Value)
 	case *StorageReferenceValue:
 		referencedValue, err := receiver.dereference(nil)
 		if err != nil {
 			panic(err)
 		}
-		return getReceiver[T](*referencedValue)
+		return getReceiver[T](config, *referencedValue)
 	default:
 		return receiver.(T)
 	}

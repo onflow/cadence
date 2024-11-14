@@ -38,7 +38,7 @@ var _ Value = PathValue{}
 
 func (PathValue) isValue() {}
 
-func (v PathValue) StaticType(common.MemoryGauge) StaticType {
+func (v PathValue) StaticType(*Config) StaticType {
 	switch v.Domain {
 	case common.PathDomainStorage:
 		return interpreter.PrimitiveStaticTypeStoragePath

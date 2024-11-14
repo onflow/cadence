@@ -58,8 +58,8 @@ func (*StorageReferenceValue) isValue() {}
 
 func (v *StorageReferenceValue) isReference() {}
 
-func (v *StorageReferenceValue) ReferencedValue(gauge common.MemoryGauge, errorOnFailedDereference bool) *Value {
-	referenced, err := v.dereference(gauge)
+func (v *StorageReferenceValue) ReferencedValue(config *Config, errorOnFailedDereference bool) *Value {
+	referenced, err := v.dereference(config)
 	if err != nil && errorOnFailedDereference {
 		panic(err)
 	}
@@ -71,33 +71,40 @@ func (v *StorageReferenceValue) BorrowType() interpreter.StaticType {
 	return v.BorrowedType
 }
 
-func (v *StorageReferenceValue) StaticType(gauge common.MemoryGauge) StaticType {
-	referencedValue, err := v.dereference(gauge)
+func (v *StorageReferenceValue) StaticType(config *Config) StaticType {
+	referencedValue, err := v.dereference(config)
 	if err != nil {
 		panic(err)
 	}
 
+	memoryGauge := config.MemoryGauge
+
 	return interpreter.NewReferenceStaticType(
-		gauge,
+		memoryGauge,
 		v.Authorization,
-		(*referencedValue).StaticType(gauge),
+		(*referencedValue).StaticType(config),
 	)
 }
 
-func (v *StorageReferenceValue) dereference(gauge common.MemoryGauge) (*Value, error) {
+func (v *StorageReferenceValue) dereference(config *Config) (*Value, error) {
+	memoryGauge := config.MemoryGauge
 	address := v.TargetStorageAddress
 	domain := v.TargetPath.Domain.Identifier()
 	identifier := v.TargetPath.Identifier
 
-	vmReferencedValue := ReadStored(gauge, v.storage, address, domain, identifier)
+	vmReferencedValue := ReadStored(memoryGauge, v.storage, address, domain, identifier)
 	if vmReferencedValue == nil {
 		return nil, nil
 	}
 
-	if v.BorrowedType != nil {
-		staticType := vmReferencedValue.StaticType(gauge)
+	if _, isReference := vmReferencedValue.(ReferenceValue); isReference {
+		panic(interpreter.NestedReferenceError{})
+	}
 
-		if !IsSubType(staticType, v.BorrowedType) {
+	if v.BorrowedType != nil {
+		staticType := vmReferencedValue.StaticType(config)
+
+		if !IsSubType(config, staticType, v.BorrowedType) {
 			panic(fmt.Errorf("type mismatch: expected %s, found %s", v.BorrowedType, staticType))
 			//semaType := interpreter.MustConvertStaticToSemaType(staticType)
 			//
@@ -121,7 +128,7 @@ func (v *StorageReferenceValue) String() string {
 }
 
 func (v *StorageReferenceValue) GetMember(config *Config, name string) Value {
-	referencedValue, err := v.dereference(config.MemoryGauge)
+	referencedValue, err := v.dereference(config)
 	if err != nil {
 		panic(err)
 	}
@@ -131,7 +138,7 @@ func (v *StorageReferenceValue) GetMember(config *Config, name string) Value {
 }
 
 func (v *StorageReferenceValue) SetMember(config *Config, name string, value Value) {
-	referencedValue, err := v.dereference(config.MemoryGauge)
+	referencedValue, err := v.dereference(config)
 	if err != nil {
 		panic(err)
 	}

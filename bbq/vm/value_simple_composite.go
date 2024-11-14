@@ -52,7 +52,7 @@ func NewSimpleCompositeValue(
 
 func (*SimpleCompositeValue) isValue() {}
 
-func (v *SimpleCompositeValue) StaticType(memoryGauge common.MemoryGauge) StaticType {
+func (v *SimpleCompositeValue) StaticType(*Config) StaticType {
 	return v.staticType
 }
 

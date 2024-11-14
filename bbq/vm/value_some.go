@@ -21,7 +21,6 @@ package vm
 import (
 	"github.com/onflow/atree"
 
-	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 )
 
@@ -41,13 +40,13 @@ func NewSomeValueNonCopying(value Value) *SomeValue {
 
 func (*SomeValue) isValue() {}
 
-func (v *SomeValue) StaticType(gauge common.MemoryGauge) StaticType {
-	innerType := v.value.StaticType(gauge)
+func (v *SomeValue) StaticType(config *Config) StaticType {
+	innerType := v.value.StaticType(config)
 	if innerType == nil {
 		return nil
 	}
 	return interpreter.NewOptionalStaticType(
-		gauge,
+		config,
 		innerType,
 	)
 }

@@ -22,7 +22,6 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 )
 
@@ -35,7 +34,7 @@ var _ Value = FunctionValue{}
 
 func (FunctionValue) isValue() {}
 
-func (FunctionValue) StaticType(common.MemoryGauge) StaticType {
+func (FunctionValue) StaticType(*Config) StaticType {
 	panic(errors.NewUnreachableError())
 }
 
@@ -60,7 +59,7 @@ var _ Value = NativeFunctionValue{}
 
 func (NativeFunctionValue) isValue() {}
 
-func (NativeFunctionValue) StaticType(common.MemoryGauge) StaticType {
+func (NativeFunctionValue) StaticType(*Config) StaticType {
 	panic(errors.NewUnreachableError())
 }
 

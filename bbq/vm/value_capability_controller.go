@@ -96,7 +96,7 @@ func (v *StorageCapabilityControllerValue) CapabilityControllerBorrowType() *int
 	return v.BorrowType
 }
 
-func (v *StorageCapabilityControllerValue) StaticType(_ common.MemoryGauge) StaticType {
+func (v *StorageCapabilityControllerValue) StaticType(*Config) StaticType {
 	return interpreter.PrimitiveStaticTypeStorageCapabilityController
 }
 

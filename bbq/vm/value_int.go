@@ -23,7 +23,6 @@ import (
 
 	"github.com/onflow/atree"
 
-	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 )
 
@@ -45,7 +44,7 @@ var _ Value = IntValue{}
 
 func (IntValue) isValue() {}
 
-func (IntValue) StaticType(common.MemoryGauge) StaticType {
+func (IntValue) StaticType(*Config) StaticType {
 	return interpreter.PrimitiveStaticTypeInt
 }
 

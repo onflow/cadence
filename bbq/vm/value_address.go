@@ -32,7 +32,7 @@ var _ Value = AddressValue{}
 
 func (AddressValue) isValue() {}
 
-func (AddressValue) StaticType(common.MemoryGauge) StaticType {
+func (AddressValue) StaticType(*Config) StaticType {
 	return interpreter.PrimitiveStaticTypeAddress
 }
 

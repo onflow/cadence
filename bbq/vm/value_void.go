@@ -22,7 +22,6 @@ import (
 	"github.com/onflow/atree"
 	"github.com/onflow/cadence/format"
 
-	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 )
 
@@ -32,7 +31,7 @@ var Void Value = VoidValue{}
 
 func (VoidValue) isValue() {}
 
-func (VoidValue) StaticType(common.MemoryGauge) StaticType {
+func (VoidValue) StaticType(*Config) StaticType {
 	return interpreter.PrimitiveStaticTypeVoid
 }
 

@@ -121,14 +121,14 @@ func init() {
 					referenceType.Authorization,
 					address,
 					path,
-					referenceType,
+					referenceType.ReferencedType,
 				)
 
 				// Attempt to dereference,
 				// which reads the stored value
 				// and performs a dynamic type check
 
-				referenced, err := reference.dereference(config.MemoryGauge)
+				referenced, err := reference.dereference(config)
 				if err != nil {
 					panic(err)
 				}

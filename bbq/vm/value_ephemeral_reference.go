@@ -20,7 +20,6 @@ package vm
 
 import (
 	"github.com/onflow/atree"
-	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/interpreter"
 )
@@ -29,7 +28,7 @@ type ReferenceValue interface {
 	Value
 	//AuthorizedValue
 	isReference()
-	ReferencedValue(gauge common.MemoryGauge, errorOnFailedDereference bool) *Value
+	ReferencedValue(config *Config, errorOnFailedDereference bool) *Value
 	BorrowType() interpreter.StaticType
 }
 
@@ -65,7 +64,7 @@ func (*EphemeralReferenceValue) isValue() {}
 
 func (v *EphemeralReferenceValue) isReference() {}
 
-func (v *EphemeralReferenceValue) ReferencedValue(_ common.MemoryGauge, _ bool) *Value {
+func (v *EphemeralReferenceValue) ReferencedValue(*Config, bool) *Value {
 	return &v.Value
 }
 
@@ -73,11 +72,11 @@ func (v *EphemeralReferenceValue) BorrowType() interpreter.StaticType {
 	return v.BorrowedType
 }
 
-func (v *EphemeralReferenceValue) StaticType(gauge common.MemoryGauge) StaticType {
+func (v *EphemeralReferenceValue) StaticType(config *Config) StaticType {
 	return interpreter.NewReferenceStaticType(
-		gauge,
+		config.MemoryGauge,
 		v.Authorization,
-		v.Value.StaticType(gauge),
+		v.Value.StaticType(config),
 	)
 }
 

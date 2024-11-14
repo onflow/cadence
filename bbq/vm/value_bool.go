@@ -21,7 +21,6 @@ package vm
 import (
 	"github.com/onflow/atree"
 
-	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/interpreter"
 )
@@ -35,7 +34,7 @@ var _ Value = BoolValue(true)
 
 func (BoolValue) isValue() {}
 
-func (BoolValue) StaticType(common.MemoryGauge) StaticType {
+func (BoolValue) StaticType(*Config) StaticType {
 	return interpreter.PrimitiveStaticTypeBool
 }
 

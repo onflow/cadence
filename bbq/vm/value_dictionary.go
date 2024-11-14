@@ -110,7 +110,7 @@ func newDictionaryValueFromAtreeMap(
 
 func (*DictionaryValue) isValue() {}
 
-func (v *DictionaryValue) StaticType(memoryGauge common.MemoryGauge) StaticType {
+func (v *DictionaryValue) StaticType(*Config) StaticType {
 	return v.Type
 }
 

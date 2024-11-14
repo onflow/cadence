@@ -59,8 +59,8 @@ func NewInvalidCapabilityValue(
 
 func (CapabilityValue) isValue() {}
 
-func (v CapabilityValue) StaticType(gauge common.MemoryGauge) StaticType {
-	return interpreter.NewCapabilityStaticType(gauge, v.BorrowType)
+func (v CapabilityValue) StaticType(config *Config) StaticType {
+	return interpreter.NewCapabilityStaticType(config.MemoryGauge, v.BorrowType)
 }
 
 func (v CapabilityValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
@@ -91,7 +91,7 @@ func init() {
 		NativeFunctionValue{
 			ParameterCount: 0,
 			Function: func(config *Config, typeArguments []StaticType, args ...Value) Value {
-				capabilityValue := getReceiver[CapabilityValue](args[0])
+				capabilityValue := getReceiver[CapabilityValue](config, args[0])
 				capabilityID := capabilityValue.ID
 
 				if capabilityID == InvalidCapabilityID {
@@ -179,7 +179,7 @@ func getCheckedCapabilityController(
 	} else {
 		//wantedBorrowType = inter.SubstituteMappedEntitlements(wantedBorrowType).(*sema.ReferenceType)
 
-		if !canBorrow(wantedBorrowType, capabilityBorrowType) {
+		if !canBorrow(config, wantedBorrowType, capabilityBorrowType) {
 			return nil, nil
 		}
 	}
@@ -193,7 +193,7 @@ func getCheckedCapabilityController(
 	}
 
 	controllerBorrowType := controller.CapabilityControllerBorrowType()
-	if !canBorrow(wantedBorrowType, controllerBorrowType) {
+	if !canBorrow(config, wantedBorrowType, controllerBorrowType) {
 		return nil, nil
 	}
 
@@ -226,6 +226,7 @@ func getCapabilityController(
 }
 
 func canBorrow(
+	config *Config,
 	wantedBorrowType *interpreter.ReferenceStaticType,
 	capabilityBorrowType *interpreter.ReferenceStaticType,
 ) bool {
@@ -240,6 +241,14 @@ func canBorrow(
 
 	// Ensure the wanted borrow type is a subtype or supertype of the capability borrow type
 
-	return IsSubType(wantedBorrowType.ReferencedType, capabilityBorrowType.ReferencedType) ||
-		IsSubType(capabilityBorrowType.ReferencedType, wantedBorrowType.ReferencedType)
+	return IsSubType(
+		config,
+		wantedBorrowType.ReferencedType,
+		capabilityBorrowType.ReferencedType,
+	) ||
+		IsSubType(
+			config,
+			capabilityBorrowType.ReferencedType,
+			wantedBorrowType.ReferencedType,
+		)
 }

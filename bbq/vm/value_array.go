@@ -136,7 +136,7 @@ func (v *ArrayValue) isValue() {
 	panic("implement me")
 }
 
-func (v *ArrayValue) StaticType(common.MemoryGauge) StaticType {
+func (v *ArrayValue) StaticType(*Config) StaticType {
 	return v.Type
 }
 

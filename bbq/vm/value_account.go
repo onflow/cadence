@@ -223,7 +223,7 @@ func BorrowCapabilityController(
 	// and performs a dynamic type check
 
 	referencedValue := referenceValue.ReferencedValue(
-		config.MemoryGauge,
+		config,
 		false,
 	)
 	if referencedValue == nil {

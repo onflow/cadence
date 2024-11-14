@@ -20,7 +20,6 @@ package vm
 
 import (
 	"github.com/onflow/atree"
-	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/interpreter"
 )
@@ -31,9 +30,9 @@ var Nil Value = NilValue{}
 
 func (NilValue) isValue() {}
 
-func (NilValue) StaticType(gauge common.MemoryGauge) StaticType {
+func (NilValue) StaticType(config *Config) StaticType {
 	return interpreter.NewOptionalStaticType(
-		gauge,
+		config.MemoryGauge,
 		interpreter.PrimitiveStaticTypeNever,
 	)
 }

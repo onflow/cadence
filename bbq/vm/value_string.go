@@ -23,7 +23,6 @@ import (
 
 	"github.com/onflow/atree"
 
-	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -48,7 +47,7 @@ func NewStringValueFromBytes(bytes []byte) StringValue {
 
 func (StringValue) isValue() {}
 
-func (StringValue) StaticType(common.MemoryGauge) StaticType {
+func (StringValue) StaticType(*Config) StaticType {
 	return interpreter.PrimitiveStaticTypeString
 }
 

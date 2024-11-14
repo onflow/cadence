@@ -40,6 +40,20 @@ func TestFTTransfer(t *testing.T) {
 	storage := interpreter.NewInMemoryStorage(nil)
 	programs := map[common.Location]compiledProgram{}
 
+	typeLoader := func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
+		program, ok := programs[location]
+		if !ok {
+			panic(fmt.Errorf("cannot find elaboration for: %s", location))
+		}
+		elaboration := program.Elaboration
+		compositeType := elaboration.CompositeType(typeID)
+		if compositeType != nil {
+			return compositeType
+		}
+
+		return elaboration.InterfaceType(typeID)
+	}
+
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
 	senderAddress := common.MustBytesToAddress([]byte{0x2})
 	receiverAddress := common.MustBytesToAddress([]byte{0x3})
@@ -62,6 +76,7 @@ func TestFTTransfer(t *testing.T) {
 	config := &vm.Config{
 		Storage:        storage,
 		AccountHandler: &testAccountHandler{},
+		TypeLoader:     typeLoader,
 	}
 
 	flowTokenVM := vm.NewVM(
@@ -100,19 +115,7 @@ func TestFTTransfer(t *testing.T) {
 
 		AccountHandler: &testAccountHandler{},
 
-		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
-			imported, ok := programs[location]
-			if !ok {
-				panic(fmt.Errorf("cannot find contract in location %s", location))
-			}
-
-			compositeType := imported.Elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType
-			}
-
-			return imported.Elaboration.InterfaceType(typeID)
-		},
+		TypeLoader: typeLoader,
 	}
 
 	for _, address := range []common.Address{
@@ -197,6 +200,20 @@ func BenchmarkFTTransfer(b *testing.B) {
 	storage := interpreter.NewInMemoryStorage(nil)
 	programs := map[common.Location]compiledProgram{}
 
+	typeLoader := func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
+		program, ok := programs[location]
+		if !ok {
+			panic(fmt.Errorf("cannot find elaboration for: %s", location))
+		}
+		elaboration := program.Elaboration
+		compositeType := elaboration.CompositeType(typeID)
+		if compositeType != nil {
+			return compositeType
+		}
+
+		return elaboration.InterfaceType(typeID)
+	}
+
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
 	senderAddress := common.MustBytesToAddress([]byte{0x2})
 	receiverAddress := common.MustBytesToAddress([]byte{0x3})
@@ -214,6 +231,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 	config := &vm.Config{
 		Storage:        storage,
 		AccountHandler: &testAccountHandler{},
+		TypeLoader:     typeLoader,
 	}
 
 	flowTokenVM := vm.NewVM(
@@ -253,19 +271,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 		AccountHandler: &testAccountHandler{},
 
-		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
-			imported, ok := programs[location]
-			if !ok {
-				panic(fmt.Errorf("cannot find contract in location %s", location))
-			}
-
-			compositeType := imported.Elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType
-			}
-
-			return imported.Elaboration.InterfaceType(typeID)
-		},
+		TypeLoader: typeLoader,
 	}
 
 	for _, address := range []common.Address{
