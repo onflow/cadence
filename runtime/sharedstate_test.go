@@ -37,6 +37,7 @@ func TestRuntimeSharedStateV1(t *testing.T) {
 
 	config := DefaultTestInterpreterConfig
 	config.StorageFormatV2Enabled = false
+	config.AtreeValidationEnabled = false
 	runtime := NewTestInterpreterRuntimeWithConfig(config)
 
 	signerAddress := common.MustBytesToAddress([]byte{0x1})
@@ -236,6 +237,7 @@ func TestRuntimeSharedStateV2(t *testing.T) {
 
 	config := DefaultTestInterpreterConfig
 	config.StorageFormatV2Enabled = true
+	config.AtreeValidationEnabled = false
 	runtime := NewTestInterpreterRuntimeWithConfig(config)
 
 	signerAddress := common.MustBytesToAddress([]byte{0x1})
@@ -412,31 +414,9 @@ func TestRuntimeSharedStateV2(t *testing.T) {
 
 	require.Equal(t,
 		[]ownerKeyPair{
-			// Read account domain register to check if it is a migrated account
-			// Read returns no value.
 			{
 				owner: signerAddress[:],
 				key:   []byte(AccountStorageKey),
-			},
-			// Read contract domain register to check if it is a unmigrated account
-			// Read returns no value.
-			{
-				owner: signerAddress[:],
-				key:   []byte(common.StorageDomainContract.Identifier()),
-			},
-			// Read all available domain registers to check if it is a new account
-			// Read returns no value.
-			{
-				owner: signerAddress[:],
-				key:   []byte(common.PathDomainStorage.Identifier()),
-			},
-			{
-				owner: signerAddress[:],
-				key:   []byte(common.PathDomainPrivate.Identifier()),
-			},
-			{
-				owner: signerAddress[:],
-				key:   []byte(common.PathDomainPublic.Identifier()),
 			},
 			{
 				owner: signerAddress[:],
@@ -444,30 +424,12 @@ func TestRuntimeSharedStateV2(t *testing.T) {
 			},
 			{
 				owner: signerAddress[:],
-				key:   []byte(common.StorageDomainInbox.Identifier()),
-			},
-			{
-				owner: signerAddress[:],
-				key:   []byte(common.StorageDomainCapabilityController.Identifier()),
-			},
-			{
-				owner: signerAddress[:],
-				key:   []byte(common.StorageDomainCapabilityControllerTag.Identifier()),
-			},
-			{
-				owner: signerAddress[:],
-				key:   []byte(common.StorageDomainPathCapability.Identifier()),
-			},
-			{
-				owner: signerAddress[:],
-				key:   []byte(common.StorageDomainAccountCapability.Identifier()),
-			},
-			// Read account domain register
-			{
-				owner: signerAddress[:],
 				key:   []byte(AccountStorageKey),
 			},
-			// Read account storage map
+			{
+				owner: signerAddress[:],
+				key:   []byte(common.StorageDomainContract.Identifier()),
+			},
 			{
 				owner: signerAddress[:],
 				key:   []byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},

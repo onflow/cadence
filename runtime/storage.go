@@ -59,10 +59,6 @@ type Storage struct {
 
 	AccountStorageV1 *AccountStorageV1
 	AccountStorageV2 *AccountStorageV2
-
-	// v1Accounts contains the cached result of determining
-	// if the account is in storage format v1 or not.
-	v1Accounts *orderedmap.OrderedMap[common.Address, bool]
 }
 
 var _ atree.SlabStorage = &Storage{}
@@ -155,28 +151,24 @@ func (s *Storage) GetDomainStorageMap(
 		}
 	}()
 
-	if !s.Config.StorageFormatV2Enabled || s.IsV1Account(address) {
+	var isV2 bool
+	if s.Config.StorageFormatV2Enabled {
+		var err error
+		isV2, err = hasAccountStorageMap(s.Ledger, address)
+		if err != nil {
+			panic(err)
+		}
+	}
 
-		domainStorageMap = s.AccountStorageV1.GetDomainStorageMap(
+	if isV2 {
+		domainStorageMap = s.AccountStorageV2.GetDomainStorageMap(
+			inter,
 			address,
 			domain,
 			createIfNotExists,
 		)
-
-		// If the account was not in storage format v1,
-		// but the domain storage map was created,
-		// mark the account as in storage format v1.
-
-		if domainStorageMap != nil {
-			s.setIsV1Account(address, true)
-		}
-
 	} else {
-		// The account is not in storage format v1,
-		// so use the new account storage format v2.
-
-		domainStorageMap = s.AccountStorageV2.GetDomainStorageMap(
-			inter,
+		domainStorageMap = s.AccountStorageV1.GetDomainStorageMap(
 			address,
 			domain,
 			createIfNotExists,
@@ -195,51 +187,6 @@ func (s *Storage) cacheDomainStorageMap(
 	}
 
 	s.cachedDomainStorageMaps[storageDomainKey] = domainStorageMap
-}
-
-// IsV1Account returns true if given account is in account storage format v1.
-func (s *Storage) IsV1Account(address common.Address) (isV1 bool) {
-
-	// Check cache
-
-	if s.v1Accounts != nil {
-		var present bool
-		isV1, present = s.v1Accounts.Get(address)
-		if present {
-			return isV1
-		}
-	}
-
-	// Cache result
-
-	defer func() {
-		s.setIsV1Account(address, isV1)
-	}()
-
-	// Check if a storage map register exists for any of the domains.
-	// Check the most frequently used domains first, such as storage, public, private.
-	for _, domain := range common.AllStorageDomains {
-		_, domainExists, err := getSlabIndexFromRegisterValue(
-			s.Ledger,
-			address,
-			[]byte(domain.Identifier()),
-		)
-		if err != nil {
-			panic(err)
-		}
-		if domainExists {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (s *Storage) setIsV1Account(address common.Address, isV1 bool) {
-	if s.v1Accounts == nil {
-		s.v1Accounts = &orderedmap.OrderedMap[common.Address, bool]{}
-	}
-	s.v1Accounts.Set(address, isV1)
 }
 
 // getSlabIndexFromRegisterValue returns register value as atree.SlabIndex.
@@ -489,7 +436,12 @@ func (s *Storage) CheckHealth() error {
 
 		// Only accounts in storage format v1 store domain storage maps
 		// directly at the root of the account
-		if !s.IsV1Account(address) {
+		isV2, err := hasAccountStorageMap(s.Ledger, address)
+		if err != nil {
+			return err
+		}
+
+		if isV2 {
 			continue
 		}
 

@@ -195,6 +195,21 @@ func (s *AccountStorageV2) commit() error {
 	return nil
 }
 
+func getAccountStorageSlabIndex(
+	ledger atree.Ledger,
+	address common.Address,
+) (
+	atree.SlabIndex,
+	bool,
+	error,
+) {
+	return getSlabIndexFromRegisterValue(
+		ledger,
+		address,
+		[]byte(AccountStorageKey),
+	)
+}
+
 func getAccountStorageMapFromRegister(
 	ledger atree.Ledger,
 	slabStorage atree.SlabStorage,
@@ -203,24 +218,38 @@ func getAccountStorageMapFromRegister(
 	*interpreter.AccountStorageMap,
 	error,
 ) {
-	accountStorageSlabIndex, accountStorageRegisterExists, err := getSlabIndexFromRegisterValue(
+	slabIndex, registerExists, err := getAccountStorageSlabIndex(
 		ledger,
 		address,
-		[]byte(AccountStorageKey),
 	)
 	if err != nil {
 		return nil, err
 	}
-	if !accountStorageRegisterExists {
+	if !registerExists {
 		return nil, nil
 	}
 
 	slabID := atree.NewSlabID(
 		atree.Address(address),
-		accountStorageSlabIndex,
+		slabIndex,
 	)
 
 	return interpreter.NewAccountStorageMapWithRootID(slabStorage, slabID), nil
+}
+
+func hasAccountStorageMap(
+	ledger atree.Ledger,
+	address common.Address,
+) (bool, error) {
+
+	_, registerExists, err := getAccountStorageSlabIndex(
+		ledger,
+		address,
+	)
+	if err != nil {
+		return false, err
+	}
+	return registerExists, nil
 }
 
 func (s *AccountStorageV2) cachedRootSlabIDs() []atree.SlabID {
