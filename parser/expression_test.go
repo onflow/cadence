@@ -6054,14 +6054,7 @@ func TestParseStringTemplate(t *testing.T) {
 		"\(test)"
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.NoError(t, err)
+		require.Empty(t, errs)
 
 		expected := &ast.StringTemplateExpression{
 			Values: []string{
@@ -6093,14 +6086,7 @@ func TestParseStringTemplate(t *testing.T) {
 		"this is a test \(abc)\(def) test"
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.NoError(t, err)
+		require.Empty(t, errs)
 
 		expected := &ast.StringTemplateExpression{
 			Values: []string{
@@ -6179,14 +6165,7 @@ func TestParseStringTemplate(t *testing.T) {
 		  "\(2 + 2) is a"
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.NoError(t, err)
+		require.Empty(t, errs)
 	})
 
 	t.Run("valid, nested identifier", func(t *testing.T) {
@@ -6197,14 +6176,7 @@ func TestParseStringTemplate(t *testing.T) {
 		  "\((a))"
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.NoError(t, err)
+		require.Empty(t, errs)
 
 		expected := &ast.StringTemplateExpression{
 			Values: []string{
@@ -6256,14 +6228,7 @@ func TestParseStringTemplate(t *testing.T) {
 			"\(add())"
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.NoError(t, err)
+		require.Empty(t, errs)
 	})
 
 	t.Run("invalid, missing paren", func(t *testing.T) {
@@ -6334,14 +6299,7 @@ func TestParseStringTemplate(t *testing.T) {
 			"a\(b)c"
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.NoError(t, err)
+		require.Empty(t, errs)
 
 		expected := &ast.StringTemplateExpression{
 			Values: []string{
@@ -6373,14 +6331,7 @@ func TestParseStringTemplate(t *testing.T) {
 			"\(a)b\(c)"
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.NoError(t, err)
+		require.Empty(t, errs)
 
 		expected := &ast.StringTemplateExpression{
 			Values: []string{
@@ -6419,14 +6370,7 @@ func TestParseStringTemplate(t *testing.T) {
 			"\(a)\(b)\(c)"
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.NoError(t, err)
+		require.Empty(t, errs)
 
 		expected := &ast.StringTemplateExpression{
 			Values: []string{
@@ -6472,14 +6416,7 @@ func TestParseStringTemplate(t *testing.T) {
 			"\(a))"
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.NoError(t, err)
+		require.Empty(t, errs)
 
 		expected := &ast.StringTemplateExpression{
 			Values: []string{
