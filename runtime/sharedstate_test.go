@@ -414,9 +414,25 @@ func TestRuntimeSharedStateV2(t *testing.T) {
 
 	require.Equal(t,
 		[]ownerKeyPair{
+			// Read account domain register to check if it is a migrated account
+			// Read returns no value.
 			{
 				owner: signerAddress[:],
 				key:   []byte(AccountStorageKey),
+			},
+			// Read all available domain registers to check if it is a new account
+			// Read returns no value.
+			{
+				owner: signerAddress[:],
+				key:   []byte(common.PathDomainStorage.Identifier()),
+			},
+			{
+				owner: signerAddress[:],
+				key:   []byte(common.PathDomainPrivate.Identifier()),
+			},
+			{
+				owner: signerAddress[:],
+				key:   []byte(common.PathDomainPublic.Identifier()),
 			},
 			{
 				owner: signerAddress[:],
@@ -424,11 +440,35 @@ func TestRuntimeSharedStateV2(t *testing.T) {
 			},
 			{
 				owner: signerAddress[:],
+				key:   []byte(common.StorageDomainInbox.Identifier()),
+			},
+			{
+				owner: signerAddress[:],
+				key:   []byte(common.StorageDomainCapabilityController.Identifier()),
+			},
+			{
+				owner: signerAddress[:],
+				key:   []byte(common.StorageDomainCapabilityControllerTag.Identifier()),
+			},
+			{
+				owner: signerAddress[:],
+				key:   []byte(common.StorageDomainPathCapability.Identifier()),
+			},
+			{
+				owner: signerAddress[:],
+				key:   []byte(common.StorageDomainAccountCapability.Identifier()),
+			},
+			{
+				owner: signerAddress[:],
 				key:   []byte(AccountStorageKey),
 			},
 			{
 				owner: signerAddress[:],
-				key:   []byte(common.StorageDomainContract.Identifier()),
+				key:   []byte(AccountStorageKey),
+			},
+			{
+				owner: signerAddress[:],
+				key:   []byte(AccountStorageKey),
 			},
 			{
 				owner: signerAddress[:],
