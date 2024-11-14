@@ -155,8 +155,7 @@ func (s *Storage) GetDomainStorageMap(
 		}
 	}()
 
-	if s.IsV1Account(address) ||
-		!s.Config.StorageFormatV2Enabled {
+	if !s.Config.StorageFormatV2Enabled || s.IsV1Account(address) {
 
 		domainStorageMap = s.AccountStorageV1.GetDomainStorageMap(
 			address,
@@ -169,7 +168,7 @@ func (s *Storage) GetDomainStorageMap(
 		// mark the account as in storage format v1.
 
 		if domainStorageMap != nil {
-			s.v1Accounts.Set(address, true)
+			s.setIsV1Account(address, true)
 		}
 
 	} else {
@@ -214,10 +213,7 @@ func (s *Storage) IsV1Account(address common.Address) (isV1 bool) {
 	// Cache result
 
 	defer func() {
-		if s.v1Accounts == nil {
-			s.v1Accounts = &orderedmap.OrderedMap[common.Address, bool]{}
-		}
-		s.v1Accounts.Set(address, isV1)
+		s.setIsV1Account(address, isV1)
 	}()
 
 	// Check if a storage map register exists for any of the domains.
@@ -237,6 +233,13 @@ func (s *Storage) IsV1Account(address common.Address) (isV1 bool) {
 	}
 
 	return false
+}
+
+func (s *Storage) setIsV1Account(address common.Address, isV1 bool) {
+	if s.v1Accounts == nil {
+		s.v1Accounts = &orderedmap.OrderedMap[common.Address, bool]{}
+	}
+	s.v1Accounts.Set(address, isV1)
 }
 
 // getSlabIndexFromRegisterValue returns register value as atree.SlabIndex.
