@@ -19,10 +19,11 @@
 package runtime
 
 import (
+	"sort"
+
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 )
@@ -35,7 +36,7 @@ type AccountStorageV1 struct {
 	// newDomainStorageMapSlabIndices contains root slab indices of new domain storage maps.
 	// The indices are saved using Ledger.SetValue() during commit().
 	// Key is StorageDomainKey{common.StorageDomain, Address} and value is 8-byte slab index.
-	newDomainStorageMapSlabIndices *orderedmap.OrderedMap[interpreter.StorageDomainKey, atree.SlabIndex]
+	newDomainStorageMapSlabIndices map[interpreter.StorageDomainKey]atree.SlabIndex
 }
 
 func NewAccountStorageV1(
@@ -91,9 +92,9 @@ func (s *AccountStorageV1) storeNewDomainStorageMap(
 	storageKey := interpreter.NewStorageDomainKey(s.memoryGauge, address, domain)
 
 	if s.newDomainStorageMapSlabIndices == nil {
-		s.newDomainStorageMapSlabIndices = &orderedmap.OrderedMap[interpreter.StorageDomainKey, atree.SlabIndex]{}
+		s.newDomainStorageMapSlabIndices = map[interpreter.StorageDomainKey]atree.SlabIndex{}
 	}
-	s.newDomainStorageMapSlabIndices.Set(storageKey, slabIndex)
+	s.newDomainStorageMapSlabIndices[storageKey] = slabIndex
 
 	return domainStorageMap
 }
@@ -103,19 +104,49 @@ func (s *AccountStorageV1) commit() error {
 		return nil
 	}
 
-	for pair := s.newDomainStorageMapSlabIndices.Oldest(); pair != nil; pair = pair.Next() {
+	type domainStorageMapSlabIndex struct {
+		StorageDomainKey interpreter.StorageDomainKey
+		SlabIndex        atree.SlabIndex
+	}
+
+	slabIndices := make([]domainStorageMapSlabIndex, 0, len(s.newDomainStorageMapSlabIndices))
+	for storageDomainKey, slabIndex := range s.newDomainStorageMapSlabIndices { //nolint:maprange
+		slabIndices = append(
+			slabIndices,
+			domainStorageMapSlabIndex{
+				StorageDomainKey: storageDomainKey,
+				SlabIndex:        slabIndex,
+			},
+		)
+	}
+	sort.Slice(
+		slabIndices,
+		func(i, j int) bool {
+			slabIndex1 := slabIndices[i]
+			slabIndex2 := slabIndices[j]
+			domainKey1 := slabIndex1.StorageDomainKey
+			domainKey2 := slabIndex2.StorageDomainKey
+			return domainKey1.Compare(domainKey2) < 0
+		},
+	)
+
+	for _, slabIndex := range slabIndices {
+		storageDomainKey := slabIndex.StorageDomainKey
+
 		var err error
 		errors.WrapPanic(func() {
 			err = s.ledger.SetValue(
-				pair.Key.Address[:],
-				[]byte(pair.Key.Domain.Identifier()),
-				pair.Value[:],
+				storageDomainKey.Address[:],
+				[]byte(storageDomainKey.Domain.Identifier()),
+				slabIndex.SlabIndex[:],
 			)
 		})
 		if err != nil {
 			return interpreter.WrappedExternalError(err)
 		}
 	}
+
+	s.newDomainStorageMapSlabIndices = nil
 
 	return nil
 }

@@ -19,10 +19,11 @@
 package runtime
 
 import (
+	"sort"
+
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 )
@@ -35,10 +36,9 @@ type AccountStorageV2 struct {
 	// cachedAccountStorageMaps is a cache of account storage maps.
 	cachedAccountStorageMaps map[common.Address]*interpreter.AccountStorageMap
 
-	// newAccountStorageMapSlabIndices contains root slab index of new account storage maps.
-	// The indices are saved using Ledger.SetValue() during Commit().
-	// Key is StorageKey{address, accountStorageKey} and value is 8-byte slab index.
-	newAccountStorageMapSlabIndices *orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]
+	// newAccountStorageMapSlabIndices contains root slab indices of new account storage maps.
+	// The indices are saved using Ledger.SetValue() during commit().
+	newAccountStorageMapSlabIndices map[common.Address]atree.SlabIndex
 }
 
 func NewAccountStorageV2(
@@ -51,14 +51,6 @@ func NewAccountStorageV2(
 		slabStorage: slabStorage,
 		memoryGauge: memoryGauge,
 	}
-}
-
-func (s *AccountStorageV2) accountStorageKey(address common.Address) interpreter.StorageKey {
-	return interpreter.NewStorageKey(
-		s.memoryGauge,
-		address,
-		AccountStorageKey,
-	)
 }
 
 func (s *AccountStorageV2) GetDomainStorageMap(
@@ -148,9 +140,10 @@ func (s *AccountStorageV2) storeNewAccountStorageMap(
 
 	slabIndex := accountStorageMap.SlabID().Index()
 
-	accountStorageKey := s.accountStorageKey(address)
-
-	s.SetNewAccountStorageMapSlabIndex(accountStorageKey, slabIndex)
+	s.SetNewAccountStorageMapSlabIndex(
+		address,
+		slabIndex,
+	)
 
 	s.cacheAccountStorageMap(
 		address,
@@ -161,13 +154,13 @@ func (s *AccountStorageV2) storeNewAccountStorageMap(
 }
 
 func (s *AccountStorageV2) SetNewAccountStorageMapSlabIndex(
-	accountStorageKey interpreter.StorageKey,
+	address common.Address,
 	slabIndex atree.SlabIndex,
 ) {
 	if s.newAccountStorageMapSlabIndices == nil {
-		s.newAccountStorageMapSlabIndices = &orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]{}
+		s.newAccountStorageMapSlabIndices = map[common.Address]atree.SlabIndex{}
 	}
-	s.newAccountStorageMapSlabIndices.Set(accountStorageKey, slabIndex)
+	s.newAccountStorageMapSlabIndices[address] = slabIndex
 }
 
 func (s *AccountStorageV2) commit() error {
@@ -175,19 +168,50 @@ func (s *AccountStorageV2) commit() error {
 		return nil
 	}
 
-	for pair := s.newAccountStorageMapSlabIndices.Oldest(); pair != nil; pair = pair.Next() {
+	type accountStorageMapSlabIndex struct {
+		Address   common.Address
+		SlabIndex atree.SlabIndex
+	}
+
+	slabIndices := make([]accountStorageMapSlabIndex, 0, len(s.newAccountStorageMapSlabIndices))
+	for address, slabIndex := range s.newAccountStorageMapSlabIndices { //nolint:maprange
+		slabIndices = append(
+			slabIndices,
+			accountStorageMapSlabIndex{
+				Address:   address,
+				SlabIndex: slabIndex,
+			},
+		)
+	}
+	sort.Slice(
+		slabIndices,
+		func(i, j int) bool {
+			slabIndex1 := slabIndices[i]
+			slabIndex2 := slabIndices[j]
+			address1 := slabIndex1.Address
+			address2 := slabIndex2.Address
+			return address1.Compare(address2) < 0
+		},
+	)
+
+	storageKey := []byte(AccountStorageKey)
+
+	for _, slabIndex := range slabIndices {
+
 		var err error
 		errors.WrapPanic(func() {
 			err = s.ledger.SetValue(
-				pair.Key.Address[:],
-				[]byte(pair.Key.Key),
-				pair.Value[:],
+				slabIndex.Address[:],
+				storageKey,
+				slabIndex.SlabIndex[:],
 			)
 		})
 		if err != nil {
 			return interpreter.WrappedExternalError(err)
 		}
 	}
+
+	s.newAccountStorageMapSlabIndices = nil
 
 	return nil
 }
