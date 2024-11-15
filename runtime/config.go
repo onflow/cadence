@@ -37,4 +37,6 @@ type Config struct {
 	CoverageReport *CoverageReport
 	// LegacyContractUpgradeEnabled enabled specifies whether to use the old parser when parsing an old contract
 	LegacyContractUpgradeEnabled bool
+	// WebAssemblyEnabled specifies if the WebAssembly API is enabled
+	WebAssemblyEnabled bool
 }

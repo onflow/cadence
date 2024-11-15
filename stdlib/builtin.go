@@ -36,10 +36,32 @@ type StandardLibraryHandler interface {
 	BLSPublicKeyAggregator
 	BLSSignatureAggregator
 	Hasher
+	WebAssemblyContractHandler
 }
 
-func DefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
-	return []StandardLibraryValue{
+type StandardLibraryOptions struct {
+	WebAssemblyEnabled bool
+}
+
+var DefaultStandardLibraryOptions = StandardLibraryOptions{
+	WebAssemblyEnabled: false,
+}
+
+func DefaultStandardLibraryValues(
+	handler StandardLibraryHandler,
+	options StandardLibraryOptions,
+) []StandardLibraryValue {
+	var values []StandardLibraryValue
+
+	if options.WebAssemblyEnabled {
+		values = append(
+			values,
+			NewWebAssemblyContract(nil, handler),
+		)
+	}
+
+	return append(
+		values,
 		AssertFunction,
 		PanicFunction,
 		SignatureAlgorithmConstructor,
@@ -54,14 +76,32 @@ func DefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibr
 		NewPublicKeyConstructor(handler),
 		NewBLSContract(nil, handler),
 		NewHashAlgorithmConstructor(handler),
-	}
+	)
 }
 
-func DefaultScriptStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
+func DefaultScriptStandardLibraryValues(
+	handler StandardLibraryHandler,
+	options StandardLibraryOptions,
+) []StandardLibraryValue {
 	return append(
-		DefaultStandardLibraryValues(handler),
+		DefaultStandardLibraryValues(handler, options),
 		NewGetAuthAccountFunction(handler),
 	)
+}
+
+func DefaultStandardLibraryTypes(
+	options StandardLibraryOptions,
+) []StandardLibraryType {
+	var types []StandardLibraryType
+
+	if options.WebAssemblyEnabled {
+		types = append(
+			types,
+			WebAssemblyContractType,
+		)
+	}
+
+	return types
 }
 
 type CompositeValueFunctionsHandler func(

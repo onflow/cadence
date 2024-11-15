@@ -65,7 +65,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 		err := runtime.ExecuteTransaction(
 			Script{
 				Source: script,
-				Arguments: encodeArgs([]cadence.Value{
+				Arguments: encodeArgs(
 					cadence.Struct{}.
 						WithType(&cadence.StructType{
 							Location: common.AddressLocation{
@@ -74,7 +74,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 							},
 							QualifiedIdentifier: "Foo.Bar",
 						}),
-				}),
+				),
 			},
 			Context{
 				Interface: runtimeInterface,
@@ -112,7 +112,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source: script,
-				Arguments: encodeArgs([]cadence.Value{
+				Arguments: encodeArgs(
 					cadence.Struct{}.
 						WithType(&cadence.StructType{
 							Location: common.AddressLocation{
@@ -121,7 +121,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 							},
 							QualifiedIdentifier: "Foo.Bar",
 						}),
-				}),
+				),
 			},
 			Context{
 				Interface: runtimeInterface,

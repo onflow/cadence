@@ -444,9 +444,9 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
                 }
               }
             `,
-			args: encodeArgs([]cadence.Value{
+			args: encodeArgs(
 				cadence.NewInt(42),
-			}),
+			),
 			expectedLogs: []string{"42"},
 		},
 		{
@@ -462,9 +462,9 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
                 }
               }
             `,
-			args: encodeArgs([]cadence.Value{
+			args: encodeArgs(
 				cadence.NewInt(42),
-			}),
+			),
 			authorizers:  []Address{common.MustBytesToAddress([]byte{42})},
 			expectedLogs: []string{"0x000000000000002a", "42"},
 		},
@@ -478,10 +478,10 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
                 }
               }
             `,
-			args: encodeArgs([]cadence.Value{
+			args: encodeArgs(
 				cadence.NewInt(42),
 				cadence.String("foo"),
-			}),
+			),
 			expectedLogs: []string{"42", `"foo"`},
 		},
 		{
@@ -508,9 +508,9 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
                 }
               }
             `,
-			args: encodeArgs([]cadence.Value{
+			args: encodeArgs(
 				cadence.String("foo"),
-			}),
+			),
 			check: func(t *testing.T, err error) {
 				RequireError(t, err)
 
@@ -531,14 +531,14 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
                 }
               }
             `,
-			args: encodeArgs([]cadence.Value{
+			args: encodeArgs(
 				cadence.BytesToAddress(
 					[]byte{
 						0x0, 0x0, 0x0, 0x0,
 						0x0, 0x0, 0x0, 0x1,
 					},
 				),
-			}),
+			),
 			expectedLogs: []string{"0x0000000000000001"},
 		},
 		{
@@ -550,7 +550,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
                 }
               }
             `,
-			args: encodeArgs([]cadence.Value{
+			args: encodeArgs(
 				cadence.NewArray(
 					[]cadence.Value{
 						cadence.NewInt(1),
@@ -558,7 +558,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 						cadence.NewInt(3),
 					},
 				),
-			}),
+			),
 			expectedLogs: []string{"[1, 2, 3]"},
 		},
 		{
@@ -570,7 +570,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
                 }
               }
             `,
-			args: encodeArgs([]cadence.Value{
+			args: encodeArgs(
 				cadence.NewDictionary(
 					[]cadence.KeyValuePair{
 						{
@@ -579,7 +579,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 						},
 					},
 				),
-			}),
+			),
 			expectedLogs: []string{"42"},
 		},
 		{
@@ -591,7 +591,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
                 }
               }
             `,
-			args: encodeArgs([]cadence.Value{
+			args: encodeArgs(
 				cadence.NewDictionary(
 					[]cadence.KeyValuePair{
 						{
@@ -600,7 +600,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 						},
 					},
 				),
-			}),
+			),
 			check: func(t *testing.T, err error) {
 				RequireError(t, err)
 
@@ -637,7 +637,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
                   }
               }
             `,
-			args: encodeArgs([]cadence.Value{
+			args: encodeArgs(
 				cadence.
 					NewStruct([]cadence.Value{cadence.String("bar")}).
 					WithType(cadence.NewStructType(
@@ -654,7 +654,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 						},
 						nil,
 					)),
-			}),
+			),
 			expectedLogs: []string{`"bar"`},
 		},
 		{
@@ -685,7 +685,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
                 }
               }
             `,
-			args: encodeArgs([]cadence.Value{
+			args: encodeArgs(
 				cadence.NewArray([]cadence.Value{
 					cadence.
 						NewStruct([]cadence.Value{cadence.String("bar")}).
@@ -704,7 +704,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 							nil,
 						)),
 				}),
-			}),
+			),
 			expectedLogs: []string{`"bar"`},
 		},
 	}
@@ -819,9 +819,9 @@ func TestRuntimeScriptArguments(t *testing.T) {
                     log(x)
                 }
             `,
-			args: encodeArgs([]cadence.Value{
+			args: encodeArgs(
 				cadence.NewInt(42),
-			}),
+			),
 			expectedLogs: []string{"42"},
 		},
 		{
@@ -832,10 +832,10 @@ func TestRuntimeScriptArguments(t *testing.T) {
                     log(y)
                 }
             `,
-			args: encodeArgs([]cadence.Value{
+			args: encodeArgs(
 				cadence.NewInt(42),
 				cadence.String("foo"),
-			}),
+			),
 			expectedLogs: []string{"42", `"foo"`},
 		},
 		{
@@ -861,9 +861,9 @@ func TestRuntimeScriptArguments(t *testing.T) {
                     log(x)
                 }
             `,
-			args: encodeArgs([]cadence.Value{
+			args: encodeArgs(
 				cadence.String("foo"),
-			}),
+			),
 			check: func(t *testing.T, err error) {
 				RequireError(t, err)
 
@@ -880,14 +880,14 @@ func TestRuntimeScriptArguments(t *testing.T) {
                     log(x)
                 }
             `,
-			args: encodeArgs([]cadence.Value{
+			args: encodeArgs(
 				cadence.BytesToAddress(
 					[]byte{
 						0x0, 0x0, 0x0, 0x0,
 						0x0, 0x0, 0x0, 0x1,
 					},
 				),
-			}),
+			),
 			expectedLogs: []string{"0x0000000000000001"},
 		},
 		{
@@ -897,7 +897,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
                     log(x)
                 }
             `,
-			args: encodeArgs([]cadence.Value{
+			args: encodeArgs(
 				cadence.NewArray(
 					[]cadence.Value{
 						cadence.NewInt(1),
@@ -905,7 +905,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 						cadence.NewInt(3),
 					},
 				),
-			}),
+			),
 			expectedLogs: []string{"[1, 2, 3]"},
 		},
 		{
@@ -915,7 +915,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
                     log(x)
                 }
             `,
-			args: encodeArgs([]cadence.Value{
+			args: encodeArgs(
 				cadence.NewArray(
 					[]cadence.Value{
 						cadence.NewInt(1),
@@ -923,7 +923,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 						cadence.NewInt(3),
 					},
 				),
-			}),
+			),
 			check: func(t *testing.T, err error) {
 				RequireError(t, err)
 
@@ -940,13 +940,13 @@ func TestRuntimeScriptArguments(t *testing.T) {
                     log(x)
                 }
             `,
-			args: encodeArgs([]cadence.Value{
+			args: encodeArgs(
 				cadence.NewArray(
 					[]cadence.Value{
 						cadence.NewInt(1),
 					},
 				),
-			}),
+			),
 			check: func(t *testing.T, err error) {
 				RequireError(t, err)
 
@@ -963,7 +963,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
                     log(x["y"])
                 }
             `,
-			args: encodeArgs([]cadence.Value{
+			args: encodeArgs(
 				cadence.NewDictionary(
 					[]cadence.KeyValuePair{
 						{
@@ -972,7 +972,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 						},
 					},
 				),
-			}),
+			),
 			expectedLogs: []string{"42"},
 		},
 		{
@@ -982,7 +982,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
                     log(x["y"])
                 }
             `,
-			args: encodeArgs([]cadence.Value{
+			args: encodeArgs(
 				cadence.NewDictionary(
 					[]cadence.KeyValuePair{
 						{
@@ -991,7 +991,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 						},
 					},
 				),
-			}),
+			),
 			check: func(t *testing.T, err error) {
 				RequireError(t, err)
 
@@ -1016,7 +1016,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
                     log(x.y)
                 }
             `,
-			args: encodeArgs([]cadence.Value{
+			args: encodeArgs(
 				cadence.
 					NewStruct([]cadence.Value{cadence.String("bar")}).
 					WithType(cadence.NewStructType(
@@ -1030,7 +1030,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 						},
 						nil,
 					)),
-			}),
+			),
 			expectedLogs: []string{`"bar"`},
 		},
 		{
@@ -1049,7 +1049,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
                     log(x.y)
                 }
             `,
-			args: encodeArgs([]cadence.Value{
+			args: encodeArgs(
 				cadence.NewArray([]cadence.Value{
 					cadence.
 						NewStruct([]cadence.Value{cadence.String("bar")}).
@@ -1065,7 +1065,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 							nil,
 						)),
 				}),
-			}),
+			),
 			expectedLogs: []string{`"bar"`},
 		},
 		{
@@ -1075,12 +1075,12 @@ func TestRuntimeScriptArguments(t *testing.T) {
                     log(x)
                 }
             `,
-			args: encodeArgs([]cadence.Value{
+			args: encodeArgs(
 				cadence.Path{
 					Domain:     common.PathDomainStorage,
 					Identifier: "foo",
 				},
-			}),
+			),
 			expectedLogs: []string{
 				"/storage/foo",
 			},
@@ -6955,17 +6955,17 @@ func TestRuntimeExecuteScriptArguments(t *testing.T) {
 		},
 		{
 			name: "correct number of arguments",
-			arguments: encodeArgs([]cadence.Value{
+			arguments: encodeArgs(
 				cadence.NewInt(1),
-			}),
+			),
 			valid: true,
 		},
 		{
 			name: "too many arguments",
-			arguments: encodeArgs([]cadence.Value{
+			arguments: encodeArgs(
 				cadence.NewInt(1),
 				cadence.NewInt(2),
-			}),
+			),
 			valid: false,
 		},
 	} {
@@ -8055,9 +8055,9 @@ func TestRuntimeAccountTypeEquality(t *testing.T) {
 	result, err := rt.ExecuteScript(
 		Script{
 			Source: script,
-			Arguments: encodeArgs([]cadence.Value{
+			Arguments: encodeArgs(
 				cadence.Address(common.MustBytesToAddress([]byte{0x1})),
-			}),
+			),
 		},
 		Context{
 			Interface: runtimeInterface,
@@ -9302,9 +9302,9 @@ func TestRuntimeInvalidWrappedPrivateCapability(t *testing.T) {
 	capability, err := runtime.ExecuteScript(
 		Script{
 			Source: getCapScript,
-			Arguments: encodeArgs([]cadence.Value{
+			Arguments: encodeArgs(
 				cadence.BytesToAddress([]byte{0x1}),
-			}),
+			),
 		},
 		Context{
 			Interface: runtimeInterface,
@@ -9318,9 +9318,9 @@ func TestRuntimeInvalidWrappedPrivateCapability(t *testing.T) {
 	err = runtime.ExecuteTransaction(
 		Script{
 			Source: attackTx,
-			Arguments: encodeArgs([]cadence.Value{
+			Arguments: encodeArgs(
 				capability,
-			}),
+			),
 		},
 		Context{
 			Interface: runtimeInterface,

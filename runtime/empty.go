@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 )
 
 // EmptyRuntimeInterface is an empty implementation of runtime.Interface.
@@ -61,6 +62,10 @@ func (EmptyRuntimeInterface) MeterComputation(_ common.ComputationKind, _ uint) 
 
 func (EmptyRuntimeInterface) ComputationUsed() (uint64, error) {
 	panic("unexpected call to ComputationUsed")
+}
+
+func (i EmptyRuntimeInterface) ComputationRemaining(_ common.ComputationKind) uint {
+	panic("unexpected call to ComputationRemaining")
 }
 
 func (EmptyRuntimeInterface) MemoryUsed() (uint64, error) {
@@ -263,4 +268,8 @@ func (EmptyRuntimeInterface) ValidateAccountCapabilitiesPublish(
 
 func (EmptyRuntimeInterface) MinimumRequiredVersion() (string, error) {
 	return "0.0.0", nil
+}
+
+func (EmptyRuntimeInterface) CompileWebAssembly(_ []byte) (stdlib.WebAssemblyModule, error) {
+	panic("unexpected call to CompileWebAssembly")
 }

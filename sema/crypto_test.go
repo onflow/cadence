@@ -35,7 +35,10 @@ func TestCheckHashAlgorithmCases(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	for _, value := range stdlib.DefaultScriptStandardLibraryValues(nil) {
+	for _, value := range stdlib.DefaultScriptStandardLibraryValues(
+		nil,
+		stdlib.DefaultStandardLibraryOptions,
+	) {
 		baseValueActivation.DeclareValue(value)
 	}
 
@@ -174,7 +177,10 @@ func TestCheckVerifyPoP(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(nil) {
+	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(
+		nil,
+		stdlib.DefaultStandardLibraryOptions,
+	) {
 		baseValueActivation.DeclareValue(valueDeclaration)
 	}
 
@@ -203,7 +209,10 @@ func TestCheckVerifyPoPInvalidArgument(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(nil) {
+	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(
+		nil,
+		stdlib.DefaultStandardLibraryOptions,
+	) {
 		baseValueActivation.DeclareValue(valueDeclaration)
 	}
 
@@ -284,7 +293,10 @@ func TestCheckBLSAggregatePublicKeys(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(nil) {
+	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(
+		nil,
+		stdlib.DefaultStandardLibraryOptions,
+	) {
 		baseValueActivation.DeclareValue(valueDeclaration)
 	}
 
@@ -314,7 +326,10 @@ func TestCheckInvalidBLSAggregatePublicKeys(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(nil) {
+	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(
+		nil,
+		stdlib.DefaultStandardLibraryOptions,
+	) {
 		baseValueActivation.DeclareValue(valueDeclaration)
 	}
 

@@ -171,6 +171,7 @@ func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*inter
 
 	standardLibraryValues := stdlib.DefaultScriptStandardLibraryValues(
 		&StandardLibraryHandler{},
+		stdlib.DefaultStandardLibraryOptions,
 	)
 
 	checker, must := PrepareChecker(
@@ -401,6 +402,10 @@ func (*StandardLibraryHandler) BLSAggregatePublicKeys(_ []*stdlib.PublicKey) (*s
 
 func (*StandardLibraryHandler) BLSAggregateSignatures(_ [][]byte) ([]byte, error) {
 	return nil, goerrors.New("crypto functionality is not available in this environment")
+}
+
+func (*StandardLibraryHandler) CompileWebAssembly(_ []byte) (stdlib.WebAssemblyModule, error) {
+	return nil, goerrors.New("WebAssembly functionality is not available in this environment")
 }
 
 func (h *StandardLibraryHandler) NewOnEventEmittedHandler() interpreter.OnEventEmittedFunc {
