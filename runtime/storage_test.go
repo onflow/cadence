@@ -7140,6 +7140,18 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 		err := storage.Commit(inter, commitContractUpdates)
 		require.NoError(t, err)
 
+		migration := NewDomainRegisterMigration(ledger, storage, inter, nil)
+		accountStorageMap, err := migration.MigrateAccount(address)
+		require.NotNil(t, accountStorageMap)
+		require.NoError(t, err)
+
+		err = CommitSlabStorage(
+			storage.PersistentSlabStorage,
+			inter,
+			true,
+		)
+		require.NoError(t, err)
+
 		// Create a new storage
 		newLedger := NewTestLedgerWithData(onRead, onWrite, ledger.StoredValues, ledger.StorageIndices)
 
@@ -8028,6 +8040,18 @@ func TestDomainRegisterMigrationForLargeAccount(t *testing.T) {
 
 	// Check there are writes to underlying storage
 	require.True(t, writeCount > 0)
+
+	migration := NewDomainRegisterMigration(ledger, storage, inter, nil)
+	accountStorageMap, err := migration.MigrateAccount(address)
+	require.NotNil(t, accountStorageMap)
+	require.NoError(t, err)
+
+	err = CommitSlabStorage(
+		storage.PersistentSlabStorage,
+		inter,
+		true,
+	)
+	require.NoError(t, err)
 
 	// Check there isn't any domain registers
 	nonAtreeRegisters := make(map[string][]byte)
