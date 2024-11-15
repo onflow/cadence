@@ -356,7 +356,7 @@ func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates b
 	return s.commit(inter, commitContractUpdates, true)
 }
 
-// NondeterministicCommit serializes and commits all values in the deltas storage
+// Deprecated: NondeterministicCommit serializes and commits all values in the deltas storage
 // in nondeterministic order.  This function is used when commit ordering isn't
 // required (e.g. migration programs).
 func (s *Storage) NondeterministicCommit(inter *interpreter.Interpreter, commitContractUpdates bool) error {
@@ -381,21 +381,35 @@ func (s *Storage) commit(inter *interpreter.Interpreter, commitContractUpdates b
 
 	// Commit the underlying slab storage's writes
 
-	size := s.PersistentSlabStorage.DeltasSizeWithoutTempAddresses()
+	slabStorage := s.PersistentSlabStorage
+
+	return CommitSlabStorage(
+		slabStorage,
+		inter,
+		deterministic,
+	)
+}
+
+func CommitSlabStorage(
+	slabStorage *atree.PersistentSlabStorage,
+	inter *interpreter.Interpreter,
+	deterministic bool,
+) error {
+	size := slabStorage.DeltasSizeWithoutTempAddresses()
 	if size > 0 {
 		inter.ReportComputation(common.ComputationKindEncodeValue, uint(size))
 		usage := common.NewBytesMemoryUsage(int(size))
-		common.UseMemory(s.memoryGauge, usage)
+		common.UseMemory(inter, usage)
 	}
 
-	deltas := s.PersistentSlabStorage.DeltasWithoutTempAddresses()
-	common.UseMemory(s.memoryGauge, common.NewAtreeEncodedSlabMemoryUsage(deltas))
+	deltas := slabStorage.DeltasWithoutTempAddresses()
+	common.UseMemory(inter, common.NewAtreeEncodedSlabMemoryUsage(deltas))
 
 	// TODO: report encoding metric for all encoded slabs
 	if deterministic {
-		return s.PersistentSlabStorage.FastCommit(runtime.NumCPU())
+		return slabStorage.FastCommit(runtime.NumCPU())
 	} else {
-		return s.PersistentSlabStorage.NondeterministicFastCommit(runtime.NumCPU())
+		return slabStorage.NondeterministicFastCommit(runtime.NumCPU())
 	}
 }
 
