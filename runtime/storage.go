@@ -49,7 +49,7 @@ type Storage struct {
 
 	// cachedV1Accounts contains the cached result of determining
 	// if the account is in storage format v1 or not.
-	cachedV1Accounts map[common.Address]bool
+	cachedV1Accounts *orderedmap.OrderedMap[common.Address, bool]
 
 	// contractUpdates is a cache of contract updates.
 	// Key is StorageKey{contract_address, contract_name} and value is contract composite value.
@@ -185,7 +185,7 @@ func (s *Storage) IsV1Account(address common.Address) (isV1 bool) {
 
 	if s.cachedV1Accounts != nil {
 		var present bool
-		isV1, present = s.cachedV1Accounts[address]
+		isV1, present = s.cachedV1Accounts.Get(address)
 		if present {
 			return isV1
 		}
@@ -230,9 +230,9 @@ func (s *Storage) IsV1Account(address common.Address) (isV1 bool) {
 
 func (s *Storage) cacheIsV1Account(address common.Address, isV1 bool) {
 	if s.cachedV1Accounts == nil {
-		s.cachedV1Accounts = map[common.Address]bool{}
+		s.cachedV1Accounts = &orderedmap.OrderedMap[common.Address, bool]{}
 	}
-	s.cachedV1Accounts[address] = isV1
+	s.cachedV1Accounts.Set(address, isV1)
 }
 
 func (s *Storage) cacheDomainStorageMap(
@@ -379,22 +379,17 @@ func (s *Storage) commit(inter *interpreter.Interpreter, commitContractUpdates b
 		return err
 	}
 
+	if s.Config.StorageFormatV2Enabled {
+		err = s.migrateV1AccountsToV2(inter)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Commit the underlying slab storage's writes
 
 	slabStorage := s.PersistentSlabStorage
 
-	return CommitSlabStorage(
-		slabStorage,
-		inter,
-		deterministic,
-	)
-}
-
-func CommitSlabStorage(
-	slabStorage *atree.PersistentSlabStorage,
-	inter *interpreter.Interpreter,
-	deterministic bool,
-) error {
 	size := slabStorage.DeltasSizeWithoutTempAddresses()
 	if size > 0 {
 		inter.ReportComputation(common.ComputationKindEncodeValue, uint(size))
@@ -411,6 +406,67 @@ func CommitSlabStorage(
 	} else {
 		return slabStorage.NondeterministicFastCommit(runtime.NumCPU())
 	}
+}
+
+func (s *Storage) migrateV1AccountsToV2(inter *interpreter.Interpreter) error {
+
+	if s.cachedV1Accounts == nil {
+		return nil
+	}
+
+	// getDomainStorageMap function returns cached domain storage map if it is available
+	// before loading domain storage map from storage.
+	// This is necessary to migrate uncommitted (new) but cached domain storage map.
+	getDomainStorageMap := func(
+		ledger atree.Ledger,
+		storage atree.SlabStorage,
+		address common.Address,
+		domain common.StorageDomain,
+	) (*interpreter.DomainStorageMap, error) {
+		domainStorageKey := interpreter.NewStorageDomainKey(s.memoryGauge, address, domain)
+
+		// Get cached domain storage map if available.
+		domainStorageMap := s.cachedDomainStorageMaps[domainStorageKey]
+
+		if domainStorageMap != nil {
+			return domainStorageMap, nil
+		}
+
+		return getDomainStorageMapFromV1DomainRegister(ledger, storage, address, domain)
+	}
+
+	migrator := NewDomainRegisterMigration(
+		s.Ledger,
+		s.PersistentSlabStorage,
+		inter,
+		s.memoryGauge,
+		getDomainStorageMap,
+	)
+
+	for pair := s.cachedV1Accounts.Oldest(); pair != nil; pair = pair.Next() {
+		address := pair.Key
+		isV1 := pair.Value
+
+		if !isV1 || !s.PersistentSlabStorage.HasUnsavedChanges(atree.Address(address)) {
+			continue
+		}
+
+		accountStorageMap, err := migrator.MigrateAccount(address)
+		if err != nil {
+			return err
+		}
+
+		// TODO: is this all that is needed?
+
+		s.AccountStorageV2.cacheAccountStorageMap(
+			address,
+			accountStorageMap,
+		)
+
+		s.cacheIsV1Account(address, false)
+	}
+
+	return nil
 }
 
 func (s *Storage) CheckHealth() error {

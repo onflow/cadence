@@ -26,12 +26,23 @@ import (
 	"github.com/onflow/cadence/interpreter"
 )
 
+type GetDomainStorageMapFunc func(
+	ledger atree.Ledger,
+	storage atree.SlabStorage,
+	address common.Address,
+	domain common.StorageDomain,
+) (
+	*interpreter.DomainStorageMap,
+	error,
+)
+
 // DomainRegisterMigration migrates domain registers to account storage maps.
 type DomainRegisterMigration struct {
-	ledger      atree.Ledger
-	storage     atree.SlabStorage
-	inter       *interpreter.Interpreter
-	memoryGauge common.MemoryGauge
+	ledger              atree.Ledger
+	storage             atree.SlabStorage
+	inter               *interpreter.Interpreter
+	memoryGauge         common.MemoryGauge
+	getDomainStorageMap GetDomainStorageMapFunc
 }
 
 func NewDomainRegisterMigration(
@@ -39,12 +50,17 @@ func NewDomainRegisterMigration(
 	storage atree.SlabStorage,
 	inter *interpreter.Interpreter,
 	memoryGauge common.MemoryGauge,
+	getDomainStorageMap GetDomainStorageMapFunc,
 ) *DomainRegisterMigration {
+	if getDomainStorageMap == nil {
+		getDomainStorageMap = getDomainStorageMapFromV1DomainRegister
+	}
 	return &DomainRegisterMigration{
-		ledger:      ledger,
-		storage:     storage,
-		inter:       inter,
-		memoryGauge: memoryGauge,
+		ledger:              ledger,
+		storage:             storage,
+		inter:               inter,
+		memoryGauge:         memoryGauge,
+		getDomainStorageMap: getDomainStorageMap,
 	}
 }
 
@@ -104,7 +120,7 @@ func (m *DomainRegisterMigration) migrateDomainRegisters(
 
 	for _, domain := range common.AllStorageDomains {
 
-		domainStorageMap, err := getDomainStorageMapFromV1DomainRegister(
+		domainStorageMap, err := m.getDomainStorageMap(
 			m.ledger,
 			m.storage,
 			address,
