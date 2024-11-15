@@ -33,8 +33,7 @@ type AccountStorageV2 struct {
 	memoryGauge common.MemoryGauge
 
 	// cachedAccountStorageMaps is a cache of account storage maps.
-	// Key is StorageKey{address, accountStorageKey} and value is account storage map.
-	cachedAccountStorageMaps map[interpreter.StorageKey]*interpreter.AccountStorageMap
+	cachedAccountStorageMaps map[common.Address]*interpreter.AccountStorageMap
 
 	// newAccountStorageMapSlabIndices contains root slab index of new account storage maps.
 	// The indices are saved using Ledger.SetValue() during Commit().
@@ -94,12 +93,10 @@ func (s *AccountStorageV2) getAccountStorageMap(
 ) (
 	accountStorageMap *interpreter.AccountStorageMap,
 ) {
-	accountStorageKey := s.accountStorageKey(address)
-
 	// Return cached account storage map if it exists.
 
 	if s.cachedAccountStorageMaps != nil {
-		accountStorageMap = s.cachedAccountStorageMaps[accountStorageKey]
+		accountStorageMap = s.cachedAccountStorageMaps[address]
 		if accountStorageMap != nil {
 			return accountStorageMap
 		}
@@ -108,7 +105,7 @@ func (s *AccountStorageV2) getAccountStorageMap(
 	defer func() {
 		if accountStorageMap != nil {
 			s.cacheAccountStorageMap(
-				accountStorageKey,
+				address,
 				accountStorageMap,
 			)
 		}
@@ -130,13 +127,13 @@ func (s *AccountStorageV2) getAccountStorageMap(
 }
 
 func (s *AccountStorageV2) cacheAccountStorageMap(
-	accountStorageKey interpreter.StorageKey,
+	address common.Address,
 	accountStorageMap *interpreter.AccountStorageMap,
 ) {
 	if s.cachedAccountStorageMaps == nil {
-		s.cachedAccountStorageMaps = map[interpreter.StorageKey]*interpreter.AccountStorageMap{}
+		s.cachedAccountStorageMaps = map[common.Address]*interpreter.AccountStorageMap{}
 	}
-	s.cachedAccountStorageMaps[accountStorageKey] = accountStorageMap
+	s.cachedAccountStorageMaps[address] = accountStorageMap
 }
 
 func (s *AccountStorageV2) storeNewAccountStorageMap(
@@ -156,7 +153,7 @@ func (s *AccountStorageV2) storeNewAccountStorageMap(
 	s.SetNewAccountStorageMapSlabIndex(accountStorageKey, slabIndex)
 
 	s.cacheAccountStorageMap(
-		accountStorageKey,
+		address,
 		accountStorageMap,
 	)
 

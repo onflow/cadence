@@ -75,7 +75,13 @@ func TestMigrateDomainRegisters(t *testing.T) {
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
-		migrator := runtime.NewDomainRegisterMigration(ledger, storage, inter, nil)
+		migrator := runtime.NewDomainRegisterMigration(
+			ledger,
+			storage,
+			inter,
+			nil,
+			nil,
+		)
 
 		for _, address := range addresses {
 			accountStorageMap, err := migrator.MigrateAccount(address)
@@ -119,7 +125,13 @@ func TestMigrateDomainRegisters(t *testing.T) {
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
-		migrator := runtime.NewDomainRegisterMigration(ledger, storage, inter, nil)
+		migrator := runtime.NewDomainRegisterMigration(
+			ledger,
+			storage,
+			inter,
+			nil,
+			nil,
+		)
 
 		var accountStorageMaps []*interpreter.AccountStorageMap
 		for _, address := range addresses {
@@ -182,7 +194,13 @@ func TestMigrateDomainRegisters(t *testing.T) {
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
-		migrator := runtime.NewDomainRegisterMigration(ledger, storage, inter, nil)
+		migrator := runtime.NewDomainRegisterMigration(
+			ledger,
+			storage,
+			inter,
+			nil,
+			nil,
+		)
 
 		for _, address := range addresses {
 			accountStorageMap, err := migrator.MigrateAccount(address)
