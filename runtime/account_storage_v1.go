@@ -32,9 +32,9 @@ type AccountStorageV1 struct {
 	slabStorage atree.SlabStorage
 	memoryGauge common.MemoryGauge
 
-	// newDomainStorageMapSlabIndices contains root slab index of new domain storage maps.
-	// The indices are saved using Ledger.SetValue() during Commit().
-	// Key is StorageKey{address, accountStorageKey} and value is 8-byte slab index.
+	// newDomainStorageMapSlabIndices contains root slab indices of new domain storage maps.
+	// The indices are saved using Ledger.SetValue() during commit().
+	// Key is StorageDomainKey{common.StorageDomain, Address} and value is 8-byte slab index.
 	newDomainStorageMapSlabIndices *orderedmap.OrderedMap[interpreter.StorageDomainKey, atree.SlabIndex]
 }
 
