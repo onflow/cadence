@@ -5795,7 +5795,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 			assert.NotNil(t, accountCode)
 
 			assert.Equal(t,
-				expectedWrites1,
+				expectedDeployTxWrites,
 				writes,
 			)
 
@@ -5828,7 +5828,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t,
-				expectedWrites2,
+				expectedWriteTxWrites,
 				writes,
 			)
 
@@ -6007,7 +6007,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 			assert.NotNil(t, accountCode)
 
 			assert.Equal(t,
-				expectedWrites1,
+				expectedDeployTxWrites,
 				writes,
 			)
 
@@ -6034,7 +6034,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t,
-				expectedWrites2,
+				expectedSaveToStorageTxWrites,
 				writes,
 			)
 
@@ -6090,7 +6090,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t,
-				expectedWrites3,
+				expectedModifyStorageTxWrites,
 				writes,
 			)
 		})
