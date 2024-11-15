@@ -5687,8 +5687,8 @@ func TestRuntimeContractWriteback(t *testing.T) {
 
 	test := func(
 		storageFormatV2Enabled bool,
-		expectedWrites1 []ownerKeyPair,
-		expectedWrites2 []ownerKeyPair,
+		expectedDeployTxWrites []ownerKeyPair,
+		expectedWriteTxWrites []ownerKeyPair,
 	) {
 
 		name := fmt.Sprintf(
@@ -5913,9 +5913,9 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
 	test := func(
 		storageFormatV2Enabled bool,
-		expectedWrites1 []ownerKeyPair,
-		expectedWrites2 []ownerKeyPair,
-		expectedWrites3 []ownerKeyPair,
+		expectedDeployTxWrites []ownerKeyPair,
+		expectedSaveToStorageTxWrites []ownerKeyPair,
+		expectedModifyStorageTxWrites []ownerKeyPair,
 	) {
 
 		name := fmt.Sprintf(
