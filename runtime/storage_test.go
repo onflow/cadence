@@ -7102,7 +7102,7 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 			ledger,
 			nil,
 			StorageConfig{
-				StorageFormatV2Enabled: true,
+				StorageFormatV2Enabled: false,
 			},
 		)
 
@@ -7353,12 +7353,28 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 			require.True(t, len(writeEntries) > 1+len(tc.existingDomains)+len(tc.newDomains))
 
 			i := 0
+
+			// Check new domain register committed in V1 format.
+			for _, domain := range common.AllStorageDomains {
+
+				if slices.Contains(tc.newDomains, domain) {
+
+					// New domains are committed in V1 format (with domain register).
+					require.Equal(t, address[:], writeEntries[i].Owner)
+					require.Equal(t, []byte(domain.Identifier()), writeEntries[i].Key)
+					require.True(t, len(writeEntries[i].Value) > 0)
+
+					i++
+				}
+			}
+
+			// Check modified registers in migration.
 			for _, domain := range common.AllStorageDomains {
 
 				if slices.Contains(tc.existingDomains, domain) ||
 					slices.Contains(tc.newDomains, domain) {
 
-					// Existing and new domain registers are removed.
+					// Existing and new domain registers are removed (migrated).
 					// Removing new (non-existent) domain registers is no-op.
 					require.Equal(t, address[:], writeEntries[i].Owner)
 					require.Equal(t, []byte(domain.Identifier()), writeEntries[i].Key)
