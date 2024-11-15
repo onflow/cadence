@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"bytes"
+	"cmp"
 	"io"
 	"math"
 	"strings"
@@ -104,6 +105,19 @@ func ConvertStoredValue(gauge common.MemoryGauge, value atree.Value) (Value, err
 type StorageDomainKey struct {
 	Domain  common.StorageDomain
 	Address common.Address
+}
+
+func (k StorageDomainKey) Compare(o StorageDomainKey) int {
+	switch bytes.Compare(k.Address[:], o.Address[:]) {
+	case -1:
+		return -1
+	case 0:
+		return cmp.Compare(k.Domain, o.Domain)
+	case 1:
+		return 1
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func NewStorageDomainKey(

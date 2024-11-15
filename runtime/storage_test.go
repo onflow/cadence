@@ -68,15 +68,10 @@ func withWritesToStorage(
 		var address common.Address
 		random.Read(address[:])
 
-		storageKey := interpreter.StorageKey{
-			Address: address,
-			Key:     AccountStorageKey,
-		}
-
 		var slabIndex atree.SlabIndex
 		binary.BigEndian.PutUint32(slabIndex[:], randomIndex)
 
-		storage.AccountStorageV2.SetNewAccountStorageMapSlabIndex(storageKey, slabIndex)
+		storage.AccountStorageV2.SetNewAccountStorageMapSlabIndex(address, slabIndex)
 	}
 
 	handler(storage, inter)
