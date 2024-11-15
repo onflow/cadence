@@ -49,7 +49,7 @@ type Storage struct {
 
 	// cachedV1Accounts contains the cached result of determining
 	// if the account is in storage format v1 or not.
-	cachedV1Accounts *orderedmap.OrderedMap[common.Address, bool]
+	cachedV1Accounts map[common.Address]bool
 
 	// contractUpdates is a cache of contract updates.
 	// Key is StorageKey{contract_address, contract_name} and value is contract composite value.
@@ -61,8 +61,9 @@ type Storage struct {
 
 	Config StorageConfig
 
-	AccountStorageV1 *AccountStorageV1
-	AccountStorageV2 *AccountStorageV2
+	AccountStorageV1      *AccountStorageV1
+	AccountStorageV2      *AccountStorageV2
+	scheduledV2Migrations []common.Address
 }
 
 var _ atree.SlabStorage = &Storage{}
@@ -183,12 +184,8 @@ func (s *Storage) IsV1Account(address common.Address) (isV1 bool) {
 
 	// Check cache
 
-	if s.cachedV1Accounts != nil {
-		var present bool
-		isV1, present = s.cachedV1Accounts.Get(address)
-		if present {
-			return isV1
-		}
+	if isV1, present := s.cachedV1Accounts[address]; present {
+		return isV1
 	}
 
 	// Cache result
@@ -230,9 +227,9 @@ func (s *Storage) IsV1Account(address common.Address) (isV1 bool) {
 
 func (s *Storage) cacheIsV1Account(address common.Address, isV1 bool) {
 	if s.cachedV1Accounts == nil {
-		s.cachedV1Accounts = &orderedmap.OrderedMap[common.Address, bool]{}
+		s.cachedV1Accounts = map[common.Address]bool{}
 	}
-	s.cachedV1Accounts.Set(address, isV1)
+	s.cachedV1Accounts[address] = isV1
 }
 
 func (s *Storage) cacheDomainStorageMap(
@@ -408,9 +405,23 @@ func (s *Storage) commit(inter *interpreter.Interpreter, commitContractUpdates b
 	}
 }
 
+func (s *Storage) ScheduleV2Migration(address common.Address) {
+	s.scheduledV2Migrations = append(s.scheduledV2Migrations, address)
+}
+
+func (s *Storage) ScheduleV2MigrationForModifiedAccounts() {
+	for address, isV1 := range s.cachedV1Accounts { //nolint:maprange
+		if !isV1 || !s.PersistentSlabStorage.HasUnsavedChanges(atree.Address(address)) {
+			continue
+		}
+
+		s.ScheduleV2Migration(address)
+	}
+}
+
 func (s *Storage) migrateV1AccountsToV2(inter *interpreter.Interpreter) error {
 
-	if s.cachedV1Accounts == nil {
+	if len(s.scheduledV2Migrations) == 0 {
 		return nil
 	}
 
@@ -443,13 +454,18 @@ func (s *Storage) migrateV1AccountsToV2(inter *interpreter.Interpreter) error {
 		getDomainStorageMap,
 	)
 
-	for pair := s.cachedV1Accounts.Oldest(); pair != nil; pair = pair.Next() {
-		address := pair.Key
-		isV1 := pair.Value
+	// Ensure the scheduled accounts are migrated in a deterministic order
 
-		if !isV1 || !s.PersistentSlabStorage.HasUnsavedChanges(atree.Address(address)) {
-			continue
-		}
+	sort.Slice(
+		s.scheduledV2Migrations,
+		func(i, j int) bool {
+			address1 := s.scheduledV2Migrations[i]
+			address2 := s.scheduledV2Migrations[j]
+			return address1.Compare(address2) < 0
+		},
+	)
+
+	for _, address := range s.scheduledV2Migrations {
 
 		accountStorageMap, err := migrator.MigrateAccount(address)
 		if err != nil {
@@ -465,6 +481,8 @@ func (s *Storage) migrateV1AccountsToV2(inter *interpreter.Interpreter) error {
 
 		s.cacheIsV1Account(address, false)
 	}
+
+	s.scheduledV2Migrations = nil
 
 	return nil
 }

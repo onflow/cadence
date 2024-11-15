@@ -7181,6 +7181,8 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 		domainStorageMap := storage.GetDomainStorageMap(inter, address, nonExistingDomain, createIfNotExists)
 		require.Nil(t, domainStorageMap)
 
+		storage.ScheduleV2MigrationForModifiedAccounts()
+
 		// Commit changes
 		const commitContractUpdates = false
 		err := storage.Commit(inter, commitContractUpdates)
@@ -7335,6 +7337,9 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 				accountValues[domain] = writeToDomainStorageMap(inter, domainStorageMap, tc.newDomainStorageMapCount, random)
 			}
 
+			// TODO:
+			storage.ScheduleV2MigrationForModifiedAccounts()
+
 			// Commit changes
 			const commitContractUpdates = false
 			err := storage.Commit(inter, commitContractUpdates)
@@ -7480,6 +7485,9 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 			}
 		}
 
+		// TODO:
+		storage.ScheduleV2MigrationForModifiedAccounts()
+
 		// Commit changes
 		const commitContractUpdates = false
 		err := storage.Commit(inter, commitContractUpdates)
@@ -7609,6 +7617,9 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 					domainValues[k] = newValue
 				}
 			}
+
+			// TODO:
+			storage.ScheduleV2MigrationForModifiedAccounts()
 
 			// Commit changes
 			const commitContractUpdates = false
@@ -8036,6 +8047,9 @@ func TestDomainRegisterMigrationForLargeAccount(t *testing.T) {
 	require.NotNil(t, domainStorageMap)
 
 	accountValues[domain] = make(domainStorageMapValues)
+
+	// TODO:
+	storage.ScheduleV2MigrationForModifiedAccounts()
 
 	// Commit changes
 	const commitContractUpdates = false
