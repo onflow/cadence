@@ -481,7 +481,6 @@ func (s *Storage) migrateV1AccountsToV2(inter *interpreter.Interpreter) error {
 			return err
 		}
 
-		// TODO: is this all that is needed?
 
 		s.AccountStorageV2.cacheAccountStorageMap(
 			address,
