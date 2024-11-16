@@ -108,11 +108,15 @@ func NewStorage(
 		persistentSlabStorage,
 		memoryGauge,
 	)
-	accountStorageV2 := NewAccountStorageV2(
-		ledger,
-		persistentSlabStorage,
-		memoryGauge,
-	)
+
+	var accountStorageV2 *AccountStorageV2
+	if config.StorageFormatV2Enabled {
+		accountStorageV2 = NewAccountStorageV2(
+			ledger,
+			persistentSlabStorage,
+			memoryGauge,
+		)
+	}
 
 	return &Storage{
 		Ledger:                ledger,
@@ -371,12 +375,12 @@ func (s *Storage) commit(inter *interpreter.Interpreter, commitContractUpdates b
 		return err
 	}
 
-	err = s.AccountStorageV2.commit()
-	if err != nil {
-		return err
-	}
-
 	if s.Config.StorageFormatV2Enabled {
+		err = s.AccountStorageV2.commit()
+		if err != nil {
+			return err
+		}
+
 		err = s.migrateV1AccountsToV2(inter)
 		if err != nil {
 			return err
@@ -420,6 +424,10 @@ func (s *Storage) ScheduleV2MigrationForModifiedAccounts() {
 }
 
 func (s *Storage) migrateV1AccountsToV2(inter *interpreter.Interpreter) error {
+
+	if !s.Config.StorageFormatV2Enabled {
+		return errors.NewUnexpectedError("cannot migrate to storage format v2, as it is not enabled")
+	}
 
 	if len(s.scheduledV2Migrations) == 0 {
 		return nil
@@ -513,11 +521,13 @@ func (s *Storage) CheckHealth() error {
 
 	var storageMapStorageIDs []atree.SlabID
 
-	// Get cached account storage map slab IDs.
-	storageMapStorageIDs = append(
-		storageMapStorageIDs,
-		s.AccountStorageV2.cachedRootSlabIDs()...,
-	)
+	if s.Config.StorageFormatV2Enabled {
+		// Get cached account storage map slab IDs.
+		storageMapStorageIDs = append(
+			storageMapStorageIDs,
+			s.AccountStorageV2.cachedRootSlabIDs()...,
+		)
+	}
 
 	// Get slab IDs of cached domain storage maps that are in account storage format v1.
 	for storageKey, storageMap := range s.cachedDomainStorageMaps { //nolint:maprange
