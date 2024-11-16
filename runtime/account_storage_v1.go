@@ -100,54 +100,92 @@ func (s *AccountStorageV1) storeNewDomainStorageMap(
 }
 
 func (s *AccountStorageV1) commit() error {
-	if s.newDomainStorageMapSlabIndices == nil {
+
+	switch len(s.newDomainStorageMapSlabIndices) {
+	case 0:
+		// Nothing to commit.
 		return nil
-	}
 
-	type domainStorageMapSlabIndex struct {
-		StorageDomainKey interpreter.StorageDomainKey
-		SlabIndex        atree.SlabIndex
-	}
+	case 1:
+		// Optimize for the common case of a single domain storage map.
 
-	slabIndices := make([]domainStorageMapSlabIndex, 0, len(s.newDomainStorageMapSlabIndices))
-	for storageDomainKey, slabIndex := range s.newDomainStorageMapSlabIndices { //nolint:maprange
-		slabIndices = append(
+		var updated int
+		for storageDomainKey, slabIndex := range s.newDomainStorageMapSlabIndices { //nolint:maprange
+			if updated > 0 {
+				panic(errors.NewUnreachableError())
+			}
+
+			err := s.writeStorageDomainSlabIndex(
+				storageDomainKey,
+				slabIndex,
+			)
+			if err != nil {
+				return err
+			}
+
+			updated++
+		}
+
+	default:
+		// Sort the indices to ensure deterministic order
+
+		type domainStorageMapSlabIndex struct {
+			StorageDomainKey interpreter.StorageDomainKey
+			SlabIndex        atree.SlabIndex
+		}
+
+		slabIndices := make([]domainStorageMapSlabIndex, 0, len(s.newDomainStorageMapSlabIndices))
+		for storageDomainKey, slabIndex := range s.newDomainStorageMapSlabIndices { //nolint:maprange
+			slabIndices = append(
+				slabIndices,
+				domainStorageMapSlabIndex{
+					StorageDomainKey: storageDomainKey,
+					SlabIndex:        slabIndex,
+				},
+			)
+		}
+		sort.Slice(
 			slabIndices,
-			domainStorageMapSlabIndex{
-				StorageDomainKey: storageDomainKey,
-				SlabIndex:        slabIndex,
+			func(i, j int) bool {
+				slabIndex1 := slabIndices[i]
+				slabIndex2 := slabIndices[j]
+				domainKey1 := slabIndex1.StorageDomainKey
+				domainKey2 := slabIndex2.StorageDomainKey
+				return domainKey1.Compare(domainKey2) < 0
 			},
 		)
-	}
-	sort.Slice(
-		slabIndices,
-		func(i, j int) bool {
-			slabIndex1 := slabIndices[i]
-			slabIndex2 := slabIndices[j]
-			domainKey1 := slabIndex1.StorageDomainKey
-			domainKey2 := slabIndex2.StorageDomainKey
-			return domainKey1.Compare(domainKey2) < 0
-		},
-	)
 
-	for _, slabIndex := range slabIndices {
-		storageDomainKey := slabIndex.StorageDomainKey
-
-		var err error
-		errors.WrapPanic(func() {
-			err = s.ledger.SetValue(
-				storageDomainKey.Address[:],
-				[]byte(storageDomainKey.Domain.Identifier()),
-				slabIndex.SlabIndex[:],
+		for _, slabIndex := range slabIndices {
+			err := s.writeStorageDomainSlabIndex(
+				slabIndex.StorageDomainKey,
+				slabIndex.SlabIndex,
 			)
-		})
-		if err != nil {
-			return interpreter.WrappedExternalError(err)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	s.newDomainStorageMapSlabIndices = nil
 
+	return nil
+}
+
+func (s *AccountStorageV1) writeStorageDomainSlabIndex(
+	storageDomainKey interpreter.StorageDomainKey,
+	slabIndex atree.SlabIndex,
+) error {
+	var err error
+	errors.WrapPanic(func() {
+		err = s.ledger.SetValue(
+			storageDomainKey.Address[:],
+			[]byte(storageDomainKey.Domain.Identifier()),
+			slabIndex[:],
+		)
+	})
+	if err != nil {
+		return interpreter.WrappedExternalError(err)
+	}
 	return nil
 }
 

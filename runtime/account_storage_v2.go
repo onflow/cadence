@@ -164,55 +164,91 @@ func (s *AccountStorageV2) SetNewAccountStorageMapSlabIndex(
 }
 
 func (s *AccountStorageV2) commit() error {
-	if s.newAccountStorageMapSlabIndices == nil {
+	switch len(s.newAccountStorageMapSlabIndices) {
+	case 0:
+		// Nothing to commit.
 		return nil
-	}
 
-	type accountStorageMapSlabIndex struct {
-		Address   common.Address
-		SlabIndex atree.SlabIndex
-	}
+	case 1:
+		// Optimize for the common case of a single account storage map.
 
-	slabIndices := make([]accountStorageMapSlabIndex, 0, len(s.newAccountStorageMapSlabIndices))
-	for address, slabIndex := range s.newAccountStorageMapSlabIndices { //nolint:maprange
-		slabIndices = append(
+		var updated int
+		for address, slabIndex := range s.newAccountStorageMapSlabIndices { //nolint:maprange
+			if updated > 0 {
+				panic(errors.NewUnreachableError())
+			}
+
+			err := s.writeAccountStorageSlabIndex(
+				address,
+				slabIndex,
+			)
+			if err != nil {
+				return err
+			}
+
+			updated++
+		}
+
+	default:
+		// Sort the indices to ensure deterministic order
+
+		type accountStorageMapSlabIndex struct {
+			Address   common.Address
+			SlabIndex atree.SlabIndex
+		}
+
+		slabIndices := make([]accountStorageMapSlabIndex, 0, len(s.newAccountStorageMapSlabIndices))
+		for address, slabIndex := range s.newAccountStorageMapSlabIndices { //nolint:maprange
+			slabIndices = append(
+				slabIndices,
+				accountStorageMapSlabIndex{
+					Address:   address,
+					SlabIndex: slabIndex,
+				},
+			)
+		}
+		sort.Slice(
 			slabIndices,
-			accountStorageMapSlabIndex{
-				Address:   address,
-				SlabIndex: slabIndex,
+			func(i, j int) bool {
+				slabIndex1 := slabIndices[i]
+				slabIndex2 := slabIndices[j]
+				address1 := slabIndex1.Address
+				address2 := slabIndex2.Address
+				return address1.Compare(address2) < 0
 			},
 		)
-	}
-	sort.Slice(
-		slabIndices,
-		func(i, j int) bool {
-			slabIndex1 := slabIndices[i]
-			slabIndex2 := slabIndices[j]
-			address1 := slabIndex1.Address
-			address2 := slabIndex2.Address
-			return address1.Compare(address2) < 0
-		},
-	)
 
-	storageKey := []byte(AccountStorageKey)
-
-	for _, slabIndex := range slabIndices {
-
-		var err error
-		errors.WrapPanic(func() {
-			err = s.ledger.SetValue(
-				slabIndex.Address[:],
-				storageKey,
-				slabIndex.SlabIndex[:],
+		for _, slabIndex := range slabIndices {
+			err := s.writeAccountStorageSlabIndex(
+				slabIndex.Address,
+				slabIndex.SlabIndex,
 			)
-		})
-		if err != nil {
-			return interpreter.WrappedExternalError(err)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	s.newAccountStorageMapSlabIndices = nil
 
+	return nil
+}
+
+func (s *AccountStorageV2) writeAccountStorageSlabIndex(
+	address common.Address,
+	slabIndex atree.SlabIndex,
+) error {
+	var err error
+	errors.WrapPanic(func() {
+		err = s.ledger.SetValue(
+			address[:],
+			[]byte(AccountStorageKey),
+			slabIndex[:],
+		)
+	})
+	if err != nil {
+		return interpreter.WrappedExternalError(err)
+	}
 	return nil
 }
 
