@@ -416,11 +416,8 @@ func (s *Storage) ScheduleV2Migration(address common.Address) {
 func (s *Storage) ScheduleV2MigrationForModifiedAccounts() {
 	for address, isV1 := range s.cachedV1Accounts { //nolint:maprange
 		if isV1 && s.PersistentSlabStorage.HasUnsavedChanges(atree.Address(address)) {
-		        s.ScheduleV2Migration(address)
+			s.ScheduleV2Migration(address)
 		}
-		}
-
-		s.ScheduleV2Migration(address)
 	}
 }
 
@@ -480,7 +477,6 @@ func (s *Storage) migrateV1AccountsToV2(inter *interpreter.Interpreter) error {
 		if err != nil {
 			return err
 		}
-
 
 		s.AccountStorageV2.cacheAccountStorageMap(
 			address,
