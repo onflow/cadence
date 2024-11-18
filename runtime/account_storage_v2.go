@@ -238,7 +238,7 @@ func (s *AccountStorageV2) writeAccountStorageSlabIndex(
 	address common.Address,
 	slabIndex atree.SlabIndex,
 ) error {
-	return writeSlabIndex(
+	return writeSlabIndexToRegister(
 		s.ledger,
 		address,
 		[]byte(AccountStorageKey),
@@ -246,7 +246,7 @@ func (s *AccountStorageV2) writeAccountStorageSlabIndex(
 	)
 }
 
-func getAccountStorageSlabIndex(
+func readAccountStorageSlabIndexFromRegister(
 	ledger atree.Ledger,
 	address common.Address,
 ) (
@@ -254,7 +254,7 @@ func getAccountStorageSlabIndex(
 	bool,
 	error,
 ) {
-	return getSlabIndexFromRegisterValue(
+	return readSlabIndexFromRegister(
 		ledger,
 		address,
 		[]byte(AccountStorageKey),
@@ -269,7 +269,7 @@ func getAccountStorageMapFromRegister(
 	*interpreter.AccountStorageMap,
 	error,
 ) {
-	slabIndex, registerExists, err := getAccountStorageSlabIndex(
+	slabIndex, registerExists, err := readAccountStorageSlabIndexFromRegister(
 		ledger,
 		address,
 	)
@@ -293,7 +293,7 @@ func hasAccountStorageMap(
 	address common.Address,
 ) (bool, error) {
 
-	_, registerExists, err := getAccountStorageSlabIndex(
+	_, registerExists, err := readAccountStorageSlabIndexFromRegister(
 		ledger,
 		address,
 	)

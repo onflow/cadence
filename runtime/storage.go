@@ -213,7 +213,7 @@ func (s *Storage) IsV1Account(address common.Address) (isV1 bool) {
 	// Check if a storage map register exists for any of the domains.
 	// Check the most frequently used domains first, such as storage, public, private.
 	for _, domain := range common.AllStorageDomains {
-		_, domainExists, err := getSlabIndexFromRegisterValue(
+		_, domainExists, err := readSlabIndexFromRegister(
 			s.Ledger,
 			address,
 			[]byte(domain.Identifier()),
@@ -245,45 +245,6 @@ func (s *Storage) cacheDomainStorageMap(
 	}
 
 	s.cachedDomainStorageMaps[storageDomainKey] = domainStorageMap
-}
-
-// getSlabIndexFromRegisterValue returns register value as atree.SlabIndex.
-// This function returns error if
-// - underlying ledger panics, or
-// - underlying ledger returns error when retrieving ledger value, or
-// - retrieved ledger value is invalid (for atree.SlabIndex).
-func getSlabIndexFromRegisterValue(
-	ledger atree.Ledger,
-	address common.Address,
-	key []byte,
-) (atree.SlabIndex, bool, error) {
-	var data []byte
-	var err error
-	errors.WrapPanic(func() {
-		data, err = ledger.GetValue(address[:], key)
-	})
-	if err != nil {
-		return atree.SlabIndex{}, false, interpreter.WrappedExternalError(err)
-	}
-
-	dataLength := len(data)
-
-	if dataLength == 0 {
-		return atree.SlabIndex{}, false, nil
-	}
-
-	isStorageIndex := dataLength == storageIndexLength
-	if !isStorageIndex {
-		// Invalid data in register
-
-		// TODO: add dedicated error type?
-		return atree.SlabIndex{}, false, errors.NewUnexpectedError(
-			"invalid storage index for storage map of account '%x': expected length %d, got %d",
-			address[:], storageIndexLength, dataLength,
-		)
-	}
-
-	return atree.SlabIndex(data), true, nil
 }
 
 func (s *Storage) recordContractUpdate(
@@ -605,24 +566,4 @@ func (UnreferencedRootSlabsError) IsInternalError() {}
 
 func (e UnreferencedRootSlabsError) Error() string {
 	return fmt.Sprintf("slabs not referenced: %s", e.UnreferencedRootSlabIDs)
-}
-
-func writeSlabIndex(
-	ledger atree.Ledger,
-	address common.Address,
-	key []byte,
-	slabIndex atree.SlabIndex,
-) error {
-	var err error
-	errors.WrapPanic(func() {
-		err = ledger.SetValue(
-			address[:],
-			key,
-			slabIndex[:],
-		)
-	})
-	if err != nil {
-		return interpreter.WrappedExternalError(err)
-	}
-	return nil
 }

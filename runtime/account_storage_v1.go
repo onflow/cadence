@@ -175,7 +175,7 @@ func (s *AccountStorageV1) writeStorageDomainSlabIndex(
 	storageDomainKey interpreter.StorageDomainKey,
 	slabIndex atree.SlabIndex,
 ) error {
-	return writeSlabIndex(
+	return writeSlabIndexToRegister(
 		s.ledger,
 		storageDomainKey.Address,
 		[]byte(storageDomainKey.Domain.Identifier()),
@@ -191,7 +191,7 @@ func getDomainStorageMapFromV1DomainRegister(
 	domain common.StorageDomain,
 ) (*interpreter.DomainStorageMap, error) {
 
-	domainStorageSlabIndex, domainRegisterExists, err := getSlabIndexFromRegisterValue(
+	domainStorageSlabIndex, domainRegisterExists, err := readSlabIndexFromRegister(
 		ledger,
 		address,
 		[]byte(domain.Identifier()),
