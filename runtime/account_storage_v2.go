@@ -238,18 +238,12 @@ func (s *AccountStorageV2) writeAccountStorageSlabIndex(
 	address common.Address,
 	slabIndex atree.SlabIndex,
 ) error {
-	var err error
-	errors.WrapPanic(func() {
-		err = s.ledger.SetValue(
-			address[:],
-			[]byte(AccountStorageKey),
-			slabIndex[:],
-		)
-	})
-	if err != nil {
-		return interpreter.WrappedExternalError(err)
-	}
-	return nil
+	return writeSlabIndex(
+		s.ledger,
+		address,
+		[]byte(AccountStorageKey),
+		slabIndex,
+	)
 }
 
 func getAccountStorageSlabIndex(

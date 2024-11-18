@@ -606,3 +606,23 @@ func (UnreferencedRootSlabsError) IsInternalError() {}
 func (e UnreferencedRootSlabsError) Error() string {
 	return fmt.Sprintf("slabs not referenced: %s", e.UnreferencedRootSlabIDs)
 }
+
+func writeSlabIndex(
+	ledger atree.Ledger,
+	address common.Address,
+	key []byte,
+	slabIndex atree.SlabIndex,
+) error {
+	var err error
+	errors.WrapPanic(func() {
+		err = ledger.SetValue(
+			address[:],
+			key,
+			slabIndex[:],
+		)
+	})
+	if err != nil {
+		return interpreter.WrappedExternalError(err)
+	}
+	return nil
+}

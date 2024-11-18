@@ -175,18 +175,12 @@ func (s *AccountStorageV1) writeStorageDomainSlabIndex(
 	storageDomainKey interpreter.StorageDomainKey,
 	slabIndex atree.SlabIndex,
 ) error {
-	var err error
-	errors.WrapPanic(func() {
-		err = s.ledger.SetValue(
-			storageDomainKey.Address[:],
-			[]byte(storageDomainKey.Domain.Identifier()),
-			slabIndex[:],
-		)
-	})
-	if err != nil {
-		return interpreter.WrappedExternalError(err)
-	}
-	return nil
+	return writeSlabIndex(
+		s.ledger,
+		storageDomainKey.Address,
+		[]byte(storageDomainKey.Domain.Identifier()),
+		slabIndex,
+	)
 }
 
 // getDomainStorageMapFromV1DomainRegister returns domain storage map from legacy domain register.
