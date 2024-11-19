@@ -40,6 +40,15 @@ type StorageConfig struct {
 	StorageFormatV2Enabled bool
 }
 
+type storageFormat uint8
+
+const (
+	storageFormatUnknown storageFormat = iota
+	storageFormatNew
+	storageFormatV1
+	StorageFormatV2
+)
+
 type Storage struct {
 	*atree.PersistentSlabStorage
 
@@ -160,7 +169,10 @@ func (s *Storage) GetDomainStorageMap(
 		}
 	}()
 
-	if !s.Config.StorageFormatV2Enabled || s.IsV1Account(address) {
+	if !s.Config.StorageFormatV2Enabled {
+
+		// When StorageFormatV2 is disabled, handle all accounts as v1 accounts.
+
 		domainStorageMap = s.AccountStorageV1.GetDomainStorageMap(
 			address,
 			domain,
@@ -172,43 +184,159 @@ func (s *Storage) GetDomainStorageMap(
 		}
 
 	} else {
-		domainStorageMap = s.AccountStorageV2.GetDomainStorageMap(
-			inter,
-			address,
-			domain,
-			createIfNotExists,
-		)
+
+		// StorageFormatV2 is enabled.
+
+		onlyCheckSpecifiedDomainForV1 := !createIfNotExists
+		format := s.getAccountStorageFormat(address, domain, onlyCheckSpecifiedDomainForV1)
+
+		switch format {
+
+		case storageFormatUnknown:
+			// storageFormatUnknown is returned when !createIfNotExists
+			// and domain register doesn't exist.
+
+			if createIfNotExists {
+				panic(errors.NewUnreachableError())
+			}
+
+			domainStorageMap = nil
+
+		case storageFormatV1:
+			domainStorageMap = s.AccountStorageV1.GetDomainStorageMap(
+				address,
+				domain,
+				createIfNotExists,
+			)
+
+			s.cacheIsV1Account(address, true)
+
+		case StorageFormatV2, storageFormatNew:
+			domainStorageMap = s.AccountStorageV2.GetDomainStorageMap(
+				inter,
+				address,
+				domain,
+				createIfNotExists,
+			)
+
+			s.cacheIsV1Account(address, false)
+
+		default:
+			panic(errors.NewUnreachableError())
+		}
 	}
 
 	return domainStorageMap
 }
 
-// IsV1Account returns true if given account is in account storage format v1.
-func (s *Storage) IsV1Account(address common.Address) (isV1 bool) {
+// getAccountStorageFormat returns storageFormat for the given account.
+// This function determines account format by reading registers.
+// If onlyCheckSpecifiedDomainForV1 is true, only the given domain
+// register is checked to determine if account format is v1.  If
+// domain register doesn't exist, StorageFormatUnknown is returned.
+//
+// When StorageFormatV2 is disabled:
+// - No register reading (accounts are assumed to be in v1 format).
+//
+// When StorageFormatV2 is enabled:
+// - For v2 accounts, "stored" register is read.
+//
+// - For v1 accounts,
+//   - If onlyCheckSpecifiedDomainForV1 is true,
+//     "stored" register and given domain register are read.
+//   - If onlyCheckSpecifiedDomainForV1 is false and given domain exists,
+//     "stored" register and given domain register are read.
+//   - If onlyCheckSpecifiedDomainForV1 is false and given domain doesn't exist,
+//     "stored" register, given domain register, and all domain registers are read.
+//
+// - For new accounts, "stored" register, given domain register, and all domain registers are read.
+func (s *Storage) getAccountStorageFormat(
+	address common.Address,
+	domain common.StorageDomain,
+	onlyCheckSpecifiedDomainForV1 bool,
+) (format storageFormat) {
 
-	// Check cache
+	// All accounts are assumed to be in v1 format when StorageFormatV2 is disabled.
 
-	if isV1, present := s.cachedV1Accounts[address]; present {
-		return isV1
+	if !s.Config.StorageFormatV2Enabled {
+		return storageFormatV1
 	}
 
-	// Cache result
+	// Return cached account format (no register reading).
 
-	defer func() {
-		s.cacheIsV1Account(address, isV1)
-	}()
+	isCachedV1, isCachedV2 := s.getCachedAccountFormat(address)
 
-	// First check if account storage map exists.
-	// In that case the account was already migrated to account storage format v2,
-	// and we do not need to check the domain storage map registers.
+	if isCachedV1 {
+		return storageFormatV1
+	}
 
+	if isCachedV2 {
+		return StorageFormatV2
+	}
+
+	// Check if account is v2 (by reading "stored" register).
+
+	if s.isV2Account(address) {
+		return StorageFormatV2
+	}
+
+	// Check if account is v1 (by reading given domain register).
+
+	if s.hasDomainRegister(address, domain) {
+		return storageFormatV1
+	}
+
+	// Return early if onlyCheckSpecifiedDomainForV1 to prevent more register reading.
+
+	if onlyCheckSpecifiedDomainForV1 {
+		return storageFormatUnknown
+	}
+
+	// At this point, account is either new account or v1 account without given domain register.
+
+	if s.isV1Account(address) {
+		return storageFormatV1
+	}
+
+	return storageFormatNew
+}
+
+func (s *Storage) getCachedAccountFormat(address common.Address) (isV1 bool, isV2 bool) {
+	isV1, cached := s.cachedV1Accounts[address]
+	if !cached {
+		return false, false
+	}
+	return isV1, !isV1
+}
+
+// isV2Account returns true if given account is in account storage format v2.
+func (s *Storage) isV2Account(address common.Address) bool {
 	accountStorageMapExists, err := hasAccountStorageMap(s.Ledger, address)
 	if err != nil {
 		panic(err)
 	}
-	if accountStorageMapExists {
-		return false
+
+	return accountStorageMapExists
+}
+
+// hasDomainRegister returns true if given account has given domain register.
+// NOTE: account storage format v1 has domain registers.
+func (s *Storage) hasDomainRegister(address common.Address, domain common.StorageDomain) (domainExists bool) {
+	_, domainExists, err := readSlabIndexFromRegister(
+		s.Ledger,
+		address,
+		[]byte(domain.Identifier()),
+	)
+	if err != nil {
+		panic(err)
 	}
+
+	return domainExists
+}
+
+// isV1Account returns true if given account is in account storage format v1
+// by checking if any of the domain registers exist.
+func (s *Storage) isV1Account(address common.Address) (isV1 bool) {
 
 	// Check if a storage map register exists for any of the domains.
 	// Check the most frequently used domains first, such as storage, public, private.
@@ -492,7 +620,7 @@ func (s *Storage) CheckHealth() error {
 
 		// Only accounts in storage format v1 store domain storage maps
 		// directly at the root of the account
-		if !s.IsV1Account(address) {
+		if !s.isV1Account(address) {
 			continue
 		}
 
