@@ -22,9 +22,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/stretchr/testify/assert"
@@ -78,50 +76,20 @@ func TestCheckCapability_borrow(t *testing.T) {
 
 	t.Parallel()
 
-	testMissingTypeArgument := func(invalidTypeErrorFixesEnabled bool) {
+	t.Run("missing type argument", func(t *testing.T) {
 
-		name := fmt.Sprintf(
-			"missing type argument, error fixes enabled: %v",
-			invalidTypeErrorFixesEnabled,
-		)
+		_, err := ParseAndCheckWithPanic(t, `
 
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+          let capability: Capability = panic("")
 
-			baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-			baseValueActivation.DeclareValue(stdlib.PanicFunction)
+          let r = capability.borrow()
+        `)
 
-			_, err := ParseAndCheckWithOptions(t,
-				`
-                  let capability: Capability = panic("")
+		errs := RequireCheckerErrors(t, err, 2)
 
-                  let r = capability.borrow()
-                `,
-				ParseAndCheckOptions{
-					Config: &sema.Config{
-						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-							return baseValueActivation
-						},
-						InvalidTypeErrorFixesEnabled: invalidTypeErrorFixesEnabled,
-					},
-				},
-			)
-			if invalidTypeErrorFixesEnabled {
-				errs := RequireCheckerErrors(t, err, 2)
-
-				require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
-				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
-			} else {
-				errs := RequireCheckerErrors(t, err, 1)
-
-				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
-			}
-		})
-	}
-
-	for _, invalidTypeErrorFixesEnabled := range []bool{false, true} {
-		testMissingTypeArgument(invalidTypeErrorFixesEnabled)
-	}
+		require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
+		require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
+	})
 
 	for _, auth := range []sema.Access{sema.UnauthorizedAccess,
 		sema.NewEntitlementSetAccess([]*sema.EntitlementType{{

@@ -431,67 +431,31 @@ func TestCheckGenericFunctionInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		test := func(invalidTypeErrorFixesEnabled bool) {
-
-			name := fmt.Sprintf(
-				"error fixes enabled: %v",
-				invalidTypeErrorFixesEnabled,
-			)
-
-			t.Run(name, func(t *testing.T) {
-				t.Parallel()
-
-				typeParameter := &sema.TypeParameter{
-					Name:      "T",
-					TypeBound: nil,
-				}
-
-				baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-				baseValueActivation.DeclareValue(stdlib.StandardLibraryValue{
-					Name: "test",
-					Type: &sema.FunctionType{
-						TypeParameters: []*sema.TypeParameter{
-							typeParameter,
-						},
-						ReturnTypeAnnotation: sema.NewTypeAnnotation(
-							&sema.GenericType{
-								TypeParameter: typeParameter,
-							},
-						),
-					},
-					Kind: common.DeclarationKindConstant,
-				})
-
-				_, err := ParseAndCheckWithOptions(t,
-					`
-                      let res = test()
-                    `,
-					ParseAndCheckOptions{
-						Config: &sema.Config{
-							BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-								return baseValueActivation
-							},
-							InvalidTypeErrorFixesEnabled: invalidTypeErrorFixesEnabled,
-						},
-					},
-				)
-
-				if invalidTypeErrorFixesEnabled {
-					errs := RequireCheckerErrors(t, err, 2)
-
-					assert.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
-					assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
-				} else {
-					errs := RequireCheckerErrors(t, err, 1)
-
-					assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
-				}
-			})
+		typeParameter := &sema.TypeParameter{
+			Name:      "T",
+			TypeBound: nil,
 		}
 
-		for _, invalidTypeErrorFixesEnabled := range []bool{true, false} {
-			test(invalidTypeErrorFixesEnabled)
-		}
+		_, err := parseAndCheckWithTestValue(t,
+			`
+              let res = test()
+            `,
+			&sema.FunctionType{
+				TypeParameters: []*sema.TypeParameter{
+					typeParameter,
+				},
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					&sema.GenericType{
+						TypeParameter: typeParameter,
+					},
+				),
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
+		assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
 	})
 
 	t.Run("valid: one type parameter, one type argument, no parameters, no arguments, return type", func(t *testing.T) {

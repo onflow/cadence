@@ -288,7 +288,6 @@ func TestCheckRevertibleRandom(t *testing.T) {
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
 				},
-				InvalidTypeErrorFixesEnabled: false,
 			},
 		}
 	}
@@ -431,6 +430,7 @@ func TestCheckRevertibleRandom(t *testing.T) {
 		"missing type argument",
 		`let rand = revertibleRandom()`,
 		[]error{
+			&sema.InvocationTypeInferenceError{},
 			&sema.TypeParameterTypeInferenceError{},
 		},
 	)

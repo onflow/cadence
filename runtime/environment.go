@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"golang.org/x/mod/semver"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/activations"
@@ -1462,9 +1461,6 @@ func (e *interpreterEnvironment) newValidateAccountCapabilitiesPublishHandler() 
 	}
 }
 
-// TODO:
-const MinimumRequiredVersionForInvalidTypeErrorFixes = "v1.0.3"
-
 func (e *interpreterEnvironment) configureVersionedFeatures() {
 	var (
 		minimumRequiredVersion string
@@ -1477,7 +1473,6 @@ func (e *interpreterEnvironment) configureVersionedFeatures() {
 		panic(err)
 	}
 
-	e.CheckerConfig.InvalidTypeErrorFixesEnabled =
-		minimumRequiredVersion != "" &&
-			semver.Compare(MinimumRequiredVersionForInvalidTypeErrorFixes, minimumRequiredVersion) >= 0
+	// No feature flags yet
+	_ = minimumRequiredVersion
 }

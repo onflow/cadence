@@ -19,7 +19,6 @@
 package checker
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -211,123 +210,80 @@ func TestCheckInvalidInvocationFunctionReturnType(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(invalidTypeErrorFixesEnabled bool) {
-
-		name := fmt.Sprintf(
-			"error fixes enabled: %v",
-			invalidTypeErrorFixesEnabled,
-		)
-
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			typeParameter := &sema.TypeParameter{
-				Name: "T",
-			}
-
-			fType := &sema.FunctionType{
-				TypeParameters: []*sema.TypeParameter{
-					typeParameter,
-				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					&sema.GenericType{
-						TypeParameter: typeParameter,
-					},
-				),
-			}
-
-			baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-			baseValueActivation.DeclareValue(stdlib.StandardLibraryValue{
-				Type: fType,
-				Name: "f",
-				Kind: common.DeclarationKindFunction,
-			})
-
-			_, err := ParseAndCheckWithOptions(t,
-				`
-                  let res = [f].reverse()
-                `,
-				ParseAndCheckOptions{
-					Config: &sema.Config{
-						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-							return baseValueActivation
-						},
-						InvalidTypeErrorFixesEnabled: invalidTypeErrorFixesEnabled,
-					},
-				},
-			)
-
-			if invalidTypeErrorFixesEnabled {
-
-				errs := RequireCheckerErrors(t, err, 1)
-
-				assert.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
-			} else {
-				require.NoError(t, err)
-			}
-		})
+	typeParameter := &sema.TypeParameter{
+		Name: "T",
 	}
 
-	for _, invalidTypeErrorFixesEnabled := range []bool{true, false} {
-		test(invalidTypeErrorFixesEnabled)
+	fType := &sema.FunctionType{
+		TypeParameters: []*sema.TypeParameter{
+			typeParameter,
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(
+			&sema.GenericType{
+				TypeParameter: typeParameter,
+			},
+		),
 	}
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.StandardLibraryValue{
+		Type: fType,
+		Name: "f",
+		Kind: common.DeclarationKindFunction,
+	})
+
+	_, err := ParseAndCheckWithOptions(t,
+		`
+          let res = [f].reverse()
+        `,
+		ParseAndCheckOptions{
+			Config: &sema.Config{
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
+			},
+		},
+	)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
 }
 
 func TestCheckInvalidTypeDefensiveCheck(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(invalidTypeErrorFixesEnabled bool) {
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.StandardLibraryValue{
+		Type: sema.InvalidType,
+		Name: "invalid",
+		Kind: common.DeclarationKindConstant,
+	})
 
-		name := fmt.Sprintf(
-			"error fixes enabled: %v",
-			invalidTypeErrorFixesEnabled,
-		)
+	var r any
+	func() {
+		defer func() {
+			r = recover()
+		}()
 
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-			baseValueActivation.DeclareValue(stdlib.StandardLibraryValue{
-				Type: sema.InvalidType,
-				Name: "invalid",
-				Kind: common.DeclarationKindConstant,
-			})
-
-			var r any
-			func() {
-				defer func() {
-					r = recover()
-				}()
-
-				_, _ = ParseAndCheckWithOptions(t,
-					`
-                      let res = invalid
-                    `,
-					ParseAndCheckOptions{
-						Config: &sema.Config{
-							BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-								return baseValueActivation
-							},
-							InvalidTypeErrorFixesEnabled: invalidTypeErrorFixesEnabled,
-						},
+		_, _ = ParseAndCheckWithOptions(t,
+			`
+                  let res = invalid
+                `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
 					},
-				)
-			}()
+				},
+			},
+		)
+	}()
 
-			if invalidTypeErrorFixesEnabled {
-				require.IsType(t, errors.UnexpectedError{}, r)
-				err := r.(errors.UnexpectedError)
-				require.ErrorContains(t, err, "invalid type produced without error")
-			} else {
-				require.Nil(t, r)
-			}
-		})
-	}
-
-	for _, invalidTypeErrorFixesEnabled := range []bool{true, false} {
-		test(invalidTypeErrorFixesEnabled)
-	}
+	require.IsType(t, errors.UnexpectedError{}, r)
+	err := r.(errors.UnexpectedError)
+	require.ErrorContains(t, err, "invalid type produced without error")
 }
 
 func TestCheckInvalidTypeIndexing(t *testing.T) {

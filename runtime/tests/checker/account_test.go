@@ -401,19 +401,18 @@ func TestCheckAccountStorageLoad(t *testing.T) {
 		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	})
 
-	testMissingTypeArguments := func(domain common.PathDomain, invalidTypeErrorFixesEnabled bool) {
+	testMissingTypeArguments := func(domain common.PathDomain) {
 
 		testName := fmt.Sprintf(
-			"missing type argument, %s, %v",
+			"missing type argument, %s",
 			domain.Identifier(),
-			invalidTypeErrorFixesEnabled,
 		)
 
 		t.Run(testName, func(t *testing.T) {
 
 			t.Parallel()
 
-			_, err := ParseAndCheckWithOptions(t,
+			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
                       fun test(storage: auth(Storage) &Account.Storage) {
@@ -422,38 +421,20 @@ func TestCheckAccountStorageLoad(t *testing.T) {
                     `,
 					domain.Identifier(),
 				),
-				ParseAndCheckOptions{
-					Config: &sema.Config{
-						InvalidTypeErrorFixesEnabled: invalidTypeErrorFixesEnabled,
-					},
-				},
 			)
 
 			if domain == common.PathDomainStorage {
-				if invalidTypeErrorFixesEnabled {
-					errs := RequireCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 2)
 
-					require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
-					require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
-				} else {
-					errs := RequireCheckerErrors(t, err, 1)
-
-					require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
-				}
+				require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
+				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
 
 			} else {
-				if invalidTypeErrorFixesEnabled {
-					errs := RequireCheckerErrors(t, err, 3)
+				errs := RequireCheckerErrors(t, err, 3)
 
-					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-					require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[1])
-					require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[2])
-				} else {
-					errs := RequireCheckerErrors(t, err, 2)
-
-					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-					require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
-				}
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[1])
+				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[2])
 			}
 		})
 	}
@@ -525,9 +506,7 @@ func TestCheckAccountStorageLoad(t *testing.T) {
 	}
 
 	for _, domain := range common.AllPathDomainsByIdentifier {
-		for _, invalidTypeErrorFixesEnabled := range []bool{false, true} {
-			testMissingTypeArguments(domain, invalidTypeErrorFixesEnabled)
-		}
+		testMissingTypeArguments(domain)
 		testExplicitTypeArgument(domain)
 	}
 }
@@ -550,19 +529,18 @@ func TestCheckAccountStorageCopy(t *testing.T) {
 		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	})
 
-	testMissingTypeArgument := func(domain common.PathDomain, invalidTypeErrorFixesEnabled bool) {
+	testMissingTypeArgument := func(domain common.PathDomain) {
 
 		testName := fmt.Sprintf(
-			"missing type argument, %s, %v",
+			"missing type argument, %s",
 			domain.Identifier(),
-			invalidTypeErrorFixesEnabled,
 		)
 
 		t.Run(testName, func(t *testing.T) {
 
 			t.Parallel()
 
-			_, err := ParseAndCheckWithOptions(t,
+			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
                       struct S {}
@@ -573,39 +551,20 @@ func TestCheckAccountStorageCopy(t *testing.T) {
                     `,
 					domain.Identifier(),
 				),
-				ParseAndCheckOptions{
-					Config: &sema.Config{
-						InvalidTypeErrorFixesEnabled: invalidTypeErrorFixesEnabled,
-					},
-				},
 			)
 
 			if domain == common.PathDomainStorage {
+				errs := RequireCheckerErrors(t, err, 2)
 
-				if invalidTypeErrorFixesEnabled {
-					errs := RequireCheckerErrors(t, err, 2)
-
-					require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
-					require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
-				} else {
-					errs := RequireCheckerErrors(t, err, 1)
-
-					require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
-				}
+				require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
+				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
 
 			} else {
-				if invalidTypeErrorFixesEnabled {
-					errs := RequireCheckerErrors(t, err, 3)
+				errs := RequireCheckerErrors(t, err, 3)
 
-					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-					require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[1])
-					require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[2])
-				} else {
-					errs := RequireCheckerErrors(t, err, 2)
-
-					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-					require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
-				}
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[1])
+				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[2])
 			}
 		})
 	}
@@ -681,9 +640,7 @@ func TestCheckAccountStorageCopy(t *testing.T) {
 	}
 
 	for _, domain := range common.AllPathDomainsByIdentifier {
-		for _, invalidTypeErrorFixesEnabled := range []bool{false, true} {
-			testMissingTypeArgument(domain, invalidTypeErrorFixesEnabled)
-		}
+		testMissingTypeArgument(domain)
 		testExplicitTypeArgument(domain)
 	}
 }
@@ -706,12 +663,11 @@ func TestCheckAccountStorageBorrow(t *testing.T) {
 		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	})
 
-	testMissingTypeArgument := func(domain common.PathDomain, invalidTypeErrorFixesEnabled bool) {
+	testMissingTypeArgument := func(domain common.PathDomain) {
 
 		testName := fmt.Sprintf(
-			"missing type argument, %s, %v",
+			"missing type argument, %s",
 			domain.Identifier(),
-			invalidTypeErrorFixesEnabled,
 		)
 
 		t.Run(testName, func(t *testing.T) {
@@ -722,7 +678,7 @@ func TestCheckAccountStorageBorrow(t *testing.T) {
 
 				t.Parallel()
 
-				_, err := ParseAndCheckWithOptions(t,
+				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
                           fun test(storage: auth(Storage) &Account.Storage) {
@@ -731,38 +687,20 @@ func TestCheckAccountStorageBorrow(t *testing.T) {
                         `,
 						domain.Identifier(),
 					),
-					ParseAndCheckOptions{
-						Config: &sema.Config{
-							InvalidTypeErrorFixesEnabled: invalidTypeErrorFixesEnabled,
-						},
-					},
 				)
 
 				if domain == common.PathDomainStorage {
-					if invalidTypeErrorFixesEnabled {
-						errs := RequireCheckerErrors(t, err, 2)
+					errs := RequireCheckerErrors(t, err, 2)
 
-						require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
-						require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
-					} else {
-						errs := RequireCheckerErrors(t, err, 1)
-
-						require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
-					}
+					require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
+					require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
 
 				} else {
-					if invalidTypeErrorFixesEnabled {
-						errs := RequireCheckerErrors(t, err, 3)
+					errs := RequireCheckerErrors(t, err, 3)
 
-						require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-						require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[1])
-						require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[2])
-					} else {
-						errs := RequireCheckerErrors(t, err, 2)
-
-						require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-						require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
-					}
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[1])
+					require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[2])
 				}
 			})
 
@@ -770,7 +708,7 @@ func TestCheckAccountStorageBorrow(t *testing.T) {
 
 				t.Parallel()
 
-				_, err := ParseAndCheckWithOptions(t,
+				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
                           fun test(storage: auth(Storage) &Account.Storage) {
@@ -779,38 +717,20 @@ func TestCheckAccountStorageBorrow(t *testing.T) {
                         `,
 						domain.Identifier(),
 					),
-					ParseAndCheckOptions{
-						Config: &sema.Config{
-							InvalidTypeErrorFixesEnabled: invalidTypeErrorFixesEnabled,
-						},
-					},
 				)
 
 				if domain == common.PathDomainStorage {
-					if invalidTypeErrorFixesEnabled {
-						errs := RequireCheckerErrors(t, err, 2)
+					errs := RequireCheckerErrors(t, err, 2)
 
-						require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
-						require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
-					} else {
-						errs := RequireCheckerErrors(t, err, 1)
-
-						require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
-					}
+					require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
+					require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
 
 				} else {
-					if invalidTypeErrorFixesEnabled {
-						errs := RequireCheckerErrors(t, err, 3)
+					errs := RequireCheckerErrors(t, err, 3)
 
-						require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-						require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[1])
-						require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[2])
-					} else {
-						errs := RequireCheckerErrors(t, err, 2)
-
-						require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-						require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
-					}
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[1])
+					require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[2])
 				}
 			})
 		})
@@ -968,9 +888,7 @@ func TestCheckAccountStorageBorrow(t *testing.T) {
 	}
 
 	for _, domain := range common.AllPathDomainsByIdentifier {
-		for _, invalidTypeErrorFixesEnabled := range []bool{false, true} {
-			testMissingTypeArgument(domain, invalidTypeErrorFixesEnabled)
-		}
+		testMissingTypeArgument(domain)
 
 		for _, auth := range []sema.Access{
 			sema.UnauthorizedAccess,
@@ -1105,45 +1023,22 @@ func TestCheckAccountContractsBorrow(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	testInvalidBorrowContractMissingTypeArgument := func(t *testing.T, invalidTypeErrorFixesEnabled bool) {
-		name := fmt.Sprintf(
-			"invalid borrow contract: missing type argument, error fixes enabled: %v",
-			invalidTypeErrorFixesEnabled,
-		)
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+	t.Run("invalid borrow contract: missing type argument", func(t *testing.T) {
+		t.Parallel()
 
-			_, err := ParseAndCheckWithOptions(t,
-				`
-                    contract C {}
+		_, err := ParseAndCheck(t, `
+            contract C {}
 
-                    fun test(contracts: &Account.Contracts): &AnyStruct {
-                        return contracts.borrow(name: "foo")!
-                    }
-                `,
-				ParseAndCheckOptions{
-					Config: &sema.Config{
-						InvalidTypeErrorFixesEnabled: invalidTypeErrorFixesEnabled,
-					},
-				},
-			)
+            fun test(contracts: &Account.Contracts): &AnyStruct {
+                return contracts.borrow(name: "foo")!
+            }
+        `)
 
-			if invalidTypeErrorFixesEnabled {
-				errors := RequireCheckerErrors(t, err, 2)
+		errors := RequireCheckerErrors(t, err, 2)
 
-				assert.IsType(t, &sema.InvocationTypeInferenceError{}, errors[0])
-				assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errors[1])
-			} else {
-				errors := RequireCheckerErrors(t, err, 1)
-
-				assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errors[0])
-			}
-		})
-	}
-
-	for _, invalidTypeErrorFixesEnabled := range []bool{false, true} {
-		testInvalidBorrowContractMissingTypeArgument(t, invalidTypeErrorFixesEnabled)
-	}
+		assert.IsType(t, &sema.InvocationTypeInferenceError{}, errors[0])
+		assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errors[1])
+	})
 }
 
 func TestCheckAccountContractsAdd(t *testing.T) {
