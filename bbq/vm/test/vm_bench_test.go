@@ -85,28 +85,26 @@ func BenchmarkNewStruct(b *testing.B) {
           }
       }
 
-      fun test(count: Int): Foo {
+      fun test(count: Int) {
           var i = 0
-          var r = Foo(0)
           while i < count {
+              Foo(i)
               i = i + 1
-              r = Foo(i)
           }
-          return r
       }
   `)
 	require.NoError(b, err)
 
-	value := vm.NewIntValue(1)
-
-	b.ReportAllocs()
-	b.ResetTimer()
+	value := vm.NewIntValue(10)
 
 	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
 	program := comp.Compile()
 
 	vmConfig := &vm.Config{}
 	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+	b.ReportAllocs()
+	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
 		_, err := vmInstance.Invoke("test", value)

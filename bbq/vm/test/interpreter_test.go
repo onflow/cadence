@@ -1057,3 +1057,41 @@ func BenchmarkInterpreterImperativeFib(b *testing.B) {
 		require.NoError(b, err)
 	}
 }
+
+func BenchmarkInterpreterNewStruct(b *testing.B) {
+
+	scriptLocation := runtime_utils.NewScriptLocationGenerator()
+
+	inter, err := parseCheckAndInterpretWithOptions(
+		b,
+		`
+        struct Foo {
+            var id : Int
+
+            init(_ id: Int) {
+                self.id = id
+            }
+        }
+
+        fun test(count: Int) {
+            var i = 0
+            while i < count {
+                Foo(i)
+                i = i + 1
+            }
+        }`,
+		scriptLocation(),
+		ParseCheckAndInterpretOptions{},
+	)
+	require.NoError(b, err)
+
+	value := interpreter.NewIntValueFromInt64(nil, 10)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, err := inter.Invoke("test", value)
+		require.NoError(b, err)
+	}
+}

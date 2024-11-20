@@ -53,7 +53,8 @@ func (v IntValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
 }
 
 func (v IntValue) Add(other IntValue) Value {
-	return NewIntValue(v.SmallInt + other.SmallInt)
+	sum := safeAdd(int(v.SmallInt), int(other.SmallInt))
+	return NewIntValue(int64(sum))
 }
 
 func (v IntValue) Subtract(other IntValue) Value {
