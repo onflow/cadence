@@ -19,6 +19,7 @@
 package common
 
 import (
+	"bytes"
 	"encoding/hex"
 	goErrors "errors"
 	"fmt"
@@ -110,6 +111,10 @@ func (a Address) ShortHexWithPrefix() string {
 
 func (a Address) HexWithPrefix() string {
 	return fmt.Sprintf("0x%x", [AddressLength]byte(a))
+}
+
+func (a Address) Compare(other Address) int {
+	return bytes.Compare(a[:], other[:])
 }
 
 // HexToAddress converts a hex string to an Address after

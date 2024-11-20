@@ -22,20 +22,21 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 )
-
-type AccountStorageMaps = *orderedmap.OrderedMap[common.Address, *interpreter.AccountStorageMap]
 
 type GetDomainStorageMapFunc func(
 	ledger atree.Ledger,
 	storage atree.SlabStorage,
 	address common.Address,
 	domain common.StorageDomain,
-) (*interpreter.DomainStorageMap, error)
+) (
+	*interpreter.DomainStorageMap,
+	error,
+)
 
+// DomainRegisterMigration migrates domain registers to account storage maps.
 type DomainRegisterMigration struct {
 	ledger              atree.Ledger
 	storage             atree.SlabStorage
@@ -49,76 +50,37 @@ func NewDomainRegisterMigration(
 	storage atree.SlabStorage,
 	inter *interpreter.Interpreter,
 	memoryGauge common.MemoryGauge,
+	getDomainStorageMap GetDomainStorageMapFunc,
 ) *DomainRegisterMigration {
+	if getDomainStorageMap == nil {
+		getDomainStorageMap = getDomainStorageMapFromV1DomainRegister
+	}
 	return &DomainRegisterMigration{
 		ledger:              ledger,
 		storage:             storage,
 		inter:               inter,
 		memoryGauge:         memoryGauge,
-		getDomainStorageMap: getDomainStorageMapFromLegacyDomainRegister,
+		getDomainStorageMap: getDomainStorageMap,
 	}
-}
-
-// SetGetDomainStorageMapFunc allows user to provide custom GetDomainStorageMap function.
-func (m *DomainRegisterMigration) SetGetDomainStorageMapFunc(
-	getDomainStorageMapFunc GetDomainStorageMapFunc,
-) {
-	m.getDomainStorageMap = getDomainStorageMapFunc
-}
-
-// MigrateAccounts migrates given accounts.
-func (m *DomainRegisterMigration) MigrateAccounts(
-	accounts *orderedmap.OrderedMap[common.Address, struct{}],
-	pred func(common.Address) bool,
-) (
-	AccountStorageMaps,
-	error,
-) {
-	if accounts == nil || accounts.Len() == 0 {
-		return nil, nil
-	}
-
-	var migratedAccounts AccountStorageMaps
-
-	for pair := accounts.Oldest(); pair != nil; pair = pair.Next() {
-		address := pair.Key
-
-		if !pred(address) {
-			continue
-		}
-
-		migrated, err := isMigrated(m.ledger, address)
-		if err != nil {
-			return nil, err
-		}
-		if migrated {
-			continue
-		}
-
-		accountStorageMap, err := m.MigrateAccount(address)
-		if err != nil {
-			return nil, err
-		}
-
-		if accountStorageMap == nil {
-			continue
-		}
-
-		if migratedAccounts == nil {
-			migratedAccounts = &orderedmap.OrderedMap[common.Address, *interpreter.AccountStorageMap]{}
-		}
-		migratedAccounts.Set(address, accountStorageMap)
-	}
-
-	return migratedAccounts, nil
 }
 
 func (m *DomainRegisterMigration) MigrateAccount(
 	address common.Address,
-) (*interpreter.AccountStorageMap, error) {
+) (
+	*interpreter.AccountStorageMap,
+	error,
+) {
+	exists, err := hasAccountStorageMap(m.ledger, address)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		// Account storage map already exists
+		return nil, nil
+	}
 
 	// Migrate existing domains
-	accountStorageMap, err := m.migrateDomains(address)
+	accountStorageMap, err := m.migrateDomainRegisters(address)
 	if err != nil {
 		return nil, err
 	}
@@ -128,14 +90,14 @@ func (m *DomainRegisterMigration) MigrateAccount(
 		return nil, nil
 	}
 
-	accountStorageMapSlabIndex := accountStorageMap.SlabID().Index()
+	slabIndex := accountStorageMap.SlabID().Index()
 
 	// Write account register
 	errors.WrapPanic(func() {
 		err = m.ledger.SetValue(
 			address[:],
 			[]byte(AccountStorageKey),
-			accountStorageMapSlabIndex[:],
+			slabIndex[:],
 		)
 	})
 	if err != nil {
@@ -145,16 +107,25 @@ func (m *DomainRegisterMigration) MigrateAccount(
 	return accountStorageMap, nil
 }
 
-// migrateDomains migrates existing domain storage maps and removes domain registers.
-func (m *DomainRegisterMigration) migrateDomains(
+// migrateDomainRegisters migrates all existing domain storage maps to a new account storage map,
+// and removes the domain registers.
+func (m *DomainRegisterMigration) migrateDomainRegisters(
 	address common.Address,
-) (*interpreter.AccountStorageMap, error) {
+) (
+	*interpreter.AccountStorageMap,
+	error,
+) {
 
 	var accountStorageMap *interpreter.AccountStorageMap
 
 	for _, domain := range common.AllStorageDomains {
 
-		domainStorageMap, err := m.getDomainStorageMap(m.ledger, m.storage, address, domain)
+		domainStorageMap, err := m.getDomainStorageMap(
+			m.ledger,
+			m.storage,
+			address,
+			domain,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -165,7 +136,11 @@ func (m *DomainRegisterMigration) migrateDomains(
 		}
 
 		if accountStorageMap == nil {
-			accountStorageMap = interpreter.NewAccountStorageMap(m.memoryGauge, m.storage, atree.Address(address))
+			accountStorageMap = interpreter.NewAccountStorageMap(
+				m.memoryGauge,
+				m.storage,
+				atree.Address(address),
+			)
 		}
 
 		// Migrate (insert) existing domain storage map to account storage map
@@ -193,12 +168,4 @@ func (m *DomainRegisterMigration) migrateDomains(
 	}
 
 	return accountStorageMap, nil
-}
-
-func isMigrated(ledger atree.Ledger, address common.Address) (bool, error) {
-	_, registerExists, err := getSlabIndexFromRegisterValue(ledger, address, []byte(AccountStorageKey))
-	if err != nil {
-		return false, err
-	}
-	return registerExists, nil
 }

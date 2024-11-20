@@ -35,7 +35,6 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
@@ -52,7 +51,13 @@ func withWritesToStorage(
 	handler func(*Storage, *interpreter.Interpreter),
 ) {
 	ledger := NewTestLedger(nil, onWrite)
-	storage := NewStorage(ledger, nil)
+	storage := NewStorage(
+		ledger,
+		nil,
+		StorageConfig{
+			StorageFormatV2Enabled: true,
+		},
+	)
 
 	inter := NewTestInterpreter(tb)
 
@@ -63,18 +68,10 @@ func withWritesToStorage(
 		var address common.Address
 		random.Read(address[:])
 
-		storageKey := interpreter.StorageKey{
-			Address: address,
-			Key:     AccountStorageKey,
-		}
-
 		var slabIndex atree.SlabIndex
 		binary.BigEndian.PutUint32(slabIndex[:], randomIndex)
 
-		if storage.NewAccountStorageMapSlabIndices == nil {
-			storage.NewAccountStorageMapSlabIndices = &orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]{}
-		}
-		storage.NewAccountStorageMapSlabIndices.Set(storageKey, slabIndex)
+		storage.AccountStorageV2.SetNewAccountStorageMapSlabIndex(address, slabIndex)
 	}
 
 	handler(storage, inter)
@@ -158,7 +155,9 @@ func TestRuntimeStorageWrite(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	config := DefaultTestInterpreterConfig
+	config.StorageFormatV2Enabled = true
+	runtime := NewTestInterpreterRuntimeWithConfig(config)
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
@@ -1619,161 +1618,238 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 
 	t.Parallel()
 
-	config := DefaultTestInterpreterConfig
-	config.ResourceOwnerChangeHandlerEnabled = true
-	runtime := NewTestInterpreterRuntimeWithConfig(config)
+	test := func(
+		storageFormatV2Enabled bool,
+		expectedNonEmptyKeys []string,
+	) {
 
-	address1 := common.MustBytesToAddress([]byte{0x1})
-	address2 := common.MustBytesToAddress([]byte{0x2})
+		name := fmt.Sprintf(
+			"storage format V2 enabled: %v",
+			storageFormatV2Enabled,
+		)
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-	ledger := NewTestLedger(nil, nil)
+			config := DefaultTestInterpreterConfig
+			config.ResourceOwnerChangeHandlerEnabled = true
+			config.StorageFormatV2Enabled = storageFormatV2Enabled
+			runtime := NewTestInterpreterRuntimeWithConfig(config)
 
-	var signers []Address
+			address1 := common.MustBytesToAddress([]byte{0x1})
+			address2 := common.MustBytesToAddress([]byte{0x2})
 
-	deployTx := DeploymentTransaction("Test", []byte(`
-      access(all) contract Test {
+			ledger := NewTestLedger(nil, nil)
 
-          access(all) resource R {}
+			var signers []Address
 
-          access(all) fun createR(): @R {
-              return <-create R()
-          }
-      }
-    `))
+			deployTx := DeploymentTransaction("Test", []byte(`
+              access(all) contract Test {
 
-	type resourceOwnerChange struct {
-		uuid       *interpreter.UInt64Value
-		typeID     common.TypeID
-		oldAddress common.Address
-		newAddress common.Address
-	}
+                  access(all) resource R {}
 
-	accountCodes := map[Location][]byte{}
-	var events []cadence.Event
-	var loggedMessages []string
-	var resourceOwnerChanges []resourceOwnerChange
+                  access(all) fun createR(): @R {
+                      return <-create R()
+                  }
+              }
+            `))
 
-	runtimeInterface := &TestRuntimeInterface{
-		Storage: ledger,
-		OnGetSigningAccounts: func() ([]Address, error) {
-			return signers, nil
-		},
-		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
-		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
-			accountCodes[location] = code
-			return nil
-		},
-		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-			code = accountCodes[location]
-			return code, nil
-		},
-		OnEmitEvent: func(event cadence.Event) error {
-			events = append(events, event)
-			return nil
-		},
-		OnProgramLog: func(message string) {
-			loggedMessages = append(loggedMessages, message)
-		},
-		OnResourceOwnerChanged: func(
-			inter *interpreter.Interpreter,
-			resource *interpreter.CompositeValue,
-			oldAddress common.Address,
-			newAddress common.Address,
-		) {
-			resourceOwnerChanges = append(
-				resourceOwnerChanges,
-				resourceOwnerChange{
-					typeID: resource.TypeID(),
-					// TODO: provide proper location range
-					uuid:       resource.ResourceUUID(inter, interpreter.EmptyLocationRange),
-					oldAddress: oldAddress,
-					newAddress: newAddress,
+			type resourceOwnerChange struct {
+				uuid       *interpreter.UInt64Value
+				typeID     common.TypeID
+				oldAddress common.Address
+				newAddress common.Address
+			}
+
+			accountCodes := map[Location][]byte{}
+			var events []cadence.Event
+			var loggedMessages []string
+			var resourceOwnerChanges []resourceOwnerChange
+
+			runtimeInterface := &TestRuntimeInterface{
+				Storage: ledger,
+				OnGetSigningAccounts: func() ([]Address, error) {
+					return signers, nil
+				},
+				OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+				OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+					accountCodes[location] = code
+					return nil
+				},
+				OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+					code = accountCodes[location]
+					return code, nil
+				},
+				OnEmitEvent: func(event cadence.Event) error {
+					events = append(events, event)
+					return nil
+				},
+				OnProgramLog: func(message string) {
+					loggedMessages = append(loggedMessages, message)
+				},
+				OnResourceOwnerChanged: func(
+					inter *interpreter.Interpreter,
+					resource *interpreter.CompositeValue,
+					oldAddress common.Address,
+					newAddress common.Address,
+				) {
+					resourceOwnerChanges = append(
+						resourceOwnerChanges,
+						resourceOwnerChange{
+							typeID: resource.TypeID(),
+							// TODO: provide proper location range
+							uuid:       resource.ResourceUUID(inter, interpreter.EmptyLocationRange),
+							oldAddress: oldAddress,
+							newAddress: newAddress,
+						},
+					)
+				},
+			}
+
+			nextTransactionLocation := NewTransactionLocationGenerator()
+
+			// Deploy contract
+
+			signers = []Address{address1}
+
+			err := runtime.ExecuteTransaction(
+				Script{
+					Source: deployTx,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
 				},
 			)
-		},
+			require.NoError(t, err)
+
+			// Store
+
+			signers = []Address{address1}
+
+			storeTx := []byte(`
+              import Test from 0x1
+
+              transaction {
+                  prepare(signer: auth(Storage) &Account) {
+                      signer.storage.save(<-Test.createR(), to: /storage/test)
+                  }
+              }
+            `)
+
+			err = runtime.ExecuteTransaction(
+				Script{
+					Source: storeTx,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			require.NoError(t, err)
+
+			// Transfer
+
+			signers = []Address{address1, address2}
+
+			transferTx := []byte(`
+              import Test from 0x1
+
+              transaction {
+                  prepare(
+                      signer1: auth(Storage) &Account,
+                      signer2: auth(Storage) &Account
+                  ) {
+                      let value <- signer1.storage.load<@Test.R>(from: /storage/test)!
+                      signer2.storage.save(<-value, to: /storage/test)
+                  }
+              }
+            `)
+
+			err = runtime.ExecuteTransaction(
+				Script{
+					Source: transferTx,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			require.NoError(t, err)
+
+			var actualNonEmptyKeys []string
+			for key, data := range ledger.StoredValues {
+				if len(data) > 0 {
+					actualNonEmptyKeys = append(actualNonEmptyKeys, key)
+				}
+			}
+
+			sort.Strings(actualNonEmptyKeys)
+
+			assert.Equal(t,
+				expectedNonEmptyKeys,
+				actualNonEmptyKeys,
+			)
+
+			expectedUUID := interpreter.NewUnmeteredUInt64Value(1)
+			assert.Equal(t,
+				[]resourceOwnerChange{
+					{
+						typeID: "A.0000000000000001.Test.R",
+						uuid:   &expectedUUID,
+						oldAddress: common.Address{
+							0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+						},
+						newAddress: common.Address{
+							0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+						},
+					},
+					{
+						typeID: "A.0000000000000001.Test.R",
+						uuid:   &expectedUUID,
+						oldAddress: common.Address{
+							0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+						},
+						newAddress: common.Address{
+							0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+						},
+					},
+					{
+						typeID: "A.0000000000000001.Test.R",
+						uuid:   &expectedUUID,
+						oldAddress: common.Address{
+							0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+						},
+						newAddress: common.Address{
+							0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
+						},
+					},
+				},
+				resourceOwnerChanges,
+			)
+		})
 	}
 
-	nextTransactionLocation := NewTransactionLocationGenerator()
-
-	// Deploy contract
-
-	signers = []Address{address1}
-
-	err := runtime.ExecuteTransaction(
-		Script{
-			Source: deployTx,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
-
-	// Store
-
-	signers = []Address{address1}
-
-	storeTx := []byte(`
-      import Test from 0x1
-
-      transaction {
-          prepare(signer: auth(Storage) &Account) {
-              signer.storage.save(<-Test.createR(), to: /storage/test)
-          }
-      }
-    `)
-
-	err = runtime.ExecuteTransaction(
-		Script{
-			Source: storeTx,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+	test(
+		false,
+		[]string{
+			// account 0x1:
+			// NOTE: with atree inlining, contract is inlined in contract map
+			//     storage map (domain key + map slab)
+			//   + contract map (domain key + map slab)
+			"\x00\x00\x00\x00\x00\x00\x00\x01|$\x00\x00\x00\x00\x00\x00\x00\x02",
+			"\x00\x00\x00\x00\x00\x00\x00\x01|$\x00\x00\x00\x00\x00\x00\x00\x04",
+			"\x00\x00\x00\x00\x00\x00\x00\x01|contract",
+			"\x00\x00\x00\x00\x00\x00\x00\x01|storage",
+			// account 0x2
+			// NOTE: with atree inlining, resource is inlined in storage map
+			//     storage map (domain key + map slab)
+			"\x00\x00\x00\x00\x00\x00\x00\x02|$\x00\x00\x00\x00\x00\x00\x00\x02",
+			"\x00\x00\x00\x00\x00\x00\x00\x02|storage",
 		},
 	)
-	require.NoError(t, err)
 
-	// Transfer
-
-	signers = []Address{address1, address2}
-
-	transferTx := []byte(`
-      import Test from 0x1
-
-      transaction {
-          prepare(
-              signer1: auth(Storage) &Account,
-              signer2: auth(Storage) &Account
-          ) {
-              let value <- signer1.storage.load<@Test.R>(from: /storage/test)!
-              signer2.storage.save(<-value, to: /storage/test)
-          }
-      }
-    `)
-
-	err = runtime.ExecuteTransaction(
-		Script{
-			Source: transferTx,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
-
-	var nonEmptyKeys []string
-	for key, data := range ledger.StoredValues {
-		if len(data) > 0 {
-			nonEmptyKeys = append(nonEmptyKeys, key)
-		}
-	}
-
-	sort.Strings(nonEmptyKeys)
-
-	assert.Equal(t,
+	test(
+		true,
 		[]string{
 			// account 0x1:
 			// NOTE: with account storage map and atree inlining,
@@ -1789,44 +1865,6 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 			"\x00\x00\x00\x00\x00\x00\x00\x02|$\x00\x00\x00\x00\x00\x00\x00\x02",
 			"\x00\x00\x00\x00\x00\x00\x00\x02|stored",
 		},
-		nonEmptyKeys,
-	)
-
-	expectedUUID := interpreter.NewUnmeteredUInt64Value(1)
-	assert.Equal(t,
-		[]resourceOwnerChange{
-			{
-				typeID: "A.0000000000000001.Test.R",
-				uuid:   &expectedUUID,
-				oldAddress: common.Address{
-					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-				},
-				newAddress: common.Address{
-					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-				},
-			},
-			{
-				typeID: "A.0000000000000001.Test.R",
-				uuid:   &expectedUUID,
-				oldAddress: common.Address{
-					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-				},
-				newAddress: common.Address{
-					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-				},
-			},
-			{
-				typeID: "A.0000000000000001.Test.R",
-				uuid:   &expectedUUID,
-				oldAddress: common.Address{
-					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-				},
-				newAddress: common.Address{
-					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
-				},
-			},
-		},
-		resourceOwnerChanges,
 	)
 }
 
@@ -3110,7 +3148,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	storageMap := storage.GetStorageMap(inter, address, common.PathDomainStorage.StorageDomain(), false)
+	storageMap := storage.GetDomainStorageMap(inter, address, common.PathDomainStorage.StorageDomain(), false)
 	require.NotNil(t, storageMap)
 
 	// Read first
@@ -6260,7 +6298,13 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 
 		// Create empty storage
 		ledger := NewTestLedger(nil, LedgerOnWriteCounter(&writeCount))
-		storage := NewStorage(ledger, nil)
+		storage := NewStorage(
+			ledger,
+			nil,
+			StorageConfig{
+				StorageFormatV2Enabled: true,
+			},
+		)
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -6268,7 +6312,7 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 
 		// Get non-existent domain storage map
 		const createIfNotExists = false
-		domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+		domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 		require.Nil(t, domainStorageMap)
 
 		// Commit changes
@@ -6309,7 +6353,13 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 
 			// Create empty storage
 			ledger := NewTestLedger(nil, LedgerOnWriteEntries(&writeEntries))
-			storage := NewStorage(ledger, nil)
+			storage := NewStorage(
+				ledger,
+				nil,
+				StorageConfig{
+					StorageFormatV2Enabled: true,
+				},
+			)
 
 			inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -6321,7 +6371,7 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 			for _, domain := range tc.newDomains {
 				// Create new domain storage map
 				const createIfNotExists = true
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 				require.Equal(t, uint64(0), domainStorageMap.Count())
 
@@ -6387,7 +6437,13 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 	t.Run("create, commit, write, commit, remove, commit", func(t *testing.T) {
 		// Create empty storage
 		ledger := NewTestLedger(nil, nil)
-		storage := NewStorage(ledger, nil)
+		storage := NewStorage(
+			ledger,
+			nil,
+			StorageConfig{
+				StorageFormatV2Enabled: true,
+			},
+		)
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -6404,7 +6460,7 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 		{
 			for _, domain := range domains {
 				const createIfNotExists = true
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 				require.Equal(t, uint64(0), domainStorageMap.Count())
 
@@ -6428,7 +6484,7 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 		{
 			for _, domain := range domains {
 				const createIfNotExists = false
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 				require.Equal(t, uint64(0), domainStorageMap.Count())
 
@@ -6454,7 +6510,7 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 		{
 			for _, domain := range domains {
 				const createIfNotExists = false
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 
 				expectedDomainValues := accountValues[domain]
@@ -6486,7 +6542,7 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 		{
 			for _, domain := range domains {
 				const createIfNotExists = false
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 				require.Equal(t, uint64(0), domainStorageMap.Count())
 			}
@@ -6521,7 +6577,13 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 		domainStorageMapCount int,
 	) (TestLedger, accountStorageMapValues) {
 		ledger := NewTestLedger(nil, nil)
-		storage := NewStorage(ledger, nil)
+		storage := NewStorage(
+			ledger,
+			nil,
+			StorageConfig{
+				StorageFormatV2Enabled: true,
+			},
+		)
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -6555,13 +6617,19 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 			address,
 			existingDomains,
 			domainStorageMapCount)
-		storage := NewStorage(ledger, nil)
+		storage := NewStorage(
+			ledger,
+			nil,
+			StorageConfig{
+				StorageFormatV2Enabled: true,
+			},
+		)
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
 		// Get non-existent domain storage map
 		const createIfNotExists = false
-		domainStorageMap := storage.GetStorageMap(inter, address, nonexistentDomain, createIfNotExists)
+		domainStorageMap := storage.GetDomainStorageMap(inter, address, nonexistentDomain, createIfNotExists)
 		require.Nil(t, domainStorageMap)
 
 		// Commit changes
@@ -6601,13 +6669,19 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 				existingDomains,
 				domainStorageMapCount,
 			)
-			storage := NewStorage(ledger, nil)
+			storage := NewStorage(
+				ledger,
+				nil,
+				StorageConfig{
+					StorageFormatV2Enabled: true,
+				},
+			)
 
 			inter := NewTestInterpreterWithStorage(t, storage)
 
 			// Read existing domain storage map
 			for domain, domainValues := range accountValues {
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, tc.createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, tc.createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 				require.Equal(t, uint64(len(domainValues)), domainStorageMap.Count())
 
@@ -6685,7 +6759,13 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 				tc.existingDomains,
 				tc.existingDomainStorageMapCount,
 			)
-			storage := NewStorage(ledger, nil)
+			storage := NewStorage(
+				ledger,
+				nil,
+				StorageConfig{
+					StorageFormatV2Enabled: true,
+				},
+			)
 
 			inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -6696,7 +6776,7 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 			// Create and write to domain storage map (createIfNotExists is true)
 			for _, domain := range tc.newDomains {
 				const createIfNotExists = true
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 				require.Equal(t, uint64(0), domainStorageMap.Count())
 
@@ -6770,7 +6850,13 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 			existingDomains,
 			existingDomainStorageMapCount,
 		)
-		storage := NewStorage(ledger, nil)
+		storage := NewStorage(
+			ledger,
+			nil,
+			StorageConfig{
+				StorageFormatV2Enabled: true,
+			},
+		)
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -6779,7 +6865,7 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 		// Write to existing domain storage map (createIfNotExists is false)
 		for _, domain := range existingDomains {
 			const createIfNotExists = false
-			domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+			domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 			require.NotNil(t, domainStorageMap)
 
 			domainValues := accountValues[domain]
@@ -6863,7 +6949,13 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 			domains,
 			domainStorageMapCount,
 		)
-		storage := NewStorage(ledger, nil)
+		storage := NewStorage(
+			ledger,
+			nil,
+			StorageConfig{
+				StorageFormatV2Enabled: true,
+			},
+		)
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -6873,7 +6965,7 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 		{
 			for _, domain := range domains {
 				const createIfNotExists = false
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 
 				domainValues := accountValues[domain]
@@ -6904,7 +6996,7 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 		{
 			for _, domain := range domains {
 				const createIfNotExists = false
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 
 				domainValues := accountValues[domain]
@@ -6935,7 +7027,7 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 		{
 			for _, domain := range domains {
 				const createIfNotExists = false
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 
 				expectedDomainValues := accountValues[domain]
@@ -6967,7 +7059,7 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 		{
 			for _, domain := range domains {
 				const createIfNotExists = false
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 				require.Equal(t, uint64(0), domainStorageMap.Count())
 			}
@@ -7001,7 +7093,13 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 		domainStorageMapCount int,
 	) (TestLedger, accountStorageMapValues) {
 		ledger := NewTestLedger(nil, nil)
-		storage := NewStorage(ledger, nil)
+		storage := NewStorage(
+			ledger,
+			nil,
+			StorageConfig{
+				StorageFormatV2Enabled: false,
+			},
+		)
 
 		inter := NewTestInterpreter(t)
 
@@ -7062,15 +7160,23 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 			address,
 			existingDomains,
 			domainStorageMapCount)
-		storage := NewStorage(ledger, nil)
+		storage := NewStorage(
+			ledger,
+			nil,
+			StorageConfig{
+				StorageFormatV2Enabled: true,
+			},
+		)
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
 		// Get non-existent domain storage map
 		const createIfNotExists = false
-		nonexistingDomain := common.PathDomainPublic.StorageDomain()
-		domainStorageMap := storage.GetStorageMap(inter, address, nonexistingDomain, createIfNotExists)
+		nonExistingDomain := common.PathDomainPublic.StorageDomain()
+		domainStorageMap := storage.GetDomainStorageMap(inter, address, nonExistingDomain, createIfNotExists)
 		require.Nil(t, domainStorageMap)
+
+		storage.ScheduleV2MigrationForModifiedAccounts()
 
 		// Commit changes
 		const commitContractUpdates = false
@@ -7109,17 +7215,23 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 				existingDomains,
 				existingDomainStorageMapCount,
 			)
-			storage := NewStorage(ledger, nil)
+			storage := NewStorage(
+				ledger,
+				nil,
+				StorageConfig{
+					StorageFormatV2Enabled: true,
+				},
+			)
 
 			inter := NewTestInterpreterWithStorage(t, storage)
 
 			// Read existing domain storage map
 			for domain, domainValues := range accountValues {
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, tc.createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, tc.createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 				require.Equal(t, uint64(len(domainValues)), domainStorageMap.Count())
 
-				// Read elements to to domain storage map
+				// Read elements to domain storage map
 				for k, expectedV := range domainValues {
 					v := domainStorageMap.ReadValue(nil, k)
 					ev, ok := v.(interpreter.EquatableValue)
@@ -7197,7 +7309,13 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 				tc.existingDomains,
 				tc.existingDomainStorageMapCount,
 			)
-			storage := NewStorage(ledger, nil)
+			storage := NewStorage(
+				ledger,
+				nil,
+				StorageConfig{
+					StorageFormatV2Enabled: true,
+				},
+			)
 
 			inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -7206,13 +7324,16 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 			// Create and write to new domain storage map
 			for _, domain := range tc.newDomains {
 				const createIfNotExists = true
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 				require.Equal(t, uint64(0), domainStorageMap.Count())
 
 				// Write elements to to domain storage map
 				accountValues[domain] = writeToDomainStorageMap(inter, domainStorageMap, tc.newDomainStorageMapCount, random)
 			}
+
+			// TODO:
+			storage.ScheduleV2MigrationForModifiedAccounts()
 
 			// Commit changes
 			const commitContractUpdates = false
@@ -7232,12 +7353,28 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 			require.True(t, len(writeEntries) > 1+len(tc.existingDomains)+len(tc.newDomains))
 
 			i := 0
+
+			// Check new domain register committed in V1 format.
+			for _, domain := range common.AllStorageDomains {
+
+				if slices.Contains(tc.newDomains, domain) {
+
+					// New domains are committed in V1 format (with domain register).
+					require.Equal(t, address[:], writeEntries[i].Owner)
+					require.Equal(t, []byte(domain.Identifier()), writeEntries[i].Key)
+					require.True(t, len(writeEntries[i].Value) > 0)
+
+					i++
+				}
+			}
+
+			// Check modified registers in migration.
 			for _, domain := range common.AllStorageDomains {
 
 				if slices.Contains(tc.existingDomains, domain) ||
 					slices.Contains(tc.newDomains, domain) {
 
-					// Existing and new domain registers are removed.
+					// Existing and new domain registers are removed (migrated).
 					// Removing new (non-existent) domain registers is no-op.
 					require.Equal(t, address[:], writeEntries[i].Owner)
 					require.Equal(t, []byte(domain.Identifier()), writeEntries[i].Key)
@@ -7288,7 +7425,13 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 			domains,
 			existingDomainStorageMapCount,
 		)
-		storage := NewStorage(ledger, nil)
+		storage := NewStorage(
+			ledger,
+			nil,
+			StorageConfig{
+				StorageFormatV2Enabled: true,
+			},
+		)
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -7297,7 +7440,7 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 		// write to existing domain storage map (createIfNotExists is false)
 		for _, domain := range domains {
 			const createIfNotExists = false
-			domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+			domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 			require.NotNil(t, domainStorageMap)
 
 			domainValues := accountValues[domain]
@@ -7336,6 +7479,9 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 				domainValues[k] = v
 			}
 		}
+
+		// TODO:
+		storage.ScheduleV2MigrationForModifiedAccounts()
 
 		// Commit changes
 		const commitContractUpdates = false
@@ -7377,7 +7523,7 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 		checkAccountStorageMapData(t, ledger.StoredValues, ledger.StorageIndices, address, accountValues)
 	})
 
-	// This test test storage map operations (including account migration) with intermittent Commit()
+	// This test storage map operations (including account migration) with intermittent Commit()
 	// - read domain storage map and commit
 	// - write to domain storage map and commit (including account migration)
 	// - remove all elements from domain storage map and commit
@@ -7397,7 +7543,13 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 			domains,
 			domainStorageMapCount,
 		)
-		storage := NewStorage(ledger, nil)
+		storage := NewStorage(
+			ledger,
+			nil,
+			StorageConfig{
+				StorageFormatV2Enabled: true,
+			},
+		)
 
 		inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -7407,7 +7559,7 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 		{
 			for _, domain := range domains {
 				const createIfNotExists = false
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 
 				domainValues := accountValues[domain]
@@ -7436,7 +7588,7 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 			// update existing domain storage map (loaded from storage)
 			for _, domain := range domains {
 				const createIfNotExists = false
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 
 				domainValues := accountValues[domain]
@@ -7460,6 +7612,9 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 					domainValues[k] = newValue
 				}
 			}
+
+			// TODO:
+			storage.ScheduleV2MigrationForModifiedAccounts()
 
 			// Commit changes
 			const commitContractUpdates = false
@@ -7507,7 +7662,7 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 		{
 			for _, domain := range domains {
 				const createIfNotExists = false
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 
 				domainValues := accountValues[domain]
@@ -7556,7 +7711,7 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 		{
 			for _, domain := range domains {
 				const createIfNotExists = false
-				domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 				require.NotNil(t, domainStorageMap)
 
 				domainValues := accountValues[domain]
@@ -7598,7 +7753,13 @@ func TestRuntimeStorageDomainStorageMapInlinedState(t *testing.T) {
 
 	// Create empty storage
 	ledger := NewTestLedger(nil, nil)
-	storage := NewStorage(ledger, nil)
+	storage := NewStorage(
+		ledger,
+		nil,
+		StorageConfig{
+			StorageFormatV2Enabled: true,
+		},
+	)
 
 	inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -7616,7 +7777,7 @@ func TestRuntimeStorageDomainStorageMapInlinedState(t *testing.T) {
 
 		// Create domain storage map
 		const createIfNotExists = true
-		domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+		domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 		require.NotNil(t, domainStorageMap)
 		require.True(t, domainStorageMap.Inlined())
 
@@ -7720,7 +7881,13 @@ func TestRuntimeStorageLargeDomainValues(t *testing.T) {
 
 	// Create empty storage
 	ledger := NewTestLedger(nil, nil)
-	storage := NewStorage(ledger, nil)
+	storage := NewStorage(
+		ledger,
+		nil,
+		StorageConfig{
+			StorageFormatV2Enabled: true,
+		},
+	)
 
 	inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -7738,7 +7905,7 @@ func TestRuntimeStorageLargeDomainValues(t *testing.T) {
 
 		// Create domain storage map
 		const createIfNotExists = true
-		domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+		domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 		require.NotNil(t, domainStorageMap)
 		require.True(t, domainStorageMap.Inlined())
 
@@ -7856,7 +8023,13 @@ func TestDomainRegisterMigrationForLargeAccount(t *testing.T) {
 		LedgerOnWriteCounter(&writeCount),
 		accountsInfo,
 	)
-	storage := NewStorage(ledger, nil)
+	storage := NewStorage(
+		ledger,
+		nil,
+		StorageConfig{
+			StorageFormatV2Enabled: true,
+		},
+	)
 
 	inter := NewTestInterpreterWithStorage(t, storage)
 
@@ -7865,10 +8038,13 @@ func TestDomainRegisterMigrationForLargeAccount(t *testing.T) {
 	// Create new domain storage map
 	const createIfNotExists = true
 	domain := common.StorageDomainInbox
-	domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+	domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 	require.NotNil(t, domainStorageMap)
 
 	accountValues[domain] = make(domainStorageMapValues)
+
+	// TODO:
+	storage.ScheduleV2MigrationForModifiedAccounts()
 
 	// Commit changes
 	const commitContractUpdates = false
@@ -7921,7 +8097,7 @@ func createAndWriteAccountStorageMap(
 	// Create domain storage map
 	for _, domain := range domains {
 		const createIfNotExists = true
-		domainStorageMap := storage.GetStorageMap(inter, address, domain, createIfNotExists)
+		domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
 		require.NotNil(t, domainStorageMap)
 		require.Equal(t, uint64(0), domainStorageMap.Count())
 
@@ -7964,7 +8140,8 @@ func writeToDomainStorageMap(
 	return domainValues
 }
 
-// checkAccountStorageMapData creates new storage with given storedValues, and compares account storage map values with given expectedAccountValues.
+// checkAccountStorageMapData creates new storage with given storedValues,
+// and compares account storage map values with given expectedAccountValues.
 func checkAccountStorageMapData(
 	tb testing.TB,
 	storedValues map[string][]byte,
@@ -7974,7 +8151,13 @@ func checkAccountStorageMapData(
 ) {
 	// Create storage with given storedValues and storageIndices
 	ledger := NewTestLedgerWithData(nil, nil, storedValues, storageIndices)
-	storage := NewStorage(ledger, nil)
+	storage := NewStorage(
+		ledger,
+		nil,
+		StorageConfig{
+			StorageFormatV2Enabled: true,
+		},
+	)
 
 	inter := NewTestInterpreterWithStorage(tb, storage)
 

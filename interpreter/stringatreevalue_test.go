@@ -45,7 +45,7 @@ func TestLargeStringAtreeValueInSeparateSlab(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	storageMap := storage.GetStorageMap(
+	storageMap := storage.GetDomainStorageMap(
 		inter,
 		common.MustBytesToAddress([]byte{0x1}),
 		common.PathDomainStorage.StorageDomain(),
