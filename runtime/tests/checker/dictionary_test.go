@@ -40,7 +40,9 @@ func TestCheckIncompleteDictionaryType(t *testing.T) {
 		},
 	)
 
-	require.NoError(t, err)
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, errs[0], &sema.UnconvertableTypeError{})
 
 	assert.Equal(t,
 		&sema.DictionaryType{

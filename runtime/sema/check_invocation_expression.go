@@ -503,7 +503,13 @@ func (checker *Checker) checkInvocation(
 
 	returnType = functionType.ReturnTypeAnnotation.Type.Resolve(typeArguments)
 	if returnType == nil {
-		// TODO: report error? does `checkTypeParameterInference` below already do that?
+		checker.report(&InvocationTypeInferenceError{
+			Range: ast.NewRangeFromPositioned(
+				checker.memoryGauge,
+				invocationExpression,
+			),
+		})
+
 		returnType = InvalidType
 	}
 
@@ -599,6 +605,12 @@ func (checker *Checker) checkInvocationRequiredArgument(
 			parameterType = parameterType.Resolve(typeParameters)
 			// If the type parameter could not be resolved, use the invalid type.
 			if parameterType == nil {
+				checker.report(&InvocationTypeInferenceError{
+					Range: ast.NewRangeFromPositioned(
+						checker.memoryGauge,
+						argument.Expression,
+					),
+				})
 				parameterType = InvalidType
 			}
 		}
@@ -674,6 +686,12 @@ func (checker *Checker) checkInvocationRequiredArgument(
 			parameterType = parameterType.Resolve(typeParameters)
 			// If the type parameter could not be resolved, use the invalid type.
 			if parameterType == nil {
+				checker.report(&InvocationTypeInferenceError{
+					Range: ast.NewRangeFromPositioned(
+						checker.memoryGauge,
+						argument.Expression,
+					),
+				})
 				parameterType = InvalidType
 			}
 		}

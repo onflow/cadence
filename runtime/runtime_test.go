@@ -11548,3 +11548,46 @@ func TestRuntimeBuiltInFunctionConfusion(t *testing.T) {
 	var redeclarationError *sema.RedeclarationError
 	require.ErrorAs(t, err, &redeclarationError)
 }
+
+func TestRuntimeInvocationReturnTypeInferenceFailure(t *testing.T) {
+
+	t.Parallel()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	newRuntimeInterface := func() Interface {
+
+		return &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]common.Address, error) {
+				return []common.Address{address}, nil
+			},
+		}
+	}
+
+	runtime := NewTestInterpreterRuntime()
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	tx := []byte(`
+      transaction{
+          prepare(signer: auth(Storage) &Account){
+              let functions = [signer.storage.save].reverse()
+          }
+      }
+    `)
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: tx,
+		},
+		Context{
+			Interface: newRuntimeInterface(),
+			Location:  nextTransactionLocation(),
+		},
+	)
+	RequireError(t, err)
+
+	var typeErr *sema.InvocationTypeInferenceError
+	require.ErrorAs(t, err, &typeErr)
+}

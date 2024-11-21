@@ -886,12 +886,12 @@ func (checker *Checker) ConvertType(t ast.Type) Type {
 	case *ast.InstantiationType:
 		return checker.convertInstantiationType(t)
 
-	case nil:
-		// The AST might contain "holes" if parsing failed
+	default:
+		checker.report(&UnconvertableTypeError{
+			Range: ast.NewRangeFromPositioned(checker.memoryGauge, t),
+		})
 		return InvalidType
 	}
-
-	panic(&astTypeConversionError{invalidASTType: t})
 }
 
 func CheckIntersectionType(
@@ -2611,6 +2611,8 @@ func (checker *Checker) visitExpressionWithForceType(
 
 	actualType = ast.AcceptExpression[Type](expr, checker)
 
+	checker.checkErrorsForInvalidExpressionTypes(actualType, expectedType)
+
 	if checker.Config.ExtendedElaborationEnabled {
 		checker.Elaboration.SetExpressionTypes(
 			expr,
@@ -2643,6 +2645,20 @@ func (checker *Checker) visitExpressionWithForceType(
 	}
 
 	return actualType, actualType
+}
+
+func (checker *Checker) checkErrorsForInvalidExpressionTypes(actualType Type, expectedType Type) {
+	// Defensive check: If an invalid type was produced,
+	// then also an error should have been reported for the invalid program.
+	//
+	// Check for errors first, which is cheap,
+	// before checking for an invalid type, which is more expensive.
+
+	if len(checker.errors) == 0 &&
+		(actualType.IsInvalidType() || (expectedType != nil && expectedType.IsInvalidType())) {
+
+		panic(errors.NewUnexpectedError("invalid type produced without error"))
+	}
 }
 
 func (checker *Checker) expressionRange(expression ast.Expression) ast.Range {

@@ -452,9 +452,10 @@ func TestCheckGenericFunctionInvocation(t *testing.T) {
 			},
 		)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+		assert.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
+		assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
 	})
 
 	t.Run("valid: one type parameter, one type argument, no parameters, no arguments, return type", func(t *testing.T) {

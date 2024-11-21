@@ -22,8 +22,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 func TestCheckSpuriousIdentifierAssignmentInvalidValueTypeMismatch(t *testing.T) {
@@ -196,6 +200,121 @@ func TestCheckSpuriousCastWithInvalidValueTypeMismatch(t *testing.T) {
           let y = x as Int
         `,
 	)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+}
+
+func TestCheckInvalidInvocationFunctionReturnType(t *testing.T) {
+
+	t.Parallel()
+
+	typeParameter := &sema.TypeParameter{
+		Name: "T",
+	}
+
+	fType := &sema.FunctionType{
+		TypeParameters: []*sema.TypeParameter{
+			typeParameter,
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(
+			&sema.GenericType{
+				TypeParameter: typeParameter,
+			},
+		),
+	}
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.StandardLibraryValue{
+		Type: fType,
+		Name: "f",
+		Kind: common.DeclarationKindFunction,
+	})
+
+	_, err := ParseAndCheckWithOptions(t,
+		`
+          let res = [f].reverse()
+        `,
+		ParseAndCheckOptions{
+			Config: &sema.Config{
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
+			},
+		},
+	)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
+}
+
+func TestCheckInvalidTypeDefensiveCheck(t *testing.T) {
+
+	t.Parallel()
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.StandardLibraryValue{
+		Type: sema.InvalidType,
+		Name: "invalid",
+		Kind: common.DeclarationKindConstant,
+	})
+
+	var r any
+	func() {
+		defer func() {
+			r = recover()
+		}()
+
+		_, _ = ParseAndCheckWithOptions(t,
+			`
+                  let res = invalid
+                `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+		)
+	}()
+
+	require.IsType(t, errors.UnexpectedError{}, r)
+	err := r.(errors.UnexpectedError)
+	require.ErrorContains(t, err, "invalid type produced without error")
+}
+
+func TestCheckInvalidTypeIndexing(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      struct S {}
+      let s = S()
+      let res = s[[]]
+    `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
+}
+
+func TestCheckInvalidRemove(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      struct S {}
+
+      attachment A for S {}
+
+      fun test() {
+          let s = S()
+          remove B from s
+      }
+    `)
 
 	errs := RequireCheckerErrors(t, err, 1)
 

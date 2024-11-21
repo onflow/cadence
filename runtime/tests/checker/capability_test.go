@@ -85,9 +85,10 @@ func TestCheckCapability_borrow(t *testing.T) {
           let r = capability.borrow()
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+		require.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
+		require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
 	})
 
 	for _, auth := range []sema.Access{sema.UnauthorizedAccess,

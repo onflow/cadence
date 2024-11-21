@@ -430,6 +430,7 @@ func TestCheckRevertibleRandom(t *testing.T) {
 		"missing type argument",
 		`let rand = revertibleRandom()`,
 		[]error{
+			&sema.InvocationTypeInferenceError{},
 			&sema.TypeParameterTypeInferenceError{},
 		},
 	)
