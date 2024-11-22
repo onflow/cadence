@@ -1281,6 +1281,7 @@ func TestCheckArrayMapInvalidArgs(t *testing.T) {
 	`,
 		[]sema.SemanticError{
 			&sema.TypeMismatchError{},
+			&sema.InvocationTypeInferenceError{},    // since we're not passing a function.
 			&sema.TypeParameterTypeInferenceError{}, // since we're not passing a function.
 		},
 	)
@@ -2660,9 +2661,10 @@ func TestCheckArrayToConstantSizedMissingTypeArgument(t *testing.T) {
 		}
 	`)
 
-	errs := RequireCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 2)
 
-	assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+	assert.IsType(t, &sema.InvocationTypeInferenceError{}, errs[0])
+	assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
 }
 
 func TestCheckArrayReferenceTypeInference(t *testing.T) {

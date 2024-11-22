@@ -51,16 +51,6 @@ func ErrorMessageExpectedActualTypes(
 	return
 }
 
-// astTypeConversionError
-
-type astTypeConversionError struct {
-	invalidASTType ast.Type
-}
-
-func (e *astTypeConversionError) Error() string {
-	return fmt.Sprintf("cannot convert unsupported AST type: %#+v", e.invalidASTType)
-}
-
 // unsupportedOperation
 
 type unsupportedOperation struct {
@@ -4882,4 +4872,39 @@ var _ errors.ErrorNote = ResultVariablePostConditionsNote{}
 
 func (ResultVariablePostConditionsNote) Message() string {
 	return "post-conditions declared here"
+}
+
+// InvocationTypeInferenceError
+
+type InvocationTypeInferenceError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvocationTypeInferenceError{}
+var _ errors.UserError = &InvocationTypeInferenceError{}
+
+func (e *InvocationTypeInferenceError) isSemanticError() {}
+
+func (*InvocationTypeInferenceError) IsUserError() {}
+
+func (e *InvocationTypeInferenceError) Error() string {
+	return "cannot infer type of invocation"
+}
+
+// UnconvertableTypeError
+
+type UnconvertableTypeError struct {
+	Type ast.Type
+	ast.Range
+}
+
+var _ SemanticError = &UnconvertableTypeError{}
+var _ errors.UserError = &UnconvertableTypeError{}
+
+func (e *UnconvertableTypeError) isSemanticError() {}
+
+func (*UnconvertableTypeError) IsUserError() {}
+
+func (e *UnconvertableTypeError) Error() string {
+	return fmt.Sprintf("cannot convert type `%s`", e.Type)
 }
