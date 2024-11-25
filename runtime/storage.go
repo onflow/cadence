@@ -46,7 +46,7 @@ const (
 	storageFormatUnknown storageFormat = iota
 	storageFormatNew
 	storageFormatV1
-	StorageFormatV2
+	storageFormatV2
 )
 
 type Storage struct {
@@ -211,7 +211,7 @@ func (s *Storage) GetDomainStorageMap(
 
 			s.cacheIsV1Account(address, true)
 
-		case StorageFormatV2, storageFormatNew:
+		case storageFormatV2, storageFormatNew:
 			domainStorageMap = s.AccountStorageV2.GetDomainStorageMap(
 				inter,
 				address,
@@ -272,7 +272,7 @@ func (s *Storage) getAccountStorageFormat(
 	// Check if account is v2 (by reading "stored" register).
 
 	if s.isV2Account(address) {
-		return StorageFormatV2
+		return storageFormatV2
 	}
 
 	// Check if account is v1 (by reading given domain register).
@@ -304,7 +304,7 @@ func (s *Storage) getCachedAccountFormat(address common.Address) (format storage
 	if isV1 {
 		return storageFormatV1, true
 	} else {
-		return StorageFormatV2, true
+		return storageFormatV2, true
 	}
 }
 
