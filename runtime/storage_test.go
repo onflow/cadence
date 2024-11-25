@@ -30,7 +30,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -8120,7 +8119,7 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 				},
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage): {},
 			},
 		},
 		{
@@ -8141,7 +8140,7 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 				// domain storage map is created and cached in the first GetDomainStorageMap().
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage): {},
 			},
 		},
 		// Test cases with storageFormatV2Enabled = true
@@ -8179,8 +8178,8 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 				},
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + AccountStorageKey:                            {},
-				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):          {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage): {},
 			},
 		},
 		{
@@ -8248,16 +8247,16 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 				// domain storage map is created and cached in the first GetDomainStorageMap().
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + AccountStorageKey:                                        {},
-				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier():             {},
-				string(address[:]) + "|" + common.StorageDomainPathPrivate.Identifier():             {},
-				string(address[:]) + "|" + common.StorageDomainPathPublic.Identifier():              {},
-				string(address[:]) + "|" + common.StorageDomainContract.Identifier():                {},
-				string(address[:]) + "|" + common.StorageDomainInbox.Identifier():                   {},
-				string(address[:]) + "|" + common.StorageDomainCapabilityController.Identifier():    {},
-				string(address[:]) + "|" + common.StorageDomainCapabilityControllerTag.Identifier(): {},
-				string(address[:]) + "|" + common.StorageDomainPathCapability.Identifier():          {},
-				string(address[:]) + "|" + common.StorageDomainAccountCapability.Identifier():       {},
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):                      {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage):             {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathPrivate):             {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathPublic):              {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainContract):                {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainInbox):                   {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainCapabilityController):    {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainCapabilityControllerTag): {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathCapability):          {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainAccountCapability):       {},
 			},
 		},
 	}
@@ -8328,7 +8327,7 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 		return func() (storedValues map[string][]byte, StorageIndices map[string]uint64) {
 			ledger := NewTestLedger(nil, nil)
 
-			persistentSlabStorage := newSlabStorage(ledger)
+			persistentSlabStorage := NewPersistentSlabStorage(ledger, nil)
 
 			orderedMap, err := atree.NewMap(
 				persistentSlabStorage,
@@ -8402,7 +8401,7 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 				},
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage): {},
 			},
 		},
 		{
@@ -8425,7 +8424,7 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 				// GetDomainStorageMap(0).
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage): {},
 			},
 		},
 		{
@@ -8453,8 +8452,8 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 				// GetDomainStorageMap(0).
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
-				string(address[:]) + "|" + string([]byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}):  {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage):  {},
+				concatRegisterAddressAndKey(address, []byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
 			},
 		},
 		{
@@ -8482,8 +8481,8 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 				// GetDomainStorageMap(0).
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
-				string(address[:]) + "|" + string([]byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}):  {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage):  {},
+				concatRegisterAddressAndKey(address, []byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
 			},
 		},
 		// Test cases with storageFormatV2Enabled = true
@@ -8519,8 +8518,8 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 				},
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + AccountStorageKey:                            {},
-				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):          {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage): {},
 			},
 		},
 		{
@@ -8566,10 +8565,10 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 				// GetDomainStorageMap().
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + AccountStorageKey:                            {},
-				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
-				string(address[:]) + "|" + common.StorageDomainPathPrivate.Identifier(): {},
-				string(address[:]) + "|" + common.StorageDomainPathPublic.Identifier():  {},
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):          {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage): {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathPrivate): {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathPublic):  {},
 			},
 		},
 		{
@@ -8607,9 +8606,9 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 				// GetDomainStorageMap().
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + AccountStorageKey:                            {},
-				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
-				string(address[:]) + "|" + string([]byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}):  {},
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):           {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage):  {},
+				concatRegisterAddressAndKey(address, []byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
 			},
 		},
 		{
@@ -8647,9 +8646,9 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 				// GetDomainStorageMap().
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + AccountStorageKey:                            {},
-				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
-				string(address[:]) + "|" + string([]byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}):  {},
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):           {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage):  {},
+				concatRegisterAddressAndKey(address, []byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
 			},
 		},
 	}
@@ -8721,7 +8720,7 @@ func TestGetDomainStorageMapRegisterReadsForV2Account(t *testing.T) {
 		return func() (storedValues map[string][]byte, StorageIndices map[string]uint64) {
 			ledger := NewTestLedger(nil, nil)
 
-			persistentSlabStorage := newSlabStorage(ledger)
+			persistentSlabStorage := NewPersistentSlabStorage(ledger, nil)
 
 			accountOrderedMap, err := atree.NewMap(
 				persistentSlabStorage,
@@ -8819,8 +8818,8 @@ func TestGetDomainStorageMapRegisterReadsForV2Account(t *testing.T) {
 				// GetDomainStorageMap().
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + AccountStorageKey:                           {},
-				string(address[:]) + "|" + string([]byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):           {},
+				concatRegisterAddressAndKey(address, []byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
 			},
 		},
 		{
@@ -8852,8 +8851,8 @@ func TestGetDomainStorageMapRegisterReadsForV2Account(t *testing.T) {
 				// GetDomainStorageMap().
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + AccountStorageKey:                           {},
-				string(address[:]) + "|" + string([]byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):           {},
+				concatRegisterAddressAndKey(address, []byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
 			},
 		},
 		{
@@ -8885,8 +8884,8 @@ func TestGetDomainStorageMapRegisterReadsForV2Account(t *testing.T) {
 				// GetDomainStorageMap().
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + AccountStorageKey:                           {},
-				string(address[:]) + "|" + string([]byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):           {},
+				concatRegisterAddressAndKey(address, []byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
 			},
 		},
 		{
@@ -8918,8 +8917,8 @@ func TestGetDomainStorageMapRegisterReadsForV2Account(t *testing.T) {
 				// GetDomainStorageMap().
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + AccountStorageKey:                           {},
-				string(address[:]) + "|" + string([]byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):           {},
+				concatRegisterAddressAndKey(address, []byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
 			},
 		},
 	}
@@ -9104,34 +9103,16 @@ func checkAccountStorageMapData(
 	require.Contains(tb, rootSlabIDs, accountSlabID)
 }
 
-func newSlabStorage(ledger atree.Ledger) *atree.PersistentSlabStorage {
-	decodeStorable := func(
-		decoder *cbor.StreamDecoder,
-		slabID atree.SlabID,
-		inlinedExtraData []atree.ExtraData,
-	) (
-		atree.Storable,
-		error,
-	) {
-		return interpreter.DecodeStorable(
-			decoder,
-			slabID,
-			inlinedExtraData,
-			nil,
-		)
-	}
+func concatRegisterAddressAndKey(
+	address common.Address,
+	key []byte,
+) string {
+	return string(address[:]) + "|" + string(key)
+}
 
-	decodeTypeInfo := func(decoder *cbor.StreamDecoder) (atree.TypeInfo, error) {
-		return interpreter.DecodeTypeInfo(decoder, nil)
-	}
-
-	ledgerStorage := atree.NewLedgerBaseStorage(ledger)
-
-	return atree.NewPersistentSlabStorage(
-		ledgerStorage,
-		interpreter.CBOREncMode,
-		interpreter.CBORDecMode,
-		decodeStorable,
-		decodeTypeInfo,
-	)
+func concatRegisterAddressAndDomain(
+	address common.Address,
+	domain common.StorageDomain,
+) string {
+	return string(address[:]) + "|" + domain.Identifier()
 }

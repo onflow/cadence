@@ -77,11 +77,10 @@ type Storage struct {
 var _ atree.SlabStorage = &Storage{}
 var _ interpreter.Storage = &Storage{}
 
-func NewStorage(
+func NewPersistentSlabStorage(
 	ledger atree.Ledger,
 	memoryGauge common.MemoryGauge,
-	config StorageConfig,
-) *Storage {
+) *atree.PersistentSlabStorage {
 	decodeStorable := func(
 		decoder *cbor.StreamDecoder,
 		slabID atree.SlabID,
@@ -103,13 +102,22 @@ func NewStorage(
 	}
 
 	ledgerStorage := atree.NewLedgerBaseStorage(ledger)
-	persistentSlabStorage := atree.NewPersistentSlabStorage(
+
+	return atree.NewPersistentSlabStorage(
 		ledgerStorage,
 		interpreter.CBOREncMode,
 		interpreter.CBORDecMode,
 		decodeStorable,
 		decodeTypeInfo,
 	)
+}
+
+func NewStorage(
+	ledger atree.Ledger,
+	memoryGauge common.MemoryGauge,
+	config StorageConfig,
+) *Storage {
+	persistentSlabStorage := NewPersistentSlabStorage(ledger, memoryGauge)
 
 	accountStorageV1 := NewAccountStorageV1(
 		ledger,
