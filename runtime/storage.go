@@ -301,12 +301,16 @@ func (s *Storage) getAccountStorageFormat(
 	return storageFormatNew
 }
 
-func (s *Storage) getCachedAccountFormat(address common.Address) (isV1 bool, isV2 bool) {
+func (s *Storage) getCachedAccountFormat(address common.Address) (format storageFormat, known bool) {
 	isV1, cached := s.cachedV1Accounts[address]
 	if !cached {
-		return false, false
+		return storageFormatUnknown, false
 	}
-	return isV1, !isV1
+	if isV1 {
+		return storageFormatV1, true
+	} else {
+		return StorageFormatV2, true
+	}
 }
 
 // isV2Account returns true if given account is in account storage format v2.
