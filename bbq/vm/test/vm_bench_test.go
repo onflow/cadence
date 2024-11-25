@@ -359,11 +359,18 @@ func BenchmarkMethodCall(b *testing.B) {
 			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *vm.CompositeValue {
 				return importedContractValue
 			},
+			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
+				elaboration := importedChecker.Elaboration
+				compositeType := elaboration.CompositeType(typeID)
+				if compositeType != nil {
+					return compositeType
+				}
+
+				return elaboration.InterfaceType(typeID)
+			},
 		}
 
 		scriptLocation := runtime_utils.NewScriptLocationGenerator()
-
-		vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
 
 		value := vm.NewIntValue(10)
 
@@ -371,6 +378,7 @@ func BenchmarkMethodCall(b *testing.B) {
 		b.ReportAllocs()
 
 		for i := 0; i < b.N; i++ {
+			vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
 			_, err := vmInstance.Invoke("test", value)
 			require.NoError(b, err)
 		}

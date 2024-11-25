@@ -20,22 +20,22 @@ package vm
 
 import (
 	"github.com/onflow/atree"
-	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/runtime"
-
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/constantkind"
 	"github.com/onflow/cadence/bbq/leb128"
 	"github.com/onflow/cadence/bbq/opcode"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/runtime"
 )
 
 type VM struct {
 	globals            map[string]Value
 	callFrame          *callFrame
 	stack              []Value
+	locals             []Value
 	config             *Config
 	linkedGlobalsCache map[common.Location]LinkedGlobals
 }
@@ -139,21 +139,38 @@ func (vm *VM) replaceTop(value Value) {
 	vm.stack[lastIndex] = value
 }
 
-func (vm *VM) pushCallFrame(functionValue FunctionValue, arguments []Value) {
-	locals := make([]Value, functionValue.Function.LocalCount)
+func fill(slice []Value, n int) []Value {
+	for i := 0; i < n; i++ {
+		slice = append(slice, nil)
+	}
+	return slice
+}
 
-	copy(locals, arguments)
+func (vm *VM) pushCallFrame(functionValue FunctionValue, arguments []Value) {
+	localsCount := functionValue.Function.LocalCount
+
+	vm.locals = append(vm.locals, arguments...)
+	vm.locals = fill(vm.locals, int(localsCount)-len(arguments))
+
+	// Calculate the offset for local variable for the new callframe.
+	// This is equal to: (local var offset + local var count) of previous callframe.
+	var offset uint16
+	if vm.callFrame != nil {
+		offset = vm.callFrame.localsOffset + vm.callFrame.localsCount
+	}
 
 	callFrame := &callFrame{
-		parent:     vm.callFrame,
-		locals:     locals,
-		function:   functionValue.Function,
-		executable: functionValue.Executable,
+		parent:       vm.callFrame,
+		localsCount:  localsCount,
+		localsOffset: offset,
+		function:     functionValue.Function,
+		executable:   functionValue.Executable,
 	}
 	vm.callFrame = callFrame
 }
 
 func (vm *VM) popCallFrame() {
+	vm.locals = vm.locals[:vm.callFrame.localsOffset]
 	vm.callFrame = vm.callFrame.parent
 }
 
@@ -331,14 +348,17 @@ func opGetConstant(vm *VM) {
 func opGetLocal(vm *VM) {
 	callFrame := vm.callFrame
 	index := callFrame.getUint16()
-	local := callFrame.locals[index]
+	absoluteIndex := callFrame.localsOffset + index
+	local := vm.locals[absoluteIndex]
 	vm.push(local)
 }
 
 func opSetLocal(vm *VM) {
 	callFrame := vm.callFrame
 	index := callFrame.getUint16()
-	callFrame.locals[index] = vm.pop()
+
+	absoluteIndex := callFrame.localsOffset + index
+	vm.locals[absoluteIndex] = vm.pop()
 }
 
 func opGetGlobal(vm *VM) {

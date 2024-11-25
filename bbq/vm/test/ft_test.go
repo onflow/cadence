@@ -319,12 +319,12 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	tokenTransferTxChecker := parseAndCheck(b, realFlowTokenTransferTransaction, nil, programs)
 	tokenTransferTxProgram := compile(b, tokenTransferTxChecker, programs)
-	tokenTransferTxVM := vm.NewVM(txLocation(), tokenTransferTxProgram, vmConfig)
 
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
+		tokenTransferTxVM := vm.NewVM(txLocation(), tokenTransferTxProgram, vmConfig)
 		err = tokenTransferTxVM.ExecuteTransaction(tokenTransferTxArgs, tokenTransferTxAuthorizer)
 		require.NoError(b, err)
 	}
