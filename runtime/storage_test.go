@@ -30,7 +30,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -8363,7 +8362,7 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 		return func() (storedValues map[string][]byte, StorageIndices map[string]uint64) {
 			ledger := NewTestLedger(nil, nil)
 
-			persistentSlabStorage := newSlabStorage(ledger)
+			persistentSlabStorage := NewPersistentSlabStorage(ledger, nil)
 
 			orderedMap, err := atree.NewMap(
 				persistentSlabStorage,
@@ -8761,7 +8760,7 @@ func TestGetDomainStorageMapRegisterReadsForV2Account(t *testing.T) {
 		return func() (storedValues map[string][]byte, StorageIndices map[string]uint64) {
 			ledger := NewTestLedger(nil, nil)
 
-			persistentSlabStorage := newSlabStorage(ledger)
+			persistentSlabStorage := NewPersistentSlabStorage(ledger, nil)
 
 			accountOrderedMap, err := atree.NewMap(
 				persistentSlabStorage,
@@ -9142,38 +9141,6 @@ func checkAccountStorageMapData(
 	require.NoError(tb, err)
 	require.Equal(tb, 1, len(rootSlabIDs))
 	require.Contains(tb, rootSlabIDs, accountSlabID)
-}
-
-func newSlabStorage(ledger atree.Ledger) *atree.PersistentSlabStorage {
-	decodeStorable := func(
-		decoder *cbor.StreamDecoder,
-		slabID atree.SlabID,
-		inlinedExtraData []atree.ExtraData,
-	) (
-		atree.Storable,
-		error,
-	) {
-		return interpreter.DecodeStorable(
-			decoder,
-			slabID,
-			inlinedExtraData,
-			nil,
-		)
-	}
-
-	decodeTypeInfo := func(decoder *cbor.StreamDecoder) (atree.TypeInfo, error) {
-		return interpreter.DecodeTypeInfo(decoder, nil)
-	}
-
-	ledgerStorage := atree.NewLedgerBaseStorage(ledger)
-
-	return atree.NewPersistentSlabStorage(
-		ledgerStorage,
-		interpreter.CBOREncMode,
-		interpreter.CBORDecMode,
-		decodeStorable,
-		decodeTypeInfo,
-	)
 }
 
 func concatRegisterAddressAndKey(
