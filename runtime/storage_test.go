@@ -8120,7 +8120,7 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 				},
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage): {},
 			},
 		},
 		{
@@ -8141,7 +8141,7 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 				// domain storage map is created and cached in the first GetDomainStorageMap().
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage): {},
 			},
 		},
 		// Test cases with storageFormatV2Enabled = true
@@ -8211,16 +8211,16 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 				},
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + AccountStorageKey:                                        {},
-				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier():             {},
-				string(address[:]) + "|" + common.StorageDomainPathPrivate.Identifier():             {},
-				string(address[:]) + "|" + common.StorageDomainPathPublic.Identifier():              {},
-				string(address[:]) + "|" + common.StorageDomainContract.Identifier():                {},
-				string(address[:]) + "|" + common.StorageDomainInbox.Identifier():                   {},
-				string(address[:]) + "|" + common.StorageDomainCapabilityController.Identifier():    {},
-				string(address[:]) + "|" + common.StorageDomainCapabilityControllerTag.Identifier(): {},
-				string(address[:]) + "|" + common.StorageDomainPathCapability.Identifier():          {},
-				string(address[:]) + "|" + common.StorageDomainAccountCapability.Identifier():       {},
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):                      {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage):             {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathPrivate):             {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathPublic):              {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainContract):                {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainInbox):                   {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainCapabilityController):    {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainCapabilityControllerTag): {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathCapability):          {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainAccountCapability):       {},
 			},
 		},
 		{
@@ -8283,16 +8283,16 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 				// domain storage map is created and cached in the first GetDomainStorageMap().
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + AccountStorageKey:                                        {},
-				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier():             {},
-				string(address[:]) + "|" + common.StorageDomainPathPrivate.Identifier():             {},
-				string(address[:]) + "|" + common.StorageDomainPathPublic.Identifier():              {},
-				string(address[:]) + "|" + common.StorageDomainContract.Identifier():                {},
-				string(address[:]) + "|" + common.StorageDomainInbox.Identifier():                   {},
-				string(address[:]) + "|" + common.StorageDomainCapabilityController.Identifier():    {},
-				string(address[:]) + "|" + common.StorageDomainCapabilityControllerTag.Identifier(): {},
-				string(address[:]) + "|" + common.StorageDomainPathCapability.Identifier():          {},
-				string(address[:]) + "|" + common.StorageDomainAccountCapability.Identifier():       {},
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):                      {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage):             {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathPrivate):             {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathPublic):              {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainContract):                {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainInbox):                   {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainCapabilityController):    {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainCapabilityControllerTag): {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathCapability):          {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainAccountCapability):       {},
 			},
 		},
 	}
@@ -8437,7 +8437,7 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 				},
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage): {},
 			},
 		},
 		{
@@ -8460,7 +8460,7 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 				// GetDomainStorageMap(0).
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage): {},
 			},
 		},
 		{
@@ -8488,8 +8488,8 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 				// GetDomainStorageMap(0).
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
-				string(address[:]) + "|" + string([]byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}):  {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage):  {},
+				concatRegisterAddressAndKey(address, []byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
 			},
 		},
 		{
@@ -8517,8 +8517,8 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 				// GetDomainStorageMap(0).
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
-				string(address[:]) + "|" + string([]byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}):  {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage):  {},
+				concatRegisterAddressAndKey(address, []byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
 			},
 		},
 		// Test cases with storageFormatV2Enabled = true
@@ -8562,10 +8562,10 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 				},
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + AccountStorageKey:                            {},
-				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
-				string(address[:]) + "|" + common.StorageDomainPathPrivate.Identifier(): {},
-				string(address[:]) + "|" + common.StorageDomainPathPublic.Identifier():  {},
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):          {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage): {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathPrivate): {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathPublic):  {},
 			},
 		},
 		{
@@ -8606,10 +8606,10 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 				// GetDomainStorageMap().
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + AccountStorageKey:                            {},
-				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
-				string(address[:]) + "|" + common.StorageDomainPathPrivate.Identifier(): {},
-				string(address[:]) + "|" + common.StorageDomainPathPublic.Identifier():  {},
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):          {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage): {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathPrivate): {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathPublic):  {},
 			},
 		},
 		{
@@ -8647,9 +8647,9 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 				// GetDomainStorageMap().
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + AccountStorageKey:                            {},
-				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
-				string(address[:]) + "|" + string([]byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}):  {},
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):           {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage):  {},
+				concatRegisterAddressAndKey(address, []byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
 			},
 		},
 		{
@@ -8687,9 +8687,9 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 				// GetDomainStorageMap().
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + AccountStorageKey:                            {},
-				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
-				string(address[:]) + "|" + string([]byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}):  {},
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):           {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage):  {},
+				concatRegisterAddressAndKey(address, []byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
 			},
 		},
 	}
@@ -8859,8 +8859,8 @@ func TestGetDomainStorageMapRegisterReadsForV2Account(t *testing.T) {
 				// GetDomainStorageMap().
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + AccountStorageKey:                           {},
-				string(address[:]) + "|" + string([]byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):           {},
+				concatRegisterAddressAndKey(address, []byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
 			},
 		},
 		{
@@ -8892,8 +8892,8 @@ func TestGetDomainStorageMapRegisterReadsForV2Account(t *testing.T) {
 				// GetDomainStorageMap().
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + AccountStorageKey:                           {},
-				string(address[:]) + "|" + string([]byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):           {},
+				concatRegisterAddressAndKey(address, []byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
 			},
 		},
 		{
@@ -8925,8 +8925,8 @@ func TestGetDomainStorageMapRegisterReadsForV2Account(t *testing.T) {
 				// GetDomainStorageMap().
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + AccountStorageKey:                           {},
-				string(address[:]) + "|" + string([]byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):           {},
+				concatRegisterAddressAndKey(address, []byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
 			},
 		},
 		{
@@ -8958,8 +8958,8 @@ func TestGetDomainStorageMapRegisterReadsForV2Account(t *testing.T) {
 				// GetDomainStorageMap().
 			},
 			expectedReadsSet: map[string]struct{}{
-				string(address[:]) + "|" + AccountStorageKey:                           {},
-				string(address[:]) + "|" + string([]byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):           {},
+				concatRegisterAddressAndKey(address, []byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
 			},
 		},
 	}
@@ -9174,4 +9174,18 @@ func newSlabStorage(ledger atree.Ledger) *atree.PersistentSlabStorage {
 		decodeStorable,
 		decodeTypeInfo,
 	)
+}
+
+func concatRegisterAddressAndKey(
+	address common.Address,
+	key []byte,
+) string {
+	return string(address[:]) + "|" + string(key)
+}
+
+func concatRegisterAddressAndDomain(
+	address common.Address,
+	domain common.StorageDomain,
+) string {
+	return string(address[:]) + "|" + domain.Identifier()
 }
