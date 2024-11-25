@@ -264,14 +264,9 @@ func (s *Storage) getAccountStorageFormat(
 
 	// Return cached account format (no register reading).
 
-	isCachedV1, isCachedV2 := s.getCachedAccountFormat(address)
-
-	if isCachedV1 {
-		return storageFormatV1
-	}
-
-	if isCachedV2 {
-		return StorageFormatV2
+	cachedFormat, known := s.getCachedAccountFormat(address)
+	if known {
+		return cachedFormat
 	}
 
 	// Check if account is v2 (by reading "stored" register).
