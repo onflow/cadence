@@ -356,14 +356,7 @@ func (s *Storage) isV1Account(address common.Address) (isV1 bool) {
 	// Check if a storage map register exists for any of the domains.
 	// Check the most frequently used domains first, such as storage, public, private.
 	for _, domain := range common.AllStorageDomains {
-		_, domainExists, err := readSlabIndexFromRegister(
-			s.Ledger,
-			address,
-			[]byte(domain.Identifier()),
-		)
-		if err != nil {
-			panic(err)
-		}
+		domainExists := s.hasDomainRegister(address, domain)
 		if domainExists {
 			return true
 		}
