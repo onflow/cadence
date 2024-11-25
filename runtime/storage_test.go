@@ -8096,6 +8096,7 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 		expectedDomainStorageMapIsNil              bool
 		expectedReadsFor1stGetDomainStorageMapCall []ownerKeyPair
 		expectedReadsFor2ndGetDomainStorageMapCall []ownerKeyPair
+		expectedReadsSet                           map[string]struct{}
 	}{
 		// Test cases with storageFormatV2Enabled = false
 		{
@@ -8118,6 +8119,9 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 					key:   []byte(common.StorageDomainPathStorage.Identifier()),
 				},
 			},
+			expectedReadsSet: map[string]struct{}{
+				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
+			},
 		},
 		{
 			name:                          "storageFormatV2Enabled = false, domain storage map does not exist, createIfNotExists = true",
@@ -8135,6 +8139,9 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 			expectedReadsFor2ndGetDomainStorageMapCall: []ownerKeyPair{
 				// No register reads from the second GetDomainStorageMap() because
 				// domain storage map is created and cached in the first GetDomainStorageMap().
+			},
+			expectedReadsSet: map[string]struct{}{
+				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
 			},
 		},
 		// Test cases with storageFormatV2Enabled = true
@@ -8170,6 +8177,10 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 					owner: address[:],
 					key:   []byte(common.StorageDomainPathStorage.Identifier()),
 				},
+			},
+			expectedReadsSet: map[string]struct{}{
+				string(address[:]) + "|" + AccountStorageKey:                            {},
+				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
 			},
 		},
 		{
@@ -8236,6 +8247,18 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 				// No register reads from the second GetDomainStorageMap() because
 				// domain storage map is created and cached in the first GetDomainStorageMap().
 			},
+			expectedReadsSet: map[string]struct{}{
+				string(address[:]) + "|" + AccountStorageKey:                                        {},
+				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier():             {},
+				string(address[:]) + "|" + common.StorageDomainPathPrivate.Identifier():             {},
+				string(address[:]) + "|" + common.StorageDomainPathPublic.Identifier():              {},
+				string(address[:]) + "|" + common.StorageDomainContract.Identifier():                {},
+				string(address[:]) + "|" + common.StorageDomainInbox.Identifier():                   {},
+				string(address[:]) + "|" + common.StorageDomainCapabilityController.Identifier():    {},
+				string(address[:]) + "|" + common.StorageDomainCapabilityControllerTag.Identifier(): {},
+				string(address[:]) + "|" + common.StorageDomainPathCapability.Identifier():          {},
+				string(address[:]) + "|" + common.StorageDomainAccountCapability.Identifier():       {},
+			},
 		},
 	}
 
@@ -8243,6 +8266,7 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 
 			var ledgerReads []ownerKeyPair
+			ledgerReadsSet := make(map[string]struct{})
 
 			// Create empty storage
 			ledger := NewTestLedger(
@@ -8254,6 +8278,7 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 							key:   key,
 						},
 					)
+					ledgerReadsSet[string(owner)+"|"+string(key)] = struct{}{}
 				},
 				nil)
 
@@ -8278,6 +8303,12 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 			domainStorageMap = storage.GetDomainStorageMap(inter, address, tc.domain, tc.createIfNotExists)
 			require.Equal(t, tc.expectedDomainStorageMapIsNil, domainStorageMap == nil)
 			require.Equal(t, tc.expectedReadsFor2ndGetDomainStorageMapCall, ledgerReads)
+
+			// Check underlying ledger reads
+			require.Equal(t, len(ledgerReadsSet), len(tc.expectedReadsSet))
+			for k := range ledgerReadsSet {
+				require.Contains(t, tc.expectedReadsSet, k)
+			}
 		})
 	}
 }
@@ -8346,6 +8377,7 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 		expectedDomainStorageMapIsNil              bool
 		expectedReadsFor1stGetDomainStorageMapCall []ownerKeyPair
 		expectedReadsFor2ndGetDomainStorageMapCall []ownerKeyPair
+		expectedReadsSet                           map[string]struct{}
 	}{
 		// Test cases with storageFormatV2Enabled = false
 		{
@@ -8369,6 +8401,9 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 					key:   []byte(common.StorageDomainPathStorage.Identifier()),
 				},
 			},
+			expectedReadsSet: map[string]struct{}{
+				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
+			},
 		},
 		{
 			name:                          "storageFormatV2Enabled = false, domain storage map does not exist, createIfNotExists = true",
@@ -8388,6 +8423,9 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 				// No register reading in second GetDomainStorageMap() because
 				// domain storage map is created and cached in the first
 				// GetDomainStorageMap(0).
+			},
+			expectedReadsSet: map[string]struct{}{
+				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
 			},
 		},
 		{
@@ -8414,6 +8452,10 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 				// domain storage map is loaded and cached in the first
 				// GetDomainStorageMap(0).
 			},
+			expectedReadsSet: map[string]struct{}{
+				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
+				string(address[:]) + "|" + string([]byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}):  {},
+			},
 		},
 		{
 			name:                          "storageFormatV2Enabled = false, domain storage map exists, createIfNotExists = true",
@@ -8438,6 +8480,10 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 				// No register reading in second GetDomainStorageMap() because
 				// domain storage map is loaded and cached in the first
 				// GetDomainStorageMap(0).
+			},
+			expectedReadsSet: map[string]struct{}{
+				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
+				string(address[:]) + "|" + string([]byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}):  {},
 			},
 		},
 		// Test cases with storageFormatV2Enabled = true
@@ -8471,6 +8517,10 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 					owner: address[:],
 					key:   []byte(common.StorageDomainPathStorage.Identifier()),
 				},
+			},
+			expectedReadsSet: map[string]struct{}{
+				string(address[:]) + "|" + AccountStorageKey:                            {},
+				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
 			},
 		},
 		{
@@ -8515,6 +8565,12 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 				// domain storage map is created and cached in the first
 				// GetDomainStorageMap().
 			},
+			expectedReadsSet: map[string]struct{}{
+				string(address[:]) + "|" + AccountStorageKey:                            {},
+				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
+				string(address[:]) + "|" + common.StorageDomainPathPrivate.Identifier(): {},
+				string(address[:]) + "|" + common.StorageDomainPathPublic.Identifier():  {},
+			},
 		},
 		{
 			name:                          "storageFormatV2Enabled = true, domain storage map exists, createIfNotExists = false",
@@ -8549,6 +8605,11 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 				// No register reading from second GetDomainStorageMap() because
 				// domain storage map is created and cached in the first
 				// GetDomainStorageMap().
+			},
+			expectedReadsSet: map[string]struct{}{
+				string(address[:]) + "|" + AccountStorageKey:                            {},
+				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
+				string(address[:]) + "|" + string([]byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}):  {},
 			},
 		},
 		{
@@ -8585,6 +8646,11 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 				// domain storage map is created and cached in the first
 				// GetDomainStorageMap().
 			},
+			expectedReadsSet: map[string]struct{}{
+				string(address[:]) + "|" + AccountStorageKey:                            {},
+				string(address[:]) + "|" + common.StorageDomainPathStorage.Identifier(): {},
+				string(address[:]) + "|" + string([]byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}):  {},
+			},
 		},
 	}
 
@@ -8594,6 +8660,7 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 			storedValues, storedIndices := tc.getStorageData()
 
 			var ledgerReads []ownerKeyPair
+			ledgerReadsSet := make(map[string]struct{})
 
 			ledger := NewTestLedgerWithData(
 				func(owner, key, _ []byte) {
@@ -8604,6 +8671,7 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 							key:   key,
 						},
 					)
+					ledgerReadsSet[string(owner)+"|"+string(key)] = struct{}{}
 				},
 				nil,
 				storedValues,
@@ -8629,6 +8697,12 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 			domainStorageMap = storage.GetDomainStorageMap(inter, address, tc.domain, tc.createIfNotExists)
 			require.Equal(t, tc.expectedDomainStorageMapIsNil, domainStorageMap == nil)
 			require.Equal(t, tc.expectedReadsFor2ndGetDomainStorageMapCall, ledgerReads)
+
+			// Check underlying ledger reads
+			require.Equal(t, len(ledgerReadsSet), len(tc.expectedReadsSet))
+			for k := range ledgerReadsSet {
+				require.Contains(t, tc.expectedReadsSet, k)
+			}
 		})
 	}
 }
@@ -8714,6 +8788,7 @@ func TestGetDomainStorageMapRegisterReadsForV2Account(t *testing.T) {
 		expectedDomainStorageMapIsNil              bool
 		expectedReadsFor1stGetDomainStorageMapCall []ownerKeyPair
 		expectedReadsFor2ndGetDomainStorageMapCall []ownerKeyPair
+		expectedReadsSet                           map[string]struct{}
 	}{
 		{
 			name:                          "domain storage map does not exist, createIfNotExists = false",
@@ -8742,6 +8817,10 @@ func TestGetDomainStorageMapRegisterReadsForV2Account(t *testing.T) {
 				// No register reading from second GetDomainStorageMap because
 				// account storage map is loaded and cached from first
 				// GetDomainStorageMap().
+			},
+			expectedReadsSet: map[string]struct{}{
+				string(address[:]) + "|" + AccountStorageKey:                           {},
+				string(address[:]) + "|" + string([]byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
 			},
 		},
 		{
@@ -8772,6 +8851,10 @@ func TestGetDomainStorageMapRegisterReadsForV2Account(t *testing.T) {
 				// domain storage map is created and cached in the first
 				// GetDomainStorageMap().
 			},
+			expectedReadsSet: map[string]struct{}{
+				string(address[:]) + "|" + AccountStorageKey:                           {},
+				string(address[:]) + "|" + string([]byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
+			},
 		},
 		{
 			name:                          "domain storage map exists, createIfNotExists = false",
@@ -8800,6 +8883,10 @@ func TestGetDomainStorageMapRegisterReadsForV2Account(t *testing.T) {
 				// No register reading from second GetDomainStorageMap() because
 				// domain storage map is created and cached in the first
 				// GetDomainStorageMap().
+			},
+			expectedReadsSet: map[string]struct{}{
+				string(address[:]) + "|" + AccountStorageKey:                           {},
+				string(address[:]) + "|" + string([]byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
 			},
 		},
 		{
@@ -8830,6 +8917,10 @@ func TestGetDomainStorageMapRegisterReadsForV2Account(t *testing.T) {
 				// domain storage map is created and cached in the first
 				// GetDomainStorageMap().
 			},
+			expectedReadsSet: map[string]struct{}{
+				string(address[:]) + "|" + AccountStorageKey:                           {},
+				string(address[:]) + "|" + string([]byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
+			},
 		},
 	}
 
@@ -8839,6 +8930,7 @@ func TestGetDomainStorageMapRegisterReadsForV2Account(t *testing.T) {
 			storedValues, storedIndices := tc.getStorageData()
 
 			var ledgerReads []ownerKeyPair
+			ledgerReadsSet := make(map[string]struct{})
 
 			ledger := NewTestLedgerWithData(
 				func(owner, key, _ []byte) {
@@ -8849,6 +8941,7 @@ func TestGetDomainStorageMapRegisterReadsForV2Account(t *testing.T) {
 							key:   key,
 						},
 					)
+					ledgerReadsSet[string(owner)+"|"+string(key)] = struct{}{}
 				},
 				nil,
 				storedValues,
@@ -8874,6 +8967,12 @@ func TestGetDomainStorageMapRegisterReadsForV2Account(t *testing.T) {
 			domainStorageMap = storage.GetDomainStorageMap(inter, address, tc.domain, tc.createIfNotExists)
 			require.Equal(t, tc.expectedDomainStorageMapIsNil, domainStorageMap == nil)
 			require.Equal(t, tc.expectedReadsFor2ndGetDomainStorageMapCall, ledgerReads)
+
+			// Check underlying ledger reads
+			require.Equal(t, len(ledgerReadsSet), len(tc.expectedReadsSet))
+			for k := range ledgerReadsSet {
+				require.Contains(t, tc.expectedReadsSet, k)
+			}
 		})
 	}
 }
