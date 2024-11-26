@@ -1139,8 +1139,15 @@ func (c *Compiler) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration
 	c.declareParameters(function, declaration.ParameterList, declareReceiver)
 	c.compileFunctionBlock(declaration.FunctionBlock)
 
+	// Manually emit a return, if there are no explicit return statements.
 	if !declaration.FunctionBlock.HasStatements() {
 		c.emit(opcode.Return)
+	} else {
+		statements := declaration.FunctionBlock.Block.Statements
+		lastStmt := statements[len(statements)-1]
+		if _, isReturn := lastStmt.(*ast.ReturnStatement); !isReturn {
+			c.emit(opcode.Return)
+		}
 	}
 
 	return

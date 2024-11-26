@@ -319,15 +319,40 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	tokenTransferTxChecker := parseAndCheck(b, realFlowTokenTransferTransaction, nil, programs)
 	tokenTransferTxProgram := compile(b, tokenTransferTxChecker, programs)
+	tokenTransferTxVM := vm.NewVM(txLocation(), tokenTransferTxProgram, vmConfig)
 
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		tokenTransferTxVM := vm.NewVM(txLocation(), tokenTransferTxProgram, vmConfig)
 		err = tokenTransferTxVM.ExecuteTransaction(tokenTransferTxArgs, tokenTransferTxAuthorizer)
 		require.NoError(b, err)
 	}
 
 	b.StopTimer()
+
+	// Run validation scripts
+
+	// actual transfer amount = (transfer amount in one tx) * (number of time the tx/benchmark runs)
+	actualTransferAmount := transferAmount * int64(b.N)
+
+	for _, address := range []common.Address{
+		senderAddress,
+		receiverAddress,
+	} {
+		program := compileCode(b, realFlowTokenBalanceScript, nil, programs)
+
+		validationScriptVM := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		addressValue := vm.AddressValue(address)
+		result, err := validationScriptVM.Invoke("main", addressValue)
+		require.NoError(b, err)
+		require.Equal(b, 0, validationScriptVM.StackSize())
+
+		if address == senderAddress {
+			assert.Equal(b, vm.NewIntValue(total-actualTransferAmount), result)
+		} else {
+			assert.Equal(b, vm.NewIntValue(actualTransferAmount), result)
+		}
+	}
 }
