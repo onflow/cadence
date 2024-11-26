@@ -42,6 +42,12 @@ type Config struct {
 	// TODO: These are temporary. Remove once storing/reading is supported for VM values.
 	inter      *interpreter.Interpreter
 	TypeLoader func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType
+
+	// OnRecordTrace is triggered when a trace is recorded
+	OnRecordTrace OnRecordTraceFunc
+	// TracingEnabled determines if tracing is enabled.
+	// Tracing reports certain operations, e.g. composite value transfers
+	TracingEnabled bool
 }
 
 func NewConfig(storage interpreter.Storage) *Config {
@@ -55,6 +61,8 @@ func NewConfig(storage interpreter.Storage) *Config {
 		CapabilityControllerIterations:              make(map[AddressPath]int),
 		MutationDuringCapabilityControllerIteration: false,
 		referencedResourceKindedValues:              ReferencedResourceKindedValues{},
+
+		TracingEnabled: false,
 	}
 }
 

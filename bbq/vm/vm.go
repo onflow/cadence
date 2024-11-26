@@ -19,6 +19,8 @@
 package vm
 
 import (
+	"time"
+
 	"github.com/onflow/atree"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -511,6 +513,18 @@ func opTransfer(vm *VM) {
 	)
 
 	valueType := transferredValue.StaticType(vm.config.MemoryGauge)
+	if vm.config.TracingEnabled {
+		startTime := time.Now()
+
+		defer func() {
+			vm.reportTransferTrace(
+				targetType.String(),
+				valueType.String(),
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	if !IsSubType(valueType, targetType) {
 		panic(errors.NewUnexpectedError("invalid transfer: expected '%s', found '%s'", targetType, valueType))
 	}

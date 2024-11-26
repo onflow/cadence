@@ -1863,6 +1863,18 @@ func (interpreter *Interpreter) transferAndConvert(
 	locationRange LocationRange,
 ) Value {
 
+	if interpreter.SharedState.Config.TracingEnabled {
+		startTime := time.Now()
+
+		defer func() {
+			interpreter.reportTransferTrace(
+				targetType.String(),
+				valueType.String(),
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	transferredValue := value.Transfer(
 		interpreter,
 		locationRange,

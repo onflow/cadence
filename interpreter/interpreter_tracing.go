@@ -349,3 +349,20 @@ func (interpreter *Interpreter) reportCompositeValueRemoveMemberTrace(
 		prepareCompositeValueTraceAttrs(owner, typeID, kind),
 	)
 }
+
+func (interpreter *Interpreter) reportTransferTrace(
+	targetType string,
+	valueType string,
+	duration time.Duration,
+) {
+	config := interpreter.SharedState.Config
+	config.OnRecordTrace(
+		interpreter,
+		tracingTransferPostfix,
+		duration,
+		[]attribute.KeyValue{
+			attribute.String("target type", targetType),
+			attribute.String("value type", valueType),
+		},
+	)
+}
