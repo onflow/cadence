@@ -8156,70 +8156,30 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 					owner: address[:],
 					key:   []byte(AccountStorageKey),
 				},
-				// Read all available domain registers to check if it is a new account
-				// Read returns no value.
+				// Check domain register
 				{
 					owner: address[:],
-					key:   []byte(common.PathDomainStorage.Identifier()),
-				},
-				{
-					owner: address[:],
-					key:   []byte(common.PathDomainPrivate.Identifier()),
-				},
-				{
-					owner: address[:],
-					key:   []byte(common.PathDomainPublic.Identifier()),
-				},
-				{
-					owner: address[:],
-					key:   []byte(common.StorageDomainContract.Identifier()),
-				},
-				{
-					owner: address[:],
-					key:   []byte(common.StorageDomainInbox.Identifier()),
-				},
-				{
-					owner: address[:],
-					key:   []byte(common.StorageDomainCapabilityController.Identifier()),
-				},
-				{
-					owner: address[:],
-					key:   []byte(common.StorageDomainCapabilityControllerTag.Identifier()),
-				},
-				{
-					owner: address[:],
-					key:   []byte(common.StorageDomainPathCapability.Identifier()),
-				},
-				{
-					owner: address[:],
-					key:   []byte(common.StorageDomainAccountCapability.Identifier()),
-				},
-				// Try to read account register to create account storage map
-				{
-					owner: address[:],
-					key:   []byte(AccountStorageKey),
+					key:   []byte(common.StorageDomainPathStorage.Identifier()),
 				},
 			},
 			expectedReadsFor2ndGetDomainStorageMapCall: []ownerKeyPair{
-				// Second GetDomainStorageMap() get cached account format v2 (cached during first GetDomainStorageMap()).
+				// Second GetDomainStorageMap() has the same register reading as the first GetDomainStorageMap()
+				// because account status can't be cached in previous call.
 
-				// Try to read account register to create account storage map
+				// Check if account is v2
 				{
 					owner: address[:],
 					key:   []byte(AccountStorageKey),
 				},
+				// Check domain register
+				{
+					owner: address[:],
+					key:   []byte(common.StorageDomainPathStorage.Identifier()),
+				},
 			},
 			expectedReadsSet: map[string]struct{}{
-				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):                      {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage):             {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainPathPrivate):             {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainPathPublic):              {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainContract):                {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainInbox):                   {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainCapabilityController):    {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainCapabilityControllerTag): {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainPathCapability):          {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainAccountCapability):       {},
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):          {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage): {},
 			},
 		},
 		{
@@ -8233,6 +8193,11 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 				{
 					owner: address[:],
 					key:   []byte(AccountStorageKey),
+				},
+				// Check domain register
+				{
+					owner: address[:],
+					key:   []byte(common.StorageDomainPathStorage.Identifier()),
 				},
 				// Check all domain registers
 				{
@@ -8534,27 +8499,19 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 					owner: address[:],
 					key:   []byte(AccountStorageKey),
 				},
-				// Check all domain registers until existing domain register is read
-				{
-					owner: address[:],
-					key:   []byte(common.PathDomainStorage.Identifier()),
-				},
-				{
-					owner: address[:],
-					key:   []byte(common.PathDomainPrivate.Identifier()),
-				},
-				{
-					owner: address[:],
-					key:   []byte(common.PathDomainPublic.Identifier()),
-				},
-				// Read requested domain register
+				// Check domain register
 				{
 					owner: address[:],
 					key:   []byte(common.StorageDomainPathStorage.Identifier()),
 				},
 			},
 			expectedReadsFor2ndGetDomainStorageMapCall: []ownerKeyPair{
-				// Read requested domain register
+				// Check if account is v2
+				{
+					owner: address[:],
+					key:   []byte(AccountStorageKey),
+				},
+				// Check domain register
 				{
 					owner: address[:],
 					key:   []byte(common.StorageDomainPathStorage.Identifier()),
@@ -8563,8 +8520,6 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 			expectedReadsSet: map[string]struct{}{
 				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):          {},
 				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage): {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainPathPrivate): {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainPathPublic):  {},
 			},
 		},
 		{
@@ -8580,7 +8535,12 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 					owner: address[:],
 					key:   []byte(AccountStorageKey),
 				},
-				// Check all domain registers until existing domain register is read
+				// Check domain register
+				{
+					owner: address[:],
+					key:   []byte(common.StorageDomainPathStorage.Identifier()),
+				},
+				// Check all domain registers until any existing domain is checked
 				{
 					owner: address[:],
 					key:   []byte(common.PathDomainStorage.Identifier()),
@@ -8593,7 +8553,7 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 					owner: address[:],
 					key:   []byte(common.PathDomainPublic.Identifier()),
 				},
-				// Read requested domain register
+				// Check domain register
 				{
 					owner: address[:],
 					key:   []byte(common.StorageDomainPathStorage.Identifier()),

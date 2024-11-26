@@ -255,11 +255,17 @@ func TestRuntimeSharedState(t *testing.T) {
 	test(
 		true,
 		[]ownerKeyPair{
-			// Read account domain register to check if it is a migrated account
+			// Read account register to check if it is a migrated account
 			// Read returns no value.
 			{
 				owner: signerAddress[:],
 				key:   []byte(AccountStorageKey),
+			},
+			// Read contract domain register.
+			// Read returns no value.
+			{
+				owner: signerAddress[:],
+				key:   []byte(common.StorageDomainContract.Identifier()),
 			},
 			// Read all available domain registers to check if it is a new account
 			// Read returns no value.
