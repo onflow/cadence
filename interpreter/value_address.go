@@ -101,8 +101,8 @@ func (AddressValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (AddressValue) StaticType(interpreter *Interpreter) StaticType {
-	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeAddress)
+func (AddressValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
+	return NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypeAddress)
 }
 
 func (AddressValue) IsImportable(_ *Interpreter, _ LocationRange) bool {

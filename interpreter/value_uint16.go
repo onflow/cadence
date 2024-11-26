@@ -67,8 +67,8 @@ func (UInt16Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (UInt16Value) StaticType(interpreter *Interpreter) StaticType {
-	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUInt16)
+func (UInt16Value) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
+	return NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypeUInt16)
 }
 
 func (UInt16Value) IsImportable(_ *Interpreter, _ LocationRange) bool {

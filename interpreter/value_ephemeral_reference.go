@@ -111,11 +111,11 @@ func (v *EphemeralReferenceValue) MeteredString(interpreter *Interpreter, seenRe
 	return v.Value.MeteredString(interpreter, seenReferences, locationRange)
 }
 
-func (v *EphemeralReferenceValue) StaticType(inter *Interpreter) StaticType {
+func (v *EphemeralReferenceValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
 	return NewReferenceStaticType(
-		inter,
+		staticTypeGetter,
 		v.Authorization,
-		v.Value.StaticType(inter),
+		v.Value.StaticType(staticTypeGetter),
 	)
 }
 

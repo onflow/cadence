@@ -96,7 +96,7 @@ func (v *AccountCapabilityControllerValue) Walk(_ *Interpreter, walkChild func(V
 	walkChild(v.CapabilityID)
 }
 
-func (v *AccountCapabilityControllerValue) StaticType(_ *Interpreter) StaticType {
+func (v *AccountCapabilityControllerValue) StaticType(_ StaticTypeGetter) StaticType {
 	return PrimitiveStaticTypeAccountCapabilityController
 }
 

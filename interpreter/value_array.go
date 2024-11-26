@@ -324,7 +324,7 @@ func (v *ArrayValue) Walk(
 	)
 }
 
-func (v *ArrayValue) StaticType(_ *Interpreter) StaticType {
+func (v *ArrayValue) StaticType(_ StaticTypeGetter) StaticType {
 	// TODO meter
 	return v.Type
 }
@@ -1538,10 +1538,10 @@ func (v *ArrayValue) GetOwner() common.Address {
 	return common.Address(v.StorageAddress())
 }
 
-func (v *ArrayValue) SemaType(interpreter *Interpreter) sema.ArrayType {
+func (v *ArrayValue) SemaType(typeConverter TypeConverter) sema.ArrayType {
 	if v.semaType == nil {
 		// this function will panic already if this conversion fails
-		v.semaType, _ = interpreter.MustConvertStaticToSemaType(v.Type).(sema.ArrayType)
+		v.semaType, _ = typeConverter.MustConvertStaticToSemaType(v.Type).(sema.ArrayType)
 	}
 	return v.semaType
 }

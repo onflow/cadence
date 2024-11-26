@@ -76,8 +76,8 @@ func (Word64Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (Word64Value) StaticType(interpreter *Interpreter) StaticType {
-	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeWord64)
+func (Word64Value) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
+	return NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypeWord64)
 }
 
 func (Word64Value) IsImportable(_ *Interpreter, _ LocationRange) bool {

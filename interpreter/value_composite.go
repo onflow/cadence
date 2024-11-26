@@ -264,12 +264,12 @@ func (v *CompositeValue) Walk(interpreter *Interpreter, walkChild func(Value), l
 	}, locationRange)
 }
 
-func (v *CompositeValue) StaticType(interpreter *Interpreter) StaticType {
+func (v *CompositeValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
 	if v.staticType == nil {
 		// NOTE: Instead of using NewCompositeStaticType, which always generates the type ID,
 		// use the TypeID accessor, which may return an already computed type ID
 		v.staticType = NewCompositeStaticType(
-			interpreter,
+			staticTypeGetter,
 			v.Location,
 			v.QualifiedIdentifier,
 			v.TypeID(),

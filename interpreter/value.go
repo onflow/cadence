@@ -94,7 +94,7 @@ type Value interface {
 	isValue()
 	Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange)
 	Walk(interpreter *Interpreter, walkChild func(Value), locationRange LocationRange)
-	StaticType(interpreter *Interpreter) StaticType
+	StaticType(staticTypeGetter StaticTypeGetter) StaticType
 	// ConformsToStaticType returns true if the value (i.e. its dynamic type)
 	// conforms to its own static type.
 	// Non-container values trivially always conform to their own static type.

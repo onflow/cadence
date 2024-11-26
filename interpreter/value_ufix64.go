@@ -86,8 +86,8 @@ func (UFix64Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (UFix64Value) StaticType(interpreter *Interpreter) StaticType {
-	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUFix64)
+func (UFix64Value) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
+	return NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypeUFix64)
 }
 
 func (UFix64Value) IsImportable(_ *Interpreter, _ LocationRange) bool {

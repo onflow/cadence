@@ -67,8 +67,8 @@ func (Word8Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (Word8Value) StaticType(interpreter *Interpreter) StaticType {
-	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeWord8)
+func (Word8Value) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
+	return NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypeWord8)
 }
 
 func (Word8Value) IsImportable(_ *Interpreter, _ LocationRange) bool {

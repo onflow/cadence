@@ -441,7 +441,7 @@ func (v *DictionaryValue) Walk(interpreter *Interpreter, walkChild func(Value), 
 	)
 }
 
-func (v *DictionaryValue) StaticType(_ *Interpreter) StaticType {
+func (v *DictionaryValue) StaticType(_ StaticTypeGetter) StaticType {
 	// TODO meter
 	return v.Type
 }

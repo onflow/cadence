@@ -69,9 +69,9 @@ func (v *PathCapabilityValue) Walk(_ *Interpreter, walkChild func(Value), _ Loca
 	walkChild(v.Path)
 }
 
-func (v *PathCapabilityValue) StaticType(inter *Interpreter) StaticType {
+func (v *PathCapabilityValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
 	return NewCapabilityStaticType(
-		inter,
+		staticTypeGetter,
 		v.BorrowType,
 	)
 }

@@ -65,14 +65,14 @@ func (PathValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (v PathValue) StaticType(interpreter *Interpreter) StaticType {
+func (v PathValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
 	switch v.Domain {
 	case common.PathDomainStorage:
-		return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeStoragePath)
+		return NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypeStoragePath)
 	case common.PathDomainPublic:
-		return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypePublicPath)
+		return NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypePublicPath)
 	case common.PathDomainPrivate:
-		return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypePrivatePath)
+		return NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypePrivatePath)
 	default:
 		panic(errors.NewUnreachableError())
 	}
