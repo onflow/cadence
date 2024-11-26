@@ -514,16 +514,24 @@ func (s *Storage) commit(inter *interpreter.Interpreter, commitContractUpdates b
 	}
 }
 
-func (s *Storage) ScheduleV2Migration(address common.Address) {
+func (s *Storage) ScheduleV2Migration(address common.Address) bool {
+	if !s.Config.StorageFormatV2Enabled {
+		return false
+	}
 	s.scheduledV2Migrations = append(s.scheduledV2Migrations, address)
+	return true
 }
 
-func (s *Storage) ScheduleV2MigrationForModifiedAccounts() {
+func (s *Storage) ScheduleV2MigrationForModifiedAccounts() bool {
 	for address, isV1 := range s.cachedV1Accounts { //nolint:maprange
 		if isV1 && s.PersistentSlabStorage.HasUnsavedChanges(atree.Address(address)) {
-			s.ScheduleV2Migration(address)
+			if !s.ScheduleV2Migration(address) {
+				return false
+			}
 		}
 	}
+
+	return true
 }
 
 func (s *Storage) migrateV1AccountsToV2(inter *interpreter.Interpreter) error {
