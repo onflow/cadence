@@ -1,8 +1,8 @@
 description: Green Goo Dao flow-utils
 maintainers:
   - bastian.mueller@flowfoundation.org
-url: https://github.com/turbolent/flow-utils.git
-branch: improvements
+url: https://github.com/green-goo-dao/flow-utils.git
+branch: main
 cadence_tests:
 - path: .
   command: npm i && ./run-tests.sh

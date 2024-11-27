@@ -12509,4 +12509,53 @@ func TestInterpretStringTemplates(t *testing.T) {
 			inter.Globals.Get("x").GetValue(inter),
 		)
 	})
+
+	t.Run("func", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let add = fun(): Int {
+				return 2+2
+			}
+			let x: String = "\(add())"
+		`)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("4"),
+			inter.Globals.Get("x").GetValue(inter),
+		)
+	})
+
+	t.Run("ternary", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let z = false
+			let x: String = "\(z ? "foo" : "bar" )"
+		`)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("bar"),
+			inter.Globals.Get("x").GetValue(inter),
+		)
+	})
+
+	t.Run("nested", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let x: String = "\(2*(4-2) + 1 == 5)"
+		`)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("true"),
+			inter.Globals.Get("x").GetValue(inter),
+		)
+	})
 }
