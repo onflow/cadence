@@ -883,6 +883,17 @@ func (vm *VM) lookupFunction(location common.Location, name string) FunctionValu
 		//   Link only the requested function.
 		program := vm.config.ImportHandler(location)
 
+		if vm.config.TracingEnabled {
+			startTime := time.Now()
+
+			defer func() {
+				vm.reportImportTrace(
+					location.String(),
+					time.Since(startTime),
+				)
+			}()
+		}
+
 		linkedGlobals = LinkGlobals(
 			location,
 			program,

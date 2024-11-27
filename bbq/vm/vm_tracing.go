@@ -74,7 +74,7 @@ func (vm *VM) reportFunctionTrace(
 		tracingFunctionPrefix+funcName,
 		duration,
 		[]attribute.KeyValue{
-			attribute.Int("count", argCount),
+			attribute.Int("arg count", argCount),
 		},
 	)
 }
@@ -167,16 +167,15 @@ func (vm *VM) reportCompositeValueDestroyTrace(
 	)
 }
 
-func (vm *VM) reportArrayValueTransferTrace(
-	typeInfo string,
-	count int,
+func (vm *VM) reportImportTrace(
+	path string,
 	duration time.Duration,
 ) {
 	config := vm.config
 	config.OnRecordTrace(
 		vm,
-		tracingArrayPrefix+tracingTransferPostfix,
+		tracingImportPrefix+path,
 		duration,
-		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
+		nil,
 	)
 }
