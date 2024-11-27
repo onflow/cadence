@@ -381,6 +381,19 @@ func opInvoke(vm *VM) {
 	case FunctionValue:
 		parameterCount := int(value.Function.ParameterCount)
 		arguments := vm.stack[stackHeight-parameterCount:]
+
+		if vm.config.TracingEnabled {
+			startTime := time.Now()
+
+			defer func() {
+				vm.reportInvokeTrace(
+					value.Function.Name,
+					int(parameterCount),
+					time.Since(startTime),
+				)
+			}()
+		}
+
 		vm.pushCallFrame(value, arguments)
 		vm.dropN(parameterCount)
 	case NativeFunctionValue:
@@ -393,6 +406,18 @@ func opInvoke(vm *VM) {
 		}
 
 		arguments := vm.stack[stackHeight-parameterCount:]
+
+		if vm.config.TracingEnabled {
+			startTime := time.Now()
+
+			defer func() {
+				vm.reportInvokeTrace(
+					value.Name,
+					int(parameterCount),
+					time.Since(startTime),
+				)
+			}()
+		}
 
 		result := value.Function(vm.config, typeArguments, arguments...)
 		vm.dropN(parameterCount)
@@ -407,6 +432,18 @@ func opInvokeDynamic(vm *VM) {
 	funcName := callframe.getString()
 	typeArgCount := callframe.getUint16()
 	argsCount := callframe.getUint16()
+
+	if vm.config.TracingEnabled {
+		startTime := time.Now()
+
+		defer func() {
+			vm.reportInvokeTrace(
+				funcName,
+				int(argsCount),
+				time.Since(startTime),
+			)
+		}()
+	}
 
 	stackHeight := len(vm.stack)
 	receiver := vm.stack[stackHeight-int(argsCount)-1]
@@ -462,6 +499,18 @@ func opNew(vm *VM) {
 	// decode location
 	staticType := vm.loadType()
 
+	if vm.config.TracingEnabled {
+		startTime := time.Now()
+
+		defer func() {
+			vm.reportCompositeConstructTrace(
+				staticType.String(),
+				compositeKind.String(),
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	// TODO: Support inclusive-range type
 	compositeStaticType := staticType.(*interpreter.CompositeStaticType)
 
@@ -482,12 +531,35 @@ func opSetField(vm *VM) {
 
 	fieldValue := vm.pop()
 
+	if vm.config.TracingEnabled {
+		startTime := time.Now()
+
+		defer func() {
+			vm.reportSetMemberTrace(
+				fieldNameStr,
+				fieldValue.String(),
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	structValue.SetMember(vm.config, fieldNameStr, fieldValue)
 }
 
 func opGetField(vm *VM) {
 	fieldName := vm.pop().(StringValue)
 	fieldNameStr := string(fieldName.Str)
+
+	if vm.config.TracingEnabled {
+		startTime := time.Now()
+
+		defer func() {
+			vm.reportGetMemberTrace(
+				fieldNameStr,
+				time.Since(startTime),
+			)
+		}()
+	}
 
 	memberAccessibleValue := vm.pop().(MemberAccessibleValue)
 
@@ -534,6 +606,22 @@ func opTransfer(vm *VM) {
 
 func opDestroy(vm *VM) {
 	value := vm.pop().(*CompositeValue)
+
+	if vm.config.TracingEnabled {
+		startTime := time.Now()
+
+		typeID := string(value.TypeID())
+		kind := value.Kind.String()
+
+		defer func() {
+			vm.reportCompositeValueDestroyTrace(
+				typeID,
+				kind,
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	value.Destroy(vm.config)
 }
 
@@ -587,6 +675,18 @@ func opNewArray(vm *VM) {
 	typ := vm.loadType().(interpreter.ArrayStaticType)
 	size := int(vm.callFrame.getUint16())
 	isResourceKinded := vm.callFrame.getBool()
+
+	if vm.config.TracingEnabled {
+		startTime := time.Now()
+
+		defer func() {
+			vm.reportArrayConstructTrace(
+				typ.String(),
+				size,
+				time.Since(startTime),
+			)
+		}()
+	}
 
 	elements := make([]Value, size)
 

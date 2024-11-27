@@ -33,12 +33,23 @@ import (
 )
 
 func TestTrace(t *testing.T) {
-	t.Run("simple transfer trace", func(t *testing.T) {
+	t.Run("simple trace test", func(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
+			struct Foo {
+				var id : Int
+
+				init(_ id: Int) {
+					self.id = id
+				}
+			}
+
             fun test() {
                 var i = 0
+				var c = [1,2,3]
+				var s = Foo(0)
+				s.id = s.id + 2
             }
         `)
 		require.NoError(t, err)
