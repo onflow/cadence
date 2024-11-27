@@ -32,10 +32,10 @@ func BenchmarkRecursionFib(b *testing.B) {
 	vmConfig := &vm.Config{}
 	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
+	expected := vm.NewIntValue(377)
+
 	b.ReportAllocs()
 	b.ResetTimer()
-
-	expected := vm.NewIntValue(377)
 
 	for i := 0; i < b.N; i++ {
 

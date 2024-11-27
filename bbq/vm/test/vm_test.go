@@ -2041,5 +2041,20 @@ func TestResource(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 	})
+}
 
+func fib(n int) int {
+	if n < 2 {
+		return n
+	}
+	return fib(n-1) + fib(n-2)
+}
+
+func BenchmarkGoFib(b *testing.B) {
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		fib(46)
+	}
 }
