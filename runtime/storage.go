@@ -40,12 +40,12 @@ type StorageConfig struct {
 	StorageFormatV2Enabled bool
 }
 
-type storageFormat uint8
+type StorageFormat uint8
 
 const (
-	storageFormatUnknown storageFormat = iota
-	storageFormatV1
-	storageFormatV2
+	StorageFormatUnknown StorageFormat = iota
+	StorageFormatV1
+	StorageFormatV2
 )
 
 type Storage struct {
@@ -292,7 +292,7 @@ func (s *Storage) getDomainStorageMapForV2Account(
 }
 
 func (s *Storage) getDomainStorageMap(
-	format storageFormat,
+	format StorageFormat,
 	inter *interpreter.Interpreter,
 	address common.Address,
 	domain common.StorageDomain,
@@ -300,14 +300,14 @@ func (s *Storage) getDomainStorageMap(
 ) *interpreter.DomainStorageMap {
 	switch format {
 
-	case storageFormatV1:
+	case StorageFormatV1:
 		return s.getDomainStorageMapForV1Account(
 			address,
 			domain,
 			createIfNotExists,
 		)
 
-	case storageFormatV2:
+	case StorageFormatV2:
 		return s.getDomainStorageMapForV2Account(
 			inter,
 			address,
@@ -320,15 +320,15 @@ func (s *Storage) getDomainStorageMap(
 	}
 }
 
-func (s *Storage) getCachedAccountFormat(address common.Address) (format storageFormat, known bool) {
+func (s *Storage) getCachedAccountFormat(address common.Address) (format StorageFormat, known bool) {
 	isV1, cached := s.cachedV1Accounts[address]
 	if !cached {
-		return storageFormatUnknown, false
+		return StorageFormatUnknown, false
 	}
 	if isV1 {
-		return storageFormatV1, true
+		return StorageFormatV1, true
 	} else {
-		return storageFormatV2, true
+		return StorageFormatV2, true
 	}
 }
 
@@ -706,6 +706,37 @@ func (s *Storage) CheckHealth() error {
 	}
 
 	return nil
+}
+
+// AccountStorageFormat returns either StorageFormatV1 or StorageFormatV2 for existing accounts,
+// and StorageFormatUnknown for non-existing accounts.
+func (s *Storage) AccountStorageFormat(address common.Address) (format StorageFormat) {
+	cachedFormat, known := s.getCachedAccountFormat(address)
+	if known {
+		return cachedFormat
+	}
+
+	defer func() {
+		// Cache account fomat
+		switch format {
+		case StorageFormatV1:
+			s.cacheIsV1Account(address, true)
+		case StorageFormatV2:
+			s.cacheIsV1Account(address, false)
+		}
+	}()
+
+	if s.Config.StorageFormatV2Enabled {
+		if s.isV2Account(address) {
+			return StorageFormatV2
+		}
+	}
+
+	if s.isV1Account(address) {
+		return StorageFormatV1
+	}
+
+	return StorageFormatUnknown
 }
 
 type UnreferencedRootSlabsError struct {
