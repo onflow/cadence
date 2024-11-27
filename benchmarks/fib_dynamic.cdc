@@ -17,5 +17,5 @@ fun fib(_ n: Int): Int {
 
 access(all)
 fun main() {
-    assert(fib(14) == 377)
+    assert(fib(23) == 28657)
 }
