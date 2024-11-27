@@ -29,7 +29,6 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/test_utils/common_utils"
-	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func setupInterpreterWithTracingCallBack(
@@ -166,39 +165,5 @@ func TestInterpreterTracing(t *testing.T) {
 		require.Equal(t, len(traceOps), 8)
 		require.Equal(t, traceOps[6], "composite.transfer")
 		require.Equal(t, traceOps[7], "array.construct")
-	})
-
-	// this is a mirror of the test of the same name in vm/test/trace_test.go
-	t.Run("simple transfer trace", func(t *testing.T) {
-		t.Parallel()
-
-		checker, err := ParseAndCheck(t, `
-            fun test() {
-                var i = 0
-            }
-        `)
-		require.NoError(t, err)
-
-		storage := newUnmeteredInMemoryStorage()
-		inter, err := interpreter.NewInterpreter(
-			interpreter.ProgramFromChecker(checker),
-			TestLocation,
-			&interpreter.Config{
-				OnRecordTrace: func(inter *interpreter.Interpreter,
-					operationName string,
-					duration time.Duration,
-					attrs []attribute.KeyValue) {
-					fmt.Println("======   LOG | Operation: ", operationName, " Time: ", duration, " Attribute", attrs, "   =======")
-				},
-				Storage:        storage,
-				TracingEnabled: true,
-			},
-		)
-		require.NoError(t, err)
-
-		err = inter.Interpret()
-		require.NoError(t, err)
-
-		inter.Invoke("test")
 	})
 }

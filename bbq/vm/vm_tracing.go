@@ -20,7 +20,6 @@ const (
 	// common
 	tracingFunctionPrefix = "function."
 	tracingImportPrefix   = "import."
-	tracingInvokePrefix   = "invoke."
 
 	// type prefixes
 	tracingArrayPrefix      = "array."
@@ -40,6 +39,13 @@ const (
 	tracingRemoveMemberPrefix = "removeMember."
 )
 
+func prepareArrayAndMapValueTraceAttrs(typeInfo string, count int) []attribute.KeyValue {
+	return []attribute.KeyValue{
+		attribute.Int("count", count),
+		attribute.String("type", typeInfo),
+	}
+}
+
 func (vm *VM) reportTransferTrace(
 	targetType string,
 	valueType string,
@@ -51,13 +57,13 @@ func (vm *VM) reportTransferTrace(
 		tracingTransferPostfix,
 		duration,
 		[]attribute.KeyValue{
-			attribute.String("Target type", targetType),
-			attribute.String("Value type", valueType),
+			attribute.String("target type", targetType),
+			attribute.String("value type", valueType),
 		},
 	)
 }
 
-func (vm *VM) reportInvokeTrace(
+func (vm *VM) reportFunctionTrace(
 	funcName string,
 	argCount int,
 	duration time.Duration,
@@ -65,18 +71,17 @@ func (vm *VM) reportInvokeTrace(
 	config := vm.config
 	config.OnRecordTrace(
 		vm,
-		tracingInvokePrefix,
+		tracingFunctionPrefix+funcName,
 		duration,
 		[]attribute.KeyValue{
-			attribute.String("Function name", funcName),
-			attribute.Int("Arg count", argCount),
+			attribute.Int("count", argCount),
 		},
 	)
 }
 
-func (vm *VM) reportArrayConstructTrace(
-	elementType string,
-	size int,
+func (vm *VM) reportArrayValueConstructTrace(
+	typeInfo string,
+	count int,
 	duration time.Duration,
 ) {
 	config := vm.config
@@ -84,14 +89,11 @@ func (vm *VM) reportArrayConstructTrace(
 		vm,
 		tracingArrayPrefix+tracingConstructPostfix,
 		duration,
-		[]attribute.KeyValue{
-			attribute.String("Element type", elementType),
-			attribute.Int("Size", size),
-		},
+		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
 	)
 }
 
-func (vm *VM) reportCompositeConstructTrace(
+func (vm *VM) reportCompositeValueConstructTrace(
 	compositeType string,
 	compositeKind string,
 	duration time.Duration,
@@ -102,31 +104,37 @@ func (vm *VM) reportCompositeConstructTrace(
 		tracingCompositePrefix+tracingConstructPostfix,
 		duration,
 		[]attribute.KeyValue{
-			attribute.String("Composite Type", compositeType),
-			attribute.String("Composite Kind", compositeKind),
+			attribute.String("type", compositeType),
+			attribute.String("kind", compositeKind),
 		},
 	)
 }
 
-func (vm *VM) reportSetMemberTrace(
-	fieldName string,
-	fieldValue string,
+func (vm *VM) reportCompositeValueSetMemberTrace(
+	typeID string,
+	kind string,
+	name string,
+	value string,
 	duration time.Duration,
 ) {
 	config := vm.config
 	config.OnRecordTrace(
 		vm,
-		tracingSetMemberPrefix,
+		tracingCompositePrefix+tracingSetMemberPrefix+name,
 		duration,
 		[]attribute.KeyValue{
-			attribute.String("Field name", fieldName),
-			attribute.String("Field value", fieldValue),
+			attribute.String("typeID", typeID),
+			attribute.String("kind", kind),
+			attribute.String("name", name),
+			attribute.String("value", value),
 		},
 	)
 }
 
-func (vm *VM) reportGetMemberTrace(
-	fieldName string,
+func (vm *VM) reportCompositeValueGetMemberTrace(
+	typeID string,
+	kind string,
+	name string,
 	duration time.Duration,
 ) {
 	config := vm.config
@@ -135,7 +143,9 @@ func (vm *VM) reportGetMemberTrace(
 		tracingGetMemberPrefix,
 		duration,
 		[]attribute.KeyValue{
-			attribute.String("Field name", fieldName),
+			attribute.String("typeID", typeID),
+			attribute.String("kind", kind),
+			attribute.String("name", name),
 		},
 	)
 }
@@ -151,8 +161,22 @@ func (vm *VM) reportCompositeValueDestroyTrace(
 		tracingCompositePrefix+tracingDestroyPostfix,
 		duration,
 		[]attribute.KeyValue{
-			attribute.String("TypeID", typeID),
-			attribute.String("Kind", kind),
+			attribute.String("typeID", typeID),
+			attribute.String("kind", kind),
 		},
+	)
+}
+
+func (vm *VM) reportArrayValueTransferTrace(
+	typeInfo string,
+	count int,
+	duration time.Duration,
+) {
+	config := vm.config
+	config.OnRecordTrace(
+		vm,
+		tracingArrayPrefix+tracingTransferPostfix,
+		duration,
+		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
 	)
 }

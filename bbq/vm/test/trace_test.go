@@ -19,24 +19,26 @@
 package test
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 
+	"github.com/onflow/cadence/interpreter"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 
 	"github.com/onflow/cadence/bbq/compiler"
 	"github.com/onflow/cadence/bbq/vm"
 )
 
+// compares the traces between vm and interpreter
 func TestTrace(t *testing.T) {
 	t.Run("simple trace test", func(t *testing.T) {
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
+		code := `
 			struct Foo {
 				var id : Int
 
@@ -51,7 +53,9 @@ func TestTrace(t *testing.T) {
 				var s = Foo(0)
 				s.id = s.id + 2
             }
-        `)
+        `
+
+		checker, err := ParseAndCheck(t, code)
 		require.NoError(t, err)
 
 		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
@@ -59,10 +63,12 @@ func TestTrace(t *testing.T) {
 
 		printProgram("", program)
 
+		var vmLogs []string
+
 		vmConfig := &vm.Config{
 			TracingEnabled: true,
 			OnRecordTrace: func(vm *vm.VM, operationName string, duration time.Duration, attrs []attribute.KeyValue) {
-				fmt.Println("======   LOG | Operation: ", operationName, " Time: ", duration, " Attribute", attrs, "   =======")
+				vmLogs = append(vmLogs, operationName)
 			},
 		}
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
@@ -70,5 +76,32 @@ func TestTrace(t *testing.T) {
 		_, err = vmInstance.Invoke("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
+		require.NoError(t, err)
+
+		var interLogs []string
+		storage := interpreter.NewInMemoryStorage(nil)
+		inter, err := interpreter.NewInterpreter(
+			interpreter.ProgramFromChecker(checker),
+			TestLocation,
+			&interpreter.Config{
+				OnRecordTrace: func(inter *interpreter.Interpreter,
+					operationName string,
+					duration time.Duration,
+					attrs []attribute.KeyValue) {
+					interLogs = append(interLogs, operationName)
+				},
+				Storage:        storage,
+				TracingEnabled: true,
+			},
+		)
+		require.NoError(t, err)
+
+		err = inter.Interpret()
+		require.NoError(t, err)
+
+		inter.Invoke("test")
+
+		// compare traces
+		AssertEqualWithDiff(t, vmLogs, interLogs)
 	})
 }

@@ -386,7 +386,7 @@ func opInvoke(vm *VM) {
 			startTime := time.Now()
 
 			defer func() {
-				vm.reportInvokeTrace(
+				vm.reportFunctionTrace(
 					value.Function.Name,
 					int(parameterCount),
 					time.Since(startTime),
@@ -411,7 +411,7 @@ func opInvoke(vm *VM) {
 			startTime := time.Now()
 
 			defer func() {
-				vm.reportInvokeTrace(
+				vm.reportFunctionTrace(
 					value.Name,
 					int(parameterCount),
 					time.Since(startTime),
@@ -437,7 +437,7 @@ func opInvokeDynamic(vm *VM) {
 		startTime := time.Now()
 
 		defer func() {
-			vm.reportInvokeTrace(
+			vm.reportFunctionTrace(
 				funcName,
 				int(argsCount),
 				time.Since(startTime),
@@ -503,7 +503,7 @@ func opNew(vm *VM) {
 		startTime := time.Now()
 
 		defer func() {
-			vm.reportCompositeConstructTrace(
+			vm.reportCompositeValueConstructTrace(
 				staticType.String(),
 				compositeKind.String(),
 				time.Since(startTime),
@@ -527,20 +527,26 @@ func opSetField(vm *VM) {
 	fieldNameStr := string(fieldName.Str)
 
 	// TODO: support all container types
-	structValue := vm.pop().(MemberAccessibleValue)
+	value := vm.pop()
+	structValue := value.(MemberAccessibleValue)
 
 	fieldValue := vm.pop()
 
 	if vm.config.TracingEnabled {
-		startTime := time.Now()
+		switch value := value.(type) {
+		case *CompositeValue:
+			startTime := time.Now()
 
-		defer func() {
-			vm.reportSetMemberTrace(
-				fieldNameStr,
-				fieldValue.String(),
-				time.Since(startTime),
-			)
-		}()
+			defer func() {
+				vm.reportCompositeValueSetMemberTrace(
+					string(value.TypeID()),
+					value.Kind.String(),
+					fieldNameStr,
+					fieldValue.String(),
+					time.Since(startTime),
+				)
+			}()
+		}
 	}
 
 	structValue.SetMember(vm.config, fieldNameStr, fieldValue)
@@ -550,18 +556,24 @@ func opGetField(vm *VM) {
 	fieldName := vm.pop().(StringValue)
 	fieldNameStr := string(fieldName.Str)
 
+	value := vm.pop()
+	memberAccessibleValue := value.(MemberAccessibleValue)
+
 	if vm.config.TracingEnabled {
-		startTime := time.Now()
+		switch value := value.(type) {
+		case *CompositeValue:
+			startTime := time.Now()
 
-		defer func() {
-			vm.reportGetMemberTrace(
-				fieldNameStr,
-				time.Since(startTime),
-			)
-		}()
+			defer func() {
+				vm.reportCompositeValueGetMemberTrace(
+					string(value.TypeID()),
+					value.Kind.String(),
+					fieldNameStr,
+					time.Since(startTime),
+				)
+			}()
+		}
 	}
-
-	memberAccessibleValue := vm.pop().(MemberAccessibleValue)
 
 	fieldValue := memberAccessibleValue.GetMember(vm.config, fieldNameStr)
 	if fieldValue == nil {
@@ -680,7 +692,7 @@ func opNewArray(vm *VM) {
 		startTime := time.Now()
 
 		defer func() {
-			vm.reportArrayConstructTrace(
+			vm.reportArrayValueConstructTrace(
 				typ.String(),
 				size,
 				time.Since(startTime),
