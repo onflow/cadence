@@ -36,12 +36,6 @@ func TestLargeStringAtreeValueInSeparateSlab(t *testing.T) {
 
 	storage := NewInMemoryStorage(nil)
 
-	storageMap := storage.GetStorageMap(
-		common.MustBytesToAddress([]byte{0x1}),
-		common.PathDomainStorage.StorageDomain(),
-		true,
-	)
-
 	inter, err := NewInterpreter(
 		nil,
 		common.StringLocation("test"),
@@ -50,6 +44,13 @@ func TestLargeStringAtreeValueInSeparateSlab(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
+
+	storageMap := storage.GetDomainStorageMap(
+		inter,
+		common.MustBytesToAddress([]byte{0x1}),
+		common.PathDomainStorage.StorageDomain(),
+		true,
+	)
 
 	// Generate a large key to force the string to get stored in a separate slab
 	keyValue := NewStringAtreeValue(nil, strings.Repeat("x", 10_000))

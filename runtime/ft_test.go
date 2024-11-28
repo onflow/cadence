@@ -1083,7 +1083,8 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		contractsAddress,
 	)
 
-	contractStorage := storage.GetStorageMap(
+	contractStorage := storage.GetDomainStorageMap(
+		inter,
 		contractsAddress,
 		common.StorageDomainContract,
 		true,
@@ -1118,7 +1119,8 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		userAddress,
 	)
 
-	userStorage := storage.GetStorageMap(
+	userStorage := storage.GetDomainStorageMap(
+		inter,
 		userAddress,
 		common.PathDomainStorage.StorageDomain(),
 		true,

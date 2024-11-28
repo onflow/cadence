@@ -7,7 +7,7 @@ require (
 	github.com/onflow/flow-core-contracts/lib/go/contracts v1.4.0
 	github.com/onflow/flow-go v0.38.0-preview.0.0.20241018215103-774056466e36
 	github.com/rs/zerolog v1.29.0
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 )
 
 require (
@@ -43,7 +43,7 @@ require (
 	github.com/multiformats/go-multibase v0.2.0 // indirect
 	github.com/multiformats/go-multihash v0.2.3 // indirect
 	github.com/multiformats/go-varint v0.0.7 // indirect
-	github.com/onflow/atree v0.8.0 // indirect
+	github.com/onflow/atree v0.8.1 // indirect
 	github.com/onflow/crypto v0.25.2 // indirect
 	github.com/onflow/flow-core-contracts/lib/go/templates v1.3.3-0.20241017220455-79fdc6c8ba53 // indirect
 	github.com/onflow/flow-ft/lib/go/contracts v1.0.1 // indirect
@@ -73,7 +73,7 @@ require (
 	github.com/vmihailenco/msgpack/v4 v4.3.11 // indirect
 	github.com/vmihailenco/tagparser v0.1.1 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	github.com/zeebo/blake3 v0.2.3 // indirect
+	github.com/zeebo/blake3 v0.2.4 // indirect
 	go.opentelemetry.io/otel v1.24.0 // indirect
 	golang.org/x/crypto v0.28.0 // indirect
 	golang.org/x/exp v0.0.0-20240119083558-1b970713d09a // indirect
