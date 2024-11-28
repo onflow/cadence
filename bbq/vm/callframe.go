@@ -23,35 +23,35 @@ import (
 )
 
 type callFrame struct {
-	parent     *callFrame
-	executable *ExecutableProgram
-	locals     []Value
-	function   *bbq.Function
-	ip         uint16
+	executable   *ExecutableProgram
+	localsOffset uint16
+	localsCount  uint16
+	function     *bbq.Function
 }
 
-func (f *callFrame) getUint16() uint16 {
-	first := f.function.Code[f.ip]
-	last := f.function.Code[f.ip+1]
-	f.ip += 2
-	return uint16(first)<<8 | uint16(last)
-}
-
-func (f *callFrame) getByte() byte {
-	byt := f.function.Code[f.ip]
-	f.ip++
-	return byt
-}
-
-func (f *callFrame) getBool() bool {
-	byt := f.function.Code[f.ip]
-	f.ip++
-	return byt == 1
-}
-
-func (f *callFrame) getString() string {
-	strLen := f.getUint16()
-	str := string(f.function.Code[f.ip : f.ip+strLen])
-	f.ip += strLen
-	return str
-}
+//
+//func (f *callFrame) getUint16() uint16 {
+//	first := f.function.Code[f.ip]
+//	last := f.function.Code[f.ip+1]
+//	f.ip += 2
+//	return uint16(first)<<8 | uint16(last)
+//}
+//
+//func (f *callFrame) getByte() byte {
+//	byt := f.function.Code[f.ip]
+//	f.ip++
+//	return byt
+//}
+//
+//func (f *callFrame) getBool() bool {
+//	byt := f.function.Code[f.ip]
+//	f.ip++
+//	return byt == 1
+//}
+//
+//func (f *callFrame) getString() string {
+//	strLen := f.getUint16()
+//	str := string(f.function.Code[f.ip : f.ip+strLen])
+//	f.ip += strLen
+//	return str
+//}

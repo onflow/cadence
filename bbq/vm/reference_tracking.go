@@ -59,14 +59,10 @@ func trackReferencedResourceKindedValue(
 
 func checkInvalidatedResourceOrResourceReference(value Value) {
 
-	// Unwrap SomeValue, to access references wrapped inside optionals.
-	someValue, isSomeValue := value.(*SomeValue)
-	for isSomeValue && someValue.value != nil {
-		value = someValue.value
-		someValue, isSomeValue = value.(*SomeValue)
-	}
-
 	switch value := value.(type) {
+	case *SomeValue:
+		checkInvalidatedResourceOrResourceReference(value.value)
+
 	// TODO:
 	//case ResourceKindedValue:
 	//	if value.isInvalidatedResource(interpreter) {

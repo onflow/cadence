@@ -330,4 +330,29 @@ func BenchmarkFTTransfer(b *testing.B) {
 	}
 
 	b.StopTimer()
+
+	// Run validation scripts
+
+	// actual transfer amount = (transfer amount in one tx) * (number of time the tx/benchmark runs)
+	actualTransferAmount := transferAmount * int64(b.N)
+
+	for _, address := range []common.Address{
+		senderAddress,
+		receiverAddress,
+	} {
+		program := compileCode(b, realFlowTokenBalanceScript, nil, programs)
+
+		validationScriptVM := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		addressValue := vm.AddressValue(address)
+		result, err := validationScriptVM.Invoke("main", addressValue)
+		require.NoError(b, err)
+		require.Equal(b, 0, validationScriptVM.StackSize())
+
+		if address == senderAddress {
+			assert.Equal(b, vm.NewIntValue(total-actualTransferAmount), result)
+		} else {
+			assert.Equal(b, vm.NewIntValue(actualTransferAmount), result)
+		}
+	}
 }

@@ -20,23 +20,29 @@ package vm
 
 import (
 	"github.com/onflow/atree"
-	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/runtime"
-
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/constantkind"
 	"github.com/onflow/cadence/bbq/leb128"
 	"github.com/onflow/cadence/bbq/opcode"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/runtime"
 )
 
 type VM struct {
-	globals            map[string]Value
-	callFrame          *callFrame
-	stack              []Value
+	stack  []Value
+	locals []Value
+
+	callstack []callFrame
+	callFrame callFrame
+
+	ipStack []uint16
+	ip      uint16
+
 	config             *Config
+	globals            map[string]Value
 	linkedGlobalsCache map[common.Location]LinkedGlobals
 }
 
@@ -139,22 +145,58 @@ func (vm *VM) replaceTop(value Value) {
 	vm.stack[lastIndex] = value
 }
 
-func (vm *VM) pushCallFrame(functionValue FunctionValue, arguments []Value) {
-	locals := make([]Value, functionValue.Function.LocalCount)
-
-	copy(locals, arguments)
-
-	callFrame := &callFrame{
-		parent:     vm.callFrame,
-		locals:     locals,
-		function:   functionValue.Function,
-		executable: functionValue.Executable,
+func fill(slice []Value, n int) []Value {
+	for i := 0; i < n; i++ {
+		slice = append(slice, nil)
 	}
+	return slice
+}
+
+func (vm *VM) pushCallFrame(functionValue FunctionValue, arguments []Value) {
+	localsCount := functionValue.Function.LocalCount
+
+	vm.locals = append(vm.locals, arguments...)
+	vm.locals = fill(vm.locals, int(localsCount)-len(arguments))
+
+	// Calculate the offset for local variable for the new callframe.
+	// This is equal to: (local var offset + local var count) of previous callframe.
+	var offset uint16
+	if len(vm.callstack) > 0 {
+		offset = vm.callFrame.localsOffset + vm.callFrame.localsCount
+
+		// store/update the current ip, so it can be resumed.
+		vm.ipStack[len(vm.ipStack)-1] = vm.ip
+	}
+
+	callFrame := callFrame{
+		localsCount:  localsCount,
+		localsOffset: offset,
+		function:     functionValue.Function,
+		executable:   functionValue.Executable,
+	}
+
+	vm.ipStack = append(vm.ipStack, 0)
+	vm.ip = 0
+
+	vm.callstack = append(vm.callstack, callFrame)
 	vm.callFrame = callFrame
 }
 
 func (vm *VM) popCallFrame() {
-	vm.callFrame = vm.callFrame.parent
+	vm.locals = vm.locals[:vm.callFrame.localsOffset]
+
+	newIpStackDepth := len(vm.ipStack) - 1
+	vm.ipStack = vm.ipStack[:newIpStackDepth]
+
+	newStackDepth := len(vm.callstack) - 1
+	vm.callstack = vm.callstack[:newStackDepth]
+
+	if newStackDepth == 0 {
+		vm.ip = 0
+	} else {
+		vm.ip = vm.ipStack[newIpStackDepth-1]
+		vm.callFrame = vm.callstack[newStackDepth-1]
+	}
 }
 
 func (vm *VM) Invoke(name string, arguments ...Value) (v Value, err error) {
@@ -268,17 +310,15 @@ func opReturn(vm *VM) {
 }
 
 func opJump(vm *VM) {
-	callFrame := vm.callFrame
-	target := callFrame.getUint16()
-	callFrame.ip = target
+	target := vm.getUint16()
+	vm.ip = target
 }
 
 func opJumpIfFalse(vm *VM) {
-	callFrame := vm.callFrame
-	target := callFrame.getUint16()
+	target := vm.getUint16()
 	value := vm.pop().(BoolValue)
 	if !value {
-		callFrame.ip = target
+		vm.ip = target
 	}
 }
 
@@ -320,7 +360,7 @@ func opFalse(vm *VM) {
 
 func opGetConstant(vm *VM) {
 	callFrame := vm.callFrame
-	index := callFrame.getUint16()
+	index := vm.getUint16()
 	constant := callFrame.executable.Constants[index]
 	if constant == nil {
 		constant = vm.initializeConstant(index)
@@ -330,26 +370,29 @@ func opGetConstant(vm *VM) {
 
 func opGetLocal(vm *VM) {
 	callFrame := vm.callFrame
-	index := callFrame.getUint16()
-	local := callFrame.locals[index]
+	index := vm.getUint16()
+	absoluteIndex := callFrame.localsOffset + index
+	local := vm.locals[absoluteIndex]
 	vm.push(local)
 }
 
 func opSetLocal(vm *VM) {
 	callFrame := vm.callFrame
-	index := callFrame.getUint16()
-	callFrame.locals[index] = vm.pop()
+	index := vm.getUint16()
+
+	absoluteIndex := callFrame.localsOffset + index
+	vm.locals[absoluteIndex] = vm.pop()
 }
 
 func opGetGlobal(vm *VM) {
 	callFrame := vm.callFrame
-	index := callFrame.getUint16()
+	index := vm.getUint16()
 	vm.push(callFrame.executable.Globals[index])
 }
 
 func opSetGlobal(vm *VM) {
 	callFrame := vm.callFrame
-	index := callFrame.getUint16()
+	index := vm.getUint16()
 	callFrame.executable.Globals[index] = vm.pop()
 }
 
@@ -372,8 +415,7 @@ func opInvoke(vm *VM) {
 	value := vm.pop()
 	stackHeight := len(vm.stack)
 
-	callFrame := vm.callFrame
-	typeArgCount := callFrame.getUint16()
+	typeArgCount := vm.getUint16()
 
 	switch value := value.(type) {
 	case FunctionValue:
@@ -401,10 +443,9 @@ func opInvoke(vm *VM) {
 }
 
 func opInvokeDynamic(vm *VM) {
-	callframe := vm.callFrame
-	funcName := callframe.getString()
-	typeArgCount := callframe.getUint16()
-	argsCount := callframe.getUint16()
+	funcName := vm.getString()
+	typeArgCount := vm.getUint16()
+	argsCount := vm.getUint16()
 
 	stackHeight := len(vm.stack)
 	receiver := vm.stack[stackHeight-int(argsCount)-1]
@@ -452,9 +493,7 @@ func opDup(vm *VM) {
 }
 
 func opNew(vm *VM) {
-	callframe := vm.callFrame
-
-	kind := callframe.getUint16()
+	kind := vm.getUint16()
 	compositeKind := common.CompositeKind(kind)
 
 	// decode location
@@ -526,9 +565,8 @@ func opDestroy(vm *VM) {
 }
 
 func opPath(vm *VM) {
-	callframe := vm.callFrame
-	domain := common.PathDomain(callframe.getByte())
-	identifier := callframe.getString()
+	domain := common.PathDomain(vm.getByte())
+	identifier := vm.getString()
 	value := PathValue{
 		Domain:     domain,
 		Identifier: identifier,
@@ -537,10 +575,9 @@ func opPath(vm *VM) {
 }
 
 func opCast(vm *VM) {
-	callframe := vm.callFrame
 	value := vm.pop()
 	targetType := vm.loadType()
-	castKind := commons.CastKind(callframe.getByte())
+	castKind := commons.CastKind(vm.getByte())
 
 	// TODO:
 	_ = castKind
@@ -573,8 +610,8 @@ func opUnwrap(vm *VM) {
 
 func opNewArray(vm *VM) {
 	typ := vm.loadType().(interpreter.ArrayStaticType)
-	size := int(vm.callFrame.getUint16())
-	isResourceKinded := vm.callFrame.getBool()
+	size := int(vm.getUint16())
+	isResourceKinded := vm.getBool()
 
 	elements := make([]Value, size)
 
@@ -606,14 +643,14 @@ func (vm *VM) run() {
 
 		callFrame := vm.callFrame
 
-		if callFrame == nil ||
-			int(callFrame.ip) >= len(callFrame.function.Code) {
+		if len(vm.callstack) == 0 ||
+			int(vm.ip) >= len(callFrame.function.Code) {
 
 			return
 		}
 
-		op := opcode.Opcode(callFrame.function.Code[callFrame.ip])
-		callFrame.ip++
+		op := opcode.Opcode(callFrame.function.Code[vm.ip])
+		vm.ip++
 
 		switch op {
 		case opcode.ReturnValue:
@@ -715,7 +752,7 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 
 func (vm *VM) loadType() StaticType {
 	callframe := vm.callFrame
-	index := callframe.getUint16()
+	index := vm.getUint16()
 	staticType := callframe.executable.StaticTypes[index]
 	if staticType == nil {
 		// TODO: Remove. Should never reach because of the
@@ -777,6 +814,32 @@ func (vm *VM) lookupFunction(location common.Location, name string) FunctionValu
 
 func (vm *VM) StackSize() int {
 	return len(vm.stack)
+}
+
+func (vm *VM) getUint16() uint16 {
+	first := vm.callFrame.function.Code[vm.ip]
+	last := vm.callFrame.function.Code[vm.ip+1]
+	vm.ip += 2
+	return uint16(first)<<8 | uint16(last)
+}
+
+func (vm *VM) getByte() byte {
+	byt := vm.callFrame.function.Code[vm.ip]
+	vm.ip++
+	return byt
+}
+
+func (vm *VM) getBool() bool {
+	byt := vm.callFrame.function.Code[vm.ip]
+	vm.ip++
+	return byt == 1
+}
+
+func (vm *VM) getString() string {
+	strLen := vm.getUint16()
+	str := string(vm.callFrame.function.Code[vm.ip : vm.ip+strLen])
+	vm.ip += strLen
+	return str
 }
 
 func getReceiver[T any](config *Config, receiver Value) T {

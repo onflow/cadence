@@ -93,8 +93,11 @@ func LinkGlobals(
 
 	executable := NewLoadedExecutableProgram(location, program)
 
-	globals := make([]Value, 0)
-	indexedGlobals := make(map[string]Value, 0)
+	globalsLen := len(program.Variables) + len(program.Functions) + len(importedGlobals) + 1
+	indexedGlobalsLen := len(program.Functions)
+
+	globals := make([]Value, 0, globalsLen)
+	indexedGlobals := make(map[string]Value, indexedGlobalsLen)
 
 	// If the current program is a contract, reserve a global variable for the contract value.
 	// The reserved position is always the zero-th index.
