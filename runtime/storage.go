@@ -380,5 +380,9 @@ var _ errors.InternalError = UnreferencedRootSlabsError{}
 func (UnreferencedRootSlabsError) IsInternalError() {}
 
 func (e UnreferencedRootSlabsError) Error() string {
-	return fmt.Sprintf("slabs not referenced: %s", e.UnreferencedRootSlabIDs)
+	return fmt.Sprintf(
+		"%s slabs not referenced: %s",
+		errors.InternalErrorMessagePrefix,
+		e.UnreferencedRootSlabIDs,
+	)
 }

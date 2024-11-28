@@ -44,7 +44,8 @@ func (*unsupportedOperation) IsInternalError() {}
 
 func (e *unsupportedOperation) Error() string {
 	return fmt.Sprintf(
-		"internal error: cannot evaluate unsupported %s operation: %s",
+		"%s cannot evaluate unsupported %s operation: %s",
+		errors.InternalErrorMessagePrefix,
 		e.kind.Name(),
 		e.operation.Symbol(),
 	)
@@ -323,7 +324,10 @@ var _ errors.InternalError = InvalidatedResourceError{}
 func (InvalidatedResourceError) IsInternalError() {}
 
 func (e InvalidatedResourceError) Error() string {
-	return "internal error: resource is invalidated and cannot be used anymore"
+	return fmt.Sprintf(
+		"%s resource is invalidated and cannot be used anymore",
+		errors.InternalErrorMessagePrefix,
+	)
 }
 
 // DestroyedResourceError is the error which is reported
@@ -633,7 +637,8 @@ func (MemberAccessTypeError) IsInternalError() {}
 
 func (e MemberAccessTypeError) Error() string {
 	return fmt.Sprintf(
-		"invalid member access: expected `%s`, got `%s`",
+		"%s invalid member access: expected `%s`, got `%s`",
+		errors.InternalErrorMessagePrefix,
 		e.ExpectedType.QualifiedString(),
 		e.ActualType.QualifiedString(),
 	)
@@ -657,7 +662,8 @@ func (e ValueTransferTypeError) Error() string {
 	)
 
 	return fmt.Sprintf(
-		"invalid transfer of value: expected `%s`, got `%s`",
+		"%s invalid transfer of value: expected `%s`, got `%s`",
+		errors.InternalErrorMessagePrefix,
 		expected,
 		actual,
 	)
@@ -675,7 +681,8 @@ func (UnexpectedMappedEntitlementError) IsInternalError() {}
 
 func (e UnexpectedMappedEntitlementError) Error() string {
 	return fmt.Sprintf(
-		"invalid transfer of value: found an unexpected runtime mapped entitlement `%s`",
+		"%s invalid transfer of value: found an unexpected runtime mapped entitlement `%s`",
+		errors.InternalErrorMessagePrefix,
 		e.Type.QualifiedString(),
 	)
 }
@@ -692,7 +699,8 @@ func (ResourceConstructionError) IsInternalError() {}
 
 func (e ResourceConstructionError) Error() string {
 	return fmt.Sprintf(
-		"cannot create resource `%s`: outside of declaring location %s",
+		"%s cannot create resource `%s`: outside of declaring location %s",
+		errors.InternalErrorMessagePrefix,
 		e.CompositeType.QualifiedString(),
 		e.CompositeType.Location.String(),
 	)
@@ -952,7 +960,8 @@ func (InvalidAttachmentOperationTargetError) IsInternalError() {}
 
 func (e InvalidAttachmentOperationTargetError) Error() string {
 	return fmt.Sprintf(
-		"cannot add or remove attachment with non-owned value (%T)",
+		"%s cannot add or remove attachment with non-owned value (%T)",
+		errors.InternalErrorMessagePrefix,
 		e.Value,
 	)
 }
@@ -1092,7 +1101,10 @@ var _ errors.InternalError = ResourceReferenceDereferenceError{}
 func (ResourceReferenceDereferenceError) IsInternalError() {}
 
 func (e ResourceReferenceDereferenceError) Error() string {
-	return "internal error: resource-references cannot be dereferenced"
+	return fmt.Sprintf(
+		"%s resource-references cannot be dereferenced",
+		errors.InternalErrorMessagePrefix,
+	)
 }
 
 // ResourceLossError
@@ -1117,7 +1129,10 @@ var _ errors.InternalError = InvalidCapabilityIDError{}
 func (InvalidCapabilityIDError) IsInternalError() {}
 
 func (e InvalidCapabilityIDError) Error() string {
-	return "capability created with invalid ID"
+	return fmt.Sprintf(
+		"%s capability created with invalid ID",
+		errors.InternalErrorMessagePrefix,
+	)
 }
 
 // ReferencedValueChangedError
