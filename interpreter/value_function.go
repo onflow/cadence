@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"time"
+
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/ast"
@@ -60,6 +62,18 @@ func NewInterpretedFunctionValue(
 	statements []ast.Statement,
 	postConditions []ast.Condition,
 ) *InterpretedFunctionValue {
+
+	config := interpreter.SharedState.Config
+
+	if config.TracingEnabled {
+		startTime := time.Now()
+
+		defer func() {
+			interpreter.reportFunctionValueConstructTrace(
+				time.Since(startTime),
+			)
+		}()
+	}
 
 	common.UseMemory(interpreter, common.InterpretedFunctionValueMemoryUsage)
 

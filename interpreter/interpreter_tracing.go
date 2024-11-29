@@ -30,9 +30,10 @@ const (
 	tracingImportPrefix   = "import."
 
 	// type prefixes
-	tracingArrayPrefix      = "array."
-	tracingDictionaryPrefix = "dictionary."
-	tracingCompositePrefix  = "composite."
+	tracingArrayPrefix              = "array."
+	tracingDictionaryPrefix         = "dictionary."
+	tracingCompositePrefix          = "composite."
+	tracingEphemeralReferencePrefix = "reference."
 
 	// Value operation postfixes
 	tracingConstructPostfix            = "construct"
@@ -382,5 +383,36 @@ func (interpreter *Interpreter) reportCastingTrace(
 			attribute.String("target type", targetType),
 			attribute.String("value type", valueType),
 		},
+	)
+}
+
+func (interpreter *Interpreter) reportEphemeralReferenceValueConstructTrace(
+	auth string,
+	typeID string,
+	value string,
+	duration time.Duration,
+) {
+	config := interpreter.SharedState.Config
+	config.OnRecordTrace(
+		interpreter,
+		tracingEphemeralReferencePrefix+tracingConstructPostfix,
+		duration,
+		[]attribute.KeyValue{
+			attribute.String("auth", auth),
+			attribute.String("typeID", typeID),
+			attribute.String("value", value),
+		},
+	)
+}
+
+func (interpreter *Interpreter) reportFunctionValueConstructTrace(
+	duration time.Duration,
+) {
+	config := interpreter.SharedState.Config
+	config.OnRecordTrace(
+		interpreter,
+		tracingFunctionPrefix+tracingConstructPostfix,
+		duration,
+		nil,
 	)
 }
