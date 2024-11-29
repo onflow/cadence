@@ -42,6 +42,7 @@ const (
 	tracingDeepRemovePostfix           = "deepRemove"
 	tracingDestroyPostfix              = "destroy"
 	tracingCastPostfix                 = "cast"
+	tracingBinaryOpPostfix             = "operation."
 
 	// MemberAccessible operation prefixes
 	tracingGetMemberPrefix    = "getMember."
@@ -371,7 +372,7 @@ func (interpreter *Interpreter) reportTransferTrace(
 
 func (interpreter *Interpreter) reportCastingTrace(
 	targetType string,
-	valueType string,
+	value string,
 	duration time.Duration,
 ) {
 	config := interpreter.SharedState.Config
@@ -381,7 +382,7 @@ func (interpreter *Interpreter) reportCastingTrace(
 		duration,
 		[]attribute.KeyValue{
 			attribute.String("target type", targetType),
-			attribute.String("value type", valueType),
+			attribute.String("value", value),
 		},
 	)
 }
@@ -412,6 +413,19 @@ func (interpreter *Interpreter) reportFunctionValueConstructTrace(
 	config.OnRecordTrace(
 		interpreter,
 		tracingFunctionPrefix+tracingConstructPostfix,
+		duration,
+		nil,
+	)
+}
+
+func (interpreter *Interpreter) reportOpTrace(
+	name string,
+	duration time.Duration,
+) {
+	config := interpreter.SharedState.Config
+	config.OnRecordTrace(
+		interpreter,
+		tracingBinaryOpPostfix+name,
 		duration,
 		nil,
 	)

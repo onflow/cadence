@@ -19,6 +19,7 @@
 package test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -77,7 +78,7 @@ func TestTrace(t *testing.T) {
 		vmConfig := &vm.Config{
 			TracingEnabled: true,
 			OnRecordTrace: func(vm *vm.VM, operationName string, duration time.Duration, attrs []attribute.KeyValue) {
-				vmLogs = append(vmLogs, operationName)
+				vmLogs = append(vmLogs, fmt.Sprintf("%s: %v", operationName, attrs))
 			},
 		}
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
@@ -97,7 +98,7 @@ func TestTrace(t *testing.T) {
 					operationName string,
 					duration time.Duration,
 					attrs []attribute.KeyValue) {
-					interLogs = append(interLogs, operationName)
+					interLogs = append(interLogs, fmt.Sprintf("%s: %v", operationName, attrs))
 				},
 				Storage:        storage,
 				TracingEnabled: true,

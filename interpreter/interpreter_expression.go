@@ -478,6 +478,18 @@ func (interpreter *Interpreter) checkInvalidatedResourceOrResourceReference(valu
 }
 
 func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpression) Value {
+	config := interpreter.SharedState.Config
+
+	// tracing
+	if config.TracingEnabled {
+		startTime := time.Now()
+		defer func() {
+			interpreter.reportOpTrace(
+				expression.Operation.String(),
+				time.Since(startTime),
+			)
+		}()
+	}
 
 	leftValue := interpreter.evalExpression(expression.Left)
 
@@ -752,6 +764,19 @@ func (interpreter *Interpreter) testComparison(left, right Value, expression *as
 }
 
 func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpression) Value {
+	config := interpreter.SharedState.Config
+
+	// tracing
+	if config.TracingEnabled {
+		startTime := time.Now()
+		defer func() {
+			interpreter.reportOpTrace(
+				expression.Operation.String(),
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	value := interpreter.evalExpression(expression.Expression)
 
 	switch expression.Operation {
