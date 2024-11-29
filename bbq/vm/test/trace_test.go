@@ -47,11 +47,22 @@ func TestTrace(t *testing.T) {
 				}
 			}
 
+			resource Bar {
+                var id : Int
+
+                init(_ id: Int) {
+                    self.id = id
+                }
+            }
+
             fun test() {
                 var i = 0
 				var c = [1,2,3]
 				var s = Foo(0)
 				s.id = s.id + 2
+
+				var r <- create Bar(5)
+				destroy r
             }
         `
 
@@ -60,8 +71,6 @@ func TestTrace(t *testing.T) {
 
 		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
 		program := comp.Compile()
-
-		printProgram("", program)
 
 		var vmLogs []string
 
@@ -76,10 +85,10 @@ func TestTrace(t *testing.T) {
 		_, err = vmInstance.Invoke("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
-		require.NoError(t, err)
 
 		var interLogs []string
 		storage := interpreter.NewInMemoryStorage(nil)
+		var uuid uint64 = 0
 		inter, err := interpreter.NewInterpreter(
 			interpreter.ProgramFromChecker(checker),
 			TestLocation,
@@ -92,6 +101,10 @@ func TestTrace(t *testing.T) {
 				},
 				Storage:        storage,
 				TracingEnabled: true,
+				UUIDHandler: func() (uint64, error) {
+					uuid++
+					return uuid, nil
+				},
 			},
 		)
 		require.NoError(t, err)
@@ -99,7 +112,8 @@ func TestTrace(t *testing.T) {
 		err = inter.Interpret()
 		require.NoError(t, err)
 
-		inter.Invoke("test")
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
 
 		// compare traces
 		AssertEqualWithDiff(t, vmLogs, interLogs)

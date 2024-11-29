@@ -658,6 +658,20 @@ func opCast(vm *VM) {
 	_ = castKind
 	_ = targetType
 
+	config := vm.config
+	// tracing
+	if config.TracingEnabled {
+		startTime := time.Now()
+
+		defer func() {
+			vm.reportCastingTrace(
+				targetType.String(),
+				value.String(),
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	vm.push(value)
 }
 

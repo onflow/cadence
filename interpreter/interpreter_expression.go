@@ -1361,6 +1361,20 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 	castingExpressionTypes := interpreter.Program.Elaboration.CastingExpressionTypes(expression)
 	expectedType := interpreter.SubstituteMappedEntitlements(castingExpressionTypes.TargetType)
 
+	config := interpreter.SharedState.Config
+	// tracing
+	if config.TracingEnabled {
+		startTime := time.Now()
+
+		defer func() {
+			interpreter.reportCastingTrace(
+				expectedType.String(),
+				value.String(),
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
 		// if the value itself has a mapped entitlement type in its authorization

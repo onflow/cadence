@@ -40,6 +40,7 @@ const (
 	tracingConformsToStaticTypePostfix = "conformsToStaticType"
 	tracingDeepRemovePostfix           = "deepRemove"
 	tracingDestroyPostfix              = "destroy"
+	tracingCastPostfix                 = "cast"
 
 	// MemberAccessible operation prefixes
 	tracingGetMemberPrefix    = "getMember."
@@ -359,6 +360,23 @@ func (interpreter *Interpreter) reportTransferTrace(
 	config.OnRecordTrace(
 		interpreter,
 		tracingTransferPostfix,
+		duration,
+		[]attribute.KeyValue{
+			attribute.String("target type", targetType),
+			attribute.String("value type", valueType),
+		},
+	)
+}
+
+func (interpreter *Interpreter) reportCastingTrace(
+	targetType string,
+	valueType string,
+	duration time.Duration,
+) {
+	config := interpreter.SharedState.Config
+	config.OnRecordTrace(
+		interpreter,
+		tracingCastPostfix,
 		duration,
 		[]attribute.KeyValue{
 			attribute.String("target type", targetType),
