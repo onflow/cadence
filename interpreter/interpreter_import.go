@@ -42,10 +42,11 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 	config := interpreter.SharedState.Config
 
 	// tracing
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 		defer func() {
-			interpreter.reportImportTrace(
+			config.Tracer.reportImportTrace(
+				interpreter,
 				resolvedLocation.Location.String(),
 				time.Since(startTime),
 			)

@@ -32,7 +32,6 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
-	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
@@ -80,14 +79,6 @@ type OnFunctionInvocationFunc func(inter *Interpreter)
 
 // OnInvokedFunctionReturnFunc is a function that is triggered when an invoked function returned.
 type OnInvokedFunctionReturnFunc func(inter *Interpreter)
-
-// OnRecordTraceFunc is a function that records a trace.
-type OnRecordTraceFunc func(
-	inter *Interpreter,
-	operationName string,
-	duration time.Duration,
-	attrs []attribute.KeyValue,
-)
 
 // OnResourceOwnerChangeFunc is a function that is triggered when a resource's owner changes.
 type OnResourceOwnerChangeFunc func(
@@ -267,6 +258,10 @@ func init() {
 	// No need to meter since this is only created once
 	BaseActivation = activations.NewActivation[Variable](nil, nil)
 	defineBaseFunctions(BaseActivation)
+}
+
+func (interpreter *Interpreter) GetLocation() common.Location {
+	return interpreter.Location
 }
 
 func NewInterpreter(
@@ -1863,11 +1858,14 @@ func (interpreter *Interpreter) transferAndConvert(
 	locationRange LocationRange,
 ) Value {
 
-	if interpreter.SharedState.Config.TracingEnabled {
+	config := interpreter.SharedState.Config
+
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
 		defer func() {
-			interpreter.reportTransferTrace(
+			config.Tracer.reportTransferTrace(
+				interpreter,
 				targetType.String(),
 				valueType.String(),
 				time.Since(startTime),
@@ -2012,11 +2010,12 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 	config := interpreter.SharedState.Config
 	// TODO: potentially differentiate this from cast
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
 		defer func() {
-			interpreter.reportCastingTrace(
+			config.Tracer.reportCastingTrace(
+				interpreter,
 				targetType.String(),
 				value.String(),
 				time.Since(startTime),

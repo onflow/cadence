@@ -481,10 +481,11 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 	config := interpreter.SharedState.Config
 
 	// tracing
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 		defer func() {
-			interpreter.reportOpTrace(
+			config.Tracer.reportOpTrace(
+				interpreter,
 				expression.Operation.String(),
 				time.Since(startTime),
 			)
@@ -767,10 +768,11 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 	config := interpreter.SharedState.Config
 
 	// tracing
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 		defer func() {
-			interpreter.reportOpTrace(
+			config.Tracer.reportOpTrace(
+				interpreter,
 				expression.Operation.String(),
 				time.Since(startTime),
 			)
@@ -1197,11 +1199,12 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 	config := interpreter.SharedState.Config
 
 	// tracing
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 		invokedExpression := invocationExpression.InvokedExpression.String()
 		defer func() {
-			interpreter.reportFunctionTrace(
+			config.Tracer.reportFunctionTrace(
+				interpreter,
 				invokedExpression,
 				time.Since(startTime),
 			)
@@ -1388,11 +1391,12 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 
 	config := interpreter.SharedState.Config
 	// tracing
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
 		defer func() {
-			interpreter.reportCastingTrace(
+			config.Tracer.reportCastingTrace(
+				interpreter,
 				expectedType.String(),
 				value.String(),
 				time.Since(startTime),

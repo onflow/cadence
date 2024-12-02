@@ -70,7 +70,7 @@ func NewDictionaryValueWithAddress(
 
 	config := interpreter.SharedState.Config
 
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
 		defer func() {
@@ -83,7 +83,8 @@ func NewDictionaryValueWithAddress(
 			typeInfo := v.Type.String()
 			count := v.Count()
 
-			interpreter.reportDictionaryValueConstructTrace(
+			config.Tracer.reportDictionaryValueConstructTrace(
+				interpreter,
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -155,7 +156,7 @@ func newDictionaryValueWithIterator(
 
 	config := interpreter.SharedState.Config
 
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
 		defer func() {
@@ -168,7 +169,8 @@ func newDictionaryValueWithIterator(
 			typeInfo := v.Type.String()
 			count := v.Count()
 
-			interpreter.reportDictionaryValueConstructTrace(
+			config.Tracer.reportDictionaryValueConstructTrace(
+				interpreter,
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -484,14 +486,15 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 
 	config := interpreter.SharedState.Config
 
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
 		count := v.Count()
 
 		defer func() {
-			interpreter.reportDictionaryValueDestroyTrace(
+			config.Tracer.reportDictionaryValueDestroyTrace(
+				interpreter,
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -722,14 +725,15 @@ func (v *DictionaryValue) GetMember(
 ) Value {
 	config := interpreter.SharedState.Config
 
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
 		count := v.Count()
 
 		defer func() {
-			interpreter.reportDictionaryValueGetMemberTrace(
+			config.Tracer.reportDictionaryValueGetMemberTrace(
+				interpreter,
 				typeInfo,
 				count,
 				name,
@@ -1140,13 +1144,14 @@ func (v *DictionaryValue) ConformsToStaticType(
 
 	config := interpreter.SharedState.Config
 
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
 
 		defer func() {
-			interpreter.reportDictionaryValueConformsToStaticTypeTrace(
+			config.Tracer.reportDictionaryValueConformsToStaticTypeTrace(
+				interpreter,
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -1290,14 +1295,15 @@ func (v *DictionaryValue) Transfer(
 		uint(v.Count()),
 	)
 
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
 		count := v.Count()
 
 		defer func() {
-			interpreter.reportDictionaryValueTransferTrace(
+			config.Tracer.reportDictionaryValueTransferTrace(
+				interpreter,
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -1504,14 +1510,15 @@ func (v *DictionaryValue) DeepRemove(interpreter *Interpreter, hasNoParentContai
 
 	config := interpreter.SharedState.Config
 
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
 		count := v.Count()
 
 		defer func() {
-			interpreter.reportDictionaryValueDeepRemoveTrace(
+			config.Tracer.reportDictionaryValueDeepRemoveTrace(
+				interpreter,
 				typeInfo,
 				count,
 				time.Since(startTime),

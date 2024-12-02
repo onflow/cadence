@@ -40,14 +40,16 @@ func setupInterpreterWithTracingCallBack(
 		nil,
 		TestLocation,
 		&interpreter.Config{
-			OnRecordTrace: func(inter *interpreter.Interpreter,
-				operationName string,
-				duration time.Duration,
-				attrs []attribute.KeyValue) {
-				tracingCallback(operationName)
+			Tracer: interpreter.Tracer{
+				OnRecordTrace: func(executer interpreter.Traceable,
+					operationName string,
+					duration time.Duration,
+					attrs []attribute.KeyValue) {
+					tracingCallback(operationName)
+				},
+				TracingEnabled: true,
 			},
-			Storage:        storage,
-			TracingEnabled: true,
+			Storage: storage,
 		},
 	)
 	require.NoError(t, err)

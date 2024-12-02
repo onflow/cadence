@@ -62,11 +62,12 @@ func NewUnmeteredEphemeralReferenceValue(
 
 	config := interpreter.SharedState.Config
 
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
 		defer func() {
-			interpreter.reportEphemeralReferenceValueConstructTrace(
+			config.Tracer.reportEphemeralReferenceValueConstructTrace(
+				interpreter,
 				authorization.String(),
 				borrowedType.String(),
 				value.String(),

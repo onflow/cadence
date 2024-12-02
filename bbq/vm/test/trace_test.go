@@ -94,14 +94,16 @@ func TestTrace(t *testing.T) {
 			interpreter.ProgramFromChecker(checker),
 			TestLocation,
 			&interpreter.Config{
-				OnRecordTrace: func(inter *interpreter.Interpreter,
-					operationName string,
-					duration time.Duration,
-					attrs []attribute.KeyValue) {
-					interLogs = append(interLogs, fmt.Sprintf("%s: %v", operationName, attrs))
+				Tracer: interpreter.Tracer{
+					OnRecordTrace: func(inter interpreter.Traceable,
+						operationName string,
+						duration time.Duration,
+						attrs []attribute.KeyValue) {
+						interLogs = append(interLogs, fmt.Sprintf("%s: %v", operationName, attrs))
+					},
+					TracingEnabled: true,
 				},
-				Storage:        storage,
-				TracingEnabled: true,
+				Storage: storage,
 				UUIDHandler: func() (uint64, error) {
 					uuid++
 					return uuid, nil

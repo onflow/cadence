@@ -177,11 +177,13 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		ContractValueHandler:           e.newContractValueHandler(),
 		ImportLocationHandler:          e.newImportLocationHandler(),
 		AccountHandler:                 e.NewAccountValue,
-		OnRecordTrace:                  e.newOnRecordTraceHandler(),
+		Tracer: interpreter.Tracer{
+			OnRecordTrace:  e.newOnRecordTraceHandler(),
+			TracingEnabled: e.config.TracingEnabled,
+		},
 		OnResourceOwnerChange:          e.newResourceOwnerChangedHandler(),
 		CompositeTypeHandler:           e.newCompositeTypeHandler(),
 		CompositeValueFunctionsHandler: e.newCompositeValueFunctionsHandler(),
-		TracingEnabled:                 e.config.TracingEnabled,
 		AtreeValueValidationEnabled:    e.config.AtreeValidationEnabled,
 		// NOTE: ignore e.config.AtreeValidationEnabled here,
 		// and disable storage validation after each value modification.
@@ -858,13 +860,13 @@ func (e *interpreterEnvironment) newOnStatementHandler() interpreter.OnStatement
 
 func (e *interpreterEnvironment) newOnRecordTraceHandler() interpreter.OnRecordTraceFunc {
 	return func(
-		interpreter *interpreter.Interpreter,
+		executer interpreter.Traceable,
 		functionName string,
 		duration time.Duration,
 		attrs []attribute.KeyValue,
 	) {
 		errors.WrapPanic(func() {
-			e.runtimeInterface.RecordTrace(functionName, interpreter.Location, duration, attrs)
+			e.runtimeInterface.RecordTrace(functionName, executer.GetLocation(), duration, attrs)
 		})
 	}
 }

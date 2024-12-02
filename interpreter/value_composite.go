@@ -132,7 +132,7 @@ func NewCompositeValue(
 
 	var v *CompositeValue
 
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
 		defer func() {
@@ -146,7 +146,8 @@ func NewCompositeValue(
 			typeID := string(v.TypeID())
 			kind := v.Kind.String()
 
-			interpreter.reportCompositeValueConstructTrace(
+			config.Tracer.reportCompositeValueConstructTrace(
+				interpreter,
 				owner,
 				typeID,
 				kind,
@@ -332,7 +333,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 	config := interpreter.SharedState.Config
 
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
 		owner := v.GetOwner().String()
@@ -341,7 +342,8 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 		defer func() {
 
-			interpreter.reportCompositeValueDestroyTrace(
+			config.Tracer.reportCompositeValueDestroyTrace(
+				interpreter,
 				owner,
 				typeID,
 				kind,
@@ -428,7 +430,7 @@ func (v *CompositeValue) getBuiltinMember(interpreter *Interpreter, locationRang
 func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
 	config := interpreter.SharedState.Config
 
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
 		owner := v.GetOwner().String()
@@ -436,7 +438,8 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		kind := v.Kind.String()
 
 		defer func() {
-			interpreter.reportCompositeValueGetMemberTrace(
+			config.Tracer.reportCompositeValueGetMemberTrace(
+				interpreter,
 				owner,
 				typeID,
 				kind,
@@ -631,7 +634,7 @@ func (v *CompositeValue) RemoveMember(
 
 	config := interpreter.SharedState.Config
 
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
 		owner := v.GetOwner().String()
@@ -639,7 +642,8 @@ func (v *CompositeValue) RemoveMember(
 		kind := v.Kind.String()
 
 		defer func() {
-			interpreter.reportCompositeValueRemoveMemberTrace(
+			config.Tracer.reportCompositeValueRemoveMemberTrace(
+				interpreter,
 				owner,
 				typeID,
 				kind,
@@ -699,7 +703,7 @@ func (v *CompositeValue) SetMemberWithoutTransfer(
 
 	interpreter.enforceNotResourceDestruction(v.ValueID(), locationRange)
 
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
 		owner := v.GetOwner().String()
@@ -707,7 +711,8 @@ func (v *CompositeValue) SetMemberWithoutTransfer(
 		kind := v.Kind.String()
 
 		defer func() {
-			interpreter.reportCompositeValueSetMemberTrace(
+			config.Tracer.reportCompositeValueSetMemberTrace(
+				interpreter,
 				owner,
 				typeID,
 				kind,
@@ -962,7 +967,7 @@ func (v *CompositeValue) ConformsToStaticType(
 ) bool {
 	config := interpreter.SharedState.Config
 
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
 		owner := v.GetOwner().String()
@@ -970,7 +975,8 @@ func (v *CompositeValue) ConformsToStaticType(
 		kind := v.Kind.String()
 
 		defer func() {
-			interpreter.reportCompositeValueConformsToStaticTypeTrace(
+			config.Tracer.reportCompositeValueConformsToStaticTypeTrace(
+				interpreter,
 				owner,
 				typeID,
 				kind,
@@ -1168,7 +1174,7 @@ func (v *CompositeValue) Transfer(
 
 	interpreter.ReportComputation(common.ComputationKindTransferCompositeValue, 1)
 
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
 		owner := v.GetOwner().String()
@@ -1176,7 +1182,8 @@ func (v *CompositeValue) Transfer(
 		kind := v.Kind.String()
 
 		defer func() {
-			interpreter.reportCompositeValueTransferTrace(
+			config.Tracer.reportCompositeValueTransferTrace(
+				interpreter,
 				owner,
 				typeID,
 				kind,
@@ -1419,7 +1426,7 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 func (v *CompositeValue) DeepRemove(interpreter *Interpreter, hasNoParentContainer bool) {
 	config := interpreter.SharedState.Config
 
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
 		owner := v.GetOwner().String()
@@ -1427,7 +1434,8 @@ func (v *CompositeValue) DeepRemove(interpreter *Interpreter, hasNoParentContain
 		kind := v.Kind.String()
 
 		defer func() {
-			interpreter.reportCompositeValueDeepRemoveTrace(
+			config.Tracer.reportCompositeValueDeepRemoveTrace(
+				interpreter,
 				owner,
 				typeID,
 				kind,

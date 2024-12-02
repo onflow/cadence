@@ -29,8 +29,8 @@ type Config struct {
 	ImportLocationHandler ImportLocationHandlerFunc
 	// OnInvokedFunctionReturn is triggered when an invoked function returned
 	OnInvokedFunctionReturn OnInvokedFunctionReturnFunc
-	// OnRecordTrace is triggered when a trace is recorded
-	OnRecordTrace OnRecordTraceFunc
+	// Used for handling traces
+	Tracer Tracer
 	// OnResourceOwnerChange is triggered when the owner of a resource changes
 	OnResourceOwnerChange OnResourceOwnerChangeFunc
 	// OnMeterComputation is triggered when a computation is about to happen
@@ -59,9 +59,6 @@ type Config struct {
 	OnStatement OnStatementFunc
 	// OnLoopIteration is triggered when a loop iteration is about to be executed
 	OnLoopIteration OnLoopIterationFunc
-	// TracingEnabled determines if tracing is enabled.
-	// Tracing reports certain operations, e.g. composite value transfers
-	TracingEnabled bool
 	// AtreeStorageValidationEnabled determines if the validation of atree storage is enabled
 	AtreeStorageValidationEnabled bool
 	// AtreeValueValidationEnabled determines if the validation of atree values is enabled

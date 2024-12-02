@@ -21,6 +21,7 @@ package interpreter
 import (
 	"time"
 
+	"github.com/onflow/cadence/common"
 	"go.opentelemetry.io/otel/attribute"
 )
 
@@ -50,14 +51,34 @@ const (
 	tracingRemoveMemberPrefix = "removeMember."
 )
 
-func (interpreter *Interpreter) reportFunctionTrace(functionName string, duration time.Duration) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(interpreter, tracingFunctionPrefix+functionName, duration, nil)
+// OnRecordTraceFunc is a function that records a trace.
+type OnRecordTraceFunc func(
+	executer Traceable,
+	operationName string,
+	duration time.Duration,
+	attrs []attribute.KeyValue,
+)
+
+type Traceable interface {
+	GetLocation() common.Location
 }
 
-func (interpreter *Interpreter) reportImportTrace(importPath string, duration time.Duration) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(interpreter, tracingImportPrefix+importPath, duration, nil)
+var _ Traceable = &Interpreter{}
+
+type Tracer struct {
+	// OnRecordTrace is triggered when a trace is recorded
+	OnRecordTrace OnRecordTraceFunc
+	// TracingEnabled determines if tracing is enabled.
+	// Tracing reports certain operations, e.g. composite value transfers
+	TracingEnabled bool
+}
+
+func (tracer Tracer) reportFunctionTrace(executer Traceable, functionName string, duration time.Duration) {
+	tracer.OnRecordTrace(executer, tracingFunctionPrefix+functionName, duration, nil)
+}
+
+func (tracer Tracer) reportImportTrace(executer Traceable, importPath string, duration time.Duration) {
+	tracer.OnRecordTrace(executer, tracingImportPrefix+importPath, duration, nil)
 }
 
 func prepareArrayAndMapValueTraceAttrs(typeInfo string, count int) []attribute.KeyValue {
@@ -67,155 +88,144 @@ func prepareArrayAndMapValueTraceAttrs(typeInfo string, count int) []attribute.K
 	}
 }
 
-func (interpreter *Interpreter) reportArrayValueConstructTrace(
+func (tracer Tracer) reportArrayValueConstructTrace(
+	executer Traceable,
 	typeInfo string,
 	count int,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	tracer.OnRecordTrace(executer,
 		tracingArrayPrefix+tracingConstructPostfix,
 		duration,
 		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
 	)
 }
 
-func (interpreter *Interpreter) reportArrayValueDeepRemoveTrace(
+func (tracer Tracer) reportArrayValueDeepRemoveTrace(
+	executer Traceable,
 	typeInfo string,
 	count int,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	tracer.OnRecordTrace(executer,
 		tracingArrayPrefix+tracingDeepRemovePostfix,
 		duration,
 		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
 	)
 }
 
-func (interpreter *Interpreter) reportArrayValueDestroyTrace(
+func (tracer Tracer) reportArrayValueDestroyTrace(
+	executer Traceable,
 	typeInfo string,
 	count int,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	tracer.OnRecordTrace(executer,
 		tracingArrayPrefix+tracingDestroyPostfix,
 		duration,
 		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
 	)
 }
 
-func (interpreter *Interpreter) reportArrayValueTransferTrace(
+func (tracer Tracer) reportArrayValueTransferTrace(
+	executer Traceable,
 	typeInfo string,
 	count int,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	tracer.OnRecordTrace(executer,
 		tracingArrayPrefix+tracingTransferPostfix,
 		duration,
 		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
 	)
 }
 
-func (interpreter *Interpreter) reportArrayValueConformsToStaticTypeTrace(
+func (tracer Tracer) reportArrayValueConformsToStaticTypeTrace(
+	executer Traceable,
 	typeInfo string,
 	count int,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	tracer.OnRecordTrace(executer,
 		tracingArrayPrefix+tracingConformsToStaticTypePostfix,
 		duration,
 		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
 	)
 }
 
-func (interpreter *Interpreter) reportDictionaryValueConstructTrace(
+func (tracer Tracer) reportDictionaryValueConstructTrace(
+	executer Traceable,
 	typeInfo string,
 	count int,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	tracer.OnRecordTrace(executer,
 		tracingDictionaryPrefix+tracingConstructPostfix,
 		duration,
 		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
 	)
 }
 
-func (interpreter *Interpreter) reportDictionaryValueDeepRemoveTrace(
+func (tracer Tracer) reportDictionaryValueDeepRemoveTrace(
+	executer Traceable,
 	typeInfo string,
 	count int,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	tracer.OnRecordTrace(executer,
 		tracingDictionaryPrefix+tracingDeepRemovePostfix,
 		duration,
 		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
 	)
 }
 
-func (interpreter *Interpreter) reportDictionaryValueDestroyTrace(
+func (tracer Tracer) reportDictionaryValueDestroyTrace(
+	executer Traceable,
 	typeInfo string,
 	count int,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	tracer.OnRecordTrace(executer,
 		tracingDictionaryPrefix+tracingDestroyPostfix,
 		duration,
 		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
 	)
 }
 
-func (interpreter *Interpreter) reportDictionaryValueTransferTrace(
+func (tracer Tracer) reportDictionaryValueTransferTrace(
+	executer Traceable,
 	typeInfo string,
 	count int,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	tracer.OnRecordTrace(executer,
 		tracingDictionaryPrefix+tracingTransferPostfix,
 		duration,
 		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
 	)
 }
 
-func (interpreter *Interpreter) reportDictionaryValueConformsToStaticTypeTrace(
+func (tracer Tracer) reportDictionaryValueConformsToStaticTypeTrace(
+	executer Traceable,
 	typeInfo string,
 	count int,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	tracer.OnRecordTrace(executer,
 		tracingDictionaryPrefix+tracingConformsToStaticTypePostfix,
 		duration,
 		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
 	)
 }
 
-func (interpreter *Interpreter) reportDictionaryValueGetMemberTrace(
+func (tracer Tracer) reportDictionaryValueGetMemberTrace(
+	executer Traceable,
 	typeInfo string,
 	count int,
 	name string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	tracer.OnRecordTrace(executer,
 		tracingDictionaryPrefix+tracingGetMemberPrefix+name,
 		duration,
 		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
@@ -230,137 +240,128 @@ func prepareCompositeValueTraceAttrs(owner, typeID, kind string) []attribute.Key
 	}
 }
 
-func (interpreter *Interpreter) reportCompositeValueConstructTrace(
+func (tracer Tracer) reportCompositeValueConstructTrace(
+	executer Traceable,
 	owner string,
 	typeID string,
 	kind string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	tracer.OnRecordTrace(executer,
 		tracingCompositePrefix+tracingConstructPostfix,
 		duration,
 		prepareCompositeValueTraceAttrs(owner, typeID, kind),
 	)
 }
 
-func (interpreter *Interpreter) reportCompositeValueDeepRemoveTrace(
+func (tracer Tracer) reportCompositeValueDeepRemoveTrace(
+	executer Traceable,
 	owner string,
 	typeID string,
 	kind string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	tracer.OnRecordTrace(executer,
 		tracingCompositePrefix+tracingDeepRemovePostfix,
 		duration,
 		prepareCompositeValueTraceAttrs(owner, typeID, kind),
 	)
 }
 
-func (interpreter *Interpreter) reportCompositeValueDestroyTrace(
+func (tracer Tracer) reportCompositeValueDestroyTrace(
+	executer Traceable,
 	owner string,
 	typeID string,
 	kind string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	tracer.OnRecordTrace(executer,
 		tracingCompositePrefix+tracingDestroyPostfix,
 		duration,
 		prepareCompositeValueTraceAttrs(owner, typeID, kind),
 	)
 }
 
-func (interpreter *Interpreter) reportCompositeValueTransferTrace(
+func (tracer Tracer) reportCompositeValueTransferTrace(
+	executer Traceable,
 	owner string,
 	typeID string,
 	kind string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	tracer.OnRecordTrace(executer,
 		tracingCompositePrefix+tracingTransferPostfix,
 		duration,
 		prepareCompositeValueTraceAttrs(owner, typeID, kind),
 	)
 }
 
-func (interpreter *Interpreter) reportCompositeValueConformsToStaticTypeTrace(
+func (tracer Tracer) reportCompositeValueConformsToStaticTypeTrace(
+	executer Traceable,
 	owner string,
 	typeID string,
 	kind string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	tracer.OnRecordTrace(executer,
 		tracingCompositePrefix+tracingConformsToStaticTypePostfix,
 		duration,
 		prepareCompositeValueTraceAttrs(owner, typeID, kind),
 	)
 }
 
-func (interpreter *Interpreter) reportCompositeValueGetMemberTrace(
+func (tracer Tracer) reportCompositeValueGetMemberTrace(
+	executer Traceable,
 	owner string,
 	typeID string,
 	kind string,
 	name string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	tracer.OnRecordTrace(executer,
 		tracingCompositePrefix+tracingGetMemberPrefix+name,
 		duration,
 		prepareCompositeValueTraceAttrs(owner, typeID, kind),
 	)
 }
 
-func (interpreter *Interpreter) reportCompositeValueSetMemberTrace(
+func (tracer Tracer) reportCompositeValueSetMemberTrace(
+	executer Traceable,
 	owner string,
 	typeID string,
 	kind string,
 	name string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	tracer.OnRecordTrace(executer,
 		tracingCompositePrefix+tracingSetMemberPrefix+name,
 		duration,
 		prepareCompositeValueTraceAttrs(owner, typeID, kind),
 	)
 }
 
-func (interpreter *Interpreter) reportCompositeValueRemoveMemberTrace(
+func (tracer Tracer) reportCompositeValueRemoveMemberTrace(
+	executer Traceable,
 	owner string,
 	typeID string,
 	kind string,
 	name string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	tracer.OnRecordTrace(executer,
 		tracingCompositePrefix+tracingRemoveMemberPrefix+name,
 		duration,
 		prepareCompositeValueTraceAttrs(owner, typeID, kind),
 	)
 }
 
-func (interpreter *Interpreter) reportTransferTrace(
+func (tracer Tracer) reportTransferTrace(
+	executer Traceable,
 	targetType string,
 	valueType string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	tracer.OnRecordTrace(executer,
 		tracingTransferPostfix,
 		duration,
 		[]attribute.KeyValue{
@@ -370,14 +371,13 @@ func (interpreter *Interpreter) reportTransferTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportCastingTrace(
+func (tracer Tracer) reportCastingTrace(
+	executer Traceable,
 	targetType string,
 	value string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	tracer.OnRecordTrace(executer,
 		tracingCastPostfix,
 		duration,
 		[]attribute.KeyValue{
@@ -387,15 +387,14 @@ func (interpreter *Interpreter) reportCastingTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportEphemeralReferenceValueConstructTrace(
+func (tracer Tracer) reportEphemeralReferenceValueConstructTrace(
+	executer Traceable,
 	auth string,
 	typeID string,
 	value string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	tracer.OnRecordTrace(executer,
 		tracingEphemeralReferencePrefix+tracingConstructPostfix,
 		duration,
 		[]attribute.KeyValue{
@@ -406,25 +405,23 @@ func (interpreter *Interpreter) reportEphemeralReferenceValueConstructTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportFunctionValueConstructTrace(
+func (tracer Tracer) reportFunctionValueConstructTrace(
+	executer Traceable,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	tracer.OnRecordTrace(executer,
 		tracingFunctionPrefix+tracingConstructPostfix,
 		duration,
 		nil,
 	)
 }
 
-func (interpreter *Interpreter) reportOpTrace(
+func (tracer Tracer) reportOpTrace(
+	executer Traceable,
 	name string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	tracer.OnRecordTrace(executer,
 		tracingBinaryOpPostfix+name,
 		duration,
 		nil,

@@ -65,11 +65,12 @@ func NewInterpretedFunctionValue(
 
 	config := interpreter.SharedState.Config
 
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
 		defer func() {
-			interpreter.reportFunctionValueConstructTrace(
+			config.Tracer.reportFunctionValueConstructTrace(
+				interpreter,
 				time.Since(startTime),
 			)
 		}()

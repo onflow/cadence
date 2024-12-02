@@ -125,7 +125,7 @@ func NewArrayValueWithIterator(
 
 	var v *ArrayValue
 
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
 		defer func() {
@@ -138,7 +138,8 @@ func NewArrayValueWithIterator(
 			typeInfo := v.Type.String()
 			count := v.Count()
 
-			interpreter.reportArrayValueConstructTrace(
+			config.Tracer.reportArrayValueConstructTrace(
+				interpreter,
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -364,14 +365,15 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 
 	config := interpreter.SharedState.Config
 
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
 		count := v.Count()
 
 		defer func() {
-			interpreter.reportArrayValueDestroyTrace(
+			config.Tracer.reportArrayValueDestroyTrace(
+				interpreter,
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -1193,13 +1195,14 @@ func (v *ArrayValue) ConformsToStaticType(
 
 	count := v.Count()
 
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
 
 		defer func() {
-			interpreter.reportArrayValueConformsToStaticTypeTrace(
+			config.Tracer.reportArrayValueConformsToStaticTypeTrace(
+				interpreter,
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -1314,14 +1317,15 @@ func (v *ArrayValue) Transfer(
 		uint(v.Count()),
 	)
 
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
 		count := v.Count()
 
 		defer func() {
-			interpreter.reportArrayValueTransferTrace(
+			config.Tracer.reportArrayValueTransferTrace(
+				interpreter,
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -1488,14 +1492,15 @@ func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 func (v *ArrayValue) DeepRemove(interpreter *Interpreter, hasNoParentContainer bool) {
 	config := interpreter.SharedState.Config
 
-	if config.TracingEnabled {
+	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
 		count := v.Count()
 
 		defer func() {
-			interpreter.reportArrayValueDeepRemoveTrace(
+			config.Tracer.reportArrayValueDeepRemoveTrace(
+				interpreter,
 				typeInfo,
 				count,
 				time.Since(startTime),
