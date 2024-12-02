@@ -2008,21 +2008,6 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 	unwrappedTargetType := sema.UnwrapOptionalType(targetType)
 
-	config := interpreter.SharedState.Config
-	// TODO: potentially differentiate this from cast
-	if config.Tracer.TracingEnabled {
-		startTime := time.Now()
-
-		defer func() {
-			config.Tracer.ReportCastingTrace(
-				interpreter,
-				targetType.String(),
-				value.String(),
-				time.Since(startTime),
-			)
-		}()
-	}
-
 	// if the value is optional, convert the inner value to the unwrapped target type
 	if optionalValueType, valueIsOptional := valueType.(*sema.OptionalType); valueIsOptional {
 		switch value := value.(type) {

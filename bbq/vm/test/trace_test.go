@@ -57,8 +57,12 @@ func TestTrace(t *testing.T) {
             }
 
             fun test() {
-                var i = 0
-				var c = [1,2,3]
+                var i = 1
+				var values = [0,1,2,3]
+				while i < 3 {
+					values[i] = values[i] + values[i-1]
+					i = i + 1
+				}
 				var s = Foo(0)
 				s.id = s.id + 2
 
