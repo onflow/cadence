@@ -98,14 +98,14 @@ func (v *PublishedValue) ConformsToStaticType(
 	return false
 }
 
-func (v *PublishedValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+func (v *PublishedValue) Equal(context ComparisonContext, locationRange LocationRange, other Value) bool {
 	otherValue, ok := other.(*PublishedValue)
 	if !ok {
 		return false
 	}
 
-	return otherValue.Recipient.Equal(interpreter, locationRange, v.Recipient) &&
-		otherValue.Value.Equal(interpreter, locationRange, v.Value)
+	return otherValue.Recipient.Equal(context, locationRange, v.Recipient) &&
+		otherValue.Value.Equal(context, locationRange, v.Value)
 }
 
 func (*PublishedValue) IsStorable() bool {

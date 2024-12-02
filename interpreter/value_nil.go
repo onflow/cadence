@@ -125,7 +125,7 @@ func (v NilValue) ConformsToStaticType(
 	return true
 }
 
-func (v NilValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v NilValue) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
 	_, ok := other.(NilValue)
 	return ok
 }

@@ -83,7 +83,7 @@ func (v Int8Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Int8Value) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v Int8Value) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
 		interpreter,
 		common.NewRawStringMemoryUsage(
@@ -454,7 +454,7 @@ func (v Int8Value) GreaterEqual(interpreter *Interpreter, other ComparableValue,
 	return AsBoolValue(v >= o)
 }
 
-func (v Int8Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v Int8Value) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
 	otherInt8, ok := other.(Int8Value)
 	if !ok {
 		return false
@@ -465,7 +465,7 @@ func (v Int8Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeInt8 (1 byte)
 // - int8 value (1 byte)
-func (v Int8Value) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v Int8Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeInt8)
 	scratch[1] = byte(v)
 	return scratch[:2]

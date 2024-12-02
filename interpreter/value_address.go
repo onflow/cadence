@@ -117,12 +117,12 @@ func (v AddressValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v AddressValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v AddressValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(interpreter, common.AddressValueStringMemoryUsage)
 	return v.String()
 }
 
-func (v AddressValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v AddressValue) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
 	otherAddress, ok := other.(AddressValue)
 	if !ok {
 		return false
@@ -133,7 +133,7 @@ func (v AddressValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeAddress (1 byte)
 // - address (8 bytes)
-func (v AddressValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v AddressValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
 	length := 1 + len(v)
 	var buffer []byte
 	if length <= len(scratch) {

@@ -158,7 +158,7 @@ func (v UIntValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v UIntValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v UIntValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
 		interpreter,
 		common.NewRawStringMemoryUsage(
@@ -431,7 +431,7 @@ func (v UIntValue) GreaterEqual(interpreter *Interpreter, other ComparableValue,
 	return AsBoolValue(cmp >= 0)
 }
 
-func (v UIntValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v UIntValue) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
 	otherUInt, ok := other.(UIntValue)
 	if !ok {
 		return false
@@ -443,7 +443,7 @@ func (v UIntValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeUInt (1 byte)
 // - big int value encoded in big-endian (n bytes)
-func (v UIntValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v UIntValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
 	b := UnsignedBigIntToBigEndianBytes(v.BigInt)
 
 	length := 1 + len(b)

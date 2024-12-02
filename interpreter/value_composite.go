@@ -457,7 +457,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		}
 	}
 
-	if field := v.GetField(interpreter, locationRange, name); field != nil {
+	if field := v.GetField(interpreter, name); field != nil {
 		return compositeMember(interpreter, v, field)
 	}
 
@@ -858,7 +858,7 @@ func formatComposite(
 	return format.Composite(typeId, preparedFields)
 }
 
-func (v *CompositeValue) GetField(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v *CompositeValue) GetField(memoryGauge common.MemoryGauge, name string) Value {
 	storedValue, err := v.dictionary.Get(
 		StringAtreeValueComparator,
 		StringAtreeValueHashInput,
@@ -872,16 +872,16 @@ func (v *CompositeValue) GetField(interpreter *Interpreter, locationRange Locati
 		panic(errors.NewExternalError(err))
 	}
 
-	return MustConvertStoredValue(interpreter, storedValue)
+	return MustConvertStoredValue(memoryGauge, storedValue)
 }
 
-func (v *CompositeValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+func (v *CompositeValue) Equal(context ComparisonContext, locationRange LocationRange, other Value) bool {
 	otherComposite, ok := other.(*CompositeValue)
 	if !ok {
 		return false
 	}
 
-	if !v.StaticType(interpreter).Equal(otherComposite.StaticType(interpreter)) ||
+	if !v.StaticType(context).Equal(otherComposite.StaticType(context)) ||
 		v.Kind != otherComposite.Kind ||
 		v.dictionary.Count() != otherComposite.dictionary.Count() {
 
@@ -906,10 +906,10 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, locationRange LocationR
 
 		// NOTE: Do NOT use an iterator, iteration order of fields may be different
 		// (if stored in different account, as storage ID is used as hash seed)
-		otherValue := otherComposite.GetField(interpreter, locationRange, fieldName)
+		otherValue := otherComposite.GetField(context, fieldName)
 
-		equatableValue, ok := MustConvertStoredValue(interpreter, value).(EquatableValue)
-		if !ok || !equatableValue.Equal(interpreter, locationRange, otherValue) {
+		equatableValue, ok := MustConvertStoredValue(context, value).(EquatableValue)
+		if !ok || !equatableValue.Equal(context, locationRange, otherValue) {
 			return false
 		}
 	}
@@ -919,13 +919,13 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, locationRange LocationR
 // - HashInputTypeEnum (1 byte)
 // - type id (n bytes)
 // - hash input of raw value field name (n bytes)
-func (v *CompositeValue) HashInput(interpreter *Interpreter, locationRange LocationRange, scratch []byte) []byte {
+func (v *CompositeValue) HashInput(memoryGauge common.MemoryGauge, locationRange LocationRange, scratch []byte) []byte {
 	if v.Kind == common.CompositeKindEnum {
 		typeID := v.TypeID()
 
-		rawValue := v.GetField(interpreter, locationRange, sema.EnumRawValueFieldName)
+		rawValue := v.GetField(memoryGauge, sema.EnumRawValueFieldName)
 		rawValueHashInput := rawValue.(HashableValue).
-			HashInput(interpreter, locationRange, scratch)
+			HashInput(memoryGauge, locationRange, scratch)
 
 		length := 1 + len(typeID) + len(rawValueHashInput)
 		if length <= len(scratch) {
@@ -1031,7 +1031,7 @@ func (v *CompositeValue) CompositeStaticTypeConformsToStaticType(
 	}
 
 	for _, fieldName := range compositeType.Fields {
-		value := v.GetField(interpreter, locationRange, fieldName)
+		value := v.GetField(interpreter, fieldName)
 		if value == nil {
 			if computedFields == nil {
 				return false
@@ -1081,7 +1081,7 @@ func (v *CompositeValue) InclusiveRangeStaticTypeConformsToStaticType(
 
 	expectedMemberStaticType := ConvertSemaToStaticType(interpreter, inclusiveRangeType.MemberType)
 	for _, fieldName := range sema.InclusiveRangeTypeFieldNames {
-		value := v.GetField(interpreter, locationRange, fieldName)
+		value := v.GetField(interpreter, fieldName)
 
 		fieldStaticType := value.StaticType(interpreter)
 
@@ -1351,7 +1351,7 @@ func (v *CompositeValue) Transfer(
 }
 
 func (v *CompositeValue) ResourceUUID(interpreter *Interpreter, locationRange LocationRange) *UInt64Value {
-	fieldValue := v.GetField(interpreter, locationRange, sema.ResourceUUIDFieldName)
+	fieldValue := v.GetField(interpreter, sema.ResourceUUIDFieldName)
 	uuid, ok := fieldValue.(UInt64Value)
 	if !ok {
 		return nil

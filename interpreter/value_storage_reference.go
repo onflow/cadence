@@ -93,7 +93,7 @@ func (v *StorageReferenceValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v *StorageReferenceValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v *StorageReferenceValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(interpreter, common.StorageReferenceValueStringMemoryUsage)
 	return v.String()
 }
@@ -324,7 +324,7 @@ func (v *StorageReferenceValue) RemoveTypeKey(
 		RemoveTypeKey(interpreter, locationRange, key)
 }
 
-func (v *StorageReferenceValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v *StorageReferenceValue) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
 	otherReference, ok := other.(*StorageReferenceValue)
 	if !ok ||
 		v.TargetStorageAddress != otherReference.TargetStorageAddress ||

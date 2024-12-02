@@ -92,7 +92,7 @@ func (v Word64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Word64Value) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v Word64Value) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
 		interpreter,
 		common.NewRawStringMemoryUsage(
@@ -304,7 +304,7 @@ func (v Word64Value) GreaterEqual(interpreter *Interpreter, other ComparableValu
 	return AsBoolValue(v >= o)
 }
 
-func (v Word64Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v Word64Value) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
 	otherWord64, ok := other.(Word64Value)
 	if !ok {
 		return false
@@ -315,7 +315,7 @@ func (v Word64Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeWord64 (1 byte)
 // - uint64 value encoded in big-endian (8 bytes)
-func (v Word64Value) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v Word64Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeWord64)
 	binary.BigEndian.PutUint64(scratch[1:], uint64(v))
 	return scratch[:9]

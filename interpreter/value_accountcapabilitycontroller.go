@@ -136,18 +136,14 @@ func (v *AccountCapabilityControllerValue) ConformsToStaticType(
 	return true
 }
 
-func (v *AccountCapabilityControllerValue) Equal(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	other Value,
-) bool {
+func (v *AccountCapabilityControllerValue) Equal(context ComparisonContext, locationRange LocationRange, other Value) bool {
 	otherController, ok := other.(*AccountCapabilityControllerValue)
 	if !ok {
 		return false
 	}
 
 	return otherController.BorrowType.Equal(v.BorrowType) &&
-		otherController.CapabilityID.Equal(interpreter, locationRange, v.CapabilityID)
+		otherController.CapabilityID.Equal(context, locationRange, v.CapabilityID)
 }
 
 func (*AccountCapabilityControllerValue) IsStorable() bool {

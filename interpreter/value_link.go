@@ -98,13 +98,13 @@ func (v PathLinkValue) ConformsToStaticType(
 	panic(errors.NewUnreachableError())
 }
 
-func (v PathLinkValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+func (v PathLinkValue) Equal(context ComparisonContext, locationRange LocationRange, other Value) bool {
 	otherLink, ok := other.(PathLinkValue)
 	if !ok {
 		return false
 	}
 
-	return otherLink.TargetPath.Equal(interpreter, locationRange, v.TargetPath) &&
+	return otherLink.TargetPath.Equal(context, locationRange, v.TargetPath) &&
 		otherLink.Type.Equal(v.Type)
 }
 
@@ -226,7 +226,7 @@ func (v AccountLinkValue) ConformsToStaticType(
 	panic(errors.NewUnreachableError())
 }
 
-func (v AccountLinkValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v AccountLinkValue) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
 	_, ok := other.(AccountLinkValue)
 	return ok
 }

@@ -108,7 +108,7 @@ func (v CharacterValue) MeteredString(interpreter *Interpreter, _ SeenReferences
 	return v.String()
 }
 
-func (v CharacterValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v CharacterValue) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		return false
@@ -148,7 +148,7 @@ func (v CharacterValue) GreaterEqual(_ *Interpreter, other ComparableValue, _ Lo
 	return v.Str >= otherChar.Str
 }
 
-func (v CharacterValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v CharacterValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
 	s := []byte(v.Str)
 	length := 1 + len(s)
 	var buffer []byte

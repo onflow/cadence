@@ -160,19 +160,15 @@ func (v *StorageCapabilityControllerValue) ConformsToStaticType(
 	return true
 }
 
-func (v *StorageCapabilityControllerValue) Equal(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	other Value,
-) bool {
+func (v *StorageCapabilityControllerValue) Equal(context ComparisonContext, locationRange LocationRange, other Value) bool {
 	otherController, ok := other.(*StorageCapabilityControllerValue)
 	if !ok {
 		return false
 	}
 
-	return otherController.TargetPath.Equal(interpreter, locationRange, v.TargetPath) &&
+	return otherController.TargetPath.Equal(context, locationRange, v.TargetPath) &&
 		otherController.BorrowType.Equal(v.BorrowType) &&
-		otherController.CapabilityID.Equal(interpreter, locationRange, v.CapabilityID)
+		otherController.CapabilityID.Equal(context, locationRange, v.CapabilityID)
 }
 
 func (*StorageCapabilityControllerValue) IsStorable() bool {

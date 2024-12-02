@@ -102,7 +102,7 @@ func (v PathValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v PathValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v PathValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	// len(domain) + len(identifier) + '/' x2
 	strLen := len(v.Domain.Identifier()) + len(v.Identifier) + 2
 	common.UseMemory(interpreter, common.NewRawStringMemoryUsage(strLen))
@@ -157,7 +157,7 @@ func (v PathValue) ConformsToStaticType(
 	return true
 }
 
-func (v PathValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v PathValue) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
 	otherPath, ok := other.(PathValue)
 	if !ok {
 		return false
@@ -171,7 +171,7 @@ func (v PathValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 // - HashInputTypePath (1 byte)
 // - domain (1 byte)
 // - identifier (n bytes)
-func (v PathValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v PathValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
 	length := 1 + 1 + len(v.Identifier)
 	var buffer []byte
 	if length <= len(scratch) {

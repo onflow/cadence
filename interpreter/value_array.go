@@ -495,7 +495,7 @@ func (v *ArrayValue) handleIndexOutOfBoundsError(err error, index int, locationR
 	}
 }
 
-func (v *ArrayValue) Get(interpreter *Interpreter, locationRange LocationRange, index int) Value {
+func (v *ArrayValue) Get(gauge common.MemoryGauge, locationRange LocationRange, index int) Value {
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Get function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -515,7 +515,7 @@ func (v *ArrayValue) Get(interpreter *Interpreter, locationRange LocationRange, 
 		panic(errors.NewExternalError(err))
 	}
 
-	return MustConvertStoredValue(interpreter, storedValue)
+	return MustConvertStoredValue(gauge, storedValue)
 }
 
 func (v *ArrayValue) SetKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
@@ -1252,7 +1252,7 @@ func (v *ArrayValue) ConformsToStaticType(
 	return !elementMismatch
 }
 
-func (v *ArrayValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+func (v *ArrayValue) Equal(context ComparisonContext, locationRange LocationRange, other Value) bool {
 	otherArray, ok := other.(*ArrayValue)
 	if !ok {
 		return false
@@ -1275,11 +1275,11 @@ func (v *ArrayValue) Equal(interpreter *Interpreter, locationRange LocationRange
 	}
 
 	for i := 0; i < count; i++ {
-		value := v.Get(interpreter, locationRange, i)
-		otherValue := otherArray.Get(interpreter, locationRange, i)
+		value := v.Get(context, locationRange, i)
+		otherValue := otherArray.Get(context, locationRange, i)
 
 		equatableValue, ok := value.(EquatableValue)
-		if !ok || !equatableValue.Equal(interpreter, locationRange, otherValue) {
+		if !ok || !equatableValue.Equal(context, locationRange, otherValue) {
 			return false
 		}
 	}

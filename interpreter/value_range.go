@@ -231,11 +231,7 @@ func getFieldAsIntegerValue(
 	name string,
 ) IntegerValue {
 	return convertAndAssertIntegerValue(
-		rangeValue.GetField(
-			interpreter,
-			locationRange,
-			name,
-		),
+		rangeValue.GetField(interpreter, name),
 	)
 }
 

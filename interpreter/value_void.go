@@ -76,7 +76,7 @@ func (v VoidValue) ConformsToStaticType(
 	return true
 }
 
-func (v VoidValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v VoidValue) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
 	_, ok := other.(VoidValue)
 	return ok
 }

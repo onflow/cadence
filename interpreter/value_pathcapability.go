@@ -199,7 +199,7 @@ func (v *PathCapabilityValue) ConformsToStaticType(
 	return true
 }
 
-func (v *PathCapabilityValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+func (v *PathCapabilityValue) Equal(context ComparisonContext, locationRange LocationRange, other Value) bool {
 	otherCapability, ok := other.(*PathCapabilityValue)
 	if !ok {
 		return false
@@ -215,8 +215,8 @@ func (v *PathCapabilityValue) Equal(interpreter *Interpreter, locationRange Loca
 		return false
 	}
 
-	return otherCapability.address.Equal(interpreter, locationRange, v.address) &&
-		otherCapability.Path.Equal(interpreter, locationRange, v.Path)
+	return otherCapability.address.Equal(context, locationRange, v.address) &&
+		otherCapability.Path.Equal(context, locationRange, v.Path)
 }
 
 func (*PathCapabilityValue) IsStorable() bool {

@@ -241,7 +241,7 @@ func (v *EphemeralReferenceValue) RemoveTypeKey(
 		RemoveTypeKey(interpreter, locationRange, key)
 }
 
-func (v *EphemeralReferenceValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v *EphemeralReferenceValue) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
 	otherReference, ok := other.(*EphemeralReferenceValue)
 	if !ok ||
 		v.Value != otherReference.Value ||

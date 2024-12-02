@@ -71,7 +71,7 @@ func (v BoolValue) Negate(_ *Interpreter) BoolValue {
 	return TrueValue
 }
 
-func (v BoolValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v BoolValue) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
 	otherBool, ok := other.(BoolValue)
 	if !ok {
 		return false
@@ -118,7 +118,7 @@ func (v BoolValue) GreaterEqual(_ *Interpreter, other ComparableValue, _ Locatio
 // HashInput returns a byte slice containing:
 // - HashInputTypeBool (1 byte)
 // - 1/0 (1 byte)
-func (v BoolValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v BoolValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeBool)
 	if v {
 		scratch[1] = 1

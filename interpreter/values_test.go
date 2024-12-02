@@ -284,7 +284,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 			someValue := removedValue.(*interpreter.SomeValue)
 
 			// Removed value must be same as the original value
-			innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
+			innerValue := someValue.InnerValue()
 			AssertValuesEqual(t, inter, orgValue, innerValue)
 
 			return false
@@ -344,7 +344,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 			someValue := removedValue.(*interpreter.SomeValue)
 
 			// Removed value must be same as the original value
-			innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
+			innerValue := someValue.InnerValue()
 			AssertValuesEqual(t, inter, orgValue, innerValue)
 
 			return false
@@ -412,7 +412,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 			someValue := oldValue.(*interpreter.SomeValue)
 
 			// Removed value must be same as the original value
-			innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
+			innerValue := someValue.InnerValue()
 			AssertValuesEqual(t, inter, value1, innerValue)
 		}
 
@@ -428,7 +428,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 			someValue := readValue.(*interpreter.SomeValue)
 
 			// Read value must be updated value
-			innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
+			innerValue := someValue.InnerValue()
 			AssertValuesEqual(t, inter, value2, innerValue)
 		}
 	})
@@ -515,7 +515,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 				someValue := removedValue.(*interpreter.SomeValue)
 
 				// Removed value must be same as the original value
-				innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
+				innerValue := someValue.InnerValue()
 				AssertValuesEqual(t, inter, orgValue, innerValue)
 
 				deleteCount++
@@ -1005,7 +1005,7 @@ func TestInterpretRandomCompositeValueOperations(t *testing.T) {
 		storageSize, slabCounts = getSlabStorageSize(t, storage)
 
 		for fieldName, orgFieldValue := range orgFields {
-			fieldValue := testComposite.GetField(inter, interpreter.EmptyLocationRange, fieldName)
+			fieldValue := testComposite.GetField(inter, fieldName)
 			AssertValuesEqual(t, inter, orgFieldValue, fieldValue)
 		}
 
@@ -1042,7 +1042,7 @@ func TestInterpretRandomCompositeValueOperations(t *testing.T) {
 		).(*interpreter.CompositeValue)
 
 		for name, orgValue := range orgFields {
-			value := copyOfTestComposite.GetField(inter, interpreter.EmptyLocationRange, name)
+			value := copyOfTestComposite.GetField(inter, name)
 			AssertValuesEqual(t, inter, orgValue, value)
 		}
 
@@ -1062,7 +1062,7 @@ func TestInterpretRandomCompositeValueOperations(t *testing.T) {
 
 		// go over original values again and check no missing data (no side effect should be found)
 		for name, orgValue := range orgFields {
-			value := testComposite.GetField(inter, interpreter.EmptyLocationRange, name)
+			value := testComposite.GetField(inter, name)
 			AssertValuesEqual(t, inter, orgValue, value)
 		}
 
@@ -1087,7 +1087,7 @@ func TestInterpretRandomCompositeValueOperations(t *testing.T) {
 
 		for name := range orgFields {
 			composite.RemoveField(inter, interpreter.EmptyLocationRange, name)
-			value := composite.GetField(inter, interpreter.EmptyLocationRange, name)
+			value := composite.GetField(inter, name)
 			assert.Nil(t, value)
 		}
 	})
@@ -1115,7 +1115,7 @@ func TestInterpretRandomCompositeValueOperations(t *testing.T) {
 
 		// Check the elements
 		for fieldName, orgFieldValue := range fields {
-			fieldValue := movedComposite.GetField(inter, interpreter.EmptyLocationRange, fieldName)
+			fieldValue := movedComposite.GetField(inter, fieldName)
 			AssertValuesEqual(t, inter, orgFieldValue, fieldValue)
 		}
 
@@ -1414,7 +1414,7 @@ func (r randomValueGenerator) generateRandomHashableValue(inter *interpreter.Int
 			common.ZeroAddress,
 		)
 
-		if enum.GetField(inter, interpreter.EmptyLocationRange, sema.EnumRawValueFieldName) == nil {
+		if enum.GetField(inter, sema.EnumRawValueFieldName) == nil {
 			panic("enum without raw value")
 		}
 
@@ -1686,7 +1686,7 @@ func (m *valueMap) internalKey(inter *interpreter.Interpreter, key interpreter.V
 			location:            key.Location,
 			qualifiedIdentifier: key.QualifiedIdentifier,
 			kind:                key.Kind,
-			rawValue:            key.GetField(inter, interpreter.EmptyLocationRange, sema.EnumRawValueFieldName),
+			rawValue:            key.GetField(inter, sema.EnumRawValueFieldName),
 		}
 	case interpreter.Value:
 		return key

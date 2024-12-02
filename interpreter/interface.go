@@ -53,3 +53,10 @@ type StaticTypeGetter interface {
 }
 
 var _ StaticTypeGetter = &Interpreter{}
+
+type ComparisonContext interface {
+	common.MemoryGauge
+	StaticTypeGetter
+}
+
+var _ ComparisonContext = &Interpreter{}

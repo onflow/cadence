@@ -84,7 +84,7 @@ func (v Word16Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Word16Value) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v Word16Value) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
 		interpreter,
 		common.NewRawStringMemoryUsage(
@@ -275,7 +275,7 @@ func (v Word16Value) GreaterEqual(interpreter *Interpreter, other ComparableValu
 	return AsBoolValue(v >= o)
 }
 
-func (v Word16Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v Word16Value) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
 	otherWord16, ok := other.(Word16Value)
 	if !ok {
 		return false
@@ -286,7 +286,7 @@ func (v Word16Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeWord16 (1 byte)
 // - uint16 value encoded in big-endian (2 bytes)
-func (v Word16Value) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v Word16Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeWord16)
 	binary.BigEndian.PutUint16(scratch[1:], uint16(v))
 	return scratch[:3]

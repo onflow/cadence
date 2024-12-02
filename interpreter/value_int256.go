@@ -116,7 +116,7 @@ func (v Int256Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Int256Value) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v Int256Value) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
 		interpreter,
 		common.NewRawStringMemoryUsage(
@@ -519,7 +519,7 @@ func (v Int256Value) GreaterEqual(interpreter *Interpreter, other ComparableValu
 	return AsBoolValue(cmp >= 0)
 }
 
-func (v Int256Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v Int256Value) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
 	otherInt, ok := other.(Int256Value)
 	if !ok {
 		return false
@@ -531,7 +531,7 @@ func (v Int256Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeInt256 (1 byte)
 // - big int value encoded in big-endian (n bytes)
-func (v Int256Value) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v Int256Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
 	b := SignedBigIntToBigEndianBytes(v.BigInt)
 
 	length := 1 + len(b)

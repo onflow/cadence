@@ -746,7 +746,7 @@ func TestOwnerDictionaryRemove(t *testing.T) {
 		value2,
 	)
 	require.IsType(t, &SomeValue{}, existingValue)
-	innerValue := existingValue.(*SomeValue).InnerValue(inter, EmptyLocationRange)
+	innerValue := existingValue.(*SomeValue).InnerValue()
 	value1 = innerValue.(*CompositeValue)
 
 	queriedValue, _ := dictionary.Get(inter, EmptyLocationRange, keyValue)
@@ -804,7 +804,7 @@ func TestOwnerDictionaryInsertExisting(t *testing.T) {
 		keyValue,
 	)
 	require.IsType(t, &SomeValue{}, existingValue)
-	innerValue := existingValue.(*SomeValue).InnerValue(inter, EmptyLocationRange)
+	innerValue := existingValue.(*SomeValue).InnerValue()
 	value = innerValue.(*CompositeValue)
 
 	assert.Equal(t, newOwner, dictionary.GetOwner())

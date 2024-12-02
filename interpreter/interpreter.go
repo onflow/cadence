@@ -2326,7 +2326,7 @@ func (interpreter *Interpreter) BoxOptional(
 
 		switch typedInner := inner.(type) {
 		case *SomeValue:
-			inner = typedInner.InnerValue(interpreter, locationRange)
+			inner = typedInner.InnerValue()
 
 		case NilValue:
 			// NOTE: nested nil will be unboxed!
@@ -2348,7 +2348,7 @@ func (interpreter *Interpreter) Unbox(locationRange LocationRange, value Value) 
 			return value
 		}
 
-		value = some.InnerValue(interpreter, locationRange)
+		value = some.InnerValue()
 	}
 }
 
@@ -4793,7 +4793,7 @@ func GetNativeCompositeValueComputedFields(qualifiedIdentifier string) map[strin
 				locationRange LocationRange,
 				v *CompositeValue,
 			) Value {
-				publicKeyValue := v.GetField(interpreter, locationRange, sema.PublicKeyTypePublicKeyFieldName)
+				publicKeyValue := v.GetField(interpreter, sema.PublicKeyTypePublicKeyFieldName)
 				return publicKeyValue.Transfer(
 					interpreter,
 					locationRange,

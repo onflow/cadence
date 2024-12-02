@@ -423,7 +423,7 @@ func (v IntValue) GreaterEqual(interpreter *Interpreter, other ComparableValue, 
 	return AsBoolValue(cmp >= 0)
 }
 
-func (v IntValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v IntValue) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
 	otherInt, ok := other.(IntValue)
 	if !ok {
 		return false
@@ -435,7 +435,7 @@ func (v IntValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeInt (1 byte)
 // - big int encoded in big-endian (n bytes)
-func (v IntValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v IntValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
 	b := SignedBigIntToBigEndianBytes(v.BigInt)
 
 	length := 1 + len(b)

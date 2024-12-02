@@ -137,13 +137,13 @@ func (v *StringValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v *StringValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v *StringValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	l := format.FormattedStringLength(v.Str)
 	common.UseMemory(interpreter, common.NewRawStringMemoryUsage(l))
 	return v.String()
 }
 
-func (v *StringValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v *StringValue) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		return false
@@ -210,7 +210,7 @@ func (v *StringValue) GreaterEqual(interpreter *Interpreter, other ComparableVal
 // HashInput returns a byte slice containing:
 // - HashInputTypeString (1 byte)
 // - string value (n bytes)
-func (v *StringValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v *StringValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
 	length := 1 + len(v.Str)
 	var buffer []byte
 	if length <= len(scratch) {

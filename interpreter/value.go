@@ -165,14 +165,14 @@ type EquatableValue interface {
 	Value
 	// Equal returns true if the given value is equal to this value.
 	// If no location range is available, pass e.g. EmptyLocationRange
-	Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool
+	Equal(context ComparisonContext, locationRange LocationRange, other Value) bool
 }
 
-func newValueComparator(interpreter *Interpreter, locationRange LocationRange) atree.ValueComparator {
+func newValueComparator(context ComparisonContext, locationRange LocationRange) atree.ValueComparator {
 	return func(storage atree.SlabStorage, atreeValue atree.Value, otherStorable atree.Storable) (bool, error) {
-		value := MustConvertStoredValue(interpreter, atreeValue)
-		otherValue := StoredValue(interpreter, otherStorable, storage)
-		return value.(EquatableValue).Equal(interpreter, locationRange, otherValue), nil
+		value := MustConvertStoredValue(context, atreeValue)
+		otherValue := StoredValue(context, otherStorable, storage)
+		return value.(EquatableValue).Equal(context, locationRange, otherValue), nil
 	}
 }
 

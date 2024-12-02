@@ -2338,13 +2338,13 @@ func TestInterpretResourceInterfaceDefaultDestroyEvent(t *testing.T) {
 
 	require.Len(t, events, 4)
 	require.Equal(t, "I.ResourceDestroyed", events[0].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, interpreter.EmptyLocationRange, "id"))
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, "id"))
 	require.Equal(t, "A.ResourceDestroyed", events[1].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[1].GetField(inter, interpreter.EmptyLocationRange, "id"))
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[1].GetField(inter, "id"))
 	require.Equal(t, "I.ResourceDestroyed", events[2].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 2), events[2].GetField(inter, interpreter.EmptyLocationRange, "id"))
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 2), events[2].GetField(inter, "id"))
 	require.Equal(t, "B.ResourceDestroyed", events[3].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 2), events[3].GetField(inter, interpreter.EmptyLocationRange, "id"))
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 2), events[3].GetField(inter, "id"))
 }
 
 func TestInterpretResourceInterfaceDefaultDestroyEventMultipleInheritance(t *testing.T) {
@@ -2393,11 +2393,11 @@ func TestInterpretResourceInterfaceDefaultDestroyEventMultipleInheritance(t *tes
 
 	require.Len(t, events, 3)
 	require.Equal(t, "I.ResourceDestroyed", events[0].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, interpreter.EmptyLocationRange, "id"))
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, "id"))
 	require.Equal(t, "J.ResourceDestroyed", events[1].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[1].GetField(inter, interpreter.EmptyLocationRange, "id"))
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[1].GetField(inter, "id"))
 	require.Equal(t, "A.ResourceDestroyed", events[2].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[2].GetField(inter, interpreter.EmptyLocationRange, "id"))
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[2].GetField(inter, "id"))
 }
 
 func TestInterpretResourceInterfaceDefaultDestroyEventIndirectInheritance(t *testing.T) {
@@ -2446,11 +2446,11 @@ func TestInterpretResourceInterfaceDefaultDestroyEventIndirectInheritance(t *tes
 
 	require.Len(t, events, 3)
 	require.Equal(t, "J.ResourceDestroyed", events[0].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, interpreter.EmptyLocationRange, "id"))
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, "id"))
 	require.Equal(t, "I.ResourceDestroyed", events[1].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[1].GetField(inter, interpreter.EmptyLocationRange, "id"))
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[1].GetField(inter, "id"))
 	require.Equal(t, "A.ResourceDestroyed", events[2].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[2].GetField(inter, interpreter.EmptyLocationRange, "id"))
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[2].GetField(inter, "id"))
 }
 
 func TestInterpretResourceInterfaceDefaultDestroyEventNoCompositeEvent(t *testing.T) {
@@ -2496,7 +2496,7 @@ func TestInterpretResourceInterfaceDefaultDestroyEventNoCompositeEvent(t *testin
 
 	require.Len(t, events, 1)
 	require.Equal(t, "I.ResourceDestroyed", events[0].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, interpreter.EmptyLocationRange, "id"))
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, "id"))
 }
 
 func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
@@ -2553,7 +2553,7 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
 		require.Equal(t, "TrollAttachment.ResourceDestroyed", events[0].QualifiedIdentifier)
 
 		// should be 1, not 123
-		require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, interpreter.EmptyLocationRange, "x"))
+		require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, "x"))
 	})
 
 	t.Run("base contract name", func(t *testing.T) {
@@ -2602,7 +2602,7 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
 		require.Equal(t, "TrollAttachment.ResourceDestroyed", events[0].QualifiedIdentifier)
 
 		// should be 1, not 123
-		require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, interpreter.EmptyLocationRange, "x"))
+		require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, "x"))
 	})
 }
 
@@ -2646,7 +2646,7 @@ func TestInterpretDefaultDestroyEventArgumentScoping(t *testing.T) {
 
 	require.Len(t, events, 1)
 	require.Equal(t, "R.ResourceDestroyed", events[0].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, interpreter.EmptyLocationRange, "x"))
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, "x"))
 }
 
 func TestInterpretVariableDeclarationEvaluationOrder(t *testing.T) {

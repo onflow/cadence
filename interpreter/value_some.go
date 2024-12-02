@@ -101,7 +101,7 @@ func (v *SomeValue) IsDestroyed() bool {
 }
 
 func (v *SomeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
-	innerValue := v.InnerValue(interpreter, locationRange)
+	innerValue := v.InnerValue()
 	maybeDestroy(interpreter, locationRange, innerValue)
 
 	v.isDestroyed = true
@@ -185,7 +185,7 @@ func (v *SomeValue) ConformsToStaticType(
 	// SomeValue.StaticType builds type from inner value (if available),
 	// so no need to check it
 
-	innerValue := v.InnerValue(interpreter, locationRange)
+	innerValue := v.InnerValue()
 
 	return innerValue.ConformsToStaticType(
 		interpreter,
@@ -194,20 +194,20 @@ func (v *SomeValue) ConformsToStaticType(
 	)
 }
 
-func (v *SomeValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+func (v *SomeValue) Equal(context ComparisonContext, locationRange LocationRange, other Value) bool {
 	otherSome, ok := other.(*SomeValue)
 	if !ok {
 		return false
 	}
 
-	innerValue := v.InnerValue(interpreter, locationRange)
+	innerValue := v.InnerValue()
 
 	equatableValue, ok := innerValue.(EquatableValue)
 	if !ok {
 		return false
 	}
 
-	return equatableValue.Equal(interpreter, locationRange, otherSome.value)
+	return equatableValue.Equal(context, locationRange, otherSome.value)
 }
 
 func (v *SomeValue) Storable(
@@ -365,7 +365,7 @@ func (v *SomeValue) DeepRemove(interpreter *Interpreter, hasNoParentContainer bo
 	}
 }
 
-func (v *SomeValue) InnerValue(_ *Interpreter, _ LocationRange) Value {
+func (v *SomeValue) InnerValue() Value {
 	return v.value
 }
 
