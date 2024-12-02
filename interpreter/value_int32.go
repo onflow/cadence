@@ -69,8 +69,8 @@ func (Int32Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (Int32Value) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
-	return NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypeInt32)
+func (Int32Value) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeInt32)
 }
 
 func (Int32Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -99,7 +99,7 @@ func (v Int32Value) ToInt(_ LocationRange) int {
 	return int(v)
 }
 
-func (v Int32Value) Negate(context ArithmeticContext, locationRange LocationRange) NumberValue {
+func (v Int32Value) Negate(context NumberValueArithmeticContext, locationRange LocationRange) NumberValue {
 	// INT32-C
 	if v == math.MinInt32 {
 		panic(OverflowError{
@@ -114,7 +114,7 @@ func (v Int32Value) Negate(context ArithmeticContext, locationRange LocationRang
 	return NewInt32Value(context, valueGetter)
 }
 
-func (v Int32Value) Plus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int32Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -143,7 +143,7 @@ func (v Int32Value) Plus(context ArithmeticContext, other NumberValue, locationR
 	return NewInt32Value(context, valueGetter)
 }
 
-func (v Int32Value) SaturatingPlus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int32Value) SaturatingPlus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -167,7 +167,7 @@ func (v Int32Value) SaturatingPlus(context ArithmeticContext, other NumberValue,
 	return NewInt32Value(context, valueGetter)
 }
 
-func (v Int32Value) Minus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int32Value) Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -196,7 +196,7 @@ func (v Int32Value) Minus(context ArithmeticContext, other NumberValue, location
 	return NewInt32Value(context, valueGetter)
 }
 
-func (v Int32Value) SaturatingMinus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int32Value) SaturatingMinus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -220,7 +220,7 @@ func (v Int32Value) SaturatingMinus(context ArithmeticContext, other NumberValue
 	return NewInt32Value(context, valueGetter)
 }
 
-func (v Int32Value) Mod(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int32Value) Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -245,7 +245,7 @@ func (v Int32Value) Mod(context ArithmeticContext, other NumberValue, locationRa
 	return NewInt32Value(context, valueGetter)
 }
 
-func (v Int32Value) Mul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int32Value) Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -298,7 +298,7 @@ func (v Int32Value) Mul(context ArithmeticContext, other NumberValue, locationRa
 	return NewInt32Value(context, valueGetter)
 }
 
-func (v Int32Value) SaturatingMul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int32Value) SaturatingMul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -342,7 +342,7 @@ func (v Int32Value) SaturatingMul(context ArithmeticContext, other NumberValue, 
 	return NewInt32Value(context, valueGetter)
 }
 
-func (v Int32Value) Div(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int32Value) Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -372,7 +372,7 @@ func (v Int32Value) Div(context ArithmeticContext, other NumberValue, locationRa
 	return NewInt32Value(context, valueGetter)
 }
 
-func (v Int32Value) SaturatingDiv(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int32Value) SaturatingDiv(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -400,7 +400,7 @@ func (v Int32Value) SaturatingDiv(context ArithmeticContext, other NumberValue, 
 	return NewInt32Value(context, valueGetter)
 }
 
-func (v Int32Value) Less(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Int32Value) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -414,7 +414,7 @@ func (v Int32Value) Less(context ComparisonContext, other ComparableValue, locat
 	return AsBoolValue(v < o)
 }
 
-func (v Int32Value) LessEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Int32Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -428,7 +428,7 @@ func (v Int32Value) LessEqual(context ComparisonContext, other ComparableValue, 
 	return AsBoolValue(v <= o)
 }
 
-func (v Int32Value) Greater(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Int32Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -442,7 +442,7 @@ func (v Int32Value) Greater(context ComparisonContext, other ComparableValue, lo
 	return AsBoolValue(v > o)
 }
 
-func (v Int32Value) GreaterEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Int32Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -456,7 +456,7 @@ func (v Int32Value) GreaterEqual(context ComparisonContext, other ComparableValu
 	return AsBoolValue(v >= o)
 }
 
-func (v Int32Value) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
+func (v Int32Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherInt32, ok := other.(Int32Value)
 	if !ok {
 		return false

@@ -111,11 +111,11 @@ func (v *EphemeralReferenceValue) MeteredString(interpreter *Interpreter, seenRe
 	return v.Value.MeteredString(interpreter, seenReferences, locationRange)
 }
 
-func (v *EphemeralReferenceValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
+func (v *EphemeralReferenceValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewReferenceStaticType(
-		staticTypeGetter,
+		context,
 		v.Authorization,
-		v.Value.StaticType(staticTypeGetter),
+		v.Value.StaticType(context),
 	)
 }
 
@@ -241,7 +241,7 @@ func (v *EphemeralReferenceValue) RemoveTypeKey(
 		RemoveTypeKey(interpreter, locationRange, key)
 }
 
-func (v *EphemeralReferenceValue) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
+func (v *EphemeralReferenceValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherReference, ok := other.(*EphemeralReferenceValue)
 	if !ok ||
 		v.Value != otherReference.Value ||

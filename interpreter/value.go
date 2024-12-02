@@ -94,7 +94,7 @@ type Value interface {
 	isValue()
 	Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange)
 	Walk(interpreter *Interpreter, walkChild func(Value), locationRange LocationRange)
-	StaticType(staticTypeGetter StaticTypeGetter) StaticType
+	StaticType(context ValueStaticTypeContext) StaticType
 	// ConformsToStaticType returns true if the value (i.e. its dynamic type)
 	// conforms to its own static type.
 	// Non-container values trivially always conform to their own static type.
@@ -159,16 +159,23 @@ type MemberAccessibleValue interface {
 	SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value) bool
 }
 
+type ValueComparisonContext interface {
+	common.MemoryGauge
+	ValueStaticTypeContext
+}
+
+var _ ValueComparisonContext = &Interpreter{}
+
 // EquatableValue
 
 type EquatableValue interface {
 	Value
 	// Equal returns true if the given value is equal to this value.
 	// If no location range is available, pass e.g. EmptyLocationRange
-	Equal(context ComparisonContext, locationRange LocationRange, other Value) bool
+	Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool
 }
 
-func newValueComparator(context ComparisonContext, locationRange LocationRange) atree.ValueComparator {
+func newValueComparator(context ValueComparisonContext, locationRange LocationRange) atree.ValueComparator {
 	return func(storage atree.SlabStorage, atreeValue atree.Value, otherStorable atree.Storable) (bool, error) {
 		value := MustConvertStoredValue(context, atreeValue)
 		otherValue := StoredValue(context, otherStorable, storage)
@@ -179,10 +186,10 @@ func newValueComparator(context ComparisonContext, locationRange LocationRange) 
 // ComparableValue
 type ComparableValue interface {
 	EquatableValue
-	Less(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue
-	LessEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue
-	Greater(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue
-	GreaterEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue
+	Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue
+	LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue
+	Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue
+	GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue
 }
 
 // ResourceKindedValue

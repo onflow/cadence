@@ -98,8 +98,8 @@ func (v *StorageReferenceValue) MeteredString(interpreter *Interpreter, _ SeenRe
 	return v.String()
 }
 
-func (v *StorageReferenceValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
-	referencedValue, err := v.dereference(staticTypeGetter, EmptyLocationRange)
+func (v *StorageReferenceValue) StaticType(context ValueStaticTypeContext) StaticType {
+	referencedValue, err := v.dereference(context, EmptyLocationRange)
 	if err != nil {
 		panic(err)
 	}
@@ -107,9 +107,9 @@ func (v *StorageReferenceValue) StaticType(staticTypeGetter StaticTypeGetter) St
 	self := *referencedValue
 
 	return NewReferenceStaticType(
-		staticTypeGetter,
+		context,
 		v.Authorization,
-		self.StaticType(staticTypeGetter),
+		self.StaticType(context),
 	)
 }
 
@@ -121,14 +121,14 @@ func (*StorageReferenceValue) IsImportable(_ *Interpreter, _ LocationRange) bool
 	return false
 }
 
-func (v *StorageReferenceValue) dereference(staticTypeGetter StaticTypeGetter, locationRange LocationRange) (*Value, error) {
+func (v *StorageReferenceValue) dereference(context ValueStaticTypeContext, locationRange LocationRange) (*Value, error) {
 	address := v.TargetStorageAddress
 	domain := v.TargetPath.Domain.StorageDomain()
 	identifier := v.TargetPath.Identifier
 
 	storageMapKey := StringStorageMapKey(identifier)
 
-	referenced := staticTypeGetter.ReadStored(address, domain, storageMapKey)
+	referenced := context.ReadStored(address, domain, storageMapKey)
 	if referenced == nil {
 		return nil, nil
 	}
@@ -141,10 +141,10 @@ func (v *StorageReferenceValue) dereference(staticTypeGetter StaticTypeGetter, l
 	}
 
 	if v.BorrowedType != nil {
-		staticType := referenced.StaticType(staticTypeGetter)
+		staticType := referenced.StaticType(context)
 
-		if !staticTypeGetter.IsSubTypeOfSemaType(staticType, v.BorrowedType) {
-			semaType := staticTypeGetter.MustConvertStaticToSemaType(staticType)
+		if !context.IsSubTypeOfSemaType(staticType, v.BorrowedType) {
+			semaType := context.MustConvertStaticToSemaType(staticType)
 
 			return nil, ForceCastTypeMismatchError{
 				ExpectedType:  v.BorrowedType,
@@ -324,7 +324,7 @@ func (v *StorageReferenceValue) RemoveTypeKey(
 		RemoveTypeKey(interpreter, locationRange, key)
 }
 
-func (v *StorageReferenceValue) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
+func (v *StorageReferenceValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherReference, ok := other.(*StorageReferenceValue)
 	if !ok ||
 		v.TargetStorageAddress != otherReference.TargetStorageAddress ||

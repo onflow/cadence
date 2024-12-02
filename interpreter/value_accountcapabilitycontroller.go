@@ -96,7 +96,7 @@ func (v *AccountCapabilityControllerValue) Walk(_ *Interpreter, walkChild func(V
 	walkChild(v.CapabilityID)
 }
 
-func (v *AccountCapabilityControllerValue) StaticType(_ StaticTypeGetter) StaticType {
+func (v *AccountCapabilityControllerValue) StaticType(_ ValueStaticTypeContext) StaticType {
 	return PrimitiveStaticTypeAccountCapabilityController
 }
 
@@ -136,7 +136,7 @@ func (v *AccountCapabilityControllerValue) ConformsToStaticType(
 	return true
 }
 
-func (v *AccountCapabilityControllerValue) Equal(context ComparisonContext, locationRange LocationRange, other Value) bool {
+func (v *AccountCapabilityControllerValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
 	otherController, ok := other.(*AccountCapabilityControllerValue)
 	if !ok {
 		return false

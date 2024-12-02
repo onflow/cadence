@@ -76,8 +76,8 @@ func (Word64Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (Word64Value) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
-	return NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypeWord64)
+func (Word64Value) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeWord64)
 }
 
 func (Word64Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -126,11 +126,11 @@ func (v Word64Value) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
 	return new(big.Int).SetUint64(uint64(v))
 }
 
-func (v Word64Value) Negate(ArithmeticContext, LocationRange) NumberValue {
+func (v Word64Value) Negate(NumberValueArithmeticContext, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word64Value) Plus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word64Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -148,11 +148,11 @@ func (v Word64Value) Plus(context ArithmeticContext, other NumberValue, location
 	return NewWord64Value(context, valueGetter)
 }
 
-func (v Word64Value) SaturatingPlus(ArithmeticContext, NumberValue, LocationRange) NumberValue {
+func (v Word64Value) SaturatingPlus(NumberValueArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word64Value) Minus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word64Value) Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -170,11 +170,11 @@ func (v Word64Value) Minus(context ArithmeticContext, other NumberValue, locatio
 	return NewWord64Value(context, valueGetter)
 }
 
-func (v Word64Value) SaturatingMinus(ArithmeticContext, NumberValue, LocationRange) NumberValue {
+func (v Word64Value) SaturatingMinus(NumberValueArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word64Value) Mod(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word64Value) Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -198,7 +198,7 @@ func (v Word64Value) Mod(context ArithmeticContext, other NumberValue, locationR
 	return NewWord64Value(context, valueGetter)
 }
 
-func (v Word64Value) Mul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word64Value) Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -216,11 +216,11 @@ func (v Word64Value) Mul(context ArithmeticContext, other NumberValue, locationR
 	return NewWord64Value(context, valueGetter)
 }
 
-func (v Word64Value) SaturatingMul(ArithmeticContext, NumberValue, LocationRange) NumberValue {
+func (v Word64Value) SaturatingMul(NumberValueArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word64Value) Div(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word64Value) Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -244,11 +244,11 @@ func (v Word64Value) Div(context ArithmeticContext, other NumberValue, locationR
 	return NewWord64Value(context, valueGetter)
 }
 
-func (v Word64Value) SaturatingDiv(ArithmeticContext, NumberValue, LocationRange) NumberValue {
+func (v Word64Value) SaturatingDiv(NumberValueArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word64Value) Less(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word64Value) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -262,7 +262,7 @@ func (v Word64Value) Less(context ComparisonContext, other ComparableValue, loca
 	return AsBoolValue(v < o)
 }
 
-func (v Word64Value) LessEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word64Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -276,7 +276,7 @@ func (v Word64Value) LessEqual(context ComparisonContext, other ComparableValue,
 	return AsBoolValue(v <= o)
 }
 
-func (v Word64Value) Greater(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word64Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -290,7 +290,7 @@ func (v Word64Value) Greater(context ComparisonContext, other ComparableValue, l
 	return AsBoolValue(v > o)
 }
 
-func (v Word64Value) GreaterEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word64Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -304,7 +304,7 @@ func (v Word64Value) GreaterEqual(context ComparisonContext, other ComparableVal
 	return AsBoolValue(v >= o)
 }
 
-func (v Word64Value) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
+func (v Word64Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherWord64, ok := other.(Word64Value)
 	if !ok {
 		return false

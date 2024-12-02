@@ -66,17 +66,17 @@ func (v *SomeValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange)
 	walkChild(v.value)
 }
 
-func (v *SomeValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
+func (v *SomeValue) StaticType(context ValueStaticTypeContext) StaticType {
 	if v.isDestroyed {
 		return nil
 	}
 
-	innerType := v.value.StaticType(staticTypeGetter)
+	innerType := v.value.StaticType(context)
 	if innerType == nil {
 		return nil
 	}
 	return NewOptionalStaticType(
-		staticTypeGetter,
+		context,
 		innerType,
 	)
 }
@@ -194,7 +194,7 @@ func (v *SomeValue) ConformsToStaticType(
 	)
 }
 
-func (v *SomeValue) Equal(context ComparisonContext, locationRange LocationRange, other Value) bool {
+func (v *SomeValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
 	otherSome, ok := other.(*SomeValue)
 	if !ok {
 		return false

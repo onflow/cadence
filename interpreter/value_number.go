@@ -26,20 +26,26 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
+type NumberValueArithmeticContext interface {
+	ValueStaticTypeContext
+}
+
+var _ NumberValueArithmeticContext = &Interpreter{}
+
 // NumberValue
 type NumberValue interface {
 	ComparableValue
 	ToInt(locationRange LocationRange) int
-	Negate(context ArithmeticContext, locationRange LocationRange) NumberValue
-	Plus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
-	SaturatingPlus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
-	Minus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
-	SaturatingMinus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
-	Mod(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
-	Mul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
-	SaturatingMul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
-	Div(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
-	SaturatingDiv(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	Negate(context NumberValueArithmeticContext, locationRange LocationRange) NumberValue
+	Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	SaturatingPlus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	SaturatingMinus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	SaturatingMul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	SaturatingDiv(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
 	ToBigEndianBytes() []byte
 }
 

@@ -82,8 +82,8 @@ func (Word128Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (Word128Value) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
-	return NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypeWord128)
+func (Word128Value) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeWord128)
 }
 
 func (Word128Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -126,11 +126,11 @@ func (v Word128Value) MeteredString(interpreter *Interpreter, _ SeenReferences, 
 	return v.String()
 }
 
-func (v Word128Value) Negate(ArithmeticContext, LocationRange) NumberValue {
+func (v Word128Value) Negate(NumberValueArithmeticContext, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word128Value) Plus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word128Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -168,11 +168,11 @@ func (v Word128Value) Plus(context ArithmeticContext, other NumberValue, locatio
 	)
 }
 
-func (v Word128Value) SaturatingPlus(_ ArithmeticContext, _ NumberValue, _ LocationRange) NumberValue {
+func (v Word128Value) SaturatingPlus(_ NumberValueArithmeticContext, _ NumberValue, _ LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word128Value) Minus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word128Value) Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -210,11 +210,11 @@ func (v Word128Value) Minus(context ArithmeticContext, other NumberValue, locati
 	)
 }
 
-func (v Word128Value) SaturatingMinus(_ ArithmeticContext, _ NumberValue, _ LocationRange) NumberValue {
+func (v Word128Value) SaturatingMinus(_ NumberValueArithmeticContext, _ NumberValue, _ LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word128Value) Mod(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word128Value) Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -239,7 +239,7 @@ func (v Word128Value) Mod(context ArithmeticContext, other NumberValue, location
 	)
 }
 
-func (v Word128Value) Mul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word128Value) Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -263,11 +263,11 @@ func (v Word128Value) Mul(context ArithmeticContext, other NumberValue, location
 	)
 }
 
-func (v Word128Value) SaturatingMul(_ ArithmeticContext, _ NumberValue, _ LocationRange) NumberValue {
+func (v Word128Value) SaturatingMul(_ NumberValueArithmeticContext, _ NumberValue, _ LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word128Value) Div(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word128Value) Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -293,11 +293,11 @@ func (v Word128Value) Div(context ArithmeticContext, other NumberValue, location
 
 }
 
-func (v Word128Value) SaturatingDiv(_ ArithmeticContext, _ NumberValue, _ LocationRange) NumberValue {
+func (v Word128Value) SaturatingDiv(_ NumberValueArithmeticContext, _ NumberValue, _ LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word128Value) Less(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word128Value) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -312,7 +312,7 @@ func (v Word128Value) Less(context ComparisonContext, other ComparableValue, loc
 	return AsBoolValue(cmp == -1)
 }
 
-func (v Word128Value) LessEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word128Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -327,7 +327,7 @@ func (v Word128Value) LessEqual(context ComparisonContext, other ComparableValue
 	return AsBoolValue(cmp <= 0)
 }
 
-func (v Word128Value) Greater(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word128Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -342,7 +342,7 @@ func (v Word128Value) Greater(context ComparisonContext, other ComparableValue, 
 	return AsBoolValue(cmp == 1)
 }
 
-func (v Word128Value) GreaterEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word128Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -357,7 +357,7 @@ func (v Word128Value) GreaterEqual(context ComparisonContext, other ComparableVa
 	return AsBoolValue(cmp >= 0)
 }
 
-func (v Word128Value) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
+func (v Word128Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherInt, ok := other.(Word128Value)
 	if !ok {
 		return false

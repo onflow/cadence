@@ -69,9 +69,9 @@ func (v *PathCapabilityValue) Walk(_ *Interpreter, walkChild func(Value), _ Loca
 	walkChild(v.Path)
 }
 
-func (v *PathCapabilityValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
+func (v *PathCapabilityValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewCapabilityStaticType(
-		staticTypeGetter,
+		context,
 		v.BorrowType,
 	)
 }
@@ -199,7 +199,7 @@ func (v *PathCapabilityValue) ConformsToStaticType(
 	return true
 }
 
-func (v *PathCapabilityValue) Equal(context ComparisonContext, locationRange LocationRange, other Value) bool {
+func (v *PathCapabilityValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
 	otherCapability, ok := other.(*PathCapabilityValue)
 	if !ok {
 		return false

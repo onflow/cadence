@@ -65,8 +65,8 @@ func (TypeValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (TypeValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
-	return NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypeMetaType)
+func (TypeValue) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeMetaType)
 }
 
 func (TypeValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -98,7 +98,7 @@ func (v TypeValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ L
 	return format.TypeValue(typeString)
 }
 
-func (v TypeValue) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
+func (v TypeValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherTypeValue, ok := other.(TypeValue)
 	if !ok {
 		return false

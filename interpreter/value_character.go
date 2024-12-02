@@ -86,8 +86,8 @@ func (CharacterValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (CharacterValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
-	return NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypeCharacter)
+func (CharacterValue) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeCharacter)
 }
 
 func (CharacterValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -108,7 +108,7 @@ func (v CharacterValue) MeteredString(interpreter *Interpreter, _ SeenReferences
 	return v.String()
 }
 
-func (v CharacterValue) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
+func (v CharacterValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		return false
@@ -116,7 +116,7 @@ func (v CharacterValue) Equal(_ ComparisonContext, _ LocationRange, other Value)
 	return v.Str == otherChar.Str
 }
 
-func (v CharacterValue) Less(_ ComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) Less(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -124,7 +124,7 @@ func (v CharacterValue) Less(_ ComparisonContext, other ComparableValue, _ Locat
 	return v.Str < otherChar.Str
 }
 
-func (v CharacterValue) LessEqual(_ ComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) LessEqual(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -132,7 +132,7 @@ func (v CharacterValue) LessEqual(_ ComparisonContext, other ComparableValue, _ 
 	return v.Str <= otherChar.Str
 }
 
-func (v CharacterValue) Greater(_ ComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) Greater(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -140,7 +140,7 @@ func (v CharacterValue) Greater(_ ComparisonContext, other ComparableValue, _ Lo
 	return v.Str > otherChar.Str
 }
 
-func (v CharacterValue) GreaterEqual(_ ComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) GreaterEqual(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())

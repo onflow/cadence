@@ -441,7 +441,7 @@ func (v *DictionaryValue) Walk(interpreter *Interpreter, walkChild func(Value), 
 	)
 }
 
-func (v *DictionaryValue) StaticType(_ StaticTypeGetter) StaticType {
+func (v *DictionaryValue) StaticType(_ ValueStaticTypeContext) StaticType {
 	// TODO meter
 	return v.Type
 }
@@ -593,7 +593,7 @@ func (v *DictionaryValue) ContainsKey(
 }
 
 func (v *DictionaryValue) Get(
-	context ComparisonContext,
+	context ValueComparisonContext,
 	locationRange LocationRange,
 	keyValue Value,
 ) (Value, bool) {
@@ -1214,7 +1214,7 @@ func (v *DictionaryValue) ConformsToStaticType(
 	}
 }
 
-func (v *DictionaryValue) Equal(context ComparisonContext, locationRange LocationRange, other Value) bool {
+func (v *DictionaryValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
 
 	otherDictionary, ok := other.(*DictionaryValue)
 	if !ok {

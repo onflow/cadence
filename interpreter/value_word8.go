@@ -67,8 +67,8 @@ func (Word8Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (Word8Value) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
-	return NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypeWord8)
+func (Word8Value) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeWord8)
 }
 
 func (Word8Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -97,11 +97,11 @@ func (v Word8Value) ToInt(_ LocationRange) int {
 	return int(v)
 }
 
-func (v Word8Value) Negate(ArithmeticContext, LocationRange) NumberValue {
+func (v Word8Value) Negate(NumberValueArithmeticContext, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word8Value) Plus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word8Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -119,11 +119,11 @@ func (v Word8Value) Plus(context ArithmeticContext, other NumberValue, locationR
 	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) SaturatingPlus(ArithmeticContext, NumberValue, LocationRange) NumberValue {
+func (v Word8Value) SaturatingPlus(NumberValueArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word8Value) Minus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word8Value) Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -141,11 +141,11 @@ func (v Word8Value) Minus(context ArithmeticContext, other NumberValue, location
 	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) SaturatingMinus(ArithmeticContext, NumberValue, LocationRange) NumberValue {
+func (v Word8Value) SaturatingMinus(NumberValueArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word8Value) Mod(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word8Value) Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -169,7 +169,7 @@ func (v Word8Value) Mod(context ArithmeticContext, other NumberValue, locationRa
 	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) Mul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word8Value) Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -187,11 +187,11 @@ func (v Word8Value) Mul(context ArithmeticContext, other NumberValue, locationRa
 	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) SaturatingMul(ArithmeticContext, NumberValue, LocationRange) NumberValue {
+func (v Word8Value) SaturatingMul(NumberValueArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word8Value) Div(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word8Value) Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -215,11 +215,11 @@ func (v Word8Value) Div(context ArithmeticContext, other NumberValue, locationRa
 	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) SaturatingDiv(ArithmeticContext, NumberValue, LocationRange) NumberValue {
+func (v Word8Value) SaturatingDiv(NumberValueArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word8Value) Less(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word8Value) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -233,7 +233,7 @@ func (v Word8Value) Less(context ComparisonContext, other ComparableValue, locat
 	return AsBoolValue(v < o)
 }
 
-func (v Word8Value) LessEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word8Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -247,7 +247,7 @@ func (v Word8Value) LessEqual(context ComparisonContext, other ComparableValue, 
 	return AsBoolValue(v <= o)
 }
 
-func (v Word8Value) Greater(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word8Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -261,7 +261,7 @@ func (v Word8Value) Greater(context ComparisonContext, other ComparableValue, lo
 	return AsBoolValue(v > o)
 }
 
-func (v Word8Value) GreaterEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word8Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -275,7 +275,7 @@ func (v Word8Value) GreaterEqual(context ComparisonContext, other ComparableValu
 	return AsBoolValue(v >= o)
 }
 
-func (v Word8Value) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
+func (v Word8Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherWord8, ok := other.(Word8Value)
 	if !ok {
 		return false

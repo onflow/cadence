@@ -45,24 +45,11 @@ type StorageReader interface {
 
 var _ StorageReader = &Interpreter{}
 
-type StaticTypeGetter interface {
+type ValueStaticTypeContext interface {
 	common.MemoryGauge
 	StorageReader
 	TypeConverter
 	SubTypeChecker
 }
 
-var _ StaticTypeGetter = &Interpreter{}
-
-type ComparisonContext interface {
-	common.MemoryGauge
-	StaticTypeGetter
-}
-
-var _ ComparisonContext = &Interpreter{}
-
-type ArithmeticContext interface {
-	StaticTypeGetter
-}
-
-var _ ArithmeticContext = &Interpreter{}
+var _ ValueStaticTypeContext = &Interpreter{}

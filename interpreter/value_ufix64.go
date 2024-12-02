@@ -86,8 +86,8 @@ func (UFix64Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (UFix64Value) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
-	return NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypeUFix64)
+func (UFix64Value) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeUFix64)
 }
 
 func (UFix64Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -116,11 +116,11 @@ func (v UFix64Value) ToInt(_ LocationRange) int {
 	return int(v / sema.Fix64Factor)
 }
 
-func (v UFix64Value) Negate(ArithmeticContext, LocationRange) NumberValue {
+func (v UFix64Value) Negate(NumberValueArithmeticContext, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UFix64Value) Plus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -138,7 +138,7 @@ func (v UFix64Value) Plus(context ArithmeticContext, other NumberValue, location
 	return NewUFix64Value(context, valueGetter)
 }
 
-func (v UFix64Value) SaturatingPlus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) SaturatingPlus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -161,7 +161,7 @@ func (v UFix64Value) SaturatingPlus(context ArithmeticContext, other NumberValue
 	return NewUFix64Value(context, valueGetter)
 }
 
-func (v UFix64Value) Minus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -187,7 +187,7 @@ func (v UFix64Value) Minus(context ArithmeticContext, other NumberValue, locatio
 	return NewUFix64Value(context, valueGetter)
 }
 
-func (v UFix64Value) SaturatingMinus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) SaturatingMinus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -211,7 +211,7 @@ func (v UFix64Value) SaturatingMinus(context ArithmeticContext, other NumberValu
 	return NewUFix64Value(context, valueGetter)
 }
 
-func (v UFix64Value) Mul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -241,7 +241,7 @@ func (v UFix64Value) Mul(context ArithmeticContext, other NumberValue, locationR
 	return NewUFix64Value(context, valueGetter)
 }
 
-func (v UFix64Value) SaturatingMul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) SaturatingMul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -269,7 +269,7 @@ func (v UFix64Value) SaturatingMul(context ArithmeticContext, other NumberValue,
 	return NewUFix64Value(context, valueGetter)
 }
 
-func (v UFix64Value) Div(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -293,7 +293,7 @@ func (v UFix64Value) Div(context ArithmeticContext, other NumberValue, locationR
 	return NewUFix64Value(context, valueGetter)
 }
 
-func (v UFix64Value) SaturatingDiv(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) SaturatingDiv(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
@@ -309,7 +309,7 @@ func (v UFix64Value) SaturatingDiv(context ArithmeticContext, other NumberValue,
 	return v.Div(context, other, locationRange)
 }
 
-func (v UFix64Value) Mod(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -345,7 +345,7 @@ func (v UFix64Value) Mod(context ArithmeticContext, other NumberValue, locationR
 	)
 }
 
-func (v UFix64Value) Less(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v UFix64Value) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -359,7 +359,7 @@ func (v UFix64Value) Less(context ComparisonContext, other ComparableValue, loca
 	return AsBoolValue(v < o)
 }
 
-func (v UFix64Value) LessEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v UFix64Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -373,7 +373,7 @@ func (v UFix64Value) LessEqual(context ComparisonContext, other ComparableValue,
 	return AsBoolValue(v <= o)
 }
 
-func (v UFix64Value) Greater(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v UFix64Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -387,7 +387,7 @@ func (v UFix64Value) Greater(context ComparisonContext, other ComparableValue, l
 	return AsBoolValue(v > o)
 }
 
-func (v UFix64Value) GreaterEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v UFix64Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -401,7 +401,7 @@ func (v UFix64Value) GreaterEqual(context ComparisonContext, other ComparableVal
 	return AsBoolValue(v >= o)
 }
 
-func (v UFix64Value) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
+func (v UFix64Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherUFix64, ok := other.(UFix64Value)
 	if !ok {
 		return false

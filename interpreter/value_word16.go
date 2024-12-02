@@ -68,8 +68,8 @@ func (Word16Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (Word16Value) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
-	return NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypeWord16)
+func (Word16Value) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeWord16)
 }
 
 func (Word16Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -97,11 +97,11 @@ func (v Word16Value) MeteredString(interpreter *Interpreter, _ SeenReferences, _
 func (v Word16Value) ToInt(_ LocationRange) int {
 	return int(v)
 }
-func (v Word16Value) Negate(ArithmeticContext, LocationRange) NumberValue {
+func (v Word16Value) Negate(NumberValueArithmeticContext, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word16Value) Plus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word16Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -119,11 +119,11 @@ func (v Word16Value) Plus(context ArithmeticContext, other NumberValue, location
 	return NewWord16Value(context, valueGetter)
 }
 
-func (v Word16Value) SaturatingPlus(ArithmeticContext, NumberValue, LocationRange) NumberValue {
+func (v Word16Value) SaturatingPlus(NumberValueArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word16Value) Minus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word16Value) Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -141,11 +141,11 @@ func (v Word16Value) Minus(context ArithmeticContext, other NumberValue, locatio
 	return NewWord16Value(context, valueGetter)
 }
 
-func (v Word16Value) SaturatingMinus(ArithmeticContext, NumberValue, LocationRange) NumberValue {
+func (v Word16Value) SaturatingMinus(NumberValueArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word16Value) Mod(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word16Value) Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -169,7 +169,7 @@ func (v Word16Value) Mod(context ArithmeticContext, other NumberValue, locationR
 	return NewWord16Value(context, valueGetter)
 }
 
-func (v Word16Value) Mul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word16Value) Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -187,11 +187,11 @@ func (v Word16Value) Mul(context ArithmeticContext, other NumberValue, locationR
 	return NewWord16Value(context, valueGetter)
 }
 
-func (v Word16Value) SaturatingMul(ArithmeticContext, NumberValue, LocationRange) NumberValue {
+func (v Word16Value) SaturatingMul(NumberValueArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word16Value) Div(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word16Value) Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -215,11 +215,11 @@ func (v Word16Value) Div(context ArithmeticContext, other NumberValue, locationR
 	return NewWord16Value(context, valueGetter)
 }
 
-func (v Word16Value) SaturatingDiv(ArithmeticContext, NumberValue, LocationRange) NumberValue {
+func (v Word16Value) SaturatingDiv(NumberValueArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word16Value) Less(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word16Value) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -233,7 +233,7 @@ func (v Word16Value) Less(context ComparisonContext, other ComparableValue, loca
 	return AsBoolValue(v < o)
 }
 
-func (v Word16Value) LessEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word16Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -247,7 +247,7 @@ func (v Word16Value) LessEqual(context ComparisonContext, other ComparableValue,
 	return AsBoolValue(v <= o)
 }
 
-func (v Word16Value) Greater(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word16Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -261,7 +261,7 @@ func (v Word16Value) Greater(context ComparisonContext, other ComparableValue, l
 	return AsBoolValue(v > o)
 }
 
-func (v Word16Value) GreaterEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word16Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -275,7 +275,7 @@ func (v Word16Value) GreaterEqual(context ComparisonContext, other ComparableVal
 	return AsBoolValue(v >= o)
 }
 
-func (v Word16Value) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
+func (v Word16Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherWord16, ok := other.(Word16Value)
 	if !ok {
 		return false

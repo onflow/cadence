@@ -121,8 +121,8 @@ func (*StringValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (*StringValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
-	return NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypeString)
+func (*StringValue) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeString)
 }
 
 func (*StringValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -143,7 +143,7 @@ func (v *StringValue) MeteredString(interpreter *Interpreter, _ SeenReferences, 
 	return v.String()
 }
 
-func (v *StringValue) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
+func (v *StringValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		return false
@@ -151,7 +151,7 @@ func (v *StringValue) Equal(_ ComparisonContext, _ LocationRange, other Value) b
 	return v.Str == otherString.Str
 }
 
-func (v *StringValue) Less(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v *StringValue) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -165,7 +165,7 @@ func (v *StringValue) Less(context ComparisonContext, other ComparableValue, loc
 	return AsBoolValue(v.Str < otherString.Str)
 }
 
-func (v *StringValue) LessEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v *StringValue) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -179,7 +179,7 @@ func (v *StringValue) LessEqual(context ComparisonContext, other ComparableValue
 	return AsBoolValue(v.Str <= otherString.Str)
 }
 
-func (v *StringValue) Greater(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v *StringValue) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -193,7 +193,7 @@ func (v *StringValue) Greater(context ComparisonContext, other ComparableValue, 
 	return AsBoolValue(v.Str > otherString.Str)
 }
 
-func (v *StringValue) GreaterEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v *StringValue) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		panic(InvalidOperandsError{

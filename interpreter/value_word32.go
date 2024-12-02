@@ -68,8 +68,8 @@ func (Word32Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (Word32Value) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
-	return NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypeWord32)
+func (Word32Value) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeWord32)
 }
 
 func (Word32Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -98,11 +98,11 @@ func (v Word32Value) ToInt(_ LocationRange) int {
 	return int(v)
 }
 
-func (v Word32Value) Negate(ArithmeticContext, LocationRange) NumberValue {
+func (v Word32Value) Negate(NumberValueArithmeticContext, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word32Value) Plus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word32Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -120,11 +120,11 @@ func (v Word32Value) Plus(context ArithmeticContext, other NumberValue, location
 	return NewWord32Value(context, valueGetter)
 }
 
-func (v Word32Value) SaturatingPlus(ArithmeticContext, NumberValue, LocationRange) NumberValue {
+func (v Word32Value) SaturatingPlus(NumberValueArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word32Value) Minus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word32Value) Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -142,11 +142,11 @@ func (v Word32Value) Minus(context ArithmeticContext, other NumberValue, locatio
 	return NewWord32Value(context, valueGetter)
 }
 
-func (v Word32Value) SaturatingMinus(ArithmeticContext, NumberValue, LocationRange) NumberValue {
+func (v Word32Value) SaturatingMinus(NumberValueArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word32Value) Mod(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word32Value) Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -170,7 +170,7 @@ func (v Word32Value) Mod(context ArithmeticContext, other NumberValue, locationR
 	return NewWord32Value(context, valueGetter)
 }
 
-func (v Word32Value) Mul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word32Value) Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -188,11 +188,11 @@ func (v Word32Value) Mul(context ArithmeticContext, other NumberValue, locationR
 	return NewWord32Value(context, valueGetter)
 }
 
-func (v Word32Value) SaturatingMul(ArithmeticContext, NumberValue, LocationRange) NumberValue {
+func (v Word32Value) SaturatingMul(NumberValueArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word32Value) Div(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word32Value) Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -216,11 +216,11 @@ func (v Word32Value) Div(context ArithmeticContext, other NumberValue, locationR
 	return NewWord32Value(context, valueGetter)
 }
 
-func (v Word32Value) SaturatingDiv(ArithmeticContext, NumberValue, LocationRange) NumberValue {
+func (v Word32Value) SaturatingDiv(NumberValueArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word32Value) Less(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word32Value) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -234,7 +234,7 @@ func (v Word32Value) Less(context ComparisonContext, other ComparableValue, loca
 	return AsBoolValue(v < o)
 }
 
-func (v Word32Value) LessEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word32Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -248,7 +248,7 @@ func (v Word32Value) LessEqual(context ComparisonContext, other ComparableValue,
 	return AsBoolValue(v <= o)
 }
 
-func (v Word32Value) Greater(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word32Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -262,7 +262,7 @@ func (v Word32Value) Greater(context ComparisonContext, other ComparableValue, l
 	return AsBoolValue(v > o)
 }
 
-func (v Word32Value) GreaterEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word32Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -276,7 +276,7 @@ func (v Word32Value) GreaterEqual(context ComparisonContext, other ComparableVal
 	return AsBoolValue(v >= o)
 }
 
-func (v Word32Value) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
+func (v Word32Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherWord32, ok := other.(Word32Value)
 	if !ok {
 		return false

@@ -103,8 +103,8 @@ func (f *InterpretedFunctionValue) Walk(_ *Interpreter, _ func(Value), _ Locatio
 	// NO-OP
 }
 
-func (f *InterpretedFunctionValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
-	return ConvertSemaToStaticType(staticTypeGetter, f.Type)
+func (f *InterpretedFunctionValue) StaticType(context ValueStaticTypeContext) StaticType {
+	return ConvertSemaToStaticType(context, f.Type)
 }
 
 func (*InterpretedFunctionValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -237,8 +237,8 @@ func (f *HostFunctionValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange)
 	// NO-OP
 }
 
-func (f *HostFunctionValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
-	return ConvertSemaToStaticType(staticTypeGetter, f.Type)
+func (f *HostFunctionValue) StaticType(context ValueStaticTypeContext) StaticType {
+	return ConvertSemaToStaticType(context, f.Type)
 }
 
 func (*HostFunctionValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -413,8 +413,8 @@ func (f BoundFunctionValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange)
 	// NO-OP
 }
 
-func (f BoundFunctionValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
-	return f.Function.StaticType(staticTypeGetter)
+func (f BoundFunctionValue) StaticType(context ValueStaticTypeContext) StaticType {
+	return f.Function.StaticType(context)
 }
 
 func (BoundFunctionValue) IsImportable(_ *Interpreter, _ LocationRange) bool {

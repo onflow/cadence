@@ -82,8 +82,8 @@ func (UInt128Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (UInt128Value) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
-	return NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypeUInt128)
+func (UInt128Value) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeUInt128)
 }
 
 func (UInt128Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -126,11 +126,11 @@ func (v UInt128Value) MeteredString(interpreter *Interpreter, _ SeenReferences, 
 	return v.String()
 }
 
-func (v UInt128Value) Negate(ArithmeticContext, LocationRange) NumberValue {
+func (v UInt128Value) Negate(NumberValueArithmeticContext, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UInt128Value) Plus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt128Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -166,7 +166,7 @@ func (v UInt128Value) Plus(context ArithmeticContext, other NumberValue, locatio
 	)
 }
 
-func (v UInt128Value) SaturatingPlus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt128Value) SaturatingPlus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -200,7 +200,7 @@ func (v UInt128Value) SaturatingPlus(context ArithmeticContext, other NumberValu
 	)
 }
 
-func (v UInt128Value) Minus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt128Value) Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -236,7 +236,7 @@ func (v UInt128Value) Minus(context ArithmeticContext, other NumberValue, locati
 	)
 }
 
-func (v UInt128Value) SaturatingMinus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt128Value) SaturatingMinus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -270,7 +270,7 @@ func (v UInt128Value) SaturatingMinus(context ArithmeticContext, other NumberVal
 	)
 }
 
-func (v UInt128Value) Mod(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt128Value) Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -295,7 +295,7 @@ func (v UInt128Value) Mod(context ArithmeticContext, other NumberValue, location
 	)
 }
 
-func (v UInt128Value) Mul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt128Value) Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -321,7 +321,7 @@ func (v UInt128Value) Mul(context ArithmeticContext, other NumberValue, location
 	)
 }
 
-func (v UInt128Value) SaturatingMul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt128Value) SaturatingMul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -345,7 +345,7 @@ func (v UInt128Value) SaturatingMul(context ArithmeticContext, other NumberValue
 	)
 }
 
-func (v UInt128Value) Div(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt128Value) Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -371,7 +371,7 @@ func (v UInt128Value) Div(context ArithmeticContext, other NumberValue, location
 
 }
 
-func (v UInt128Value) SaturatingDiv(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt128Value) SaturatingDiv(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
@@ -387,7 +387,7 @@ func (v UInt128Value) SaturatingDiv(context ArithmeticContext, other NumberValue
 	return v.Div(context, other, locationRange)
 }
 
-func (v UInt128Value) Less(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v UInt128Value) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -402,7 +402,7 @@ func (v UInt128Value) Less(context ComparisonContext, other ComparableValue, loc
 	return AsBoolValue(cmp == -1)
 }
 
-func (v UInt128Value) LessEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v UInt128Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -417,7 +417,7 @@ func (v UInt128Value) LessEqual(context ComparisonContext, other ComparableValue
 	return AsBoolValue(cmp <= 0)
 }
 
-func (v UInt128Value) Greater(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v UInt128Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -432,7 +432,7 @@ func (v UInt128Value) Greater(context ComparisonContext, other ComparableValue, 
 	return AsBoolValue(cmp == 1)
 }
 
-func (v UInt128Value) GreaterEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v UInt128Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -447,7 +447,7 @@ func (v UInt128Value) GreaterEqual(context ComparisonContext, other ComparableVa
 	return AsBoolValue(cmp >= 0)
 }
 
-func (v UInt128Value) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
+func (v UInt128Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherInt, ok := other.(UInt128Value)
 	if !ok {
 		return false

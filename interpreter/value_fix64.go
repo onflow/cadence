@@ -93,8 +93,8 @@ func (Fix64Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (Fix64Value) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
-	return NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypeFix64)
+func (Fix64Value) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeFix64)
 }
 
 func (Fix64Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -123,7 +123,7 @@ func (v Fix64Value) ToInt(_ LocationRange) int {
 	return int(v / sema.Fix64Factor)
 }
 
-func (v Fix64Value) Negate(context ArithmeticContext, locationRange LocationRange) NumberValue {
+func (v Fix64Value) Negate(context NumberValueArithmeticContext, locationRange LocationRange) NumberValue {
 	// INT32-C
 	if v == math.MinInt64 {
 		panic(OverflowError{
@@ -138,7 +138,7 @@ func (v Fix64Value) Negate(context ArithmeticContext, locationRange LocationRang
 	return NewFix64Value(context, valueGetter)
 }
 
-func (v Fix64Value) Plus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Fix64Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -156,7 +156,7 @@ func (v Fix64Value) Plus(context ArithmeticContext, other NumberValue, locationR
 	return NewFix64Value(context, valueGetter)
 }
 
-func (v Fix64Value) SaturatingPlus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Fix64Value) SaturatingPlus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -180,7 +180,7 @@ func (v Fix64Value) SaturatingPlus(context ArithmeticContext, other NumberValue,
 	return NewFix64Value(context, valueGetter)
 }
 
-func (v Fix64Value) Minus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Fix64Value) Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -209,7 +209,7 @@ func (v Fix64Value) Minus(context ArithmeticContext, other NumberValue, location
 	return NewFix64Value(context, valueGetter)
 }
 
-func (v Fix64Value) SaturatingMinus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Fix64Value) SaturatingMinus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -236,7 +236,7 @@ func (v Fix64Value) SaturatingMinus(context ArithmeticContext, other NumberValue
 var minInt64Big = big.NewInt(math.MinInt64)
 var maxInt64Big = big.NewInt(math.MaxInt64)
 
-func (v Fix64Value) Mul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Fix64Value) Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -270,7 +270,7 @@ func (v Fix64Value) Mul(context ArithmeticContext, other NumberValue, locationRa
 	return NewFix64Value(context, valueGetter)
 }
 
-func (v Fix64Value) SaturatingMul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Fix64Value) SaturatingMul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -300,7 +300,7 @@ func (v Fix64Value) SaturatingMul(context ArithmeticContext, other NumberValue, 
 	return NewFix64Value(context, valueGetter)
 }
 
-func (v Fix64Value) Div(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Fix64Value) Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -334,7 +334,7 @@ func (v Fix64Value) Div(context ArithmeticContext, other NumberValue, locationRa
 	return NewFix64Value(context, valueGetter)
 }
 
-func (v Fix64Value) SaturatingDiv(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Fix64Value) SaturatingDiv(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -364,7 +364,7 @@ func (v Fix64Value) SaturatingDiv(context ArithmeticContext, other NumberValue, 
 	return NewFix64Value(context, valueGetter)
 }
 
-func (v Fix64Value) Mod(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Fix64Value) Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -400,7 +400,7 @@ func (v Fix64Value) Mod(context ArithmeticContext, other NumberValue, locationRa
 	)
 }
 
-func (v Fix64Value) Less(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Fix64Value) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -414,7 +414,7 @@ func (v Fix64Value) Less(context ComparisonContext, other ComparableValue, locat
 	return AsBoolValue(v < o)
 }
 
-func (v Fix64Value) LessEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Fix64Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -428,7 +428,7 @@ func (v Fix64Value) LessEqual(context ComparisonContext, other ComparableValue, 
 	return AsBoolValue(v <= o)
 }
 
-func (v Fix64Value) Greater(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Fix64Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -442,7 +442,7 @@ func (v Fix64Value) Greater(context ComparisonContext, other ComparableValue, lo
 	return AsBoolValue(v > o)
 }
 
-func (v Fix64Value) GreaterEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Fix64Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -456,7 +456,7 @@ func (v Fix64Value) GreaterEqual(context ComparisonContext, other ComparableValu
 	return AsBoolValue(v >= o)
 }
 
-func (v Fix64Value) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
+func (v Fix64Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherFix64, ok := other.(Fix64Value)
 	if !ok {
 		return false

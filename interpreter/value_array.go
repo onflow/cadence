@@ -324,7 +324,7 @@ func (v *ArrayValue) Walk(
 	)
 }
 
-func (v *ArrayValue) StaticType(_ StaticTypeGetter) StaticType {
+func (v *ArrayValue) StaticType(_ ValueStaticTypeContext) StaticType {
 	// TODO meter
 	return v.Type
 }
@@ -1252,7 +1252,7 @@ func (v *ArrayValue) ConformsToStaticType(
 	return !elementMismatch
 }
 
-func (v *ArrayValue) Equal(context ComparisonContext, locationRange LocationRange, other Value) bool {
+func (v *ArrayValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
 	otherArray, ok := other.(*ArrayValue)
 	if !ok {
 		return false

@@ -59,7 +59,7 @@ func (v PathLinkValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
-func (v PathLinkValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
+func (v PathLinkValue) StaticType(context ValueStaticTypeContext) StaticType {
 	// When iterating over public/private paths,
 	// the values at these paths are PathLinkValues,
 	// placed there by the `link` function.
@@ -67,7 +67,7 @@ func (v PathLinkValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType 
 	// These are loaded as links, however,
 	// for the purposes of checking their type,
 	// we treat them as capabilities
-	return NewCapabilityStaticType(staticTypeGetter, v.Type)
+	return NewCapabilityStaticType(context, v.Type)
 }
 
 func (PathLinkValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -98,7 +98,7 @@ func (v PathLinkValue) ConformsToStaticType(
 	panic(errors.NewUnreachableError())
 }
 
-func (v PathLinkValue) Equal(context ComparisonContext, locationRange LocationRange, other Value) bool {
+func (v PathLinkValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
 	otherLink, ok := other.(PathLinkValue)
 	if !ok {
 		return false
@@ -184,7 +184,7 @@ func (AccountLinkValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
-func (v AccountLinkValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
+func (v AccountLinkValue) StaticType(context ValueStaticTypeContext) StaticType {
 	// When iterating over public/private paths,
 	// the values at these paths are AccountLinkValues,
 	// placed there by the `linkAccount` function.
@@ -193,9 +193,9 @@ func (v AccountLinkValue) StaticType(staticTypeGetter StaticTypeGetter) StaticTy
 	// for the purposes of checking their type,
 	// we treat them as capabilities
 	return NewCapabilityStaticType(
-		staticTypeGetter,
+		context,
 		NewReferenceStaticType(
-			staticTypeGetter,
+			context,
 			FullyEntitledAccountAccess,
 			PrimitiveStaticTypeAccount,
 		),
@@ -226,7 +226,7 @@ func (v AccountLinkValue) ConformsToStaticType(
 	panic(errors.NewUnreachableError())
 }
 
-func (v AccountLinkValue) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
+func (v AccountLinkValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	_, ok := other.(AccountLinkValue)
 	return ok
 }

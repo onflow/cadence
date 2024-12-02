@@ -53,10 +53,10 @@ func (v *PublishedValue) Accept(interpreter *Interpreter, visitor Visitor, _ Loc
 	visitor.VisitPublishedValue(interpreter, v)
 }
 
-func (v *PublishedValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
+func (v *PublishedValue) StaticType(context ValueStaticTypeContext) StaticType {
 	// checking the static type of a published value should show us the
 	// static type of the underlying value
-	return v.Value.StaticType(staticTypeGetter)
+	return v.Value.StaticType(context)
 }
 
 func (*PublishedValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -98,7 +98,7 @@ func (v *PublishedValue) ConformsToStaticType(
 	return false
 }
 
-func (v *PublishedValue) Equal(context ComparisonContext, locationRange LocationRange, other Value) bool {
+func (v *PublishedValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
 	otherValue, ok := other.(*PublishedValue)
 	if !ok {
 		return false

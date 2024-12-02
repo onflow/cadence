@@ -101,8 +101,8 @@ func (AddressValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (AddressValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
-	return NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypeAddress)
+func (AddressValue) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeAddress)
 }
 
 func (AddressValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -122,7 +122,7 @@ func (v AddressValue) MeteredString(interpreter *Interpreter, _ SeenReferences, 
 	return v.String()
 }
 
-func (v AddressValue) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
+func (v AddressValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherAddress, ok := other.(AddressValue)
 	if !ok {
 		return false

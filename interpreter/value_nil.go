@@ -51,10 +51,10 @@ func (NilValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (NilValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
+func (NilValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewOptionalStaticType(
-		staticTypeGetter,
-		NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypeNever),
+		context,
+		NewPrimitiveStaticType(context, PrimitiveStaticTypeNever),
 	)
 }
 
@@ -125,7 +125,7 @@ func (v NilValue) ConformsToStaticType(
 	return true
 }
 
-func (v NilValue) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
+func (v NilValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	_, ok := other.(NilValue)
 	return ok
 }

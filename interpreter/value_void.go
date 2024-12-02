@@ -47,8 +47,8 @@ func (VoidValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (VoidValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
-	return NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypeVoid)
+func (VoidValue) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeVoid)
 }
 
 func (VoidValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -76,7 +76,7 @@ func (v VoidValue) ConformsToStaticType(
 	return true
 }
 
-func (v VoidValue) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
+func (v VoidValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	_, ok := other.(VoidValue)
 	return ok
 }

@@ -69,8 +69,8 @@ func (Int16Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (Int16Value) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
-	return NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypeInt16)
+func (Int16Value) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeInt16)
 }
 
 func (Int16Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -99,7 +99,7 @@ func (v Int16Value) ToInt(_ LocationRange) int {
 	return int(v)
 }
 
-func (v Int16Value) Negate(context ArithmeticContext, locationRange LocationRange) NumberValue {
+func (v Int16Value) Negate(context NumberValueArithmeticContext, locationRange LocationRange) NumberValue {
 	// INT32-C
 	if v == math.MinInt16 {
 		panic(OverflowError{
@@ -114,7 +114,7 @@ func (v Int16Value) Negate(context ArithmeticContext, locationRange LocationRang
 	return NewInt16Value(context, valueGetter)
 }
 
-func (v Int16Value) Plus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int16Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -143,7 +143,7 @@ func (v Int16Value) Plus(context ArithmeticContext, other NumberValue, locationR
 	return NewInt16Value(context, valueGetter)
 }
 
-func (v Int16Value) SaturatingPlus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int16Value) SaturatingPlus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -167,7 +167,7 @@ func (v Int16Value) SaturatingPlus(context ArithmeticContext, other NumberValue,
 	return NewInt16Value(context, valueGetter)
 }
 
-func (v Int16Value) Minus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int16Value) Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -196,7 +196,7 @@ func (v Int16Value) Minus(context ArithmeticContext, other NumberValue, location
 	return NewInt16Value(context, valueGetter)
 }
 
-func (v Int16Value) SaturatingMinus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int16Value) SaturatingMinus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -220,7 +220,7 @@ func (v Int16Value) SaturatingMinus(context ArithmeticContext, other NumberValue
 	return NewInt16Value(context, valueGetter)
 }
 
-func (v Int16Value) Mod(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int16Value) Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -245,7 +245,7 @@ func (v Int16Value) Mod(context ArithmeticContext, other NumberValue, locationRa
 	return NewInt16Value(context, valueGetter)
 }
 
-func (v Int16Value) Mul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int16Value) Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -298,7 +298,7 @@ func (v Int16Value) Mul(context ArithmeticContext, other NumberValue, locationRa
 	return NewInt16Value(context, valueGetter)
 }
 
-func (v Int16Value) SaturatingMul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int16Value) SaturatingMul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -342,7 +342,7 @@ func (v Int16Value) SaturatingMul(context ArithmeticContext, other NumberValue, 
 	return NewInt16Value(context, valueGetter)
 }
 
-func (v Int16Value) Div(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int16Value) Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -372,7 +372,7 @@ func (v Int16Value) Div(context ArithmeticContext, other NumberValue, locationRa
 	return NewInt16Value(context, valueGetter)
 }
 
-func (v Int16Value) SaturatingDiv(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int16Value) SaturatingDiv(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -399,7 +399,7 @@ func (v Int16Value) SaturatingDiv(context ArithmeticContext, other NumberValue, 
 	return NewInt16Value(context, valueGetter)
 }
 
-func (v Int16Value) Less(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Int16Value) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -413,7 +413,7 @@ func (v Int16Value) Less(context ComparisonContext, other ComparableValue, locat
 	return AsBoolValue(v < o)
 }
 
-func (v Int16Value) LessEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Int16Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -427,7 +427,7 @@ func (v Int16Value) LessEqual(context ComparisonContext, other ComparableValue, 
 	return AsBoolValue(v <= o)
 }
 
-func (v Int16Value) Greater(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Int16Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -441,7 +441,7 @@ func (v Int16Value) Greater(context ComparisonContext, other ComparableValue, lo
 	return AsBoolValue(v > o)
 }
 
-func (v Int16Value) GreaterEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Int16Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -455,7 +455,7 @@ func (v Int16Value) GreaterEqual(context ComparisonContext, other ComparableValu
 	return AsBoolValue(v >= o)
 }
 
-func (v Int16Value) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
+func (v Int16Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherInt16, ok := other.(Int16Value)
 	if !ok {
 		return false

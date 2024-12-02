@@ -264,12 +264,12 @@ func (v *CompositeValue) Walk(interpreter *Interpreter, walkChild func(Value), l
 	}, locationRange)
 }
 
-func (v *CompositeValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
+func (v *CompositeValue) StaticType(context ValueStaticTypeContext) StaticType {
 	if v.staticType == nil {
 		// NOTE: Instead of using NewCompositeStaticType, which always generates the type ID,
 		// use the TypeID accessor, which may return an already computed type ID
 		v.staticType = NewCompositeStaticType(
-			staticTypeGetter,
+			context,
 			v.Location,
 			v.QualifiedIdentifier,
 			v.TypeID(),
@@ -875,7 +875,7 @@ func (v *CompositeValue) GetField(memoryGauge common.MemoryGauge, name string) V
 	return MustConvertStoredValue(memoryGauge, storedValue)
 }
 
-func (v *CompositeValue) Equal(context ComparisonContext, locationRange LocationRange, other Value) bool {
+func (v *CompositeValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
 	otherComposite, ok := other.(*CompositeValue)
 	if !ok {
 		return false

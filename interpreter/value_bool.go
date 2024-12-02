@@ -56,8 +56,8 @@ func (BoolValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (BoolValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
-	return NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypeBool)
+func (BoolValue) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeBool)
 }
 
 func (BoolValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -71,7 +71,7 @@ func (v BoolValue) Negate(_ *Interpreter) BoolValue {
 	return TrueValue
 }
 
-func (v BoolValue) Equal(_ ComparisonContext, _ LocationRange, other Value) bool {
+func (v BoolValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherBool, ok := other.(BoolValue)
 	if !ok {
 		return false
@@ -79,7 +79,7 @@ func (v BoolValue) Equal(_ ComparisonContext, _ LocationRange, other Value) bool
 	return bool(v) == bool(otherBool)
 }
 
-func (v BoolValue) Less(_ ComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v BoolValue) Less(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -88,7 +88,7 @@ func (v BoolValue) Less(_ ComparisonContext, other ComparableValue, _ LocationRa
 	return !v && o
 }
 
-func (v BoolValue) LessEqual(_ ComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v BoolValue) LessEqual(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -97,7 +97,7 @@ func (v BoolValue) LessEqual(_ ComparisonContext, other ComparableValue, _ Locat
 	return !v || o
 }
 
-func (v BoolValue) Greater(_ ComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v BoolValue) Greater(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -106,7 +106,7 @@ func (v BoolValue) Greater(_ ComparisonContext, other ComparableValue, _ Locatio
 	return v && !o
 }
 
-func (v BoolValue) GreaterEqual(_ ComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v BoolValue) GreaterEqual(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
