@@ -118,7 +118,7 @@ func (v *StorageCapabilityControllerValue) Walk(_ *Interpreter, walkChild func(V
 	walkChild(v.CapabilityID)
 }
 
-func (v *StorageCapabilityControllerValue) StaticType(_ *Interpreter) StaticType {
+func (v *StorageCapabilityControllerValue) StaticType(_ StaticTypeGetter) StaticType {
 	return PrimitiveStaticTypeStorageCapabilityController
 }
 

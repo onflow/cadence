@@ -51,10 +51,10 @@ func (NilValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (NilValue) StaticType(interpreter *Interpreter) StaticType {
+func (NilValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
 	return NewOptionalStaticType(
-		interpreter,
-		NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeNever),
+		staticTypeGetter,
+		NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypeNever),
 	)
 }
 

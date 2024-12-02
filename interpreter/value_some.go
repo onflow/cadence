@@ -66,17 +66,17 @@ func (v *SomeValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange)
 	walkChild(v.value)
 }
 
-func (v *SomeValue) StaticType(inter *Interpreter) StaticType {
+func (v *SomeValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
 	if v.isDestroyed {
 		return nil
 	}
 
-	innerType := v.value.StaticType(inter)
+	innerType := v.value.StaticType(staticTypeGetter)
 	if innerType == nil {
 		return nil
 	}
 	return NewOptionalStaticType(
-		inter,
+		staticTypeGetter,
 		innerType,
 	)
 }

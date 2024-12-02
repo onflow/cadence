@@ -86,8 +86,8 @@ func (CharacterValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (CharacterValue) StaticType(interpreter *Interpreter) StaticType {
-	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeCharacter)
+func (CharacterValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
+	return NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypeCharacter)
 }
 
 func (CharacterValue) IsImportable(_ *Interpreter, _ LocationRange) bool {

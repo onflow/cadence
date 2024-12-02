@@ -108,9 +108,9 @@ func (v *IDCapabilityValue) Walk(_ *Interpreter, walkChild func(Value), _ Locati
 	walkChild(v.address)
 }
 
-func (v *IDCapabilityValue) StaticType(inter *Interpreter) StaticType {
+func (v *IDCapabilityValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
 	return NewCapabilityStaticType(
-		inter,
+		staticTypeGetter,
 		v.BorrowType,
 	)
 }

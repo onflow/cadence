@@ -93,8 +93,8 @@ func (Fix64Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (Fix64Value) StaticType(interpreter *Interpreter) StaticType {
-	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeFix64)
+func (Fix64Value) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
+	return NewPrimitiveStaticType(staticTypeGetter, PrimitiveStaticTypeFix64)
 }
 
 func (Fix64Value) IsImportable(_ *Interpreter, _ LocationRange) bool {

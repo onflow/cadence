@@ -98,8 +98,8 @@ func (v *StorageReferenceValue) MeteredString(interpreter *Interpreter, _ SeenRe
 	return v.String()
 }
 
-func (v *StorageReferenceValue) StaticType(inter *Interpreter) StaticType {
-	referencedValue, err := v.dereference(inter, EmptyLocationRange)
+func (v *StorageReferenceValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
+	referencedValue, err := v.dereference(staticTypeGetter, EmptyLocationRange)
 	if err != nil {
 		panic(err)
 	}
@@ -107,9 +107,9 @@ func (v *StorageReferenceValue) StaticType(inter *Interpreter) StaticType {
 	self := *referencedValue
 
 	return NewReferenceStaticType(
-		inter,
+		staticTypeGetter,
 		v.Authorization,
-		self.StaticType(inter),
+		self.StaticType(staticTypeGetter),
 	)
 }
 
@@ -121,14 +121,14 @@ func (*StorageReferenceValue) IsImportable(_ *Interpreter, _ LocationRange) bool
 	return false
 }
 
-func (v *StorageReferenceValue) dereference(interpreter *Interpreter, locationRange LocationRange) (*Value, error) {
+func (v *StorageReferenceValue) dereference(staticTypeGetter StaticTypeGetter, locationRange LocationRange) (*Value, error) {
 	address := v.TargetStorageAddress
 	domain := v.TargetPath.Domain.StorageDomain()
 	identifier := v.TargetPath.Identifier
 
 	storageMapKey := StringStorageMapKey(identifier)
 
-	referenced := interpreter.ReadStored(address, domain, storageMapKey)
+	referenced := staticTypeGetter.ReadStored(address, domain, storageMapKey)
 	if referenced == nil {
 		return nil, nil
 	}
@@ -141,10 +141,10 @@ func (v *StorageReferenceValue) dereference(interpreter *Interpreter, locationRa
 	}
 
 	if v.BorrowedType != nil {
-		staticType := referenced.StaticType(interpreter)
+		staticType := referenced.StaticType(staticTypeGetter)
 
-		if !interpreter.IsSubTypeOfSemaType(staticType, v.BorrowedType) {
-			semaType := interpreter.MustConvertStaticToSemaType(staticType)
+		if !staticTypeGetter.IsSubTypeOfSemaType(staticType, v.BorrowedType) {
+			semaType := staticTypeGetter.MustConvertStaticToSemaType(staticType)
 
 			return nil, ForceCastTypeMismatchError{
 				ExpectedType:  v.BorrowedType,

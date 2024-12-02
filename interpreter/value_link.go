@@ -59,7 +59,7 @@ func (v PathLinkValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
-func (v PathLinkValue) StaticType(interpreter *Interpreter) StaticType {
+func (v PathLinkValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
 	// When iterating over public/private paths,
 	// the values at these paths are PathLinkValues,
 	// placed there by the `link` function.
@@ -67,7 +67,7 @@ func (v PathLinkValue) StaticType(interpreter *Interpreter) StaticType {
 	// These are loaded as links, however,
 	// for the purposes of checking their type,
 	// we treat them as capabilities
-	return NewCapabilityStaticType(interpreter, v.Type)
+	return NewCapabilityStaticType(staticTypeGetter, v.Type)
 }
 
 func (PathLinkValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -184,7 +184,7 @@ func (AccountLinkValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
-func (v AccountLinkValue) StaticType(interpreter *Interpreter) StaticType {
+func (v AccountLinkValue) StaticType(staticTypeGetter StaticTypeGetter) StaticType {
 	// When iterating over public/private paths,
 	// the values at these paths are AccountLinkValues,
 	// placed there by the `linkAccount` function.
@@ -193,9 +193,9 @@ func (v AccountLinkValue) StaticType(interpreter *Interpreter) StaticType {
 	// for the purposes of checking their type,
 	// we treat them as capabilities
 	return NewCapabilityStaticType(
-		interpreter,
+		staticTypeGetter,
 		NewReferenceStaticType(
-			interpreter,
+			staticTypeGetter,
 			FullyEntitledAccountAccess,
 			PrimitiveStaticTypeAccount,
 		),
