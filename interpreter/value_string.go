@@ -151,13 +151,13 @@ func (v *StringValue) Equal(_ ComparisonContext, _ LocationRange, other Value) b
 	return v.Str == otherString.Str
 }
 
-func (v *StringValue) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v *StringValue) Less(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationLess,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -165,13 +165,13 @@ func (v *StringValue) Less(interpreter *Interpreter, other ComparableValue, loca
 	return AsBoolValue(v.Str < otherString.Str)
 }
 
-func (v *StringValue) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v *StringValue) LessEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationLessEqual,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -179,13 +179,13 @@ func (v *StringValue) LessEqual(interpreter *Interpreter, other ComparableValue,
 	return AsBoolValue(v.Str <= otherString.Str)
 }
 
-func (v *StringValue) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v *StringValue) Greater(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationGreater,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -193,13 +193,13 @@ func (v *StringValue) Greater(interpreter *Interpreter, other ComparableValue, l
 	return AsBoolValue(v.Str > otherString.Str)
 }
 
-func (v *StringValue) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v *StringValue) GreaterEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationGreaterEqual,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}

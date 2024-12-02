@@ -1170,12 +1170,12 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 	return nil
 }
 
-func (v *ArrayValue) RemoveMember(interpreter *Interpreter, locationRange LocationRange, _ string) Value {
+func (v *ArrayValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	// Arrays have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (v *ArrayValue) SetMember(interpreter *Interpreter, locationRange LocationRange, _ string, _ Value) bool {
+func (v *ArrayValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Arrays have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

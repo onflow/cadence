@@ -79,7 +79,7 @@ func (v BoolValue) Equal(_ ComparisonContext, _ LocationRange, other Value) bool
 	return bool(v) == bool(otherBool)
 }
 
-func (v BoolValue) Less(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
+func (v BoolValue) Less(_ ComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -88,7 +88,7 @@ func (v BoolValue) Less(_ *Interpreter, other ComparableValue, _ LocationRange) 
 	return !v && o
 }
 
-func (v BoolValue) LessEqual(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
+func (v BoolValue) LessEqual(_ ComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -97,7 +97,7 @@ func (v BoolValue) LessEqual(_ *Interpreter, other ComparableValue, _ LocationRa
 	return !v || o
 }
 
-func (v BoolValue) Greater(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
+func (v BoolValue) Greater(_ ComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -106,7 +106,7 @@ func (v BoolValue) Greater(_ *Interpreter, other ComparableValue, _ LocationRang
 	return v && !o
 }
 
-func (v BoolValue) GreaterEqual(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
+func (v BoolValue) GreaterEqual(_ ComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -136,7 +136,7 @@ func (v BoolValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v BoolValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v BoolValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	if v {
 		common.UseMemory(interpreter, common.TrueStringMemoryUsage)
 	} else {

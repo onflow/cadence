@@ -167,11 +167,11 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, _ LocationRange, name st
 	return nil
 }
 
-func (v *SomeValue) RemoveMember(interpreter *Interpreter, locationRange LocationRange, _ string) Value {
+func (v *SomeValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (v *SomeValue) SetMember(interpreter *Interpreter, locationRange LocationRange, _ string, _ Value) bool {
+func (v *SomeValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	panic(errors.NewUnreachableError())
 }
 
@@ -369,7 +369,7 @@ func (v *SomeValue) InnerValue() Value {
 	return v.value
 }
 
-func (v *SomeValue) isInvalidatedResource(interpreter *Interpreter) bool {
+func (v *SomeValue) isInvalidatedResource(_ *Interpreter) bool {
 	return v.value == nil || v.IsDestroyed()
 }
 

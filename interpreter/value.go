@@ -179,10 +179,10 @@ func newValueComparator(context ComparisonContext, locationRange LocationRange) 
 // ComparableValue
 type ComparableValue interface {
 	EquatableValue
-	Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
-	LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
-	Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
-	GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
+	Less(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue
+	LessEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue
+	Greater(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue
+	GreaterEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue
 }
 
 // ResourceKindedValue

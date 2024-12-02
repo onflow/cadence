@@ -102,7 +102,7 @@ func (v CharacterValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v CharacterValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v CharacterValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	l := format.FormattedStringLength(v.Str)
 	common.UseMemory(interpreter, common.NewRawStringMemoryUsage(l))
 	return v.String()
@@ -116,7 +116,7 @@ func (v CharacterValue) Equal(_ ComparisonContext, _ LocationRange, other Value)
 	return v.Str == otherChar.Str
 }
 
-func (v CharacterValue) Less(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) Less(_ ComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -124,7 +124,7 @@ func (v CharacterValue) Less(_ *Interpreter, other ComparableValue, _ LocationRa
 	return v.Str < otherChar.Str
 }
 
-func (v CharacterValue) LessEqual(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) LessEqual(_ ComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -132,7 +132,7 @@ func (v CharacterValue) LessEqual(_ *Interpreter, other ComparableValue, _ Locat
 	return v.Str <= otherChar.Str
 }
 
-func (v CharacterValue) Greater(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) Greater(_ ComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -140,7 +140,7 @@ func (v CharacterValue) Greater(_ *Interpreter, other ComparableValue, _ Locatio
 	return v.Str > otherChar.Str
 }
 
-func (v CharacterValue) GreaterEqual(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) GreaterEqual(_ ComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())

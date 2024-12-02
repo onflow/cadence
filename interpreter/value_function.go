@@ -88,7 +88,7 @@ func (f *InterpretedFunctionValue) RecursiveString(_ SeenReferences) string {
 	return f.String()
 }
 
-func (f *InterpretedFunctionValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (f *InterpretedFunctionValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	// TODO: Meter sema.Type String conversion
 	typeString := f.Type.String()
 	common.UseMemory(interpreter, common.NewRawStringMemoryUsage(8+len(typeString)))
@@ -186,7 +186,7 @@ func (f *HostFunctionValue) RecursiveString(_ SeenReferences) string {
 	return f.String()
 }
 
-func (f *HostFunctionValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (f *HostFunctionValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(interpreter, common.HostFunctionValueStringMemoryUsage)
 	return f.String()
 }

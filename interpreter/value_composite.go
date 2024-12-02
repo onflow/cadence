@@ -1350,7 +1350,7 @@ func (v *CompositeValue) Transfer(
 	return res
 }
 
-func (v *CompositeValue) ResourceUUID(interpreter *Interpreter, locationRange LocationRange) *UInt64Value {
+func (v *CompositeValue) ResourceUUID(interpreter *Interpreter) *UInt64Value {
 	fieldValue := v.GetField(interpreter, sema.ResourceUUIDFieldName)
 	uuid, ok := fieldValue.(UInt64Value)
 	if !ok {

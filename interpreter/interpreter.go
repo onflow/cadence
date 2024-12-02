@@ -1595,13 +1595,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 		HasPosition: declaration,
 	}
 
-	value := EnumConstructorFunction(
-		interpreter,
-		locationRange,
-		compositeType,
-		caseValues,
-		constructorNestedVariables,
-	)
+	value := EnumConstructorFunction(interpreter, compositeType, caseValues, constructorNestedVariables)
 	variable.SetValue(
 		interpreter,
 		locationRange,
@@ -1613,7 +1607,6 @@ func (interpreter *Interpreter) declareEnumConstructor(
 
 func EnumConstructorFunction(
 	gauge common.MemoryGauge,
-	locationRange LocationRange,
 	enumType *sema.CompositeType,
 	cases []EnumCase,
 	nestedVariables map[string]Variable,
@@ -1907,7 +1900,7 @@ func (interpreter *Interpreter) ConvertAndBox(
 	valueType, targetType sema.Type,
 ) Value {
 	value = interpreter.convert(value, valueType, targetType, locationRange)
-	return interpreter.BoxOptional(locationRange, value, targetType)
+	return interpreter.BoxOptional(value, targetType)
 }
 
 // Produces the `valueStaticType` argument into a new static type that conforms
@@ -2310,11 +2303,7 @@ func checkMappedEntitlements(unwrappedTargetType *sema.ReferenceType, locationRa
 }
 
 // BoxOptional boxes a value in optionals, if necessary
-func (interpreter *Interpreter) BoxOptional(
-	locationRange LocationRange,
-	value Value,
-	targetType sema.Type,
-) Value {
+func (interpreter *Interpreter) BoxOptional(value Value, targetType sema.Type) Value {
 
 	inner := value
 
@@ -2341,7 +2330,7 @@ func (interpreter *Interpreter) BoxOptional(
 	return value
 }
 
-func (interpreter *Interpreter) Unbox(locationRange LocationRange, value Value) Value {
+func (interpreter *Interpreter) Unbox(value Value) Value {
 	for {
 		some, ok := value.(*SomeValue)
 		if !ok {
@@ -4707,11 +4696,7 @@ func (interpreter *Interpreter) MustConvertStaticToSemaType(staticType StaticTyp
 }
 
 func (interpreter *Interpreter) MustConvertStaticAuthorizationToSemaAccess(auth Authorization) sema.Access {
-	access, err := ConvertStaticAuthorizationToSemaAccess(
-		interpreter,
-		auth,
-		interpreter,
-	)
+	access, err := ConvertStaticAuthorizationToSemaAccess(auth, interpreter)
 	if err != nil {
 		panic(err)
 	}

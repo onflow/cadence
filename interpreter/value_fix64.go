@@ -109,7 +109,7 @@ func (v Fix64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Fix64Value) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v Fix64Value) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
 		interpreter,
 		common.NewRawStringMemoryUsage(
@@ -400,13 +400,13 @@ func (v Fix64Value) Mod(interpreter *Interpreter, other NumberValue, locationRan
 	)
 }
 
-func (v Fix64Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Fix64Value) Less(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationLess,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -414,13 +414,13 @@ func (v Fix64Value) Less(interpreter *Interpreter, other ComparableValue, locati
 	return AsBoolValue(v < o)
 }
 
-func (v Fix64Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Fix64Value) LessEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationLessEqual,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -428,13 +428,13 @@ func (v Fix64Value) LessEqual(interpreter *Interpreter, other ComparableValue, l
 	return AsBoolValue(v <= o)
 }
 
-func (v Fix64Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Fix64Value) Greater(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationGreater,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -442,13 +442,13 @@ func (v Fix64Value) Greater(interpreter *Interpreter, other ComparableValue, loc
 	return AsBoolValue(v > o)
 }
 
-func (v Fix64Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Fix64Value) GreaterEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationGreaterEqual,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}

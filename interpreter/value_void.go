@@ -63,7 +63,7 @@ func (v VoidValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v VoidValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v VoidValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(interpreter, common.VoidStringMemoryUsage)
 	return v.String()
 }

@@ -662,21 +662,9 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 }
 
 func (interpreter *Interpreter) testEqual(left, right Value, expression *ast.BinaryExpression) BoolValue {
-	left = interpreter.Unbox(
-		LocationRange{
-			Location:    interpreter.Location,
-			HasPosition: expression.Left,
-		},
-		left,
-	)
+	left = interpreter.Unbox(left)
 
-	right = interpreter.Unbox(
-		LocationRange{
-			Location:    interpreter.Location,
-			HasPosition: expression.Right,
-		},
-		right,
-	)
+	right = interpreter.Unbox(right)
 
 	leftEquatable, ok := left.(EquatableValue)
 	if !ok {
@@ -1371,7 +1359,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		unboxedExpectedType := sema.UnwrapOptionalType(expectedType)
 		if !(unboxedExpectedType == sema.AnyStructType || unboxedExpectedType == sema.AnyResourceType) {
 			// otherwise dynamic cast now always unboxes optionals
-			value = interpreter.Unbox(locationRange, value)
+			value = interpreter.Unbox(value)
 		}
 		valueSemaType := interpreter.SubstituteMappedEntitlements(interpreter.MustSemaTypeOfValue(value))
 		valueStaticType := ConvertSemaToStaticType(interpreter, valueSemaType)

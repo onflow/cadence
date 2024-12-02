@@ -41,12 +41,12 @@ func NewInclusiveRangeIterator(
 	v *CompositeValue,
 	typ InclusiveRangeStaticType,
 ) *InclusiveRangeIterator {
-	startValue := getFieldAsIntegerValue(interpreter, v, locationRange, sema.InclusiveRangeTypeStartFieldName)
+	startValue := getFieldAsIntegerValue(interpreter, v, sema.InclusiveRangeTypeStartFieldName)
 
 	zeroValue := GetSmallIntegerValue(0, typ.ElementType)
-	endValue := getFieldAsIntegerValue(interpreter, v, locationRange, sema.InclusiveRangeTypeEndFieldName)
+	endValue := getFieldAsIntegerValue(interpreter, v, sema.InclusiveRangeTypeEndFieldName)
 
-	stepValue := getFieldAsIntegerValue(interpreter, v, locationRange, sema.InclusiveRangeTypeStepFieldName)
+	stepValue := getFieldAsIntegerValue(interpreter, v, sema.InclusiveRangeTypeStepFieldName)
 	stepNegative := stepValue.Less(interpreter, zeroValue, locationRange)
 
 	return &InclusiveRangeIterator{

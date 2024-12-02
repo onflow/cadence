@@ -400,13 +400,13 @@ func (v Int32Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, l
 	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Int32Value) Less(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationLess,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -414,13 +414,13 @@ func (v Int32Value) Less(interpreter *Interpreter, other ComparableValue, locati
 	return AsBoolValue(v < o)
 }
 
-func (v Int32Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Int32Value) LessEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationLessEqual,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -428,13 +428,13 @@ func (v Int32Value) LessEqual(interpreter *Interpreter, other ComparableValue, l
 	return AsBoolValue(v <= o)
 }
 
-func (v Int32Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Int32Value) Greater(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationGreater,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -442,13 +442,13 @@ func (v Int32Value) Greater(interpreter *Interpreter, other ComparableValue, loc
 	return AsBoolValue(v > o)
 }
 
-func (v Int32Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Int32Value) GreaterEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationGreaterEqual,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}

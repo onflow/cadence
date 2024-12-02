@@ -194,9 +194,9 @@ func rangeContains(
 	locationRange LocationRange,
 	needleValue IntegerValue,
 ) BoolValue {
-	start := getFieldAsIntegerValue(interpreter, rangeValue, locationRange, sema.InclusiveRangeTypeStartFieldName)
-	end := getFieldAsIntegerValue(interpreter, rangeValue, locationRange, sema.InclusiveRangeTypeEndFieldName)
-	step := getFieldAsIntegerValue(interpreter, rangeValue, locationRange, sema.InclusiveRangeTypeStepFieldName)
+	start := getFieldAsIntegerValue(interpreter, rangeValue, sema.InclusiveRangeTypeStartFieldName)
+	end := getFieldAsIntegerValue(interpreter, rangeValue, sema.InclusiveRangeTypeEndFieldName)
+	step := getFieldAsIntegerValue(interpreter, rangeValue, sema.InclusiveRangeTypeStepFieldName)
 
 	result := start.Equal(interpreter, locationRange, needleValue) ||
 		end.Equal(interpreter, locationRange, needleValue)
@@ -224,12 +224,7 @@ func rangeContains(
 	return AsBoolValue(result)
 }
 
-func getFieldAsIntegerValue(
-	interpreter *Interpreter,
-	rangeValue *CompositeValue,
-	locationRange LocationRange,
-	name string,
-) IntegerValue {
+func getFieldAsIntegerValue(interpreter *Interpreter, rangeValue *CompositeValue, name string) IntegerValue {
 	return convertAndAssertIntegerValue(
 		rangeValue.GetField(interpreter, name),
 	)

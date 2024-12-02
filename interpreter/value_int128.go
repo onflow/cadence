@@ -116,7 +116,7 @@ func (v Int128Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Int128Value) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v Int128Value) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
 		interpreter,
 		common.NewRawStringMemoryUsage(
@@ -461,13 +461,13 @@ func (v Int128Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Int128Value) Less(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationLess,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -476,13 +476,13 @@ func (v Int128Value) Less(interpreter *Interpreter, other ComparableValue, locat
 	return AsBoolValue(cmp == -1)
 }
 
-func (v Int128Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Int128Value) LessEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationLessEqual,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -491,13 +491,13 @@ func (v Int128Value) LessEqual(interpreter *Interpreter, other ComparableValue, 
 	return AsBoolValue(cmp <= 0)
 }
 
-func (v Int128Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Int128Value) Greater(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationGreater,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -506,13 +506,13 @@ func (v Int128Value) Greater(interpreter *Interpreter, other ComparableValue, lo
 	return AsBoolValue(cmp == 1)
 }
 
-func (v Int128Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Int128Value) GreaterEqual(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationGreaterEqual,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
