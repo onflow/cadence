@@ -1068,7 +1068,7 @@ type StringValueIterator struct {
 
 var _ ValueIterator = StringValueIterator{}
 
-func (i StringValueIterator) Next(_ *Interpreter, _ LocationRange) Value {
+func (i StringValueIterator) Next(_ ValueIteratorContext, _ LocationRange) Value {
 	if !i.graphemes.Next() {
 		return nil
 	}

@@ -57,7 +57,7 @@ func (v *ArrayValue) Iterator(_ *Interpreter, _ LocationRange) ValueIterator {
 
 var _ ValueIterator = ArrayValueIterator{}
 
-func (i ArrayValueIterator) Next(interpreter *Interpreter, _ LocationRange) Value {
+func (i ArrayValueIterator) Next(context ValueIteratorContext, _ LocationRange) Value {
 	atreeValue, err := i.atreeIterator.Next()
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -69,7 +69,7 @@ func (i ArrayValueIterator) Next(interpreter *Interpreter, _ LocationRange) Valu
 
 	// atree.Array iterator returns low-level atree.Value,
 	// convert to high-level interpreter.Value
-	return MustConvertStoredValue(interpreter, atreeValue)
+	return MustConvertStoredValue(context, atreeValue)
 }
 
 func NewArrayValue(

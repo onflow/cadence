@@ -247,10 +247,15 @@ type OwnedValue interface {
 	GetOwner() common.Address
 }
 
+type ValueIteratorContext interface {
+	common.MemoryGauge
+	NumberValueArithmeticContext
+}
+
 // ValueIterator is an iterator which returns values.
 // When Next returns nil, it signals the end of the iterator.
 type ValueIterator interface {
-	Next(interpreter *Interpreter, locationRange LocationRange) Value
+	Next(context ValueIteratorContext, locationRange LocationRange) Value
 }
 
 func safeAdd(a, b int, locationRange LocationRange) int {

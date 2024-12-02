@@ -64,18 +64,18 @@ func NewInclusiveRangeIterator(
 	}
 }
 
-func (i *InclusiveRangeIterator) Next(interpreter *Interpreter, locationRange LocationRange) Value {
+func (i *InclusiveRangeIterator) Next(context ValueIteratorContext, locationRange LocationRange) Value {
 	valueToReturn := i.next
 
 	// Ensure that valueToReturn is within the bounds.
-	if i.stepNegative && bool(valueToReturn.Less(interpreter, i.end, locationRange)) {
+	if i.stepNegative && bool(valueToReturn.Less(context, i.end, locationRange)) {
 		return nil
-	} else if !i.stepNegative && bool(valueToReturn.Greater(interpreter, i.end, locationRange)) {
+	} else if !i.stepNegative && bool(valueToReturn.Greater(context, i.end, locationRange)) {
 		return nil
 	}
 
 	// Update the next value.
-	nextValueToReturn, ok := valueToReturn.Plus(interpreter, i.step, locationRange).(IntegerValue)
+	nextValueToReturn, ok := valueToReturn.Plus(context, i.step, locationRange).(IntegerValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
