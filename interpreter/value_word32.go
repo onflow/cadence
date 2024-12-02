@@ -98,17 +98,17 @@ func (v Word32Value) ToInt(_ LocationRange) int {
 	return int(v)
 }
 
-func (v Word32Value) Negate(*Interpreter, LocationRange) NumberValue {
+func (v Word32Value) Negate(ArithmeticContext, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word32Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word32Value) Plus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationPlus,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -117,20 +117,20 @@ func (v Word32Value) Plus(interpreter *Interpreter, other NumberValue, locationR
 		return uint32(v + o)
 	}
 
-	return NewWord32Value(interpreter, valueGetter)
+	return NewWord32Value(context, valueGetter)
 }
 
-func (v Word32Value) SaturatingPlus(*Interpreter, NumberValue, LocationRange) NumberValue {
+func (v Word32Value) SaturatingPlus(ArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word32Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word32Value) Minus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMinus,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -139,20 +139,20 @@ func (v Word32Value) Minus(interpreter *Interpreter, other NumberValue, location
 		return uint32(v - o)
 	}
 
-	return NewWord32Value(interpreter, valueGetter)
+	return NewWord32Value(context, valueGetter)
 }
 
-func (v Word32Value) SaturatingMinus(*Interpreter, NumberValue, LocationRange) NumberValue {
+func (v Word32Value) SaturatingMinus(ArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word32Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word32Value) Mod(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMod,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -167,16 +167,16 @@ func (v Word32Value) Mod(interpreter *Interpreter, other NumberValue, locationRa
 		return uint32(v % o)
 	}
 
-	return NewWord32Value(interpreter, valueGetter)
+	return NewWord32Value(context, valueGetter)
 }
 
-func (v Word32Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word32Value) Mul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMul,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -185,20 +185,20 @@ func (v Word32Value) Mul(interpreter *Interpreter, other NumberValue, locationRa
 		return uint32(v * o)
 	}
 
-	return NewWord32Value(interpreter, valueGetter)
+	return NewWord32Value(context, valueGetter)
 }
 
-func (v Word32Value) SaturatingMul(*Interpreter, NumberValue, LocationRange) NumberValue {
+func (v Word32Value) SaturatingMul(ArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word32Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word32Value) Div(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationDiv,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -213,10 +213,10 @@ func (v Word32Value) Div(interpreter *Interpreter, other NumberValue, locationRa
 		return uint32(v / o)
 	}
 
-	return NewWord32Value(interpreter, valueGetter)
+	return NewWord32Value(context, valueGetter)
 }
 
-func (v Word32Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) NumberValue {
+func (v Word32Value) SaturatingDiv(ArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 

@@ -30,16 +30,16 @@ import (
 type NumberValue interface {
 	ComparableValue
 	ToInt(locationRange LocationRange) int
-	Negate(*Interpreter, LocationRange) NumberValue
-	Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
-	SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
-	Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
-	SaturatingMinus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
-	Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
-	Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
-	SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
-	Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
-	SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
+	Negate(context ArithmeticContext, locationRange LocationRange) NumberValue
+	Plus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	SaturatingPlus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	Minus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	SaturatingMinus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	Mod(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	Mul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	SaturatingMul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	Div(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	SaturatingDiv(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
 	ToBigEndianBytes() []byte
 }
 

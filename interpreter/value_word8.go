@@ -97,17 +97,17 @@ func (v Word8Value) ToInt(_ LocationRange) int {
 	return int(v)
 }
 
-func (v Word8Value) Negate(*Interpreter, LocationRange) NumberValue {
+func (v Word8Value) Negate(ArithmeticContext, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word8Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word8Value) Plus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationPlus,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -116,20 +116,20 @@ func (v Word8Value) Plus(interpreter *Interpreter, other NumberValue, locationRa
 		return uint8(v + o)
 	}
 
-	return NewWord8Value(interpreter, valueGetter)
+	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) SaturatingPlus(*Interpreter, NumberValue, LocationRange) NumberValue {
+func (v Word8Value) SaturatingPlus(ArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word8Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word8Value) Minus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMinus,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -138,20 +138,20 @@ func (v Word8Value) Minus(interpreter *Interpreter, other NumberValue, locationR
 		return uint8(v - o)
 	}
 
-	return NewWord8Value(interpreter, valueGetter)
+	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) SaturatingMinus(*Interpreter, NumberValue, LocationRange) NumberValue {
+func (v Word8Value) SaturatingMinus(ArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word8Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word8Value) Mod(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMod,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -166,16 +166,16 @@ func (v Word8Value) Mod(interpreter *Interpreter, other NumberValue, locationRan
 		return uint8(v % o)
 	}
 
-	return NewWord8Value(interpreter, valueGetter)
+	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word8Value) Mul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMul,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -184,20 +184,20 @@ func (v Word8Value) Mul(interpreter *Interpreter, other NumberValue, locationRan
 		return uint8(v * o)
 	}
 
-	return NewWord8Value(interpreter, valueGetter)
+	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) SaturatingMul(*Interpreter, NumberValue, LocationRange) NumberValue {
+func (v Word8Value) SaturatingMul(ArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word8Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word8Value) Div(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationDiv,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -212,10 +212,10 @@ func (v Word8Value) Div(interpreter *Interpreter, other NumberValue, locationRan
 		return uint8(v / o)
 	}
 
-	return NewWord8Value(interpreter, valueGetter)
+	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) NumberValue {
+func (v Word8Value) SaturatingDiv(ArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 

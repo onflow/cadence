@@ -127,23 +127,23 @@ func (v UInt256Value) MeteredString(interpreter *Interpreter, _ SeenReferences, 
 	return v.String()
 }
 
-func (v UInt256Value) Negate(*Interpreter, LocationRange) NumberValue {
+func (v UInt256Value) Negate(ArithmeticContext, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UInt256Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt256Value) Plus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationPlus,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
 
 	return NewUInt256ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			sum := new(big.Int)
 			sum.Add(v.BigInt, o.BigInt)
@@ -168,19 +168,19 @@ func (v UInt256Value) Plus(interpreter *Interpreter, other NumberValue, location
 
 }
 
-func (v UInt256Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt256Value) SaturatingPlus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
 
 	return NewUInt256ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			sum := new(big.Int)
 			sum.Add(v.BigInt, o.BigInt)
@@ -202,19 +202,19 @@ func (v UInt256Value) SaturatingPlus(interpreter *Interpreter, other NumberValue
 	)
 }
 
-func (v UInt256Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt256Value) Minus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMinus,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
 
 	return NewUInt256ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			diff := new(big.Int)
 			diff.Sub(v.BigInt, o.BigInt)
@@ -238,19 +238,19 @@ func (v UInt256Value) Minus(interpreter *Interpreter, other NumberValue, locatio
 	)
 }
 
-func (v UInt256Value) SaturatingMinus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt256Value) SaturatingMinus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
 
 	return NewUInt256ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			diff := new(big.Int)
 			diff.Sub(v.BigInt, o.BigInt)
@@ -273,19 +273,19 @@ func (v UInt256Value) SaturatingMinus(interpreter *Interpreter, other NumberValu
 
 }
 
-func (v UInt256Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt256Value) Mod(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMod,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
 
 	return NewUInt256ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			res := new(big.Int)
 			if o.BigInt.Cmp(res) == 0 {
@@ -298,19 +298,19 @@ func (v UInt256Value) Mod(interpreter *Interpreter, other NumberValue, locationR
 	)
 }
 
-func (v UInt256Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt256Value) Mul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMul,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
 
 	return NewUInt256ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			res := new(big.Int)
 			res.Mul(v.BigInt, o.BigInt)
@@ -324,19 +324,19 @@ func (v UInt256Value) Mul(interpreter *Interpreter, other NumberValue, locationR
 	)
 }
 
-func (v UInt256Value) SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt256Value) SaturatingMul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
 
 	return NewUInt256ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			res := new(big.Int)
 			res.Mul(v.BigInt, o.BigInt)
@@ -348,19 +348,19 @@ func (v UInt256Value) SaturatingMul(interpreter *Interpreter, other NumberValue,
 	)
 }
 
-func (v UInt256Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt256Value) Div(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationDiv,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
 
 	return NewUInt256ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			res := new(big.Int)
 			if o.BigInt.Cmp(res) == 0 {
@@ -373,20 +373,20 @@ func (v UInt256Value) Div(interpreter *Interpreter, other NumberValue, locationR
 	)
 }
 
-func (v UInt256Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt256Value) SaturatingDiv(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName:  sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:      v.StaticType(interpreter),
-				RightType:     other.StaticType(interpreter),
+				LeftType:      v.StaticType(context),
+				RightType:     other.StaticType(context),
 				LocationRange: locationRange,
 			})
 		}
 	}()
 
-	return v.Div(interpreter, other, locationRange)
+	return v.Div(context, other, locationRange)
 }
 
 func (v UInt256Value) Less(context ComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {

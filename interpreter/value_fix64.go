@@ -123,7 +123,7 @@ func (v Fix64Value) ToInt(_ LocationRange) int {
 	return int(v / sema.Fix64Factor)
 }
 
-func (v Fix64Value) Negate(interpreter *Interpreter, locationRange LocationRange) NumberValue {
+func (v Fix64Value) Negate(context ArithmeticContext, locationRange LocationRange) NumberValue {
 	// INT32-C
 	if v == math.MinInt64 {
 		panic(OverflowError{
@@ -135,16 +135,16 @@ func (v Fix64Value) Negate(interpreter *Interpreter, locationRange LocationRange
 		return int64(-v)
 	}
 
-	return NewFix64Value(interpreter, valueGetter)
+	return NewFix64Value(context, valueGetter)
 }
 
-func (v Fix64Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Fix64Value) Plus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationPlus,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -153,16 +153,16 @@ func (v Fix64Value) Plus(interpreter *Interpreter, other NumberValue, locationRa
 		return safeAddInt64(int64(v), int64(o), locationRange)
 	}
 
-	return NewFix64Value(interpreter, valueGetter)
+	return NewFix64Value(context, valueGetter)
 }
 
-func (v Fix64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Fix64Value) SaturatingPlus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -177,16 +177,16 @@ func (v Fix64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, 
 		return int64(v + o)
 	}
 
-	return NewFix64Value(interpreter, valueGetter)
+	return NewFix64Value(context, valueGetter)
 }
 
-func (v Fix64Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Fix64Value) Minus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMinus,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -206,16 +206,16 @@ func (v Fix64Value) Minus(interpreter *Interpreter, other NumberValue, locationR
 		return int64(v - o)
 	}
 
-	return NewFix64Value(interpreter, valueGetter)
+	return NewFix64Value(context, valueGetter)
 }
 
-func (v Fix64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Fix64Value) SaturatingMinus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -230,19 +230,19 @@ func (v Fix64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue,
 		return int64(v - o)
 	}
 
-	return NewFix64Value(interpreter, valueGetter)
+	return NewFix64Value(context, valueGetter)
 }
 
 var minInt64Big = big.NewInt(math.MinInt64)
 var maxInt64Big = big.NewInt(math.MaxInt64)
 
-func (v Fix64Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Fix64Value) Mul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMul,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -267,16 +267,16 @@ func (v Fix64Value) Mul(interpreter *Interpreter, other NumberValue, locationRan
 		return result.Int64()
 	}
 
-	return NewFix64Value(interpreter, valueGetter)
+	return NewFix64Value(context, valueGetter)
 }
 
-func (v Fix64Value) SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Fix64Value) SaturatingMul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -297,16 +297,16 @@ func (v Fix64Value) SaturatingMul(interpreter *Interpreter, other NumberValue, l
 		return result.Int64()
 	}
 
-	return NewFix64Value(interpreter, valueGetter)
+	return NewFix64Value(context, valueGetter)
 }
 
-func (v Fix64Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Fix64Value) Div(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationDiv,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -331,16 +331,16 @@ func (v Fix64Value) Div(interpreter *Interpreter, other NumberValue, locationRan
 		return result.Int64()
 	}
 
-	return NewFix64Value(interpreter, valueGetter)
+	return NewFix64Value(context, valueGetter)
 }
 
-func (v Fix64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Fix64Value) SaturatingDiv(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingDivideFunctionName,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -361,41 +361,41 @@ func (v Fix64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, l
 		return result.Int64()
 	}
 
-	return NewFix64Value(interpreter, valueGetter)
+	return NewFix64Value(context, valueGetter)
 }
 
-func (v Fix64Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Fix64Value) Mod(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMod,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
 
 	// v - int(v/o) * o
-	quotient, ok := v.Div(interpreter, o, locationRange).(Fix64Value)
+	quotient, ok := v.Div(context, o, locationRange).(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMod,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
 
 	truncatedQuotient := NewFix64Value(
-		interpreter,
+		context,
 		func() int64 {
 			return (int64(quotient) / sema.Fix64Factor) * sema.Fix64Factor
 		},
 	)
 
 	return v.Minus(
-		interpreter,
-		truncatedQuotient.Mul(interpreter, o, locationRange),
+		context,
+		truncatedQuotient.Mul(context, o, locationRange),
 		locationRange,
 	)
 }

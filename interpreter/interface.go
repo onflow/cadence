@@ -60,3 +60,9 @@ type ComparisonContext interface {
 }
 
 var _ ComparisonContext = &Interpreter{}
+
+type ArithmeticContext interface {
+	StaticTypeGetter
+}
+
+var _ ArithmeticContext = &Interpreter{}

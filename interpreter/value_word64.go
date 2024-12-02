@@ -126,17 +126,17 @@ func (v Word64Value) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
 	return new(big.Int).SetUint64(uint64(v))
 }
 
-func (v Word64Value) Negate(*Interpreter, LocationRange) NumberValue {
+func (v Word64Value) Negate(ArithmeticContext, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word64Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word64Value) Plus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationPlus,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -145,20 +145,20 @@ func (v Word64Value) Plus(interpreter *Interpreter, other NumberValue, locationR
 		return uint64(v + o)
 	}
 
-	return NewWord64Value(interpreter, valueGetter)
+	return NewWord64Value(context, valueGetter)
 }
 
-func (v Word64Value) SaturatingPlus(*Interpreter, NumberValue, LocationRange) NumberValue {
+func (v Word64Value) SaturatingPlus(ArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word64Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word64Value) Minus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMinus,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -167,20 +167,20 @@ func (v Word64Value) Minus(interpreter *Interpreter, other NumberValue, location
 		return uint64(v - o)
 	}
 
-	return NewWord64Value(interpreter, valueGetter)
+	return NewWord64Value(context, valueGetter)
 }
 
-func (v Word64Value) SaturatingMinus(*Interpreter, NumberValue, LocationRange) NumberValue {
+func (v Word64Value) SaturatingMinus(ArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word64Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word64Value) Mod(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMod,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -195,16 +195,16 @@ func (v Word64Value) Mod(interpreter *Interpreter, other NumberValue, locationRa
 		return uint64(v % o)
 	}
 
-	return NewWord64Value(interpreter, valueGetter)
+	return NewWord64Value(context, valueGetter)
 }
 
-func (v Word64Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word64Value) Mul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMul,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -213,20 +213,20 @@ func (v Word64Value) Mul(interpreter *Interpreter, other NumberValue, locationRa
 		return uint64(v * o)
 	}
 
-	return NewWord64Value(interpreter, valueGetter)
+	return NewWord64Value(context, valueGetter)
 }
 
-func (v Word64Value) SaturatingMul(*Interpreter, NumberValue, LocationRange) NumberValue {
+func (v Word64Value) SaturatingMul(ArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word64Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word64Value) Div(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationDiv,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -241,10 +241,10 @@ func (v Word64Value) Div(interpreter *Interpreter, other NumberValue, locationRa
 		return uint64(v / o)
 	}
 
-	return NewWord64Value(interpreter, valueGetter)
+	return NewWord64Value(context, valueGetter)
 }
 
-func (v Word64Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) NumberValue {
+func (v Word64Value) SaturatingDiv(ArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 

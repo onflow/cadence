@@ -126,23 +126,23 @@ func (v Word128Value) MeteredString(interpreter *Interpreter, _ SeenReferences, 
 	return v.String()
 }
 
-func (v Word128Value) Negate(*Interpreter, LocationRange) NumberValue {
+func (v Word128Value) Negate(ArithmeticContext, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word128Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word128Value) Plus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationPlus,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
 
 	return NewWord128ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			sum := new(big.Int)
 			sum.Add(v.BigInt, o.BigInt)
@@ -168,23 +168,23 @@ func (v Word128Value) Plus(interpreter *Interpreter, other NumberValue, location
 	)
 }
 
-func (v Word128Value) SaturatingPlus(_ *Interpreter, _ NumberValue, _ LocationRange) NumberValue {
+func (v Word128Value) SaturatingPlus(_ ArithmeticContext, _ NumberValue, _ LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word128Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word128Value) Minus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMinus,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
 
 	return NewWord128ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			diff := new(big.Int)
 			diff.Sub(v.BigInt, o.BigInt)
@@ -210,23 +210,23 @@ func (v Word128Value) Minus(interpreter *Interpreter, other NumberValue, locatio
 	)
 }
 
-func (v Word128Value) SaturatingMinus(_ *Interpreter, _ NumberValue, _ LocationRange) NumberValue {
+func (v Word128Value) SaturatingMinus(_ ArithmeticContext, _ NumberValue, _ LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word128Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word128Value) Mod(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMod,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
 
 	return NewWord128ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			res := new(big.Int)
 			if o.BigInt.Cmp(res) == 0 {
@@ -239,19 +239,19 @@ func (v Word128Value) Mod(interpreter *Interpreter, other NumberValue, locationR
 	)
 }
 
-func (v Word128Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word128Value) Mul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMul,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
 
 	return NewWord128ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			res := new(big.Int)
 			res.Mul(v.BigInt, o.BigInt)
@@ -263,23 +263,23 @@ func (v Word128Value) Mul(interpreter *Interpreter, other NumberValue, locationR
 	)
 }
 
-func (v Word128Value) SaturatingMul(_ *Interpreter, _ NumberValue, _ LocationRange) NumberValue {
+func (v Word128Value) SaturatingMul(_ ArithmeticContext, _ NumberValue, _ LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word128Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word128Value) Div(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationDiv,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
 
 	return NewWord128ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			res := new(big.Int)
 			if o.BigInt.Cmp(res) == 0 {
@@ -293,7 +293,7 @@ func (v Word128Value) Div(interpreter *Interpreter, other NumberValue, locationR
 
 }
 
-func (v Word128Value) SaturatingDiv(_ *Interpreter, _ NumberValue, _ LocationRange) NumberValue {
+func (v Word128Value) SaturatingDiv(_ ArithmeticContext, _ NumberValue, _ LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 

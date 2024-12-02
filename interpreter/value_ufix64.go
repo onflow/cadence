@@ -116,17 +116,17 @@ func (v UFix64Value) ToInt(_ LocationRange) int {
 	return int(v / sema.Fix64Factor)
 }
 
-func (v UFix64Value) Negate(*Interpreter, LocationRange) NumberValue {
+func (v UFix64Value) Negate(ArithmeticContext, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UFix64Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) Plus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationPlus,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -135,16 +135,16 @@ func (v UFix64Value) Plus(interpreter *Interpreter, other NumberValue, locationR
 		return safeAddUint64(uint64(v), uint64(o), locationRange)
 	}
 
-	return NewUFix64Value(interpreter, valueGetter)
+	return NewUFix64Value(context, valueGetter)
 }
 
-func (v UFix64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) SaturatingPlus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -158,16 +158,16 @@ func (v UFix64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue,
 		return uint64(sum)
 	}
 
-	return NewUFix64Value(interpreter, valueGetter)
+	return NewUFix64Value(context, valueGetter)
 }
 
-func (v UFix64Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) Minus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMinus,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -184,16 +184,16 @@ func (v UFix64Value) Minus(interpreter *Interpreter, other NumberValue, location
 		return uint64(diff)
 	}
 
-	return NewUFix64Value(interpreter, valueGetter)
+	return NewUFix64Value(context, valueGetter)
 }
 
-func (v UFix64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) SaturatingMinus(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -208,16 +208,16 @@ func (v UFix64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue
 		return uint64(diff)
 	}
 
-	return NewUFix64Value(interpreter, valueGetter)
+	return NewUFix64Value(context, valueGetter)
 }
 
-func (v UFix64Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) Mul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMul,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -238,16 +238,16 @@ func (v UFix64Value) Mul(interpreter *Interpreter, other NumberValue, locationRa
 		return result.Uint64()
 	}
 
-	return NewUFix64Value(interpreter, valueGetter)
+	return NewUFix64Value(context, valueGetter)
 }
 
-func (v UFix64Value) SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) SaturatingMul(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -266,16 +266,16 @@ func (v UFix64Value) SaturatingMul(interpreter *Interpreter, other NumberValue, 
 		return result.Uint64()
 	}
 
-	return NewUFix64Value(interpreter, valueGetter)
+	return NewUFix64Value(context, valueGetter)
 }
 
-func (v UFix64Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) Div(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationDiv,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -290,57 +290,57 @@ func (v UFix64Value) Div(interpreter *Interpreter, other NumberValue, locationRa
 		return result.Uint64()
 	}
 
-	return NewUFix64Value(interpreter, valueGetter)
+	return NewUFix64Value(context, valueGetter)
 }
 
-func (v UFix64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) SaturatingDiv(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName:  sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:      v.StaticType(interpreter),
-				RightType:     other.StaticType(interpreter),
+				LeftType:      v.StaticType(context),
+				RightType:     other.StaticType(context),
 				LocationRange: locationRange,
 			})
 		}
 	}()
 
-	return v.Div(interpreter, other, locationRange)
+	return v.Div(context, other, locationRange)
 }
 
-func (v UFix64Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) Mod(context ArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMod,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
 
 	// v - int(v/o) * o
-	quotient, ok := v.Div(interpreter, o, locationRange).(UFix64Value)
+	quotient, ok := v.Div(context, o, locationRange).(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMod,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
 
 	truncatedQuotient := NewUFix64Value(
-		interpreter,
+		context,
 		func() uint64 {
 			return (uint64(quotient) / sema.Fix64Factor) * sema.Fix64Factor
 		},
 	)
 
 	return v.Minus(
-		interpreter,
-		truncatedQuotient.Mul(interpreter, o, locationRange),
+		context,
+		truncatedQuotient.Mul(context, o, locationRange),
 		locationRange,
 	)
 }
