@@ -76,9 +76,11 @@ func TestTrace(t *testing.T) {
 		var vmLogs []string
 
 		vmConfig := &vm.Config{
-			TracingEnabled: true,
-			OnRecordTrace: func(vm *vm.VM, operationName string, duration time.Duration, attrs []attribute.KeyValue) {
-				vmLogs = append(vmLogs, fmt.Sprintf("%s: %v", operationName, attrs))
+			Tracer: interpreter.Tracer{
+				TracingEnabled: true,
+				OnRecordTrace: func(executer interpreter.Traceable, operationName string, duration time.Duration, attrs []attribute.KeyValue) {
+					vmLogs = append(vmLogs, fmt.Sprintf("%s: %v", operationName, attrs))
+				},
 			},
 		}
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)

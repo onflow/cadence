@@ -146,7 +146,7 @@ func NewCompositeValue(
 			typeID := string(v.TypeID())
 			kind := v.Kind.String()
 
-			config.Tracer.reportCompositeValueConstructTrace(
+			config.Tracer.ReportCompositeValueConstructTrace(
 				interpreter,
 				owner,
 				typeID,
@@ -342,7 +342,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 		defer func() {
 
-			config.Tracer.reportCompositeValueDestroyTrace(
+			config.Tracer.ReportCompositeValueDestroyTrace(
 				interpreter,
 				owner,
 				typeID,
@@ -438,7 +438,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		kind := v.Kind.String()
 
 		defer func() {
-			config.Tracer.reportCompositeValueGetMemberTrace(
+			config.Tracer.ReportCompositeValueGetMemberTrace(
 				interpreter,
 				owner,
 				typeID,
@@ -642,7 +642,7 @@ func (v *CompositeValue) RemoveMember(
 		kind := v.Kind.String()
 
 		defer func() {
-			config.Tracer.reportCompositeValueRemoveMemberTrace(
+			config.Tracer.ReportCompositeValueRemoveMemberTrace(
 				interpreter,
 				owner,
 				typeID,
@@ -711,7 +711,7 @@ func (v *CompositeValue) SetMemberWithoutTransfer(
 		kind := v.Kind.String()
 
 		defer func() {
-			config.Tracer.reportCompositeValueSetMemberTrace(
+			config.Tracer.ReportCompositeValueSetMemberTrace(
 				interpreter,
 				owner,
 				typeID,
@@ -975,7 +975,7 @@ func (v *CompositeValue) ConformsToStaticType(
 		kind := v.Kind.String()
 
 		defer func() {
-			config.Tracer.reportCompositeValueConformsToStaticTypeTrace(
+			config.Tracer.ReportCompositeValueConformsToStaticTypeTrace(
 				interpreter,
 				owner,
 				typeID,
@@ -1182,7 +1182,7 @@ func (v *CompositeValue) Transfer(
 		kind := v.Kind.String()
 
 		defer func() {
-			config.Tracer.reportCompositeValueTransferTrace(
+			config.Tracer.ReportCompositeValueTransferTrace(
 				interpreter,
 				owner,
 				typeID,
@@ -1434,7 +1434,7 @@ func (v *CompositeValue) DeepRemove(interpreter *Interpreter, hasNoParentContain
 		kind := v.Kind.String()
 
 		defer func() {
-			config.Tracer.reportCompositeValueDeepRemoveTrace(
+			config.Tracer.ReportCompositeValueDeepRemoveTrace(
 				interpreter,
 				owner,
 				typeID,

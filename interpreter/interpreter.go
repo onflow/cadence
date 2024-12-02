@@ -1864,7 +1864,7 @@ func (interpreter *Interpreter) transferAndConvert(
 		startTime := time.Now()
 
 		defer func() {
-			config.Tracer.reportTransferTrace(
+			config.Tracer.ReportTransferTrace(
 				interpreter,
 				targetType.String(),
 				valueType.String(),
@@ -2014,7 +2014,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 		startTime := time.Now()
 
 		defer func() {
-			config.Tracer.reportCastingTrace(
+			config.Tracer.ReportCastingTrace(
 				interpreter,
 				targetType.String(),
 				value.String(),

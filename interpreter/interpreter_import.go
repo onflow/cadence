@@ -45,7 +45,7 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 		defer func() {
-			config.Tracer.reportImportTrace(
+			config.Tracer.ReportImportTrace(
 				interpreter,
 				resolvedLocation.Location.String(),
 				time.Since(startTime),

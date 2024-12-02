@@ -138,7 +138,7 @@ func NewArrayValueWithIterator(
 			typeInfo := v.Type.String()
 			count := v.Count()
 
-			config.Tracer.reportArrayValueConstructTrace(
+			config.Tracer.ReportArrayValueConstructTrace(
 				interpreter,
 				typeInfo,
 				count,
@@ -372,7 +372,7 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 		count := v.Count()
 
 		defer func() {
-			config.Tracer.reportArrayValueDestroyTrace(
+			config.Tracer.ReportArrayValueDestroyTrace(
 				interpreter,
 				typeInfo,
 				count,
@@ -1201,7 +1201,7 @@ func (v *ArrayValue) ConformsToStaticType(
 		typeInfo := v.Type.String()
 
 		defer func() {
-			config.Tracer.reportArrayValueConformsToStaticTypeTrace(
+			config.Tracer.ReportArrayValueConformsToStaticTypeTrace(
 				interpreter,
 				typeInfo,
 				count,
@@ -1324,7 +1324,7 @@ func (v *ArrayValue) Transfer(
 		count := v.Count()
 
 		defer func() {
-			config.Tracer.reportArrayValueTransferTrace(
+			config.Tracer.ReportArrayValueTransferTrace(
 				interpreter,
 				typeInfo,
 				count,
@@ -1499,7 +1499,7 @@ func (v *ArrayValue) DeepRemove(interpreter *Interpreter, hasNoParentContainer b
 		count := v.Count()
 
 		defer func() {
-			config.Tracer.reportArrayValueDeepRemoveTrace(
+			config.Tracer.ReportArrayValueDeepRemoveTrace(
 				interpreter,
 				typeInfo,
 				count,

@@ -73,11 +73,11 @@ type Tracer struct {
 	TracingEnabled bool
 }
 
-func (tracer Tracer) reportFunctionTrace(executer Traceable, functionName string, duration time.Duration) {
+func (tracer Tracer) ReportFunctionTrace(executer Traceable, functionName string, duration time.Duration) {
 	tracer.OnRecordTrace(executer, tracingFunctionPrefix+functionName, duration, nil)
 }
 
-func (tracer Tracer) reportImportTrace(executer Traceable, importPath string, duration time.Duration) {
+func (tracer Tracer) ReportImportTrace(executer Traceable, importPath string, duration time.Duration) {
 	tracer.OnRecordTrace(executer, tracingImportPrefix+importPath, duration, nil)
 }
 
@@ -88,7 +88,7 @@ func prepareArrayAndMapValueTraceAttrs(typeInfo string, count int) []attribute.K
 	}
 }
 
-func (tracer Tracer) reportArrayValueConstructTrace(
+func (tracer Tracer) ReportArrayValueConstructTrace(
 	executer Traceable,
 	typeInfo string,
 	count int,
@@ -101,7 +101,7 @@ func (tracer Tracer) reportArrayValueConstructTrace(
 	)
 }
 
-func (tracer Tracer) reportArrayValueDeepRemoveTrace(
+func (tracer Tracer) ReportArrayValueDeepRemoveTrace(
 	executer Traceable,
 	typeInfo string,
 	count int,
@@ -114,7 +114,7 @@ func (tracer Tracer) reportArrayValueDeepRemoveTrace(
 	)
 }
 
-func (tracer Tracer) reportArrayValueDestroyTrace(
+func (tracer Tracer) ReportArrayValueDestroyTrace(
 	executer Traceable,
 	typeInfo string,
 	count int,
@@ -127,7 +127,7 @@ func (tracer Tracer) reportArrayValueDestroyTrace(
 	)
 }
 
-func (tracer Tracer) reportArrayValueTransferTrace(
+func (tracer Tracer) ReportArrayValueTransferTrace(
 	executer Traceable,
 	typeInfo string,
 	count int,
@@ -140,7 +140,7 @@ func (tracer Tracer) reportArrayValueTransferTrace(
 	)
 }
 
-func (tracer Tracer) reportArrayValueConformsToStaticTypeTrace(
+func (tracer Tracer) ReportArrayValueConformsToStaticTypeTrace(
 	executer Traceable,
 	typeInfo string,
 	count int,
@@ -153,7 +153,7 @@ func (tracer Tracer) reportArrayValueConformsToStaticTypeTrace(
 	)
 }
 
-func (tracer Tracer) reportDictionaryValueConstructTrace(
+func (tracer Tracer) ReportDictionaryValueConstructTrace(
 	executer Traceable,
 	typeInfo string,
 	count int,
@@ -166,7 +166,7 @@ func (tracer Tracer) reportDictionaryValueConstructTrace(
 	)
 }
 
-func (tracer Tracer) reportDictionaryValueDeepRemoveTrace(
+func (tracer Tracer) ReportDictionaryValueDeepRemoveTrace(
 	executer Traceable,
 	typeInfo string,
 	count int,
@@ -179,7 +179,7 @@ func (tracer Tracer) reportDictionaryValueDeepRemoveTrace(
 	)
 }
 
-func (tracer Tracer) reportDictionaryValueDestroyTrace(
+func (tracer Tracer) ReportDictionaryValueDestroyTrace(
 	executer Traceable,
 	typeInfo string,
 	count int,
@@ -192,7 +192,7 @@ func (tracer Tracer) reportDictionaryValueDestroyTrace(
 	)
 }
 
-func (tracer Tracer) reportDictionaryValueTransferTrace(
+func (tracer Tracer) ReportDictionaryValueTransferTrace(
 	executer Traceable,
 	typeInfo string,
 	count int,
@@ -205,7 +205,7 @@ func (tracer Tracer) reportDictionaryValueTransferTrace(
 	)
 }
 
-func (tracer Tracer) reportDictionaryValueConformsToStaticTypeTrace(
+func (tracer Tracer) ReportDictionaryValueConformsToStaticTypeTrace(
 	executer Traceable,
 	typeInfo string,
 	count int,
@@ -218,7 +218,7 @@ func (tracer Tracer) reportDictionaryValueConformsToStaticTypeTrace(
 	)
 }
 
-func (tracer Tracer) reportDictionaryValueGetMemberTrace(
+func (tracer Tracer) ReportDictionaryValueGetMemberTrace(
 	executer Traceable,
 	typeInfo string,
 	count int,
@@ -240,7 +240,7 @@ func prepareCompositeValueTraceAttrs(owner, typeID, kind string) []attribute.Key
 	}
 }
 
-func (tracer Tracer) reportCompositeValueConstructTrace(
+func (tracer Tracer) ReportCompositeValueConstructTrace(
 	executer Traceable,
 	owner string,
 	typeID string,
@@ -254,7 +254,7 @@ func (tracer Tracer) reportCompositeValueConstructTrace(
 	)
 }
 
-func (tracer Tracer) reportCompositeValueDeepRemoveTrace(
+func (tracer Tracer) ReportCompositeValueDeepRemoveTrace(
 	executer Traceable,
 	owner string,
 	typeID string,
@@ -268,7 +268,7 @@ func (tracer Tracer) reportCompositeValueDeepRemoveTrace(
 	)
 }
 
-func (tracer Tracer) reportCompositeValueDestroyTrace(
+func (tracer Tracer) ReportCompositeValueDestroyTrace(
 	executer Traceable,
 	owner string,
 	typeID string,
@@ -282,7 +282,7 @@ func (tracer Tracer) reportCompositeValueDestroyTrace(
 	)
 }
 
-func (tracer Tracer) reportCompositeValueTransferTrace(
+func (tracer Tracer) ReportCompositeValueTransferTrace(
 	executer Traceable,
 	owner string,
 	typeID string,
@@ -296,7 +296,7 @@ func (tracer Tracer) reportCompositeValueTransferTrace(
 	)
 }
 
-func (tracer Tracer) reportCompositeValueConformsToStaticTypeTrace(
+func (tracer Tracer) ReportCompositeValueConformsToStaticTypeTrace(
 	executer Traceable,
 	owner string,
 	typeID string,
@@ -310,7 +310,7 @@ func (tracer Tracer) reportCompositeValueConformsToStaticTypeTrace(
 	)
 }
 
-func (tracer Tracer) reportCompositeValueGetMemberTrace(
+func (tracer Tracer) ReportCompositeValueGetMemberTrace(
 	executer Traceable,
 	owner string,
 	typeID string,
@@ -325,7 +325,7 @@ func (tracer Tracer) reportCompositeValueGetMemberTrace(
 	)
 }
 
-func (tracer Tracer) reportCompositeValueSetMemberTrace(
+func (tracer Tracer) ReportCompositeValueSetMemberTrace(
 	executer Traceable,
 	owner string,
 	typeID string,
@@ -340,7 +340,7 @@ func (tracer Tracer) reportCompositeValueSetMemberTrace(
 	)
 }
 
-func (tracer Tracer) reportCompositeValueRemoveMemberTrace(
+func (tracer Tracer) ReportCompositeValueRemoveMemberTrace(
 	executer Traceable,
 	owner string,
 	typeID string,
@@ -355,7 +355,7 @@ func (tracer Tracer) reportCompositeValueRemoveMemberTrace(
 	)
 }
 
-func (tracer Tracer) reportTransferTrace(
+func (tracer Tracer) ReportTransferTrace(
 	executer Traceable,
 	targetType string,
 	valueType string,
@@ -371,7 +371,7 @@ func (tracer Tracer) reportTransferTrace(
 	)
 }
 
-func (tracer Tracer) reportCastingTrace(
+func (tracer Tracer) ReportCastingTrace(
 	executer Traceable,
 	targetType string,
 	value string,
@@ -387,7 +387,7 @@ func (tracer Tracer) reportCastingTrace(
 	)
 }
 
-func (tracer Tracer) reportEphemeralReferenceValueConstructTrace(
+func (tracer Tracer) ReportEphemeralReferenceValueConstructTrace(
 	executer Traceable,
 	auth string,
 	typeID string,
@@ -405,7 +405,7 @@ func (tracer Tracer) reportEphemeralReferenceValueConstructTrace(
 	)
 }
 
-func (tracer Tracer) reportFunctionValueConstructTrace(
+func (tracer Tracer) ReportFunctionValueConstructTrace(
 	executer Traceable,
 	duration time.Duration,
 ) {
@@ -416,7 +416,7 @@ func (tracer Tracer) reportFunctionValueConstructTrace(
 	)
 }
 
-func (tracer Tracer) reportOpTrace(
+func (tracer Tracer) ReportOpTrace(
 	executer Traceable,
 	name string,
 	duration time.Duration,

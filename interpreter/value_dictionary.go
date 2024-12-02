@@ -83,7 +83,7 @@ func NewDictionaryValueWithAddress(
 			typeInfo := v.Type.String()
 			count := v.Count()
 
-			config.Tracer.reportDictionaryValueConstructTrace(
+			config.Tracer.ReportDictionaryValueConstructTrace(
 				interpreter,
 				typeInfo,
 				count,
@@ -169,7 +169,7 @@ func newDictionaryValueWithIterator(
 			typeInfo := v.Type.String()
 			count := v.Count()
 
-			config.Tracer.reportDictionaryValueConstructTrace(
+			config.Tracer.ReportDictionaryValueConstructTrace(
 				interpreter,
 				typeInfo,
 				count,
@@ -493,7 +493,7 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 		count := v.Count()
 
 		defer func() {
-			config.Tracer.reportDictionaryValueDestroyTrace(
+			config.Tracer.ReportDictionaryValueDestroyTrace(
 				interpreter,
 				typeInfo,
 				count,
@@ -732,7 +732,7 @@ func (v *DictionaryValue) GetMember(
 		count := v.Count()
 
 		defer func() {
-			config.Tracer.reportDictionaryValueGetMemberTrace(
+			config.Tracer.ReportDictionaryValueGetMemberTrace(
 				interpreter,
 				typeInfo,
 				count,
@@ -1150,7 +1150,7 @@ func (v *DictionaryValue) ConformsToStaticType(
 		typeInfo := v.Type.String()
 
 		defer func() {
-			config.Tracer.reportDictionaryValueConformsToStaticTypeTrace(
+			config.Tracer.ReportDictionaryValueConformsToStaticTypeTrace(
 				interpreter,
 				typeInfo,
 				count,
@@ -1302,7 +1302,7 @@ func (v *DictionaryValue) Transfer(
 		count := v.Count()
 
 		defer func() {
-			config.Tracer.reportDictionaryValueTransferTrace(
+			config.Tracer.ReportDictionaryValueTransferTrace(
 				interpreter,
 				typeInfo,
 				count,
@@ -1517,7 +1517,7 @@ func (v *DictionaryValue) DeepRemove(interpreter *Interpreter, hasNoParentContai
 		count := v.Count()
 
 		defer func() {
-			config.Tracer.reportDictionaryValueDeepRemoveTrace(
+			config.Tracer.ReportDictionaryValueDeepRemoveTrace(
 				interpreter,
 				typeInfo,
 				count,

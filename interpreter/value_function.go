@@ -69,7 +69,7 @@ func NewInterpretedFunctionValue(
 		startTime := time.Now()
 
 		defer func() {
-			config.Tracer.reportFunctionValueConstructTrace(
+			config.Tracer.ReportFunctionValueConstructTrace(
 				interpreter,
 				time.Since(startTime),
 			)

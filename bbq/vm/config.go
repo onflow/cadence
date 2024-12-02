@@ -43,11 +43,8 @@ type Config struct {
 	inter      *interpreter.Interpreter
 	TypeLoader func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType
 
-	// OnRecordTrace is triggered when a trace is recorded
-	OnRecordTrace OnRecordTraceFunc
-	// TracingEnabled determines if tracing is enabled.
-	// Tracing reports certain operations, e.g. composite value transfers
-	TracingEnabled bool
+	// Used for handling traces
+	Tracer interpreter.Tracer
 }
 
 func NewConfig(storage interpreter.Storage) *Config {
@@ -62,7 +59,9 @@ func NewConfig(storage interpreter.Storage) *Config {
 		MutationDuringCapabilityControllerIteration: false,
 		referencedResourceKindedValues:              ReferencedResourceKindedValues{},
 
-		TracingEnabled: false,
+		Tracer: interpreter.Tracer{
+			TracingEnabled: false,
+		},
 	}
 }
 
