@@ -19,6 +19,7 @@
 package interpreter
 
 import (
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 )
@@ -35,19 +36,24 @@ type InclusiveRangeIterator struct {
 
 var _ ValueIterator = &InclusiveRangeIterator{}
 
+type InclusiveRangeIteratorContext interface {
+	common.MemoryGauge
+	NumberValueArithmeticContext
+}
+
 func NewInclusiveRangeIterator(
-	interpreter *Interpreter,
+	context InclusiveRangeIteratorContext,
 	locationRange LocationRange,
 	v *CompositeValue,
 	typ InclusiveRangeStaticType,
 ) *InclusiveRangeIterator {
-	startValue := getFieldAsIntegerValue(interpreter, v, sema.InclusiveRangeTypeStartFieldName)
+	startValue := getFieldAsIntegerValue(context, v, sema.InclusiveRangeTypeStartFieldName)
 
 	zeroValue := GetSmallIntegerValue(0, typ.ElementType)
-	endValue := getFieldAsIntegerValue(interpreter, v, sema.InclusiveRangeTypeEndFieldName)
+	endValue := getFieldAsIntegerValue(context, v, sema.InclusiveRangeTypeEndFieldName)
 
-	stepValue := getFieldAsIntegerValue(interpreter, v, sema.InclusiveRangeTypeStepFieldName)
-	stepNegative := stepValue.Less(interpreter, zeroValue, locationRange)
+	stepValue := getFieldAsIntegerValue(context, v, sema.InclusiveRangeTypeStepFieldName)
+	stepNegative := stepValue.Less(context, zeroValue, locationRange)
 
 	return &InclusiveRangeIterator{
 		rangeValue:   v,
