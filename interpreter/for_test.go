@@ -862,25 +862,29 @@ func TestInclusiveRangeForInLoop(t *testing.T) {
 			)
 
 			count := 0
-			iterator := (loopElements).(*interpreter.ArrayValue).Iterator(inter, interpreter.EmptyLocationRange)
-			for {
-				elem := iterator.Next(inter, interpreter.EmptyLocationRange)
-				if elem == nil {
-					break
-				}
+			loopElementsArray := loopElements.(*interpreter.ArrayValue)
 
-				AssertValuesEqual(
-					t,
-					inter,
-					interpreter.GetSmallIntegerValue(
-						int8(testCase.loopElements[count]),
-						integerStaticType,
-					),
-					elem,
-				)
+			loopElementsArray.ForEach(
+				inter,
+				nil,
+				func(value interpreter.Value) (resume bool) {
+					AssertValuesEqual(
+						t,
+						inter,
+						interpreter.GetSmallIntegerValue(
+							int8(testCase.loopElements[count]),
+							integerStaticType,
+						),
+						value,
+					)
 
-				count += 1
-			}
+					count += 1
+
+					return true
+				},
+				false,
+				interpreter.EmptyLocationRange,
+			)
 
 			assert.Equal(t, len(testCase.loopElements), count)
 		})

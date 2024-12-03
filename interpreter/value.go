@@ -231,7 +231,6 @@ type ContractValue interface {
 // IterableValue is a value which can be iterated over, e.g. with a for-loop
 type IterableValue interface {
 	Value
-	Iterator(interpreter *Interpreter, locationRange LocationRange) ValueIterator
 	ForEach(
 		interpreter *Interpreter,
 		elementType sema.Type,

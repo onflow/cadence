@@ -412,11 +412,6 @@ func (*StorageReferenceValue) DeepRemove(_ *Interpreter, _ bool) {
 
 func (*StorageReferenceValue) isReference() {}
 
-func (v *StorageReferenceValue) Iterator(_ *Interpreter, _ LocationRange) ValueIterator {
-	// Not used for now
-	panic(errors.NewUnreachableError())
-}
-
 func (v *StorageReferenceValue) ForEach(
 	interpreter *Interpreter,
 	elementType sema.Type,
