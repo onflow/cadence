@@ -37,7 +37,7 @@ func TestFTTransfer(t *testing.T) {
 
 	// ---- Deploy FT Contract -----
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := vm.NewStorage()
 	programs := map[common.Location]compiledProgram{}
 
 	typeLoader := func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
@@ -197,7 +197,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	// ---- Deploy FT Contract -----
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := vm.NewStorage()
 	programs := map[common.Location]compiledProgram{}
 
 	typeLoader := func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
@@ -317,14 +317,13 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	tokenTransferTxAuthorizer := vm.NewAuthAccountReferenceValue(vmConfig, senderAddress)
 
-	tokenTransferTxChecker := parseAndCheck(b, realFlowTokenTransferTransaction, nil, programs)
-	tokenTransferTxProgram := compile(b, tokenTransferTxChecker, programs)
-	tokenTransferTxVM := vm.NewVM(txLocation(), tokenTransferTxProgram, vmConfig)
-
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
+		tokenTransferTxChecker := parseAndCheck(b, realFlowTokenTransferTransaction, nil, programs)
+		tokenTransferTxProgram := compile(b, tokenTransferTxChecker, programs)
+		tokenTransferTxVM := vm.NewVM(txLocation(), tokenTransferTxProgram, vmConfig)
 		err = tokenTransferTxVM.ExecuteTransaction(tokenTransferTxArgs, tokenTransferTxAuthorizer)
 		require.NoError(b, err)
 	}

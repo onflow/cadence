@@ -291,7 +291,7 @@ func parseCheckAndInterpretWithEvents(t *testing.T, code string) (
 }
 
 func newUnmeteredInMemoryStorage() interpreter.InMemoryStorage {
-	return interpreter.NewInMemoryStorage(nil)
+	return vm.NewStorage()
 }
 
 func constructorArguments(compositeKind common.CompositeKind, arguments string) string {

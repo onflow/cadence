@@ -318,7 +318,7 @@ func storeCapabilityController(
 	capabilityIDValue IntValue,
 	controller CapabilityControllerValue,
 ) {
-	storageMapKey := interpreter.Uint64StorageMapKey(capabilityIDValue.SmallInt)
+	storageMapKey := StorageMapIntKey(capabilityIDValue.SmallInt)
 
 	existed := WriteStored(
 		config,
@@ -356,29 +356,25 @@ func recordStorageCapabilityController(
 		config.MutationDuringCapabilityControllerIteration = true
 	}
 
-	identifier := targetPathValue.Identifier
-
-	storageMapKey := interpreter.StringStorageMapKey(identifier)
+	key := StorageMapStringKey(targetPathValue.Identifier)
 
 	accountStorage := config.Storage.GetStorageMap(address, stdlib.PathCapabilityStorageDomain, true)
 
-	referenced := accountStorage.ReadValue(config.MemoryGauge, interpreter.StringStorageMapKey(identifier))
-	readValue := InterpreterValueToVMValue(config.Storage, referenced)
+	referenced := accountStorage[key]
 
 	setKey := capabilityIDValue
 	setValue := Nil
 
-	if readValue == nil {
+	if referenced == nil {
 		capabilityIDSet := NewDictionaryValue(
 			config,
 			capabilityIDSetStaticType,
 			setKey,
 			setValue,
 		)
-		capabilityIDSetInterValue := VMValueToInterpreterValue(config, capabilityIDSet)
-		accountStorage.SetValue(config.interpreter(), storageMapKey, capabilityIDSetInterValue)
+		accountStorage[key] = capabilityIDSet
 	} else {
-		capabilityIDSet := readValue.(*DictionaryValue)
+		capabilityIDSet := referenced.(*DictionaryValue)
 		existing := capabilityIDSet.Insert(config, setKey, setValue)
 		if existing != Nil {
 			panic(errors.NewUnreachableError())

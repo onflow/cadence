@@ -470,7 +470,7 @@ func compile(t testing.TB, checker *sema.Checker, programs map[common.Location]c
 func compileAndInvoke(t testing.TB, code string, funcName string) (vm.Value, error) {
 	location := common.ScriptLocation{0x1}
 	program := compileCode(t, code, location, map[common.Location]compiledProgram{})
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := vm.NewStorage()
 
 	scriptLocation := runtime_utils.NewScriptLocationGenerator()
 

@@ -56,7 +56,7 @@ func NewVM(
 		conf = &Config{}
 	}
 	if conf.Storage == nil {
-		conf.Storage = interpreter.NewInMemoryStorage(nil)
+		conf.Storage = NewStorage()
 	}
 
 	// linkedGlobalsCache is a local cache-alike that is being used to hold already linked imports.
@@ -97,7 +97,7 @@ func (vm *VM) pop() Value {
 	vm.stack[lastIndex] = nil
 	vm.stack = vm.stack[:lastIndex]
 
-	checkInvalidatedResourceOrResourceReference(value)
+	//checkInvalidatedResourceOrResourceReference(value)
 
 	return value
 }
@@ -505,7 +505,6 @@ func opNew(vm *VM) {
 	value := NewCompositeValue(
 		compositeKind,
 		compositeStaticType,
-		vm.config.Storage,
 	)
 	vm.push(value)
 }

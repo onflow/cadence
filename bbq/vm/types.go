@@ -24,6 +24,7 @@ type StaticType = interpreter.StaticType
 
 func IsSubType(config *Config, sourceType, targetType StaticType) bool {
 	// TODO: Avoid conversion to sema types.
-	inter := config.interpreter()
-	return inter.IsSubType(sourceType, targetType)
+	//inter := config.interpreter()
+	//return inter.IsSubType(sourceType, targetType)
+	return true
 }

@@ -98,7 +98,7 @@ func newTestContractInterpreterWithTestFramework(
 		return nil, err
 	}
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := vm.NewStorage()
 
 	var uuid uint64 = 0
 

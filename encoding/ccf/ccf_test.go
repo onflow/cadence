@@ -4964,7 +4964,7 @@ func exportFromScript(t *testing.T, code string) cadence.Value {
 			},
 			AtreeStorageValidationEnabled: true,
 			AtreeValueValidationEnabled:   true,
-			Storage:                       interpreter.NewInMemoryStorage(nil),
+			Storage:                       vm.NewStorage(),
 		},
 	)
 	require.NoError(t, err)

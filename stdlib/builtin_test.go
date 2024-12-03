@@ -34,7 +34,7 @@ import (
 )
 
 func newUnmeteredInMemoryStorage() interpreter.InMemoryStorage {
-	return interpreter.NewInMemoryStorage(nil)
+	return vm.NewStorage()
 }
 
 func newInterpreter(t *testing.T, code string, valueDeclarations ...StandardLibraryValue) *interpreter.Interpreter {

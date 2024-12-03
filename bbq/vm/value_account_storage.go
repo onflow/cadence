@@ -64,7 +64,7 @@ func init() {
 				}
 
 				domain := path.Domain.Identifier()
-				identifier := path.Identifier
+				identifier := StorageMapStringKey(path.Identifier)
 
 				// Prevent an overwrite
 
@@ -89,7 +89,7 @@ func init() {
 					config,
 					address,
 					domain,
-					interpreter.StringStorageMapKey(identifier),
+					identifier,
 					value,
 				)
 

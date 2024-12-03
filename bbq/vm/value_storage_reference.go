@@ -31,7 +31,7 @@ type StorageReferenceValue struct {
 	TargetStorageAddress common.Address
 	TargetPath           PathValue
 	BorrowedType         interpreter.StaticType
-	storage              interpreter.Storage
+	storage              *Storage
 }
 
 var _ Value = &StorageReferenceValue{}
@@ -39,7 +39,7 @@ var _ MemberAccessibleValue = &StorageReferenceValue{}
 var _ ReferenceValue = &StorageReferenceValue{}
 
 func NewStorageReferenceValue(
-	storage interpreter.Storage,
+	storage *Storage,
 	authorization interpreter.Authorization,
 	targetStorageAddress common.Address,
 	targetPath PathValue,

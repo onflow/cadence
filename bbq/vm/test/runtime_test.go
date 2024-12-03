@@ -40,7 +40,7 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 
 	// ---- Deploy FT Contract -----
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := vm.NewStorage()
 
 	programs := map[common.Location]compiledProgram{}
 

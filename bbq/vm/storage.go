@@ -32,19 +32,19 @@ import (
 //		CheckHealth() error
 //	}
 
-func StoredValue(gauge common.MemoryGauge, storable atree.Storable, storage interpreter.Storage) Value {
-	value := interpreter.StoredValue(gauge, storable, storage)
-	return InterpreterValueToVMValue(storage, value)
-}
+//func StoredValue(gauge common.MemoryGauge, storage Storage) Value {
+//	value := interpreter.StoredValue(gauge, storable, storage)
+//	return InterpreterValueToVMValue(storage, value)
+//}
 
-func MustConvertStoredValue(gauge common.MemoryGauge, storage interpreter.Storage, storedValue atree.Value) Value {
-	value := interpreter.MustConvertStoredValue(gauge, storedValue)
-	return InterpreterValueToVMValue(storage, value)
-}
+//func MustConvertStoredValue(gauge common.MemoryGauge, storage interpreter.Storage, storedValue atree.Value) Value {
+//	value := interpreter.MustConvertStoredValue(gauge, storedValue)
+//	return InterpreterValueToVMValue(storage, value)
+//}
 
 func ReadStored(
 	gauge common.MemoryGauge,
-	storage interpreter.Storage,
+	storage *Storage,
 	address common.Address,
 	domain string,
 	identifier string,
@@ -54,26 +54,23 @@ func ReadStored(
 		return nil
 	}
 
-	referenced := accountStorage.ReadValue(gauge, interpreter.StringStorageMapKey(identifier))
-	return InterpreterValueToVMValue(storage, referenced)
+	key := StorageMapStringKey(identifier)
+
+	return accountStorage[key]
 }
 
 func WriteStored(
 	config *Config,
 	storageAddress common.Address,
 	domain string,
-	key interpreter.StorageMapKey,
+	key StorageMapKey,
 	value Value,
 ) (existed bool) {
 	accountStorage := config.Storage.GetStorageMap(storageAddress, domain, true)
-	interValue := VMValueToInterpreterValue(config, value)
 
-	return accountStorage.WriteValue(
-		config.interpreter(),
-		key,
-		interValue,
-	)
-	//interpreter.recordStorageMutation()
+	_, existed = accountStorage[key]
+	accountStorage[key] = value
+	return existed
 }
 
 func RemoveReferencedSlab(storage interpreter.Storage, storable atree.Storable) {
@@ -90,16 +87,18 @@ func RemoveReferencedSlab(storage interpreter.Storage, storable atree.Storable) 
 }
 
 func StoredValueExists(
-	storage interpreter.Storage,
+	storage *Storage,
 	storageAddress common.Address,
 	domain string,
-	identifier interpreter.StorageMapKey,
+	key StorageMapKey,
 ) bool {
 	accountStorage := storage.GetStorageMap(storageAddress, domain, false)
 	if accountStorage == nil {
 		return false
 	}
-	return accountStorage.ValueExists(identifier)
+
+	_, exist := accountStorage[key]
+	return exist
 }
 
 //

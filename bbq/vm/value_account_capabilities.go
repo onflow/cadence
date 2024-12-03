@@ -132,7 +132,8 @@ func init() {
 
 				// Prevent an overwrite
 
-				storageMapKey := interpreter.StringStorageMapKey(identifier)
+				storageMapKey := StorageMapStringKey(identifier)
+
 				if StoredValueExists(
 					config.Storage,
 					accountAddress,

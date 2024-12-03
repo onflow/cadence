@@ -27,14 +27,16 @@ import (
 )
 
 type DictionaryValue struct {
-	dictionary  *atree.OrderedMap
+	dictionary  map[Value]Value
 	Type        *interpreter.DictionaryStaticType
 	elementSize uint
+	address     common.Address
 }
 
 var _ Value = &DictionaryValue{}
 var _ MemberAccessibleValue = &DictionaryValue{}
-var _ ReferenceTrackedResourceKindedValue = &DictionaryValue{}
+
+//var _ ReferenceTrackedResourceKindedValue = &DictionaryValue{}
 
 func NewDictionaryValue(
 	config *Config,
@@ -42,63 +44,56 @@ func NewDictionaryValue(
 	keysAndValues ...Value,
 ) *DictionaryValue {
 
-	address := common.ZeroAddress
-
 	keysAndValuesCount := len(keysAndValues)
 	if keysAndValuesCount%2 != 0 {
 		panic("uneven number of keys and values")
 	}
 
-	constructor := func() *atree.OrderedMap {
-		dictionary, err := atree.NewMap(
-			config.Storage,
-			atree.Address(address),
-			atree.NewDefaultDigesterBuilder(),
-			dictionaryType,
-		)
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
-		return dictionary
-	}
+	dictionary := make(map[Value]Value)
 
 	// values are added to the dictionary after creation, not here
-	v := newDictionaryValueFromConstructor(dictionaryType, constructor)
 
 	for i := 0; i < keysAndValuesCount; i += 2 {
 		key := keysAndValues[i]
 		value := keysAndValues[i+1]
-		existingValue := v.Insert(config, key, value)
+
+		existingValue, _ := dictionary[key]
+		dictionary[key] = value
 		// If the dictionary already contained a value for the key,
 		// and the dictionary is resource-typed,
 		// then we need to prevent a resource loss
 		if _, ok := existingValue.(*SomeValue); ok {
-			if v.IsResourceKinded() {
-				panic(interpreter.DuplicateKeyInResourceDictionaryError{})
-			}
+			//if v.IsResourceKinded() {
+			//	panic(interpreter.DuplicateKeyInResourceDictionaryError{})
+			//}
 		}
 	}
 
-	return v
+	return &DictionaryValue{
+		Type:        dictionaryType,
+		dictionary:  dictionary,
+		elementSize: uint(len(dictionary)),
+		address:     common.ZeroAddress,
+	}
 }
 
-func newDictionaryValueFromConstructor(
-	staticType *interpreter.DictionaryStaticType,
-	constructor func() *atree.OrderedMap,
-) *DictionaryValue {
-
-	elementSize := interpreter.DictionaryElementSize(staticType)
-	return newDictionaryValueFromAtreeMap(
-		staticType,
-		elementSize,
-		constructor(),
-	)
-}
+//func newDictionaryValueFromConstructor(
+//	staticType *interpreter.DictionaryStaticType,
+//	constructor func() *atree.OrderedMap,
+//) *DictionaryValue {
+//
+//	elementSize := interpreter.DictionaryElementSize(staticType)
+//	return newDictionaryValueFromAtreeMap(
+//		staticType,
+//		elementSize,
+//		constructor(),
+//	)
+//}
 
 func newDictionaryValueFromAtreeMap(
 	staticType *interpreter.DictionaryStaticType,
 	elementSize uint,
-	atreeOrderedMap *atree.OrderedMap,
+	atreeOrderedMap map[Value]Value,
 ) *DictionaryValue {
 
 	return &DictionaryValue{
@@ -129,7 +124,7 @@ func (v *DictionaryValue) Insert(
 	keyValue, value Value,
 ) Value /* TODO: OptionalValue*/ {
 
-	address := v.dictionary.Address()
+	address := atree.Address(v.address)
 
 	keyValue = keyValue.Transfer(
 		conf,
@@ -148,57 +143,39 @@ func (v *DictionaryValue) Insert(
 	//interpreter.checkContainerMutation(v.Type.KeyType, keyValue, locationRange)
 	//interpreter.checkContainerMutation(v.Type.ValueType, value, locationRange)
 
-	existingValueStorable := v.InsertWithoutTransfer(conf, keyValue, value)
+	existingValue := v.InsertWithoutTransfer(conf, keyValue, value)
 
-	if existingValueStorable == nil {
+	if existingValue == nil {
 		return Nil // TODO: NilOptionalValue
 	}
 
-	existingValue := StoredValue(
-		conf,
-		existingValueStorable,
-		conf.Storage,
-	).Transfer(
+	existingValue = existingValue.Transfer(
 		conf,
 		atree.Address{},
 		true,
-		existingValueStorable,
+		nil,
 	)
 
 	return NewSomeValueNonCopying(existingValue)
 }
 
-func (v *DictionaryValue) InsertWithoutTransfer(config *Config, key, value Value) (existingValueStorable atree.Storable) {
+func (v *DictionaryValue) InsertWithoutTransfer(config *Config, key, value Value) (existingValue Value) {
 
 	//interpreter.validateMutation(v.StorageID(), locationRange)
 
-	valueComparator := newValueComparator(config)
-	hashInputProvider := newHashInputProvider(config)
-
-	keyInterpreterValue := VMValueToInterpreterValue(config, key)
-	valueInterpreterValue := VMValueToInterpreterValue(config, value)
-
 	// atree only calls Storable() on keyValue if needed,
 	// i.e., if the key is a new key
-	var err error
-	existingValueStorable, err = v.dictionary.Set(
-		valueComparator,
-		hashInputProvider,
-		keyInterpreterValue,
-		valueInterpreterValue,
-	)
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
+	existingValue, _ = v.dictionary[key]
+	v.dictionary[key] = value
 
 	//interpreter.maybeValidateAtreeValue(v.dictionary)
 
-	return existingValueStorable
+	return existingValue
 }
 
-func (v *DictionaryValue) SlabID() atree.SlabID {
-	return v.dictionary.SlabID()
-}
+//func (v *DictionaryValue) SlabID() atree.SlabID {
+//	return v.dictionary.SlabID()
+//}
 
 func (v *DictionaryValue) IsResourceKinded() bool {
 	// TODO:
@@ -216,64 +193,19 @@ func (v *DictionaryValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 ) Value {
-	storage := config.Storage
 	dictionary := v.dictionary
 
 	needsStoreTo := v.NeedsStoreTo(address)
 	isResourceKinded := v.IsResourceKinded()
 
 	if needsStoreTo || !isResourceKinded {
-		valueComparator := newValueComparator(config)
-		hashInputProvider := newHashInputProvider(config)
+		newDictionary := make(map[Value]Value, len(dictionary))
 
-		// Use non-readonly iterator here because iterated
-		// value can be removed if remove parameter is true.
-		iterator, err := v.dictionary.Iterator(valueComparator, hashInputProvider)
-		if err != nil {
-			panic(errors.NewExternalError(err))
+		for key, value := range dictionary {
+			newDictionary[key] = value.Transfer(config, address, remove, storable)
 		}
 
-		dictionary, err = atree.NewMapFromBatchData(
-			storage,
-			address,
-			atree.NewDefaultDigesterBuilder(),
-			v.dictionary.Type(),
-			valueComparator,
-			hashInputProvider,
-			v.dictionary.Seed(),
-			func() (atree.Value, atree.Value, error) {
-
-				atreeKey, atreeValue, err := iterator.Next()
-				if err != nil {
-					return nil, nil, err
-				}
-				if atreeKey == nil || atreeValue == nil {
-					return nil, nil, nil
-				}
-
-				key := interpreter.MustConvertStoredValue(config.MemoryGauge, atreeValue)
-				value := interpreter.MustConvertStoredValue(config.MemoryGauge, atreeValue)
-
-				// TODO: Transfer both key and value before returning.
-				return key, value, nil
-			},
-		)
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
-
-		if remove {
-			err = v.dictionary.PopIterate(func(keyStorable atree.Storable, valueStorable atree.Storable) {
-				RemoveReferencedSlab(storage, keyStorable)
-				RemoveReferencedSlab(storage, valueStorable)
-			})
-			if err != nil {
-				panic(errors.NewExternalError(err))
-			}
-			//interpreter.maybeValidateAtreeValue(v.dictionary)
-
-			RemoveReferencedSlab(storage, storable)
-		}
+		dictionary = newDictionary
 	}
 
 	if isResourceKinded {
@@ -286,7 +218,7 @@ func (v *DictionaryValue) Transfer(
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		invalidateReferencedResources(config, v)
+		//invalidateReferencedResources(config, v)
 
 		v.dictionary = nil
 	}
@@ -297,9 +229,7 @@ func (v *DictionaryValue) Transfer(
 		dictionary,
 	)
 
-	//res.semaType = v.semaType
-	//res.isResourceKinded = v.isResourceKinded
-	//res.isDestroyed = v.isDestroyed
+	res.address = common.Address(address)
 
 	return res
 }
@@ -313,14 +243,14 @@ func (v *DictionaryValue) NeedsStoreTo(address atree.Address) bool {
 }
 
 func (v *DictionaryValue) StorageAddress() atree.Address {
-	return v.dictionary.Address()
+	return atree.Address(v.address)
 }
 
 func (v *DictionaryValue) IsReferenceTrackedResourceKindedValue() {}
 
-func (v *DictionaryValue) ValueID() atree.ValueID {
-	return v.dictionary.ValueID()
-}
+//func (v *DictionaryValue) ValueID() atree.ValueID {
+//	return v.dictionary.ValueID()
+//}
 
 func (v *DictionaryValue) IsStaleResource() bool {
 	return v.dictionary == nil && v.IsResourceKinded()
@@ -330,63 +260,58 @@ func (v *DictionaryValue) Iterate(
 	config *Config,
 	f func(key, value Value) (resume bool),
 ) {
-	valueComparator := newValueComparator(config)
-	hashInputProvider := newHashInputProvider(config)
-	iterate := func(fn atree.MapEntryIterationFunc) error {
-		return v.dictionary.Iterate(
-			valueComparator,
-			hashInputProvider,
-			fn,
-		)
-	}
-	v.iterate(config, iterate, f)
-}
-
-// IterateReadOnlyLoaded iterates over all LOADED key-valye pairs of the array.
-// DO NOT perform storage mutations in the callback!
-func (v *DictionaryValue) IterateReadOnlyLoaded(
-	config *Config,
-	f func(key, value Value) (resume bool),
-) {
-	v.iterate(
-		config,
-		v.dictionary.IterateReadOnlyLoadedValues,
-		f,
-	)
-}
-
-func (v *DictionaryValue) iterate(
-	config *Config,
-	atreeIterate func(fn atree.MapEntryIterationFunc) error,
-	f func(key Value, value Value) (resume bool),
-) {
-	iterate := func() {
-		err := atreeIterate(func(key, value atree.Value) (resume bool, err error) {
-			// atree.OrderedMap iteration provides low-level atree.Value,
-			// convert to high-level interpreter.Value
-
-			keyValue := MustConvertStoredValue(config.MemoryGauge, config.Storage, key)
-			valueValue := MustConvertStoredValue(config.MemoryGauge, config.Storage, value)
-
-			checkInvalidatedResourceOrResourceReference(keyValue)
-			checkInvalidatedResourceOrResourceReference(valueValue)
-
-			resume = f(
-				keyValue,
-				valueValue,
-			)
-
-			return resume, nil
-		})
-		if err != nil {
-			panic(errors.NewExternalError(err))
+	for key, value := range v.dictionary {
+		if !f(key, value) {
+			break
 		}
 	}
-
-	// TODO:
-	//interpreter.withMutationPrevention(v.ValueID(), iterate)
-	iterate()
 }
+
+//// IterateReadOnlyLoaded iterates over all LOADED key-valye pairs of the array.
+//// DO NOT perform storage mutations in the callback!
+//func (v *DictionaryValue) IterateReadOnlyLoaded(
+//	config *Config,
+//	f func(key, value Value) (resume bool),
+//) {
+//	v.iterate(
+//		config,
+//		v.dictionary.IterateReadOnlyLoadedValues,
+//		f,
+//	)
+//}
+
+//func (v *DictionaryValue) iterate(
+//	config *Config,
+//	atreeIterate func(fn atree.MapEntryIterationFunc) error,
+//	f func(key Value, value Value) (resume bool),
+//) {
+//	iterate := func() {
+//		err := atreeIterate(func(key, value atree.Value) (resume bool, err error) {
+//			// atree.OrderedMap iteration provides low-level atree.Value,
+//			// convert to high-level interpreter.Value
+//
+//			keyValue := MustConvertStoredValue(config.MemoryGauge, config.Storage, key)
+//			valueValue := MustConvertStoredValue(config.MemoryGauge, config.Storage, value)
+//
+//			//checkInvalidatedResourceOrResourceReference(keyValue)
+//			//checkInvalidatedResourceOrResourceReference(valueValue)
+//
+//			resume = f(
+//				keyValue,
+//				valueValue,
+//			)
+//
+//			return resume, nil
+//		})
+//		if err != nil {
+//			panic(errors.NewExternalError(err))
+//		}
+//	}
+//
+//	// TODO:
+//	//interpreter.withMutationPrevention(v.ValueID(), iterate)
+//	iterate()
+//}
 
 func newValueComparator(conf *Config) atree.ValueComparator {
 	return func(storage atree.SlabStorage, atreeValue atree.Value, otherStorable atree.Storable) (bool, error) {

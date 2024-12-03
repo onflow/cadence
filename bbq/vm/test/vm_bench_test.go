@@ -32,7 +32,7 @@ func BenchmarkRecursionFib(b *testing.B) {
 	vmConfig := &vm.Config{}
 	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
-	expected := vm.NewIntValue(377)
+	expected := vm.NewIntValue(34)
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -41,7 +41,7 @@ func BenchmarkRecursionFib(b *testing.B) {
 
 		result, err := vmInstance.Invoke(
 			"fib",
-			vm.NewIntValue(14),
+			vm.NewIntValue(9),
 		)
 		require.NoError(b, err)
 		require.Equal(b, expected, result)
@@ -64,7 +64,7 @@ func BenchmarkImperativeFib(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	var value vm.Value = vm.NewIntValue(14)
+	var value vm.Value = vm.NewIntValue(9)
 
 	for i := 0; i < b.N; i++ {
 		_, err := vmInstance.Invoke("fib", value)
@@ -155,7 +155,7 @@ func BenchmarkNewResource(b *testing.B) {
 
 func BenchmarkNewStructRaw(b *testing.B) {
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := vm.NewStorage()
 	vmConfig := &vm.Config{
 		Storage: storage,
 	}
@@ -173,7 +173,6 @@ func BenchmarkNewStructRaw(b *testing.B) {
 					common.NewAddressLocation(nil, common.ZeroAddress, "Foo"),
 					"Foo",
 				),
-				storage.BasicSlabStorage,
 			)
 			structValue.SetMember(vmConfig, "id", fieldValue)
 			structValue.Transfer(vmConfig, atree.Address{}, false, nil)

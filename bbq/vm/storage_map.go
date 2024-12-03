@@ -18,6 +18,11 @@
 
 package vm
 
+import (
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
+)
+
 //// StorageMap is an ordered map which stores values in an account.
 //type StorageMap struct {
 //	orderedMap *atree.OrderedMap
@@ -238,3 +243,44 @@ package vm
 //
 //	return InterpreterValueToVMValue(i.storage, value)
 //}
+
+type Storage struct {
+	StorageMaps map[interpreter.StorageKey]StorageMap
+}
+
+func NewStorage() *Storage {
+	return &Storage{
+		StorageMaps: make(map[interpreter.StorageKey]StorageMap),
+	}
+}
+
+type StorageMap map[StorageMapKey]Value
+
+type StorageMapKey interface {
+	isStorageMapKey()
+}
+
+type StorageMapStringKey string
+
+func (StorageMapStringKey) isStorageMapKey() {}
+
+type StorageMapIntKey uint64
+
+func (StorageMapIntKey) isStorageMapKey() {}
+
+func (s *Storage) GetStorageMap(
+	address common.Address,
+	domain string,
+	createIfNotExists bool,
+) (
+	storageMap StorageMap,
+) {
+	key := interpreter.NewStorageKey(nil, address, domain)
+	storageMap = s.StorageMaps[key]
+
+	if storageMap == nil && createIfNotExists {
+		storageMap = make(map[StorageMapKey]Value)
+		s.StorageMaps[key] = storageMap
+	}
+	return storageMap
+}

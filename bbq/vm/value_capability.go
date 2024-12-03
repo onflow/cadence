@@ -207,17 +207,16 @@ func getCapabilityController(
 	capabilityID uint64,
 ) CapabilityControllerValue {
 
-	storageMapKey := interpreter.Uint64StorageMapKey(capabilityID)
+	storageMapKey := StorageMapIntKey(capabilityID)
 
 	accountStorage := config.Storage.GetStorageMap(address, stdlib.CapabilityControllerStorageDomain, false)
 	if accountStorage == nil {
 		return nil
 	}
 
-	referenced := accountStorage.ReadValue(config.MemoryGauge, storageMapKey)
-	vmReferencedValue := InterpreterValueToVMValue(config.Storage, referenced)
+	referenced := accountStorage[storageMapKey]
 
-	controller, ok := vmReferencedValue.(CapabilityControllerValue)
+	controller, ok := referenced.(CapabilityControllerValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}

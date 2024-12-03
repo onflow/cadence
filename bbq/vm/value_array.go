@@ -22,20 +22,21 @@ import (
 	goerrors "errors"
 	"github.com/onflow/atree"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 )
 
 type ArrayValue struct {
 	Type             interpreter.ArrayStaticType
-	array            *atree.Array
+	array            []Value
 	isResourceKinded bool
 	elementSize      uint
 	isDestroyed      bool
+	address          common.Address
 }
 
 var _ Value = &ArrayValue{}
-var _ ReferenceTrackedResourceKindedValue = &ArrayValue{}
+
+//var _ ReferenceTrackedResourceKindedValue = &ArrayValue{}
 
 func NewArrayValue(
 	config *Config,
@@ -44,89 +45,96 @@ func NewArrayValue(
 	values ...Value,
 ) *ArrayValue {
 
-	address := common.ZeroAddress
+	//var index int
+	//count := len(values)
+	//
+	//return NewArrayValueWithIterator(
+	//	config,
+	//	arrayType,
+	//	isResourceKinded,
+	//	address,
+	//	func() Value {
+	//		if index >= count {
+	//			return nil
+	//		}
+	//
+	//		value := values[index]
+	//
+	//		index++
+	//
+	//		value = value.Transfer(
+	//			config,
+	//			atree.Address(address),
+	//			true,
+	//			nil,
+	//		)
+	//
+	//		return value
+	//	},
+	//)
 
-	var index int
-	count := len(values)
-
-	return NewArrayValueWithIterator(
-		config,
-		arrayType,
-		isResourceKinded,
-		address,
-		func() Value {
-			if index >= count {
-				return nil
-			}
-
-			value := values[index]
-
-			index++
-
-			value = value.Transfer(
-				config,
-				atree.Address(address),
-				true,
-				nil,
-			)
-
-			return value
-		},
-	)
-}
-
-func NewArrayValueWithIterator(
-	config *Config,
-	arrayType interpreter.ArrayStaticType,
-	isResourceKinded bool,
-	address common.Address,
-	values func() Value,
-) *ArrayValue {
-	constructor := func() *atree.Array {
-		array, err := atree.NewArrayFromBatchData(
-			config.Storage,
-			atree.Address(address),
-			arrayType,
-			func() (atree.Value, error) {
-				vmValue := values()
-				value := VMValueToInterpreterValue(config, vmValue)
-				return value, nil
-			},
-		)
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
-		return array
+	return &ArrayValue{
+		Type:             arrayType,
+		array:            values,
+		isResourceKinded: isResourceKinded,
+		elementSize:      uint(len(values)),
+		isDestroyed:      false,
+		address:          common.ZeroAddress,
 	}
-
-	return newArrayValueFromConstructor(arrayType, isResourceKinded, constructor)
 }
 
-func newArrayValueFromConstructor(
-	staticType interpreter.ArrayStaticType,
-	isResourceKinded bool,
-	constructor func() *atree.Array,
-) *ArrayValue {
-
-	elementSize := interpreter.ArrayElementSize(staticType)
-
-	return newArrayValueFromAtreeArray(
-		staticType,
-		isResourceKinded,
-		elementSize,
-		constructor(),
-	)
-}
+//func NewArrayValueWithIterator(
+//	config *Config,
+//	arrayType interpreter.ArrayStaticType,
+//	isResourceKinded bool,
+//	address common.Address,
+//	values func() Value,
+//) *ArrayValue {
+//	constructor := func() *atree.Array {
+//		array, err := atree.NewArrayFromBatchData(
+//			config.Storage,
+//			atree.Address(address),
+//			arrayType,
+//			func() (atree.Value, error) {
+//				vmValue := values()
+//				value := VMValueToInterpreterValue(config, vmValue)
+//				return value, nil
+//			},
+//		)
+//		if err != nil {
+//			panic(errors.NewExternalError(err))
+//		}
+//		return array
+//	}
+//
+//	return newArrayValueFromConstructor(arrayType, isResourceKinded, constructor)
+//}
+//
+//func newArrayValueFromConstructor(
+//	staticType interpreter.ArrayStaticType,
+//	isResourceKinded bool,
+//	constructor func() *atree.Array,
+//) *ArrayValue {
+//
+//	elementSize := interpreter.ArrayElementSize(staticType)
+//
+//	return newArrayValueFromAtreeArray(
+//		staticType,
+//		isResourceKinded,
+//		elementSize,
+//		constructor(),
+//	)
+//}
 
 func newArrayValueFromAtreeArray(
 	staticType interpreter.ArrayStaticType,
 	isResourceKinded bool,
 	elementSize uint,
-	atreeArray *atree.Array,
+	array []Value,
 ) *ArrayValue {
 	return &ArrayValue{
 		Type:             staticType,
-		array:            atreeArray,
+		array:            array,
 		elementSize:      elementSize,
 		isResourceKinded: isResourceKinded,
 	}
@@ -141,8 +149,6 @@ func (v *ArrayValue) StaticType(*Config) StaticType {
 }
 
 func (v *ArrayValue) Transfer(config *Config, address atree.Address, remove bool, storable atree.Storable) Value {
-
-	storage := config.Storage
 
 	array := v.array
 
@@ -165,49 +171,10 @@ func (v *ArrayValue) Transfer(config *Config, address atree.Address, remove bool
 
 		// Use non-readonly iterator here because iterated
 		// value can be removed if remove parameter is true.
-		iterator, err := v.array.Iterator()
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
 
-		array, err = atree.NewArrayFromBatchData(
-			config.Storage,
-			address,
-			v.array.Type(),
-			func() (atree.Value, error) {
-				value, err := iterator.Next()
-				if err != nil {
-					return nil, err
-				}
-				if value == nil {
-					return nil, nil
-				}
-
-				element := interpreter.MustConvertStoredValue(config.MemoryGauge, value)
-
-				// TODO: Transfer before returning.
-				return element, nil
-			},
-		)
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
-
-		if remove {
-			err = v.array.PopIterate(func(valueStorable atree.Storable) {
-				RemoveReferencedSlab(storage, valueStorable)
-			})
-			if err != nil {
-				panic(errors.NewExternalError(err))
-			}
-
-			//interpreter.maybeValidateAtreeValue(v.array)
-			//if hasNoParentContainer {
-			//	interpreter.maybeValidateAtreeStorage()
-			//}
-
-			RemoveReferencedSlab(storage, storable)
-		}
+		newArray := make([]Value, len(v.array))
+		copy(newArray, array)
+		array = newArray
 	}
 
 	if isResourceKinded {
@@ -220,7 +187,7 @@ func (v *ArrayValue) Transfer(config *Config, address atree.Address, remove bool
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		invalidateReferencedResources(config, v)
+		//invalidateReferencedResources(config, v)
 
 		v.array = nil
 	}
@@ -242,16 +209,16 @@ func (v *ArrayValue) String() string {
 	panic("implement me")
 }
 
-func (v *ArrayValue) ValueID() atree.ValueID {
-	return v.array.ValueID()
-}
+//func (v *ArrayValue) ValueID() atree.ValueID {
+//	return v.array.ValueID()
+//}
 
-func (v *ArrayValue) SlabID() atree.SlabID {
-	return v.array.SlabID()
-}
+//func (v *ArrayValue) SlabID() atree.SlabID {
+//	return v.array.SlabID()
+//}
 
 func (v *ArrayValue) StorageAddress() atree.Address {
-	return v.array.Address()
+	return atree.Address(v.address)
 }
 
 func (v *ArrayValue) NeedsStoreTo(address atree.Address) bool {
@@ -269,7 +236,7 @@ func (v *ArrayValue) IsStaleResource() bool {
 }
 
 func (v *ArrayValue) Count() int {
-	return int(v.array.Count())
+	return len(v.array)
 }
 
 func (v *ArrayValue) Get(config *Config, index int) Value {
@@ -284,17 +251,7 @@ func (v *ArrayValue) Get(config *Config, index int) Value {
 		})
 	}
 
-	storedValue, err := v.array.Get(uint64(index))
-	if err != nil {
-		v.handleIndexOutOfBoundsError(err, index)
-		panic(errors.NewExternalError(err))
-	}
-
-	return MustConvertStoredValue(
-		config.MemoryGauge,
-		config.Storage,
-		storedValue,
-	)
+	return v.array[index]
 }
 
 func (v *ArrayValue) handleIndexOutOfBoundsError(err error, index int) {
@@ -322,36 +279,7 @@ func (v *ArrayValue) Set(config *Config, index int, element Value) {
 		})
 	}
 
-	// TODO:
-	//interpreter.checkContainerMutation(v.Type.ElementType(), element, locationRange)
-
-	element = element.Transfer(
-		config,
-		v.array.Address(),
-		true,
-		nil,
-	)
-
-	storableElement := VMValueToInterpreterValue(config, element)
-
-	existingStorable, err := v.array.Set(uint64(index), storableElement)
-	if err != nil {
-		v.handleIndexOutOfBoundsError(err, index)
-
-		panic(errors.NewExternalError(err))
-	}
-
-	//interpreter.maybeValidateAtreeValue(v.array)
-	//interpreter.maybeValidateAtreeStorage()
-
-	existingValue := StoredValue(config.MemoryGauge, existingStorable, config.Storage)
-	_ = existingValue
-
-	//interpreter.checkResourceLoss(existingValue, locationRange)
-
-	//existingValue.DeepRemove(interpreter, true) // existingValue is standalone because it was overwritten in parent container.
-
-	RemoveReferencedSlab(config.Storage, existingStorable)
+	v.array[index] = element
 }
 
 func (v *ArrayValue) Iterate(
@@ -359,62 +287,69 @@ func (v *ArrayValue) Iterate(
 	f func(element Value) (resume bool),
 	transferElements bool,
 ) {
-	v.iterate(
-		config,
-		v.array.Iterate,
-		f,
-		transferElements,
-	)
+	for _, element := range v.array {
+		if transferElements {
+			element = element.Transfer(
+				config,
+				atree.Address{},
+				false,
+				nil,
+			)
+		}
+		if !f(element) {
+			break
+		}
+	}
 }
 
 // IterateReadOnlyLoaded iterates over all LOADED elements of the array.
 // DO NOT perform storage mutations in the callback!
-func (v *ArrayValue) IterateReadOnlyLoaded(
-	config *Config,
-	f func(element Value) (resume bool),
-) {
-	const transferElements = false
+//func (v *ArrayValue) IterateReadOnlyLoaded(
+//	config *Config,
+//	f func(element Value) (resume bool),
+//) {
+//	const transferElements = false
+//
+//	v.iterate(
+//		config,
+//		v.array.IterateReadOnlyLoadedValues,
+//		f,
+//		transferElements,
+//	)
+//}
 
-	v.iterate(
-		config,
-		v.array.IterateReadOnlyLoadedValues,
-		f,
-		transferElements,
-	)
-}
-
-func (v *ArrayValue) iterate(
-	config *Config,
-	atreeIterate func(fn atree.ArrayIterationFunc) error,
-	f func(element Value) (resume bool),
-	transferElements bool,
-) {
-	iterate := func() {
-		err := atreeIterate(func(element atree.Value) (resume bool, err error) {
-			// atree.Array iteration provides low-level atree.Value,
-			// convert to high-level interpreter.Value
-			elementValue := MustConvertStoredValue(config, config, element)
-			checkInvalidatedResourceOrResourceReference(elementValue)
-
-			if transferElements {
-				// Each element must be transferred before passing onto the function.
-				elementValue = elementValue.Transfer(
-					config,
-					atree.Address{},
-					false,
-					nil,
-				)
-			}
-
-			resume = f(elementValue)
-
-			return resume, nil
-		})
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
-	}
-
-	iterate()
-	//interpreter.withMutationPrevention(v.ValueID(), iterate)
-}
+//func (v *ArrayValue) iterate(
+//	config *Config,
+//	atreeIterate func(fn atree.ArrayIterationFunc) error,
+//	f func(element Value) (resume bool),
+//	transferElements bool,
+//) {
+//	iterate := func() {
+//		err := atreeIterate(func(element atree.Value) (resume bool, err error) {
+//			// atree.Array iteration provides low-level atree.Value,
+//			// convert to high-level interpreter.Value
+//			elementValue := MustConvertStoredValue(config, config, element)
+//			//checkInvalidatedResourceOrResourceReference(elementValue)
+//
+//			if transferElements {
+//				// Each element must be transferred before passing onto the function.
+//				elementValue = elementValue.Transfer(
+//					config,
+//					atree.Address{},
+//					false,
+//					nil,
+//				)
+//			}
+//
+//			resume = f(elementValue)
+//
+//			return resume, nil
+//		})
+//		if err != nil {
+//			panic(errors.NewExternalError(err))
+//		}
+//	}
+//
+//	iterate()
+//	//interpreter.withMutationPrevention(v.ValueID(), iterate)
+//}

@@ -28,7 +28,7 @@ import (
 )
 
 type Config struct {
-	interpreter.Storage
+	*Storage
 	common.MemoryGauge
 	commons.ImportHandler
 	ContractValueHandler
@@ -44,7 +44,7 @@ type Config struct {
 	TypeLoader func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType
 }
 
-func NewConfig(storage interpreter.Storage) *Config {
+func NewConfig(storage *Storage) *Config {
 	return &Config{
 		Storage:              storage,
 		MemoryGauge:          nil,
@@ -70,7 +70,7 @@ func (c *Config) interpreter() *interpreter.Interpreter {
 			nil,
 			common_utils.TestLocation,
 			&interpreter.Config{
-				Storage:               c.Storage,
+				//Storage:               c.Storage,
 				ImportLocationHandler: nil,
 				CompositeTypeHandler: func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 					return c.TypeLoader(location, typeID).(*sema.CompositeType)

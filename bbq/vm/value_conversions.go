@@ -37,12 +37,12 @@ func InterpreterValueToVMValue(storage interpreter.Storage, value interpreter.Va
 		return NewIntValue(value.BigInt.Int64())
 	case *interpreter.StringValue:
 		return NewStringValue(value.Str)
-	case *interpreter.CompositeValue:
-		return newCompositeValueFromOrderedMap(
-			value.AtreeMap(),
-			value.StaticType(nil).(*interpreter.CompositeStaticType),
-			value.Kind,
-		)
+	//case *interpreter.CompositeValue:
+	//return newCompositeValueFromOrderedMap(
+	//	value.AtreeMap(),
+	//	value.StaticType(nil).(*interpreter.CompositeStaticType),
+	//	value.Kind,
+	//)
 	//case interpreter.LinkValue:
 	//	return NewLinkValue(
 	//		InterpreterValueToVMValue(value.TargetPath).(PathValue),
@@ -65,12 +65,12 @@ func InterpreterValueToVMValue(storage interpreter.Storage, value interpreter.Va
 			value.TypeID,
 			fields,
 		)
-	case *interpreter.DictionaryValue:
-		return newDictionaryValueFromAtreeMap(
-			value.Type,
-			value.ElementSize(),
-			value.AtreeMap(),
-		)
+	//case *interpreter.DictionaryValue:
+	//	return newDictionaryValueFromAtreeMap(
+	//		value.Type,
+	//		value.ElementSize(),
+	//		value.AtreeMap(),
+	//	)
 	case *interpreter.IDCapabilityValue:
 		return NewCapabilityValue(
 			AddressValue(value.Address()),
@@ -83,14 +83,14 @@ func InterpreterValueToVMValue(storage interpreter.Storage, value interpreter.Va
 			NewIntValue(int64(value.CapabilityID.ToInt(interpreter.EmptyLocationRange))),
 			InterpreterValueToVMValue(storage, value.TargetPath).(PathValue),
 		)
-	case *interpreter.StorageReferenceValue:
-		return NewStorageReferenceValue(
-			storage,
-			value.Authorization,
-			value.TargetStorageAddress,
-			InterpreterValueToVMValue(storage, value.TargetPath).(PathValue),
-			interpreter.ConvertSemaToStaticType(nil, value.BorrowedType),
-		)
+	//case *interpreter.StorageReferenceValue:
+	//	return NewStorageReferenceValue(
+	//		storage,
+	//		value.Authorization,
+	//		value.TargetStorageAddress,
+	//		InterpreterValueToVMValue(storage, value.TargetPath).(PathValue),
+	//		interpreter.ConvertSemaToStaticType(nil, value.BorrowedType),
+	//	)
 	default:
 		panic(errors.NewUnreachableError())
 	}
@@ -106,26 +106,26 @@ func VMValueToInterpreterValue(config *Config, value Value) interpreter.Value {
 		return interpreter.NewIntValueFromInt64(nil, value.SmallInt)
 	case StringValue:
 		return interpreter.NewUnmeteredStringValue(string(value.Str))
-	case *CompositeValue:
-		compositeType := value.CompositeType
-		return interpreter.NewCompositeValueFromAtreeMap(
-			nil,
-			interpreter.CompositeTypeInfo{
-				Location:            compositeType.Location,
-				QualifiedIdentifier: compositeType.QualifiedIdentifier,
-				Kind:                value.Kind,
-			},
-			value.dictionary,
-		)
-	case *DictionaryValue:
-		staticType := value.Type
-		elementSize := interpreter.DictionaryElementSize(staticType)
-		return interpreter.NewDictionaryValueFromAtreeMap(
-			nil,
-			staticType,
-			elementSize,
-			value.dictionary,
-		)
+	//case *CompositeValue:
+	//	compositeType := value.CompositeType
+	//	return interpreter.NewCompositeValueFromAtreeMap(
+	//		nil,
+	//		interpreter.CompositeTypeInfo{
+	//			Location:            compositeType.Location,
+	//			QualifiedIdentifier: compositeType.QualifiedIdentifier,
+	//			Kind:                value.Kind,
+	//		},
+	//		value.dictionary,
+	//	)
+	//case *DictionaryValue:
+	//	staticType := value.Type
+	//	elementSize := interpreter.DictionaryElementSize(staticType)
+	//	return interpreter.NewDictionaryValueFromAtreeMap(
+	//		nil,
+	//		staticType,
+	//		elementSize,
+	//		value.dictionary,
+	//	)
 	case CapabilityValue:
 		return interpreter.NewCapabilityValue(
 			nil,
