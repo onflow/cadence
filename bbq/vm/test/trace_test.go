@@ -40,14 +40,6 @@ func TestTrace(t *testing.T) {
 		t.Parallel()
 
 		code := `
-			struct Foo {
-				var id : Int
-
-				init(_ id: Int) {
-					self.id = id
-				}
-			}
-
 			resource Bar {
                 var id : Int
 
@@ -63,10 +55,8 @@ func TestTrace(t *testing.T) {
 					values[i] = values[i] + values[i-1]
 					i = i + 1
 				}
-				var s = Foo(0)
-				s.id = s.id + 2
-
 				var r <- create Bar(5)
+				r.id = r.id + values[3]
 				destroy r
             }
         `

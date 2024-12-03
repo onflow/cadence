@@ -340,6 +340,18 @@ func opGetLocal(vm *VM) {
 	callFrame := vm.callFrame
 	index := callFrame.getUint16()
 	local := callFrame.locals[index]
+	if vm.config.Tracer.TracingEnabled {
+		startTime := time.Now()
+
+		defer func() {
+			vm.config.Tracer.ReportVariableReadTrace(
+				vm,
+				// should be Value.String() but unimplemented
+				"var",
+				time.Since(startTime),
+			)
+		}()
+	}
 	vm.push(local)
 }
 
@@ -347,6 +359,18 @@ func opSetLocal(vm *VM) {
 	callFrame := vm.callFrame
 	index := callFrame.getUint16()
 	callFrame.locals[index] = vm.pop()
+	if vm.config.Tracer.TracingEnabled {
+		startTime := time.Now()
+
+		defer func() {
+			vm.config.Tracer.ReportVariableWriteTrace(
+				vm,
+				// should be Value.String() but unimplemented
+				"var",
+				time.Since(startTime),
+			)
+		}()
+	}
 }
 
 func opGetGlobal(vm *VM) {
@@ -695,11 +719,33 @@ func opNil(vm *VM) {
 }
 
 func opEqual(vm *VM) {
+	if vm.config.Tracer.TracingEnabled {
+		startTime := time.Now()
+
+		defer func() {
+			vm.config.Tracer.ReportOpTrace(
+				vm,
+				"equal",
+				time.Since(startTime),
+			)
+		}()
+	}
 	left, right := vm.peekPop()
 	vm.replaceTop(BoolValue(left == right))
 }
 
 func opNotEqual(vm *VM) {
+	if vm.config.Tracer.TracingEnabled {
+		startTime := time.Now()
+
+		defer func() {
+			vm.config.Tracer.ReportOpTrace(
+				vm,
+				"not equal",
+				time.Since(startTime),
+			)
+		}()
+	}
 	left, right := vm.peekPop()
 	vm.replaceTop(BoolValue(left != right))
 }
