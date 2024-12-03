@@ -426,6 +426,20 @@ func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.Identi
 	variable := interpreter.FindVariable(name)
 	value := variable.GetValue(interpreter)
 
+	config := interpreter.SharedState.Config
+
+	// tracing
+	if config.Tracer.TracingEnabled {
+		startTime := time.Now()
+		defer func() {
+			config.Tracer.ReportVariableReadTrace(
+				interpreter,
+				expression.Identifier.Identifier,
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	interpreter.checkInvalidatedResourceUse(value, variable, name, expression)
 
 	return value

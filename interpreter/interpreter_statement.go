@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"time"
+
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -544,6 +546,20 @@ func (interpreter *Interpreter) VisitAssignmentStatement(assignment *ast.Assignm
 
 	target := assignment.Target
 	value := assignment.Value
+
+	config := interpreter.SharedState.Config
+
+	// tracing
+	if config.Tracer.TracingEnabled {
+		startTime := time.Now()
+		defer func() {
+			config.Tracer.ReportVariableWriteTrace(
+				interpreter,
+				target.String(),
+				time.Since(startTime),
+			)
+		}()
+	}
 
 	locationRange := LocationRange{
 		Location:    interpreter.Location,

@@ -62,7 +62,6 @@ func NewInterpretedFunctionValue(
 	statements []ast.Statement,
 	postConditions []ast.Condition,
 ) *InterpretedFunctionValue {
-
 	config := interpreter.SharedState.Config
 
 	if config.Tracer.TracingEnabled {
@@ -71,11 +70,11 @@ func NewInterpretedFunctionValue(
 		defer func() {
 			config.Tracer.ReportFunctionValueConstructTrace(
 				interpreter,
+				functionType.String(),
 				time.Since(startTime),
 			)
 		}()
 	}
-
 	common.UseMemory(interpreter, common.InterpretedFunctionValueMemoryUsage)
 
 	return &InterpretedFunctionValue{

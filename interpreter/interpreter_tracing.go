@@ -29,6 +29,7 @@ const (
 	// common
 	tracingFunctionPrefix = "function."
 	tracingImportPrefix   = "import."
+	tracingVariablePrefix = "variable."
 
 	// type prefixes
 	tracingArrayPrefix              = "array."
@@ -37,13 +38,15 @@ const (
 	tracingEphemeralReferencePrefix = "reference."
 
 	// Value operation postfixes
-	tracingConstructPostfix            = "construct"
+	tracingConstructPostfix            = "construct."
 	tracingTransferPostfix             = "transfer"
 	tracingConformsToStaticTypePostfix = "conformsToStaticType"
 	tracingDeepRemovePostfix           = "deepRemove"
 	tracingDestroyPostfix              = "destroy"
 	tracingCastPostfix                 = "cast"
-	tracingBinaryOpPostfix             = "operation."
+	tracingOpPostfix                   = "operation."
+	tracingReadPostfix                 = "read."
+	tracingWritePostfix                = "write."
 
 	// MemberAccessible operation prefixes
 	tracingGetMemberPrefix    = "getMember."
@@ -407,10 +410,11 @@ func (tracer Tracer) ReportEphemeralReferenceValueConstructTrace(
 
 func (tracer Tracer) ReportFunctionValueConstructTrace(
 	executer Traceable,
+	name string,
 	duration time.Duration,
 ) {
 	tracer.OnRecordTrace(executer,
-		tracingFunctionPrefix+tracingConstructPostfix,
+		tracingFunctionPrefix+tracingConstructPostfix+name,
 		duration,
 		nil,
 	)
@@ -422,8 +426,36 @@ func (tracer Tracer) ReportOpTrace(
 	duration time.Duration,
 ) {
 	tracer.OnRecordTrace(executer,
-		tracingBinaryOpPostfix+name,
+		tracingOpPostfix+name,
 		duration,
 		nil,
+	)
+}
+
+func (tracer Tracer) ReportVariableReadTrace(
+	executer Traceable,
+	name string,
+	duration time.Duration,
+) {
+	tracer.OnRecordTrace(executer,
+		tracingVariablePrefix+tracingReadPostfix,
+		duration,
+		[]attribute.KeyValue{
+			attribute.String("name", name),
+		},
+	)
+}
+
+func (tracer Tracer) ReportVariableWriteTrace(
+	executer Traceable,
+	name string,
+	duration time.Duration,
+) {
+	tracer.OnRecordTrace(executer,
+		tracingVariablePrefix+tracingWritePostfix,
+		duration,
+		[]attribute.KeyValue{
+			attribute.String("name", name),
+		},
 	)
 }
