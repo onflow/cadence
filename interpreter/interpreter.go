@@ -1858,21 +1858,6 @@ func (interpreter *Interpreter) transferAndConvert(
 	locationRange LocationRange,
 ) Value {
 
-	config := interpreter.SharedState.Config
-
-	if config.Tracer.TracingEnabled {
-		startTime := time.Now()
-
-		defer func() {
-			config.Tracer.ReportTransferTrace(
-				interpreter,
-				targetType.String(),
-				valueType.String(),
-				time.Since(startTime),
-			)
-		}()
-	}
-
 	transferredValue := value.Transfer(
 		interpreter,
 		locationRange,
@@ -1884,6 +1869,21 @@ func (interpreter *Interpreter) transferAndConvert(
 	)
 
 	targetType = interpreter.SubstituteMappedEntitlements(targetType)
+
+	config := interpreter.SharedState.Config
+
+	if config.Tracer.TracingEnabled && targetType != nil {
+		startTime := time.Now()
+
+		defer func() {
+			config.Tracer.ReportTransferTrace(
+				interpreter,
+				targetType.String(),
+				valueType.String(),
+				time.Since(startTime),
+			)
+		}()
+	}
 
 	result := interpreter.ConvertAndBox(
 		locationRange,

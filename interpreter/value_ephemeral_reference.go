@@ -19,8 +19,6 @@
 package interpreter
 
 import (
-	"time"
-
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/common"
@@ -60,21 +58,21 @@ func NewUnmeteredEphemeralReferenceValue(
 		})
 	}
 
-	config := interpreter.SharedState.Config
+	// config := interpreter.SharedState.Config
 
-	if config.Tracer.TracingEnabled {
-		startTime := time.Now()
+	// if config.Tracer.TracingEnabled {
+	// 	startTime := time.Now()
 
-		defer func() {
-			config.Tracer.ReportEphemeralReferenceValueConstructTrace(
-				interpreter,
-				authorization.String(),
-				borrowedType.String(),
-				value.String(),
-				time.Since(startTime),
-			)
-		}()
-	}
+	// 	defer func() {
+	// 		config.Tracer.ReportEphemeralReferenceValueConstructTrace(
+	// 			interpreter,
+	// 			authorization.String(),
+	// 			borrowedType.String(),
+	// 			value.String(),
+	// 			time.Since(startTime),
+	// 		)
+	// 	}()
+	// }
 
 	ref := &EphemeralReferenceValue{
 		Authorization: authorization,

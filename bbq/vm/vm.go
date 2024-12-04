@@ -705,7 +705,7 @@ func opCast(vm *VM) {
 			config.Tracer.ReportCastingTrace(
 				vm,
 				targetType.String(),
-				value.String(),
+				"some value",
 				time.Since(startTime),
 			)
 		}()
@@ -950,6 +950,18 @@ func (vm *VM) lookupFunction(location common.Location, name string) FunctionValu
 		return value.(FunctionValue)
 	}
 
+	if vm.config.Tracer.TracingEnabled {
+		startTime := time.Now()
+
+		defer func() {
+			vm.config.Tracer.ReportImportTrace(
+				vm,
+				location.String(),
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	// If not found, check in already linked imported functions.
 	linkedGlobals, ok := vm.linkedGlobalsCache[location]
 
@@ -958,18 +970,6 @@ func (vm *VM) lookupFunction(location common.Location, name string) FunctionValu
 		// TODO: This currently link all functions in program, unnecessarily.
 		//   Link only the requested function.
 		program := vm.config.ImportHandler(location)
-
-		if vm.config.Tracer.TracingEnabled {
-			startTime := time.Now()
-
-			defer func() {
-				vm.config.Tracer.ReportImportTrace(
-					vm,
-					location.String(),
-					time.Since(startTime),
-				)
-			}()
-		}
 
 		linkedGlobals = LinkGlobals(
 			location,

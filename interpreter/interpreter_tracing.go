@@ -110,11 +110,11 @@ func (tracer Tracer) ReportArrayValueDeepRemoveTrace(
 	count int,
 	duration time.Duration,
 ) {
-	tracer.OnRecordTrace(executer,
-		tracingArrayPrefix+tracingDeepRemovePostfix,
-		duration,
-		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
-	)
+	// tracer.OnRecordTrace(executer,
+	// 	tracingArrayPrefix+tracingDeepRemovePostfix,
+	// 	duration,
+	// 	prepareArrayAndMapValueTraceAttrs(typeInfo, count),
+	// )
 }
 
 func (tracer Tracer) ReportArrayValueDestroyTrace(
@@ -123,11 +123,11 @@ func (tracer Tracer) ReportArrayValueDestroyTrace(
 	count int,
 	duration time.Duration,
 ) {
-	tracer.OnRecordTrace(executer,
-		tracingArrayPrefix+tracingDestroyPostfix,
-		duration,
-		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
-	)
+	// tracer.OnRecordTrace(executer,
+	// 	tracingArrayPrefix+tracingDestroyPostfix,
+	// 	duration,
+	// 	prepareArrayAndMapValueTraceAttrs(typeInfo, count),
+	// )
 }
 
 func (tracer Tracer) ReportArrayValueTransferTrace(
@@ -136,11 +136,11 @@ func (tracer Tracer) ReportArrayValueTransferTrace(
 	count int,
 	duration time.Duration,
 ) {
-	tracer.OnRecordTrace(executer,
-		tracingArrayPrefix+tracingTransferPostfix,
-		duration,
-		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
-	)
+	// tracer.OnRecordTrace(executer,
+	// 	tracingArrayPrefix+tracingTransferPostfix,
+	// 	duration,
+	// 	prepareArrayAndMapValueTraceAttrs(typeInfo, count),
+	// )
 }
 
 func (tracer Tracer) ReportArrayValueConformsToStaticTypeTrace(
@@ -149,11 +149,11 @@ func (tracer Tracer) ReportArrayValueConformsToStaticTypeTrace(
 	count int,
 	duration time.Duration,
 ) {
-	tracer.OnRecordTrace(executer,
-		tracingArrayPrefix+tracingConformsToStaticTypePostfix,
-		duration,
-		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
-	)
+	// tracer.OnRecordTrace(executer,
+	// 	tracingArrayPrefix+tracingConformsToStaticTypePostfix,
+	// 	duration,
+	// 	prepareArrayAndMapValueTraceAttrs(typeInfo, count),
+	// )
 }
 
 func (tracer Tracer) ReportDictionaryValueConstructTrace(
@@ -162,11 +162,11 @@ func (tracer Tracer) ReportDictionaryValueConstructTrace(
 	count int,
 	duration time.Duration,
 ) {
-	tracer.OnRecordTrace(executer,
-		tracingDictionaryPrefix+tracingConstructPostfix,
-		duration,
-		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
-	)
+	// tracer.OnRecordTrace(executer,
+	// 	tracingDictionaryPrefix+tracingConstructPostfix,
+	// 	duration,
+	// 	prepareArrayAndMapValueTraceAttrs(typeInfo, count),
+	// )
 }
 
 func (tracer Tracer) ReportDictionaryValueDeepRemoveTrace(
@@ -175,11 +175,11 @@ func (tracer Tracer) ReportDictionaryValueDeepRemoveTrace(
 	count int,
 	duration time.Duration,
 ) {
-	tracer.OnRecordTrace(executer,
-		tracingDictionaryPrefix+tracingDeepRemovePostfix,
-		duration,
-		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
-	)
+	// tracer.OnRecordTrace(executer,
+	// 	tracingDictionaryPrefix+tracingDeepRemovePostfix,
+	// 	duration,
+	// 	prepareArrayAndMapValueTraceAttrs(typeInfo, count),
+	// )
 }
 
 func (tracer Tracer) ReportDictionaryValueDestroyTrace(
@@ -188,11 +188,11 @@ func (tracer Tracer) ReportDictionaryValueDestroyTrace(
 	count int,
 	duration time.Duration,
 ) {
-	tracer.OnRecordTrace(executer,
-		tracingDictionaryPrefix+tracingDestroyPostfix,
-		duration,
-		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
-	)
+	// tracer.OnRecordTrace(executer,
+	// 	tracingDictionaryPrefix+tracingDestroyPostfix,
+	// 	duration,
+	// 	prepareArrayAndMapValueTraceAttrs(typeInfo, count),
+	// )
 }
 
 func (tracer Tracer) ReportDictionaryValueTransferTrace(
@@ -201,11 +201,11 @@ func (tracer Tracer) ReportDictionaryValueTransferTrace(
 	count int,
 	duration time.Duration,
 ) {
-	tracer.OnRecordTrace(executer,
-		tracingDictionaryPrefix+tracingTransferPostfix,
-		duration,
-		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
-	)
+	// tracer.OnRecordTrace(executer,
+	// 	tracingDictionaryPrefix+tracingTransferPostfix,
+	// 	duration,
+	// 	prepareArrayAndMapValueTraceAttrs(typeInfo, count),
+	// )
 }
 
 func (tracer Tracer) ReportDictionaryValueConformsToStaticTypeTrace(
@@ -214,11 +214,11 @@ func (tracer Tracer) ReportDictionaryValueConformsToStaticTypeTrace(
 	count int,
 	duration time.Duration,
 ) {
-	tracer.OnRecordTrace(executer,
-		tracingDictionaryPrefix+tracingConformsToStaticTypePostfix,
-		duration,
-		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
-	)
+	// tracer.OnRecordTrace(executer,
+	// 	tracingDictionaryPrefix+tracingConformsToStaticTypePostfix,
+	// 	duration,
+	// 	prepareArrayAndMapValueTraceAttrs(typeInfo, count),
+	// )
 }
 
 func (tracer Tracer) ReportDictionaryValueGetMemberTrace(
@@ -228,11 +228,11 @@ func (tracer Tracer) ReportDictionaryValueGetMemberTrace(
 	name string,
 	duration time.Duration,
 ) {
-	tracer.OnRecordTrace(executer,
-		tracingDictionaryPrefix+tracingGetMemberPrefix+name,
-		duration,
-		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
-	)
+	// tracer.OnRecordTrace(executer,
+	// 	tracingDictionaryPrefix+tracingGetMemberPrefix+name,
+	// 	duration,
+	// 	prepareArrayAndMapValueTraceAttrs(typeInfo, count),
+	// )
 }
 
 func prepareCompositeValueTraceAttrs(owner, typeID, kind string) []attribute.KeyValue {
@@ -264,11 +264,11 @@ func (tracer Tracer) ReportCompositeValueDeepRemoveTrace(
 	kind string,
 	duration time.Duration,
 ) {
-	tracer.OnRecordTrace(executer,
-		tracingCompositePrefix+tracingDeepRemovePostfix,
-		duration,
-		prepareCompositeValueTraceAttrs(owner, typeID, kind),
-	)
+	// tracer.OnRecordTrace(executer,
+	// 	tracingCompositePrefix+tracingDeepRemovePostfix,
+	// 	duration,
+	// 	prepareCompositeValueTraceAttrs(owner, typeID, kind),
+	// )
 }
 
 func (tracer Tracer) ReportCompositeValueDestroyTrace(
@@ -278,11 +278,11 @@ func (tracer Tracer) ReportCompositeValueDestroyTrace(
 	kind string,
 	duration time.Duration,
 ) {
-	tracer.OnRecordTrace(executer,
-		tracingCompositePrefix+tracingDestroyPostfix,
-		duration,
-		prepareCompositeValueTraceAttrs(owner, typeID, kind),
-	)
+	// tracer.OnRecordTrace(executer,
+	// 	tracingCompositePrefix+tracingDestroyPostfix,
+	// 	duration,
+	// 	prepareCompositeValueTraceAttrs(owner, typeID, kind),
+	// )
 }
 
 func (tracer Tracer) ReportCompositeValueTransferTrace(
@@ -292,11 +292,11 @@ func (tracer Tracer) ReportCompositeValueTransferTrace(
 	kind string,
 	duration time.Duration,
 ) {
-	tracer.OnRecordTrace(executer,
-		tracingCompositePrefix+tracingTransferPostfix,
-		duration,
-		prepareCompositeValueTraceAttrs(owner, typeID, kind),
-	)
+	// tracer.OnRecordTrace(executer,
+	// 	tracingCompositePrefix+tracingTransferPostfix,
+	// 	duration,
+	// 	prepareCompositeValueTraceAttrs(owner, typeID, kind),
+	// )
 }
 
 func (tracer Tracer) ReportCompositeValueConformsToStaticTypeTrace(
@@ -306,11 +306,11 @@ func (tracer Tracer) ReportCompositeValueConformsToStaticTypeTrace(
 	kind string,
 	duration time.Duration,
 ) {
-	tracer.OnRecordTrace(executer,
-		tracingCompositePrefix+tracingConformsToStaticTypePostfix,
-		duration,
-		prepareCompositeValueTraceAttrs(owner, typeID, kind),
-	)
+	// tracer.OnRecordTrace(executer,
+	// 	tracingCompositePrefix+tracingConformsToStaticTypePostfix,
+	// 	duration,
+	// 	prepareCompositeValueTraceAttrs(owner, typeID, kind),
+	// )
 }
 
 func (tracer Tracer) ReportCompositeValueGetMemberTrace(
@@ -351,11 +351,11 @@ func (tracer Tracer) ReportCompositeValueRemoveMemberTrace(
 	name string,
 	duration time.Duration,
 ) {
-	tracer.OnRecordTrace(executer,
-		tracingCompositePrefix+tracingRemoveMemberPrefix+name,
-		duration,
-		prepareCompositeValueTraceAttrs(owner, typeID, kind),
-	)
+	// tracer.OnRecordTrace(executer,
+	// 	tracingCompositePrefix+tracingRemoveMemberPrefix+name,
+	// 	duration,
+	// 	prepareCompositeValueTraceAttrs(owner, typeID, kind),
+	// )
 }
 
 func (tracer Tracer) ReportTransferTrace(
@@ -397,15 +397,15 @@ func (tracer Tracer) ReportEphemeralReferenceValueConstructTrace(
 	value string,
 	duration time.Duration,
 ) {
-	tracer.OnRecordTrace(executer,
-		tracingEphemeralReferencePrefix+tracingConstructPostfix,
-		duration,
-		[]attribute.KeyValue{
-			attribute.String("auth", auth),
-			attribute.String("typeID", typeID),
-			attribute.String("value", value),
-		},
-	)
+	// tracer.OnRecordTrace(executer,
+	// 	tracingEphemeralReferencePrefix+tracingConstructPostfix,
+	// 	duration,
+	// 	[]attribute.KeyValue{
+	// 		attribute.String("auth", auth),
+	// 		attribute.String("typeID", typeID),
+	// 		attribute.String("value", value),
+	// 	},
+	// )
 }
 
 func (tracer Tracer) ReportFunctionValueConstructTrace(
@@ -413,11 +413,11 @@ func (tracer Tracer) ReportFunctionValueConstructTrace(
 	name string,
 	duration time.Duration,
 ) {
-	tracer.OnRecordTrace(executer,
-		tracingFunctionPrefix+tracingConstructPostfix+name,
-		duration,
-		nil,
-	)
+	// tracer.OnRecordTrace(executer,
+	// 	tracingFunctionPrefix+tracingConstructPostfix+name,
+	// 	duration,
+	// 	nil,
+	// )
 }
 
 func (tracer Tracer) ReportOpTrace(
@@ -425,11 +425,11 @@ func (tracer Tracer) ReportOpTrace(
 	name string,
 	duration time.Duration,
 ) {
-	tracer.OnRecordTrace(executer,
-		tracingOpPostfix+name,
-		duration,
-		nil,
-	)
+	// tracer.OnRecordTrace(executer,
+	// 	tracingOpPostfix+name,
+	// 	duration,
+	// 	nil,
+	// )
 }
 
 func (tracer Tracer) ReportVariableReadTrace(
@@ -437,13 +437,13 @@ func (tracer Tracer) ReportVariableReadTrace(
 	name string,
 	duration time.Duration,
 ) {
-	tracer.OnRecordTrace(executer,
-		tracingVariablePrefix+tracingReadPostfix,
-		duration,
-		[]attribute.KeyValue{
-			attribute.String("name", name),
-		},
-	)
+	// tracer.OnRecordTrace(executer,
+	// 	tracingVariablePrefix+tracingReadPostfix,
+	// 	duration,
+	// 	[]attribute.KeyValue{
+	// 		attribute.String("name", name),
+	// 	},
+	// )
 }
 
 func (tracer Tracer) ReportVariableWriteTrace(
@@ -451,11 +451,11 @@ func (tracer Tracer) ReportVariableWriteTrace(
 	name string,
 	duration time.Duration,
 ) {
-	tracer.OnRecordTrace(executer,
-		tracingVariablePrefix+tracingWritePostfix,
-		duration,
-		[]attribute.KeyValue{
-			attribute.String("name", name),
-		},
-	)
+	// tracer.OnRecordTrace(executer,
+	// 	tracingVariablePrefix+tracingWritePostfix,
+	// 	duration,
+	// 	[]attribute.KeyValue{
+	// 		attribute.String("name", name),
+	// 	},
+	// )
 }
