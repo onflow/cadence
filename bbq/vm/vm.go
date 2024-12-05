@@ -607,6 +607,34 @@ func opGetField(vm *VM) {
 					time.Since(startTime),
 				)
 			}()
+		case *SimpleCompositeValue:
+			startTime := time.Now()
+
+			defer func() {
+				vm.config.Tracer.ReportCompositeValueGetMemberTrace(
+					vm,
+					"owner",
+					string(value.typeID),
+					value.Kind.String(),
+					fieldNameStr,
+					time.Since(startTime),
+				)
+			}()
+		case *StorageReferenceValue:
+			if v, ok := value.BorrowedType.(*interpreter.CompositeStaticType); ok {
+				startTime := time.Now()
+
+				defer func() {
+					vm.config.Tracer.ReportCompositeValueGetMemberTrace(
+						vm,
+						v.Location.String(),
+						string(v.TypeID),
+						"kind",
+						fieldNameStr,
+						time.Since(startTime),
+					)
+				}()
+			}
 		}
 	}
 
