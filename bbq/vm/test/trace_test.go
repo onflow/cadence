@@ -131,6 +131,8 @@ func TestTrace(t *testing.T) {
 
 		// VM VERSION
 
+		var vmLogs []string
+
 		// ---- Deploy FT Contract -----
 
 		storage := interpreter.NewInMemoryStorage(nil)
@@ -158,6 +160,17 @@ func TestTrace(t *testing.T) {
 		config := &vm.Config{
 			Storage:        storage,
 			AccountHandler: &testAccountHandler{},
+			Tracer: interpreter.Tracer{
+				TracingEnabled: true,
+				OnRecordTrace: func(executer interpreter.Traceable, operationName string, duration time.Duration, attrs []attribute.KeyValue) {
+					vmLogs = append(vmLogs,
+						fmt.Sprintf("%s: %v",
+							operationName,
+							attrs,
+						),
+					)
+				},
+			},
 		}
 
 		flowTokenVM := vm.NewVM(
@@ -171,8 +184,6 @@ func TestTrace(t *testing.T) {
 		require.NoError(t, err)
 
 		// ----- Run setup account transaction -----
-
-		var vmLogs []string
 
 		vmConfig := &vm.Config{
 			Storage: storage,
@@ -215,7 +226,12 @@ func TestTrace(t *testing.T) {
 			Tracer: interpreter.Tracer{
 				TracingEnabled: true,
 				OnRecordTrace: func(executer interpreter.Traceable, operationName string, duration time.Duration, attrs []attribute.KeyValue) {
-					vmLogs = append(vmLogs, fmt.Sprintf("%s: %v", operationName, attrs))
+					vmLogs = append(vmLogs,
+						fmt.Sprintf("%s: %v",
+							operationName,
+							attrs,
+						),
+					)
 				},
 			},
 		}
@@ -294,9 +310,9 @@ func TestTrace(t *testing.T) {
 			}
 		}
 
-		var interLogs []string
-
 		// INTERPRETER VERSION
+
+		var interLogs []string
 
 		// ---- Deploy FT Contract -----
 
@@ -374,7 +390,12 @@ func TestTrace(t *testing.T) {
 					operationName string,
 					duration time.Duration,
 					attrs []attribute.KeyValue) {
-					interLogs = append(interLogs, fmt.Sprintf("%s: %v", operationName, attrs))
+					interLogs = append(interLogs,
+						fmt.Sprintf("%s: %v",
+							operationName,
+							attrs,
+						),
+					)
 				},
 				TracingEnabled: true,
 			},
