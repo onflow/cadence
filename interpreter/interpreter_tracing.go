@@ -81,7 +81,7 @@ func (tracer Tracer) ReportFunctionTrace(executer Traceable, functionName string
 }
 
 func (tracer Tracer) ReportImportTrace(executer Traceable, importPath string, duration time.Duration) {
-	tracer.OnRecordTrace(executer, tracingImportPrefix+importPath, duration, nil)
+	// 	tracer.OnRecordTrace(executer, tracingImportPrefix+importPath, duration, nil)
 }
 
 func prepareArrayAndMapValueTraceAttrs(typeInfo string, count int) []attribute.KeyValue {
