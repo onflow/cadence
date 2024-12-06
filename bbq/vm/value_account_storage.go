@@ -117,7 +117,6 @@ func init() {
 				}
 
 				reference := NewStorageReferenceValue(
-					config.Storage,
 					referenceType.Authorization,
 					address,
 					path,

@@ -69,17 +69,33 @@ func newAccountReferenceValue(
 func newAccountValue(
 	address common.Address,
 ) *SimpleCompositeValue {
-	return &SimpleCompositeValue{
+	value := &SimpleCompositeValue{
 		typeID:     sema.AccountType.ID(),
 		staticType: interpreter.PrimitiveStaticTypeAccount,
 		Kind:       common.CompositeKindStructure,
 		fields: map[string]Value{
-			sema.AccountTypeAddressFieldName:      AddressValue(address),
-			sema.AccountTypeStorageFieldName:      NewAccountStorageValue(address),
-			sema.AccountTypeCapabilitiesFieldName: NewAccountCapabilitiesValue(address),
-			// TODO: add the remaining fields
+			sema.AccountTypeAddressFieldName: AddressValue(address),
 		},
 	}
+
+	value.computeField = func(name string) Value {
+		var field Value
+		switch name {
+		case sema.AccountTypeStorageFieldName:
+			field = NewAccountStorageValue(address)
+		case sema.AccountTypeCapabilitiesFieldName:
+			field = NewAccountCapabilitiesValue(address)
+		default:
+			return nil
+		}
+
+		value.fields[name] = field
+		return field
+	}
+
+	// TODO: add the remaining fields
+
+	return value
 }
 
 // members

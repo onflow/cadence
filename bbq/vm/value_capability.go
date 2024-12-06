@@ -158,7 +158,6 @@ func GetCheckedCapabilityControllerReference(
 	capabilityAddress := common.Address(capabilityAddressValue)
 
 	return controller.ReferenceValue(
-		config,
 		capabilityAddress,
 		resultBorrowType,
 	)

@@ -28,18 +28,32 @@ import (
 )
 
 func NewAccountCapabilitiesValue(accountAddress common.Address) *SimpleCompositeValue {
-	return &SimpleCompositeValue{
+	value := &SimpleCompositeValue{
 		typeID:     sema.Account_StorageType.ID(),
 		staticType: interpreter.PrimitiveStaticTypeAccount_Capabilities,
 		Kind:       common.CompositeKindStructure,
-		fields: map[string]Value{
-			sema.Account_CapabilitiesTypeStorageFieldName: NewAccountStorageCapabilitiesValue(accountAddress),
+		fields:     map[string]Value{
 			// TODO: add the remaining fields
 		},
 		metadata: map[string]any{
 			sema.AccountTypeAddressFieldName: accountAddress,
 		},
 	}
+
+	value.computeField = func(name string) Value {
+		var field Value
+		switch name {
+		case sema.Account_CapabilitiesTypeStorageFieldName:
+			field = NewAccountStorageCapabilitiesValue(accountAddress)
+		default:
+			return nil
+		}
+
+		value.fields[name] = field
+		return field
+	}
+
+	return value
 }
 
 // members

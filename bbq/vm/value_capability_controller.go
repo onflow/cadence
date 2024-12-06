@@ -31,7 +31,6 @@ type CapabilityControllerValue interface {
 	Value
 	isCapabilityControllerValue()
 	ReferenceValue(
-		conf *Config,
 		capabilityAddress common.Address,
 		resultBorrowType *interpreter.ReferenceStaticType,
 	) ReferenceValue
@@ -200,12 +199,10 @@ func (v *StorageCapabilityControllerValue) ControllerCapabilityID() IntValue {
 }
 
 func (v *StorageCapabilityControllerValue) ReferenceValue(
-	conf *Config,
 	capabilityAddress common.Address,
 	resultBorrowType *interpreter.ReferenceStaticType,
 ) ReferenceValue {
 	return NewStorageReferenceValue(
-		conf.Storage,
 		resultBorrowType.Authorization,
 		capabilityAddress,
 		v.TargetPath,

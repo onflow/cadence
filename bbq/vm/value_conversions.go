@@ -85,7 +85,6 @@ func InterpreterValueToVMValue(storage interpreter.Storage, value interpreter.Va
 		)
 	case *interpreter.StorageReferenceValue:
 		return NewStorageReferenceValue(
-			storage,
 			value.Authorization,
 			value.TargetStorageAddress,
 			InterpreterValueToVMValue(storage, value.TargetPath).(PathValue),

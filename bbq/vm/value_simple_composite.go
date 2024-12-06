@@ -24,10 +24,12 @@ import (
 )
 
 type SimpleCompositeValue struct {
-	fields     map[string]Value
 	typeID     common.TypeID
 	staticType StaticType
 	Kind       common.CompositeKind
+
+	fields       map[string]Value
+	computeField func(name string) Value
 
 	// metadata is a property bag to carry internal data
 	// that are not visible to cadence users.
@@ -57,7 +59,12 @@ func (v *SimpleCompositeValue) StaticType(*Config) StaticType {
 }
 
 func (v *SimpleCompositeValue) GetMember(_ *Config, name string) Value {
-	return v.fields[name]
+	value, ok := v.fields[name]
+	if ok {
+		return value
+	}
+
+	return v.computeField(name)
 }
 
 func (v *SimpleCompositeValue) SetMember(_ *Config, name string, value Value) {

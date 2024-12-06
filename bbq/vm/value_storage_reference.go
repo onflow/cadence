@@ -31,7 +31,6 @@ type StorageReferenceValue struct {
 	TargetStorageAddress common.Address
 	TargetPath           PathValue
 	BorrowedType         interpreter.StaticType
-	storage              interpreter.Storage
 }
 
 var _ Value = &StorageReferenceValue{}
@@ -39,7 +38,6 @@ var _ MemberAccessibleValue = &StorageReferenceValue{}
 var _ ReferenceValue = &StorageReferenceValue{}
 
 func NewStorageReferenceValue(
-	storage interpreter.Storage,
 	authorization interpreter.Authorization,
 	targetStorageAddress common.Address,
 	targetPath PathValue,
@@ -50,7 +48,6 @@ func NewStorageReferenceValue(
 		TargetStorageAddress: targetStorageAddress,
 		TargetPath:           targetPath,
 		BorrowedType:         borrowedType,
-		storage:              storage,
 	}
 }
 
@@ -92,7 +89,7 @@ func (v *StorageReferenceValue) dereference(config *Config) (*Value, error) {
 	domain := v.TargetPath.Domain.Identifier()
 	identifier := v.TargetPath.Identifier
 
-	vmReferencedValue := ReadStored(memoryGauge, v.storage, address, domain, identifier)
+	vmReferencedValue := ReadStored(memoryGauge, config.Storage, address, domain, identifier)
 	if vmReferencedValue == nil {
 		return nil, nil
 	}
