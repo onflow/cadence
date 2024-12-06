@@ -29,6 +29,7 @@ import (
 
 var account_InboxTypeID = sema.Account_InboxType.ID()
 var account_InboxStaticType StaticType = PrimitiveStaticTypeAccount_Inbox
+var account_InboxFieldNames []string = nil
 
 // NewAccountInboxValue constructs an Account.Inbox value.
 func NewAccountInboxValue(
@@ -38,6 +39,31 @@ func NewAccountInboxValue(
 	unpublishFunction BoundFunctionGenerator,
 	claimFunction BoundFunctionGenerator,
 ) Value {
+
+	var accountInbox *SimpleCompositeValue
+
+	fields := map[string]Value{}
+
+	computeLazyStoredField := func(name string) Value {
+		switch name {
+		case sema.Account_InboxTypePublishFunctionName:
+			return publishFunction(accountInbox)
+		case sema.Account_InboxTypeUnpublishFunctionName:
+			return unpublishFunction(accountInbox)
+		case sema.Account_InboxTypeClaimFunctionName:
+			return claimFunction(accountInbox)
+		}
+
+		return nil
+	}
+
+	computeField := func(name string, _ *Interpreter, _ LocationRange) Value {
+		field := computeLazyStoredField(name)
+		if field != nil {
+			fields[name] = field
+		}
+		return field
+	}
 
 	var str string
 	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
@@ -49,22 +75,16 @@ func NewAccountInboxValue(
 		return str
 	}
 
-	accountInbox := NewSimpleCompositeValue(
+	accountInbox = NewSimpleCompositeValue(
 		gauge,
 		account_InboxTypeID,
 		account_InboxStaticType,
-		nil,
-		nil,
-		nil,
+		account_InboxFieldNames,
+		fields,
+		computeField,
 		nil,
 		stringer,
 	)
-
-	accountInbox.Fields = map[string]Value{
-		sema.Account_InboxTypePublishFunctionName:   publishFunction(accountInbox),
-		sema.Account_InboxTypeUnpublishFunctionName: unpublishFunction(accountInbox),
-		sema.Account_InboxTypeClaimFunctionName:     claimFunction(accountInbox),
-	}
 
 	return accountInbox
 }
