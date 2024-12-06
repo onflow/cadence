@@ -45,16 +45,40 @@ func NewAccountContractsValue(
 	namesGetter ContractNamesGetter,
 ) Value {
 
-	computeField := func(
-		name string,
-		interpreter *Interpreter,
-		locationRange LocationRange,
-	) Value {
+	var accountContracts *SimpleCompositeValue
+
+	fields := map[string]Value{}
+
+	computeLazyStoredField := func(name string) Value {
+		switch name {
+		case sema.Account_ContractsTypeAddFunctionName:
+			return addFunction(accountContracts)
+		case sema.Account_ContractsTypeGetFunctionName:
+			return getFunction(accountContracts)
+		case sema.Account_ContractsTypeBorrowFunctionName:
+			return borrowFunction(accountContracts)
+		case sema.Account_ContractsTypeRemoveFunctionName:
+			return removeFunction(accountContracts)
+		case sema.Account_ContractsTypeUpdateFunctionName:
+			return updateFunction(accountContracts)
+		case sema.Account_ContractsTypeTryUpdateFunctionName:
+			return tryUpdateFunction(accountContracts)
+		}
+
+		return nil
+	}
+
+	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
 		switch name {
 		case sema.Account_ContractsTypeNamesFieldName:
-			return namesGetter(interpreter, locationRange)
+			return namesGetter(inter, locationRange)
 		}
-		return nil
+
+		field := computeLazyStoredField(name)
+		if field != nil {
+			fields[name] = field
+		}
+		return field
 	}
 
 	var str string
@@ -67,25 +91,16 @@ func NewAccountContractsValue(
 		return str
 	}
 
-	accountContracts := NewSimpleCompositeValue(
+	accountContracts = NewSimpleCompositeValue(
 		gauge,
 		account_ContractsTypeID,
 		account_ContractsStaticType,
 		account_ContractsFieldNames,
-		nil,
+		fields,
 		computeField,
 		nil,
 		stringer,
 	)
-
-	accountContracts.Fields = map[string]Value{
-		sema.Account_ContractsTypeAddFunctionName:       addFunction(accountContracts),
-		sema.Account_ContractsTypeGetFunctionName:       getFunction(accountContracts),
-		sema.Account_ContractsTypeBorrowFunctionName:    borrowFunction(accountContracts),
-		sema.Account_ContractsTypeRemoveFunctionName:    removeFunction(accountContracts),
-		sema.Account_ContractsTypeUpdateFunctionName:    updateFunction(accountContracts),
-		sema.Account_ContractsTypeTryUpdateFunctionName: tryUpdateFunction(accountContracts),
-	}
 
 	return accountContracts
 }

@@ -41,6 +41,35 @@ func NewAccountAccountCapabilitiesValue(
 	issueWithTypeFunction BoundFunctionGenerator,
 ) *SimpleCompositeValue {
 
+	var accountCapabilities *SimpleCompositeValue
+
+	fields := map[string]Value{}
+
+	computeLazyStoredField := func(name string) Value {
+		switch name {
+		case sema.Account_AccountCapabilitiesTypeGetControllerFunctionName:
+			return getControllerFunction(accountCapabilities)
+		case sema.Account_AccountCapabilitiesTypeGetControllersFunctionName:
+			return getControllersFunction(accountCapabilities)
+		case sema.Account_AccountCapabilitiesTypeForEachControllerFunctionName:
+			return forEachControllerFunction(accountCapabilities)
+		case sema.Account_AccountCapabilitiesTypeIssueFunctionName:
+			return issueFunction(accountCapabilities)
+		case sema.Account_AccountCapabilitiesTypeIssueWithTypeFunctionName:
+			return issueWithTypeFunction(accountCapabilities)
+		}
+
+		return nil
+	}
+
+	computeField := func(name string, _ *Interpreter, _ LocationRange) Value {
+		field := computeLazyStoredField(name)
+		if field != nil {
+			fields[name] = field
+		}
+		return field
+	}
+
 	var str string
 	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
 		if str == "" {
@@ -51,24 +80,16 @@ func NewAccountAccountCapabilitiesValue(
 		return str
 	}
 
-	accountCapabilities := NewSimpleCompositeValue(
+	accountCapabilities = NewSimpleCompositeValue(
 		gauge,
 		account_AccountCapabilitiesTypeID,
 		account_AccountCapabilitiesStaticType,
 		account_AccountCapabilitiesFieldNames,
-		nil,
-		nil,
+		fields,
+		computeField,
 		nil,
 		stringer,
 	)
-
-	accountCapabilities.Fields = map[string]Value{
-		sema.Account_AccountCapabilitiesTypeGetControllerFunctionName:     getControllerFunction(accountCapabilities),
-		sema.Account_AccountCapabilitiesTypeGetControllersFunctionName:    getControllersFunction(accountCapabilities),
-		sema.Account_AccountCapabilitiesTypeForEachControllerFunctionName: forEachControllerFunction(accountCapabilities),
-		sema.Account_AccountCapabilitiesTypeIssueFunctionName:             issueFunction(accountCapabilities),
-		sema.Account_AccountCapabilitiesTypeIssueWithTypeFunctionName:     issueWithTypeFunction(accountCapabilities),
-	}
 
 	return accountCapabilities
 }

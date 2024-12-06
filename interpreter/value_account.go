@@ -55,44 +55,29 @@ func NewAccountValue(
 		sema.AccountTypeAddressFieldName: address,
 	}
 
-	var storage Value
-	var contracts Value
-	var keys Value
-	var inbox Value
-	var capabilities Value
-
-	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
+	computeLazyStoredField := func(name string) Value {
 		switch name {
 		case sema.AccountTypeStorageFieldName:
-			if storage == nil {
-				storage = storageConstructor()
-			}
-			return storage
+			return storageConstructor()
 
 		case sema.AccountTypeContractsFieldName:
-			if contracts == nil {
-				contracts = contractsConstructor()
-			}
-			return contracts
+			return contractsConstructor()
 
 		case sema.AccountTypeKeysFieldName:
-			if keys == nil {
-				keys = keysConstructor()
-			}
-			return keys
+			return keysConstructor()
 
 		case sema.AccountTypeInboxFieldName:
-			if inbox == nil {
-				inbox = inboxConstructor()
-			}
-			return inbox
+			return inboxConstructor()
 
 		case sema.AccountTypeCapabilitiesFieldName:
-			if capabilities == nil {
-				capabilities = capabilitiesConstructor()
-			}
-			return capabilities
+			return capabilitiesConstructor()
+		}
 
+		return nil
+	}
+
+	computeField := func(name string, _ *Interpreter, _ LocationRange) Value {
+		switch name {
 		case sema.AccountTypeBalanceFieldName:
 			return accountBalanceGet()
 
@@ -100,7 +85,11 @@ func NewAccountValue(
 			return accountAvailableBalanceGet()
 		}
 
-		return nil
+		field := computeLazyStoredField(name)
+		if field != nil {
+			fields[name] = field
+		}
+		return field
 	}
 
 	var str string
