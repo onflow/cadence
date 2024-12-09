@@ -1,0 +1,1482 @@
+
+%scanner
+
+*
+<spaceToken>:
+        whitespace
+    ;
+
+whitespace:
+        1*whitespaceItem
+    ;
+
+whitespaceItem:
+        singleLineComment
+    |   multipleLineComment
+    |   whitespaceCharacter
+    |   lineBreak
+    ;
+
+whitespaceCharacter:
+        U+0000,U+0009,U+000B-U+000C,U+0020
+    ;
+
+lineBreak:
+        "\r" "\n"
+    |   "\r"
+    |   "\n" ;
+
+singleLineComment:
+        "/" "/" *1singleLineCommentText lineBreak
+    ;
+
+singleLineCommentText:
+        1*singleLineCommentTextItem
+    ;
+
+singleLineCommentTextItem:
+        ~"\n\r" ;
+
+multipleLineComment:
+        multipleLineCommentStart *1multipleLineCommentText multipleLineCommentEnd
+    ;
+
+multipleLineCommentStart:
+        "/" "*" ;
+
+multipleLineCommentEnd:
+        "*" "/" ;
+
+multipleLineCommentText:
+        1*multipleLineCommentTextItem
+    ;
+
+multipleLineCommentTextItem:
+        multipleLineCommentTextCharacter
+    |   multipleLineComment
+    ;
+
+multipleLineCommentTextCharacter:
+        ~multipleLineCommentStartOrEnd
+    ;
+
+multipleLineCommentStartOrEnd:
+        multipleLineCommentStart
+    |   multipleLineCommentEnd
+    ;
+
+<identifierToken>:
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz" *identifierFollower
+    ;
+
+identifierFollower:
+        "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz" ;
+
+<fixedPointToken>:
+        "0123456789" *"0123456789_" "." "0123456789" *"0123456789_"
+    ;
+
+<decimalToken>:
+        "0"
+    |   "123456789" *"0123456789_" ;
+
+<binaryToken>:
+        "0" "b" 1*"01_" ;
+
+<octalToken>:
+        "0" "o" 1*"01234567_" ;
+
+<hexadecimalToken>:
+        "0" "x" 1*"0123456789ABCDEFabcdef_" ;
+
+<invalidNumberToken>:
+        "0" "acdefghijklmnpqrstuvwyzABCDEFGHIJKLMNOPQRSTUVWXYZ" "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_"
+    ;
+
+<stringToken>:
+        "\"" *quotedTextItem "\"" ;
+
+quotedTextItem:
+        quotedTextItemCharacter
+    |   escapedCharacter
+    ;
+
+quotedTextItemCharacter:
+        ~nonquotedTextItemCharacter
+    ;
+
+nonquotedTextItemCharacter:
+        "\"\r\n\\" ;
+
+escapedCharacter:
+        escapedUnicodeScalar
+    |   escapedCCharacter
+    ;
+
+escapedUnicodeScalar:
+        "\\" "u" "{" 1*8unicodeScalarDigit "}" ;
+
+unicodeScalarDigit:
+        "0123456789abcdefABCDEF" ;
+
+escapedCCharacter:
+        "\\" "0\\tnr\"'" ;
+
+%parser
+
+*
+program:
+         *declaration( declarationSeparator ) $
+    ;
+
+declarationSeparator:
+        semicolon
+    |   empty
+    ;
+
+empty:
+    ;
+
+semicolon:
+        ";"
+    ;
+
+declaration:
+        pragmaDeclaration
+    |   variableDeclaration
+    |   functionDeclaration
+    |   importDeclaration
+    |   eventDeclaration
+    |   structCompositeDeclaration
+    |   resourceCompositeDeclaration
+    |   contractCompositeDeclaration
+    |   enumCompositeDeclaration
+    |   structInterfaceDeclaration
+    |   resourceInterfaceDeclaration
+    |   contractInterfaceDeclaration
+    |   enumInterfaceDeclaration
+    |   entitlementDeclaration
+    |   entitlementMappingDeclaration
+    |   attachmentDeclaration
+    |   transactionDeclaration
+    ;
+
+attachmentDeclaration:
+        access attachmentKeyword nonReservedIdentifier forKeyword nominalType conformances "{" membersAndNestedDeclarations "}"
+    ;
+
+transactionDeclaration:
+        transactionKeyword *1parameterList "{" fields *1prepareFunctionDeclaration *1preConditions *1executeOrPostConditions "}"
+    ;
+
+executeOrPostConditions:
+        executeOrPostConditionsExecute
+    |   executeOrPostConditionsExecutePostConditions
+    |   executeOrPostConditionsPostConditions
+    |   executeOrPostConditionsPostConditionsExecute
+    ;
+
+executeOrPostConditionsExecute:
+        execute
+    ;
+
+executeOrPostConditionsExecutePostConditions:
+        execute postConditions
+    ;
+
+executeOrPostConditionsPostConditions:
+        postConditions
+    ;
+
+executeOrPostConditionsPostConditionsExecute:
+        postConditions execute
+    ;
+
+execute:
+        identifier block
+    ;
+
+importDeclaration:
+        importKeyword *1importDeclarationFromPhrase importDeclarationSource
+    ;
+
+importDeclarationFromPhrase:
+        1*identifier( "," ) fromKeyword
+    ;
+
+importDeclarationSource:
+        stringLiteral
+    |   hexadecimalLiteral
+    |   identifier
+    ;
+
+access:
+        accessPriv
+    |   accessPub
+    |   accessSpecified
+    |   accessNotSpecified
+    ;
+
+accessNotSpecified:
+    ;
+
+accessPriv:
+        privKeyword
+    ;
+
+accessPub:
+        pubKeyword *1accessPubSet
+    ;
+
+accessPubSet:
+        "(" setKeyword ")"
+    ;
+
+accessSpecified:
+        accessKeyword "(" accessAccessValue ")"
+    ;
+
+accessAccessValue:
+        selfKeyword
+    |   contractKeyword
+    |   accountKeyword
+    |   allKeyword
+    |   accessAccessValueEntitlement
+    |   accessAccessValueEntitlementMapping
+    ;
+
+accessAccessValueEntitlement:
+        accessAccessValueEntitlementConjunction
+    |   accessAccessValueEntitlementDisjunction
+    ;
+
+accessAccessValueEntitlementConjunction:
+        1*fullType( "," )
+    ;
+
+accessAccessValueEntitlementDisjunction:
+        1*fullType( "|" )
+    ;
+
+accessAccessValueEntitlementMapping:
+        mappingKeyword fullType
+    ;
+
+conformances:
+        conformancesTypes
+    |   conformancesEmpty
+    ;
+
+conformancesTypes:
+        ":" 1*nominalType( "," )
+    ;
+
+conformancesEmpty:
+    ;
+
+field:
+        letField
+    |   varField
+    |   unspecifiedField
+    ;
+
+letField:
+        access letKeyword nonReservedIdentifier ":" typeAnnotation
+    ;
+
+varField:
+        access varKeyword nonReservedIdentifier ":" typeAnnotation
+    ;
+
+unspecifiedField:
+        access nonReservedIdentifier ":" typeAnnotation
+    ;
+
+fields:
+        *fieldsEntry
+    ;
+
+fieldsEntry:
+        field *1semicolon
+    ;
+
+structCompositeDeclaration:
+        access structKeyword nonReservedIdentifier conformances "{" membersAndNestedDeclarations "}"
+    ;
+
+resourceCompositeDeclaration:
+        access resourceKeyword nonReservedIdentifier conformances "{" membersAndNestedDeclarations "}"
+    ;
+
+contractCompositeDeclaration:
+        access contractKeyword nonReservedIdentifier conformances "{" membersAndNestedDeclarations "}"
+    ;
+
+enumCompositeDeclaration:
+        access enumKeyword nonReservedIdentifier conformances "{" *semicolonEnumerationDeclarationCase "}"
+    ;
+
+structInterfaceDeclaration:
+        access structKeyword interfaceKeyword nonReservedIdentifier *1interfaceInheritance "{" membersAndNestedDeclarations "}"
+    ;
+
+resourceInterfaceDeclaration:
+        access resourceKeyword interfaceKeyword nonReservedIdentifier *1interfaceInheritance "{" membersAndNestedDeclarations "}"
+    ;
+
+contractInterfaceDeclaration:
+        access contractKeyword interfaceKeyword nonReservedIdentifier *1interfaceInheritance "{" membersAndNestedDeclarations "}"
+    ;
+
+enumInterfaceDeclaration:
+        access enumKeyword interfaceKeyword nonReservedIdentifier *1interfaceInheritance "{" *semicolonEnumerationDeclarationCase "}"
+    ;
+
+interfaceInheritance:
+        ":" 1*fullType( "," )
+    ;
+
+membersAndNestedDeclarations:
+        *membersAndNestedDeclarationsEntry
+    ;
+
+membersAndNestedDeclarationsEntry:
+        memberOrNestedDeclaration declarationSeparator
+    ;
+
+memberOrNestedDeclaration:
+        field
+    |   initFunctionDeclaration
+    |   destroyFunctionDeclaration
+    |   prepareFunctionDeclaration
+    |   functionDeclaration
+    |   structCompositeDeclaration
+    |   resourceCompositeDeclaration
+    |   contractCompositeDeclaration
+    |   enumCompositeDeclaration
+    |   structInterfaceDeclaration
+    |   resourceInterfaceDeclaration
+    |   contractInterfaceDeclaration
+    |   enumInterfaceDeclaration
+    |   eventDeclaration
+    |   pragmaDeclaration
+    |   entitlementDeclaration
+    |   entitlementMappingDeclaration
+    |   attachmentDeclaration
+    ;
+
+initFunctionDeclaration:
+        access *1viewKeyword initKeyword parameterList *1functionBlock
+    ;
+
+destroyFunctionDeclaration:
+        access *1viewKeyword destroyKeyword parameterList *1functionBlock
+    ;
+
+prepareFunctionDeclaration:
+        access *1viewKeyword prepareKeyword parameterList *1functionBlock
+    ;
+
+functionDeclaration:
+        access *1viewKeyword funKeyword nonReservedIdentifier parameterList *1functionDeclarationTypeAnnotation *1functionBlock
+    ;
+
+functionDeclarationTypeAnnotation:
+        ":" typeAnnotation
+    ;
+
+eventDeclaration:
+        access eventKeyword nonReservedIdentifier parameterList
+    ;
+
+comma:
+        ","
+    ;
+
+pragmaDeclaration:
+        "#" expression
+    ;
+
+entitlementDeclaration:
+        access entitlementKeyword nonReservedIdentifier
+    ;
+
+entitlementMappingDeclaration:
+        access entitlementKeyword mappingKeyword nonReservedIdentifier "{" entitlementMappingsAndInclusions "}"
+    ;
+
+entitlementMappingsAndInclusions:
+        *entitlementMappingElement
+    ;
+
+entitlementMappingElement:
+        entitlementMapping
+    |   entitlementIncludeType
+    ;
+
+entitlementMapping:
+        entitlementMappingSource "->" entitlementMappingTarget
+    ;
+
+entitlementMappingSource:
+        fullType
+    ;
+
+entitlementMappingTarget:
+        fullType
+    ;
+
+entitlementIncludeType:
+        includeKeyword nominalType
+    ;
+
+semicolonEnumerationDeclarationCase:
+        semicolon
+    |   enumerationDeclarationCase
+    ;
+
+enumerationDeclarationCase:
+        access caseKeyword nonReservedIdentifier
+    ;
+
+parameterList:
+        "(" *parameter( "," ) *1comma ")"
+    ;
+
+parameter:
+        parseLabeledParameter
+    |   parseUnlabeledParameter
+    ;
+
+parseLabeledParameter:
+        parameterPublicName parameterLocalName ":" typeAnnotation *1defaultValue
+    ;
+
+parseUnlabeledParameter:
+        parameterLocalName ":" typeAnnotation *1defaultValue
+    ;
+
+parameterPublicName:
+        nonReservedIdentifier
+    ;
+
+parameterLocalName:
+        nonReservedIdentifier
+    ;
+
+defaultValue:
+        "=" expression
+    ;
+
+typeAnnotation:
+        *1resourceAnnotation fullType
+    ;
+
+resourceAnnotation:
+        "@"
+    ;
+
+fullType:
+        fullTypeNormal
+    |   fullTypeNested
+    ;
+
+fullTypeNormal:
+        *1fullTypeReference innerType *fullTypeOptional
+    ;
+
+fullTypeReference:
+        *1fullTypeReferenceAuth "&"
+    ;
+
+fullTypeReferenceAuth:
+        fullTypeReferenceAuthConjunction
+    |   fullTypeReferenceAuthDisjunction
+    |   fullTypeReferenceAuthNoEntitlements
+    |   fullTypeReferenceAuthMapping
+    ;
+
+fullTypeReferenceAuthConjunction:
+        authKeyword "(" 1*fullType( "," ) ")"
+    ;
+
+fullTypeReferenceAuthDisjunction:
+        authKeyword "(" 1*fullType( "|" ) ")"
+    ;
+
+fullTypeReferenceAuthNoEntitlements:
+        authKeyword
+    ;
+
+fullTypeReferenceAuthMapping:
+        authKeyword "(" mappingKeyword nominalType ")"
+    ;
+
+fullTypeOptional:
+        . optional
+    ;
+
+fullTypeNested:
+        "(" fullType ")" *fullTypeOptional
+    ;
+
+innerType:
+        innerTypeBase
+    |   innerTypeRestrictions
+    ;
+
+innerTypeBase:
+        baseType *1innerTypeBaseRestrictions
+    ;
+
+innerTypeBaseRestrictions:
+        . typeRestrictions
+    ;
+
+innerTypeRestrictions:
+        typeRestrictions
+    ;
+
+baseType:
+        nominalType
+    |   functionType
+    |   variableSizedType
+    |   constantSizedType
+    |   dictionaryType
+    ;
+
+typeRestrictions:
+        "{" *1nominalTypeList "}"
+    ;
+
+nominalTypeList:
+        1*nominalType( "," )
+    ;
+
+nominalType:
+        nonReservedIdentifier *nominalTypeMember *1nominalTypeTemplate
+    ;
+
+nominalTypeMember:
+        "." nominalType
+    ;
+
+nominalTypeTemplate:
+        "<" *1typeAnnotationList ">"
+    ;
+
+typeAnnotationList:
+        1*typeAnnotation( "," )
+    ;
+
+functionType:
+        funKeyword "(" *1functionTypeParameters ")" *1functionTypeReturn
+    ;
+
+functionTypeParameters:
+        typeAnnotationList
+    ;
+
+functionTypeReturn:
+        ":" typeAnnotation
+    ;
+
+variableSizedType:
+        "[" fullType "]"
+    ;
+
+constantSizedType:
+        "[" fullType ";" integerLiteral "]"
+    ;
+
+dictionaryType:
+        "{" dictionaryTypeKey ":" dictionaryTypeValue "}"
+    ;
+
+dictionaryTypeKey:
+        fullType
+    ;
+
+dictionaryTypeValue:
+        fullType
+    ;
+
+block:
+        "{" statements "}"
+    ;
+
+functionBlock:
+        "{" *1preConditions *1postConditions statements "}"
+    ;
+
+preConditions:
+        preKeyword conditions
+    ;
+
+postConditions:
+        postKeyword conditions
+    ;
+
+conditions:
+        "{" *semicolonCondition "}"
+    ;
+
+semicolonCondition:
+        semicolon
+    |   condition
+    ;
+
+condition:
+        emitStatement
+    |   conditionExpression
+    ;
+
+conditionExpression:
+        expression *1conditionDescription
+    ;
+
+conditionDescription:
+        ":" expression
+    ;
+
+statements:
+        *eosStatement
+    ;
+
+eosStatement:
+        eos
+    |   statement
+    ;
+
+eos:
+        semicolon
+    |   newLine
+    ;
+
+newLine:
+        /
+    ;
+
+statement:
+        returnStatement
+    |   breakStatement
+    |   continueStatement
+    |   ifStatement
+    |   whileStatement
+    |   forStatement
+    |   switchStatement
+    |   emitStatement
+    |   declaration
+    |   assignment
+    |   swap
+    |   expression
+    ;
+
+returnStatement:
+        returnStatementExpression
+    |   returnStatementEmpty
+    ;
+
+returnStatementExpression:
+        returnKeyword expression
+    ;
+
+returnStatementEmpty:
+        returnKeyword
+    ;
+
+breakStatement:
+        breakKeyword
+    ;
+
+continueStatement:
+        continueKeyword
+    ;
+
+ifStatement:
+        ifKeyword ifStatementCondition block *1ifStatementElse
+    ;
+
+ifStatementCondition:
+        expression
+    |   variableDeclaration
+    ;
+
+ifStatementElse:
+        elseKeyword ifStatementElseElement
+    ;
+
+ifStatementElseElement:
+        ifStatement
+    |   block
+    ;
+
+whileStatement:
+        whileKeyword expression block
+    ;
+
+forStatement:
+        forKeyword *1forStatementIndex nonReservedIdentifier inKeyword expression block
+    ;
+
+forStatementIndex:
+        nonReservedIdentifier ","
+    ;
+
+switchStatement:
+        switchKeyword expression "{" *switchCase "}"
+    ;
+
+switchCase:
+        switchCaseExpression
+    |   switchCaseDefault
+    ;
+
+switchCaseExpression:
+        caseKeyword expression ":" statements
+    ;
+
+switchCaseDefault:
+        defaultKeyword ":" statements
+    ;
+
+emitStatement:
+        emitKeyword 1*identifier( "." ) *1invocationTemplateParameters "(" *1argumentList ")"
+    ;
+
+variableDeclaration:
+        letVariableDeclaration
+    |   varVariableDeclaration
+    ;
+
+letVariableDeclaration:
+        access letKeyword nonReservedIdentifier *1variableDeclarationTypeAnnotation transfer expression *1variableDeclarationTrailingTransferExpression
+    ;
+
+varVariableDeclaration:
+        access varKeyword nonReservedIdentifier *1variableDeclarationTypeAnnotation transfer expression *1variableDeclarationTrailingTransferExpression
+    ;
+
+variableDeclarationTypeAnnotation:
+        ":" typeAnnotation
+    ;
+
+variableDeclarationTrailingTransferExpression:
+        transfer expression
+    ;
+
+assignment:
+        assignmentTarget transfer assignmentValue
+    ;
+
+assignmentTarget:
+        expression
+    ;
+
+assignmentValue:
+        expression
+    ;
+
+swap:
+        swapExpressionLeft "<->" swapExpressionRight
+    ;
+
+swapExpressionLeft:
+        expression
+    ;
+
+swapExpressionRight:
+        expression
+    ;
+
+transfer:
+        transferEqual
+    |   transferMoveForced
+    |   transferMove
+    ;
+
+transferEqual:
+        "="
+    ;
+
+transferMoveForced:
+        moveForced
+    ;
+
+transferMove:
+        move
+    ;
+
+expression:
+        conditionalExpression  // 20
+    ;
+
+conditionalExpression:
+        orExpression *1conditionalExpressionBranches
+    ;
+
+conditionalExpressionBranches:
+        "?" conditionalExpressionBranchesTrue ":" conditionalExpressionBranchesFalse
+    ;
+
+conditionalExpressionBranchesTrue:
+        expression
+    ;
+
+conditionalExpressionBranchesFalse:
+        expression
+    ;
+
+orExpression:  // 30 '||'
+        1*andExpression( "||" )
+    ;
+
+andExpression:  // 40
+        1*comparisonExpression( "&&" )
+    ;
+
+comparisonExpression:  // 50
+        1*2nilCoalescingExpression( comparisonOp )
+    ;
+
+nilCoalescingExpression:  // 60
+        1*bitwiseOrExpression( nilCoalescingOperator )
+    ;
+
+nilCoalescingOperator:
+        "?" . "?"
+    ;
+
+bitwiseOrExpression:  // 70
+        1*bitwiseXorExpression( "|" )
+    ;
+
+bitwiseXorExpression:  // 80
+        1*bitwiseAndExpression( "^" )
+    ;
+
+bitwiseAndExpression:  // 90
+        1*bitwiseShiftExpression( "&" )
+    ;
+
+bitwiseShiftExpression:  // 100
+        1*additiveExpression( bitwiseShiftOp )
+    ;
+
+additiveExpression:  // 110
+        1*multiplicativeExpression( additiveOp )
+    ;
+
+multiplicativeExpression:  // 120
+        1*moveExpression( multiplicativeOp )
+    ;
+
+moveExpression:  // 130
+        *1moveOp castingExpression
+    ;
+
+castingExpression:  // 140
+        prefixExpression *castingExpressionCast
+    ;
+
+castingExpressionCast:
+        castingOp typeAnnotation
+    ;
+
+prefixExpression:  // 150
+        *1prefixOp postfixExpression
+    ;
+
+postfixExpression:  // 160
+        primaryExpression
+    ;
+
+forceUnwrapOp:
+        \ "!"
+    ;
+
+primaryExpression:
+        nullDenotation *leftDenotation
+    ;
+
+nullDenotation:
+        identifierExpression
+    ;
+
+leftDenotation:
+        forceUnwrapOp
+    |   accessExpression
+    |   invocationExpression
+    ;
+
+accessExpression:  // 170
+        memberExpression
+    |   indexExpression
+    ;
+
+indexExpression:
+        \ "[" expression "]"
+    ;
+
+memberExpression:
+        memberAccess
+    |   optionalMemberAccess
+    ;
+
+invocationExpression:
+        \ *1invocationTemplateParameters "(" *1argumentList ")"
+    ;
+
+identifierExpression:
+        trueKeyword
+    |   falseKeyword
+    |   nilKeyword
+    |   createExpression
+    |   destroyExpression
+    |   attachExpression
+    |   viewFunctionExpression
+    |   functionExpression
+    |   nonReservedIdentifier
+    |   literal
+    |   expressionNested
+    ;
+
+attachExpression:
+        attachKeyword identifier *nestedIdentifier "(" *argument( "," ) ")" toKeyword expression
+    ;
+
+nestedIdentifier:
+        "." nonReservedIdentifier
+    ;
+
+viewFunctionExpression:
+        viewKeyword funKeyword parameterList *1functionTypeAnnotation functionBlock
+    ;
+
+functionExpression:
+        funKeyword parameterList *1functionTypeAnnotation functionBlock
+    ;
+
+functionTypeAnnotation:
+        ":" typeAnnotation
+    ;
+
+expressionNested:
+        "(" expression ")"
+    ;
+
+comparisonOp:
+        equal
+    |   unequal
+    |   less
+    |   greater
+    |   lessEqual
+    |   greaterEqual
+    ;
+
+equal:
+        "=="
+    ;
+
+unequal:
+        "!="
+    ;
+
+less:
+        "<"
+    ;
+
+greater:
+        ">"
+    ;
+
+lessEqual:
+        "<="
+    ;
+
+greaterEqual:
+        ">="
+    ;
+
+bitwiseShiftOp:
+        shiftLeft
+    |   shiftRight
+    ;
+
+shiftLeft:
+        "<<"
+    ;
+
+shiftRight:
+        ">" . ">"
+    ;
+
+additiveOp:
+        plus
+    |   minus
+    ;
+
+plus:
+        "+"
+    ;
+
+minus:
+        "-"
+    ;
+
+multiplicativeOp:
+        mul
+    |   div
+    |   mod
+    ;
+
+mul:
+        "*"
+    ;
+
+div:
+        "/"
+    ;
+
+mod:
+        "%"
+    ;
+
+moveOp:
+        move
+    |   moveForced
+    ;
+
+move:
+        "<-"
+    ;
+
+moveForced:
+        "<-!"
+    ;
+
+prefixOp:
+        negative
+    |   negate
+    |   dereference
+    |   reference
+    ;
+
+negative:
+        "-"
+    ;
+
+negate:
+        "!"
+    ;
+
+dereference:
+        "*"
+    ;
+
+reference:
+        "&"
+    ;
+
+optional:
+        "?"
+    ;
+
+casting:
+        asKeyword
+    ;
+
+failableCasting:
+        asKeyword . "?"
+    ;
+
+forceCasting:
+        asKeyword . "!"
+    ;
+
+castingOp:
+        casting
+    |   failableCasting
+    |   forceCasting
+    ;
+
+createExpression:
+        createKeyword nominalType *1invocationTemplateParameters "(" *1argumentList ")"
+    ;
+
+destroyExpression:
+        destroyKeyword expression
+    ;
+
+memberAccess:
+        "." . nonReservedIdentifier
+    ;
+
+optionalMemberAccess:
+        "?." . nonReservedIdentifier
+    ;
+
+argumentList:
+        1*argument( "," ) *1comma
+    ;
+
+invocationTemplateParameters:
+        "<" *1typeAnnotationList ">"
+    ;
+
+argument:
+        *1argumentLabel expression
+    ;
+
+argumentLabel:
+        labelName ":"
+    ;
+
+labelName:
+        nonReservedIdentifier
+    ;
+
+literal:
+        fixedPointLiteral
+    |   integerLiteral
+    |   booleanLiteral
+    |   arrayLiteral
+    |   dictionaryLiteral
+    |   stringLiteral
+    |   nilLiteral
+    |   pathLiteral
+    ;
+
+booleanLiteral:
+        booleanLiteralTrue
+    |   booleanLiteralFalse
+    ;
+
+booleanLiteralTrue:
+        trueKeyword
+    ;
+
+booleanLiteralFalse:
+        falseKeyword
+    ;
+
+nilLiteral:
+        nilKeyword
+    ;
+
+pathLiteral:
+        "/" . pathLiteralDomain . "/" . identifier
+    ;
+
+pathLiteralDomain:
+        identifier
+    ;
+
+stringLiteral:
+        <stringToken>
+    ;
+
+fixedPointLiteral:
+        *1minus positiveFixedPointLiteral
+    ;
+
+positiveFixedPointLiteral:
+        <fixedPointToken>
+    ;
+
+integerLiteral:
+        *1minus positiveIntegerLiteral
+    ;
+
+positiveIntegerLiteral:
+        positiveIntegerLiteralDecimal
+    |   positiveIntegerLiteralBinary
+    |   positiveIntegerLiteralOctal
+    |   positiveIntegerLiteralHexadecimal
+    |   positiveIntegerLiteralInvalid
+    ;
+
+positiveIntegerLiteralDecimal:
+        <decimalToken>
+    ;
+
+positiveIntegerLiteralBinary:
+        <binaryToken>
+    ;
+
+positiveIntegerLiteralOctal:
+        <octalToken>
+    ;
+
+positiveIntegerLiteralHexadecimal:
+        hexadecimalLiteral
+    ;
+
+positiveIntegerLiteralInvalid:
+        <invalidNumberToken>
+    ;
+
+arrayLiteral:
+        "[" *1expressionList "]"
+    ;
+
+expressionList:
+        1*expression( "," )
+    ;
+
+dictionaryLiteral:
+        "{" *1dictionaryEntryList "}"
+    ;
+
+dictionaryEntryList:
+        1*dictionaryEntry( "," )
+    ;
+
+dictionaryEntry:
+        dictionaryEntryKey ":" dictionaryEntryValue
+    ;
+
+dictionaryEntryKey:
+        expression
+    ;
+
+dictionaryEntryValue:
+        expression
+    ;
+
+identifier:
+        <identifierToken>
+    ;
+
+hexadecimalLiteral:
+        <hexadecimalToken>
+    ;
+
+nonReservedIdentifier:
+        softKeyword
+    |   identifier
+    ;
+
+softKeyword:
+        accessKeyword
+    |   accountKeyword
+    |   allKeyword
+    |   attachKeyword
+    |   authKeyword
+    |   createKeyword
+    |   contractKeyword
+    |   eventKeyword
+    |   forKeyword
+    |   fromKeyword
+    |   inKeyword
+    |   removeKeyword
+    |   selfKeyword
+    |   setKeyword
+    |   toKeyword
+    |   typeKeyword
+    |   viewKeyword
+    ;
+
+accessKeyword:
+        "access"
+    ;
+
+accountKeyword:
+        "account"
+    ;
+
+allKeyword:
+        "all"
+    ;
+
+asKeyword:
+        "as"
+    ;
+
+attachKeyword:
+        "attach"
+    ;
+
+attachmentKeyword:
+        "attachment"
+    ;
+
+authKeyword:
+        "auth"
+    ;
+
+breakKeyword:
+        "break"
+    ;
+
+caseKeyword:
+        "case"
+    ;
+
+continueKeyword:
+        "continue"
+    ;
+
+contractKeyword:
+        "contract"
+    ;
+
+createKeyword:
+        "create"
+    ;
+
+defaultKeyword:
+        "default"
+    ;
+
+destroyKeyword:
+        "destroy"
+    ;
+
+elseKeyword:
+        "else"
+    ;
+
+emitKeyword:
+        "emit"
+    ;
+
+entitlementKeyword:
+        "entitlement"
+    ;
+
+enumKeyword:
+        "enum"
+    ;
+
+eventKeyword:
+        "event"
+    ;
+
+falseKeyword:
+        "false"
+    ;
+
+forKeyword:
+        "for"
+    ;
+
+fromKeyword:
+        "from"
+    ;
+
+funKeyword:
+        "fun"
+    ;
+
+ifKeyword:
+        "if"
+    ;
+
+importKeyword:
+        "import"
+    ;
+
+inKeyword:
+        "in"
+    ;
+
+includeKeyword:
+        "include"
+    ;
+
+initKeyword:
+        "init"
+    ;
+
+interfaceKeyword:
+        "interface"
+    ;
+
+letKeyword:
+        "let"
+    ;
+
+mappingKeyword:
+        "mapping"
+    ;
+
+nilKeyword:
+        "nil"
+    ;
+
+postKeyword:
+        "post"
+    ;
+
+preKeyword:
+        "pre"
+    ;
+
+prepareKeyword:
+        "prepare"
+    ;
+
+privKeyword:
+        "priv"
+    ;
+
+pubKeyword:
+        "pub"
+    ;
+
+removeKeyword:
+        "remove"
+    ;
+
+resourceKeyword:
+        "resource"
+    ;
+
+returnKeyword:
+        "return"
+    ;
+
+selfKeyword:
+        "self"
+    ;
+
+setKeyword:
+        "set"
+    ;
+
+structKeyword:
+        "struct"
+    ;
+
+switchKeyword:
+        "switch"
+    ;
+
+toKeyword:
+        "to"
+    ;
+
+transactionKeyword:
+        "transaction"
+    ;
+
+trueKeyword:
+        "true"
+    ;
+
+typeKeyword:
+        "type"
+    ;
+
+varKeyword:
+        "var"
+    ;
+
+viewKeyword:
+        "view"
+    ;
+
+whileKeyword:
+        "while"
+    ;
