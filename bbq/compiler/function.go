@@ -22,15 +22,13 @@ import (
 	"math"
 
 	"github.com/onflow/cadence/activations"
-	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/errors"
 )
 
 type function struct {
-	name       string
-	localCount uint16
-	// TODO: use byte.Buffer?
-	code                []byte
+	name                string
+	localCount          uint16
+	codeGen             CodeGen
 	locals              *activations.Activations[*local]
 	parameterCount      uint16
 	isCompositeFunction bool
@@ -40,16 +38,10 @@ func newFunction(name string, parameterCount uint16, isCompositeFunction bool) *
 	return &function{
 		name:                name,
 		parameterCount:      parameterCount,
+		codeGen:             &BytecodeGen{},
 		locals:              activations.NewActivations[*local](nil),
 		isCompositeFunction: isCompositeFunction,
 	}
-}
-
-func (f *function) emit(opcode opcode.Opcode, args ...byte) int {
-	offset := len(f.code)
-	f.code = append(f.code, byte(opcode))
-	f.code = append(f.code, args...)
-	return offset
 }
 
 func (f *function) declareLocal(name string) *local {

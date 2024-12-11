@@ -20,6 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/constantkind"
@@ -577,7 +578,7 @@ func opPath(vm *VM) {
 func opCast(vm *VM) {
 	value := vm.pop()
 	targetType := vm.loadType()
-	castKind := commons.CastKind(vm.getByte())
+	castKind := opcode.CastKind(vm.getByte())
 
 	// TODO:
 	_ = castKind
