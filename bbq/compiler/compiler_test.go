@@ -75,7 +75,7 @@ func TestCompileRecursionFib(t *testing.T) {
 			byte(opcode.IntAdd),
 			byte(opcode.ReturnValue),
 		},
-		compiler.functions[0].code,
+		compiler.functions[0].codeGen.Code(),
 	)
 
 	require.Equal(t,
@@ -167,7 +167,7 @@ func TestCompileImperativeFib(t *testing.T) {
 			byte(opcode.GetLocal), 0, 3,
 			byte(opcode.ReturnValue),
 		},
-		compiler.functions[0].code,
+		compiler.functions[0].codeGen.Code(),
 	)
 
 	require.Equal(t,
@@ -235,7 +235,7 @@ func TestCompileBreak(t *testing.T) {
 			byte(opcode.GetLocal), 0, 0,
 			byte(opcode.ReturnValue),
 		},
-		compiler.functions[0].code,
+		compiler.functions[0].codeGen.Code(),
 	)
 
 	require.Equal(t,
@@ -310,7 +310,7 @@ func TestCompileContinue(t *testing.T) {
 			byte(opcode.GetLocal), 0, 0,
 			byte(opcode.ReturnValue),
 		},
-		compiler.functions[0].code,
+		compiler.functions[0].codeGen.Code(),
 	)
 
 	require.Equal(t,
