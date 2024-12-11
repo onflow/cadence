@@ -22,10 +22,9 @@ import (
 	"github.com/onflow/cadence/common"
 )
 
-func emit(code *[]byte, opcode Opcode, args ...byte) int {
+func emitOpcode(code *[]byte, opcode Opcode) int {
 	offset := len(*code)
 	*code = append(*code, byte(opcode))
-	*code = append(*code, args...)
 	return offset
 }
 
@@ -35,6 +34,12 @@ func emit(code *[]byte, opcode Opcode, args ...byte) int {
 func encodeUint16(v uint16) (byte, byte) {
 	return byte((v >> 8) & 0xff),
 		byte(v & 0xff)
+}
+
+// emitUint16 encodes the given uint16 in big-endian representation
+func emitUint16(code *[]byte, v uint16) {
+	first, last := encodeUint16(v)
+	*code = append(*code, first, last)
 }
 
 func decodeUint16(ip *uint16, code []byte) uint16 {
@@ -52,10 +57,22 @@ func decodeByte(ip *uint16, code []byte) byte {
 	return byt
 }
 
+func emitByte(code *[]byte, b byte) {
+	*code = append(*code, b)
+}
+
 // Bool
 
 func decodeBool(ip *uint16, code []byte) bool {
 	return decodeByte(ip, code) == 1
+}
+
+func emitBool(code *[]byte, v bool) {
+	var b byte
+	if v {
+		b = 1
+	}
+	*code = append(*code, b)
 }
 
 // String
@@ -69,46 +86,46 @@ func decodeString(ip *uint16, code []byte) string {
 }
 
 func emitString(code *[]byte, str string) {
-	sizeFirst, sizeSecond := encodeUint16(uint16(len(str)))
-	*code = append(*code, sizeFirst, sizeSecond)
+	emitUint16(code, uint16(len(str)))
 	*code = append(*code, []byte(str)...)
 }
 
 // True
 
 func EmitTrue(code *[]byte) {
-	emit(code, True)
+	emitOpcode(code, True)
 }
 
 // False
 
 func EmitFalse(code *[]byte) {
-	emit(code, False)
+	emitOpcode(code, False)
 }
 
 // Nil
 
 func EmitNil(code *[]byte) {
-	emit(code, Nil)
+	emitOpcode(code, Nil)
 }
 
 // Dup
 
 func EmitDup(code *[]byte) {
-	emit(code, Dup)
+	emitOpcode(code, Dup)
 }
 
 // Drop
 
 func EmitDrop(code *[]byte) {
-	emit(code, Drop)
+	emitOpcode(code, Drop)
 }
 
 // GetConstant
 
-func EmitGetConstant(code *[]byte, constantIndex uint16) int {
-	first, second := encodeUint16(constantIndex)
-	return emit(code, GetConstant, first, second)
+func EmitGetConstant(code *[]byte, constantIndex uint16) (offset int) {
+	offset = emitOpcode(code, GetConstant)
+	emitUint16(code, constantIndex)
+	return offset
 }
 
 func DecodeGetConstant(ip *uint16, code []byte) (constantIndex uint16) {
@@ -117,9 +134,10 @@ func DecodeGetConstant(ip *uint16, code []byte) (constantIndex uint16) {
 
 // Jump
 
-func EmitJump(code *[]byte, target uint16) int {
-	first, second := encodeUint16(target)
-	return emit(code, Jump, first, second)
+func EmitJump(code *[]byte, target uint16) (offset int) {
+	offset = emitOpcode(code, Jump)
+	emitUint16(code, target)
+	return offset
 }
 
 func DecodeJump(ip *uint16, code []byte) (target uint16) {
@@ -128,9 +146,10 @@ func DecodeJump(ip *uint16, code []byte) (target uint16) {
 
 // JumpIfFalse
 
-func EmitJumpIfFalse(code *[]byte, target uint16) int {
-	first, second := encodeUint16(target)
-	return emit(code, JumpIfFalse, first, second)
+func EmitJumpIfFalse(code *[]byte, target uint16) (offset int) {
+	offset = emitOpcode(code, JumpIfFalse)
+	emitUint16(code, target)
+	return offset
 }
 
 func DecodeJumpIfFalse(ip *uint16, code []byte) (target uint16) {
@@ -146,20 +165,20 @@ func PatchJump(code *[]byte, opcodeOffset int, target uint16) {
 // Return
 
 func EmitReturn(code *[]byte) int {
-	return emit(code, Return)
+	return emitOpcode(code, Return)
 }
 
 // ReturnValue
 
 func EmitReturnValue(code *[]byte) int {
-	return emit(code, ReturnValue)
+	return emitOpcode(code, ReturnValue)
 }
 
 // GetLocal
 
 func EmitGetLocal(code *[]byte, localIndex uint16) {
-	first, second := encodeUint16(localIndex)
-	emit(code, GetLocal, first, second)
+	emitOpcode(code, GetLocal)
+	emitUint16(code, localIndex)
 }
 
 func DecodeGetLocal(ip *uint16, code []byte) (localIndex uint16) {
@@ -169,8 +188,8 @@ func DecodeGetLocal(ip *uint16, code []byte) (localIndex uint16) {
 // SetLocal
 
 func EmitSetLocal(code *[]byte, localIndex uint16) {
-	first, second := encodeUint16(localIndex)
-	emit(code, SetLocal, first, second)
+	emitOpcode(code, SetLocal)
+	emitUint16(code, localIndex)
 }
 
 func DecodeSetLocal(ip *uint16, code []byte) (localIndex uint16) {
@@ -180,8 +199,8 @@ func DecodeSetLocal(ip *uint16, code []byte) (localIndex uint16) {
 // GetGlobal
 
 func EmitGetGlobal(code *[]byte, globalIndex uint16) {
-	first, second := encodeUint16(globalIndex)
-	emit(code, GetGlobal, first, second)
+	emitOpcode(code, GetGlobal)
+	emitUint16(code, globalIndex)
 }
 
 func DecodeGetGlobal(ip *uint16, code []byte) (globalIndex uint16) {
@@ -191,8 +210,8 @@ func DecodeGetGlobal(ip *uint16, code []byte) (globalIndex uint16) {
 // SetGlobal
 
 func EmitSetGlobal(code *[]byte, globalIndex uint16) {
-	first, second := encodeUint16(globalIndex)
-	emit(code, SetGlobal, first, second)
+	emitOpcode(code, SetGlobal)
+	emitUint16(code, globalIndex)
 }
 
 func DecodeSetGlobal(ip *uint16, code []byte) (globalIndex uint16) {
@@ -202,43 +221,34 @@ func DecodeSetGlobal(ip *uint16, code []byte) (globalIndex uint16) {
 // GetField
 
 func EmitGetField(code *[]byte) {
-	emit(code, GetField)
+	emitOpcode(code, GetField)
 }
 
 // SetField
 
 func EmitSetField(code *[]byte) {
-	emit(code, SetField)
+	emitOpcode(code, SetField)
 }
 
 // GetIndex
 
 func EmitGetIndex(code *[]byte) {
-	emit(code, GetIndex)
+	emitOpcode(code, GetIndex)
 }
 
 // SetIndex
 
 func EmitSetIndex(code *[]byte) {
-	emit(code, SetIndex)
+	emitOpcode(code, SetIndex)
 }
 
 // NewArray
 
 func EmitNewArray(code *[]byte, typeIndex uint16, size uint16, isResource bool) {
-	typeIndexFirst, typeIndexSecond := encodeUint16(typeIndex)
-	sizeFirst, sizeSecond := encodeUint16(size)
-	var isResourceFlag byte
-	if isResource {
-		isResourceFlag = 1
-	}
-	emit(
-		code,
-		NewArray,
-		typeIndexFirst, typeIndexSecond,
-		sizeFirst, sizeSecond,
-		isResourceFlag,
-	)
+	emitOpcode(code, NewArray)
+	emitUint16(code, typeIndex)
+	emitUint16(code, size)
+	emitBool(code, isResource)
 }
 
 func DecodeNewArray(ip *uint16, code []byte) (typeIndex uint16, size uint16, isResource bool) {
@@ -251,99 +261,100 @@ func DecodeNewArray(ip *uint16, code []byte) (typeIndex uint16, size uint16, isR
 // IntAdd
 
 func EmitIntAdd(code *[]byte) {
-	emit(code, IntAdd)
+	emitOpcode(code, IntAdd)
 }
 
 // IntSubtract
 
 func EmitIntSubtract(code *[]byte) {
-	emit(code, IntSubtract)
+	emitOpcode(code, IntSubtract)
 }
 
 // IntMultiply
 
 func EmitIntMultiply(code *[]byte) {
-	emit(code, IntMultiply)
+	emitOpcode(code, IntMultiply)
 }
 
 // IntDivide
 
 func EmitIntDivide(code *[]byte) {
-	emit(code, IntDivide)
+	emitOpcode(code, IntDivide)
 }
 
 // IntMod
 
 func EmitIntMod(code *[]byte) {
-	emit(code, IntMod)
+	emitOpcode(code, IntMod)
 }
 
 // IntEqual
 
 func EmitEqual(code *[]byte) {
-	emit(code, Equal)
+	emitOpcode(code, Equal)
 }
 
 // IntNotEqual
 
 func EmitNotEqual(code *[]byte) {
-	emit(code, NotEqual)
+	emitOpcode(code, NotEqual)
 }
 
 // IntLess
 
 func EmitIntLess(code *[]byte) {
-	emit(code, IntLess)
+	emitOpcode(code, IntLess)
 }
 
 // IntLessOrEqual
 
 func EmitIntLessOrEqual(code *[]byte) {
-	emit(code, IntLessOrEqual)
+	emitOpcode(code, IntLessOrEqual)
 }
 
 // IntGreater
 
 func EmitIntGreater(code *[]byte) {
-	emit(code, IntGreater)
+	emitOpcode(code, IntGreater)
 }
 
 // IntGreaterOrEqual
 
 func EmitIntGreaterOrEqual(code *[]byte) {
-	emit(code, IntGreaterOrEqual)
+	emitOpcode(code, IntGreaterOrEqual)
 }
 
 // Unwrap
 
 func EmitUnwrap(code *[]byte) {
-	emit(code, Unwrap)
+	emitOpcode(code, Unwrap)
 }
 
 // Cast
 
 func EmitCast(code *[]byte, typeIndex uint16, kind CastKind) {
-	first, second := encodeUint16(typeIndex)
-	emit(code, Cast, first, second, byte(kind))
+	emitOpcode(code, Cast)
+	emitUint16(code, typeIndex)
+	emitByte(code, byte(kind))
 }
 
-func DecodeCast(ip *uint16, code []byte) (typeIndex uint16, kind byte) {
+func DecodeCast(ip *uint16, code []byte) (typeIndex uint16, kind CastKind) {
 	typeIndex = decodeUint16(ip, code)
-	kind = decodeByte(ip, code)
+	kind = CastKind(decodeByte(ip, code))
 	return typeIndex, kind
 }
 
 // Destroy
 
 func EmitDestroy(code *[]byte) {
-	emit(code, Destroy)
+	emitOpcode(code, Destroy)
 }
 
 // Transfer
 
 func EmitTransfer(code *[]byte, typeIndex uint16) {
-	first, second := encodeUint16(typeIndex)
-	emit(code, Transfer, first, second)
+	emitOpcode(code, Transfer)
+	emitUint16(code, typeIndex)
 }
 
 func DecodeTransfer(ip *uint16, code []byte) (typeIndex uint16) {
@@ -353,8 +364,8 @@ func DecodeTransfer(ip *uint16, code []byte) (typeIndex uint16) {
 // NewRef
 
 func EmitNewRef(code *[]byte, typeIndex uint16) {
-	first, second := encodeUint16(typeIndex)
-	emit(code, NewRef, first, second)
+	emitOpcode(code, NewRef)
+	emitUint16(code, typeIndex)
 }
 
 func DecodeNewRef(ip *uint16, code []byte) (typeIndex uint16) {
@@ -364,7 +375,7 @@ func DecodeNewRef(ip *uint16, code []byte) (typeIndex uint16) {
 // Path
 
 func EmitPath(code *[]byte, domain common.PathDomain, identifier string) {
-	emit(code, Path)
+	emitOpcode(code, Path)
 
 	*code = append(*code, byte(domain))
 
@@ -380,11 +391,9 @@ func DecodePath(ip *uint16, code []byte) (domain byte, identifier string) {
 // Type arguments
 
 func emitTypeArgs(code *[]byte, typeArgs []uint16) {
-	first, second := encodeUint16(uint16(len(typeArgs)))
-	*code = append(*code, first, second)
+	emitUint16(code, uint16(len(typeArgs)))
 	for _, typeArg := range typeArgs {
-		first, second := encodeUint16(typeArg)
-		*code = append(*code, first, second)
+		emitUint16(code, typeArg)
 	}
 }
 
@@ -400,7 +409,7 @@ func decodeTypeArgs(ip *uint16, code []byte) (typeArgs []uint16) {
 // Invoke
 
 func EmitInvoke(code *[]byte, typeArgs []uint16) {
-	emit(code, Invoke)
+	emitOpcode(code, Invoke)
 	emitTypeArgs(code, typeArgs)
 }
 
@@ -411,14 +420,9 @@ func DecodeInvoke(ip *uint16, code []byte) (typeArgs []uint16) {
 // New
 
 func EmitNew(code *[]byte, kind uint16, typeIndex uint16) {
-	firstKind, secondKind := encodeUint16(kind)
-	firstTypeIndex, secondTypeIndex := encodeUint16(typeIndex)
-	emit(
-		code,
-		New,
-		firstKind, secondKind,
-		firstTypeIndex, secondTypeIndex,
-	)
+	emitOpcode(code, New)
+	emitUint16(code, kind)
+	emitUint16(code, typeIndex)
 }
 
 func DecodeNew(ip *uint16, code []byte) (kind uint16, typeIndex uint16) {
@@ -430,11 +434,10 @@ func DecodeNew(ip *uint16, code []byte) (kind uint16, typeIndex uint16) {
 // InvokeDynamic
 
 func EmitInvokeDynamic(code *[]byte, name string, typeArgs []uint16, argCount uint16) {
-	emit(code, InvokeDynamic)
+	emitOpcode(code, InvokeDynamic)
 	emitString(code, name)
 	emitTypeArgs(code, typeArgs)
-	argsCountFirst, argsCountSecond := encodeUint16(argCount)
-	*code = append(*code, argsCountFirst, argsCountSecond)
+	emitUint16(code, argCount)
 }
 
 func DecodeInvokeDynamic(ip *uint16, code []byte) (name string, typeArgs []uint16, argCount uint16) {

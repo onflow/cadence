@@ -581,10 +581,9 @@ func opPath(vm *VM) {
 func opCast(vm *VM) {
 	value := vm.pop()
 
-	typeIndex, kind := opcode.DecodeCast(&vm.ip, vm.callFrame.function.Code)
+	typeIndex, castKind := opcode.DecodeCast(&vm.ip, vm.callFrame.function.Code)
 
 	targetType := vm.loadType(typeIndex)
-	castKind := opcode.CastKind(kind)
 
 	// TODO:
 	_ = castKind
