@@ -38,7 +38,7 @@ func newFunction(name string, parameterCount uint16, isCompositeFunction bool) *
 	return &function{
 		name:                name,
 		parameterCount:      parameterCount,
-		codeGen:             &BytecodeGen{},
+		codeGen:             &ByteCodeGen{},
 		locals:              activations.NewActivations[*local](nil),
 		isCompositeFunction: isCompositeFunction,
 	}

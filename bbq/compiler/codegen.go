@@ -20,6 +20,7 @@ package compiler
 
 import (
 	"github.com/onflow/cadence/bbq/opcode"
+	"github.com/onflow/cadence/errors"
 )
 
 type CodeGen interface {
@@ -29,24 +30,58 @@ type CodeGen interface {
 	PatchJump(offset int, newTarget uint16)
 }
 
-type BytecodeGen struct {
+// ByteCodeGen is a CodeGen implementation that emits bytecode
+type ByteCodeGen struct {
 	code []byte
 }
 
-var _ CodeGen = &BytecodeGen{}
+var _ CodeGen = &ByteCodeGen{}
 
-func (g *BytecodeGen) Offset() int {
+func (g *ByteCodeGen) Offset() int {
 	return len(g.code)
 }
 
-func (g *BytecodeGen) Code() interface{} {
+func (g *ByteCodeGen) Code() interface{} {
 	return g.code
 }
 
-func (g *BytecodeGen) Emit(instruction opcode.Instruction) {
+func (g *ByteCodeGen) Emit(instruction opcode.Instruction) {
 	instruction.Encode(&g.code)
 }
 
-func (g *BytecodeGen) PatchJump(offset int, newTarget uint16) {
+func (g *ByteCodeGen) PatchJump(offset int, newTarget uint16) {
 	opcode.PatchJump(&g.code, offset, newTarget)
+}
+
+// InstructionCodeGen is a CodeGen implementation that emits opcode.Instruction
+type InstructionCodeGen struct {
+	code []opcode.Instruction
+}
+
+var _ CodeGen = &InstructionCodeGen{}
+
+func (g *InstructionCodeGen) Offset() int {
+	return len(g.code)
+}
+
+func (g *InstructionCodeGen) Code() interface{} {
+	return g.code
+}
+
+func (g *InstructionCodeGen) Emit(instruction opcode.Instruction) {
+	g.code = append(g.code, instruction)
+}
+
+func (g *InstructionCodeGen) PatchJump(offset int, newTarget uint16) {
+	switch ins := g.code[offset].(type) {
+	case opcode.InstructionJump:
+		ins.Target = newTarget
+		g.code[offset] = ins
+
+	case opcode.InstructionJumpIfFalse:
+		ins.Target = newTarget
+		g.code[offset] = ins
+	}
+
+	panic(errors.NewUnreachableError())
 }
