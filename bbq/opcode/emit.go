@@ -22,10 +22,12 @@ import (
 	"github.com/onflow/cadence/common"
 )
 
-func emitOpcode(code *[]byte, opcode Opcode) int {
-	offset := len(*code)
+type Instruction interface {
+	Encode(code *[]byte)
+}
+
+func emitOpcode(code *[]byte, opcode Opcode) {
 	*code = append(*code, byte(opcode))
-	return offset
 }
 
 // uint16
@@ -92,300 +94,404 @@ func emitString(code *[]byte, str string) {
 
 // True
 
-func EmitTrue(code *[]byte) {
+type InstructionTrue struct{}
+
+func (InstructionTrue) Encode(code *[]byte) {
 	emitOpcode(code, True)
 }
 
 // False
 
-func EmitFalse(code *[]byte) {
+type InstructionFalse struct{}
+
+func (InstructionFalse) Encode(code *[]byte) {
 	emitOpcode(code, False)
 }
 
 // Nil
 
-func EmitNil(code *[]byte) {
+type InstructionNil struct{}
+
+func (InstructionNil) Encode(code *[]byte) {
 	emitOpcode(code, Nil)
 }
 
 // Dup
 
-func EmitDup(code *[]byte) {
+type InstructionDup struct{}
+
+func (InstructionDup) Encode(code *[]byte) {
 	emitOpcode(code, Dup)
 }
 
 // Drop
 
-func EmitDrop(code *[]byte) {
+type InstructionDrop struct{}
+
+func (InstructionDrop) Encode(code *[]byte) {
 	emitOpcode(code, Drop)
 }
 
 // GetConstant
 
-func EmitGetConstant(code *[]byte, constantIndex uint16) (offset int) {
-	offset = emitOpcode(code, GetConstant)
-	emitUint16(code, constantIndex)
-	return offset
+type InstructionGetConstant struct {
+	ConstantIndex uint16
 }
 
-func DecodeGetConstant(ip *uint16, code []byte) (constantIndex uint16) {
-	return decodeUint16(ip, code)
+func (ins InstructionGetConstant) Encode(code *[]byte) {
+	emitOpcode(code, GetConstant)
+	emitUint16(code, ins.ConstantIndex)
+}
+
+func DecodeGetConstant(ip *uint16, code []byte) (ins InstructionGetConstant) {
+	ins.ConstantIndex = decodeUint16(ip, code)
+	return ins
 }
 
 // Jump
 
-func EmitJump(code *[]byte, target uint16) (offset int) {
-	offset = emitOpcode(code, Jump)
-	emitUint16(code, target)
-	return offset
+type InstructionJump struct {
+	Target uint16
 }
 
-func DecodeJump(ip *uint16, code []byte) (target uint16) {
-	return decodeUint16(ip, code)
+func (ins InstructionJump) Encode(code *[]byte) {
+	emitOpcode(code, Jump)
+	emitUint16(code, ins.Target)
+}
+
+func DecodeJump(ip *uint16, code []byte) (ins InstructionJump) {
+	ins.Target = decodeUint16(ip, code)
+	return ins
 }
 
 // JumpIfFalse
 
-func EmitJumpIfFalse(code *[]byte, target uint16) (offset int) {
-	offset = emitOpcode(code, JumpIfFalse)
-	emitUint16(code, target)
-	return offset
+type InstructionJumpIfFalse struct {
+	Target uint16
 }
 
-func DecodeJumpIfFalse(ip *uint16, code []byte) (target uint16) {
-	return decodeUint16(ip, code)
+func (ins InstructionJumpIfFalse) Encode(code *[]byte) {
+	emitOpcode(code, JumpIfFalse)
+	emitUint16(code, ins.Target)
 }
 
-func PatchJump(code *[]byte, opcodeOffset int, target uint16) {
-	first, second := encodeUint16(target)
+func DecodeJumpIfFalse(ip *uint16, code []byte) (ins InstructionJumpIfFalse) {
+	ins.Target = decodeUint16(ip, code)
+	return ins
+}
+
+func PatchJump(code *[]byte, opcodeOffset int, newTarget uint16) {
+	first, second := encodeUint16(newTarget)
 	(*code)[opcodeOffset+1] = first
 	(*code)[opcodeOffset+2] = second
 }
 
 // Return
 
-func EmitReturn(code *[]byte) int {
-	return emitOpcode(code, Return)
+type InstructionReturn struct{}
+
+func (InstructionReturn) Encode(code *[]byte) {
+	emitOpcode(code, Return)
 }
 
 // ReturnValue
 
-func EmitReturnValue(code *[]byte) int {
-	return emitOpcode(code, ReturnValue)
+type InstructionReturnValue struct{}
+
+func (InstructionReturnValue) Encode(code *[]byte) {
+	emitOpcode(code, ReturnValue)
 }
 
 // GetLocal
 
-func EmitGetLocal(code *[]byte, localIndex uint16) {
-	emitOpcode(code, GetLocal)
-	emitUint16(code, localIndex)
+type InstructionGetLocal struct {
+	LocalIndex uint16
 }
 
-func DecodeGetLocal(ip *uint16, code []byte) (localIndex uint16) {
-	return decodeUint16(ip, code)
+func (ins InstructionGetLocal) Encode(code *[]byte) {
+	emitOpcode(code, GetLocal)
+	emitUint16(code, ins.LocalIndex)
+}
+
+func DecodeGetLocal(ip *uint16, code []byte) (ins InstructionGetLocal) {
+	ins.LocalIndex = decodeUint16(ip, code)
+	return ins
 }
 
 // SetLocal
 
-func EmitSetLocal(code *[]byte, localIndex uint16) {
-	emitOpcode(code, SetLocal)
-	emitUint16(code, localIndex)
+type InstructionSetLocal struct {
+	LocalIndex uint16
 }
 
-func DecodeSetLocal(ip *uint16, code []byte) (localIndex uint16) {
-	return decodeUint16(ip, code)
+func (ins InstructionSetLocal) Encode(code *[]byte) {
+	emitOpcode(code, SetLocal)
+	emitUint16(code, ins.LocalIndex)
+}
+
+func DecodeSetLocal(ip *uint16, code []byte) (ins InstructionSetLocal) {
+	ins.LocalIndex = decodeUint16(ip, code)
+	return ins
 }
 
 // GetGlobal
 
-func EmitGetGlobal(code *[]byte, globalIndex uint16) {
-	emitOpcode(code, GetGlobal)
-	emitUint16(code, globalIndex)
+type InstructionGetGlobal struct {
+	GlobalIndex uint16
 }
 
-func DecodeGetGlobal(ip *uint16, code []byte) (globalIndex uint16) {
-	return decodeUint16(ip, code)
+func (ins InstructionGetGlobal) Encode(code *[]byte) {
+	emitOpcode(code, GetGlobal)
+	emitUint16(code, ins.GlobalIndex)
+}
+
+func DecodeGetGlobal(ip *uint16, code []byte) (ins InstructionGetGlobal) {
+	ins.GlobalIndex = decodeUint16(ip, code)
+	return ins
 }
 
 // SetGlobal
 
-func EmitSetGlobal(code *[]byte, globalIndex uint16) {
-	emitOpcode(code, SetGlobal)
-	emitUint16(code, globalIndex)
+type InstructionSetGlobal struct {
+	GlobalIndex uint16
 }
 
-func DecodeSetGlobal(ip *uint16, code []byte) (globalIndex uint16) {
-	return decodeUint16(ip, code)
+func (ins InstructionSetGlobal) Encode(code *[]byte) {
+	emitOpcode(code, SetGlobal)
+	emitUint16(code, ins.GlobalIndex)
+}
+
+func DecodeSetGlobal(ip *uint16, code []byte) (ins InstructionSetGlobal) {
+	ins.GlobalIndex = decodeUint16(ip, code)
+	return ins
 }
 
 // GetField
 
-func EmitGetField(code *[]byte) {
+type InstructionGetField struct{}
+
+func (InstructionGetField) Encode(code *[]byte) {
 	emitOpcode(code, GetField)
 }
 
 // SetField
 
-func EmitSetField(code *[]byte) {
+type InstructionSetField struct{}
+
+func (InstructionSetField) Encode(code *[]byte) {
 	emitOpcode(code, SetField)
 }
 
 // GetIndex
 
-func EmitGetIndex(code *[]byte) {
+type InstructionGetIndex struct{}
+
+func (InstructionGetIndex) Encode(code *[]byte) {
 	emitOpcode(code, GetIndex)
 }
 
 // SetIndex
 
-func EmitSetIndex(code *[]byte) {
+type InstructionSetIndex struct{}
+
+func (InstructionSetIndex) Encode(code *[]byte) {
 	emitOpcode(code, SetIndex)
 }
 
 // NewArray
 
-func EmitNewArray(code *[]byte, typeIndex uint16, size uint16, isResource bool) {
-	emitOpcode(code, NewArray)
-	emitUint16(code, typeIndex)
-	emitUint16(code, size)
-	emitBool(code, isResource)
+type InstructionNewArray struct {
+	TypeIndex  uint16
+	Size       uint16
+	IsResource bool
 }
 
-func DecodeNewArray(ip *uint16, code []byte) (typeIndex uint16, size uint16, isResource bool) {
-	typeIndex = decodeUint16(ip, code)
-	size = decodeUint16(ip, code)
-	isResource = decodeBool(ip, code)
-	return typeIndex, size, isResource
+func (ins InstructionNewArray) Encode(code *[]byte) {
+	emitOpcode(code, NewArray)
+	emitUint16(code, ins.TypeIndex)
+	emitUint16(code, ins.Size)
+	emitBool(code, ins.IsResource)
+}
+
+func DecodeNewArray(ip *uint16, code []byte) (ins InstructionNewArray) {
+	ins.TypeIndex = decodeUint16(ip, code)
+	ins.Size = decodeUint16(ip, code)
+	ins.IsResource = decodeBool(ip, code)
+	return ins
 }
 
 // IntAdd
 
-func EmitIntAdd(code *[]byte) {
+type InstructionIntAdd struct{}
+
+func (InstructionIntAdd) Encode(code *[]byte) {
 	emitOpcode(code, IntAdd)
 }
 
 // IntSubtract
 
-func EmitIntSubtract(code *[]byte) {
+type InstructionIntSubtract struct{}
+
+func (InstructionIntSubtract) Encode(code *[]byte) {
 	emitOpcode(code, IntSubtract)
 }
 
 // IntMultiply
 
-func EmitIntMultiply(code *[]byte) {
+type InstructionIntMultiply struct{}
+
+func (InstructionIntMultiply) Encode(code *[]byte) {
 	emitOpcode(code, IntMultiply)
 }
 
 // IntDivide
 
-func EmitIntDivide(code *[]byte) {
+type InstructionIntDivide struct{}
+
+func (InstructionIntDivide) Encode(code *[]byte) {
 	emitOpcode(code, IntDivide)
 }
 
 // IntMod
 
-func EmitIntMod(code *[]byte) {
+type InstructionIntMod struct{}
+
+func (InstructionIntMod) Encode(code *[]byte) {
 	emitOpcode(code, IntMod)
 }
 
-// IntEqual
+// Equal
 
-func EmitEqual(code *[]byte) {
+type InstructionEqual struct{}
+
+func (InstructionEqual) Encode(code *[]byte) {
 	emitOpcode(code, Equal)
 }
 
-// IntNotEqual
+// NotEqual
 
-func EmitNotEqual(code *[]byte) {
+type InstructionNotEqual struct{}
+
+func (InstructionNotEqual) Encode(code *[]byte) {
 	emitOpcode(code, NotEqual)
 }
 
 // IntLess
 
-func EmitIntLess(code *[]byte) {
+type InstructionIntLess struct{}
+
+func (InstructionIntLess) Encode(code *[]byte) {
 	emitOpcode(code, IntLess)
 }
 
 // IntLessOrEqual
 
-func EmitIntLessOrEqual(code *[]byte) {
+type InstructionIntLessOrEqual struct{}
+
+func (InstructionIntLessOrEqual) Encode(code *[]byte) {
 	emitOpcode(code, IntLessOrEqual)
 }
 
 // IntGreater
 
-func EmitIntGreater(code *[]byte) {
+type InstructionIntGreater struct{}
+
+func (InstructionIntGreater) Encode(code *[]byte) {
 	emitOpcode(code, IntGreater)
 }
 
 // IntGreaterOrEqual
 
-func EmitIntGreaterOrEqual(code *[]byte) {
+type InstructionIntGreaterOrEqual struct{}
+
+func (InstructionIntGreaterOrEqual) Encode(code *[]byte) {
 	emitOpcode(code, IntGreaterOrEqual)
 }
 
 // Unwrap
 
-func EmitUnwrap(code *[]byte) {
+type InstructionUnwrap struct{}
+
+func (InstructionUnwrap) Encode(code *[]byte) {
 	emitOpcode(code, Unwrap)
 }
 
 // Cast
 
-func EmitCast(code *[]byte, typeIndex uint16, kind CastKind) {
-	emitOpcode(code, Cast)
-	emitUint16(code, typeIndex)
-	emitByte(code, byte(kind))
+type InstructionCast struct {
+	TypeIndex uint16
+	Kind      CastKind
 }
 
-func DecodeCast(ip *uint16, code []byte) (typeIndex uint16, kind CastKind) {
-	typeIndex = decodeUint16(ip, code)
-	kind = CastKind(decodeByte(ip, code))
-	return typeIndex, kind
+func (ins InstructionCast) Encode(code *[]byte) {
+	emitOpcode(code, Cast)
+	emitUint16(code, ins.TypeIndex)
+	emitByte(code, byte(ins.Kind))
+}
+
+func DecodeCast(ip *uint16, code []byte) (ins InstructionCast) {
+	ins.TypeIndex = decodeUint16(ip, code)
+	ins.Kind = CastKind(decodeByte(ip, code))
+	return ins
 }
 
 // Destroy
 
-func EmitDestroy(code *[]byte) {
+type InstructionDestroy struct{}
+
+func (InstructionDestroy) Encode(code *[]byte) {
 	emitOpcode(code, Destroy)
 }
 
 // Transfer
 
-func EmitTransfer(code *[]byte, typeIndex uint16) {
-	emitOpcode(code, Transfer)
-	emitUint16(code, typeIndex)
+type InstructionTransfer struct {
+	TypeIndex uint16
 }
 
-func DecodeTransfer(ip *uint16, code []byte) (typeIndex uint16) {
-	return decodeUint16(ip, code)
+func (ins InstructionTransfer) Encode(code *[]byte) {
+	emitOpcode(code, Transfer)
+	emitUint16(code, ins.TypeIndex)
+}
+
+func DecodeTransfer(ip *uint16, code []byte) (ins InstructionTransfer) {
+	ins.TypeIndex = decodeUint16(ip, code)
+	return ins
 }
 
 // NewRef
 
-func EmitNewRef(code *[]byte, typeIndex uint16) {
-	emitOpcode(code, NewRef)
-	emitUint16(code, typeIndex)
+type InstructionNewRef struct {
+	TypeIndex uint16
 }
 
-func DecodeNewRef(ip *uint16, code []byte) (typeIndex uint16) {
-	return decodeUint16(ip, code)
+func (ins InstructionNewRef) Encode(code *[]byte) {
+	emitOpcode(code, NewRef)
+	emitUint16(code, ins.TypeIndex)
+}
+
+func DecodeNewRef(ip *uint16, code []byte) (ins InstructionNewRef) {
+	ins.TypeIndex = decodeUint16(ip, code)
+	return ins
 }
 
 // Path
 
-func EmitPath(code *[]byte, domain common.PathDomain, identifier string) {
-	emitOpcode(code, Path)
-
-	*code = append(*code, byte(domain))
-
-	emitString(code, identifier)
+type InstructionPath struct {
+	Domain     common.PathDomain
+	Identifier string
 }
 
-func DecodePath(ip *uint16, code []byte) (domain byte, identifier string) {
-	domain = decodeByte(ip, code)
-	identifier = decodeString(ip, code)
-	return domain, identifier
+func (ins InstructionPath) Encode(code *[]byte) {
+	emitOpcode(code, Path)
+	emitByte(code, byte(ins.Domain))
+	emitString(code, ins.Identifier)
+}
+
+func DecodePath(ip *uint16, code []byte) (ins InstructionPath) {
+	ins.Domain = common.PathDomain(decodeByte(ip, code))
+	ins.Identifier = decodeString(ip, code)
+	return ins
 }
 
 // Type arguments
@@ -408,41 +514,57 @@ func decodeTypeArgs(ip *uint16, code []byte) (typeArgs []uint16) {
 
 // Invoke
 
-func EmitInvoke(code *[]byte, typeArgs []uint16) {
-	emitOpcode(code, Invoke)
-	emitTypeArgs(code, typeArgs)
+type InstructionInvoke struct {
+	TypeArgs []uint16
 }
 
-func DecodeInvoke(ip *uint16, code []byte) (typeArgs []uint16) {
-	return decodeTypeArgs(ip, code)
+func (ins InstructionInvoke) Encode(code *[]byte) {
+	emitOpcode(code, Invoke)
+	emitTypeArgs(code, ins.TypeArgs)
+}
+
+func DecodeInvoke(ip *uint16, code []byte) (ins InstructionInvoke) {
+	ins.TypeArgs = decodeTypeArgs(ip, code)
+	return ins
 }
 
 // New
 
-func EmitNew(code *[]byte, kind uint16, typeIndex uint16) {
-	emitOpcode(code, New)
-	emitUint16(code, kind)
-	emitUint16(code, typeIndex)
+type InstructionNew struct {
+	Kind      uint16
+	TypeIndex uint16
 }
 
-func DecodeNew(ip *uint16, code []byte) (kind uint16, typeIndex uint16) {
-	kind = decodeUint16(ip, code)
-	typeIndex = decodeUint16(ip, code)
-	return kind, typeIndex
+func (ins InstructionNew) Encode(code *[]byte) {
+	emitOpcode(code, New)
+	emitUint16(code, ins.Kind)
+	emitUint16(code, ins.TypeIndex)
+}
+
+func DecodeNew(ip *uint16, code []byte) (ins InstructionNew) {
+	ins.Kind = decodeUint16(ip, code)
+	ins.TypeIndex = decodeUint16(ip, code)
+	return ins
 }
 
 // InvokeDynamic
 
-func EmitInvokeDynamic(code *[]byte, name string, typeArgs []uint16, argCount uint16) {
-	emitOpcode(code, InvokeDynamic)
-	emitString(code, name)
-	emitTypeArgs(code, typeArgs)
-	emitUint16(code, argCount)
+type InstructionInvokeDynamic struct {
+	Name     string
+	TypeArgs []uint16
+	ArgCount uint16
 }
 
-func DecodeInvokeDynamic(ip *uint16, code []byte) (name string, typeArgs []uint16, argCount uint16) {
-	name = decodeString(ip, code)
-	typeArgs = decodeTypeArgs(ip, code)
-	argCount = decodeUint16(ip, code)
-	return name, typeArgs, argCount
+func (ins InstructionInvokeDynamic) Encode(code *[]byte) {
+	emitOpcode(code, InvokeDynamic)
+	emitString(code, ins.Name)
+	emitTypeArgs(code, ins.TypeArgs)
+	emitUint16(code, ins.ArgCount)
+}
+
+func DecodeInvokeDynamic(ip *uint16, code []byte) (ins InstructionInvokeDynamic) {
+	ins.Name = decodeString(ip, code)
+	ins.TypeArgs = decodeTypeArgs(ip, code)
+	ins.ArgCount = decodeUint16(ip, code)
+	return
 }
