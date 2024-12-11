@@ -51,6 +51,7 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 		returnType,
 		nil,
 		invocationPosition,
+		nil,
 	), nil
 }
 
@@ -63,6 +64,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 	returnType sema.Type,
 	typeParameterTypes *sema.TypeParameterTypeOrderedMap,
 	invocationPosition ast.HasPosition,
+	invocationTracer func(),
 ) Value {
 
 	parameterTypeCount := len(parameterTypes)
@@ -108,6 +110,10 @@ func (interpreter *Interpreter) invokeFunctionValue(
 				)
 			}
 		}
+	}
+
+	if invocationTracer != nil {
+		invocationTracer()
 	}
 
 	locationRange := LocationRange{

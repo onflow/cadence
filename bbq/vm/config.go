@@ -98,6 +98,12 @@ func (c *Config) interpreter() *interpreter.Interpreter {
 	return c.inter
 }
 
+func (c *Config) GetLocation() common.Location {
+	return nil
+}
+
+var _ interpreter.Traceable = &Config{}
+
 type ContractValueHandler func(conf *Config, location common.Location) *CompositeValue
 
 type AddressPath struct {

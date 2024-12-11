@@ -20,6 +20,7 @@ package vm
 
 import (
 	goerrors "errors"
+	"time"
 
 	"github.com/onflow/atree"
 
@@ -92,6 +93,20 @@ func (v *CompositeValue) StaticType(common.MemoryGauge) StaticType {
 }
 
 func (v *CompositeValue) GetMember(config *Config, name string) Value {
+	if config.Tracer.TracingEnabled {
+		startTime := time.Now()
+
+		defer func() {
+			config.Tracer.ReportCompositeValueGetMemberTrace(
+				config,
+				v.GetOwner(),
+				v.TypeID(),
+				v.Kind.String(),
+				name,
+				time.Since(startTime),
+			)
+		}()
+	}
 	return v.GetField(config, name)
 }
 
@@ -123,6 +138,21 @@ func (v *CompositeValue) SetMember(config *Config, name string, value Value) {
 	//	true,
 	//	nil,
 	//)
+
+	if config.Tracer.TracingEnabled {
+		startTime := time.Now()
+
+		defer func() {
+			config.Tracer.ReportCompositeValueSetMemberTrace(
+				config,
+				v.GetOwner(),
+				v.TypeID(),
+				v.Kind.String(),
+				name,
+				time.Since(startTime),
+			)
+		}()
+	}
 
 	interpreterValue := VMValueToInterpreterValue(config, value)
 
@@ -471,4 +501,8 @@ func (v *CompositeValue) forEachField(
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
+}
+
+func (v *CompositeValue) GetOwner() common.Address {
+	return common.Address(v.StorageAddress())
 }

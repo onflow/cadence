@@ -157,6 +157,7 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, _ LocationRange, name st
 							returnType,
 							invocation.TypeParameterTypes,
 							locationRange,
+							nil,
 						)
 					},
 				)

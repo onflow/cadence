@@ -1875,14 +1875,12 @@ func (interpreter *Interpreter) transferAndConvert(
 	if config.Tracer.TracingEnabled && targetType != nil {
 		startTime := time.Now()
 
-		defer func() {
-			config.Tracer.ReportTransferTrace(
-				interpreter,
-				targetType.String(),
-				valueType.String(),
-				time.Since(startTime),
-			)
-		}()
+		config.Tracer.ReportTransferTrace(
+			interpreter,
+			targetType.ID(),
+			value.StaticType(interpreter).ID(),
+			time.Since(startTime),
+		)
 	}
 
 	result := interpreter.ConvertAndBox(
@@ -4219,6 +4217,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 					returnType,
 					nil,
 					locationRange,
+					nil,
 				)
 
 				shouldContinue, ok := result.(BoolValue)

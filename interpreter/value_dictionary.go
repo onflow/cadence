@@ -556,6 +556,7 @@ func (v *DictionaryValue) ForEachKey(
 					returnType,
 					nil,
 					locationRange,
+					nil,
 				)
 
 				shouldContinue, ok := result.(BoolValue)

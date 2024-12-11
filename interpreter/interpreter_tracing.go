@@ -97,7 +97,8 @@ func (tracer Tracer) ReportArrayValueConstructTrace(
 	count int,
 	duration time.Duration,
 ) {
-	tracer.OnRecordTrace(executer,
+	tracer.OnRecordTrace(
+		executer,
 		tracingArrayPrefix+tracingConstructPostfix,
 		duration,
 		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
@@ -245,15 +246,20 @@ func prepareCompositeValueTraceAttrs(owner, typeID, kind string) []attribute.Key
 
 func (tracer Tracer) ReportCompositeValueConstructTrace(
 	executer Traceable,
-	owner string,
-	typeID string,
+	owner common.Address,
+	typeID TypeID,
 	kind string,
 	duration time.Duration,
 ) {
-	tracer.OnRecordTrace(executer,
+	tracer.OnRecordTrace(
+		executer,
 		tracingCompositePrefix+tracingConstructPostfix,
 		duration,
-		prepareCompositeValueTraceAttrs(owner, typeID, kind),
+		prepareCompositeValueTraceAttrs(
+			owner.HexWithPrefix(),
+			string(typeID),
+			kind,
+		),
 	)
 }
 
@@ -315,31 +321,41 @@ func (tracer Tracer) ReportCompositeValueConformsToStaticTypeTrace(
 
 func (tracer Tracer) ReportCompositeValueGetMemberTrace(
 	executer Traceable,
-	owner string,
-	typeID string,
+	owner common.Address,
+	typeID TypeID,
 	kind string,
 	name string,
 	duration time.Duration,
 ) {
-	tracer.OnRecordTrace(executer,
+	tracer.OnRecordTrace(
+		executer,
 		tracingCompositePrefix+tracingGetMemberPrefix+name,
 		duration,
-		prepareCompositeValueTraceAttrs(owner, typeID, kind),
+		prepareCompositeValueTraceAttrs(
+			owner.HexWithPrefix(),
+			string(typeID),
+			kind,
+		),
 	)
 }
 
 func (tracer Tracer) ReportCompositeValueSetMemberTrace(
 	executer Traceable,
-	owner string,
-	typeID string,
+	owner common.Address,
+	typeID TypeID,
 	kind string,
 	name string,
 	duration time.Duration,
 ) {
-	tracer.OnRecordTrace(executer,
+	tracer.OnRecordTrace(
+		executer,
 		tracingCompositePrefix+tracingSetMemberPrefix+name,
 		duration,
-		prepareCompositeValueTraceAttrs(owner, typeID, kind),
+		prepareCompositeValueTraceAttrs(
+			owner.HexWithPrefix(),
+			string(typeID),
+			kind,
+		),
 	)
 }
 
@@ -360,32 +376,32 @@ func (tracer Tracer) ReportCompositeValueRemoveMemberTrace(
 
 func (tracer Tracer) ReportTransferTrace(
 	executer Traceable,
-	targetType string,
-	valueType string,
+	targetType TypeID,
+	valueType TypeID,
 	duration time.Duration,
 ) {
 	tracer.OnRecordTrace(executer,
 		tracingTransferPostfix,
 		duration,
 		[]attribute.KeyValue{
-			attribute.String("target type", targetType),
-			attribute.String("value type", valueType),
+			attribute.String("target_type", string(targetType)),
+			attribute.String("value_type", string(valueType)),
 		},
 	)
 }
 
 func (tracer Tracer) ReportCastingTrace(
 	executer Traceable,
-	targetType string,
-	value string,
+	targetType TypeID,
+	valueType TypeID,
 	duration time.Duration,
 ) {
 	tracer.OnRecordTrace(executer,
 		tracingCastPostfix,
 		duration,
 		[]attribute.KeyValue{
-			attribute.String("target type", targetType),
-			attribute.String("value", value),
+			attribute.String("target_type", string(targetType)),
+			attribute.String("value_type", string(valueType)),
 		},
 	)
 }

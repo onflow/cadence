@@ -19,6 +19,7 @@
 package interpreter
 
 import (
+	"fmt"
 	"math/big"
 	"strings"
 	"time"
@@ -1212,19 +1213,6 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(invocationExpression *ast.InvocationExpression, implicitArg *Value) Value {
 	config := interpreter.SharedState.Config
 
-	// tracing
-	if config.Tracer.TracingEnabled {
-		startTime := time.Now()
-		invokedExpression := invocationExpression.InvokedExpression.String()
-		defer func() {
-			config.Tracer.ReportFunctionTrace(
-				interpreter,
-				invokedExpression,
-				time.Since(startTime),
-			)
-		}()
-	}
-
 	// interpret the invoked expression
 	result := interpreter.evalExpression(invocationExpression.InvokedExpression)
 
@@ -1294,6 +1282,36 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 
 	interpreter.reportFunctionInvocation()
 
+	// tracing
+	tracerFunc := func() {
+		if config.Tracer.TracingEnabled {
+			startTime := time.Now()
+
+			var funcName string
+			switch invokedExpr := invocationExpression.InvokedExpression.(type) {
+			case *ast.MemberExpression:
+				memberInfo, _ := elaboration.MemberExpressionMemberAccessInfo(invokedExpr)
+				name := memberInfo.Member.Identifier
+				//typ := ConvertSemaToStaticType(nil, memberInfo.Member.ContainerType)
+				funcName = fmt.Sprintf("%s.%s", memberInfo.Member.ContainerType.QualifiedString(), name)
+			case *ast.IdentifierExpression:
+				if function.FunctionType().IsConstructor {
+					funcName = returnType.QualifiedString()
+				} else {
+					funcName = invokedExpr.String()
+				}
+			default:
+				funcName = invokedExpr.String()
+			}
+
+			config.Tracer.ReportFunctionTrace(
+				interpreter,
+				funcName,
+				time.Since(startTime),
+			)
+		}
+	}
+
 	resultValue := interpreter.invokeFunctionValue(
 		function,
 		arguments,
@@ -1303,6 +1321,7 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 		returnType,
 		typeParameterTypes,
 		invocationExpression,
+		tracerFunc,
 	)
 
 	interpreter.reportInvokedFunctionReturn()
@@ -1411,8 +1430,8 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		defer func() {
 			config.Tracer.ReportCastingTrace(
 				interpreter,
-				expectedType.String(),
-				value.String(),
+				expectedType.ID(),
+				value.StaticType(interpreter).ID(),
 				time.Since(startTime),
 			)
 		}()

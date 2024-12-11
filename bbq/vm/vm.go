@@ -83,12 +83,6 @@ func NewVM(
 	return vm
 }
 
-func (vm *VM) GetLocation() common.Location {
-	return nil
-}
-
-var _ interpreter.Traceable = &VM{}
-
 func (vm *VM) push(value Value) {
 	vm.stack = append(vm.stack, value)
 }
@@ -202,13 +196,11 @@ func (vm *VM) invoke(function Value, arguments []Value) (Value, error) {
 	if vm.config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
-		defer func() {
-			vm.config.Tracer.ReportFunctionTrace(
-				vm,
-				functionValue.Function.Name,
-				time.Since(startTime),
-			)
-		}()
+		vm.config.Tracer.ReportFunctionTrace(
+			vm.config,
+			functionValue.Function.Name,
+			time.Since(startTime),
+		)
 	}
 
 	vm.pushCallFrame(functionValue, arguments)
@@ -357,7 +349,7 @@ func opGetLocal(vm *VM) {
 
 		defer func() {
 			vm.config.Tracer.ReportVariableReadTrace(
-				vm,
+				vm.config,
 				// should be Value.String() but unimplemented
 				"var",
 				time.Since(startTime),
@@ -376,7 +368,7 @@ func opSetLocal(vm *VM) {
 
 		defer func() {
 			vm.config.Tracer.ReportVariableWriteTrace(
-				vm,
+				vm.config,
 				// should be Value.String() but unimplemented
 				"var",
 				time.Since(startTime),
@@ -427,13 +419,11 @@ func opInvoke(vm *VM) {
 		if vm.config.Tracer.TracingEnabled {
 			startTime := time.Now()
 
-			defer func() {
-				vm.config.Tracer.ReportFunctionTrace(
-					vm,
-					value.Function.Name,
-					time.Since(startTime),
-				)
-			}()
+			vm.config.Tracer.ReportFunctionTrace(
+				vm.config,
+				value.Function.Name,
+				time.Since(startTime),
+			)
 		}
 
 		vm.pushCallFrame(value, arguments)
@@ -452,13 +442,11 @@ func opInvoke(vm *VM) {
 		if vm.config.Tracer.TracingEnabled {
 			startTime := time.Now()
 
-			defer func() {
-				vm.config.Tracer.ReportFunctionTrace(
-					vm,
-					value.Name,
-					time.Since(startTime),
-				)
-			}()
+			vm.config.Tracer.ReportFunctionTrace(
+				vm.config,
+				value.Name,
+				time.Since(startTime),
+			)
 		}
 
 		result := value.Function(vm.config, typeArguments, arguments...)
@@ -474,18 +462,6 @@ func opInvokeDynamic(vm *VM) {
 	funcName := callframe.getString()
 	typeArgCount := callframe.getUint16()
 	argsCount := callframe.getUint16()
-
-	if vm.config.Tracer.TracingEnabled {
-		startTime := time.Now()
-
-		defer func() {
-			vm.config.Tracer.ReportFunctionTrace(
-				vm,
-				funcName,
-				time.Since(startTime),
-			)
-		}()
-	}
 
 	stackHeight := len(vm.stack)
 	receiver := vm.stack[stackHeight-int(argsCount)-1]
@@ -515,6 +491,17 @@ func opInvokeDynamic(vm *VM) {
 	compositeType := compositeValue.CompositeType
 
 	qualifiedFuncName := commons.TypeQualifiedName(compositeType.QualifiedIdentifier, funcName)
+
+	if vm.config.Tracer.TracingEnabled {
+		startTime := time.Now()
+
+		vm.config.Tracer.ReportFunctionTrace(
+			vm.config,
+			qualifiedFuncName,
+			time.Since(startTime),
+		)
+	}
+
 	var functionValue = vm.lookupFunction(compositeType.Location, qualifiedFuncName)
 
 	parameterCount := int(functionValue.Function.ParameterCount)
@@ -541,20 +528,6 @@ func opNew(vm *VM) {
 	// decode location
 	staticType := vm.loadType()
 
-	if vm.config.Tracer.TracingEnabled {
-		startTime := time.Now()
-
-		defer func() {
-			vm.config.Tracer.ReportCompositeValueConstructTrace(
-				vm,
-				"owner",
-				staticType.String(),
-				compositeKind.String(),
-				time.Since(startTime),
-			)
-		}()
-	}
-
 	// TODO: Support inclusive-range type
 	compositeStaticType := staticType.(*interpreter.CompositeStaticType)
 
@@ -563,6 +536,21 @@ func opNew(vm *VM) {
 		compositeStaticType,
 		vm.config.Storage,
 	)
+
+	if vm.config.Tracer.TracingEnabled {
+		startTime := time.Now()
+
+		defer func() {
+			vm.config.Tracer.ReportCompositeValueConstructTrace(
+				vm.config,
+				value.GetOwner(),
+				staticType.ID(),
+				compositeKind.String(),
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	vm.push(value)
 }
 
@@ -576,52 +564,6 @@ func opSetField(vm *VM) {
 
 	fieldValue := vm.pop()
 
-	if vm.config.Tracer.TracingEnabled {
-		switch value := value.(type) {
-		case *CompositeValue:
-			startTime := time.Now()
-
-			defer func() {
-				vm.config.Tracer.ReportCompositeValueSetMemberTrace(
-					vm,
-					"owner",
-					string(value.TypeID()),
-					value.Kind.String(),
-					fieldNameStr,
-					time.Since(startTime),
-				)
-			}()
-		case *SimpleCompositeValue:
-			startTime := time.Now()
-
-			defer func() {
-				vm.config.Tracer.ReportCompositeValueGetMemberTrace(
-					vm,
-					"owner",
-					string(value.typeID),
-					value.Kind.String(),
-					fieldNameStr,
-					time.Since(startTime),
-				)
-			}()
-		case *StorageReferenceValue:
-			if v, ok := value.BorrowedType.(*interpreter.CompositeStaticType); ok {
-				startTime := time.Now()
-
-				defer func() {
-					vm.config.Tracer.ReportCompositeValueGetMemberTrace(
-						vm,
-						v.Location.String(),
-						string(v.TypeID),
-						"kind",
-						fieldNameStr,
-						time.Since(startTime),
-					)
-				}()
-			}
-		}
-	}
-
 	structValue.SetMember(vm.config, fieldNameStr, fieldValue)
 }
 
@@ -631,52 +573,6 @@ func opGetField(vm *VM) {
 
 	value := vm.pop()
 	memberAccessibleValue := value.(MemberAccessibleValue)
-
-	if vm.config.Tracer.TracingEnabled {
-		switch value := value.(type) {
-		case *CompositeValue:
-			startTime := time.Now()
-
-			defer func() {
-				vm.config.Tracer.ReportCompositeValueGetMemberTrace(
-					vm,
-					"owner",
-					string(value.TypeID()),
-					value.Kind.String(),
-					fieldNameStr,
-					time.Since(startTime),
-				)
-			}()
-		case *SimpleCompositeValue:
-			startTime := time.Now()
-
-			defer func() {
-				vm.config.Tracer.ReportCompositeValueGetMemberTrace(
-					vm,
-					"owner",
-					string(value.typeID),
-					value.Kind.String(),
-					fieldNameStr,
-					time.Since(startTime),
-				)
-			}()
-		case *StorageReferenceValue:
-			if v, ok := value.BorrowedType.(*interpreter.CompositeStaticType); ok {
-				startTime := time.Now()
-
-				defer func() {
-					vm.config.Tracer.ReportCompositeValueGetMemberTrace(
-						vm,
-						v.Location.String(),
-						string(v.TypeID),
-						"kind",
-						fieldNameStr,
-						time.Since(startTime),
-					)
-				}()
-			}
-		}
-	}
 
 	fieldValue := memberAccessibleValue.GetMember(vm.config, fieldNameStr)
 	if fieldValue == nil {
@@ -700,17 +596,16 @@ func opTransfer(vm *VM) {
 	)
 
 	valueType := transferredValue.StaticType(vm.config.MemoryGauge)
+
 	if vm.config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
-		defer func() {
-			vm.config.Tracer.ReportTransferTrace(
-				vm,
-				targetType.String(),
-				valueType.String(),
-				time.Since(startTime),
-			)
-		}()
+		vm.config.Tracer.ReportTransferTrace(
+			vm.config,
+			targetType.ID(),
+			valueType.ID(),
+			time.Since(startTime),
+		)
 	}
 
 	if !IsSubType(valueType, targetType) {
@@ -731,7 +626,7 @@ func opDestroy(vm *VM) {
 
 		defer func() {
 			vm.config.Tracer.ReportCompositeValueDestroyTrace(
-				vm,
+				vm.config,
 				"owner",
 				typeID,
 				kind,
@@ -771,9 +666,9 @@ func opCast(vm *VM) {
 
 		defer func() {
 			config.Tracer.ReportCastingTrace(
-				vm,
-				targetType.String(),
-				"some value",
+				vm.config,
+				targetType.ID(),
+				value.StaticType(config).ID(),
 				time.Since(startTime),
 			)
 		}()
@@ -792,7 +687,7 @@ func opEqual(vm *VM) {
 
 		defer func() {
 			vm.config.Tracer.ReportOpTrace(
-				vm,
+				vm.config,
 				"equal",
 				time.Since(startTime),
 			)
@@ -808,7 +703,7 @@ func opNotEqual(vm *VM) {
 
 		defer func() {
 			vm.config.Tracer.ReportOpTrace(
-				vm,
+				vm.config,
 				"not equal",
 				time.Since(startTime),
 			)
@@ -836,7 +731,7 @@ func opNewArray(vm *VM) {
 
 		defer func() {
 			vm.config.Tracer.ReportArrayValueConstructTrace(
-				vm,
+				vm.config,
 				typ.String(),
 				size,
 				time.Since(startTime),
@@ -1023,7 +918,7 @@ func (vm *VM) lookupFunction(location common.Location, name string) FunctionValu
 
 		defer func() {
 			vm.config.Tracer.ReportImportTrace(
-				vm,
+				vm.config,
 				location.String(),
 				time.Since(startTime),
 			)

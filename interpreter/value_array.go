@@ -1740,6 +1740,7 @@ func (v *ArrayValue) Filter(
 					returnType,
 					nil,
 					locationRange,
+					nil,
 				)
 
 				shouldInclude, ok := result.(BoolValue)
@@ -1835,6 +1836,7 @@ func (v *ArrayValue) Map(
 				returnType,
 				nil,
 				locationRange,
+				nil,
 			)
 
 			return result.Transfer(

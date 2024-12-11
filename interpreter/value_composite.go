@@ -142,15 +142,11 @@ func NewCompositeValue(
 				return
 			}
 
-			owner := v.GetOwner().String()
-			typeID := string(v.TypeID())
-			kind := v.Kind.String()
-
 			config.Tracer.ReportCompositeValueConstructTrace(
 				interpreter,
-				owner,
-				typeID,
-				kind,
+				v.GetOwner(),
+				v.TypeID(),
+				v.Kind.String(),
 				time.Since(startTime),
 			)
 		}()
@@ -433,16 +429,12 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
-		owner := v.GetOwner().String()
-		typeID := string(v.TypeID())
-		kind := v.Kind.String()
-
 		defer func() {
 			config.Tracer.ReportCompositeValueGetMemberTrace(
 				interpreter,
-				owner,
-				typeID,
-				kind,
+				v.GetOwner(),
+				v.TypeID(),
+				v.Kind.String(),
 				name,
 				time.Since(startTime),
 			)
@@ -706,16 +698,12 @@ func (v *CompositeValue) SetMemberWithoutTransfer(
 	if config.Tracer.TracingEnabled {
 		startTime := time.Now()
 
-		owner := v.GetOwner().String()
-		typeID := string(v.TypeID())
-		kind := v.Kind.String()
-
 		defer func() {
 			config.Tracer.ReportCompositeValueSetMemberTrace(
 				interpreter,
-				owner,
-				typeID,
-				kind,
+				v.GetOwner(),
+				v.TypeID(),
+				v.Kind.String(),
 				name,
 				time.Since(startTime),
 			)
@@ -1743,6 +1731,7 @@ func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, loc
 					returnType,
 					nil,
 					locationRange,
+					nil,
 				)
 			}
 
