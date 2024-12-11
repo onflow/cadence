@@ -55,8 +55,8 @@ func EmitDrop(code *[]byte) {
 	emit(code, Drop)
 }
 
-func EmitGetConstant(code *[]byte, index uint16) int {
-	first, second := encodeUint16(index)
+func EmitGetConstant(code *[]byte, constantIndex uint16) int {
+	first, second := encodeUint16(constantIndex)
 	return emit(code, GetConstant, first, second)
 }
 
@@ -84,22 +84,22 @@ func EmitReturnValue(code *[]byte) int {
 	return emit(code, ReturnValue)
 }
 
-func EmitGetLocal(code *[]byte, index uint16) {
-	first, second := encodeUint16(index)
+func EmitGetLocal(code *[]byte, localIndex uint16) {
+	first, second := encodeUint16(localIndex)
 	emit(code, GetLocal, first, second)
 }
 
-func EmitSetLocal(code *[]byte, index uint16) {
-	first, second := encodeUint16(index)
+func EmitSetLocal(code *[]byte, localIndex uint16) {
+	first, second := encodeUint16(localIndex)
 	emit(code, SetLocal, first, second)
 }
 
-func EmitGetGlobal(code *[]byte, index uint16) {
-	first, second := encodeUint16(index)
+func EmitGetGlobal(code *[]byte, globalIndex uint16) {
+	first, second := encodeUint16(globalIndex)
 	emit(code, GetGlobal, first, second)
 }
-func EmitSetGlobal(code *[]byte, index uint16) {
-	first, second := encodeUint16(index)
+func EmitSetGlobal(code *[]byte, globalIndex uint16) {
+	first, second := encodeUint16(globalIndex)
 	emit(code, SetGlobal, first, second)
 }
 
@@ -119,8 +119,8 @@ func EmitSetIndex(code *[]byte) {
 	emit(code, SetIndex)
 }
 
-func EmitNewArray(code *[]byte, index uint16, size uint16, isResource bool) {
-	indexFirst, indexSecond := encodeUint16(index)
+func EmitNewArray(code *[]byte, typeIndex uint16, size uint16, isResource bool) {
+	typeIndexFirst, typeIndexSecond := encodeUint16(typeIndex)
 	sizeFirst, sizeSecond := encodeUint16(size)
 	var isResourceFlag byte
 	if isResource {
@@ -129,7 +129,7 @@ func EmitNewArray(code *[]byte, index uint16, size uint16, isResource bool) {
 	emit(
 		code,
 		NewArray,
-		indexFirst, indexSecond,
+		typeIndexFirst, typeIndexSecond,
 		sizeFirst, sizeSecond,
 		isResourceFlag,
 	)
@@ -183,8 +183,8 @@ func EmitUnwrap(code *[]byte) {
 	emit(code, Unwrap)
 }
 
-func EmitCast(code *[]byte, index uint16, kind CastKind) {
-	first, second := encodeUint16(index)
+func EmitCast(code *[]byte, typeIndex uint16, kind CastKind) {
+	first, second := encodeUint16(typeIndex)
 	emit(code, Cast, first, second, byte(kind))
 }
 
@@ -192,13 +192,13 @@ func EmitDestroy(code *[]byte) {
 	emit(code, Destroy)
 }
 
-func EmitTransfer(code *[]byte, index uint16) {
-	first, second := encodeUint16(index)
+func EmitTransfer(code *[]byte, typeIndex uint16) {
+	first, second := encodeUint16(typeIndex)
 	emit(code, Transfer, first, second)
 }
 
-func EmitNewRef(code *[]byte, index uint16) {
-	first, second := encodeUint16(index)
+func EmitNewRef(code *[]byte, typeIndex uint16) {
+	first, second := encodeUint16(typeIndex)
 	emit(code, NewRef, first, second)
 }
 
@@ -229,14 +229,14 @@ func EmitInvoke(code *[]byte, typeArgs []uint16) {
 	emitTypeArgs(code, typeArgs)
 }
 
-func EmitNew(code *[]byte, kind uint16, index uint16) {
+func EmitNew(code *[]byte, kind uint16, typeIndex uint16) {
 	firstKind, secondKind := encodeUint16(kind)
-	firstIndex, secondIndex := encodeUint16(index)
+	firstTypeIndex, secondTypeIndex := encodeUint16(typeIndex)
 	emit(
 		code,
 		New,
 		firstKind, secondKind,
-		firstIndex, secondIndex,
+		firstTypeIndex, secondTypeIndex,
 	)
 }
 

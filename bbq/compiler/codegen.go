@@ -31,21 +31,21 @@ type CodeGen interface {
 	EmitFalse()
 	EmitDup()
 	EmitDrop()
-	EmitGetConstant(index uint16)
+	EmitGetConstant(constantIndex uint16)
 	EmitJump(target uint16) int
 	EmitJumpIfFalse(target uint16) int
 	PatchJump(offset int, newTarget uint16)
 	EmitReturnValue()
 	EmitReturn()
-	EmitGetLocal(index uint16)
-	EmitSetLocal(index uint16)
-	EmitGetGlobal(index uint16)
-	EmitSetGlobal(index uint16)
+	EmitGetLocal(localIndex uint16)
+	EmitSetLocal(localIndex uint16)
+	EmitGetGlobal(globalIndex uint16)
+	EmitSetGlobal(globalIndex uint16)
 	EmitGetField()
 	EmitSetField()
 	EmitGetIndex()
 	EmitSetIndex()
-	EmitNewArray(index uint16, size uint16, isResource bool)
+	EmitNewArray(typeIndex uint16, size uint16, isResource bool)
 	EmitIntAdd()
 	EmitIntSubtract()
 	EmitIntMultiply()
@@ -58,12 +58,12 @@ type CodeGen interface {
 	EmitIntGreater()
 	EmitIntGreaterOrEqual()
 	EmitUnwrap()
-	EmitCast(index uint16, kind opcode.CastKind)
+	EmitCast(typeIndex uint16, kind opcode.CastKind)
 	EmitDestroy()
-	EmitTransfer(index uint16)
-	EmitNewRef(index uint16)
+	EmitTransfer(typeIndex uint16)
+	EmitNewRef(typeIndex uint16)
 	EmitPath(domain common.PathDomain, identifier string)
-	EmitNew(kind uint16, index uint16)
+	EmitNew(kind uint16, typeIndex uint16)
 	EmitInvoke(typeArgs []uint16)
 	EmitInvokeDynamic(name string, typeArgs []uint16, argCount uint16)
 }
@@ -102,8 +102,8 @@ func (g *BytecodeGen) EmitDrop() {
 	opcode.EmitDrop(&g.code)
 }
 
-func (g *BytecodeGen) EmitGetConstant(index uint16) {
-	opcode.EmitGetConstant(&g.code, index)
+func (g *BytecodeGen) EmitGetConstant(constantIndex uint16) {
+	opcode.EmitGetConstant(&g.code, constantIndex)
 }
 
 func (g *BytecodeGen) EmitJump(target uint16) int {
@@ -126,19 +126,19 @@ func (g *BytecodeGen) EmitReturn() {
 	opcode.EmitReturn(&g.code)
 }
 
-func (g *BytecodeGen) EmitGetLocal(index uint16) {
-	opcode.EmitGetLocal(&g.code, index)
+func (g *BytecodeGen) EmitGetLocal(localIndex uint16) {
+	opcode.EmitGetLocal(&g.code, localIndex)
 }
-func (g *BytecodeGen) EmitSetLocal(index uint16) {
-	opcode.EmitSetLocal(&g.code, index)
-}
-
-func (g *BytecodeGen) EmitGetGlobal(index uint16) {
-	opcode.EmitGetGlobal(&g.code, index)
+func (g *BytecodeGen) EmitSetLocal(localIndex uint16) {
+	opcode.EmitSetLocal(&g.code, localIndex)
 }
 
-func (g *BytecodeGen) EmitSetGlobal(index uint16) {
-	opcode.EmitSetGlobal(&g.code, index)
+func (g *BytecodeGen) EmitGetGlobal(globalIndex uint16) {
+	opcode.EmitGetGlobal(&g.code, globalIndex)
+}
+
+func (g *BytecodeGen) EmitSetGlobal(globalIndex uint16) {
+	opcode.EmitSetGlobal(&g.code, globalIndex)
 }
 
 func (g *BytecodeGen) EmitGetField() {
@@ -157,8 +157,8 @@ func (g *BytecodeGen) EmitSetIndex() {
 	opcode.EmitSetIndex(&g.code)
 }
 
-func (g *BytecodeGen) EmitNewArray(index uint16, size uint16, isResource bool) {
-	opcode.EmitNewArray(&g.code, index, size, isResource)
+func (g *BytecodeGen) EmitNewArray(typeIndex uint16, size uint16, isResource bool) {
+	opcode.EmitNewArray(&g.code, typeIndex, size, isResource)
 }
 
 func (g *BytecodeGen) EmitIntAdd() {
@@ -209,28 +209,28 @@ func (g *BytecodeGen) EmitUnwrap() {
 	opcode.EmitUnwrap(&g.code)
 }
 
-func (g *BytecodeGen) EmitCast(index uint16, kind opcode.CastKind) {
-	opcode.EmitCast(&g.code, index, kind)
+func (g *BytecodeGen) EmitCast(typeIndex uint16, kind opcode.CastKind) {
+	opcode.EmitCast(&g.code, typeIndex, kind)
 }
 
 func (g *BytecodeGen) EmitDestroy() {
 	opcode.EmitDestroy(&g.code)
 }
 
-func (g *BytecodeGen) EmitTransfer(index uint16) {
-	opcode.EmitTransfer(&g.code, index)
+func (g *BytecodeGen) EmitTransfer(typeIndex uint16) {
+	opcode.EmitTransfer(&g.code, typeIndex)
 }
 
-func (g *BytecodeGen) EmitNewRef(index uint16) {
-	opcode.EmitNewRef(&g.code, index)
+func (g *BytecodeGen) EmitNewRef(typeIndex uint16) {
+	opcode.EmitNewRef(&g.code, typeIndex)
 }
 
 func (g *BytecodeGen) EmitPath(domain common.PathDomain, identifier string) {
 	opcode.EmitPath(&g.code, domain, identifier)
 }
 
-func (g *BytecodeGen) EmitNew(kind uint16, index uint16) {
-	opcode.EmitNew(&g.code, kind, index)
+func (g *BytecodeGen) EmitNew(kind uint16, typeIndex uint16) {
+	opcode.EmitNew(&g.code, kind, typeIndex)
 }
 
 func (g *BytecodeGen) EmitInvoke(typeArgs []uint16) {
