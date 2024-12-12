@@ -19,7 +19,6 @@
 package bbq
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
 
@@ -53,8 +52,7 @@ func (p *BytecodePrinter) printFunction(function *Function) {
 }
 
 func (p *BytecodePrinter) printCode(code []byte) {
-	reader := bytes.NewReader(code)
-	err := opcode.PrintInstructions(&p.stringBuilder, reader)
+	err := opcode.PrintInstructions(&p.stringBuilder, code)
 	if err != nil {
 		// TODO: propagate error
 		panic(err)

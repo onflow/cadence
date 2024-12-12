@@ -311,15 +311,15 @@ func opReturn(vm *VM) {
 }
 
 func opJump(vm *VM) {
-	target := vm.getUint16()
-	vm.ip = target
+	ins := opcode.DecodeJump(&vm.ip, vm.callFrame.function.Code)
+	vm.ip = ins.Target
 }
 
 func opJumpIfFalse(vm *VM) {
-	target := vm.getUint16()
+	ins := opcode.DecodeJumpIfFalse(&vm.ip, vm.callFrame.function.Code)
 	value := vm.pop().(BoolValue)
 	if !value {
-		vm.ip = target
+		vm.ip = ins.Target
 	}
 }
 
@@ -361,40 +361,39 @@ func opFalse(vm *VM) {
 
 func opGetConstant(vm *VM) {
 	callFrame := vm.callFrame
-	index := vm.getUint16()
-	constant := callFrame.executable.Constants[index]
+	ins := opcode.DecodeGetConstant(&vm.ip, callFrame.function.Code)
+	constant := callFrame.executable.Constants[ins.ConstantIndex]
 	if constant == nil {
-		constant = vm.initializeConstant(index)
+		constant = vm.initializeConstant(ins.ConstantIndex)
 	}
 	vm.push(constant)
 }
 
 func opGetLocal(vm *VM) {
 	callFrame := vm.callFrame
-	index := vm.getUint16()
-	absoluteIndex := callFrame.localsOffset + index
+	ins := opcode.DecodeGetLocal(&vm.ip, callFrame.function.Code)
+	absoluteIndex := callFrame.localsOffset + ins.LocalIndex
 	local := vm.locals[absoluteIndex]
 	vm.push(local)
 }
 
 func opSetLocal(vm *VM) {
 	callFrame := vm.callFrame
-	index := vm.getUint16()
-
-	absoluteIndex := callFrame.localsOffset + index
+	ins := opcode.DecodeSetLocal(&vm.ip, callFrame.function.Code)
+	absoluteIndex := callFrame.localsOffset + ins.LocalIndex
 	vm.locals[absoluteIndex] = vm.pop()
 }
 
 func opGetGlobal(vm *VM) {
 	callFrame := vm.callFrame
-	index := vm.getUint16()
-	vm.push(callFrame.executable.Globals[index])
+	ins := opcode.DecodeGetGlobal(&vm.ip, callFrame.function.Code)
+	vm.push(callFrame.executable.Globals[ins.GlobalIndex])
 }
 
 func opSetGlobal(vm *VM) {
 	callFrame := vm.callFrame
-	index := vm.getUint16()
-	callFrame.executable.Globals[index] = vm.pop()
+	ins := opcode.DecodeSetGlobal(&vm.ip, callFrame.function.Code)
+	callFrame.executable.Globals[ins.GlobalIndex] = vm.pop()
 }
 
 func opSetIndex(vm *VM) {
@@ -416,7 +415,8 @@ func opInvoke(vm *VM) {
 	value := vm.pop()
 	stackHeight := len(vm.stack)
 
-	typeArgCount := vm.getUint16()
+	callFrame := vm.callFrame
+	ins := opcode.DecodeInvoke(&vm.ip, callFrame.function.Code)
 
 	switch value := value.(type) {
 	case FunctionValue:
@@ -424,12 +424,13 @@ func opInvoke(vm *VM) {
 		arguments := vm.stack[stackHeight-parameterCount:]
 		vm.pushCallFrame(value, arguments)
 		vm.dropN(parameterCount)
+
 	case NativeFunctionValue:
 		parameterCount := value.ParameterCount
 
 		var typeArguments []StaticType
-		for i := 0; i < int(typeArgCount); i++ {
-			typeArg := vm.loadType()
+		for _, index := range ins.TypeArgs {
+			typeArg := vm.loadType(index)
 			typeArguments = append(typeArguments, typeArg)
 		}
 
@@ -438,23 +439,24 @@ func opInvoke(vm *VM) {
 		result := value.Function(vm.config, typeArguments, arguments...)
 		vm.dropN(parameterCount)
 		vm.push(result)
+
 	default:
 		panic(errors.NewUnreachableError())
 	}
 }
 
 func opInvokeDynamic(vm *VM) {
-	funcName := vm.getString()
-	typeArgCount := vm.getUint16()
-	argsCount := vm.getUint16()
+	callFrame := vm.callFrame
+
+	ins := opcode.DecodeInvokeDynamic(&vm.ip, callFrame.function.Code)
 
 	stackHeight := len(vm.stack)
-	receiver := vm.stack[stackHeight-int(argsCount)-1]
+	receiver := vm.stack[stackHeight-int(ins.ArgCount)-1]
 
 	// TODO:
 	var typeArguments []StaticType
-	for i := 0; i < int(typeArgCount); i++ {
-		typeArg := vm.loadType()
+	for _, index := range ins.TypeArgs {
+		typeArg := vm.loadType(index)
 		typeArguments = append(typeArguments, typeArg)
 	}
 	// TODO: Just to make the linter happy
@@ -475,7 +477,7 @@ func opInvokeDynamic(vm *VM) {
 	compositeValue := receiver.(*CompositeValue)
 	compositeType := compositeValue.CompositeType
 
-	qualifiedFuncName := commons.TypeQualifiedName(compositeType.QualifiedIdentifier, funcName)
+	qualifiedFuncName := commons.TypeQualifiedName(compositeType.QualifiedIdentifier, ins.Name)
 	var functionValue = vm.lookupFunction(compositeType.Location, qualifiedFuncName)
 
 	parameterCount := int(functionValue.Function.ParameterCount)
@@ -494,11 +496,11 @@ func opDup(vm *VM) {
 }
 
 func opNew(vm *VM) {
-	kind := vm.getUint16()
-	compositeKind := common.CompositeKind(kind)
+	ins := opcode.DecodeNew(&vm.ip, vm.callFrame.function.Code)
+	compositeKind := common.CompositeKind(ins.Kind)
 
 	// decode location
-	staticType := vm.loadType()
+	staticType := vm.loadType(ins.TypeIndex)
 
 	// TODO: Support inclusive-range type
 	compositeStaticType := staticType.(*interpreter.CompositeStaticType)
@@ -541,7 +543,9 @@ func opGetField(vm *VM) {
 }
 
 func opTransfer(vm *VM) {
-	targetType := vm.loadType()
+	ins := opcode.DecodeTransfer(&vm.ip, vm.callFrame.function.Code)
+
+	targetType := vm.loadType(ins.TypeIndex)
 	value := vm.peek()
 
 	config := vm.config
@@ -566,22 +570,23 @@ func opDestroy(vm *VM) {
 }
 
 func opPath(vm *VM) {
-	domain := common.PathDomain(vm.getByte())
-	identifier := vm.getString()
+	ins := opcode.DecodePath(&vm.ip, vm.callFrame.function.Code)
 	value := PathValue{
-		Domain:     domain,
-		Identifier: identifier,
+		Domain:     ins.Domain,
+		Identifier: ins.Identifier,
 	}
 	vm.push(value)
 }
 
 func opCast(vm *VM) {
 	value := vm.pop()
-	targetType := vm.loadType()
-	castKind := opcode.CastKind(vm.getByte())
+
+	ins := opcode.DecodeCast(&vm.ip, vm.callFrame.function.Code)
+
+	targetType := vm.loadType(ins.TypeIndex)
 
 	// TODO:
-	_ = castKind
+	_ = ins.Kind
 	_ = targetType
 
 	vm.push(value)
@@ -610,24 +615,26 @@ func opUnwrap(vm *VM) {
 }
 
 func opNewArray(vm *VM) {
-	typ := vm.loadType().(interpreter.ArrayStaticType)
-	size := int(vm.getUint16())
-	isResourceKinded := vm.getBool()
+	ins := opcode.DecodeNewArray(&vm.ip, vm.callFrame.function.Code)
 
-	elements := make([]Value, size)
+	typ := vm.loadType(ins.TypeIndex).(interpreter.ArrayStaticType)
+
+	elements := make([]Value, ins.Size)
 
 	// Must be inserted in the reverse,
-	//since the stack if FILO.
-	for i := size - 1; i >= 0; i-- {
+	// since the stack if FILO.
+	for i := int(ins.Size) - 1; i >= 0; i-- {
 		elements[i] = vm.pop()
 	}
 
-	array := NewArrayValue(vm.config, typ, isResourceKinded, elements...)
+	array := NewArrayValue(vm.config, typ, ins.IsResource, elements...)
 	vm.push(array)
 }
 
 func opNewRef(vm *VM) {
-	borrowedType := vm.loadType().(*interpreter.ReferenceStaticType)
+	ins := opcode.DecodeNewRef(&vm.ip, vm.callFrame.function.Code)
+
+	borrowedType := vm.loadType(ins.TypeIndex).(*interpreter.ReferenceStaticType)
 	value := vm.pop()
 
 	ref := NewEphemeralReferenceValue(
@@ -751,10 +758,8 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 	return value
 }
 
-func (vm *VM) loadType() StaticType {
-	callframe := vm.callFrame
-	index := vm.getUint16()
-	staticType := callframe.executable.StaticTypes[index]
+func (vm *VM) loadType(index uint16) StaticType {
+	staticType := vm.callFrame.executable.StaticTypes[index]
 	if staticType == nil {
 		// TODO: Remove. Should never reach because of the
 		// pre loading-decoding of types.
@@ -815,32 +820,6 @@ func (vm *VM) lookupFunction(location common.Location, name string) FunctionValu
 
 func (vm *VM) StackSize() int {
 	return len(vm.stack)
-}
-
-func (vm *VM) getUint16() uint16 {
-	first := vm.callFrame.function.Code[vm.ip]
-	last := vm.callFrame.function.Code[vm.ip+1]
-	vm.ip += 2
-	return uint16(first)<<8 | uint16(last)
-}
-
-func (vm *VM) getByte() byte {
-	byt := vm.callFrame.function.Code[vm.ip]
-	vm.ip++
-	return byt
-}
-
-func (vm *VM) getBool() bool {
-	byt := vm.callFrame.function.Code[vm.ip]
-	vm.ip++
-	return byt == 1
-}
-
-func (vm *VM) getString() string {
-	strLen := vm.getUint16()
-	str := string(vm.callFrame.function.Code[vm.ip : vm.ip+strLen])
-	vm.ip += strLen
-	return str
 }
 
 func getReceiver[T any](config *Config, receiver Value) T {

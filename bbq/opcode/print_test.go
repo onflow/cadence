@@ -19,7 +19,6 @@
 package opcode
 
 import (
-	"bytes"
 	"strings"
 	"testing"
 
@@ -58,31 +57,30 @@ func TestPrintRecursionFib(t *testing.T) {
 		byte(ReturnValue),
 	}
 
-	const expected = `GetLocal 0
-GetConstant 0
+	const expected = `GetLocal localIndex:0
+GetConstant constantIndex:0
 IntLess
-JumpIfFalse 14
-GetLocal 0
+JumpIfFalse target:14
+GetLocal localIndex:0
 ReturnValue
-GetLocal 0
-GetConstant 1
+GetLocal localIndex:0
+GetConstant constantIndex:1
 IntSubtract
-Transfer 0
-GetGlobal 0
-Invoke typeParamCount:0 typeParams:[]
-GetLocal 0
-GetConstant 0
+Transfer typeIndex:0
+GetGlobal globalIndex:0
+Invoke typeArgs:[]
+GetLocal localIndex:0
+GetConstant constantIndex:0
 IntSubtract
-Transfer 0
-GetGlobal 0
-Invoke typeParamCount:0 typeParams:[]
+Transfer typeIndex:0
+GetGlobal globalIndex:0
+Invoke typeArgs:[]
 IntAdd
 ReturnValue
 `
 
 	var builder strings.Builder
-	reader := bytes.NewReader(code)
-	err := PrintInstructions(&builder, reader)
+	err := PrintInstructions(&builder, code)
 	require.NoError(t, err)
 
 	assert.Equal(t, expected, builder.String())
@@ -92,28 +90,32 @@ func TestPrintInstruction(t *testing.T) {
 	t.Parallel()
 
 	instructions := map[string][]byte{
-		"GetConstant 258": {byte(GetConstant), 1, 2},
-		"GetLocal 258":    {byte(GetLocal), 1, 2},
-		"SetLocal 258":    {byte(SetLocal), 1, 2},
-		"GetGlobal 258":   {byte(GetGlobal), 1, 2},
-		"SetGlobal 258":   {byte(SetGlobal), 1, 2},
-		"Jump 258":        {byte(Jump), 1, 2},
-		"JumpIfFalse 258": {byte(JumpIfFalse), 1, 2},
-		"Transfer 258":    {byte(Transfer), 1, 2},
+		"GetConstant constantIndex:258": {byte(GetConstant), 1, 2},
+		"GetLocal localIndex:258":       {byte(GetLocal), 1, 2},
+		"SetLocal localIndex:258":       {byte(SetLocal), 1, 2},
+		"GetGlobal globalIndex:258":     {byte(GetGlobal), 1, 2},
+		"SetGlobal globalIndex:258":     {byte(SetGlobal), 1, 2},
+		"Jump target:258":               {byte(Jump), 1, 2},
+		"JumpIfFalse target:258":        {byte(JumpIfFalse), 1, 2},
+		"Transfer typeIndex:258":        {byte(Transfer), 1, 2},
 
 		"New kind:258 typeIndex:772": {byte(New), 1, 2, 3, 4},
 
-		"Cast typeIndex:258 castKind:3": {byte(Cast), 1, 2, 3},
+		"Cast typeIndex:258 kind:3": {byte(Cast), 1, 2, 3},
 
 		`Path domain:1 identifier:"hello"`: {byte(Path), 1, 0, 5, 'h', 'e', 'l', 'l', 'o'},
 
-		`InvokeDynamic funcName:"abc" typeParamCount:2 typeParams:[772, 1286] argsCount:1800`: {
+		`InvokeDynamic name:"abc" typeArgs:[772 1286] argCount:1800`: {
 			byte(InvokeDynamic), 0, 3, 'a', 'b', 'c', 0, 2, 3, 4, 5, 6, 7, 8,
 		},
 
-		"Invoke typeParamCount:2 typeParams:[772, 1286]": {
+		"Invoke typeArgs:[772 1286]": {
 			byte(Invoke), 0, 2, 3, 4, 5, 6,
 		},
+
+		"NewRef typeIndex:258": {byte(NewRef), 1, 2},
+
+		"NewArray typeIndex:258 size:772 isResource:true": {byte(NewArray), 1, 2, 3, 4, 1},
 
 		"Unknown":           {byte(Unknown)},
 		"Return":            {byte(Return)},
@@ -134,9 +136,6 @@ func TestPrintInstruction(t *testing.T) {
 		"True":              {byte(True)},
 		"False":             {byte(False)},
 		"Nil":               {byte(Nil)},
-		"NewArray":          {byte(NewArray)},
-		"NewDictionary":     {byte(NewDictionary)},
-		"NewRef":            {byte(NewRef)},
 		"GetField":          {byte(GetField)},
 		"SetField":          {byte(SetField)},
 		"SetIndex":          {byte(SetIndex)},
@@ -145,15 +144,12 @@ func TestPrintInstruction(t *testing.T) {
 		"Dup":               {byte(Dup)},
 	}
 
-	for expected, instruction := range instructions {
+	for expected, code := range instructions {
 		t.Run(expected, func(t *testing.T) {
 
-			var builder strings.Builder
-			reader := bytes.NewReader(instruction)
-			err := PrintInstruction(&builder, reader)
-			require.NoError(t, err)
-			assert.Equal(t, 0, reader.Len())
-			assert.Equal(t, expected, builder.String())
+			var ip uint16
+			instruction := DecodeInstruction(&ip, code)
+			assert.Equal(t, expected, instruction.String())
 		})
 	}
 }

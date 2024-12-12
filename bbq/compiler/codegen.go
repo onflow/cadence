@@ -20,223 +20,68 @@ package compiler
 
 import (
 	"github.com/onflow/cadence/bbq/opcode"
-	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 )
 
 type CodeGen interface {
 	Offset() int
 	Code() interface{}
-	EmitNil()
-	EmitTrue()
-	EmitFalse()
-	EmitDup()
-	EmitDrop()
-	EmitGetConstant(constantIndex uint16)
-	EmitJump(target uint16) int
-	EmitJumpIfFalse(target uint16) int
+	Emit(instruction opcode.Instruction)
 	PatchJump(offset int, newTarget uint16)
-	EmitReturnValue()
-	EmitReturn()
-	EmitGetLocal(localIndex uint16)
-	EmitSetLocal(localIndex uint16)
-	EmitGetGlobal(globalIndex uint16)
-	EmitSetGlobal(globalIndex uint16)
-	EmitGetField()
-	EmitSetField()
-	EmitGetIndex()
-	EmitSetIndex()
-	EmitNewArray(typeIndex uint16, size uint16, isResource bool)
-	EmitIntAdd()
-	EmitIntSubtract()
-	EmitIntMultiply()
-	EmitIntDivide()
-	EmitIntMod()
-	EmitEqual()
-	EmitNotEqual()
-	EmitIntLess()
-	EmitIntLessOrEqual()
-	EmitIntGreater()
-	EmitIntGreaterOrEqual()
-	EmitUnwrap()
-	EmitCast(typeIndex uint16, kind opcode.CastKind)
-	EmitDestroy()
-	EmitTransfer(typeIndex uint16)
-	EmitNewRef(typeIndex uint16)
-	EmitPath(domain common.PathDomain, identifier string)
-	EmitNew(kind uint16, typeIndex uint16)
-	EmitInvoke(typeArgs []uint16)
-	EmitInvokeDynamic(name string, typeArgs []uint16, argCount uint16)
 }
 
-type BytecodeGen struct {
+// ByteCodeGen is a CodeGen implementation that emits bytecode
+type ByteCodeGen struct {
 	code []byte
 }
 
-var _ CodeGen = &BytecodeGen{}
+var _ CodeGen = &ByteCodeGen{}
 
-func (g *BytecodeGen) Offset() int {
+func (g *ByteCodeGen) Offset() int {
 	return len(g.code)
 }
 
-func (g *BytecodeGen) Code() interface{} {
+func (g *ByteCodeGen) Code() interface{} {
 	return g.code
 }
 
-func (g *BytecodeGen) EmitNil() {
-	opcode.EmitNil(&g.code)
+func (g *ByteCodeGen) Emit(instruction opcode.Instruction) {
+	instruction.Encode(&g.code)
 }
 
-func (g *BytecodeGen) EmitTrue() {
-	opcode.EmitTrue(&g.code)
-}
-
-func (g *BytecodeGen) EmitFalse() {
-	opcode.EmitFalse(&g.code)
-}
-
-func (g *BytecodeGen) EmitDup() {
-	opcode.EmitDup(&g.code)
-}
-
-func (g *BytecodeGen) EmitDrop() {
-	opcode.EmitDrop(&g.code)
-}
-
-func (g *BytecodeGen) EmitGetConstant(constantIndex uint16) {
-	opcode.EmitGetConstant(&g.code, constantIndex)
-}
-
-func (g *BytecodeGen) EmitJump(target uint16) int {
-	return opcode.EmitJump(&g.code, target)
-}
-
-func (g *BytecodeGen) EmitJumpIfFalse(target uint16) int {
-	return opcode.EmitJumpIfFalse(&g.code, target)
-}
-
-func (g *BytecodeGen) PatchJump(offset int, newTarget uint16) {
+func (g *ByteCodeGen) PatchJump(offset int, newTarget uint16) {
 	opcode.PatchJump(&g.code, offset, newTarget)
 }
 
-func (g *BytecodeGen) EmitReturnValue() {
-	opcode.EmitReturnValue(&g.code)
+// InstructionCodeGen is a CodeGen implementation that emits opcode.Instruction
+type InstructionCodeGen struct {
+	code []opcode.Instruction
 }
 
-func (g *BytecodeGen) EmitReturn() {
-	opcode.EmitReturn(&g.code)
+var _ CodeGen = &InstructionCodeGen{}
+
+func (g *InstructionCodeGen) Offset() int {
+	return len(g.code)
 }
 
-func (g *BytecodeGen) EmitGetLocal(localIndex uint16) {
-	opcode.EmitGetLocal(&g.code, localIndex)
-}
-func (g *BytecodeGen) EmitSetLocal(localIndex uint16) {
-	opcode.EmitSetLocal(&g.code, localIndex)
+func (g *InstructionCodeGen) Code() interface{} {
+	return g.code
 }
 
-func (g *BytecodeGen) EmitGetGlobal(globalIndex uint16) {
-	opcode.EmitGetGlobal(&g.code, globalIndex)
+func (g *InstructionCodeGen) Emit(instruction opcode.Instruction) {
+	g.code = append(g.code, instruction)
 }
 
-func (g *BytecodeGen) EmitSetGlobal(globalIndex uint16) {
-	opcode.EmitSetGlobal(&g.code, globalIndex)
-}
+func (g *InstructionCodeGen) PatchJump(offset int, newTarget uint16) {
+	switch ins := g.code[offset].(type) {
+	case opcode.InstructionJump:
+		ins.Target = newTarget
+		g.code[offset] = ins
 
-func (g *BytecodeGen) EmitGetField() {
-	opcode.EmitGetField(&g.code)
-}
+	case opcode.InstructionJumpIfFalse:
+		ins.Target = newTarget
+		g.code[offset] = ins
+	}
 
-func (g *BytecodeGen) EmitSetField() {
-	opcode.EmitSetField(&g.code)
-}
-
-func (g *BytecodeGen) EmitGetIndex() {
-	opcode.EmitGetIndex(&g.code)
-}
-
-func (g *BytecodeGen) EmitSetIndex() {
-	opcode.EmitSetIndex(&g.code)
-}
-
-func (g *BytecodeGen) EmitNewArray(typeIndex uint16, size uint16, isResource bool) {
-	opcode.EmitNewArray(&g.code, typeIndex, size, isResource)
-}
-
-func (g *BytecodeGen) EmitIntAdd() {
-	opcode.EmitIntAdd(&g.code)
-}
-
-func (g *BytecodeGen) EmitIntSubtract() {
-	opcode.EmitIntSubtract(&g.code)
-}
-
-func (g *BytecodeGen) EmitIntMultiply() {
-	opcode.EmitIntMultiply(&g.code)
-}
-
-func (g *BytecodeGen) EmitIntDivide() {
-	opcode.EmitIntDivide(&g.code)
-}
-
-func (g *BytecodeGen) EmitIntMod() {
-	opcode.EmitIntMod(&g.code)
-}
-
-func (g *BytecodeGen) EmitEqual() {
-	opcode.EmitEqual(&g.code)
-}
-
-func (g *BytecodeGen) EmitNotEqual() {
-	opcode.EmitNotEqual(&g.code)
-}
-
-func (g *BytecodeGen) EmitIntLess() {
-	opcode.EmitIntLess(&g.code)
-}
-
-func (g *BytecodeGen) EmitIntLessOrEqual() {
-	opcode.EmitIntLessOrEqual(&g.code)
-}
-
-func (g *BytecodeGen) EmitIntGreater() {
-	opcode.EmitIntGreater(&g.code)
-}
-
-func (g *BytecodeGen) EmitIntGreaterOrEqual() {
-	opcode.EmitIntGreaterOrEqual(&g.code)
-}
-
-func (g *BytecodeGen) EmitUnwrap() {
-	opcode.EmitUnwrap(&g.code)
-}
-
-func (g *BytecodeGen) EmitCast(typeIndex uint16, kind opcode.CastKind) {
-	opcode.EmitCast(&g.code, typeIndex, kind)
-}
-
-func (g *BytecodeGen) EmitDestroy() {
-	opcode.EmitDestroy(&g.code)
-}
-
-func (g *BytecodeGen) EmitTransfer(typeIndex uint16) {
-	opcode.EmitTransfer(&g.code, typeIndex)
-}
-
-func (g *BytecodeGen) EmitNewRef(typeIndex uint16) {
-	opcode.EmitNewRef(&g.code, typeIndex)
-}
-
-func (g *BytecodeGen) EmitPath(domain common.PathDomain, identifier string) {
-	opcode.EmitPath(&g.code, domain, identifier)
-}
-
-func (g *BytecodeGen) EmitNew(kind uint16, typeIndex uint16) {
-	opcode.EmitNew(&g.code, kind, typeIndex)
-}
-
-func (g *BytecodeGen) EmitInvoke(typeArgs []uint16) {
-	opcode.EmitInvoke(&g.code, typeArgs)
-}
-
-func (g *BytecodeGen) EmitInvokeDynamic(name string, typeArgs []uint16, argCount uint16) {
-	opcode.EmitInvokeDynamic(&g.code, name, typeArgs, argCount)
+	panic(errors.NewUnreachableError())
 }
