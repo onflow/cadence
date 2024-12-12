@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -380,10 +381,10 @@ func singleIdentifierLocationResolver(t testing.TB) func(
 	}
 }
 
-func printProgram(name string, program *bbq.Program) {
-	byteCodePrinter := &bbq.BytecodePrinter{}
+func printProgram(name string, program *bbq.Program[opcode.Instruction]) {
+	printer := bbq.NewInstructionsProgramPrinter()
 	fmt.Println("===================", name, "===================")
-	fmt.Println(byteCodePrinter.PrintProgram(program))
+	fmt.Println(printer.PrintProgram(program))
 }
 
 func baseValueActivation(common.Location) *sema.VariableActivation {
@@ -400,7 +401,7 @@ func baseValueActivation(common.Location) *sema.VariableActivation {
 }
 
 type compiledProgram struct {
-	*bbq.Program
+	*bbq.Program[opcode.Instruction]
 	*sema.Elaboration
 }
 
@@ -409,7 +410,7 @@ func compileCode(
 	code string,
 	location common.Location,
 	programs map[common.Location]compiledProgram,
-) *bbq.Program {
+) *bbq.Program[opcode.Instruction] {
 	checker := parseAndCheck(t, code, location, programs)
 
 	program := compile(t, checker, programs)
@@ -452,10 +453,14 @@ func parseAndCheck(
 	return checker
 }
 
-func compile(t testing.TB, checker *sema.Checker, programs map[common.Location]compiledProgram) *bbq.Program {
-	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+func compile(
+	t testing.TB,
+	checker *sema.Checker,
+	programs map[common.Location]compiledProgram,
+) *bbq.Program[opcode.Instruction] {
+	comp := compiler.NewInstructionCompiler(checker.Program, checker.Elaboration)
 	comp.Config.LocationHandler = singleIdentifierLocationResolver(t)
-	comp.Config.ImportHandler = func(location common.Location) *bbq.Program {
+	comp.Config.ImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction] {
 		imported, ok := programs[location]
 		if !ok {
 			return nil

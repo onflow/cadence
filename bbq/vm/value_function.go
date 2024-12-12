@@ -22,11 +22,12 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/errors"
 )
 
 type FunctionValue struct {
-	Function   *bbq.Function
+	Function   *bbq.Function[opcode.Instruction]
 	Executable *ExecutableProgram
 }
 

@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/test_utils/runtime_utils"
@@ -147,7 +148,7 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 		contractsAddress.HexWithPrefix(),
 	)
 
-	importHandler := func(location common.Location) *bbq.Program {
+	importHandler := func(location common.Location) *bbq.Program[opcode.Instruction] {
 		switch location {
 		case barLocation:
 			return barProgram

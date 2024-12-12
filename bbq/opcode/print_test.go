@@ -80,7 +80,7 @@ ReturnValue
 `
 
 	var builder strings.Builder
-	err := PrintInstructions(&builder, code)
+	err := PrintBytecode(&builder, code)
 	require.NoError(t, err)
 
 	assert.Equal(t, expected, builder.String())

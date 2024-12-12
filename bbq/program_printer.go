@@ -29,11 +29,24 @@ import (
 	"github.com/onflow/cadence/interpreter"
 )
 
-type BytecodePrinter struct {
+type ProgramPrinter[E any] struct {
 	stringBuilder strings.Builder
+	codePrinter   func(builder *strings.Builder, code []E) error
 }
 
-func (p *BytecodePrinter) PrintProgram(program *Program) string {
+func NewBytecodeProgramPrinter() *ProgramPrinter[byte] {
+	return &ProgramPrinter[byte]{
+		codePrinter: opcode.PrintBytecode,
+	}
+}
+
+func NewInstructionsProgramPrinter() *ProgramPrinter[opcode.Instruction] {
+	return &ProgramPrinter[opcode.Instruction]{
+		codePrinter: opcode.PrintInstructions,
+	}
+}
+
+func (p *ProgramPrinter[E]) PrintProgram(program *Program[E]) string {
 	p.printImports(program.Imports)
 	p.printConstantPool(program.Constants)
 	p.printTypePool(program.Types)
@@ -46,27 +59,23 @@ func (p *BytecodePrinter) PrintProgram(program *Program) string {
 	return p.stringBuilder.String()
 }
 
-func (p *BytecodePrinter) printFunction(function *Function) {
+func (p *ProgramPrinter[E]) printFunction(function *Function[E]) {
 	p.stringBuilder.WriteString("-- " + function.Name + " --\n")
-	p.printCode(function.Code)
-}
-
-func (p *BytecodePrinter) printCode(code []byte) {
-	err := opcode.PrintInstructions(&p.stringBuilder, code)
+	err := p.codePrinter(&p.stringBuilder, function.Code)
 	if err != nil {
 		// TODO: propagate error
 		panic(err)
 	}
 }
 
-func (*BytecodePrinter) getIntOperand(codes []byte, i int) (operand int, endIndex int) {
+func (*ProgramPrinter[_]) getIntOperand(codes []byte, i int) (operand int, endIndex int) {
 	first := codes[i+1]
 	last := codes[i+2]
 	operand = int(uint16(first)<<8 | uint16(last))
 	return operand, i + 2
 }
 
-func (p *BytecodePrinter) printConstantPool(constants []*Constant) {
+func (p *ProgramPrinter[_]) printConstantPool(constants []*Constant) {
 	p.stringBuilder.WriteString("-- Constant Pool --\n")
 
 	for index, constant := range constants {
@@ -94,7 +103,7 @@ func (p *BytecodePrinter) printConstantPool(constants []*Constant) {
 	p.stringBuilder.WriteRune('\n')
 }
 
-func (p *BytecodePrinter) printTypePool(types [][]byte) {
+func (p *ProgramPrinter[_]) printTypePool(types [][]byte) {
 	p.stringBuilder.WriteString("-- Type Pool --\n")
 
 	for index, typeBytes := range types {
@@ -114,7 +123,7 @@ func (p *BytecodePrinter) printTypePool(types [][]byte) {
 	p.stringBuilder.WriteRune('\n')
 }
 
-func (p *BytecodePrinter) printImports(imports []*Import) {
+func (p *ProgramPrinter[_]) printImports(imports []*Import) {
 	p.stringBuilder.WriteString("-- Imports --\n")
 	for _, impt := range imports {
 		location := impt.Location

@@ -23,8 +23,12 @@ import (
 	"strings"
 )
 
-func PrintInstructions(builder *strings.Builder, code []byte) error {
+func PrintBytecode(builder *strings.Builder, code []byte) error {
 	instructions := DecodeInstructions(code)
+	return PrintInstructions(builder, instructions)
+}
+
+func PrintInstructions(builder *strings.Builder, instructions []Instruction) error {
 	for _, instruction := range instructions {
 		_, err := fmt.Fprint(builder, instruction)
 		if err != nil {

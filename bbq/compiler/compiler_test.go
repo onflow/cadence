@@ -43,7 +43,7 @@ func TestCompileRecursionFib(t *testing.T) {
   `)
 	require.NoError(t, err)
 
-	compiler := NewCompiler(checker.Program, checker.Elaboration)
+	compiler := NewBytecodeCompiler(checker.Program, checker.Elaboration)
 	program := compiler.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -75,7 +75,7 @@ func TestCompileRecursionFib(t *testing.T) {
 			byte(opcode.IntAdd),
 			byte(opcode.ReturnValue),
 		},
-		compiler.functions[0].codeGen.Code(),
+		compiler.ExportFunctions()[0].Code,
 	)
 
 	require.Equal(t,
@@ -114,7 +114,7 @@ func TestCompileImperativeFib(t *testing.T) {
   `)
 	require.NoError(t, err)
 
-	compiler := NewCompiler(checker.Program, checker.Elaboration)
+	compiler := NewBytecodeCompiler(checker.Program, checker.Elaboration)
 	program := compiler.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -167,7 +167,7 @@ func TestCompileImperativeFib(t *testing.T) {
 			byte(opcode.GetLocal), 0, 3,
 			byte(opcode.ReturnValue),
 		},
-		compiler.functions[0].codeGen.Code(),
+		compiler.ExportFunctions()[0].Code,
 	)
 
 	require.Equal(t,
@@ -203,7 +203,7 @@ func TestCompileBreak(t *testing.T) {
   `)
 	require.NoError(t, err)
 
-	compiler := NewCompiler(checker.Program, checker.Elaboration)
+	compiler := NewBytecodeCompiler(checker.Program, checker.Elaboration)
 	program := compiler.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -235,7 +235,7 @@ func TestCompileBreak(t *testing.T) {
 			byte(opcode.GetLocal), 0, 0,
 			byte(opcode.ReturnValue),
 		},
-		compiler.functions[0].codeGen.Code(),
+		compiler.ExportFunctions()[0].Code,
 	)
 
 	require.Equal(t,
@@ -276,7 +276,7 @@ func TestCompileContinue(t *testing.T) {
   `)
 	require.NoError(t, err)
 
-	compiler := NewCompiler(checker.Program, checker.Elaboration)
+	compiler := NewBytecodeCompiler(checker.Program, checker.Elaboration)
 	program := compiler.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -310,7 +310,7 @@ func TestCompileContinue(t *testing.T) {
 			byte(opcode.GetLocal), 0, 0,
 			byte(opcode.ReturnValue),
 		},
-		compiler.functions[0].codeGen.Code(),
+		compiler.ExportFunctions()[0].Code,
 	)
 
 	require.Equal(t,

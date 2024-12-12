@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/opcode"
 
 	"github.com/onflow/cadence/common"
 )
@@ -37,7 +38,7 @@ type LinkedGlobals struct {
 // LinkGlobals performs the linking of global functions and variables for a given program.
 func LinkGlobals(
 	location common.Location,
-	program *bbq.Program,
+	program *bbq.Program[opcode.Instruction],
 	conf *Config,
 	linkedGlobalsCache map[common.Location]LinkedGlobals,
 ) LinkedGlobals {

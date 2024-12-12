@@ -20,6 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
 )
 
@@ -30,7 +31,7 @@ import (
 // i.e: indexes used in opcodes refer to the indexes of its ExecutableProgram.
 type ExecutableProgram struct {
 	Location    common.Location
-	Program     *bbq.Program
+	Program     *bbq.Program[opcode.Instruction]
 	Globals     []Value
 	Constants   []Value
 	StaticTypes []StaticType
@@ -38,7 +39,7 @@ type ExecutableProgram struct {
 
 func NewExecutableProgram(
 	location common.Location,
-	program *bbq.Program,
+	program *bbq.Program[opcode.Instruction],
 	globals []Value,
 ) *ExecutableProgram {
 	return &ExecutableProgram{
@@ -52,7 +53,10 @@ func NewExecutableProgram(
 
 // NewLoadedExecutableProgram returns an ExecutableProgram with types decoded.
 // Note that the returned program **doesn't** have the globals linked.
-func NewLoadedExecutableProgram(location common.Location, program *bbq.Program) *ExecutableProgram {
+func NewLoadedExecutableProgram(
+	location common.Location,
+	program *bbq.Program[opcode.Instruction],
+) *ExecutableProgram {
 	executable := NewExecutableProgram(location, program, nil)
 
 	// Optimization: Pre load/decode types
