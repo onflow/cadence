@@ -22,7 +22,7 @@ import (
 	"github.com/onflow/cadence/bbq/commons"
 )
 
-type Config struct {
+type Config[E any] struct {
 	ImportHandler   commons.ImportHandler
 	LocationHandler commons.LocationHandler
 }

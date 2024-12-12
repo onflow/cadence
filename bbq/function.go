@@ -18,9 +18,9 @@
 
 package bbq
 
-type Function struct {
+type Function[E any] struct {
 	Name               string
-	Code               []byte
+	Code               []E
 	ParameterCount     uint16
 	TypeParameterCount uint16
 	LocalCount         uint16

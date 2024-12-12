@@ -28,8 +28,6 @@ type CodeGen[E any] interface {
 	SetTarget(code *[]E)
 	Emit(instruction opcode.Instruction)
 	PatchJump(offset int, newTarget uint16)
-	// TODO: remove, by makeing bbq.Function generic
-	Assemble(code []E) []byte
 }
 
 // ByteCodeGen is a CodeGen implementation that emits bytecode
@@ -53,10 +51,6 @@ func (g *ByteCodeGen) Emit(instruction opcode.Instruction) {
 
 func (g *ByteCodeGen) PatchJump(offset int, newTarget uint16) {
 	opcode.PatchJump(g.target, offset, newTarget)
-}
-
-func (g *ByteCodeGen) Assemble(code []byte) []byte {
-	return code
 }
 
 // InstructionCodeGen is a CodeGen implementation that emits opcode.Instruction
@@ -87,15 +81,8 @@ func (g *InstructionCodeGen) PatchJump(offset int, newTarget uint16) {
 	case opcode.InstructionJumpIfFalse:
 		ins.Target = newTarget
 		(*g.target)[offset] = ins
-	}
 
-	panic(errors.NewUnreachableError())
-}
-
-func (g *InstructionCodeGen) Assemble(code []opcode.Instruction) []byte {
-	var result []byte
-	for _, ins := range code {
-		ins.Encode(&result)
+	default:
+		panic(errors.NewUnreachableError())
 	}
-	return result
 }

@@ -37,7 +37,7 @@ import (
 type Compiler[E any] struct {
 	Program     *ast.Program
 	Elaboration *sema.Elaboration
-	Config      *Config
+	Config      *Config[E]
 
 	currentFunction    *function[E]
 	compositeTypeStack *Stack[*sema.CompositeType]
@@ -95,14 +95,37 @@ var _ ast.DeclarationVisitor[struct{}] = &Compiler[any]{}
 var _ ast.StatementVisitor[struct{}] = &Compiler[any]{}
 var _ ast.ExpressionVisitor[struct{}] = &Compiler[any]{}
 
-func NewCompiler(
+func NewBytecodeCompiler(
 	program *ast.Program,
 	elaboration *sema.Elaboration,
 ) *Compiler[byte] {
-	return &Compiler[byte]{
+	return newCompiler(
+		program,
+		elaboration,
+		&ByteCodeGen{},
+	)
+}
+
+func NewInstructionCompiler(
+	program *ast.Program,
+	elaboration *sema.Elaboration,
+) *Compiler[opcode.Instruction] {
+	return newCompiler(
+		program,
+		elaboration,
+		&InstructionCodeGen{},
+	)
+}
+
+func newCompiler[E any](
+	program *ast.Program,
+	elaboration *sema.Elaboration,
+	codeGen CodeGen[E],
+) *Compiler[E] {
+	return &Compiler[E]{
 		Program:         program,
 		Elaboration:     elaboration,
-		Config:          &Config{},
+		Config:          &Config[E]{},
 		globals:         make(map[string]*global),
 		importedGlobals: NativeFunctions(),
 		typesInPool:     make(map[sema.TypeID]uint16),
@@ -110,7 +133,7 @@ func NewCompiler(
 		compositeTypeStack: &Stack[*sema.CompositeType]{
 			elements: make([]*sema.CompositeType, 0),
 		},
-		codeGen: &ByteCodeGen{},
+		codeGen: codeGen,
 	}
 }
 
@@ -289,14 +312,14 @@ func (c *Compiler[_]) popLoop() {
 	c.currentLoop = previousLoop
 }
 
-func (c *Compiler[_]) Compile() *bbq.Program {
+func (c *Compiler[E]) Compile() *bbq.Program[E] {
 
 	for _, declaration := range c.Program.ImportDeclarations() {
 		c.compileDeclaration(declaration)
 	}
 
 	if c.Program.SoleContractInterfaceDeclaration() != nil {
-		return &bbq.Program{
+		return &bbq.Program[E]{
 			Contract: c.exportContract(),
 		}
 	}
@@ -339,7 +362,7 @@ func (c *Compiler[_]) Compile() *bbq.Program {
 	contract := c.exportContract()
 	variables := c.exportVariables(variableDeclarations)
 
-	return &bbq.Program{
+	return &bbq.Program[E]{
 		Functions: functions,
 		Constants: constants,
 		Types:     types,
@@ -433,14 +456,14 @@ func (c *Compiler[_]) exportImports() []*bbq.Import {
 	return exportedImports
 }
 
-func (c *Compiler[E]) ExportFunctions() []*bbq.Function {
-	functions := make([]*bbq.Function, 0, len(c.functions))
+func (c *Compiler[E]) ExportFunctions() []*bbq.Function[E] {
+	functions := make([]*bbq.Function[E], 0, len(c.functions))
 	for _, function := range c.functions {
 		functions = append(
 			functions,
-			&bbq.Function{
+			&bbq.Function[E]{
 				Name:                function.name,
-				Code:                c.codeGen.Assemble(function.code),
+				Code:                function.code,
 				LocalCount:          function.localCount,
 				ParameterCount:      function.parameterCount,
 				IsCompositeFunction: function.isCompositeFunction,

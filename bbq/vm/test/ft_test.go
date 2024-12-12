@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
@@ -93,7 +94,7 @@ func TestFTTransfer(t *testing.T) {
 
 	vmConfig := &vm.Config{
 		Storage: storage,
-		ImportHandler: func(location common.Location) *bbq.Program {
+		ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
 			imported, ok := programs[location]
 			if !ok {
 				return nil
@@ -249,7 +250,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	vmConfig := &vm.Config{
 		Storage: storage,
-		ImportHandler: func(location common.Location) *bbq.Program {
+		ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
 			imported, ok := programs[location]
 			if !ok {
 				return nil

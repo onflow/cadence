@@ -49,7 +49,7 @@ type VM struct {
 
 func NewVM(
 	location common.Location,
-	program *bbq.Program,
+	program *bbq.Program[opcode.Instruction],
 	conf *Config,
 ) *VM {
 	// TODO: Remove initializing config. Following is for testing purpose only.
@@ -310,13 +310,11 @@ func opReturn(vm *VM) {
 	vm.push(voidValue)
 }
 
-func opJump(vm *VM) {
-	ins := opcode.DecodeJump(&vm.ip, vm.callFrame.function.Code)
+func opJump(vm *VM, ins opcode.InstructionJump) {
 	vm.ip = ins.Target
 }
 
-func opJumpIfFalse(vm *VM) {
-	ins := opcode.DecodeJumpIfFalse(&vm.ip, vm.callFrame.function.Code)
+func opJumpIfFalse(vm *VM, ins opcode.InstructionJumpIfFalse) {
 	value := vm.pop().(BoolValue)
 	if !value {
 		vm.ip = ins.Target
@@ -359,41 +357,32 @@ func opFalse(vm *VM) {
 	vm.push(FalseValue)
 }
 
-func opGetConstant(vm *VM) {
-	callFrame := vm.callFrame
-	ins := opcode.DecodeGetConstant(&vm.ip, callFrame.function.Code)
-	constant := callFrame.executable.Constants[ins.ConstantIndex]
+func opGetConstant(vm *VM, ins opcode.InstructionGetConstant) {
+	constant := vm.callFrame.executable.Constants[ins.ConstantIndex]
 	if constant == nil {
 		constant = vm.initializeConstant(ins.ConstantIndex)
 	}
 	vm.push(constant)
 }
 
-func opGetLocal(vm *VM) {
-	callFrame := vm.callFrame
-	ins := opcode.DecodeGetLocal(&vm.ip, callFrame.function.Code)
-	absoluteIndex := callFrame.localsOffset + ins.LocalIndex
+func opGetLocal(vm *VM, ins opcode.InstructionGetLocal) {
+	absoluteIndex := vm.callFrame.localsOffset + ins.LocalIndex
 	local := vm.locals[absoluteIndex]
 	vm.push(local)
 }
 
-func opSetLocal(vm *VM) {
-	callFrame := vm.callFrame
-	ins := opcode.DecodeSetLocal(&vm.ip, callFrame.function.Code)
-	absoluteIndex := callFrame.localsOffset + ins.LocalIndex
+func opSetLocal(vm *VM, ins opcode.InstructionSetLocal) {
+	absoluteIndex := vm.callFrame.localsOffset + ins.LocalIndex
 	vm.locals[absoluteIndex] = vm.pop()
 }
 
-func opGetGlobal(vm *VM) {
-	callFrame := vm.callFrame
-	ins := opcode.DecodeGetGlobal(&vm.ip, callFrame.function.Code)
-	vm.push(callFrame.executable.Globals[ins.GlobalIndex])
+func opGetGlobal(vm *VM, ins opcode.InstructionGetGlobal) {
+	value := vm.callFrame.executable.Globals[ins.GlobalIndex]
+	vm.push(value)
 }
 
-func opSetGlobal(vm *VM) {
-	callFrame := vm.callFrame
-	ins := opcode.DecodeSetGlobal(&vm.ip, callFrame.function.Code)
-	callFrame.executable.Globals[ins.GlobalIndex] = vm.pop()
+func opSetGlobal(vm *VM, ins opcode.InstructionSetGlobal) {
+	vm.callFrame.executable.Globals[ins.GlobalIndex] = vm.pop()
 }
 
 func opSetIndex(vm *VM) {
@@ -411,12 +400,9 @@ func opGetIndex(vm *VM) {
 	vm.push(element)
 }
 
-func opInvoke(vm *VM) {
+func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	value := vm.pop()
 	stackHeight := len(vm.stack)
-
-	callFrame := vm.callFrame
-	ins := opcode.DecodeInvoke(&vm.ip, callFrame.function.Code)
 
 	switch value := value.(type) {
 	case FunctionValue:
@@ -445,11 +431,7 @@ func opInvoke(vm *VM) {
 	}
 }
 
-func opInvokeDynamic(vm *VM) {
-	callFrame := vm.callFrame
-
-	ins := opcode.DecodeInvokeDynamic(&vm.ip, callFrame.function.Code)
-
+func opInvokeDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
 	stackHeight := len(vm.stack)
 	receiver := vm.stack[stackHeight-int(ins.ArgCount)-1]
 
@@ -495,8 +477,7 @@ func opDup(vm *VM) {
 	vm.push(top)
 }
 
-func opNew(vm *VM) {
-	ins := opcode.DecodeNew(&vm.ip, vm.callFrame.function.Code)
+func opNew(vm *VM, ins opcode.InstructionNew) {
 	compositeKind := common.CompositeKind(ins.Kind)
 
 	// decode location
@@ -542,9 +523,7 @@ func opGetField(vm *VM) {
 	vm.push(fieldValue)
 }
 
-func opTransfer(vm *VM) {
-	ins := opcode.DecodeTransfer(&vm.ip, vm.callFrame.function.Code)
-
+func opTransfer(vm *VM, ins opcode.InstructionTransfer) {
 	targetType := vm.loadType(ins.TypeIndex)
 	value := vm.peek()
 
@@ -569,8 +548,7 @@ func opDestroy(vm *VM) {
 	value.Destroy(vm.config)
 }
 
-func opPath(vm *VM) {
-	ins := opcode.DecodePath(&vm.ip, vm.callFrame.function.Code)
+func opPath(vm *VM, ins opcode.InstructionPath) {
 	value := PathValue{
 		Domain:     ins.Domain,
 		Identifier: ins.Identifier,
@@ -578,10 +556,8 @@ func opPath(vm *VM) {
 	vm.push(value)
 }
 
-func opCast(vm *VM) {
+func opCast(vm *VM, ins opcode.InstructionCast) {
 	value := vm.pop()
-
-	ins := opcode.DecodeCast(&vm.ip, vm.callFrame.function.Code)
 
 	targetType := vm.loadType(ins.TypeIndex)
 
@@ -614,8 +590,7 @@ func opUnwrap(vm *VM) {
 	}
 }
 
-func opNewArray(vm *VM) {
-	ins := opcode.DecodeNewArray(&vm.ip, vm.callFrame.function.Code)
+func opNewArray(vm *VM, ins opcode.InstructionNewArray) {
 
 	typ := vm.loadType(ins.TypeIndex).(interpreter.ArrayStaticType)
 
@@ -631,8 +606,7 @@ func opNewArray(vm *VM) {
 	vm.push(array)
 }
 
-func opNewRef(vm *VM) {
-	ins := opcode.DecodeNewRef(&vm.ip, vm.callFrame.function.Code)
+func opNewRef(vm *VM, ins opcode.InstructionNewRef) {
 
 	borrowedType := vm.loadType(ins.TypeIndex).(*interpreter.ReferenceStaticType)
 	value := vm.pop()
@@ -657,80 +631,80 @@ func (vm *VM) run() {
 			return
 		}
 
-		op := opcode.Opcode(callFrame.function.Code[vm.ip])
+		ins := callFrame.function.Code[vm.ip]
 		vm.ip++
 
-		switch op {
-		case opcode.ReturnValue:
+		switch ins := ins.(type) {
+		case opcode.InstructionReturnValue:
 			opReturnValue(vm)
-		case opcode.Return:
+		case opcode.InstructionReturn:
 			opReturn(vm)
-		case opcode.Jump:
-			opJump(vm)
-		case opcode.JumpIfFalse:
-			opJumpIfFalse(vm)
-		case opcode.IntAdd:
+		case opcode.InstructionJump:
+			opJump(vm, ins)
+		case opcode.InstructionJumpIfFalse:
+			opJumpIfFalse(vm, ins)
+		case opcode.InstructionIntAdd:
 			opBinaryIntAdd(vm)
-		case opcode.IntSubtract:
+		case opcode.InstructionIntSubtract:
 			opBinaryIntSubtract(vm)
-		case opcode.IntLess:
+		case opcode.InstructionIntLess:
 			opBinaryIntLess(vm)
-		case opcode.IntGreater:
+		case opcode.InstructionIntGreater:
 			opBinaryIntGreater(vm)
-		case opcode.True:
+		case opcode.InstructionTrue:
 			opTrue(vm)
-		case opcode.False:
+		case opcode.InstructionFalse:
 			opFalse(vm)
-		case opcode.GetConstant:
-			opGetConstant(vm)
-		case opcode.GetLocal:
-			opGetLocal(vm)
-		case opcode.SetLocal:
-			opSetLocal(vm)
-		case opcode.GetGlobal:
-			opGetGlobal(vm)
-		case opcode.SetGlobal:
-			opSetGlobal(vm)
-		case opcode.SetIndex:
+		case opcode.InstructionGetConstant:
+			opGetConstant(vm, ins)
+		case opcode.InstructionGetLocal:
+			opGetLocal(vm, ins)
+		case opcode.InstructionSetLocal:
+			opSetLocal(vm, ins)
+		case opcode.InstructionGetGlobal:
+			opGetGlobal(vm, ins)
+		case opcode.InstructionSetGlobal:
+			opSetGlobal(vm, ins)
+		case opcode.InstructionSetIndex:
 			opSetIndex(vm)
-		case opcode.GetIndex:
+		case opcode.InstructionGetIndex:
 			opGetIndex(vm)
-		case opcode.Invoke:
-			opInvoke(vm)
-		case opcode.InvokeDynamic:
-			opInvokeDynamic(vm)
-		case opcode.Drop:
+		case opcode.InstructionInvoke:
+			opInvoke(vm, ins)
+		case opcode.InstructionInvokeDynamic:
+			opInvokeDynamic(vm, ins)
+		case opcode.InstructionDrop:
 			opDrop(vm)
-		case opcode.Dup:
+		case opcode.InstructionDup:
 			opDup(vm)
-		case opcode.New:
-			opNew(vm)
-		case opcode.NewArray:
-			opNewArray(vm)
-		case opcode.NewRef:
-			opNewRef(vm)
-		case opcode.SetField:
+		case opcode.InstructionNew:
+			opNew(vm, ins)
+		case opcode.InstructionNewArray:
+			opNewArray(vm, ins)
+		case opcode.InstructionNewRef:
+			opNewRef(vm, ins)
+		case opcode.InstructionSetField:
 			opSetField(vm)
-		case opcode.GetField:
+		case opcode.InstructionGetField:
 			opGetField(vm)
-		case opcode.Transfer:
-			opTransfer(vm)
-		case opcode.Destroy:
+		case opcode.InstructionTransfer:
+			opTransfer(vm, ins)
+		case opcode.InstructionDestroy:
 			opDestroy(vm)
-		case opcode.Path:
-			opPath(vm)
-		case opcode.Cast:
-			opCast(vm)
-		case opcode.Nil:
+		case opcode.InstructionPath:
+			opPath(vm, ins)
+		case opcode.InstructionCast:
+			opCast(vm, ins)
+		case opcode.InstructionNil:
 			opNil(vm)
-		case opcode.Equal:
+		case opcode.InstructionEqual:
 			opEqual(vm)
-		case opcode.NotEqual:
+		case opcode.InstructionNotEqual:
 			opNotEqual(vm)
-		case opcode.Unwrap:
+		case opcode.InstructionUnwrap:
 			opUnwrap(vm)
 		default:
-			panic(errors.NewUnexpectedError("cannot execute opcode '%s'", op.String()))
+			panic(errors.NewUnexpectedError("cannot execute instruction of type %T", ins))
 		}
 
 		// Faster in Go <1.19:
