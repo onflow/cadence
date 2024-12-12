@@ -23,65 +23,79 @@ import (
 	"github.com/onflow/cadence/errors"
 )
 
-type CodeGen interface {
+type CodeGen[E any] interface {
 	Offset() int
-	Code() interface{}
+	SetTarget(code *[]E)
 	Emit(instruction opcode.Instruction)
 	PatchJump(offset int, newTarget uint16)
+	// TODO: remove, by makeing bbq.Function generic
+	Assemble(code []E) []byte
 }
 
 // ByteCodeGen is a CodeGen implementation that emits bytecode
 type ByteCodeGen struct {
-	code []byte
+	target *[]byte
 }
 
-var _ CodeGen = &ByteCodeGen{}
+var _ CodeGen[byte] = &ByteCodeGen{}
 
 func (g *ByteCodeGen) Offset() int {
-	return len(g.code)
+	return len(*g.target)
 }
 
-func (g *ByteCodeGen) Code() interface{} {
-	return g.code
+func (g *ByteCodeGen) SetTarget(target *[]byte) {
+	g.target = target
 }
 
 func (g *ByteCodeGen) Emit(instruction opcode.Instruction) {
-	instruction.Encode(&g.code)
+	instruction.Encode(g.target)
 }
 
 func (g *ByteCodeGen) PatchJump(offset int, newTarget uint16) {
-	opcode.PatchJump(&g.code, offset, newTarget)
+	opcode.PatchJump(g.target, offset, newTarget)
+}
+
+func (g *ByteCodeGen) Assemble(code []byte) []byte {
+	return code
 }
 
 // InstructionCodeGen is a CodeGen implementation that emits opcode.Instruction
 type InstructionCodeGen struct {
-	code []opcode.Instruction
+	target *[]opcode.Instruction
 }
 
-var _ CodeGen = &InstructionCodeGen{}
+var _ CodeGen[opcode.Instruction] = &InstructionCodeGen{}
 
 func (g *InstructionCodeGen) Offset() int {
-	return len(g.code)
+	return len(*g.target)
 }
 
-func (g *InstructionCodeGen) Code() interface{} {
-	return g.code
+func (g *InstructionCodeGen) SetTarget(target *[]opcode.Instruction) {
+	g.target = target
 }
 
 func (g *InstructionCodeGen) Emit(instruction opcode.Instruction) {
-	g.code = append(g.code, instruction)
+	*g.target = append(*g.target, instruction)
 }
 
 func (g *InstructionCodeGen) PatchJump(offset int, newTarget uint16) {
-	switch ins := g.code[offset].(type) {
+	switch ins := (*g.target)[offset].(type) {
 	case opcode.InstructionJump:
 		ins.Target = newTarget
-		g.code[offset] = ins
+		(*g.target)[offset] = ins
 
 	case opcode.InstructionJumpIfFalse:
 		ins.Target = newTarget
-		g.code[offset] = ins
+		(*g.target)[offset] = ins
 	}
 
 	panic(errors.NewUnreachableError())
+}
+
+func (g *InstructionCodeGen) Assemble(code []opcode.Instruction) []byte {
+	var result []byte
+	for _, ins := range code {
+		ins.Encode(&result)
+	}
+	return result
 }

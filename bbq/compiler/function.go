@@ -25,26 +25,25 @@ import (
 	"github.com/onflow/cadence/errors"
 )
 
-type function struct {
+type function[E any] struct {
 	name                string
+	code                []E
 	localCount          uint16
-	codeGen             CodeGen
 	locals              *activations.Activations[*local]
 	parameterCount      uint16
 	isCompositeFunction bool
 }
 
-func newFunction(name string, parameterCount uint16, isCompositeFunction bool) *function {
-	return &function{
+func newFunction[E any](name string, parameterCount uint16, isCompositeFunction bool) *function[E] {
+	return &function[E]{
 		name:                name,
 		parameterCount:      parameterCount,
-		codeGen:             &ByteCodeGen{},
 		locals:              activations.NewActivations[*local](nil),
 		isCompositeFunction: isCompositeFunction,
 	}
 }
 
-func (f *function) declareLocal(name string) *local {
+func (f *function[E]) declareLocal(name string) *local {
 	if f.localCount >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid local declaration"))
 	}
@@ -55,6 +54,6 @@ func (f *function) declareLocal(name string) *local {
 	return local
 }
 
-func (f *function) findLocal(name string) *local {
+func (f *function[E]) findLocal(name string) *local {
 	return f.locals.Find(name)
 }
