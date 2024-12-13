@@ -645,7 +645,7 @@ func parsePragmaDeclaration(p *parser) (*ast.PragmaDeclaration, error) {
 //
 //	importDeclaration :
 //	    'import'
-//	    ( identifier (',' identifier)* 'from' )?
+//	    ( identifier (as identifier)? (',' identifier (as identifier)?)* 'from' )?
 //	    ( string | hexadecimalLiteral | identifier )
 func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 
@@ -684,6 +684,30 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 		endPos = identifier.EndPosition(p.memoryGauge)
 	}
 
+	parseOptionalImportAlias := func() error {
+		// stop early if the current token is not as
+		if string(p.currentTokenSource()) != KeywordAs {
+			return nil
+		}
+		// Skip the `as` keyword
+		p.nextSemanticToken()
+
+		switch p.current.Type {
+		case lexer.TokenIdentifier:
+			identifierAlias := p.tokenToIdentifier(p.current)
+			identifiers = append(identifiers, identifierAlias)
+
+			// Skip the alias
+			p.nextSemanticToken()
+		default:
+			return p.syntaxError(
+				"expected identifer in import alias: got %s",
+				p.current.Type,
+			)
+		}
+		return nil
+	}
+
 	parseLocation := func() error {
 		switch p.current.Type {
 		case lexer.TokenString, lexer.TokenHexadecimalIntegerLiteral:
@@ -710,6 +734,9 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 		atEnd := false
 		for !atEnd {
 			p.nextSemanticToken()
+
+			// Parse optional alias
+			parseOptionalImportAlias()
 
 			switch p.current.Type {
 			case lexer.TokenComma:
@@ -813,6 +840,8 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 		identifier := p.tokenToIdentifier(p.current)
 		// Skip the identifier
 		p.nextSemanticToken()
+		// Parse optional alias
+		parseOptionalImportAlias()
 
 		switch p.current.Type {
 		case lexer.TokenComma:

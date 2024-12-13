@@ -2431,6 +2431,42 @@ func TestParseImportDeclaration(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("single import alias", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`
+			import foo as bar, lorem from 0x42
+		`)
+		require.Empty(t, errs)
+
+		// assert result after deciding how to parse
+	})
+
+	t.Run("multiple import alias", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`
+			import foo as bar, lorem as ipsum from 0x42
+		`)
+		require.Empty(t, errs)
+
+		// assert result after deciding how to parse
+	})
+
+	t.Run("combination import aliases", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`
+			import foo as bar, test as from, from from 0x42
+		`)
+		require.Empty(t, errs)
+
+		// assert result after deciding how to parse
+	})
 }
 
 func TestParseEvent(t *testing.T) {
