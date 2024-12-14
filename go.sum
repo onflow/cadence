@@ -20,6 +20,8 @@ github.com/fxamacker/cbor/v2 v2.4.1-0.20230228173756-c0c9f774e40c h1:5tm/Wbs9d9r
 github.com/fxamacker/cbor/v2 v2.4.1-0.20230228173756-c0c9f774e40c/go.mod h1:TA1xS00nchWmaBnEIxPSE5oHLuJBAVvqrtAnWBwBCVo=
 github.com/fxamacker/circlehash v0.3.0 h1:XKdvTtIJV9t7DDUtsf0RIpC1OcxZtPbmgIH7ekx28WA=
 github.com/fxamacker/circlehash v0.3.0/go.mod h1:3aq3OfVvsWtkWMb6A1owjOQFA+TLsD5FgJflnaQwtMM=
+github.com/goccy/go-yaml v1.15.9 h1:500CYajdgpK4Smqrf86u7VMZuj/bFt2ghdff9D/nQYc=
+github.com/goccy/go-yaml v1.15.9/go.mod h1:XBurs7gK8ATbW4ZPGKgcbrY1Br56PdM69F7LkFRi1kA=
 github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0/go.mod h1:E/TSTwGwJL78qG/PmXZO1EjYhfJinVAhrmmHX6Z8B9k=
 github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
 github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
