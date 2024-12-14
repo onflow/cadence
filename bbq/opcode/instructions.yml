@@ -1,0 +1,178 @@
+- name: "true"
+  description: Pushes the boolean value `true` onto the stack.
+
+- name: "false"
+  description: Pushes the boolean value `false` onto the stack.
+
+- name: "nil"
+  description: Pushes the value `nil` onto the stack.
+
+- name: "dup"
+  description: Duplicates the top value on the stack.
+
+- name: "drop"
+  description: Removes the top value from the stack.
+
+- name: "getConstant"
+  description: Pushes the constant at the given index onto the stack.
+  operands:
+    - name: "constantIndex"
+      type: "index"
+
+- name: "jump"
+  description: Jumps to the given instruction.
+  operands:
+    - name: "target"
+      type: "index"
+
+- name: "jumpIfFalse"
+  description: Jumps to the given instruction, if the top value on the stack is `false`.
+  operands:
+    - name: "target"
+      type: "index"
+
+- name: "return"
+  description: Returns from the current function, without a value.
+
+- name: "returnValue"
+  description: Returns from the current function, with the top value on the stack.
+
+- name: "getLocal"
+  description: Pushes the value of the local at the given index onto the stack.
+  operands:
+    - name: "localIndex"
+      type: "index"
+
+- name: "setLocal"
+  description: Sets the value of the local at the given index to the top value on the stack.
+  operands:
+    - name: "localIndex"
+      type: "index"
+
+- name: "getGlobal"
+  description: Pushes the value of the global at the given index onto the stack.
+  operands:
+    - name: "globalIndex"
+      type: "index"
+
+- name: "setGlobal"
+  description: Sets the value of the global at the given index to the top value on the stack.
+  operands:
+    - name: "globalIndex"
+      type: "index"
+
+- name: "getField"
+  description: Pushes the value of the field at the given index onto the stack.
+
+- name: "setField"
+  description: Sets the value of the field at the given index to the top value on the stack.
+
+- name: "getIndex"
+  description: Pushes the value at the given index onto the stack.
+
+- name: "setIndex"
+  description: Sets the value at the given index to the top value on the stack.
+
+- name: "newArray"
+  description: Creates a new array with the given type and size.
+  operands:
+    - name: "typeIndex"
+      type: "index"
+    - name: "size"
+      type: "size"
+    - name: "isResource"
+      type: "bool"
+
+- name: "intAdd"
+  description: Adds the top two values on the stack.
+
+- name: "intSubtract"
+  description: Subtracts the top two values on the stack.
+
+- name: "intMultiply"
+  description: Multiplies the top two values on the stack.
+
+- name: "intDivide"
+  description: Divides the top two values on the stack.
+
+- name: "intMod"
+  description: Calculates the modulo of the top two values on the stack.
+
+- name: "equal"
+  description: Compares the top two values on the stack for equality.
+
+- name: "notEqual"
+  description: Compares the top two values on the stack for inequality.
+
+- name: "intLess"
+  description: Compares the top two values on the stack for less than.
+
+- name: "intLessOrEqual"
+  description: Compares the top two values on the stack for less than or equal.
+
+- name: "intGreater"
+  description: Compares the top two values on the stack for greater than.
+
+- name: "intGreaterOrEqual"
+  description: Compares the top two values on the stack for greater than or equal.
+
+- name: "unwrap"
+  description: Unwraps the top value on the stack.
+
+- name: "cast"
+  description: Casts the top value on the stack to the given type.
+  operands:
+    - name: "typeIndex"
+      type: "index"
+    - name: "kind"
+      type: "castKind"
+
+- name: "destroy"
+  description: Destroys the top value on the stack.
+
+- name: "transfer"
+  description: Transfers the top value on the stack.
+  operands:
+    - name: "typeIndex"
+      type: "index"
+
+- name: "newRef"
+  description: Creates a new reference with the given type.
+  operands:
+    - name: "typeIndex"
+      type: "index"
+
+- name: "path"
+  description: Pushes the path with the given domain and identifier onto the stack.
+  operands:
+    - name: "domain"
+      type: "pathDomain"
+    - name: "identifier"
+      type: "string"
+
+- name: "invoke"
+  description: Invokes the function with the given type arguments.
+  operands:
+    - name: "typeArgs"
+      type: "indices"
+
+- name: "new"
+  description: Creates a new instance of the given type.
+  operands:
+    - name: "kind"
+      type: "compositeKind"
+    - name: "typeIndex"
+      type: "index"
+
+- name: "invokeDynamic"
+  description: Invokes the dynamic function with the given name, type arguments, and argument count.
+  operands:
+    - name: "name"
+      type: "string"
+    - name: "typeArgs"
+      type: "indices"
+    - name: "argCount"
+      type: "size"
+
+- name: "unknown"
+  description: An unknown instruction.

@@ -1,0 +1,41 @@
+{
+  "type": "array",
+  "items": { "$ref": "#/$defs/instruction" },
+  "$defs": {
+    "instruction": {
+      "type": "object",
+      "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "operands": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/operand" }
+          }
+      },
+      "required": ["name", "description"],
+      "additionalProperties": false
+    },
+    "operand": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": [
+            "bool",
+            "index",
+            "indices",
+            "size",
+            "string",
+            "castKind",
+            "pathDomain",
+            "compositeKind"
+          ]
+        },
+        "description": { "type": "string" }
+      },
+      "required": ["name", "type"],
+      "additionalProperties": false
+    }
+  }
+}

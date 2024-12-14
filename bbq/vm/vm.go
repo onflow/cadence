@@ -478,7 +478,7 @@ func opDup(vm *VM) {
 }
 
 func opNew(vm *VM, ins opcode.InstructionNew) {
-	compositeKind := common.CompositeKind(ins.Kind)
+	compositeKind := ins.Kind
 
 	// decode location
 	staticType := vm.loadType(ins.TypeIndex)
