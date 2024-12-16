@@ -833,11 +833,12 @@ func (c *Compiler[_]) VisitInvocationExpression(expression *ast.InvocationExpres
 				panic(errors.NewDefaultUserError("invalid number of arguments"))
 			}
 
+			funcNameConst := c.addStringConst(funcName)
 			c.codeGen.Emit(
 				opcode.InstructionInvokeDynamic{
-					Name:     funcName,
-					TypeArgs: typeArgs,
-					ArgCount: uint16(argumentCount),
+					NameIndex: funcNameConst.index,
+					TypeArgs:  typeArgs,
+					ArgCount:  uint16(argumentCount),
 				},
 			)
 
@@ -1067,10 +1068,13 @@ func (c *Compiler[_]) VisitPathExpression(expression *ast.PathExpression) (_ str
 	if len(identifier) >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid identifier"))
 	}
+
+	identifierConst := c.addStringConst(identifier)
+
 	c.codeGen.Emit(
 		opcode.InstructionPath{
-			Domain:     domain,
-			Identifier: identifier,
+			Domain:          domain,
+			IdentifierIndex: identifierConst.index,
 		},
 	)
 	return

@@ -68,8 +68,8 @@
   operands:
     - name: "domain"
       type: "pathDomain"
-    - name: "identifier"
-      type: "string"
+    - name: "identifierIndex"
+      type: "index"
 
 - name: "new"
   description: Creates a new instance of the given type.
@@ -113,8 +113,8 @@
 - name: "invokeDynamic"
   description: Invokes the dynamic function with the given name, type arguments, and argument count.
   operands:
-    - name: "name"
-      type: "string"
+    - name: "nameIndex"
+      type: "index"
     - name: "typeArgs"
       type: "indices"
     - name: "argCount"

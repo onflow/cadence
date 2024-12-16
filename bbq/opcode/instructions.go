@@ -314,8 +314,8 @@ func (i InstructionNil) Encode(code *[]byte) {
 //
 // Pushes the path with the given domain and identifier onto the stack.
 type InstructionPath struct {
-	Domain     common.PathDomain
-	Identifier string
+	Domain          common.PathDomain
+	IdentifierIndex uint16
 }
 
 var _ Instruction = InstructionPath{}
@@ -328,19 +328,19 @@ func (i InstructionPath) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
 	fmt.Fprintf(&sb, " domain:%s", i.Domain)
-	fmt.Fprintf(&sb, " identifier:%s", i.Identifier)
+	fmt.Fprintf(&sb, " identifierIndex:%s", i.IdentifierIndex)
 	return sb.String()
 }
 
 func (i InstructionPath) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 	emitPathDomain(code, i.Domain)
-	emitString(code, i.Identifier)
+	emitUint16(code, i.IdentifierIndex)
 }
 
 func DecodePath(ip *uint16, code []byte) (i InstructionPath) {
 	i.Domain = decodePathDomain(ip, code)
-	i.Identifier = decodeString(ip, code)
+	i.IdentifierIndex = decodeUint16(ip, code)
 	return i
 }
 
@@ -510,9 +510,9 @@ func DecodeInvoke(ip *uint16, code []byte) (i InstructionInvoke) {
 //
 // Invokes the dynamic function with the given name, type arguments, and argument count.
 type InstructionInvokeDynamic struct {
-	Name     string
-	TypeArgs []uint16
-	ArgCount uint16
+	NameIndex uint16
+	TypeArgs  []uint16
+	ArgCount  uint16
 }
 
 var _ Instruction = InstructionInvokeDynamic{}
@@ -524,7 +524,7 @@ func (InstructionInvokeDynamic) Opcode() Opcode {
 func (i InstructionInvokeDynamic) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	fmt.Fprintf(&sb, " name:%s", i.Name)
+	fmt.Fprintf(&sb, " nameIndex:%s", i.NameIndex)
 	fmt.Fprintf(&sb, " typeArgs:%s", i.TypeArgs)
 	fmt.Fprintf(&sb, " argCount:%s", i.ArgCount)
 	return sb.String()
@@ -532,13 +532,13 @@ func (i InstructionInvokeDynamic) String() string {
 
 func (i InstructionInvokeDynamic) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitString(code, i.Name)
+	emitUint16(code, i.NameIndex)
 	emitUint16Array(code, i.TypeArgs)
 	emitUint16(code, i.ArgCount)
 }
 
 func DecodeInvokeDynamic(ip *uint16, code []byte) (i InstructionInvokeDynamic) {
-	i.Name = decodeString(ip, code)
+	i.NameIndex = decodeUint16(ip, code)
 	i.TypeArgs = decodeUint16Array(ip, code)
 	i.ArgCount = decodeUint16(ip, code)
 	return i

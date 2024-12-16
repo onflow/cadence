@@ -459,7 +459,9 @@ func opInvokeDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
 	compositeValue := receiver.(*CompositeValue)
 	compositeType := compositeValue.CompositeType
 
-	qualifiedFuncName := commons.TypeQualifiedName(compositeType.QualifiedIdentifier, ins.Name)
+	funcName := getStringConstant(vm, ins.NameIndex)
+
+	qualifiedFuncName := commons.TypeQualifiedName(compositeType.QualifiedIdentifier, funcName)
 	var functionValue = vm.lookupFunction(compositeType.Location, qualifiedFuncName)
 
 	parameterCount := int(functionValue.Function.ParameterCount)
@@ -501,8 +503,7 @@ func opSetField(vm *VM, ins opcode.InstructionSetField) {
 	fieldValue := vm.pop()
 
 	// VM assumes the field name is always a string.
-	constant := vm.callFrame.executable.Program.Constants[ins.FieldNameIndex]
-	fieldName := string(constant.Data)
+	fieldName := getStringConstant(vm, ins.FieldNameIndex)
 
 	structValue.SetMember(vm.config, fieldName, fieldValue)
 }
@@ -511,8 +512,7 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 	memberAccessibleValue := vm.pop().(MemberAccessibleValue)
 
 	// VM assumes the field name is always a string.
-	constant := vm.callFrame.executable.Program.Constants[ins.FieldNameIndex]
-	fieldName := string(constant.Data)
+	fieldName := getStringConstant(vm, ins.FieldNameIndex)
 
 	fieldValue := memberAccessibleValue.GetMember(vm.config, fieldName)
 	if fieldValue == nil {
@@ -523,6 +523,11 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 	}
 
 	vm.push(fieldValue)
+}
+
+func getStringConstant(vm *VM, index uint16) string {
+	constant := vm.callFrame.executable.Program.Constants[index]
+	return string(constant.Data)
 }
 
 func opTransfer(vm *VM, ins opcode.InstructionTransfer) {
@@ -551,9 +556,10 @@ func opDestroy(vm *VM) {
 }
 
 func opPath(vm *VM, ins opcode.InstructionPath) {
+	identifier := getStringConstant(vm, ins.IdentifierIndex)
 	value := PathValue{
 		Domain:     ins.Domain,
-		Identifier: ins.Identifier,
+		Identifier: identifier,
 	}
 	vm.push(value)
 }
