@@ -446,7 +446,7 @@ func TestInterpretImportWithAlias(t *testing.T) {
 		  import a as a2 from 0x2
 
           access(all) fun test(): Int {
-              return a() + a()
+              return a1() + a2()
           }
         `,
 		ParseAndCheckOptions{
