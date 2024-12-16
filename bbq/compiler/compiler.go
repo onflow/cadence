@@ -1125,7 +1125,7 @@ func (c *Compiler[_]) compileInitializer(declaration *ast.SpecialFunctionDeclara
 
 	// Write composite kind
 	// TODO: Maybe get/include this from static-type. Then no need to provide separately.
-	kind := uint16(enclosingCompositeType.Kind)
+	kind := enclosingCompositeType.Kind
 
 	typeIndex := c.getOrAddType(enclosingCompositeType)
 
