@@ -824,3 +824,195 @@ func TestCheckImportContract(t *testing.T) {
 	})
 
 }
+
+func TestCheckImportAlias(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("valid contract import", func(t *testing.T) {
+
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
+            access(all) contract Foo {
+                access(all) let x: [Int]
+
+                access(all) fun answer(): Int {
+                    return 42
+                }
+
+                access(all) struct Bar {}
+
+                init() {
+                    self.x = []
+                }
+            }`,
+			ParseAndCheckOptions{
+				Location: ImportedLocation,
+			},
+		)
+
+		require.NoError(t, err)
+
+		_, err = ParseAndCheckWithOptions(t,
+			`
+            import Foo as Bar from "imported"
+
+            access(all) fun main() {
+                var foo: &Bar = Bar
+                var x: &[Int] = Bar.x
+                var bar: Bar.Bar = Bar.Bar()
+            }
+            `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("valid, multiple alias of same contract", func(t *testing.T) {
+
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
+            access(all) contract Foo {
+                access(all) let x: [Int]
+
+                access(all) fun answer(): Int {
+                    return 42
+                }
+
+                access(all) struct Bar {}
+
+                init() {
+                    self.x = []
+                }
+            }`,
+			ParseAndCheckOptions{
+				Location: ImportedLocation,
+			},
+		)
+
+		require.NoError(t, err)
+
+		_, err = ParseAndCheckWithOptions(t,
+			`
+            import Foo as Bar from "imported"
+			import Foo as Cab from "imported"
+
+            access(all) fun main() {
+                var foo: &Cab = Cab
+                var x: &[Int] = Bar.x
+                var bar: Cab.Bar = Cab.Bar()
+            }
+            `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid, duplicate aliases", func(t *testing.T) {
+
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
+            access(all) fun a(): Int {
+              return 42
+          	}
+
+			access(all) fun b(): Int {
+              return 50
+          	}
+			  
+			`,
+			ParseAndCheckOptions{
+				Location: ImportedLocation,
+			},
+		)
+
+		require.NoError(t, err)
+
+		_, err = ParseAndCheckWithOptions(t,
+			`
+            import a as c from "imported"
+			import b as c from "imported"
+
+            access(all) fun main() {
+                c() + c()
+            }
+            `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		redeclarationError := &sema.RedeclarationError{}
+		assert.ErrorAs(t, errs[0], &redeclarationError)
+
+	})
+
+	t.Run("invalid, missing aliased import", func(t *testing.T) {
+
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
+            access(all) fun a(): Int {
+              return 42
+          	}
+			  
+			`,
+			ParseAndCheckOptions{
+				Location: ImportedLocation,
+			},
+		)
+
+		require.NoError(t, err)
+
+		_, err = ParseAndCheckWithOptions(t,
+			`
+            import c as a from "imported"
+
+            access(all) fun main() {
+                c() + c()
+            }
+            `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 0)
+
+		notExportedError := &sema.NotExportedError{}
+		assert.ErrorAs(t, errs[0], &notExportedError)
+
+	})
+
+}

@@ -89,7 +89,7 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 	checker.Elaboration.SetImportDeclarationsResolvedLocations(declaration, resolvedLocations)
 
 	for _, resolvedLocation := range resolvedLocations {
-		checker.importResolvedLocation(resolvedLocation, locationRange)
+		checker.importResolvedLocation(resolvedLocation, locationRange, &declaration.Aliases)
 	}
 }
 
@@ -113,7 +113,7 @@ func (checker *Checker) resolveLocation(identifiers []ast.Identifier, location c
 	return locationHandler(identifiers, location)
 }
 
-func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation, locationRange ast.Range) {
+func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation, locationRange ast.Range, aliases *map[string]string) {
 
 	// First, get the Import for the resolved location
 
@@ -178,6 +178,7 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 		checker.valueActivations,
 		resolvedLocation.Identifiers,
 		allValueElements,
+		aliases,
 		true,
 	)
 
@@ -188,6 +189,7 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 		checker.typeActivations,
 		resolvedLocation.Identifiers,
 		allTypeElements,
+		aliases,
 		false,
 	)
 
@@ -302,6 +304,7 @@ func (checker *Checker) importElements(
 	valueActivations *VariableActivations,
 	requestedIdentifiers []ast.Identifier,
 	availableElements *StringImportElementOrderedMap,
+	aliases *map[string]string,
 	importValues bool,
 ) (
 	found map[ast.Identifier]bool,
@@ -325,6 +328,10 @@ func (checker *Checker) importElements(
 			element, ok := availableElements.Get(name)
 			if !ok {
 				continue
+			}
+			alias, ok := (*aliases)[name]
+			if ok {
+				name = alias
 			}
 			elements.Set(name, element)
 			found[identifier] = true
