@@ -31,6 +31,7 @@ import (
 type ImportDeclaration struct {
 	Location    common.Location
 	Identifiers []Identifier
+	Aliases     map[string]string
 	Range
 	LocationPos Position
 }
@@ -41,6 +42,7 @@ var _ Declaration = &ImportDeclaration{}
 func NewImportDeclaration(
 	gauge common.MemoryGauge,
 	identifiers []Identifier,
+	aliases map[string]string,
 	location common.Location,
 	declRange Range,
 	locationPos Position,
@@ -49,6 +51,7 @@ func NewImportDeclaration(
 
 	return &ImportDeclaration{
 		Identifiers: identifiers,
+		Aliases:     aliases,
 		Location:    location,
 		Range:       declRange,
 		LocationPos: locationPos,

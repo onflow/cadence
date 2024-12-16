@@ -2436,36 +2436,123 @@ func TestParseImportDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations(`
+		result, errs := testParseDeclarations(`
 			import foo as bar, lorem from 0x42
 		`)
 		require.Empty(t, errs)
 
-		// assert result after deciding how to parse
+		AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.ImportDeclaration{
+					Identifiers: []ast.Identifier{
+						{
+							Identifier: "foo",
+							Pos:        ast.Position{Line: 2, Column: 10, Offset: 11},
+						},
+						{
+							Identifier: "lorem",
+							Pos:        ast.Position{Line: 2, Column: 22, Offset: 23},
+						},
+					},
+					Aliases: map[string]string{
+						"foo": "bar",
+					},
+					Location: common.AddressLocation{
+						Address: common.MustBytesToAddress([]byte{0x42}),
+					},
+					LocationPos: ast.Position{Line: 2, Column: 33, Offset: 34},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 2, Column: 3, Offset: 4},
+						EndPos:   ast.Position{Line: 2, Column: 36, Offset: 37},
+					},
+				},
+			},
+			result,
+		)
 	})
 
 	t.Run("multiple import alias", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations(`
+		result, errs := testParseDeclarations(`
 			import foo as bar, lorem as ipsum from 0x42
 		`)
 		require.Empty(t, errs)
 
-		// assert result after deciding how to parse
+		AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.ImportDeclaration{
+					Identifiers: []ast.Identifier{
+						{
+							Identifier: "foo",
+							Pos:        ast.Position{Line: 2, Column: 10, Offset: 11},
+						},
+						{
+							Identifier: "lorem",
+							Pos:        ast.Position{Line: 2, Column: 22, Offset: 23},
+						},
+					},
+					Aliases: map[string]string{
+						"foo":   "bar",
+						"lorem": "ipsum",
+					},
+					Location: common.AddressLocation{
+						Address: common.MustBytesToAddress([]byte{0x42}),
+					},
+					LocationPos: ast.Position{Line: 2, Column: 42, Offset: 43},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 2, Column: 3, Offset: 4},
+						EndPos:   ast.Position{Line: 2, Column: 45, Offset: 46},
+					},
+				},
+			},
+			result,
+		)
 	})
 
 	t.Run("combination import aliases", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations(`
+		result, errs := testParseDeclarations(`
 			import foo as bar, test as from, from from 0x42
 		`)
 		require.Empty(t, errs)
 
-		// assert result after deciding how to parse
+		AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.ImportDeclaration{
+					Identifiers: []ast.Identifier{
+						{
+							Identifier: "foo",
+							Pos:        ast.Position{Line: 2, Column: 10, Offset: 11},
+						},
+						{
+							Identifier: "test",
+							Pos:        ast.Position{Line: 2, Column: 22, Offset: 23},
+						},
+						{
+							Identifier: "from",
+							Pos:        ast.Position{Line: 2, Column: 36, Offset: 37},
+						},
+					},
+					Aliases: map[string]string{
+						"foo":  "bar",
+						"test": "from",
+					},
+					Location: common.AddressLocation{
+						Address: common.MustBytesToAddress([]byte{0x42}),
+					},
+					LocationPos: ast.Position{Line: 2, Column: 46, Offset: 47},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 2, Column: 3, Offset: 4},
+						EndPos:   ast.Position{Line: 2, Column: 49, Offset: 50},
+					},
+				},
+			},
+			result,
+		)
 	})
 }
 

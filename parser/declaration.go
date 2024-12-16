@@ -652,6 +652,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 	startPosition := p.current.StartPos
 
 	var identifiers []ast.Identifier
+	aliases := make(map[string]string)
 
 	var location common.Location
 	var locationPos ast.Position
@@ -684,7 +685,8 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 		endPos = identifier.EndPosition(p.memoryGauge)
 	}
 
-	parseOptionalImportAlias := func() error {
+	// pass in the identifier which would be aliased
+	parseOptionalImportAlias := func(identifier ast.Identifier) error {
 		// stop early if the current token is not as
 		if string(p.currentTokenSource()) != KeywordAs {
 			return nil
@@ -695,7 +697,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
 			identifierAlias := p.tokenToIdentifier(p.current)
-			identifiers = append(identifiers, identifierAlias)
+			aliases[identifier.Identifier] = identifierAlias.Identifier
 
 			// Skip the alias
 			p.nextSemanticToken()
@@ -729,15 +731,10 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 	}
 
 	parseMoreIdentifiers := func() error {
-		expectCommaOrFrom := false
+		expectCommaOrFrom := true
 
 		atEnd := false
 		for !atEnd {
-			p.nextSemanticToken()
-
-			// Parse optional alias
-			parseOptionalImportAlias()
-
 			switch p.current.Type {
 			case lexer.TokenComma:
 				if !expectCommaOrFrom {
@@ -749,6 +746,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 					)
 				}
 				expectCommaOrFrom = false
+				p.nextSemanticToken()
 
 			case lexer.TokenIdentifier:
 
@@ -782,6 +780,10 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 
 				identifier := p.tokenToIdentifier(p.current)
 				identifiers = append(identifiers, identifier)
+				p.nextSemanticToken()
+
+				// Parse optional alias
+				parseOptionalImportAlias(identifier)
 
 				expectCommaOrFrom = true
 
@@ -841,7 +843,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 		// Skip the identifier
 		p.nextSemanticToken()
 		// Parse optional alias
-		parseOptionalImportAlias()
+		parseOptionalImportAlias(identifier)
 
 		switch p.current.Type {
 		case lexer.TokenComma:
@@ -883,6 +885,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 	return ast.NewImportDeclaration(
 		p.memoryGauge,
 		identifiers,
+		aliases,
 		location,
 		ast.NewRange(
 			p.memoryGauge,
