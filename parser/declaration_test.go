@@ -2609,6 +2609,22 @@ func TestParseImportDeclaration(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("invalid, non identifier alias", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`
+			import foo as 1 from 0x42
+		`)
+
+		AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 2, Column: 17, Offset: 18},
+				Message: `expected identifier in import alias: got decimal integer`,
+			},
+		}, errs)
+	})
 }
 
 func TestParseEvent(t *testing.T) {

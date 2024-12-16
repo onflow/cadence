@@ -63,6 +63,7 @@ func TestImportDeclaration_MarshalJSON(t *testing.T) {
                     "EndPos": {"Offset": 3, "Line": 2, "Column": 5}
                 }
             ],
+			"Aliases": null,
             "Location": {
                 "Type": "StringLocation",
                 "String": "test"

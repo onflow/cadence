@@ -973,7 +973,7 @@ func TestCheckImportAlias(t *testing.T) {
 
 	})
 
-	t.Run("invalid, missing aliased import", func(t *testing.T) {
+	t.Run("invalid missing aliased import", func(t *testing.T) {
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
@@ -1008,7 +1008,7 @@ func TestCheckImportAlias(t *testing.T) {
 			},
 		)
 
-		errs := RequireCheckerErrors(t, err, 0)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		notExportedError := &sema.NotExportedError{}
 		assert.ErrorAs(t, errs[0], &notExportedError)

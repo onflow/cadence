@@ -652,7 +652,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 	startPosition := p.current.StartPos
 
 	var identifiers []ast.Identifier
-	aliases := make(map[string]string)
+	var aliases map[string]string
 
 	var location common.Location
 	var locationPos ast.Position
@@ -688,11 +688,16 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 	// pass in the identifier which would be aliased
 	parseOptionalImportAlias := func(identifier ast.Identifier) error {
 		// stop early if the current token is not as
-		if string(p.currentTokenSource()) != KeywordAs {
+		if p.current.Type != lexer.TokenIdentifier || string(p.currentTokenSource()) != KeywordAs {
 			return nil
 		}
 		// Skip the `as` keyword
 		p.nextSemanticToken()
+
+		// lazy initialize alias map
+		if aliases == nil {
+			aliases = make(map[string]string)
+		}
 
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
@@ -703,7 +708,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 			p.nextSemanticToken()
 		default:
 			return p.syntaxError(
-				"expected identifer in import alias: got %s",
+				"expected identifier in import alias: got %s",
 				p.current.Type,
 			)
 		}
@@ -783,7 +788,10 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 				p.nextSemanticToken()
 
 				// Parse optional alias
-				parseOptionalImportAlias(identifier)
+				err := parseOptionalImportAlias(identifier)
+				if err != nil {
+					return err
+				}
 
 				expectCommaOrFrom = true
 
@@ -843,7 +851,10 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 		// Skip the identifier
 		p.nextSemanticToken()
 		// Parse optional alias
-		parseOptionalImportAlias(identifier)
+		err := parseOptionalImportAlias(identifier)
+		if err != nil {
+			return nil, err
+		}
 
 		switch p.current.Type {
 		case lexer.TokenComma:
