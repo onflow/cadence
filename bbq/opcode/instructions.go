@@ -154,6 +154,7 @@ func DecodeSetGlobal(ip *uint16, code []byte) (i InstructionSetGlobal) {
 //
 // Pushes the value of the field at the given index onto the stack.
 type InstructionGetField struct {
+	FieldNameIndex uint16
 }
 
 var _ Instruction = InstructionGetField{}
@@ -163,17 +164,27 @@ func (InstructionGetField) Opcode() Opcode {
 }
 
 func (i InstructionGetField) String() string {
-	return i.Opcode().String()
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	fmt.Fprintf(&sb, " fieldNameIndex:%s", i.FieldNameIndex)
+	return sb.String()
 }
 
 func (i InstructionGetField) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.FieldNameIndex)
+}
+
+func DecodeGetField(ip *uint16, code []byte) (i InstructionGetField) {
+	i.FieldNameIndex = decodeUint16(ip, code)
+	return i
 }
 
 // InstructionSetField
 //
 // Sets the value of the field at the given index to the top value on the stack.
 type InstructionSetField struct {
+	FieldNameIndex uint16
 }
 
 var _ Instruction = InstructionSetField{}
@@ -183,11 +194,20 @@ func (InstructionSetField) Opcode() Opcode {
 }
 
 func (i InstructionSetField) String() string {
-	return i.Opcode().String()
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	fmt.Fprintf(&sb, " fieldNameIndex:%s", i.FieldNameIndex)
+	return sb.String()
 }
 
 func (i InstructionSetField) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.FieldNameIndex)
+}
+
+func DecodeSetField(ip *uint16, code []byte) (i InstructionSetField) {
+	i.FieldNameIndex = decodeUint16(ip, code)
+	return i
 }
 
 // InstructionGetIndex
@@ -1001,9 +1021,9 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 	case SetGlobal:
 		return DecodeSetGlobal(ip, code)
 	case GetField:
-		return InstructionGetField{}
+		return DecodeGetField(ip, code)
 	case SetField:
-		return InstructionSetField{}
+		return DecodeSetField(ip, code)
 	case GetIndex:
 		return InstructionGetIndex{}
 	case SetIndex:

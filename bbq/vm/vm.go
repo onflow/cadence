@@ -494,29 +494,31 @@ func opNew(vm *VM, ins opcode.InstructionNew) {
 	vm.push(value)
 }
 
-func opSetField(vm *VM) {
-	fieldName := vm.pop().(StringValue)
-	fieldNameStr := string(fieldName.Str)
-
+func opSetField(vm *VM, ins opcode.InstructionSetField) {
 	// TODO: support all container types
 	structValue := vm.pop().(MemberAccessibleValue)
 
 	fieldValue := vm.pop()
 
-	structValue.SetMember(vm.config, fieldNameStr, fieldValue)
+	// VM assumes the field name is always a string.
+	constant := vm.callFrame.executable.Program.Constants[ins.FieldNameIndex]
+	fieldName := string(constant.Data)
+
+	structValue.SetMember(vm.config, fieldName, fieldValue)
 }
 
-func opGetField(vm *VM) {
-	fieldName := vm.pop().(StringValue)
-	fieldNameStr := string(fieldName.Str)
-
+func opGetField(vm *VM, ins opcode.InstructionGetField) {
 	memberAccessibleValue := vm.pop().(MemberAccessibleValue)
 
-	fieldValue := memberAccessibleValue.GetMember(vm.config, fieldNameStr)
+	// VM assumes the field name is always a string.
+	constant := vm.callFrame.executable.Program.Constants[ins.FieldNameIndex]
+	fieldName := string(constant.Data)
+
+	fieldValue := memberAccessibleValue.GetMember(vm.config, fieldName)
 	if fieldValue == nil {
 		panic(MissingMemberValueError{
 			Parent: memberAccessibleValue,
-			Name:   fieldNameStr,
+			Name:   fieldName,
 		})
 	}
 
@@ -684,9 +686,9 @@ func (vm *VM) run() {
 		case opcode.InstructionNewRef:
 			opNewRef(vm, ins)
 		case opcode.InstructionSetField:
-			opSetField(vm)
+			opSetField(vm, ins)
 		case opcode.InstructionGetField:
-			opGetField(vm)
+			opGetField(vm, ins)
 		case opcode.InstructionTransfer:
 			opTransfer(vm, ins)
 		case opcode.InstructionDestroy:

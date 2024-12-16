@@ -244,8 +244,12 @@ func (c *Compiler[_]) addConstant(kind constantkind.ConstantKind, data []byte) *
 }
 
 func (c *Compiler[_]) stringConstLoad(str string) {
-	constant := c.addConstant(constantkind.String, []byte(str))
+	constant := c.addStringConst(str)
 	c.codeGen.Emit(opcode.InstructionGetConstant{ConstantIndex: constant.index})
+}
+
+func (c *Compiler[_]) addStringConst(str string) *constant {
+	return c.addConstant(constantkind.String, []byte(str))
 }
 
 func (c *Compiler[_]) emitJump(target int) int {
@@ -648,8 +652,8 @@ func (c *Compiler[_]) VisitAssignmentStatement(statement *ast.AssignmentStatemen
 
 	case *ast.MemberExpression:
 		c.compileExpression(target.Expression)
-		c.stringConstLoad(target.Identifier.Identifier)
-		c.codeGen.Emit(opcode.InstructionSetField{})
+		constant := c.addStringConst(target.Identifier.Identifier)
+		c.codeGen.Emit(opcode.InstructionSetField{FieldNameIndex: constant.index})
 
 	case *ast.IndexExpression:
 		c.compileExpression(target.TargetExpression)
@@ -914,8 +918,8 @@ func (c *Compiler[_]) loadTypeArguments(expression *ast.InvocationExpression) []
 
 func (c *Compiler[_]) VisitMemberExpression(expression *ast.MemberExpression) (_ struct{}) {
 	c.compileExpression(expression.Expression)
-	c.stringConstLoad(expression.Identifier.Identifier)
-	c.codeGen.Emit(opcode.InstructionGetField{})
+	constant := c.addStringConst(expression.Identifier.Identifier)
+	c.codeGen.Emit(opcode.InstructionGetField{FieldNameIndex: constant.index})
 	return
 }
 

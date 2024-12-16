@@ -34,9 +34,15 @@
 
 - name: "getField"
   description: Pushes the value of the field at the given index onto the stack.
+  operands:
+    - name: "fieldNameIndex"
+      type: "index"
 
 - name: "setField"
   description: Sets the value of the field at the given index to the top value on the stack.
+  operands:
+    - name: "fieldNameIndex"
+      type: "index"
 
 # Index instructions
 
