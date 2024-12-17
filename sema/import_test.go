@@ -877,7 +877,7 @@ func TestCheckImportAlias(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("valid, multiple alias of same contract", func(t *testing.T) {
+	t.Run("valid multiple alias of same contract", func(t *testing.T) {
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
@@ -926,7 +926,7 @@ func TestCheckImportAlias(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("invalid, duplicate aliases", func(t *testing.T) {
+	t.Run("invalid duplicate aliases", func(t *testing.T) {
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
@@ -1012,6 +1012,48 @@ func TestCheckImportAlias(t *testing.T) {
 
 		notExportedError := &sema.NotExportedError{}
 		assert.ErrorAs(t, errs[0], &notExportedError)
+
+	})
+
+	t.Run("invalid use orig instead of alias", func(t *testing.T) {
+
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
+            access(all) fun a(): Int {
+              return 42
+          	}
+			  
+			`,
+			ParseAndCheckOptions{
+				Location: ImportedLocation,
+			},
+		)
+
+		require.NoError(t, err)
+
+		_, err = ParseAndCheckWithOptions(t,
+			`
+            import a as b from "imported"
+
+            access(all) fun main() {
+                a()
+            }
+            `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		notDeclaredError := &sema.NotDeclaredError{}
+		assert.ErrorAs(t, errs[0], &notDeclaredError)
 
 	})
 
