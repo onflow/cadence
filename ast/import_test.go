@@ -40,6 +40,9 @@ func TestImportDeclaration_MarshalJSON(t *testing.T) {
 				Pos:        Position{Offset: 1, Line: 2, Column: 3},
 			},
 		},
+		Aliases: map[string]string{
+			"foo": "bar",
+		},
 		Location:    common.StringLocation("test"),
 		LocationPos: Position{Offset: 4, Line: 5, Column: 6},
 		Range: Range{
@@ -63,7 +66,9 @@ func TestImportDeclaration_MarshalJSON(t *testing.T) {
                     "EndPos": {"Offset": 3, "Line": 2, "Column": 5}
                 }
             ],
-			"Aliases": null,
+			"Aliases": {
+				"foo": "bar"
+			},
             "Location": {
                 "Type": "StringLocation",
                 "String": "test"

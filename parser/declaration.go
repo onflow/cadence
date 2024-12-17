@@ -645,7 +645,7 @@ func parsePragmaDeclaration(p *parser) (*ast.PragmaDeclaration, error) {
 //
 //	importDeclaration :
 //	    'import'
-//	    ( identifier (as identifier)? (',' identifier (as identifier)?)* 'from' )?
+//	    ( identifier ('as' identifier)? (',' identifier ('as' identifier)?)* 'from' )?
 //	    ( string | hexadecimalLiteral | identifier )
 func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 

@@ -542,3 +542,95 @@ func TestInterpretImportWithAlias(t *testing.T) {
 		value,
 	)
 }
+
+func TestInterpretImportAliasGetType(t *testing.T) {
+
+	t.Parallel()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	importedChecker, err := ParseAndCheckWithOptions(t,
+		`
+		access(all) struct Foo {
+		}
+		`,
+		ParseAndCheckOptions{
+			Location: common.AddressLocation{
+				Address: address,
+				Name:    "",
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	importingChecker, err := ParseAndCheckWithOptions(t,
+		`
+		import Foo as Bar from 0x1
+
+		access(all) fun test(): String {
+			var bar: Bar = Bar()
+			return bar.getType().identifier
+		}
+        `,
+		ParseAndCheckOptions{
+			Config: &sema.Config{
+				LocationHandler: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
+
+					for _, identifier := range identifiers {
+						result = append(result, sema.ResolvedLocation{
+							Location: common.AddressLocation{
+								Address: location.(common.AddressLocation).Address,
+								Name:    identifier.Identifier,
+							},
+							Identifiers: []ast.Identifier{
+								identifier,
+							},
+						})
+					}
+					return
+				},
+				ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	storage := newUnmeteredInMemoryStorage()
+
+	inter, err := interpreter.NewInterpreter(
+		interpreter.ProgramFromChecker(importingChecker),
+		importingChecker.Location,
+		&interpreter.Config{
+			Storage: storage,
+			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+				program := interpreter.ProgramFromChecker(importedChecker)
+				subInterpreter, err := inter.NewSubInterpreter(program, location)
+				if err != nil {
+					panic(err)
+				}
+
+				return interpreter.InterpreterImport{
+					Interpreter: subInterpreter,
+				}
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	err = inter.Interpret()
+	require.NoError(t, err)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredStringValue("A.0000000000000001.Foo"),
+		value,
+	)
+}

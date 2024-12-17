@@ -833,19 +833,20 @@ func TestCheckImportAlias(t *testing.T) {
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
-            access(all) contract Foo {
-                access(all) let x: [Int]
+			access(all) contract Foo {
+				access(all) let x: [Int]
 
-                access(all) fun answer(): Int {
-                    return 42
-                }
+				access(all) fun answer(): Int {
+					return 42
+				}
 
-                access(all) struct Bar {}
+				access(all) struct Bar {}
 
-                init() {
-                    self.x = []
-                }
-            }`,
+				init() {
+					self.x = []
+				}
+			}
+			`,
 			ParseAndCheckOptions{
 				Location: ImportedLocation,
 			},
@@ -881,19 +882,20 @@ func TestCheckImportAlias(t *testing.T) {
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
-            access(all) contract Foo {
-                access(all) let x: [Int]
+			access(all) contract Foo {
+				access(all) let x: [Int]
 
-                access(all) fun answer(): Int {
-                    return 42
-                }
+				access(all) fun answer(): Int {
+					return 42
+				}
 
-                access(all) struct Bar {}
+				access(all) struct Bar {}
 
-                init() {
-                    self.x = []
-                }
-            }`,
+				init() {
+					self.x = []
+				}
+			}
+			`,
 			ParseAndCheckOptions{
 				Location: ImportedLocation,
 			},
@@ -937,7 +939,6 @@ func TestCheckImportAlias(t *testing.T) {
 			access(all) fun b(): Int {
               return 50
           	}
-			  
 			`,
 			ParseAndCheckOptions{
 				Location: ImportedLocation,
@@ -980,7 +981,6 @@ func TestCheckImportAlias(t *testing.T) {
             access(all) fun a(): Int {
               return 42
           	}
-			  
 			`,
 			ParseAndCheckOptions{
 				Location: ImportedLocation,
@@ -1022,7 +1022,6 @@ func TestCheckImportAlias(t *testing.T) {
             access(all) fun a(): Int {
               return 42
           	}
-			  
 			`,
 			ParseAndCheckOptions{
 				Location: ImportedLocation,

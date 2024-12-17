@@ -32,13 +32,13 @@ func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDe
 	resolvedLocations := interpreter.Program.Elaboration.ImportDeclarationsResolvedLocations(declaration)
 
 	for _, resolvedLocation := range resolvedLocations {
-		interpreter.importResolvedLocation(resolvedLocation, &declaration.Aliases)
+		interpreter.importResolvedLocation(resolvedLocation, declaration.Aliases)
 	}
 
 	return nil
 }
 
-func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.ResolvedLocation, aliases *map[string]string) {
+func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.ResolvedLocation, aliases map[string]string) {
 	config := interpreter.SharedState.Config
 
 	// tracing
@@ -63,7 +63,7 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 		variables = make(map[string]Variable, identifierLength)
 		for _, identifier := range resolvedLocation.Identifiers {
 			name := identifier.Identifier
-			alias, ok := (*aliases)[name]
+			alias, ok := aliases[name]
 			if ok {
 				name = alias
 			}
