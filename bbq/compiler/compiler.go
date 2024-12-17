@@ -244,8 +244,12 @@ func (c *Compiler[_]) addConstant(kind constantkind.ConstantKind, data []byte) *
 }
 
 func (c *Compiler[_]) stringConstLoad(str string) {
-	constant := c.addConstant(constantkind.String, []byte(str))
+	constant := c.addStringConst(str)
 	c.codeGen.Emit(opcode.InstructionGetConstant{ConstantIndex: constant.index})
+}
+
+func (c *Compiler[_]) addStringConst(str string) *constant {
+	return c.addConstant(constantkind.String, []byte(str))
 }
 
 func (c *Compiler[_]) emitJump(target int) int {
@@ -648,8 +652,8 @@ func (c *Compiler[_]) VisitAssignmentStatement(statement *ast.AssignmentStatemen
 
 	case *ast.MemberExpression:
 		c.compileExpression(target.Expression)
-		c.stringConstLoad(target.Identifier.Identifier)
-		c.codeGen.Emit(opcode.InstructionSetField{})
+		constant := c.addStringConst(target.Identifier.Identifier)
+		c.codeGen.Emit(opcode.InstructionSetField{FieldNameIndex: constant.index})
 
 	case *ast.IndexExpression:
 		c.compileExpression(target.TargetExpression)
@@ -829,11 +833,12 @@ func (c *Compiler[_]) VisitInvocationExpression(expression *ast.InvocationExpres
 				panic(errors.NewDefaultUserError("invalid number of arguments"))
 			}
 
+			funcNameConst := c.addStringConst(funcName)
 			c.codeGen.Emit(
 				opcode.InstructionInvokeDynamic{
-					Name:     funcName,
-					TypeArgs: typeArgs,
-					ArgCount: uint16(argumentCount),
+					NameIndex: funcNameConst.index,
+					TypeArgs:  typeArgs,
+					ArgCount:  uint16(argumentCount),
 				},
 			)
 
@@ -914,8 +919,8 @@ func (c *Compiler[_]) loadTypeArguments(expression *ast.InvocationExpression) []
 
 func (c *Compiler[_]) VisitMemberExpression(expression *ast.MemberExpression) (_ struct{}) {
 	c.compileExpression(expression.Expression)
-	c.stringConstLoad(expression.Identifier.Identifier)
-	c.codeGen.Emit(opcode.InstructionGetField{})
+	constant := c.addStringConst(expression.Identifier.Identifier)
+	c.codeGen.Emit(opcode.InstructionGetField{FieldNameIndex: constant.index})
 	return
 }
 
@@ -1063,10 +1068,13 @@ func (c *Compiler[_]) VisitPathExpression(expression *ast.PathExpression) (_ str
 	if len(identifier) >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid identifier"))
 	}
+
+	identifierConst := c.addStringConst(identifier)
+
 	c.codeGen.Emit(
 		opcode.InstructionPath{
-			Domain:     domain,
-			Identifier: identifier,
+			Domain:          domain,
+			IdentifierIndex: identifierConst.index,
 		},
 	)
 	return

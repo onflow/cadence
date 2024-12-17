@@ -473,13 +473,19 @@ func instructionStringFuncDecl(ins instruction) *dst.FuncDecl {
 		)
 
 		for _, operand := range ins.Operands {
+			var funcName string
+			switch operand.Type {
+			case operandTypeIndices:
+				funcName = "printfUInt16ArrayArgument"
+			default:
+				funcName = "printfArgument"
+			}
 			stmts = append(
 				stmts,
 				&dst.ExprStmt{
 					X: &dst.CallExpr{
 						Fun: &dst.Ident{
-							Name: "Fprintf",
-							Path: "fmt",
+							Name: funcName,
 						},
 						Args: []dst.Expr{
 							&dst.UnaryExpr{
@@ -488,7 +494,7 @@ func instructionStringFuncDecl(ins instruction) *dst.FuncDecl {
 							},
 							&dst.BasicLit{
 								Kind:  token.STRING,
-								Value: fmt.Sprintf(`" %s:%%s"`, operand.Name),
+								Value: fmt.Sprintf(`"%s"`, operand.Name),
 							},
 							&dst.SelectorExpr{
 								X:   dst.NewIdent("i"),

@@ -21,6 +21,9 @@
 package opcode
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/onflow/cadence/common"
 )
 
@@ -160,4 +163,22 @@ func DecodeInstructions(code []byte) []Instruction {
 		instructions = append(instructions, instruction)
 	}
 	return instructions
+}
+
+// Instruction pretty print
+
+func printfUInt16ArrayArgument(sb *strings.Builder, argName string, values []uint16) {
+	_, _ = fmt.Fprintf(sb, " %s:[", argName)
+	for i, value := range values {
+		if i > 0 {
+			_, _ = fmt.Fprint(sb, ", ")
+		}
+		_, _ = fmt.Fprintf(sb, "%d", value)
+	}
+
+	sb.WriteString("]")
+}
+
+func printfArgument(sb *strings.Builder, fieldName string, v any) {
+	_, _ = fmt.Fprintf(sb, " %s:%v", fieldName, v)
 }

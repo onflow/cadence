@@ -3,7 +3,6 @@
 package opcode
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/onflow/cadence/common"
@@ -46,7 +45,7 @@ func (InstructionGetLocal) Opcode() Opcode {
 func (i InstructionGetLocal) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	fmt.Fprintf(&sb, " localIndex:%s", i.LocalIndex)
+	printfArgument(&sb, "localIndex", i.LocalIndex)
 	return sb.String()
 }
 
@@ -76,7 +75,7 @@ func (InstructionSetLocal) Opcode() Opcode {
 func (i InstructionSetLocal) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	fmt.Fprintf(&sb, " localIndex:%s", i.LocalIndex)
+	printfArgument(&sb, "localIndex", i.LocalIndex)
 	return sb.String()
 }
 
@@ -106,7 +105,7 @@ func (InstructionGetGlobal) Opcode() Opcode {
 func (i InstructionGetGlobal) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	fmt.Fprintf(&sb, " globalIndex:%s", i.GlobalIndex)
+	printfArgument(&sb, "globalIndex", i.GlobalIndex)
 	return sb.String()
 }
 
@@ -136,7 +135,7 @@ func (InstructionSetGlobal) Opcode() Opcode {
 func (i InstructionSetGlobal) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	fmt.Fprintf(&sb, " globalIndex:%s", i.GlobalIndex)
+	printfArgument(&sb, "globalIndex", i.GlobalIndex)
 	return sb.String()
 }
 
@@ -154,6 +153,7 @@ func DecodeSetGlobal(ip *uint16, code []byte) (i InstructionSetGlobal) {
 //
 // Pushes the value of the field at the given index onto the stack.
 type InstructionGetField struct {
+	FieldNameIndex uint16
 }
 
 var _ Instruction = InstructionGetField{}
@@ -163,17 +163,27 @@ func (InstructionGetField) Opcode() Opcode {
 }
 
 func (i InstructionGetField) String() string {
-	return i.Opcode().String()
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	printfArgument(&sb, "fieldNameIndex", i.FieldNameIndex)
+	return sb.String()
 }
 
 func (i InstructionGetField) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.FieldNameIndex)
+}
+
+func DecodeGetField(ip *uint16, code []byte) (i InstructionGetField) {
+	i.FieldNameIndex = decodeUint16(ip, code)
+	return i
 }
 
 // InstructionSetField
 //
 // Sets the value of the field at the given index to the top value on the stack.
 type InstructionSetField struct {
+	FieldNameIndex uint16
 }
 
 var _ Instruction = InstructionSetField{}
@@ -183,11 +193,20 @@ func (InstructionSetField) Opcode() Opcode {
 }
 
 func (i InstructionSetField) String() string {
-	return i.Opcode().String()
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	printfArgument(&sb, "fieldNameIndex", i.FieldNameIndex)
+	return sb.String()
 }
 
 func (i InstructionSetField) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.FieldNameIndex)
+}
+
+func DecodeSetField(ip *uint16, code []byte) (i InstructionSetField) {
+	i.FieldNameIndex = decodeUint16(ip, code)
+	return i
 }
 
 // InstructionGetIndex
@@ -294,8 +313,8 @@ func (i InstructionNil) Encode(code *[]byte) {
 //
 // Pushes the path with the given domain and identifier onto the stack.
 type InstructionPath struct {
-	Domain     common.PathDomain
-	Identifier string
+	Domain          common.PathDomain
+	IdentifierIndex uint16
 }
 
 var _ Instruction = InstructionPath{}
@@ -307,20 +326,20 @@ func (InstructionPath) Opcode() Opcode {
 func (i InstructionPath) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	fmt.Fprintf(&sb, " domain:%s", i.Domain)
-	fmt.Fprintf(&sb, " identifier:%s", i.Identifier)
+	printfArgument(&sb, "domain", i.Domain)
+	printfArgument(&sb, "identifierIndex", i.IdentifierIndex)
 	return sb.String()
 }
 
 func (i InstructionPath) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 	emitPathDomain(code, i.Domain)
-	emitString(code, i.Identifier)
+	emitUint16(code, i.IdentifierIndex)
 }
 
 func DecodePath(ip *uint16, code []byte) (i InstructionPath) {
 	i.Domain = decodePathDomain(ip, code)
-	i.Identifier = decodeString(ip, code)
+	i.IdentifierIndex = decodeUint16(ip, code)
 	return i
 }
 
@@ -341,8 +360,8 @@ func (InstructionNew) Opcode() Opcode {
 func (i InstructionNew) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	fmt.Fprintf(&sb, " kind:%s", i.Kind)
-	fmt.Fprintf(&sb, " typeIndex:%s", i.TypeIndex)
+	printfArgument(&sb, "kind", i.Kind)
+	printfArgument(&sb, "typeIndex", i.TypeIndex)
 	return sb.String()
 }
 
@@ -376,9 +395,9 @@ func (InstructionNewArray) Opcode() Opcode {
 func (i InstructionNewArray) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	fmt.Fprintf(&sb, " typeIndex:%s", i.TypeIndex)
-	fmt.Fprintf(&sb, " size:%s", i.Size)
-	fmt.Fprintf(&sb, " isResource:%s", i.IsResource)
+	printfArgument(&sb, "typeIndex", i.TypeIndex)
+	printfArgument(&sb, "size", i.Size)
+	printfArgument(&sb, "isResource", i.IsResource)
 	return sb.String()
 }
 
@@ -412,7 +431,7 @@ func (InstructionNewRef) Opcode() Opcode {
 func (i InstructionNewRef) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	fmt.Fprintf(&sb, " typeIndex:%s", i.TypeIndex)
+	printfArgument(&sb, "typeIndex", i.TypeIndex)
 	return sb.String()
 }
 
@@ -442,7 +461,7 @@ func (InstructionGetConstant) Opcode() Opcode {
 func (i InstructionGetConstant) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	fmt.Fprintf(&sb, " constantIndex:%s", i.ConstantIndex)
+	printfArgument(&sb, "constantIndex", i.ConstantIndex)
 	return sb.String()
 }
 
@@ -472,7 +491,7 @@ func (InstructionInvoke) Opcode() Opcode {
 func (i InstructionInvoke) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	fmt.Fprintf(&sb, " typeArgs:%s", i.TypeArgs)
+	printfUInt16ArrayArgument(&sb, "typeArgs", i.TypeArgs)
 	return sb.String()
 }
 
@@ -490,9 +509,9 @@ func DecodeInvoke(ip *uint16, code []byte) (i InstructionInvoke) {
 //
 // Invokes the dynamic function with the given name, type arguments, and argument count.
 type InstructionInvokeDynamic struct {
-	Name     string
-	TypeArgs []uint16
-	ArgCount uint16
+	NameIndex uint16
+	TypeArgs  []uint16
+	ArgCount  uint16
 }
 
 var _ Instruction = InstructionInvokeDynamic{}
@@ -504,21 +523,21 @@ func (InstructionInvokeDynamic) Opcode() Opcode {
 func (i InstructionInvokeDynamic) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	fmt.Fprintf(&sb, " name:%s", i.Name)
-	fmt.Fprintf(&sb, " typeArgs:%s", i.TypeArgs)
-	fmt.Fprintf(&sb, " argCount:%s", i.ArgCount)
+	printfArgument(&sb, "nameIndex", i.NameIndex)
+	printfUInt16ArrayArgument(&sb, "typeArgs", i.TypeArgs)
+	printfArgument(&sb, "argCount", i.ArgCount)
 	return sb.String()
 }
 
 func (i InstructionInvokeDynamic) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitString(code, i.Name)
+	emitUint16(code, i.NameIndex)
 	emitUint16Array(code, i.TypeArgs)
 	emitUint16(code, i.ArgCount)
 }
 
 func DecodeInvokeDynamic(ip *uint16, code []byte) (i InstructionInvokeDynamic) {
-	i.Name = decodeString(ip, code)
+	i.NameIndex = decodeUint16(ip, code)
 	i.TypeArgs = decodeUint16Array(ip, code)
 	i.ArgCount = decodeUint16(ip, code)
 	return i
@@ -620,7 +639,7 @@ func (InstructionTransfer) Opcode() Opcode {
 func (i InstructionTransfer) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	fmt.Fprintf(&sb, " typeIndex:%s", i.TypeIndex)
+	printfArgument(&sb, "typeIndex", i.TypeIndex)
 	return sb.String()
 }
 
@@ -651,8 +670,8 @@ func (InstructionCast) Opcode() Opcode {
 func (i InstructionCast) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	fmt.Fprintf(&sb, " typeIndex:%s", i.TypeIndex)
-	fmt.Fprintf(&sb, " kind:%s", i.Kind)
+	printfArgument(&sb, "typeIndex", i.TypeIndex)
+	printfArgument(&sb, "kind", i.Kind)
 	return sb.String()
 }
 
@@ -684,7 +703,7 @@ func (InstructionJump) Opcode() Opcode {
 func (i InstructionJump) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	fmt.Fprintf(&sb, " target:%s", i.Target)
+	printfArgument(&sb, "target", i.Target)
 	return sb.String()
 }
 
@@ -714,7 +733,7 @@ func (InstructionJumpIfFalse) Opcode() Opcode {
 func (i InstructionJumpIfFalse) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	fmt.Fprintf(&sb, " target:%s", i.Target)
+	printfArgument(&sb, "target", i.Target)
 	return sb.String()
 }
 
@@ -1001,9 +1020,9 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 	case SetGlobal:
 		return DecodeSetGlobal(ip, code)
 	case GetField:
-		return InstructionGetField{}
+		return DecodeGetField(ip, code)
 	case SetField:
-		return InstructionSetField{}
+		return DecodeSetField(ip, code)
 	case GetIndex:
 		return InstructionGetIndex{}
 	case SetIndex:
