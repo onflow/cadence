@@ -9,12 +9,20 @@
   operands:
     - name: "localIndex"
       type: "index"
+  valueEffects:
+    push:
+      - name: "value"
+        type: "value"
 
 - name: "setLocal"
   description: Sets the value of the local at the given index to the top value on the stack.
   operands:
     - name: "localIndex"
       type: "index"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
 
 # Global instructions
 
@@ -23,12 +31,20 @@
   operands:
     - name: "globalIndex"
       type: "index"
+  valueEffects:
+    push:
+      - name: "value"
+        type: "value"
 
 - name: "setGlobal"
   description: Sets the value of the global at the given index to the top value on the stack.
   operands:
     - name: "globalIndex"
       type: "index"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
 
 # Field instructions
 
@@ -37,31 +53,73 @@
   operands:
     - name: "fieldNameIndex"
       type: "index"
+  valueEffects:
+    pop:
+      - name: "container"
+        type: "value"
+    push:
+      - name: "value"
+        type: "value"
 
 - name: "setField"
   description: Sets the value of the field at the given index to the top value on the stack.
   operands:
     - name: "fieldNameIndex"
       type: "index"
+  valueEffects:
+    pop:
+      - name: "container"
+        type: "value"
+      - name: "value"
+        type: "value"
 
 # Index instructions
 
 - name: "getIndex"
   description: Pushes the value at the given index onto the stack.
+  valueEffects:
+    pop:
+      - name: "array"
+        type: "array"
+      - name: "index"
+        type: "integer"
+    push:
+      - name: "value"
+        type: "value"
 
 - name: "setIndex"
   description: Sets the value at the given index to the top value on the stack.
+  valueEffects:
+    pop:
+      - name: "array"
+        type: "array"
+      - name: "index"
+        type: "integer"
+      - name: "value"
+        type: "value"
 
 # Value instantiation instructions
 
 - name: "true"
   description: Pushes the boolean value `true` onto the stack.
+  valueEffects:
+    push:
+      - name: "value"
+        type: "bool"
 
 - name: "false"
   description: Pushes the boolean value `false` onto the stack.
+  valueEffects:
+    push:
+      - name: "value"
+        type: "bool"
 
 - name: "nil"
   description: Pushes the value `nil` onto the stack.
+  valueEffects:
+    push:
+      - name: "value"
+        type: "value"
 
 - name: "path"
   description: Pushes the path with the given domain and identifier onto the stack.
@@ -70,6 +128,10 @@
       type: "pathDomain"
     - name: "identifierIndex"
       type: "index"
+  valueEffects:
+    push:
+      - name: "value"
+        type: "path"
 
 - name: "new"
   description: Creates a new instance of the given type.
@@ -78,6 +140,10 @@
       type: "compositeKind"
     - name: "typeIndex"
       type: "index"
+  valueEffects:
+    push:
+      - name: "value"
+        type: "value"
 
 - name: "newArray"
   description: Creates a new array with the given type and size.
@@ -88,18 +154,38 @@
       type: "size"
     - name: "isResource"
       type: "bool"
+  valueEffects:
+    pop:
+      - name: "elements"
+        type: "value"
+        # The number of elements taken from the stack is equal to the size operand of the opcode.
+        count: "size"
+    push:
+      - name: "array"
+        type: "array"
 
 - name: "newRef"
   description: Creates a new reference with the given type.
   operands:
     - name: "typeIndex"
       type: "index"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+    push:
+      - name: "reference"
+        type: "reference"
 
 - name: "getConstant"
   description: Pushes the constant at the given index onto the stack.
   operands:
     - name: "constantIndex"
       type: "index"
+  valueEffects:
+    push:
+      - name: "value"
+        type: "value"
 
 # Invocation instructions
 
@@ -108,7 +194,17 @@
   operands:
     - name: "typeArgs"
       type: "indices"
-
+  valueEffects:
+    pop:
+      - name: "arguments"
+        # TODO: count
+      - name: "function"
+        type: "function"
+    push:
+      - name: "result"
+        type: "value"
+  controlEffects:
+    - call:
 
 - name: "invokeDynamic"
   description: Invokes the dynamic function with the given name, type arguments, and argument count.
@@ -119,24 +215,57 @@
       type: "indices"
     - name: "argCount"
       type: "size"
+  valueEffects:
+    pop:
+      - name: "arguments"
+        # TODO: count
+    push:
+      - name: "result"
+        type: "value"
+  controlEffects:
+    - call:
 
 # Value stack instructions
 
 - name: "dup"
   description: Duplicates the top value on the stack.
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+    push:
+      - name: "original"
+        type: "value"
+      - name: "duplicate"
+        type: "value"
 
 - name: "drop"
   description: Removes the top value from the stack.
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
 
 # Resource stack instructions
 
 - name: "destroy"
   description: Destroys the top value on the stack.
+  valueEffects:
+    pop:
+      - name: "resource"
+        type: "resource"
 
 # Optional instructions
 
 - name: "unwrap"
   description: Unwraps the top value on the stack.
+  valueEffects:
+    pop:
+      - name: "optional"
+        type: "optional"
+    push:
+      - name: "value"
+        type: "value"
 
 # Conversion instructions
 
@@ -145,6 +274,13 @@
   operands:
     - name: "typeIndex"
       type: "index"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+    push:
+      - name: "value"
+        type: "value"
 
 - name: "cast"
   description: Casts the top value on the stack to the given type.
@@ -153,6 +289,13 @@
       type: "index"
     - name: "kind"
       type: "castKind"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+    push:
+      - name: "value"
+        type: "value"
 
 # Control flow instructions
 
@@ -161,54 +304,165 @@
   operands:
     - name: "target"
       type: "index"
+  controlEffects:
+    - jump: "target"
 
 - name: "jumpIfFalse"
   description: Jumps to the given instruction, if the top value on the stack is `false`.
   operands:
     - name: "target"
       type: "index"
+  controlEffects:
+    - jump: "target"
 
 - name: "return"
   description: Returns from the current function, without a value.
+  controlEffects:
+    - return:
 
 - name: "returnValue"
   description: Returns from the current function, with the top value on the stack.
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+  controlEffects:
+    - return: "value"
 
 # Comparison instructions
 
 - name: "equal"
   description: Compares the top two values on the stack for equality.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "value"
+      - name: "right"
+        type: "value"
+    push:
+      - name: "result"
+        type: "bool"
 
 - name: "notEqual"
   description: Compares the top two values on the stack for inequality.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "value"
+      - name: "right"
+        type: "value"
+    push:
+      - name: "result"
+        type: "bool"
 
 # Integer arithmetic instructions
 
 - name: "intAdd"
   description: Adds the top two values on the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "int"
+      - name: "right"
+        type: "int"
+    push:
+      - name: "result"
+        type: "int"
 
 - name: "intSubtract"
   description: Subtracts the top two values on the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "int"
+      - name: "right"
+        type: "int"
+    push:
+      - name: "result"
+        type: "int"
 
 - name: "intMultiply"
   description: Multiplies the top two values on the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "int"
+      - name: "right"
+        type: "int"
+    push:
+      - name: "result"
+        type: "int"
 
 - name: "intDivide"
   description: Divides the top two values on the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "int"
+      - name: "right"
+        type: "int"
+    push:
+      - name: "result"
+        type: "int"
 
 - name: "intMod"
   description: Calculates the modulo of the top two values on the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "int"
+      - name: "right"
+        type: "int"
+    push:
+      - name: "result"
+        type: "int"
 
 # Integer comparison instructions
 
 - name: "intLess"
   description: Compares the top two values on the stack for less than.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "int"
+      - name: "right"
+        type: "int"
+    push:
+      - name: "result"
+        type: "bool"
 
 - name: "intLessOrEqual"
   description: Compares the top two values on the stack for less than or equal.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "int"
+      - name: "right"
+        type: "int"
+    push:
+      - name: "result"
+        type: "bool"
 
 - name: "intGreater"
   description: Compares the top two values on the stack for greater than.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "int"
+      - name: "right"
+        type: "int"
+    push:
+      - name: "result"
+        type: "bool"
 
 - name: "intGreaterOrEqual"
   description: Compares the top two values on the stack for greater than or equal.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "int"
+      - name: "right"
+        type: "int"
+    push:
+      - name: "result"
+        type: "bool"
