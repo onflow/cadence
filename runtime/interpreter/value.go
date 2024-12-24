@@ -2283,6 +2283,7 @@ func newArrayValueFromAtreeArray(
 
 var _ Value = &ArrayValue{}
 var _ atree.Value = &ArrayValue{}
+var _ atree.WrapperValue = &ArrayValue{}
 var _ EquatableValue = &ArrayValue{}
 var _ ValueIndexableValue = &ArrayValue{}
 var _ MemberAccessibleValue = &ArrayValue{}
@@ -3362,7 +3363,15 @@ func (v *ArrayValue) Storable(
 	address atree.Address,
 	maxInlineSize uint64,
 ) (atree.Storable, error) {
+	// NOTE: Need to change ArrayValue.UnwrapAtreeValue()
+	// if ArrayValue is stored with wrapping.
 	return v.array.Storable(storage, address, maxInlineSize)
+}
+
+func (v *ArrayValue) UnwrapAtreeValue() (atree.Value, uint64) {
+	// Wrapper size is 0 because ArrayValue is stored as
+	// atree.Array without any physical wrapping.
+	return v.array, 0
 }
 
 func (v *ArrayValue) IsReferenceTrackedResourceKindedValue() {}
@@ -17380,6 +17389,8 @@ var _ HashableValue = &CompositeValue{}
 var _ MemberAccessibleValue = &CompositeValue{}
 var _ ReferenceTrackedResourceKindedValue = &CompositeValue{}
 var _ ContractValue = &CompositeValue{}
+var _ atree.Value = &CompositeValue{}
+var _ atree.WrapperValue = &CompositeValue{}
 
 func (*CompositeValue) isValue() {}
 
@@ -18282,7 +18293,16 @@ func (v *CompositeValue) Storable(
 		return NonStorable{Value: v}, nil
 	}
 
+	// NOTE: Need to change CompositeValue.UnwrapAtreeValue()
+	// if CompositeValue is stored with wrapping.
+
 	return v.dictionary.Storable(storage, address, maxInlineSize)
+}
+
+func (v *CompositeValue) UnwrapAtreeValue() (atree.Value, uint64) {
+	// Wrapper size is 0 because CompositeValue is stored as
+	// atree.OrderedMap without any physical wrapping.
+	return v.dictionary, 0
 }
 
 func (v *CompositeValue) NeedsStoreTo(address atree.Address) bool {
@@ -19351,6 +19371,7 @@ func newDictionaryValueFromAtreeMap(
 
 var _ Value = &DictionaryValue{}
 var _ atree.Value = &DictionaryValue{}
+var _ atree.WrapperValue = &DictionaryValue{}
 var _ EquatableValue = &DictionaryValue{}
 var _ ValueIndexableValue = &DictionaryValue{}
 var _ MemberAccessibleValue = &DictionaryValue{}
@@ -20376,7 +20397,15 @@ func (v *DictionaryValue) Storable(
 	address atree.Address,
 	maxInlineSize uint64,
 ) (atree.Storable, error) {
+	// NOTE: Need to change DictionaryValue.UnwrapAtreeValue()
+	// if DictionaryValue is stored with wrapping.
 	return v.dictionary.Storable(storage, address, maxInlineSize)
+}
+
+func (v *DictionaryValue) UnwrapAtreeValue() (atree.Value, uint64) {
+	// Wrapper size is 0 because DictionaryValue is stored as
+	// atree.OrderedMap without any physical wrapping.
+	return v.dictionary, 0
 }
 
 func (v *DictionaryValue) IsReferenceTrackedResourceKindedValue() {}
@@ -20887,6 +20916,26 @@ var _ Value = &SomeValue{}
 var _ EquatableValue = &SomeValue{}
 var _ MemberAccessibleValue = &SomeValue{}
 var _ OptionalValue = &SomeValue{}
+var _ atree.Value = &SomeValue{}
+var _ atree.WrapperValue = &SomeValue{}
+
+func (v *SomeValue) UnwrapAtreeValue() (atree.Value, uint64) {
+	// Unwrap SomeValue(s)
+	nonSomeValue, nestedLevels := v.nonSomeValue()
+
+	// Get SomeValue(s) wrapper size
+	someStorableEncodedPrefixSize := getSomeStorableEncodedPrefixSize(nestedLevels)
+
+	// Unwrap nonSomeValue if needed
+	switch nonSomeValue := nonSomeValue.(type) {
+	case atree.WrapperValue:
+		unwrappedValue, wrapperSize := nonSomeValue.UnwrapAtreeValue()
+		return unwrappedValue, wrapperSize + uint64(someStorableEncodedPrefixSize)
+
+	default:
+		return nonSomeValue, uint64(someStorableEncodedPrefixSize)
+	}
+}
 
 func (*SomeValue) isValue() {}
 
@@ -21215,6 +21264,19 @@ type SomeStorable struct {
 }
 
 var _ atree.ContainerStorable = SomeStorable{}
+var _ atree.WrapperStorable = SomeStorable{}
+
+func (s SomeStorable) UnwrapAtreeStorable() atree.Storable {
+	storable := s.Storable
+
+	switch storable := storable.(type) {
+	case atree.WrapperStorable:
+		return storable.UnwrapAtreeStorable()
+
+	default:
+		return storable
+	}
+}
 
 func (s SomeStorable) HasPointer() bool {
 	switch cs := s.Storable.(type) {

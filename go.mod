@@ -16,7 +16,7 @@ require (
 	github.com/onflow/atree v0.8.0-rc.6
 	github.com/rivo/uniseg v0.4.4
 	github.com/schollz/progressbar/v3 v3.13.1
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	github.com/texttheater/golang-levenshtein/levenshtein v0.0.0-20200805054039-cae8b0eaed6c
 	github.com/tidwall/pretty v1.2.1
 	github.com/turbolent/prettier v0.0.0-20220320183459-661cc755135d
@@ -54,7 +54,7 @@ require (
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/zeebo/assert v1.3.0 // indirect
-	github.com/zeebo/blake3 v0.2.3 // indirect
+	github.com/zeebo/blake3 v0.2.4 // indirect
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.26.0 // indirect
@@ -62,3 +62,5 @@ require (
 	gonum.org/v1/gonum v0.6.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/onflow/atree => github.com/onflow/atree-internal v0.8.2-0.20241224003741-68d02a879b11
