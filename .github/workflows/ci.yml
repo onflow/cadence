@@ -85,6 +85,17 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           cache: true
 
+      - name: Setup SSH for Onflow
+        run: git config --global url.git@github.com:onflow/.insteadOf https://github.com/onflow/
+      
+      - name: Add GOPRIVATE
+        run: go env -w GOPRIVATE=${{ env.GOPRIVATE }}
+        
+      - name: Setup SSH Agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.ATREE_DEPLOY_KEY }}
+
       - name: Lint
         run: make lint-github-actions
 
