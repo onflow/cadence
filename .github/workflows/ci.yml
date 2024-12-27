@@ -14,6 +14,7 @@ on:
 
 env:
   GO_VERSION: '1.22'
+  GOPRIVATE: github.com/onflow/atree-internal
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
@@ -41,6 +42,17 @@ jobs:
 
       - name: Install Flow CLI
         run: sh -ci "$(curl -fsSL https://raw.githubusercontent.com/onflow/flow-cli/master/install.sh)"
+
+      - name: Setup SSH for Onflow
+        run: git config --global url.git@github.com:onflow/.insteadOf https://github.com/onflow/
+      
+      - name: Add GOPRIVATE
+        run: go env -w GOPRIVATE=${{ env.GOPRIVATE }}
+        
+      - name: Setup SSH Agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.ATREE_DEPLOY_KEY }}
 
       - name: Build
         run: make -j8 build
