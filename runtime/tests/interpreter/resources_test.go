@@ -3575,6 +3575,10 @@ func TestInterpretInvalidNilCoalescingResourceDuplication(t *testing.T) {
 				errs := checker.RequireCheckerErrors(t, err, 1)
 				assert.IsType(t, &sema.InvalidNilCoalescingRightResourceOperandError{}, errs[0])
 			},
+			Config: &interpreter.Config{
+				AtreeStorageValidationEnabled: false,
+				AtreeValueValidationEnabled:   false,
+			},
 		},
 	)
 	require.NoError(t, err)

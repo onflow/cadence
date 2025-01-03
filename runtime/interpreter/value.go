@@ -21278,6 +21278,18 @@ func (s SomeStorable) UnwrapAtreeStorable() atree.Storable {
 	}
 }
 
+// WrapAtreeStorable() wraps storable as innermost wrapped value and
+// returns new wrapped storable.
+func (s SomeStorable) WrapAtreeStorable(storable atree.Storable) atree.Storable {
+	_, nestedLevels := s.nonSomeStorable()
+
+	newStorable := SomeStorable{Storable: storable}
+	for i := 1; i < int(nestedLevels); i++ {
+		newStorable = SomeStorable{Storable: newStorable}
+	}
+	return newStorable
+}
+
 func (s SomeStorable) HasPointer() bool {
 	switch cs := s.Storable.(type) {
 	case atree.ContainerStorable:
