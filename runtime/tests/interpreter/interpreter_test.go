@@ -189,12 +189,17 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 	inter *interpreter.Interpreter,
 	err error,
 ) {
+
+	// Atree validation should be disabled for memory metering tests.
+	// Otherwise, validation may also affect the memory consumption.
+	enableAtreeValidations := memoryGauge == nil
+
 	return parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
 		t,
 		code,
 		options,
 		memoryGauge,
-		true,
+		enableAtreeValidations,
 	)
 }
 
