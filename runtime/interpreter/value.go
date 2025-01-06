@@ -20919,7 +20919,12 @@ var _ OptionalValue = &SomeValue{}
 var _ atree.Value = &SomeValue{}
 var _ atree.WrapperValue = &SomeValue{}
 
+// UnwrapAtreeValue returns non-SomeValue and wrapper size.
 func (v *SomeValue) UnwrapAtreeValue() (atree.Value, uint64) {
+	// NOTE:
+	// - non-SomeValue is the same as non-SomeValue in SomeValue.Storable()
+	// - non-SomeValue wrapper size is the same as encoded wrapper size in SomeStorable.ByteSize().
+
 	// Unwrap SomeValue(s)
 	nonSomeValue, nestedLevels := v.nonSomeValue()
 

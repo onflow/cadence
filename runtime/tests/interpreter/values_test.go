@@ -1927,9 +1927,20 @@ func TestCheckStorageHealthInMiddleOfTransferAndRemove(t *testing.T) {
 }
 
 // TestInterpretArrayOperations tests ArrayValue operations with
-// the a hardcoded seed that produced a past test failure.
-// See TestInterpretRandomArrayOperations for same test using
-// non-hardcoded seed.
+// the a hardcoded seed that produced a past test failure when using
+// the atree.WrapperValue interface (added to atree in January 2025).
+//
+// When WrapperValue (e.g. SomeValue) is inserted into atree array,
+// atree array unwraps WrapperValue and tracks its inserted index in array.
+// When such value is removed, atree array also needs to unwrap the removed
+// value and untracks its index in the array.
+// For more info about Wrappervalue and WrapperStorable, see:
+// https://github.com/onflow/cadence-internal/issues/286
+// https://github.com/onflow/atree-internal/pull/2
+// https://github.com/onflow/cadence-internal/pull/287
+//
+// NOTE: TestInterpretRandomArrayOperations is the same test as this, but
+// it uses a non-hardcoded seed.
 func TestInterpretArrayOperations(t *testing.T) {
 
 	// Use this random seed because it reproduces prior test failure.
