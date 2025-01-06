@@ -71,6 +71,23 @@ func parseCheckAndInterpretWithOptions(
 	return parseCheckAndInterpretWithOptionsAndMemoryMetering(t, code, options, nil)
 }
 
+func parseCheckAndInterpretWithAtreeValidationsDisabled(
+	t testing.TB,
+	code string,
+	options ParseCheckAndInterpretOptions,
+) (
+	inter *interpreter.Interpreter,
+	err error,
+) {
+	return parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
+		t,
+		code,
+		options,
+		nil,
+		false,
+	)
+}
+
 func parseCheckAndInterpretWithLogs(
 	tb testing.TB,
 	code string,
@@ -172,6 +189,25 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 	inter *interpreter.Interpreter,
 	err error,
 ) {
+	return parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
+		t,
+		code,
+		options,
+		memoryGauge,
+		true,
+	)
+}
+
+func parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
+	t testing.TB,
+	code string,
+	options ParseCheckAndInterpretOptions,
+	memoryGauge common.MemoryGauge,
+	enableAtreeValidations bool,
+) (
+	inter *interpreter.Interpreter,
+	err error,
+) {
 
 	checker, err := checker.ParseAndCheckWithOptionsAndMemoryMetering(t,
 		code,
@@ -201,10 +237,15 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 	if options.Config != nil {
 		config = *options.Config
 	}
-	if memoryGauge == nil {
+
+	if enableAtreeValidations {
 		config.AtreeValueValidationEnabled = true
 		config.AtreeStorageValidationEnabled = true
+	} else {
+		config.AtreeValueValidationEnabled = false
+		config.AtreeStorageValidationEnabled = false
 	}
+
 	if config.UUIDHandler == nil {
 		config.UUIDHandler = func() (uint64, error) {
 			uuid++

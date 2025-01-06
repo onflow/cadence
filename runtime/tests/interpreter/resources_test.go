@@ -24,11 +24,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/atree"
+
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/utils"
-
-	"github.com/onflow/cadence/runtime/interpreter"
 )
 
 func TestInterpretOptionalResourceBindingWithSecondValue(t *testing.T) {
@@ -3548,8 +3549,12 @@ func TestInterpretInvalidNilCoalescingResourceDuplication(t *testing.T) {
 
 	t.Parallel()
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
-		`
+	t.Run("remove", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, err := parseCheckAndInterpretWithAtreeValidationsDisabled(t,
+			`
           access(all) resource R {
                access(all) let answer: Int
                init() {
@@ -3570,22 +3575,59 @@ func TestInterpretInvalidNilCoalescingResourceDuplication(t *testing.T) {
               return answer1 + answer2
 	    }
 	    `,
-		ParseCheckAndInterpretOptions{
-			HandleCheckerError: func(err error) {
-				errs := checker.RequireCheckerErrors(t, err, 1)
-				assert.IsType(t, &sema.InvalidNilCoalescingRightResourceOperandError{}, errs[0])
+			ParseCheckAndInterpretOptions{
+				HandleCheckerError: func(err error) {
+					errs := checker.RequireCheckerErrors(t, err, 1)
+					assert.IsType(t, &sema.InvalidNilCoalescingRightResourceOperandError{}, errs[0])
+				},
 			},
-			Config: &interpreter.Config{
-				AtreeStorageValidationEnabled: false,
-				AtreeValueValidationEnabled:   false,
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		require.Error(t, err)
+
+		var inliningError *atree.FatalError
+		require.ErrorAs(t, err, &inliningError)
+		require.Contains(t, inliningError.Error(), "failed to uninline")
+	})
+
+	t.Run("destroy", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, err := parseCheckAndInterpretWithAtreeValidationsDisabled(t,
+			`
+          access(all) resource R {
+               access(all) let answer: Int
+               init() {
+                   self.answer = 42
+               }
+          }
+
+          access(all) fun main(): Int {
+              let rs <- [<- create R(), nil]
+              rs[1] <-! (nil ?? rs[0])
+              let answer1 = rs[0]?.answer!
+              let answer2 = rs[1]?.answer!
+              destroy rs
+              return answer1 + answer2
+	    }
+	    `,
+			ParseCheckAndInterpretOptions{
+				HandleCheckerError: func(err error) {
+					errs := checker.RequireCheckerErrors(t, err, 1)
+					assert.IsType(t, &sema.InvalidNilCoalescingRightResourceOperandError{}, errs[0])
+				},
 			},
-		},
-	)
-	require.NoError(t, err)
+		)
+		require.NoError(t, err)
 
-	_, err = inter.Invoke("main")
-	require.Error(t, err)
+		_, err = inter.Invoke("main")
+		require.Error(t, err)
 
-	var destroyedResourceErr interpreter.DestroyedResourceError
-	require.ErrorAs(t, err, &destroyedResourceErr)
+		var destroyedResourceErr interpreter.DestroyedResourceError
+		require.ErrorAs(t, err, &destroyedResourceErr)
+	})
+
 }
