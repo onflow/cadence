@@ -3370,7 +3370,7 @@ func (v *ArrayValue) Storable(
 
 func (v *ArrayValue) UnwrapAtreeValue() (atree.Value, uint64) {
 	// Wrapper size is 0 because ArrayValue is stored as
-	// atree.Array without any physical wrapping.
+	// atree.Array without any physical wrapping (see ArrayValue.Storable()).
 	return v.array, 0
 }
 
@@ -18301,7 +18301,7 @@ func (v *CompositeValue) Storable(
 
 func (v *CompositeValue) UnwrapAtreeValue() (atree.Value, uint64) {
 	// Wrapper size is 0 because CompositeValue is stored as
-	// atree.OrderedMap without any physical wrapping.
+	// atree.OrderedMap without any physical wrapping (see CompositeValue.Storable()).
 	return v.dictionary, 0
 }
 
@@ -20404,7 +20404,7 @@ func (v *DictionaryValue) Storable(
 
 func (v *DictionaryValue) UnwrapAtreeValue() (atree.Value, uint64) {
 	// Wrapper size is 0 because DictionaryValue is stored as
-	// atree.OrderedMap without any physical wrapping.
+	// atree.OrderedMap without any physical wrapping (see DictionaryValue.Storable()).
 	return v.dictionary, 0
 }
 
