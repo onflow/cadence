@@ -40,6 +40,7 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/checker"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -12505,4 +12506,227 @@ func TestInterpretOptionalAddressInConditional(t *testing.T) {
 		),
 		value,
 	)
+}
+
+func TestRuntimeSomeValueChildContainerMutation2(t *testing.T) {
+
+	t.Parallel()
+
+	ledger := NewTestLedger(nil, nil)
+
+	newInter := func() *interpreter.Interpreter {
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+
+              struct Foo {
+                  let values: {String: Int}?
+
+                  init() {
+                      self.values = {}
+                  }
+
+                  fun set(key: String, value: Int) {
+                      if let ref: auth(Mutate) &{String: Int} = &self.values {
+                          ref[key] = value
+                      }
+                  }
+
+                  fun get(key: String): Int? {
+                      if let ref: &{String: Int} = &self.values {
+                          return ref[key]
+                      }
+                      return nil
+                  }
+              }
+
+              fun setup(): Foo {
+                  let foo = Foo()
+                  foo.set(key: "a", value: 1)
+                  return foo
+              }
+
+              fun update(foo: &Foo): Bool {
+                  if foo.get(key: "a") != 1 {
+                       return false
+                  }
+	    		  foo.set(key: "a", value: 2)
+                  return true
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage: runtime.NewStorage(ledger, nil),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		return inter
+	}
+
+	inter := newInter()
+
+	foo, err := inter.Invoke("setup")
+	require.NoError(t, err)
+
+	address := common.MustBytesToAddress([]byte{0x1})
+	path := interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "foo")
+
+	storage := inter.Storage().(*runtime.Storage)
+	storageMap := storage.GetStorageMap(
+		address,
+		path.Domain.Identifier(),
+		true,
+	)
+
+	foo = foo.Transfer(
+		inter,
+		interpreter.EmptyLocationRange,
+		atree.Address(address),
+		false,
+		nil,
+		nil,
+		true,
+	)
+	storageMap.WriteValue(inter, interpreter.StringStorageMapKey(path.Identifier), foo)
+
+	err = storage.Commit(inter, false)
+	require.NoError(t, err)
+
+	inter = newInter()
+
+	storage = inter.Storage().(*runtime.Storage)
+	storageMap = storage.GetStorageMap(
+		address,
+		path.Domain.Identifier(),
+		false,
+	)
+	require.NotNil(t, storageMap)
+
+	ref := interpreter.NewStorageReferenceValue(
+		nil,
+		interpreter.UnauthorizedAccess,
+		address,
+		path,
+		nil,
+	)
+
+	result, err := inter.Invoke("update", ref)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.TrueValue, result)
+}
+
+func TestRuntimeSomeValueChildContainerMutation3(t *testing.T) {
+
+	t.Parallel()
+
+	ledger := NewTestLedger(nil, nil)
+
+	newInter := func() *interpreter.Interpreter {
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+
+              resource Bar {
+                  var value: Int
+
+                  init() {
+                      self.value = 0
+                  }
+              }
+
+              resource Foo {
+                  let bar: @Bar?
+
+                  init() {
+                      self.bar <- create Bar()
+                  }
+
+                  fun set(value: Int) {
+                      if let ref: &Bar = &self.bar {
+                          ref.value = value
+                      }
+                  }
+
+                  fun getValue(): Int? {
+                      return self.bar?.value
+                  }
+              }
+
+              fun setup(): @Foo {
+                  let foo <- create Foo()
+                  foo.set(value: 1)
+                  return <-foo
+              }
+
+              fun update(foo: &Foo): Bool {
+                  if foo.getValue() != 1 {
+                       return false
+                  }
+	    		  foo.set(value: 2)
+                  return true
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage: runtime.NewStorage(ledger, nil),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		return inter
+	}
+
+	inter := newInter()
+
+	foo, err := inter.Invoke("setup")
+	require.NoError(t, err)
+
+	address := common.MustBytesToAddress([]byte{0x1})
+	path := interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "foo")
+
+	storage := inter.Storage().(*runtime.Storage)
+	storageMap := storage.GetStorageMap(
+		address,
+		path.Domain.Identifier(),
+		true,
+	)
+
+	foo = foo.Transfer(
+		inter,
+		interpreter.EmptyLocationRange,
+		atree.Address(address),
+		false,
+		nil,
+		nil,
+		true,
+	)
+	storageMap.WriteValue(inter, interpreter.StringStorageMapKey(path.Identifier), foo)
+
+	err = storage.Commit(inter, false)
+	require.NoError(t, err)
+
+	inter = newInter()
+
+	storage = inter.Storage().(*runtime.Storage)
+	storageMap = storage.GetStorageMap(
+		address,
+		path.Domain.Identifier(),
+		false,
+	)
+	require.NotNil(t, storageMap)
+
+	ref := interpreter.NewStorageReferenceValue(
+		nil,
+		interpreter.UnauthorizedAccess,
+		address,
+		path,
+		nil,
+	)
+
+	result, err := inter.Invoke("update", ref)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.TrueValue, result)
 }
