@@ -12508,7 +12508,7 @@ func TestInterpretOptionalAddressInConditional(t *testing.T) {
 	)
 }
 
-func TestRuntimeSomeValueChildContainerMutation2(t *testing.T) {
+func TestInterpretSomeValueChildContainerMutation_Dictionary(t *testing.T) {
 
 	t.Parallel()
 
@@ -12553,6 +12553,14 @@ func TestRuntimeSomeValueChildContainerMutation2(t *testing.T) {
 	    		  foo.set(key: "a", value: 2)
                   return true
               }
+
+              fun updateAgain(foo: &Foo): Bool {
+                  if foo.get(key: "a") != 2 {
+                       return false
+                  }
+	    		  foo.set(key: "a", value: 3)
+                  return true
+              }
             `,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
@@ -12564,6 +12572,8 @@ func TestRuntimeSomeValueChildContainerMutation2(t *testing.T) {
 
 		return inter
 	}
+
+	// Setup
 
 	inter := newInter()
 
@@ -12594,6 +12604,8 @@ func TestRuntimeSomeValueChildContainerMutation2(t *testing.T) {
 	err = storage.Commit(inter, false)
 	require.NoError(t, err)
 
+	// Update
+
 	inter = newInter()
 
 	storage = inter.Storage().(*runtime.Storage)
@@ -12615,9 +12627,33 @@ func TestRuntimeSomeValueChildContainerMutation2(t *testing.T) {
 	result, err := inter.Invoke("update", ref)
 	require.NoError(t, err)
 	assert.Equal(t, interpreter.TrueValue, result)
+
+	// Update again
+
+	inter = newInter()
+
+	storage = inter.Storage().(*runtime.Storage)
+	storageMap = storage.GetStorageMap(
+		address,
+		path.Domain.Identifier(),
+		false,
+	)
+	require.NotNil(t, storageMap)
+
+	ref = interpreter.NewStorageReferenceValue(
+		nil,
+		interpreter.UnauthorizedAccess,
+		address,
+		path,
+		nil,
+	)
+
+	result, err = inter.Invoke("updateAgain", ref)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.TrueValue, result)
 }
 
-func TestRuntimeSomeValueChildContainerMutation3(t *testing.T) {
+func TestInterpretSomeValueChildContainerMutation_Composite(t *testing.T) {
 
 	t.Parallel()
 
@@ -12667,6 +12703,14 @@ func TestRuntimeSomeValueChildContainerMutation3(t *testing.T) {
 	    		  foo.set(value: 2)
                   return true
               }
+
+              fun updateAgain(foo: &Foo): Bool {
+                  if foo.getValue() != 2 {
+                       return false
+                  }
+	    		  foo.set(value: 3)
+                  return true
+              }
             `,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
@@ -12678,6 +12722,8 @@ func TestRuntimeSomeValueChildContainerMutation3(t *testing.T) {
 
 		return inter
 	}
+
+	// Setup
 
 	inter := newInter()
 
@@ -12708,6 +12754,8 @@ func TestRuntimeSomeValueChildContainerMutation3(t *testing.T) {
 	err = storage.Commit(inter, false)
 	require.NoError(t, err)
 
+	// Update
+
 	inter = newInter()
 
 	storage = inter.Storage().(*runtime.Storage)
@@ -12727,6 +12775,182 @@ func TestRuntimeSomeValueChildContainerMutation3(t *testing.T) {
 	)
 
 	result, err := inter.Invoke("update", ref)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.TrueValue, result)
+
+	err = storage.Commit(inter, false)
+	require.NoError(t, err)
+
+	// Update again
+
+	inter = newInter()
+
+	storage = inter.Storage().(*runtime.Storage)
+	storageMap = storage.GetStorageMap(
+		address,
+		path.Domain.Identifier(),
+		false,
+	)
+	require.NotNil(t, storageMap)
+
+	ref = interpreter.NewStorageReferenceValue(
+		nil,
+		interpreter.UnauthorizedAccess,
+		address,
+		path,
+		nil,
+	)
+
+	result, err = inter.Invoke("updateAgain", ref)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.TrueValue, result)
+}
+
+func TestInterpretSomeValueChildContainerMutation_Array(t *testing.T) {
+
+	t.Parallel()
+
+	ledger := NewTestLedger(nil, nil)
+
+	newInter := func() *interpreter.Interpreter {
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+
+              struct Foo {
+                  let values: [Int]?
+
+                  init() {
+                      self.values = []
+                  }
+
+                  fun set(value: Int) {
+                      if let ref: auth(Mutate) &[Int] = &self.values {
+                          if ref.length == 0 {
+                             ref.append(value)
+                          } else {
+                             ref[0] = value
+                          }
+                      }
+                  }
+
+                  fun getValue(): Int? {
+                      if let ref: &[Int] = &self.values {
+                          return ref[0]
+                      }
+                      return nil
+                  }
+              }
+
+              fun setup(): Foo {
+                  let foo = Foo()
+                  foo.set(value: 1)
+                  return foo
+              }
+
+              fun update(foo: &Foo): Bool {
+                  if foo.getValue() != 1 {
+                       return false
+                  }
+	    		  foo.set(value: 2)
+                  return true
+              }
+
+              fun updateAgain(foo: &Foo): Bool {
+                  if foo.getValue() != 2 {
+                       return false
+                  }
+	    		  foo.set(value: 3)
+                  return true
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage: runtime.NewStorage(ledger, nil),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		return inter
+	}
+
+	// Setup
+
+	inter := newInter()
+
+	foo, err := inter.Invoke("setup")
+	require.NoError(t, err)
+
+	address := common.MustBytesToAddress([]byte{0x1})
+	path := interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "foo")
+
+	storage := inter.Storage().(*runtime.Storage)
+	storageMap := storage.GetStorageMap(
+		address,
+		path.Domain.Identifier(),
+		true,
+	)
+
+	foo = foo.Transfer(
+		inter,
+		interpreter.EmptyLocationRange,
+		atree.Address(address),
+		false,
+		nil,
+		nil,
+		true,
+	)
+	storageMap.WriteValue(inter, interpreter.StringStorageMapKey(path.Identifier), foo)
+
+	err = storage.Commit(inter, false)
+	require.NoError(t, err)
+
+	// Update
+
+	inter = newInter()
+
+	storage = inter.Storage().(*runtime.Storage)
+	storageMap = storage.GetStorageMap(
+		address,
+		path.Domain.Identifier(),
+		false,
+	)
+	require.NotNil(t, storageMap)
+
+	ref := interpreter.NewStorageReferenceValue(
+		nil,
+		interpreter.UnauthorizedAccess,
+		address,
+		path,
+		nil,
+	)
+
+	result, err := inter.Invoke("update", ref)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.TrueValue, result)
+
+	// Update again
+
+	inter = newInter()
+
+	storage = inter.Storage().(*runtime.Storage)
+	storageMap = storage.GetStorageMap(
+		address,
+		path.Domain.Identifier(),
+		false,
+	)
+	require.NotNil(t, storageMap)
+
+	ref = interpreter.NewStorageReferenceValue(
+		nil,
+		interpreter.UnauthorizedAccess,
+		address,
+		path,
+		nil,
+	)
+
+	result, err = inter.Invoke("updateAgain", ref)
 	require.NoError(t, err)
 	assert.Equal(t, interpreter.TrueValue, result)
 }
