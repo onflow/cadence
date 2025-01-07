@@ -12628,6 +12628,9 @@ func TestInterpretSomeValueChildContainerMutation_Dictionary(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, interpreter.TrueValue, result)
 
+	err = storage.Commit(inter, false)
+	require.NoError(t, err)
+
 	// Update again
 
 	inter = newInter()
@@ -12929,6 +12932,9 @@ func TestInterpretSomeValueChildContainerMutation_Array(t *testing.T) {
 	result, err := inter.Invoke("update", ref)
 	require.NoError(t, err)
 	assert.Equal(t, interpreter.TrueValue, result)
+
+	err = storage.Commit(inter, false)
+	require.NoError(t, err)
 
 	// Update again
 
