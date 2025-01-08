@@ -8029,15 +8029,16 @@ func (v Int128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{
+		panic(NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
-	if !o.BigInt.IsUint64() {
-		panic(OverflowError{
-			LocationRange: locationRange,
-		})
+	if o.BigInt.Cmp(big.NewInt(128)) == 1 {
+		return NewInt128ValueFromUint64(interpreter, 0)
 	}
+
+	// Add usage for possible intermediate value.
+	common.UseMemory(interpreter, Int128MemoryUsage)
 
 	valueGetter := func() *big.Int {
 		res := new(big.Int)
@@ -8060,14 +8061,12 @@ func (v Int128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{
+		panic(NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
-	if !o.BigInt.IsUint64() {
-		panic(OverflowError{
-			LocationRange: locationRange,
-		})
+	if o.BigInt.Cmp(big.NewInt(128)) == 1 {
+		return NewInt128ValueFromUint64(interpreter, 0)
 	}
 
 	valueGetter := func() *big.Int {
@@ -8771,18 +8770,20 @@ func (v Int256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 		})
 	}
 
+	if o.BigInt.Sign() < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+	if o.BigInt.Cmp(big.NewInt(256)) == 1 {
+		return NewInt256ValueFromUint64(interpreter, 0)
+	}
+
+	// Add usage for possible intermediate value.
+	common.UseMemory(interpreter, Int256MemoryUsage)
+
 	valueGetter := func() *big.Int {
 		res := new(big.Int)
-		if o.BigInt.Sign() < 0 {
-			panic(UnderflowError{
-				LocationRange: locationRange,
-			})
-		}
-		if !o.BigInt.IsUint64() {
-			panic(OverflowError{
-				LocationRange: locationRange,
-			})
-		}
 		res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
 
 		return res
@@ -8802,18 +8803,17 @@ func (v Int256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 		})
 	}
 
+	if o.BigInt.Sign() < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+	if o.BigInt.Cmp(big.NewInt(256)) == 1 {
+		return NewInt256ValueFromUint64(interpreter, 0)
+	}
+
 	valueGetter := func() *big.Int {
 		res := new(big.Int)
-		if o.BigInt.Sign() < 0 {
-			panic(UnderflowError{
-				LocationRange: locationRange,
-			})
-		}
-		if !o.BigInt.IsUint64() {
-			panic(OverflowError{
-				LocationRange: locationRange,
-			})
-		}
 		res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
 		return res
 	}
@@ -12318,20 +12318,22 @@ func (v UInt128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVa
 		})
 	}
 
+	if o.BigInt.Sign() < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+	if o.BigInt.Cmp(big.NewInt(128)) == 1 {
+		return NewUInt128ValueFromUint64(interpreter, 0)
+	}
+
+	// Add usage for possible intermediate value.
+	common.UseMemory(interpreter, Uint128MemoryUsage)
+
 	return NewUInt128ValueFromBigInt(
 		interpreter,
 		func() *big.Int {
 			res := new(big.Int)
-			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{
-					LocationRange: locationRange,
-				})
-			}
-			if !o.BigInt.IsUint64() {
-				panic(OverflowError{
-					LocationRange: locationRange,
-				})
-			}
 			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
 		},
 	)
@@ -12348,20 +12350,19 @@ func (v UInt128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerV
 		})
 	}
 
+	if o.BigInt.Sign() < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+	if o.BigInt.Cmp(big.NewInt(128)) == 1 {
+		return NewUInt128ValueFromUint64(interpreter, 0)
+	}
+
 	return NewUInt128ValueFromBigInt(
 		interpreter,
 		func() *big.Int {
 			res := new(big.Int)
-			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{
-					LocationRange: locationRange,
-				})
-			}
-			if !o.BigInt.IsUint64() {
-				panic(OverflowError{
-					LocationRange: locationRange,
-				})
-			}
 			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
 		},
 	)
@@ -12994,20 +12995,22 @@ func (v UInt256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVa
 		})
 	}
 
+	if o.BigInt.Sign() < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+	if o.BigInt.Cmp(big.NewInt(256)) == 1 {
+		return NewUInt256ValueFromUint64(interpreter, 0)
+	}
+
+	// Add usage for possible intermediate value.
+	common.UseMemory(interpreter, Uint256MemoryUsage)
+
 	return NewUInt256ValueFromBigInt(
 		interpreter,
 		func() *big.Int {
 			res := new(big.Int)
-			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{
-					LocationRange: locationRange,
-				})
-			}
-			if !o.BigInt.IsUint64() {
-				panic(OverflowError{
-					LocationRange: locationRange,
-				})
-			}
 			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
 		},
 	)
@@ -13024,20 +13027,19 @@ func (v UInt256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerV
 		})
 	}
 
+	if o.BigInt.Sign() < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+	if o.BigInt.Cmp(big.NewInt(256)) == 1 {
+		return NewUInt256ValueFromUint64(interpreter, 0)
+	}
+
 	return NewUInt256ValueFromBigInt(
 		interpreter,
 		func() *big.Int {
 			res := new(big.Int)
-			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{
-					LocationRange: locationRange,
-				})
-			}
-			if !o.BigInt.IsUint64() {
-				panic(OverflowError{
-					LocationRange: locationRange,
-				})
-			}
 			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
 		},
 	)
@@ -15358,20 +15360,22 @@ func (v Word128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVa
 		})
 	}
 
+	if o.BigInt.Sign() < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+	if o.BigInt.Cmp(big.NewInt(128)) == 1 {
+		return NewWord128ValueFromUint64(interpreter, 0)
+	}
+
+	// Add usage for possible intermediate value.
+	common.UseMemory(interpreter, Uint128MemoryUsage)
+
 	return NewWord128ValueFromBigInt(
 		interpreter,
 		func() *big.Int {
 			res := new(big.Int)
-			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{
-					LocationRange: locationRange,
-				})
-			}
-			if !o.BigInt.IsUint64() {
-				panic(OverflowError{
-					LocationRange: locationRange,
-				})
-			}
 			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
 		},
 	)
@@ -15387,20 +15391,19 @@ func (v Word128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerV
 		})
 	}
 
+	if o.BigInt.Sign() < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+	if o.BigInt.Cmp(big.NewInt(128)) == 1 {
+		return NewWord128ValueFromUint64(interpreter, 0)
+	}
+
 	return NewWord128ValueFromBigInt(
 		interpreter,
 		func() *big.Int {
 			res := new(big.Int)
-			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{
-					LocationRange: locationRange,
-				})
-			}
-			if !o.BigInt.IsUint64() {
-				panic(OverflowError{
-					LocationRange: locationRange,
-				})
-			}
 			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
 		},
 	)
@@ -15939,20 +15942,22 @@ func (v Word256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVa
 		})
 	}
 
+	if o.BigInt.Sign() < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+	if o.BigInt.Cmp(big.NewInt(256)) == 1 {
+		return NewWord256ValueFromUint64(interpreter, 0)
+	}
+
+	// Add usage for possible intermediate value.
+	common.UseMemory(interpreter, Uint256MemoryUsage)
+
 	return NewWord256ValueFromBigInt(
 		interpreter,
 		func() *big.Int {
 			res := new(big.Int)
-			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{
-					LocationRange: locationRange,
-				})
-			}
-			if !o.BigInt.IsUint64() {
-				panic(OverflowError{
-					LocationRange: locationRange,
-				})
-			}
 			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
 		},
 	)
@@ -15969,20 +15974,19 @@ func (v Word256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerV
 		})
 	}
 
+	if o.BigInt.Sign() < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+	if o.BigInt.Cmp(big.NewInt(256)) == 1 {
+		return NewWord256ValueFromUint64(interpreter, 0)
+	}
+
 	return NewWord256ValueFromBigInt(
 		interpreter,
 		func() *big.Int {
 			res := new(big.Int)
-			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{
-					LocationRange: locationRange,
-				})
-			}
-			if !o.BigInt.IsUint64() {
-				panic(OverflowError{
-					LocationRange: locationRange,
-				})
-			}
 			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
 		},
 	)
