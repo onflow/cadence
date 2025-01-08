@@ -12666,53 +12666,125 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 
 	t.Run("dictionary, two levels", func(t *testing.T) {
 		test(t, `
-              struct Foo {
-                  let values: {String: Int}??
+            struct Foo {
+                let values: {String: Int}??
 
-                  init() {
-                      self.values = {}
-                  }
+                init() {
+                    self.values = {}
+                }
 
-                  fun set(key: String, value: Int) {
-                      if let optRef: auth(Mutate) &{String: Int}? = &self.values {
-                          if let ref: auth(Mutate) &{String: Int} = optRef {
-                              ref[key] = value
-                          }
-                      }
-                  }
+                fun set(key: String, value: Int) {
+                    if let optRef: auth(Mutate) &{String: Int}? = &self.values {
+                        if let ref: auth(Mutate) &{String: Int} = optRef {
+                            ref[key] = value
+                        }
+                    }
+                }
 
-                  fun get(key: String): Int? {
-                      if let optRef: &{String: Int}? = &self.values {
-                          if let ref: &{String: Int} = optRef {
-                              return ref[key]
-                          }
-                      }
-                      return nil
-                  }
-              }
+                fun get(key: String): Int? {
+                    if let optRef: &{String: Int}? = &self.values {
+                        if let ref: &{String: Int} = optRef {
+                            return ref[key]
+                        }
+                    }
+                    return nil
+                }
+            }
 
-              fun setup(): Foo {
-                  let foo = Foo()
-                  foo.set(key: "a", value: 1)
-                  return foo
-              }
+            fun setup(): Foo {
+                let foo = Foo()
+                foo.set(key: "a", value: 1)
+                return foo
+            }
 
-              fun update(foo: &Foo): Bool {
-                  if foo.get(key: "a") != 1 {
-                       return false
-                  }
-                  foo.set(key: "a", value: 2)
-                  return true
-              }
+            fun update(foo: &Foo): Bool {
+                if foo.get(key: "a") != 1 {
+                     return false
+                }
+                foo.set(key: "a", value: 2)
+                return true
+            }
 
-              fun updateAgain(foo: &Foo): Bool {
-                  if foo.get(key: "a") != 2 {
-                       return false
-                  }
-                  foo.set(key: "a", value: 3)
-                  return true
-              }
+            fun updateAgain(foo: &Foo): Bool {
+                if foo.get(key: "a") != 2 {
+                     return false
+                }
+                foo.set(key: "a", value: 3)
+                return true
+            }
        `)
+	})
+
+	t.Run("dictionary, nested", func(t *testing.T) {
+
+		test(t, `
+            struct Bar {
+                let values: {String: Int}?
+
+                init() {
+                    self.values = {}
+                }
+
+                fun set(key: String, value: Int) {
+                    if let ref: auth(Mutate) &{String: Int} = &self.values {
+                        ref[key] = value
+                    }
+                }
+
+                fun get(key: String): Int? {
+                    if let ref: &{String: Int} = &self.values {
+                        return ref[key]
+                    }
+                    return nil
+                }
+            }
+
+            struct Foo {
+                let values: {String: Bar}?
+
+                init() {
+                    self.values = {}
+                }
+
+                fun set(key: String, value: Int) {
+                    if let ref: auth(Mutate) &{String: Bar} = &self.values {
+                        if ref[key] == nil {
+                            ref[key] = Bar()
+                        }
+                        ref[key]?.set(key: key, value: value)
+                    }
+                }
+
+                fun get(key: String): Int? {
+                    if let ref: &{String: Bar} = &self.values {
+                        return ref[key]?.get(key: key) ?? nil
+                    }
+                    return nil
+                }
+            }
+
+            fun setup(): Foo {
+                let foo = Foo()
+                foo.set(key: "a", value: 1)
+                return foo
+            }
+
+            fun update(foo: &Foo): Bool {
+                if foo.get(key: "a") != 1 {
+                     return false
+                }
+                foo.set(key: "a", value: 2)
+                return true
+            }
+
+            fun updateAgain(foo: &Foo): Bool {
+                if foo.get(key: "a") != 2 {
+                     return false
+                }
+                foo.set(key: "a", value: 3)
+                return true
+            }
+        `)
 	})
 
 	t.Run("resource, one level", func(t *testing.T) {
@@ -12802,6 +12874,77 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
                           return optRef?.value
                       }
                       return nil
+                  }
+              }
+
+              fun setup(): @Foo {
+                  let foo <- create Foo()
+                  foo.set(value: 1)
+                  return <-foo
+              }
+
+              fun update(foo: &Foo): Bool {
+                  if foo.getValue() != 1 {
+                       return false
+                  }
+                  foo.set(value: 2)
+                  return true
+              }
+
+              fun updateAgain(foo: &Foo): Bool {
+                  if foo.getValue() != 2 {
+                       return false
+                  }
+                  foo.set(value: 3)
+                  return true
+              }
+        `)
+	})
+
+	t.Run("resource, nested", func(t *testing.T) {
+
+		test(t, `
+              resource Baz {
+                  var value: Int
+
+                  init() {
+                      self.value = 0
+                  }
+              }
+
+              resource Bar {
+                  let baz: @Baz?
+
+                  init() {
+                      self.baz <- create Baz()
+                  }
+
+                  fun set(value: Int) {
+                      if let ref: &Baz = &self.baz {
+                          ref.value = value
+                      }
+                  }
+
+                  fun getValue(): Int? {
+                      return self.baz?.value
+                  }
+              }
+
+              resource Foo {
+                  let bar: @Bar?
+
+                  init() {
+                      self.bar <- create Bar()
+                  }
+
+                  fun set(value: Int) {
+                      if let ref: &Bar = &self.bar {
+                          ref.set(value: value)
+                      }
+                  }
+
+                  fun getValue(): Int? {
+                      return self.bar?.getValue() ?? nil
                   }
               }
 
@@ -12939,4 +13082,83 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
           }
         `)
 	})
+
+	t.Run("array, nested", func(t *testing.T) {
+
+		test(t, `
+
+           struct Bar {
+              let values: [Int]?
+
+              init() {
+                  self.values = []
+              }
+
+              fun set(value: Int) {
+                  if let ref: auth(Mutate) &[Int] = &self.values {
+                      if ref.length == 0 {
+                         ref.append(value)
+                      } else {
+                         ref[0] = value
+                      }
+                  }
+              }
+
+              fun getValue(): Int? {
+                  if let ref: &[Int] = &self.values {
+                      return ref[0]
+                  }
+                  return nil
+              }
+          }
+
+          struct Foo {
+              let values: [Bar]?
+
+              init() {
+                  self.values = []
+              }
+
+              fun set(value: Int) {
+                  if let ref: auth(Mutate) &[Bar] = &self.values {
+                      if ref.length == 0 {
+                         ref.append(Bar())
+                      }
+                      ref[0].set(value: value)
+                  }
+              }
+
+              fun getValue(): Int? {
+                  if let ref: &[Bar] = &self.values {
+                      return ref[0].getValue()
+                  }
+                  return nil
+              }
+          }
+
+          fun setup(): Foo {
+              let foo = Foo()
+              foo.set(value: 1)
+              return foo
+          }
+
+          fun update(foo: &Foo): Bool {
+              if foo.getValue() != 1 {
+                   return false
+              }
+              foo.set(value: 2)
+              return true
+          }
+
+          fun updateAgain(foo: &Foo): Bool {
+              if foo.getValue() != 2 {
+                   return false
+              }
+              foo.set(value: 3)
+              return true
+          }
+        `)
+
+	})
+
 }
