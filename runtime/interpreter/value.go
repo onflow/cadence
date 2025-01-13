@@ -7407,6 +7407,22 @@ func (Int64Value) ChildStorables() []atree.Storable {
 	return nil
 }
 
+// truncate trims a big.Int to maxWords by directly modifying its underlying representation.
+func truncate(x *big.Int, maxWords int) *big.Int {
+	// Get the absolute value of x as a nat slice.
+	abs := x.Bits()
+
+	// Limit the nat slice to maxWords.
+	if len(abs) > maxWords {
+		abs = abs[:maxWords]
+	}
+
+	// Update the big.Int's internal representation.
+	x.SetBits(abs)
+
+	return x
+}
+
 // Int128Value
 
 type Int128Value struct {
@@ -8033,17 +8049,19 @@ func (v Int128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 			LocationRange: locationRange,
 		})
 	}
-	if o.BigInt.Cmp(big.NewInt(128)) == 1 {
+	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 128 {
 		return NewInt128ValueFromUint64(interpreter, 0)
 	}
 
-	// Add usage for possible intermediate value.
+	// The maximum shift value at this point is 127, which may lead to an
+	// additional allocation of up to 128 bits. Add usage for possible
+	// intermediate value.
 	common.UseMemory(interpreter, Int128MemoryUsage)
 
 	valueGetter := func() *big.Int {
 		res := new(big.Int)
-		res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-		return res
+		res = res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+		return truncate(res, 2)
 	}
 
 	return NewInt128ValueFromBigInt(interpreter, valueGetter)
@@ -8065,7 +8083,7 @@ func (v Int128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 			LocationRange: locationRange,
 		})
 	}
-	if o.BigInt.Cmp(big.NewInt(128)) == 1 {
+	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 128 {
 		return NewInt128ValueFromUint64(interpreter, 0)
 	}
 
@@ -8775,18 +8793,19 @@ func (v Int256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 			LocationRange: locationRange,
 		})
 	}
-	if o.BigInt.Cmp(big.NewInt(256)) == 1 {
+	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 256 {
 		return NewInt256ValueFromUint64(interpreter, 0)
 	}
 
-	// Add usage for possible intermediate value.
+	// The maximum shift value at this point is 255, which may lead to an
+	// additional allocation of up to 256 bits. Add usage for possible
+	// intermediate value.
 	common.UseMemory(interpreter, Int256MemoryUsage)
 
 	valueGetter := func() *big.Int {
 		res := new(big.Int)
-		res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-
-		return res
+		res = res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+		return truncate(res, 4)
 	}
 
 	return NewInt256ValueFromBigInt(interpreter, valueGetter)
@@ -8808,7 +8827,7 @@ func (v Int256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 			LocationRange: locationRange,
 		})
 	}
-	if o.BigInt.Cmp(big.NewInt(256)) == 1 {
+	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 256 {
 		return NewInt256ValueFromUint64(interpreter, 0)
 	}
 
@@ -12323,18 +12342,21 @@ func (v UInt128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVa
 			LocationRange: locationRange,
 		})
 	}
-	if o.BigInt.Cmp(big.NewInt(128)) == 1 {
+	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 128 {
 		return NewUInt128ValueFromUint64(interpreter, 0)
 	}
 
-	// Add usage for possible intermediate value.
+	// The maximum shift value at this point is 127, which may lead to an
+	// additional allocation of up to 128 bits. Add usage for possible
+	// intermediate value.
 	common.UseMemory(interpreter, Uint128MemoryUsage)
 
 	return NewUInt128ValueFromBigInt(
 		interpreter,
 		func() *big.Int {
 			res := new(big.Int)
-			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+			res = res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+			return truncate(res, 2)
 		},
 	)
 }
@@ -12355,7 +12377,7 @@ func (v UInt128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerV
 			LocationRange: locationRange,
 		})
 	}
-	if o.BigInt.Cmp(big.NewInt(128)) == 1 {
+	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 128 {
 		return NewUInt128ValueFromUint64(interpreter, 0)
 	}
 
@@ -13000,18 +13022,21 @@ func (v UInt256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVa
 			LocationRange: locationRange,
 		})
 	}
-	if o.BigInt.Cmp(big.NewInt(256)) == 1 {
+	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 256 {
 		return NewUInt256ValueFromUint64(interpreter, 0)
 	}
 
-	// Add usage for possible intermediate value.
+	// The maximum shift value at this point is 255, which may lead to an
+	// additional allocation of up to 256 bits. Add usage for possible
+	// intermediate value.
 	common.UseMemory(interpreter, Uint256MemoryUsage)
 
 	return NewUInt256ValueFromBigInt(
 		interpreter,
 		func() *big.Int {
 			res := new(big.Int)
-			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+			res = res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+			return truncate(res, 4)
 		},
 	)
 }
@@ -13032,7 +13057,7 @@ func (v UInt256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerV
 			LocationRange: locationRange,
 		})
 	}
-	if o.BigInt.Cmp(big.NewInt(256)) == 1 {
+	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 256 {
 		return NewUInt256ValueFromUint64(interpreter, 0)
 	}
 
@@ -15365,18 +15390,21 @@ func (v Word128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVa
 			LocationRange: locationRange,
 		})
 	}
-	if o.BigInt.Cmp(big.NewInt(128)) == 1 {
+	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 128 {
 		return NewWord128ValueFromUint64(interpreter, 0)
 	}
 
-	// Add usage for possible intermediate value.
+	// The maximum shift value at this point is 127, which may lead to an
+	// additional allocation of up to 128 bits. Add usage for possible
+	// intermediate value.
 	common.UseMemory(interpreter, Uint128MemoryUsage)
 
 	return NewWord128ValueFromBigInt(
 		interpreter,
 		func() *big.Int {
 			res := new(big.Int)
-			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+			res = res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+			return truncate(res, 2)
 		},
 	)
 }
@@ -15396,7 +15424,7 @@ func (v Word128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerV
 			LocationRange: locationRange,
 		})
 	}
-	if o.BigInt.Cmp(big.NewInt(128)) == 1 {
+	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 128 {
 		return NewWord128ValueFromUint64(interpreter, 0)
 	}
 
@@ -15947,18 +15975,21 @@ func (v Word256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVa
 			LocationRange: locationRange,
 		})
 	}
-	if o.BigInt.Cmp(big.NewInt(256)) == 1 {
+	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 256 {
 		return NewWord256ValueFromUint64(interpreter, 0)
 	}
 
-	// Add usage for possible intermediate value.
+	// The maximum shift value at this point is 255, which may lead to an
+	// additional allocation of up to 256 bits. Add usage for possible
+	// intermediate value.
 	common.UseMemory(interpreter, Uint256MemoryUsage)
 
 	return NewWord256ValueFromBigInt(
 		interpreter,
 		func() *big.Int {
 			res := new(big.Int)
-			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+			res = res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+			return truncate(res, 4)
 		},
 	)
 }
@@ -15979,7 +16010,7 @@ func (v Word256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerV
 			LocationRange: locationRange,
 		})
 	}
-	if o.BigInt.Cmp(big.NewInt(256)) == 1 {
+	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 256 {
 		return NewWord256ValueFromUint64(interpreter, 0)
 	}
 
