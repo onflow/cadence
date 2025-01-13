@@ -21,16 +21,13 @@
 package main
 
 import (
-	"context"
+	"encoding/base64"
 	"encoding/csv"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"sort"
-
-	"github.com/hasura/go-graphql-client"
 )
 
 type chainID string
@@ -41,17 +38,15 @@ const (
 )
 
 var chainFlag = flag.String("chain", "", "mainnet or testnet")
-var apiKeyFlag = flag.String("apiKey", "", "Flowdiver API key")
-var batchFlag = flag.Int("batch", 500, "batch size")
 
-var csvHeader = []string{"location", "code"}
+const authFlagUsage = "find.xyz API auth (username:password)"
+
+var authFlag = flag.String("auth", "", authFlagUsage)
+
+var resultCSVHeader = []string{"location", "code"}
 
 func main() {
 	flag.Parse()
-
-	// Get batch size from flags
-
-	batchSize := *batchFlag
 
 	// Get chain ID from flags
 
@@ -65,11 +60,11 @@ func main() {
 		log.Fatalf("invalid chain: %s", chain)
 	}
 
-	// Get API key from flags
+	// Get auth from flags
 
-	apiKey := *apiKeyFlag
-	if apiKey == "" {
-		log.Fatal("missing Flowdiver API key")
+	auth := *authFlag
+	if auth == "" {
+		log.Fatal("missing " + authFlagUsage)
 	}
 
 	// Get contracts from network
@@ -77,70 +72,36 @@ func main() {
 	var apiURL string
 	switch chain {
 	case mainnet:
-		apiURL = "https://api.findlabs.io/hasura/v1/graphql"
+		apiURL = "https://api.find.xyz"
 	case testnet:
-		apiURL = "https://api.findlabs.io/hasura_testnet/v1/graphql"
+		apiURL = "https://api.test-find.xyz"
 	}
 
-	client := graphql.NewClient(apiURL, nil).
-		WithRequestModifier(func(r *http.Request) {
-			r.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
-			// NOTE: important, default is forbidden by API's bot prevention
-			// (https://github.com/Kong/kong/blob/master/kong/plugins/bot-detection/rules.lua)
-			r.Header.Set("User-Agent", "Flow Foundation Cadence Tool")
-		})
+	apiURL += "/bulk/v1/contract?valid_only=true"
 
-	var total, offset int
-	var contracts [][]string
-
-	for {
-
-		log.Printf("fetching contracts %d-%d", offset, offset+batchSize)
-
-		var req struct {
-			ContractsAggregate struct {
-				Aggregate struct {
-					Count int
-				}
-			} `graphql:"contracts_aggregate(where: {valid_to: {_is_null: true}})"`
-			Contracts []struct {
-				Identifier string
-				Body       string
-			} `graphql:"contracts(where: {valid_to: {_is_null: true}}, limit: $limit, offset: $offset)"`
-		}
-
-		if err := client.Query(
-			context.Background(),
-			&req,
-			map[string]any{
-				"offset": offset,
-				"limit":  batchSize,
-			},
-		); err != nil {
-			log.Fatalf("failed to query: %s", err)
-		}
-
-		total = req.ContractsAggregate.Aggregate.Count
-
-		if contracts == nil {
-			contracts = make([][]string, 0, total)
-		}
-
-		for _, contract := range req.Contracts {
-			contracts = append(
-				contracts, []string{
-					contract.Identifier,
-					contract.Body,
-				},
-			)
-		}
-
-		offset += batchSize
-
-		if offset >= total {
-			break
-		}
+	req, err := http.NewRequest("GET", apiURL, nil)
+	if err != nil {
+		log.Fatalf("failed to create HTTP request: %s", err)
 	}
+
+	req.Header.Set("Accept", "text/csv")
+	req.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(auth)))
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Fatalf("failed to send HTTP request: %s", err)
+	}
+
+	reader := csv.NewReader(res.Body)
+	reader.FieldsPerRecord = -1
+
+	contracts, err := reader.ReadAll()
+	if err != nil {
+		log.Fatalf("failed to read CSV: %s", err)
+	}
+
+	// Skip header
+	contracts = contracts[1:]
 
 	// Sort
 
@@ -155,12 +116,17 @@ func main() {
 
 	writer := csv.NewWriter(os.Stdout)
 
-	if err := writer.Write(csvHeader); err != nil {
+	if err := writer.Write(resultCSVHeader); err != nil {
 		log.Fatalf("failed to write CSV header: %s", err)
 		return
 	}
 
 	for _, contract := range contracts {
+		identifier := contract[0]
+		if identifier == "A." || identifier == "null" {
+			continue
+		}
+
 		err := writer.Write(contract)
 		if err != nil {
 			log.Fatalf("failed to write contract to CSV: %s", err)
