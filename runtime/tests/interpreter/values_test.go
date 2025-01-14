@@ -535,7 +535,14 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 
 		dictionary, expectedValue, reloadDictionary := createDictionary(&r, inter)
 
-		resetStorage()
+		// Check dictionary and reset storage
+		doubleCheckDictionary(
+			inter,
+			resetStorage,
+			dictionary,
+			expectedValue,
+			orgOwner,
+		)
 
 		// Reload the dictionary after the reset
 
@@ -617,7 +624,14 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 
 		dictionary, expectedValue, reloadDictionary := createDictionary(&r, inter)
 
-		resetStorage()
+		// Check dictionary and reset storage
+		doubleCheckDictionary(
+			inter,
+			resetStorage,
+			dictionary,
+			expectedValue,
+			orgOwner,
+		)
 
 		// Reload the dictionary after the reset
 
@@ -676,7 +690,14 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 
 		dictionary, expectedValue, reloadDictionary := createDictionary(&r, inter)
 
-		resetStorage()
+		// Check dictionary and reset storage
+		doubleCheckDictionary(
+			inter,
+			resetStorage,
+			dictionary,
+			expectedValue,
+			orgOwner,
+		)
 
 		// Reload the dictionary after the reset
 
@@ -1038,7 +1059,14 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 		array, expectedValue, reloadArray := createArray(&r, inter)
 
-		resetStorage()
+		// Check array and reset storage
+		doubleCheckArray(
+			inter,
+			resetStorage,
+			array,
+			expectedValue,
+			orgOwner,
+		)
 
 		// Reload the array after the reset
 
@@ -1098,7 +1126,14 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 		array, expectedValue, reloadArray := createArray(&r, inter)
 
-		resetStorage()
+		// Check array and reset storage
+		doubleCheckArray(
+			inter,
+			resetStorage,
+			array,
+			expectedValue,
+			orgOwner,
+		)
 
 		// Reload the array after the reset
 
@@ -1155,7 +1190,14 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 		array, expectedValue, reloadArray := createArray(&r, inter)
 
-		resetStorage()
+		// Check array and reset storage
+		doubleCheckArray(
+			inter,
+			resetStorage,
+			array,
+			expectedValue,
+			orgOwner,
+		)
 
 		// Reload the array after the reset
 
