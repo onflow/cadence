@@ -7,7 +7,7 @@ on:
         required: true
         type: string
     secrets:
-      FLOWDIVER_API_KEY:
+      FIND_API_AUTH:
         required: true
 
 env:
@@ -37,10 +37,10 @@ jobs:
 
       - name: Download contracts
         env:
-          FLOWDIVER_API_KEY: ${{ secrets.FLOWDIVER_API_KEY }}
+          FIND_API_AUTH: ${{ secrets.FIND_API_AUTH }}
         working-directory: ./tools/get-contracts
         run: |
-          go run . --chain=${{ inputs.chain }} --apiKey="$FLOWDIVER_API_KEY" > ../../tmp/contracts.csv
+          go run . -chain=${{ inputs.chain }} -auth="$FIND_API_AUTH" > ../../tmp/contracts.csv
 
       # Upload
 
