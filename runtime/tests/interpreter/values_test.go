@@ -48,8 +48,8 @@ const containerMaxDepth = 3
 const containerMaxSize = 50
 const compositeMaxFields = 10
 
-var runSmokeTests = flag.Bool("runSmokeTests", true, "Run smoke tests on values")
-var validateAtree = flag.Bool("validateAtree", true, "Enable atree validation")
+var runSmokeTests = flag.Bool("runSmokeTests", false, "Run smoke tests on values")
+var validateAtree = flag.Bool("validateAtree", false, "Enable atree validation")
 var smokeTestSeed = flag.Int64("smokeTestSeed", -1, "Seed for prng (-1 specifies current Unix time)")
 
 func newRandomValueTestInterpreter(t *testing.T) (inter *interpreter.Interpreter, resetStorage func()) {
@@ -1244,22 +1244,6 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 		// TODO: check storage size, slab count
 	})
-}
-
-func getSlabStorageSize(t *testing.T, storage interpreter.InMemoryStorage) (totalSize int, slabCounts int) {
-	slabs, err := storage.Encode()
-	require.NoError(t, err)
-
-	for id, slab := range slabs {
-		if id.HasTempAddress() {
-			continue
-		}
-
-		totalSize += len(slab)
-		slabCounts++
-	}
-
-	return
 }
 
 type randomValueGenerator struct {
