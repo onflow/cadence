@@ -409,16 +409,16 @@ func compileCode(
 	t testing.TB,
 	code string,
 	location common.Location,
-	programs map[common.Location]compiledProgram,
+	programs map[common.Location]*compiledProgram,
 ) *bbq.Program[opcode.Instruction] {
 	checker := parseAndCheck(t, code, location, programs)
-
-	program := compile(t, checker, programs)
-
-	programs[location] = compiledProgram{
-		Program:     program,
+	programs[location] = &compiledProgram{
 		Elaboration: checker.Elaboration,
 	}
+
+	program := compile(t, checker, programs)
+	programs[location].Program = program
+
 	return program
 }
 
@@ -426,7 +426,7 @@ func parseAndCheck(
 	t testing.TB,
 	code string,
 	location common.Location,
-	programs map[common.Location]compiledProgram,
+	programs map[common.Location]*compiledProgram,
 ) *sema.Checker {
 	checker, err := sema_utils.ParseAndCheckWithOptions(
 		t,
@@ -456,7 +456,7 @@ func parseAndCheck(
 func compile(
 	t testing.TB,
 	checker *sema.Checker,
-	programs map[common.Location]compiledProgram,
+	programs map[common.Location]*compiledProgram,
 ) *bbq.Program[opcode.Instruction] {
 	comp := compiler.NewInstructionCompiler(checker.Program, checker.Elaboration)
 	comp.Config.LocationHandler = singleIdentifierLocationResolver(t)
@@ -468,13 +468,21 @@ func compile(
 		return imported.Program
 	}
 
+	comp.Config.ElaborationResolver = func(location common.Location) (*sema.Elaboration, error) {
+		imported, ok := programs[location]
+		if !ok {
+			return nil, fmt.Errorf("cannot find elaboration for %s", location)
+		}
+		return imported.Elaboration, nil
+	}
+
 	program := comp.Compile()
 	return program
 }
 
 func compileAndInvoke(t testing.TB, code string, funcName string) (vm.Value, error) {
 	location := common.ScriptLocation{0x1}
-	program := compileCode(t, code, location, map[common.Location]compiledProgram{})
+	program := compileCode(t, code, location, map[common.Location]*compiledProgram{})
 	storage := interpreter.NewInMemoryStorage(nil)
 
 	scriptLocation := runtime_utils.NewScriptLocationGenerator()
@@ -486,5 +494,10 @@ func compileAndInvoke(t testing.TB, code string, funcName string) (vm.Value, err
 			WithAccountHandler(&testAccountHandler{}),
 	)
 
-	return programVM.Invoke(funcName)
+	result, err := programVM.Invoke(funcName)
+	if err != nil {
+		require.Equal(t, 0, programVM.StackSize())
+	}
+
+	return result, err
 }

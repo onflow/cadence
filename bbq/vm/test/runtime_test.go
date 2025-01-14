@@ -43,7 +43,7 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 
 	storage := interpreter.NewInMemoryStorage(nil)
 
-	programs := map[common.Location]compiledProgram{}
+	programs := map[common.Location]*compiledProgram{}
 
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
 	authorizerAddress := common.MustBytesToAddress([]byte{0x2})
@@ -102,7 +102,7 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 
 	// --------- Execute Transaction ------------
 
-	tx := fmt.Sprintf(`
+	fooContract := fmt.Sprintf(`
         import Bar from %[1]s
 
         access(all) contract Foo {
@@ -158,7 +158,8 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 		}
 	}
 
-	program := compileCode(t, tx, nil, programs)
+	fooLocation := common.NewAddressLocation(nil, contractsAddress, "Foo")
+	program := compileCode(t, fooContract, fooLocation, programs)
 
 	vmConfig := &vm.Config{
 		Storage:       storage,

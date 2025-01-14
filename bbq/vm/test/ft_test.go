@@ -39,7 +39,7 @@ func TestFTTransfer(t *testing.T) {
 	// ---- Deploy FT Contract -----
 
 	storage := interpreter.NewInMemoryStorage(nil)
-	programs := map[common.Location]compiledProgram{}
+	programs := map[common.Location]*compiledProgram{}
 
 	typeLoader := func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
 		program, ok := programs[location]
@@ -199,7 +199,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 	// ---- Deploy FT Contract -----
 
 	storage := interpreter.NewInMemoryStorage(nil)
-	programs := map[common.Location]compiledProgram{}
+	programs := map[common.Location]*compiledProgram{}
 
 	typeLoader := func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
 		program, ok := programs[location]

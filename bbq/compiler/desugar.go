@@ -4,15 +4,17 @@ import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 )
 
-// Desugar will rewrite the AST from high-level abstraction to a much lower-level
+// Desugar will rewrite the AST from high-level abstractions to a much lower-level
 // abstractions, so the compiler and vm could work with a minimal set of language features.
 type Desugar struct {
 	memoryGauge common.MemoryGauge
 	elaboration *sema.Elaboration
 	program     *ast.Program
+	config      *Config
 
 	updatedDeclarations []ast.Declaration
 }
@@ -21,10 +23,13 @@ var _ ast.DeclarationVisitor[ast.Declaration] = &Desugar{}
 
 func NewDesugar(
 	memoryGauge common.MemoryGauge,
+	compilerConfig *Config,
+	program *ast.Program,
 	elaboration *sema.Elaboration,
-	program *ast.Program) *Desugar {
+) *Desugar {
 	return &Desugar{
 		memoryGauge: memoryGauge,
+		config:      compilerConfig,
 		elaboration: elaboration,
 		program:     program,
 	}
@@ -33,19 +38,19 @@ func NewDesugar(
 func (d *Desugar) Run() *ast.Program {
 	// TODO: This assumes the program/elaboration is not cached.
 	//   i.e: Modifies the elaboration.
-	//   Handle this properly for cached transactions.
+	//   Handle this properly for cached programs.
 
 	declarations := d.program.Declarations()
 	for _, declaration := range declarations {
-		d.desugarDeclaration(declaration)
+		updatedDecl := d.desugarDeclaration(declaration)
+		d.updatedDeclarations = append(d.updatedDeclarations, updatedDecl)
 	}
 
 	return ast.NewProgram(d.memoryGauge, d.updatedDeclarations)
 }
 
-func (d *Desugar) desugarDeclaration(declaration ast.Declaration) {
-	updatedDecl := ast.AcceptDeclaration[ast.Declaration](declaration, d)
-	d.updatedDeclarations = append(d.updatedDeclarations, updatedDecl)
+func (d *Desugar) desugarDeclaration(declaration ast.Declaration) ast.Declaration {
+	return ast.AcceptDeclaration[ast.Declaration](declaration, d)
 }
 
 func (d *Desugar) VisitVariableDeclaration(declaration *ast.VariableDeclaration) ast.Declaration {
@@ -60,12 +65,100 @@ func (d *Desugar) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFuncti
 	return declaration
 }
 
-func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) ast.Declaration {
+func (d *Desugar) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) ast.Declaration {
 	return declaration
 }
 
-func (d *Desugar) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) ast.Declaration {
-	return declaration
+func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) ast.Declaration {
+	existingMembers := declaration.Members.Declarations()
+	existingMemberCount := len(existingMembers)
+
+	// Recursively de-sugar nested declarations (functions, types, etc.)
+
+	desugaredMembers := make([]ast.Declaration, 0, existingMemberCount)
+	membersDesugared := false
+
+	for _, member := range existingMembers {
+		desugaredMember := d.desugarDeclaration(member)
+		membersDesugared = membersDesugared || (desugaredMember != member)
+		desugaredMembers = append(desugaredMembers, desugaredMember)
+	}
+
+	// Copy over inherited default functions.
+
+	compositeType := d.elaboration.CompositeDeclarationType(declaration)
+	inheritedDefaultFuncs := d.copyInheritedFunctions(compositeType)
+
+	// Optimization: If none of the existing members got updated or,
+	// if there are no inherited members, then return the same declaration as-is.
+	if !membersDesugared && len(inheritedDefaultFuncs) == 0 {
+		return declaration
+	}
+
+	updatedMembers := make([]ast.Declaration, existingMemberCount)
+	copy(updatedMembers, desugaredMembers)
+
+	updatedMembers = append(updatedMembers, inheritedDefaultFuncs...)
+
+	updatedDecl := ast.NewCompositeDeclaration(
+		d.memoryGauge,
+		declaration.Access,
+		declaration.CompositeKind,
+		declaration.Identifier,
+		declaration.Conformances,
+		ast.NewMembers(d.memoryGauge, updatedMembers),
+		declaration.DocString,
+		declaration.Range,
+	)
+
+	// Update elaboration. Type info is needed for later steps.
+	d.elaboration.SetCompositeDeclarationType(updatedDecl, compositeType)
+
+	return updatedDecl
+}
+
+func (d *Desugar) copyInheritedFunctions(compositeType *sema.CompositeType) []ast.Declaration {
+	directMembers := compositeType.Members
+	allMembers := compositeType.GetMembers()
+
+	inheritedMembers := make([]ast.Declaration, 0)
+
+	for memberName, resolver := range allMembers {
+		if directMembers.Contains(memberName) {
+			continue
+		}
+
+		member := resolver.Resolve(
+			nil,
+			memberName,
+			ast.EmptyRange,
+			func(err error) {
+				if err != nil {
+					panic(err)
+				}
+			},
+		)
+
+		// Inherited functions are always from interfaces
+		interfaceType := member.ContainerType.(*sema.InterfaceType)
+
+		elaboration, err := d.config.ElaborationResolver(interfaceType.Location)
+		if err != nil {
+			panic(err)
+		}
+
+		interfaceDecl := elaboration.InterfaceTypeDeclaration(interfaceType)
+
+		functions := interfaceDecl.Members.FunctionsByIdentifier()
+		inheritedFunc, ok := functions[memberName]
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		inheritedMembers = append(inheritedMembers, inheritedFunc)
+	}
+
+	return inheritedMembers
 }
 
 func (d *Desugar) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) ast.Declaration {

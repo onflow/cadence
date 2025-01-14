@@ -37,7 +37,7 @@ import (
 type Compiler[E any] struct {
 	Program     *ast.Program
 	Elaboration *sema.Elaboration
-	Config      *Config[E]
+	Config      *Config
 
 	currentFunction    *function[E]
 	compositeTypeStack *Stack[*sema.CompositeType]
@@ -100,7 +100,7 @@ func newCompiler[E any](
 	return &Compiler[E]{
 		Program:         program,
 		Elaboration:     elaboration,
-		Config:          &Config[E]{},
+		Config:          &Config{},
 		globals:         make(map[string]*global),
 		importedGlobals: NativeFunctions(),
 		typesInPool:     make(map[sema.TypeID]uint16),
@@ -294,7 +294,12 @@ func (c *Compiler[_]) popLoop() {
 func (c *Compiler[E]) Compile() *bbq.Program[E] {
 
 	// Desugar the program before compiling.
-	desugar := NewDesugar(c.memoryGauge, c.Elaboration, c.Program)
+	desugar := NewDesugar(
+		c.memoryGauge,
+		c.Config,
+		c.Program,
+		c.Elaboration,
+	)
 	c.Program = desugar.Run()
 
 	for _, declaration := range c.Program.ImportDeclarations() {

@@ -2065,10 +2065,10 @@ func TestDefaultFunctions(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("interface", func(t *testing.T) {
+	t.Run("simple interface", func(t *testing.T) {
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
+		result, err := compileAndInvoke(t, `
             struct interface IA {
                 fun test(): Int {
                     return 42
@@ -2077,26 +2077,184 @@ func TestDefaultFunctions(t *testing.T) {
 
             struct Test: IA {}
 
-            //fun main(): Int {
-            //    return Test().test()
-            //}
-        `)
-		require.NoError(t, err)
-
-		comp := compiler.NewInstructionCompiler(checker.Program, checker.Elaboration)
-		program := comp.Compile()
-		printProgram("", program)
-
-		vmConfig := &vm.Config{}
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-
-		result, err := vmInstance.Invoke("main")
-		require.NoError(t, err)
-		require.Equal(t, 0, vmInstance.StackSize())
-		require.Equal(
-			t,
-			vm.NewIntValue(42),
-			result,
+            fun main(): Int {
+               return Test().test()
+            }
+        `,
+			"main",
 		)
+
+		require.NoError(t, err)
+		require.Equal(t, vm.NewIntValue(42), result)
+	})
+
+	t.Run("overridden", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := compileAndInvoke(t, `
+            struct interface IA {
+                fun test(): Int {
+                    return 41
+                }
+            }
+
+            struct Test: IA {
+                fun test(): Int {
+                    return 42
+                }
+            }
+
+            fun main(): Int {
+               return Test().test()
+            }
+        `,
+			"main",
+		)
+
+		require.NoError(t, err)
+		require.Equal(t, vm.NewIntValue(42), result)
+	})
+
+	t.Run("default method via different paths", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, err := compileAndInvoke(t, `
+            struct interface A {
+                access(all) fun test(): Int {
+                    return 3
+                }
+            }
+
+            struct interface B: A {}
+
+            struct interface C: A {}
+
+            struct D: B, C {}
+
+            access(all) fun main(): Int {
+                let d = D()
+                return d.test()
+            }
+        `,
+			"main",
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(3), result)
+	})
+
+	t.Run("in multiple contracts", func(t *testing.T) {
+
+		t.Parallel()
+
+		storage := interpreter.NewInMemoryStorage(nil)
+
+		programs := map[common.Location]*compiledProgram{}
+		contractValues := map[common.Location]*vm.CompositeValue{}
+
+		vmConfig := &vm.Config{
+			Storage:        storage,
+			AccountHandler: &testAccountHandler{},
+			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+				program, ok := programs[location]
+				if !ok {
+					assert.FailNow(t, "invalid location")
+				}
+				return program.Program
+			},
+			ContractValueHandler: func(_ *vm.Config, location common.Location) *vm.CompositeValue {
+				contractValue, ok := contractValues[location]
+				if !ok {
+					assert.FailNow(t, "invalid location")
+				}
+				return contractValue
+			},
+		}
+
+		contractsAddress := common.MustBytesToAddress([]byte{0x1})
+
+		barLocation := common.NewAddressLocation(nil, contractsAddress, "Bar")
+		fooLocation := common.NewAddressLocation(nil, contractsAddress, "Foo")
+
+		// Deploy interface contract
+
+		barContract := `
+        access(all) contract interface Bar {
+
+            access(all) resource interface VaultInterface {
+
+                access(all) var balance: Int
+
+                access(all) fun getBalance(): Int {
+                    return self.balance
+                }
+            }
+        }
+    `
+
+		// Only need to compile
+		compileCode(t, barContract, barLocation, programs)
+
+		// Deploy contract with the implementation
+
+		fooContract := fmt.Sprintf(`
+        import Bar from %[1]s
+
+        access(all) contract Foo {
+
+            access(all) resource Vault: Bar.VaultInterface {
+                access(all) var balance: Int
+
+                init(balance: Int) {
+                    self.balance = balance
+                }
+
+                access(all) fun withdraw(amount: Int): @Vault {
+                    self.balance = self.balance - amount
+                    return <-create Vault(balance: amount)
+                }
+            }
+
+            access(all) fun createVault(balance: Int): @Vault {
+                return <- create Vault(balance: balance)
+            }
+        }`,
+			contractsAddress.HexWithPrefix(),
+		)
+
+		fooProgram := compileCode(t, fooContract, fooLocation, programs)
+		printProgram("", fooProgram)
+
+		fooVM := vm.NewVM(fooLocation, fooProgram, vmConfig)
+
+		fooContractValue, err := fooVM.InitializeContract()
+		require.NoError(t, err)
+		contractValues[fooLocation] = fooContractValue
+
+		// Run transaction
+
+		tx := fmt.Sprintf(`
+            import Foo from %[1]s
+
+            fun main(): Int {
+               var vault <- Foo.createVault(balance: 10)
+               destroy vault.withdraw(amount: 3)
+               var balance = vault.getBalance()
+               destroy vault
+               return balance
+            }`,
+			contractsAddress.HexWithPrefix(),
+		)
+
+		txLocation := runtime_utils.NewTransactionLocationGenerator()
+
+		txProgram := compileCode(t, tx, txLocation(), programs)
+		txVM := vm.NewVM(txLocation(), txProgram, vmConfig)
+
+		result, err := txVM.Invoke("main")
+		require.NoError(t, err)
+		require.Equal(t, 0, txVM.StackSize())
+		require.Equal(t, vm.NewIntValue(7), result)
 	})
 }
