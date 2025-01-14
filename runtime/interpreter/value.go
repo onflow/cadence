@@ -19142,6 +19142,10 @@ func (v *CompositeValue) ForEach(
 	}
 }
 
+func (v *CompositeValue) Inlined() bool {
+	return v.dictionary.Inlined()
+}
+
 type InclusiveRangeIterator struct {
 	rangeValue *CompositeValue
 	next       IntegerValue

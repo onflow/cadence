@@ -207,7 +207,7 @@ func withoutAtreeStorageValidationEnabled[T any](inter *interpreter.Interpreter,
 	return result
 }
 
-func TestInterpretRandomMapOperations(t *testing.T) {
+func TestInterpretRandomDictionaryOperations(t *testing.T) {
 	if !*runSmokeTests {
 		t.Skip("smoke tests are disabled")
 	}
@@ -768,6 +768,332 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 	})
 }
 
+func TestInterpretRandomCompositeOperations(t *testing.T) {
+	if !*runSmokeTests {
+		t.Skip("smoke tests are disabled")
+	}
+
+	t.Parallel()
+
+	orgOwner := common.Address{'A'}
+
+	const compositeStorageMapKey = interpreter.StringStorageMapKey("composite")
+
+	createComposite := func(
+		r *randomValueGenerator,
+		inter *interpreter.Interpreter,
+	) (
+		*interpreter.CompositeValue,
+		cadence.Struct,
+		func() *interpreter.CompositeValue,
+	) {
+		expectedValue := r.randomStructValue(inter, 0)
+
+		fieldsMappedByName := expectedValue.FieldsMappedByName()
+		fields := make([]interpreter.CompositeField, 0, len(fieldsMappedByName))
+		for name, field := range fieldsMappedByName {
+
+			value := importValue(t, inter, field)
+
+			fields = append(fields, interpreter.CompositeField{
+				Name:  name,
+				Value: value,
+			})
+		}
+
+		// Construct a composite directly in the owner's account.
+		// However, the composite is not referenced by the root of the storage yet
+		// (a storage map), so atree storage validation must be temporarily disabled
+		// to not report any "unreferenced slab" errors.
+
+		composite := withoutAtreeStorageValidationEnabled(
+			inter,
+			func() *interpreter.CompositeValue {
+				return interpreter.NewCompositeValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					expectedValue.StructType.Location,
+					expectedValue.StructType.QualifiedIdentifier,
+					common.CompositeKindStructure,
+					fields,
+					orgOwner,
+				)
+			},
+		)
+
+		// Store the composite in a storage map, so that the composite's slab
+		// is referenced by the root of the storage.
+
+		inter.Storage().
+			GetStorageMap(
+				orgOwner,
+				common.PathDomainStorage.Identifier(),
+				true,
+			).
+			WriteValue(
+				inter,
+				compositeStorageMapKey,
+				composite,
+			)
+
+		reloadComposite := func() *interpreter.CompositeValue {
+			storageMap := inter.Storage().GetStorageMap(
+				orgOwner,
+				common.PathDomainStorage.Identifier(),
+				false,
+			)
+			require.NotNil(t, storageMap)
+
+			readValue := storageMap.ReadValue(inter, compositeStorageMapKey)
+			require.NotNil(t, readValue)
+
+			require.IsType(t, &interpreter.CompositeValue{}, readValue)
+			return readValue.(*interpreter.CompositeValue)
+		}
+
+		return composite, expectedValue, reloadComposite
+	}
+
+	checkComposite := func(
+		inter *interpreter.Interpreter,
+		composite *interpreter.CompositeValue,
+		expectedValue cadence.Struct,
+		expectedOwner common.Address,
+	) {
+		fieldsMappedByName := expectedValue.FieldsMappedByName()
+
+		require.Equal(t, len(fieldsMappedByName), composite.FieldCount())
+
+		for name, field := range fieldsMappedByName {
+
+			value := composite.GetMember(inter, interpreter.EmptyLocationRange, name)
+
+			fieldValue := importValue(t, inter, field)
+			utils.AssertValuesEqual(t, inter, fieldValue, value)
+		}
+
+		owner := composite.GetOwner()
+		assert.Equal(t, expectedOwner, owner)
+	}
+
+	doubleCheckComposite := func(
+		inter *interpreter.Interpreter,
+		resetStorage func(),
+		composite *interpreter.CompositeValue,
+		expectedValue cadence.Struct,
+		expectedOwner common.Address,
+	) {
+		// Check the values of the composite.
+		// Once right away, and once after a reset (commit and reload) of the storage.
+
+		for i := 0; i < 2; i++ {
+
+			checkComposite(
+				inter,
+				composite,
+				expectedValue,
+				expectedOwner,
+			)
+
+			resetStorage()
+		}
+	}
+
+	t.Run("construction", func(t *testing.T) {
+
+		t.Parallel()
+
+		r := newRandomValueGenerator(*smokeTestSeed)
+		t.Logf("seed: %d", r.seed)
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		composite, expectedValue, _ := createComposite(&r, inter)
+
+		doubleCheckComposite(
+			inter,
+			resetStorage,
+			composite,
+			expectedValue,
+			orgOwner,
+		)
+	})
+
+	t.Run("move (transfer and deep remove)", func(t *testing.T) {
+
+		t.Parallel()
+
+		r := newRandomValueGenerator(*smokeTestSeed)
+		t.Logf("seed: %d", r.seed)
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		original, expectedValue, _ := createComposite(&r, inter)
+
+		resetStorage()
+
+		// Transfer the composite to a new owner
+
+		newOwner := common.Address{'B'}
+
+		transferred := original.Transfer(
+			inter,
+			interpreter.EmptyLocationRange,
+			atree.Address(newOwner),
+			false,
+			nil,
+			nil,
+			// TODO: is has no parent container = true correct?
+			true,
+		).(*interpreter.CompositeValue)
+
+		// Store the transferred composite in a storage map, so that the composote's slab
+		// is referenced by the root of the storage.
+
+		inter.Storage().
+			GetStorageMap(
+				newOwner,
+				common.PathDomainStorage.Identifier(),
+				true,
+			).
+			WriteValue(
+				inter,
+				interpreter.StringStorageMapKey("transferred_composite"),
+				transferred,
+			)
+
+		// Both original and transferred composite should contain the expected values
+		// Check once right away, and once after a reset (commit and reload) of the storage.
+
+		for i := 0; i < 2; i++ {
+
+			checkComposite(
+				inter,
+				original,
+				expectedValue,
+				orgOwner,
+			)
+
+			checkComposite(
+				inter,
+				transferred,
+				expectedValue,
+				newOwner,
+			)
+
+			resetStorage()
+		}
+
+		// Deep remove the original composite
+
+		// TODO: is has no parent container = true correct?
+		original.DeepRemove(inter, true)
+
+		if !original.Inlined() {
+			err := inter.Storage().Remove(original.SlabID())
+			require.NoError(t, err)
+		}
+
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
+
+		// New composite should still be accessible
+
+		doubleCheckComposite(
+			inter,
+			resetStorage,
+			transferred,
+			expectedValue,
+			newOwner,
+		)
+
+		// TODO: check deep removal cleaned up everything in original account (storage size, slab count)
+	})
+
+	t.Run("update", func(t *testing.T) {
+		t.Parallel()
+
+		r := newRandomValueGenerator(*smokeTestSeed)
+		t.Logf("seed: %d", r.seed)
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		composite, expectedValue, reloadComposite := createComposite(&r, inter)
+
+		// Check composite and reset storage
+		doubleCheckComposite(
+			inter,
+			resetStorage,
+			composite,
+			expectedValue,
+			orgOwner,
+		)
+
+		// Reload the composite after the reset
+
+		composite = reloadComposite()
+
+		typeID := expectedValue.StructType.Location.
+			TypeID(nil, expectedValue.StructType.QualifiedIdentifier)
+		compositeType := inter.Program.Elaboration.CompositeType(typeID)
+
+		typeFieldCount := len(compositeType.Fields)
+		require.Equal(t, typeFieldCount, len(expectedValue.FieldsMappedByName()))
+		require.Equal(t, typeFieldCount, composite.FieldCount())
+
+		// Generate new values
+
+		newValues := make([]cadence.Value, typeFieldCount)
+
+		for i := range compositeType.Fields {
+			newValues[i] = r.randomStorableValue(inter, 0)
+		}
+
+		// Update
+		for i, name := range compositeType.Fields {
+
+			newValue := importValue(t, inter, newValues[i])
+
+			// Atree storage validation must be temporarily disabled
+			// to not report any "unreferenced slab" errors.
+
+			existed := withoutAtreeStorageValidationEnabled(inter, func() bool {
+				return composite.SetMember(
+					inter,
+					interpreter.EmptyLocationRange,
+					name,
+					newValue,
+				)
+			})
+
+			require.True(t, existed)
+		}
+
+		expectedValue = cadence.NewStruct(newValues).
+			WithType(expectedValue.Type().(*cadence.StructType))
+
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
+
+		// Composite must have same number of key-value pairs
+		require.Equal(t, typeFieldCount, composite.FieldCount())
+
+		doubleCheckComposite(
+			inter,
+			resetStorage,
+			composite,
+			expectedValue,
+			orgOwner,
+		)
+
+		// TODO: check storage size, slab count
+	})
+}
+
 func TestInterpretRandomArrayOperations(t *testing.T) {
 	if !*runSmokeTests {
 		t.Skip("smoke tests are disabled")
@@ -1320,15 +1646,15 @@ func (r randomValueGenerator) randomStorableValue(inter *interpreter.Interpreter
 
 	// Hashable
 	default:
-		return r.generateRandomHashableValue(inter, n)
+		return r.generateHashableValueOfType(inter, n)
 	}
 }
 
 func (r randomValueGenerator) randomHashableValue(inter *interpreter.Interpreter) cadence.Value {
-	return r.generateRandomHashableValue(inter, r.randomInt(randomValueKindEnum))
+	return r.generateHashableValueOfType(inter, r.randomInt(randomValueKindEnum))
 }
 
-func (r randomValueGenerator) generateRandomHashableValue(inter *interpreter.Interpreter, n int) cadence.Value {
+func (r randomValueGenerator) generateHashableValueOfType(inter *interpreter.Interpreter, n int) cadence.Value {
 	switch n {
 
 	// Int*
@@ -1560,6 +1886,8 @@ func (r randomValueGenerator) randomStructValue(inter *interpreter.Interpreter, 
 		Members:    &sema.StringMemberOrderedMap{},
 	}
 
+	fieldNames := make([]string, fieldsCount)
+
 	for i := 0; i < fieldsCount; i++ {
 		fieldName := fields[i].Identifier
 		compositeType.Members.Set(
@@ -1571,7 +1899,9 @@ func (r randomValueGenerator) randomStructValue(inter *interpreter.Interpreter, 
 				"",
 			),
 		)
+		fieldNames[i] = fieldName
 	}
+	compositeType.Fields = fieldNames
 
 	// Add the type to the elaboration, to short-circuit the type-lookup.
 	inter.Program.Elaboration.SetCompositeType(
@@ -1777,7 +2107,7 @@ func (r randomValueGenerator) randomEnumValue(inter *interpreter.Interpreter) ca
 	// Get a random integer subtype to be used as the raw-type of enum
 	typ := r.randomInt(randomValueKindWord64)
 
-	rawValue := r.generateRandomHashableValue(inter, typ).(cadence.NumberValue)
+	rawValue := r.generateHashableValueOfType(inter, typ).(cadence.NumberValue)
 
 	identifier := fmt.Sprintf("E%d", r.rand.Uint64())
 
