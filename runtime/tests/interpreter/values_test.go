@@ -509,8 +509,10 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		err := inter.Storage().CheckHealth()
-		require.NoError(t, err)
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
 
 		// New dictionary should still be accessible
 
@@ -602,8 +604,10 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 			)
 		}
 
-		err := inter.Storage().CheckHealth()
-		require.NoError(t, err)
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
 
 		doubleCheckDictionary(
 			inter,
@@ -660,8 +664,10 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 			utils.AssertValuesEqual(t, inter, value, innerValue)
 		}
 
-		err := inter.Storage().CheckHealth()
-		require.NoError(t, err)
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
 
 		expectedValue = cadence.Dictionary{}.
 			WithType(expectedValue.Type().(*cadence.DictionaryType))
@@ -742,8 +748,10 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 			expectedValue.Pairs[i].Value = newValues[i]
 		}
 
-		err := inter.Storage().CheckHealth()
-		require.NoError(t, err)
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
 
 		// Dictionary must have same number of key-value pairs
 		require.Equal(t, elementCount, dictionary.Count())
@@ -1033,8 +1041,10 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		err := inter.Storage().CheckHealth()
-		require.NoError(t, err)
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
 
 		// New array should still be accessible
 
@@ -1104,8 +1114,10 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 			})
 		}
 
-		err := inter.Storage().CheckHealth()
-		require.NoError(t, err)
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
 
 		doubleCheckArray(
 			inter,
@@ -1163,8 +1175,10 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 			utils.AssertValuesEqual(t, inter, value, removedValue)
 		}
 
-		err := inter.Storage().CheckHealth()
-		require.NoError(t, err)
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
 
 		// Array must be empty
 		require.Equal(t, 0, array.Count())
@@ -1228,8 +1242,10 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 		}
 
-		err := inter.Storage().CheckHealth()
-		require.NoError(t, err)
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
 
 		// Array must have same number of key-value pairs
 		require.Equal(t, elementCount, array.Count())
