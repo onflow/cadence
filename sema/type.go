@@ -320,8 +320,10 @@ type ConformingType interface {
 // CompositeKindedType is a type which has a composite kind
 type CompositeKindedType interface {
 	Type
+	LocatedType
 	EntitlementSupportingType
 	GetCompositeKind() common.CompositeKind
+	GetIdentifier() string
 }
 
 // LocatedType is a type which has a location
@@ -5394,6 +5396,10 @@ func (t *CompositeType) CheckInstantiated(pos ast.HasPosition, memoryGauge commo
 	}
 }
 
+func (t *CompositeType) GetIdentifier() string {
+	return t.Identifier
+}
+
 // Member
 
 type Member struct {
@@ -5993,6 +5999,10 @@ func (t *InterfaceType) initializeEffectiveInterfaceConformanceSet() {
 			t.effectiveInterfaceConformanceSet.Add(conformance.InterfaceType)
 		}
 	})
+}
+
+func (t *InterfaceType) GetIdentifier() string {
+	return t.Identifier
 }
 
 // distinctConformances recursively visit conformances and their conformances,
