@@ -61,31 +61,6 @@ type Compiler[E any] struct {
 	codeGen CodeGen[E]
 }
 
-func (c *Compiler[_]) VisitAttachmentDeclaration(_ *ast.AttachmentDeclaration) (_ struct{}) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *Compiler[_]) VisitEntitlementDeclaration(_ *ast.EntitlementDeclaration) (_ struct{}) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *Compiler[_]) VisitEntitlementMappingDeclaration(_ *ast.EntitlementMappingDeclaration) (_ struct{}) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *Compiler[_]) VisitRemoveStatement(_ *ast.RemoveStatement) (_ struct{}) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *Compiler[_]) VisitAttachExpression(_ *ast.AttachExpression) (_ struct{}) {
-	//TODO implement me
-	panic("implement me")
-}
-
 type constantsCacheKey struct {
 	data string
 	kind constantkind.ConstantKind
@@ -318,29 +293,24 @@ func (c *Compiler[_]) popLoop() {
 
 func (c *Compiler[E]) Compile() *bbq.Program[E] {
 
+	// Desugar the program before compiling.
+	desugar := NewDesugar(c.memoryGauge, c.Elaboration, c.Program)
+	c.Program = desugar.Run()
+
 	for _, declaration := range c.Program.ImportDeclarations() {
 		c.compileDeclaration(declaration)
 	}
 
-	if c.Program.SoleContractInterfaceDeclaration() != nil {
+	contract, _ := c.exportContract()
+	if contract != nil && contract.IsInterface {
 		return &bbq.Program[E]{
-			Contract: c.exportContract(),
+			Contract: contract,
 		}
 	}
 
 	compositeDeclarations := c.Program.CompositeDeclarations()
 	variableDeclarations := c.Program.VariableDeclarations()
 	functionDeclarations := c.Program.FunctionDeclarations()
-
-	transaction := c.Program.SoleTransactionDeclaration()
-	if transaction != nil {
-		desugaredTransaction, desugaredTransactionParams, initFunction := c.desugarTransaction(transaction)
-		compositeDeclarations = append(compositeDeclarations, desugaredTransaction)
-		variableDeclarations = append(variableDeclarations, desugaredTransactionParams...)
-		if initFunction != nil {
-			functionDeclarations = append(functionDeclarations, initFunction)
-		}
-	}
 
 	// Reserve globals for functions/types before visiting their implementations.
 	c.reserveGlobalVars(
@@ -363,7 +333,6 @@ func (c *Compiler[E]) Compile() *bbq.Program[E] {
 	constants := c.exportConstants()
 	types := c.exportTypes()
 	imports := c.exportImports()
-	contract := c.exportContract()
 	variables := c.exportVariables(variableDeclarations)
 
 	return &bbq.Program[E]{
@@ -490,32 +459,42 @@ func (c *Compiler[_]) exportVariables(variableDecls []*ast.VariableDeclaration) 
 	return variables
 }
 
-func (c *Compiler[_]) exportContract() *bbq.Contract {
+func (c *Compiler[_]) contractType() (contractType sema.CompositeKindedType) {
+	contractDecl := c.Program.SoleContractDeclaration()
+	if contractDecl != nil {
+		contractType = c.Elaboration.CompositeDeclarationType(contractDecl)
+		return
+	}
+
+	interfaceDecl := c.Program.SoleContractInterfaceDeclaration()
+	if interfaceDecl != nil {
+		contractType = c.Elaboration.InterfaceDeclarationType(interfaceDecl)
+		return
+	}
+
+	return nil
+}
+
+func (c *Compiler[_]) exportContract() (*bbq.Contract, sema.CompositeKindedType) {
 	var location common.Location
 	var name string
 
-	contractDecl := c.Program.SoleContractDeclaration()
-	if contractDecl != nil {
-		contractType := c.Elaboration.CompositeDeclarationType(contractDecl)
-		location = contractType.Location
-		name = contractType.Identifier
-	} else {
-		interfaceDecl := c.Program.SoleContractInterfaceDeclaration()
-		if interfaceDecl == nil {
-			return nil
-		}
-
-		interfaceType := c.Elaboration.InterfaceDeclarationType(interfaceDecl)
-		location = interfaceType.Location
-		name = interfaceType.Identifier
+	contractType := c.contractType()
+	if contractType == nil {
+		return nil, nil
 	}
+
+	_, isInterface := contractType.(*sema.InterfaceType)
+
+	location = contractType.GetLocation()
+	name = contractType.GetIdentifier()
 
 	addressLocation := location.(common.AddressLocation)
 	return &bbq.Contract{
 		Name:        name,
 		Address:     addressLocation.Address[:],
-		IsInterface: contractDecl == nil,
-	}
+		IsInterface: isInterface,
+	}, contractType
 }
 
 func (c *Compiler[_]) compileDeclaration(declaration ast.Declaration) {
@@ -1216,8 +1195,8 @@ func (c *Compiler[E]) declareFunction(declaration *ast.FunctionDeclaration, decl
 }
 
 func (c *Compiler[_]) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) (_ struct{}) {
-	enclosingCompositeType := c.Elaboration.CompositeDeclarationType(declaration)
-	c.compositeTypeStack.push(enclosingCompositeType)
+	compositeType := c.Elaboration.CompositeDeclarationType(declaration)
+	c.compositeTypeStack.push(compositeType)
 	defer func() {
 		c.compositeTypeStack.pop()
 	}()
@@ -1311,6 +1290,31 @@ func (c *Compiler[_]) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) (_ st
 	panic(errors.NewUnreachableError())
 }
 
+func (c *Compiler[_]) VisitAttachmentDeclaration(_ *ast.AttachmentDeclaration) (_ struct{}) {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (c *Compiler[_]) VisitEntitlementDeclaration(_ *ast.EntitlementDeclaration) (_ struct{}) {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (c *Compiler[_]) VisitEntitlementMappingDeclaration(_ *ast.EntitlementMappingDeclaration) (_ struct{}) {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (c *Compiler[_]) VisitRemoveStatement(_ *ast.RemoveStatement) (_ struct{}) {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (c *Compiler[_]) VisitAttachExpression(_ *ast.AttachExpression) (_ struct{}) {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
 func (c *Compiler[_]) patchLoop(l *loop) {
 	for _, breakOffset := range l.breaks {
 		c.patchJump(breakOffset)
@@ -1378,168 +1382,6 @@ func (c *Compiler[E]) declareParameters(function *function[E], paramList *ast.Pa
 		}
 	}
 }
-
-// desugarTransaction Convert a transaction into a composite type declaration,
-// so the code-gen would seamlessly work without having special-case anything in compiler/vm.
-// Transaction parameters are converted into global variables.
-// An initializer is generated to set parameters to above generated global variables.
-func (c *Compiler[_]) desugarTransaction(transaction *ast.TransactionDeclaration) (
-	*ast.CompositeDeclaration,
-	[]*ast.VariableDeclaration,
-	*ast.FunctionDeclaration,
-) {
-	// TODO: This assumes the transaction program/elaboration is not cached.
-	//   i.e: Modifies the elaboration.
-	//   Handle this properly for cached transactions.
-
-	// TODO: add pre/post conditions
-
-	var varDeclarations []*ast.VariableDeclaration
-	var initFunction *ast.FunctionDeclaration
-
-	if transaction.ParameterList != nil {
-		varDeclarations = make([]*ast.VariableDeclaration, 0, len(transaction.ParameterList.Parameters))
-		statements := make([]ast.Statement, 0, len(transaction.ParameterList.Parameters))
-		parameters := make([]*ast.Parameter, 0, len(transaction.ParameterList.Parameters))
-
-		for index, parameter := range transaction.ParameterList.Parameters {
-			// Create global variables
-			// i.e: `var a: Type`
-			field := &ast.VariableDeclaration{
-				Access:         ast.AccessSelf,
-				IsConstant:     false,
-				Identifier:     parameter.Identifier,
-				TypeAnnotation: parameter.TypeAnnotation,
-			}
-			varDeclarations = append(varDeclarations, field)
-
-			// Create assignment from param to global var.
-			// i.e: `a = $param_a`
-			modifiedParamName := commons.TransactionGeneratedParamPrefix + parameter.Identifier.Identifier
-			modifiedParameter := &ast.Parameter{
-				Label: "",
-				Identifier: ast.Identifier{
-					Identifier: modifiedParamName,
-				},
-				TypeAnnotation: parameter.TypeAnnotation,
-			}
-			parameters = append(parameters, modifiedParameter)
-
-			assignment := &ast.AssignmentStatement{
-				Target: &ast.IdentifierExpression{
-					Identifier: parameter.Identifier,
-				},
-				Value: &ast.IdentifierExpression{
-					Identifier: ast.Identifier{
-						Identifier: modifiedParamName,
-					},
-				},
-				Transfer: &ast.Transfer{
-					Operation: ast.TransferOperationCopy,
-				},
-			}
-			statements = append(statements, assignment)
-
-			transactionTypes := c.Elaboration.TransactionDeclarationType(transaction)
-			paramType := transactionTypes.Parameters[index].TypeAnnotation.Type
-			assignmentTypes := sema.AssignmentStatementTypes{
-				ValueType:  paramType,
-				TargetType: paramType,
-			}
-
-			c.Elaboration.SetAssignmentStatementTypes(assignment, assignmentTypes)
-		}
-
-		// Create an init function.
-		// func $init($param_a: Type, $param_b: Type, ...) {
-		//     a = $param_a
-		//     b = $param_b
-		//     ...
-		// }
-		initFunction = &ast.FunctionDeclaration{
-			Access: ast.AccessNotSpecified,
-			Identifier: ast.Identifier{
-				Identifier: commons.ProgramInitFunctionName,
-			},
-			ParameterList: &ast.ParameterList{
-				Parameters: parameters,
-			},
-			ReturnTypeAnnotation: nil,
-			FunctionBlock: &ast.FunctionBlock{
-				Block: &ast.Block{
-					Statements: statements,
-				},
-			},
-		}
-	}
-
-	var members []ast.Declaration
-	if transaction.Execute != nil {
-		members = append(members, transaction.Execute.FunctionDeclaration)
-	}
-	if transaction.Prepare != nil {
-		members = append(members, transaction.Prepare)
-	}
-
-	compositeType := &sema.CompositeType{
-		Location:   nil,
-		Identifier: commons.TransactionWrapperCompositeName,
-		Kind:       common.CompositeKindStructure,
-	}
-
-	compositeDecl := ast.NewCompositeDeclaration(
-		c.memoryGauge,
-		ast.AccessNotSpecified,
-		common.CompositeKindStructure,
-		ast.NewIdentifier(
-			c.memoryGauge,
-			commons.TransactionWrapperCompositeName,
-			ast.EmptyPosition,
-		),
-		nil,
-		ast.NewMembers(c.memoryGauge, members),
-		"",
-		ast.EmptyRange,
-	)
-
-	c.Elaboration.SetCompositeDeclarationType(compositeDecl, compositeType)
-
-	return compositeDecl, varDeclarations, initFunction
-}
-
-var emptyInitializer = func() *ast.SpecialFunctionDeclaration {
-	// This is created only once per compilation. So no need to meter memory.
-
-	initializer := ast.NewFunctionDeclaration(
-		nil,
-		ast.AccessNotSpecified,
-		ast.FunctionPurityUnspecified,
-		false,
-		false,
-		ast.NewIdentifier(
-			nil,
-			commons.InitFunctionName,
-			ast.EmptyPosition,
-		),
-		nil,
-		nil,
-		nil,
-		ast.NewFunctionBlock(
-			nil,
-			ast.NewBlock(nil, nil, ast.EmptyRange),
-			nil,
-			nil,
-		),
-		ast.Position{},
-		"",
-	)
-
-	return ast.NewSpecialFunctionDeclaration(
-		nil,
-		common.DeclarationKindInitializer,
-		initializer,
-	)
-}()
 
 func (c *Compiler[_]) generateEmptyInit() {
 	c.VisitSpecialFunctionDeclaration(emptyInitializer)

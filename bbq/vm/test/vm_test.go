@@ -2060,3 +2060,43 @@ func BenchmarkGoFib(b *testing.B) {
 		fib(46)
 	}
 }
+
+func TestDefaultFunctions(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("interface", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            struct interface IA {
+                fun test(): Int {
+                    return 42
+                }
+            }
+
+            struct Test: IA {}
+
+            //fun main(): Int {
+            //    return Test().test()
+            //}
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(checker.Program, checker.Elaboration)
+		program := comp.Compile()
+		printProgram("", program)
+
+		vmConfig := &vm.Config{}
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		result, err := vmInstance.Invoke("main")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+		require.Equal(
+			t,
+			vm.NewIntValue(42),
+			result,
+		)
+	})
+}
