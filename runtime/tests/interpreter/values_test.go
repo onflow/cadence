@@ -43,10 +43,11 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-// TODO: make these program args?
-const containerMaxDepth = 3
-const containerMaxSize = 50
-const compositeMaxFields = 10
+var defaultRandomValueLimits = randomValueLimits{
+	containerMaxDepth:  3,
+	containerMaxSize:   50,
+	compositeMaxFields: 10,
+}
 
 var runSmokeTests = flag.Bool("runSmokeTests", false, "Run smoke tests on values")
 var validateAtree = flag.Bool("validateAtree", false, "Enable atree validation")
@@ -399,7 +400,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 
 		t.Parallel()
 
-		r := newRandomValueGenerator(*smokeTestSeed)
+		r := newRandomValueGenerator(*smokeTestSeed, defaultRandomValueLimits)
 		t.Logf("seed: %d", r.seed)
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
@@ -419,7 +420,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 
 		t.Parallel()
 
-		r := newRandomValueGenerator(*smokeTestSeed)
+		r := newRandomValueGenerator(*smokeTestSeed, defaultRandomValueLimits)
 		t.Logf("seed: %d", r.seed)
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
@@ -438,7 +439,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 
 		t.Parallel()
 
-		r := newRandomValueGenerator(*smokeTestSeed)
+		r := newRandomValueGenerator(*smokeTestSeed, defaultRandomValueLimits)
 		t.Logf("seed: %d", r.seed)
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
@@ -530,7 +531,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 	t.Run("insert", func(t *testing.T) {
 		t.Parallel()
 
-		r := newRandomValueGenerator(*smokeTestSeed)
+		r := newRandomValueGenerator(*smokeTestSeed, defaultRandomValueLimits)
 		t.Logf("seed: %d", r.seed)
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
@@ -554,7 +555,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 		// Atree storage validation must be temporarily disabled
 		// to not report any "unreferenced slab errors.
 
-		numberOfValues := r.randomInt(containerMaxSize)
+		numberOfValues := r.randomInt(r.containerMaxSize)
 
 		for i := 0; i < numberOfValues; i++ {
 
@@ -621,7 +622,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 	t.Run("remove", func(t *testing.T) {
 		t.Parallel()
 
-		r := newRandomValueGenerator(*smokeTestSeed)
+		r := newRandomValueGenerator(*smokeTestSeed, defaultRandomValueLimits)
 		t.Logf("seed: %d", r.seed)
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
@@ -689,7 +690,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 	t.Run("update", func(t *testing.T) {
 		t.Parallel()
 
-		r := newRandomValueGenerator(*smokeTestSeed)
+		r := newRandomValueGenerator(*smokeTestSeed, defaultRandomValueLimits)
 		t.Logf("seed: %d", r.seed)
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
@@ -903,7 +904,7 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 
 		t.Parallel()
 
-		r := newRandomValueGenerator(*smokeTestSeed)
+		r := newRandomValueGenerator(*smokeTestSeed, defaultRandomValueLimits)
 		t.Logf("seed: %d", r.seed)
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
@@ -923,7 +924,7 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 
 		t.Parallel()
 
-		r := newRandomValueGenerator(*smokeTestSeed)
+		r := newRandomValueGenerator(*smokeTestSeed, defaultRandomValueLimits)
 		t.Logf("seed: %d", r.seed)
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
@@ -1015,7 +1016,7 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 	t.Run("update", func(t *testing.T) {
 		t.Parallel()
 
-		r := newRandomValueGenerator(*smokeTestSeed)
+		r := newRandomValueGenerator(*smokeTestSeed, defaultRandomValueLimits)
 		t.Logf("seed: %d", r.seed)
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
@@ -1257,7 +1258,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 		t.Parallel()
 
-		r := newRandomValueGenerator(*smokeTestSeed)
+		r := newRandomValueGenerator(*smokeTestSeed, defaultRandomValueLimits)
 		t.Logf("seed: %d", r.seed)
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
@@ -1277,7 +1278,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 		t.Parallel()
 
-		r := newRandomValueGenerator(*smokeTestSeed)
+		r := newRandomValueGenerator(*smokeTestSeed, defaultRandomValueLimits)
 		t.Logf("seed: %d", r.seed)
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
@@ -1296,7 +1297,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 		t.Parallel()
 
-		r := newRandomValueGenerator(*smokeTestSeed)
+		r := newRandomValueGenerator(*smokeTestSeed, defaultRandomValueLimits)
 		t.Logf("seed: %d", r.seed)
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
@@ -1388,7 +1389,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 	t.Run("insert", func(t *testing.T) {
 		t.Parallel()
 
-		r := newRandomValueGenerator(*smokeTestSeed)
+		r := newRandomValueGenerator(*smokeTestSeed, defaultRandomValueLimits)
 		t.Logf("seed: %d", r.seed)
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
@@ -1412,7 +1413,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 		// Insert new values into the array.
 
-		newValueCount := r.randomInt(containerMaxSize)
+		newValueCount := r.randomInt(r.containerMaxSize)
 
 		for i := 0; i < newValueCount; i++ {
 
@@ -1462,7 +1463,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 	t.Run("remove", func(t *testing.T) {
 		t.Parallel()
 
-		r := newRandomValueGenerator(1736809620917220000)
+		r := newRandomValueGenerator(*smokeTestSeed, defaultRandomValueLimits)
 		t.Logf("seed: %d", r.seed)
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
@@ -1528,7 +1529,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 	t.Run("update", func(t *testing.T) {
 		t.Parallel()
 
-		r := newRandomValueGenerator(*smokeTestSeed)
+		r := newRandomValueGenerator(*smokeTestSeed, defaultRandomValueLimits)
 		t.Logf("seed: %d", r.seed)
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
@@ -1593,24 +1594,33 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 	})
 }
 
+
+type randomValueLimits struct {
+	containerMaxDepth  int
+	containerMaxSize   int
+	compositeMaxFields int
+}
+
 type randomValueGenerator struct {
 	seed int64
 	rand *rand.Rand
+	randomValueLimits
 }
 
-func newRandomValueGenerator(seed int64) randomValueGenerator {
+func newRandomValueGenerator(seed int64, limits randomValueLimits) randomValueGenerator {
 	if seed == -1 {
 		seed = time.Now().UnixNano()
 	}
 
 	return randomValueGenerator{
-		seed: seed,
-		rand: rand.New(rand.NewSource(seed)),
+		seed:              seed,
+		rand:              rand.New(rand.NewSource(seed)),
+		randomValueLimits: limits,
 	}
 }
 func (r randomValueGenerator) randomStorableValue(inter *interpreter.Interpreter, currentDepth int) cadence.Value {
 	n := 0
-	if currentDepth < containerMaxDepth {
+	if currentDepth < r.containerMaxDepth {
 		n = r.randomInt(randomValueKindStruct)
 	} else {
 		n = r.randomInt(randomValueKindCapability)
@@ -1790,7 +1800,7 @@ func (r randomValueGenerator) randomCapabilityValue() cadence.Capability {
 
 func (r randomValueGenerator) randomDictionaryValue(inter *interpreter.Interpreter, currentDepth int) cadence.Dictionary {
 
-	entryCount := r.randomInt(containerMaxSize)
+	entryCount := r.randomInt(r.containerMaxSize)
 	keyValues := make([]cadence.KeyValuePair, entryCount)
 
 	existingKeys := map[string]struct{}{}
@@ -1831,7 +1841,7 @@ func (r randomValueGenerator) randomInt(upperBound int) int {
 }
 
 func (r randomValueGenerator) randomArrayValue(inter *interpreter.Interpreter, currentDepth int) cadence.Array {
-	elementsCount := r.randomInt(containerMaxSize)
+	elementsCount := r.randomInt(r.containerMaxSize)
 	elements := make([]cadence.Value, elementsCount)
 
 	for i := 0; i < elementsCount; i++ {
@@ -1843,7 +1853,7 @@ func (r randomValueGenerator) randomArrayValue(inter *interpreter.Interpreter, c
 }
 
 func (r randomValueGenerator) randomStructValue(inter *interpreter.Interpreter, currentDepth int) cadence.Struct {
-	fieldsCount := r.randomInt(compositeMaxFields)
+	fieldsCount := r.randomInt(r.compositeMaxFields)
 
 	fields := make([]cadence.Field, fieldsCount)
 	fieldValues := make([]cadence.Value, fieldsCount)
@@ -2170,12 +2180,14 @@ func TestRandomValueGeneration(t *testing.T) {
 
 	inter, _ := newRandomValueTestInterpreter(t)
 
+	limits := defaultRandomValueLimits
+
 	// Generate random values
 	for i := 0; i < 1000; i++ {
-		r1 := newRandomValueGenerator(int64(i))
+		r1 := newRandomValueGenerator(int64(i), limits)
 		v1 := r1.randomStorableValue(inter, 0)
 
-		r2 := newRandomValueGenerator(int64(i))
+		r2 := newRandomValueGenerator(int64(i), limits)
 		v2 := r2.randomStorableValue(inter, 0)
 
 		// Check if the generated values are equal
@@ -2295,7 +2307,10 @@ func TestCheckStorageHealthInMiddleOfDeepRemove(t *testing.T) {
 // In this test, storage.CheckHealth() should be called after DictionaryValue.Transfer()
 // with remove flag, not in the middle of DictionaryValue.Transfer().
 func TestCheckStorageHealthInMiddleOfTransferAndRemove(t *testing.T) {
-	r := newRandomValueGenerator(*smokeTestSeed)
+
+	t.Parallel()
+
+	r := newRandomValueGenerator(*smokeTestSeed, defaultRandomValueLimits)
 	t.Logf("seed: %d", r.seed)
 
 	storage := newUnmeteredInMemoryStorage()
