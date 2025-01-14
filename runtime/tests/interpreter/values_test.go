@@ -32,21 +32,180 @@ import (
 
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 // TODO: make these program args?
 const containerMaxDepth = 3
-const containerMaxSize = 100
+const containerMaxSize = 50
 const compositeMaxFields = 10
 
-var runSmokeTests = flag.Bool("runSmokeTests", false, "Run smoke tests on values")
+var runSmokeTests = flag.Bool("runSmokeTests", true, "Run smoke tests on values")
 var validateAtree = flag.Bool("validateAtree", true, "Enable atree validation")
 var smokeTestSeed = flag.Int64("smokeTestSeed", -1, "Seed for prng (-1 specifies current Unix time)")
+
+func newRandomValueTestInterpreter(t *testing.T) (inter *interpreter.Interpreter, resetStorage func()) {
+
+	config := &interpreter.Config{
+		ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+			return interpreter.VirtualImport{
+				Elaboration: inter.Program.Elaboration,
+			}
+		},
+		AtreeStorageValidationEnabled: *validateAtree,
+		AtreeValueValidationEnabled:   *validateAtree,
+	}
+
+	inter, err := interpreter.NewInterpreter(
+		&interpreter.Program{
+			Elaboration: sema.NewElaboration(nil),
+		},
+		utils.TestLocation,
+		config,
+	)
+	require.NoError(t, err)
+
+	ledger := NewTestLedger(nil, nil)
+
+	resetStorage = func() {
+		if config.Storage != nil {
+			storage := config.Storage.(*runtime.Storage)
+			err := storage.Commit(inter, false)
+			require.NoError(t, err)
+		}
+		config.Storage = runtime.NewStorage(ledger, nil)
+	}
+
+	resetStorage()
+
+	return inter, resetStorage
+}
+
+func importValue(t *testing.T, inter *interpreter.Interpreter, value cadence.Value) interpreter.Value {
+
+	switch value := value.(type) {
+	case cadence.Array:
+		// Work around for "cannot import array: elements do not belong to the same type",
+		// caused by import of array without expected type, which leads to inference of the element type:
+		// Create an empty array with an expected type, then append imported elements to it.
+
+		arrayResult, err := runtime.ImportValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			nil,
+			cadence.Array{},
+			sema.NewVariableSizedType(nil, sema.AnyStructType),
+		)
+		require.NoError(t, err)
+		require.IsType(t, &interpreter.ArrayValue{}, arrayResult)
+		array := arrayResult.(*interpreter.ArrayValue)
+
+		for _, element := range value.Values {
+			array.Append(
+				inter,
+				interpreter.EmptyLocationRange,
+				importValue(t, inter, element),
+			)
+		}
+
+		return array
+
+	case cadence.Dictionary:
+		// Work around for "cannot import dictionary: keys does not belong to the same type",
+		// caused by import of dictionary without expected type, which leads to inference of the key type:
+		// Create an empty dictionary with an expected type, then append imported key-value pairs to it.
+
+		dictionaryResult, err := runtime.ImportValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			nil,
+			cadence.Dictionary{},
+			sema.NewDictionaryType(
+				nil,
+				sema.HashableStructType,
+				sema.AnyStructType,
+			),
+		)
+		require.NoError(t, err)
+		require.IsType(t, &interpreter.DictionaryValue{}, dictionaryResult)
+		dictionary := dictionaryResult.(*interpreter.DictionaryValue)
+
+		for _, pair := range value.Pairs {
+			dictionary.Insert(
+				inter,
+				interpreter.EmptyLocationRange,
+				importValue(t, inter, pair.Key),
+				importValue(t, inter, pair.Value),
+			)
+		}
+
+		return dictionary
+
+	case cadence.Struct:
+
+		structResult, err := runtime.ImportValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			nil,
+			cadence.Struct{
+				StructType: value.StructType,
+			},
+			nil,
+		)
+		require.NoError(t, err)
+		require.IsType(t, &interpreter.CompositeValue{}, structResult)
+		composite := structResult.(*interpreter.CompositeValue)
+
+		for fieldName, fieldValue := range value.FieldsMappedByName() {
+			composite.SetMember(
+				inter,
+				interpreter.EmptyLocationRange,
+				fieldName,
+				importValue(t, inter, fieldValue),
+			)
+		}
+
+		return composite
+
+	case cadence.Optional:
+
+		if value.Value == nil {
+			return interpreter.NilValue{}
+		}
+
+		return interpreter.NewUnmeteredSomeValueNonCopying(
+			importValue(t, inter, value.Value),
+		)
+
+	default:
+		result, err := runtime.ImportValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			nil,
+			value,
+			nil,
+		)
+		require.NoError(t, err)
+		return result
+	}
+}
+
+func withoutAtreeStorageValidationEnabled[T any](inter *interpreter.Interpreter, f func() T) T {
+	config := inter.SharedState.Config
+	original := config.AtreeStorageValidationEnabled
+	config.AtreeStorageValidationEnabled = false
+	result := f()
+	config.AtreeStorageValidationEnabled = original
+	return result
+}
 
 func TestInterpretRandomMapOperations(t *testing.T) {
 	if !*runSmokeTests {
@@ -55,541 +214,528 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 
 	t.Parallel()
 
-	r := newRandomValueGenerator()
-	t.Logf("seed: %d", r.seed)
-
-	storage := newUnmeteredInMemoryStorage()
-	inter, err := interpreter.NewInterpreter(
-		&interpreter.Program{
-			Program:     ast.NewProgram(nil, []ast.Declaration{}),
-			Elaboration: sema.NewElaboration(nil),
-		},
-		utils.TestLocation,
-		&interpreter.Config{
-			Storage: storage,
-			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-				return interpreter.VirtualImport{
-					Elaboration: inter.Program.Elaboration,
-				}
-			},
-			AtreeStorageValidationEnabled: *validateAtree,
-			AtreeValueValidationEnabled:   *validateAtree,
-		},
-	)
-	require.NoError(t, err)
-
-	numberOfValues := r.randomInt(containerMaxSize)
-
-	var testMap, copyOfTestMap *interpreter.DictionaryValue
-	var storageSize, slabCounts int
-
-	entries := newValueMap(numberOfValues)
 	orgOwner := common.Address{'A'}
 
-	t.Run("construction", func(t *testing.T) {
-		keyValues := make([]interpreter.Value, numberOfValues*2)
-		for i := 0; i < numberOfValues; i++ {
-			key := r.randomHashableValue(inter)
-			value := r.randomStorableValue(inter, 0)
+	const dictionaryStorageMapKey = interpreter.StringStorageMapKey("dictionary")
 
-			entries.put(inter, key, value)
+	createDictionary := func(
+		r *randomValueGenerator,
+		inter *interpreter.Interpreter,
+	) (
+		*interpreter.DictionaryValue,
+		cadence.Dictionary,
+		func() *interpreter.DictionaryValue,
+	) {
+		expectedValue := r.randomDictionaryValue(inter, 0)
+
+		keyValues := make([]interpreter.Value, 2*len(expectedValue.Pairs))
+		for i, pair := range expectedValue.Pairs {
+
+			key := importValue(t, inter, pair.Key)
+			value := importValue(t, inter, pair.Value)
 
 			keyValues[i*2] = key
 			keyValues[i*2+1] = value
 		}
 
-		testMap = interpreter.NewDictionaryValueWithAddress(
+		// Construct a dictionary directly in the owner's account.
+		// However, the dictionary is not referenced by the root of the storage yet
+		// (a storage map), so atree storage validation must be temporarily disabled
+		// to not report any "unreferenced slab" errors.
+
+		dictionary := withoutAtreeStorageValidationEnabled(
 			inter,
-			interpreter.EmptyLocationRange,
-			&interpreter.DictionaryStaticType{
-				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
-				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+			func() *interpreter.DictionaryValue {
+				return interpreter.NewDictionaryValueWithAddress(
+					inter,
+					interpreter.EmptyLocationRange,
+					&interpreter.DictionaryStaticType{
+						KeyType:   interpreter.PrimitiveStaticTypeHashableStruct,
+						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+					},
+					orgOwner,
+					keyValues...,
+				)
 			},
-			orgOwner,
-			keyValues...,
 		)
 
-		storageSize, slabCounts = getSlabStorageSize(t, storage)
+		// Store the dictionary in a storage map, so that the dictionary's slab
+		// is referenced by the root of the storage.
 
-		require.Equal(t, testMap.Count(), entries.size())
+		inter.Storage().
+			GetStorageMap(
+				orgOwner,
+				common.PathDomainStorage.Identifier(),
+				true,
+			).
+			WriteValue(
+				inter,
+				dictionaryStorageMapKey,
+				dictionary,
+			)
 
-		entries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
-			exists := testMap.ContainsKey(inter, interpreter.EmptyLocationRange, orgKey)
+		reloadDictionary := func() *interpreter.DictionaryValue {
+			storageMap := inter.Storage().GetStorageMap(
+				orgOwner,
+				common.PathDomainStorage.Identifier(),
+				false,
+			)
+			require.NotNil(t, storageMap)
+
+			readValue := storageMap.ReadValue(inter, dictionaryStorageMapKey)
+			require.NotNil(t, readValue)
+
+			require.IsType(t, &interpreter.DictionaryValue{}, readValue)
+			return readValue.(*interpreter.DictionaryValue)
+		}
+
+		return dictionary, expectedValue, reloadDictionary
+	}
+
+	checkDictionary := func(
+		inter *interpreter.Interpreter,
+		dictionary *interpreter.DictionaryValue,
+		expectedValue cadence.Dictionary,
+		expectedOwner common.Address,
+	) {
+		require.Equal(t, len(expectedValue.Pairs), dictionary.Count())
+
+		for _, pair := range expectedValue.Pairs {
+			pairKey := importValue(t, inter, pair.Key)
+
+			exists := dictionary.ContainsKey(inter, interpreter.EmptyLocationRange, pairKey)
 			require.True(t, bool(exists))
 
-			value, found := testMap.Get(inter, interpreter.EmptyLocationRange, orgKey)
+			value, found := dictionary.Get(inter, interpreter.EmptyLocationRange, pairKey)
 			require.True(t, found)
-			utils.AssertValuesEqual(t, inter, orgValue, value)
 
-			return false
-		})
+			pairValue := importValue(t, inter, pair.Value)
+			utils.AssertValuesEqual(t, inter, pairValue, value)
+		}
 
-		owner := testMap.GetOwner()
-		assert.Equal(t, orgOwner, owner)
+		owner := dictionary.GetOwner()
+		assert.Equal(t, expectedOwner, owner)
+	}
+
+	doubleCheckDictionary := func(
+		inter *interpreter.Interpreter,
+		resetStorage func(),
+		dictionary *interpreter.DictionaryValue,
+		expectedValue cadence.Dictionary,
+		expectedOwner common.Address,
+	) {
+		// Check the values of the dictionary.
+		// Once right away, and once after a reset (commit and reload) of the storage.
+
+		for i := 0; i < 2; i++ {
+
+			checkDictionary(
+				inter,
+				dictionary,
+				expectedValue,
+				expectedOwner,
+			)
+
+			resetStorage()
+		}
+	}
+
+	checkIteration := func(
+		inter *interpreter.Interpreter,
+		resetStorage func(),
+		dictionary *interpreter.DictionaryValue,
+		expectedValue cadence.Dictionary,
+	) {
+		// Index the expected key-value pairs for lookup during iteration
+
+		indexedExpected := map[any]interpreter.DictionaryEntryValues{}
+		for _, pair := range expectedValue.Pairs {
+			pairKey := importValue(t, inter, pair.Key)
+
+			mapKey := mapKey(inter, pairKey)
+
+			require.NotContains(t, indexedExpected, mapKey)
+			indexedExpected[mapKey] = interpreter.DictionaryEntryValues{
+				Key:   pairKey,
+				Value: importValue(t, inter, pair.Value),
+			}
+		}
+
+		// Iterate over the values of the created dictionary.
+		// Once right after construction, and once after a reset (commit and reload) of the storage.
+
+		for i := 0; i < 2; i++ {
+
+			require.Equal(t, len(expectedValue.Pairs), dictionary.Count())
+
+			var iterations int
+
+			dictionary.Iterate(
+				inter,
+				interpreter.EmptyLocationRange,
+				func(key, value interpreter.Value) (resume bool) {
+
+					mapKey := mapKey(inter, key)
+					require.Contains(t, indexedExpected, mapKey)
+
+					pair := indexedExpected[mapKey]
+
+					utils.AssertValuesEqual(t, inter, pair.Key, key)
+					utils.AssertValuesEqual(t, inter, pair.Value, value)
+
+					iterations += 1
+
+					return true
+				},
+			)
+
+			assert.Equal(t, len(expectedValue.Pairs), iterations)
+
+			resetStorage()
+		}
+	}
+
+	t.Run("construction", func(t *testing.T) {
+
+		t.Parallel()
+
+		r := newRandomValueGenerator(*smokeTestSeed)
+		t.Logf("seed: %d", r.seed)
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		dictionary, expectedValue, _ := createDictionary(&r, inter)
+
+		doubleCheckDictionary(
+			inter,
+			resetStorage,
+			dictionary,
+			expectedValue,
+			orgOwner,
+		)
 	})
 
 	t.Run("iterate", func(t *testing.T) {
-		require.Equal(t, testMap.Count(), entries.size())
 
-		testMap.Iterate(
+		t.Parallel()
+
+		r := newRandomValueGenerator(*smokeTestSeed)
+		t.Logf("seed: %d", r.seed)
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		dictionary, expectedValue, _ := createDictionary(&r, inter)
+
+		checkIteration(
 			inter,
-			interpreter.EmptyLocationRange,
-			func(key, value interpreter.Value) (resume bool) {
-				orgValue, ok := entries.get(inter, key)
-				require.True(t, ok, "cannot find key: %v", key)
-
-				utils.AssertValuesEqual(t, inter, orgValue, value)
-				return true
-			},
+			resetStorage,
+			dictionary,
+			expectedValue,
 		)
 	})
 
-	t.Run("deep copy", func(t *testing.T) {
-		newOwner := atree.Address{'B'}
-		copyOfTestMap = testMap.Transfer(
+	t.Run("move (transfer and deep remove)", func(t *testing.T) {
+
+		t.Parallel()
+
+		r := newRandomValueGenerator(*smokeTestSeed)
+		t.Logf("seed: %d", r.seed)
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		original, expectedValue, _ := createDictionary(&r, inter)
+
+		resetStorage()
+
+		// Transfer the dictionary to a new owner
+
+		newOwner := common.Address{'B'}
+
+		transferred := original.Transfer(
 			inter,
 			interpreter.EmptyLocationRange,
-			newOwner,
+			atree.Address(newOwner),
 			false,
 			nil,
 			nil,
-			true, // testMap is standalone.
+			// TODO: is has no parent container = true correct?
+			true,
 		).(*interpreter.DictionaryValue)
 
-		require.Equal(t, entries.size(), copyOfTestMap.Count())
+		// Store the transferred dictionary in a storage map, so that the dictionary's slab
+		// is referenced by the root of the storage.
 
-		entries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
-			exists := copyOfTestMap.ContainsKey(inter, interpreter.EmptyLocationRange, orgKey)
-			require.True(t, bool(exists))
+		inter.Storage().
+			GetStorageMap(
+				newOwner,
+				common.PathDomainStorage.Identifier(),
+				true,
+			).
+			WriteValue(
+				inter,
+				interpreter.StringStorageMapKey("transferred_dictionary"),
+				transferred,
+			)
 
-			value, found := copyOfTestMap.Get(inter, interpreter.EmptyLocationRange, orgKey)
-			require.True(t, found)
-			utils.AssertValuesEqual(t, inter, orgValue, value)
+		// Both original and transferred dictionary should contain the expected values
+		// Check once right away, and once after a reset (commit and reload) of the storage.
 
-			return false
-		})
+		for i := 0; i < 2; i++ {
 
-		owner := copyOfTestMap.GetOwner()
-		assert.Equal(t, newOwner[:], owner[:])
-	})
+			checkDictionary(
+				inter,
+				original,
+				expectedValue,
+				orgOwner,
+			)
 
-	t.Run("deep remove", func(t *testing.T) {
-		copyOfTestMap.DeepRemove(inter, true)
-		err = storage.Remove(copyOfTestMap.SlabID())
+			checkDictionary(
+				inter,
+				transferred,
+				expectedValue,
+				newOwner,
+			)
+
+			resetStorage()
+		}
+
+		// Deep remove the original dictionary
+
+		// TODO: is has no parent container = true correct?
+		original.DeepRemove(inter, true)
+
+		if !original.Inlined() {
+			err := inter.Storage().Remove(original.SlabID())
+			require.NoError(t, err)
+		}
+
+		err := inter.Storage().CheckHealth()
 		require.NoError(t, err)
 
-		// deep removal should clean up everything
-		newStorageSize, newSlabCounts := getSlabStorageSize(t, storage)
-		assert.Equal(t, slabCounts, newSlabCounts)
-		assert.Equal(t, storageSize, newStorageSize)
+		// New dictionary should still be accessible
 
-		require.Equal(t, entries.size(), testMap.Count())
+		doubleCheckDictionary(
+			inter,
+			resetStorage,
+			transferred,
+			expectedValue,
+			newOwner,
+		)
 
-		// go over original values again and check no missing data (no side effect should be found)
-		entries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
-			exists := testMap.ContainsKey(inter, interpreter.EmptyLocationRange, orgKey)
-			require.True(t, bool(exists))
-
-			value, found := testMap.Get(inter, interpreter.EmptyLocationRange, orgKey)
-			require.True(t, found)
-			utils.AssertValuesEqual(t, inter, orgValue, value)
-
-			return false
-		})
-
-		owner := testMap.GetOwner()
-		assert.Equal(t, orgOwner, owner)
+		// TODO: check deep removal cleaned up everything in original account (storage size, slab count)
 	})
 
 	t.Run("insert", func(t *testing.T) {
-		newEntries := newValueMap(numberOfValues)
+		t.Parallel()
 
-		dictionary := interpreter.NewDictionaryValueWithAddress(
-			inter,
-			interpreter.EmptyLocationRange,
-			&interpreter.DictionaryStaticType{
-				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
-				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
-			},
-			orgOwner,
-		)
+		r := newRandomValueGenerator(*smokeTestSeed)
+		t.Logf("seed: %d", r.seed)
 
-		// Insert
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		dictionary, expectedValue, reloadDictionary := createDictionary(&r, inter)
+
+		resetStorage()
+
+		// Reload the dictionary after the reset
+
+		dictionary = reloadDictionary()
+
+		// Insert new values into the dictionary.
+		// Atree storage validation must be temporarily disabled
+		// to not report any "unreferenced slab errors.
+
+		numberOfValues := r.randomInt(containerMaxSize)
+
 		for i := 0; i < numberOfValues; i++ {
-			key := r.randomHashableValue(inter)
-			value := r.randomStorableValue(inter, 0)
 
-			newEntries.put(inter, key, value)
-
-			_ = dictionary.Insert(inter, interpreter.EmptyLocationRange, key, value)
-		}
-
-		require.Equal(t, newEntries.size(), dictionary.Count())
-
-		// Go over original values again and check no missing data (no side effect should be found)
-		newEntries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
-			exists := dictionary.ContainsKey(inter, interpreter.EmptyLocationRange, orgKey)
-			require.True(t, bool(exists))
-
-			value, found := dictionary.Get(inter, interpreter.EmptyLocationRange, orgKey)
-			require.True(t, found)
-			utils.AssertValuesEqual(t, inter, orgValue, value)
-
-			return false
-		})
-	})
-
-	t.Run("remove", func(t *testing.T) {
-		newEntries := newValueMap(numberOfValues)
-
-		keyValues := make([][2]interpreter.Value, numberOfValues)
-		for i := 0; i < numberOfValues; i++ {
-			key := r.randomHashableValue(inter)
-			value := r.randomStorableValue(inter, 0)
-
-			newEntries.put(inter, key, value)
-
-			keyValues[i][0] = key
-			keyValues[i][1] = value
-		}
-
-		dictionary := interpreter.NewDictionaryValueWithAddress(
-			inter,
-			interpreter.EmptyLocationRange,
-			&interpreter.DictionaryStaticType{
-				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
-				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
-			},
-			orgOwner,
-		)
-
-		require.Equal(t, 0, dictionary.Count())
-
-		// Get the initial storage size before inserting values
-		startingStorageSize, startingSlabCounts := getSlabStorageSize(t, storage)
-
-		// Insert
-		for _, keyValue := range keyValues {
-			dictionary.Insert(inter, interpreter.EmptyLocationRange, keyValue[0], keyValue[1])
-		}
-
-		require.Equal(t, newEntries.size(), dictionary.Count())
-
-		// Remove
-		newEntries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
-			removedValue := dictionary.Remove(inter, interpreter.EmptyLocationRange, orgKey)
-
-			require.IsType(t, &interpreter.SomeValue{}, removedValue)
-			someValue := removedValue.(*interpreter.SomeValue)
-
-			// Removed value must be same as the original value
-			innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
-			utils.AssertValuesEqual(t, inter, orgValue, innerValue)
-
-			return false
-		})
-
-		// Dictionary must be empty
-		require.Equal(t, 0, dictionary.Count())
-
-		storageSize, slabCounts := getSlabStorageSize(t, storage)
-
-		// Storage size after removals should be same as the size before insertion.
-		assert.Equal(t, startingStorageSize, storageSize)
-		assert.Equal(t, startingSlabCounts, slabCounts)
-	})
-
-	t.Run("remove enum key", func(t *testing.T) {
-
-		dictionary := interpreter.NewDictionaryValueWithAddress(
-			inter,
-			interpreter.EmptyLocationRange,
-			&interpreter.DictionaryStaticType{
-				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
-				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
-			},
-			orgOwner,
-		)
-
-		require.Equal(t, 0, dictionary.Count())
-
-		// Get the initial storage size after creating empty dictionary
-		startingStorageSize, startingSlabCounts := getSlabStorageSize(t, storage)
-
-		newEntries := newValueMap(numberOfValues)
-
-		keyValues := make([][2]interpreter.Value, numberOfValues)
-		for i := 0; i < numberOfValues; i++ {
-			// Create a random enum as key
-			key := r.generateRandomHashableValue(inter, randomValueKindEnum)
-			value := interpreter.Void
-
-			newEntries.put(inter, key, value)
-
-			keyValues[i][0] = key
-			keyValues[i][1] = value
-		}
-
-		// Insert
-		for _, keyValue := range keyValues {
-			dictionary.Insert(inter, interpreter.EmptyLocationRange, keyValue[0], keyValue[1])
-		}
-
-		// Remove
-		newEntries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
-			removedValue := dictionary.Remove(inter, interpreter.EmptyLocationRange, orgKey)
-
-			require.IsType(t, &interpreter.SomeValue{}, removedValue)
-			someValue := removedValue.(*interpreter.SomeValue)
-
-			// Removed value must be same as the original value
-			innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
-			utils.AssertValuesEqual(t, inter, orgValue, innerValue)
-
-			return false
-		})
-
-		// Dictionary must be empty
-		require.Equal(t, 0, dictionary.Count())
-
-		storageSize, slabCounts = getSlabStorageSize(t, storage)
-
-		// Storage size after removals should be same as the size before insertion.
-		assert.Equal(t, startingStorageSize, storageSize)
-		assert.Equal(t, startingSlabCounts, slabCounts)
-	})
-
-	t.Run("update enum key", func(t *testing.T) {
-
-		dictionary := interpreter.NewDictionaryValueWithAddress(
-			inter,
-			interpreter.EmptyLocationRange,
-			&interpreter.DictionaryStaticType{
-				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
-				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
-			},
-			orgOwner,
-		)
-
-		require.Equal(t, 0, dictionary.Count())
-
-		value1 := interpreter.NewUnmeteredIntValueFromInt64(1)
-		value2 := interpreter.NewUnmeteredIntValueFromInt64(2)
-
-		keys := make([]interpreter.Value, numberOfValues)
-		for i := 0; i < numberOfValues; i++ {
-			// Create a random enum as key
-			key := r.generateRandomHashableValue(inter, randomValueKindEnum)
-
-			keys[i] = key
-		}
-
-		// Insert
-		for _, key := range keys {
-			dictionary.Insert(
-				inter,
-				interpreter.EmptyLocationRange,
-				// Need to clone the key, as it is transferred, and we want to keep using it.
-				key.Clone(inter),
-				// Always insert value1
-				value1,
-			)
-		}
-
-		// Update
-		for _, key := range keys {
-			oldValue := dictionary.Insert(
-				inter,
-				interpreter.EmptyLocationRange,
-				// Need to clone the key, as it is transferred, and we want to keep using it.
-				key.Clone(inter),
-				// Change all value1 to value2
-				value2,
-			)
-
-			require.IsType(t, &interpreter.SomeValue{}, oldValue)
-			someValue := oldValue.(*interpreter.SomeValue)
-
-			// Removed value must be same as the original value
-			innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
-			utils.AssertValuesEqual(t, inter, value1, innerValue)
-		}
-
-		// Check the values
-		for _, key := range keys {
-			readValue := dictionary.GetKey(
-				inter,
-				interpreter.EmptyLocationRange,
-				key,
-			)
-
-			require.IsType(t, &interpreter.SomeValue{}, readValue)
-			someValue := readValue.(*interpreter.SomeValue)
-
-			// Read value must be updated value
-			innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
-			utils.AssertValuesEqual(t, inter, value2, innerValue)
-		}
-	})
-
-	t.Run("random insert & remove", func(t *testing.T) {
-		keyValues := make([][2]interpreter.Value, numberOfValues)
-		for i := 0; i < numberOfValues; i++ {
-			// Generate unique key
-			var key interpreter.Value
+			// Generate a unique key
+			var key cadence.Value
+			var importedKey interpreter.Value
 			for {
 				key = r.randomHashableValue(inter)
+				importedKey = importValue(t, inter, key)
 
-				var foundConflict bool
-				for j := 0; j < i; j++ {
-					existingKey := keyValues[j][0]
-					if key.(interpreter.EquatableValue).Equal(inter, interpreter.EmptyLocationRange, existingKey) {
-						foundConflict = true
-						break
-					}
-				}
-				if !foundConflict {
+				if !dictionary.ContainsKey(
+					inter,
+					interpreter.EmptyLocationRange,
+					importedKey,
+				) {
 					break
 				}
 			}
 
-			keyValues[i][0] = key
-			keyValues[i][1] = r.randomStorableValue(inter, 0)
-		}
+			value := r.randomStorableValue(inter, 0)
+			importedValue := importValue(t, inter, value)
 
-		dictionary := interpreter.NewDictionaryValueWithAddress(
-			inter,
-			interpreter.EmptyLocationRange,
-			&interpreter.DictionaryStaticType{
-				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
-				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
-			},
-			orgOwner,
-		)
+			// Atree storage validation must be temporarily disabled
+			// to not report any "unreferenced slab" errors.
 
-		require.Equal(t, 0, dictionary.Count())
+			_ = withoutAtreeStorageValidationEnabled(inter, func() struct{} {
 
-		// Get the initial storage size before inserting values
-		startingStorageSize, startingSlabCounts := getSlabStorageSize(t, storage)
-
-		insertCount := 0
-		deleteCount := 0
-
-		isInsert := func() bool {
-			if dictionary.Count() == 0 {
-				return true
-			}
-
-			if insertCount >= numberOfValues {
-				return false
-			}
-
-			return r.randomInt(1) == 1
-		}
-
-		for insertCount < numberOfValues || dictionary.Count() > 0 {
-			// Perform a random operation out of insert/remove
-			if isInsert() {
-				key := keyValues[insertCount][0]
-				if _, ok := key.(*interpreter.CompositeValue); ok {
-					key = key.Clone(inter)
-				}
-
-				value := keyValues[insertCount][1].Clone(inter)
-
-				dictionary.Insert(
+				existing := dictionary.Insert(
 					inter,
 					interpreter.EmptyLocationRange,
-					key,
-					value,
+					importedKey,
+					importedValue,
 				)
-				insertCount++
-			} else {
-				key := keyValues[deleteCount][0]
-				orgValue := keyValues[deleteCount][1]
+				require.Equal(t,
+					interpreter.NilOptionalValue,
+					existing,
+				)
+				return struct{}{}
+			})
 
-				removedValue := dictionary.Remove(inter, interpreter.EmptyLocationRange, key)
-
-				require.IsType(t, &interpreter.SomeValue{}, removedValue)
-				someValue := removedValue.(*interpreter.SomeValue)
-
-				// Removed value must be same as the original value
-				innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
-				utils.AssertValuesEqual(t, inter, orgValue, innerValue)
-
-				deleteCount++
-			}
+			expectedValue.Pairs = append(
+				expectedValue.Pairs,
+				cadence.KeyValuePair{
+					Key:   key,
+					Value: value,
+				},
+			)
 		}
+
+		err := inter.Storage().CheckHealth()
+		require.NoError(t, err)
+
+		doubleCheckDictionary(
+			inter,
+			resetStorage,
+			dictionary,
+			expectedValue,
+			orgOwner,
+		)
+	})
+
+	t.Run("remove", func(t *testing.T) {
+		t.Parallel()
+
+		r := newRandomValueGenerator(*smokeTestSeed)
+		t.Logf("seed: %d", r.seed)
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		dictionary, expectedValue, reloadDictionary := createDictionary(&r, inter)
+
+		resetStorage()
+
+		// Reload the dictionary after the reset
+
+		dictionary = reloadDictionary()
+
+		// Remove
+		for _, pair := range expectedValue.Pairs {
+
+			key := importValue(t, inter, pair.Key)
+
+			// Atree storage validation must be temporarily disabled
+			// to not report any "unreferenced slab" errors.
+
+			removedValue := withoutAtreeStorageValidationEnabled(inter, func() interpreter.OptionalValue {
+				return dictionary.Remove(inter, interpreter.EmptyLocationRange, key)
+			})
+
+			require.IsType(t, &interpreter.SomeValue{}, removedValue)
+			someValue := removedValue.(*interpreter.SomeValue)
+
+			// TODO: panic: duplicate slab 0x4100000000000000.14 for seed 1736809620917220000
+			value := importValue(t, inter, pair.Value)
+
+			// Removed value must be same as the original value
+			innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
+			utils.AssertValuesEqual(t, inter, value, innerValue)
+		}
+
+		err := inter.Storage().CheckHealth()
+		require.NoError(t, err)
+
+		expectedValue = cadence.Dictionary{}.
+			WithType(expectedValue.Type().(*cadence.DictionaryType))
 
 		// Dictionary must be empty
 		require.Equal(t, 0, dictionary.Count())
 
-		storageSize, slabCounts := getSlabStorageSize(t, storage)
-
-		// Storage size after removals should be same as the size before insertion.
-		assert.Equal(t, startingStorageSize, storageSize)
-		assert.Equal(t, startingSlabCounts, slabCounts)
-	})
-
-	t.Run("move", func(t *testing.T) {
-		newOwner := atree.Address{'B'}
-
-		entries := newValueMap(numberOfValues)
-
-		keyValues := make([]interpreter.Value, numberOfValues*2)
-		for i := 0; i < numberOfValues; i++ {
-			key := r.randomHashableValue(inter)
-			value := r.randomStorableValue(inter, 0)
-
-			entries.put(inter, key, value)
-
-			keyValues[i*2] = key
-			keyValues[i*2+1] = value
-		}
-
-		dictionary := interpreter.NewDictionaryValueWithAddress(
+		doubleCheckDictionary(
 			inter,
-			interpreter.EmptyLocationRange,
-			&interpreter.DictionaryStaticType{
-				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
-				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
-			},
+			resetStorage,
+			dictionary,
+			expectedValue,
 			orgOwner,
-			keyValues...,
 		)
 
-		require.Equal(t, entries.size(), dictionary.Count())
+		// TODO: check storage size, slab count
+	})
 
-		movedDictionary := dictionary.Transfer(
-			inter,
-			interpreter.EmptyLocationRange,
-			newOwner,
-			true,
-			nil,
-			nil,
-			true, // dictionary is standalone.
-		).(*interpreter.DictionaryValue)
+	t.Run("update", func(t *testing.T) {
+		t.Parallel()
 
-		require.Equal(t, entries.size(), movedDictionary.Count())
+		r := newRandomValueGenerator(*smokeTestSeed)
+		t.Logf("seed: %d", r.seed)
 
-		// Cleanup the slab of original dictionary.
-		err := storage.Remove(dictionary.SlabID())
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		dictionary, expectedValue, reloadDictionary := createDictionary(&r, inter)
+
+		resetStorage()
+
+		// Reload the dictionary after the reset
+
+		dictionary = reloadDictionary()
+
+		elementCount := dictionary.Count()
+
+		// Generate new values
+
+		newValues := make([]cadence.Value, len(expectedValue.Pairs))
+		for i := range expectedValue.Pairs {
+			newValues[i] = r.randomStorableValue(inter, 0)
+		}
+
+		// Update
+		for i, pair := range expectedValue.Pairs {
+
+			key := importValue(t, inter, pair.Key)
+			newValue := importValue(t, inter, newValues[i])
+
+			// Atree storage validation must be temporarily disabled
+			// to not report any "unreferenced slab" errors.
+
+			existingValue := withoutAtreeStorageValidationEnabled(inter, func() interpreter.OptionalValue {
+				return dictionary.Insert(
+					inter,
+					interpreter.EmptyLocationRange,
+					key,
+					newValue,
+				)
+			})
+
+			require.IsType(t, &interpreter.SomeValue{}, existingValue)
+			someValue := existingValue.(*interpreter.SomeValue)
+
+			value := importValue(t, inter, pair.Value)
+
+			// Removed value must be same as the original value
+			innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
+			utils.AssertValuesEqual(t, inter, value, innerValue)
+
+			expectedValue.Pairs[i].Value = newValues[i]
+		}
+
+		err := inter.Storage().CheckHealth()
 		require.NoError(t, err)
 
-		// Check the values
-		entries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
-			exists := movedDictionary.ContainsKey(inter, interpreter.EmptyLocationRange, orgKey)
-			require.True(t, bool(exists))
+		// Dictionary must have same number of key-value pairs
+		require.Equal(t, elementCount, dictionary.Count())
 
-			value, found := movedDictionary.Get(inter, interpreter.EmptyLocationRange, orgKey)
-			require.True(t, found)
-			utils.AssertValuesEqual(t, inter, orgValue, value)
+		doubleCheckDictionary(
+			inter,
+			resetStorage,
+			dictionary,
+			expectedValue,
+			orgOwner,
+		)
 
-			return false
-		})
-
-		owner := movedDictionary.GetOwner()
-		assert.Equal(t, newOwner[:], owner[:])
+		// TODO: check storage size, slab count
 	})
 }
 
@@ -598,614 +744,464 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		t.Skip("smoke tests are disabled")
 	}
 
-	r := newRandomValueGenerator()
+	t.Parallel()
 
-	testInterpretArrayOperations(t, r)
-}
-
-func testInterpretArrayOperations(t *testing.T, r randomValueGenerator) {
-
-	t.Logf("seed: %d", r.seed)
-
-	storage := newUnmeteredInMemoryStorage()
-	inter, err := interpreter.NewInterpreter(
-		&interpreter.Program{
-			Program:     ast.NewProgram(nil, []ast.Declaration{}),
-			Elaboration: sema.NewElaboration(nil),
-		},
-		utils.TestLocation,
-		&interpreter.Config{
-			Storage: storage,
-			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-				return interpreter.VirtualImport{
-					Elaboration: inter.Program.Elaboration,
-				}
-			},
-		},
-	)
-	require.NoError(t, err)
-
-	numberOfValues := r.randomInt(containerMaxSize)
-
-	var testArray, copyOfTestArray *interpreter.ArrayValue
-	var storageSize, slabCounts int
-
-	elements := make([]interpreter.Value, numberOfValues)
 	orgOwner := common.Address{'A'}
 
-	t.Run("construction", func(t *testing.T) {
-		values := make([]interpreter.Value, numberOfValues)
-		for i := 0; i < numberOfValues; i++ {
-			value := r.randomStorableValue(inter, 0)
-			elements[i] = value
-			values[i] = value.Clone(inter)
+	const arrayStorageMapKey = interpreter.StringStorageMapKey("array")
+
+	createArray := func(
+		r *randomValueGenerator,
+		inter *interpreter.Interpreter,
+	) (
+		*interpreter.ArrayValue,
+		cadence.Array,
+		func() *interpreter.ArrayValue,
+	) {
+		expectedValue := r.randomArrayValue(inter, 0)
+
+		elements := make([]interpreter.Value, len(expectedValue.Values))
+		for i, value := range expectedValue.Values {
+			elements[i] = importValue(t, inter, value)
 		}
 
-		testArray = interpreter.NewArrayValue(
+		// Construct an array directly in the owner's account.
+		// However, the array is not referenced by the root of the storage yet
+		// (a storage map), so atree storage validation must be temporarily disabled
+		// to not report any "unreferenced slab" errors.
+
+		array := withoutAtreeStorageValidationEnabled(
 			inter,
-			interpreter.EmptyLocationRange,
-			&interpreter.VariableSizedStaticType{
-				Type: interpreter.PrimitiveStaticTypeAnyStruct,
+			func() *interpreter.ArrayValue {
+				return interpreter.NewArrayValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					&interpreter.VariableSizedStaticType{
+						Type: interpreter.PrimitiveStaticTypeAnyStruct,
+					},
+					orgOwner,
+					elements...,
+				)
 			},
-			orgOwner,
-			values...,
 		)
 
-		storageSize, slabCounts = getSlabStorageSize(t, storage)
+		// Store the array in a storage map, so that the array's slab
+		// is referenced by the root of the storage.
 
-		require.Equal(t, len(elements), testArray.Count())
+		inter.Storage().
+			GetStorageMap(
+				orgOwner,
+				common.PathDomainStorage.Identifier(),
+				true,
+			).
+			WriteValue(
+				inter,
+				arrayStorageMapKey,
+				array,
+			)
 
-		for index, orgElement := range elements {
-			element := testArray.Get(inter, interpreter.EmptyLocationRange, index)
-			utils.AssertValuesEqual(t, inter, orgElement, element)
+		reloadArray := func() *interpreter.ArrayValue {
+			storageMap := inter.Storage().GetStorageMap(
+				orgOwner,
+				common.PathDomainStorage.Identifier(),
+				false,
+			)
+			require.NotNil(t, storageMap)
+
+			readValue := storageMap.ReadValue(inter, arrayStorageMapKey)
+			require.NotNil(t, readValue)
+
+			require.IsType(t, &interpreter.ArrayValue{}, readValue)
+			return readValue.(*interpreter.ArrayValue)
 		}
 
-		owner := testArray.GetOwner()
-		assert.Equal(t, orgOwner, owner)
+		return array, expectedValue, reloadArray
+	}
+
+	checkArray := func(
+		inter *interpreter.Interpreter,
+		array *interpreter.ArrayValue,
+		expectedValue cadence.Array,
+		expectedOwner common.Address,
+	) {
+		require.Equal(t, len(expectedValue.Values), array.Count())
+
+		for i, value := range expectedValue.Values {
+			value := importValue(t, inter, value)
+
+			element := array.Get(inter, interpreter.EmptyLocationRange, i)
+
+			utils.AssertValuesEqual(t, inter, value, element)
+		}
+
+		owner := array.GetOwner()
+		assert.Equal(t, expectedOwner, owner)
+	}
+
+	doubleCheckArray := func(
+		inter *interpreter.Interpreter,
+		resetStorage func(),
+		array *interpreter.ArrayValue,
+		expectedValue cadence.Array,
+		expectedOwner common.Address,
+	) {
+		// Check the values of the array.
+		// Once right away, and once after a reset (commit and reload) of the storage.
+
+		for i := 0; i < 2; i++ {
+
+			checkArray(
+				inter,
+				array,
+				expectedValue,
+				expectedOwner,
+			)
+
+			resetStorage()
+		}
+	}
+
+	checkIteration := func(
+		inter *interpreter.Interpreter,
+		resetStorage func(),
+		array *interpreter.ArrayValue,
+		expectedValue cadence.Array,
+	) {
+
+		// Iterate over the values of the created array.
+		// Once right after construction, and once after a reset (commit and reload) of the storage.
+
+		for i := 0; i < 2; i++ {
+
+			require.Equal(t, len(expectedValue.Values), array.Count())
+
+			var iterations int
+
+			array.Iterate(
+				inter,
+				func(element interpreter.Value) (resume bool) {
+					value := importValue(t, inter, expectedValue.Values[iterations])
+
+					utils.AssertValuesEqual(t, inter, value, element)
+
+					iterations += 1
+
+					return true
+				},
+				false,
+				interpreter.EmptyLocationRange,
+			)
+
+			assert.Equal(t, len(expectedValue.Values), iterations)
+
+			resetStorage()
+		}
+	}
+
+	t.Run("construction", func(t *testing.T) {
+
+		t.Parallel()
+
+		r := newRandomValueGenerator(*smokeTestSeed)
+		t.Logf("seed: %d", r.seed)
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		array, expectedValue, _ := createArray(&r, inter)
+
+		doubleCheckArray(
+			inter,
+			resetStorage,
+			array,
+			expectedValue,
+			orgOwner,
+		)
 	})
 
 	t.Run("iterate", func(t *testing.T) {
-		require.Equal(t, testArray.Count(), len(elements))
 
-		index := 0
-		testArray.Iterate(
+		t.Parallel()
+
+		r := newRandomValueGenerator(*smokeTestSeed)
+		t.Logf("seed: %d", r.seed)
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		array, expectedValue, _ := createArray(&r, inter)
+
+		checkIteration(
 			inter,
-			func(element interpreter.Value) (resume bool) {
-				orgElement := elements[index]
-				utils.AssertValuesEqual(t, inter, orgElement, element)
-
-				elementByIndex := testArray.Get(inter, interpreter.EmptyLocationRange, index)
-				utils.AssertValuesEqual(t, inter, element, elementByIndex)
-
-				index++
-				return true
-			},
-			false,
-			interpreter.EmptyLocationRange,
+			resetStorage,
+			array,
+			expectedValue,
 		)
 	})
 
-	t.Run("deep copy", func(t *testing.T) {
-		newOwner := atree.Address{'B'}
-		copyOfTestArray = testArray.Transfer(
+	t.Run("move (transfer and deep remove)", func(t *testing.T) {
+
+		t.Parallel()
+
+		r := newRandomValueGenerator(*smokeTestSeed)
+		t.Logf("seed: %d", r.seed)
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		original, expectedValue, _ := createArray(&r, inter)
+
+		resetStorage()
+
+		// Transfer the array to a new owner
+
+		newOwner := common.Address{'B'}
+
+		transferred := original.Transfer(
 			inter,
 			interpreter.EmptyLocationRange,
-			newOwner,
+			atree.Address(newOwner),
 			false,
 			nil,
 			nil,
-			true, // testArray is standalone.
+			// TODO: is has no parent container = true correct?
+			true,
 		).(*interpreter.ArrayValue)
 
-		require.Equal(t, len(elements), copyOfTestArray.Count())
+		// Store the transferred array in a storage map, so that the array's slab
+		// is referenced by the root of the storage.
 
-		for index, orgElement := range elements {
-			element := copyOfTestArray.Get(inter, interpreter.EmptyLocationRange, index)
-			utils.AssertValuesEqual(t, inter, orgElement, element)
+		inter.Storage().
+			GetStorageMap(
+				newOwner,
+				common.PathDomainStorage.Identifier(),
+				true,
+			).
+			WriteValue(
+				inter,
+				interpreter.StringStorageMapKey("transferred_array"),
+				transferred,
+			)
+
+		// Both original and transferred array should contain the expected values
+		// Check once right away, and once after a reset (commit and reload) of the storage.
+
+		for i := 0; i < 2; i++ {
+
+			checkArray(
+				inter,
+				original,
+				expectedValue,
+				orgOwner,
+			)
+
+			checkArray(
+				inter,
+				transferred,
+				expectedValue,
+				newOwner,
+			)
+
+			resetStorage()
 		}
 
-		owner := copyOfTestArray.GetOwner()
-		assert.Equal(t, newOwner[:], owner[:])
-	})
+		// Deep remove the original array
 
-	t.Run("deep removal", func(t *testing.T) {
-		copyOfTestArray.DeepRemove(inter, true)
-		err = storage.Remove(copyOfTestArray.SlabID())
+		// TODO: is has no parent container = true correct?
+		original.DeepRemove(inter, true)
+
+		if !original.Inlined() {
+			err := inter.Storage().Remove(original.SlabID())
+			require.NoError(t, err)
+		}
+
+		err := inter.Storage().CheckHealth()
 		require.NoError(t, err)
 
-		// deep removal should clean up everything
-		newStorageSize, newSlabCounts := getSlabStorageSize(t, storage)
-		assert.Equal(t, slabCounts, newSlabCounts)
-		assert.Equal(t, storageSize, newStorageSize)
+		// New array should still be accessible
 
-		assert.Equal(t, len(elements), testArray.Count())
+		doubleCheckArray(
+			inter,
+			resetStorage,
+			transferred,
+			expectedValue,
+			newOwner,
+		)
 
-		// go over original elements again and check no missing data (no side effect should be found)
-		for index, orgElement := range elements {
-			element := testArray.Get(inter, interpreter.EmptyLocationRange, index)
-			utils.AssertValuesEqual(t, inter, orgElement, element)
-		}
-
-		owner := testArray.GetOwner()
-		assert.Equal(t, orgOwner, owner)
+		// TODO: check deep removal cleaned up everything in original account (storage size, slab count)
 	})
 
 	t.Run("insert", func(t *testing.T) {
-		newElements := make([]interpreter.Value, numberOfValues)
+		t.Parallel()
 
-		testArray = interpreter.NewArrayValue(
-			inter,
-			interpreter.EmptyLocationRange,
-			&interpreter.VariableSizedStaticType{
-				Type: interpreter.PrimitiveStaticTypeAnyStruct,
-			},
-			orgOwner,
-		)
+		r := newRandomValueGenerator(*smokeTestSeed)
+		t.Logf("seed: %d", r.seed)
 
-		require.Equal(t, 0, testArray.Count())
+		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		for i := 0; i < numberOfValues; i++ {
-			element := r.randomStorableValue(inter, 0)
-			newElements[i] = element
+		array, expectedValue, reloadArray := createArray(&r, inter)
 
-			testArray.Insert(
-				inter,
-				interpreter.EmptyLocationRange,
-				i,
-				element.Clone(inter),
-			)
-		}
+		resetStorage()
 
-		require.Equal(t, len(newElements), testArray.Count())
+		// Reload the array after the reset
 
-		// Go over original values again and check no missing data (no side effect should be found)
-		for index, element := range newElements {
-			value := testArray.Get(inter, interpreter.EmptyLocationRange, index)
-			utils.AssertValuesEqual(t, inter, element, value)
-		}
-	})
+		array = reloadArray()
 
-	t.Run("append", func(t *testing.T) {
-		newElements := make([]interpreter.Value, numberOfValues)
+		// Insert new values into the array.
 
-		testArray = interpreter.NewArrayValue(
-			inter,
-			interpreter.EmptyLocationRange,
-			&interpreter.VariableSizedStaticType{
-				Type: interpreter.PrimitiveStaticTypeAnyStruct,
-			},
-			orgOwner,
-		)
-
-		require.Equal(t, 0, testArray.Count())
+		numberOfValues := r.randomInt(containerMaxSize)
 
 		for i := 0; i < numberOfValues; i++ {
-			element := r.randomStorableValue(inter, 0)
-			newElements[i] = element
 
-			testArray.Append(
-				inter,
-				interpreter.EmptyLocationRange,
-				element.Clone(inter),
-			)
+			value := r.randomStorableValue(inter, 0)
+			importedValue := importValue(t, inter, value)
+
+			// Generate a random index
+			index := r.rand.Intn(len(expectedValue.Values))
+
+			expectedValue.Values = append(expectedValue.Values, nil)
+			copy(expectedValue.Values[index+1:], expectedValue.Values[index:])
+			expectedValue.Values[index] = value
+
+			// Atree storage validation must be temporarily disabled
+			// to not report any "unreferenced slab" errors.
+
+			_ = withoutAtreeStorageValidationEnabled(inter, func() struct{} {
+
+				array.Insert(
+					inter,
+					interpreter.EmptyLocationRange,
+					index,
+					importedValue,
+				)
+
+				return struct{}{}
+			})
 		}
 
-		require.Equal(t, len(newElements), testArray.Count())
+		err := inter.Storage().CheckHealth()
+		require.NoError(t, err)
 
-		// Go over original values again and check no missing data (no side effect should be found)
-		for index, element := range newElements {
-			value := testArray.Get(inter, interpreter.EmptyLocationRange, index)
-			utils.AssertValuesEqual(t, inter, element, value)
-		}
+		doubleCheckArray(
+			inter,
+			resetStorage,
+			array,
+			expectedValue,
+			orgOwner,
+		)
 	})
 
 	t.Run("remove", func(t *testing.T) {
-		newElements := make([]interpreter.Value, numberOfValues)
+		t.Parallel()
 
+		r := newRandomValueGenerator(1736809620917220000)
+		t.Logf("seed: %d", r.seed)
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		array, expectedValue, reloadArray := createArray(&r, inter)
+
+		resetStorage()
+
+		// Reload the array after the reset
+
+		array = reloadArray()
+
+		// Random remove
+		numberOfValues := len(expectedValue.Values)
 		for i := 0; i < numberOfValues; i++ {
-			newElements[i] = r.randomStorableValue(inter, 0)
-		}
 
-		testArray = interpreter.NewArrayValue(
-			inter,
-			interpreter.EmptyLocationRange,
-			&interpreter.VariableSizedStaticType{
-				Type: interpreter.PrimitiveStaticTypeAnyStruct,
-			},
-			orgOwner,
-		)
+			index := r.rand.Intn(len(expectedValue.Values))
 
-		require.Equal(t, 0, testArray.Count())
+			value := importValue(t, inter, expectedValue.Values[index])
 
-		// Get the initial storage size before inserting values
-		startingStorageSize, startingSlabCounts := getSlabStorageSize(t, storage)
-
-		// Insert
-		for index, element := range newElements {
-			testArray.Insert(
-				inter,
-				interpreter.EmptyLocationRange,
-				index,
-				element.Clone(inter),
+			expectedValue.Values = append(
+				expectedValue.Values[:index],
+				expectedValue.Values[index+1:]...,
 			)
-		}
 
-		require.Equal(t, len(newElements), testArray.Count())
+			// Atree storage validation must be temporarily disabled
+			// to not report any "unreferenced slab" errors.
 
-		// Remove
-		for _, element := range newElements {
-			removedValue := testArray.Remove(inter, interpreter.EmptyLocationRange, 0)
+			removedValue := withoutAtreeStorageValidationEnabled(inter, func() interpreter.Value {
+				return array.Remove(inter, interpreter.EmptyLocationRange, index)
+			})
 
 			// Removed value must be same as the original value
-			utils.AssertValuesEqual(t, inter, element, removedValue)
+			utils.AssertValuesEqual(t, inter, value, removedValue)
 		}
+
+		err := inter.Storage().CheckHealth()
+		require.NoError(t, err)
 
 		// Array must be empty
-		require.Equal(t, 0, testArray.Count())
+		require.Equal(t, 0, array.Count())
 
-		storageSize, slabCounts := getSlabStorageSize(t, storage)
-
-		// Storage size after removals should be same as the size before insertion.
-		assert.Equal(t, startingStorageSize, storageSize)
-		assert.Equal(t, startingSlabCounts, slabCounts)
-	})
-
-	t.Run("random insert & remove", func(t *testing.T) {
-		elements := make([]interpreter.Value, numberOfValues)
-
-		for i := 0; i < numberOfValues; i++ {
-			elements[i] = r.randomStorableValue(inter, 0)
-		}
-
-		testArray = interpreter.NewArrayValue(
+		doubleCheckArray(
 			inter,
-			interpreter.EmptyLocationRange,
-			&interpreter.VariableSizedStaticType{
-				Type: interpreter.PrimitiveStaticTypeAnyStruct,
-			},
+			resetStorage,
+			array,
+			expectedValue,
 			orgOwner,
 		)
 
-		require.Equal(t, 0, testArray.Count())
+		// TODO: check storage size, slab count
+	})
 
-		// Get the initial storage size before inserting values
-		startingStorageSize, startingSlabCounts := getSlabStorageSize(t, storage)
+	t.Run("update", func(t *testing.T) {
+		t.Parallel()
 
-		insertCount := 0
-		deleteCount := 0
+		r := newRandomValueGenerator(*smokeTestSeed)
+		t.Logf("seed: %d", r.seed)
 
-		isInsert := func() bool {
-			if testArray.Count() == 0 {
-				return true
-			}
+		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-			if insertCount >= numberOfValues {
-				return false
-			}
+		array, expectedValue, reloadArray := createArray(&r, inter)
 
-			return r.randomInt(1) == 1
-		}
+		resetStorage()
 
-		for insertCount < numberOfValues || testArray.Count() > 0 {
-			// Perform a random operation out of insert/remove
-			if isInsert() {
-				value := elements[insertCount].Clone(inter)
+		// Reload the array after the reset
 
-				testArray.Append(
+		array = reloadArray()
+
+		elementCount := array.Count()
+
+		// Random update
+		for i := 0; i < len(expectedValue.Values); i++ {
+
+			index := r.rand.Intn(len(expectedValue.Values))
+
+			expectedValue.Values[index] = r.randomStorableValue(inter, 0)
+			newValue := importValue(t, inter, expectedValue.Values[index])
+
+			// Atree storage validation must be temporarily disabled
+			// to not report any "unreferenced slab" errors.
+
+			withoutAtreeStorageValidationEnabled(inter, func() struct{} {
+				array.Set(
 					inter,
 					interpreter.EmptyLocationRange,
-					value,
+					index,
+					newValue,
 				)
-				insertCount++
-			} else {
-				orgValue := elements[deleteCount]
-				removedValue := testArray.RemoveFirst(inter, interpreter.EmptyLocationRange)
+				return struct{}{}
+			})
 
-				// Removed value must be same as the original value
-				utils.AssertValuesEqual(t, inter, orgValue, removedValue)
-
-				deleteCount++
-			}
 		}
 
-		// Dictionary must be empty
-		require.Equal(t, 0, testArray.Count())
+		err := inter.Storage().CheckHealth()
+		require.NoError(t, err)
 
-		storageSize, slabCounts := getSlabStorageSize(t, storage)
+		// Array must have same number of key-value pairs
+		require.Equal(t, elementCount, array.Count())
 
-		// Storage size after removals should be same as the size before insertion.
-		assert.Equal(t, startingStorageSize, storageSize)
-		assert.Equal(t, startingSlabCounts, slabCounts)
-	})
-
-	t.Run("move", func(t *testing.T) {
-		values := make([]interpreter.Value, numberOfValues)
-		elements := make([]interpreter.Value, numberOfValues)
-
-		for i := 0; i < numberOfValues; i++ {
-			value := r.randomStorableValue(inter, 0)
-			elements[i] = value
-			values[i] = value.Clone(inter)
-		}
-
-		array := interpreter.NewArrayValue(
+		doubleCheckArray(
 			inter,
-			interpreter.EmptyLocationRange,
-			&interpreter.VariableSizedStaticType{
-				Type: interpreter.PrimitiveStaticTypeAnyStruct,
-			},
+			resetStorage,
+			array,
+			expectedValue,
 			orgOwner,
-			values...,
 		)
 
-		require.Equal(t, len(elements), array.Count())
-
-		owner := array.GetOwner()
-		assert.Equal(t, orgOwner, owner)
-
-		newOwner := atree.Address{'B'}
-		movedArray := array.Transfer(
-			inter,
-			interpreter.EmptyLocationRange,
-			newOwner,
-			true,
-			nil,
-			nil,
-			true, // array is standalone.
-		).(*interpreter.ArrayValue)
-
-		require.Equal(t, len(elements), movedArray.Count())
-
-		// Cleanup the slab of original array.
-		err := storage.Remove(array.SlabID())
-		require.NoError(t, err)
-
-		// Check the elements
-		for index, orgElement := range elements {
-			element := movedArray.Get(inter, interpreter.EmptyLocationRange, index)
-			utils.AssertValuesEqual(t, inter, orgElement, element)
-		}
-
-		owner = movedArray.GetOwner()
-		assert.Equal(t, newOwner[:], owner[:])
+		// TODO: check storage size, slab count
 	})
-}
-
-func TestInterpretRandomCompositeValueOperations(t *testing.T) {
-	if !*runSmokeTests {
-		t.Skip("smoke tests are disabled")
-	}
-
-	r := newRandomValueGenerator()
-	t.Logf("seed: %d", r.seed)
-
-	storage := newUnmeteredInMemoryStorage()
-	inter, err := interpreter.NewInterpreter(
-		&interpreter.Program{
-			Program:     ast.NewProgram(nil, []ast.Declaration{}),
-			Elaboration: sema.NewElaboration(nil),
-		},
-		utils.TestLocation,
-		&interpreter.Config{
-			Storage: storage,
-			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-				return interpreter.VirtualImport{
-					Elaboration: inter.Program.Elaboration,
-				}
-			},
-		},
-	)
-	require.NoError(t, err)
-
-	var testComposite, copyOfTestComposite *interpreter.CompositeValue
-	var storageSize, slabCounts int
-	var orgFields map[string]interpreter.Value
-
-	fieldsCount := r.randomInt(compositeMaxFields)
-	orgOwner := common.Address{'A'}
-
-	t.Run("construction", func(t *testing.T) {
-		testComposite, orgFields = r.randomCompositeValue(orgOwner, fieldsCount, inter, 0)
-
-		storageSize, slabCounts = getSlabStorageSize(t, storage)
-
-		for fieldName, orgFieldValue := range orgFields {
-			fieldValue := testComposite.GetField(inter, interpreter.EmptyLocationRange, fieldName)
-			utils.AssertValuesEqual(t, inter, orgFieldValue, fieldValue)
-		}
-
-		owner := testComposite.GetOwner()
-		assert.Equal(t, orgOwner, owner)
-	})
-
-	t.Run("iterate", func(t *testing.T) {
-		fieldCount := 0
-		testComposite.ForEachField(inter, func(name string, value interpreter.Value) (resume bool) {
-			orgValue, ok := orgFields[name]
-			require.True(t, ok)
-			utils.AssertValuesEqual(t, inter, orgValue, value)
-			fieldCount++
-
-			// continue iteration
-			return true
-		}, interpreter.EmptyLocationRange)
-
-		assert.Equal(t, len(orgFields), fieldCount)
-	})
-
-	t.Run("deep copy", func(t *testing.T) {
-		newOwner := atree.Address{'B'}
-
-		copyOfTestComposite = testComposite.Transfer(
-			inter,
-			interpreter.EmptyLocationRange,
-			newOwner,
-			false,
-			nil,
-			nil,
-			true, // testComposite is standalone.
-		).(*interpreter.CompositeValue)
-
-		for name, orgValue := range orgFields {
-			value := copyOfTestComposite.GetField(inter, interpreter.EmptyLocationRange, name)
-			utils.AssertValuesEqual(t, inter, orgValue, value)
-		}
-
-		owner := copyOfTestComposite.GetOwner()
-		assert.Equal(t, newOwner[:], owner[:])
-	})
-
-	t.Run("deep remove", func(t *testing.T) {
-		copyOfTestComposite.DeepRemove(inter, true)
-		err = storage.Remove(copyOfTestComposite.SlabID())
-		require.NoError(t, err)
-
-		// deep removal should clean up everything
-		newStorageSize, newSlabCounts := getSlabStorageSize(t, storage)
-		assert.Equal(t, slabCounts, newSlabCounts)
-		assert.Equal(t, storageSize, newStorageSize)
-
-		// go over original values again and check no missing data (no side effect should be found)
-		for name, orgValue := range orgFields {
-			value := testComposite.GetField(inter, interpreter.EmptyLocationRange, name)
-			utils.AssertValuesEqual(t, inter, orgValue, value)
-		}
-
-		owner := testComposite.GetOwner()
-		assert.Equal(t, orgOwner, owner)
-	})
-
-	t.Run("remove field", func(t *testing.T) {
-		newOwner := atree.Address{'c'}
-
-		composite := testComposite.Transfer(
-			inter,
-			interpreter.EmptyLocationRange,
-			newOwner,
-			false,
-			nil,
-			nil,
-			true, // testComposite is standalone.
-		).(*interpreter.CompositeValue)
-
-		require.NoError(t, err)
-
-		for name := range orgFields {
-			composite.RemoveField(inter, interpreter.EmptyLocationRange, name)
-			value := composite.GetField(inter, interpreter.EmptyLocationRange, name)
-			assert.Nil(t, value)
-		}
-	})
-
-	t.Run("move", func(t *testing.T) {
-		composite, fields := r.randomCompositeValue(orgOwner, fieldsCount, inter, 0)
-
-		owner := composite.GetOwner()
-		assert.Equal(t, orgOwner, owner)
-
-		newOwner := atree.Address{'B'}
-		movedComposite := composite.Transfer(
-			inter,
-			interpreter.EmptyLocationRange,
-			newOwner,
-			true,
-			nil,
-			nil,
-			true, // composite is standalone.
-		).(*interpreter.CompositeValue)
-
-		// Cleanup the slab of original composite.
-		err := storage.Remove(composite.SlabID())
-		require.NoError(t, err)
-
-		// Check the elements
-		for fieldName, orgFieldValue := range fields {
-			fieldValue := movedComposite.GetField(inter, interpreter.EmptyLocationRange, fieldName)
-			utils.AssertValuesEqual(t, inter, orgFieldValue, fieldValue)
-		}
-
-		owner = composite.GetOwner()
-		assert.Equal(t, orgOwner, owner)
-	})
-}
-
-func (r randomValueGenerator) randomCompositeValue(
-	orgOwner common.Address,
-	fieldsCount int,
-	inter *interpreter.Interpreter,
-	currentDepth int,
-) (*interpreter.CompositeValue, map[string]interpreter.Value) {
-
-	orgFields := make(map[string]interpreter.Value, fieldsCount)
-
-	identifier := r.randomUTF8String()
-
-	location := common.AddressLocation{
-		Address: orgOwner,
-		Name:    identifier,
-	}
-
-	fields := make([]interpreter.CompositeField, fieldsCount)
-
-	fieldNames := make(map[string]any, fieldsCount)
-
-	for i := 0; i < fieldsCount; {
-		fieldName := r.randomUTF8String()
-
-		// avoid duplicate field names
-		if _, ok := fieldNames[fieldName]; ok {
-			continue
-		}
-		fieldNames[fieldName] = struct{}{}
-
-		field := interpreter.NewUnmeteredCompositeField(
-			fieldName,
-			r.randomStorableValue(inter, currentDepth+1),
-		)
-
-		fields[i] = field
-		orgFields[field.Name] = field.Value.Clone(inter)
-
-		i++
-	}
-
-	kind := common.CompositeKindStructure
-
-	compositeType := &sema.CompositeType{
-		Location:   location,
-		Identifier: identifier,
-		Kind:       kind,
-	}
-
-	compositeType.Members = &sema.StringMemberOrderedMap{}
-	for _, field := range fields {
-		compositeType.Members.Set(
-			field.Name,
-			sema.NewUnmeteredPublicConstantFieldMember(
-				compositeType,
-				field.Name,
-				sema.AnyStructType,
-				"",
-			),
-		)
-	}
-
-	// Add the type to the elaboration, to short-circuit the type-lookup
-	inter.Program.Elaboration.SetCompositeType(
-		compositeType.ID(),
-		compositeType,
-	)
-
-	testComposite := interpreter.NewCompositeValue(
-		inter,
-		interpreter.EmptyLocationRange,
-		location,
-		identifier,
-		kind,
-		fields,
-		orgOwner,
-	)
-	return testComposite, orgFields
 }
 
 func getSlabStorageSize(t *testing.T, storage interpreter.InMemoryStorage) (totalSize int, slabCounts int) {
@@ -1229,8 +1225,7 @@ type randomValueGenerator struct {
 	rand *rand.Rand
 }
 
-func newRandomValueGenerator() randomValueGenerator {
-	seed := *smokeTestSeed
+func newRandomValueGenerator(seed int64) randomValueGenerator {
 	if seed == -1 {
 		seed = time.Now().UnixNano()
 	}
@@ -1240,10 +1235,10 @@ func newRandomValueGenerator() randomValueGenerator {
 		rand: rand.New(rand.NewSource(seed)),
 	}
 }
-func (r randomValueGenerator) randomStorableValue(inter *interpreter.Interpreter, currentDepth int) interpreter.Value {
+func (r randomValueGenerator) randomStorableValue(inter *interpreter.Interpreter, currentDepth int) cadence.Value {
 	n := 0
 	if currentDepth < containerMaxDepth {
-		n = r.randomInt(randomValueKindComposite)
+		n = r.randomInt(randomValueKindStruct)
 	} else {
 		n = r.randomInt(randomValueKindCapability)
 	}
@@ -1252,30 +1247,27 @@ func (r randomValueGenerator) randomStorableValue(inter *interpreter.Interpreter
 
 	// Non-hashable
 	case randomValueKindVoid:
-		return interpreter.Void
+		return cadence.Void{}
+
 	case randomValueKindNil:
-		return interpreter.Nil
+		return cadence.NewOptional(nil)
+
 	case randomValueKindDictionaryVariant1,
 		randomValueKindDictionaryVariant2:
 		return r.randomDictionaryValue(inter, currentDepth)
+
 	case randomValueKindArrayVariant1,
 		randomValueKindArrayVariant2:
 		return r.randomArrayValue(inter, currentDepth)
-	case randomValueKindComposite:
-		fieldsCount := r.randomInt(compositeMaxFields)
-		v, _ := r.randomCompositeValue(common.ZeroAddress, fieldsCount, inter, currentDepth)
-		return v
+
+	case randomValueKindStruct:
+		return r.randomStructValue(inter, currentDepth)
+
 	case randomValueKindCapability:
-		return interpreter.NewUnmeteredCapabilityValue(
-			interpreter.UInt64Value(r.randomInt(math.MaxInt-1)),
-			r.randomAddressValue(),
-			&interpreter.ReferenceStaticType{
-				Authorization:  interpreter.UnauthorizedAccess,
-				ReferencedType: interpreter.PrimitiveStaticTypeAnyStruct,
-			},
-		)
+		return r.randomCapabilityValue()
+
 	case randomValueKindSome:
-		return interpreter.NewUnmeteredSomeValueNonCopying(
+		return cadence.NewOptional(
 			r.randomStorableValue(inter, currentDepth+1),
 		)
 
@@ -1285,74 +1277,78 @@ func (r randomValueGenerator) randomStorableValue(inter *interpreter.Interpreter
 	}
 }
 
-func (r randomValueGenerator) randomHashableValue(interpreter *interpreter.Interpreter) interpreter.Value {
-	return r.generateRandomHashableValue(interpreter, r.randomInt(randomValueKindEnum))
+func (r randomValueGenerator) randomHashableValue(inter *interpreter.Interpreter) cadence.Value {
+	return r.generateRandomHashableValue(inter, r.randomInt(randomValueKindEnum))
 }
 
-func (r randomValueGenerator) generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpreter.Value {
+func (r randomValueGenerator) generateRandomHashableValue(inter *interpreter.Interpreter, n int) cadence.Value {
 	switch n {
 
 	// Int*
 	case randomValueKindInt:
-		return interpreter.NewUnmeteredIntValueFromInt64(int64(r.randomSign()) * r.rand.Int63())
+		// TODO: generate larger numbers
+		return cadence.NewInt(r.randomSign() * int(r.rand.Int63()))
 	case randomValueKindInt8:
-		return interpreter.NewUnmeteredInt8Value(int8(r.randomInt(math.MaxUint8)))
+		return cadence.NewInt8(int8(r.randomInt(math.MaxUint8)))
 	case randomValueKindInt16:
-		return interpreter.NewUnmeteredInt16Value(int16(r.randomInt(math.MaxUint16)))
+		return cadence.NewInt16(int16(r.randomInt(math.MaxUint16)))
 	case randomValueKindInt32:
-		return interpreter.NewUnmeteredInt32Value(int32(r.randomSign()) * r.rand.Int31())
+		return cadence.NewInt32(int32(r.randomSign()) * r.rand.Int31())
 	case randomValueKindInt64:
-		return interpreter.NewUnmeteredInt64Value(int64(r.randomSign()) * r.rand.Int63())
+		return cadence.NewInt64(int64(r.randomSign()) * r.rand.Int63())
 	case randomValueKindInt128:
-		return interpreter.NewUnmeteredInt128ValueFromInt64(int64(r.randomSign()) * r.rand.Int63())
+		// TODO: generate larger numbers
+		return cadence.NewInt128(r.randomSign() * int(r.rand.Int63()))
 	case randomValueKindInt256:
-		return interpreter.NewUnmeteredInt256ValueFromInt64(int64(r.randomSign()) * r.rand.Int63())
+		// TODO: generate larger numbers
+		return cadence.NewInt256(r.randomSign() * int(r.rand.Int63()))
 
 	// UInt*
 	case randomValueKindUInt:
-		return interpreter.NewUnmeteredUIntValueFromUint64(r.rand.Uint64())
+		// TODO: generate larger numbers
+		return cadence.NewUInt(uint(r.rand.Uint64()))
 	case randomValueKindUInt8:
-		return interpreter.NewUnmeteredUInt8Value(uint8(r.randomInt(math.MaxUint8)))
+		return cadence.NewUInt8(uint8(r.randomInt(math.MaxUint8)))
 	case randomValueKindUInt16:
-		return interpreter.NewUnmeteredUInt16Value(uint16(r.randomInt(math.MaxUint16)))
+		return cadence.NewUInt16(uint16(r.randomInt(math.MaxUint16)))
 	case randomValueKindUInt32:
-		return interpreter.NewUnmeteredUInt32Value(r.rand.Uint32())
+		return cadence.NewUInt32(r.rand.Uint32())
 	case randomValueKindUInt64Variant1,
 		randomValueKindUInt64Variant2,
 		randomValueKindUInt64Variant3,
 		randomValueKindUInt64Variant4: // should be more common
-		return interpreter.NewUnmeteredUInt64Value(r.rand.Uint64())
+		return cadence.NewUInt64(r.rand.Uint64())
 	case randomValueKindUInt128:
-		return interpreter.NewUnmeteredUInt128ValueFromUint64(r.rand.Uint64())
+		// TODO: generate larger numbers
+		return cadence.NewUInt128(uint(r.rand.Uint64()))
 	case randomValueKindUInt256:
-		return interpreter.NewUnmeteredUInt256ValueFromUint64(r.rand.Uint64())
+		// TODO: generate larger numbers
+		return cadence.NewUInt256(uint(r.rand.Uint64()))
 
 	// Word*
 	case randomValueKindWord8:
-		return interpreter.NewUnmeteredWord8Value(uint8(r.randomInt(math.MaxUint8)))
+		return cadence.NewWord8(uint8(r.randomInt(math.MaxUint8)))
 	case randomValueKindWord16:
-		return interpreter.NewUnmeteredWord16Value(uint16(r.randomInt(math.MaxUint16)))
+		return cadence.NewWord16(uint16(r.randomInt(math.MaxUint16)))
 	case randomValueKindWord32:
-		return interpreter.NewUnmeteredWord32Value(r.rand.Uint32())
+		return cadence.NewWord32(r.rand.Uint32())
 	case randomValueKindWord64:
-		return interpreter.NewUnmeteredWord64Value(r.rand.Uint64())
+		return cadence.NewWord64(r.rand.Uint64())
 	case randomValueKindWord128:
-		return interpreter.NewUnmeteredWord128ValueFromUint64(r.rand.Uint64())
+		// TODO: generate larger numbers
+		return cadence.NewWord128(uint(r.rand.Uint64()))
 	case randomValueKindWord256:
-		return interpreter.NewUnmeteredWord256ValueFromUint64(r.rand.Uint64())
+		// TODO: generate larger numbers
+		return cadence.NewWord256(uint(r.rand.Uint64()))
 
 	// (U)Fix*
 	case randomValueKindFix64:
-		return interpreter.NewUnmeteredFix64ValueWithInteger(
-			int64(r.randomSign())*r.rand.Int63n(sema.Fix64TypeMaxInt),
-			interpreter.EmptyLocationRange,
+		return cadence.Fix64(
+			int64(r.randomSign()) * r.rand.Int63n(sema.Fix64TypeMaxInt),
 		)
 	case randomValueKindUFix64:
-		return interpreter.NewUnmeteredUFix64ValueWithInteger(
-			uint64(r.rand.Int63n(
-				int64(sema.UFix64TypeMaxInt),
-			)),
-			interpreter.EmptyLocationRange,
+		return cadence.UFix64(
+			uint64(r.rand.Int63n(int64(sema.UFix64TypeMaxInt))),
 		)
 
 	// String
@@ -1361,15 +1357,15 @@ func (r randomValueGenerator) generateRandomHashableValue(inter *interpreter.Int
 		randomValueKindStringVariant3,
 		randomValueKindStringVariant4: // small string - should be more common
 		size := r.randomInt(255)
-		return interpreter.NewUnmeteredStringValue(r.randomUTF8StringOfSize(size))
+		return cadence.String(r.randomUTF8StringOfSize(size))
 	case randomValueKindStringVariant5: // large string
 		size := r.randomInt(4048) + 255
-		return interpreter.NewUnmeteredStringValue(r.randomUTF8StringOfSize(size))
+		return cadence.String(r.randomUTF8StringOfSize(size))
 
 	case randomValueKindBoolVariantTrue:
-		return interpreter.TrueValue
+		return cadence.NewBool(true)
 	case randomValueKindBoolVariantFalse:
-		return interpreter.FalseValue
+		return cadence.NewBool(false)
 
 	case randomValueKindAddress:
 		return r.randomAddressValue()
@@ -1378,52 +1374,7 @@ func (r randomValueGenerator) generateRandomHashableValue(inter *interpreter.Int
 		return r.randomPathValue()
 
 	case randomValueKindEnum:
-		// Get a random integer subtype to be used as the raw-type of enum
-		typ := r.randomInt(randomValueKindWord64)
-
-		rawValue := r.generateRandomHashableValue(inter, typ).(interpreter.NumberValue)
-
-		identifier := r.randomUTF8String()
-
-		address := r.randomAddressValue()
-
-		location := common.AddressLocation{
-			Address: common.Address(address),
-			Name:    identifier,
-		}
-
-		enumType := &sema.CompositeType{
-			Identifier:  identifier,
-			EnumRawType: r.intSubtype(typ),
-			Kind:        common.CompositeKindEnum,
-			Location:    location,
-		}
-
-		inter.Program.Elaboration.SetCompositeType(
-			enumType.ID(),
-			enumType,
-		)
-
-		enum := interpreter.NewCompositeValue(
-			inter,
-			interpreter.EmptyLocationRange,
-			location,
-			enumType.QualifiedIdentifier(),
-			enumType.Kind,
-			[]interpreter.CompositeField{
-				{
-					Name:  sema.EnumRawValueFieldName,
-					Value: rawValue,
-				},
-			},
-			common.ZeroAddress,
-		)
-
-		if enum.GetField(inter, interpreter.EmptyLocationRange, sema.EnumRawValueFieldName) == nil {
-			panic("enum without raw value")
-		}
-
-		return enum
+		return r.randomEnumValue(inter)
 
 	default:
 		panic(fmt.Sprintf("unsupported: %d", n))
@@ -1438,74 +1389,216 @@ func (r randomValueGenerator) randomSign() int {
 	return -1
 }
 
-func (r randomValueGenerator) randomAddressValue() interpreter.AddressValue {
-	data := make([]byte, 8)
-	r.rand.Read(data)
-	return interpreter.NewUnmeteredAddressValueFromBytes(data)
+func (r randomValueGenerator) randomAddressValue() (address cadence.Address) {
+	r.rand.Read(address[:])
+	return address
 }
 
-func (r randomValueGenerator) randomPathValue() interpreter.PathValue {
+func (r randomValueGenerator) randomPathValue() cadence.Path {
 	randomDomain := r.rand.Intn(len(common.AllPathDomains))
 	identifier := r.randomUTF8String()
 
-	return interpreter.PathValue{
+	return cadence.Path{
 		Domain:     common.AllPathDomains[randomDomain],
 		Identifier: identifier,
 	}
 }
 
-func (r randomValueGenerator) randomDictionaryValue(
-	inter *interpreter.Interpreter,
-	currentDepth int,
-) interpreter.Value {
+func (r randomValueGenerator) randomCapabilityValue() cadence.Capability {
+	return cadence.NewCapability(
+		cadence.UInt64(r.randomInt(math.MaxInt-1)),
+		r.randomAddressValue(),
+		cadence.NewReferenceType(
+			cadence.UnauthorizedAccess,
+			cadence.AnyStructType,
+		),
+	)
+}
+
+func (r randomValueGenerator) randomDictionaryValue(inter *interpreter.Interpreter, currentDepth int) cadence.Dictionary {
 
 	entryCount := r.randomInt(containerMaxSize)
-	keyValues := make([]interpreter.Value, entryCount*2)
+	keyValues := make([]cadence.KeyValuePair, entryCount)
+
+	existingKeys := map[string]struct{}{}
 
 	for i := 0; i < entryCount; i++ {
-		key := r.randomHashableValue(inter)
-		value := r.randomStorableValue(inter, currentDepth+1)
-		keyValues[i*2] = key
-		keyValues[i*2+1] = value
+
+		// generate a unique key
+		var key cadence.Value
+		for {
+			key = r.randomHashableValue(inter)
+			keyStr := key.String()
+
+			// avoid duplicate keys
+			_, exists := existingKeys[keyStr]
+			if !exists {
+				existingKeys[keyStr] = struct{}{}
+				break
+			}
+		}
+
+		keyValues[i] = cadence.KeyValuePair{
+			Key:   key,
+			Value: r.randomStorableValue(inter, currentDepth+1),
+		}
 	}
 
-	return interpreter.NewDictionaryValueWithAddress(
-		inter,
-		interpreter.EmptyLocationRange,
-		&interpreter.DictionaryStaticType{
-			KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
-			ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
-		},
-		common.ZeroAddress,
-		keyValues...,
-	)
+	return cadence.NewDictionary(keyValues).
+		WithType(
+			cadence.NewDictionaryType(
+				cadence.HashableStructType,
+				cadence.AnyStructType,
+			),
+		)
 }
 
 func (r randomValueGenerator) randomInt(upperBound int) int {
 	return r.rand.Intn(upperBound + 1)
 }
 
-func (r randomValueGenerator) randomArrayValue(inter *interpreter.Interpreter, currentDepth int) interpreter.Value {
+func (r randomValueGenerator) randomArrayValue(inter *interpreter.Interpreter, currentDepth int) cadence.Array {
 	elementsCount := r.randomInt(containerMaxSize)
-	elements := make([]interpreter.Value, elementsCount)
+	elements := make([]cadence.Value, elementsCount)
 
 	for i := 0; i < elementsCount; i++ {
-		value := r.randomStorableValue(inter, currentDepth+1)
-		elements[i] = value.Clone(inter)
+		elements[i] = r.randomStorableValue(inter, currentDepth+1)
 	}
 
-	return interpreter.NewArrayValue(
-		inter,
-		interpreter.EmptyLocationRange,
-		&interpreter.VariableSizedStaticType{
-			Type: interpreter.PrimitiveStaticTypeAnyStruct,
-		},
-		common.ZeroAddress,
-		elements...,
+	return cadence.NewArray(elements).
+		WithType(cadence.NewVariableSizedArrayType(cadence.AnyStructType))
+}
+
+func (r randomValueGenerator) randomStructValue(inter *interpreter.Interpreter, currentDepth int) cadence.Struct {
+	fieldsCount := r.randomInt(compositeMaxFields)
+
+	fields := make([]cadence.Field, fieldsCount)
+	fieldValues := make([]cadence.Value, fieldsCount)
+
+	existingFieldNames := make(map[string]any, fieldsCount)
+
+	for i := 0; i < fieldsCount; i++ {
+		// generate a unique field name
+		var fieldName string
+		for {
+			fieldName = r.randomUTF8String()
+
+			// avoid duplicate field names
+			_, exists := existingFieldNames[fieldName]
+			if !exists {
+				existingFieldNames[fieldName] = struct{}{}
+				break
+			}
+		}
+
+		fields[i] = cadence.NewField(fieldName, cadence.AnyStructType)
+		fieldValues[i] = r.randomStorableValue(inter, currentDepth+1)
+	}
+
+	identifier := fmt.Sprintf("S%d", r.rand.Uint64())
+
+	address := r.randomAddressValue()
+
+	location := common.AddressLocation{
+		Address: common.Address(address),
+		Name:    identifier,
+	}
+
+	kind := common.CompositeKindStructure
+
+	compositeType := &sema.CompositeType{
+		Location:   location,
+		Identifier: identifier,
+		Kind:       kind,
+		Members:    &sema.StringMemberOrderedMap{},
+	}
+
+	for i := 0; i < fieldsCount; i++ {
+		fieldName := fields[i].Identifier
+		compositeType.Members.Set(
+			fieldName,
+			sema.NewUnmeteredPublicConstantFieldMember(
+				compositeType,
+				fieldName,
+				sema.AnyStructType,
+				"",
+			),
+		)
+	}
+
+	// Add the type to the elaboration, to short-circuit the type-lookup.
+	inter.Program.Elaboration.SetCompositeType(
+		compositeType.ID(),
+		compositeType,
+	)
+
+	return cadence.NewStruct(fieldValues).WithType(
+		cadence.NewStructType(
+			location,
+			identifier,
+			fields,
+			nil,
+		),
 	)
 }
 
-func (r randomValueGenerator) intSubtype(n int) sema.Type {
+func (r randomValueGenerator) cadenceIntegerType(n int) cadence.Type {
+	switch n {
+	// Int
+	case randomValueKindInt:
+		return cadence.IntType
+	case randomValueKindInt8:
+		return cadence.Int8Type
+	case randomValueKindInt16:
+		return cadence.Int16Type
+	case randomValueKindInt32:
+		return cadence.Int32Type
+	case randomValueKindInt64:
+		return cadence.Int64Type
+	case randomValueKindInt128:
+		return cadence.Int128Type
+	case randomValueKindInt256:
+		return cadence.Int256Type
+
+	// UInt
+	case randomValueKindUInt:
+		return cadence.UIntType
+	case randomValueKindUInt8:
+		return cadence.UInt8Type
+	case randomValueKindUInt16:
+		return cadence.UInt16Type
+	case randomValueKindUInt32:
+		return cadence.UInt32Type
+	case randomValueKindUInt64Variant1,
+		randomValueKindUInt64Variant2,
+		randomValueKindUInt64Variant3,
+		randomValueKindUInt64Variant4:
+		return cadence.UInt64Type
+	case randomValueKindUInt128:
+		return cadence.UInt128Type
+	case randomValueKindUInt256:
+		return cadence.UInt256Type
+
+	// Word
+	case randomValueKindWord8:
+		return cadence.Word8Type
+	case randomValueKindWord16:
+		return cadence.Word16Type
+	case randomValueKindWord32:
+		return cadence.Word32Type
+	case randomValueKindWord64:
+		return cadence.Word64Type
+	case randomValueKindWord128:
+		return cadence.Word128Type
+	case randomValueKindWord256:
+		return cadence.Word256Type
+
+	default:
+		panic(fmt.Sprintf("unsupported: %d", n))
+	}
+}
+
+func (r randomValueGenerator) semaIntegerType(n int) sema.Type {
 	switch n {
 	// Int
 	case randomValueKindInt:
@@ -1620,7 +1713,7 @@ const (
 	randomValueKindArrayVariant2
 	randomValueKindDictionaryVariant1
 	randomValueKindDictionaryVariant2
-	randomValueKindComposite
+	randomValueKindStruct
 )
 
 func (r randomValueGenerator) randomUTF8String() string {
@@ -1633,75 +1726,111 @@ func (r randomValueGenerator) randomUTF8StringOfSize(size int) string {
 	return strings.ToValidUTF8(string(identifier), "$")
 }
 
-type valueMap struct {
-	values map[any]interpreter.Value
-	keys   map[any]interpreter.Value
+func (r randomValueGenerator) randomEnumValue(inter *interpreter.Interpreter) cadence.Enum {
+	// Get a random integer subtype to be used as the raw-type of enum
+	typ := r.randomInt(randomValueKindWord64)
+
+	rawValue := r.generateRandomHashableValue(inter, typ).(cadence.NumberValue)
+
+	identifier := fmt.Sprintf("E%d", r.rand.Uint64())
+
+	address := r.randomAddressValue()
+
+	location := common.AddressLocation{
+		Address: common.Address(address),
+		Name:    identifier,
+	}
+
+	semaRawType := r.semaIntegerType(typ)
+
+	semaEnumType := &sema.CompositeType{
+		Identifier:  identifier,
+		EnumRawType: semaRawType,
+		Kind:        common.CompositeKindEnum,
+		Location:    location,
+		Members:     &sema.StringMemberOrderedMap{},
+	}
+
+	semaEnumType.Members.Set(
+		sema.EnumRawValueFieldName,
+		sema.NewUnmeteredPublicConstantFieldMember(
+			semaEnumType,
+			sema.EnumRawValueFieldName,
+			semaRawType,
+			"",
+		),
+	)
+
+	// Add the type to the elaboration, to short-circuit the type-lookup.
+	inter.Program.Elaboration.SetCompositeType(
+		semaEnumType.ID(),
+		semaEnumType,
+	)
+
+	rawType := r.cadenceIntegerType(typ)
+
+	fields := []cadence.Value{
+		rawValue,
+	}
+
+	return cadence.NewEnum(fields).WithType(
+		cadence.NewEnumType(
+			location,
+			identifier,
+			rawType,
+			[]cadence.Field{
+				{
+					Identifier: sema.EnumRawValueFieldName,
+					Type:       rawType,
+				},
+			},
+			nil,
+		),
+	)
 }
 
-func newValueMap(size int) *valueMap {
-	return &valueMap{
-		values: make(map[any]interpreter.Value, size),
-		keys:   make(map[any]interpreter.Value, size),
+func TestRandomValueGeneration(t *testing.T) {
+
+	inter, _ := newRandomValueTestInterpreter(t)
+
+	// Generate random values
+	for i := 0; i < 1000; i++ {
+		r1 := newRandomValueGenerator(int64(i))
+		v1 := r1.randomStorableValue(inter, 0)
+
+		r2 := newRandomValueGenerator(int64(i))
+		v2 := r2.randomStorableValue(inter, 0)
+
+		// Check if the generated values are equal
+		assert.Equal(t, v1, v2)
 	}
 }
 
-type enumKey struct {
-	location            common.Location
-	qualifiedIdentifier string
-	kind                common.CompositeKind
-	rawValue            interpreter.Value
-}
-
-func (m *valueMap) put(inter *interpreter.Interpreter, key, value interpreter.Value) {
-	internalKey := m.internalKey(inter, key)
-
-	// Deep copy enum keys. This should be fine since we use an internal key for enums.
-	// Deep copying other values would mess key-lookup.
-	if _, ok := key.(*interpreter.CompositeValue); ok {
-		key = key.Clone(inter)
-	}
-
-	m.keys[internalKey] = key
-	m.values[internalKey] = value.Clone(inter)
-}
-
-func (m *valueMap) get(inter *interpreter.Interpreter, key interpreter.Value) (interpreter.Value, bool) {
-	internalKey := m.internalKey(inter, key)
-	value, ok := m.values[internalKey]
-	return value, ok
-}
-
-func (m *valueMap) foreach(apply func(key, value interpreter.Value) (exit bool)) {
-	for internalKey, key := range m.keys {
-		value := m.values[internalKey]
-		exit := apply(key, value)
-
-		if exit {
-			return
-		}
-	}
-}
-
-func (m *valueMap) internalKey(inter *interpreter.Interpreter, key interpreter.Value) any {
+func mapKey(inter *interpreter.Interpreter, key interpreter.Value) any {
 	switch key := key.(type) {
 	case *interpreter.StringValue:
 		return *key
+
 	case *interpreter.CompositeValue:
+		type enumKey struct {
+			location            common.Location
+			qualifiedIdentifier string
+			kind                common.CompositeKind
+			rawValue            interpreter.Value
+		}
 		return enumKey{
 			location:            key.Location,
 			qualifiedIdentifier: key.QualifiedIdentifier,
 			kind:                key.Kind,
 			rawValue:            key.GetField(inter, interpreter.EmptyLocationRange, sema.EnumRawValueFieldName),
 		}
+
 	case interpreter.Value:
 		return key
-	default:
-		panic("unreachable")
-	}
-}
 
-func (m *valueMap) size() int {
-	return len(m.keys)
+	default:
+		panic(errors.NewUnexpectedError("unsupported map key type: %T", key))
+	}
 }
 
 // This test is a reproducer for "slab was not reachable from leaves" false alarm.
@@ -1789,7 +1918,7 @@ func TestCheckStorageHealthInMiddleOfDeepRemove(t *testing.T) {
 // In this test, storage.CheckHealth() should be called after DictionaryValue.Transfer()
 // with remove flag, not in the middle of DictionaryValue.Transfer().
 func TestCheckStorageHealthInMiddleOfTransferAndRemove(t *testing.T) {
-	r := newRandomValueGenerator()
+	r := newRandomValueGenerator(*smokeTestSeed)
 	t.Logf("seed: %d", r.seed)
 
 	storage := newUnmeteredInMemoryStorage()
@@ -1930,29 +2059,4 @@ func TestCheckStorageHealthInMiddleOfTransferAndRemove(t *testing.T) {
 	inter.ValidateAtreeValue(m)
 
 	require.NoError(t, storage.CheckHealth())
-}
-
-// TestInterpretArrayOperations tests ArrayValue operations with
-// the a hardcoded seed that produced a past test failure when using
-// the atree.WrapperValue interface (added to atree in January 2025).
-//
-// When WrapperValue (e.g. SomeValue) is inserted into atree array,
-// atree array unwraps WrapperValue and tracks its inserted index in array.
-// When such value is removed, atree array also needs to unwrap the removed
-// value and untracks its index in the array.
-// For more info about Wrappervalue and WrapperStorable, see:
-// https://github.com/onflow/cadence-internal/issues/286
-// https://github.com/onflow/atree-internal/pull/2
-// https://github.com/onflow/cadence-internal/pull/287
-func TestInterpretArrayOperations(t *testing.T) {
-
-	// Use this random seed because it reproduces prior test failure.
-	seed := int64(1735328920693279431)
-
-	r := randomValueGenerator{
-		seed: 1735328920693279431,
-		rand: rand.New(rand.NewSource(seed)),
-	}
-
-	testInterpretArrayOperations(t, r)
 }

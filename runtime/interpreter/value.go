@@ -4074,6 +4074,10 @@ func (v *ArrayValue) SetType(staticType ArrayStaticType) {
 	}
 }
 
+func (v *ArrayValue) Inlined() bool {
+	return v.array.Inlined()
+}
+
 // NumberValue
 type NumberValue interface {
 	ComparableValue
@@ -20757,6 +20761,10 @@ func (v *DictionaryValue) SetType(staticType *DictionaryStaticType) {
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
+}
+
+func (v *DictionaryValue) Inlined() bool {
+	return v.dictionary.Inlined()
 }
 
 // OptionalValue
