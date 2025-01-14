@@ -1082,17 +1082,22 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 		array = reloadArray()
 
+		existingValueCount := len(expectedValue.Values)
+
 		// Insert new values into the array.
 
-		numberOfValues := r.randomInt(containerMaxSize)
+		newValueCount := r.randomInt(containerMaxSize)
 
-		for i := 0; i < numberOfValues; i++ {
+		for i := 0; i < newValueCount; i++ {
 
 			value := r.randomStorableValue(inter, 0)
 			importedValue := importValue(t, inter, value)
 
 			// Generate a random index
-			index := r.rand.Intn(len(expectedValue.Values))
+			index := 0
+			if existingValueCount > 0 {
+				index = r.rand.Intn(existingValueCount)
+			}
 
 			expectedValue.Values = append(expectedValue.Values, nil)
 			copy(expectedValue.Values[index+1:], expectedValue.Values[index:])
