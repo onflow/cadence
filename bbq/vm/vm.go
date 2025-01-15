@@ -590,6 +590,11 @@ func opNotEqual(vm *VM) {
 	vm.replaceTop(BoolValue(left != right))
 }
 
+func opNot(vm *VM) {
+	value := vm.peek().(BoolValue)
+	vm.replaceTop(!value)
+}
+
 func opUnwrap(vm *VM) {
 	value := vm.peek()
 	if someValue, ok := value.(*SomeValue); ok {
@@ -709,6 +714,8 @@ func (vm *VM) run() {
 			opEqual(vm)
 		case opcode.InstructionNotEqual:
 			opNotEqual(vm)
+		case opcode.InstructionNot:
+			opNot(vm)
 		case opcode.InstructionUnwrap:
 			opUnwrap(vm)
 		default:

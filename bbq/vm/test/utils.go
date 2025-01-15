@@ -480,7 +480,7 @@ func compile(
 	return program
 }
 
-func compileAndInvoke(t testing.TB, code string, funcName string) (vm.Value, error) {
+func compileAndInvoke(t testing.TB, code string, funcName string, arguments ...vm.Value) (vm.Value, error) {
 	location := common.ScriptLocation{0x1}
 	program := compileCode(t, code, location, map[common.Location]*compiledProgram{})
 	storage := interpreter.NewInMemoryStorage(nil)
@@ -494,8 +494,8 @@ func compileAndInvoke(t testing.TB, code string, funcName string) (vm.Value, err
 			WithAccountHandler(&testAccountHandler{}),
 	)
 
-	result, err := programVM.Invoke(funcName)
-	if err != nil {
+	result, err := programVM.Invoke(funcName, arguments...)
+	if err == nil {
 		require.Equal(t, 0, programVM.StackSize())
 	}
 

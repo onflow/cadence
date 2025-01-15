@@ -2258,3 +2258,127 @@ func TestDefaultFunctions(t *testing.T) {
 		require.Equal(t, vm.NewIntValue(7), result)
 	})
 }
+
+func TestFunctionPreConditions(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("pre condition failed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := compileAndInvoke(t, `
+            fun main(x: Int): Int {
+                pre {
+                    x == 0
+                }
+                return x
+            }`,
+			"main",
+			vm.NewIntValue(3),
+		)
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "pre/post condition failed")
+	})
+
+	t.Run("pre condition failed with message", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := compileAndInvoke(t, `
+            fun main(x: Int): Int {
+                pre {
+                    x == 0: "x must be zero"
+                }
+                return x
+            }`,
+			"main",
+			vm.NewIntValue(3),
+		)
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "x must be zero")
+	})
+
+	t.Run("pre condition passed", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, err := compileAndInvoke(t, `
+            fun main(x: Int): Int {
+                pre {
+                    x != 0
+                }
+                return x
+            }`,
+			"main",
+			vm.NewIntValue(3),
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(3), result)
+	})
+}
+
+func TestFunctionPostConditions(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("post condition failed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := compileAndInvoke(t, `
+            fun main(x: Int): Int {
+                post {
+                    x == 0
+                }
+                return x
+            }`,
+			"main",
+			vm.NewIntValue(3),
+		)
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "pre/post condition failed")
+	})
+
+	t.Run("post condition failed with message", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := compileAndInvoke(t, `
+            fun main(x: Int): Int {
+                post {
+                    x == 0: "x must be zero"
+                }
+                return x
+            }`,
+			"main",
+			vm.NewIntValue(3),
+		)
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "x must be zero")
+	})
+
+	t.Run("post condition passed", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, err := compileAndInvoke(t, `
+            fun main(x: Int): Int {
+                post {
+                    x != 0
+                }
+                return x
+            }`,
+			"main",
+			vm.NewIntValue(3),
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(3), result)
+	})
+}

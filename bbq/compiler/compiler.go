@@ -514,12 +514,32 @@ func (c *Compiler[_]) compileBlock(block *ast.Block) {
 }
 
 func (c *Compiler[_]) compileFunctionBlock(functionBlock *ast.FunctionBlock) {
-	// TODO: pre and post conditions, incl. interfaces
+	c.compileConditions(functionBlock.PreConditions)
+	c.compileConditions(functionBlock.PostConditions)
+
 	if functionBlock == nil {
 		return
 	}
 
 	c.compileBlock(functionBlock.Block)
+}
+
+func (c *Compiler[_]) compileConditions(conditions *ast.Conditions) {
+	if conditions == nil {
+		return
+	}
+
+	for _, condition := range conditions.Conditions {
+		switch condition := condition.(type) {
+		case *ast.DesugaredCondition:
+			c.compileStatement(condition.Condition)
+		case *ast.EmitCondition, ast.TestCondition:
+			// These should have been desugared to a `ast.DesugaredCondition`
+			panic(errors.NewUnreachableError())
+		default:
+			panic(errors.NewUnreachableError())
+		}
+	}
 }
 
 func (c *Compiler[_]) compileStatement(statement ast.Statement) {
@@ -924,6 +944,9 @@ func (c *Compiler[_]) VisitUnaryExpression(expression *ast.UnaryExpression) (_ s
 	switch expression.Operation {
 	case ast.OperationMove:
 		c.compileExpression(expression.Expression)
+	case ast.OperationNegate:
+		c.compileExpression(expression.Expression)
+		c.codeGen.Emit(opcode.InstructionNot{})
 	default:
 		// TODO
 		panic(errors.NewUnreachableError())

@@ -73,7 +73,10 @@ func init() {
 				panic(errors.NewUnreachableError())
 			}
 
-			panic(string(messageValue.Str))
+			panic(stdlib.PanicError{
+				Message: string(messageValue.Str),
+				// TODO: pass location
+			})
 		},
 	})
 

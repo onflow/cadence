@@ -182,6 +182,11 @@
 - name: "notEqual"
   description: Compares the top two values on the stack for inequality.
 
+# Logical instructions
+
+- name: "not"
+  description: Negates the boolean value at the top of the stack.
+
 # Integer arithmetic instructions
 
 - name: "intAdd"
