@@ -342,11 +342,25 @@ func opBinaryIntLess(vm *VM) {
 	vm.replaceTop(leftNumber.Less(rightNumber))
 }
 
+func opBinaryIntLessOrEqual(vm *VM) {
+	left, right := vm.peekPop()
+	leftNumber := left.(IntValue)
+	rightNumber := right.(IntValue)
+	vm.replaceTop(leftNumber.LessOrEqual(rightNumber))
+}
+
 func opBinaryIntGreater(vm *VM) {
 	left, right := vm.peekPop()
 	leftNumber := left.(IntValue)
 	rightNumber := right.(IntValue)
 	vm.replaceTop(leftNumber.Greater(rightNumber))
+}
+
+func opBinaryIntGreaterOrEqual(vm *VM) {
+	left, right := vm.peekPop()
+	leftNumber := left.(IntValue)
+	rightNumber := right.(IntValue)
+	vm.replaceTop(leftNumber.GreaterOrEqual(rightNumber))
 }
 
 func opTrue(vm *VM) {
@@ -662,8 +676,12 @@ func (vm *VM) run() {
 			opBinaryIntSubtract(vm)
 		case opcode.InstructionIntLess:
 			opBinaryIntLess(vm)
+		case opcode.InstructionIntLessOrEqual:
+			opBinaryIntLessOrEqual(vm)
 		case opcode.InstructionIntGreater:
 			opBinaryIntGreater(vm)
+		case opcode.InstructionIntGreaterOrEqual:
+			opBinaryIntGreaterOrEqual(vm)
 		case opcode.InstructionTrue:
 			opTrue(vm)
 		case opcode.InstructionFalse:
