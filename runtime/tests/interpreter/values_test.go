@@ -657,7 +657,6 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 			require.IsType(t, &interpreter.SomeValue{}, removedValue)
 			someValue := removedValue.(*interpreter.SomeValue)
 
-			// TODO: panic: duplicate slab 0x4100000000000000.14 for seed 1736809620917220000
 			value := importValue(t, inter, pair.Value)
 
 			// Removed value must be same as the original value
