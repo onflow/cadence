@@ -219,6 +219,44 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 
 	const dictionaryStorageMapKey = interpreter.StringStorageMapKey("dictionary")
 
+	writeDictionary := func(
+		inter *interpreter.Interpreter,
+		owner common.Address,
+		storageMapKey interpreter.StorageMapKey,
+		dictionary *interpreter.DictionaryValue,
+	) {
+		inter.Storage().
+			GetStorageMap(
+				owner,
+				common.PathDomainStorage.Identifier(),
+				true,
+			).
+			WriteValue(
+				inter,
+				storageMapKey,
+				dictionary,
+			)
+	}
+
+	readDictionary := func(
+		inter *interpreter.Interpreter,
+		owner common.Address,
+		storageMapKey interpreter.StorageMapKey,
+	) *interpreter.DictionaryValue {
+		storageMap := inter.Storage().GetStorageMap(
+			owner,
+			common.PathDomainStorage.Identifier(),
+			false,
+		)
+		require.NotNil(t, storageMap)
+
+		readValue := storageMap.ReadValue(inter, storageMapKey)
+		require.NotNil(t, readValue)
+
+		require.IsType(t, &interpreter.DictionaryValue{}, readValue)
+		return readValue.(*interpreter.DictionaryValue)
+	}
+
 	createDictionary := func(
 		t *testing.T,
 		r *randomValueGenerator,
@@ -226,7 +264,6 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 	) (
 		*interpreter.DictionaryValue,
 		cadence.Dictionary,
-		func() *interpreter.DictionaryValue,
 	) {
 		expectedValue := r.randomDictionaryValue(inter, 0)
 
@@ -264,34 +301,14 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 		// Store the dictionary in a storage map, so that the dictionary's slab
 		// is referenced by the root of the storage.
 
-		inter.Storage().
-			GetStorageMap(
-				orgOwner,
-				common.PathDomainStorage.Identifier(),
-				true,
-			).
-			WriteValue(
-				inter,
-				dictionaryStorageMapKey,
-				dictionary,
-			)
+		writeDictionary(
+			inter,
+			orgOwner,
+			dictionaryStorageMapKey,
+			dictionary,
+		)
 
-		reloadDictionary := func() *interpreter.DictionaryValue {
-			storageMap := inter.Storage().GetStorageMap(
-				orgOwner,
-				common.PathDomainStorage.Identifier(),
-				false,
-			)
-			require.NotNil(t, storageMap)
-
-			readValue := storageMap.ReadValue(inter, dictionaryStorageMapKey)
-			require.NotNil(t, readValue)
-
-			require.IsType(t, &interpreter.DictionaryValue{}, readValue)
-			return readValue.(*interpreter.DictionaryValue)
-		}
-
-		return dictionary, expectedValue, reloadDictionary
+		return dictionary, expectedValue
 	}
 
 	checkDictionary := func(
@@ -320,35 +337,9 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 		assert.Equal(t, expectedOwner, owner)
 	}
 
-	doubleCheckDictionary := func(
-		t *testing.T,
-		inter *interpreter.Interpreter,
-		resetStorage func(),
-		dictionary *interpreter.DictionaryValue,
-		expectedValue cadence.Dictionary,
-		expectedOwner common.Address,
-	) {
-		// Check the values of the dictionary.
-		// Once right away, and once after a reset (commit and reload) of the storage.
-
-		for i := 0; i < 2; i++ {
-
-			checkDictionary(
-				t,
-				inter,
-				dictionary,
-				expectedValue,
-				expectedOwner,
-			)
-
-			resetStorage()
-		}
-	}
-
 	checkIteration := func(
 		t *testing.T,
 		inter *interpreter.Interpreter,
-		resetStorage func(),
 		dictionary *interpreter.DictionaryValue,
 		expectedValue cadence.Dictionary,
 	) {
@@ -367,38 +358,30 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 			}
 		}
 
-		// Iterate over the values of the created dictionary.
-		// Once right after construction, and once after a reset (commit and reload) of the storage.
+		require.Equal(t, len(expectedValue.Pairs), dictionary.Count())
 
-		for i := 0; i < 2; i++ {
+		var iterations int
 
-			require.Equal(t, len(expectedValue.Pairs), dictionary.Count())
+		dictionary.Iterate(
+			inter,
+			interpreter.EmptyLocationRange,
+			func(key, value interpreter.Value) (resume bool) {
 
-			var iterations int
+				mapKey := mapKey(inter, key)
+				require.Contains(t, indexedExpected, mapKey)
 
-			dictionary.Iterate(
-				inter,
-				interpreter.EmptyLocationRange,
-				func(key, value interpreter.Value) (resume bool) {
+				pair := indexedExpected[mapKey]
 
-					mapKey := mapKey(inter, key)
-					require.Contains(t, indexedExpected, mapKey)
+				utils.AssertValuesEqual(t, inter, pair.Key, key)
+				utils.AssertValuesEqual(t, inter, pair.Value, value)
 
-					pair := indexedExpected[mapKey]
+				iterations += 1
 
-					utils.AssertValuesEqual(t, inter, pair.Key, key)
-					utils.AssertValuesEqual(t, inter, pair.Value, value)
+				return true
+			},
+		)
 
-					iterations += 1
-
-					return true
-				},
-			)
-
-			assert.Equal(t, len(expectedValue.Pairs), iterations)
-
-			resetStorage()
-		}
+		assert.Equal(t, len(expectedValue.Pairs), iterations)
 	}
 
 	t.Run("construction", func(t *testing.T) {
@@ -410,12 +393,27 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		dictionary, expectedValue, _ := createDictionary(t, &r, inter)
+		dictionary, expectedValue := createDictionary(t, &r, inter)
 
-		doubleCheckDictionary(
+		checkDictionary(
 			t,
 			inter,
-			resetStorage,
+			dictionary,
+			expectedValue,
+			orgOwner,
+		)
+
+		resetStorage()
+
+		dictionary = readDictionary(
+			inter,
+			orgOwner,
+			dictionaryStorageMapKey,
+		)
+
+		checkDictionary(
+			t,
+			inter,
 			dictionary,
 			expectedValue,
 			orgOwner,
@@ -431,12 +429,42 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		dictionary, expectedValue, _ := createDictionary(t, &r, inter)
+		dictionary, expectedValue := createDictionary(t, &r, inter)
+
+		checkDictionary(
+			t,
+			inter,
+			dictionary,
+			expectedValue,
+			orgOwner,
+		)
 
 		checkIteration(
 			t,
 			inter,
-			resetStorage,
+			dictionary,
+			expectedValue,
+		)
+
+		resetStorage()
+
+		dictionary = readDictionary(
+			inter,
+			orgOwner,
+			dictionaryStorageMapKey,
+		)
+
+		checkDictionary(
+			t,
+			inter,
+			dictionary,
+			expectedValue,
+			orgOwner,
+		)
+
+		checkIteration(
+			t,
+			inter,
 			dictionary,
 			expectedValue,
 		)
@@ -451,9 +479,31 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		original, expectedValue, _ := createDictionary(t, &r, inter)
+		original, expectedValue := createDictionary(t, &r, inter)
+
+		checkDictionary(
+			t,
+			inter,
+			original,
+			expectedValue,
+			orgOwner,
+		)
 
 		resetStorage()
+
+		original = readDictionary(
+			inter,
+			orgOwner,
+			dictionaryStorageMapKey,
+		)
+
+		checkDictionary(
+			t,
+			inter,
+			original,
+			expectedValue,
+			orgOwner,
+		)
 
 		// Transfer the dictionary to a new owner
 
@@ -466,58 +516,57 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 			false,
 			nil,
 			nil,
-			// TODO: is has no parent container = true correct?
-			true,
+			false,
 		).(*interpreter.DictionaryValue)
 
 		// Store the transferred dictionary in a storage map, so that the dictionary's slab
 		// is referenced by the root of the storage.
 
-		inter.Storage().
-			GetStorageMap(
-				newOwner,
-				common.PathDomainStorage.Identifier(),
-				true,
-			).
-			WriteValue(
-				inter,
-				interpreter.StringStorageMapKey("transferred_dictionary"),
-				transferred,
-			)
+		const transferredStorageMapKey = interpreter.StringStorageMapKey("transferred")
 
-		// Both original and transferred dictionary should contain the expected values
-		// Check once right away, and once after a reset (commit and reload) of the storage.
+		writeDictionary(
+			inter,
+			newOwner,
+			transferredStorageMapKey,
+			transferred,
+		)
 
-		for i := 0; i < 2; i++ {
+		withoutAtreeStorageValidationEnabled(inter, func() struct{} {
+			inter.Storage().
+				GetStorageMap(orgOwner, common.PathDomainStorage.Identifier(), false).
+				RemoveValue(inter, dictionaryStorageMapKey)
 
-			checkDictionary(
-				t,
-				inter,
-				original,
-				expectedValue,
-				orgOwner,
-			)
-
-			checkDictionary(
-				t,
-				inter,
-				transferred,
-				expectedValue,
-				newOwner,
-			)
-
-			resetStorage()
-		}
-
-		// Deep remove the original dictionary
-
-		// TODO: is has no parent container = true correct?
-		original.DeepRemove(inter, true)
+			return struct{}{}
+		})
 
 		if !original.Inlined() {
 			err := inter.Storage().Remove(original.SlabID())
 			require.NoError(t, err)
 		}
+
+		checkDictionary(
+			t,
+			inter,
+			transferred,
+			expectedValue,
+			newOwner,
+		)
+
+		resetStorage()
+
+		transferred = readDictionary(
+			inter,
+			newOwner,
+			transferredStorageMapKey,
+		)
+
+		checkDictionary(
+			t,
+			inter,
+			transferred,
+			expectedValue,
+			newOwner,
+		)
 
 		if *validateAtree {
 			err := inter.Storage().CheckHealth()
@@ -526,10 +575,25 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 
 		// New dictionary should still be accessible
 
-		doubleCheckDictionary(
+		checkDictionary(
 			t,
 			inter,
-			resetStorage,
+			transferred,
+			expectedValue,
+			newOwner,
+		)
+
+		resetStorage()
+
+		transferred = readDictionary(
+			inter,
+			newOwner,
+			transferredStorageMapKey,
+		)
+
+		checkDictionary(
+			t,
+			inter,
 			transferred,
 			expectedValue,
 			newOwner,
@@ -546,21 +610,31 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		dictionary, expectedValue, reloadDictionary := createDictionary(t, &r, inter)
+		dictionary, expectedValue := createDictionary(t, &r, inter)
 
-		// Check dictionary and reset storage
-		doubleCheckDictionary(
+		checkDictionary(
 			t,
 			inter,
-			resetStorage,
 			dictionary,
 			expectedValue,
 			orgOwner,
 		)
 
-		// Reload the dictionary after the reset
+		resetStorage()
 
-		dictionary = reloadDictionary()
+		dictionary = readDictionary(
+			inter,
+			orgOwner,
+			dictionaryStorageMapKey,
+		)
+
+		checkDictionary(
+			t,
+			inter,
+			dictionary,
+			expectedValue,
+			orgOwner,
+		)
 
 		// Insert new values into the dictionary.
 		// Atree storage validation must be temporarily disabled
@@ -621,10 +695,25 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		doubleCheckDictionary(
+		checkDictionary(
 			t,
 			inter,
-			resetStorage,
+			dictionary,
+			expectedValue,
+			orgOwner,
+		)
+
+		resetStorage()
+
+		dictionary = readDictionary(
+			inter,
+			orgOwner,
+			dictionaryStorageMapKey,
+		)
+
+		checkDictionary(
+			t,
+			inter,
 			dictionary,
 			expectedValue,
 			orgOwner,
@@ -639,21 +728,31 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		dictionary, expectedValue, reloadDictionary := createDictionary(t, &r, inter)
+		dictionary, expectedValue := createDictionary(t, &r, inter)
 
-		// Check dictionary and reset storage
-		doubleCheckDictionary(
+		checkDictionary(
 			t,
 			inter,
-			resetStorage,
 			dictionary,
 			expectedValue,
 			orgOwner,
 		)
 
-		// Reload the dictionary after the reset
+		resetStorage()
 
-		dictionary = reloadDictionary()
+		dictionary = readDictionary(
+			inter,
+			orgOwner,
+			dictionaryStorageMapKey,
+		)
+
+		checkDictionary(
+			t,
+			inter,
+			dictionary,
+			expectedValue,
+			orgOwner,
+		)
 
 		// Remove
 		for _, pair := range expectedValue.Pairs {
@@ -688,10 +787,25 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 		// Dictionary must be empty
 		require.Equal(t, 0, dictionary.Count())
 
-		doubleCheckDictionary(
+		checkDictionary(
 			t,
 			inter,
-			resetStorage,
+			dictionary,
+			expectedValue,
+			orgOwner,
+		)
+
+		resetStorage()
+
+		dictionary = readDictionary(
+			inter,
+			orgOwner,
+			dictionaryStorageMapKey,
+		)
+
+		checkDictionary(
+			t,
+			inter,
 			dictionary,
 			expectedValue,
 			orgOwner,
@@ -708,21 +822,31 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		dictionary, expectedValue, reloadDictionary := createDictionary(t, &r, inter)
+		dictionary, expectedValue := createDictionary(t, &r, inter)
 
-		// Check dictionary and reset storage
-		doubleCheckDictionary(
+		checkDictionary(
 			t,
 			inter,
-			resetStorage,
 			dictionary,
 			expectedValue,
 			orgOwner,
 		)
 
-		// Reload the dictionary after the reset
+		resetStorage()
 
-		dictionary = reloadDictionary()
+		dictionary = readDictionary(
+			inter,
+			orgOwner,
+			dictionaryStorageMapKey,
+		)
+
+		checkDictionary(
+			t,
+			inter,
+			dictionary,
+			expectedValue,
+			orgOwner,
+		)
 
 		elementCount := dictionary.Count()
 
@@ -771,10 +895,25 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 		// Dictionary must have same number of key-value pairs
 		require.Equal(t, elementCount, dictionary.Count())
 
-		doubleCheckDictionary(
+		checkDictionary(
 			t,
 			inter,
-			resetStorage,
+			dictionary,
+			expectedValue,
+			orgOwner,
+		)
+
+		resetStorage()
+
+		dictionary = readDictionary(
+			inter,
+			orgOwner,
+			dictionaryStorageMapKey,
+		)
+
+		checkDictionary(
+			t,
+			inter,
 			dictionary,
 			expectedValue,
 			orgOwner,
@@ -2242,26 +2381,134 @@ func TestRandomValueGeneration(t *testing.T) {
 }
 
 func mapKey(inter *interpreter.Interpreter, key interpreter.Value) any {
+
 	switch key := key.(type) {
 	case *interpreter.StringValue:
-		return *key
+		type stringValue string
+		return stringValue(key.Str)
+
+	case interpreter.CharacterValue:
+		type characterValue string
+		return characterValue(key.Str)
+
+	case interpreter.TypeValue:
+		type typeValue common.TypeID
+		return typeValue(key.Type.ID())
 
 	case *interpreter.CompositeValue:
 		type enumKey struct {
 			location            common.Location
 			qualifiedIdentifier string
 			kind                common.CompositeKind
-			rawValue            interpreter.Value
+			rawValue            string
 		}
 		return enumKey{
 			location:            key.Location,
 			qualifiedIdentifier: key.QualifiedIdentifier,
 			kind:                key.Kind,
-			rawValue:            key.GetField(inter, interpreter.EmptyLocationRange, sema.EnumRawValueFieldName),
+			rawValue: key.GetField(
+				inter,
+				interpreter.EmptyLocationRange,
+				sema.EnumRawValueFieldName,
+			).String(),
 		}
 
-	case interpreter.Value:
+	case interpreter.IntValue:
+		type intValue string
+		return intValue(key.String())
+
+	case interpreter.UIntValue:
+		type uintValue string
+		return uintValue(key.String())
+
+	case interpreter.Int8Value:
+		type int8Value string
+		return int8Value(key.String())
+
+	case interpreter.UInt8Value:
+		type uint8Value string
+		return uint8Value(key.String())
+
+	case interpreter.Int16Value:
+		type int16Value string
+		return int16Value(key.String())
+
+	case interpreter.UInt16Value:
+		type uint16Value string
+		return uint16Value(key.String())
+
+	case interpreter.Int32Value:
+		type int32Value string
+		return int32Value(key.String())
+
+	case interpreter.UInt32Value:
+		type uint32Value string
+		return uint32Value(key.String())
+
+	case interpreter.Int64Value:
+		type int64Value string
+		return int64Value(key.String())
+
+	case interpreter.UInt64Value:
+		type uint64Value string
+		return uint64Value(key.String())
+
+	case interpreter.Int128Value:
+		type int128Value string
+		return int128Value(key.String())
+
+	case interpreter.UInt128Value:
+		type uint128Value string
+		return uint128Value(key.String())
+
+	case interpreter.Int256Value:
+		type int256Value string
+		return int256Value(key.String())
+
+	case interpreter.UInt256Value:
+		type uint256Value string
+		return uint256Value(key.String())
+
+	case interpreter.Word8Value:
+		type word8Value string
+		return word8Value(key.String())
+
+	case interpreter.Word16Value:
+		type word16Value string
+		return word16Value(key.String())
+
+	case interpreter.Word32Value:
+		type word32Value string
+		return word32Value(key.String())
+
+	case interpreter.Word64Value:
+		type word64Value string
+		return word64Value(key.String())
+
+	case interpreter.Word128Value:
+		type word128Value string
+		return word128Value(key.String())
+
+	case interpreter.Word256Value:
+		type word256Value string
+		return word256Value(key.String())
+
+	case interpreter.PathValue:
 		return key
+
+	case interpreter.AddressValue:
+		return key
+
+	case interpreter.BoolValue:
+		return key
+
+	case interpreter.Fix64Value:
+		type fix64Value string
+		return fix64Value(key.String())
+
+	case interpreter.UFix64Value:
+		type ufix64Value string
+		return ufix64Value(key.String())
 
 	default:
 		panic(errors.NewUnexpectedError("unsupported map key type: %T", key))
