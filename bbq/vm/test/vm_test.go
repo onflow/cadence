@@ -2381,4 +2381,44 @@ func TestFunctionPostConditions(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, vm.NewIntValue(3), result)
 	})
+
+	t.Run("post condition on local var", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, err := compileAndInvoke(t, `
+            fun main(x: Int): Int {
+                post {
+                    y == 5
+                }
+                var y = x + 2
+                return y
+            }`,
+			"main",
+			vm.NewIntValue(3),
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(5), result)
+	})
+
+	t.Run("post condition on local var failed with message", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := compileAndInvoke(t, `
+            fun main(x: Int): Int {
+                post {
+                    y == 5: "x must be 5"
+                }
+                var y = x + 2
+                return y
+            }`,
+			"main",
+			vm.NewIntValue(4),
+		)
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "x must be 5")
+	})
 }

@@ -514,31 +514,14 @@ func (c *Compiler[_]) compileBlock(block *ast.Block) {
 }
 
 func (c *Compiler[_]) compileFunctionBlock(functionBlock *ast.FunctionBlock) {
-	c.compileConditions(functionBlock.PreConditions)
-	c.compileConditions(functionBlock.PostConditions)
-
-	if functionBlock == nil {
-		return
+	// Function conditions must have been desugared to statements.
+	// So there shouldn't be any condition at this point.
+	if functionBlock.HasConditions() {
+		panic(errors.NewUnreachableError())
 	}
 
-	c.compileBlock(functionBlock.Block)
-}
-
-func (c *Compiler[_]) compileConditions(conditions *ast.Conditions) {
-	if conditions == nil {
-		return
-	}
-
-	for _, condition := range conditions.Conditions {
-		switch condition := condition.(type) {
-		case *ast.DesugaredCondition:
-			c.compileStatement(condition.Condition)
-		case *ast.EmitCondition, ast.TestCondition:
-			// These should have been desugared to a `ast.DesugaredCondition`
-			panic(errors.NewUnreachableError())
-		default:
-			panic(errors.NewUnreachableError())
-		}
+	if functionBlock != nil {
+		c.compileBlock(functionBlock.Block)
 	}
 }
 
@@ -1179,23 +1162,11 @@ func (c *Compiler[_]) compileInitializer(declaration *ast.SpecialFunctionDeclara
 }
 
 func (c *Compiler[_]) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) (_ struct{}) {
-	// TODO: handle nested functions
 	declareReceiver := !c.compositeTypeStack.isEmpty()
 	function := c.declareFunction(declaration, declareReceiver)
 
 	c.declareParameters(function, declaration.ParameterList, declareReceiver)
 	c.compileFunctionBlock(declaration.FunctionBlock)
-
-	// Manually emit a return, if there are no explicit return statements.
-	if !declaration.FunctionBlock.HasStatements() {
-		c.codeGen.Emit(opcode.InstructionReturn{})
-	} else {
-		statements := declaration.FunctionBlock.Block.Statements
-		lastStmt := statements[len(statements)-1]
-		if _, isReturn := lastStmt.(*ast.ReturnStatement); !isReturn {
-			c.codeGen.Emit(opcode.InstructionReturn{})
-		}
-	}
 
 	return
 }

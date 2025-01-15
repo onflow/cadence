@@ -9,6 +9,8 @@ import (
 	"github.com/onflow/cadence/stdlib"
 )
 
+const tempResultVariableName = "$result"
+
 // Desugar will rewrite the AST from high-level abstractions to a much lower-level
 // abstractions, so the compiler and vm could work with a minimal set of language features.
 type Desugar struct {
@@ -64,11 +66,109 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration)
 		return declaration
 	}
 
+	statements := funcBlock.Block.Statements
+	preConditions := d.desugarConditions(funcBlock.PreConditions)
+	postConditions := d.desugarConditions(funcBlock.PostConditions)
+
+	modifiedStatements := make([]ast.Statement, 0, len(preConditions)+len(postConditions)+len(statements))
+
+	modifiedStatements = append(modifiedStatements, preConditions...)
+	modifiedStatements = append(modifiedStatements, statements...)
+
+	// Before the post conditions are appended, we need to move the
+	// return statement to the end of the function.
+	// For that, replace the remove with a temporary result assignment,
+	// and once the post conditions are added, then add a new return
+	// which would return the temp result.
+
+	// TODO: If 'result' variable is used in the user-code,
+	//   this temp assignment must use the 'result' variable.
+
+	lastStmt := modifiedStatements[len(statements)-1]
+	originalReturnStmt, hasReturn := lastStmt.(*ast.ReturnStatement)
+	if hasReturn {
+		// Remove the return statement from here
+		modifiedStatements = modifiedStatements[:len(statements)-1]
+
+		if originalReturnStmt.Expression != nil {
+			// Instead append a temp-result assignment.i.e:
+			// `let $result = <expression>`
+			tempResultAssignmentStmt := ast.NewVariableDeclaration(
+				d.memoryGauge,
+				ast.AccessNotSpecified,
+				true,
+				ast.NewIdentifier(d.memoryGauge, tempResultVariableName, originalReturnStmt.StartPos),
+				declaration.ReturnTypeAnnotation,
+				originalReturnStmt.Expression,
+				ast.NewTransfer(
+					d.memoryGauge,
+					ast.TransferOperationCopy, // TODO: determine based on return value (if resource, this should be a move)
+					originalReturnStmt.StartPos,
+				),
+				originalReturnStmt.StartPos,
+				nil,
+				nil,
+				"",
+			)
+
+			returnStmtTypes := d.elaboration.ReturnStatementTypes(originalReturnStmt)
+			d.elaboration.SetVariableDeclarationTypes(
+				tempResultAssignmentStmt,
+				sema.VariableDeclarationTypes{
+					ValueType:  returnStmtTypes.ValueType,
+					TargetType: returnStmtTypes.ReturnType,
+				},
+			)
+
+			modifiedStatements = append(modifiedStatements, tempResultAssignmentStmt)
+		}
+	}
+
+	// Once the return statement is remove, then append the post conditions.
+	modifiedStatements = append(modifiedStatements, postConditions...)
+
+	// Insert a return statement at the end, after post conditions.
+	var modifiedReturn *ast.ReturnStatement
+	if !hasReturn || originalReturnStmt.Expression == nil {
+		var astRange ast.Range
+		if hasReturn {
+			astRange = originalReturnStmt.Range
+		} else {
+			astRange = ast.EmptyRange
+		}
+
+		// `return`
+		modifiedReturn = ast.NewReturnStatement(
+			d.memoryGauge,
+			nil,
+			astRange,
+		)
+	} else {
+		// `return $result`
+		modifiedReturn = ast.NewReturnStatement(
+			d.memoryGauge,
+			ast.NewIdentifierExpression(
+				d.memoryGauge,
+				ast.NewIdentifier(
+					d.memoryGauge,
+					tempResultVariableName,
+					originalReturnStmt.StartPos,
+				),
+			),
+			originalReturnStmt.Range,
+		)
+	}
+	modifiedStatements = append(modifiedStatements, modifiedReturn)
+
 	modifiedFuncBlock := ast.NewFunctionBlock(
 		d.memoryGauge,
-		funcBlock.Block,
-		d.desugarConditions(funcBlock.PreConditions),
-		d.desugarConditions(funcBlock.PostConditions),
+		ast.NewBlock(
+			d.memoryGauge,
+			modifiedStatements,
+			funcBlock.Block.Range,
+		),
+		nil,
+		nil,
 	)
 
 	return ast.NewFunctionDeclaration(
@@ -87,22 +187,19 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration)
 	)
 }
 
-func (d *Desugar) desugarConditions(conditions *ast.Conditions) *ast.Conditions {
+func (d *Desugar) desugarConditions(conditions *ast.Conditions) []ast.Statement {
 	if conditions == nil {
 		return nil
 	}
 
-	desugaredConditions := make([]ast.Condition, 0, len(conditions.Conditions))
+	desugaredConditions := make([]ast.Statement, 0, len(conditions.Conditions))
 
 	for _, condition := range conditions.Conditions {
 		desugaredCondition := d.desugarCondition(condition)
 		desugaredConditions = append(desugaredConditions, desugaredCondition)
 	}
 
-	return &ast.Conditions{
-		Conditions: desugaredConditions,
-		Range:      conditions.Range,
-	}
+	return desugaredConditions
 }
 
 var conditionFailedMessage = ast.NewStringExpression(nil, "pre/post condition failed", ast.EmptyRange)
@@ -114,7 +211,7 @@ var panicFuncInvocationTypes = sema.InvocationExpressionTypes{
 	},
 }
 
-func (d *Desugar) desugarCondition(condition ast.Condition) *ast.DesugaredCondition {
+func (d *Desugar) desugarCondition(condition ast.Condition) ast.Statement {
 	switch condition := condition.(type) {
 	case *ast.TestCondition:
 
@@ -155,7 +252,7 @@ func (d *Desugar) desugarCondition(condition ast.Condition) *ast.DesugaredCondit
 
 		d.elaboration.SetInvocationExpressionTypes(panicFuncInvocation, panicFuncInvocationTypes)
 
-		ifStmt := ast.NewIfStatement(
+		return ast.NewIfStatement(
 			d.memoryGauge,
 			ast.NewUnaryExpression(
 				d.memoryGauge,
@@ -179,9 +276,8 @@ func (d *Desugar) desugarCondition(condition ast.Condition) *ast.DesugaredCondit
 			nil,
 			startPos,
 		)
-		return ast.NewDesugaredCondition(ifStmt)
 	case *ast.EmitCondition:
-		return ast.NewDesugaredCondition((*ast.EmitStatement)(condition))
+		return (*ast.EmitStatement)(condition)
 	default:
 		panic(errors.NewUnreachableError())
 	}
