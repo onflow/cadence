@@ -20,6 +20,7 @@ package interpreter_test
 
 import (
 	"fmt"
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -280,16 +281,18 @@ func TestInterpretBitwiseLeftShift128(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t,
 			`
-			let a: Int128 = 0x7fff_ffff
+			let a: Int128 = 0x7fff_ffff_ffff_ffff_ffff_ffff_ffff_ffff
 			let b: Int128 = 32
 			let c = a << b
 		  	`,
 		)
 
+		bigInt, _ := big.NewInt(0).SetString("0xffff_ffff_ffff_ffff_ffff_ffff_0000_0000", 0)
+
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewUnmeteredInt128ValueFromInt64(int64(0x7fff_ffff_0000_0000)),
+			interpreter.NewUnmeteredInt128ValueFromBigInt(bigInt),
 			inter.Globals.Get("c").GetValue(inter),
 		)
 	})
@@ -333,16 +336,18 @@ func TestInterpretBitwiseLeftShift128(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t,
 			`
-				let a: UInt128 = 0xffff_ffff
+				let a: UInt128 = 0xffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff
 				let b: UInt128 = 32
 				let c = a << b
 				`,
 		)
 
+		bigInt, _ := big.NewInt(0).SetString("0xffff_ffff_ffff_ffff_ffff_ffff_0000_0000", 0)
+
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewUnmeteredUInt128ValueFromUint64(uint64(0xffff_ffff_0000_0000)),
+			interpreter.NewUnmeteredUInt128ValueFromBigInt(bigInt),
 			inter.Globals.Get("c").GetValue(inter),
 		)
 	})
@@ -369,16 +374,18 @@ func TestInterpretBitwiseLeftShift128(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t,
 			`
-				let a: Word128 = 0xffff_ffff
+				let a: Word128 = 0xffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff
 				let b: Word128 = 32
 				let c = a << b
 				`,
 		)
 
+		bigInt, _ := big.NewInt(0).SetString("0xffff_ffff_ffff_ffff_ffff_ffff_0000_0000", 0)
+
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewUnmeteredWord128ValueFromUint64(uint64(0xffff_ffff_0000_0000)),
+			interpreter.NewUnmeteredWord128ValueFromBigInt(bigInt),
 			inter.Globals.Get("c").GetValue(inter),
 		)
 	})
@@ -406,20 +413,22 @@ func TestInterpretBitwiseLeftShift256(t *testing.T) {
 		)
 	})
 
-	t.Run("Int256 << 192", func(t *testing.T) {
+	t.Run("Int256 << 32", func(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t,
 			`
-			let a: Int256 = 0x7fff_ffff
+			let a: Int256 = 0x7fff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff
 			let b: Int256 = 32
 			let c = a << b
 		  	`,
 		)
 
+		bigInt, _ := big.NewInt(0).SetString("0xffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_0000_0000", 0)
+
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewUnmeteredInt256ValueFromInt64(int64(0x7fff_ffff_0000_0000)),
+			interpreter.NewUnmeteredInt256ValueFromBigInt(bigInt),
 			inter.Globals.Get("c").GetValue(inter),
 		)
 	})
@@ -459,7 +468,7 @@ func TestInterpretBitwiseLeftShift256(t *testing.T) {
 		)
 	})
 
-	t.Run("UInt256 << 192", func(t *testing.T) {
+	t.Run("UInt256 << 32", func(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t,
 			`
@@ -495,7 +504,7 @@ func TestInterpretBitwiseLeftShift256(t *testing.T) {
 		)
 	})
 
-	t.Run("Word256 << 192", func(t *testing.T) {
+	t.Run("Word256 << 32", func(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t,
 			`
