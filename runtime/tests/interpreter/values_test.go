@@ -1594,7 +1594,6 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 	})
 }
 
-
 type randomValueLimits struct {
 	containerMaxDepth  int
 	containerMaxSize   int
