@@ -220,6 +220,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 	const dictionaryStorageMapKey = interpreter.StringStorageMapKey("dictionary")
 
 	createDictionary := func(
+		t *testing.T,
 		r *randomValueGenerator,
 		inter *interpreter.Interpreter,
 	) (
@@ -294,6 +295,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 	}
 
 	checkDictionary := func(
+		t *testing.T,
 		inter *interpreter.Interpreter,
 		dictionary *interpreter.DictionaryValue,
 		expectedValue cadence.Dictionary,
@@ -319,6 +321,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 	}
 
 	doubleCheckDictionary := func(
+		t *testing.T,
 		inter *interpreter.Interpreter,
 		resetStorage func(),
 		dictionary *interpreter.DictionaryValue,
@@ -331,6 +334,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 		for i := 0; i < 2; i++ {
 
 			checkDictionary(
+				t,
 				inter,
 				dictionary,
 				expectedValue,
@@ -342,6 +346,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 	}
 
 	checkIteration := func(
+		t *testing.T,
 		inter *interpreter.Interpreter,
 		resetStorage func(),
 		dictionary *interpreter.DictionaryValue,
@@ -405,9 +410,10 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		dictionary, expectedValue, _ := createDictionary(&r, inter)
+		dictionary, expectedValue, _ := createDictionary(t, &r, inter)
 
 		doubleCheckDictionary(
+			t,
 			inter,
 			resetStorage,
 			dictionary,
@@ -425,9 +431,10 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		dictionary, expectedValue, _ := createDictionary(&r, inter)
+		dictionary, expectedValue, _ := createDictionary(t, &r, inter)
 
 		checkIteration(
+			t,
 			inter,
 			resetStorage,
 			dictionary,
@@ -444,7 +451,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		original, expectedValue, _ := createDictionary(&r, inter)
+		original, expectedValue, _ := createDictionary(t, &r, inter)
 
 		resetStorage()
 
@@ -484,6 +491,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 		for i := 0; i < 2; i++ {
 
 			checkDictionary(
+				t,
 				inter,
 				original,
 				expectedValue,
@@ -491,6 +499,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 			)
 
 			checkDictionary(
+				t,
 				inter,
 				transferred,
 				expectedValue,
@@ -518,6 +527,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 		// New dictionary should still be accessible
 
 		doubleCheckDictionary(
+			t,
 			inter,
 			resetStorage,
 			transferred,
@@ -536,10 +546,11 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		dictionary, expectedValue, reloadDictionary := createDictionary(&r, inter)
+		dictionary, expectedValue, reloadDictionary := createDictionary(t, &r, inter)
 
 		// Check dictionary and reset storage
 		doubleCheckDictionary(
+			t,
 			inter,
 			resetStorage,
 			dictionary,
@@ -553,7 +564,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 
 		// Insert new values into the dictionary.
 		// Atree storage validation must be temporarily disabled
-		// to not report any "unreferenced slab errors.
+		// to not report any "unreferenced slab" errors.
 
 		numberOfValues := r.randomInt(r.containerMaxSize)
 
@@ -611,6 +622,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 		}
 
 		doubleCheckDictionary(
+			t,
 			inter,
 			resetStorage,
 			dictionary,
@@ -627,10 +639,11 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		dictionary, expectedValue, reloadDictionary := createDictionary(&r, inter)
+		dictionary, expectedValue, reloadDictionary := createDictionary(t, &r, inter)
 
 		// Check dictionary and reset storage
 		doubleCheckDictionary(
+			t,
 			inter,
 			resetStorage,
 			dictionary,
@@ -676,6 +689,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 		require.Equal(t, 0, dictionary.Count())
 
 		doubleCheckDictionary(
+			t,
 			inter,
 			resetStorage,
 			dictionary,
@@ -694,10 +708,11 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		dictionary, expectedValue, reloadDictionary := createDictionary(&r, inter)
+		dictionary, expectedValue, reloadDictionary := createDictionary(t, &r, inter)
 
 		// Check dictionary and reset storage
 		doubleCheckDictionary(
+			t,
 			inter,
 			resetStorage,
 			dictionary,
@@ -757,6 +772,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 		require.Equal(t, elementCount, dictionary.Count())
 
 		doubleCheckDictionary(
+			t,
 			inter,
 			resetStorage,
 			dictionary,
@@ -780,6 +796,7 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 	const compositeStorageMapKey = interpreter.StringStorageMapKey("composite")
 
 	createComposite := func(
+		t *testing.T,
 		r *randomValueGenerator,
 		inter *interpreter.Interpreter,
 	) (
@@ -855,6 +872,7 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 	}
 
 	checkComposite := func(
+		t *testing.T,
 		inter *interpreter.Interpreter,
 		composite *interpreter.CompositeValue,
 		expectedValue cadence.Struct,
@@ -877,6 +895,7 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 	}
 
 	doubleCheckComposite := func(
+		t *testing.T,
 		inter *interpreter.Interpreter,
 		resetStorage func(),
 		composite *interpreter.CompositeValue,
@@ -889,6 +908,7 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 		for i := 0; i < 2; i++ {
 
 			checkComposite(
+				t,
 				inter,
 				composite,
 				expectedValue,
@@ -908,9 +928,10 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		composite, expectedValue, _ := createComposite(&r, inter)
+		composite, expectedValue, _ := createComposite(t, &r, inter)
 
 		doubleCheckComposite(
+			t,
 			inter,
 			resetStorage,
 			composite,
@@ -928,7 +949,7 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		original, expectedValue, _ := createComposite(&r, inter)
+		original, expectedValue, _ := createComposite(t, &r, inter)
 
 		resetStorage()
 
@@ -947,7 +968,7 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 			true,
 		).(*interpreter.CompositeValue)
 
-		// Store the transferred composite in a storage map, so that the composote's slab
+		// Store the transferred composite in a storage map, so that the composite's slab
 		// is referenced by the root of the storage.
 
 		inter.Storage().
@@ -968,6 +989,7 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 		for i := 0; i < 2; i++ {
 
 			checkComposite(
+				t,
 				inter,
 				original,
 				expectedValue,
@@ -975,6 +997,7 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 			)
 
 			checkComposite(
+				t,
 				inter,
 				transferred,
 				expectedValue,
@@ -1002,6 +1025,7 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 		// New composite should still be accessible
 
 		doubleCheckComposite(
+			t,
 			inter,
 			resetStorage,
 			transferred,
@@ -1020,10 +1044,11 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		composite, expectedValue, reloadComposite := createComposite(&r, inter)
+		composite, expectedValue, reloadComposite := createComposite(t, &r, inter)
 
 		// Check composite and reset storage
 		doubleCheckComposite(
+			t,
 			inter,
 			resetStorage,
 			composite,
@@ -1083,6 +1108,7 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 		require.Equal(t, typeFieldCount, composite.FieldCount())
 
 		doubleCheckComposite(
+			t,
 			inter,
 			resetStorage,
 			composite,
@@ -1106,6 +1132,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 	const arrayStorageMapKey = interpreter.StringStorageMapKey("array")
 
 	createArray := func(
+		t *testing.T,
 		r *randomValueGenerator,
 		inter *interpreter.Interpreter,
 	) (
@@ -1174,6 +1201,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 	}
 
 	checkArray := func(
+		t *testing.T,
 		inter *interpreter.Interpreter,
 		array *interpreter.ArrayValue,
 		expectedValue cadence.Array,
@@ -1194,6 +1222,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 	}
 
 	doubleCheckArray := func(
+		t *testing.T,
 		inter *interpreter.Interpreter,
 		resetStorage func(),
 		array *interpreter.ArrayValue,
@@ -1206,6 +1235,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		for i := 0; i < 2; i++ {
 
 			checkArray(
+				t,
 				inter,
 				array,
 				expectedValue,
@@ -1217,6 +1247,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 	}
 
 	checkIteration := func(
+		t *testing.T,
 		inter *interpreter.Interpreter,
 		resetStorage func(),
 		array *interpreter.ArrayValue,
@@ -1262,9 +1293,10 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		array, expectedValue, _ := createArray(&r, inter)
+		array, expectedValue, _ := createArray(t, &r, inter)
 
 		doubleCheckArray(
+			t,
 			inter,
 			resetStorage,
 			array,
@@ -1282,9 +1314,10 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		array, expectedValue, _ := createArray(&r, inter)
+		array, expectedValue, _ := createArray(t, &r, inter)
 
 		checkIteration(
+			t,
 			inter,
 			resetStorage,
 			array,
@@ -1301,7 +1334,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		original, expectedValue, _ := createArray(&r, inter)
+		original, expectedValue, _ := createArray(t, &r, inter)
 
 		resetStorage()
 
@@ -1341,6 +1374,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		for i := 0; i < 2; i++ {
 
 			checkArray(
+				t,
 				inter,
 				original,
 				expectedValue,
@@ -1348,6 +1382,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 			)
 
 			checkArray(
+				t,
 				inter,
 				transferred,
 				expectedValue,
@@ -1375,6 +1410,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		// New array should still be accessible
 
 		doubleCheckArray(
+			t,
 			inter,
 			resetStorage,
 			transferred,
@@ -1393,10 +1429,11 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		array, expectedValue, reloadArray := createArray(&r, inter)
+		array, expectedValue, reloadArray := createArray(t, &r, inter)
 
 		// Check array and reset storage
 		doubleCheckArray(
+			t,
 			inter,
 			resetStorage,
 			array,
@@ -1451,6 +1488,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		}
 
 		doubleCheckArray(
+			t,
 			inter,
 			resetStorage,
 			array,
@@ -1467,10 +1505,11 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		array, expectedValue, reloadArray := createArray(&r, inter)
+		array, expectedValue, reloadArray := createArray(t, &r, inter)
 
 		// Check array and reset storage
 		doubleCheckArray(
+			t,
 			inter,
 			resetStorage,
 			array,
@@ -1515,6 +1554,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		require.Equal(t, 0, array.Count())
 
 		doubleCheckArray(
+			t,
 			inter,
 			resetStorage,
 			array,
@@ -1533,10 +1573,11 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		array, expectedValue, reloadArray := createArray(&r, inter)
+		array, expectedValue, reloadArray := createArray(t, &r, inter)
 
 		// Check array and reset storage
 		doubleCheckArray(
+			t,
 			inter,
 			resetStorage,
 			array,
@@ -1578,10 +1619,11 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		// Array must have same number of key-value pairs
+		// Array must have same number of elements
 		require.Equal(t, elementCount, array.Count())
 
 		doubleCheckArray(
+			t,
 			inter,
 			resetStorage,
 			array,
@@ -1617,14 +1659,14 @@ func newRandomValueGenerator(seed int64, limits randomValueLimits) randomValueGe
 	}
 }
 func (r randomValueGenerator) randomStorableValue(inter *interpreter.Interpreter, currentDepth int) cadence.Value {
-	n := 0
+	var kind randomValueKind
 	if currentDepth < r.containerMaxDepth {
-		n = r.randomInt(randomValueKindStruct)
+		kind = r.randomValueKind(randomValueKindStruct)
 	} else {
-		n = r.randomInt(randomValueKindCapability)
+		kind = r.randomValueKind(randomValueKindCapability)
 	}
 
-	switch n {
+	switch kind {
 
 	// Non-hashable
 	case randomValueKindVoid:
@@ -1654,16 +1696,16 @@ func (r randomValueGenerator) randomStorableValue(inter *interpreter.Interpreter
 
 	// Hashable
 	default:
-		return r.generateHashableValueOfType(inter, n)
+		return r.generateHashableValueOfKind(inter, kind)
 	}
 }
 
 func (r randomValueGenerator) randomHashableValue(inter *interpreter.Interpreter) cadence.Value {
-	return r.generateHashableValueOfType(inter, r.randomInt(randomValueKindEnum))
+	return r.generateHashableValueOfKind(inter, r.randomValueKind(randomValueKindEnum))
 }
 
-func (r randomValueGenerator) generateHashableValueOfType(inter *interpreter.Interpreter, n int) cadence.Value {
-	switch n {
+func (r randomValueGenerator) generateHashableValueOfKind(inter *interpreter.Interpreter, kind randomValueKind) cadence.Value {
+	switch kind {
 
 	// Int*
 	case randomValueKindInt:
@@ -1758,7 +1800,7 @@ func (r randomValueGenerator) generateHashableValueOfType(inter *interpreter.Int
 		return r.randomEnumValue(inter)
 
 	default:
-		panic(fmt.Sprintf("unsupported: %d", n))
+		panic(fmt.Sprintf("unsupported: %d", kind))
 	}
 }
 
@@ -1927,8 +1969,8 @@ func (r randomValueGenerator) randomStructValue(inter *interpreter.Interpreter, 
 	)
 }
 
-func (r randomValueGenerator) cadenceIntegerType(n int) cadence.Type {
-	switch n {
+func (r randomValueGenerator) cadenceIntegerType(kind randomValueKind) cadence.Type {
+	switch kind {
 	// Int
 	case randomValueKindInt:
 		return cadence.IntType
@@ -1979,12 +2021,12 @@ func (r randomValueGenerator) cadenceIntegerType(n int) cadence.Type {
 		return cadence.Word256Type
 
 	default:
-		panic(fmt.Sprintf("unsupported: %d", n))
+		panic(fmt.Sprintf("unsupported kind: %d", kind))
 	}
 }
 
-func (r randomValueGenerator) semaIntegerType(n int) sema.Type {
-	switch n {
+func (r randomValueGenerator) semaIntegerType(kind randomValueKind) sema.Type {
+	switch kind {
 	// Int
 	case randomValueKindInt:
 		return sema.IntType
@@ -2035,14 +2077,16 @@ func (r randomValueGenerator) semaIntegerType(n int) sema.Type {
 		return sema.Word256Type
 
 	default:
-		panic(fmt.Sprintf("unsupported: %d", n))
+		panic(fmt.Sprintf("unsupported kind: %d", kind))
 	}
 }
+
+type randomValueKind uint8
 
 const (
 	// Hashable values
 	// Int*
-	randomValueKindInt = iota
+	randomValueKindInt randomValueKind = iota
 	randomValueKindInt8
 	randomValueKindInt16
 	randomValueKindInt32
@@ -2113,9 +2157,9 @@ func (r randomValueGenerator) randomUTF8StringOfSize(size int) string {
 
 func (r randomValueGenerator) randomEnumValue(inter *interpreter.Interpreter) cadence.Enum {
 	// Get a random integer subtype to be used as the raw-type of enum
-	typ := r.randomInt(randomValueKindWord64)
+	typ := r.randomValueKind(randomValueKindWord64)
 
-	rawValue := r.generateHashableValueOfType(inter, typ).(cadence.NumberValue)
+	rawValue := r.generateHashableValueOfKind(inter, typ).(cadence.NumberValue)
 
 	identifier := fmt.Sprintf("E%d", r.rand.Uint64())
 
@@ -2172,6 +2216,10 @@ func (r randomValueGenerator) randomEnumValue(inter *interpreter.Interpreter) ca
 			nil,
 		),
 	)
+}
+
+func (r randomValueGenerator) randomValueKind(kind randomValueKind) randomValueKind {
+	return randomValueKind(r.randomInt(int(kind)))
 }
 
 func TestRandomValueGeneration(t *testing.T) {
