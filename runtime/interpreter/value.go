@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"math/bits"
 	"strings"
 	"time"
 	"unicode"
@@ -8065,7 +8066,7 @@ func (v Int128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 	valueGetter := func() *big.Int {
 		res := new(big.Int)
 		res = res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-		return truncate(res, 2)
+		return truncate(res, 128/bits.UintSize)
 	}
 
 	return NewInt128ValueFromBigInt(interpreter, valueGetter)
@@ -8087,7 +8088,7 @@ func (v Int128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 			LocationRange: locationRange,
 		})
 	}
-	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 128 {
+	if !o.BigInt.IsUint64() {
 		return NewInt128ValueFromUint64(interpreter, 0)
 	}
 
@@ -8809,7 +8810,7 @@ func (v Int256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 	valueGetter := func() *big.Int {
 		res := new(big.Int)
 		res = res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-		return truncate(res, 4)
+		return truncate(res, 256/bits.UintSize)
 	}
 
 	return NewInt256ValueFromBigInt(interpreter, valueGetter)
@@ -8831,7 +8832,7 @@ func (v Int256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 			LocationRange: locationRange,
 		})
 	}
-	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 256 {
+	if !o.BigInt.IsUint64() {
 		return NewInt256ValueFromUint64(interpreter, 0)
 	}
 
@@ -12360,7 +12361,7 @@ func (v UInt128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVa
 		func() *big.Int {
 			res := new(big.Int)
 			res = res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-			return truncate(res, 2)
+			return truncate(res, 128/bits.UintSize)
 		},
 	)
 }
@@ -12381,7 +12382,7 @@ func (v UInt128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerV
 			LocationRange: locationRange,
 		})
 	}
-	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 128 {
+	if !o.BigInt.IsUint64() {
 		return NewUInt128ValueFromUint64(interpreter, 0)
 	}
 
@@ -13040,7 +13041,7 @@ func (v UInt256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVa
 		func() *big.Int {
 			res := new(big.Int)
 			res = res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-			return truncate(res, 4)
+			return truncate(res, 256/bits.UintSize)
 		},
 	)
 }
@@ -13061,7 +13062,7 @@ func (v UInt256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerV
 			LocationRange: locationRange,
 		})
 	}
-	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 256 {
+	if !o.BigInt.IsUint64() {
 		return NewUInt256ValueFromUint64(interpreter, 0)
 	}
 
@@ -15408,7 +15409,7 @@ func (v Word128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVa
 		func() *big.Int {
 			res := new(big.Int)
 			res = res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-			return truncate(res, 2)
+			return truncate(res, 128/bits.UintSize)
 		},
 	)
 }
@@ -15428,7 +15429,7 @@ func (v Word128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerV
 			LocationRange: locationRange,
 		})
 	}
-	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 128 {
+	if !o.BigInt.IsUint64() {
 		return NewWord128ValueFromUint64(interpreter, 0)
 	}
 
@@ -15993,7 +15994,7 @@ func (v Word256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVa
 		func() *big.Int {
 			res := new(big.Int)
 			res = res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-			return truncate(res, 4)
+			return truncate(res, 256/bits.UintSize)
 		},
 	)
 }
@@ -16014,7 +16015,7 @@ func (v Word256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerV
 			LocationRange: locationRange,
 		})
 	}
-	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 256 {
+	if !o.BigInt.IsUint64() {
 		return NewWord256ValueFromUint64(interpreter, 0)
 	}
 
