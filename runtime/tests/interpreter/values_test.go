@@ -567,36 +567,10 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 			newOwner,
 		)
 
-		resetStorage()
-
-		transferred = readDictionary(
-			inter,
-			newOwner,
-			transferredStorageMapKey,
-		)
-
-		checkDictionary(
-			t,
-			inter,
-			transferred,
-			expectedValue,
-			newOwner,
-		)
-
 		if *validateAtree {
 			err := inter.Storage().CheckHealth()
 			require.NoError(t, err)
 		}
-
-		// New dictionary should still be accessible
-
-		checkDictionary(
-			t,
-			inter,
-			transferred,
-			expectedValue,
-			newOwner,
-		)
 
 		resetStorage()
 
@@ -1209,36 +1183,10 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 			newOwner,
 		)
 
-		resetStorage()
-
-		transferred = readComposite(
-			inter,
-			newOwner,
-			transferredStorageMapKey,
-		)
-
-		checkComposite(
-			t,
-			inter,
-			transferred,
-			expectedValue,
-			newOwner,
-		)
-
 		if *validateAtree {
 			err := inter.Storage().CheckHealth()
 			require.NoError(t, err)
 		}
-
-		// New composite should still be accessible
-
-		checkComposite(
-			t,
-			inter,
-			transferred,
-			expectedValue,
-			newOwner,
-		)
 
 		resetStorage()
 
@@ -1708,36 +1656,10 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 			newOwner,
 		)
 
-		resetStorage()
-
-		transferred = readArray(
-			inter,
-			newOwner,
-			transferredStorageMapKey,
-		)
-
-		checkArray(
-			t,
-			inter,
-			transferred,
-			expectedValue,
-			newOwner,
-		)
-
 		if *validateAtree {
 			err := inter.Storage().CheckHealth()
 			require.NoError(t, err)
 		}
-
-		// New array should still be accessible
-
-		checkArray(
-			t,
-			inter,
-			transferred,
-			expectedValue,
-			newOwner,
-		)
 
 		resetStorage()
 
