@@ -64,14 +64,14 @@ func TestFTTransfer(t *testing.T) {
 
 	ftLocation := common.NewAddressLocation(nil, contractsAddress, "FungibleToken")
 
-	ftContractProgram := compileCode(t, realFungibleTokenContractInterface, ftLocation, programs)
+	ftContractProgram := parseCheckAndCompile(t, realFungibleTokenContractInterface, ftLocation, programs)
 	printProgram("FungibleToken", ftContractProgram)
 
 	// ----- Deploy FlowToken Contract -----
 
 	flowTokenLocation := common.NewAddressLocation(nil, contractsAddress, "FlowToken")
 
-	flowTokenProgram := compileCode(t, realFlowContract, flowTokenLocation, programs)
+	flowTokenProgram := parseCheckAndCompile(t, realFlowContract, flowTokenLocation, programs)
 	printProgram("FlowToken", flowTokenProgram)
 
 	config := &vm.Config{
@@ -123,7 +123,7 @@ func TestFTTransfer(t *testing.T) {
 		senderAddress,
 		receiverAddress,
 	} {
-		program := compileCode(t, realSetupFlowTokenAccountTransaction, nil, programs)
+		program := parseCheckAndCompile(t, realSetupFlowTokenAccountTransaction, nil, programs)
 
 		setupTxVM := vm.NewVM(txLocation(), program, vmConfig)
 
@@ -135,7 +135,7 @@ func TestFTTransfer(t *testing.T) {
 
 	// Mint FLOW to sender
 
-	program := compileCode(t, realMintFlowTokenTransaction, nil, programs)
+	program := parseCheckAndCompile(t, realMintFlowTokenTransaction, nil, programs)
 	printProgram("Setup FlowToken Tx", program)
 
 	mintTxVM := vm.NewVM(txLocation(), program, vmConfig)
@@ -154,7 +154,7 @@ func TestFTTransfer(t *testing.T) {
 
 	// ----- Run token transfer transaction -----
 
-	tokenTransferTxProgram := compileCode(t, realFlowTokenTransferTransaction, nil, programs)
+	tokenTransferTxProgram := parseCheckAndCompile(t, realFlowTokenTransferTransaction, nil, programs)
 	printProgram("FT Transfer Tx", tokenTransferTxProgram)
 
 	tokenTransferTxVM := vm.NewVM(txLocation(), tokenTransferTxProgram, vmConfig)
@@ -177,7 +177,7 @@ func TestFTTransfer(t *testing.T) {
 		senderAddress,
 		receiverAddress,
 	} {
-		program := compileCode(t, realFlowTokenBalanceScript, nil, programs)
+		program := parseCheckAndCompile(t, realFlowTokenBalanceScript, nil, programs)
 
 		validationScriptVM := vm.NewVM(scriptLocation(), program, vmConfig)
 
@@ -222,12 +222,12 @@ func BenchmarkFTTransfer(b *testing.B) {
 	txLocation := runtime_utils.NewTransactionLocationGenerator()
 
 	ftLocation := common.NewAddressLocation(nil, contractsAddress, "FungibleToken")
-	_ = compileCode(b, realFungibleTokenContractInterface, ftLocation, programs)
+	_ = parseCheckAndCompile(b, realFungibleTokenContractInterface, ftLocation, programs)
 
 	// ----- Deploy FlowToken Contract -----
 
 	flowTokenLocation := common.NewAddressLocation(nil, contractsAddress, "FlowToken")
-	flowTokenProgram := compileCode(b, realFlowContract, flowTokenLocation, programs)
+	flowTokenProgram := parseCheckAndCompile(b, realFlowContract, flowTokenLocation, programs)
 
 	config := &vm.Config{
 		Storage:        storage,
@@ -279,7 +279,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 		senderAddress,
 		receiverAddress,
 	} {
-		program := compileCode(b, realSetupFlowTokenAccountTransaction, nil, programs)
+		program := parseCheckAndCompile(b, realSetupFlowTokenAccountTransaction, nil, programs)
 
 		setupTxVM := vm.NewVM(txLocation(), program, vmConfig)
 
@@ -291,7 +291,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	// Mint FLOW to sender
 
-	program := compileCode(b, realMintFlowTokenTransaction, nil, programs)
+	program := parseCheckAndCompile(b, realMintFlowTokenTransaction, nil, programs)
 
 	mintTxVM := vm.NewVM(txLocation(), program, vmConfig)
 
@@ -318,8 +318,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	tokenTransferTxAuthorizer := vm.NewAuthAccountReferenceValue(vmConfig, senderAddress)
 
-	tokenTransferTxChecker := parseAndCheck(b, realFlowTokenTransferTransaction, nil, programs)
-	tokenTransferTxProgram := compile(b, tokenTransferTxChecker, programs)
+	tokenTransferTxProgram := parseCheckAndCompile(b, realFlowTokenTransferTransaction, nil, programs)
 	tokenTransferTxVM := vm.NewVM(txLocation(), tokenTransferTxProgram, vmConfig)
 
 	b.ReportAllocs()
@@ -341,7 +340,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 		senderAddress,
 		receiverAddress,
 	} {
-		program := compileCode(b, realFlowTokenBalanceScript, nil, programs)
+		program := parseCheckAndCompile(b, realFlowTokenBalanceScript, nil, programs)
 
 		validationScriptVM := vm.NewVM(scriptLocation(), program, vmConfig)
 

@@ -30,6 +30,7 @@ import (
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	"github.com/onflow/cadence/test_utils/common_utils"
@@ -760,10 +761,6 @@ func TestContractImport(t *testing.T) {
 		fooCompiler := compiler.NewInstructionCompiler(fooChecker.Program, fooChecker.Elaboration)
 		fooProgram := fooCompiler.Compile()
 
-		//vmInstance := NewVM(fooProgram, nil)
-		//fooContractValue, err := vmInstance.InitializeContract()
-		//require.NoError(t, err)
-
 		// Initialize Bar
 
 		barLocation := common.NewAddressLocation(
@@ -803,6 +800,17 @@ func TestContractImport(t *testing.T) {
 			return fooProgram
 		}
 
+		barCompiler.Config.ElaborationResolver = func(location common.Location) (*sema.Elaboration, error) {
+			switch location {
+			case fooLocation:
+				return fooChecker.Elaboration, nil
+			case barLocation:
+				return barChecker.Elaboration, nil
+			default:
+				return nil, fmt.Errorf("cannot find elaboration for %s", location)
+			}
+		}
+
 		barProgram := barCompiler.Compile()
 
 		vmConfig := &vm.Config{
@@ -810,10 +818,6 @@ func TestContractImport(t *testing.T) {
 				require.Equal(t, fooLocation, location)
 				return fooProgram
 			},
-			//ContractValueHandler: func(_ *Config, location common.Location) *CompositeValue {
-			//	require.Equal(t, fooLocation, location)
-			//	return fooContractValue
-			//},
 		}
 
 		vmInstance := vm.NewVM(barLocation, barProgram, vmConfig)
@@ -826,7 +830,7 @@ func TestContractImport(t *testing.T) {
             import Bar from 0x02
 
             fun test(): String {
-                return Bar.withdraw(150)
+                return Bar.withdraw(50)
             }`,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
@@ -1144,10 +1148,12 @@ func TestContractField(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker.Program, checker.Elaboration)
-		comp.Config.ImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction] {
-			return importedProgram
-		}
+		comp := compiler.NewInstructionCompiler(checker.Program, checker.Elaboration).
+			WithConfig(&compiler.Config{
+				ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+					return importedProgram
+				},
+			})
 
 		program := comp.Compile()
 
@@ -1473,6 +1479,14 @@ func TestInterfaceMethodCall(t *testing.T) {
 		require.NoError(t, err)
 
 		importCompiler := compiler.NewInstructionCompiler(importedChecker.Program, importedChecker.Elaboration)
+		importCompiler.Config.ElaborationResolver = func(location common.Location) (*sema.Elaboration, error) {
+			if location == contractLocation {
+				return importedChecker.Elaboration, nil
+			}
+
+			return nil, fmt.Errorf("cannot find elaboration for %s", location)
+		}
+
 		importedProgram := importCompiler.Compile()
 
 		vmInstance := vm.NewVM(contractLocation, importedProgram, nil)
@@ -1659,6 +1673,17 @@ func TestInterfaceMethodCall(t *testing.T) {
 		bazCompiler := compiler.NewInstructionCompiler(bazChecker.Program, bazChecker.Elaboration)
 		bazCompiler.Config.LocationHandler = singleIdentifierLocationResolver(t)
 		bazCompiler.Config.ImportHandler = bazImportHandler
+		bazCompiler.Config.ElaborationResolver = func(location common.Location) (*sema.Elaboration, error) {
+			switch location {
+			case fooLocation:
+				return fooChecker.Elaboration, nil
+			case barLocation:
+				return barChecker.Elaboration, nil
+			default:
+				return nil, fmt.Errorf("cannot find elaboration for %s", location)
+			}
+		}
+
 		bazProgram := bazCompiler.Compile()
 
 		implProgramVMConfig := &vm.Config{
@@ -2194,7 +2219,7 @@ func TestDefaultFunctions(t *testing.T) {
     `
 
 		// Only need to compile
-		compileCode(t, barContract, barLocation, programs)
+		parseCheckAndCompile(t, barContract, barLocation, programs)
 
 		// Deploy contract with the implementation
 
@@ -2223,7 +2248,7 @@ func TestDefaultFunctions(t *testing.T) {
 			contractsAddress.HexWithPrefix(),
 		)
 
-		fooProgram := compileCode(t, fooContract, fooLocation, programs)
+		fooProgram := parseCheckAndCompile(t, fooContract, fooLocation, programs)
 		printProgram("", fooProgram)
 
 		fooVM := vm.NewVM(fooLocation, fooProgram, vmConfig)
@@ -2249,7 +2274,7 @@ func TestDefaultFunctions(t *testing.T) {
 
 		txLocation := runtime_utils.NewTransactionLocationGenerator()
 
-		txProgram := compileCode(t, tx, txLocation(), programs)
+		txProgram := parseCheckAndCompile(t, tx, txLocation(), programs)
 		txVM := vm.NewVM(txLocation(), txProgram, vmConfig)
 
 		result, err := txVM.Invoke("main")
@@ -2263,7 +2288,7 @@ func TestFunctionPreConditions(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("pre condition failed", func(t *testing.T) {
+	t.Run("failed", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2282,7 +2307,7 @@ func TestFunctionPreConditions(t *testing.T) {
 		assert.ErrorContains(t, err, "pre/post condition failed")
 	})
 
-	t.Run("pre condition failed with message", func(t *testing.T) {
+	t.Run("failed with message", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2301,7 +2326,7 @@ func TestFunctionPreConditions(t *testing.T) {
 		assert.ErrorContains(t, err, "x must be zero")
 	})
 
-	t.Run("pre condition passed", func(t *testing.T) {
+	t.Run("passed", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2318,6 +2343,162 @@ func TestFunctionPreConditions(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, vm.NewIntValue(3), result)
+	})
+
+	t.Run("inherited", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := compileAndInvoke(t, `
+            struct interface A {
+                access(all) fun test(_ a: Int): Int {
+                    pre { a > 10: "a must be larger than 10" }
+                }
+            }
+
+            struct interface B: A {
+                access(all) fun test(_ a: Int): Int
+            }
+
+            struct C: B {
+                fun test(_ a: Int): Int {
+                    return a + 3
+                }
+            }
+
+            access(all) fun main(_ a: Int): Int {
+                let c = C()
+                return c.test(a)
+            }`,
+			"main",
+			vm.NewIntValue(4),
+		)
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "a must be larger than 10")
+	})
+
+	t.Run("pre conditions order", func(t *testing.T) {
+
+		t.Parallel()
+
+		code := `struct A: B {
+                access(all) fun test() {
+                    pre { print("A") }
+                }
+            }
+
+            struct interface B: C, D {
+                access(all) fun test() {
+                    pre { print("B") }
+                }
+            }
+
+            struct interface C: E, F {
+                access(all) fun test() {
+                    pre { print("C") }
+                }
+            }
+
+            struct interface D: F {
+                access(all) fun test() {
+                    pre { print("D") }
+                }
+            }
+
+            struct interface E {
+                access(all) fun test() {
+                    pre { print("E") }
+                }
+            }
+
+            struct interface F {
+                access(all) fun test() {
+                    pre { print("F") }
+                }
+            }
+
+            access(all) view fun print(_ msg: String): Bool {
+                log(msg)
+                return true
+            }
+
+            access(all) fun main() {
+                let a = A()
+                a.test()
+            }`
+
+		location := common.ScriptLocation{0x1}
+
+		activation := sema.NewVariableActivation(sema.BaseValueActivation)
+		activation.DeclareValue(stdlib.PanicFunction)
+		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
+			"log",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityView,
+				[]sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: sema.AnyStructTypeAnnotation,
+					},
+				},
+				sema.VoidTypeAnnotation,
+			),
+			"",
+			nil,
+		))
+
+		var logs []string
+
+		config := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+		config.NativeFunctionsProvider = func() map[string]vm.Value {
+			return map[string]vm.Value{
+				commons.LogFunctionName: vm.NativeFunctionValue{
+					ParameterCount: len(stdlib.LogFunctionType.Parameters),
+					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+						logs = append(logs, arguments[0].String())
+						return vm.VoidValue{}
+					},
+				},
+				commons.PanicFunctionName: vm.NativeFunctionValue{
+					ParameterCount: len(stdlib.PanicFunctionType.Parameters),
+					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+						messageValue, ok := arguments[0].(vm.StringValue)
+						if !ok {
+							panic(errors.NewUnreachableError())
+						}
+
+						panic(stdlib.PanicError{
+							Message: string(messageValue.Str),
+						})
+					},
+				},
+			}
+		}
+
+		_, err := compileAndInvokeWithOptions(
+			t,
+			code,
+			"main",
+			CompilerAndVMOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: location,
+					Config: &sema.Config{
+						LocationHandler: singleIdentifierLocationResolver(t),
+						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+							return activation
+						},
+					},
+				},
+				VMConfig: config,
+			},
+		)
+		require.NoError(t, err)
+
+		// The pre-conditions of the interfaces are executed first, with depth-first pre-order traversal.
+		// The pre-condition of the concrete type is executed at the end, after the interfaces.
+		assert.Equal(t, []string{"B", "C", "E", "F", "D", "A"}, logs)
 	})
 }
 
@@ -2325,7 +2506,7 @@ func TestFunctionPostConditions(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("post condition failed", func(t *testing.T) {
+	t.Run("failed", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2344,7 +2525,7 @@ func TestFunctionPostConditions(t *testing.T) {
 		assert.ErrorContains(t, err, "pre/post condition failed")
 	})
 
-	t.Run("post condition failed with message", func(t *testing.T) {
+	t.Run("failed with message", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2363,7 +2544,7 @@ func TestFunctionPostConditions(t *testing.T) {
 		assert.ErrorContains(t, err, "x must be zero")
 	})
 
-	t.Run("post condition passed", func(t *testing.T) {
+	t.Run("passed", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2382,7 +2563,7 @@ func TestFunctionPostConditions(t *testing.T) {
 		assert.Equal(t, vm.NewIntValue(3), result)
 	})
 
-	t.Run("post condition on local var", func(t *testing.T) {
+	t.Run("test on local var", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2402,7 +2583,7 @@ func TestFunctionPostConditions(t *testing.T) {
 		assert.Equal(t, vm.NewIntValue(5), result)
 	})
 
-	t.Run("post condition on local var failed with message", func(t *testing.T) {
+	t.Run("test on local var failed with message", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2420,5 +2601,129 @@ func TestFunctionPostConditions(t *testing.T) {
 
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "x must be 5")
+	})
+
+	t.Run("post conditions order", func(t *testing.T) {
+
+		t.Parallel()
+
+		code := `
+            struct A: B {
+                access(all) fun test() {
+                    post { print("A") }
+                }
+            }
+
+            struct interface B: C, D {
+                access(all) fun test() {
+                    post { print("B") }
+                }
+            }
+
+            struct interface C: E, F {
+                access(all) fun test() {
+                    post { print("C") }
+                }
+            }
+
+            struct interface D: F {
+                access(all) fun test() {
+                    post { print("D") }
+                }
+            }
+
+            struct interface E {
+                access(all) fun test() {
+                    post { print("E") }
+                }
+            }
+
+            struct interface F {
+                access(all) fun test() {
+                    post { print("F") }
+                }
+            }
+
+            access(all) view fun print(_ msg: String): Bool {
+                log(msg)
+                return true
+            }
+
+            access(all) fun main() {
+                let a = A()
+                a.test()
+            }`
+
+		location := common.ScriptLocation{0x1}
+
+		activation := sema.NewVariableActivation(sema.BaseValueActivation)
+		activation.DeclareValue(stdlib.PanicFunction)
+		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
+			"log",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityView,
+				[]sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: sema.AnyStructTypeAnnotation,
+					},
+				},
+				sema.VoidTypeAnnotation,
+			),
+			"",
+			nil,
+		))
+
+		var logs []string
+
+		config := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+		config.NativeFunctionsProvider = func() map[string]vm.Value {
+			return map[string]vm.Value{
+				commons.LogFunctionName: vm.NativeFunctionValue{
+					ParameterCount: len(stdlib.LogFunctionType.Parameters),
+					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+						logs = append(logs, arguments[0].String())
+						return vm.VoidValue{}
+					},
+				},
+				commons.PanicFunctionName: vm.NativeFunctionValue{
+					ParameterCount: len(stdlib.PanicFunctionType.Parameters),
+					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+						messageValue, ok := arguments[0].(vm.StringValue)
+						if !ok {
+							panic(errors.NewUnreachableError())
+						}
+
+						panic(stdlib.PanicError{
+							Message: string(messageValue.Str),
+						})
+					},
+				},
+			}
+		}
+
+		_, err := compileAndInvokeWithOptions(
+			t,
+			code,
+			"main",
+			CompilerAndVMOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: location,
+					Config: &sema.Config{
+						LocationHandler: singleIdentifierLocationResolver(t),
+						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+							return activation
+						},
+					},
+				},
+				VMConfig: config,
+			},
+		)
+		require.NoError(t, err)
+
+		// The post-condition of the concrete type is executed first, before the interfaces.
+		// The post-conditions of the interfaces are executed after that, with the reversed depth-first pre-order.
+		assert.Equal(t, []string{"A", "D", "F", "E", "C", "B"}, logs)
 	})
 }

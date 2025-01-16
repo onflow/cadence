@@ -86,7 +86,7 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
     `
 	barLocation := common.NewAddressLocation(nil, contractsAddress, "Bar")
 
-	barProgram := compileCode(t, contractCode, barLocation, programs)
+	barProgram := parseCheckAndCompile(t, contractCode, barLocation, programs)
 
 	barVM := vm.NewVM(
 		barLocation,
@@ -159,7 +159,7 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 	}
 
 	fooLocation := common.NewAddressLocation(nil, contractsAddress, "Foo")
-	program := compileCode(t, fooContract, fooLocation, programs)
+	program := parseCheckAndCompile(t, fooContract, fooLocation, programs)
 
 	vmConfig := &vm.Config{
 		Storage:       storage,

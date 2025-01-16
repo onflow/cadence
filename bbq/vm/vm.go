@@ -60,13 +60,17 @@ func NewVM(
 		conf.Storage = interpreter.NewInMemoryStorage(nil)
 	}
 
+	if conf.NativeFunctionsProvider == nil {
+		conf.NativeFunctionsProvider = NativeFunctions
+	}
+
 	// linkedGlobalsCache is a local cache-alike that is being used to hold already linked imports.
 	linkedGlobalsCache := map[common.Location]LinkedGlobals{
 		BuiltInLocation: {
 			// It is NOT safe to re-use native functions map here because,
 			// once put into the cache, it will be updated by adding the
 			// globals of the current program.
-			indexedGlobals: NativeFunctions(),
+			indexedGlobals: conf.NativeFunctionsProvider(),
 		},
 	}
 

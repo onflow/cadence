@@ -19,7 +19,8 @@ type Desugar struct {
 	program     *ast.Program
 	config      *Config
 
-	modifiedDeclarations []ast.Declaration
+	modifiedDeclarations         []ast.Declaration
+	inheritedFuncsWithConditions map[string][]*ast.FunctionDeclaration
 }
 
 var _ ast.DeclarationVisitor[ast.Declaration] = &Desugar{}
@@ -62,13 +63,19 @@ func (d *Desugar) VisitVariableDeclaration(declaration *ast.VariableDeclaration)
 
 func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) ast.Declaration {
 	funcBlock := declaration.FunctionBlock
-	if !funcBlock.HasConditions() {
-		return declaration
-	}
-
 	statements := funcBlock.Block.Statements
-	preConditions := d.desugarConditions(funcBlock.PreConditions)
-	postConditions := d.desugarConditions(funcBlock.PostConditions)
+	funcName := declaration.Identifier.Identifier
+
+	preConditions := d.desugarConditions(
+		funcName,
+		ast.ConditionKindPre,
+		funcBlock.PreConditions,
+	)
+	postConditions := d.desugarConditions(
+		funcName,
+		ast.ConditionKindPost,
+		funcBlock.PostConditions,
+	)
 
 	modifiedStatements := make([]ast.Statement, 0, len(preConditions)+len(postConditions)+len(statements))
 
@@ -84,11 +91,17 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration)
 	// TODO: If 'result' variable is used in the user-code,
 	//   this temp assignment must use the 'result' variable.
 
-	lastStmt := modifiedStatements[len(statements)-1]
-	originalReturnStmt, hasReturn := lastStmt.(*ast.ReturnStatement)
+	var originalReturnStmt *ast.ReturnStatement
+	hasReturn := false
+
+	if len(modifiedStatements) > 0 {
+		lastStmt := modifiedStatements[len(modifiedStatements)-1]
+		originalReturnStmt, hasReturn = lastStmt.(*ast.ReturnStatement)
+	}
+
 	if hasReturn {
 		// Remove the return statement from here
-		modifiedStatements = modifiedStatements[:len(statements)-1]
+		modifiedStatements = modifiedStatements[:len(modifiedStatements)-1]
 
 		if originalReturnStmt.Expression != nil {
 			// Instead append a temp-result assignment.i.e:
@@ -187,16 +200,67 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration)
 	)
 }
 
-func (d *Desugar) desugarConditions(conditions *ast.Conditions) []ast.Statement {
-	if conditions == nil {
-		return nil
+func (d *Desugar) desugarConditions(
+	funcName string,
+	kind ast.ConditionKind,
+	conditions *ast.Conditions,
+) []ast.Statement {
+	desugaredConditions := make([]ast.Statement, 0)
+
+	if kind == ast.ConditionKindPre {
+		if d.inheritedFuncsWithConditions != nil {
+			inheritedFuncs := d.inheritedFuncsWithConditions[funcName]
+			for _, inheritedFunc := range inheritedFuncs {
+				inheritedPreConditions := inheritedFunc.FunctionBlock.PreConditions
+				if inheritedPreConditions == nil {
+					continue
+				}
+				for _, condition := range inheritedPreConditions.Conditions {
+					desugaredCondition := d.desugarCondition(condition)
+					desugaredConditions = append(desugaredConditions, desugaredCondition)
+				}
+			}
+		}
 	}
 
-	desugaredConditions := make([]ast.Statement, 0, len(conditions.Conditions))
+	if conditions != nil {
+		conditionsList := conditions.Conditions
 
-	for _, condition := range conditions.Conditions {
-		desugaredCondition := d.desugarCondition(condition)
-		desugaredConditions = append(desugaredConditions, desugaredCondition)
+		if kind == ast.ConditionKindPost {
+			postConditionsRewrite := d.elaboration.PostConditionsRewrite(conditions)
+			conditionsList = postConditionsRewrite.RewrittenPostConditions
+		}
+
+		for _, condition := range conditionsList {
+			desugaredCondition := d.desugarCondition(condition)
+			desugaredConditions = append(desugaredConditions, desugaredCondition)
+		}
+	}
+
+	if kind == ast.ConditionKindPost {
+		if d.inheritedFuncsWithConditions != nil {
+			inheritedFuncs, ok := d.inheritedFuncsWithConditions[funcName]
+			if ok && len(inheritedFuncs) > 0 {
+				// Must be added in reverse order.
+				for i := len(inheritedFuncs) - 1; i >= 0; i-- {
+					inheritedFunc := inheritedFuncs[i]
+					inheritedPostConditions := inheritedFunc.FunctionBlock.PostConditions
+					if inheritedPostConditions == nil {
+						continue
+					}
+
+					// TODO: This is wrong. Inherited post-conditions could be from a different program/elaboration.
+					//  Looking it up in the current elaboration is wrong.
+					postConditionsRewrite := d.elaboration.PostConditionsRewrite(inheritedPostConditions)
+					postConditions := postConditionsRewrite.RewrittenPostConditions
+
+					for _, condition := range postConditions {
+						desugaredCondition := d.desugarCondition(condition)
+						desugaredConditions = append(desugaredConditions, desugaredCondition)
+					}
+				}
+			}
+		}
 	}
 
 	return desugaredConditions
@@ -295,7 +359,15 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 	existingMembers := declaration.Members.Declarations()
 	existingMemberCount := len(existingMembers)
 
+	compositeType := d.elaboration.CompositeDeclarationType(declaration)
+
 	// Recursively de-sugar nested declarations (functions, types, etc.)
+
+	prevInheritedFuncs := d.inheritedFuncsWithConditions
+	d.inheritedFuncsWithConditions = d.inheritedFunctionsWithConditions(compositeType)
+	defer func() {
+		d.inheritedFuncsWithConditions = prevInheritedFuncs
+	}()
 
 	desugaredMembers := make([]ast.Declaration, 0, existingMemberCount)
 	membersDesugared := false
@@ -308,8 +380,7 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 
 	// Copy over inherited default functions.
 
-	compositeType := d.elaboration.CompositeDeclarationType(declaration)
-	inheritedDefaultFuncs := d.copyInheritedFunctions(compositeType)
+	inheritedDefaultFuncs := d.copyInheritedDefaultFunctions(compositeType)
 
 	// Optimization: If none of the existing members got updated or,
 	// if there are no inherited members, then return the same declaration as-is.
@@ -339,7 +410,37 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 	return modifiedDecl
 }
 
-func (d *Desugar) copyInheritedFunctions(compositeType *sema.CompositeType) []ast.Declaration {
+func (d *Desugar) inheritedFunctionsWithConditions(compositeType *sema.CompositeType) map[string][]*ast.FunctionDeclaration {
+	inheritedFunctions := make(map[string][]*ast.FunctionDeclaration)
+
+	for _, conformance := range compositeType.EffectiveInterfaceConformances() {
+		interfaceType := conformance.InterfaceType
+
+		// TODO: Merge this elaboration with the current elaboration (d.elaboration).
+		//   Because the inherited functions need their corresponding elaboration
+		//   for code generation.
+		elaboration, err := d.config.ElaborationResolver(interfaceType.Location)
+		if err != nil {
+			panic(err)
+		}
+
+		interfaceDecl := elaboration.InterfaceTypeDeclaration(interfaceType)
+		functions := interfaceDecl.Members.FunctionsByIdentifier()
+
+		for name, functionDecl := range functions {
+			if !functionDecl.FunctionBlock.HasConditions() {
+				continue
+			}
+			funcs := inheritedFunctions[name]
+			funcs = append(funcs, functionDecl)
+			inheritedFunctions[name] = funcs
+		}
+	}
+
+	return inheritedFunctions
+}
+
+func (d *Desugar) copyInheritedDefaultFunctions(compositeType *sema.CompositeType) []ast.Declaration {
 	directMembers := compositeType.Members
 	allMembers := compositeType.GetMembers()
 
@@ -364,6 +465,9 @@ func (d *Desugar) copyInheritedFunctions(compositeType *sema.CompositeType) []as
 		// Inherited functions are always from interfaces
 		interfaceType := member.ContainerType.(*sema.InterfaceType)
 
+		// TODO: Merge this elaboration with the current elaboration (d.elaboration).
+		//   Because the inherited functions need their corresponding elaboration
+		//   for code generation.
 		elaboration, err := d.config.ElaborationResolver(interfaceType.Location)
 		if err != nil {
 			panic(err)

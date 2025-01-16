@@ -112,6 +112,11 @@ func newCompiler[E any](
 	}
 }
 
+func (c *Compiler[E]) WithConfig(config *Config) *Compiler[E] {
+	c.Config = config
+	return c
+}
+
 func (c *Compiler[_]) findGlobal(name string) *global {
 	global, ok := c.globals[name]
 	if ok {
