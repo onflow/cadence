@@ -7412,6 +7412,21 @@ func (Int64Value) ChildStorables() []atree.Storable {
 	return nil
 }
 
+// toTwosComplement sets `res` to the two's complement representation of a big.Int `x` in the given target bit size.
+// `res` is returned and is awlways a positive big.Int.
+func toTwosComplement(res, x *big.Int, targetBitSize uint) *big.Int {
+	bytes := SignedBigIntToSizedBigEndianBytes(x, targetBitSize/8)
+	return res.SetBytes(bytes)
+}
+
+// toTwosComplement converts `res` to the big.Int representation from the two's complement format of a
+// signed integer.
+// `res` is returned and can be positive or negative.
+func fromTwosComplement(res *big.Int) *big.Int {
+	bytes := res.Bytes()
+	return BigEndianBytesToSignedBigInt(bytes)
+}
+
 // truncate trims a big.Int to maxWords by directly modifying its underlying representation.
 func truncate(x *big.Int, maxWords int) *big.Int {
 	// Get the absolute value of x as a nat slice.
@@ -8065,8 +8080,10 @@ func (v Int128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 
 	valueGetter := func() *big.Int {
 		res := new(big.Int)
-		res = res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-		return truncate(res, 128/bits.UintSize)
+		res = toTwosComplement(res, v.BigInt, 128)
+		res = res.Lsh(res, uint(o.BigInt.Uint64()))
+		res = truncate(res, 128/bits.UintSize)
+		return fromTwosComplement(res)
 	}
 
 	return NewInt128ValueFromBigInt(interpreter, valueGetter)
@@ -8809,8 +8826,10 @@ func (v Int256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 
 	valueGetter := func() *big.Int {
 		res := new(big.Int)
-		res = res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-		return truncate(res, 256/bits.UintSize)
+		res = toTwosComplement(res, v.BigInt, 256)
+		res = res.Lsh(res, uint(o.BigInt.Uint64()))
+		res = truncate(res, 256/bits.UintSize)
+		return fromTwosComplement(res)
 	}
 
 	return NewInt256ValueFromBigInt(interpreter, valueGetter)
