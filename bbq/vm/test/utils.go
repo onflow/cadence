@@ -495,7 +495,7 @@ func compileAndInvoke(t testing.TB, code string, funcName string) (vm.Value, err
 	)
 
 	result, err := programVM.Invoke(funcName)
-	if err != nil {
+	if err == nil {
 		require.Equal(t, 0, programVM.StackSize())
 	}
 
