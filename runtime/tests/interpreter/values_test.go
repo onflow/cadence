@@ -403,6 +403,11 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 			orgOwner,
 		)
 
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
+
 		resetStorage()
 
 		dictionary = readDictionary(
@@ -418,6 +423,11 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 			expectedValue,
 			orgOwner,
 		)
+
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
 	})
 
 	t.Run("iterate", func(t *testing.T) {
@@ -446,6 +456,11 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 			expectedValue,
 		)
 
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
+
 		resetStorage()
 
 		dictionary = readDictionary(
@@ -468,6 +483,11 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 			dictionary,
 			expectedValue,
 		)
+
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
 	})
 
 	t.Run("move (transfer and deep remove)", func(t *testing.T) {
@@ -594,6 +614,11 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 			newOwner,
 		)
 
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
+
 		// TODO: check deep removal cleaned up everything in original account (storage size, slab count)
 	})
 
@@ -713,6 +738,11 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 			expectedValue,
 			orgOwner,
 		)
+
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
 	})
 
 	t.Run("remove", func(t *testing.T) {
@@ -805,6 +835,11 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 			expectedValue,
 			orgOwner,
 		)
+
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
 
 		// TODO: check storage size, slab count
 	})
@@ -913,6 +948,11 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 			expectedValue,
 			orgOwner,
 		)
+
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
 
 		// TODO: check storage size, slab count
 	})
@@ -1064,6 +1104,11 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 			orgOwner,
 		)
 
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
+
 		resetStorage()
 
 		composite = readComposite(
@@ -1079,6 +1124,11 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 			expectedValue,
 			orgOwner,
 		)
+
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
 
 	})
 
@@ -1206,6 +1256,11 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 			newOwner,
 		)
 
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
+
 		// TODO: check deep removal cleaned up everything in original account (storage size, slab count)
 	})
 
@@ -1313,6 +1368,11 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 			expectedValue,
 			orgOwner,
 		)
+
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
 
 		// TODO: check storage size, slab count
 	})
@@ -1483,6 +1543,11 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 			orgOwner,
 		)
 
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
+
 		resetStorage()
 
 		array = readArray(
@@ -1498,6 +1563,11 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 			expectedValue,
 			orgOwner,
 		)
+
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
 	})
 
 	t.Run("iterate", func(t *testing.T) {
@@ -1526,6 +1596,11 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 			expectedValue,
 		)
 
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
+
 		resetStorage()
 
 		array = readArray(
@@ -1548,6 +1623,12 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 			array,
 			expectedValue,
 		)
+
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
+
 	})
 
 	t.Run("move (transfer and deep remove)", func(t *testing.T) {
@@ -1674,6 +1755,11 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 			newOwner,
 		)
 
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
+
 		// TODO: check deep removal cleaned up everything in original account (storage size, slab count)
 	})
 
@@ -1756,6 +1842,11 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 			orgOwner,
 		)
 
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
+
 		resetStorage()
 
 		array = readArray(
@@ -1771,6 +1862,12 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 			expectedValue,
 			orgOwner,
 		)
+
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
+
 	})
 
 	t.Run("remove", func(t *testing.T) {
@@ -1862,6 +1959,11 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 			expectedValue,
 			orgOwner,
 		)
+
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
 
 		// TODO: check storage size, slab count
 	})
@@ -1956,6 +2058,11 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 			expectedValue,
 			orgOwner,
 		)
+
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
 
 		// TODO: check storage size, slab count
 	})
