@@ -255,11 +255,194 @@ func TestInterpretBitwiseRightShift(t *testing.T) {
 	}
 }
 
+func TestInterpretBitwiseLeftShift8(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("Int8 << 9 (zero result)", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t,
+			`
+			let a: Int8 = 0x7f
+			let b: Int8 = 9
+			let c = a << b
+		  	`,
+		)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredInt8Value(0),
+			inter.Globals.Get("c").GetValue(inter),
+		)
+	})
+
+	t.Run("Int8 << 1 (positive to positive)", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t,
+			`
+				let a: Int8 = 5
+				let b: Int8 = 1
+				let c = a << b
+			  	`,
+		)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredInt8Value(10),
+			inter.Globals.Get("c").GetValue(inter),
+		)
+	})
+
+	t.Run("Int8 << 1 (negative to negative)", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t,
+			`
+				let a: Int8 = -5  // 0b1111_1011
+				let b: Int8 = 1
+				let c = a << b    // 0b1111_0110  --> -10
+				`,
+		)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredInt8Value(-10),
+			inter.Globals.Get("c").GetValue(inter),
+		)
+	})
+
+	t.Run("Int8 << 1 (positive to negative)", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t,
+			`
+				let a: Int8 = 5  // 0b0000_0101
+				let b: Int8 = 7
+				let c = a << b    // 0b1000_0000  --> -128
+				`,
+		)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredInt8Value(-128),
+			inter.Globals.Get("c").GetValue(inter),
+		)
+	})
+
+	t.Run("Int8 << 1 (negative to positive)", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t,
+			`
+					let a: Int8 = -5  // 0b1111_1011
+					let b: Int8 = 5
+					let c = a << b    // 0b0110_0000  --> 96 
+						`,
+		)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredInt8Value(0x60), // or 96
+			inter.Globals.Get("c").GetValue(inter),
+		)
+	})
+	t.Run("Int8 << -3", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t,
+			`
+			fun test() {
+				let a: Int8 = 0x7f
+				let b: Int8 = -3
+				let c = a << b
+				}
+		   `)
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var shiftErr interpreter.NegativeShiftError
+		require.ErrorAs(t, err, &shiftErr)
+	})
+
+	t.Run("UInt8 << 9", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t,
+			`
+			    let a: UInt8 = 0x7f
+				let b: UInt8 = 9
+				let c = a << b
+				`,
+		)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredUInt8Value(0),
+			inter.Globals.Get("c").GetValue(inter),
+		)
+	})
+
+	t.Run("UInt8 << 1", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t,
+			`
+				let a: UInt8 = 0xff
+				let b: UInt8 = 1
+				let c = a << b
+				`,
+		)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredUInt8Value(0xfe),
+			inter.Globals.Get("c").GetValue(inter),
+		)
+	})
+
+	t.Run("Word8 << 9", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t,
+			`
+				let a: Word8 = 0xff
+				let b: Word8 = 9
+				let c = a << b
+				`,
+		)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredWord8Value(0),
+			inter.Globals.Get("c").GetValue(inter),
+		)
+	})
+
+	t.Run("Word8 << 1", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t,
+			`
+				let a: Word8 = 0xff
+				let b: Word8 = 1
+				let c = a << b
+				`,
+		)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredWord8Value(0xfe),
+			inter.Globals.Get("c").GetValue(inter),
+		)
+	})
+}
+
 func TestInterpretBitwiseLeftShift128(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("Int128 << 130", func(t *testing.T) {
+	t.Run("Int128 << 130 (zero result)", func(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t,
 			`
@@ -277,17 +460,73 @@ func TestInterpretBitwiseLeftShift128(t *testing.T) {
 		)
 	})
 
-	t.Run("Int128 << 32", func(t *testing.T) {
+	t.Run("Int128 << 1 (positive to positive)", func(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t,
 			`
-			let a: Int128 = 0x7fff_ffff_ffff_ffff_ffff_ffff_ffff_ffff
-			let b: Int128 = 32
+			let a: Int128 = 5
+			let b: Int128 = 1
 			let c = a << b
-		  	`,
+			`,
 		)
 
-		bigInt, _ := big.NewInt(0).SetString("0xffff_ffff_ffff_ffff_ffff_ffff_0000_0000", 0)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredInt128ValueFromInt64(10),
+			inter.Globals.Get("c").GetValue(inter),
+		)
+	})
+
+	t.Run("Int128 << 1 (negative to negative)", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t,
+			`
+				let a: Int128 = -5
+				let b: Int128 = 1
+				let c = a << b
+					`,
+		)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredInt128ValueFromInt64(-10),
+			inter.Globals.Get("c").GetValue(inter),
+		)
+	})
+
+	t.Run("Int128 << 127 (positive to negative)", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t,
+			`
+				let a: Int128 = 5 		// 0b0000_0101
+				let b: Int128 = 127
+				let c = a << b			// 0b1000_0000_..._0000  --> -2^127
+			  	`,
+		)
+
+		bigInt, _ := big.NewInt(0).SetString("-0x80000000_00000000_00000000_00000000", 0)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredInt128ValueFromBigInt(bigInt),
+			inter.Globals.Get("c").GetValue(inter),
+		)
+	})
+
+	t.Run("Int128 << 125 (negative to positive)", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t,
+			`
+				let a: Int128 = -5 // 0b1111_1111_..._1111_1011
+				let b: Int128 = 125
+				let c = a << b    // 0b0110_0000_..._0000
+			  	`,
+		)
+
+		bigInt, _ := big.NewInt(0).SetString("0x60000000_00000000_00000000_00000000", 0)
 
 		AssertValuesEqual(
 			t,
@@ -395,7 +634,7 @@ func TestInterpretBitwiseLeftShift256(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("Int256 << 260", func(t *testing.T) {
+	t.Run("Int256 << 260 (zero result)", func(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t,
 			`
@@ -413,17 +652,73 @@ func TestInterpretBitwiseLeftShift256(t *testing.T) {
 		)
 	})
 
-	t.Run("Int256 << 32", func(t *testing.T) {
+	t.Run("Int256 << 1 (positive to positive)", func(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t,
 			`
-			let a: Int256 = 0x7fff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff
-			let b: Int256 = 32
-			let c = a << b
-		  	`,
+				let a: Int256 = 5
+				let b: Int256 = 1
+				let c = a << b
+				`,
 		)
 
-		bigInt, _ := big.NewInt(0).SetString("0xffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff_0000_0000", 0)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredInt256ValueFromInt64(10),
+			inter.Globals.Get("c").GetValue(inter),
+		)
+	})
+
+	t.Run("Int256 << 1 (negative to negative)", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t,
+			`
+					let a: Int256 = -5
+					let b: Int256 = 1
+					let c = a << b
+						`,
+		)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredInt256ValueFromInt64(-10),
+			inter.Globals.Get("c").GetValue(inter),
+		)
+	})
+
+	t.Run("Int256 << 255 (positive to negative)", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t,
+			`
+					let a: Int256 = 5 		// 0b0000_0101
+					let b: Int256 = 255
+					let c = a << b			// 0b1000_0000_..._0000  --> -2^127
+				  	`,
+		)
+
+		bigInt, _ := big.NewInt(0).SetString("-0x80000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000", 0)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredInt256ValueFromBigInt(bigInt),
+			inter.Globals.Get("c").GetValue(inter),
+		)
+	})
+
+	t.Run("Int256 << 253 (negative to positive)", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t,
+			`
+					let a: Int256 = -5 // 0b1111_1111_..._1111_1011
+					let b: Int256 = 253
+					let c = a << b    // 0b0110_0000_..._0000
+				  	`,
+		)
+
+		bigInt, _ := big.NewInt(0).SetString("0x60000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000", 0)
 
 		AssertValuesEqual(
 			t,
