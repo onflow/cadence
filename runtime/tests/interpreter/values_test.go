@@ -934,6 +934,44 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 
 	const compositeStorageMapKey = interpreter.StringStorageMapKey("composite")
 
+	writeComposite := func(
+		inter *interpreter.Interpreter,
+		owner common.Address,
+		storageMapKey interpreter.StorageMapKey,
+		composite *interpreter.CompositeValue,
+	) {
+		inter.Storage().
+			GetStorageMap(
+				owner,
+				common.PathDomainStorage.Identifier(),
+				true,
+			).
+			WriteValue(
+				inter,
+				storageMapKey,
+				composite,
+			)
+	}
+
+	readComposite := func(
+		inter *interpreter.Interpreter,
+		owner common.Address,
+		storageMapKey interpreter.StorageMapKey,
+	) *interpreter.CompositeValue {
+		storageMap := inter.Storage().GetStorageMap(
+			owner,
+			common.PathDomainStorage.Identifier(),
+			false,
+		)
+		require.NotNil(t, storageMap)
+
+		readValue := storageMap.ReadValue(inter, storageMapKey)
+		require.NotNil(t, readValue)
+
+		require.IsType(t, &interpreter.CompositeValue{}, readValue)
+		return readValue.(*interpreter.CompositeValue)
+	}
+
 	createComposite := func(
 		t *testing.T,
 		r *randomValueGenerator,
@@ -941,7 +979,6 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 	) (
 		*interpreter.CompositeValue,
 		cadence.Struct,
-		func() *interpreter.CompositeValue,
 	) {
 		expectedValue := r.randomStructValue(inter, 0)
 
@@ -980,34 +1017,14 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 		// Store the composite in a storage map, so that the composite's slab
 		// is referenced by the root of the storage.
 
-		inter.Storage().
-			GetStorageMap(
-				orgOwner,
-				common.PathDomainStorage.Identifier(),
-				true,
-			).
-			WriteValue(
-				inter,
-				compositeStorageMapKey,
-				composite,
-			)
+		writeComposite(
+			inter,
+			orgOwner,
+			compositeStorageMapKey,
+			composite,
+		)
 
-		reloadComposite := func() *interpreter.CompositeValue {
-			storageMap := inter.Storage().GetStorageMap(
-				orgOwner,
-				common.PathDomainStorage.Identifier(),
-				false,
-			)
-			require.NotNil(t, storageMap)
-
-			readValue := storageMap.ReadValue(inter, compositeStorageMapKey)
-			require.NotNil(t, readValue)
-
-			require.IsType(t, &interpreter.CompositeValue{}, readValue)
-			return readValue.(*interpreter.CompositeValue)
-		}
-
-		return composite, expectedValue, reloadComposite
+		return composite, expectedValue
 	}
 
 	checkComposite := func(
@@ -1033,31 +1050,6 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 		assert.Equal(t, expectedOwner, owner)
 	}
 
-	doubleCheckComposite := func(
-		t *testing.T,
-		inter *interpreter.Interpreter,
-		resetStorage func(),
-		composite *interpreter.CompositeValue,
-		expectedValue cadence.Struct,
-		expectedOwner common.Address,
-	) {
-		// Check the values of the composite.
-		// Once right away, and once after a reset (commit and reload) of the storage.
-
-		for i := 0; i < 2; i++ {
-
-			checkComposite(
-				t,
-				inter,
-				composite,
-				expectedValue,
-				expectedOwner,
-			)
-
-			resetStorage()
-		}
-	}
-
 	t.Run("construction", func(t *testing.T) {
 
 		t.Parallel()
@@ -1067,16 +1059,32 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		composite, expectedValue, _ := createComposite(t, &r, inter)
+		composite, expectedValue := createComposite(t, &r, inter)
 
-		doubleCheckComposite(
+		checkComposite(
 			t,
 			inter,
-			resetStorage,
 			composite,
 			expectedValue,
 			orgOwner,
 		)
+
+		resetStorage()
+
+		composite = readComposite(
+			inter,
+			orgOwner,
+			compositeStorageMapKey,
+		)
+
+		checkComposite(
+			t,
+			inter,
+			composite,
+			expectedValue,
+			orgOwner,
+		)
+
 	})
 
 	t.Run("move (transfer and deep remove)", func(t *testing.T) {
@@ -1088,9 +1096,31 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		original, expectedValue, _ := createComposite(t, &r, inter)
+		original, expectedValue := createComposite(t, &r, inter)
+
+		checkComposite(
+			t,
+			inter,
+			original,
+			expectedValue,
+			orgOwner,
+		)
 
 		resetStorage()
+
+		original = readComposite(
+			inter,
+			orgOwner,
+			compositeStorageMapKey,
+		)
+
+		checkComposite(
+			t,
+			inter,
+			original,
+			expectedValue,
+			orgOwner,
+		)
 
 		// Transfer the composite to a new owner
 
@@ -1103,58 +1133,57 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 			false,
 			nil,
 			nil,
-			// TODO: is has no parent container = true correct?
-			true,
+			false,
 		).(*interpreter.CompositeValue)
 
 		// Store the transferred composite in a storage map, so that the composite's slab
 		// is referenced by the root of the storage.
 
-		inter.Storage().
-			GetStorageMap(
-				newOwner,
-				common.PathDomainStorage.Identifier(),
-				true,
-			).
-			WriteValue(
-				inter,
-				interpreter.StringStorageMapKey("transferred_composite"),
-				transferred,
-			)
+		const transferredStorageMapKey = interpreter.StringStorageMapKey("transferred")
 
-		// Both original and transferred composite should contain the expected values
-		// Check once right away, and once after a reset (commit and reload) of the storage.
+		writeComposite(
+			inter,
+			newOwner,
+			transferredStorageMapKey,
+			transferred,
+		)
 
-		for i := 0; i < 2; i++ {
+		withoutAtreeStorageValidationEnabled(inter, func() struct{} {
+			inter.Storage().
+				GetStorageMap(orgOwner, common.PathDomainStorage.Identifier(), false).
+				RemoveValue(inter, compositeStorageMapKey)
 
-			checkComposite(
-				t,
-				inter,
-				original,
-				expectedValue,
-				orgOwner,
-			)
-
-			checkComposite(
-				t,
-				inter,
-				transferred,
-				expectedValue,
-				newOwner,
-			)
-
-			resetStorage()
-		}
-
-		// Deep remove the original composite
-
-		// TODO: is has no parent container = true correct?
-		original.DeepRemove(inter, true)
+			return struct{}{}
+		})
 
 		if !original.Inlined() {
 			err := inter.Storage().Remove(original.SlabID())
 			require.NoError(t, err)
 		}
+
+		checkComposite(
+			t,
+			inter,
+			transferred,
+			expectedValue,
+			newOwner,
+		)
+
+		resetStorage()
+
+		transferred = readComposite(
+			inter,
+			newOwner,
+			transferredStorageMapKey,
+		)
+
+		checkComposite(
+			t,
+			inter,
+			transferred,
+			expectedValue,
+			newOwner,
+		)
 
 		if *validateAtree {
 			err := inter.Storage().CheckHealth()
@@ -1163,10 +1192,25 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 
 		// New composite should still be accessible
 
-		doubleCheckComposite(
+		checkComposite(
 			t,
 			inter,
-			resetStorage,
+			transferred,
+			expectedValue,
+			newOwner,
+		)
+
+		resetStorage()
+
+		transferred = readComposite(
+			inter,
+			newOwner,
+			transferredStorageMapKey,
+		)
+
+		checkComposite(
+			t,
+			inter,
 			transferred,
 			expectedValue,
 			newOwner,
@@ -1183,21 +1227,31 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		composite, expectedValue, reloadComposite := createComposite(t, &r, inter)
+		composite, expectedValue := createComposite(t, &r, inter)
 
-		// Check composite and reset storage
-		doubleCheckComposite(
+		checkComposite(
 			t,
 			inter,
-			resetStorage,
 			composite,
 			expectedValue,
 			orgOwner,
 		)
 
-		// Reload the composite after the reset
+		resetStorage()
 
-		composite = reloadComposite()
+		composite = readComposite(
+			inter,
+			orgOwner,
+			compositeStorageMapKey,
+		)
+
+		checkComposite(
+			t,
+			inter,
+			composite,
+			expectedValue,
+			orgOwner,
+		)
 
 		typeID := expectedValue.StructType.Location.
 			TypeID(nil, expectedValue.StructType.QualifiedIdentifier)
@@ -1246,10 +1300,25 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 		// Composite must have same number of key-value pairs
 		require.Equal(t, typeFieldCount, composite.FieldCount())
 
-		doubleCheckComposite(
+		checkComposite(
 			t,
 			inter,
-			resetStorage,
+			composite,
+			expectedValue,
+			orgOwner,
+		)
+
+		resetStorage()
+
+		composite = readComposite(
+			inter,
+			orgOwner,
+			compositeStorageMapKey,
+		)
+
+		checkComposite(
+			t,
+			inter,
 			composite,
 			expectedValue,
 			orgOwner,
