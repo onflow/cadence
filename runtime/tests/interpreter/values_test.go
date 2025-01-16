@@ -50,7 +50,7 @@ var defaultRandomValueLimits = randomValueLimits{
 }
 
 var runSmokeTests = flag.Bool("runSmokeTests", false, "Run smoke tests on values")
-var validateAtree = flag.Bool("validateAtree", false, "Enable atree validation")
+var validateAtree = flag.Bool("validateAtree", true, "Enable atree validation")
 var smokeTestSeed = flag.Int64("smokeTestSeed", -1, "Seed for prng (-1 specifies current Unix time)")
 
 func newRandomValueTestInterpreter(t *testing.T) (inter *interpreter.Interpreter, resetStorage func()) {
