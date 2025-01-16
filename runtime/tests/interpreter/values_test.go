@@ -44,8 +44,8 @@ import (
 )
 
 var defaultRandomValueLimits = randomValueLimits{
-	containerMaxDepth:  3,
-	containerMaxSize:   50,
+	containerMaxDepth:  4,
+	containerMaxSize:   40,
 	compositeMaxFields: 10,
 }
 
