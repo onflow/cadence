@@ -1339,6 +1339,44 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 	const arrayStorageMapKey = interpreter.StringStorageMapKey("array")
 
+	writeArray := func(
+		inter *interpreter.Interpreter,
+		owner common.Address,
+		storageMapKey interpreter.StorageMapKey,
+		array *interpreter.ArrayValue,
+	) {
+		inter.Storage().
+			GetStorageMap(
+				owner,
+				common.PathDomainStorage.Identifier(),
+				true,
+			).
+			WriteValue(
+				inter,
+				storageMapKey,
+				array,
+			)
+	}
+
+	readArray := func(
+		inter *interpreter.Interpreter,
+		owner common.Address,
+		storageMapKey interpreter.StorageMapKey,
+	) *interpreter.ArrayValue {
+		storageMap := inter.Storage().GetStorageMap(
+			owner,
+			common.PathDomainStorage.Identifier(),
+			false,
+		)
+		require.NotNil(t, storageMap)
+
+		readValue := storageMap.ReadValue(inter, storageMapKey)
+		require.NotNil(t, readValue)
+
+		require.IsType(t, &interpreter.ArrayValue{}, readValue)
+		return readValue.(*interpreter.ArrayValue)
+	}
+
 	createArray := func(
 		t *testing.T,
 		r *randomValueGenerator,
@@ -1346,7 +1384,6 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 	) (
 		*interpreter.ArrayValue,
 		cadence.Array,
-		func() *interpreter.ArrayValue,
 	) {
 		expectedValue := r.randomArrayValue(inter, 0)
 
@@ -1378,34 +1415,14 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		// Store the array in a storage map, so that the array's slab
 		// is referenced by the root of the storage.
 
-		inter.Storage().
-			GetStorageMap(
-				orgOwner,
-				common.PathDomainStorage.Identifier(),
-				true,
-			).
-			WriteValue(
-				inter,
-				arrayStorageMapKey,
-				array,
-			)
+		writeArray(
+			inter,
+			orgOwner,
+			arrayStorageMapKey,
+			array,
+		)
 
-		reloadArray := func() *interpreter.ArrayValue {
-			storageMap := inter.Storage().GetStorageMap(
-				orgOwner,
-				common.PathDomainStorage.Identifier(),
-				false,
-			)
-			require.NotNil(t, storageMap)
-
-			readValue := storageMap.ReadValue(inter, arrayStorageMapKey)
-			require.NotNil(t, readValue)
-
-			require.IsType(t, &interpreter.ArrayValue{}, readValue)
-			return readValue.(*interpreter.ArrayValue)
-		}
-
-		return array, expectedValue, reloadArray
+		return array, expectedValue
 	}
 
 	checkArray := func(
@@ -1429,67 +1446,32 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		assert.Equal(t, expectedOwner, owner)
 	}
 
-	doubleCheckArray := func(
-		t *testing.T,
-		inter *interpreter.Interpreter,
-		resetStorage func(),
-		array *interpreter.ArrayValue,
-		expectedValue cadence.Array,
-		expectedOwner common.Address,
-	) {
-		// Check the values of the array.
-		// Once right away, and once after a reset (commit and reload) of the storage.
-
-		for i := 0; i < 2; i++ {
-
-			checkArray(
-				t,
-				inter,
-				array,
-				expectedValue,
-				expectedOwner,
-			)
-
-			resetStorage()
-		}
-	}
-
 	checkIteration := func(
 		t *testing.T,
 		inter *interpreter.Interpreter,
-		resetStorage func(),
 		array *interpreter.ArrayValue,
 		expectedValue cadence.Array,
 	) {
+		require.Equal(t, len(expectedValue.Values), array.Count())
 
-		// Iterate over the values of the created array.
-		// Once right after construction, and once after a reset (commit and reload) of the storage.
+		var iterations int
 
-		for i := 0; i < 2; i++ {
+		array.Iterate(
+			inter,
+			func(element interpreter.Value) (resume bool) {
+				value := importValue(t, inter, expectedValue.Values[iterations])
 
-			require.Equal(t, len(expectedValue.Values), array.Count())
+				utils.AssertValuesEqual(t, inter, value, element)
 
-			var iterations int
+				iterations += 1
 
-			array.Iterate(
-				inter,
-				func(element interpreter.Value) (resume bool) {
-					value := importValue(t, inter, expectedValue.Values[iterations])
+				return true
+			},
+			false,
+			interpreter.EmptyLocationRange,
+		)
 
-					utils.AssertValuesEqual(t, inter, value, element)
-
-					iterations += 1
-
-					return true
-				},
-				false,
-				interpreter.EmptyLocationRange,
-			)
-
-			assert.Equal(t, len(expectedValue.Values), iterations)
-
-			resetStorage()
-		}
+		assert.Equal(t, len(expectedValue.Values), iterations)
 	}
 
 	t.Run("construction", func(t *testing.T) {
@@ -1501,12 +1483,27 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		array, expectedValue, _ := createArray(t, &r, inter)
+		array, expectedValue := createArray(t, &r, inter)
 
-		doubleCheckArray(
+		checkArray(
 			t,
 			inter,
-			resetStorage,
+			array,
+			expectedValue,
+			orgOwner,
+		)
+
+		resetStorage()
+
+		array = readArray(
+			inter,
+			orgOwner,
+			arrayStorageMapKey,
+		)
+
+		checkArray(
+			t,
+			inter,
 			array,
 			expectedValue,
 			orgOwner,
@@ -1522,12 +1519,42 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		array, expectedValue, _ := createArray(t, &r, inter)
+		array, expectedValue := createArray(t, &r, inter)
+
+		checkArray(
+			t,
+			inter,
+			array,
+			expectedValue,
+			orgOwner,
+		)
 
 		checkIteration(
 			t,
 			inter,
-			resetStorage,
+			array,
+			expectedValue,
+		)
+
+		resetStorage()
+
+		array = readArray(
+			inter,
+			orgOwner,
+			arrayStorageMapKey,
+		)
+
+		checkArray(
+			t,
+			inter,
+			array,
+			expectedValue,
+			orgOwner,
+		)
+
+		checkIteration(
+			t,
+			inter,
 			array,
 			expectedValue,
 		)
@@ -1542,9 +1569,31 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		original, expectedValue, _ := createArray(t, &r, inter)
+		original, expectedValue := createArray(t, &r, inter)
+
+		checkArray(
+			t,
+			inter,
+			original,
+			expectedValue,
+			orgOwner,
+		)
 
 		resetStorage()
+
+		original = readArray(
+			inter,
+			orgOwner,
+			arrayStorageMapKey,
+		)
+
+		checkArray(
+			t,
+			inter,
+			original,
+			expectedValue,
+			orgOwner,
+		)
 
 		// Transfer the array to a new owner
 
@@ -1557,58 +1606,57 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 			false,
 			nil,
 			nil,
-			// TODO: is has no parent container = true correct?
-			true,
+			false,
 		).(*interpreter.ArrayValue)
 
 		// Store the transferred array in a storage map, so that the array's slab
 		// is referenced by the root of the storage.
 
-		inter.Storage().
-			GetStorageMap(
-				newOwner,
-				common.PathDomainStorage.Identifier(),
-				true,
-			).
-			WriteValue(
-				inter,
-				interpreter.StringStorageMapKey("transferred_array"),
-				transferred,
-			)
+		const transferredStorageMapKey = interpreter.StringStorageMapKey("transferred")
 
-		// Both original and transferred array should contain the expected values
-		// Check once right away, and once after a reset (commit and reload) of the storage.
+		writeArray(
+			inter,
+			newOwner,
+			transferredStorageMapKey,
+			transferred,
+		)
 
-		for i := 0; i < 2; i++ {
+		withoutAtreeStorageValidationEnabled(inter, func() struct{} {
+			inter.Storage().
+				GetStorageMap(orgOwner, common.PathDomainStorage.Identifier(), false).
+				RemoveValue(inter, arrayStorageMapKey)
 
-			checkArray(
-				t,
-				inter,
-				original,
-				expectedValue,
-				orgOwner,
-			)
-
-			checkArray(
-				t,
-				inter,
-				transferred,
-				expectedValue,
-				newOwner,
-			)
-
-			resetStorage()
-		}
-
-		// Deep remove the original array
-
-		// TODO: is has no parent container = true correct?
-		original.DeepRemove(inter, true)
+			return struct{}{}
+		})
 
 		if !original.Inlined() {
 			err := inter.Storage().Remove(original.SlabID())
 			require.NoError(t, err)
 		}
+
+		checkArray(
+			t,
+			inter,
+			transferred,
+			expectedValue,
+			newOwner,
+		)
+
+		resetStorage()
+
+		transferred = readArray(
+			inter,
+			newOwner,
+			transferredStorageMapKey,
+		)
+
+		checkArray(
+			t,
+			inter,
+			transferred,
+			expectedValue,
+			newOwner,
+		)
 
 		if *validateAtree {
 			err := inter.Storage().CheckHealth()
@@ -1617,10 +1665,25 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 		// New array should still be accessible
 
-		doubleCheckArray(
+		checkArray(
 			t,
 			inter,
-			resetStorage,
+			transferred,
+			expectedValue,
+			newOwner,
+		)
+
+		resetStorage()
+
+		transferred = readArray(
+			inter,
+			newOwner,
+			transferredStorageMapKey,
+		)
+
+		checkArray(
+			t,
+			inter,
 			transferred,
 			expectedValue,
 			newOwner,
@@ -1637,21 +1700,31 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		array, expectedValue, reloadArray := createArray(t, &r, inter)
+		array, expectedValue := createArray(t, &r, inter)
 
-		// Check array and reset storage
-		doubleCheckArray(
+		checkArray(
 			t,
 			inter,
-			resetStorage,
 			array,
 			expectedValue,
 			orgOwner,
 		)
 
-		// Reload the array after the reset
+		resetStorage()
 
-		array = reloadArray()
+		array = readArray(
+			inter,
+			orgOwner,
+			arrayStorageMapKey,
+		)
+
+		checkArray(
+			t,
+			inter,
+			array,
+			expectedValue,
+			orgOwner,
+		)
 
 		existingValueCount := len(expectedValue.Values)
 
@@ -1690,15 +1763,25 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 			})
 		}
 
-		if *validateAtree {
-			err := inter.Storage().CheckHealth()
-			require.NoError(t, err)
-		}
-
-		doubleCheckArray(
+		checkArray(
 			t,
 			inter,
-			resetStorage,
+			array,
+			expectedValue,
+			orgOwner,
+		)
+
+		resetStorage()
+
+		array = readArray(
+			inter,
+			orgOwner,
+			arrayStorageMapKey,
+		)
+
+		checkArray(
+			t,
+			inter,
 			array,
 			expectedValue,
 			orgOwner,
@@ -1713,21 +1796,31 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		array, expectedValue, reloadArray := createArray(t, &r, inter)
+		array, expectedValue := createArray(t, &r, inter)
 
-		// Check array and reset storage
-		doubleCheckArray(
+		checkArray(
 			t,
 			inter,
-			resetStorage,
 			array,
 			expectedValue,
 			orgOwner,
 		)
 
-		// Reload the array after the reset
+		resetStorage()
 
-		array = reloadArray()
+		array = readArray(
+			inter,
+			orgOwner,
+			arrayStorageMapKey,
+		)
+
+		checkArray(
+			t,
+			inter,
+			array,
+			expectedValue,
+			orgOwner,
+		)
 
 		// Random remove
 		numberOfValues := len(expectedValue.Values)
@@ -1761,10 +1854,25 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		// Array must be empty
 		require.Equal(t, 0, array.Count())
 
-		doubleCheckArray(
+		checkArray(
 			t,
 			inter,
-			resetStorage,
+			array,
+			expectedValue,
+			orgOwner,
+		)
+
+		resetStorage()
+
+		array = readArray(
+			inter,
+			orgOwner,
+			arrayStorageMapKey,
+		)
+
+		checkArray(
+			t,
+			inter,
 			array,
 			expectedValue,
 			orgOwner,
@@ -1781,21 +1889,31 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 		inter, resetStorage := newRandomValueTestInterpreter(t)
 
-		array, expectedValue, reloadArray := createArray(t, &r, inter)
+		array, expectedValue := createArray(t, &r, inter)
 
-		// Check array and reset storage
-		doubleCheckArray(
+		checkArray(
 			t,
 			inter,
-			resetStorage,
 			array,
 			expectedValue,
 			orgOwner,
 		)
 
-		// Reload the array after the reset
+		resetStorage()
 
-		array = reloadArray()
+		array = readArray(
+			inter,
+			orgOwner,
+			arrayStorageMapKey,
+		)
+
+		checkArray(
+			t,
+			inter,
+			array,
+			expectedValue,
+			orgOwner,
+		)
 
 		elementCount := array.Count()
 
@@ -1830,10 +1948,25 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		// Array must have same number of elements
 		require.Equal(t, elementCount, array.Count())
 
-		doubleCheckArray(
+		checkArray(
 			t,
 			inter,
-			resetStorage,
+			array,
+			expectedValue,
+			orgOwner,
+		)
+
+		resetStorage()
+
+		array = readArray(
+			inter,
+			orgOwner,
+			arrayStorageMapKey,
+		)
+
+		checkArray(
+			t,
+			inter,
 			array,
 			expectedValue,
 			orgOwner,
