@@ -539,11 +539,6 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 			return struct{}{}
 		})
 
-		if !original.Inlined() {
-			err := inter.Storage().Remove(original.SlabID())
-			require.NoError(t, err)
-		}
-
 		checkDictionary(
 			t,
 			inter,
@@ -1156,11 +1151,6 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 			return struct{}{}
 		})
 
-		if !original.Inlined() {
-			err := inter.Storage().Remove(original.SlabID())
-			require.NoError(t, err)
-		}
-
 		checkComposite(
 			t,
 			inter,
@@ -1628,11 +1618,6 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 			return struct{}{}
 		})
-
-		if !original.Inlined() {
-			err := inter.Storage().Remove(original.SlabID())
-			require.NoError(t, err)
-		}
 
 		checkArray(
 			t,
