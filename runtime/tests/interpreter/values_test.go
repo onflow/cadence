@@ -257,6 +257,23 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 		return readValue.(*interpreter.DictionaryValue)
 	}
 
+	removeDictionary := func(
+		inter *interpreter.Interpreter,
+		owner common.Address,
+		storageMapKey interpreter.StorageMapKey,
+	) {
+		inter.Storage().
+			GetStorageMap(
+				owner,
+				common.PathDomainStorage.Identifier(),
+				false,
+			).
+			RemoveValue(
+				inter,
+				storageMapKey,
+			)
+	}
+
 	createDictionary := func(
 		t *testing.T,
 		r *randomValueGenerator,
@@ -265,6 +282,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 		*interpreter.DictionaryValue,
 		cadence.Dictionary,
 	) {
+
 		expectedValue := r.randomDictionaryValue(inter, 0)
 
 		keyValues := make([]interpreter.Value, 2*len(expectedValue.Pairs))
@@ -552,9 +570,12 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 		)
 
 		withoutAtreeStorageValidationEnabled(inter, func() struct{} {
-			inter.Storage().
-				GetStorageMap(orgOwner, common.PathDomainStorage.Identifier(), false).
-				RemoveValue(inter, dictionaryStorageMapKey)
+
+			removeDictionary(
+				inter,
+				orgOwner,
+				dictionaryStorageMapKey,
+			)
 
 			return struct{}{}
 		})
@@ -962,6 +983,23 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 			)
 	}
 
+	removeComposite := func(
+		inter *interpreter.Interpreter,
+		owner common.Address,
+		storageMapKey interpreter.StorageMapKey,
+	) {
+		inter.Storage().
+			GetStorageMap(
+				owner,
+				common.PathDomainStorage.Identifier(),
+				true,
+			).
+			RemoveValue(
+				inter,
+				storageMapKey,
+			)
+	}
+
 	readComposite := func(
 		inter *interpreter.Interpreter,
 		owner common.Address,
@@ -1168,9 +1206,11 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 		)
 
 		withoutAtreeStorageValidationEnabled(inter, func() struct{} {
-			inter.Storage().
-				GetStorageMap(orgOwner, common.PathDomainStorage.Identifier(), false).
-				RemoveValue(inter, compositeStorageMapKey)
+			removeComposite(
+				inter,
+				orgOwner,
+				compositeStorageMapKey,
+			)
 
 			return struct{}{}
 		})
@@ -1353,6 +1393,23 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 				inter,
 				storageMapKey,
 				array,
+			)
+	}
+
+	removeArray := func(
+		inter *interpreter.Interpreter,
+		owner common.Address,
+		storageMapKey interpreter.StorageMapKey,
+	) {
+		inter.Storage().
+			GetStorageMap(
+				owner,
+				common.PathDomainStorage.Identifier(),
+				true,
+			).
+			RemoveValue(
+				inter,
+				storageMapKey,
 			)
 	}
 
@@ -1641,9 +1698,12 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		)
 
 		withoutAtreeStorageValidationEnabled(inter, func() struct{} {
-			inter.Storage().
-				GetStorageMap(orgOwner, common.PathDomainStorage.Identifier(), false).
-				RemoveValue(inter, arrayStorageMapKey)
+
+			removeArray(
+				inter,
+				orgOwner,
+				arrayStorageMapKey,
+			)
 
 			return struct{}{}
 		})
