@@ -2034,8 +2034,6 @@ func TestResource(t *testing.T) {
 		comp := compiler.NewInstructionCompiler(checker.Program, checker.Elaboration)
 		program := comp.Compile()
 
-		printProgram("", program)
-
 		vmConfig := &vm.Config{}
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
@@ -2224,7 +2222,6 @@ func TestDefaultFunctions(t *testing.T) {
 		)
 
 		fooProgram := compileCode(t, fooContract, fooLocation, programs)
-		printProgram("", fooProgram)
 
 		fooVM := vm.NewVM(fooLocation, fooProgram, vmConfig)
 

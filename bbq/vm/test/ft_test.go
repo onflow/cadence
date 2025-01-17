@@ -64,15 +64,13 @@ func TestFTTransfer(t *testing.T) {
 
 	ftLocation := common.NewAddressLocation(nil, contractsAddress, "FungibleToken")
 
-	ftContractProgram := compileCode(t, realFungibleTokenContractInterface, ftLocation, programs)
-	printProgram("FungibleToken", ftContractProgram)
+	compileCode(t, realFungibleTokenContractInterface, ftLocation, programs)
 
 	// ----- Deploy FlowToken Contract -----
 
 	flowTokenLocation := common.NewAddressLocation(nil, contractsAddress, "FlowToken")
 
 	flowTokenProgram := compileCode(t, realFlowContract, flowTokenLocation, programs)
-	printProgram("FlowToken", flowTokenProgram)
 
 	config := &vm.Config{
 		Storage:        storage,
@@ -136,7 +134,6 @@ func TestFTTransfer(t *testing.T) {
 	// Mint FLOW to sender
 
 	program := compileCode(t, realMintFlowTokenTransaction, nil, programs)
-	printProgram("Setup FlowToken Tx", program)
 
 	mintTxVM := vm.NewVM(txLocation(), program, vmConfig)
 
@@ -155,7 +152,6 @@ func TestFTTransfer(t *testing.T) {
 	// ----- Run token transfer transaction -----
 
 	tokenTransferTxProgram := compileCode(t, realFlowTokenTransferTransaction, nil, programs)
-	printProgram("FT Transfer Tx", tokenTransferTxProgram)
 
 	tokenTransferTxVM := vm.NewVM(txLocation(), tokenTransferTxProgram, vmConfig)
 
