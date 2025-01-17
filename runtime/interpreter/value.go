@@ -263,6 +263,13 @@ type ValueIterator interface {
 	Next(interpreter *Interpreter, locationRange LocationRange) Value
 }
 
+// containerValue is an interface for values using atree containers
+// (atree.Array or atree.OrderedMap) under the hood.
+type containerValue interface {
+	Value
+	isContainerValue()
+}
+
 func safeAdd(a, b int, locationRange LocationRange) int {
 	// INT32-C
 	if (b > 0) && (a > (goMaxInt - b)) {
@@ -2290,8 +2297,11 @@ var _ ValueIndexableValue = &ArrayValue{}
 var _ MemberAccessibleValue = &ArrayValue{}
 var _ ReferenceTrackedResourceKindedValue = &ArrayValue{}
 var _ IterableValue = &ArrayValue{}
+var _ containerValue = &ArrayValue{}
 
 func (*ArrayValue) isValue() {}
+
+func (*ArrayValue) isContainerValue() {}
 
 func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
 	descend := visitor.VisitArrayValue(interpreter, v)
@@ -17450,8 +17460,11 @@ var _ ReferenceTrackedResourceKindedValue = &CompositeValue{}
 var _ ContractValue = &CompositeValue{}
 var _ atree.Value = &CompositeValue{}
 var _ atree.WrapperValue = &CompositeValue{}
+var _ containerValue = &CompositeValue{}
 
 func (*CompositeValue) isValue() {}
+
+func (*CompositeValue) isContainerValue() {}
 
 func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
 	descend := visitor.VisitCompositeValue(interpreter, v)
@@ -19439,8 +19452,11 @@ var _ EquatableValue = &DictionaryValue{}
 var _ ValueIndexableValue = &DictionaryValue{}
 var _ MemberAccessibleValue = &DictionaryValue{}
 var _ ReferenceTrackedResourceKindedValue = &DictionaryValue{}
+var _ containerValue = &DictionaryValue{}
 
 func (*DictionaryValue) isValue() {}
+
+func (*DictionaryValue) isContainerValue() {}
 
 func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
 	descend := visitor.VisitDictionaryValue(interpreter, v)
@@ -21182,9 +21198,18 @@ func (v *SomeValue) Storable(
 	// The above applies to both immutable non-SomeValue (such as StringValue),
 	// and mutable non-SomeValue (such as ArrayValue).
 
-	if v.valueStorable == nil {
+	// NOTE:
+	// - If SomeValue's inner value is a value with atree.Array or atree.OrderedMap,
+	//   we MUST NOT cache SomeStorable because we need to call nonSomeValue.Storable()
+	//   to trigger container inlining or un-inlining.
+	// - Otherwise, we need to cache SomeStorable because nonSomeValue.Storable() can
+	//   create registers in storage, such as large string.
 
-		nonSomeValue, nestedLevels := v.nonSomeValue()
+	nonSomeValue, nestedLevels := v.nonSomeValue()
+
+	_, isContainerValue := nonSomeValue.(containerValue)
+
+	if v.valueStorable == nil || isContainerValue {
 
 		someStorableEncodedPrefixSize := getSomeStorableEncodedPrefixSize(nestedLevels)
 
