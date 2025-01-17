@@ -2167,6 +2167,39 @@ func TestInterpretRandomNestedArrayOperations(t *testing.T) {
 		return
 	}
 
+	checkIteration := func(
+		t *testing.T,
+		inter *interpreter.Interpreter,
+		actualArray *interpreter.ArrayValue,
+		expectedArray *interpreter.ArrayValue,
+	) {
+		expectedCount := expectedArray.Count()
+		require.Equal(t, expectedCount, actualArray.Count())
+
+		var iterations int
+
+		actualArray.Iterate(
+			inter,
+			func(element interpreter.Value) (resume bool) {
+
+				expectedElement := expectedArray.Get(
+					inter,
+					interpreter.EmptyLocationRange,
+					iterations,
+				)
+				utils.AssertValuesEqual(t, inter, expectedElement, element)
+
+				iterations += 1
+
+				return true
+			},
+			false,
+			interpreter.EmptyLocationRange,
+		)
+
+		assert.Equal(t, expectedCount, iterations)
+	}
+
 	t.Run("insert", func(t *testing.T) {
 		t.Parallel()
 
@@ -2274,6 +2307,13 @@ func TestInterpretRandomNestedArrayOperations(t *testing.T) {
 				)
 			}
 			utils.AssertValuesEqual(t, inter, expectedRootValue, actualRootValue)
+
+			checkIteration(
+				t,
+				inter,
+				actualNestedArray,
+				expectedNestedArray,
+			)
 		}
 	})
 
@@ -2382,6 +2422,13 @@ func TestInterpretRandomNestedArrayOperations(t *testing.T) {
 				)
 			}
 			utils.AssertValuesEqual(t, inter, expectedRootValue, actualRootValue)
+
+			checkIteration(
+				t,
+				inter,
+				actualNestedArray,
+				expectedNestedArray,
+			)
 		}
 	})
 
@@ -2471,6 +2518,13 @@ func TestInterpretRandomNestedArrayOperations(t *testing.T) {
 				)
 			}
 			utils.AssertValuesEqual(t, inter, expectedRootValue, actualRootValue)
+
+			checkIteration(
+				t,
+				inter,
+				actualNestedArray,
+				expectedNestedArray,
+			)
 		}
 	})
 }
@@ -2590,6 +2644,39 @@ func TestInterpretRandomNestedDictionaryOperations(t *testing.T) {
 		}
 
 		return
+	}
+
+	checkIteration := func(
+		t *testing.T,
+		inter *interpreter.Interpreter,
+		actualDictionary *interpreter.DictionaryValue,
+		expectedDictionary *interpreter.DictionaryValue,
+	) {
+		expectedCount := expectedDictionary.Count()
+		require.Equal(t, expectedCount, actualDictionary.Count())
+
+		var iterations int
+
+		actualDictionary.Iterate(
+			inter,
+			interpreter.EmptyLocationRange,
+			func(key, element interpreter.Value) (resume bool) {
+
+				expectedElement, exists := expectedDictionary.Get(
+					inter,
+					interpreter.EmptyLocationRange,
+					key,
+				)
+				require.True(t, exists)
+				utils.AssertValuesEqual(t, inter, expectedElement, element)
+
+				iterations += 1
+
+				return true
+			},
+		)
+
+		assert.Equal(t, expectedCount, iterations)
 	}
 
 	t.Run("insert", func(t *testing.T) {
@@ -2716,6 +2803,13 @@ func TestInterpretRandomNestedDictionaryOperations(t *testing.T) {
 				)
 			}
 			utils.AssertValuesEqual(t, inter, expectedRootValue, actualRootValue)
+
+			checkIteration(
+				t,
+				inter,
+				actualNestedDictionary,
+				expectedNestedDictionary,
+			)
 		}
 	})
 
@@ -2846,6 +2940,13 @@ func TestInterpretRandomNestedDictionaryOperations(t *testing.T) {
 				)
 			}
 			utils.AssertValuesEqual(t, inter, expectedRootValue, actualRootValue)
+
+			checkIteration(
+				t,
+				inter,
+				actualNestedDictionary,
+				expectedNestedDictionary,
+			)
 		}
 	})
 
@@ -2970,6 +3071,13 @@ func TestInterpretRandomNestedDictionaryOperations(t *testing.T) {
 				)
 			}
 			utils.AssertValuesEqual(t, inter, expectedRootValue, actualRootValue)
+
+			checkIteration(
+				t,
+				inter,
+				actualNestedDictionary,
+				expectedNestedDictionary,
+			)
 		}
 	})
 }
@@ -3089,6 +3197,38 @@ func TestInterpretRandomNestedCompositeOperations(t *testing.T) {
 		}
 
 		return
+	}
+
+	checkIteration := func(
+		t *testing.T,
+		inter *interpreter.Interpreter,
+		actualComposite *interpreter.CompositeValue,
+		expectedComposite *interpreter.CompositeValue,
+	) {
+		expectedCount := expectedComposite.FieldCount()
+		require.Equal(t, expectedCount, actualComposite.FieldCount())
+
+		var iterations int
+
+		actualComposite.ForEachField(
+			inter,
+			func(name string, element interpreter.Value) (resume bool) {
+
+				expectedElement := expectedComposite.GetMember(
+					inter,
+					interpreter.EmptyLocationRange,
+					name,
+				)
+				utils.AssertValuesEqual(t, inter, expectedElement, element)
+
+				iterations += 1
+
+				return true
+			},
+			interpreter.EmptyLocationRange,
+		)
+
+		assert.Equal(t, expectedCount, iterations)
 	}
 
 	t.Run("insert", func(t *testing.T) {
@@ -3212,6 +3352,13 @@ func TestInterpretRandomNestedCompositeOperations(t *testing.T) {
 				)
 			}
 			utils.AssertValuesEqual(t, inter, expectedRootValue, actualRootValue)
+
+			checkIteration(
+				t,
+				inter,
+				actualNestedComposite,
+				expectedNestedComposite,
+			)
 		}
 	})
 
@@ -3331,6 +3478,13 @@ func TestInterpretRandomNestedCompositeOperations(t *testing.T) {
 				)
 			}
 			utils.AssertValuesEqual(t, inter, expectedRootValue, actualRootValue)
+
+			checkIteration(
+				t,
+				inter,
+				actualNestedComposite,
+				expectedNestedComposite,
+			)
 		}
 	})
 
@@ -3445,6 +3599,13 @@ func TestInterpretRandomNestedCompositeOperations(t *testing.T) {
 				)
 			}
 			utils.AssertValuesEqual(t, inter, expectedRootValue, actualRootValue)
+
+			checkIteration(
+				t,
+				inter,
+				actualNestedComposite,
+				expectedNestedComposite,
+			)
 		}
 	})
 }
