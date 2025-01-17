@@ -1990,6 +1990,1629 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 	})
 }
 
+func TestInterpretRandomNestedArrayOperations(t *testing.T) {
+	if !*runSmokeTests {
+		t.Skip("smoke tests are disabled")
+	}
+
+	owner := common.Address{'A'}
+
+	limits := randomValueLimits{
+		containerMaxDepth:  6,
+		containerMaxSize:   20,
+		compositeMaxFields: 10,
+	}
+
+	const opCount = 5
+
+	createValue := func(
+		t *testing.T,
+		r *randomValueGenerator,
+		inter *interpreter.Interpreter,
+		predicate func(cadence.Array) bool,
+	) (
+		actualRootValue interpreter.Value,
+		generatedValue cadence.Value,
+		reloadActualRootValue func() interpreter.Value,
+		getNestedArray func(rootValue interpreter.Value, owner common.Address) *interpreter.ArrayValue,
+	) {
+
+		// It does not matter what the root value is,
+		// as long as it contains a nested array,
+		// which it is nested inside an optional,
+		// and it satisfies the given predicate.
+
+		var path []pathElement
+		for {
+			generatedValue = r.randomArrayValue(inter, 0)
+
+			path = findNestedValue(
+				generatedValue,
+				func(value cadence.Value, path []pathElement) bool {
+					array, ok := value.(cadence.Array)
+					if !ok {
+						return false
+					}
+
+					if !predicate(array) {
+						return false
+					}
+
+					var foundSome bool
+					for _, element := range path {
+						if _, ok := element.(somePathElement); ok {
+							foundSome = true
+							break
+						}
+					}
+					if !foundSome {
+						return false
+					}
+
+					return true
+				},
+			)
+			if path != nil {
+				break
+			}
+		}
+
+		actualRootValue = importValue(t, inter, generatedValue).Transfer(
+			inter,
+			interpreter.EmptyLocationRange,
+			atree.Address(owner),
+			false,
+			nil,
+			nil,
+			// TODO: is has no parent container = true correct?
+			true,
+		)
+
+		const arrayStorageMapKey = interpreter.StringStorageMapKey("array")
+
+		// Store the array in a storage map, so that the array's slab
+		// is referenced by the root of the storage.
+
+		inter.Storage().
+			GetStorageMap(
+				owner,
+				common.PathDomainStorage.Identifier(),
+				true,
+			).
+			WriteValue(
+				inter,
+				arrayStorageMapKey,
+				actualRootValue,
+			)
+
+		reloadActualRootValue = func() interpreter.Value {
+			storageMap := inter.Storage().GetStorageMap(
+				owner,
+				common.PathDomainStorage.Identifier(),
+				false,
+			)
+			require.NotNil(t, storageMap)
+
+			readValue := storageMap.ReadValue(inter, arrayStorageMapKey)
+			require.NotNil(t, readValue)
+
+			require.IsType(t, &interpreter.ArrayValue{}, readValue)
+			return readValue.(*interpreter.ArrayValue)
+		}
+
+		getNestedArray = func(rootValue interpreter.Value, owner common.Address) *interpreter.ArrayValue {
+			nestedValue := getNestedValue(t, inter, rootValue, path)
+			require.IsType(t, &interpreter.ArrayValue{}, nestedValue)
+			nestedArray := nestedValue.(*interpreter.ArrayValue)
+			require.Equal(t, owner, nestedArray.GetOwner())
+			return nestedArray
+		}
+
+		return
+	}
+
+	t.Run("insert", func(t *testing.T) {
+		t.Parallel()
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		r := newRandomValueGenerator(
+			*smokeTestSeed,
+			limits,
+		)
+		t.Logf("seed: %d", r.seed)
+
+		actualRootValue, generatedValue, reloadActualRootValue, getNestedArray :=
+			createValue(
+				t,
+				&r,
+				inter,
+				// Accept any array, even empty ones,
+				// given we're only inserting
+				func(array cadence.Array) bool {
+					return true
+				},
+			)
+
+		actualNestedArray := getNestedArray(actualRootValue, owner)
+
+		type insert struct {
+			index int
+			value cadence.Value
+		}
+
+		performInsert := func(array *interpreter.ArrayValue, insert insert) {
+
+			newValue := importValue(t, inter, insert.value)
+
+			// Atree storage validation must be temporarily disabled
+			// to not report any "unreferenced slab" errors.
+
+			withoutAtreeStorageValidationEnabled(inter, func() struct{} {
+				array.Insert(
+					inter,
+					interpreter.EmptyLocationRange,
+					insert.index,
+					newValue,
+				)
+				return struct{}{}
+			})
+
+			if *validateAtree {
+				err := inter.Storage().CheckHealth()
+				require.NoError(t, err)
+			}
+		}
+
+		// We use the generated value twice: once as the expected value, and once as the actual value.
+		// We first perform mutations on the actual value, and then compare it to the expected value.
+		// The actual value is stored in an account and reloaded.
+		// The expected value is temporary (zero address), and is not stored in storage.
+		// Given that the storage reset destroys the data for the expected value because it is temporary,
+		// we re-import it each time and perform all operations on it from scratch.
+
+		var inserts []insert
+
+		elementCount := actualNestedArray.Count()
+
+		for i := 0; i < opCount; i++ {
+			var index int
+			elementCountAfterInserts := elementCount + i
+			if elementCountAfterInserts > 0 {
+				index = r.rand.Intn(elementCountAfterInserts)
+			}
+
+			inserts = append(
+				inserts,
+				insert{
+					index: index,
+					value: r.randomStorableValue(inter, 0),
+				},
+			)
+		}
+
+		for i, insert := range inserts {
+
+			resetStorage()
+
+			actualRootValue = reloadActualRootValue()
+			actualNestedArray = getNestedArray(actualRootValue, owner)
+
+			performInsert(
+				actualNestedArray,
+				insert,
+			)
+
+			// Re-create the expected value from scratch,
+			// by importing the generated value, and performing all updates on it
+			// that have been performed on the actual value so far.
+
+			expectedRootValue := importValue(t, inter, generatedValue)
+			expectedNestedArray := getNestedArray(expectedRootValue, common.ZeroAddress)
+
+			for _, insert := range inserts[:i+1] {
+
+				performInsert(
+					expectedNestedArray,
+					insert,
+				)
+			}
+			utils.AssertValuesEqual(t, inter, expectedRootValue, actualRootValue)
+		}
+	})
+
+	t.Run("update", func(t *testing.T) {
+		t.Parallel()
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		r := newRandomValueGenerator(
+			*smokeTestSeed,
+			limits,
+		)
+		t.Logf("seed: %d", r.seed)
+
+		actualRootValue, generatedValue, reloadActualRootValue, getNestedArray :=
+			createValue(
+				t,
+				&r,
+				inter,
+				// Generate a non-empty array,
+				// so we have at least one element to update
+				func(array cadence.Array) bool {
+					return len(array.Values) > 0
+				},
+			)
+
+		actualNestedArray := getNestedArray(actualRootValue, owner)
+
+		elementCount := actualNestedArray.Count()
+		require.Greater(t, elementCount, 0)
+
+		type update struct {
+			index int
+			value cadence.Value
+		}
+
+		performUpdate := func(array *interpreter.ArrayValue, update update) {
+
+			newValue := importValue(t, inter, update.value)
+
+			// Atree storage validation must be temporarily disabled
+			// to not report any "unreferenced slab" errors.
+
+			withoutAtreeStorageValidationEnabled(inter, func() struct{} {
+				array.Set(
+					inter,
+					interpreter.EmptyLocationRange,
+					update.index,
+					newValue,
+				)
+				return struct{}{}
+			})
+
+			if *validateAtree {
+				err := inter.Storage().CheckHealth()
+				require.NoError(t, err)
+			}
+
+			// Array must have same number of elements
+			require.Equal(t, elementCount, array.Count())
+		}
+
+		// We use the generated value twice: once as the expected value, and once as the actual value.
+		// We first perform mutations on the actual value, and then compare it to the expected value.
+		// The actual value is stored in an account and reloaded.
+		// The expected value is temporary (zero address), and is not stored in storage.
+		// Given that the storage reset destroys the data for the expected value because it is temporary,
+		// we re-import it each time and perform all operations on it from scratch.
+
+		var updates []update
+
+		for i := 0; i < opCount; i++ {
+			updates = append(
+				updates,
+				update{
+					index: r.rand.Intn(elementCount),
+					value: r.randomStorableValue(inter, 0),
+				},
+			)
+		}
+
+		for i, update := range updates {
+
+			resetStorage()
+
+			actualRootValue = reloadActualRootValue()
+			actualNestedArray = getNestedArray(actualRootValue, owner)
+
+			performUpdate(
+				actualNestedArray,
+				update,
+			)
+
+			// Re-create the expected value from scratch,
+			// by importing the generated value, and performing all updates on it
+			// that have been performed on the actual value so far.
+
+			expectedRootValue := importValue(t, inter, generatedValue)
+			expectedNestedArray := getNestedArray(expectedRootValue, common.ZeroAddress)
+
+			for _, update := range updates[:i+1] {
+
+				performUpdate(
+					expectedNestedArray,
+					update,
+				)
+			}
+			utils.AssertValuesEqual(t, inter, expectedRootValue, actualRootValue)
+		}
+	})
+
+	t.Run("remove", func(t *testing.T) {
+		t.Parallel()
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		r := newRandomValueGenerator(
+			*smokeTestSeed,
+			limits,
+		)
+		t.Logf("seed: %d", r.seed)
+
+		actualRootValue, generatedValue, reloadActualRootValue, getNestedArray :=
+			createValue(
+				t,
+				&r,
+				inter,
+				func(array cadence.Array) bool {
+					return len(array.Values) >= opCount
+				},
+			)
+
+		actualNestedArray := getNestedArray(actualRootValue, owner)
+		elementCount := actualNestedArray.Count()
+		require.GreaterOrEqual(t, elementCount, opCount)
+
+		performRemove := func(array *interpreter.ArrayValue, index int) {
+
+			// Atree storage validation must be temporarily disabled
+			// to not report any "unreferenced slab" errors.
+
+			withoutAtreeStorageValidationEnabled(inter, func() struct{} {
+				array.Remove(
+					inter,
+					interpreter.EmptyLocationRange,
+					index,
+				)
+				return struct{}{}
+			})
+
+			if *validateAtree {
+				err := inter.Storage().CheckHealth()
+				require.NoError(t, err)
+			}
+		}
+
+		// We use the generated value twice: once as the expected value, and once as the actual value.
+		// We first perform mutations on the actual value, and then compare it to the expected value.
+		// The actual value is stored in an account and reloaded.
+		// The expected value is temporary (zero address), and is not stored in storage.
+		// Given that the storage reset destroys the data for the expected value because it is temporary,
+		// we re-import it each time and perform all operations on it from scratch.
+
+		var removes []int
+
+		for i := 0; i < opCount; i++ {
+			index := r.rand.Intn(elementCount - i)
+			removes = append(removes, index)
+		}
+
+		for i, index := range removes {
+
+			resetStorage()
+
+			actualRootValue = reloadActualRootValue()
+			actualNestedArray = getNestedArray(actualRootValue, owner)
+
+			performRemove(
+				actualNestedArray,
+				index,
+			)
+
+			// Re-create the expected value from scratch,
+			// by importing the generated value, and performing all updates on it
+			// that have been performed on the actual value so far.
+
+			expectedRootValue := importValue(t, inter, generatedValue)
+			expectedNestedArray := getNestedArray(expectedRootValue, common.ZeroAddress)
+
+			for _, index := range removes[:i+1] {
+
+				performRemove(
+					expectedNestedArray,
+					index,
+				)
+			}
+			utils.AssertValuesEqual(t, inter, expectedRootValue, actualRootValue)
+		}
+	})
+}
+
+func TestInterpretRandomNestedDictionaryOperations(t *testing.T) {
+	if !*runSmokeTests {
+		t.Skip("smoke tests are disabled")
+	}
+
+	owner := common.Address{'A'}
+
+	limits := randomValueLimits{
+		containerMaxDepth:  6,
+		containerMaxSize:   20,
+		compositeMaxFields: 10,
+	}
+
+	const opCount = 5
+
+	createValue := func(
+		t *testing.T,
+		r *randomValueGenerator,
+		inter *interpreter.Interpreter,
+		predicate func(cadence.Dictionary) bool,
+	) (
+		actualRootValue interpreter.Value,
+		generatedValue cadence.Value,
+		reloadActualRootValue func() interpreter.Value,
+		getNestedDictionary func(rootValue interpreter.Value, owner common.Address) *interpreter.DictionaryValue,
+	) {
+
+		// It does not matter what the root value is,
+		// as long as it contains a nested dictionary,
+		// which it is nested inside an optional,
+		// and it satisfies the given predicate.
+
+		var path []pathElement
+		for {
+			generatedValue = r.randomDictionaryValue(inter, 0)
+
+			path = findNestedValue(
+				generatedValue,
+				func(value cadence.Value, path []pathElement) bool {
+					dictionary, ok := value.(cadence.Dictionary)
+					if !ok {
+						return false
+					}
+
+					if !predicate(dictionary) {
+						return false
+					}
+
+					var foundSome bool
+					for _, element := range path {
+						if _, ok := element.(somePathElement); ok {
+							foundSome = true
+							break
+						}
+					}
+					if !foundSome {
+						return false
+					}
+
+					return true
+				},
+			)
+			if path != nil {
+				break
+			}
+		}
+
+		actualRootValue = importValue(t, inter, generatedValue).Transfer(
+			inter,
+			interpreter.EmptyLocationRange,
+			atree.Address(owner),
+			false,
+			nil,
+			nil,
+			// TODO: is has no parent container = true correct?
+			true,
+		)
+
+		const dictionaryStorageMapKey = interpreter.StringStorageMapKey("dictionary")
+
+		// Store the dictionary in a storage map, so that the dictionary's slab
+		// is referenced by the root of the storage.
+
+		inter.Storage().
+			GetStorageMap(
+				owner,
+				common.PathDomainStorage.Identifier(),
+				true,
+			).
+			WriteValue(
+				inter,
+				dictionaryStorageMapKey,
+				actualRootValue,
+			)
+
+		reloadActualRootValue = func() interpreter.Value {
+			storageMap := inter.Storage().GetStorageMap(
+				owner,
+				common.PathDomainStorage.Identifier(),
+				false,
+			)
+			require.NotNil(t, storageMap)
+
+			readValue := storageMap.ReadValue(inter, dictionaryStorageMapKey)
+			require.NotNil(t, readValue)
+
+			require.IsType(t, &interpreter.DictionaryValue{}, readValue)
+			return readValue.(*interpreter.DictionaryValue)
+		}
+
+		getNestedDictionary = func(rootValue interpreter.Value, owner common.Address) *interpreter.DictionaryValue {
+			nestedValue := getNestedValue(t, inter, rootValue, path)
+			require.IsType(t, &interpreter.DictionaryValue{}, nestedValue)
+			nestedDictionary := nestedValue.(*interpreter.DictionaryValue)
+			require.Equal(t, owner, nestedDictionary.GetOwner())
+			return nestedDictionary
+		}
+
+		return
+	}
+
+	t.Run("insert", func(t *testing.T) {
+		t.Parallel()
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		r := newRandomValueGenerator(
+			*smokeTestSeed,
+			limits,
+		)
+		t.Logf("seed: %d", r.seed)
+
+		actualRootValue, generatedValue, reloadActualRootValue, getNestedDictionary :=
+			createValue(
+				t,
+				&r,
+				inter,
+				// Accept any dictionary, even empty ones,
+				// given we're only inserting
+				func(dictionary cadence.Dictionary) bool {
+					return true
+				},
+			)
+
+		actualNestedDictionary := getNestedDictionary(actualRootValue, owner)
+
+		type insert struct {
+			key   cadence.Value
+			value cadence.Value
+		}
+
+		performInsert := func(dictionary *interpreter.DictionaryValue, insert insert) {
+
+			newKey := importValue(t, inter, insert.key)
+			newValue := importValue(t, inter, insert.value)
+
+			// Atree storage validation must be temporarily disabled
+			// to not report any "unreferenced slab" errors.
+
+			withoutAtreeStorageValidationEnabled(inter, func() struct{} {
+				dictionary.Insert(
+					inter,
+					interpreter.EmptyLocationRange,
+					newKey,
+					newValue,
+				)
+				return struct{}{}
+			})
+
+			if *validateAtree {
+				err := inter.Storage().CheckHealth()
+				require.NoError(t, err)
+			}
+		}
+
+		// We use the generated value twice: once as the expected value, and once as the actual value.
+		// We first perform mutations on the actual value, and then compare it to the expected value.
+		// The actual value is stored in an account and reloaded.
+		// The expected value is temporary (zero address), and is not stored in storage.
+		// Given that the storage reset destroys the data for the expected value because it is temporary,
+		// we re-import it each time and perform all operations on it from scratch.
+
+		var inserts []insert
+		insertSet := map[any]struct{}{}
+
+		for i := 0; i < opCount; i++ {
+			// Generate a unique key
+			var key cadence.Value
+			for {
+				key = r.randomHashableValue(inter)
+
+				importedKey := importValue(t, inter, key)
+				if actualNestedDictionary.ContainsKey(
+					inter,
+					interpreter.EmptyLocationRange,
+					importedKey,
+				) {
+					continue
+				}
+
+				mapKey := mapKey(inter, importedKey)
+				if _, ok := insertSet[mapKey]; ok {
+					continue
+				}
+				insertSet[mapKey] = struct{}{}
+
+				break
+			}
+
+			inserts = append(
+				inserts,
+				insert{
+					key:   key,
+					value: r.randomStorableValue(inter, 0),
+				},
+			)
+		}
+
+		for i, insert := range inserts {
+
+			resetStorage()
+
+			actualRootValue = reloadActualRootValue()
+			actualNestedDictionary = getNestedDictionary(actualRootValue, owner)
+
+			performInsert(
+				actualNestedDictionary,
+				insert,
+			)
+
+			// Re-create the expected value from scratch,
+			// by importing the generated value, and performing all updates on it
+			// that have been performed on the actual value so far.
+
+			expectedRootValue := importValue(t, inter, generatedValue)
+			expectedNestedDictionary := getNestedDictionary(expectedRootValue, common.ZeroAddress)
+
+			for _, insert := range inserts[:i+1] {
+
+				performInsert(
+					expectedNestedDictionary,
+					insert,
+				)
+			}
+			utils.AssertValuesEqual(t, inter, expectedRootValue, actualRootValue)
+		}
+	})
+
+	t.Run("update", func(t *testing.T) {
+		t.Parallel()
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		r := newRandomValueGenerator(
+			*smokeTestSeed,
+			limits,
+		)
+		t.Logf("seed: %d", r.seed)
+
+		actualRootValue, generatedValue, reloadActualRootValue, getNestedDictionary :=
+			createValue(
+				t,
+				&r,
+				inter,
+				// Generate a non-empty dictionary,
+				// so we have at least one element to update
+				func(dictionary cadence.Dictionary) bool {
+					return len(dictionary.Pairs) > 0
+				},
+			)
+
+		actualNestedDictionary := getNestedDictionary(actualRootValue, owner)
+
+		elementCount := actualNestedDictionary.Count()
+		require.Greater(t, elementCount, 0)
+
+		type update struct {
+			key   cadence.Value
+			value cadence.Value
+		}
+
+		performUpdate := func(dictionary *interpreter.DictionaryValue, update update) {
+
+			key := importValue(t, inter, update.key)
+			newValue := importValue(t, inter, update.value)
+
+			// Atree storage validation must be temporarily disabled
+			// to not report any "unreferenced slab" errors.
+
+			withoutAtreeStorageValidationEnabled(inter, func() struct{} {
+				dictionary.SetKey(
+					inter,
+					interpreter.EmptyLocationRange,
+					key,
+					interpreter.NewUnmeteredSomeValueNonCopying(newValue),
+				)
+				return struct{}{}
+			})
+
+			if *validateAtree {
+				err := inter.Storage().CheckHealth()
+				require.NoError(t, err)
+			}
+
+			// Dictionary must have same number of elements
+			require.Equal(t, elementCount, dictionary.Count())
+		}
+
+		// We use the generated value twice: once as the expected value, and once as the actual value.
+		// We first perform mutations on the actual value, and then compare it to the expected value.
+		// The actual value is stored in an account and reloaded.
+		// The expected value is temporary (zero address), and is not stored in storage.
+		// Given that the storage reset destroys the data for the expected value because it is temporary,
+		// we re-import it each time and perform all operations on it from scratch.
+
+		keys := make([]cadence.Value, 0, elementCount)
+
+		actualNestedDictionary.IterateKeys(
+			inter,
+			interpreter.EmptyLocationRange,
+			func(key interpreter.Value) (resume bool) {
+				cadenceKey, err := runtime.ExportValue(
+					key,
+					inter,
+					interpreter.EmptyLocationRange,
+				)
+				require.NoError(t, err)
+
+				keys = append(keys, cadenceKey)
+
+				return true
+			},
+		)
+
+		var updates []update
+
+		for i := 0; i < opCount; i++ {
+			index := r.rand.Intn(elementCount)
+
+			updates = append(
+				updates,
+				update{
+					key:   keys[index],
+					value: r.randomStorableValue(inter, 0),
+				},
+			)
+		}
+
+		for i, update := range updates {
+
+			resetStorage()
+
+			actualRootValue = reloadActualRootValue()
+			actualNestedDictionary = getNestedDictionary(actualRootValue, owner)
+
+			performUpdate(
+				actualNestedDictionary,
+				update,
+			)
+
+			// Re-create the expected value from scratch,
+			// by importing the generated value, and performing all updates on it
+			// that have been performed on the actual value so far.
+
+			expectedRootValue := importValue(t, inter, generatedValue)
+			expectedNestedDictionary := getNestedDictionary(expectedRootValue, common.ZeroAddress)
+
+			for _, update := range updates[:i+1] {
+
+				performUpdate(
+					expectedNestedDictionary,
+					update,
+				)
+			}
+			utils.AssertValuesEqual(t, inter, expectedRootValue, actualRootValue)
+		}
+	})
+
+	t.Run("remove", func(t *testing.T) {
+		t.Parallel()
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		r := newRandomValueGenerator(
+			*smokeTestSeed,
+			limits,
+		)
+		t.Logf("seed: %d", r.seed)
+
+		actualRootValue, generatedValue, reloadActualRootValue, getNestedDictionary :=
+			createValue(
+				t,
+				&r,
+				inter,
+				func(dictionary cadence.Dictionary) bool {
+					return len(dictionary.Pairs) >= opCount
+				},
+			)
+
+		actualNestedDictionary := getNestedDictionary(actualRootValue, owner)
+
+		elementCount := actualNestedDictionary.Count()
+		require.GreaterOrEqual(t, elementCount, opCount)
+
+		performRemove := func(dictionary *interpreter.DictionaryValue, key cadence.Value) {
+
+			// Atree storage validation must be temporarily disabled
+			// to not report any "unreferenced slab" errors.
+
+			withoutAtreeStorageValidationEnabled(inter, func() struct{} {
+				dictionary.Remove(
+					inter,
+					interpreter.EmptyLocationRange,
+					importValue(t, inter, key),
+				)
+				return struct{}{}
+			})
+
+			if *validateAtree {
+				err := inter.Storage().CheckHealth()
+				require.NoError(t, err)
+			}
+		}
+
+		// We use the generated value twice: once as the expected value, and once as the actual value.
+		// We first perform mutations on the actual value, and then compare it to the expected value.
+		// The actual value is stored in an account and reloaded.
+		// The expected value is temporary (zero address), and is not stored in storage.
+		// Given that the storage reset destroys the data for the expected value because it is temporary,
+		// we re-import it each time and perform all operations on it from scratch.
+
+		keys := make([]interpreter.Value, 0, elementCount)
+
+		actualNestedDictionary.IterateKeys(
+			inter,
+			interpreter.EmptyLocationRange,
+			func(key interpreter.Value) (resume bool) {
+
+				keys = append(keys, key)
+
+				return true
+			},
+		)
+
+		var removes []cadence.Value
+		removeSet := map[any]struct{}{}
+
+		for i := 0; i < opCount; i++ {
+			// Find a unique key
+			var key interpreter.Value
+			for {
+				key = keys[r.rand.Intn(elementCount)]
+
+				mapKey := mapKey(inter, key)
+				if _, ok := removeSet[mapKey]; ok {
+					continue
+				}
+				removeSet[mapKey] = struct{}{}
+
+				break
+			}
+
+			cadenceKey, err := runtime.ExportValue(
+				key,
+				inter,
+				interpreter.EmptyLocationRange,
+			)
+			require.NoError(t, err)
+
+			removes = append(removes, cadenceKey)
+		}
+
+		for i, index := range removes {
+
+			resetStorage()
+
+			actualRootValue = reloadActualRootValue()
+			actualNestedDictionary = getNestedDictionary(actualRootValue, owner)
+
+			performRemove(
+				actualNestedDictionary,
+				index,
+			)
+
+			// Re-create the expected value from scratch,
+			// by importing the generated value, and performing all updates on it
+			// that have been performed on the actual value so far.
+
+			expectedRootValue := importValue(t, inter, generatedValue)
+			expectedNestedDictionary := getNestedDictionary(expectedRootValue, common.ZeroAddress)
+
+			for _, index := range removes[:i+1] {
+
+				performRemove(
+					expectedNestedDictionary,
+					index,
+				)
+			}
+			utils.AssertValuesEqual(t, inter, expectedRootValue, actualRootValue)
+		}
+	})
+}
+
+func TestInterpretRandomNestedCompositeOperations(t *testing.T) {
+	if !*runSmokeTests {
+		t.Skip("smoke tests are disabled")
+	}
+
+	owner := common.Address{'A'}
+
+	limits := randomValueLimits{
+		containerMaxDepth:  6,
+		containerMaxSize:   20,
+		compositeMaxFields: 10,
+	}
+
+	const opCount = 5
+
+	createValue := func(
+		t *testing.T,
+		r *randomValueGenerator,
+		inter *interpreter.Interpreter,
+		predicate func(cadence.Composite) bool,
+	) (
+		actualRootValue interpreter.Value,
+		generatedValue cadence.Value,
+		reloadActualRootValue func() interpreter.Value,
+		getNestedComposite func(rootValue interpreter.Value, owner common.Address) *interpreter.CompositeValue,
+	) {
+
+		// It does not matter what the root value is,
+		// as long as it contains a nested composite,
+		// which it is nested inside an optional,
+		// and it satisfies the given predicate.
+
+		var path []pathElement
+		for {
+			generatedValue = r.randomStructValue(inter, 0)
+
+			path = findNestedValue(
+				generatedValue,
+				func(value cadence.Value, path []pathElement) bool {
+					composite, ok := value.(cadence.Struct)
+					if !ok {
+						return false
+					}
+
+					if !predicate(composite) {
+						return false
+					}
+
+					var foundSome bool
+					for _, element := range path {
+						if _, ok := element.(somePathElement); ok {
+							foundSome = true
+							break
+						}
+					}
+					if !foundSome {
+						return false
+					}
+
+					return true
+				},
+			)
+			if path != nil {
+				break
+			}
+		}
+
+		actualRootValue = importValue(t, inter, generatedValue).Transfer(
+			inter,
+			interpreter.EmptyLocationRange,
+			atree.Address(owner),
+			false,
+			nil,
+			nil,
+			// TODO: is has no parent container = true correct?
+			true,
+		)
+
+		const compositeStorageMapKey = interpreter.StringStorageMapKey("composite")
+
+		// Store the composite in a storage map, so that the composite's slab
+		// is referenced by the root of the storage.
+
+		inter.Storage().
+			GetStorageMap(
+				owner,
+				common.PathDomainStorage.Identifier(),
+				true,
+			).
+			WriteValue(
+				inter,
+				compositeStorageMapKey,
+				actualRootValue,
+			)
+
+		reloadActualRootValue = func() interpreter.Value {
+			storageMap := inter.Storage().GetStorageMap(
+				owner,
+				common.PathDomainStorage.Identifier(),
+				false,
+			)
+			require.NotNil(t, storageMap)
+
+			readValue := storageMap.ReadValue(inter, compositeStorageMapKey)
+			require.NotNil(t, readValue)
+
+			require.IsType(t, &interpreter.CompositeValue{}, readValue)
+			return readValue.(*interpreter.CompositeValue)
+		}
+
+		getNestedComposite = func(rootValue interpreter.Value, owner common.Address) *interpreter.CompositeValue {
+			nestedValue := getNestedValue(t, inter, rootValue, path)
+			require.IsType(t, &interpreter.CompositeValue{}, nestedValue)
+			nestedComposite := nestedValue.(*interpreter.CompositeValue)
+			require.Equal(t, owner, nestedComposite.GetOwner())
+			return nestedComposite
+		}
+
+		return
+	}
+
+	t.Run("insert", func(t *testing.T) {
+		t.Parallel()
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		r := newRandomValueGenerator(
+			*smokeTestSeed,
+			limits,
+		)
+		t.Logf("seed: %d", r.seed)
+
+		actualRootValue, generatedValue, reloadActualRootValue, getNestedComposite :=
+			createValue(
+				t,
+				&r,
+				inter,
+				// Accept any composite, even empty ones,
+				// given we're only inserting
+				func(composite cadence.Composite) bool {
+					return true
+				},
+			)
+
+		actualNestedComposite := getNestedComposite(actualRootValue, owner)
+
+		type insert struct {
+			name  string
+			value cadence.Value
+		}
+
+		performInsert := func(composite *interpreter.CompositeValue, insert insert) {
+
+			newValue := importValue(t, inter, insert.value)
+
+			// Atree storage validation must be temporarily disabled
+			// to not report any "unreferenced slab" errors.
+
+			withoutAtreeStorageValidationEnabled(inter, func() struct{} {
+				composite.SetMember(
+					inter,
+					interpreter.EmptyLocationRange,
+					insert.name,
+					newValue,
+				)
+				return struct{}{}
+			})
+
+			if *validateAtree {
+				err := inter.Storage().CheckHealth()
+				require.NoError(t, err)
+			}
+		}
+
+		// We use the generated value twice: once as the expected value, and once as the actual value.
+		// We first perform mutations on the actual value, and then compare it to the expected value.
+		// The actual value is stored in an account and reloaded.
+		// The expected value is temporary (zero address), and is not stored in storage.
+		// Given that the storage reset destroys the data for the expected value because it is temporary,
+		// we re-import it each time and perform all operations on it from scratch.
+
+		var inserts []insert
+		insertSet := map[string]struct{}{}
+
+		for i := 0; i < opCount; i++ {
+			// Generate a unique name
+			var name string
+			for {
+				name = r.randomUTF8String()
+
+				if actualNestedComposite.GetMember(
+					inter,
+					interpreter.EmptyLocationRange,
+					name,
+				) != nil {
+					continue
+				}
+
+				if _, ok := insertSet[name]; ok {
+					continue
+				}
+				insertSet[name] = struct{}{}
+
+				break
+			}
+
+			inserts = append(
+				inserts,
+				insert{
+					name:  name,
+					value: r.randomStorableValue(inter, 0),
+				},
+			)
+		}
+
+		for i, insert := range inserts {
+
+			resetStorage()
+
+			actualRootValue = reloadActualRootValue()
+			actualNestedComposite = getNestedComposite(actualRootValue, owner)
+
+			performInsert(
+				actualNestedComposite,
+				insert,
+			)
+
+			// Re-create the expected value from scratch,
+			// by importing the generated value, and performing all updates on it
+			// that have been performed on the actual value so far.
+
+			expectedRootValue := importValue(t, inter, generatedValue)
+			expectedNestedComposite := getNestedComposite(expectedRootValue, common.ZeroAddress)
+
+			for _, insert := range inserts[:i+1] {
+
+				performInsert(
+					expectedNestedComposite,
+					insert,
+				)
+			}
+			utils.AssertValuesEqual(t, inter, expectedRootValue, actualRootValue)
+		}
+	})
+
+	t.Run("update", func(t *testing.T) {
+		t.Parallel()
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		r := newRandomValueGenerator(
+			*smokeTestSeed,
+			limits,
+		)
+		t.Logf("seed: %d", r.seed)
+
+		actualRootValue, generatedValue, reloadActualRootValue, getNestedComposite :=
+			createValue(
+				t,
+				&r,
+				inter,
+				// Generate a non-empty composite,
+				// so we have at least one element to update
+				func(composite cadence.Composite) bool {
+					return len(composite.FieldsMappedByName()) > 0
+				},
+			)
+
+		actualNestedComposite := getNestedComposite(actualRootValue, owner)
+
+		fieldCount := actualNestedComposite.FieldCount()
+		require.Greater(t, fieldCount, 0)
+
+		type update struct {
+			name  string
+			value cadence.Value
+		}
+
+		performUpdate := func(composite *interpreter.CompositeValue, update update) {
+
+			newValue := importValue(t, inter, update.value)
+
+			// Atree storage validation must be temporarily disabled
+			// to not report any "unreferenced slab" errors.
+
+			withoutAtreeStorageValidationEnabled(inter, func() struct{} {
+				composite.SetMember(
+					inter,
+					interpreter.EmptyLocationRange,
+					update.name,
+					interpreter.NewUnmeteredSomeValueNonCopying(newValue),
+				)
+				return struct{}{}
+			})
+
+			if *validateAtree {
+				err := inter.Storage().CheckHealth()
+				require.NoError(t, err)
+			}
+
+			// Composite must have same number of elements
+			require.Equal(t, fieldCount, composite.FieldCount())
+		}
+
+		// We use the generated value twice: once as the expected value, and once as the actual value.
+		// We first perform mutations on the actual value, and then compare it to the expected value.
+		// The actual value is stored in an account and reloaded.
+		// The expected value is temporary (zero address), and is not stored in storage.
+		// Given that the storage reset destroys the data for the expected value because it is temporary,
+		// we re-import it each time and perform all operations on it from scratch.
+
+		var updates []update
+
+		fieldNames := make([]string, 0, fieldCount)
+
+		actualNestedComposite.ForEachFieldName(
+			func(name string) (resume bool) {
+				fieldNames = append(fieldNames, name)
+				return true
+			},
+		)
+
+		for i := 0; i < opCount; i++ {
+			index := r.rand.Intn(fieldCount)
+
+			updates = append(
+				updates,
+				update{
+					name:  fieldNames[index],
+					value: r.randomStorableValue(inter, 0),
+				},
+			)
+		}
+
+		for i, update := range updates {
+
+			resetStorage()
+
+			actualRootValue = reloadActualRootValue()
+			actualNestedComposite = getNestedComposite(actualRootValue, owner)
+
+			performUpdate(
+				actualNestedComposite,
+				update,
+			)
+
+			// Re-create the expected value from scratch,
+			// by importing the generated value, and performing all updates on it
+			// that have been performed on the actual value so far.
+
+			expectedRootValue := importValue(t, inter, generatedValue)
+			expectedNestedComposite := getNestedComposite(expectedRootValue, common.ZeroAddress)
+
+			for _, update := range updates[:i+1] {
+
+				performUpdate(
+					expectedNestedComposite,
+					update,
+				)
+			}
+			utils.AssertValuesEqual(t, inter, expectedRootValue, actualRootValue)
+		}
+	})
+
+	t.Run("remove", func(t *testing.T) {
+		t.Parallel()
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		r := newRandomValueGenerator(
+			*smokeTestSeed,
+			limits,
+		)
+		t.Logf("seed: %d", r.seed)
+
+		actualRootValue, generatedValue, reloadActualRootValue, getNestedComposite :=
+			createValue(
+				t,
+				&r,
+				inter,
+				func(composite cadence.Composite) bool {
+					return len(composite.FieldsMappedByName()) >= opCount
+				},
+			)
+
+		actualNestedComposite := getNestedComposite(actualRootValue, owner)
+
+		fieldCount := actualNestedComposite.FieldCount()
+		require.GreaterOrEqual(t, fieldCount, opCount)
+
+		performRemove := func(composite *interpreter.CompositeValue, name string) {
+
+			// Atree storage validation must be temporarily disabled
+			// to not report any "unreferenced slab" errors.
+
+			withoutAtreeStorageValidationEnabled(inter, func() struct{} {
+				composite.RemoveMember(
+					inter,
+					interpreter.EmptyLocationRange,
+					name,
+				)
+				return struct{}{}
+			})
+
+			if *validateAtree {
+				err := inter.Storage().CheckHealth()
+				require.NoError(t, err)
+			}
+		}
+
+		// We use the generated value twice: once as the expected value, and once as the actual value.
+		// We first perform mutations on the actual value, and then compare it to the expected value.
+		// The actual value is stored in an account and reloaded.
+		// The expected value is temporary (zero address), and is not stored in storage.
+		// Given that the storage reset destroys the data for the expected value because it is temporary,
+		// we re-import it each time and perform all operations on it from scratch.
+
+		fieldNames := make([]string, 0, fieldCount)
+
+		actualNestedComposite.ForEachFieldName(
+			func(name string) (resume bool) {
+
+				fieldNames = append(fieldNames, name)
+
+				return true
+			},
+		)
+
+		var removes []string
+		removeSet := map[string]struct{}{}
+
+		for i := 0; i < opCount; i++ {
+			// Find a unique name
+			var name string
+			for {
+				name = fieldNames[r.rand.Intn(fieldCount)]
+
+				if _, ok := removeSet[name]; ok {
+					continue
+				}
+				removeSet[name] = struct{}{}
+
+				break
+			}
+
+			removes = append(removes, name)
+		}
+
+		for i, index := range removes {
+
+			resetStorage()
+
+			actualRootValue = reloadActualRootValue()
+			actualNestedComposite = getNestedComposite(actualRootValue, owner)
+
+			performRemove(
+				actualNestedComposite,
+				index,
+			)
+
+			// Re-create the expected value from scratch,
+			// by importing the generated value, and performing all updates on it
+			// that have been performed on the actual value so far.
+
+			expectedRootValue := importValue(t, inter, generatedValue)
+			expectedNestedComposite := getNestedComposite(expectedRootValue, common.ZeroAddress)
+
+			for _, index := range removes[:i+1] {
+
+				performRemove(
+					expectedNestedComposite,
+					index,
+				)
+			}
+			utils.AssertValuesEqual(t, inter, expectedRootValue, actualRootValue)
+		}
+	})
+}
+
+func findNestedValue(
+	value cadence.Value,
+	predicate func(value cadence.Value, path []pathElement) bool,
+) []pathElement {
+	return findNestedRecursive(value, nil, predicate)
+}
+
+func findNestedRecursive(
+	value cadence.Value,
+	path []pathElement,
+	predicate func(value cadence.Value, path []pathElement) bool,
+) []pathElement {
+	if predicate(value, path) {
+		return path
+	}
+
+	switch value := value.(type) {
+	case cadence.Array:
+		for index, element := range value.Values {
+
+			nestedPath := append(path, arrayPathElement{index})
+
+			result := findNestedRecursive(element, nestedPath, predicate)
+			if result != nil {
+				return result
+			}
+		}
+
+	case cadence.Dictionary:
+		for _, pair := range value.Pairs {
+
+			nestedPath := append(path, dictionaryPathElement{pair.Key})
+
+			result := findNestedRecursive(pair.Value, nestedPath, predicate)
+			if result != nil {
+				return result
+			}
+		}
+
+	case cadence.Struct:
+		for name, field := range value.FieldsMappedByName() {
+
+			nestedPath := append(path, structPathElement{name})
+
+			result := findNestedRecursive(field, nestedPath, predicate)
+			if result != nil {
+				return result
+			}
+		}
+
+	case cadence.Optional:
+		nestedValue := value.Value
+		if nestedValue == nil {
+			break
+		}
+
+		nestedPath := append(path, somePathElement{})
+
+		result := findNestedRecursive(nestedValue, nestedPath, predicate)
+		if result != nil {
+			return result
+		}
+	}
+
+	return nil
+}
+
+func getNestedValue(
+	t *testing.T,
+	inter *interpreter.Interpreter,
+	value interpreter.Value,
+	path []pathElement,
+) interpreter.Value {
+	for i, element := range path {
+		switch element := element.(type) {
+		case arrayPathElement:
+			require.IsType(
+				t,
+				&interpreter.ArrayValue{},
+				value,
+				"path: %v",
+				path[:i],
+			)
+			array := value.(*interpreter.ArrayValue)
+
+			value = array.Get(
+				inter,
+				interpreter.EmptyLocationRange,
+				element.index,
+			)
+
+			require.NotNil(t,
+				value,
+				"missing value for array element %d (path: %v)",
+				element.index,
+				path[:i],
+			)
+
+		case dictionaryPathElement:
+			require.IsType(
+				t,
+				&interpreter.DictionaryValue{},
+				value,
+				"path: %v",
+				path[:i],
+			)
+			dictionary := value.(*interpreter.DictionaryValue)
+
+			key := importValue(t, inter, element.key)
+
+			var found bool
+			value, found = dictionary.Get(
+				inter,
+				interpreter.EmptyLocationRange,
+				key,
+			)
+			require.True(t,
+				found,
+				"missing value for dictionary key %s (path: %v)",
+				element.key,
+				path[:i],
+			)
+			require.NotNil(t,
+				value,
+				"missing value for dictionary key %s (path: %v)",
+				element.key,
+				path[:i],
+			)
+
+		case structPathElement:
+			require.IsType(
+				t,
+				&interpreter.CompositeValue{},
+				value,
+				"path: %v",
+				path[:i],
+			)
+			composite := value.(*interpreter.CompositeValue)
+
+			value = composite.GetMember(
+				inter,
+				interpreter.EmptyLocationRange,
+				element.name,
+			)
+
+			require.NotNil(t,
+				value,
+				"missing value for composite field %q (path: %v)",
+				element.name,
+				path[:i],
+			)
+
+		case somePathElement:
+			require.IsType(
+				t,
+				&interpreter.SomeValue{},
+				value,
+				"path: %v",
+				path[:i],
+			)
+			optional := value.(*interpreter.SomeValue)
+
+			value = optional.InnerValue(inter, interpreter.EmptyLocationRange)
+
+			require.NotNil(t,
+				value,
+				"missing value for optional (path: %v)",
+				path[:i],
+			)
+
+		default:
+			panic(errors.NewUnexpectedError("unsupported path element: %T", element))
+		}
+	}
+
+	return value
+}
+
+type pathElement interface {
+	isPathElement()
+}
+
+type arrayPathElement struct {
+	index int
+}
+
+var _ pathElement = arrayPathElement{}
+
+func (arrayPathElement) isPathElement() {}
+
+type dictionaryPathElement struct {
+	key cadence.Value
+}
+
+var _ pathElement = dictionaryPathElement{}
+
+func (dictionaryPathElement) isPathElement() {}
+
+type structPathElement struct {
+	name string
+}
+
+var _ pathElement = structPathElement{}
+
+func (structPathElement) isPathElement() {}
+
+type somePathElement struct{}
+
+var _ pathElement = somePathElement{}
+
+func (somePathElement) isPathElement() {}
+
 type randomValueLimits struct {
 	containerMaxDepth  int
 	containerMaxSize   int
@@ -2533,6 +4156,9 @@ func (r randomValueGenerator) randomEnumValue(inter *interpreter.Interpreter) ca
 		Kind:        common.CompositeKindEnum,
 		Location:    location,
 		Members:     &sema.StringMemberOrderedMap{},
+		Fields: []string{
+			sema.EnumRawValueFieldName,
+		},
 	}
 
 	semaEnumType.Members.Set(
