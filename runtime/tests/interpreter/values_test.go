@@ -2045,11 +2045,7 @@ func TestInterpretRandomNestedArrayOperations(t *testing.T) {
 							break
 						}
 					}
-					if !foundSome {
-						return false
-					}
-
-					return true
+					return foundSome
 				},
 			)
 			if path != nil {
@@ -2474,11 +2470,7 @@ func TestInterpretRandomNestedDictionaryOperations(t *testing.T) {
 							break
 						}
 					}
-					if !foundSome {
-						return false
-					}
-
-					return true
+					return foundSome
 				},
 			)
 			if path != nil {
@@ -2977,11 +2969,7 @@ func TestInterpretRandomNestedCompositeOperations(t *testing.T) {
 							break
 						}
 					}
-					if !foundSome {
-						return false
-					}
-
-					return true
+					return foundSome
 				},
 			)
 			if path != nil {
