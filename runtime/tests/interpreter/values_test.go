@@ -3409,7 +3409,8 @@ func findNestedRecursive(
 	case cadence.Array:
 		for index, element := range value.Values {
 
-			nestedPath := append(path, arrayPathElement{index})
+			nestedPath := path
+			nestedPath = append(nestedPath, arrayPathElement{index})
 
 			result := findNestedRecursive(element, nestedPath, predicate)
 			if result != nil {
@@ -3420,7 +3421,8 @@ func findNestedRecursive(
 	case cadence.Dictionary:
 		for _, pair := range value.Pairs {
 
-			nestedPath := append(path, dictionaryPathElement{pair.Key})
+			nestedPath := path
+			nestedPath = append(nestedPath, dictionaryPathElement{pair.Key})
 
 			result := findNestedRecursive(pair.Value, nestedPath, predicate)
 			if result != nil {
@@ -3431,7 +3433,8 @@ func findNestedRecursive(
 	case cadence.Struct:
 		for name, field := range value.FieldsMappedByName() {
 
-			nestedPath := append(path, structPathElement{name})
+			nestedPath := path
+			nestedPath = append(nestedPath, structPathElement{name})
 
 			result := findNestedRecursive(field, nestedPath, predicate)
 			if result != nil {
@@ -3445,7 +3448,8 @@ func findNestedRecursive(
 			break
 		}
 
-		nestedPath := append(path, somePathElement{})
+		nestedPath := path
+		nestedPath = append(nestedPath, somePathElement{})
 
 		result := findNestedRecursive(nestedValue, nestedPath, predicate)
 		if result != nil {
