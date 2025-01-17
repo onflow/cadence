@@ -2086,7 +2086,7 @@ func TestInterpretRandomNestedArrayOperations(t *testing.T) {
 		for {
 			generatedValue = r.randomArrayValue(inter, 0)
 
-			path = findNestedValue(
+			path = findNestedCadenceValue(
 				generatedValue,
 				func(value cadence.Value, path []pathElement) bool {
 					array, ok := value.(cadence.Array)
@@ -2565,7 +2565,7 @@ func TestInterpretRandomNestedDictionaryOperations(t *testing.T) {
 		for {
 			generatedValue = r.randomDictionaryValue(inter, 0)
 
-			path = findNestedValue(
+			path = findNestedCadenceValue(
 				generatedValue,
 				func(value cadence.Value, path []pathElement) bool {
 					dictionary, ok := value.(cadence.Dictionary)
@@ -3118,7 +3118,7 @@ func TestInterpretRandomNestedCompositeOperations(t *testing.T) {
 		for {
 			generatedValue = r.randomStructValue(inter, 0)
 
-			path = findNestedValue(
+			path = findNestedCadenceValue(
 				generatedValue,
 				func(value cadence.Value, path []pathElement) bool {
 					composite, ok := value.(cadence.Struct)
@@ -3610,14 +3610,14 @@ func TestInterpretRandomNestedCompositeOperations(t *testing.T) {
 	})
 }
 
-func findNestedValue(
+func findNestedCadenceValue(
 	value cadence.Value,
 	predicate func(value cadence.Value, path []pathElement) bool,
 ) []pathElement {
-	return findNestedRecursive(value, nil, predicate)
+	return findNestedCadenceRecursive(value, nil, predicate)
 }
 
-func findNestedRecursive(
+func findNestedCadenceRecursive(
 	value cadence.Value,
 	path []pathElement,
 	predicate func(value cadence.Value, path []pathElement) bool,
@@ -3633,7 +3633,7 @@ func findNestedRecursive(
 			nestedPath := path
 			nestedPath = append(nestedPath, arrayPathElement{index})
 
-			result := findNestedRecursive(element, nestedPath, predicate)
+			result := findNestedCadenceRecursive(element, nestedPath, predicate)
 			if result != nil {
 				return result
 			}
@@ -3645,7 +3645,7 @@ func findNestedRecursive(
 			nestedPath := path
 			nestedPath = append(nestedPath, dictionaryPathElement{pair.Key})
 
-			result := findNestedRecursive(pair.Value, nestedPath, predicate)
+			result := findNestedCadenceRecursive(pair.Value, nestedPath, predicate)
 			if result != nil {
 				return result
 			}
@@ -3657,7 +3657,7 @@ func findNestedRecursive(
 			nestedPath := path
 			nestedPath = append(nestedPath, structPathElement{name})
 
-			result := findNestedRecursive(field, nestedPath, predicate)
+			result := findNestedCadenceRecursive(field, nestedPath, predicate)
 			if result != nil {
 				return result
 			}
@@ -3672,7 +3672,151 @@ func findNestedRecursive(
 		nestedPath := path
 		nestedPath = append(nestedPath, somePathElement{})
 
-		result := findNestedRecursive(nestedValue, nestedPath, predicate)
+		result := findNestedCadenceRecursive(nestedValue, nestedPath, predicate)
+		if result != nil {
+			return result
+		}
+	}
+
+	return nil
+}
+
+func findNestedValue(
+	value interpreter.Value,
+	inter *interpreter.Interpreter,
+	predicate func(value interpreter.Value, path []pathElement) bool,
+) []pathElement {
+	return findNestedRecursive(
+		value,
+		inter,
+		nil,
+		predicate,
+	)
+}
+
+func findNestedRecursive(
+	value interpreter.Value,
+	inter *interpreter.Interpreter,
+	path []pathElement,
+	predicate func(value interpreter.Value, path []pathElement) bool,
+) (result []pathElement) {
+	if predicate(value, path) {
+		return path
+	}
+
+	switch value := value.(type) {
+	case *interpreter.ArrayValue:
+
+		var index int
+
+		value.Iterate(
+			inter,
+			func(element interpreter.Value) (resume bool) {
+
+				nestedPath := path
+				nestedPath = append(nestedPath, arrayPathElement{index})
+
+				result = findNestedRecursive(
+					element,
+					inter,
+					nestedPath,
+					predicate,
+				)
+				if result != nil {
+					return false
+				}
+
+				index += 1
+
+				// continue iteration
+				return true
+			},
+			false,
+			interpreter.EmptyLocationRange,
+		)
+
+		if result != nil {
+			return result
+		}
+
+	case *interpreter.DictionaryValue:
+
+		value.Iterate(
+			inter,
+			interpreter.EmptyLocationRange,
+			func(key, element interpreter.Value) (resume bool) {
+
+				cadenceKey, err := runtime.ExportValue(key, inter, interpreter.EmptyLocationRange)
+				if err != nil {
+					panic(errors.NewUnexpectedErrorFromCause(err))
+				}
+
+				nestedPath := path
+				nestedPath = append(nestedPath, dictionaryPathElement{cadenceKey})
+
+				result = findNestedRecursive(
+					element,
+					inter,
+					nestedPath,
+					predicate,
+				)
+				if result != nil {
+					return false
+				}
+
+				// continue iteration
+				return true
+			},
+		)
+
+		if result != nil {
+			return result
+		}
+
+	case *interpreter.CompositeValue:
+
+		value.ForEachFieldName(func(fieldName string) (resume bool) {
+
+			nestedPath := path
+			nestedPath = append(nestedPath, structPathElement{fieldName})
+
+			field := value.GetMember(
+				inter,
+				interpreter.EmptyLocationRange,
+				fieldName,
+			)
+
+			result = findNestedRecursive(
+				field,
+				inter,
+				nestedPath,
+				predicate,
+			)
+			if result != nil {
+				return false
+			}
+
+			// continue iteration
+			return true
+		})
+
+		if result != nil {
+			return result
+		}
+
+	case *interpreter.SomeValue:
+
+		nestedPath := path
+		nestedPath = append(nestedPath, somePathElement{})
+
+		innerValue := value.InnerValue(inter, interpreter.EmptyLocationRange)
+
+		result = findNestedRecursive(
+			innerValue,
+			inter,
+			nestedPath,
+			predicate,
+		)
 		if result != nil {
 			return result
 		}
