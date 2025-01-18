@@ -2065,6 +2065,59 @@ func TestInterpretRandomNestedArrayOperations(t *testing.T) {
 
 	const opCount = 5
 
+	const arrayStorageMapKey = interpreter.StringStorageMapKey("array")
+
+	writeArray := func(
+		inter *interpreter.Interpreter,
+		owner common.Address,
+		storageMapKey interpreter.StorageMapKey,
+		array *interpreter.ArrayValue,
+	) {
+		inter.Storage().
+			GetStorageMap(
+				owner,
+				common.PathDomainStorage.Identifier(),
+				true,
+			).
+			WriteValue(
+				inter,
+				storageMapKey,
+				array,
+			)
+	}
+
+	readArray := func(
+		inter *interpreter.Interpreter,
+		owner common.Address,
+		storageMapKey interpreter.StorageMapKey,
+	) *interpreter.ArrayValue {
+		storageMap := inter.Storage().GetStorageMap(
+			owner,
+			common.PathDomainStorage.Identifier(),
+			false,
+		)
+		require.NotNil(t, storageMap)
+
+		readValue := storageMap.ReadValue(inter, storageMapKey)
+		require.NotNil(t, readValue)
+
+		require.IsType(t, &interpreter.ArrayValue{}, readValue)
+		return readValue.(*interpreter.ArrayValue)
+	}
+
+	getNestedArray := func(
+		inter *interpreter.Interpreter,
+		rootValue interpreter.Value,
+		owner common.Address,
+		path []pathElement,
+	) *interpreter.ArrayValue {
+		nestedValue := getNestedValue(t, inter, rootValue, path)
+		require.IsType(t, &interpreter.ArrayValue{}, nestedValue)
+		nestedArray := nestedValue.(*interpreter.ArrayValue)
+		require.Equal(t, owner, nestedArray.GetOwner())
+		return nestedArray
+	}
+
 	createValue := func(
 		t *testing.T,
 		r *randomValueGenerator,
@@ -2073,8 +2126,7 @@ func TestInterpretRandomNestedArrayOperations(t *testing.T) {
 	) (
 		actualRootValue interpreter.Value,
 		generatedValue cadence.Value,
-		reloadActualRootValue func() interpreter.Value,
-		getNestedArray func(rootValue interpreter.Value, owner common.Address) *interpreter.ArrayValue,
+		path []pathElement,
 	) {
 
 		// It does not matter what the root value is,
@@ -2082,7 +2134,6 @@ func TestInterpretRandomNestedArrayOperations(t *testing.T) {
 		// which it is nested inside an optional,
 		// and it satisfies the given predicate.
 
-		var path []pathElement
 		for {
 			generatedValue = r.randomArrayValue(inter, 0)
 
@@ -2124,45 +2175,15 @@ func TestInterpretRandomNestedArrayOperations(t *testing.T) {
 			true,
 		)
 
-		const arrayStorageMapKey = interpreter.StringStorageMapKey("array")
-
 		// Store the array in a storage map, so that the array's slab
 		// is referenced by the root of the storage.
 
-		inter.Storage().
-			GetStorageMap(
-				owner,
-				common.PathDomainStorage.Identifier(),
-				true,
-			).
-			WriteValue(
-				inter,
-				arrayStorageMapKey,
-				actualRootValue,
-			)
-
-		reloadActualRootValue = func() interpreter.Value {
-			storageMap := inter.Storage().GetStorageMap(
-				owner,
-				common.PathDomainStorage.Identifier(),
-				false,
-			)
-			require.NotNil(t, storageMap)
-
-			readValue := storageMap.ReadValue(inter, arrayStorageMapKey)
-			require.NotNil(t, readValue)
-
-			require.IsType(t, &interpreter.ArrayValue{}, readValue)
-			return readValue.(*interpreter.ArrayValue)
-		}
-
-		getNestedArray = func(rootValue interpreter.Value, owner common.Address) *interpreter.ArrayValue {
-			nestedValue := getNestedValue(t, inter, rootValue, path)
-			require.IsType(t, &interpreter.ArrayValue{}, nestedValue)
-			nestedArray := nestedValue.(*interpreter.ArrayValue)
-			require.Equal(t, owner, nestedArray.GetOwner())
-			return nestedArray
-		}
+		writeArray(
+			inter,
+			owner,
+			arrayStorageMapKey,
+			actualRootValue.(*interpreter.ArrayValue),
+		)
 
 		return
 	}
@@ -2211,7 +2232,7 @@ func TestInterpretRandomNestedArrayOperations(t *testing.T) {
 		)
 		t.Logf("seed: %d", r.seed)
 
-		actualRootValue, generatedValue, reloadActualRootValue, getNestedArray :=
+		actualRootValue, generatedValue, path :=
 			createValue(
 				t,
 				&r,
@@ -2223,7 +2244,12 @@ func TestInterpretRandomNestedArrayOperations(t *testing.T) {
 				},
 			)
 
-		actualNestedArray := getNestedArray(actualRootValue, owner)
+		actualNestedArray := getNestedArray(
+			inter,
+			actualRootValue,
+			owner,
+			path,
+		)
 
 		type insert struct {
 			index int
@@ -2284,8 +2310,13 @@ func TestInterpretRandomNestedArrayOperations(t *testing.T) {
 
 			resetStorage()
 
-			actualRootValue = reloadActualRootValue()
-			actualNestedArray = getNestedArray(actualRootValue, owner)
+			actualRootValue = readArray(inter, owner, arrayStorageMapKey)
+			actualNestedArray = getNestedArray(
+				inter,
+				actualRootValue,
+				owner,
+				path,
+			)
 
 			performInsert(
 				actualNestedArray,
@@ -2297,7 +2328,12 @@ func TestInterpretRandomNestedArrayOperations(t *testing.T) {
 			// that have been performed on the actual value so far.
 
 			expectedRootValue := importValue(t, inter, generatedValue)
-			expectedNestedArray := getNestedArray(expectedRootValue, common.ZeroAddress)
+			expectedNestedArray := getNestedArray(
+				inter,
+				expectedRootValue,
+				common.ZeroAddress,
+				path,
+			)
 
 			for _, insert := range inserts[:i+1] {
 
@@ -2328,7 +2364,7 @@ func TestInterpretRandomNestedArrayOperations(t *testing.T) {
 		)
 		t.Logf("seed: %d", r.seed)
 
-		actualRootValue, generatedValue, reloadActualRootValue, getNestedArray :=
+		actualRootValue, generatedValue, path :=
 			createValue(
 				t,
 				&r,
@@ -2340,7 +2376,12 @@ func TestInterpretRandomNestedArrayOperations(t *testing.T) {
 				},
 			)
 
-		actualNestedArray := getNestedArray(actualRootValue, owner)
+		actualNestedArray := getNestedArray(
+			inter,
+			actualRootValue,
+			owner,
+			path,
+		)
 
 		elementCount := actualNestedArray.Count()
 		require.Greater(t, elementCount, 0)
@@ -2399,8 +2440,13 @@ func TestInterpretRandomNestedArrayOperations(t *testing.T) {
 
 			resetStorage()
 
-			actualRootValue = reloadActualRootValue()
-			actualNestedArray = getNestedArray(actualRootValue, owner)
+			actualRootValue = readArray(inter, owner, arrayStorageMapKey)
+			actualNestedArray = getNestedArray(
+				inter,
+				actualRootValue,
+				owner,
+				path,
+			)
 
 			performUpdate(
 				actualNestedArray,
@@ -2412,7 +2458,12 @@ func TestInterpretRandomNestedArrayOperations(t *testing.T) {
 			// that have been performed on the actual value so far.
 
 			expectedRootValue := importValue(t, inter, generatedValue)
-			expectedNestedArray := getNestedArray(expectedRootValue, common.ZeroAddress)
+			expectedNestedArray := getNestedArray(
+				inter,
+				expectedRootValue,
+				common.ZeroAddress,
+				path,
+			)
 
 			for _, update := range updates[:i+1] {
 
@@ -2443,7 +2494,7 @@ func TestInterpretRandomNestedArrayOperations(t *testing.T) {
 		)
 		t.Logf("seed: %d", r.seed)
 
-		actualRootValue, generatedValue, reloadActualRootValue, getNestedArray :=
+		actualRootValue, generatedValue, path :=
 			createValue(
 				t,
 				&r,
@@ -2453,7 +2504,13 @@ func TestInterpretRandomNestedArrayOperations(t *testing.T) {
 				},
 			)
 
-		actualNestedArray := getNestedArray(actualRootValue, owner)
+		actualNestedArray := getNestedArray(
+			inter,
+			actualRootValue,
+			owner,
+			path,
+		)
+
 		elementCount := actualNestedArray.Count()
 		require.GreaterOrEqual(t, elementCount, opCount)
 
@@ -2495,8 +2552,13 @@ func TestInterpretRandomNestedArrayOperations(t *testing.T) {
 
 			resetStorage()
 
-			actualRootValue = reloadActualRootValue()
-			actualNestedArray = getNestedArray(actualRootValue, owner)
+			actualRootValue = readArray(inter, owner, arrayStorageMapKey)
+			actualNestedArray = getNestedArray(
+				inter,
+				actualRootValue,
+				owner,
+				path,
+			)
 
 			performRemove(
 				actualNestedArray,
@@ -2508,7 +2570,12 @@ func TestInterpretRandomNestedArrayOperations(t *testing.T) {
 			// that have been performed on the actual value so far.
 
 			expectedRootValue := importValue(t, inter, generatedValue)
-			expectedNestedArray := getNestedArray(expectedRootValue, common.ZeroAddress)
+			expectedNestedArray := getNestedArray(
+				inter,
+				expectedRootValue,
+				common.ZeroAddress,
+				path,
+			)
 
 			for _, index := range removes[:i+1] {
 
@@ -2544,6 +2611,59 @@ func TestInterpretRandomNestedDictionaryOperations(t *testing.T) {
 
 	const opCount = 5
 
+	const dictionaryStorageMapKey = interpreter.StringStorageMapKey("dictionary")
+
+	writeDictionary := func(
+		inter *interpreter.Interpreter,
+		owner common.Address,
+		storageMapKey interpreter.StorageMapKey,
+		dictionary *interpreter.DictionaryValue,
+	) {
+		inter.Storage().
+			GetStorageMap(
+				owner,
+				common.PathDomainStorage.Identifier(),
+				true,
+			).
+			WriteValue(
+				inter,
+				storageMapKey,
+				dictionary,
+			)
+	}
+
+	readDictionary := func(
+		inter *interpreter.Interpreter,
+		owner common.Address,
+		storageMapKey interpreter.StorageMapKey,
+	) *interpreter.DictionaryValue {
+		storageMap := inter.Storage().GetStorageMap(
+			owner,
+			common.PathDomainStorage.Identifier(),
+			false,
+		)
+		require.NotNil(t, storageMap)
+
+		readValue := storageMap.ReadValue(inter, storageMapKey)
+		require.NotNil(t, readValue)
+
+		require.IsType(t, &interpreter.DictionaryValue{}, readValue)
+		return readValue.(*interpreter.DictionaryValue)
+	}
+
+	getNestedDictionary := func(
+		inter *interpreter.Interpreter,
+		rootValue interpreter.Value,
+		owner common.Address,
+		path []pathElement,
+	) *interpreter.DictionaryValue {
+		nestedValue := getNestedValue(t, inter, rootValue, path)
+		require.IsType(t, &interpreter.DictionaryValue{}, nestedValue)
+		nestedDictionary := nestedValue.(*interpreter.DictionaryValue)
+		require.Equal(t, owner, nestedDictionary.GetOwner())
+		return nestedDictionary
+	}
+
 	createValue := func(
 		t *testing.T,
 		r *randomValueGenerator,
@@ -2552,8 +2672,7 @@ func TestInterpretRandomNestedDictionaryOperations(t *testing.T) {
 	) (
 		actualRootValue interpreter.Value,
 		generatedValue cadence.Value,
-		reloadActualRootValue func() interpreter.Value,
-		getNestedDictionary func(rootValue interpreter.Value, owner common.Address) *interpreter.DictionaryValue,
+		path []pathElement,
 	) {
 
 		// It does not matter what the root value is,
@@ -2561,7 +2680,6 @@ func TestInterpretRandomNestedDictionaryOperations(t *testing.T) {
 		// which it is nested inside an optional,
 		// and it satisfies the given predicate.
 
-		var path []pathElement
 		for {
 			generatedValue = r.randomDictionaryValue(inter, 0)
 
@@ -2603,45 +2721,15 @@ func TestInterpretRandomNestedDictionaryOperations(t *testing.T) {
 			true,
 		)
 
-		const dictionaryStorageMapKey = interpreter.StringStorageMapKey("dictionary")
-
 		// Store the dictionary in a storage map, so that the dictionary's slab
 		// is referenced by the root of the storage.
 
-		inter.Storage().
-			GetStorageMap(
-				owner,
-				common.PathDomainStorage.Identifier(),
-				true,
-			).
-			WriteValue(
-				inter,
-				dictionaryStorageMapKey,
-				actualRootValue,
-			)
-
-		reloadActualRootValue = func() interpreter.Value {
-			storageMap := inter.Storage().GetStorageMap(
-				owner,
-				common.PathDomainStorage.Identifier(),
-				false,
-			)
-			require.NotNil(t, storageMap)
-
-			readValue := storageMap.ReadValue(inter, dictionaryStorageMapKey)
-			require.NotNil(t, readValue)
-
-			require.IsType(t, &interpreter.DictionaryValue{}, readValue)
-			return readValue.(*interpreter.DictionaryValue)
-		}
-
-		getNestedDictionary = func(rootValue interpreter.Value, owner common.Address) *interpreter.DictionaryValue {
-			nestedValue := getNestedValue(t, inter, rootValue, path)
-			require.IsType(t, &interpreter.DictionaryValue{}, nestedValue)
-			nestedDictionary := nestedValue.(*interpreter.DictionaryValue)
-			require.Equal(t, owner, nestedDictionary.GetOwner())
-			return nestedDictionary
-		}
+		writeDictionary(
+			inter,
+			owner,
+			dictionaryStorageMapKey,
+			actualRootValue.(*interpreter.DictionaryValue),
+		)
 
 		return
 	}
@@ -2690,7 +2778,7 @@ func TestInterpretRandomNestedDictionaryOperations(t *testing.T) {
 		)
 		t.Logf("seed: %d", r.seed)
 
-		actualRootValue, generatedValue, reloadActualRootValue, getNestedDictionary :=
+		actualRootValue, generatedValue, path :=
 			createValue(
 				t,
 				&r,
@@ -2702,7 +2790,12 @@ func TestInterpretRandomNestedDictionaryOperations(t *testing.T) {
 				},
 			)
 
-		actualNestedDictionary := getNestedDictionary(actualRootValue, owner)
+		actualNestedDictionary := getNestedDictionary(
+			inter,
+			actualRootValue,
+			owner,
+			path,
+		)
 
 		type insert struct {
 			key   cadence.Value
@@ -2780,8 +2873,13 @@ func TestInterpretRandomNestedDictionaryOperations(t *testing.T) {
 
 			resetStorage()
 
-			actualRootValue = reloadActualRootValue()
-			actualNestedDictionary = getNestedDictionary(actualRootValue, owner)
+			actualRootValue = readDictionary(inter, owner, dictionaryStorageMapKey)
+			actualNestedDictionary = getNestedDictionary(
+				inter,
+				actualRootValue,
+				owner,
+				path,
+			)
 
 			performInsert(
 				actualNestedDictionary,
@@ -2793,7 +2891,12 @@ func TestInterpretRandomNestedDictionaryOperations(t *testing.T) {
 			// that have been performed on the actual value so far.
 
 			expectedRootValue := importValue(t, inter, generatedValue)
-			expectedNestedDictionary := getNestedDictionary(expectedRootValue, common.ZeroAddress)
+			expectedNestedDictionary := getNestedDictionary(
+				inter,
+				expectedRootValue,
+				common.ZeroAddress,
+				path,
+			)
 
 			for _, insert := range inserts[:i+1] {
 
@@ -2824,7 +2927,7 @@ func TestInterpretRandomNestedDictionaryOperations(t *testing.T) {
 		)
 		t.Logf("seed: %d", r.seed)
 
-		actualRootValue, generatedValue, reloadActualRootValue, getNestedDictionary :=
+		actualRootValue, generatedValue, path :=
 			createValue(
 				t,
 				&r,
@@ -2836,7 +2939,12 @@ func TestInterpretRandomNestedDictionaryOperations(t *testing.T) {
 				},
 			)
 
-		actualNestedDictionary := getNestedDictionary(actualRootValue, owner)
+		actualNestedDictionary := getNestedDictionary(
+			inter,
+			actualRootValue,
+			owner,
+			path,
+		)
 
 		elementCount := actualNestedDictionary.Count()
 		require.Greater(t, elementCount, 0)
@@ -2917,8 +3025,13 @@ func TestInterpretRandomNestedDictionaryOperations(t *testing.T) {
 
 			resetStorage()
 
-			actualRootValue = reloadActualRootValue()
-			actualNestedDictionary = getNestedDictionary(actualRootValue, owner)
+			actualRootValue = readDictionary(inter, owner, dictionaryStorageMapKey)
+			actualNestedDictionary = getNestedDictionary(
+				inter,
+				actualRootValue,
+				owner,
+				path,
+			)
 
 			performUpdate(
 				actualNestedDictionary,
@@ -2930,7 +3043,12 @@ func TestInterpretRandomNestedDictionaryOperations(t *testing.T) {
 			// that have been performed on the actual value so far.
 
 			expectedRootValue := importValue(t, inter, generatedValue)
-			expectedNestedDictionary := getNestedDictionary(expectedRootValue, common.ZeroAddress)
+			expectedNestedDictionary := getNestedDictionary(
+				inter,
+				expectedRootValue,
+				common.ZeroAddress,
+				path,
+			)
 
 			for _, update := range updates[:i+1] {
 
@@ -2961,7 +3079,7 @@ func TestInterpretRandomNestedDictionaryOperations(t *testing.T) {
 		)
 		t.Logf("seed: %d", r.seed)
 
-		actualRootValue, generatedValue, reloadActualRootValue, getNestedDictionary :=
+		actualRootValue, generatedValue, path :=
 			createValue(
 				t,
 				&r,
@@ -2971,7 +3089,12 @@ func TestInterpretRandomNestedDictionaryOperations(t *testing.T) {
 				},
 			)
 
-		actualNestedDictionary := getNestedDictionary(actualRootValue, owner)
+		actualNestedDictionary := getNestedDictionary(
+			inter,
+			actualRootValue,
+			owner,
+			path,
+		)
 
 		elementCount := actualNestedDictionary.Count()
 		require.GreaterOrEqual(t, elementCount, opCount)
@@ -3048,8 +3171,13 @@ func TestInterpretRandomNestedDictionaryOperations(t *testing.T) {
 
 			resetStorage()
 
-			actualRootValue = reloadActualRootValue()
-			actualNestedDictionary = getNestedDictionary(actualRootValue, owner)
+			actualRootValue = readDictionary(inter, owner, dictionaryStorageMapKey)
+			actualNestedDictionary = getNestedDictionary(
+				inter,
+				actualRootValue,
+				owner,
+				path,
+			)
 
 			performRemove(
 				actualNestedDictionary,
@@ -3061,7 +3189,12 @@ func TestInterpretRandomNestedDictionaryOperations(t *testing.T) {
 			// that have been performed on the actual value so far.
 
 			expectedRootValue := importValue(t, inter, generatedValue)
-			expectedNestedDictionary := getNestedDictionary(expectedRootValue, common.ZeroAddress)
+			expectedNestedDictionary := getNestedDictionary(
+				inter,
+				expectedRootValue,
+				common.ZeroAddress,
+				path,
+			)
 
 			for _, index := range removes[:i+1] {
 
@@ -3097,6 +3230,59 @@ func TestInterpretRandomNestedCompositeOperations(t *testing.T) {
 
 	const opCount = 5
 
+	const compositeStorageMapKey = interpreter.StringStorageMapKey("composite")
+
+	writeComposite := func(
+		inter *interpreter.Interpreter,
+		owner common.Address,
+		storageMapKey interpreter.StorageMapKey,
+		composite *interpreter.CompositeValue,
+	) {
+		inter.Storage().
+			GetStorageMap(
+				owner,
+				common.PathDomainStorage.Identifier(),
+				true,
+			).
+			WriteValue(
+				inter,
+				storageMapKey,
+				composite,
+			)
+	}
+
+	readComposite := func(
+		inter *interpreter.Interpreter,
+		owner common.Address,
+		storageMapKey interpreter.StorageMapKey,
+	) *interpreter.CompositeValue {
+		storageMap := inter.Storage().GetStorageMap(
+			owner,
+			common.PathDomainStorage.Identifier(),
+			false,
+		)
+		require.NotNil(t, storageMap)
+
+		readValue := storageMap.ReadValue(inter, storageMapKey)
+		require.NotNil(t, readValue)
+
+		require.IsType(t, &interpreter.CompositeValue{}, readValue)
+		return readValue.(*interpreter.CompositeValue)
+	}
+
+	getNestedComposite := func(
+		inter *interpreter.Interpreter,
+		rootValue interpreter.Value,
+		owner common.Address,
+		path []pathElement,
+	) *interpreter.CompositeValue {
+		nestedValue := getNestedValue(t, inter, rootValue, path)
+		require.IsType(t, &interpreter.CompositeValue{}, nestedValue)
+		nestedComposite := nestedValue.(*interpreter.CompositeValue)
+		require.Equal(t, owner, nestedComposite.GetOwner())
+		return nestedComposite
+	}
+
 	createValue := func(
 		t *testing.T,
 		r *randomValueGenerator,
@@ -3105,8 +3291,7 @@ func TestInterpretRandomNestedCompositeOperations(t *testing.T) {
 	) (
 		actualRootValue interpreter.Value,
 		generatedValue cadence.Value,
-		reloadActualRootValue func() interpreter.Value,
-		getNestedComposite func(rootValue interpreter.Value, owner common.Address) *interpreter.CompositeValue,
+		path []pathElement,
 	) {
 
 		// It does not matter what the root value is,
@@ -3114,7 +3299,6 @@ func TestInterpretRandomNestedCompositeOperations(t *testing.T) {
 		// which it is nested inside an optional,
 		// and it satisfies the given predicate.
 
-		var path []pathElement
 		for {
 			generatedValue = r.randomStructValue(inter, 0)
 
@@ -3156,45 +3340,15 @@ func TestInterpretRandomNestedCompositeOperations(t *testing.T) {
 			true,
 		)
 
-		const compositeStorageMapKey = interpreter.StringStorageMapKey("composite")
-
 		// Store the composite in a storage map, so that the composite's slab
 		// is referenced by the root of the storage.
 
-		inter.Storage().
-			GetStorageMap(
-				owner,
-				common.PathDomainStorage.Identifier(),
-				true,
-			).
-			WriteValue(
-				inter,
-				compositeStorageMapKey,
-				actualRootValue,
-			)
-
-		reloadActualRootValue = func() interpreter.Value {
-			storageMap := inter.Storage().GetStorageMap(
-				owner,
-				common.PathDomainStorage.Identifier(),
-				false,
-			)
-			require.NotNil(t, storageMap)
-
-			readValue := storageMap.ReadValue(inter, compositeStorageMapKey)
-			require.NotNil(t, readValue)
-
-			require.IsType(t, &interpreter.CompositeValue{}, readValue)
-			return readValue.(*interpreter.CompositeValue)
-		}
-
-		getNestedComposite = func(rootValue interpreter.Value, owner common.Address) *interpreter.CompositeValue {
-			nestedValue := getNestedValue(t, inter, rootValue, path)
-			require.IsType(t, &interpreter.CompositeValue{}, nestedValue)
-			nestedComposite := nestedValue.(*interpreter.CompositeValue)
-			require.Equal(t, owner, nestedComposite.GetOwner())
-			return nestedComposite
-		}
+		writeComposite(
+			inter,
+			owner,
+			compositeStorageMapKey,
+			actualRootValue.(*interpreter.CompositeValue),
+		)
 
 		return
 	}
@@ -3242,7 +3396,7 @@ func TestInterpretRandomNestedCompositeOperations(t *testing.T) {
 		)
 		t.Logf("seed: %d", r.seed)
 
-		actualRootValue, generatedValue, reloadActualRootValue, getNestedComposite :=
+		actualRootValue, generatedValue, path :=
 			createValue(
 				t,
 				&r,
@@ -3254,7 +3408,12 @@ func TestInterpretRandomNestedCompositeOperations(t *testing.T) {
 				},
 			)
 
-		actualNestedComposite := getNestedComposite(actualRootValue, owner)
+		actualNestedComposite := getNestedComposite(
+			inter,
+			actualRootValue,
+			owner,
+			path,
+		)
 
 		type insert struct {
 			name  string
@@ -3329,8 +3488,13 @@ func TestInterpretRandomNestedCompositeOperations(t *testing.T) {
 
 			resetStorage()
 
-			actualRootValue = reloadActualRootValue()
-			actualNestedComposite = getNestedComposite(actualRootValue, owner)
+			actualRootValue = readComposite(inter, owner, compositeStorageMapKey)
+			actualNestedComposite = getNestedComposite(
+				inter,
+				actualRootValue,
+				owner,
+				path,
+			)
 
 			performInsert(
 				actualNestedComposite,
@@ -3342,7 +3506,12 @@ func TestInterpretRandomNestedCompositeOperations(t *testing.T) {
 			// that have been performed on the actual value so far.
 
 			expectedRootValue := importValue(t, inter, generatedValue)
-			expectedNestedComposite := getNestedComposite(expectedRootValue, common.ZeroAddress)
+			expectedNestedComposite := getNestedComposite(
+				inter,
+				expectedRootValue,
+				common.ZeroAddress,
+				path,
+			)
 
 			for _, insert := range inserts[:i+1] {
 
@@ -3373,7 +3542,7 @@ func TestInterpretRandomNestedCompositeOperations(t *testing.T) {
 		)
 		t.Logf("seed: %d", r.seed)
 
-		actualRootValue, generatedValue, reloadActualRootValue, getNestedComposite :=
+		actualRootValue, generatedValue, path :=
 			createValue(
 				t,
 				&r,
@@ -3385,7 +3554,12 @@ func TestInterpretRandomNestedCompositeOperations(t *testing.T) {
 				},
 			)
 
-		actualNestedComposite := getNestedComposite(actualRootValue, owner)
+		actualNestedComposite := getNestedComposite(
+			inter,
+			actualRootValue,
+			owner,
+			path,
+		)
 
 		fieldCount := actualNestedComposite.FieldCount()
 		require.Greater(t, fieldCount, 0)
@@ -3455,8 +3629,13 @@ func TestInterpretRandomNestedCompositeOperations(t *testing.T) {
 
 			resetStorage()
 
-			actualRootValue = reloadActualRootValue()
-			actualNestedComposite = getNestedComposite(actualRootValue, owner)
+			actualRootValue = readComposite(inter, owner, compositeStorageMapKey)
+			actualNestedComposite = getNestedComposite(
+				inter,
+				actualRootValue,
+				owner,
+				path,
+			)
 
 			performUpdate(
 				actualNestedComposite,
@@ -3468,7 +3647,12 @@ func TestInterpretRandomNestedCompositeOperations(t *testing.T) {
 			// that have been performed on the actual value so far.
 
 			expectedRootValue := importValue(t, inter, generatedValue)
-			expectedNestedComposite := getNestedComposite(expectedRootValue, common.ZeroAddress)
+			expectedNestedComposite := getNestedComposite(
+				inter,
+				expectedRootValue,
+				common.ZeroAddress,
+				path,
+			)
 
 			for _, update := range updates[:i+1] {
 
@@ -3499,7 +3683,7 @@ func TestInterpretRandomNestedCompositeOperations(t *testing.T) {
 		)
 		t.Logf("seed: %d", r.seed)
 
-		actualRootValue, generatedValue, reloadActualRootValue, getNestedComposite :=
+		actualRootValue, generatedValue, path :=
 			createValue(
 				t,
 				&r,
@@ -3509,7 +3693,12 @@ func TestInterpretRandomNestedCompositeOperations(t *testing.T) {
 				},
 			)
 
-		actualNestedComposite := getNestedComposite(actualRootValue, owner)
+		actualNestedComposite := getNestedComposite(
+			inter,
+			actualRootValue,
+			owner,
+			path,
+		)
 
 		fieldCount := actualNestedComposite.FieldCount()
 		require.GreaterOrEqual(t, fieldCount, opCount)
@@ -3576,8 +3765,13 @@ func TestInterpretRandomNestedCompositeOperations(t *testing.T) {
 
 			resetStorage()
 
-			actualRootValue = reloadActualRootValue()
-			actualNestedComposite = getNestedComposite(actualRootValue, owner)
+			actualRootValue = readComposite(inter, owner, compositeStorageMapKey)
+			actualNestedComposite = getNestedComposite(
+				inter,
+				actualRootValue,
+				owner,
+				path,
+			)
 
 			performRemove(
 				actualNestedComposite,
@@ -3589,7 +3783,12 @@ func TestInterpretRandomNestedCompositeOperations(t *testing.T) {
 			// that have been performed on the actual value so far.
 
 			expectedRootValue := importValue(t, inter, generatedValue)
-			expectedNestedComposite := getNestedComposite(expectedRootValue, common.ZeroAddress)
+			expectedNestedComposite := getNestedComposite(
+				inter,
+				expectedRootValue,
+				common.ZeroAddress,
+				path,
+			)
 
 			for _, index := range removes[:i+1] {
 
