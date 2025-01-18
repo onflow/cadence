@@ -5143,3 +5143,432 @@ func TestCheckStorageHealthInMiddleOfTransferAndRemove(t *testing.T) {
 
 	require.NoError(t, storage.CheckHealth())
 }
+
+// TestInterpretIterateReadOnlyLoadedWithSomeValueChildren tests https://github.com/onflow/atree-internal/pull/7
+func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
+
+	owner := common.Address{'A'}
+
+	const storageMapKey = interpreter.StringStorageMapKey("value")
+
+	writeValue := func(
+		inter *interpreter.Interpreter,
+		owner common.Address,
+		storageMapKey interpreter.StorageMapKey,
+		value interpreter.Value,
+	) {
+		value = value.Transfer(
+			inter,
+			interpreter.EmptyLocationRange,
+			atree.Address(owner),
+			false,
+			nil,
+			nil,
+			// TODO: is has no parent container = true correct?
+			true,
+		)
+
+		inter.Storage().
+			GetStorageMap(
+				owner,
+				common.PathDomainStorage.Identifier(),
+				true,
+			).
+			WriteValue(
+				inter,
+				storageMapKey,
+				value,
+			)
+	}
+
+	readValue := func(
+		inter *interpreter.Interpreter,
+		owner common.Address,
+		storageMapKey interpreter.StorageMapKey,
+	) interpreter.Value {
+		storageMap := inter.Storage().GetStorageMap(
+			owner,
+			common.PathDomainStorage.Identifier(),
+			false,
+		)
+		require.NotNil(t, storageMap)
+
+		readValue := storageMap.ReadValue(inter, storageMapKey)
+		require.NotNil(t, readValue)
+
+		return readValue
+	}
+
+	t.Run("dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		var cadenceRootPairs []cadence.KeyValuePair
+
+		const expectedRootCount = 10
+		const expectedInnerCount = 100
+
+		for i := 0; i < expectedRootCount; i++ {
+			var cadenceInnerPairs []cadence.KeyValuePair
+
+			for j := 0; j < expectedInnerCount; j++ {
+				cadenceInnerPairs = append(
+					cadenceInnerPairs,
+					cadence.KeyValuePair{
+						Key:   cadence.NewInt(j),
+						Value: cadence.String(strings.Repeat("cadence", 1000)),
+					},
+				)
+			}
+
+			cadenceRootPairs = append(
+				cadenceRootPairs,
+				cadence.KeyValuePair{
+					Key: cadence.NewInt(i),
+					Value: cadence.NewOptional(
+						cadence.NewDictionary(cadenceInnerPairs),
+					),
+				},
+			)
+		}
+
+		cadenceRootDictionary := cadence.NewDictionary(cadenceRootPairs)
+
+		rootDictionary := importValue(t, inter, cadenceRootDictionary).(*interpreter.DictionaryValue)
+
+		// Check that the inner dictionaries are not inlined.
+		// If the test fails here, adjust the value generation code above
+		// to ensure that the inner dictionaries are not inlined.
+
+		rootDictionary.Iterate(
+			inter,
+			interpreter.EmptyLocationRange,
+			func(key, value interpreter.Value) (resume bool) {
+
+				require.IsType(t, &interpreter.SomeValue{}, value)
+				someValue := value.(*interpreter.SomeValue)
+
+				innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
+
+				require.IsType(t, &interpreter.DictionaryValue{}, innerValue)
+				innerDictionary := innerValue.(*interpreter.DictionaryValue)
+				require.False(t, innerDictionary.Inlined())
+
+				// continue iteration
+				return true
+			},
+		)
+
+		writeValue(
+			inter,
+			owner,
+			storageMapKey,
+			rootDictionary,
+		)
+
+		resetStorage()
+
+		rootDictionary = readValue(
+			inter,
+			owner,
+			storageMapKey,
+		).(*interpreter.DictionaryValue)
+
+		var iterations int
+		rootDictionary.IterateReadOnlyLoaded(
+			inter,
+			interpreter.EmptyLocationRange,
+			func(_, _ interpreter.Value) (resume bool) {
+				iterations += 1
+
+				// continue iteration
+				return true
+			},
+		)
+
+		require.Equal(t, 0, iterations)
+
+		iterations = 0
+		rootDictionary.Iterate(
+			inter,
+			interpreter.EmptyLocationRange,
+			func(_, _ interpreter.Value) (resume bool) {
+				iterations += 1
+
+				// continue iteration
+				return true
+			},
+		)
+
+		require.Equal(t, expectedRootCount, iterations)
+	})
+
+	t.Run("array", func(t *testing.T) {
+		t.Parallel()
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		var cadenceRootElements []cadence.Value
+
+		const expectedRootCount = 10
+		const expectedInnerCount = 100
+
+		for i := 0; i < expectedRootCount; i++ {
+			var cadenceInnerElements []cadence.Value
+
+			for j := 0; j < expectedInnerCount; j++ {
+				cadenceInnerElements = append(
+					cadenceInnerElements,
+					cadence.String(strings.Repeat("cadence", 1000)),
+				)
+			}
+
+			cadenceRootElements = append(
+				cadenceRootElements,
+				cadence.NewOptional(
+					cadence.NewArray(cadenceInnerElements),
+				),
+			)
+		}
+
+		cadenceRootArray := cadence.NewArray(cadenceRootElements)
+
+		rootArray := importValue(t, inter, cadenceRootArray).(*interpreter.ArrayValue)
+
+		// Check that the inner arrays are not inlined.
+		// If the test fails here, adjust the value generation code above
+		// to ensure that the inner arrays are not inlined.
+
+		rootArray.Iterate(
+			inter,
+			func(value interpreter.Value) (resume bool) {
+
+				require.IsType(t, &interpreter.SomeValue{}, value)
+				someValue := value.(*interpreter.SomeValue)
+
+				innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
+
+				require.IsType(t, &interpreter.ArrayValue{}, innerValue)
+				innerArray := innerValue.(*interpreter.ArrayValue)
+				require.False(t, innerArray.Inlined())
+
+				// continue iteration
+				return true
+			},
+			false,
+			interpreter.EmptyLocationRange,
+		)
+
+		writeValue(
+			inter,
+			owner,
+			storageMapKey,
+			rootArray,
+		)
+
+		resetStorage()
+
+		rootArray = readValue(
+			inter,
+			owner,
+			storageMapKey,
+		).(*interpreter.ArrayValue)
+
+		var iterations int
+		rootArray.IterateReadOnlyLoaded(
+			inter,
+			func(_ interpreter.Value) (resume bool) {
+				iterations += 1
+
+				// continue iteration
+				return true
+			},
+			interpreter.EmptyLocationRange,
+		)
+
+		require.Equal(t, 0, iterations)
+
+		iterations = 0
+
+		rootArray.Iterate(
+			inter,
+			func(_ interpreter.Value) (resume bool) {
+				iterations += 1
+
+				// continue iteration
+				return true
+			},
+			false,
+			interpreter.EmptyLocationRange,
+		)
+
+		require.Equal(t, expectedRootCount, iterations)
+	})
+
+	t.Run("composite", func(t *testing.T) {
+		t.Parallel()
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		newCadenceType := func(fieldCount int) *cadence.StructType {
+			typeIdentifier := fmt.Sprintf("S%d", fieldCount)
+
+			typeLocation := common.AddressLocation{
+				Address: owner,
+				Name:    typeIdentifier,
+			}
+
+			fieldNames := make([]string, 0, fieldCount)
+			for i := 0; i < fieldCount; i++ {
+				fieldName := fmt.Sprintf("field%d", i)
+				fieldNames = append(fieldNames, fieldName)
+			}
+
+			cadenceFields := make([]cadence.Field, 0, fieldCount)
+			for _, fieldName := range fieldNames {
+				cadenceFields = append(
+					cadenceFields,
+					cadence.Field{
+						Identifier: fieldName,
+						Type:       cadence.AnyStructType,
+					},
+				)
+			}
+
+			structType := cadence.NewStructType(
+				typeLocation,
+				typeIdentifier,
+				cadenceFields,
+				nil,
+			)
+
+			compositeType := &sema.CompositeType{
+				Location:   typeLocation,
+				Identifier: typeIdentifier,
+				Kind:       common.CompositeKindStructure,
+				Members:    &sema.StringMemberOrderedMap{},
+				Fields:     fieldNames,
+			}
+
+			for _, fieldName := range fieldNames {
+				compositeType.Members.Set(
+					fieldName,
+					sema.NewUnmeteredPublicConstantFieldMember(
+						compositeType,
+						fieldName,
+						sema.AnyStructType,
+						"",
+					),
+				)
+			}
+
+			// Add the type to the elaboration, to short-circuit the type-lookup.
+			inter.Program.Elaboration.SetCompositeType(
+				compositeType.ID(),
+				compositeType,
+			)
+
+			return structType
+		}
+
+		var cadenceRootValues []cadence.Value
+
+		const expectedRootCount = 10
+		const expectedInnerCount = 100
+
+		rootStructType := newCadenceType(expectedRootCount)
+		innerStructType := newCadenceType(expectedInnerCount)
+
+		for i := 0; i < expectedRootCount; i++ {
+			var cadenceInnerValues []cadence.Value
+
+			for j := 0; j < expectedInnerCount; j++ {
+				cadenceInnerValues = append(
+					cadenceInnerValues,
+					cadence.String(strings.Repeat("cadence", 1000)),
+				)
+			}
+
+			cadenceRootValues = append(
+				cadenceRootValues,
+				cadence.NewOptional(
+					cadence.NewStruct(cadenceInnerValues).
+						WithType(innerStructType),
+				),
+			)
+		}
+
+		cadenceRootStruct := cadence.NewStruct(cadenceRootValues).
+			WithType(rootStructType)
+
+		rootStruct := importValue(t, inter, cadenceRootStruct).(*interpreter.CompositeValue)
+
+		// Check that the inner structs are not inlined.
+		// If the test fails here, adjust the value generation code above
+		// to ensure that the inner structs are not inlined.
+
+		rootStruct.ForEachField(
+			inter,
+			func(fieldName string, value interpreter.Value) (resume bool) {
+
+				require.IsType(t, &interpreter.SomeValue{}, value)
+				someValue := value.(*interpreter.SomeValue)
+
+				innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
+
+				require.IsType(t, &interpreter.CompositeValue{}, innerValue)
+				innerStruct := innerValue.(*interpreter.CompositeValue)
+				require.False(t, innerStruct.Inlined())
+
+				// continue iteration
+				return true
+			},
+			interpreter.EmptyLocationRange,
+		)
+
+		writeValue(
+			inter,
+			owner,
+			storageMapKey,
+			rootStruct,
+		)
+
+		resetStorage()
+
+		rootStruct = readValue(
+			inter,
+			owner,
+			storageMapKey,
+		).(*interpreter.CompositeValue)
+
+		var iterations int
+		rootStruct.ForEachReadOnlyLoadedField(
+			inter,
+			func(_ string, _ interpreter.Value) (resume bool) {
+				iterations += 1
+
+				// continue iteration
+				return true
+			},
+			interpreter.EmptyLocationRange,
+		)
+
+		require.Equal(t, 0, iterations)
+
+		iterations = 0
+		rootStruct.ForEachField(
+			inter,
+			func(_ string, _ interpreter.Value) (resume bool) {
+				iterations += 1
+
+				// continue iteration
+				return true
+			},
+			interpreter.EmptyLocationRange,
+		)
+
+		require.Equal(t, expectedRootCount, iterations)
+	})
+
+}
