@@ -4733,7 +4733,7 @@ func (v IntValue) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue,
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{
+		panic(NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
@@ -4766,7 +4766,7 @@ func (v IntValue) BitwiseRightShift(interpreter *Interpreter, other IntegerValue
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{
+		panic(NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
@@ -5403,6 +5403,12 @@ func (v Int8Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue
 		})
 	}
 
+	if o < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+
 	valueGetter := func() int8 {
 		return int8(v << o)
 	}
@@ -5417,6 +5423,12 @@ func (v Int8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValu
 			Operation:     ast.OperationBitwiseRightShift,
 			LeftType:      v.StaticType(interpreter),
 			RightType:     other.StaticType(interpreter),
+			LocationRange: locationRange,
+		})
+	}
+
+	if o < 0 {
+		panic(NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
@@ -6044,6 +6056,12 @@ func (v Int16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValu
 		})
 	}
 
+	if o < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+
 	valueGetter := func() int16 {
 		return int16(v << o)
 	}
@@ -6058,6 +6076,12 @@ func (v Int16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVal
 			Operation:     ast.OperationBitwiseRightShift,
 			LeftType:      v.StaticType(interpreter),
 			RightType:     other.StaticType(interpreter),
+			LocationRange: locationRange,
+		})
+	}
+
+	if o < 0 {
+		panic(NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
@@ -6687,6 +6711,12 @@ func (v Int32Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValu
 		})
 	}
 
+	if o < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+
 	valueGetter := func() int32 {
 		return int32(v << o)
 	}
@@ -6701,6 +6731,12 @@ func (v Int32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVal
 			Operation:     ast.OperationBitwiseRightShift,
 			LeftType:      v.StaticType(interpreter),
 			RightType:     other.StaticType(interpreter),
+			LocationRange: locationRange,
+		})
+	}
+
+	if o < 0 {
+		panic(NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
@@ -7322,6 +7358,12 @@ func (v Int64Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValu
 		})
 	}
 
+	if o < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+
 	valueGetter := func() int64 {
 		return int64(v << o)
 	}
@@ -7336,6 +7378,12 @@ func (v Int64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVal
 			Operation:     ast.OperationBitwiseRightShift,
 			LeftType:      v.StaticType(interpreter),
 			RightType:     other.StaticType(interpreter),
+			LocationRange: locationRange,
+		})
+	}
+
+	if o < 0 {
+		panic(NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
@@ -9450,7 +9498,7 @@ func (v UIntValue) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{
+		panic(NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
@@ -9484,7 +9532,7 @@ func (v UIntValue) BitwiseRightShift(interpreter *Interpreter, other IntegerValu
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{
+		panic(NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
@@ -18894,7 +18942,7 @@ func (v *CompositeValue) getBaseValue(
 	return NewEphemeralReferenceValue(interpreter, functionAuthorization, v.base, baseType, locationRange)
 }
 
-func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeValue) {
+func (v *CompositeValue) setBaseValue(_ *Interpreter, base *CompositeValue) {
 	v.base = base
 }
 

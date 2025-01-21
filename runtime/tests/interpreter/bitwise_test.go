@@ -348,6 +348,7 @@ func TestInterpretBitwiseLeftShift8(t *testing.T) {
 			inter.Globals.Get("c").GetValue(inter),
 		)
 	})
+
 	t.Run("Int8 << -3", func(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t,
@@ -355,6 +356,91 @@ func TestInterpretBitwiseLeftShift8(t *testing.T) {
 			fun test() {
 				let a: Int8 = 0x7f
 				let b: Int8 = -3
+				let c = a << b
+				}
+		   `)
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var shiftErr interpreter.NegativeShiftError
+		require.ErrorAs(t, err, &shiftErr)
+	})
+
+	t.Run("Int16 << -3", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t,
+			`
+			fun test() {
+				let a: Int16 = 0x7f
+				let b: Int16 = -3
+				let c = a << b
+				}
+		   `)
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var shiftErr interpreter.NegativeShiftError
+		require.ErrorAs(t, err, &shiftErr)
+	})
+
+	t.Run("Int32 << -3", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t,
+			`
+			fun test() {
+				let a: Int32 = 0x7f
+				let b: Int32 = -3
+				let c = a << b
+				}
+		   `)
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var shiftErr interpreter.NegativeShiftError
+		require.ErrorAs(t, err, &shiftErr)
+	})
+
+	t.Run("Int64 << -3", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t,
+			`
+			fun test() {
+				let a: Int64 = 0x7f
+				let b: Int64 = -3
+				let c = a << b
+				}
+		   `)
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var shiftErr interpreter.NegativeShiftError
+		require.ErrorAs(t, err, &shiftErr)
+	})
+
+	t.Run("Int128 << -3", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t,
+			`
+			fun test() {
+				let a: Int128 = 0x7f
+				let b: Int128 = -3
+				let c = a << b
+				}
+		   `)
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var shiftErr interpreter.NegativeShiftError
+		require.ErrorAs(t, err, &shiftErr)
+	})
+
+	t.Run("Int256 << -3", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t,
+			`
+			fun test() {
+				let a: Int256 = 0x7f
+				let b: Int256 = -3
 				let c = a << b
 				}
 		   `)
