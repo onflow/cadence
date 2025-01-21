@@ -240,6 +240,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 	}
 
 	readDictionary := func(
+		t *testing.T,
 		inter *interpreter.Interpreter,
 		owner common.Address,
 		storageMapKey interpreter.StorageMapKey,
@@ -430,6 +431,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 		resetStorage()
 
 		dictionary = readDictionary(
+			t,
 			inter,
 			orgOwner,
 			dictionaryStorageMapKey,
@@ -483,6 +485,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 		resetStorage()
 
 		dictionary = readDictionary(
+			t,
 			inter,
 			orgOwner,
 			dictionaryStorageMapKey,
@@ -531,6 +534,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 		resetStorage()
 
 		original = readDictionary(
+			t,
 			inter,
 			orgOwner,
 			dictionaryStorageMapKey,
@@ -597,6 +601,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 		resetStorage()
 
 		transferred = readDictionary(
+			t,
 			inter,
 			newOwner,
 			transferredStorageMapKey,
@@ -639,6 +644,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 		resetStorage()
 
 		dictionary = readDictionary(
+			t,
 			inter,
 			orgOwner,
 			dictionaryStorageMapKey,
@@ -722,6 +728,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 		resetStorage()
 
 		dictionary = readDictionary(
+			t,
 			inter,
 			orgOwner,
 			dictionaryStorageMapKey,
@@ -762,6 +769,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 		resetStorage()
 
 		dictionary = readDictionary(
+			t,
 			inter,
 			orgOwner,
 			dictionaryStorageMapKey,
@@ -819,6 +827,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 		resetStorage()
 
 		dictionary = readDictionary(
+			t,
 			inter,
 			orgOwner,
 			dictionaryStorageMapKey,
@@ -861,6 +870,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 		resetStorage()
 
 		dictionary = readDictionary(
+			t,
 			inter,
 			orgOwner,
 			dictionaryStorageMapKey,
@@ -932,6 +942,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 		resetStorage()
 
 		dictionary = readDictionary(
+			t,
 			inter,
 			orgOwner,
 			dictionaryStorageMapKey,
@@ -1002,6 +1013,7 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 	}
 
 	readComposite := func(
+		t *testing.T,
 		inter *interpreter.Interpreter,
 		owner common.Address,
 		storageMapKey interpreter.StorageMapKey,
@@ -1125,6 +1137,7 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 		resetStorage()
 
 		composite = readComposite(
+			t,
 			inter,
 			orgOwner,
 			compositeStorageMapKey,
@@ -1167,6 +1180,7 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 		resetStorage()
 
 		original = readComposite(
+			t,
 			inter,
 			orgOwner,
 			compositeStorageMapKey,
@@ -1232,6 +1246,7 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 		resetStorage()
 
 		transferred = readComposite(
+			t,
 			inter,
 			newOwner,
 			transferredStorageMapKey,
@@ -1274,6 +1289,7 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 		resetStorage()
 
 		composite = readComposite(
+			t,
 			inter,
 			orgOwner,
 			compositeStorageMapKey,
@@ -1345,6 +1361,7 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 		resetStorage()
 
 		composite = readComposite(
+			t,
 			inter,
 			orgOwner,
 			compositeStorageMapKey,
@@ -1415,6 +1432,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 	}
 
 	readArray := func(
+		t *testing.T,
 		inter *interpreter.Interpreter,
 		owner common.Address,
 		storageMapKey interpreter.StorageMapKey,
@@ -1557,6 +1575,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		resetStorage()
 
 		array = readArray(
+			t,
 			inter,
 			orgOwner,
 			arrayStorageMapKey,
@@ -1610,6 +1629,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		resetStorage()
 
 		array = readArray(
+			t,
 			inter,
 			orgOwner,
 			arrayStorageMapKey,
@@ -1659,6 +1679,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		resetStorage()
 
 		original = readArray(
+			t,
 			inter,
 			orgOwner,
 			arrayStorageMapKey,
@@ -1725,6 +1746,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		resetStorage()
 
 		transferred = readArray(
+			t,
 			inter,
 			newOwner,
 			transferredStorageMapKey,
@@ -1767,6 +1789,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		resetStorage()
 
 		array = readArray(
+			t,
 			inter,
 			orgOwner,
 			arrayStorageMapKey,
@@ -1833,6 +1856,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		resetStorage()
 
 		array = readArray(
+			t,
 			inter,
 			orgOwner,
 			arrayStorageMapKey,
@@ -1874,6 +1898,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		resetStorage()
 
 		array = readArray(
+			t,
 			inter,
 			orgOwner,
 			arrayStorageMapKey,
@@ -1930,6 +1955,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		resetStorage()
 
 		array = readArray(
+			t,
 			inter,
 			orgOwner,
 			arrayStorageMapKey,
@@ -1972,6 +1998,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		resetStorage()
 
 		array = readArray(
+			t,
 			inter,
 			orgOwner,
 			arrayStorageMapKey,
@@ -2029,6 +2056,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		resetStorage()
 
 		array = readArray(
+			t,
 			inter,
 			orgOwner,
 			arrayStorageMapKey,
@@ -5184,6 +5212,7 @@ func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
 	}
 
 	readValue := func(
+		t *testing.T,
 		inter *interpreter.Interpreter,
 		owner common.Address,
 		storageMapKey interpreter.StorageMapKey,
@@ -5653,6 +5682,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		resetStorage()
 
 		rootSomeValue = readValue(
+			t,
 			inter,
 			owner,
 			storageMapKey,
@@ -5779,6 +5809,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		resetStorage()
 
 		rootSomeValue = readValue(
+			t,
 			inter,
 			owner,
 			storageMapKey,
@@ -5881,6 +5912,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		resetStorage()
 
 		rootSomeValue = readValue(
+			t,
 			inter,
 			owner,
 			storageMapKey,
@@ -5994,6 +6026,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		resetStorage()
 
 		rootSomeValue = readValue(
+			t,
 			inter,
 			owner,
 			storageMapKey,
@@ -6109,6 +6142,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		resetStorage()
 
 		rootSomeValue = readValue(
+			t,
 			inter,
 			owner,
 			storageMapKey,
@@ -6282,6 +6316,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		resetStorage()
 
 		rootSomeValue = readValue(
+			t,
 			inter,
 			owner,
 			storageMapKey,
