@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -5572,4 +5573,155 @@ func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
 		require.Equal(t, expectedRootCount, iterations)
 	})
 
+}
+
+func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) {
+	t.Parallel()
+
+	owner := common.Address{'A'}
+
+	const storageMapKey = interpreter.StringStorageMapKey("value")
+
+	writeValue := func(
+		inter *interpreter.Interpreter,
+		owner common.Address,
+		storageMapKey interpreter.StorageMapKey,
+		value interpreter.Value,
+	) {
+		value = value.Transfer(
+			inter,
+			interpreter.EmptyLocationRange,
+			atree.Address(owner),
+			false,
+			nil,
+			nil,
+			// TODO: is has no parent container = true correct?
+			true,
+		)
+
+		inter.Storage().
+			GetStorageMap(
+				owner,
+				common.PathDomainStorage.Identifier(),
+				true,
+			).
+			WriteValue(
+				inter,
+				storageMapKey,
+				value,
+			)
+	}
+
+	readValue := func(
+		inter *interpreter.Interpreter,
+		owner common.Address,
+		storageMapKey interpreter.StorageMapKey,
+	) interpreter.Value {
+		storageMap := inter.Storage().GetStorageMap(
+			owner,
+			common.PathDomainStorage.Identifier(),
+			false,
+		)
+		require.NotNil(t, storageMap)
+
+		readValue := storageMap.ReadValue(inter, storageMapKey)
+		require.NotNil(t, readValue)
+
+		return readValue
+	}
+
+	t.Run("dictionary (inlined -> uninlined -> inlined)", func(t *testing.T) {
+		t.Parallel()
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		// Start with an empty dictionary
+
+		cadenceChildDictionary := cadence.NewDictionary(nil)
+
+		cadenceRootOptionalValue := cadence.NewOptional(cadenceChildDictionary)
+
+		rootSomeValue := importValue(t, inter, cadenceRootOptionalValue).(*interpreter.SomeValue)
+
+		writeValue(
+			inter,
+			owner,
+			storageMapKey,
+			rootSomeValue,
+		)
+
+		resetStorage()
+
+		rootSomeValue = readValue(
+			inter,
+			owner,
+			storageMapKey,
+		).(*interpreter.SomeValue)
+
+		// Fill the dictionary until it becomes uninlined
+
+		childDictionary := rootSomeValue.InnerValue(inter, interpreter.EmptyLocationRange).(*interpreter.DictionaryValue)
+
+		require.True(t, childDictionary.IsInlined())
+
+		for i := 0; childDictionary.IsInlined(); i++ {
+			childDictionary.Insert(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.NewUnmeteredStringValue(strconv.Itoa(i)),
+				interpreter.NewUnmeteredIntValueFromInt64(int64(i)),
+			)
+		}
+
+		require.False(t, childDictionary.IsInlined())
+
+		uninlinedCount := childDictionary.Count()
+
+		// Verify the contents of the dictionary
+
+		childDictionary = rootSomeValue.InnerValue(inter, interpreter.EmptyLocationRange).(*interpreter.DictionaryValue)
+
+		verify := func(count int) {
+			for i := 0; i < count; i++ {
+				key := interpreter.NewUnmeteredStringValue(strconv.Itoa(i))
+				value, exists := childDictionary.Get(inter, interpreter.EmptyLocationRange, key)
+				require.True(t, exists)
+				expectedValue := interpreter.NewUnmeteredIntValueFromInt64(int64(i))
+				utils.AssertValuesEqual(t, inter, expectedValue, value)
+			}
+		}
+
+		verify(uninlinedCount)
+
+		// Remove the last element to make the dictionary inlined again
+
+		inlinedCount := uninlinedCount - 1
+
+		childDictionary.Remove(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.NewUnmeteredStringValue(strconv.Itoa(inlinedCount)),
+		)
+
+		require.True(t, childDictionary.IsInlined())
+
+		// Verify the contents of the dictionary again
+
+		verify(inlinedCount)
+
+		// Add a new element to make the dictionary uninlined again
+
+		childDictionary.Insert(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.NewUnmeteredStringValue(strconv.Itoa(inlinedCount)),
+			interpreter.NewUnmeteredIntValueFromInt64(int64(inlinedCount)),
+		)
+
+		require.False(t, childDictionary.IsInlined())
+
+		// Verify the contents of the dictionary again
+
+		verify(uninlinedCount)
+	})
 }

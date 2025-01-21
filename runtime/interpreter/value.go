@@ -20807,6 +20807,10 @@ func (v *DictionaryValue) Inlined() bool {
 	return v.dictionary.Inlined()
 }
 
+func (v *DictionaryValue) IsInlined() bool {
+	return v.dictionary.Inlined()
+}
+
 // OptionalValue
 
 type OptionalValue interface {
