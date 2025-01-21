@@ -255,100 +255,7 @@ func TestInterpretBitwiseRightShift(t *testing.T) {
 	}
 }
 
-func TestInterpretBitwiseLeftShift8(t *testing.T) {
-
-	t.Parallel()
-
-	t.Run("Int8 << 9 (zero result)", func(t *testing.T) {
-
-		inter := parseCheckAndInterpret(t,
-			`
-			let a: Int8 = 0x7f
-			let b: Int8 = 9
-			let c = a << b
-		  	`,
-		)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredInt8Value(0),
-			inter.Globals.Get("c").GetValue(inter),
-		)
-	})
-
-	t.Run("Int8 << 1 (positive to positive)", func(t *testing.T) {
-
-		inter := parseCheckAndInterpret(t,
-			`
-				let a: Int8 = 5
-				let b: Int8 = 1
-				let c = a << b
-			  	`,
-		)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredInt8Value(10),
-			inter.Globals.Get("c").GetValue(inter),
-		)
-	})
-
-	t.Run("Int8 << 1 (negative to negative)", func(t *testing.T) {
-
-		inter := parseCheckAndInterpret(t,
-			`
-				let a: Int8 = -5  // 0b1111_1011
-				let b: Int8 = 1
-				let c = a << b    // 0b1111_0110  --> -10
-				`,
-		)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredInt8Value(-10),
-			inter.Globals.Get("c").GetValue(inter),
-		)
-	})
-
-	t.Run("Int8 << 1 (positive to negative)", func(t *testing.T) {
-
-		inter := parseCheckAndInterpret(t,
-			`
-				let a: Int8 = 5  // 0b0000_0101
-				let b: Int8 = 7
-				let c = a << b    // 0b1000_0000  --> -128
-				`,
-		)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredInt8Value(-128),
-			inter.Globals.Get("c").GetValue(inter),
-		)
-	})
-
-	t.Run("Int8 << 1 (negative to positive)", func(t *testing.T) {
-
-		inter := parseCheckAndInterpret(t,
-			`
-					let a: Int8 = -5  // 0b1111_1011
-					let b: Int8 = 5
-					let c = a << b    // 0b0110_0000  --> 96 
-						`,
-		)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredInt8Value(0x60), // or 96
-			inter.Globals.Get("c").GetValue(inter),
-		)
-	})
-
+func TestInterpretBitwiseNegativeShift(t *testing.T) {
 	t.Run("Int8 << -3", func(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t,
@@ -449,6 +356,101 @@ func TestInterpretBitwiseLeftShift8(t *testing.T) {
 
 		var shiftErr interpreter.NegativeShiftError
 		require.ErrorAs(t, err, &shiftErr)
+	})
+}
+
+func TestInterpretBitwiseLeftShift8(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("Int8 << 9 (zero result)", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t,
+			`
+			let a: Int8 = 0x7f
+			let b: Int8 = 9
+			let c = a << b
+		  	`,
+		)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredInt8Value(0),
+			inter.Globals.Get("c").GetValue(inter),
+		)
+	})
+
+	t.Run("Int8 << 1 (positive to positive)", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t,
+			`
+				let a: Int8 = 5
+				let b: Int8 = 1
+				let c = a << b
+			  	`,
+		)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredInt8Value(10),
+			inter.Globals.Get("c").GetValue(inter),
+		)
+	})
+
+	t.Run("Int8 << 1 (negative to negative)", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t,
+			`
+				let a: Int8 = -5  // 0b1111_1011
+				let b: Int8 = 1
+				let c = a << b    // 0b1111_0110  --> -10
+				`,
+		)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredInt8Value(-10),
+			inter.Globals.Get("c").GetValue(inter),
+		)
+	})
+
+	t.Run("Int8 << 1 (positive to negative)", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t,
+			`
+				let a: Int8 = 5  // 0b0000_0101
+				let b: Int8 = 7
+				let c = a << b    // 0b1000_0000  --> -128
+				`,
+		)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredInt8Value(-128),
+			inter.Globals.Get("c").GetValue(inter),
+		)
+	})
+
+	t.Run("Int8 << 1 (negative to positive)", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t,
+			`
+					let a: Int8 = -5  // 0b1111_1011
+					let b: Int8 = 5
+					let c = a << b    // 0b0110_0000  --> 96 
+						`,
+		)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredInt8Value(0x60), // or 96
+			inter.Globals.Get("c").GetValue(inter),
+		)
 	})
 
 	t.Run("UInt8 << 9", func(t *testing.T) {
