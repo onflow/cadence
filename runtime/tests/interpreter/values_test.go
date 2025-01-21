@@ -5690,7 +5690,10 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		// Fill the dictionary until it becomes uninlined
 
-		childDictionary := rootSomeValue.InnerValue(inter, interpreter.EmptyLocationRange).(*interpreter.DictionaryValue)
+		childDictionary := rootSomeValue.InnerValue(
+			inter,
+			interpreter.EmptyLocationRange,
+		).(*interpreter.DictionaryValue)
 
 		require.True(t, childDictionary.Inlined())
 
@@ -5712,6 +5715,8 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		childDictionary = rootSomeValue.InnerValue(inter, interpreter.EmptyLocationRange).(*interpreter.DictionaryValue)
 
 		verify := func(count int) {
+			require.Equal(t, count, childDictionary.Count())
+
 			for i := 0; i < count; i++ {
 				key := interpreter.NewUnmeteredStringValue(strconv.Itoa(i))
 				value, exists := childDictionary.Get(
@@ -5772,6 +5777,35 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		require.Equal(t, 0, childDictionary.Count())
 		require.True(t, childDictionary.Inlined())
+
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
+
+		// Validate after storage reset and reload of root value
+
+		resetStorage()
+
+		rootSomeValue = readValue(
+			t,
+			inter,
+			owner,
+			storageMapKey,
+		).(*interpreter.SomeValue)
+
+		childDictionary = rootSomeValue.InnerValue(
+			inter,
+			interpreter.EmptyLocationRange,
+		).(*interpreter.DictionaryValue)
+
+		require.Equal(t, 0, childDictionary.Count())
+		require.True(t, childDictionary.Inlined())
+
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
 	})
 
 	t.Run("dictionary (uninlined -> inlined -> uninlined)", func(t *testing.T) {
@@ -5815,7 +5849,10 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 			storageMapKey,
 		).(*interpreter.SomeValue)
 
-		childDictionary := rootSomeValue.InnerValue(inter, interpreter.EmptyLocationRange).(*interpreter.DictionaryValue)
+		childDictionary := rootSomeValue.InnerValue(
+			inter,
+			interpreter.EmptyLocationRange,
+		).(*interpreter.DictionaryValue)
 
 		// Check that the inner dictionary is not inlined.
 		// If the test fails here, adjust the value generation code above
@@ -5830,6 +5867,8 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		// Verify the contents of the dictionary
 
 		verify := func(count int) {
+			require.Equal(t, count, childDictionary.Count())
+
 			for i := 0; i < count; i++ {
 				key := interpreter.NewUnmeteredStringValue(strconv.Itoa(i))
 				value, exists := childDictionary.Get(
@@ -5887,6 +5926,36 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		uninlinedCount := inlinedCount + 1
 
 		verify(uninlinedCount)
+
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
+
+		// Validate after storage reset and reload of root value
+
+		resetStorage()
+
+		rootSomeValue = readValue(
+			t,
+			inter,
+			owner,
+			storageMapKey,
+		).(*interpreter.SomeValue)
+
+		childDictionary = rootSomeValue.InnerValue(
+			inter,
+			interpreter.EmptyLocationRange,
+		).(*interpreter.DictionaryValue)
+
+		verify(uninlinedCount)
+
+		require.False(t, childDictionary.Inlined())
+
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
 	})
 
 	t.Run("array (inlined -> uninlined -> inlined)", func(t *testing.T) {
@@ -5920,7 +5989,10 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		// Fill the array until it becomes uninlined
 
-		childArray := rootSomeValue.InnerValue(inter, interpreter.EmptyLocationRange).(*interpreter.ArrayValue)
+		childArray := rootSomeValue.InnerValue(
+			inter,
+			interpreter.EmptyLocationRange,
+		).(*interpreter.ArrayValue)
 
 		require.True(t, childArray.Inlined())
 
@@ -5938,9 +6010,14 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		// Verify the contents of the array
 
-		childArray = rootSomeValue.InnerValue(inter, interpreter.EmptyLocationRange).(*interpreter.ArrayValue)
+		childArray = rootSomeValue.InnerValue(
+			inter,
+			interpreter.EmptyLocationRange,
+		).(*interpreter.ArrayValue)
 
 		verify := func(count int) {
+			require.Equal(t, count, childArray.Count())
+
 			for i := 0; i < count; i++ {
 				value := childArray.Get(inter, interpreter.EmptyLocationRange, i)
 				expectedValue := interpreter.NewUnmeteredStringValue(strconv.Itoa(i))
@@ -5992,6 +6069,35 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		require.Equal(t, 0, childArray.Count())
 		require.True(t, childArray.Inlined())
+
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
+
+		// Validate after storage reset and reload of root value
+
+		resetStorage()
+
+		rootSomeValue = readValue(
+			t,
+			inter,
+			owner,
+			storageMapKey,
+		).(*interpreter.SomeValue)
+
+		childArray = rootSomeValue.InnerValue(
+			inter,
+			interpreter.EmptyLocationRange,
+		).(*interpreter.ArrayValue)
+
+		require.Equal(t, 0, childArray.Count())
+		require.True(t, childArray.Inlined())
+
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
 	})
 
 	t.Run("array (uninlined -> inlined -> uninlined)", func(t *testing.T) {
@@ -6032,7 +6138,10 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 			storageMapKey,
 		).(*interpreter.SomeValue)
 
-		childArray := rootSomeValue.InnerValue(inter, interpreter.EmptyLocationRange).(*interpreter.ArrayValue)
+		childArray := rootSomeValue.InnerValue(
+			inter,
+			interpreter.EmptyLocationRange,
+		).(*interpreter.ArrayValue)
 
 		// Check that the inner array is not inlined.
 		// If the test fails here, adjust the value generation code above
@@ -6047,6 +6156,8 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		// Verify the contents of the array
 
 		verify := func(count int) {
+			require.Equal(t, count, childArray.Count())
+
 			for i := 0; i < count; i++ {
 				value := childArray.Get(inter, interpreter.EmptyLocationRange, i)
 				expectedValue := interpreter.NewUnmeteredStringValue(strconv.Itoa(i))
@@ -6091,6 +6202,36 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		uninlinedCount := inlinedCount + 1
 
 		verify(uninlinedCount)
+
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
+
+		// Validate after storage reset and reload of root value
+
+		resetStorage()
+
+		rootSomeValue = readValue(
+			t,
+			inter,
+			owner,
+			storageMapKey,
+		).(*interpreter.SomeValue)
+
+		childArray = rootSomeValue.InnerValue(
+			inter,
+			interpreter.EmptyLocationRange,
+		).(*interpreter.ArrayValue)
+
+		verify(uninlinedCount)
+
+		require.False(t, childArray.Inlined())
+
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
 	})
 
 	t.Run("composite (inlined -> uninlined -> inlined)", func(t *testing.T) {
@@ -6150,7 +6291,10 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		// Fill the composite until it becomes uninlined
 
-		childComposite := rootSomeValue.InnerValue(inter, interpreter.EmptyLocationRange).(*interpreter.CompositeValue)
+		childComposite := rootSomeValue.InnerValue(
+			inter,
+			interpreter.EmptyLocationRange,
+		).(*interpreter.CompositeValue)
 
 		require.True(t, childComposite.Inlined())
 
@@ -6169,9 +6313,14 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		// Verify the contents of the composite
 
-		childComposite = rootSomeValue.InnerValue(inter, interpreter.EmptyLocationRange).(*interpreter.CompositeValue)
+		childComposite = rootSomeValue.InnerValue(
+			inter,
+			interpreter.EmptyLocationRange,
+		).(*interpreter.CompositeValue)
 
 		verify := func(count int) {
+			require.Equal(t, count, childComposite.FieldCount())
+
 			for i := 0; i < count; i++ {
 				value := childComposite.GetMember(
 					inter,
@@ -6228,6 +6377,35 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		require.Equal(t, 0, childComposite.FieldCount())
 		require.True(t, childComposite.Inlined())
+
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
+
+		// Validate after storage reset and reload of root value
+
+		resetStorage()
+
+		rootSomeValue = readValue(
+			t,
+			inter,
+			owner,
+			storageMapKey,
+		).(*interpreter.SomeValue)
+
+		childComposite = rootSomeValue.InnerValue(
+			inter,
+			interpreter.EmptyLocationRange,
+		).(*interpreter.CompositeValue)
+
+		require.Equal(t, 0, childComposite.FieldCount())
+		require.True(t, childComposite.Inlined())
+
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
 	})
 
 	t.Run("composite (uninlined -> inlined -> uninlined)", func(t *testing.T) {
@@ -6322,7 +6500,10 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 			storageMapKey,
 		).(*interpreter.SomeValue)
 
-		childComposite := rootSomeValue.InnerValue(inter, interpreter.EmptyLocationRange).(*interpreter.CompositeValue)
+		childComposite := rootSomeValue.InnerValue(
+			inter,
+			interpreter.EmptyLocationRange,
+		).(*interpreter.CompositeValue)
 
 		// Check that the inner composite is not inlined.
 		// If the test fails here, adjust the value generation code above
@@ -6337,6 +6518,8 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		// Verify the contents of the composite
 
 		verify := func(count int) {
+			require.Equal(t, count, childComposite.FieldCount())
+
 			for i := 0; i < count; i++ {
 				value := childComposite.GetMember(
 					inter,
@@ -6388,5 +6571,35 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		uninlinedCount := inlinedCount + 1
 
 		verify(uninlinedCount)
+
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
+
+		// Validate after storage reset and reload of root value
+
+		resetStorage()
+
+		rootSomeValue = readValue(
+			t,
+			inter,
+			owner,
+			storageMapKey,
+		).(*interpreter.SomeValue)
+
+		childComposite = rootSomeValue.InnerValue(
+			inter,
+			interpreter.EmptyLocationRange,
+		).(*interpreter.CompositeValue)
+
+		verify(uninlinedCount)
+
+		require.False(t, childComposite.Inlined())
+
+		if *validateAtree {
+			err := inter.Storage().CheckHealth()
+			require.NoError(t, err)
+		}
 	})
 }
