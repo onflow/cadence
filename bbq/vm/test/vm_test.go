@@ -2059,8 +2059,6 @@ func TestResource(t *testing.T) {
 		comp := compiler.NewInstructionCompiler(checker.Program, checker.Elaboration)
 		program := comp.Compile()
 
-		printProgram("", program)
-
 		vmConfig := &vm.Config{}
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
@@ -2169,7 +2167,7 @@ func TestDefaultFunctions(t *testing.T) {
 		assert.Equal(t, vm.NewIntValue(3), result)
 	})
 
-	t.Run("in multiple contracts", func(t *testing.T) {
+	t.Run("in different contract", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2249,7 +2247,6 @@ func TestDefaultFunctions(t *testing.T) {
 		)
 
 		fooProgram := parseCheckAndCompile(t, fooContract, fooLocation, programs)
-		printProgram("", fooProgram)
 
 		fooVM := vm.NewVM(fooLocation, fooProgram, vmConfig)
 
@@ -2281,6 +2278,220 @@ func TestDefaultFunctions(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, txVM.StackSize())
 		require.Equal(t, vm.NewIntValue(7), result)
+	})
+
+	t.Run("in different contract with nested call", func(t *testing.T) {
+
+		t.Parallel()
+
+		storage := interpreter.NewInMemoryStorage(nil)
+
+		programs := map[common.Location]*compiledProgram{}
+		contractValues := map[common.Location]*vm.CompositeValue{}
+
+		vmConfig := &vm.Config{
+			Storage:        storage,
+			AccountHandler: &testAccountHandler{},
+			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+				program, ok := programs[location]
+				if !ok {
+					assert.FailNow(t, "invalid location")
+				}
+				return program.Program
+			},
+			ContractValueHandler: func(_ *vm.Config, location common.Location) *vm.CompositeValue {
+				contractValue, ok := contractValues[location]
+				if !ok {
+					assert.FailNow(t, "invalid location")
+				}
+				return contractValue
+			},
+		}
+
+		contractsAddress := common.MustBytesToAddress([]byte{0x1})
+
+		barLocation := common.NewAddressLocation(nil, contractsAddress, "Bar")
+		fooLocation := common.NewAddressLocation(nil, contractsAddress, "Foo")
+
+		// Deploy interface contract
+
+		barContract := `
+        access(all) contract interface Bar {
+
+            access(all) resource interface HelloInterface {
+
+                access(all) fun sayHello(): String {
+                    // Delegate the call
+                    return self.sayHelloImpl()
+                }
+
+                access(contract) fun sayHelloImpl(): String {
+                    return "Hello from HelloInterface"
+                }
+            }
+        }
+    `
+
+		// Only need to compile
+		parseCheckAndCompile(t, barContract, barLocation, programs)
+
+		// Deploy contract with the implementation
+
+		fooContract := fmt.Sprintf(`
+        import Bar from %[1]s
+
+        access(all) contract Foo {
+
+            access(all) resource Hello: Bar.HelloInterface { }
+
+            access(all) fun createHello(): @Hello {
+                return <- create Hello()
+            }
+        }`,
+			contractsAddress.HexWithPrefix(),
+		)
+
+		fooProgram := parseCheckAndCompile(t, fooContract, fooLocation, programs)
+
+		fooVM := vm.NewVM(fooLocation, fooProgram, vmConfig)
+
+		fooContractValue, err := fooVM.InitializeContract()
+		require.NoError(t, err)
+		contractValues[fooLocation] = fooContractValue
+
+		// Run transaction
+
+		tx := fmt.Sprintf(`
+            import Foo from %[1]s
+
+            fun main(): String {
+               var hello <- Foo.createHello()
+               var msg = hello.sayHello()
+               destroy hello
+               return msg
+            }`,
+			contractsAddress.HexWithPrefix(),
+		)
+
+		txLocation := runtime_utils.NewTransactionLocationGenerator()
+
+		txProgram := parseCheckAndCompile(t, tx, txLocation(), programs)
+		txVM := vm.NewVM(txLocation(), txProgram, vmConfig)
+
+		result, err := txVM.Invoke("main")
+		require.NoError(t, err)
+		require.Equal(t, 0, txVM.StackSize())
+		require.Equal(t, vm.NewStringValue("Hello from HelloInterface"), result)
+	})
+
+	t.Run("in different contract nested call overridden", func(t *testing.T) {
+
+		t.Parallel()
+
+		storage := interpreter.NewInMemoryStorage(nil)
+
+		programs := map[common.Location]*compiledProgram{}
+		contractValues := map[common.Location]*vm.CompositeValue{}
+
+		vmConfig := &vm.Config{
+			Storage:        storage,
+			AccountHandler: &testAccountHandler{},
+			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+				program, ok := programs[location]
+				if !ok {
+					assert.FailNow(t, "invalid location")
+				}
+				return program.Program
+			},
+			ContractValueHandler: func(_ *vm.Config, location common.Location) *vm.CompositeValue {
+				contractValue, ok := contractValues[location]
+				if !ok {
+					assert.FailNow(t, "invalid location")
+				}
+				return contractValue
+			},
+		}
+
+		contractsAddress := common.MustBytesToAddress([]byte{0x1})
+
+		barLocation := common.NewAddressLocation(nil, contractsAddress, "Bar")
+		fooLocation := common.NewAddressLocation(nil, contractsAddress, "Foo")
+
+		// Deploy interface contract
+
+		barContract := `
+        access(all) contract interface Bar {
+
+            access(all) resource interface HelloInterface {
+
+                access(all) fun sayHello(): String {
+                    // Delegate the call
+                    return self.sayHelloImpl()
+                }
+
+                access(contract) fun sayHelloImpl(): String {
+                    return "Hello from HelloInterface"
+                }
+            }
+        }
+    `
+
+		// Only need to compile
+		parseCheckAndCompile(t, barContract, barLocation, programs)
+
+		// Deploy contract with the implementation
+
+		fooContract := fmt.Sprintf(`
+        import Bar from %[1]s
+
+        access(all) contract Foo {
+
+            access(all) resource Hello: Bar.HelloInterface {
+
+                // Override one of the functions (one at the bottom of the call hierarchy)
+                access(contract) fun sayHelloImpl(): String {
+                    return "Hello from Hello"
+                }
+            }
+
+            access(all) fun createHello(): @Hello {
+                return <- create Hello()
+            }
+        }`,
+			contractsAddress.HexWithPrefix(),
+		)
+
+		fooProgram := parseCheckAndCompile(t, fooContract, fooLocation, programs)
+
+		fooVM := vm.NewVM(fooLocation, fooProgram, vmConfig)
+
+		fooContractValue, err := fooVM.InitializeContract()
+		require.NoError(t, err)
+		contractValues[fooLocation] = fooContractValue
+
+		// Run transaction
+
+		tx := fmt.Sprintf(`
+            import Foo from %[1]s
+
+            fun main(): String {
+               var hello <- Foo.createHello()
+               var msg = hello.sayHello()
+               destroy hello
+               return msg
+            }`,
+			contractsAddress.HexWithPrefix(),
+		)
+
+		txLocation := runtime_utils.NewTransactionLocationGenerator()
+
+		txProgram := parseCheckAndCompile(t, tx, txLocation(), programs)
+		txVM := vm.NewVM(txLocation(), txProgram, vmConfig)
+
+		result, err := txVM.Invoke("main")
+		require.NoError(t, err)
+		require.Equal(t, 0, txVM.StackSize())
+		require.Equal(t, vm.NewStringValue("Hello from Hello"), result)
 	})
 }
 
@@ -2500,6 +2711,224 @@ func TestFunctionPreConditions(t *testing.T) {
 		// The pre-condition of the concrete type is executed at the end, after the interfaces.
 		assert.Equal(t, []string{"B", "C", "E", "F", "D", "A"}, logs)
 	})
+
+	t.Run("in different contract with nested call", func(t *testing.T) {
+
+		t.Parallel()
+
+		storage := interpreter.NewInMemoryStorage(nil)
+
+		programs := map[common.Location]*compiledProgram{}
+		contractValues := map[common.Location]*vm.CompositeValue{}
+		var logs []string
+
+		vmConfig := &vm.Config{
+			Storage:        storage,
+			AccountHandler: &testAccountHandler{},
+			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+				program, ok := programs[location]
+				if !ok {
+					assert.FailNow(t, "invalid location")
+				}
+				return program.Program
+			},
+			ContractValueHandler: func(_ *vm.Config, location common.Location) *vm.CompositeValue {
+				contractValue, ok := contractValues[location]
+				if !ok {
+					assert.FailNow(t, "invalid location")
+				}
+				return contractValue
+			},
+
+			NativeFunctionsProvider: func() map[string]vm.Value {
+				funcs := vm.NativeFunctions()
+				funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+					ParameterCount: len(stdlib.LogFunctionType.Parameters),
+					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+						logs = append(logs, arguments[0].String())
+						return vm.VoidValue{}
+					},
+				}
+
+				return funcs
+			},
+		}
+
+		activation := sema.NewVariableActivation(sema.BaseValueActivation)
+		activation.DeclareValue(stdlib.PanicFunction)
+		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
+			"log",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityView,
+				[]sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: sema.AnyStructTypeAnnotation,
+					},
+				},
+				sema.VoidTypeAnnotation,
+			),
+			"",
+			nil,
+		))
+
+		contractsAddress := common.MustBytesToAddress([]byte{0x1})
+
+		barLocation := common.NewAddressLocation(nil, contractsAddress, "Bar")
+		fooLocation := common.NewAddressLocation(nil, contractsAddress, "Foo")
+
+		// Deploy interface contract
+
+		barContract := `
+        access(all) contract interface Bar {
+
+            struct interface E {
+                access(all) fun test() {
+                    pre { self.printFromE("E") }
+                }
+
+                access(all) view fun printFromE(_ msg: String): Bool {
+                    log("Bar.".concat(msg))
+                    return true
+                }
+            }
+
+            struct interface F {
+                access(all) fun test() {
+                    pre { self.printFromF("F") }
+                }
+
+                access(all) view fun printFromF(_ msg: String): Bool {
+                    log("Bar.".concat(msg))
+                    return true
+                }
+            }
+        }
+    `
+
+		// Only need to compile
+		parseCheckAndCompileCodeWithOptions(
+			t,
+			barContract,
+			barLocation,
+			CompilerAndVMOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: barLocation,
+					Config: &sema.Config{
+						LocationHandler: singleIdentifierLocationResolver(t),
+						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+							return activation
+						},
+					},
+				},
+			},
+			programs,
+		)
+
+		// Deploy contract with the implementation
+
+		fooContract := fmt.Sprintf(`
+        import Bar from %[1]s
+
+        access(all) contract Foo {
+
+            struct interface B: C, D {
+                access(all) fun test() {
+                    pre { Foo.printFromFoo("B") }
+                }
+            }
+
+            struct interface C: Bar.E, Bar.F {
+                access(all) fun test() {
+                    pre { Foo.printFromFoo("C") }
+                }
+            }
+
+            struct interface D: Bar.F {
+                access(all) fun test() {
+                    pre { Foo.printFromFoo("D") }
+                }
+            }
+
+            access(all) view fun printFromFoo(_ msg: String): Bool {
+                log("Foo.".concat(msg))
+                return true
+            }
+        }`,
+			contractsAddress.HexWithPrefix(),
+		)
+
+		fooProgram := parseCheckAndCompileCodeWithOptions(
+			t,
+			fooContract,
+			fooLocation,
+			CompilerAndVMOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: fooLocation,
+					Config: &sema.Config{
+						LocationHandler: singleIdentifierLocationResolver(t),
+						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+							return activation
+						},
+					},
+				},
+			},
+			programs,
+		)
+
+		fooVM := vm.NewVM(fooLocation, fooProgram, vmConfig)
+
+		fooContractValue, err := fooVM.InitializeContract()
+		require.NoError(t, err)
+		contractValues[fooLocation] = fooContractValue
+
+		// Run script
+
+		code := fmt.Sprintf(`
+            import Foo from %[1]s
+
+            access(all) struct A: Foo.B {
+                access(all) fun test() {
+                    pre { print("A") }
+                }
+            }
+
+            access(all) view fun print(_ msg: String): Bool {
+                log(msg)
+                return true
+            }
+
+            access(all) fun main() {
+                let a = A()
+                a.test()
+            }`,
+			contractsAddress.HexWithPrefix(),
+		)
+
+		location := common.ScriptLocation{0x1}
+
+		_, err = compileAndInvokeWithOptionsAndPrograms(
+			t,
+			code,
+			"main",
+			CompilerAndVMOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: location,
+					Config: &sema.Config{
+						LocationHandler: singleIdentifierLocationResolver(t),
+						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+							return activation
+						},
+					},
+				},
+				VMConfig: vmConfig,
+			},
+			programs,
+		)
+		require.NoError(t, err)
+		assert.Equal(t, []string{"Foo.B", "Foo.C", "Bar.E", "Bar.F", "Foo.D", "A"}, logs)
+	})
 }
 
 func TestFunctionPostConditions(t *testing.T) {
@@ -2679,28 +3108,16 @@ func TestFunctionPostConditions(t *testing.T) {
 
 		config := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
 		config.NativeFunctionsProvider = func() map[string]vm.Value {
-			return map[string]vm.Value{
-				commons.LogFunctionName: vm.NativeFunctionValue{
-					ParameterCount: len(stdlib.LogFunctionType.Parameters),
-					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-						logs = append(logs, arguments[0].String())
-						return vm.VoidValue{}
-					},
-				},
-				commons.PanicFunctionName: vm.NativeFunctionValue{
-					ParameterCount: len(stdlib.PanicFunctionType.Parameters),
-					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-						messageValue, ok := arguments[0].(vm.StringValue)
-						if !ok {
-							panic(errors.NewUnreachableError())
-						}
-
-						panic(stdlib.PanicError{
-							Message: string(messageValue.Str),
-						})
-					},
+			funcs := vm.NativeFunctions()
+			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+				ParameterCount: len(stdlib.LogFunctionType.Parameters),
+				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+					logs = append(logs, arguments[0].String())
+					return vm.VoidValue{}
 				},
 			}
+
+			return funcs
 		}
 
 		_, err := compileAndInvokeWithOptions(

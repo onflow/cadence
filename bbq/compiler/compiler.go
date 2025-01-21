@@ -35,9 +35,10 @@ import (
 )
 
 type Compiler[E any] struct {
-	Program     *ast.Program
-	Elaboration *sema.Elaboration
-	Config      *Config
+	Program         *ast.Program
+	Elaboration     *sema.Elaboration
+	SubElaborations map[ast.Element]*sema.Elaboration
+	Config          *Config
 
 	currentFunction    *function[E]
 	compositeTypeStack *Stack[*sema.CompositeType]
@@ -100,6 +101,7 @@ func newCompiler[E any](
 	return &Compiler[E]{
 		Program:         program,
 		Elaboration:     elaboration,
+		SubElaborations: make(map[ast.Element]*sema.Elaboration),
 		Config:          &Config{},
 		globals:         make(map[string]*global),
 		importedGlobals: NativeFunctions(),
@@ -304,6 +306,7 @@ func (c *Compiler[E]) Compile() *bbq.Program[E] {
 		c.Config,
 		c.Program,
 		c.Elaboration,
+		c.SubElaborations,
 	)
 	c.Program = desugar.Run()
 
@@ -563,6 +566,18 @@ func (c *Compiler[_]) VisitContinueStatement(_ *ast.ContinueStatement) (_ struct
 }
 
 func (c *Compiler[_]) VisitIfStatement(statement *ast.IfStatement) (_ struct{}) {
+
+	// TODO: Maybe generalize this.
+	//   Note that, conditions can be only either if-stmt or a emit-stmt.
+	//   So do not over-generalize.
+	if elaboration, ok := c.SubElaborations[statement]; ok {
+		prevElaboration := c.Elaboration
+		c.Elaboration = elaboration
+		defer func() {
+			c.Elaboration = prevElaboration
+		}()
+	}
+
 	// TODO: scope
 	switch test := statement.Test.(type) {
 	case ast.Expression:
@@ -854,6 +869,8 @@ func isInterfaceMethodInvocation(accessedType sema.Type) bool {
 	case *sema.ReferenceType:
 		return isInterfaceMethodInvocation(typ.Type)
 	case *sema.IntersectionType:
+		return true
+	case *sema.InterfaceType:
 		return true
 	default:
 		return false
@@ -1167,6 +1184,14 @@ func (c *Compiler[_]) compileInitializer(declaration *ast.SpecialFunctionDeclara
 }
 
 func (c *Compiler[_]) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) (_ struct{}) {
+	if elaboration, ok := c.SubElaborations[declaration]; ok {
+		prevElaboration := c.Elaboration
+		c.Elaboration = elaboration
+		defer func() {
+			c.Elaboration = prevElaboration
+		}()
+	}
+
 	declareReceiver := !c.compositeTypeStack.isEmpty()
 	function := c.declareFunction(declaration, declareReceiver)
 

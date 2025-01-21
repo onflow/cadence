@@ -14,13 +14,19 @@ const tempResultVariableName = "$result"
 // Desugar will rewrite the AST from high-level abstractions to a much lower-level
 // abstractions, so the compiler and vm could work with a minimal set of language features.
 type Desugar struct {
-	memoryGauge common.MemoryGauge
-	elaboration *sema.Elaboration
-	program     *ast.Program
-	config      *Config
+	memoryGauge  common.MemoryGauge
+	elaboration  *sema.Elaboration
+	elaborations map[ast.Element]*sema.Elaboration
+	program      *ast.Program
+	config       *Config
 
 	modifiedDeclarations         []ast.Declaration
-	inheritedFuncsWithConditions map[string][]*ast.FunctionDeclaration
+	inheritedFuncsWithConditions map[string][]desugarFunction
+}
+
+type desugarFunction struct {
+	function    *ast.FunctionDeclaration
+	elaboration *sema.Elaboration
 }
 
 var _ ast.DeclarationVisitor[ast.Declaration] = &Desugar{}
@@ -30,12 +36,14 @@ func NewDesugar(
 	compilerConfig *Config,
 	program *ast.Program,
 	elaboration *sema.Elaboration,
+	elaborations map[ast.Element]*sema.Elaboration,
 ) *Desugar {
 	return &Desugar{
-		memoryGauge: memoryGauge,
-		config:      compilerConfig,
-		elaboration: elaboration,
-		program:     program,
+		memoryGauge:  memoryGauge,
+		config:       compilerConfig,
+		elaboration:  elaboration,
+		elaborations: elaborations,
+		program:      program,
 	}
 }
 
@@ -211,12 +219,12 @@ func (d *Desugar) desugarConditions(
 		if d.inheritedFuncsWithConditions != nil {
 			inheritedFuncs := d.inheritedFuncsWithConditions[funcName]
 			for _, inheritedFunc := range inheritedFuncs {
-				inheritedPreConditions := inheritedFunc.FunctionBlock.PreConditions
+				inheritedPreConditions := inheritedFunc.function.FunctionBlock.PreConditions
 				if inheritedPreConditions == nil {
 					continue
 				}
 				for _, condition := range inheritedPreConditions.Conditions {
-					desugaredCondition := d.desugarCondition(condition)
+					desugaredCondition := d.desugarCondition(condition, inheritedFunc.elaboration)
 					desugaredConditions = append(desugaredConditions, desugaredCondition)
 				}
 			}
@@ -232,7 +240,7 @@ func (d *Desugar) desugarConditions(
 		}
 
 		for _, condition := range conditionsList {
-			desugaredCondition := d.desugarCondition(condition)
+			desugaredCondition := d.desugarCondition(condition, d.elaboration)
 			desugaredConditions = append(desugaredConditions, desugaredCondition)
 		}
 	}
@@ -244,18 +252,18 @@ func (d *Desugar) desugarConditions(
 				// Must be added in reverse order.
 				for i := len(inheritedFuncs) - 1; i >= 0; i-- {
 					inheritedFunc := inheritedFuncs[i]
-					inheritedPostConditions := inheritedFunc.FunctionBlock.PostConditions
+					inheritedPostConditions := inheritedFunc.function.FunctionBlock.PostConditions
 					if inheritedPostConditions == nil {
 						continue
 					}
 
-					// TODO: This is wrong. Inherited post-conditions could be from a different program/elaboration.
-					//  Looking it up in the current elaboration is wrong.
-					postConditionsRewrite := d.elaboration.PostConditionsRewrite(inheritedPostConditions)
+					elaboration := inheritedFunc.elaboration
+
+					postConditionsRewrite := elaboration.PostConditionsRewrite(inheritedPostConditions)
 					postConditions := postConditionsRewrite.RewrittenPostConditions
 
 					for _, condition := range postConditions {
-						desugaredCondition := d.desugarCondition(condition)
+						desugaredCondition := d.desugarCondition(condition, elaboration)
 						desugaredConditions = append(desugaredConditions, desugaredCondition)
 					}
 				}
@@ -275,7 +283,7 @@ var panicFuncInvocationTypes = sema.InvocationExpressionTypes{
 	},
 }
 
-func (d *Desugar) desugarCondition(condition ast.Condition) ast.Statement {
+func (d *Desugar) desugarCondition(condition ast.Condition, elaboration *sema.Elaboration) ast.Statement {
 	switch condition := condition.(type) {
 	case *ast.TestCondition:
 
@@ -314,9 +322,10 @@ func (d *Desugar) desugarCondition(condition ast.Condition) ast.Statement {
 			condition.EndPosition(d.memoryGauge),
 		)
 
-		d.elaboration.SetInvocationExpressionTypes(panicFuncInvocation, panicFuncInvocationTypes)
+		// Important: types must be set in the passed-in elaboration.
+		elaboration.SetInvocationExpressionTypes(panicFuncInvocation, panicFuncInvocationTypes)
 
-		return ast.NewIfStatement(
+		ifStmt := ast.NewIfStatement(
 			d.memoryGauge,
 			ast.NewUnaryExpression(
 				d.memoryGauge,
@@ -340,8 +349,13 @@ func (d *Desugar) desugarCondition(condition ast.Condition) ast.Statement {
 			nil,
 			startPos,
 		)
+
+		d.elaborations[ifStmt] = elaboration
+		return ifStmt
 	case *ast.EmitCondition:
-		return (*ast.EmitStatement)(condition)
+		emitStmt := (*ast.EmitStatement)(condition)
+		d.elaborations[emitStmt] = elaboration
+		return emitStmt
 	default:
 		panic(errors.NewUnreachableError())
 	}
@@ -410,8 +424,8 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 	return modifiedDecl
 }
 
-func (d *Desugar) inheritedFunctionsWithConditions(compositeType *sema.CompositeType) map[string][]*ast.FunctionDeclaration {
-	inheritedFunctions := make(map[string][]*ast.FunctionDeclaration)
+func (d *Desugar) inheritedFunctionsWithConditions(compositeType *sema.CompositeType) map[string][]desugarFunction {
+	inheritedFunctions := make(map[string][]desugarFunction)
 
 	for _, conformance := range compositeType.EffectiveInterfaceConformances() {
 		interfaceType := conformance.InterfaceType
@@ -432,7 +446,10 @@ func (d *Desugar) inheritedFunctionsWithConditions(compositeType *sema.Composite
 				continue
 			}
 			funcs := inheritedFunctions[name]
-			funcs = append(funcs, functionDecl)
+			funcs = append(funcs, desugarFunction{
+				function:    functionDecl,
+				elaboration: elaboration,
+			})
 			inheritedFunctions[name] = funcs
 		}
 	}
@@ -481,6 +498,7 @@ func (d *Desugar) copyInheritedDefaultFunctions(compositeType *sema.CompositeTyp
 			panic(errors.NewUnreachableError())
 		}
 
+		d.elaborations[inheritedFunc] = elaboration
 		inheritedMembers = append(inheritedMembers, inheritedFunc)
 	}
 

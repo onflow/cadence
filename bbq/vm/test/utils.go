@@ -479,19 +479,22 @@ func parseAndCheckWithOptions(
 		parseAndCheckOptions = sema_utils.ParseAndCheckOptions{
 			Location: location,
 			Config: &sema.Config{
-				ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
-					imported, ok := programs[location]
-					if !ok {
-						return nil, fmt.Errorf("cannot find contract in location %s", location)
-					}
-
-					return sema.ElaborationImport{
-						Elaboration: imported.Elaboration,
-					}, nil
-				},
 				LocationHandler:            singleIdentifierLocationResolver(t),
 				BaseValueActivationHandler: baseValueActivation,
 			},
+		}
+	}
+
+	if parseAndCheckOptions.Config.ImportHandler == nil {
+		parseAndCheckOptions.Config.ImportHandler = func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+			imported, ok := programs[location]
+			if !ok {
+				return nil, fmt.Errorf("cannot find contract in location %s", location)
+			}
+
+			return sema.ElaborationImport{
+				Elaboration: imported.Elaboration,
+			}, nil
 		}
 	}
 
