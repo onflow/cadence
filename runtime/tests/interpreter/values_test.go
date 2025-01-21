@@ -5740,6 +5740,116 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		require.True(t, childDictionary.Inlined())
 	})
 
+	t.Run("dictionary (uninlined -> inlined -> uninlined)", func(t *testing.T) {
+		t.Parallel()
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		// Start with a large dictionary which will get uninlined
+
+		var cadenceChildPairs []cadence.KeyValuePair
+
+		for i := 0; i < 1000; i++ {
+			cadenceChildPairs = append(
+				cadenceChildPairs,
+				cadence.KeyValuePair{
+					Key:   cadence.String(strconv.Itoa(i)),
+					Value: cadence.NewInt(i),
+				},
+			)
+		}
+
+		cadenceChildDictionary := cadence.NewDictionary(cadenceChildPairs)
+
+		cadenceRootOptionalValue := cadence.NewOptional(cadenceChildDictionary)
+
+		rootSomeValue := importValue(t, inter, cadenceRootOptionalValue).(*interpreter.SomeValue)
+
+		writeValue(
+			inter,
+			owner,
+			storageMapKey,
+			rootSomeValue,
+		)
+
+		resetStorage()
+
+		rootSomeValue = readValue(
+			inter,
+			owner,
+			storageMapKey,
+		).(*interpreter.SomeValue)
+
+		childDictionary := rootSomeValue.InnerValue(inter, interpreter.EmptyLocationRange).(*interpreter.DictionaryValue)
+
+		// Check that the inner dictionary is not inlined.
+		// If the test fails here, adjust the value generation code above
+		// to ensure that the inner dictionary is not inlined.
+
+		require.False(t, childDictionary.Inlined())
+
+		// Verify the contents of the dictionary
+
+		inlinedCount := childDictionary.Count()
+
+		// Verify the contents of the dictionary
+
+		verify := func(count int) {
+			for i := 0; i < count; i++ {
+				key := interpreter.NewUnmeteredStringValue(strconv.Itoa(i))
+				value, exists := childDictionary.Get(inter, interpreter.EmptyLocationRange, key)
+				require.True(t, exists)
+				expectedValue := interpreter.NewUnmeteredIntValueFromInt64(int64(i))
+				utils.AssertValuesEqual(t, inter, expectedValue, value)
+			}
+		}
+
+		verify(inlinedCount)
+
+		// Remove elements until the dictionary is inlined
+
+		for i := inlinedCount - 1; !childDictionary.Inlined(); i-- {
+			existingValue := childDictionary.Remove(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.NewUnmeteredStringValue(strconv.Itoa(i)),
+			)
+
+			require.IsType(t, &interpreter.SomeValue{}, existingValue)
+			existingSomeValue := existingValue.(*interpreter.SomeValue)
+
+			existingInnerValue := existingSomeValue.InnerValue(inter, interpreter.EmptyLocationRange)
+			expectedValue := interpreter.NewUnmeteredIntValueFromInt64(int64(i))
+			utils.AssertValuesEqual(t, inter, expectedValue, existingInnerValue)
+
+		}
+
+		inlinedCount = childDictionary.Count()
+
+		require.True(t, childDictionary.Inlined())
+
+		// Verify the contents of the dictionary again
+
+		verify(inlinedCount)
+
+		// Add element to make the dictionary uninlined again
+
+		childDictionary.Insert(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.NewUnmeteredStringValue(strconv.Itoa(inlinedCount)),
+			interpreter.NewUnmeteredIntValueFromInt64(int64(inlinedCount)),
+		)
+
+		require.False(t, childDictionary.Inlined())
+
+		// Verify the contents of the dictionary again
+
+		uninlinedCount := inlinedCount + 1
+
+		verify(uninlinedCount)
+	})
+
 	t.Run("array (inlined -> uninlined -> inlined)", func(t *testing.T) {
 		t.Parallel()
 
@@ -5842,5 +5952,103 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		require.Equal(t, 0, childArray.Count())
 		require.True(t, childArray.Inlined())
+	})
+
+	t.Run("array (uninlined -> inlined -> uninlined)", func(t *testing.T) {
+		t.Parallel()
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		// Start with a large array which will get uninlined
+
+		var cadenceChildElements []cadence.Value
+
+		for i := 0; i < 1000; i++ {
+			cadenceChildElements = append(
+				cadenceChildElements,
+				cadence.String(strconv.Itoa(i)),
+			)
+		}
+
+		cadenceChildArray := cadence.NewArray(cadenceChildElements)
+
+		cadenceRootOptionalValue := cadence.NewOptional(cadenceChildArray)
+
+		rootSomeValue := importValue(t, inter, cadenceRootOptionalValue).(*interpreter.SomeValue)
+
+		writeValue(
+			inter,
+			owner,
+			storageMapKey,
+			rootSomeValue,
+		)
+
+		resetStorage()
+
+		rootSomeValue = readValue(
+			inter,
+			owner,
+			storageMapKey,
+		).(*interpreter.SomeValue)
+
+		childArray := rootSomeValue.InnerValue(inter, interpreter.EmptyLocationRange).(*interpreter.ArrayValue)
+
+		// Check that the inner array is not inlined.
+		// If the test fails here, adjust the value generation code above
+		// to ensure that the inner array is not inlined.
+
+		require.False(t, childArray.Inlined())
+
+		// Verify the contents of the array
+
+		inlinedCount := childArray.Count()
+
+		// Verify the contents of the array
+
+		verify := func(count int) {
+			for i := 0; i < count; i++ {
+				value := childArray.Get(inter, interpreter.EmptyLocationRange, i)
+				expectedValue := interpreter.NewUnmeteredStringValue(strconv.Itoa(i))
+				utils.AssertValuesEqual(t, inter, expectedValue, value)
+			}
+		}
+
+		verify(inlinedCount)
+
+		// Remove elements until the array is inlined
+
+		for i := inlinedCount - 1; !childArray.Inlined(); i-- {
+			existingValue := childArray.Remove(
+				inter,
+				interpreter.EmptyLocationRange,
+				i,
+			)
+			expectedValue := interpreter.NewUnmeteredStringValue(strconv.Itoa(i))
+			utils.AssertValuesEqual(t, inter, expectedValue, existingValue)
+		}
+
+		inlinedCount = childArray.Count()
+
+		require.True(t, childArray.Inlined())
+
+		// Verify the contents of the array again
+
+		verify(inlinedCount)
+
+		// Add element to make the array uninlined again
+
+		childArray.Append(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.NewUnmeteredStringValue(strconv.Itoa(inlinedCount)),
+		)
+
+		require.False(t, childArray.Inlined())
+
+		// Verify the contents of the array again
+
+		uninlinedCount := inlinedCount + 1
+
+		verify(uninlinedCount)
 	})
 }
