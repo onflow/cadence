@@ -5684,7 +5684,11 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		verify := func(count int) {
 			for i := 0; i < count; i++ {
 				key := interpreter.NewUnmeteredStringValue(strconv.Itoa(i))
-				value, exists := childDictionary.Get(inter, interpreter.EmptyLocationRange, key)
+				value, exists := childDictionary.Get(
+					inter,
+					interpreter.EmptyLocationRange,
+					key,
+				)
 				require.True(t, exists)
 				expectedValue := interpreter.NewUnmeteredIntValueFromInt64(int64(i))
 				utils.AssertValuesEqual(t, inter, expectedValue, value)
@@ -5797,7 +5801,11 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		verify := func(count int) {
 			for i := 0; i < count; i++ {
 				key := interpreter.NewUnmeteredStringValue(strconv.Itoa(i))
-				value, exists := childDictionary.Get(inter, interpreter.EmptyLocationRange, key)
+				value, exists := childDictionary.Get(
+					inter,
+					interpreter.EmptyLocationRange,
+					key,
+				)
 				require.True(t, exists)
 				expectedValue := interpreter.NewUnmeteredIntValueFromInt64(int64(i))
 				utils.AssertValuesEqual(t, inter, expectedValue, value)
@@ -6046,6 +6054,301 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		require.False(t, childArray.Inlined())
 
 		// Verify the contents of the array again
+
+		uninlinedCount := inlinedCount + 1
+
+		verify(uninlinedCount)
+	})
+
+	t.Run("composite (inlined -> uninlined -> inlined)", func(t *testing.T) {
+		t.Parallel()
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		// Start with an empty composite
+
+		const qualifiedIdentifier = "Test"
+		location := common.AddressLocation{
+			Address: owner,
+			Name:    qualifiedIdentifier,
+		}
+
+		cadenceStructType := cadence.NewStructType(
+			location,
+			qualifiedIdentifier,
+			nil,
+			nil,
+		)
+
+		semaStructType := &sema.CompositeType{
+			Location:   location,
+			Identifier: qualifiedIdentifier,
+			Kind:       common.CompositeKindStructure,
+			Members:    &sema.StringMemberOrderedMap{},
+		}
+
+		// Add the type to the elaboration, to short-circuit the type-lookup.
+		inter.Program.Elaboration.SetCompositeType(
+			semaStructType.ID(),
+			semaStructType,
+		)
+
+		cadenceChildComposite := cadence.NewStruct(nil).WithType(cadenceStructType)
+
+		cadenceRootOptionalValue := cadence.NewOptional(cadenceChildComposite)
+
+		rootSomeValue := importValue(t, inter, cadenceRootOptionalValue).(*interpreter.SomeValue)
+
+		writeValue(
+			inter,
+			owner,
+			storageMapKey,
+			rootSomeValue,
+		)
+
+		resetStorage()
+
+		rootSomeValue = readValue(
+			inter,
+			owner,
+			storageMapKey,
+		).(*interpreter.SomeValue)
+
+		// Fill the composite until it becomes uninlined
+
+		childComposite := rootSomeValue.InnerValue(inter, interpreter.EmptyLocationRange).(*interpreter.CompositeValue)
+
+		require.True(t, childComposite.Inlined())
+
+		for i := 0; childComposite.Inlined(); i++ {
+			childComposite.SetMember(
+				inter,
+				interpreter.EmptyLocationRange,
+				strconv.Itoa(i),
+				interpreter.NewUnmeteredIntValueFromInt64(int64(i)),
+			)
+		}
+
+		require.False(t, childComposite.Inlined())
+
+		uninlinedCount := childComposite.FieldCount()
+
+		// Verify the contents of the composite
+
+		childComposite = rootSomeValue.InnerValue(inter, interpreter.EmptyLocationRange).(*interpreter.CompositeValue)
+
+		verify := func(count int) {
+			for i := 0; i < count; i++ {
+				value := childComposite.GetMember(
+					inter,
+					interpreter.EmptyLocationRange,
+					strconv.Itoa(i),
+				)
+				expectedValue := interpreter.NewUnmeteredIntValueFromInt64(int64(i))
+				utils.AssertValuesEqual(t, inter, expectedValue, value)
+			}
+		}
+
+		verify(uninlinedCount)
+
+		// Remove the last element to make the composite inlined again
+
+		inlinedCount := uninlinedCount - 1
+
+		childComposite.RemoveMember(
+			inter,
+			interpreter.EmptyLocationRange,
+			strconv.Itoa(inlinedCount),
+		)
+
+		require.True(t, childComposite.Inlined())
+
+		// Verify the contents of the composite again
+
+		verify(inlinedCount)
+
+		// Add a new element to make the composite uninlined again
+
+		childComposite.SetMember(
+			inter,
+			interpreter.EmptyLocationRange,
+			strconv.Itoa(inlinedCount),
+			interpreter.NewUnmeteredIntValueFromInt64(int64(inlinedCount)),
+		)
+
+		require.False(t, childComposite.Inlined())
+
+		// Verify the contents of the composite again
+
+		verify(uninlinedCount)
+
+		// Remove all elements
+
+		for i := 0; i < uninlinedCount; i++ {
+			childComposite.RemoveMember(
+				inter,
+				interpreter.EmptyLocationRange,
+				strconv.Itoa(i),
+			)
+		}
+
+		require.Equal(t, 0, childComposite.FieldCount())
+		require.True(t, childComposite.Inlined())
+	})
+
+	t.Run("composite (uninlined -> inlined -> uninlined)", func(t *testing.T) {
+		t.Parallel()
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		// Start with a large composite which will get uninlined
+
+		const qualifiedIdentifier = "Test"
+		location := common.AddressLocation{
+			Address: owner,
+			Name:    qualifiedIdentifier,
+		}
+
+		const fieldCount = 1000
+
+		fields := make([]cadence.Field, fieldCount)
+		for i := 0; i < fieldCount; i++ {
+			fields[i] = cadence.Field{
+				Identifier: strconv.Itoa(i),
+				Type:       cadence.IntType,
+			}
+		}
+
+		cadenceStructType := cadence.NewStructType(
+			location,
+			qualifiedIdentifier,
+			fields,
+			nil,
+		)
+
+		semaStructType := &sema.CompositeType{
+			Location:   location,
+			Identifier: qualifiedIdentifier,
+			Kind:       common.CompositeKindStructure,
+			Members:    &sema.StringMemberOrderedMap{},
+		}
+
+		// Add the type to the elaboration, to short-circuit the type-lookup.
+		inter.Program.Elaboration.SetCompositeType(
+			semaStructType.ID(),
+			semaStructType,
+		)
+		fieldNames := make([]string, fieldCount)
+
+		for i := 0; i < fieldCount; i++ {
+			fieldName := fields[0].Identifier
+			semaStructType.Members.Set(
+				fieldName,
+				sema.NewUnmeteredPublicConstantFieldMember(
+					semaStructType,
+					fieldName,
+					sema.IntType,
+					"",
+				),
+			)
+			fieldNames[i] = fieldName
+		}
+		semaStructType.Fields = fieldNames
+
+		var cadenceChildElements []cadence.Value
+
+		for i := 0; i < fieldCount; i++ {
+			cadenceChildElements = append(
+				cadenceChildElements,
+				cadence.NewInt(i),
+			)
+
+		}
+
+		cadenceChildComposite := cadence.NewStruct(cadenceChildElements).
+			WithType(cadenceStructType)
+
+		cadenceRootOptionalValue := cadence.NewOptional(cadenceChildComposite)
+
+		rootSomeValue := importValue(t, inter, cadenceRootOptionalValue).(*interpreter.SomeValue)
+
+		writeValue(
+			inter,
+			owner,
+			storageMapKey,
+			rootSomeValue,
+		)
+
+		resetStorage()
+
+		rootSomeValue = readValue(
+			inter,
+			owner,
+			storageMapKey,
+		).(*interpreter.SomeValue)
+
+		childComposite := rootSomeValue.InnerValue(inter, interpreter.EmptyLocationRange).(*interpreter.CompositeValue)
+
+		// Check that the inner composite is not inlined.
+		// If the test fails here, adjust the value generation code above
+		// to ensure that the inner composite is not inlined.
+
+		require.False(t, childComposite.Inlined())
+
+		// Verify the contents of the composite
+
+		inlinedCount := childComposite.FieldCount()
+
+		// Verify the contents of the composite
+
+		verify := func(count int) {
+			for i := 0; i < count; i++ {
+				value := childComposite.GetMember(
+					inter,
+					interpreter.EmptyLocationRange,
+					strconv.Itoa(i),
+				)
+				expectedValue := interpreter.NewUnmeteredIntValueFromInt64(int64(i))
+				utils.AssertValuesEqual(t, inter, expectedValue, value)
+			}
+		}
+
+		verify(inlinedCount)
+
+		// Remove elements until the composite is inlined
+
+		for i := inlinedCount - 1; !childComposite.Inlined(); i-- {
+			existingValue := childComposite.RemoveMember(
+				inter,
+				interpreter.EmptyLocationRange,
+				strconv.Itoa(i),
+			)
+
+			expectedValue := interpreter.NewUnmeteredIntValueFromInt64(int64(i))
+			utils.AssertValuesEqual(t, inter, expectedValue, existingValue)
+
+		}
+
+		inlinedCount = childComposite.FieldCount()
+
+		require.True(t, childComposite.Inlined())
+
+		// Verify the contents of the composite again
+
+		verify(inlinedCount)
+
+		// Add element to make the composite uninlined again
+
+		childComposite.SetMember(
+			inter,
+			interpreter.EmptyLocationRange,
+			strconv.Itoa(inlinedCount),
+			interpreter.NewUnmeteredIntValueFromInt64(int64(inlinedCount)),
+		)
+
+		require.False(t, childComposite.Inlined())
+
+		// Verify the contents of the composite again
 
 		uninlinedCount := inlinedCount + 1
 
