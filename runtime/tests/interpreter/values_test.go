@@ -5724,5 +5724,123 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		// Verify the contents of the dictionary again
 
 		verify(uninlinedCount)
+
+		// Remove all elements
+
+		for i := 0; i < uninlinedCount; i++ {
+			existingValue := childDictionary.Remove(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.NewUnmeteredStringValue(strconv.Itoa(i)),
+			)
+			require.IsType(t, &interpreter.SomeValue{}, existingValue)
+		}
+
+		require.Equal(t, 0, childDictionary.Count())
+		require.True(t, childDictionary.Inlined())
+	})
+
+	t.Run("array (inlined -> uninlined -> inlined)", func(t *testing.T) {
+		t.Parallel()
+
+		inter, resetStorage := newRandomValueTestInterpreter(t)
+
+		// Start with an empty array
+
+		cadenceChildArray := cadence.NewArray(nil)
+
+		cadenceRootOptionalValue := cadence.NewOptional(cadenceChildArray)
+
+		rootSomeValue := importValue(t, inter, cadenceRootOptionalValue).(*interpreter.SomeValue)
+
+		writeValue(
+			inter,
+			owner,
+			storageMapKey,
+			rootSomeValue,
+		)
+
+		resetStorage()
+
+		rootSomeValue = readValue(
+			inter,
+			owner,
+			storageMapKey,
+		).(*interpreter.SomeValue)
+
+		// Fill the array until it becomes uninlined
+
+		childArray := rootSomeValue.InnerValue(inter, interpreter.EmptyLocationRange).(*interpreter.ArrayValue)
+
+		require.True(t, childArray.Inlined())
+
+		for i := 0; childArray.Inlined(); i++ {
+			childArray.Append(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.NewUnmeteredStringValue(strconv.Itoa(i)),
+			)
+		}
+
+		require.False(t, childArray.Inlined())
+
+		uninlinedCount := childArray.Count()
+
+		// Verify the contents of the array
+
+		childArray = rootSomeValue.InnerValue(inter, interpreter.EmptyLocationRange).(*interpreter.ArrayValue)
+
+		verify := func(count int) {
+			for i := 0; i < count; i++ {
+				value := childArray.Get(inter, interpreter.EmptyLocationRange, i)
+				expectedValue := interpreter.NewUnmeteredStringValue(strconv.Itoa(i))
+				utils.AssertValuesEqual(t, inter, expectedValue, value)
+			}
+		}
+
+		verify(uninlinedCount)
+
+		// Remove the last element to make the array inlined again
+
+		inlinedCount := uninlinedCount - 1
+
+		childArray.Remove(
+			inter,
+			interpreter.EmptyLocationRange,
+			inlinedCount,
+		)
+
+		require.True(t, childArray.Inlined())
+
+		// Verify the contents of the array again
+
+		verify(inlinedCount)
+
+		// Add a new element to make the array uninlined again
+
+		childArray.Append(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.NewUnmeteredStringValue(strconv.Itoa(inlinedCount)),
+		)
+
+		require.False(t, childArray.Inlined())
+
+		// Verify the contents of the array again
+
+		verify(uninlinedCount)
+
+		// Remove all elements
+
+		for i := uninlinedCount - 1; i >= 0; i-- {
+			childArray.Remove(
+				inter,
+				interpreter.EmptyLocationRange,
+				i,
+			)
+		}
+
+		require.Equal(t, 0, childArray.Count())
+		require.True(t, childArray.Inlined())
 	})
 }
