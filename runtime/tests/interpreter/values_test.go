@@ -5146,6 +5146,7 @@ func TestCheckStorageHealthInMiddleOfTransferAndRemove(t *testing.T) {
 
 // TestInterpretIterateReadOnlyLoadedWithSomeValueChildren tests https://github.com/onflow/atree-internal/pull/7
 func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
+	t.Parallel()
 
 	owner := common.Address{'A'}
 
