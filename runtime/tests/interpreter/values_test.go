@@ -5662,9 +5662,9 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		childDictionary := rootSomeValue.InnerValue(inter, interpreter.EmptyLocationRange).(*interpreter.DictionaryValue)
 
-		require.True(t, childDictionary.IsInlined())
+		require.True(t, childDictionary.Inlined())
 
-		for i := 0; childDictionary.IsInlined(); i++ {
+		for i := 0; childDictionary.Inlined(); i++ {
 			childDictionary.Insert(
 				inter,
 				interpreter.EmptyLocationRange,
@@ -5673,7 +5673,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 			)
 		}
 
-		require.False(t, childDictionary.IsInlined())
+		require.False(t, childDictionary.Inlined())
 
 		uninlinedCount := childDictionary.Count()
 
@@ -5697,13 +5697,14 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		inlinedCount := uninlinedCount - 1
 
-		childDictionary.Remove(
+		existingValue := childDictionary.Remove(
 			inter,
 			interpreter.EmptyLocationRange,
 			interpreter.NewUnmeteredStringValue(strconv.Itoa(inlinedCount)),
 		)
+		require.IsType(t, &interpreter.SomeValue{}, existingValue)
 
-		require.True(t, childDictionary.IsInlined())
+		require.True(t, childDictionary.Inlined())
 
 		// Verify the contents of the dictionary again
 
@@ -5718,7 +5719,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 			interpreter.NewUnmeteredIntValueFromInt64(int64(inlinedCount)),
 		)
 
-		require.False(t, childDictionary.IsInlined())
+		require.False(t, childDictionary.Inlined())
 
 		// Verify the contents of the dictionary again
 
