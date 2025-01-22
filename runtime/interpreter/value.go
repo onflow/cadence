@@ -263,11 +263,11 @@ type ValueIterator interface {
 	Next(interpreter *Interpreter, locationRange LocationRange) Value
 }
 
-// containerValue is an interface for values using atree containers
+// atreeContainerBackedValue is an interface for values using atree containers
 // (atree.Array or atree.OrderedMap) under the hood.
-type containerValue interface {
+type atreeContainerBackedValue interface {
 	Value
-	isContainerValue()
+	isAtreeContainerBackedValue()
 }
 
 func safeAdd(a, b int, locationRange LocationRange) int {
@@ -2297,11 +2297,11 @@ var _ ValueIndexableValue = &ArrayValue{}
 var _ MemberAccessibleValue = &ArrayValue{}
 var _ ReferenceTrackedResourceKindedValue = &ArrayValue{}
 var _ IterableValue = &ArrayValue{}
-var _ containerValue = &ArrayValue{}
+var _ atreeContainerBackedValue = &ArrayValue{}
 
 func (*ArrayValue) isValue() {}
 
-func (*ArrayValue) isContainerValue() {}
+func (*ArrayValue) isAtreeContainerBackedValue() {}
 
 func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
 	descend := visitor.VisitArrayValue(interpreter, v)
@@ -17508,11 +17508,11 @@ var _ ReferenceTrackedResourceKindedValue = &CompositeValue{}
 var _ ContractValue = &CompositeValue{}
 var _ atree.Value = &CompositeValue{}
 var _ atree.WrapperValue = &CompositeValue{}
-var _ containerValue = &CompositeValue{}
+var _ atreeContainerBackedValue = &CompositeValue{}
 
 func (*CompositeValue) isValue() {}
 
-func (*CompositeValue) isContainerValue() {}
+func (*CompositeValue) isAtreeContainerBackedValue() {}
 
 func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
 	descend := visitor.VisitCompositeValue(interpreter, v)
@@ -19500,11 +19500,11 @@ var _ EquatableValue = &DictionaryValue{}
 var _ ValueIndexableValue = &DictionaryValue{}
 var _ MemberAccessibleValue = &DictionaryValue{}
 var _ ReferenceTrackedResourceKindedValue = &DictionaryValue{}
-var _ containerValue = &DictionaryValue{}
+var _ atreeContainerBackedValue = &DictionaryValue{}
 
 func (*DictionaryValue) isValue() {}
 
-func (*DictionaryValue) isContainerValue() {}
+func (*DictionaryValue) isAtreeContainerBackedValue() {}
 
 func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
 	descend := visitor.VisitDictionaryValue(interpreter, v)
@@ -21255,7 +21255,7 @@ func (v *SomeValue) Storable(
 
 	nonSomeValue, nestedLevels := v.nonSomeValue()
 
-	_, isContainerValue := nonSomeValue.(containerValue)
+	_, isContainerValue := nonSomeValue.(atreeContainerBackedValue)
 
 	if v.valueStorable == nil || isContainerValue {
 
