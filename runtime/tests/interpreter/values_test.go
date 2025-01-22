@@ -209,7 +209,7 @@ func withoutAtreeStorageValidationEnabled[T any](inter *interpreter.Interpreter,
 	return result
 }
 
-func TestInterpretRandomDictionaryOperations(t *testing.T) {
+func TestInterpretSmokeRandomDictionaryOperations(t *testing.T) {
 	if !*runSmokeTests {
 		t.Skip("smoke tests are disabled")
 	}
@@ -965,7 +965,7 @@ func TestInterpretRandomDictionaryOperations(t *testing.T) {
 	})
 }
 
-func TestInterpretRandomCompositeOperations(t *testing.T) {
+func TestInterpretSmokeRandomCompositeOperations(t *testing.T) {
 	if !*runSmokeTests {
 		t.Skip("smoke tests are disabled")
 	}
@@ -1384,7 +1384,7 @@ func TestInterpretRandomCompositeOperations(t *testing.T) {
 	})
 }
 
-func TestInterpretRandomArrayOperations(t *testing.T) {
+func TestInterpretSmokeRandomArrayOperations(t *testing.T) {
 	if !*runSmokeTests {
 		t.Skip("smoke tests are disabled")
 	}
@@ -2079,7 +2079,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 	})
 }
 
-func TestInterpretRandomNestedArrayOperations(t *testing.T) {
+func TestInterpretSmokeRandomNestedArrayOperations(t *testing.T) {
 	if !*runSmokeTests {
 		t.Skip("smoke tests are disabled")
 	}
@@ -2625,7 +2625,7 @@ func TestInterpretRandomNestedArrayOperations(t *testing.T) {
 	})
 }
 
-func TestInterpretRandomNestedDictionaryOperations(t *testing.T) {
+func TestInterpretSmokeRandomNestedDictionaryOperations(t *testing.T) {
 	if !*runSmokeTests {
 		t.Skip("smoke tests are disabled")
 	}
@@ -3244,7 +3244,7 @@ func TestInterpretRandomNestedDictionaryOperations(t *testing.T) {
 	})
 }
 
-func TestInterpretRandomNestedCompositeOperations(t *testing.T) {
+func TestInterpretSmokeRandomNestedCompositeOperations(t *testing.T) {
 	if !*runSmokeTests {
 		t.Skip("smoke tests are disabled")
 	}
@@ -4808,6 +4808,8 @@ func mapKey(inter *interpreter.Interpreter, key interpreter.Value) any {
 // - maybeValidateAtreeValue() calls CheckHealth()
 func TestCheckStorageHealthInMiddleOfDeepRemove(t *testing.T) {
 
+	t.Parallel()
+
 	storage := newUnmeteredInMemoryStorage()
 	inter, err := interpreter.NewInterpreter(
 		&interpreter.Program{
@@ -4882,7 +4884,7 @@ func TestCheckStorageHealthInMiddleOfDeepRemove(t *testing.T) {
 // https://github.com/onflow/cadence/pull/2882#issuecomment-1796381227
 // In this test, storage.CheckHealth() should be called after DictionaryValue.Transfer()
 // with remove flag, not in the middle of DictionaryValue.Transfer().
-func TestCheckStorageHealthInMiddleOfTransferAndRemove(t *testing.T) {
+func TestInterpretCheckStorageHealthInMiddleOfTransferAndRemove(t *testing.T) {
 
 	t.Parallel()
 
