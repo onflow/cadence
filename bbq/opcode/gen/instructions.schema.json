@@ -5,12 +5,14 @@
     "instruction": {
       "type": "object",
       "properties": {
-          "name": { "type": "string" },
-          "description": { "type": "string" },
-          "operands": {
-            "type": "array",
-            "items": { "$ref": "#/$defs/operand" }
-          }
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "operands": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/operand" }
+        },
+        "valueEffects": {"$ref": "#/$defs/valueEffects"},
+        "controlEffects": {"$ref": "#/$defs/controlEffects"}
       },
       "required": ["name", "description"],
       "additionalProperties": false
@@ -35,6 +37,92 @@
         "description": { "type": "string" }
       },
       "required": ["name", "type"],
+      "additionalProperties": false
+    },
+    "valueEffects": {
+      "type": "object",
+      "properties": {
+        "push": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/valueStackOp" }
+        },
+        "pop": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/valueStackOp"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "valueStackOp": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": [
+            "value",
+            "string",
+            "array",
+            "integer",
+            "bool",
+            "path",
+            "int",
+            "reference",
+            "function",
+            "resource",
+            "optional"
+          ]
+        },
+        "count": {
+          "oneOf": [
+            { "type": "integer" },
+            { "type": "string" }
+          ]
+        }
+      },
+      "required": ["name", "type"],
+      "additionalProperties": false
+    },
+    "controlEffects": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/controlEffect" }
+    },
+    "controlEffect": {
+      "oneOf": [
+        { "$ref": "#/$defs/jump" },
+        { "$ref": "#/$defs/call" },
+        { "$ref": "#/$defs/return" }
+      ]
+    },
+    "jump": {
+      "type": "object",
+      "properties": {
+        "jump": { "type": "string" }
+      },
+      "required": ["jump"],
+      "additionalProperties": false
+    },
+    "call": {
+      "type": "object",
+      "properties": {
+        "call": { "type": "null" }
+      },
+      "required": ["call"],
+      "additionalProperties": false
+    },
+    "return": {
+      "type": "object",
+      "properties": {
+        "return": {
+          "oneOf": [
+            {"type": "string"},
+            {"type": "null"}
+          ]
+        }
+      },
+      "required": ["return"],
       "additionalProperties": false
     }
   }
