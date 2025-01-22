@@ -5157,6 +5157,7 @@ func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
 		resetStorage()
 
 		rootDictionary = readValue(
+			t,
 			inter,
 			owner,
 			storageMapKey,
@@ -5257,6 +5258,7 @@ func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
 		resetStorage()
 
 		rootArray = readValue(
+			t,
 			inter,
 			owner,
 			storageMapKey,
@@ -5424,6 +5426,7 @@ func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
 		resetStorage()
 
 		rootStruct = readValue(
+			t,
 			inter,
 			owner,
 			storageMapKey,
@@ -5498,6 +5501,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 	}
 
 	readValue := func(
+		t *testing.T,
 		inter *interpreter.Interpreter,
 		owner common.Address,
 		storageMapKey interpreter.StorageMapKey,
