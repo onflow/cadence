@@ -572,6 +572,8 @@ func compileAndInvokeWithOptions(
 		map[common.Location]*compiledProgram{},
 	)
 
+	printProgram("", program)
+
 	vmConfig := options.VMConfig
 	if vmConfig == nil {
 		storage := interpreter.NewInMemoryStorage(nil)

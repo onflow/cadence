@@ -35,13 +35,12 @@ import (
 )
 
 type Compiler[E any] struct {
-	Program         *ast.Program
-	Elaboration     *sema.Elaboration
-	SubElaborations map[ast.Element]*sema.Elaboration
-	Config          *Config
+	Program             *ast.Program
+	ExtendedElaboration *ExtendedElaboration
+	Config              *Config
 
 	currentFunction    *function[E]
-	compositeTypeStack *Stack[*sema.CompositeType]
+	compositeTypeStack *Stack[sema.CompositeKindedType]
 
 	functions           []*function[E]
 	constants           []*constant
@@ -99,16 +98,15 @@ func newCompiler[E any](
 	codeGen CodeGen[E],
 ) *Compiler[E] {
 	return &Compiler[E]{
-		Program:         program,
-		Elaboration:     elaboration,
-		SubElaborations: make(map[ast.Element]*sema.Elaboration),
-		Config:          &Config{},
-		globals:         make(map[string]*global),
-		importedGlobals: NativeFunctions(),
-		typesInPool:     make(map[sema.TypeID]uint16),
-		constantsInPool: make(map[constantsCacheKey]*constant),
-		compositeTypeStack: &Stack[*sema.CompositeType]{
-			elements: make([]*sema.CompositeType, 0),
+		Program:             program,
+		ExtendedElaboration: NewExtendedElaboration(elaboration),
+		Config:              &Config{},
+		globals:             make(map[string]*global),
+		importedGlobals:     NativeFunctions(),
+		typesInPool:         make(map[sema.TypeID]uint16),
+		constantsInPool:     make(map[constantsCacheKey]*constant),
+		compositeTypeStack: &Stack[sema.CompositeKindedType]{
+			elements: make([]sema.CompositeKindedType, 0),
 		},
 		codeGen: codeGen,
 	}
@@ -130,7 +128,7 @@ func (c *Compiler[_]) findGlobal(name string) *global {
 	// e.g: SomeContract.Foo() == Foo(), within `SomeContract`.
 	if !c.compositeTypeStack.isEmpty() {
 		enclosingContract := c.compositeTypeStack.bottom()
-		typeQualifiedName := commons.TypeQualifiedName(enclosingContract.Identifier, name)
+		typeQualifiedName := commons.TypeQualifiedName(enclosingContract.GetIdentifier(), name)
 		global, ok = c.globals[typeQualifiedName]
 		if ok {
 			return global
@@ -305,8 +303,7 @@ func (c *Compiler[E]) Compile() *bbq.Program[E] {
 		c.memoryGauge,
 		c.Config,
 		c.Program,
-		c.Elaboration,
-		c.SubElaborations,
+		c.ExtendedElaboration,
 	)
 	c.Program = desugar.Run()
 
@@ -315,15 +312,16 @@ func (c *Compiler[E]) Compile() *bbq.Program[E] {
 	}
 
 	contract, _ := c.exportContract()
-	if contract != nil && contract.IsInterface {
-		return &bbq.Program[E]{
-			Contract: contract,
-		}
-	}
+	//if contract != nil && contract.IsInterface {
+	//	return &bbq.Program[E]{
+	//		Contract: contract,
+	//	}
+	//}
 
 	compositeDeclarations := c.Program.CompositeDeclarations()
 	variableDeclarations := c.Program.VariableDeclarations()
 	functionDeclarations := c.Program.FunctionDeclarations()
+	interfaceDeclarations := c.Program.InterfaceDeclarations()
 
 	// Reserve globals for functions/types before visiting their implementations.
 	c.reserveGlobalVars(
@@ -332,6 +330,7 @@ func (c *Compiler[E]) Compile() *bbq.Program[E] {
 		nil,
 		functionDeclarations,
 		compositeDeclarations,
+		interfaceDeclarations,
 	)
 
 	// Compile declarations
@@ -339,6 +338,9 @@ func (c *Compiler[E]) Compile() *bbq.Program[E] {
 		c.compileDeclaration(declaration)
 	}
 	for _, declaration := range compositeDeclarations {
+		c.compileDeclaration(declaration)
+	}
+	for _, declaration := range interfaceDeclarations {
 		c.compileDeclaration(declaration)
 	}
 
@@ -364,6 +366,7 @@ func (c *Compiler[_]) reserveGlobalVars(
 	specialFunctionDecls []*ast.SpecialFunctionDeclaration,
 	functionDecls []*ast.FunctionDeclaration,
 	compositeDecls []*ast.CompositeDeclaration,
+	interfaceDecls []*ast.InterfaceDeclaration,
 ) {
 	for _, declaration := range variableDecls {
 		c.addGlobal(declaration.Identifier.Identifier)
@@ -386,9 +389,9 @@ func (c *Compiler[_]) reserveGlobalVars(
 	}
 
 	for _, declaration := range compositeDecls {
-		// TODO: Handle nested composite types. Those name should be `Foo.Bar`.
 		qualifiedTypeName := commons.TypeQualifiedName(compositeTypeName, declaration.Identifier.Identifier)
 
+		// Reserve a global-var for the value-constructor.
 		c.addGlobal(qualifiedTypeName)
 
 		// For composite types other than contracts, global variables
@@ -401,12 +404,32 @@ func (c *Compiler[_]) reserveGlobalVars(
 		}
 
 		// Define globals for functions before visiting function bodies.
+
+		members := declaration.Members
+
 		c.reserveGlobalVars(
 			qualifiedTypeName,
 			nil,
-			declaration.Members.SpecialFunctions(),
-			declaration.Members.Functions(),
-			declaration.Members.Composites(),
+			members.SpecialFunctions(),
+			members.Functions(),
+			members.Composites(),
+			members.Interfaces(),
+		)
+	}
+
+	for _, declaration := range interfaceDecls {
+		// Don't need a global-var for the value-constructor for interfaces
+		qualifiedTypeName := commons.TypeQualifiedName(compositeTypeName, declaration.Identifier.Identifier)
+
+		members := declaration.Members
+
+		c.reserveGlobalVars(
+			qualifiedTypeName,
+			nil,
+			members.SpecialFunctions(),
+			members.Functions(),
+			members.Composites(),
+			members.Interfaces(),
 		)
 	}
 }
@@ -475,13 +498,13 @@ func (c *Compiler[_]) exportVariables(variableDecls []*ast.VariableDeclaration) 
 func (c *Compiler[_]) contractType() (contractType sema.CompositeKindedType) {
 	contractDecl := c.Program.SoleContractDeclaration()
 	if contractDecl != nil {
-		contractType = c.Elaboration.CompositeDeclarationType(contractDecl)
+		contractType = c.ExtendedElaboration.CompositeDeclarationType(contractDecl)
 		return
 	}
 
 	interfaceDecl := c.Program.SoleContractInterfaceDeclaration()
 	if interfaceDecl != nil {
-		contractType = c.Elaboration.InterfaceDeclarationType(interfaceDecl)
+		contractType = c.ExtendedElaboration.InterfaceDeclarationType(interfaceDecl)
 		return
 	}
 
@@ -524,9 +547,9 @@ func (c *Compiler[_]) compileBlock(block *ast.Block) {
 func (c *Compiler[_]) compileFunctionBlock(functionBlock *ast.FunctionBlock) {
 	// Function conditions must have been desugared to statements.
 	// So there shouldn't be any condition at this point.
-	if functionBlock.HasConditions() {
-		panic(errors.NewUnreachableError())
-	}
+	//if functionBlock.HasConditions() {
+	//	panic(errors.NewUnreachableError())
+	//}
 
 	if functionBlock != nil {
 		c.compileBlock(functionBlock.Block)
@@ -566,18 +589,6 @@ func (c *Compiler[_]) VisitContinueStatement(_ *ast.ContinueStatement) (_ struct
 }
 
 func (c *Compiler[_]) VisitIfStatement(statement *ast.IfStatement) (_ struct{}) {
-
-	// TODO: Maybe generalize this.
-	//   Note that, conditions can be only either if-stmt or a emit-stmt.
-	//   So do not over-generalize.
-	if elaboration, ok := c.SubElaborations[statement]; ok {
-		prevElaboration := c.Elaboration
-		c.Elaboration = elaboration
-		defer func() {
-			c.Elaboration = prevElaboration
-		}()
-	}
-
 	// TODO: scope
 	switch test := statement.Test.(type) {
 	case ast.Expression:
@@ -631,7 +642,7 @@ func (c *Compiler[_]) VisitVariableDeclaration(declaration *ast.VariableDeclarat
 	// TODO: second value
 	c.compileExpression(declaration.Value)
 
-	varDeclTypes := c.Elaboration.VariableDeclarationTypes(declaration)
+	varDeclTypes := c.ExtendedElaboration.VariableDeclarationTypes(declaration)
 	c.emitCheckType(varDeclTypes.TargetType)
 
 	local := c.currentFunction.declareLocal(declaration.Identifier.Identifier)
@@ -642,7 +653,7 @@ func (c *Compiler[_]) VisitVariableDeclaration(declaration *ast.VariableDeclarat
 func (c *Compiler[_]) VisitAssignmentStatement(statement *ast.AssignmentStatement) (_ struct{}) {
 	c.compileExpression(statement.Value)
 
-	assignmentTypes := c.Elaboration.AssignmentStatementTypes(statement)
+	assignmentTypes := c.ExtendedElaboration.AssignmentStatementTypes(statement)
 	c.emitCheckType(assignmentTypes.TargetType)
 
 	switch target := statement.Target.(type) {
@@ -713,7 +724,7 @@ func (c *Compiler[_]) VisitNilExpression(_ *ast.NilExpression) (_ struct{}) {
 }
 
 func (c *Compiler[_]) VisitIntegerExpression(expression *ast.IntegerExpression) (_ struct{}) {
-	integerType := c.Elaboration.IntegerExpressionType(expression)
+	integerType := c.ExtendedElaboration.IntegerExpressionType(expression)
 	constantKind := constantkind.FromSemaType(integerType)
 
 	// TODO:
@@ -731,7 +742,7 @@ func (c *Compiler[_]) VisitFixedPointExpression(_ *ast.FixedPointExpression) (_ 
 }
 
 func (c *Compiler[_]) VisitArrayExpression(array *ast.ArrayExpression) (_ struct{}) {
-	arrayTypes := c.Elaboration.ArrayExpressionTypes(array)
+	arrayTypes := c.ExtendedElaboration.ArrayExpressionTypes(array)
 
 	typeIndex := c.getOrAddType(arrayTypes.ArrayType)
 
@@ -784,7 +795,7 @@ func (c *Compiler[_]) VisitInvocationExpression(expression *ast.InvocationExpres
 	switch invokedExpr := expression.InvokedExpression.(type) {
 	case *ast.IdentifierExpression:
 		// TODO: Does constructors need any special handling?
-		//typ := c.Elaboration.IdentifierInInvocationType(invokedExpr)
+		//typ := c.ExtendedElaboration.IdentifierInInvocationType(invokedExpr)
 		//invocationType := typ.(*sema.FunctionType)
 		//if invocationType.IsConstructor {
 		//}
@@ -798,7 +809,7 @@ func (c *Compiler[_]) VisitInvocationExpression(expression *ast.InvocationExpres
 		c.codeGen.Emit(opcode.InstructionInvoke{TypeArgs: typeArgs})
 
 	case *ast.MemberExpression:
-		memberInfo, ok := c.Elaboration.MemberExpressionMemberAccessInfo(invokedExpr)
+		memberInfo, ok := c.ExtendedElaboration.MemberExpressionMemberAccessInfo(invokedExpr)
 		if !ok {
 			// TODO: verify
 			panic(errors.NewUnreachableError())
@@ -827,7 +838,12 @@ func (c *Compiler[_]) VisitInvocationExpression(expression *ast.InvocationExpres
 		// Load arguments
 		c.loadArguments(expression)
 
-		if isInterfaceMethodInvocation(memberInfo.AccessedType) {
+		// Invocations into the interface code, such as default functions and inherited conditions,
+		// that were synthetically added at the desugar phase, must be static calls.
+		isInterfaceInheritedFuncCall := c.ExtendedElaboration.IsInterfaceMethodStaticCall(expression)
+
+		// Any invocation on restricted-types must be dynamic
+		if !isInterfaceInheritedFuncCall && isDynamicMethodInvocation(memberInfo.AccessedType) {
 			funcName = invokedExpr.Identifier.Identifier
 			if len(funcName) >= math.MaxUint16 {
 				panic(errors.NewDefaultUserError("invalid function name"))
@@ -864,12 +880,15 @@ func (c *Compiler[_]) VisitInvocationExpression(expression *ast.InvocationExpres
 	return
 }
 
-func isInterfaceMethodInvocation(accessedType sema.Type) bool {
+func isDynamicMethodInvocation(accessedType sema.Type) bool {
 	switch typ := accessedType.(type) {
 	case *sema.ReferenceType:
-		return isInterfaceMethodInvocation(typ.Type)
+		return isDynamicMethodInvocation(typ.Type)
 	case *sema.IntersectionType:
 		return true
+
+		// TODO: Optional type?
+
 	case *sema.InterfaceType:
 		return true
 	default:
@@ -892,7 +911,7 @@ func TypeName(typ sema.Type) string {
 }
 
 func (c *Compiler[_]) loadArguments(expression *ast.InvocationExpression) {
-	invocationTypes := c.Elaboration.InvocationExpressionTypes(expression)
+	invocationTypes := c.ExtendedElaboration.InvocationExpressionTypes(expression)
 	for index, argument := range expression.Arguments {
 		c.compileExpression(argument.Expression)
 		c.emitCheckType(invocationTypes.ArgumentTypes[index])
@@ -906,7 +925,7 @@ func (c *Compiler[_]) loadArguments(expression *ast.InvocationExpression) {
 }
 
 func (c *Compiler[_]) loadTypeArguments(expression *ast.InvocationExpression) []uint16 {
-	invocationTypes := c.Elaboration.InvocationExpressionTypes(expression)
+	invocationTypes := c.ExtendedElaboration.InvocationExpressionTypes(expression)
 
 	typeArgsCount := invocationTypes.TypeArguments.Len()
 	if typeArgsCount >= math.MaxUint16 {
@@ -1036,7 +1055,7 @@ func (c *Compiler[_]) VisitStringTemplateExpression(_ *ast.StringTemplateExpress
 func (c *Compiler[_]) VisitCastingExpression(expression *ast.CastingExpression) (_ struct{}) {
 	c.compileExpression(expression.Expression)
 
-	castingTypes := c.Elaboration.CastingExpressionTypes(expression)
+	castingTypes := c.ExtendedElaboration.CastingExpressionTypes(expression)
 	index := c.getOrAddType(castingTypes.TargetType)
 
 	castKind := opcode.CastKindFrom(expression.Operation)
@@ -1063,7 +1082,7 @@ func (c *Compiler[_]) VisitDestroyExpression(expression *ast.DestroyExpression) 
 
 func (c *Compiler[_]) VisitReferenceExpression(expression *ast.ReferenceExpression) (_ struct{}) {
 	c.compileExpression(expression.Expression)
-	borrowType := c.Elaboration.ReferenceExpressionBorrowType(expression)
+	borrowType := c.ExtendedElaboration.ReferenceExpressionBorrowType(expression)
 	index := c.getOrAddType(borrowType)
 	c.codeGen.Emit(opcode.InstructionNewRef{TypeIndex: index})
 	return
@@ -1109,9 +1128,10 @@ func (c *Compiler[_]) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFu
 func (c *Compiler[_]) compileInitializer(declaration *ast.SpecialFunctionDeclaration) {
 	enclosingCompositeTypeName := c.enclosingCompositeTypeFullyQualifiedName()
 	enclosingType := c.compositeTypeStack.top()
+	kind := enclosingType.GetCompositeKind()
 
 	var functionName string
-	if enclosingType.Kind == common.CompositeKindContract {
+	if kind == common.CompositeKindContract {
 		// For contracts, add the initializer as `init()`.
 		// A global variable with the same name as contract is separately added.
 		// The VM will load the contract and assign to that global variable during imports resolution.
@@ -1141,13 +1161,10 @@ func (c *Compiler[_]) compileInitializer(declaration *ast.SpecialFunctionDeclara
 	// Initialize an empty struct and assign to `self`.
 	// i.e: `self = New()`
 
-	enclosingCompositeType := c.compositeTypeStack.top()
-
 	// Write composite kind
 	// TODO: Maybe get/include this from static-type. Then no need to provide separately.
-	kind := enclosingCompositeType.Kind
 
-	typeIndex := c.getOrAddType(enclosingCompositeType)
+	typeIndex := c.getOrAddType(enclosingType)
 
 	c.codeGen.Emit(
 		opcode.InstructionNew{
@@ -1156,7 +1173,7 @@ func (c *Compiler[_]) compileInitializer(declaration *ast.SpecialFunctionDeclara
 		},
 	)
 
-	if enclosingType.Kind == common.CompositeKindContract {
+	if kind == common.CompositeKindContract {
 		// During contract init, update the global variable with the newly initialized contract value.
 		// So accessing the contract through the global variable while initializing itself, would work.
 		// i.e:
@@ -1184,14 +1201,6 @@ func (c *Compiler[_]) compileInitializer(declaration *ast.SpecialFunctionDeclara
 }
 
 func (c *Compiler[_]) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) (_ struct{}) {
-	if elaboration, ok := c.SubElaborations[declaration]; ok {
-		prevElaboration := c.Elaboration
-		c.Elaboration = elaboration
-		defer func() {
-			c.Elaboration = prevElaboration
-		}()
-	}
-
 	declareReceiver := !c.compositeTypeStack.isEmpty()
 	function := c.declareFunction(declaration, declareReceiver)
 
@@ -1224,7 +1233,7 @@ func (c *Compiler[E]) declareFunction(declaration *ast.FunctionDeclaration, decl
 }
 
 func (c *Compiler[_]) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) (_ struct{}) {
-	compositeType := c.Elaboration.CompositeDeclarationType(declaration)
+	compositeType := c.ExtendedElaboration.CompositeDeclarationType(declaration)
 	c.compositeTypeStack.push(compositeType)
 	defer func() {
 		c.compositeTypeStack.pop()
@@ -1247,7 +1256,9 @@ func (c *Compiler[_]) VisitCompositeDeclaration(declaration *ast.CompositeDeclar
 	for _, function := range declaration.Members.Functions() {
 		c.compileDeclaration(function)
 	}
-
+	for _, nestedTypes := range declaration.Members.Interfaces() {
+		c.compileDeclaration(nestedTypes)
+	}
 	for _, nestedTypes := range declaration.Members.Composites() {
 		c.compileDeclaration(nestedTypes)
 	}
@@ -1257,9 +1268,23 @@ func (c *Compiler[_]) VisitCompositeDeclaration(declaration *ast.CompositeDeclar
 	return
 }
 
-func (c *Compiler[_]) VisitInterfaceDeclaration(_ *ast.InterfaceDeclaration) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler[_]) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) (_ struct{}) {
+	interfaceType := c.ExtendedElaboration.InterfaceDeclarationType(declaration)
+	c.compositeTypeStack.push(interfaceType)
+	defer func() {
+		c.compositeTypeStack.pop()
+	}()
+
+	for _, function := range declaration.Members.Functions() {
+		c.compileDeclaration(function)
+	}
+	for _, nestedTypes := range declaration.Members.Interfaces() {
+		c.compileDeclaration(nestedTypes)
+	}
+	for _, nestedTypes := range declaration.Members.Composites() {
+		c.compileDeclaration(nestedTypes)
+	}
+	return
 }
 
 func (c *Compiler[_]) VisitFieldDeclaration(_ *ast.FieldDeclaration) (_ struct{}) {
@@ -1391,7 +1416,7 @@ func (c *Compiler[_]) enclosingCompositeTypeFullyQualifiedName() string {
 		if i > 0 {
 			sb.WriteRune('.')
 		}
-		sb.WriteString(typ.Identifier)
+		sb.WriteString(typ.GetIdentifier())
 	}
 
 	return sb.String()

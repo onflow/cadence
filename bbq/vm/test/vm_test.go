@@ -2808,7 +2808,7 @@ func TestFunctionPreConditions(t *testing.T) {
     `
 
 		// Only need to compile
-		parseCheckAndCompileCodeWithOptions(
+		program := parseCheckAndCompileCodeWithOptions(
 			t,
 			barContract,
 			barLocation,
@@ -2825,6 +2825,8 @@ func TestFunctionPreConditions(t *testing.T) {
 			},
 			programs,
 		)
+
+		printProgram("Bar", program)
 
 		// Deploy contract with the implementation
 
@@ -2876,6 +2878,8 @@ func TestFunctionPreConditions(t *testing.T) {
 			},
 			programs,
 		)
+
+		printProgram("Foo", fooProgram)
 
 		fooVM := vm.NewVM(fooLocation, fooProgram, vmConfig)
 

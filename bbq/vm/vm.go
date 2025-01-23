@@ -463,11 +463,8 @@ func opInvokeDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
 	_ = typeArguments
 
 	switch typedReceiver := receiver.(type) {
-	case *StorageReferenceValue:
-		referenced, err := typedReceiver.dereference(vm.config)
-		if err != nil {
-			panic(err)
-		}
+	case ReferenceValue:
+		referenced := typedReceiver.ReferencedValue(vm.config, true)
 		receiver = *referenced
 
 		// TODO:
@@ -840,7 +837,7 @@ func getReceiver[T any](config *Config, receiver Value) T {
 	case *EphemeralReferenceValue:
 		return getReceiver[T](config, receiver.Value)
 	case *StorageReferenceValue:
-		referencedValue, err := receiver.dereference(nil)
+		referencedValue, err := receiver.dereference(config)
 		if err != nil {
 			panic(err)
 		}

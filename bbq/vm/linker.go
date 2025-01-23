@@ -71,7 +71,7 @@ func LinkGlobals(
 				)
 
 				// TODO: remove this check. This shouldn't be nil ideally.
-				if conf.ContractValueHandler != nil {
+				if !contract.IsInterface && conf.ContractValueHandler != nil {
 					contractValue := conf.ContractValueHandler(conf, location)
 					// Update the globals - both the context and the mapping.
 					// Contract value is always at the zero-th index.
@@ -104,7 +104,7 @@ func LinkGlobals(
 	// The reserved position is always the zero-th index.
 	// This value will be populated either by the `init` method invocation of the contract,
 	// Or when this program is imported by another (loads the value from storage).
-	if program.Contract != nil {
+	if program.Contract != nil && !program.Contract.IsInterface {
 		globals = append(globals, nil)
 	}
 

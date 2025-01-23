@@ -1,6 +1,7 @@
 package compiler
 
 import (
+	"fmt"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
@@ -14,11 +15,11 @@ const tempResultVariableName = "$result"
 // Desugar will rewrite the AST from high-level abstractions to a much lower-level
 // abstractions, so the compiler and vm could work with a minimal set of language features.
 type Desugar struct {
-	memoryGauge  common.MemoryGauge
-	elaboration  *sema.Elaboration
-	elaborations map[ast.Element]*sema.Elaboration
-	program      *ast.Program
-	config       *Config
+	memoryGauge       common.MemoryGauge
+	elaboration       *ExtendedElaboration
+	program           *ast.Program
+	config            *Config
+	isInterfaceMember bool
 
 	modifiedDeclarations         []ast.Declaration
 	inheritedFuncsWithConditions map[string][]desugarFunction
@@ -35,15 +36,13 @@ func NewDesugar(
 	memoryGauge common.MemoryGauge,
 	compilerConfig *Config,
 	program *ast.Program,
-	elaboration *sema.Elaboration,
-	elaborations map[ast.Element]*sema.Elaboration,
+	elaboration *ExtendedElaboration,
 ) *Desugar {
 	return &Desugar{
-		memoryGauge:  memoryGauge,
-		config:       compilerConfig,
-		elaboration:  elaboration,
-		elaborations: elaborations,
-		program:      program,
+		memoryGauge: memoryGauge,
+		config:      compilerConfig,
+		elaboration: elaboration,
+		program:     program,
 	}
 }
 
@@ -74,15 +73,19 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration)
 	statements := funcBlock.Block.Statements
 	funcName := declaration.Identifier.Identifier
 
+	hasBody := declaration.FunctionBlock.HasStatements()
+
 	preConditions := d.desugarConditions(
 		funcName,
 		ast.ConditionKindPre,
 		funcBlock.PreConditions,
+		hasBody,
 	)
 	postConditions := d.desugarConditions(
 		funcName,
 		ast.ConditionKindPost,
 		funcBlock.PostConditions,
+		hasBody,
 	)
 
 	modifiedStatements := make([]ast.Statement, 0, len(preConditions)+len(postConditions)+len(statements))
@@ -212,66 +215,86 @@ func (d *Desugar) desugarConditions(
 	funcName string,
 	kind ast.ConditionKind,
 	conditions *ast.Conditions,
+	body bool,
 ) []ast.Statement {
+	if conditions == nil {
+		return nil
+	}
+
 	desugaredConditions := make([]ast.Statement, 0)
 
-	if kind == ast.ConditionKindPre {
-		if d.inheritedFuncsWithConditions != nil {
-			inheritedFuncs := d.inheritedFuncsWithConditions[funcName]
-			for _, inheritedFunc := range inheritedFuncs {
-				inheritedPreConditions := inheritedFunc.function.FunctionBlock.PreConditions
-				if inheritedPreConditions == nil {
-					continue
-				}
-				for _, condition := range inheritedPreConditions.Conditions {
-					desugaredCondition := d.desugarCondition(condition, inheritedFunc.elaboration)
-					desugaredConditions = append(desugaredConditions, desugaredCondition)
-				}
-			}
-		}
-	}
-
-	if conditions != nil {
-		conditionsList := conditions.Conditions
-
-		if kind == ast.ConditionKindPost {
-			postConditionsRewrite := d.elaboration.PostConditionsRewrite(conditions)
-			conditionsList = postConditionsRewrite.RewrittenPostConditions
-		}
-
-		for _, condition := range conditionsList {
-			desugaredCondition := d.desugarCondition(condition, d.elaboration)
-			desugaredConditions = append(desugaredConditions, desugaredCondition)
-		}
-	}
+	conditionsList := conditions.Conditions
 
 	if kind == ast.ConditionKindPost {
-		if d.inheritedFuncsWithConditions != nil {
-			inheritedFuncs, ok := d.inheritedFuncsWithConditions[funcName]
-			if ok && len(inheritedFuncs) > 0 {
-				// Must be added in reverse order.
-				for i := len(inheritedFuncs) - 1; i >= 0; i-- {
-					inheritedFunc := inheritedFuncs[i]
-					inheritedPostConditions := inheritedFunc.function.FunctionBlock.PostConditions
-					if inheritedPostConditions == nil {
-						continue
-					}
+		postConditionsRewrite := d.elaboration.PostConditionsRewrite(conditions)
+		conditionsList = postConditionsRewrite.RewrittenPostConditions
+	}
 
-					elaboration := inheritedFunc.elaboration
+	for _, condition := range conditionsList {
+		desugaredCondition := d.desugarCondition(condition, d.elaboration)
+		desugaredConditions = append(desugaredConditions, desugaredCondition)
+	}
 
-					postConditionsRewrite := elaboration.PostConditionsRewrite(inheritedPostConditions)
-					postConditions := postConditionsRewrite.RewrittenPostConditions
+	if d.isInterfaceMember && !body {
+		// If this is a pre/post condition of an interface function,
+		// and is not a default function, then generate a separate
+		// function for the conditions.
 
-					for _, condition := range postConditions {
-						desugaredCondition := d.desugarCondition(condition, elaboration)
-						desugaredConditions = append(desugaredConditions, desugaredCondition)
-					}
-				}
-			}
-		}
+		pos := conditions.StartPos
+
+		modifiedFuncBlock := ast.NewFunctionBlock(
+			d.memoryGauge,
+			ast.NewBlock(
+				d.memoryGauge,
+				desugaredConditions,
+				conditions.Range,
+			),
+			nil,
+			nil,
+		)
+
+		conditionFunc := ast.NewFunctionDeclaration(
+			d.memoryGauge,
+			ast.AccessAll,
+			ast.FunctionPurityView, // conditions must be pure
+			false,
+			false,
+			conditionsGeneratedFuncName(funcName, kind, pos),
+			nil,
+			nil, // TODO: Add parameters
+			ast.NewTypeAnnotation(
+				nil,
+				false,
+				astVoidType(pos),
+				pos,
+			),
+			modifiedFuncBlock,
+			pos,
+			"",
+		)
+
+		d.modifiedDeclarations = append(d.modifiedDeclarations, conditionFunc)
+
+		return nil
 	}
 
 	return desugaredConditions
+}
+
+func conditionsGeneratedFuncName(funcName string, kind ast.ConditionKind, pos ast.Position) ast.Identifier {
+	return ast.NewIdentifier(
+		nil,
+		fmt.Sprintf("%s.$%sConditions", funcName, kind.Keyword()),
+		pos,
+	)
+}
+
+func astVoidType(pos ast.Position) ast.Type {
+	return ast.NewNominalType(
+		nil,
+		ast.NewIdentifier(nil, "Void", pos),
+		nil,
+	)
 }
 
 var conditionFailedMessage = ast.NewStringExpression(nil, "pre/post condition failed", ast.EmptyRange)
@@ -283,7 +306,7 @@ var panicFuncInvocationTypes = sema.InvocationExpressionTypes{
 	},
 }
 
-func (d *Desugar) desugarCondition(condition ast.Condition, elaboration *sema.Elaboration) ast.Statement {
+func (d *Desugar) desugarCondition(condition ast.Condition, elaboration *ExtendedElaboration) ast.Statement {
 	switch condition := condition.(type) {
 	case *ast.TestCondition:
 
@@ -350,11 +373,11 @@ func (d *Desugar) desugarCondition(condition ast.Condition, elaboration *sema.El
 			startPos,
 		)
 
-		d.elaborations[ifStmt] = elaboration
+		//d.elaborations[ifStmt] = elaboration
 		return ifStmt
 	case *ast.EmitCondition:
 		emitStmt := (*ast.EmitStatement)(condition)
-		d.elaborations[emitStmt] = elaboration
+		//d.elaborations[emitStmt] = elaboration
 		return emitStmt
 	default:
 		panic(errors.NewUnreachableError())
@@ -371,30 +394,24 @@ func (d *Desugar) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclarat
 
 func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) ast.Declaration {
 	existingMembers := declaration.Members.Declarations()
-	existingMemberCount := len(existingMembers)
 
 	compositeType := d.elaboration.CompositeDeclarationType(declaration)
 
 	// Recursively de-sugar nested declarations (functions, types, etc.)
 
-	prevInheritedFuncs := d.inheritedFuncsWithConditions
-	d.inheritedFuncsWithConditions = d.inheritedFunctionsWithConditions(compositeType)
-	defer func() {
-		d.inheritedFuncsWithConditions = prevInheritedFuncs
-	}()
-
-	desugaredMembers := make([]ast.Declaration, 0, existingMemberCount)
+	var desugaredMembers []ast.Declaration
 	membersDesugared := false
 
 	for _, member := range existingMembers {
 		desugaredMember := d.desugarDeclaration(member)
+
 		membersDesugared = membersDesugared || (desugaredMember != member)
 		desugaredMembers = append(desugaredMembers, desugaredMember)
 	}
 
 	// Copy over inherited default functions.
 
-	inheritedDefaultFuncs := d.copyInheritedDefaultFunctions(compositeType)
+	inheritedDefaultFuncs := d.inheritedDefaultFunctions(compositeType, declaration)
 
 	// Optimization: If none of the existing members got updated or,
 	// if there are no inherited members, then return the same declaration as-is.
@@ -402,7 +419,7 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 		return declaration
 	}
 
-	modifiedMembers := make([]ast.Declaration, existingMemberCount)
+	modifiedMembers := make([]ast.Declaration, len(desugaredMembers))
 	copy(modifiedMembers, desugaredMembers)
 
 	modifiedMembers = append(modifiedMembers, inheritedDefaultFuncs...)
@@ -457,9 +474,11 @@ func (d *Desugar) inheritedFunctionsWithConditions(compositeType *sema.Composite
 	return inheritedFunctions
 }
 
-func (d *Desugar) copyInheritedDefaultFunctions(compositeType *sema.CompositeType) []ast.Declaration {
+func (d *Desugar) inheritedDefaultFunctions(compositeType *sema.CompositeType, decl *ast.CompositeDeclaration) []ast.Declaration {
 	directMembers := compositeType.Members
 	allMembers := compositeType.GetMembers()
+
+	pos := decl.StartPos
 
 	inheritedMembers := make([]ast.Declaration, 0)
 
@@ -482,9 +501,6 @@ func (d *Desugar) copyInheritedDefaultFunctions(compositeType *sema.CompositeTyp
 		// Inherited functions are always from interfaces
 		interfaceType := member.ContainerType.(*sema.InterfaceType)
 
-		// TODO: Merge this elaboration with the current elaboration (d.elaboration).
-		//   Because the inherited functions need their corresponding elaboration
-		//   for code generation.
 		elaboration, err := d.config.ElaborationResolver(interfaceType.Location)
 		if err != nil {
 			panic(err)
@@ -498,15 +514,195 @@ func (d *Desugar) copyInheritedDefaultFunctions(compositeType *sema.CompositeTyp
 			panic(errors.NewUnreachableError())
 		}
 
-		d.elaborations[inheritedFunc] = elaboration
-		inheritedMembers = append(inheritedMembers, inheritedFunc)
+		// for each inherited function, generate a delegator function,
+		// which calls the actual default implementation at the interface.
+		// i.e:
+		//  FooImpl {
+		//    fun defaultFunc(a1: T1, a2: T2): R {
+		//        return FooInterface.defaultFunc(a1, a2)
+		//    }
+		//  }
+		arguments := make([]*ast.Argument, 0)
+		for _, param := range inheritedFunc.ParameterList.Parameters {
+			var arg *ast.Argument
+			if param.Label == "" {
+				arg = ast.NewUnlabeledArgument(
+					d.memoryGauge,
+					ast.NewIdentifierExpression(
+						d.memoryGauge,
+						param.Identifier,
+					),
+				)
+			} else {
+				arg = ast.NewArgument(
+					d.memoryGauge,
+					param.Label,
+					&param.StartPos,
+					&param.StartPos,
+					ast.NewIdentifierExpression(
+						d.memoryGauge,
+						param.Identifier,
+					),
+				)
+			}
+			arguments = append(arguments, arg)
+		}
+
+		// `FooInterface.defaultFunc(a1, a2)`
+		//
+		// However, when generating code, we need to load "self" as the receiver,
+		// and call the interface's function.
+		// This is done by setting the invoked identifier as 'self',
+		// but setting interface-type as the "AccessedType" (in AccessedType).
+		// TODO: Can this be improved? Maybe emit a special identifier name other than 'self',
+		// 	so that the compiler/codegen knows
+		invokedExpr := ast.NewMemberExpression(
+			d.memoryGauge,
+			ast.NewIdentifierExpression(
+				d.memoryGauge,
+
+				ast.NewIdentifier(
+					d.memoryGauge,
+					"self",
+					pos,
+				),
+			),
+			false,
+			pos,
+			ast.NewIdentifier(
+				d.memoryGauge,
+				memberName,
+				pos,
+			),
+		)
+
+		invocation := ast.NewInvocationExpression(
+			d.memoryGauge,
+			invokedExpr,
+			nil,
+			arguments,
+			pos,
+			pos,
+		)
+
+		funcType, ok := member.TypeAnnotation.Type.(*sema.FunctionType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		invocationTypes := sema.InvocationExpressionTypes{
+			ReturnType:    funcType.ReturnTypeAnnotation.Type,
+			ArgumentTypes: funcType.ParameterTypes(),
+		}
+
+		memberAccessInfo := sema.MemberAccessInfo{
+			AccessedType:    interfaceType,
+			ResultingType:   funcType,
+			Member:          member,
+			IsOptional:      false,
+			ReturnReference: false,
+		}
+
+		d.elaboration.SetInvocationExpressionTypes(invocation, invocationTypes)
+		d.elaboration.SetMemberExpressionMemberAccessInfo(invokedExpr, memberAccessInfo)
+		d.elaboration.SetInterfaceMethodStaticCall(invocation)
+
+		// `fun defaultFunc(a1: T1, a2: T2) { ... }`
+		defaultFuncDelegator := ast.NewFunctionDeclaration(
+			d.memoryGauge,
+			inheritedFunc.Access,
+			inheritedFunc.Purity,
+			inheritedFunc.IsStatic(),
+			inheritedFunc.IsNative(),
+			ast.NewIdentifier(
+				d.memoryGauge,
+				memberName,
+				pos,
+			),
+			inheritedFunc.TypeParameterList,
+			inheritedFunc.ParameterList,
+			inheritedFunc.ReturnTypeAnnotation,
+			ast.NewFunctionBlock(
+				d.memoryGauge,
+				ast.NewBlock(
+					d.memoryGauge,
+					[]ast.Statement{
+						ast.NewReturnStatement(d.memoryGauge, invocation, decl.Range),
+					},
+					decl.Range,
+				),
+				nil,
+				nil,
+			),
+			inheritedFunc.StartPos,
+			inheritedFunc.DocString,
+		)
+
+		inheritedMembers = append(inheritedMembers, defaultFuncDelegator)
 	}
 
 	return inheritedMembers
 }
 
 func (d *Desugar) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) ast.Declaration {
-	return declaration
+	// TODO: Fix: this will overwrite top-level declarations
+	prevModifiedDecls := d.modifiedDeclarations
+	prevIsInterfaceMember := d.isInterfaceMember
+	d.modifiedDeclarations = nil
+	d.isInterfaceMember = true
+
+	defer func() {
+		d.modifiedDeclarations = prevModifiedDecls
+		d.isInterfaceMember = prevIsInterfaceMember
+	}()
+
+	existingMembers := declaration.Members.Declarations()
+
+	compositeType := d.elaboration.InterfaceDeclarationType(declaration)
+
+	// Recursively de-sugar nested declarations (functions, types, etc.)
+
+	membersDesugared := false
+
+	for _, member := range existingMembers {
+		desugaredMember := d.desugarDeclaration(member)
+		membersDesugared = membersDesugared || (desugaredMember != member)
+		d.modifiedDeclarations = append(d.modifiedDeclarations, desugaredMember)
+	}
+
+	// Copy over inherited default functions.
+
+	//inheritedDefaultFuncs := d.copyInheritedDefaultFunctions(compositeType)
+
+	// Optimization: If none of the existing members got updated or,
+	// if there are no inherited members, then return the same declaration as-is.
+	//if !membersDesugared && len(inheritedDefaultFuncs) == 0 {
+	//	return declaration
+	//}
+	if !membersDesugared {
+		return declaration
+	}
+
+	//modifiedMembers := make([]ast.Declaration, existingMemberCount)
+	//copy(modifiedMembers, desugaredMembers)
+
+	//modifiedMembers = append(modifiedMembers, inheritedDefaultFuncs...)
+
+	modifiedDecl := ast.NewInterfaceDeclaration(
+		d.memoryGauge,
+		declaration.Access,
+		declaration.CompositeKind,
+		declaration.Identifier,
+		declaration.Conformances,
+		ast.NewMembers(d.memoryGauge, d.modifiedDeclarations),
+		declaration.DocString,
+		declaration.Range,
+	)
+
+	// Update elaboration. Type info is needed for later steps.
+	d.elaboration.SetInterfaceDeclarationWithType(modifiedDecl, compositeType)
+
+	return modifiedDecl
 }
 
 func (d *Desugar) VisitEntitlementDeclaration(declaration *ast.EntitlementDeclaration) ast.Declaration {
