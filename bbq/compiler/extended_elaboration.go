@@ -9,6 +9,7 @@ type ExtendedElaboration struct {
 	*sema.Elaboration
 
 	interfaceMethodStaticCalls map[*ast.InvocationExpression]struct{}
+	interfaceDeclarationTypes  map[*ast.InterfaceDeclaration]*sema.InterfaceType
 }
 
 func NewExtendedElaboration(elaboration *sema.Elaboration) *ExtendedElaboration {
@@ -31,4 +32,23 @@ func (e *ExtendedElaboration) IsInterfaceMethodStaticCall(invocation *ast.Invoca
 
 	_, ok := e.interfaceMethodStaticCalls[invocation]
 	return ok
+}
+
+func (e *ExtendedElaboration) SetInterfaceDeclarationType(decl *ast.InterfaceDeclaration, interfaceType *sema.InterfaceType) {
+	if e.interfaceDeclarationTypes == nil {
+		e.interfaceDeclarationTypes = make(map[*ast.InterfaceDeclaration]*sema.InterfaceType)
+	}
+
+	e.interfaceDeclarationTypes[decl] = interfaceType
+}
+
+func (e *ExtendedElaboration) InterfaceDeclarationType(decl *ast.InterfaceDeclaration) *sema.InterfaceType {
+	// First lookup in the extended type info
+	typ, ok := e.interfaceDeclarationTypes[decl]
+	if ok {
+		return typ
+	}
+
+	// If couldn't find, then fallback and look in the original elaboration
+	return e.Elaboration.InterfaceDeclarationType(decl)
 }

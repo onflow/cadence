@@ -38,6 +38,7 @@ type Compiler[E any] struct {
 	Program             *ast.Program
 	ExtendedElaboration *ExtendedElaboration
 	Config              *Config
+	checker             *sema.Checker
 
 	currentFunction    *function[E]
 	compositeTypeStack *Stack[sema.CompositeKindedType]
@@ -71,36 +72,32 @@ var _ ast.StatementVisitor[struct{}] = &Compiler[any]{}
 var _ ast.ExpressionVisitor[struct{}] = &Compiler[any]{}
 
 func NewBytecodeCompiler(
-	program *ast.Program,
-	elaboration *sema.Elaboration,
+	checker *sema.Checker,
 ) *Compiler[byte] {
 	return newCompiler(
-		program,
-		elaboration,
+		checker,
 		&ByteCodeGen{},
 	)
 }
 
 func NewInstructionCompiler(
-	program *ast.Program,
-	elaboration *sema.Elaboration,
+	checker *sema.Checker,
 ) *Compiler[opcode.Instruction] {
 	return newCompiler(
-		program,
-		elaboration,
+		checker,
 		&InstructionCodeGen{},
 	)
 }
 
 func newCompiler[E any](
-	program *ast.Program,
-	elaboration *sema.Elaboration,
+	checker *sema.Checker,
 	codeGen CodeGen[E],
 ) *Compiler[E] {
 	return &Compiler[E]{
-		Program:             program,
-		ExtendedElaboration: NewExtendedElaboration(elaboration),
+		Program:             checker.Program,
+		ExtendedElaboration: NewExtendedElaboration(checker.Elaboration),
 		Config:              &Config{},
+		checker:             checker,
 		globals:             make(map[string]*global),
 		importedGlobals:     NativeFunctions(),
 		typesInPool:         make(map[sema.TypeID]uint16),
@@ -304,6 +301,7 @@ func (c *Compiler[E]) Compile() *bbq.Program[E] {
 		c.Config,
 		c.Program,
 		c.ExtendedElaboration,
+		c.checker,
 	)
 	c.Program = desugar.Run()
 

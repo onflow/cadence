@@ -533,7 +533,7 @@ func compile(
 			},
 		}
 	}
-	comp := compiler.NewInstructionCompiler(checker.Program, checker.Elaboration).
+	comp := compiler.NewInstructionCompiler(checker).
 		WithConfig(config)
 
 	program := comp.Compile()
