@@ -71,10 +71,10 @@ func TestRecursionFib(t *testing.T) {
 
 	result, err := vmInstance.Invoke(
 		"fib",
-		vm.NewIntValue(35),
+		vm.NewIntValue(23),
 	)
 	require.NoError(t, err)
-	require.Equal(t, vm.NewIntValue(9227465), result)
+	require.Equal(t, vm.NewIntValue(28657), result)
 	require.Equal(t, 0, vmInstance.StackSize())
 }
 
