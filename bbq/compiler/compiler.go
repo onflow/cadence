@@ -1296,7 +1296,7 @@ func (c *Compiler[_]) VisitPragmaDeclaration(_ *ast.PragmaDeclaration) (_ struct
 }
 
 func (c *Compiler[_]) VisitImportDeclaration(declaration *ast.ImportDeclaration) (_ struct{}) {
-	resolvedLocation, err := commons.ResolveLocation(
+	resolvedLocations, err := commons.ResolveLocation(
 		c.Config.LocationHandler,
 		declaration.Identifiers,
 		declaration.Location,
@@ -1305,13 +1305,13 @@ func (c *Compiler[_]) VisitImportDeclaration(declaration *ast.ImportDeclaration)
 		panic(err)
 	}
 
-	for _, location := range resolvedLocation {
+	for _, location := range resolvedLocations {
 		importedProgram := c.Config.ImportHandler(location.Location)
 
 		// Add a global variable for the imported contract value.
 		contractDecl := importedProgram.Contract
 		isContract := contractDecl != nil
-		if isContract {
+		if isContract && !contractDecl.IsInterface {
 			c.addImportedGlobal(location.Location, contractDecl.Name)
 		}
 

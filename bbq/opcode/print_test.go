@@ -99,17 +99,17 @@ func TestPrintInstruction(t *testing.T) {
 		"JumpIfFalse target:258":        {byte(JumpIfFalse), 1, 2},
 		"Transfer typeIndex:258":        {byte(Transfer), 1, 2},
 
-		"New kind:258 typeIndex:772": {byte(New), 1, 2, 3, 4},
+		"New kind:CompositeKind(258) typeIndex:772": {byte(New), 1, 2, 3, 4},
 
 		"Cast typeIndex:258 kind:3": {byte(Cast), 1, 2, 3},
 
-		`Path domain:1 identifier:"hello"`: {byte(Path), 1, 0, 5, 'h', 'e', 'l', 'l', 'o'},
+		`Path domain:PathDomainStorage identifierIndex:5`: {byte(Path), 1, 0, 5, 'h', 'e', 'l', 'l', 'o'},
 
-		`InvokeDynamic name:"abc" typeArgs:[772 1286] argCount:1800`: {
-			byte(InvokeDynamic), 0, 3, 'a', 'b', 'c', 0, 2, 3, 4, 5, 6, 7, 8,
+		`InvokeDynamic nameIndex:1 typeArgs:[772, 1286] argCount:1800`: {
+			byte(InvokeDynamic), 0, 1, 0, 2, 3, 4, 5, 6, 7, 8,
 		},
 
-		"Invoke typeArgs:[772 1286]": {
+		"Invoke typeArgs:[772, 1286]": {
 			byte(Invoke), 0, 2, 3, 4, 5, 6,
 		},
 
@@ -117,31 +117,31 @@ func TestPrintInstruction(t *testing.T) {
 
 		"NewArray typeIndex:258 size:772 isResource:true": {byte(NewArray), 1, 2, 3, 4, 1},
 
-		"Unknown":           {byte(Unknown)},
-		"Return":            {byte(Return)},
-		"ReturnValue":       {byte(ReturnValue)},
-		"IntAdd":            {byte(IntAdd)},
-		"IntSubtract":       {byte(IntSubtract)},
-		"IntMultiply":       {byte(IntMultiply)},
-		"IntDivide":         {byte(IntDivide)},
-		"IntMod":            {byte(IntMod)},
-		"IntLess":           {byte(IntLess)},
-		"IntGreater":        {byte(IntGreater)},
-		"IntLessOrEqual":    {byte(IntLessOrEqual)},
-		"IntGreaterOrEqual": {byte(IntGreaterOrEqual)},
-		"Equal":             {byte(Equal)},
-		"NotEqual":          {byte(NotEqual)},
-		"Unwrap":            {byte(Unwrap)},
-		"Destroy":           {byte(Destroy)},
-		"True":              {byte(True)},
-		"False":             {byte(False)},
-		"Nil":               {byte(Nil)},
-		"GetField":          {byte(GetField)},
-		"SetField":          {byte(SetField)},
-		"SetIndex":          {byte(SetIndex)},
-		"GetIndex":          {byte(GetIndex)},
-		"Drop":              {byte(Drop)},
-		"Dup":               {byte(Dup)},
+		"Unknown":                     {byte(Unknown)},
+		"Return":                      {byte(Return)},
+		"ReturnValue":                 {byte(ReturnValue)},
+		"IntAdd":                      {byte(IntAdd)},
+		"IntSubtract":                 {byte(IntSubtract)},
+		"IntMultiply":                 {byte(IntMultiply)},
+		"IntDivide":                   {byte(IntDivide)},
+		"IntMod":                      {byte(IntMod)},
+		"IntLess":                     {byte(IntLess)},
+		"IntGreater":                  {byte(IntGreater)},
+		"IntLessOrEqual":              {byte(IntLessOrEqual)},
+		"IntGreaterOrEqual":           {byte(IntGreaterOrEqual)},
+		"Equal":                       {byte(Equal)},
+		"NotEqual":                    {byte(NotEqual)},
+		"Unwrap":                      {byte(Unwrap)},
+		"Destroy":                     {byte(Destroy)},
+		"True":                        {byte(True)},
+		"False":                       {byte(False)},
+		"Nil":                         {byte(Nil)},
+		"GetField fieldNameIndex:258": {byte(GetField), 1, 2},
+		"SetField fieldNameIndex:258": {byte(SetField), 1, 2},
+		"SetIndex":                    {byte(SetIndex)},
+		"GetIndex":                    {byte(GetIndex)},
+		"Drop":                        {byte(Drop)},
+		"Dup":                         {byte(Dup)},
 	}
 
 	for expected, code := range instructions {

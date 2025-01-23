@@ -24,6 +24,9 @@ type Desugar struct {
 
 	modifiedDeclarations         []ast.Declaration
 	inheritedFuncsWithConditions map[string][]*inheritedFunction
+
+	importsSet map[common.Location]struct{}
+	newImports []ast.Declaration
 }
 
 type inheritedFunction struct {
@@ -46,6 +49,7 @@ func NewDesugar(
 		elaboration: elaboration,
 		program:     program,
 		checker:     checker,
+		importsSet:  map[common.Location]struct{}{},
 	}
 }
 
@@ -57,12 +61,16 @@ func (d *Desugar) Run() *ast.Program {
 	declarations := d.program.Declarations()
 	for _, declaration := range declarations {
 		modifiedDeclaration := d.desugarDeclaration(declaration)
-		d.modifiedDeclarations = append(d.modifiedDeclarations, modifiedDeclaration)
+		if modifiedDeclaration != nil {
+			d.modifiedDeclarations = append(d.modifiedDeclarations, modifiedDeclaration)
+		}
 	}
+
+	d.modifiedDeclarations = append(d.newImports, d.modifiedDeclarations...)
 
 	program := ast.NewProgram(d.memoryGauge, d.modifiedDeclarations)
 
-	fmt.Println(ast.Prettier(program))
+	//fmt.Println(ast.Prettier(program))
 
 	return program
 }
@@ -652,7 +660,7 @@ func (d *Desugar) inheritedDefaultFunctions(compositeType *sema.CompositeType, d
 		}
 
 		member := resolver.Resolve(
-			nil,
+			d.memoryGauge,
 			memberName,
 			ast.EmptyRange,
 			func(err error) {
@@ -661,6 +669,13 @@ func (d *Desugar) inheritedDefaultFunctions(compositeType *sema.CompositeType, d
 				}
 			},
 		)
+
+		// Only interested in functions.
+		// Also filter out built-in functions.
+		if member.DeclarationKind != common.DeclarationKindFunction ||
+			member.Predeclared {
+			continue
+		}
 
 		// Inherited functions are always from interfaces
 		interfaceType := member.ContainerType.(*sema.InterfaceType)
@@ -826,6 +841,30 @@ func (d *Desugar) interfaceDelegationMethodCall(
 	d.elaboration.SetInvocationExpressionTypes(invocation, invocationTypes)
 	d.elaboration.SetMemberExpressionMemberAccessInfo(invokedExpr, memberAccessInfo)
 	d.elaboration.SetInterfaceMethodStaticCall(invocation)
+
+	// Given these invocations are treated as static calls,
+	// we need to inject a static import as well, so the
+	// compiler can link these functions.
+
+	interfaceLocation, isAddressLocation := interfaceType.Location.(common.AddressLocation)
+	if isAddressLocation {
+		if _, exists := d.importsSet[interfaceLocation]; !exists {
+			d.newImports = append(
+				d.newImports,
+				ast.NewImportDeclaration(
+					d.memoryGauge,
+					[]ast.Identifier{
+						ast.NewIdentifier(d.memoryGauge, interfaceLocation.Name, ast.EmptyPosition),
+					},
+					interfaceLocation,
+					ast.EmptyRange,
+					ast.EmptyPosition,
+				))
+
+			d.importsSet[interfaceLocation] = struct{}{}
+		}
+	}
+
 	return invocation
 }
 
@@ -857,8 +896,6 @@ func (d *Desugar) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaratio
 
 	// Copy over inherited default functions.
 
-	//inheritedDefaultFuncs := d.copyInheritedDefaultFunctions(compositeType)
-
 	// Optimization: If none of the existing members got updated or,
 	// if there are no inherited members, then return the same declaration as-is.
 	//if !membersDesugared && len(inheritedDefaultFuncs) == 0 {
@@ -867,11 +904,6 @@ func (d *Desugar) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaratio
 	if !membersDesugared {
 		return declaration
 	}
-
-	//modifiedMembers := make([]ast.Declaration, existingMemberCount)
-	//copy(modifiedMembers, desugaredMembers)
-
-	//modifiedMembers = append(modifiedMembers, inheritedDefaultFuncs...)
 
 	modifiedDecl := ast.NewInterfaceDeclaration(
 		d.memoryGauge,
@@ -1040,6 +1072,25 @@ func (d *Desugar) VisitPragmaDeclaration(declaration *ast.PragmaDeclaration) ast
 }
 
 func (d *Desugar) VisitImportDeclaration(declaration *ast.ImportDeclaration) ast.Declaration {
+	resolvedLocations, err := commons.ResolveLocation(
+		d.config.LocationHandler,
+		declaration.Identifiers,
+		declaration.Location,
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	for _, resolvedLocation := range resolvedLocations {
+		location := resolvedLocation.Location
+		_, exists := d.importsSet[location]
+		if exists {
+			return nil
+		}
+
+		d.importsSet[location] = struct{}{}
+	}
+
 	return declaration
 }
 
