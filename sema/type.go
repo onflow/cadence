@@ -599,13 +599,15 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 	members[IsInstanceFunctionName] = MemberResolver{
 		Kind: common.DeclarationKindFunction,
 		Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.HasPosition, _ func(error)) *Member {
-			return NewPublicFunctionMember(
+			fun := NewPublicFunctionMember(
 				memoryGauge,
 				ty,
 				identifier,
 				IsInstanceFunctionType,
 				isInstanceFunctionDocString,
 			)
+			fun.Predeclared = true
+			return fun
 		},
 	}
 
@@ -614,13 +616,16 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 	members[GetTypeFunctionName] = MemberResolver{
 		Kind: common.DeclarationKindFunction,
 		Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.HasPosition, _ func(error)) *Member {
-			return NewPublicFunctionMember(
+			fun := NewPublicFunctionMember(
 				memoryGauge,
 				ty,
 				identifier,
 				GetTypeFunctionType,
 				getTypeFunctionDocString,
 			)
+
+			fun.Predeclared = true
+			return fun
 		},
 	}
 
@@ -631,13 +636,16 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 		members[ToStringFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
 			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.HasPosition, _ func(error)) *Member {
-				return NewPublicFunctionMember(
+				fun := NewPublicFunctionMember(
 					memoryGauge,
 					ty,
 					identifier,
 					ToStringFunctionType,
 					toStringFunctionDocString,
 				)
+
+				fun.Predeclared = true
+				return fun
 			},
 		}
 	}
