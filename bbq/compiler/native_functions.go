@@ -61,7 +61,7 @@ func init() {
 }
 
 func registerBoundFunctions(typ sema.Type) {
-	for name, _ := range typ.GetMembers() {
+	for name := range typ.GetMembers() { //nolint:maprange
 		funcName := commons.TypeQualifiedName(typ.QualifiedString(), name)
 		addNativeFunction(funcName)
 	}

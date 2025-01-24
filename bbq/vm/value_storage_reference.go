@@ -20,7 +20,9 @@ package vm
 
 import (
 	"fmt"
+
 	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/interpreter"

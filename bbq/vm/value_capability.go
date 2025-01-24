@@ -20,6 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
@@ -175,8 +176,9 @@ func getCheckedCapabilityController(
 ) {
 	if wantedBorrowType == nil {
 		wantedBorrowType = capabilityBorrowType
-	} else {
-		//wantedBorrowType = inter.SubstituteMappedEntitlements(wantedBorrowType).(*sema.ReferenceType)
+	} else { //nolint:gocritic
+		// TODO:
+		//   wantedBorrowType = inter.SubstituteMappedEntitlements(wantedBorrowType).(*sema.ReferenceType)
 
 		if !canBorrow(config, wantedBorrowType, capabilityBorrowType) {
 			return nil, nil
