@@ -927,13 +927,10 @@ func newTestTypeExpectFailureFunction(
 					if !failedAsExpected {
 						panic(internalErr)
 					} else if !strings.Contains(internalErr.Error(), errorMessage.Str) {
-						msg := fmt.Sprintf(
-							"Expected error message to include: %s.",
+						panic(errors.NewDefaultUserError(
+							"Expected error message to include: %s",
 							errorMessage,
-						)
-						panic(
-							errors.NewDefaultUserError(msg),
-						)
+						))
 					}
 				})
 

@@ -1615,324 +1615,293 @@ func (*FixedPointNumericType) CheckInstantiated(_ ast.HasPosition, _ common.Memo
 
 // Numeric types
 
-var (
+// NumberType represents the super-type of all number types
+var NumberType = NewNumericType(NumberTypeName).
+	WithTag(NumberTypeTag).
+	AsSuperType()
+var NumberTypeAnnotation = NewTypeAnnotation(NumberType)
 
-	// NumberType represents the super-type of all number types
-	NumberType = NewNumericType(NumberTypeName).
-			WithTag(NumberTypeTag).
-			AsSuperType()
+// SignedNumberType represents the super-type of all signed number types
+var SignedNumberType = NewNumericType(SignedNumberTypeName).
+	WithTag(SignedNumberTypeTag).
+	AsSuperType()
+var SignedNumberTypeAnnotation = NewTypeAnnotation(SignedNumberType)
 
-	NumberTypeAnnotation = NewTypeAnnotation(NumberType)
+// IntegerType represents the super-type of all integer types
+var IntegerType = NewNumericType(IntegerTypeName).
+	WithTag(IntegerTypeTag).
+	AsSuperType()
+var IntegerTypeAnnotation = NewTypeAnnotation(IntegerType)
 
-	// SignedNumberType represents the super-type of all signed number types
-	SignedNumberType = NewNumericType(SignedNumberTypeName).
-				WithTag(SignedNumberTypeTag).
-				AsSuperType()
+// SignedIntegerType represents the super-type of all signed integer types
+var SignedIntegerType = NewNumericType(SignedIntegerTypeName).
+	WithTag(SignedIntegerTypeTag).
+	AsSuperType()
+var SignedIntegerTypeAnnotation = NewTypeAnnotation(SignedIntegerType)
 
-	SignedNumberTypeAnnotation = NewTypeAnnotation(SignedNumberType)
+// FixedSizeUnsignedIntegerType represents the super-type of all unsigned integer types which have a fixed size.
+var FixedSizeUnsignedIntegerType = NewNumericType(FixedSizeUnsignedIntegerTypeName).
+	WithTag(FixedSizeUnsignedIntegerTypeTag).
+	AsSuperType()
 
-	// IntegerType represents the super-type of all integer types
-	IntegerType = NewNumericType(IntegerTypeName).
-			WithTag(IntegerTypeTag).
-			AsSuperType()
+// IntType represents the arbitrary-precision integer type `Int`
+var IntType = NewNumericType(IntTypeName).
+	WithTag(IntTypeTag)
+var IntTypeAnnotation = NewTypeAnnotation(IntType)
 
-	IntegerTypeAnnotation = NewTypeAnnotation(IntegerType)
+// Int8Type represents the 8-bit signed integer type `Int8`
+var Int8Type = NewNumericType(Int8TypeName).
+	WithTag(Int8TypeTag).
+	WithIntRange(Int8TypeMinInt, Int8TypeMaxInt).
+	WithByteSize(1).
+	WithSaturatingFunctions(SaturatingArithmeticSupport{
+		Add:      true,
+		Subtract: true,
+		Multiply: true,
+		Divide:   true,
+	})
+var Int8TypeAnnotation = NewTypeAnnotation(Int8Type)
 
-	// SignedIntegerType represents the super-type of all signed integer types
-	SignedIntegerType = NewNumericType(SignedIntegerTypeName).
-				WithTag(SignedIntegerTypeTag).
-				AsSuperType()
+// Int16Type represents the 16-bit signed integer type `Int16`
+var Int16Type = NewNumericType(Int16TypeName).
+	WithTag(Int16TypeTag).
+	WithIntRange(Int16TypeMinInt, Int16TypeMaxInt).
+	WithByteSize(2).
+	WithSaturatingFunctions(SaturatingArithmeticSupport{
+		Add:      true,
+		Subtract: true,
+		Multiply: true,
+		Divide:   true,
+	})
+var Int16TypeAnnotation = NewTypeAnnotation(Int16Type)
 
-	SignedIntegerTypeAnnotation = NewTypeAnnotation(SignedIntegerType)
+// Int32Type represents the 32-bit signed integer type `Int32`
+var Int32Type = NewNumericType(Int32TypeName).
+	WithTag(Int32TypeTag).
+	WithIntRange(Int32TypeMinInt, Int32TypeMaxInt).
+	WithByteSize(4).
+	WithSaturatingFunctions(SaturatingArithmeticSupport{
+		Add:      true,
+		Subtract: true,
+		Multiply: true,
+		Divide:   true,
+	})
+var Int32TypeAnnotation = NewTypeAnnotation(Int32Type)
 
-	// FixedSizeUnsignedIntegerType represents the super-type of all unsigned integer types which have a fixed size.
-	FixedSizeUnsignedIntegerType = NewNumericType(FixedSizeUnsignedIntegerTypeName).
-					WithTag(FixedSizeUnsignedIntegerTypeTag).
-					AsSuperType()
+// Int64Type represents the 64-bit signed integer type `Int64`
+var Int64Type = NewNumericType(Int64TypeName).
+	WithTag(Int64TypeTag).
+	WithIntRange(Int64TypeMinInt, Int64TypeMaxInt).
+	WithByteSize(8).
+	WithSaturatingFunctions(SaturatingArithmeticSupport{
+		Add:      true,
+		Subtract: true,
+		Multiply: true,
+		Divide:   true,
+	})
+var Int64TypeAnnotation = NewTypeAnnotation(Int64Type)
 
-	// IntType represents the arbitrary-precision integer type `Int`
-	IntType = NewNumericType(IntTypeName).
-		WithTag(IntTypeTag)
+// Int128Type represents the 128-bit signed integer type `Int128`
+var Int128Type = NewNumericType(Int128TypeName).
+	WithTag(Int128TypeTag).
+	WithIntRange(Int128TypeMinIntBig, Int128TypeMaxIntBig).
+	WithByteSize(16).
+	WithSaturatingFunctions(SaturatingArithmeticSupport{
+		Add:      true,
+		Subtract: true,
+		Multiply: true,
+		Divide:   true,
+	})
+var Int128TypeAnnotation = NewTypeAnnotation(Int128Type)
 
-	IntTypeAnnotation = NewTypeAnnotation(IntType)
+// Int256Type represents the 256-bit signed integer type `Int256`
+var Int256Type = NewNumericType(Int256TypeName).
+	WithTag(Int256TypeTag).
+	WithIntRange(Int256TypeMinIntBig, Int256TypeMaxIntBig).
+	WithByteSize(32).
+	WithSaturatingFunctions(SaturatingArithmeticSupport{
+		Add:      true,
+		Subtract: true,
+		Multiply: true,
+		Divide:   true,
+	})
+var Int256TypeAnnotation = NewTypeAnnotation(Int256Type)
 
-	// Int8Type represents the 8-bit signed integer type `Int8`
-	Int8Type = NewNumericType(Int8TypeName).
-			WithTag(Int8TypeTag).
-			WithIntRange(Int8TypeMinInt, Int8TypeMaxInt).
-			WithByteSize(1).
-			WithSaturatingFunctions(SaturatingArithmeticSupport{
-			Add:      true,
-			Subtract: true,
-			Multiply: true,
-			Divide:   true,
-		})
+// UIntType represents the arbitrary-precision unsigned integer type `UInt`
+var UIntType = NewNumericType(UIntTypeName).
+	WithTag(UIntTypeTag).
+	WithIntRange(UIntTypeMin, nil).
+	WithSaturatingFunctions(SaturatingArithmeticSupport{
+		Subtract: true,
+	})
+var UIntTypeAnnotation = NewTypeAnnotation(UIntType)
 
-	Int8TypeAnnotation = NewTypeAnnotation(Int8Type)
+// UInt8Type represents the 8-bit unsigned integer type `UInt8`
+// which checks for overflow and underflow
+var UInt8Type = NewNumericType(UInt8TypeName).
+	WithTag(UInt8TypeTag).
+	WithIntRange(UInt8TypeMinInt, UInt8TypeMaxInt).
+	WithByteSize(1).
+	WithSaturatingFunctions(SaturatingArithmeticSupport{
+		Add:      true,
+		Subtract: true,
+		Multiply: true,
+	})
+var UInt8TypeAnnotation = NewTypeAnnotation(UInt8Type)
 
-	// Int16Type represents the 16-bit signed integer type `Int16`
-	Int16Type = NewNumericType(Int16TypeName).
-			WithTag(Int16TypeTag).
-			WithIntRange(Int16TypeMinInt, Int16TypeMaxInt).
-			WithByteSize(2).
-			WithSaturatingFunctions(SaturatingArithmeticSupport{
-			Add:      true,
-			Subtract: true,
-			Multiply: true,
-			Divide:   true,
-		})
+// UInt16Type represents the 16-bit unsigned integer type `UInt16`
+// which checks for overflow and underflow
+var UInt16Type = NewNumericType(UInt16TypeName).
+	WithTag(UInt16TypeTag).
+	WithIntRange(UInt16TypeMinInt, UInt16TypeMaxInt).
+	WithByteSize(2).
+	WithSaturatingFunctions(SaturatingArithmeticSupport{
+		Add:      true,
+		Subtract: true,
+		Multiply: true,
+	})
+var UInt16TypeAnnotation = NewTypeAnnotation(UInt16Type)
 
-	Int16TypeAnnotation = NewTypeAnnotation(Int16Type)
+// UInt32Type represents the 32-bit unsigned integer type `UInt32`
+// which checks for overflow and underflow
+var UInt32Type = NewNumericType(UInt32TypeName).
+	WithTag(UInt32TypeTag).
+	WithIntRange(UInt32TypeMinInt, UInt32TypeMaxInt).
+	WithByteSize(4).
+	WithSaturatingFunctions(SaturatingArithmeticSupport{
+		Add:      true,
+		Subtract: true,
+		Multiply: true,
+	})
+var UInt32TypeAnnotation = NewTypeAnnotation(UInt32Type)
 
-	// Int32Type represents the 32-bit signed integer type `Int32`
-	Int32Type = NewNumericType(Int32TypeName).
-			WithTag(Int32TypeTag).
-			WithIntRange(Int32TypeMinInt, Int32TypeMaxInt).
-			WithByteSize(4).
-			WithSaturatingFunctions(SaturatingArithmeticSupport{
-			Add:      true,
-			Subtract: true,
-			Multiply: true,
-			Divide:   true,
-		})
+// UInt64Type represents the 64-bit unsigned integer type `UInt64`
+// which checks for overflow and underflow
+var UInt64Type = NewNumericType(UInt64TypeName).
+	WithTag(UInt64TypeTag).
+	WithIntRange(UInt64TypeMinInt, UInt64TypeMaxInt).
+	WithByteSize(8).
+	WithSaturatingFunctions(SaturatingArithmeticSupport{
+		Add:      true,
+		Subtract: true,
+		Multiply: true,
+	})
+var UInt64TypeAnnotation = NewTypeAnnotation(UInt64Type)
 
-	Int32TypeAnnotation = NewTypeAnnotation(Int32Type)
+// UInt128Type represents the 128-bit unsigned integer type `UInt128`
+// which checks for overflow and underflow
+var UInt128Type = NewNumericType(UInt128TypeName).
+	WithTag(UInt128TypeTag).
+	WithIntRange(UInt128TypeMinIntBig, UInt128TypeMaxIntBig).
+	WithByteSize(16).
+	WithSaturatingFunctions(SaturatingArithmeticSupport{
+		Add:      true,
+		Subtract: true,
+		Multiply: true,
+	})
+var UInt128TypeAnnotation = NewTypeAnnotation(UInt128Type)
 
-	// Int64Type represents the 64-bit signed integer type `Int64`
-	Int64Type = NewNumericType(Int64TypeName).
-			WithTag(Int64TypeTag).
-			WithIntRange(Int64TypeMinInt, Int64TypeMaxInt).
-			WithByteSize(8).
-			WithSaturatingFunctions(SaturatingArithmeticSupport{
-			Add:      true,
-			Subtract: true,
-			Multiply: true,
-			Divide:   true,
-		})
+// UInt256Type represents the 256-bit unsigned integer type `UInt256`
+// which checks for overflow and underflow
+var UInt256Type = NewNumericType(UInt256TypeName).
+	WithTag(UInt256TypeTag).
+	WithIntRange(UInt256TypeMinIntBig, UInt256TypeMaxIntBig).
+	WithByteSize(32).
+	WithSaturatingFunctions(SaturatingArithmeticSupport{
+		Add:      true,
+		Subtract: true,
+		Multiply: true,
+	})
+var UInt256TypeAnnotation = NewTypeAnnotation(UInt256Type)
 
-	Int64TypeAnnotation = NewTypeAnnotation(Int64Type)
+// Word8Type represents the 8-bit unsigned integer type `Word8`
+// which does NOT check for overflow and underflow
+var Word8Type = NewNumericType(Word8TypeName).
+	WithTag(Word8TypeTag).
+	WithByteSize(1).
+	WithIntRange(Word8TypeMinInt, Word8TypeMaxInt)
+var Word8TypeAnnotation = NewTypeAnnotation(Word8Type)
 
-	// Int128Type represents the 128-bit signed integer type `Int128`
-	Int128Type = NewNumericType(Int128TypeName).
-			WithTag(Int128TypeTag).
-			WithIntRange(Int128TypeMinIntBig, Int128TypeMaxIntBig).
-			WithByteSize(16).
-			WithSaturatingFunctions(SaturatingArithmeticSupport{
-			Add:      true,
-			Subtract: true,
-			Multiply: true,
-			Divide:   true,
-		})
+// Word16Type represents the 16-bit unsigned integer type `Word16`
+// which does NOT check for overflow and underflow
+var Word16Type = NewNumericType(Word16TypeName).
+	WithTag(Word16TypeTag).
+	WithByteSize(2).
+	WithIntRange(Word16TypeMinInt, Word16TypeMaxInt)
+var Word16TypeAnnotation = NewTypeAnnotation(Word16Type)
 
-	Int128TypeAnnotation = NewTypeAnnotation(Int128Type)
+// Word32Type represents the 32-bit unsigned integer type `Word32`
+// which does NOT check for overflow and underflow
+var Word32Type = NewNumericType(Word32TypeName).
+	WithTag(Word32TypeTag).
+	WithByteSize(4).
+	WithIntRange(Word32TypeMinInt, Word32TypeMaxInt)
+var Word32TypeAnnotation = NewTypeAnnotation(Word32Type)
 
-	// Int256Type represents the 256-bit signed integer type `Int256`
-	Int256Type = NewNumericType(Int256TypeName).
-			WithTag(Int256TypeTag).
-			WithIntRange(Int256TypeMinIntBig, Int256TypeMaxIntBig).
-			WithByteSize(32).
-			WithSaturatingFunctions(SaturatingArithmeticSupport{
-			Add:      true,
-			Subtract: true,
-			Multiply: true,
-			Divide:   true,
-		})
+// Word64Type represents the 64-bit unsigned integer type `Word64`
+// which does NOT check for overflow and underflow
+var Word64Type = NewNumericType(Word64TypeName).
+	WithTag(Word64TypeTag).
+	WithByteSize(8).
+	WithIntRange(Word64TypeMinInt, Word64TypeMaxInt)
+var Word64TypeAnnotation = NewTypeAnnotation(Word64Type)
 
-	Int256TypeAnnotation = NewTypeAnnotation(Int256Type)
+// Word128Type represents the 128-bit unsigned integer type `Word128`
+// which does NOT check for overflow and underflow
+var Word128Type = NewNumericType(Word128TypeName).
+	WithTag(Word128TypeTag).
+	WithByteSize(16).
+	WithIntRange(Word128TypeMinIntBig, Word128TypeMaxIntBig)
+var Word128TypeAnnotation = NewTypeAnnotation(Word128Type)
 
-	// UIntType represents the arbitrary-precision unsigned integer type `UInt`
-	UIntType = NewNumericType(UIntTypeName).
-			WithTag(UIntTypeTag).
-			WithIntRange(UIntTypeMin, nil).
-			WithSaturatingFunctions(SaturatingArithmeticSupport{
-			Subtract: true,
-		})
+// Word256Type represents the 256-bit unsigned integer type `Word256`
+// which does NOT check for overflow and underflow
+var Word256Type = NewNumericType(Word256TypeName).
+	WithTag(Word256TypeTag).
+	WithByteSize(32).
+	WithIntRange(Word256TypeMinIntBig, Word256TypeMaxIntBig)
+var Word256TypeAnnotation = NewTypeAnnotation(Word256Type)
 
-	UIntTypeAnnotation = NewTypeAnnotation(UIntType)
+// FixedPointType represents the super-type of all fixed-point types
+var FixedPointType = NewNumericType(FixedPointTypeName).
+	WithTag(FixedPointTypeTag).
+	AsSuperType()
+var FixedPointTypeAnnotation = NewTypeAnnotation(FixedPointType)
 
-	// UInt8Type represents the 8-bit unsigned integer type `UInt8`
-	// which checks for overflow and underflow
-	UInt8Type = NewNumericType(UInt8TypeName).
-			WithTag(UInt8TypeTag).
-			WithIntRange(UInt8TypeMinInt, UInt8TypeMaxInt).
-			WithByteSize(1).
-			WithSaturatingFunctions(SaturatingArithmeticSupport{
-			Add:      true,
-			Subtract: true,
-			Multiply: true,
-		})
+// SignedFixedPointType represents the super-type of all signed fixed-point types
+var SignedFixedPointType = NewNumericType(SignedFixedPointTypeName).
+	WithTag(SignedFixedPointTypeTag).
+	AsSuperType()
+var SignedFixedPointTypeAnnotation = NewTypeAnnotation(SignedFixedPointType)
 
-	UInt8TypeAnnotation = NewTypeAnnotation(UInt8Type)
+// Fix64Type represents the 64-bit signed decimal fixed-point type `Fix64`
+// which has a scale of Fix64Scale, and checks for overflow and underflow
+var Fix64Type = NewFixedPointNumericType(Fix64TypeName).
+	WithTag(Fix64TypeTag).
+	WithIntRange(Fix64TypeMinIntBig, Fix64TypeMaxIntBig).
+	WithFractionalRange(Fix64TypeMinFractionalBig, Fix64TypeMaxFractionalBig).
+	WithScale(Fix64Scale).
+	WithSaturatingFunctions(SaturatingArithmeticSupport{
+		Add:      true,
+		Subtract: true,
+		Multiply: true,
+		Divide:   true,
+	})
+var Fix64TypeAnnotation = NewTypeAnnotation(Fix64Type)
 
-	// UInt16Type represents the 16-bit unsigned integer type `UInt16`
-	// which checks for overflow and underflow
-	UInt16Type = NewNumericType(UInt16TypeName).
-			WithTag(UInt16TypeTag).
-			WithIntRange(UInt16TypeMinInt, UInt16TypeMaxInt).
-			WithByteSize(2).
-			WithSaturatingFunctions(SaturatingArithmeticSupport{
-			Add:      true,
-			Subtract: true,
-			Multiply: true,
-		})
-
-	UInt16TypeAnnotation = NewTypeAnnotation(UInt16Type)
-
-	// UInt32Type represents the 32-bit unsigned integer type `UInt32`
-	// which checks for overflow and underflow
-	UInt32Type = NewNumericType(UInt32TypeName).
-			WithTag(UInt32TypeTag).
-			WithIntRange(UInt32TypeMinInt, UInt32TypeMaxInt).
-			WithByteSize(4).
-			WithSaturatingFunctions(SaturatingArithmeticSupport{
-			Add:      true,
-			Subtract: true,
-			Multiply: true,
-		})
-
-	UInt32TypeAnnotation = NewTypeAnnotation(UInt32Type)
-
-	// UInt64Type represents the 64-bit unsigned integer type `UInt64`
-	// which checks for overflow and underflow
-	UInt64Type = NewNumericType(UInt64TypeName).
-			WithTag(UInt64TypeTag).
-			WithIntRange(UInt64TypeMinInt, UInt64TypeMaxInt).
-			WithByteSize(8).
-			WithSaturatingFunctions(SaturatingArithmeticSupport{
-			Add:      true,
-			Subtract: true,
-			Multiply: true,
-		})
-
-	UInt64TypeAnnotation = NewTypeAnnotation(UInt64Type)
-
-	// UInt128Type represents the 128-bit unsigned integer type `UInt128`
-	// which checks for overflow and underflow
-	UInt128Type = NewNumericType(UInt128TypeName).
-			WithTag(UInt128TypeTag).
-			WithIntRange(UInt128TypeMinIntBig, UInt128TypeMaxIntBig).
-			WithByteSize(16).
-			WithSaturatingFunctions(SaturatingArithmeticSupport{
-			Add:      true,
-			Subtract: true,
-			Multiply: true,
-		})
-
-	UInt128TypeAnnotation = NewTypeAnnotation(UInt128Type)
-
-	// UInt256Type represents the 256-bit unsigned integer type `UInt256`
-	// which checks for overflow and underflow
-	UInt256Type = NewNumericType(UInt256TypeName).
-			WithTag(UInt256TypeTag).
-			WithIntRange(UInt256TypeMinIntBig, UInt256TypeMaxIntBig).
-			WithByteSize(32).
-			WithSaturatingFunctions(SaturatingArithmeticSupport{
-			Add:      true,
-			Subtract: true,
-			Multiply: true,
-		})
-
-	UInt256TypeAnnotation = NewTypeAnnotation(UInt256Type)
-
-	// Word8Type represents the 8-bit unsigned integer type `Word8`
-	// which does NOT check for overflow and underflow
-	Word8Type = NewNumericType(Word8TypeName).
-			WithTag(Word8TypeTag).
-			WithByteSize(1).
-			WithIntRange(Word8TypeMinInt, Word8TypeMaxInt)
-
-	Word8TypeAnnotation = NewTypeAnnotation(Word8Type)
-
-	// Word16Type represents the 16-bit unsigned integer type `Word16`
-	// which does NOT check for overflow and underflow
-	Word16Type = NewNumericType(Word16TypeName).
-			WithTag(Word16TypeTag).
-			WithByteSize(2).
-			WithIntRange(Word16TypeMinInt, Word16TypeMaxInt)
-
-	Word16TypeAnnotation = NewTypeAnnotation(Word16Type)
-
-	// Word32Type represents the 32-bit unsigned integer type `Word32`
-	// which does NOT check for overflow and underflow
-	Word32Type = NewNumericType(Word32TypeName).
-			WithTag(Word32TypeTag).
-			WithByteSize(4).
-			WithIntRange(Word32TypeMinInt, Word32TypeMaxInt)
-
-	Word32TypeAnnotation = NewTypeAnnotation(Word32Type)
-
-	// Word64Type represents the 64-bit unsigned integer type `Word64`
-	// which does NOT check for overflow and underflow
-	Word64Type = NewNumericType(Word64TypeName).
-			WithTag(Word64TypeTag).
-			WithByteSize(8).
-			WithIntRange(Word64TypeMinInt, Word64TypeMaxInt)
-
-	Word64TypeAnnotation = NewTypeAnnotation(Word64Type)
-
-	// Word128Type represents the 128-bit unsigned integer type `Word128`
-	// which does NOT check for overflow and underflow
-	Word128Type = NewNumericType(Word128TypeName).
-			WithTag(Word128TypeTag).
-			WithByteSize(16).
-			WithIntRange(Word128TypeMinIntBig, Word128TypeMaxIntBig)
-
-	Word128TypeAnnotation = NewTypeAnnotation(Word128Type)
-
-	// Word256Type represents the 256-bit unsigned integer type `Word256`
-	// which does NOT check for overflow and underflow
-	Word256Type = NewNumericType(Word256TypeName).
-			WithTag(Word256TypeTag).
-			WithByteSize(32).
-			WithIntRange(Word256TypeMinIntBig, Word256TypeMaxIntBig)
-
-	Word256TypeAnnotation = NewTypeAnnotation(Word256Type)
-
-	// FixedPointType represents the super-type of all fixed-point types
-	FixedPointType = NewNumericType(FixedPointTypeName).
-			WithTag(FixedPointTypeTag).
-			AsSuperType()
-
-	FixedPointTypeAnnotation = NewTypeAnnotation(FixedPointType)
-
-	// SignedFixedPointType represents the super-type of all signed fixed-point types
-	SignedFixedPointType = NewNumericType(SignedFixedPointTypeName).
-				WithTag(SignedFixedPointTypeTag).
-				AsSuperType()
-
-	SignedFixedPointTypeAnnotation = NewTypeAnnotation(SignedFixedPointType)
-
-	// Fix64Type represents the 64-bit signed decimal fixed-point type `Fix64`
-	// which has a scale of Fix64Scale, and checks for overflow and underflow
-	Fix64Type = NewFixedPointNumericType(Fix64TypeName).
-			WithTag(Fix64TypeTag).
-			WithIntRange(Fix64TypeMinIntBig, Fix64TypeMaxIntBig).
-			WithFractionalRange(Fix64TypeMinFractionalBig, Fix64TypeMaxFractionalBig).
-			WithScale(Fix64Scale).
-			WithSaturatingFunctions(SaturatingArithmeticSupport{
-			Add:      true,
-			Subtract: true,
-			Multiply: true,
-			Divide:   true,
-		})
-
-	Fix64TypeAnnotation = NewTypeAnnotation(Fix64Type)
-
-	// UFix64Type represents the 64-bit unsigned decimal fixed-point type `UFix64`
-	// which has a scale of 1E9, and checks for overflow and underflow
-	UFix64Type = NewFixedPointNumericType(UFix64TypeName).
-			WithTag(UFix64TypeTag).
-			WithIntRange(UFix64TypeMinIntBig, UFix64TypeMaxIntBig).
-			WithFractionalRange(UFix64TypeMinFractionalBig, UFix64TypeMaxFractionalBig).
-			WithScale(Fix64Scale).
-			WithSaturatingFunctions(SaturatingArithmeticSupport{
-			Add:      true,
-			Subtract: true,
-			Multiply: true,
-		})
-
-	UFix64TypeAnnotation = NewTypeAnnotation(UFix64Type)
-)
+// UFix64Type represents the 64-bit unsigned decimal fixed-point type `UFix64`
+// which has a scale of 1E9, and checks for overflow and underflow
+var UFix64Type = NewFixedPointNumericType(UFix64TypeName).
+	WithTag(UFix64TypeTag).
+	WithIntRange(UFix64TypeMinIntBig, UFix64TypeMaxIntBig).
+	WithFractionalRange(UFix64TypeMinFractionalBig, UFix64TypeMaxFractionalBig).
+	WithScale(Fix64Scale).
+	WithSaturatingFunctions(SaturatingArithmeticSupport{
+		Add:      true,
+		Subtract: true,
+		Multiply: true,
+	})
+var UFix64TypeAnnotation = NewTypeAnnotation(UFix64Type)
 
 // Numeric type ranges
 var (
@@ -8457,7 +8426,7 @@ func (t *IntersectionType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeP
 			if mappedType, isInterface := mapped.(*InterfaceType); isInterface {
 				intersectionTypes = append(intersectionTypes, mappedType)
 			} else {
-				panic(errors.NewUnexpectedError(fmt.Sprintf("intersection mapped to non-interface type %T", mapped)))
+				panic(errors.NewUnexpectedError("intersection mapped to non-interface type %T", mapped))
 			}
 		}
 	}

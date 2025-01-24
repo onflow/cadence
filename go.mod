@@ -1,6 +1,6 @@
 module github.com/onflow/cadence
 
-go 1.22
+go 1.23
 
 require (
 	github.com/bits-and-blooms/bitset v1.5.0
