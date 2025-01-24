@@ -285,7 +285,7 @@ func (d *Desugar) desugarConditions(
 		}
 
 		for _, condition := range conditionsList {
-			desugaredCondition := d.desugarCondition(condition, d.elaboration)
+			desugaredCondition := d.desugarCondition(condition)
 			desugaredConditions = append(desugaredConditions, desugaredCondition)
 		}
 	}
@@ -474,7 +474,7 @@ var panicFuncInvocationTypes = sema.InvocationExpressionTypes{
 	},
 }
 
-func (d *Desugar) desugarCondition(condition ast.Condition, elaboration *ExtendedElaboration) ast.Statement {
+func (d *Desugar) desugarCondition(condition ast.Condition) ast.Statement {
 	switch condition := condition.(type) {
 	case *ast.TestCondition:
 
@@ -513,8 +513,7 @@ func (d *Desugar) desugarCondition(condition ast.Condition, elaboration *Extende
 			condition.EndPosition(d.memoryGauge),
 		)
 
-		// Important: types must be set in the passed-in elaboration.
-		elaboration.SetInvocationExpressionTypes(panicFuncInvocation, panicFuncInvocationTypes)
+		d.elaboration.SetInvocationExpressionTypes(panicFuncInvocation, panicFuncInvocationTypes)
 
 		ifStmt := ast.NewIfStatement(
 			d.memoryGauge,
@@ -789,8 +788,6 @@ func (d *Desugar) interfaceDelegationMethodCall(
 	// and call the interface's function.
 	// This is done by setting the invoked identifier as 'self',
 	// but setting interface-type as the "AccessedType" (in AccessedType).
-	// TODO: Can this be improved? Maybe emit a special identifier name other than 'self',
-	// 	so that the compiler/codegen knows
 	invokedExpr := ast.NewMemberExpression(
 		d.memoryGauge,
 		ast.NewIdentifierExpression(
@@ -893,8 +890,6 @@ func (d *Desugar) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaratio
 		membersDesugared = membersDesugared || (desugaredMember != member)
 		d.modifiedDeclarations = append(d.modifiedDeclarations, desugaredMember)
 	}
-
-	// Copy over inherited default functions.
 
 	// Optimization: If none of the existing members got updated or,
 	// if there are no inherited members, then return the same declaration as-is.

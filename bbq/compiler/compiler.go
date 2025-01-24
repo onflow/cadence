@@ -310,11 +310,6 @@ func (c *Compiler[E]) Compile() *bbq.Program[E] {
 	}
 
 	contract, _ := c.exportContract()
-	//if contract != nil && contract.IsInterface {
-	//	return &bbq.Program[E]{
-	//		Contract: contract,
-	//	}
-	//}
 
 	compositeDeclarations := c.Program.CompositeDeclarations()
 	variableDeclarations := c.Program.VariableDeclarations()
@@ -545,10 +540,6 @@ func (c *Compiler[_]) compileBlock(block *ast.Block) {
 func (c *Compiler[_]) compileFunctionBlock(functionBlock *ast.FunctionBlock) {
 	// Function conditions must have been desugared to statements.
 	// So there shouldn't be any condition at this point.
-	//if functionBlock.HasConditions() {
-	//	panic(errors.NewUnreachableError())
-	//}
-
 	if functionBlock != nil {
 		c.compileBlock(functionBlock.Block)
 	}
