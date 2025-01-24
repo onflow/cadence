@@ -1,6 +1,6 @@
 module github.com/onflow/cadence/tools/golangci-lint
 
-go 1.22
+go 1.23
 
 require github.com/golangci/golangci-lint v1.59.0
 
