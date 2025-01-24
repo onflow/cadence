@@ -36,7 +36,7 @@ var BuiltInLocation common.Location = nil
 
 func NativeFunctions() map[string]Value {
 	funcs := make(map[string]Value, len(nativeFunctions))
-	for name, value := range nativeFunctions {
+	for name, value := range nativeFunctions { //nolint:maprange
 		funcs[name] = value
 	}
 	return funcs

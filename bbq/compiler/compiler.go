@@ -267,15 +267,6 @@ func (c *Compiler[_]) emitUndefinedJump() int {
 	return offset
 }
 
-func (c *Compiler[_]) emitJumpIfFalse(target uint16) int {
-	if target >= math.MaxUint16 {
-		panic(errors.NewDefaultUserError("invalid jump"))
-	}
-	offset := c.codeGen.Offset()
-	c.codeGen.Emit(opcode.InstructionJumpIfFalse{Target: target})
-	return offset
-}
-
 func (c *Compiler[_]) emitUndefinedJumpIfFalse() int {
 	offset := c.codeGen.Offset()
 	c.codeGen.Emit(opcode.InstructionJumpIfFalse{Target: math.MaxUint16})

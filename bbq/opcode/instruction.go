@@ -84,21 +84,6 @@ func emitBool(code *[]byte, v bool) {
 	*code = append(*code, b)
 }
 
-// String
-
-func decodeString(ip *uint16, code []byte) string {
-	strLen := decodeUint16(ip, code)
-	start := *ip
-	*ip += strLen
-	end := *ip
-	return string(code[start:end])
-}
-
-func emitString(code *[]byte, str string) {
-	emitUint16(code, uint16(len(str)))
-	*code = append(*code, []byte(str)...)
-}
-
 // PathDomain
 
 func decodePathDomain(ip *uint16, code []byte) common.PathDomain {

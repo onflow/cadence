@@ -68,13 +68,6 @@ func (p *ProgramPrinter[E]) printFunction(function *Function[E]) {
 	}
 }
 
-func (*ProgramPrinter[_]) getIntOperand(codes []byte, i int) (operand int, endIndex int) {
-	first := codes[i+1]
-	last := codes[i+2]
-	operand = int(uint16(first)<<8 | uint16(last))
-	return operand, i + 2
-}
-
 func (p *ProgramPrinter[_]) printConstantPool(constants []*Constant) {
 	p.stringBuilder.WriteString("-- Constant Pool --\n")
 
