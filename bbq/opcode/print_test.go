@@ -103,7 +103,7 @@ func TestPrintInstruction(t *testing.T) {
 
 		"Cast typeIndex:258 kind:3": {byte(Cast), 1, 2, 3},
 
-		`Path domain:PathDomainStorage identifierIndex:5`: {byte(Path), 1, 0, 5, 'h', 'e', 'l', 'l', 'o'},
+		`Path domain:PathDomainStorage identifierIndex:5`: {byte(Path), 1, 0, 5},
 
 		`InvokeDynamic nameIndex:1 typeArgs:[772, 1286] argCount:1800`: {
 			byte(InvokeDynamic), 0, 1, 0, 2, 3, 4, 5, 6, 7, 8,
