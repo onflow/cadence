@@ -24,7 +24,6 @@ import (
 	"github.com/turbolent/prettier"
 
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 )
 
 type Block struct {
@@ -352,45 +351,6 @@ func (c *EmitCondition) ElementType() ElementType {
 
 func (c *EmitCondition) Walk(walkChild func(Element)) {
 	(*EmitStatement)(c).Walk(walkChild)
-}
-
-// DesugaredCondition is only used in desugar phase.
-type DesugaredCondition struct {
-	Condition Statement
-}
-
-var _ Condition = &DesugaredCondition{}
-
-func NewDesugaredCondition(condition Statement) *DesugaredCondition {
-	return &DesugaredCondition{
-		Condition: condition,
-	}
-}
-
-func (c DesugaredCondition) StartPosition() Position {
-	return c.Condition.StartPosition()
-}
-
-func (c DesugaredCondition) EndPosition(memoryGauge common.MemoryGauge) Position {
-	return c.Condition.EndPosition(memoryGauge)
-}
-
-func (c DesugaredCondition) ElementType() ElementType {
-	return ElementTypeUnknown
-}
-
-func (c DesugaredCondition) Walk(walkChild func(Element)) {
-	walkChild(c.Condition)
-}
-
-func (c DesugaredCondition) isCondition() {}
-
-func (c DesugaredCondition) CodeElement() Element {
-	return c.Condition
-}
-
-func (c DesugaredCondition) Doc() prettier.Doc {
-	panic(errors.NewUnreachableError())
 }
 
 // Conditions
