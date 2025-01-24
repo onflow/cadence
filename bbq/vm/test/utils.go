@@ -455,7 +455,7 @@ func parseCheckAndCompileCodeWithOptions(
 	return program
 }
 
-func parseAndCheck(
+func parseAndCheck( // nolint:unused
 	t testing.TB,
 	code string,
 	location common.Location,

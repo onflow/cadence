@@ -20,6 +20,7 @@ package compiler
 
 import (
 	"fmt"
+
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
@@ -105,15 +106,13 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration)
 	funcBlock := declaration.FunctionBlock
 	funcName := declaration.Identifier.Identifier
 
-	var preConditions, postConditions []ast.Statement
-
-	preConditions = d.desugarConditions(
+	preConditions := d.desugarConditions(
 		funcName,
 		ast.ConditionKindPre,
 		funcBlock,
 		declaration.ParameterList,
 	)
-	postConditions = d.desugarConditions(
+	postConditions := d.desugarConditions(
 		funcName,
 		ast.ConditionKindPost,
 		funcBlock,
@@ -288,10 +287,9 @@ func (d *Desugar) desugarConditions(
 				desugaredConditions = append(desugaredConditions, invocation)
 			}
 		}
-	} else {
-		if funcBlock != nil {
-			conditions = funcBlock.PostConditions
-		}
+	} else if funcBlock != nil {
+		// Post conditions
+		conditions = funcBlock.PostConditions
 	}
 
 	// Desugar self-defined pre/post conditions
@@ -345,7 +343,13 @@ func (d *Desugar) desugarConditions(
 
 	// Otherwise, i.e: if this is an interface function with only pre/post conditions,
 	// (thus not a default function), then generate a separate function for the conditions.
-	d.generateConditionsFunction(enclosingFuncName, kind, pos, conditions, desugaredConditions, list)
+	d.generateConditionsFunction(
+		enclosingFuncName,
+		kind,
+		conditions,
+		desugaredConditions,
+		list,
+	)
 
 	return nil
 }
@@ -353,12 +357,11 @@ func (d *Desugar) desugarConditions(
 func (d *Desugar) generateConditionsFunction(
 	enclosingFuncName string,
 	kind ast.ConditionKind,
-	pos ast.Position,
 	conditions *ast.Conditions,
 	desugaredConditions []ast.Statement,
 	list *ast.ParameterList,
 ) {
-	pos = conditions.StartPos
+	pos := conditions.StartPos
 
 	desugaredConditions = append(
 		desugaredConditions,
@@ -650,7 +653,7 @@ func (d *Desugar) inheritedFunctionsWithConditions(compositeType *sema.Composite
 		interfaceDecl := elaboration.InterfaceTypeDeclaration(interfaceType)
 		functions := interfaceDecl.Members.FunctionsByIdentifier()
 
-		for name, functionDecl := range functions {
+		for name, functionDecl := range functions { // nolint:maprange
 			if !functionDecl.FunctionBlock.HasConditions() {
 				continue
 			}
@@ -674,7 +677,7 @@ func (d *Desugar) inheritedDefaultFunctions(compositeType *sema.CompositeType, d
 
 	inheritedMembers := make([]ast.Declaration, 0)
 
-	for memberName, resolver := range allMembers {
+	for memberName, resolver := range allMembers { // nolint:maprange
 		if directMembers.Contains(memberName) {
 			continue
 		}
