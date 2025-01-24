@@ -112,8 +112,8 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration)
 
 	// Before the post conditions are appended, we need to move the
 	// return statement to the end of the function.
-	// For that, replace the remove with a temporary result assignment,
-	// and once the post conditions are added, then add a new return
+	// For that, replace the return-stmt with a temporary result assignment,
+	// and once the post conditions are added, then add a new return-stmt
 	// which would return the temp result.
 
 	// TODO: If 'result' variable is used in the user-code,
@@ -167,7 +167,7 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration)
 		}
 	}
 
-	// Once the return statement is remove, then append the post conditions.
+	// Once the return statement is removed, then append the post conditions.
 	modifiedStatements = append(modifiedStatements, postConditions...)
 
 	// Insert a return statement at the end, after post conditions.
@@ -257,7 +257,7 @@ func (d *Desugar) desugarConditions(
 					continue
 				}
 
-				// If the inheritted function has pre-conditions, then add an invocation
+				// If the inherited function has pre-conditions, then add an invocation
 				// to call the generated pre-condition-function of the interface.
 
 				// Generate: `FooInterface.bar.&preCondition(a1, a2)`
@@ -759,7 +759,7 @@ func (d *Desugar) interfaceDelegationMethodCall(
 	arguments := make([]*ast.Argument, 0)
 	for _, param := range inheritedFunc.ParameterList.Parameters {
 		var arg *ast.Argument
-		if param.Label == "" {
+		if param.Label == "_" {
 			arg = ast.NewUnlabeledArgument(
 				d.memoryGauge,
 				ast.NewIdentifierExpression(
@@ -768,9 +768,16 @@ func (d *Desugar) interfaceDelegationMethodCall(
 				),
 			)
 		} else {
+			var label string
+			if param.Label == "" {
+				label = param.Identifier.Identifier
+			} else {
+				label = param.Label
+			}
+
 			arg = ast.NewArgument(
 				d.memoryGauge,
-				param.Label,
+				label,
 				&param.StartPos,
 				&param.StartPos,
 				ast.NewIdentifierExpression(
@@ -868,7 +875,6 @@ func (d *Desugar) interfaceDelegationMethodCall(
 func (d *Desugar) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) ast.Declaration {
 	interfaceType := d.elaboration.InterfaceDeclarationType(declaration)
 
-	// TODO: Fix: this will overwrite top-level declarations
 	prevModifiedDecls := d.modifiedDeclarations
 	prevEnclosingInterfaceType := d.enclosingInterfaceType
 	d.modifiedDeclarations = nil
