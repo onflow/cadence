@@ -1,3 +1,21 @@
+/*
+ * Cadence - The resource-oriented smart contract programming language
+ *
+ * Copyright Flow Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package compiler
 
 import (
@@ -243,7 +261,7 @@ func (d *Desugar) desugarConditions(
 
 	var conditions *ast.Conditions
 
-	// Desugar for inherited pre-conditions
+	// Desugar inherited pre-conditions
 	if kind == ast.ConditionKindPre {
 		if funcBlock != nil {
 			conditions = funcBlock.PreConditions
@@ -276,7 +294,7 @@ func (d *Desugar) desugarConditions(
 		}
 	}
 
-	// Desugar for elf defined pre/post conditions
+	// Desugar self-defined pre/post conditions
 	if conditions != nil {
 		conditionsList := conditions.Conditions
 		if kind == ast.ConditionKindPost {
@@ -290,7 +308,7 @@ func (d *Desugar) desugarConditions(
 		}
 	}
 
-	// Desugar for inherited post-conditions
+	// Desugar inherited post-conditions
 	if kind == ast.ConditionKindPost {
 		if d.inheritedFuncsWithConditions != nil {
 			inheritedFuncs, ok := d.inheritedFuncsWithConditions[enclosingFuncName]
@@ -314,8 +332,11 @@ func (d *Desugar) desugarConditions(
 		}
 	}
 
-	// If this is a concrete-type method, or an interface default method,
+	// If this is a method of a concrete-type, or an interface default method,
 	// then return with the updated statements, and continue desugaring the rest.
+
+	// TODO: Handle default functions with conditions
+
 	if d.enclosingInterfaceType == nil ||
 		funcBlock.HasStatements() ||
 		conditions == nil {
