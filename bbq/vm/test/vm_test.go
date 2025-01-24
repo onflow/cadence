@@ -1826,8 +1826,6 @@ func TestInterfaceMethodCall(t *testing.T) {
 			default:
 				panic(fmt.Errorf("cannot find import for: %s", location))
 			}
-
-			return fooProgram
 		}
 
 		comp = compiler.NewInstructionCompiler(checker)

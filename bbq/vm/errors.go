@@ -20,6 +20,7 @@ package vm
 
 import (
 	"fmt"
+
 	"github.com/onflow/cadence/errors"
 )
 

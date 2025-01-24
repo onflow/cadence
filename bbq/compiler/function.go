@@ -44,7 +44,7 @@ func newFunction[E any](name string, parameterCount uint16, isCompositeFunction 
 }
 
 func (f *function[E]) declareLocal(name string) *local {
-	if f.localCount >= math.MaxUint16 {
+	if f.localCount == math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid local declaration"))
 	}
 	index := f.localCount

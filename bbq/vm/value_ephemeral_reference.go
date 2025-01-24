@@ -20,6 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/interpreter"
 )
