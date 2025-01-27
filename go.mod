@@ -13,7 +13,7 @@ require (
 	github.com/kr/pretty v0.3.1
 	github.com/leanovate/gopter v0.2.9
 	github.com/logrusorgru/aurora/v4 v4.0.0
-	github.com/onflow/atree v0.8.0-rc.6
+	github.com/onflow/atree v0.9.0
 	github.com/rivo/uniseg v0.4.4
 	github.com/schollz/progressbar/v3 v3.13.1
 	github.com/stretchr/testify v1.10.0
@@ -62,5 +62,3 @@ require (
 	gonum.org/v1/gonum v0.6.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/onflow/atree => github.com/onflow/atree-internal v0.8.2-0.20250117221137-acdb0e04ab01
