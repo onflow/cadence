@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	github.com/gorilla/mux v1.8.1
-	github.com/onflow/atree v0.8.0-rc.6
+	github.com/onflow/atree v0.9.0
 	github.com/onflow/cadence v1.0.0-preview-atree-register-inlining.29
 	github.com/onflow/flow-go v0.35.7-crescendo-preview.23-atree-inlining
 	github.com/rs/zerolog v1.32.0
