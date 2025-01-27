@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"math/bits"
 	"strings"
 	"time"
 	"unicode"
@@ -260,6 +261,13 @@ type OwnedValue interface {
 // When Next returns nil, it signals the end of the iterator.
 type ValueIterator interface {
 	Next(interpreter *Interpreter, locationRange LocationRange) Value
+}
+
+// atreeContainerBackedValue is an interface for values using atree containers
+// (atree.Array or atree.OrderedMap) under the hood.
+type atreeContainerBackedValue interface {
+	Value
+	isAtreeContainerBackedValue()
 }
 
 func safeAdd(a, b int, locationRange LocationRange) int {
@@ -2283,13 +2291,17 @@ func newArrayValueFromAtreeArray(
 
 var _ Value = &ArrayValue{}
 var _ atree.Value = &ArrayValue{}
+var _ atree.WrapperValue = &ArrayValue{}
 var _ EquatableValue = &ArrayValue{}
 var _ ValueIndexableValue = &ArrayValue{}
 var _ MemberAccessibleValue = &ArrayValue{}
 var _ ReferenceTrackedResourceKindedValue = &ArrayValue{}
 var _ IterableValue = &ArrayValue{}
+var _ atreeContainerBackedValue = &ArrayValue{}
 
 func (*ArrayValue) isValue() {}
+
+func (*ArrayValue) isAtreeContainerBackedValue() {}
 
 func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
 	descend := visitor.VisitArrayValue(interpreter, v)
@@ -3362,7 +3374,15 @@ func (v *ArrayValue) Storable(
 	address atree.Address,
 	maxInlineSize uint64,
 ) (atree.Storable, error) {
+	// NOTE: Need to change ArrayValue.UnwrapAtreeValue()
+	// if ArrayValue is stored with wrapping.
 	return v.array.Storable(storage, address, maxInlineSize)
+}
+
+func (v *ArrayValue) UnwrapAtreeValue() (atree.Value, uint64) {
+	// Wrapper size is 0 because ArrayValue is stored as
+	// atree.Array without any physical wrapping (see ArrayValue.Storable()).
+	return v.array, 0
 }
 
 func (v *ArrayValue) IsReferenceTrackedResourceKindedValue() {}
@@ -4065,6 +4085,10 @@ func (v *ArrayValue) SetType(staticType ArrayStaticType) {
 	}
 }
 
+func (v *ArrayValue) Inlined() bool {
+	return v.array.Inlined()
+}
+
 // NumberValue
 type NumberValue interface {
 	ComparableValue
@@ -4709,7 +4733,7 @@ func (v IntValue) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue,
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{
+		panic(NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
@@ -4742,7 +4766,7 @@ func (v IntValue) BitwiseRightShift(interpreter *Interpreter, other IntegerValue
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{
+		panic(NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
@@ -5379,6 +5403,12 @@ func (v Int8Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue
 		})
 	}
 
+	if o < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+
 	valueGetter := func() int8 {
 		return int8(v << o)
 	}
@@ -5393,6 +5423,12 @@ func (v Int8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValu
 			Operation:     ast.OperationBitwiseRightShift,
 			LeftType:      v.StaticType(interpreter),
 			RightType:     other.StaticType(interpreter),
+			LocationRange: locationRange,
+		})
+	}
+
+	if o < 0 {
+		panic(NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
@@ -6020,6 +6056,12 @@ func (v Int16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValu
 		})
 	}
 
+	if o < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+
 	valueGetter := func() int16 {
 		return int16(v << o)
 	}
@@ -6034,6 +6076,12 @@ func (v Int16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVal
 			Operation:     ast.OperationBitwiseRightShift,
 			LeftType:      v.StaticType(interpreter),
 			RightType:     other.StaticType(interpreter),
+			LocationRange: locationRange,
+		})
+	}
+
+	if o < 0 {
+		panic(NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
@@ -6663,6 +6711,12 @@ func (v Int32Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValu
 		})
 	}
 
+	if o < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+
 	valueGetter := func() int32 {
 		return int32(v << o)
 	}
@@ -6677,6 +6731,12 @@ func (v Int32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVal
 			Operation:     ast.OperationBitwiseRightShift,
 			LeftType:      v.StaticType(interpreter),
 			RightType:     other.StaticType(interpreter),
+			LocationRange: locationRange,
+		})
+	}
+
+	if o < 0 {
+		panic(NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
@@ -7298,6 +7358,12 @@ func (v Int64Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValu
 		})
 	}
 
+	if o < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+
 	valueGetter := func() int64 {
 		return int64(v << o)
 	}
@@ -7312,6 +7378,12 @@ func (v Int64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVal
 			Operation:     ast.OperationBitwiseRightShift,
 			LeftType:      v.StaticType(interpreter),
 			RightType:     other.StaticType(interpreter),
+			LocationRange: locationRange,
+		})
+	}
+
+	if o < 0 {
+		panic(NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
@@ -7396,6 +7468,37 @@ func (v Int64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (Int64Value) ChildStorables() []atree.Storable {
 	return nil
+}
+
+// toTwosComplement sets `res` to the two's complement representation of a big.Int `x` in the given target bit size.
+// `res` is returned and is awlways a positive big.Int.
+func toTwosComplement(res, x *big.Int, targetBitSize uint) *big.Int {
+	bytes := SignedBigIntToSizedBigEndianBytes(x, targetBitSize/8)
+	return res.SetBytes(bytes)
+}
+
+// toTwosComplement converts `res` to the big.Int representation from the two's complement format of a
+// signed integer.
+// `res` is returned and can be positive or negative.
+func fromTwosComplement(res *big.Int) *big.Int {
+	bytes := res.Bytes()
+	return BigEndianBytesToSignedBigInt(bytes)
+}
+
+// truncate trims a big.Int to maxWords by directly modifying its underlying representation.
+func truncate(x *big.Int, maxWords int) *big.Int {
+	// Get the absolute value of x as a nat slice.
+	abs := x.Bits()
+
+	// Limit the nat slice to maxWords.
+	if len(abs) > maxWords {
+		abs = abs[:maxWords]
+	}
+
+	// Update the big.Int's internal representation.
+	x.SetBits(abs)
+
+	return x
 }
 
 // Int128Value
@@ -8020,20 +8123,25 @@ func (v Int128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{
+		panic(NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
-	if !o.BigInt.IsUint64() {
-		panic(OverflowError{
-			LocationRange: locationRange,
-		})
+	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 128 {
+		return NewInt128ValueFromUint64(interpreter, 0)
 	}
+
+	// The maximum shift value at this point is 127, which may lead to an
+	// additional allocation of up to 128 bits. Add usage for possible
+	// intermediate value.
+	common.UseMemory(interpreter, Int128MemoryUsage)
 
 	valueGetter := func() *big.Int {
 		res := new(big.Int)
-		res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-		return res
+		res = toTwosComplement(res, v.BigInt, 128)
+		res = res.Lsh(res, uint(o.BigInt.Uint64()))
+		res = truncate(res, 128/bits.UintSize)
+		return fromTwosComplement(res)
 	}
 
 	return NewInt128ValueFromBigInt(interpreter, valueGetter)
@@ -8051,14 +8159,12 @@ func (v Int128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{
+		panic(NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
 	if !o.BigInt.IsUint64() {
-		panic(OverflowError{
-			LocationRange: locationRange,
-		})
+		return NewInt128ValueFromUint64(interpreter, 0)
 	}
 
 	valueGetter := func() *big.Int {
@@ -8762,21 +8868,26 @@ func (v Int256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 		})
 	}
 
+	if o.BigInt.Sign() < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 256 {
+		return NewInt256ValueFromUint64(interpreter, 0)
+	}
+
+	// The maximum shift value at this point is 255, which may lead to an
+	// additional allocation of up to 256 bits. Add usage for possible
+	// intermediate value.
+	common.UseMemory(interpreter, Int256MemoryUsage)
+
 	valueGetter := func() *big.Int {
 		res := new(big.Int)
-		if o.BigInt.Sign() < 0 {
-			panic(UnderflowError{
-				LocationRange: locationRange,
-			})
-		}
-		if !o.BigInt.IsUint64() {
-			panic(OverflowError{
-				LocationRange: locationRange,
-			})
-		}
-		res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-
-		return res
+		res = toTwosComplement(res, v.BigInt, 256)
+		res = res.Lsh(res, uint(o.BigInt.Uint64()))
+		res = truncate(res, 256/bits.UintSize)
+		return fromTwosComplement(res)
 	}
 
 	return NewInt256ValueFromBigInt(interpreter, valueGetter)
@@ -8793,18 +8904,17 @@ func (v Int256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 		})
 	}
 
+	if o.BigInt.Sign() < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+	if !o.BigInt.IsUint64() {
+		return NewInt256ValueFromUint64(interpreter, 0)
+	}
+
 	valueGetter := func() *big.Int {
 		res := new(big.Int)
-		if o.BigInt.Sign() < 0 {
-			panic(UnderflowError{
-				LocationRange: locationRange,
-			})
-		}
-		if !o.BigInt.IsUint64() {
-			panic(OverflowError{
-				LocationRange: locationRange,
-			})
-		}
 		res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
 		return res
 	}
@@ -9388,7 +9498,7 @@ func (v UIntValue) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{
+		panic(NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
@@ -9422,7 +9532,7 @@ func (v UIntValue) BitwiseRightShift(interpreter *Interpreter, other IntegerValu
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{
+		panic(NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
@@ -12309,21 +12419,26 @@ func (v UInt128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVa
 		})
 	}
 
+	if o.BigInt.Sign() < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 128 {
+		return NewUInt128ValueFromUint64(interpreter, 0)
+	}
+
+	// The maximum shift value at this point is 127, which may lead to an
+	// additional allocation of up to 128 bits. Add usage for possible
+	// intermediate value.
+	common.UseMemory(interpreter, Uint128MemoryUsage)
+
 	return NewUInt128ValueFromBigInt(
 		interpreter,
 		func() *big.Int {
 			res := new(big.Int)
-			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{
-					LocationRange: locationRange,
-				})
-			}
-			if !o.BigInt.IsUint64() {
-				panic(OverflowError{
-					LocationRange: locationRange,
-				})
-			}
-			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+			res = res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+			return truncate(res, 128/bits.UintSize)
 		},
 	)
 }
@@ -12339,20 +12454,19 @@ func (v UInt128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerV
 		})
 	}
 
+	if o.BigInt.Sign() < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+	if !o.BigInt.IsUint64() {
+		return NewUInt128ValueFromUint64(interpreter, 0)
+	}
+
 	return NewUInt128ValueFromBigInt(
 		interpreter,
 		func() *big.Int {
 			res := new(big.Int)
-			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{
-					LocationRange: locationRange,
-				})
-			}
-			if !o.BigInt.IsUint64() {
-				panic(OverflowError{
-					LocationRange: locationRange,
-				})
-			}
 			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
 		},
 	)
@@ -12985,21 +13099,26 @@ func (v UInt256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVa
 		})
 	}
 
+	if o.BigInt.Sign() < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 256 {
+		return NewUInt256ValueFromUint64(interpreter, 0)
+	}
+
+	// The maximum shift value at this point is 255, which may lead to an
+	// additional allocation of up to 256 bits. Add usage for possible
+	// intermediate value.
+	common.UseMemory(interpreter, Uint256MemoryUsage)
+
 	return NewUInt256ValueFromBigInt(
 		interpreter,
 		func() *big.Int {
 			res := new(big.Int)
-			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{
-					LocationRange: locationRange,
-				})
-			}
-			if !o.BigInt.IsUint64() {
-				panic(OverflowError{
-					LocationRange: locationRange,
-				})
-			}
-			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+			res = res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+			return truncate(res, 256/bits.UintSize)
 		},
 	)
 }
@@ -13015,20 +13134,19 @@ func (v UInt256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerV
 		})
 	}
 
+	if o.BigInt.Sign() < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+	if !o.BigInt.IsUint64() {
+		return NewUInt256ValueFromUint64(interpreter, 0)
+	}
+
 	return NewUInt256ValueFromBigInt(
 		interpreter,
 		func() *big.Int {
 			res := new(big.Int)
-			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{
-					LocationRange: locationRange,
-				})
-			}
-			if !o.BigInt.IsUint64() {
-				panic(OverflowError{
-					LocationRange: locationRange,
-				})
-			}
 			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
 		},
 	)
@@ -15349,21 +15467,26 @@ func (v Word128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVa
 		})
 	}
 
+	if o.BigInt.Sign() < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 128 {
+		return NewWord128ValueFromUint64(interpreter, 0)
+	}
+
+	// The maximum shift value at this point is 127, which may lead to an
+	// additional allocation of up to 128 bits. Add usage for possible
+	// intermediate value.
+	common.UseMemory(interpreter, Uint128MemoryUsage)
+
 	return NewWord128ValueFromBigInt(
 		interpreter,
 		func() *big.Int {
 			res := new(big.Int)
-			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{
-					LocationRange: locationRange,
-				})
-			}
-			if !o.BigInt.IsUint64() {
-				panic(OverflowError{
-					LocationRange: locationRange,
-				})
-			}
-			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+			res = res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+			return truncate(res, 128/bits.UintSize)
 		},
 	)
 }
@@ -15378,20 +15501,19 @@ func (v Word128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerV
 		})
 	}
 
+	if o.BigInt.Sign() < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+	if !o.BigInt.IsUint64() {
+		return NewWord128ValueFromUint64(interpreter, 0)
+	}
+
 	return NewWord128ValueFromBigInt(
 		interpreter,
 		func() *big.Int {
 			res := new(big.Int)
-			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{
-					LocationRange: locationRange,
-				})
-			}
-			if !o.BigInt.IsUint64() {
-				panic(OverflowError{
-					LocationRange: locationRange,
-				})
-			}
 			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
 		},
 	)
@@ -15930,21 +16052,26 @@ func (v Word256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVa
 		})
 	}
 
+	if o.BigInt.Sign() < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 256 {
+		return NewWord256ValueFromUint64(interpreter, 0)
+	}
+
+	// The maximum shift value at this point is 255, which may lead to an
+	// additional allocation of up to 256 bits. Add usage for possible
+	// intermediate value.
+	common.UseMemory(interpreter, Uint256MemoryUsage)
+
 	return NewWord256ValueFromBigInt(
 		interpreter,
 		func() *big.Int {
 			res := new(big.Int)
-			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{
-					LocationRange: locationRange,
-				})
-			}
-			if !o.BigInt.IsUint64() {
-				panic(OverflowError{
-					LocationRange: locationRange,
-				})
-			}
-			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+			res = res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+			return truncate(res, 256/bits.UintSize)
 		},
 	)
 }
@@ -15960,20 +16087,19 @@ func (v Word256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerV
 		})
 	}
 
+	if o.BigInt.Sign() < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+	if !o.BigInt.IsUint64() {
+		return NewWord256ValueFromUint64(interpreter, 0)
+	}
+
 	return NewWord256ValueFromBigInt(
 		interpreter,
 		func() *big.Int {
 			res := new(big.Int)
-			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{
-					LocationRange: locationRange,
-				})
-			}
-			if !o.BigInt.IsUint64() {
-				panic(OverflowError{
-					LocationRange: locationRange,
-				})
-			}
 			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
 		},
 	)
@@ -17380,8 +17506,13 @@ var _ HashableValue = &CompositeValue{}
 var _ MemberAccessibleValue = &CompositeValue{}
 var _ ReferenceTrackedResourceKindedValue = &CompositeValue{}
 var _ ContractValue = &CompositeValue{}
+var _ atree.Value = &CompositeValue{}
+var _ atree.WrapperValue = &CompositeValue{}
+var _ atreeContainerBackedValue = &CompositeValue{}
 
 func (*CompositeValue) isValue() {}
+
+func (*CompositeValue) isAtreeContainerBackedValue() {}
 
 func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
 	descend := visitor.VisitCompositeValue(interpreter, v)
@@ -18282,7 +18413,16 @@ func (v *CompositeValue) Storable(
 		return NonStorable{Value: v}, nil
 	}
 
+	// NOTE: Need to change CompositeValue.UnwrapAtreeValue()
+	// if CompositeValue is stored with wrapping.
+
 	return v.dictionary.Storable(storage, address, maxInlineSize)
+}
+
+func (v *CompositeValue) UnwrapAtreeValue() (atree.Value, uint64) {
+	// Wrapper size is 0 because CompositeValue is stored as
+	// atree.OrderedMap without any physical wrapping (see CompositeValue.Storable()).
+	return v.dictionary, 0
 }
 
 func (v *CompositeValue) NeedsStoreTo(address atree.Address) bool {
@@ -18802,7 +18942,7 @@ func (v *CompositeValue) getBaseValue(
 	return NewEphemeralReferenceValue(interpreter, functionAuthorization, v.base, baseType, locationRange)
 }
 
-func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeValue) {
+func (v *CompositeValue) setBaseValue(_ *Interpreter, base *CompositeValue) {
 	v.base = base
 }
 
@@ -19083,6 +19223,10 @@ func (v *CompositeValue) ForEach(
 	}
 }
 
+func (v *CompositeValue) Inlined() bool {
+	return v.dictionary.Inlined()
+}
+
 type InclusiveRangeIterator struct {
 	rangeValue *CompositeValue
 	next       IntegerValue
@@ -19351,12 +19495,16 @@ func newDictionaryValueFromAtreeMap(
 
 var _ Value = &DictionaryValue{}
 var _ atree.Value = &DictionaryValue{}
+var _ atree.WrapperValue = &DictionaryValue{}
 var _ EquatableValue = &DictionaryValue{}
 var _ ValueIndexableValue = &DictionaryValue{}
 var _ MemberAccessibleValue = &DictionaryValue{}
 var _ ReferenceTrackedResourceKindedValue = &DictionaryValue{}
+var _ atreeContainerBackedValue = &DictionaryValue{}
 
 func (*DictionaryValue) isValue() {}
+
+func (*DictionaryValue) isAtreeContainerBackedValue() {}
 
 func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
 	descend := visitor.VisitDictionaryValue(interpreter, v)
@@ -20376,7 +20524,15 @@ func (v *DictionaryValue) Storable(
 	address atree.Address,
 	maxInlineSize uint64,
 ) (atree.Storable, error) {
+	// NOTE: Need to change DictionaryValue.UnwrapAtreeValue()
+	// if DictionaryValue is stored with wrapping.
 	return v.dictionary.Storable(storage, address, maxInlineSize)
+}
+
+func (v *DictionaryValue) UnwrapAtreeValue() (atree.Value, uint64) {
+	// Wrapper size is 0 because DictionaryValue is stored as
+	// atree.OrderedMap without any physical wrapping (see DictionaryValue.Storable()).
+	return v.dictionary, 0
 }
 
 func (v *DictionaryValue) IsReferenceTrackedResourceKindedValue() {}
@@ -20695,6 +20851,10 @@ func (v *DictionaryValue) SetType(staticType *DictionaryStaticType) {
 	}
 }
 
+func (v *DictionaryValue) Inlined() bool {
+	return v.dictionary.Inlined()
+}
+
 // OptionalValue
 
 type OptionalValue interface {
@@ -20887,6 +21047,31 @@ var _ Value = &SomeValue{}
 var _ EquatableValue = &SomeValue{}
 var _ MemberAccessibleValue = &SomeValue{}
 var _ OptionalValue = &SomeValue{}
+var _ atree.Value = &SomeValue{}
+var _ atree.WrapperValue = &SomeValue{}
+
+// UnwrapAtreeValue returns non-SomeValue and wrapper size.
+func (v *SomeValue) UnwrapAtreeValue() (atree.Value, uint64) {
+	// NOTE:
+	// - non-SomeValue is the same as non-SomeValue in SomeValue.Storable()
+	// - non-SomeValue wrapper size is the same as encoded wrapper size in SomeStorable.ByteSize().
+
+	// Unwrap SomeValue(s)
+	nonSomeValue, nestedLevels := v.nonSomeValue()
+
+	// Get SomeValue(s) wrapper size
+	someStorableEncodedPrefixSize := getSomeStorableEncodedPrefixSize(nestedLevels)
+
+	// Unwrap nonSomeValue if needed
+	switch nonSomeValue := nonSomeValue.(type) {
+	case atree.WrapperValue:
+		unwrappedValue, wrapperSize := nonSomeValue.UnwrapAtreeValue()
+		return unwrappedValue, wrapperSize + uint64(someStorableEncodedPrefixSize)
+
+	default:
+		return nonSomeValue, uint64(someStorableEncodedPrefixSize)
+	}
+}
 
 func (*SomeValue) isValue() {}
 
@@ -21061,9 +21246,18 @@ func (v *SomeValue) Storable(
 	// The above applies to both immutable non-SomeValue (such as StringValue),
 	// and mutable non-SomeValue (such as ArrayValue).
 
-	if v.valueStorable == nil {
+	// NOTE:
+	// - If SomeValue's inner value is a value with atree.Array or atree.OrderedMap,
+	//   we MUST NOT cache SomeStorable because we need to call nonSomeValue.Storable()
+	//   to trigger container inlining or un-inlining.
+	// - Otherwise, we need to cache SomeStorable because nonSomeValue.Storable() can
+	//   create registers in storage, such as large string.
 
-		nonSomeValue, nestedLevels := v.nonSomeValue()
+	nonSomeValue, nestedLevels := v.nonSomeValue()
+
+	_, isContainerValue := nonSomeValue.(atreeContainerBackedValue)
+
+	if v.valueStorable == nil || isContainerValue {
 
 		someStorableEncodedPrefixSize := getSomeStorableEncodedPrefixSize(nestedLevels)
 
@@ -21215,6 +21409,31 @@ type SomeStorable struct {
 }
 
 var _ atree.ContainerStorable = SomeStorable{}
+var _ atree.WrapperStorable = SomeStorable{}
+
+func (s SomeStorable) UnwrapAtreeStorable() atree.Storable {
+	storable := s.Storable
+
+	switch storable := storable.(type) {
+	case atree.WrapperStorable:
+		return storable.UnwrapAtreeStorable()
+
+	default:
+		return storable
+	}
+}
+
+// WrapAtreeStorable() wraps storable as innermost wrapped value and
+// returns new wrapped storable.
+func (s SomeStorable) WrapAtreeStorable(storable atree.Storable) atree.Storable {
+	_, nestedLevels := s.nonSomeStorable()
+
+	newStorable := SomeStorable{Storable: storable}
+	for i := 1; i < int(nestedLevels); i++ {
+		newStorable = SomeStorable{Storable: newStorable}
+	}
+	return newStorable
+}
 
 func (s SomeStorable) HasPointer() bool {
 	switch cs := s.Storable.(type) {
