@@ -41,6 +41,7 @@ import (
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -12622,7 +12623,7 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 				code,
 				ParseCheckAndInterpretOptions{
 					Config: &interpreter.Config{
-						Storage: runtime.NewStorage(ledger, nil),
+						Storage: runtime.NewStorage(ledger, nil, runtime.StorageConfig{}),
 					},
 				},
 			)
@@ -12642,9 +12643,10 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 		path := interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "foo")
 
 		storage := inter.Storage().(*runtime.Storage)
-		storageMap := storage.GetStorageMap(
+		storageMap := storage.GetDomainStorageMap(
+			inter,
 			address,
-			path.Domain.Identifier(),
+			common.StorageDomain(path.Domain),
 			true,
 		)
 
@@ -12667,9 +12669,10 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 		inter = newInter()
 
 		storage = inter.Storage().(*runtime.Storage)
-		storageMap = storage.GetStorageMap(
+		storageMap = storage.GetDomainStorageMap(
+			inter,
 			address,
-			path.Domain.Identifier(),
+			common.StorageDomain(path.Domain),
 			false,
 		)
 		require.NotNil(t, storageMap)
@@ -12694,9 +12697,10 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 		inter = newInter()
 
 		storage = inter.Storage().(*runtime.Storage)
-		storageMap = storage.GetStorageMap(
+		storageMap = storage.GetDomainStorageMap(
+			inter,
 			address,
-			path.Domain.Identifier(),
+			common.StorageDomain(path.Domain),
 			false,
 		)
 		require.NotNil(t, storageMap)

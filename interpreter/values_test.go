@@ -84,7 +84,7 @@ func newRandomValueTestInterpreter(t *testing.T) (inter *interpreter.Interpreter
 			err := storage.Commit(inter, false)
 			require.NoError(t, err)
 		}
-		config.Storage = runtime.NewStorage(ledger, nil)
+		config.Storage = runtime.NewStorage(ledger, nil, runtime.StorageConfig{})
 	}
 
 	resetStorage()
@@ -103,6 +103,7 @@ func importValue(t *testing.T, inter *interpreter.Interpreter, value cadence.Val
 		arrayResult, err := runtime.ImportValue(
 			inter,
 			interpreter.EmptyLocationRange,
+			nil,
 			nil,
 			cadence.Array{},
 			sema.NewVariableSizedType(nil, sema.AnyStructType),
@@ -129,6 +130,7 @@ func importValue(t *testing.T, inter *interpreter.Interpreter, value cadence.Val
 		dictionaryResult, err := runtime.ImportValue(
 			inter,
 			interpreter.EmptyLocationRange,
+			nil,
 			nil,
 			cadence.Dictionary{},
 			sema.NewDictionaryType(
@@ -157,6 +159,7 @@ func importValue(t *testing.T, inter *interpreter.Interpreter, value cadence.Val
 		structResult, err := runtime.ImportValue(
 			inter,
 			interpreter.EmptyLocationRange,
+			nil,
 			nil,
 			cadence.Struct{
 				StructType: value.StructType,
@@ -193,6 +196,7 @@ func importValue(t *testing.T, inter *interpreter.Interpreter, value cadence.Val
 			inter,
 			interpreter.EmptyLocationRange,
 			nil,
+			nil,
 			value,
 			nil,
 		)
@@ -228,9 +232,10 @@ func TestInterpretSmokeRandomDictionaryOperations(t *testing.T) {
 		dictionary *interpreter.DictionaryValue,
 	) {
 		inter.Storage().
-			GetStorageMap(
+			GetDomainStorageMap(
+				inter,
 				owner,
-				common.PathDomainStorage.Identifier(),
+				common.StorageDomainPathStorage,
 				true,
 			).
 			WriteValue(
@@ -246,9 +251,10 @@ func TestInterpretSmokeRandomDictionaryOperations(t *testing.T) {
 		owner common.Address,
 		storageMapKey interpreter.StorageMapKey,
 	) *interpreter.DictionaryValue {
-		storageMap := inter.Storage().GetStorageMap(
+		storageMap := inter.Storage().GetDomainStorageMap(
+			inter,
 			owner,
-			common.PathDomainStorage.Identifier(),
+			common.StorageDomainPathStorage,
 			false,
 		)
 		require.NotNil(t, storageMap)
@@ -266,9 +272,10 @@ func TestInterpretSmokeRandomDictionaryOperations(t *testing.T) {
 		storageMapKey interpreter.StorageMapKey,
 	) {
 		inter.Storage().
-			GetStorageMap(
+			GetDomainStorageMap(
+				inter,
 				owner,
-				common.PathDomainStorage.Identifier(),
+				common.StorageDomainPathStorage,
 				false,
 			).
 			RemoveValue(
@@ -984,9 +991,10 @@ func TestInterpretSmokeRandomCompositeOperations(t *testing.T) {
 		composite *interpreter.CompositeValue,
 	) {
 		inter.Storage().
-			GetStorageMap(
+			GetDomainStorageMap(
+				inter,
 				owner,
-				common.PathDomainStorage.Identifier(),
+				common.StorageDomainPathStorage,
 				true,
 			).
 			WriteValue(
@@ -1002,9 +1010,10 @@ func TestInterpretSmokeRandomCompositeOperations(t *testing.T) {
 		storageMapKey interpreter.StorageMapKey,
 	) {
 		inter.Storage().
-			GetStorageMap(
+			GetDomainStorageMap(
+				inter,
 				owner,
-				common.PathDomainStorage.Identifier(),
+				common.StorageDomainPathStorage,
 				true,
 			).
 			RemoveValue(
@@ -1019,9 +1028,10 @@ func TestInterpretSmokeRandomCompositeOperations(t *testing.T) {
 		owner common.Address,
 		storageMapKey interpreter.StorageMapKey,
 	) *interpreter.CompositeValue {
-		storageMap := inter.Storage().GetStorageMap(
+		storageMap := inter.Storage().GetDomainStorageMap(
+			inter,
 			owner,
-			common.PathDomainStorage.Identifier(),
+			common.StorageDomainPathStorage,
 			false,
 		)
 		require.NotNil(t, storageMap)
@@ -1403,9 +1413,10 @@ func TestInterpretSmokeRandomArrayOperations(t *testing.T) {
 		array *interpreter.ArrayValue,
 	) {
 		inter.Storage().
-			GetStorageMap(
+			GetDomainStorageMap(
+				inter,
 				owner,
-				common.PathDomainStorage.Identifier(),
+				common.StorageDomainPathStorage,
 				true,
 			).
 			WriteValue(
@@ -1421,9 +1432,10 @@ func TestInterpretSmokeRandomArrayOperations(t *testing.T) {
 		storageMapKey interpreter.StorageMapKey,
 	) {
 		inter.Storage().
-			GetStorageMap(
+			GetDomainStorageMap(
+				inter,
 				owner,
-				common.PathDomainStorage.Identifier(),
+				common.StorageDomainPathStorage,
 				true,
 			).
 			RemoveValue(
@@ -1438,9 +1450,10 @@ func TestInterpretSmokeRandomArrayOperations(t *testing.T) {
 		owner common.Address,
 		storageMapKey interpreter.StorageMapKey,
 	) *interpreter.ArrayValue {
-		storageMap := inter.Storage().GetStorageMap(
+		storageMap := inter.Storage().GetDomainStorageMap(
+			inter,
 			owner,
-			common.PathDomainStorage.Identifier(),
+			common.StorageDomainPathStorage,
 			false,
 		)
 		require.NotNil(t, storageMap)
@@ -2104,9 +2117,10 @@ func TestInterpretSmokeRandomNestedArrayOperations(t *testing.T) {
 		array *interpreter.ArrayValue,
 	) {
 		inter.Storage().
-			GetStorageMap(
+			GetDomainStorageMap(
+				inter,
 				owner,
-				common.PathDomainStorage.Identifier(),
+				common.StorageDomainPathStorage,
 				true,
 			).
 			WriteValue(
@@ -2121,9 +2135,10 @@ func TestInterpretSmokeRandomNestedArrayOperations(t *testing.T) {
 		owner common.Address,
 		storageMapKey interpreter.StorageMapKey,
 	) *interpreter.ArrayValue {
-		storageMap := inter.Storage().GetStorageMap(
+		storageMap := inter.Storage().GetDomainStorageMap(
+			inter,
 			owner,
-			common.PathDomainStorage.Identifier(),
+			common.StorageDomainPathStorage,
 			false,
 		)
 		require.NotNil(t, storageMap)
@@ -2650,9 +2665,10 @@ func TestInterpretSmokeRandomNestedDictionaryOperations(t *testing.T) {
 		dictionary *interpreter.DictionaryValue,
 	) {
 		inter.Storage().
-			GetStorageMap(
+			GetDomainStorageMap(
+				inter,
 				owner,
-				common.PathDomainStorage.Identifier(),
+				common.StorageDomainPathStorage,
 				true,
 			).
 			WriteValue(
@@ -2667,9 +2683,10 @@ func TestInterpretSmokeRandomNestedDictionaryOperations(t *testing.T) {
 		owner common.Address,
 		storageMapKey interpreter.StorageMapKey,
 	) *interpreter.DictionaryValue {
-		storageMap := inter.Storage().GetStorageMap(
+		storageMap := inter.Storage().GetDomainStorageMap(
+			inter,
 			owner,
-			common.PathDomainStorage.Identifier(),
+			common.StorageDomainPathStorage,
 			false,
 		)
 		require.NotNil(t, storageMap)
@@ -3269,9 +3286,10 @@ func TestInterpretSmokeRandomNestedCompositeOperations(t *testing.T) {
 		composite *interpreter.CompositeValue,
 	) {
 		inter.Storage().
-			GetStorageMap(
+			GetDomainStorageMap(
+				inter,
 				owner,
-				common.PathDomainStorage.Identifier(),
+				common.StorageDomainPathStorage,
 				true,
 			).
 			WriteValue(
@@ -3286,9 +3304,10 @@ func TestInterpretSmokeRandomNestedCompositeOperations(t *testing.T) {
 		owner common.Address,
 		storageMapKey interpreter.StorageMapKey,
 	) *interpreter.CompositeValue {
-		storageMap := inter.Storage().GetStorageMap(
+		storageMap := inter.Storage().GetDomainStorageMap(
+			inter,
 			owner,
-			common.PathDomainStorage.Identifier(),
+			common.StorageDomainPathStorage,
 			false,
 		)
 		require.NotNil(t, storageMap)
@@ -4817,7 +4836,7 @@ func TestCheckStorageHealthInMiddleOfDeepRemove(t *testing.T) {
 			Program:     ast.NewProgram(nil, []ast.Declaration{}),
 			Elaboration: sema.NewElaboration(nil),
 		},
-		utils.TestLocation,
+		TestLocation,
 		&interpreter.Config{
 			Storage: storage,
 			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
@@ -4898,7 +4917,7 @@ func TestInterpretCheckStorageHealthInMiddleOfTransferAndRemove(t *testing.T) {
 			Program:     ast.NewProgram(nil, []ast.Declaration{}),
 			Elaboration: sema.NewElaboration(nil),
 		},
-		utils.TestLocation,
+		TestLocation,
 		&interpreter.Config{
 			Storage: storage,
 			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
@@ -5058,9 +5077,10 @@ func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
 		)
 
 		inter.Storage().
-			GetStorageMap(
+			GetDomainStorageMap(
+				inter,
 				owner,
-				common.PathDomainStorage.Identifier(),
+				common.StorageDomainPathStorage,
 				true,
 			).
 			WriteValue(
@@ -5076,9 +5096,10 @@ func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
 		owner common.Address,
 		storageMapKey interpreter.StorageMapKey,
 	) interpreter.Value {
-		storageMap := inter.Storage().GetStorageMap(
+		storageMap := inter.Storage().GetDomainStorageMap(
+			inter,
 			owner,
-			common.PathDomainStorage.Identifier(),
+			common.StorageDomainPathStorage,
 			false,
 		)
 		require.NotNil(t, storageMap)
@@ -5491,9 +5512,10 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		)
 
 		inter.Storage().
-			GetStorageMap(
+			GetDomainStorageMap(
+				inter,
 				owner,
-				common.PathDomainStorage.Identifier(),
+				common.StorageDomainPathStorage,
 				true,
 			).
 			WriteValue(
@@ -5509,9 +5531,10 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		owner common.Address,
 		storageMapKey interpreter.StorageMapKey,
 	) interpreter.Value {
-		storageMap := inter.Storage().GetStorageMap(
+		storageMap := inter.Storage().GetDomainStorageMap(
+			inter,
 			owner,
-			common.PathDomainStorage.Identifier(),
+			common.StorageDomainPathStorage,
 			false,
 		)
 		require.NotNil(t, storageMap)

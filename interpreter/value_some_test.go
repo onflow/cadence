@@ -26,18 +26,18 @@ import (
 
 	"github.com/onflow/atree"
 
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 	const (
 		cborTagSize                                   = 2
-		someStorableWithMultipleNestedlevelsArraySize = 1
+		someStorableWithMultipleNestedLevelsArraySize = 1
 	)
 
 	t.Parallel()
@@ -61,7 +61,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		unwrappedValue, wrapperSize := v.UnwrapAtreeValue()
 		require.Equal(t, bv, unwrappedValue)
-		require.Equal(t, uint64(cborTagSize+someStorableWithMultipleNestedlevelsArraySize+1), wrapperSize)
+		require.Equal(t, uint64(cborTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
 	})
 
 	t.Run("SomeValue(SomeValue(ArrayValue(...)))", func(t *testing.T) {
@@ -72,7 +72,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 				Program:     ast.NewProgram(nil, []ast.Declaration{}),
 				Elaboration: sema.NewElaboration(nil),
 			},
-			utils.TestLocation,
+			TestLocation,
 			&interpreter.Config{
 				Storage: storage,
 				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
@@ -107,7 +107,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		unwrappedValue, wrapperSize := v.UnwrapAtreeValue()
 		require.IsType(t, &atree.Array{}, unwrappedValue)
-		require.Equal(t, uint64(cborTagSize+someStorableWithMultipleNestedlevelsArraySize+1), wrapperSize)
+		require.Equal(t, uint64(cborTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
 
 		atreeArray := unwrappedValue.(*atree.Array)
 		require.Equal(t, atree.Address(address), atreeArray.Address())
@@ -128,7 +128,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 				Program:     ast.NewProgram(nil, []ast.Declaration{}),
 				Elaboration: sema.NewElaboration(nil),
 			},
-			utils.TestLocation,
+			TestLocation,
 			&interpreter.Config{
 				Storage: storage,
 				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
@@ -166,7 +166,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		unwrappedValue, wrapperSize := v.UnwrapAtreeValue()
 		require.IsType(t, &atree.OrderedMap{}, unwrappedValue)
-		require.Equal(t, uint64(cborTagSize+someStorableWithMultipleNestedlevelsArraySize+1), wrapperSize)
+		require.Equal(t, uint64(cborTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
 
 		// Verify unwrapped value
 		atreeMap := unwrappedValue.(*atree.OrderedMap)
@@ -214,7 +214,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 				Program:     ast.NewProgram(nil, []ast.Declaration{}),
 				Elaboration: sema.NewElaboration(nil),
 			},
-			utils.TestLocation,
+			TestLocation,
 			&interpreter.Config{
 				Storage: storage,
 				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
@@ -264,7 +264,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		unwrappedValue, wrapperSize := v.UnwrapAtreeValue()
 		require.IsType(t, &atree.OrderedMap{}, unwrappedValue)
-		require.Equal(t, uint64(cborTagSize+someStorableWithMultipleNestedlevelsArraySize+1), wrapperSize)
+		require.Equal(t, uint64(cborTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
 
 		// Verify unwrapped value
 		atreeMap := unwrappedValue.(*atree.OrderedMap)
@@ -328,7 +328,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 				Program:     ast.NewProgram(nil, []ast.Declaration{}),
 				Elaboration: sema.NewElaboration(nil),
 			},
-			utils.TestLocation,
+			TestLocation,
 			&interpreter.Config{
 				Storage: storage,
 				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
@@ -390,7 +390,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 				Program:     ast.NewProgram(nil, []ast.Declaration{}),
 				Elaboration: sema.NewElaboration(nil),
 			},
-			utils.TestLocation,
+			TestLocation,
 			&interpreter.Config{
 				Storage: storage,
 				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
@@ -452,7 +452,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 				Program:     ast.NewProgram(nil, []ast.Declaration{}),
 				Elaboration: sema.NewElaboration(nil),
 			},
-			utils.TestLocation,
+			TestLocation,
 			&interpreter.Config{
 				Storage: storage,
 				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
@@ -546,7 +546,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 				Program:     ast.NewProgram(nil, []ast.Declaration{}),
 				Elaboration: sema.NewElaboration(nil),
 			},
-			utils.TestLocation,
+			TestLocation,
 			&interpreter.Config{
 				Storage: storage,
 				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
@@ -643,7 +643,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 				Program:     ast.NewProgram(nil, []ast.Declaration{}),
 				Elaboration: sema.NewElaboration(nil),
 			},
-			utils.TestLocation,
+			TestLocation,
 			&interpreter.Config{
 				Storage: storage,
 				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
@@ -727,7 +727,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 				Program:     ast.NewProgram(nil, []ast.Declaration{}),
 				Elaboration: sema.NewElaboration(nil),
 			},
-			utils.TestLocation,
+			TestLocation,
 			&interpreter.Config{
 				Storage: storage,
 				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
