@@ -12659,7 +12659,22 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 			nil,
 			true,
 		)
-		storageMap.WriteValue(inter, interpreter.StringStorageMapKey(path.Identifier), foo)
+
+		// Write the value to the storage map.
+		// However, the value is not referenced by the root of the storage yet
+		// (a storage map), so atree storage validation must be temporarily disabled
+		// to not report any "unreferenced slab" errors.
+		withoutAtreeStorageValidationEnabled(
+			inter,
+			func() struct{} {
+				storageMap.WriteValue(
+					inter,
+					interpreter.StringStorageMapKey(path.Identifier),
+					foo,
+				)
+				return struct{}{}
+			},
+		)
 
 		err = storage.Commit(inter, false)
 		require.NoError(t, err)

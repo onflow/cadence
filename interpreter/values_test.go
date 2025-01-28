@@ -5076,18 +5076,29 @@ func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
 			true,
 		)
 
-		inter.Storage().
-			GetDomainStorageMap(
-				inter,
-				owner,
-				common.StorageDomainPathStorage,
-				true,
-			).
-			WriteValue(
-				inter,
-				storageMapKey,
-				value,
-			)
+		// Write the value to the storage map.
+		// However, the value is not referenced by the root of the storage yet
+		// (a storage map), so atree storage validation must be temporarily disabled
+		// to not report any "unreferenced slab" errors.
+		withoutAtreeStorageValidationEnabled(
+			inter,
+			func() struct{} {
+				inter.Storage().
+					GetDomainStorageMap(
+						inter,
+						owner,
+						common.StorageDomainPathStorage,
+						true,
+					).
+					WriteValue(
+						inter,
+						storageMapKey,
+						value,
+					)
+
+				return struct{}{}
+			},
+		)
 	}
 
 	readValue := func(
@@ -5484,7 +5495,6 @@ func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
 
 		require.Equal(t, expectedRootCount, iterations)
 	})
-
 }
 
 func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) {
@@ -5511,18 +5521,29 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 			true,
 		)
 
-		inter.Storage().
-			GetDomainStorageMap(
-				inter,
-				owner,
-				common.StorageDomainPathStorage,
-				true,
-			).
-			WriteValue(
-				inter,
-				storageMapKey,
-				value,
-			)
+		// Write the value to the storage map.
+		// However, the value is not referenced by the root of the storage yet
+		// (a storage map), so atree storage validation must be temporarily disabled
+		// to not report any "unreferenced slab" errors.
+		withoutAtreeStorageValidationEnabled(
+			inter,
+			func() struct{} {
+				inter.Storage().
+					GetDomainStorageMap(
+						inter,
+						owner,
+						common.StorageDomainPathStorage,
+						true,
+					).
+					WriteValue(
+						inter,
+						storageMapKey,
+						value,
+					)
+
+				return struct{}{}
+			},
+		)
 	}
 
 	readValue := func(
