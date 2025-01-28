@@ -280,7 +280,7 @@ func TestCompileContinue(t *testing.T) {
 	t.Parallel()
 
 	t.SkipNow()
-	
+
 	checker, err := ParseAndCheck(t, `
       fun test(): Int {
           var i = 0
