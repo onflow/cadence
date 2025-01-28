@@ -563,13 +563,15 @@ func compileAndInvokeWithOptions(
 	arguments ...vm.Value,
 ) (vm.Value, error) {
 
+	programs := map[common.Location]*compiledProgram{}
+
 	location := common.ScriptLocation{0x1}
 	program := parseCheckAndCompileCodeWithOptions(
 		t,
 		code,
 		location,
 		options,
-		map[common.Location]*compiledProgram{},
+		programs,
 	)
 
 	vmConfig := options.VMConfig
@@ -577,6 +579,19 @@ func compileAndInvokeWithOptions(
 		storage := interpreter.NewInMemoryStorage(nil)
 		vmConfig = vm.NewConfig(storage).
 			WithAccountHandler(&testAccountHandler{})
+
+		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
+			program, ok := programs[location]
+			require.True(t, ok, "cannot find elaboration for %s", location)
+
+			elaboration := program.Elaboration
+			compositeType := elaboration.CompositeType(typeID)
+			if compositeType != nil {
+				return compositeType
+			}
+
+			return elaboration.InterfaceType(typeID)
+		}
 	}
 
 	scriptLocation := runtime_utils.NewScriptLocationGenerator()

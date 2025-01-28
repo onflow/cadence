@@ -3216,4 +3216,59 @@ func TestFunctionPostConditions(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "result must be larger than 10")
 	})
+
+	t.Run("resource typed result var passed", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, err := compileAndInvoke(t, `
+            resource R {
+                var i: Int
+                init() {
+                    self.i = 4
+                }
+            }
+
+            fun main(): @R {
+                post {
+                    result.i > 0
+                }
+
+
+                return <- create R()
+            }`,
+			"main",
+		)
+
+		require.NoError(t, err)
+		assert.IsType(t, &vm.CompositeValue{}, result)
+	})
+
+	t.Run("resource typed result var failed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := compileAndInvoke(t, `
+            resource R {
+                var i: Int
+                init() {
+                    self.i = 4
+                }
+            }
+
+            fun main(): @R {
+                post {
+                    result.i > 10
+                }
+
+
+                return <- create R()
+            }`,
+			"main",
+		)
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "pre/post condition failed")
+	})
+
 }

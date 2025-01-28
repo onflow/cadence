@@ -36,6 +36,7 @@ type ExtendedElaboration struct {
 	memberExpressionMemberAccessInfos map[*ast.MemberExpression]sema.MemberAccessInfo
 	assignmentStatementTypes          map[*ast.AssignmentStatement]sema.AssignmentStatementTypes
 	resultVariableTypes               map[ast.Element]sema.Type
+	referenceExpressionBorrowTypes    map[*ast.ReferenceExpression]sema.Type
 }
 
 func NewExtendedElaboration(elaboration *sema.Elaboration) *ExtendedElaboration {
@@ -209,10 +210,6 @@ func (e *ExtendedElaboration) CastingExpressionTypes(expression *ast.CastingExpr
 	return e.elaboration.CastingExpressionTypes(expression)
 }
 
-func (e *ExtendedElaboration) ReferenceExpressionBorrowType(expression *ast.ReferenceExpression) sema.Type {
-	return e.elaboration.ReferenceExpressionBorrowType(expression)
-}
-
 func (e *ExtendedElaboration) FunctionDeclarationFunctionType(declaration *ast.FunctionDeclaration) *sema.FunctionType {
 	return e.elaboration.FunctionDeclarationFunctionType(declaration)
 }
@@ -232,4 +229,21 @@ func (e *ExtendedElaboration) SetResultVariableType(declaration ast.Element, typ
 		e.resultVariableTypes = map[ast.Element]sema.Type{}
 	}
 	e.resultVariableTypes[declaration] = typ
+}
+
+func (e *ExtendedElaboration) ReferenceExpressionBorrowType(expression *ast.ReferenceExpression) sema.Type {
+	if e.referenceExpressionBorrowTypes != nil {
+		typ, ok := e.referenceExpressionBorrowTypes[expression]
+		if ok {
+			return typ
+		}
+	}
+	return e.elaboration.ReferenceExpressionBorrowType(expression)
+}
+
+func (e *ExtendedElaboration) SetReferenceExpressionBorrowType(expression *ast.ReferenceExpression, ty sema.Type) {
+	if e.referenceExpressionBorrowTypes == nil {
+		e.referenceExpressionBorrowTypes = map[*ast.ReferenceExpression]sema.Type{}
+	}
+	e.referenceExpressionBorrowTypes[expression] = ty
 }

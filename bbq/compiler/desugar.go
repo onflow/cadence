@@ -75,10 +75,6 @@ func NewDesugar(
 }
 
 func (d *Desugar) Run() *ast.Program {
-	// TODO: This assumes the program/elaboration is not cached.
-	//   i.e: Modifies the elaboration.
-	//   Handle this properly for cached programs.
-
 	declarations := d.program.Declarations()
 	for _, declaration := range declarations {
 		modifiedDeclaration := d.desugarDeclaration(declaration)
@@ -152,6 +148,8 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration)
 		originalReturnStmt, hasReturn = lastStmt.(*ast.ReturnStatement)
 	}
 
+	var returnType sema.Type = sema.VoidType
+
 	if hasReturn {
 		// Remove the return statement from here
 		modifiedStatements = modifiedStatements[:len(modifiedStatements)-1]
@@ -159,19 +157,22 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration)
 		if originalReturnStmt.Expression != nil {
 			// Instead, append a temp-result assignment.i.e:
 			// `let $_result = <expression>`
-			tempResultAssignmentStmt := d.tempResultAssignment(originalReturnStmt)
+			returnStmtTypes := d.elaboration.ReturnStatementTypes(originalReturnStmt)
+			returnType = returnStmtTypes.ReturnType
+
+			tempResultAssignmentStmt := d.tempResultAssignment(originalReturnStmt, returnStmtTypes)
 			modifiedStatements = append(modifiedStatements, tempResultAssignmentStmt)
 		}
 	}
 
 	// Once the return statement is removed, then append the post conditions.
 	if len(postConditions) > 0 {
-		modifiedStatements = d.declareResultVariable(funcBlock, modifiedStatements)
+		modifiedStatements = d.declareResultVariable(funcBlock, modifiedStatements, returnType)
 		modifiedStatements = append(modifiedStatements, postConditions...)
 	}
 
 	// Insert a return statement at the end, after post conditions.
-	tempResultReturn := d.tempResultReturnStatement(hasReturn, originalReturnStmt)
+	tempResultReturn := d.tempResultReturnStatement(hasReturn, originalReturnStmt, returnType)
 	modifiedStatements = append(modifiedStatements, tempResultReturn)
 
 	modifiedFuncBlock := ast.NewFunctionBlock(
@@ -202,20 +203,27 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration)
 }
 
 // Assign the return value to the temporary `$_result` synthetic variable.
-func (d *Desugar) tempResultAssignment(originalReturnStmt *ast.ReturnStatement) *ast.AssignmentStatement {
+func (d *Desugar) tempResultAssignment(
+	originalReturnStmt *ast.ReturnStatement,
+	returnStmtTypes sema.ReturnStatementTypes,
+) *ast.AssignmentStatement {
+
+	transfer := ast.TransferOperationCopy
+	if returnStmtTypes.ReturnType.IsResourceType() {
+		transfer = ast.TransferOperationMove
+	}
 
 	tempResultAssignmentStmt := ast.NewAssignmentStatement(
 		d.memoryGauge,
 		d.tempResultIdentifierExpr(originalReturnStmt.StartPos),
 		ast.NewTransfer(
 			d.memoryGauge,
-			ast.TransferOperationCopy, // TODO: determine based on return value (if resource, this should be a move)
+			transfer,
 			originalReturnStmt.StartPos,
 		),
 		originalReturnStmt.Expression,
 	)
 
-	returnStmtTypes := d.elaboration.ReturnStatementTypes(originalReturnStmt)
 	d.elaboration.SetAssignmentStatementTypes(
 		tempResultAssignmentStmt,
 		sema.AssignmentStatementTypes{
@@ -230,6 +238,7 @@ func (d *Desugar) tempResultAssignment(originalReturnStmt *ast.ReturnStatement) 
 func (d *Desugar) tempResultReturnStatement(
 	hasReturn bool,
 	originalReturnStmt *ast.ReturnStatement,
+	returnType sema.Type,
 ) *ast.ReturnStatement {
 
 	var returnExpr ast.Expression
@@ -239,6 +248,18 @@ func (d *Desugar) tempResultReturnStatement(
 		if originalReturnStmt.Expression != nil {
 			// `return $_result`
 			returnExpr = d.tempResultIdentifierExpr(originalReturnStmt.StartPos)
+
+			// If the return type is resource, then wrap it with a move.
+			if returnType.IsResourceType() {
+				// i.e: `return <- $_result`
+				returnExpr = ast.NewUnaryExpression(
+					d.memoryGauge,
+					ast.OperationMove,
+					returnExpr,
+					originalReturnStmt.StartPos,
+				)
+			}
+
 		}
 		astRange = originalReturnStmt.Range
 	} else {
@@ -302,6 +323,7 @@ func (d *Desugar) declareTempResultVariable(
 func (d *Desugar) declareResultVariable(
 	funcBlock *ast.FunctionBlock,
 	modifiedStatements []ast.Statement,
+	returnType sema.Type,
 ) []ast.Statement {
 
 	pos := funcBlock.EndPosition(d.memoryGauge)
@@ -313,8 +335,14 @@ func (d *Desugar) declareResultVariable(
 		return modifiedStatements
 	}
 
-	// TODO: if the return type is a resource, then this must be a reference expr.
-	valueExpr := d.tempResultIdentifierExpr(pos)
+	var returnValueExpr ast.Expression = d.tempResultIdentifierExpr(pos)
+
+	// If the return type is a resource, then this must be a reference expr.
+	if returnType.IsResourceType() {
+		referenceExpression := ast.NewReferenceExpression(d.memoryGauge, returnValueExpr, pos)
+		d.elaboration.SetReferenceExpressionBorrowType(referenceExpression, resultVarType)
+		returnValueExpr = referenceExpression
+	}
 
 	resultVarDecl := ast.NewVariableDeclaration(
 		d.memoryGauge,
@@ -326,11 +354,11 @@ func (d *Desugar) declareResultVariable(
 			pos,
 		),
 
-		// TODO: Is this needed? Only used in type-checker.
+		// No need of type annotation.
 		// Compiler retrieves types from the elaboration, which is updated below.
 		nil,
 
-		valueExpr,
+		returnValueExpr,
 		ast.NewTransfer(
 			d.memoryGauge,
 			// This is always a copy.
@@ -869,9 +897,6 @@ func (d *Desugar) inheritedFunctionsWithConditions(compositeType *sema.Composite
 	for _, conformance := range compositeType.EffectiveInterfaceConformances() {
 		interfaceType := conformance.InterfaceType
 
-		// TODO: Merge this elaboration with the current elaboration (d.elaboration).
-		//   Because the inherited functions need their corresponding elaboration
-		//   for code generation.
 		elaboration, err := d.config.ElaborationResolver(interfaceType.Location)
 		if err != nil {
 			panic(err)
