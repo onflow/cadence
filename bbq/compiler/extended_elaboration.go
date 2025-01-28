@@ -35,6 +35,7 @@ type ExtendedElaboration struct {
 	invocationExpressionTypes         map[*ast.InvocationExpression]sema.InvocationExpressionTypes
 	memberExpressionMemberAccessInfos map[*ast.MemberExpression]sema.MemberAccessInfo
 	assignmentStatementTypes          map[*ast.AssignmentStatement]sema.AssignmentStatementTypes
+	resultVariableTypes               map[ast.Element]sema.Type
 }
 
 func NewExtendedElaboration(elaboration *sema.Elaboration) *ExtendedElaboration {
@@ -210,4 +211,25 @@ func (e *ExtendedElaboration) CastingExpressionTypes(expression *ast.CastingExpr
 
 func (e *ExtendedElaboration) ReferenceExpressionBorrowType(expression *ast.ReferenceExpression) sema.Type {
 	return e.elaboration.ReferenceExpressionBorrowType(expression)
+}
+
+func (e *ExtendedElaboration) FunctionDeclarationFunctionType(declaration *ast.FunctionDeclaration) *sema.FunctionType {
+	return e.elaboration.FunctionDeclarationFunctionType(declaration)
+}
+
+func (e *ExtendedElaboration) ResultVariableType(enclosingBlock ast.Element) (typ sema.Type, exist bool) {
+	if e.resultVariableTypes != nil {
+		types, ok := e.resultVariableTypes[enclosingBlock]
+		if ok {
+			return types, ok
+		}
+	}
+	return e.elaboration.ResultVariableType(enclosingBlock)
+}
+
+func (e *ExtendedElaboration) SetResultVariableType(declaration ast.Element, typ sema.Type) {
+	if e.resultVariableTypes == nil {
+		e.resultVariableTypes = map[ast.Element]sema.Type{}
+	}
+	e.resultVariableTypes[declaration] = typ
 }

@@ -3145,4 +3145,75 @@ func TestFunctionPostConditions(t *testing.T) {
 		// The post-conditions of the interfaces are executed after that, with the reversed depth-first pre-order.
 		assert.Equal(t, []string{"A", "D", "F", "E", "C", "B"}, logs)
 	})
+
+	t.Run("result var failed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := compileAndInvoke(t, `
+            fun main(x: Int): Int {
+                post {
+                    result == 0: "x must be zero"
+                }
+                return x
+            }`,
+			"main",
+			vm.NewIntValue(3),
+		)
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "x must be zero")
+	})
+
+	t.Run("result var passed", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, err := compileAndInvoke(t, `
+            fun main(x: Int): Int {
+                post {
+                    result != 0
+                }
+                return x
+            }`,
+			"main",
+			vm.NewIntValue(3),
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(3), result)
+	})
+
+	t.Run("result var in inherited condition", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := compileAndInvoke(t, `
+            struct interface A {
+                access(all) fun test(_ a: Int): Int {
+                    post { result > 10: "result must be larger than 10" }
+                }
+            }
+
+            struct interface B: A {
+                access(all) fun test(_ a: Int): Int
+            }
+
+            struct C: B {
+                fun test(_ a: Int): Int {
+                    return a + 3
+                }
+            }
+
+            access(all) fun main(_ a: Int): Int {
+                let c = C()
+                return c.test(a)
+            }`,
+			"main",
+			vm.NewIntValue(4),
+		)
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "result must be larger than 10")
+	})
 }

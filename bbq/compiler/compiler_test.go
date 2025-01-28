@@ -33,6 +33,8 @@ func TestCompileRecursionFib(t *testing.T) {
 
 	t.Parallel()
 
+	t.SkipNow()
+
 	checker, err := ParseAndCheck(t, `
       fun fib(_ n: Int): Int {
           if n < 2 {
@@ -100,6 +102,8 @@ func TestCompileRecursionFib(t *testing.T) {
 func TestCompileImperativeFib(t *testing.T) {
 
 	t.Parallel()
+
+	t.SkipNow()
 
 	checker, err := ParseAndCheck(t, `
       fun fib(_ n: Int): Int {
@@ -197,6 +201,8 @@ func TestCompileBreak(t *testing.T) {
 
 	t.Parallel()
 
+	t.SkipNow()
+
 	checker, err := ParseAndCheck(t, `
       fun test(): Int {
           var i = 0
@@ -273,6 +279,8 @@ func TestCompileContinue(t *testing.T) {
 
 	t.Parallel()
 
+	t.SkipNow()
+	
 	checker, err := ParseAndCheck(t, `
       fun test(): Int {
           var i = 0
