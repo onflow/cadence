@@ -653,7 +653,7 @@ var _ Value = UInt{}
 
 func NewUInt(i uint) UInt {
 	return UInt{
-		Value: big.NewInt(int64(i)),
+		Value: (&big.Int{}).SetUint64(uint64(i)),
 	}
 }
 
@@ -860,7 +860,7 @@ var UInt128MemoryUsage = common.NewCadenceBigIntMemoryUsage(16)
 
 func NewUInt128(i uint) UInt128 {
 	return UInt128{
-		Value: big.NewInt(int64(i)),
+		Value: (&big.Int{}).SetUint64(uint64(i)),
 	}
 }
 
@@ -924,7 +924,7 @@ var UInt256MemoryUsage = common.NewCadenceBigIntMemoryUsage(32)
 
 func NewUInt256(i uint) UInt256 {
 	return UInt256{
-		Value: big.NewInt(int64(i)),
+		Value: (&big.Int{}).SetUint64(uint64(i)),
 	}
 }
 
@@ -1134,7 +1134,7 @@ var Word128MemoryUsage = common.NewCadenceBigIntMemoryUsage(16)
 
 func NewWord128(i uint) Word128 {
 	return Word128{
-		Value: big.NewInt(int64(i)),
+		Value: (&big.Int{}).SetUint64(uint64(i)),
 	}
 }
 
@@ -1198,7 +1198,7 @@ var Word256MemoryUsage = common.NewCadenceBigIntMemoryUsage(32)
 
 func NewWord256(i uint) Word256 {
 	return Word256{
-		Value: big.NewInt(int64(i)),
+		Value: (&big.Int{}).SetUint64(uint64(i)),
 	}
 }
 

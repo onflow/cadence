@@ -67,6 +67,23 @@ func parseCheckAndInterpretWithOptions(
 	return parseCheckAndInterpretWithOptionsAndMemoryMetering(t, code, options, nil)
 }
 
+func parseCheckAndInterpretWithAtreeValidationsDisabled(
+	t testing.TB,
+	code string,
+	options ParseCheckAndInterpretOptions,
+) (
+	inter *interpreter.Interpreter,
+	err error,
+) {
+	return parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
+		t,
+		code,
+		options,
+		nil,
+		false,
+	)
+}
+
 func parseCheckAndInterpretWithLogs(
 	tb testing.TB,
 	code string,
@@ -169,6 +186,30 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 	err error,
 ) {
 
+	// Atree validation should be disabled for memory metering tests.
+	// Otherwise, validation may also affect the memory consumption.
+	enableAtreeValidations := memoryGauge == nil
+
+	return parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
+		t,
+		code,
+		options,
+		memoryGauge,
+		enableAtreeValidations,
+	)
+}
+
+func parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
+	t testing.TB,
+	code string,
+	options ParseCheckAndInterpretOptions,
+	memoryGauge common.MemoryGauge,
+	enableAtreeValidations bool,
+) (
+	inter *interpreter.Interpreter,
+	err error,
+) {
+
 	checker, err := ParseAndCheckWithOptionsAndMemoryMetering(t,
 		code,
 		ParseAndCheckOptions{
@@ -197,10 +238,15 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 	if options.Config != nil {
 		config = *options.Config
 	}
-	if memoryGauge == nil {
+
+	if enableAtreeValidations {
 		config.AtreeValueValidationEnabled = true
 		config.AtreeStorageValidationEnabled = true
+	} else {
+		config.AtreeValueValidationEnabled = false
+		config.AtreeStorageValidationEnabled = false
 	}
+
 	if config.UUIDHandler == nil {
 		config.UUIDHandler = func() (uint64, error) {
 			uuid++
@@ -12557,5 +12603,659 @@ func TestInterpretStringTemplates(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("true"),
 			inter.Globals.Get("x").GetValue(inter),
 		)
+	})
+}
+
+func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, code string) {
+
+		t.Parallel()
+
+		ledger := NewTestLedger(nil, nil)
+
+		newInter := func() *interpreter.Interpreter {
+
+			inter, err := parseCheckAndInterpretWithOptions(t,
+				code,
+				ParseCheckAndInterpretOptions{
+					Config: &interpreter.Config{
+						Storage: runtime.NewStorage(ledger, nil),
+					},
+				},
+			)
+			require.NoError(t, err)
+
+			return inter
+		}
+
+		// Setup
+
+		inter := newInter()
+
+		foo, err := inter.Invoke("setup")
+		require.NoError(t, err)
+
+		address := common.MustBytesToAddress([]byte{0x1})
+		path := interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "foo")
+
+		storage := inter.Storage().(*runtime.Storage)
+		storageMap := storage.GetStorageMap(
+			address,
+			path.Domain.Identifier(),
+			true,
+		)
+
+		foo = foo.Transfer(
+			inter,
+			interpreter.EmptyLocationRange,
+			atree.Address(address),
+			false,
+			nil,
+			nil,
+			true,
+		)
+		storageMap.WriteValue(inter, interpreter.StringStorageMapKey(path.Identifier), foo)
+
+		err = storage.Commit(inter, false)
+		require.NoError(t, err)
+
+		// Update
+
+		inter = newInter()
+
+		storage = inter.Storage().(*runtime.Storage)
+		storageMap = storage.GetStorageMap(
+			address,
+			path.Domain.Identifier(),
+			false,
+		)
+		require.NotNil(t, storageMap)
+
+		ref := interpreter.NewStorageReferenceValue(
+			nil,
+			interpreter.UnauthorizedAccess,
+			address,
+			path,
+			nil,
+		)
+
+		result, err := inter.Invoke("update", ref)
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.TrueValue, result)
+
+		err = storage.Commit(inter, false)
+		require.NoError(t, err)
+
+		// Update again
+
+		inter = newInter()
+
+		storage = inter.Storage().(*runtime.Storage)
+		storageMap = storage.GetStorageMap(
+			address,
+			path.Domain.Identifier(),
+			false,
+		)
+		require.NotNil(t, storageMap)
+
+		ref = interpreter.NewStorageReferenceValue(
+			nil,
+			interpreter.UnauthorizedAccess,
+			address,
+			path,
+			nil,
+		)
+
+		result, err = inter.Invoke("updateAgain", ref)
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.TrueValue, result)
+	}
+
+	t.Run("dictionary, one level", func(t *testing.T) {
+
+		test(t, `
+            struct Foo {
+                let values: {String: Int}?
+
+                init() {
+                    self.values = {}
+                }
+
+                fun set(key: String, value: Int) {
+                    if let ref: auth(Mutate) &{String: Int} = &self.values {
+                        ref[key] = value
+                    }
+                }
+
+                fun get(key: String): Int? {
+                    if let ref: &{String: Int} = &self.values {
+                        return ref[key]
+                    }
+                    return nil
+                }
+            }
+
+            fun setup(): Foo {
+                let foo = Foo()
+                foo.set(key: "a", value: 1)
+                return foo
+            }
+
+            fun update(foo: &Foo): Bool {
+                if foo.get(key: "a") != 1 {
+                     return false
+                }
+                foo.set(key: "a", value: 2)
+                return true
+            }
+
+            fun updateAgain(foo: &Foo): Bool {
+                if foo.get(key: "a") != 2 {
+                     return false
+                }
+                foo.set(key: "a", value: 3)
+                return true
+            }
+        `)
+	})
+
+	t.Run("dictionary, two levels", func(t *testing.T) {
+		test(t, `
+            struct Foo {
+                let values: {String: Int}??
+
+                init() {
+                    self.values = {}
+                }
+
+                fun set(key: String, value: Int) {
+                    if let optRef: auth(Mutate) &{String: Int}? = &self.values {
+                        if let ref: auth(Mutate) &{String: Int} = optRef {
+                            ref[key] = value
+                        }
+                    }
+                }
+
+                fun get(key: String): Int? {
+                    if let optRef: &{String: Int}? = &self.values {
+                        if let ref: &{String: Int} = optRef {
+                            return ref[key]
+                        }
+                    }
+                    return nil
+                }
+            }
+
+            fun setup(): Foo {
+                let foo = Foo()
+                foo.set(key: "a", value: 1)
+                return foo
+            }
+
+            fun update(foo: &Foo): Bool {
+                if foo.get(key: "a") != 1 {
+                     return false
+                }
+                foo.set(key: "a", value: 2)
+                return true
+            }
+
+            fun updateAgain(foo: &Foo): Bool {
+                if foo.get(key: "a") != 2 {
+                     return false
+                }
+                foo.set(key: "a", value: 3)
+                return true
+            }
+       `)
+	})
+
+	t.Run("dictionary, nested", func(t *testing.T) {
+
+		test(t, `
+            struct Bar {
+                let values: {String: Int}?
+
+                init() {
+                    self.values = {}
+                }
+
+                fun set(key: String, value: Int) {
+                    if let ref: auth(Mutate) &{String: Int} = &self.values {
+                        ref[key] = value
+                    }
+                }
+
+                fun get(key: String): Int? {
+                    if let ref: &{String: Int} = &self.values {
+                        return ref[key]
+                    }
+                    return nil
+                }
+            }
+
+            struct Foo {
+                let values: {String: Bar}?
+
+                init() {
+                    self.values = {}
+                }
+
+                fun set(key: String, value: Int) {
+                    if let ref: auth(Mutate) &{String: Bar} = &self.values {
+                        if ref[key] == nil {
+                            ref[key] = Bar()
+                        }
+                        ref[key]?.set(key: key, value: value)
+                    }
+                }
+
+                fun get(key: String): Int? {
+                    if let ref: &{String: Bar} = &self.values {
+                        return ref[key]?.get(key: key) ?? nil
+                    }
+                    return nil
+                }
+            }
+
+            fun setup(): Foo {
+                let foo = Foo()
+                foo.set(key: "a", value: 1)
+                return foo
+            }
+
+            fun update(foo: &Foo): Bool {
+                if foo.get(key: "a") != 1 {
+                     return false
+                }
+                foo.set(key: "a", value: 2)
+                return true
+            }
+
+            fun updateAgain(foo: &Foo): Bool {
+                if foo.get(key: "a") != 2 {
+                     return false
+                }
+                foo.set(key: "a", value: 3)
+                return true
+            }
+        `)
+	})
+
+	t.Run("resource, one level", func(t *testing.T) {
+
+		test(t, `
+
+              resource Bar {
+                  var value: Int
+
+                  init() {
+                      self.value = 0
+                  }
+              }
+
+              resource Foo {
+                  let bar: @Bar?
+
+                  init() {
+                      self.bar <- create Bar()
+                  }
+
+                  fun set(value: Int) {
+                      if let ref: &Bar = &self.bar {
+                          ref.value = value
+                      }
+                  }
+
+                  fun getValue(): Int? {
+                      return self.bar?.value
+                  }
+              }
+
+              fun setup(): @Foo {
+                  let foo <- create Foo()
+                  foo.set(value: 1)
+                  return <-foo
+              }
+
+              fun update(foo: &Foo): Bool {
+                  if foo.getValue() != 1 {
+                       return false
+                  }
+                  foo.set(value: 2)
+                  return true
+              }
+
+              fun updateAgain(foo: &Foo): Bool {
+                  if foo.getValue() != 2 {
+                       return false
+                  }
+                  foo.set(value: 3)
+                  return true
+              }
+        `)
+
+	})
+
+	t.Run("resource, two levels", func(t *testing.T) {
+
+		test(t, `
+
+              resource Bar {
+                  var value: Int
+
+                  init() {
+                      self.value = 0
+                  }
+              }
+
+              resource Foo {
+                  let bar: @Bar??
+
+                  init() {
+                      self.bar <- create Bar()
+                  }
+
+                  fun set(value: Int) {
+                      if let optRef: &Bar? = &self.bar {
+                          if let ref = optRef {
+                              ref.value = value
+                          }
+                      }
+                  }
+
+                  fun getValue(): Int? {
+                      if let optRef: &Bar? = &self.bar {
+                          return optRef?.value
+                      }
+                      return nil
+                  }
+              }
+
+              fun setup(): @Foo {
+                  let foo <- create Foo()
+                  foo.set(value: 1)
+                  return <-foo
+              }
+
+              fun update(foo: &Foo): Bool {
+                  if foo.getValue() != 1 {
+                       return false
+                  }
+                  foo.set(value: 2)
+                  return true
+              }
+
+              fun updateAgain(foo: &Foo): Bool {
+                  if foo.getValue() != 2 {
+                       return false
+                  }
+                  foo.set(value: 3)
+                  return true
+              }
+        `)
+	})
+
+	t.Run("resource, nested", func(t *testing.T) {
+
+		test(t, `
+              resource Baz {
+                  var value: Int
+
+                  init() {
+                      self.value = 0
+                  }
+              }
+
+              resource Bar {
+                  let baz: @Baz?
+
+                  init() {
+                      self.baz <- create Baz()
+                  }
+
+                  fun set(value: Int) {
+                      if let ref: &Baz = &self.baz {
+                          ref.value = value
+                      }
+                  }
+
+                  fun getValue(): Int? {
+                      return self.baz?.value
+                  }
+              }
+
+              resource Foo {
+                  let bar: @Bar?
+
+                  init() {
+                      self.bar <- create Bar()
+                  }
+
+                  fun set(value: Int) {
+                      if let ref: &Bar = &self.bar {
+                          ref.set(value: value)
+                      }
+                  }
+
+                  fun getValue(): Int? {
+                      return self.bar?.getValue() ?? nil
+                  }
+              }
+
+              fun setup(): @Foo {
+                  let foo <- create Foo()
+                  foo.set(value: 1)
+                  return <-foo
+              }
+
+              fun update(foo: &Foo): Bool {
+                  if foo.getValue() != 1 {
+                       return false
+                  }
+                  foo.set(value: 2)
+                  return true
+              }
+
+              fun updateAgain(foo: &Foo): Bool {
+                  if foo.getValue() != 2 {
+                       return false
+                  }
+                  foo.set(value: 3)
+                  return true
+              }
+        `)
+	})
+
+	t.Run("array, one level", func(t *testing.T) {
+
+		test(t, `
+
+          struct Foo {
+              let values: [Int]?
+
+              init() {
+                  self.values = []
+              }
+
+              fun set(value: Int) {
+                  if let ref: auth(Mutate) &[Int] = &self.values {
+                      if ref.length == 0 {
+                         ref.append(value)
+                      } else {
+                         ref[0] = value
+                      }
+                  }
+              }
+
+              fun getValue(): Int? {
+                  if let ref: &[Int] = &self.values {
+                      return ref[0]
+                  }
+                  return nil
+              }
+          }
+
+          fun setup(): Foo {
+              let foo = Foo()
+              foo.set(value: 1)
+              return foo
+          }
+
+          fun update(foo: &Foo): Bool {
+              if foo.getValue() != 1 {
+                   return false
+              }
+              foo.set(value: 2)
+              return true
+          }
+
+          fun updateAgain(foo: &Foo): Bool {
+              if foo.getValue() != 2 {
+                   return false
+              }
+              foo.set(value: 3)
+              return true
+          }
+        `)
+
+	})
+
+	t.Run("array, two levels", func(t *testing.T) {
+
+		test(t, `
+
+          struct Foo {
+              let values: [Int]??
+
+              init() {
+                  self.values = []
+              }
+
+              fun set(value: Int) {
+                  if let optRef: auth(Mutate) &[Int]? = &self.values {
+                      if let ref = optRef {
+                          if ref.length == 0 {
+                             ref.append(value)
+                          } else {
+                             ref[0] = value
+                          }
+                      }
+                  }
+              }
+
+              fun getValue(): Int? {
+                  if let optRef: &[Int]? = &self.values {
+                      if let ref = optRef {
+                          return ref[0]
+                      }
+                  }
+                  return nil
+              }
+          }
+
+          fun setup(): Foo {
+              let foo = Foo()
+              foo.set(value: 1)
+              return foo
+          }
+
+          fun update(foo: &Foo): Bool {
+              if foo.getValue() != 1 {
+                   return false
+              }
+              foo.set(value: 2)
+              return true
+          }
+
+          fun updateAgain(foo: &Foo): Bool {
+              if foo.getValue() != 2 {
+                   return false
+              }
+              foo.set(value: 3)
+              return true
+          }
+        `)
+	})
+
+	t.Run("array, nested", func(t *testing.T) {
+
+		test(t, `
+
+           struct Bar {
+              let values: [Int]?
+
+              init() {
+                  self.values = []
+              }
+
+              fun set(value: Int) {
+                  if let ref: auth(Mutate) &[Int] = &self.values {
+                      if ref.length == 0 {
+                         ref.append(value)
+                      } else {
+                         ref[0] = value
+                      }
+                  }
+              }
+
+              fun getValue(): Int? {
+                  if let ref: &[Int] = &self.values {
+                      return ref[0]
+                  }
+                  return nil
+              }
+          }
+
+          struct Foo {
+              let values: [Bar]?
+
+              init() {
+                  self.values = []
+              }
+
+              fun set(value: Int) {
+                  if let ref: auth(Mutate) &[Bar] = &self.values {
+                      if ref.length == 0 {
+                         ref.append(Bar())
+                      }
+                      ref[0].set(value: value)
+                  }
+              }
+
+              fun getValue(): Int? {
+                  if let ref: &[Bar] = &self.values {
+                      return ref[0].getValue()
+                  }
+                  return nil
+              }
+          }
+
+          fun setup(): Foo {
+              let foo = Foo()
+              foo.set(value: 1)
+              return foo
+          }
+
+          fun update(foo: &Foo): Bool {
+              if foo.getValue() != 1 {
+                   return false
+              }
+              foo.set(value: 2)
+              return true
+          }
+
+          fun updateAgain(foo: &Foo): Bool {
+              if foo.getValue() != 2 {
+                   return false
+              }
+              foo.set(value: 3)
+              return true
+          }
+        `)
+
 	})
 }

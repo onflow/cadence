@@ -11954,3 +11954,327 @@ func TestRuntimeInvocationReturnTypeInferenceFailure(t *testing.T) {
 	var typeErr *sema.InvocationTypeInferenceError
 	require.ErrorAs(t, err, &typeErr)
 }
+
+func TestRuntimeSomeValueChildContainerMutation(t *testing.T) {
+
+	t.Parallel()
+
+	buyTicketTx := []byte(`
+       import Foo from 0x1
+
+       transaction() {
+           prepare(acct: auth(Storage, Capabilities) &Account) {
+               Foo.logVaultBalance()
+               var pool = Foo.borrowLotteryPool()!
+               pool.buyTickets()
+               Foo.logVaultBalance()
+           }
+           execute {}
+       }
+    `)
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	setupTest := func(t *testing.T) (
+		runTransaction func(tx []byte) (logs []string),
+	) {
+
+		rt := NewTestInterpreterRuntime()
+
+		accountCodes := map[Location][]byte{}
+
+		address := common.MustBytesToAddress([]byte{0x1})
+
+		var logs []string
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{address}, nil
+			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				return accountCodes[location], nil
+			},
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
+			OnProgramLog: func(message string) {
+				logs = append(logs, message)
+			},
+			OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+				return json.Decode(nil, b)
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				return nil
+			},
+		}
+
+		runTransaction = func(tx []byte) []string {
+
+			logs = logs[:0]
+
+			err := rt.ExecuteTransaction(
+				Script{
+					Source: tx,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			require.NoError(t, err)
+
+			return logs
+		}
+
+		return runTransaction
+	}
+
+	t.Run("non optional vault", func(t *testing.T) {
+
+		t.Parallel()
+
+		contractFoo := `
+			access(all) contract Foo {
+				access(all) resource Vault {
+					access(all)
+					var balance: UFix64
+					init(balance: UFix64) {
+						self.balance = balance
+					}
+					access(all) fun withdraw(amount: UFix64): @Vault {
+						self.balance = self.balance - amount
+						return <-create Vault(balance: amount)
+					}
+					access(all) fun deposit(from: @Vault) {
+						self.balance = self.balance + from.balance
+						destroy from
+					}
+				}
+				access(all) fun createEmptyVault(): @Vault {
+				   return <- create Vault(balance: 0.0)
+				}
+				access(all) resource LotteryPool {
+					access(contract)
+					let ftVault: @Vault
+					init() {
+						self.ftVault <- Foo.createEmptyVault()
+					}
+					access(all)
+					fun buyTickets() {
+						self.borrowVault().deposit(from: <- create Vault(balance: 5.0))
+					}
+					access(all) fun buyNewTicket() {
+						self.borrowVault().deposit(from: <- create Vault(balance: 5.0))
+					}
+					access(self)
+					view fun borrowVault(): &Vault {
+						return &self.ftVault as &Vault
+					}
+				}
+				init() {
+					self.account.storage.save(<- create LotteryPool(), to: /storage/lottery_pool)
+				}
+				access(all) fun borrowLotteryPool(): &LotteryPool? {
+					return self.account.storage.borrow<&LotteryPool>(from: /storage/lottery_pool)
+				}
+				access(all) fun logVaultBalance() {
+					var pool = self.borrowLotteryPool()!
+					log(pool.ftVault.balance)
+				}
+			}
+		`
+
+		runTransaction := setupTest(t)
+
+		runTransaction(DeploymentTransaction(
+			"Foo",
+			[]byte(contractFoo),
+		))
+
+		logs := runTransaction(buyTicketTx)
+		assert.Equal(t, []string{"0.00000000", "5.00000000"}, logs)
+
+		logs = runTransaction(buyTicketTx)
+		assert.Equal(t, []string{"5.00000000", "10.00000000"}, logs)
+	})
+
+	t.Run("optional vault", func(t *testing.T) {
+
+		t.Parallel()
+
+		contractFoo := `
+		  access(all) contract Foo {
+			  access(all) resource Vault {
+				  access(all)
+				  var balance: UFix64
+				  init(balance: UFix64) {
+					  self.balance = balance
+				  }
+				  access(all) fun withdraw(amount: UFix64): @Vault {
+					  self.balance = self.balance - amount
+					  return <-create Vault(balance: amount)
+				  }
+				  access(all) fun deposit(from: @Vault) {
+					  self.balance = self.balance + from.balance
+					  destroy from
+				  }
+			  }
+			  access(all) fun createEmptyVault(): @Vault {
+				 return <- create Vault(balance: 0.0)
+			  }
+			  access(all) resource LotteryPool {
+				  access(contract)
+				  let ftVault: @Vault?
+				  init() {
+					  self.ftVault <- Foo.createEmptyVault()
+				  }
+				  access(all)
+				  fun buyTickets() {
+					  self.borrowVault().deposit(from: <- create Vault(balance: 5.0))
+				  }
+				  access(all) fun buyNewTicket() {
+					  self.borrowVault().deposit(from: <- create Vault(balance: 5.0))
+				  }
+				  access(self)
+				  view fun borrowVault(): &Vault {
+					  return &self.ftVault as &Vault? ?? panic("Cannot borrow vault")
+				  }
+			  }
+			  init() {
+				  self.account.storage.save(<- create LotteryPool(), to: /storage/lottery_pool)
+			  }
+			  access(all) fun borrowLotteryPool(): &LotteryPool? {
+				  return self.account.storage.borrow<&LotteryPool>(from: /storage/lottery_pool)
+			  }
+			  access(all) fun logVaultBalance() {
+				  var pool = self.borrowLotteryPool()!
+				  log(pool.ftVault!.balance)
+			  }
+		  }
+	   `
+
+		runTransaction := setupTest(t)
+
+		runTransaction(DeploymentTransaction(
+			"Foo",
+			[]byte(contractFoo),
+		))
+
+		logs := runTransaction(buyTicketTx)
+		assert.Equal(t, []string{"0.00000000", "5.00000000"}, logs)
+
+		logs = runTransaction(buyTicketTx)
+		assert.Equal(t, []string{"5.00000000", "10.00000000"}, logs)
+	})
+
+	t.Run("deeply nested optional vault", func(t *testing.T) {
+		contractFoo := `
+		   access(all)
+		   contract Foo {
+			   access(all)
+			   resource Vault {
+				   access(all)
+				   var balance: UFix64
+				   init(balance: UFix64) {
+					   self.balance = balance
+				   }
+				   access(all)
+				   fun withdraw(amount: UFix64): @Vault {
+					   self.balance = self.balance - amount
+					   return <-create Vault(balance: amount)
+				   }
+				   access(all)
+				   fun deposit(from: @Vault) {
+					   self.balance = self.balance + from.balance
+					   destroy from
+				   }
+			   }
+			   access(all)
+			   fun createEmptyVault(): @Vault {
+				  return <- create Vault(balance: 0.0)
+			   }
+			   access(all)
+			   resource LotteryPool {
+				   access(contract)
+				   let jackpotPool: @Change
+				   access(contract)
+				   let lotteries: @{UInt64: Lottery}
+				   init() {
+					   self.jackpotPool <- create Change()
+					   self.lotteries <- {0: <- create Lottery()}
+				   }
+				   access(all)
+				   fun buyTickets() {
+					   var lotteryRef = self.borrowLotteryRef()!
+					   lotteryRef.buyNewTicket()
+				   }
+				   access(self)
+				   fun borrowLotteryRef(): &Lottery? {
+						return &self.lotteries[0]
+				   }
+			   }
+			   access(all)
+			   resource Lottery {
+				   access(contract)
+				   let current: @Change
+				   init() {
+					   self.current <- create Change()
+				   }
+				   access(all)
+				   fun buyNewTicket() {
+					   var change = self.borrowCurrentLotteryChange()
+					   change.forceMerge()
+				   }
+				   access(contract)
+				   view fun borrowCurrentLotteryChange(): &Change {
+					   return &self.current
+				   }
+			   }
+			   access(all)
+			   resource Change {
+				   access(contract)
+				   var ftVault: @Vault?
+				   init() {
+					   self.ftVault <- Foo.createEmptyVault()
+				   }
+				   access(all)
+				   fun forceMerge() {
+						self.borrowVault().deposit(from: <- create Vault(balance: 5.0))
+				   }
+				   access(self)
+				   view fun borrowVault(): &Vault {
+					   return &self.ftVault as &Vault? ?? panic("Cannot borrow vault")
+				   }
+			   }
+			   init() {
+				   self.account.storage.save(<- create LotteryPool(), to: /storage/lottery_pool)
+			   }
+			   access(all)
+			   fun borrowLotteryPool(): &LotteryPool? {
+				   return self.account.storage.borrow<&LotteryPool>(from: /storage/lottery_pool)
+			   }
+			   access(all)
+			   fun logVaultBalance() {
+				   var pool = self.borrowLotteryPool()!
+				   log(pool.lotteries[0]!.current.ftVault!.balance)
+			   }
+		   }
+	    `
+
+		runTransaction := setupTest(t)
+
+		runTransaction(DeploymentTransaction(
+			"Foo",
+			[]byte(contractFoo),
+		))
+
+		logs := runTransaction(buyTicketTx)
+		assert.Equal(t, []string{"0.00000000", "5.00000000"}, logs)
+
+		logs = runTransaction(buyTicketTx)
+		assert.Equal(t, []string{"5.00000000", "10.00000000"}, logs)
+	})
+}

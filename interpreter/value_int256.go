@@ -649,21 +649,26 @@ func (v Int256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 		})
 	}
 
+	if o.BigInt.Sign() < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 256 {
+		return NewInt256ValueFromUint64(interpreter, 0)
+	}
+
+	// The maximum shift value at this point is 255, which may lead to an
+	// additional allocation of up to 256 bits. Add usage for possible
+	// intermediate value.
+	common.UseMemory(interpreter, Int256MemoryUsage)
+
 	valueGetter := func() *big.Int {
 		res := new(big.Int)
-		if o.BigInt.Sign() < 0 {
-			panic(UnderflowError{
-				LocationRange: locationRange,
-			})
-		}
-		if !o.BigInt.IsUint64() {
-			panic(OverflowError{
-				LocationRange: locationRange,
-			})
-		}
-		res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-
-		return res
+		res = toTwosComplement(res, v.BigInt, 256)
+		res = res.Lsh(res, uint(o.BigInt.Uint64()))
+		res = truncate(res, 256/bits.UintSize)
+		return fromTwosComplement(res)
 	}
 
 	return NewInt256ValueFromBigInt(interpreter, valueGetter)
@@ -680,18 +685,17 @@ func (v Int256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 		})
 	}
 
+	if o.BigInt.Sign() < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+	if !o.BigInt.IsUint64() {
+		return NewInt256ValueFromUint64(interpreter, 0)
+	}
+
 	valueGetter := func() *big.Int {
 		res := new(big.Int)
-		if o.BigInt.Sign() < 0 {
-			panic(UnderflowError{
-				LocationRange: locationRange,
-			})
-		}
-		if !o.BigInt.IsUint64() {
-			panic(OverflowError{
-				LocationRange: locationRange,
-			})
-		}
 		res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
 		return res
 	}

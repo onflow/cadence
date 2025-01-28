@@ -534,7 +534,7 @@ func (v UIntValue) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{
+		panic(NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
@@ -568,7 +568,7 @@ func (v UIntValue) BitwiseRightShift(interpreter *Interpreter, other IntegerValu
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{
+		panic(NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}

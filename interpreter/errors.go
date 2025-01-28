@@ -300,7 +300,21 @@ func (e UnderflowError) Error() string {
 	return "underflow"
 }
 
-// UnderflowError
+// NegativeShiftError
+
+type NegativeShiftError struct {
+	LocationRange
+}
+
+var _ errors.UserError = NegativeShiftError{}
+
+func (NegativeShiftError) IsUserError() {}
+
+func (e NegativeShiftError) Error() string {
+	return "negative shift"
+}
+
+// DivisionByZeroError
 
 type DivisionByZeroError struct {
 	LocationRange
