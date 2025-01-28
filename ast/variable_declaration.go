@@ -151,7 +151,12 @@ func (d *VariableDeclaration) Doc() prettier.Doc {
 		)
 	}
 
-	valueDoc := d.Value.Doc()
+	var valueDoc prettier.Doc
+	if d.Value != nil {
+		valueDoc = d.Value.Doc()
+	} else {
+		valueDoc = prettier.Line{}
+	}
 
 	var valuesDoc prettier.Doc
 

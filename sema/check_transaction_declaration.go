@@ -70,6 +70,7 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 	}
 
 	checker.visitWithPostConditions(
+		declaration,
 		declaration.PostConditions,
 		VoidType,
 		nil,
