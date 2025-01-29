@@ -16,26 +16,27 @@
  * limitations under the License.
  */
 
-package wasm
+package runtime_utils
 
-import "fmt"
+import (
+	"testing"
 
-// Import represents an import
-type Import struct {
-	Module string
-	Name   string
-	// TODO: add support for tables, memories, and globals. adjust name section!
-	TypeIndex uint32
-}
-
-func (imp Import) FullName() string {
-	return fmt.Sprintf("%s.%s", imp.Module, imp.Name)
-}
-
-// importIndicator is the byte used to indicate the kind of import in the WASM binary
-type importIndicator byte
-
-const (
-	// importIndicatorFunction is the byte used to indicate the import of a function in the WASM binary
-	importIndicatorFunction importIndicator = 0x0
+	"github.com/onflow/atree"
+	"github.com/stretchr/testify/require"
 )
+
+func CheckAtreeStorageHealth(tb testing.TB, storage atree.SlabStorage, expectedRootSlabIDs []atree.SlabID) {
+	rootSlabIDs, err := atree.CheckStorageHealth(storage, -1)
+	require.NoError(tb, err)
+
+	nonTempRootSlabIDs := make([]atree.SlabID, 0, len(rootSlabIDs))
+
+	for rootSlabID := range rootSlabIDs { //nolint:maprange
+		if rootSlabID.HasTempAddress() {
+			continue
+		}
+		nonTempRootSlabIDs = append(nonTempRootSlabIDs, rootSlabID)
+	}
+
+	require.ElementsMatch(tb, nonTempRootSlabIDs, expectedRootSlabIDs)
+}

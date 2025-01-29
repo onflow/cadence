@@ -70,3 +70,18 @@ func (i PathDomain) Identifier() string {
 
 	panic(errors.NewUnreachableError())
 }
+
+func (i PathDomain) StorageDomain() StorageDomain {
+	switch i {
+	case PathDomainStorage:
+		return StorageDomainPathStorage
+
+	case PathDomainPrivate:
+		return StorageDomainPathPrivate
+
+	case PathDomainPublic:
+		return StorageDomainPathPublic
+	}
+
+	panic(errors.NewUnreachableError())
+}

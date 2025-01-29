@@ -747,7 +747,10 @@ func parseHexadecimalLocation(p *parser) common.AddressLocation {
 	address, err := common.BytesToAddress(rawAddress)
 	if err != nil {
 		// Any returned error is a syntax error. e.g: Address too large error.
-		p.reportSyntaxError(err.Error())
+		p.report(&SyntaxError{
+			Pos:     p.current.StartPos,
+			Message: err.Error(),
+		})
 	}
 
 	return common.NewAddressLocation(p.memoryGauge, address, "")
