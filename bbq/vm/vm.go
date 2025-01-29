@@ -475,7 +475,7 @@ func opInvokeDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
 	vm.pushCallFrame(functionValue, arguments)
 	vm.dropN(len(arguments))
 
-	// TODO: drop the receiver?
+	// We do not need to drop the receiver, as the parameter count given in the instruction already includes it
 }
 
 func opDrop(vm *VM) {
