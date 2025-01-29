@@ -107,7 +107,13 @@ func (executor *interpreterScriptExecutor) preprocess() (err error) {
 
 	runtimeInterface := context.Interface
 
-	storage := NewStorage(runtimeInterface, runtimeInterface)
+	storage := NewStorage(
+		runtimeInterface,
+		runtimeInterface,
+		StorageConfig{
+			StorageFormatV2Enabled: interpreterRuntime.defaultConfig.StorageFormatV2Enabled,
+		},
+	)
 	executor.storage = storage
 
 	environment := context.Environment

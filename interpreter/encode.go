@@ -1684,10 +1684,6 @@ func (c CompositeTypeInfo) IsComposite() bool {
 	return true
 }
 
-func (c CompositeTypeInfo) Identifier() string {
-	return string(c.Location.TypeID(nil, c.QualifiedIdentifier))
-}
-
 func (c CompositeTypeInfo) Copy() atree.TypeInfo {
 	// Return c as is because c is a value type.
 	return c
@@ -1739,10 +1735,6 @@ func (e EmptyTypeInfo) Encode(encoder *cbor.StreamEncoder) error {
 
 func (e EmptyTypeInfo) IsComposite() bool {
 	return false
-}
-
-func (e EmptyTypeInfo) Identifier() string {
-	return ""
 }
 
 func (e EmptyTypeInfo) Copy() atree.TypeInfo {

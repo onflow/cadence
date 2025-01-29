@@ -123,7 +123,7 @@ func (*StorageReferenceValue) IsImportable(_ *Interpreter, _ LocationRange) bool
 
 func (v *StorageReferenceValue) dereference(interpreter *Interpreter, locationRange LocationRange) (*Value, error) {
 	address := v.TargetStorageAddress
-	domain := v.TargetPath.Domain.Identifier()
+	domain := v.TargetPath.Domain.StorageDomain()
 	identifier := v.TargetPath.Identifier
 
 	storageMapKey := StringStorageMapKey(identifier)

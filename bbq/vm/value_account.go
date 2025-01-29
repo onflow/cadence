@@ -23,7 +23,6 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/stdlib"
 )
 
 type AccountIDGenerator interface {
@@ -143,8 +142,7 @@ func getCapability(
 	// Read stored capability, if any
 
 	readValue := ReadStored(
-		config.MemoryGauge,
-		config.Storage,
+		config,
 		address,
 		domain,
 		identifier,
@@ -339,7 +337,7 @@ func storeCapabilityController(
 	existed := WriteStored(
 		config,
 		address,
-		stdlib.CapabilityControllerStorageDomain,
+		common.StorageDomainCapabilityController,
 		storageMapKey,
 		controller,
 	)
@@ -376,7 +374,12 @@ func recordStorageCapabilityController(
 
 	storageMapKey := interpreter.StringStorageMapKey(identifier)
 
-	accountStorage := config.Storage.GetStorageMap(address, stdlib.PathCapabilityStorageDomain, true)
+	accountStorage := config.Storage.GetDomainStorageMap(
+		config.interpreter(),
+		address,
+		common.StorageDomainPathCapability,
+		true,
+	)
 
 	referenced := accountStorage.ReadValue(config.MemoryGauge, interpreter.StringStorageMapKey(identifier))
 	readValue := InterpreterValueToVMValue(config.Storage, referenced)

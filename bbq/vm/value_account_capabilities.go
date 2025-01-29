@@ -142,15 +142,17 @@ func init() {
 				}
 
 				domain := path.Domain.Identifier()
+				storageDomain, _ := common.StorageDomainFromIdentifier(domain)
+
 				identifier := path.Identifier
 
 				// Prevent an overwrite
 
 				storageMapKey := interpreter.StringStorageMapKey(identifier)
 				if StoredValueExists(
-					config.Storage,
+					config,
 					accountAddress,
-					domain,
+					storageDomain,
 					storageMapKey,
 				) {
 					panic(interpreter.OverwriteError{
@@ -174,7 +176,7 @@ func init() {
 				WriteStored(
 					config,
 					accountAddress,
-					domain,
+					storageDomain,
 					storageMapKey,
 					capabilityValue,
 				)

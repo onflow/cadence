@@ -6054,14 +6054,7 @@ func TestParseStringTemplate(t *testing.T) {
 		"\(test)"
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.NoError(t, err)
+		require.Empty(t, errs)
 
 		expected := &ast.StringTemplateExpression{
 			Values: []string{
@@ -6093,14 +6086,7 @@ func TestParseStringTemplate(t *testing.T) {
 		"this is a test \(abc)\(def) test"
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.NoError(t, err)
+		require.Empty(t, errs)
 
 		expected := &ast.StringTemplateExpression{
 			Values: []string{
@@ -6139,14 +6125,7 @@ func TestParseStringTemplate(t *testing.T) {
 		  "this is a test \(FOO)
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.Error(t, err)
+		require.NotEmpty(t, errs)
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -6166,14 +6145,7 @@ func TestParseStringTemplate(t *testing.T) {
 		  "\(.)"
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.Error(t, err)
+		require.NotEmpty(t, errs)
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -6185,7 +6157,7 @@ func TestParseStringTemplate(t *testing.T) {
 		)
 	})
 
-	t.Run("invalid, num", func(t *testing.T) {
+	t.Run("valid, num", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -6193,23 +6165,7 @@ func TestParseStringTemplate(t *testing.T) {
 		  "\(2 + 2) is a"
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.Error(t, err)
-		AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "expected identifier got: 2 + 2",
-					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
-				},
-			},
-			errs,
-		)
+		require.Empty(t, errs)
 	})
 
 	t.Run("valid, nested identifier", func(t *testing.T) {
@@ -6220,14 +6176,7 @@ func TestParseStringTemplate(t *testing.T) {
 		  "\((a))"
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.NoError(t, err)
+		require.Empty(t, errs)
 
 		expected := &ast.StringTemplateExpression{
 			Values: []string{
@@ -6259,14 +6208,7 @@ func TestParseStringTemplate(t *testing.T) {
 		  "\()"
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.Error(t, err)
+		require.NotEmpty(t, errs)
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -6278,7 +6220,7 @@ func TestParseStringTemplate(t *testing.T) {
 		)
 	})
 
-	t.Run("invalid, function identifier", func(t *testing.T) {
+	t.Run("valid, function identifier", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -6286,26 +6228,10 @@ func TestParseStringTemplate(t *testing.T) {
 			"\(add())"
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.Error(t, err)
-		AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "expected identifier got: add()",
-					Pos:     ast.Position{Offset: 12, Line: 2, Column: 11},
-				},
-			},
-			errs,
-		)
+		require.Empty(t, errs)
 	})
 
-	t.Run("invalid, unbalanced paren", func(t *testing.T) {
+	t.Run("invalid, missing paren", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -6313,19 +6239,32 @@ func TestParseStringTemplate(t *testing.T) {
 			"\(add"
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.Error(t, err)
+		require.NotEmpty(t, errs)
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected token ')'",
 					Pos:     ast.Position{Offset: 10, Line: 2, Column: 9},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid, nested expression paren", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression(`
+			"\((2+2)/2()"
+		`)
+
+		require.NotEmpty(t, errs)
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token ')'",
+					Pos:     ast.Position{Offset: 16, Line: 2, Column: 15},
 				},
 			},
 			errs,
@@ -6340,14 +6279,7 @@ func TestParseStringTemplate(t *testing.T) {
 			"outer string \( "\(inner template)" )"
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.Error(t, err)
+		require.NotEmpty(t, errs)
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -6367,14 +6299,7 @@ func TestParseStringTemplate(t *testing.T) {
 			"a\(b)c"
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.NoError(t, err)
+		require.Empty(t, errs)
 
 		expected := &ast.StringTemplateExpression{
 			Values: []string{
@@ -6406,14 +6331,7 @@ func TestParseStringTemplate(t *testing.T) {
 			"\(a)b\(c)"
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.NoError(t, err)
+		require.Empty(t, errs)
 
 		expected := &ast.StringTemplateExpression{
 			Values: []string{
@@ -6452,14 +6370,7 @@ func TestParseStringTemplate(t *testing.T) {
 			"\(a)\(b)\(c)"
 		`)
 
-		var err error
-		if len(errs) > 0 {
-			err = Error{
-				Errors: errs,
-			}
-		}
-
-		require.NoError(t, err)
+		require.Empty(t, errs)
 
 		expected := &ast.StringTemplateExpression{
 			Values: []string{
@@ -6491,6 +6402,38 @@ func TestParseStringTemplate(t *testing.T) {
 			Range: ast.Range{
 				StartPos: ast.Position{Offset: 4, Line: 2, Column: 3},
 				EndPos:   ast.Position{Offset: 17, Line: 2, Column: 18},
+			},
+		}
+
+		AssertEqualWithDiff(t, expected, actual)
+	})
+
+	t.Run("valid, extra closing paren", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual, errs := testParseExpression(`
+			"\(a))"
+		`)
+
+		require.Empty(t, errs)
+
+		expected := &ast.StringTemplateExpression{
+			Values: []string{
+				"",
+				")",
+			},
+			Expressions: []ast.Expression{
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "a",
+						Pos:        ast.Position{Offset: 7, Line: 2, Column: 6},
+					},
+				},
+			},
+			Range: ast.Range{
+				StartPos: ast.Position{Offset: 4, Line: 2, Column: 3},
+				EndPos:   ast.Position{Offset: 10, Line: 2, Column: 9},
 			},
 		}
 

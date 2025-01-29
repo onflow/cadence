@@ -237,7 +237,12 @@ func (c TypeCodes) Merge(codes TypeCodes) {
 
 type Storage interface {
 	atree.SlabStorage
-	GetStorageMap(address common.Address, domain string, createIfNotExists bool) *StorageMap
+	GetDomainStorageMap(
+		inter *Interpreter,
+		address common.Address,
+		domain common.StorageDomain,
+		createIfNotExists bool,
+	) *DomainStorageMap
 	CheckHealth() error
 }
 
@@ -967,7 +972,7 @@ func (interpreter *Interpreter) declareSelfVariable(value Value, locationRange L
 }
 
 func (interpreter *Interpreter) visitAssignment(
-	transferOperation ast.TransferOperation,
+	_ ast.TransferOperation,
 	targetGetterSetter getterSetter, targetType sema.Type,
 	valueExpression ast.Expression, valueType sema.Type,
 	position ast.HasPosition,
@@ -1271,7 +1276,7 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 		functions.Set(resourceDefaultDestroyEventName(compositeType), destroyEventConstructor)
 	}
 
-	applyDefaultFunctions := func(ty *sema.InterfaceType, code WrapperCode) {
+	applyDefaultFunctions := func(_ *sema.InterfaceType, code WrapperCode) {
 
 		// Apply default functions, if conforming type does not provide the function
 
@@ -2678,10 +2683,10 @@ func (interpreter *Interpreter) NewSubInterpreter(
 
 func (interpreter *Interpreter) StoredValueExists(
 	storageAddress common.Address,
-	domain string,
+	domain common.StorageDomain,
 	identifier StorageMapKey,
 ) bool {
-	accountStorage := interpreter.Storage().GetStorageMap(storageAddress, domain, false)
+	accountStorage := interpreter.Storage().GetDomainStorageMap(interpreter, storageAddress, domain, false)
 	if accountStorage == nil {
 		return false
 	}
@@ -2690,10 +2695,10 @@ func (interpreter *Interpreter) StoredValueExists(
 
 func (interpreter *Interpreter) ReadStored(
 	storageAddress common.Address,
-	domain string,
+	domain common.StorageDomain,
 	identifier StorageMapKey,
 ) Value {
-	accountStorage := interpreter.Storage().GetStorageMap(storageAddress, domain, false)
+	accountStorage := interpreter.Storage().GetDomainStorageMap(interpreter, storageAddress, domain, false)
 	if accountStorage == nil {
 		return nil
 	}
@@ -2702,11 +2707,11 @@ func (interpreter *Interpreter) ReadStored(
 
 func (interpreter *Interpreter) WriteStored(
 	storageAddress common.Address,
-	domain string,
+	domain common.StorageDomain,
 	key StorageMapKey,
 	value Value,
 ) (existed bool) {
-	accountStorage := interpreter.Storage().GetStorageMap(storageAddress, domain, true)
+	accountStorage := interpreter.Storage().GetDomainStorageMap(interpreter, storageAddress, domain, true)
 	return accountStorage.WriteValue(interpreter, key, value)
 }
 
@@ -4069,7 +4074,7 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(staticSubType StaticType, su
 }
 
 func (interpreter *Interpreter) domainPaths(address common.Address, domain common.PathDomain) []Value {
-	storageMap := interpreter.Storage().GetStorageMap(address, domain.Identifier(), false)
+	storageMap := interpreter.Storage().GetDomainStorageMap(interpreter, address, domain.StorageDomain(), false)
 	if storageMap == nil {
 		return []Value{}
 	}
@@ -4164,7 +4169,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 			parameterTypes := fnType.ParameterTypes()
 			returnType := fnType.ReturnTypeAnnotation.Type
 
-			storageMap := config.Storage.GetStorageMap(address, domain.Identifier(), false)
+			storageMap := config.Storage.GetDomainStorageMap(interpreter, address, domain.StorageDomain(), false)
 			if storageMap == nil {
 				// if nothing is stored, no iteration is required
 				return Void
@@ -4327,7 +4332,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			domain := path.Domain.Identifier()
+			domain := path.Domain.StorageDomain()
 			identifier := path.Identifier
 
 			// Prevent an overwrite
@@ -4390,7 +4395,7 @@ func (interpreter *Interpreter) authAccountTypeFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			domain := path.Domain.Identifier()
+			domain := path.Domain.StorageDomain()
 			identifier := path.Identifier
 
 			storageMapKey := StringStorageMapKey(identifier)
@@ -4448,7 +4453,7 @@ func (interpreter *Interpreter) authAccountReadFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			domain := path.Domain.Identifier()
+			domain := path.Domain.StorageDomain()
 			identifier := path.Identifier
 
 			storageMapKey := StringStorageMapKey(identifier)
@@ -4589,7 +4594,7 @@ func (interpreter *Interpreter) authAccountCheckFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			domain := path.Domain.Identifier()
+			domain := path.Domain.StorageDomain()
 			identifier := path.Identifier
 
 			storageMapKey := StringStorageMapKey(identifier)

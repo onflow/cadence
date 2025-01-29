@@ -26,7 +26,6 @@ import (
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/stdlib"
 )
 
 // members
@@ -210,7 +209,12 @@ func getCapabilityController(
 
 	storageMapKey := interpreter.Uint64StorageMapKey(capabilityID)
 
-	accountStorage := config.Storage.GetStorageMap(address, stdlib.CapabilityControllerStorageDomain, false)
+	accountStorage := config.Storage.GetDomainStorageMap(
+		config.interpreter(),
+		address,
+		common.StorageDomainCapabilityController,
+		false,
+	)
 	if accountStorage == nil {
 		return nil
 	}

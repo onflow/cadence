@@ -566,6 +566,12 @@ func (v Int64Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValu
 		})
 	}
 
+	if o < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+
 	valueGetter := func() int64 {
 		return int64(v << o)
 	}
@@ -580,6 +586,12 @@ func (v Int64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVal
 			Operation:     ast.OperationBitwiseRightShift,
 			LeftType:      v.StaticType(interpreter),
 			RightType:     other.StaticType(interpreter),
+			LocationRange: locationRange,
+		})
+	}
+
+	if o < 0 {
+		panic(NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
