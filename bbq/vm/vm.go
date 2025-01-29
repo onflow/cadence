@@ -103,25 +103,34 @@ func (vm *VM) pop() Value {
 	return value
 }
 
-// pop2NonResource removes and returns the top two non-resource values from the stack:
+// pop2 removes and returns the top two values from the stack:
 // N-2, and N-1, where N is the number of elements on the stack.
-// It is efficient than calling `pop` twice, in the case of non-resource values.
-func (vm *VM) pop2NonResource() (Value, Value) {
+// It is efficient than calling `pop` twice.
+func (vm *VM) pop2() (Value, Value) {
 	lastIndex := len(vm.stack) - 1
 	value1, value2 := vm.stack[lastIndex-1], vm.stack[lastIndex]
 	vm.stack[lastIndex-1], vm.stack[lastIndex] = nil, nil
 	vm.stack = vm.stack[:lastIndex-1]
+
+	checkInvalidatedResourceOrResourceReference(value1)
+	checkInvalidatedResourceOrResourceReference(value2)
+
 	return value1, value2
 }
 
-// pop3NonResource removes and returns the top three non-resource values from the stack:
+// pop3 removes and returns the top three values from the stack:
 // N-3, N-2, and N-1, where N is the number of elements on the stack.
-// It is efficient than calling `pop` thrice, in the case of non-resource values.
-func (vm *VM) pop3NonResource() (Value, Value, Value) {
+// It is efficient than calling `pop` thrice.
+func (vm *VM) pop3() (Value, Value, Value) {
 	lastIndex := len(vm.stack) - 1
 	value1, value2, value3 := vm.stack[lastIndex-2], vm.stack[lastIndex-1], vm.stack[lastIndex]
 	vm.stack[lastIndex-2], vm.stack[lastIndex-1], vm.stack[lastIndex] = nil, nil, nil
 	vm.stack = vm.stack[:lastIndex-2]
+
+	checkInvalidatedResourceOrResourceReference(value1)
+	checkInvalidatedResourceOrResourceReference(value2)
+	checkInvalidatedResourceOrResourceReference(value3)
+
 	return value1, value2, value3
 }
 
@@ -139,7 +148,9 @@ func (vm *VM) peek() Value {
 func (vm *VM) dropN(count int) {
 	stackHeight := len(vm.stack)
 	startIndex := stackHeight - count
-	// TODO: checkInvalidatedResourceOrResourceReference for all dropped values?
+	for _, value := range vm.stack[startIndex:] {
+		checkInvalidatedResourceOrResourceReference(value)
+	}
 	clear(vm.stack[startIndex:])
 	vm.stack = vm.stack[:startIndex]
 }
@@ -394,16 +405,16 @@ func opSetGlobal(vm *VM, ins opcode.InstructionSetGlobal) {
 }
 
 func opSetIndex(vm *VM) {
-	element, array, index := vm.pop3NonResource()
-	indexValue := index.(IntValue)
+	array, index, element := vm.pop3()
 	arrayValue := array.(*ArrayValue)
+	indexValue := index.(IntValue)
 	arrayValue.Set(vm.config, int(indexValue.SmallInt), element)
 }
 
 func opGetIndex(vm *VM) {
-	array, index := vm.pop2NonResource()
-	indexValue := index.(IntValue)
+	array, index := vm.pop2()
 	arrayValue := array.(*ArrayValue)
+	indexValue := index.(IntValue)
 	element := arrayValue.Get(vm.config, int(indexValue.SmallInt))
 	vm.push(element)
 }
@@ -505,15 +516,13 @@ func opNew(vm *VM, ins opcode.InstructionNew) {
 }
 
 func opSetField(vm *VM, ins opcode.InstructionSetField) {
-	// TODO: support all container types
-	structValue := vm.pop().(MemberAccessibleValue)
-
-	fieldValue := vm.pop()
+	target, fieldValue := vm.pop2()
 
 	// VM assumes the field name is always a string.
 	fieldName := getStringConstant(vm, ins.FieldNameIndex)
 
-	structValue.SetMember(vm.config, fieldName, fieldValue)
+	target.(MemberAccessibleValue).
+		SetMember(vm.config, fieldName, fieldValue)
 }
 
 func opGetField(vm *VM, ins opcode.InstructionGetField) {
@@ -552,7 +561,11 @@ func opTransfer(vm *VM, ins opcode.InstructionTransfer) {
 
 	valueType := transferredValue.StaticType(config)
 	if !IsSubType(config, valueType, targetType) {
-		panic(errors.NewUnexpectedError("invalid transfer: expected '%s', found '%s'", targetType, valueType))
+		panic(errors.NewUnexpectedError(
+			"invalid transfer: expected '%s', found '%s'",
+			targetType,
+			valueType,
+		))
 	}
 
 	vm.replaceTop(transferredValue)
