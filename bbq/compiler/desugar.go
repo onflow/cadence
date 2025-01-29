@@ -479,9 +479,8 @@ func (d *Desugar) desugarPostConditions(
 
 	// Desugar self-defined post-conditions
 	if conditions != nil {
-		conditionsList := conditions.Conditions
 		postConditionsRewrite := d.elaboration.PostConditionsRewrite(conditions)
-		conditionsList = postConditionsRewrite.RewrittenPostConditions
+		conditionsList := postConditionsRewrite.RewrittenPostConditions
 
 		for _, condition := range conditionsList {
 			desugaredCondition := d.desugarCondition(condition)
