@@ -60,13 +60,17 @@ func NewVM(
 		conf.Storage = interpreter.NewInMemoryStorage(nil)
 	}
 
+	if conf.NativeFunctionsProvider == nil {
+		conf.NativeFunctionsProvider = NativeFunctions
+	}
+
 	// linkedGlobalsCache is a local cache-alike that is being used to hold already linked imports.
 	linkedGlobalsCache := map[common.Location]LinkedGlobals{
 		BuiltInLocation: {
 			// It is NOT safe to re-use native functions map here because,
 			// once put into the cache, it will be updated by adding the
 			// globals of the current program.
-			indexedGlobals: NativeFunctions(),
+			indexedGlobals: conf.NativeFunctionsProvider(),
 		},
 	}
 
@@ -342,11 +346,25 @@ func opBinaryIntLess(vm *VM) {
 	vm.replaceTop(leftNumber.Less(rightNumber))
 }
 
+func opBinaryIntLessOrEqual(vm *VM) {
+	left, right := vm.peekPop()
+	leftNumber := left.(IntValue)
+	rightNumber := right.(IntValue)
+	vm.replaceTop(leftNumber.LessOrEqual(rightNumber))
+}
+
 func opBinaryIntGreater(vm *VM) {
 	left, right := vm.peekPop()
 	leftNumber := left.(IntValue)
 	rightNumber := right.(IntValue)
 	vm.replaceTop(leftNumber.Greater(rightNumber))
+}
+
+func opBinaryIntGreaterOrEqual(vm *VM) {
+	left, right := vm.peekPop()
+	leftNumber := left.(IntValue)
+	rightNumber := right.(IntValue)
+	vm.replaceTop(leftNumber.GreaterOrEqual(rightNumber))
 }
 
 func opTrue(vm *VM) {
@@ -445,11 +463,8 @@ func opInvokeDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
 	_ = typeArguments
 
 	switch typedReceiver := receiver.(type) {
-	case *StorageReferenceValue:
-		referenced, err := typedReceiver.dereference(vm.config)
-		if err != nil {
-			panic(err)
-		}
+	case ReferenceValue:
+		referenced := typedReceiver.ReferencedValue(vm.config, true)
 		receiver = *referenced
 
 		// TODO:
@@ -590,6 +605,11 @@ func opNotEqual(vm *VM) {
 	vm.replaceTop(BoolValue(left != right))
 }
 
+func opNot(vm *VM) {
+	value := vm.peek().(BoolValue)
+	vm.replaceTop(!value)
+}
+
 func opUnwrap(vm *VM) {
 	value := vm.peek()
 	if someValue, ok := value.(*SomeValue); ok {
@@ -657,8 +677,12 @@ func (vm *VM) run() {
 			opBinaryIntSubtract(vm)
 		case opcode.InstructionIntLess:
 			opBinaryIntLess(vm)
+		case opcode.InstructionIntLessOrEqual:
+			opBinaryIntLessOrEqual(vm)
 		case opcode.InstructionIntGreater:
 			opBinaryIntGreater(vm)
+		case opcode.InstructionIntGreaterOrEqual:
+			opBinaryIntGreaterOrEqual(vm)
 		case opcode.InstructionTrue:
 			opTrue(vm)
 		case opcode.InstructionFalse:
@@ -709,6 +733,8 @@ func (vm *VM) run() {
 			opEqual(vm)
 		case opcode.InstructionNotEqual:
 			opNotEqual(vm)
+		case opcode.InstructionNot:
+			opNot(vm)
 		case opcode.InstructionUnwrap:
 			opUnwrap(vm)
 		default:
@@ -811,7 +837,7 @@ func getReceiver[T any](config *Config, receiver Value) T {
 	case *EphemeralReferenceValue:
 		return getReceiver[T](config, receiver.Value)
 	case *StorageReferenceValue:
-		referencedValue, err := receiver.dereference(nil)
+		referencedValue, err := receiver.dereference(config)
 		if err != nil {
 			panic(err)
 		}

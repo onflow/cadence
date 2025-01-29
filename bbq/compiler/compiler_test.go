@@ -43,7 +43,7 @@ func TestCompileRecursionFib(t *testing.T) {
   `)
 	require.NoError(t, err)
 
-	compiler := NewBytecodeCompiler(checker.Program, checker.Elaboration)
+	compiler := NewBytecodeCompiler(checker)
 	program := compiler.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -71,8 +71,12 @@ func TestCompileRecursionFib(t *testing.T) {
 			byte(opcode.Transfer), 0, 0,
 			byte(opcode.GetGlobal), 0, 0,
 			byte(opcode.Invoke), 0, 0,
-			// return sum
 			byte(opcode.IntAdd),
+			// assign to temp $result
+			byte(opcode.Transfer), 0, 0,
+			byte(opcode.SetLocal), 0, 1,
+			// return $result
+			byte(opcode.GetLocal), 0, 1,
 			byte(opcode.ReturnValue),
 		},
 		compiler.ExportFunctions()[0].Code,
@@ -114,7 +118,7 @@ func TestCompileImperativeFib(t *testing.T) {
   `)
 	require.NoError(t, err)
 
-	compiler := NewBytecodeCompiler(checker.Program, checker.Elaboration)
+	compiler := NewBytecodeCompiler(checker)
 	program := compiler.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -163,8 +167,12 @@ func TestCompileImperativeFib(t *testing.T) {
 			byte(opcode.SetLocal), 0, 4,
 			// continue loop
 			byte(opcode.Jump), 0, 36,
-			// return fibonacci
+			// assign to temp $result
 			byte(opcode.GetLocal), 0, 3,
+			byte(opcode.Transfer), 0, 0,
+			byte(opcode.SetLocal), 0, 5,
+			// return $result
+			byte(opcode.GetLocal), 0, 5,
 			byte(opcode.ReturnValue),
 		},
 		compiler.ExportFunctions()[0].Code,
@@ -203,7 +211,7 @@ func TestCompileBreak(t *testing.T) {
   `)
 	require.NoError(t, err)
 
-	compiler := NewBytecodeCompiler(checker.Program, checker.Elaboration)
+	compiler := NewBytecodeCompiler(checker)
 	program := compiler.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -231,8 +239,12 @@ func TestCompileBreak(t *testing.T) {
 			byte(opcode.SetLocal), 0, 0,
 			// repeat
 			byte(opcode.Jump), 0, 9,
-			// return i
+			// assign i to temp $result
 			byte(opcode.GetLocal), 0, 0,
+			byte(opcode.Transfer), 0, 0,
+			byte(opcode.SetLocal), 0, 1,
+			// return $result
+			byte(opcode.GetLocal), 0, 1,
 			byte(opcode.ReturnValue),
 		},
 		compiler.ExportFunctions()[0].Code,
@@ -276,7 +288,7 @@ func TestCompileContinue(t *testing.T) {
   `)
 	require.NoError(t, err)
 
-	compiler := NewBytecodeCompiler(checker.Program, checker.Elaboration)
+	compiler := NewBytecodeCompiler(checker)
 	program := compiler.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -306,8 +318,12 @@ func TestCompileContinue(t *testing.T) {
 			byte(opcode.Jump), 0, 45,
 			// repeat
 			byte(opcode.Jump), 0, 9,
-			// return i
+			// assign i to temp $result
 			byte(opcode.GetLocal), 0, 0,
+			byte(opcode.Transfer), 0, 0,
+			byte(opcode.SetLocal), 0, 1,
+			// return $result
+			byte(opcode.GetLocal), 0, 1,
 			byte(opcode.ReturnValue),
 		},
 		compiler.ExportFunctions()[0].Code,

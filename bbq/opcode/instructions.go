@@ -827,6 +827,26 @@ func (i InstructionNotEqual) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
+// InstructionNot
+//
+// Negates the boolean value at the top of the stack.
+type InstructionNot struct {
+}
+
+var _ Instruction = InstructionNot{}
+
+func (InstructionNot) Opcode() Opcode {
+	return Not
+}
+
+func (i InstructionNot) String() string {
+	return i.Opcode().String()
+}
+
+func (i InstructionNot) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+}
+
 // InstructionIntAdd
 //
 // Adds the top two values on the stack.
@@ -1071,6 +1091,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionEqual{}
 	case NotEqual:
 		return InstructionNotEqual{}
+	case Not:
+		return InstructionNot{}
 	case IntAdd:
 		return InstructionIntAdd{}
 	case IntSubtract:

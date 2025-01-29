@@ -355,6 +355,18 @@
       - name: "result"
         type: "bool"
 
+# Logical instructions
+
+- name: "not"
+  description: Negates the boolean value at the top of the stack.
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "bool"
+    push:
+      - name: "result"
+        type: "bool"
+
 # Integer arithmetic instructions
 
 - name: "intAdd"

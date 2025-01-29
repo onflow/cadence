@@ -65,6 +65,10 @@ const (
 
 	Equal
 	NotEqual
+	Not
+	_
+	_
+	_
 	Unwrap
 	Destroy
 	Transfer
