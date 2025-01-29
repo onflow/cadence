@@ -68,8 +68,22 @@ func (v IntValue) Less(other IntValue) Value {
 	return FalseValue
 }
 
+func (v IntValue) LessOrEqual(other IntValue) Value {
+	if v.SmallInt <= other.SmallInt {
+		return TrueValue
+	}
+	return FalseValue
+}
+
 func (v IntValue) Greater(other IntValue) Value {
 	if v.SmallInt > other.SmallInt {
+		return TrueValue
+	}
+	return FalseValue
+}
+
+func (v IntValue) GreaterOrEqual(other IntValue) Value {
+	if v.SmallInt >= other.SmallInt {
 		return TrueValue
 	}
 	return FalseValue

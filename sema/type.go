@@ -321,8 +321,10 @@ type ConformingType interface {
 // CompositeKindedType is a type which has a composite kind
 type CompositeKindedType interface {
 	Type
+	LocatedType
 	EntitlementSupportingType
 	GetCompositeKind() common.CompositeKind
+	GetIdentifier() string
 }
 
 // LocatedType is a type which has a location
@@ -598,13 +600,15 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 	members[IsInstanceFunctionName] = MemberResolver{
 		Kind: common.DeclarationKindFunction,
 		Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.HasPosition, _ func(error)) *Member {
-			return NewPublicFunctionMember(
+			fun := NewPublicFunctionMember(
 				memoryGauge,
 				ty,
 				identifier,
 				IsInstanceFunctionType,
 				isInstanceFunctionDocString,
 			)
+			fun.Predeclared = true
+			return fun
 		},
 	}
 
@@ -613,13 +617,16 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 	members[GetTypeFunctionName] = MemberResolver{
 		Kind: common.DeclarationKindFunction,
 		Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.HasPosition, _ func(error)) *Member {
-			return NewPublicFunctionMember(
+			fun := NewPublicFunctionMember(
 				memoryGauge,
 				ty,
 				identifier,
 				GetTypeFunctionType,
 				getTypeFunctionDocString,
 			)
+
+			fun.Predeclared = true
+			return fun
 		},
 	}
 
@@ -630,13 +637,16 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 		members[ToStringFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
 			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.HasPosition, _ func(error)) *Member {
-				return NewPublicFunctionMember(
+				fun := NewPublicFunctionMember(
 					memoryGauge,
 					ty,
 					identifier,
 					ToStringFunctionType,
 					toStringFunctionDocString,
 				)
+
+				fun.Predeclared = true
+				return fun
 			},
 		}
 	}
@@ -5395,6 +5405,10 @@ func (t *CompositeType) CheckInstantiated(pos ast.HasPosition, memoryGauge commo
 	}
 }
 
+func (t *CompositeType) GetIdentifier() string {
+	return t.Identifier
+}
+
 // Member
 
 type Member struct {
@@ -5994,6 +6008,10 @@ func (t *InterfaceType) initializeEffectiveInterfaceConformanceSet() {
 			t.effectiveInterfaceConformanceSet.Add(conformance.InterfaceType)
 		}
 	})
+}
+
+func (t *InterfaceType) GetIdentifier() string {
+	return t.Identifier
 }
 
 // distinctConformances recursively visit conformances and their conformances,

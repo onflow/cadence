@@ -34,6 +34,8 @@ type Config struct {
 	ContractValueHandler
 	stdlib.AccountHandler
 
+	NativeFunctionsProvider
+
 	// TODO: Move these to a 'shared state'?
 	CapabilityControllerIterations              map[AddressPath]int
 	MutationDuringCapabilityControllerIteration bool

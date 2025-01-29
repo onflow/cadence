@@ -45,7 +45,7 @@ func BenchmarkRecursionFib(b *testing.B) {
 	checker, err := ParseAndCheck(b, recursiveFib)
 	require.NoError(b, err)
 
-	comp := compiler.NewInstructionCompiler(checker.Program, checker.Elaboration)
+	comp := compiler.NewInstructionCompiler(checker)
 	program := comp.Compile()
 
 	vmConfig := &vm.Config{}
@@ -74,7 +74,7 @@ func BenchmarkImperativeFib(b *testing.B) {
 	checker, err := ParseAndCheck(b, imperativeFib)
 	require.NoError(b, err)
 
-	comp := compiler.NewInstructionCompiler(checker.Program, checker.Elaboration)
+	comp := compiler.NewInstructionCompiler(checker)
 	program := comp.Compile()
 
 	vmConfig := &vm.Config{}
@@ -116,7 +116,7 @@ func BenchmarkNewStruct(b *testing.B) {
 
 	value := vm.NewIntValue(10)
 
-	comp := compiler.NewInstructionCompiler(checker.Program, checker.Elaboration)
+	comp := compiler.NewInstructionCompiler(checker)
 	program := comp.Compile()
 
 	vmConfig := &vm.Config{}
@@ -162,7 +162,7 @@ func BenchmarkNewResource(b *testing.B) {
 	scriptLocation := runtime_utils.NewScriptLocationGenerator()
 
 	for i := 0; i < b.N; i++ {
-		comp := compiler.NewInstructionCompiler(checker.Program, checker.Elaboration)
+		comp := compiler.NewInstructionCompiler(checker)
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{}
@@ -237,7 +237,7 @@ func BenchmarkContractImport(b *testing.B) {
 	)
 	require.NoError(b, err)
 
-	importCompiler := compiler.NewInstructionCompiler(importedChecker.Program, importedChecker.Elaboration)
+	importCompiler := compiler.NewInstructionCompiler(importedChecker)
 	importedProgram := importCompiler.Compile()
 
 	vmInstance := vm.NewVM(location, importedProgram, nil)
@@ -285,7 +285,7 @@ func BenchmarkContractImport(b *testing.B) {
 		)
 		require.NoError(b, err)
 
-		comp := compiler.NewInstructionCompiler(checker.Program, checker.Elaboration)
+		comp := compiler.NewInstructionCompiler(checker)
 		comp.Config.ImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction] {
 			return importedProgram
 		}
@@ -333,7 +333,7 @@ func BenchmarkMethodCall(b *testing.B) {
 		)
 		require.NoError(b, err)
 
-		importCompiler := compiler.NewInstructionCompiler(importedChecker.Program, importedChecker.Elaboration)
+		importCompiler := compiler.NewInstructionCompiler(importedChecker)
 		importedProgram := importCompiler.Compile()
 
 		vmInstance := vm.NewVM(location, importedProgram, nil)
@@ -364,7 +364,7 @@ func BenchmarkMethodCall(b *testing.B) {
 		)
 		require.NoError(b, err)
 
-		comp := compiler.NewInstructionCompiler(checker.Program, checker.Elaboration)
+		comp := compiler.NewInstructionCompiler(checker)
 		comp.Config.ImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction] {
 			return importedProgram
 		}
@@ -435,7 +435,7 @@ func BenchmarkMethodCall(b *testing.B) {
 		)
 		require.NoError(b, err)
 
-		importCompiler := compiler.NewInstructionCompiler(importedChecker.Program, importedChecker.Elaboration)
+		importCompiler := compiler.NewInstructionCompiler(importedChecker)
 		importedProgram := importCompiler.Compile()
 
 		vmInstance := vm.NewVM(location, importedProgram, nil)
@@ -466,7 +466,7 @@ func BenchmarkMethodCall(b *testing.B) {
 		)
 		require.NoError(b, err)
 
-		comp := compiler.NewInstructionCompiler(checker.Program, checker.Elaboration)
+		comp := compiler.NewInstructionCompiler(checker)
 		comp.Config.ImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction] {
 			return importedProgram
 		}

@@ -34,6 +34,8 @@ var nativeFunctions = map[string]Value{}
 // It's always nil.
 var BuiltInLocation common.Location = nil
 
+type NativeFunctionsProvider func() map[string]Value
+
 func NativeFunctions() map[string]Value {
 	funcs := make(map[string]Value, len(nativeFunctions))
 	for name, value := range nativeFunctions { //nolint:maprange
@@ -73,7 +75,10 @@ func init() {
 				panic(errors.NewUnreachableError())
 			}
 
-			panic(string(messageValue.Str))
+			panic(stdlib.PanicError{
+				Message: string(messageValue.Str),
+				// TODO: pass location
+			})
 		},
 	})
 
