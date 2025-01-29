@@ -30,6 +30,8 @@ func NewUnreachableError() InternalError {
 	return NewUnexpectedError("unreachable")
 }
 
+const InternalErrorMessagePrefix = "internal error:"
+
 // InternalError is an implementation error, e.g: an unreachable code path (UnreachableError).
 // A program should never throw an InternalError in an ideal world.
 //
@@ -174,9 +176,18 @@ func (e UnexpectedError) Unwrap() error {
 func (e UnexpectedError) Error() string {
 	message := e.Err.Error()
 	if len(e.Stack) == 0 {
-		return fmt.Sprintf("unexpected error: %s", message)
+		return fmt.Sprintf(
+			"%s unexpected: %s",
+			InternalErrorMessagePrefix,
+			message,
+		)
 	} else {
-		return fmt.Sprintf("unexpected error: %s\n%s", message, e.Stack)
+		return fmt.Sprintf(
+			"%s unexpected: %s\n%s",
+			InternalErrorMessagePrefix,
+			message,
+			e.Stack,
+		)
 	}
 }
 

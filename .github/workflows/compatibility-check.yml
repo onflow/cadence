@@ -23,7 +23,7 @@ on:
       - 'v**'
 
 env:
-  GO_VERSION: '1.22'
+  GO_VERSION: '1.23'
 
 concurrency:
   group: ${{ github.workflow }}-${{ inputs.base || github.run_id }}
@@ -66,7 +66,7 @@ jobs:
       current-branch: ${{ needs.setup.outputs.branch }}
       chain: mainnet
     secrets:
-      FLOWDIVER_API_KEY: ${{ secrets.FLOWDIVER_API_KEY }}
+      FIND_API_AUTH: ${{ secrets.FIND_API_AUTH }}
 
   testnet:
     needs: setup
@@ -77,4 +77,4 @@ jobs:
       current-branch: ${{ needs.setup.outputs.branch }}
       chain: testnet
     secrets:
-      FLOWDIVER_API_KEY: ${{ secrets.FLOWDIVER_API_KEY }}
+      FIND_API_AUTH: ${{ secrets.FIND_API_AUTH }}

@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"math/big"
+	"math/bits"
 
 	"github.com/onflow/atree"
 
@@ -580,21 +581,26 @@ func (v UInt128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVa
 		})
 	}
 
+	if o.BigInt.Sign() < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 128 {
+		return NewUInt128ValueFromUint64(interpreter, 0)
+	}
+
+	// The maximum shift value at this point is 127, which may lead to an
+	// additional allocation of up to 128 bits. Add usage for possible
+	// intermediate value.
+	common.UseMemory(interpreter, Uint128MemoryUsage)
+
 	return NewUInt128ValueFromBigInt(
 		interpreter,
 		func() *big.Int {
 			res := new(big.Int)
-			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{
-					LocationRange: locationRange,
-				})
-			}
-			if !o.BigInt.IsUint64() {
-				panic(OverflowError{
-					LocationRange: locationRange,
-				})
-			}
-			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+			res = res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+			return truncate(res, 128/bits.UintSize)
 		},
 	)
 }
@@ -610,20 +616,19 @@ func (v UInt128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerV
 		})
 	}
 
+	if o.BigInt.Sign() < 0 {
+		panic(NegativeShiftError{
+			LocationRange: locationRange,
+		})
+	}
+	if !o.BigInt.IsUint64() {
+		return NewUInt128ValueFromUint64(interpreter, 0)
+	}
+
 	return NewUInt128ValueFromBigInt(
 		interpreter,
 		func() *big.Int {
 			res := new(big.Int)
-			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{
-					LocationRange: locationRange,
-				})
-			}
-			if !o.BigInt.IsUint64() {
-				panic(OverflowError{
-					LocationRange: locationRange,
-				})
-			}
 			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
 		},
 	)

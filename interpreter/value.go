@@ -246,6 +246,13 @@ type ValueIterator interface {
 	Next(interpreter *Interpreter, locationRange LocationRange) Value
 }
 
+// atreeContainerBackedValue is an interface for values using atree containers
+// (atree.Array or atree.OrderedMap) under the hood.
+type atreeContainerBackedValue interface {
+	Value
+	isAtreeContainerBackedValue()
+}
+
 func safeAdd(a, b int, locationRange LocationRange) int {
 	// INT32-C
 	if (b > 0) && (a > (goMaxInt - b)) {

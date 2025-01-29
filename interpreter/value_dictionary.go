@@ -243,12 +243,16 @@ func NewDictionaryValueFromAtreeMap(
 
 var _ Value = &DictionaryValue{}
 var _ atree.Value = &DictionaryValue{}
+var _ atree.WrapperValue = &DictionaryValue{}
 var _ EquatableValue = &DictionaryValue{}
 var _ ValueIndexableValue = &DictionaryValue{}
 var _ MemberAccessibleValue = &DictionaryValue{}
 var _ ReferenceTrackedResourceKindedValue = &DictionaryValue{}
+var _ atreeContainerBackedValue = &DictionaryValue{}
 
 func (*DictionaryValue) isValue() {}
+
+func (*DictionaryValue) isAtreeContainerBackedValue() {}
 
 func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
 	descend := visitor.VisitDictionaryValue(interpreter, v)
@@ -1268,7 +1272,15 @@ func (v *DictionaryValue) Storable(
 	address atree.Address,
 	maxInlineSize uint64,
 ) (atree.Storable, error) {
+	// NOTE: Need to change DictionaryValue.UnwrapAtreeValue()
+	// if DictionaryValue is stored with wrapping.
 	return v.dictionary.Storable(storage, address, maxInlineSize)
+}
+
+func (v *DictionaryValue) UnwrapAtreeValue() (atree.Value, uint64) {
+	// Wrapper size is 0 because DictionaryValue is stored as
+	// atree.OrderedMap without any physical wrapping (see DictionaryValue.Storable()).
+	return v.dictionary, 0
 }
 
 func (v *DictionaryValue) IsReferenceTrackedResourceKindedValue() {}
@@ -1593,4 +1605,8 @@ func (v *DictionaryValue) AtreeMap() *atree.OrderedMap {
 
 func (v *DictionaryValue) ElementSize() uint {
 	return v.elementSize
+}
+
+func (v *DictionaryValue) Inlined() bool {
+	return v.dictionary.Inlined()
 }

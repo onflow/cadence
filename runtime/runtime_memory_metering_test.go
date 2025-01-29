@@ -815,7 +815,9 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 				// Before the storageUsed function is invoked, the deltas must have been committed.
 				// So the encoded slabs must have been metered at this point.
 				assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeEncodedSlab))
+
 				storageUsedInvoked = true
+
 				return 1, nil
 			},
 		}
@@ -840,85 +842,152 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 	t.Run("account.storage.save", func(t *testing.T) {
 		t.Parallel()
 
-		code := []byte(`
-            transaction {
-                prepare(signer: auth(Storage) &Account) {
-                    signer.storage.save([[1, 2, 3], [4, 5, 6]], to: /storage/test)
-                }
-            }
-        `)
+		test := func(storageFormatV2Enabled bool) {
 
-		meter := newTestMemoryGauge()
+			name := fmt.Sprintf(
+				"storage format V2 enabled: %v",
+				storageFormatV2Enabled,
+			)
 
-		runtimeInterface := &TestRuntimeInterface{
-			Storage: NewTestLedger(nil, nil),
-			OnGetSigningAccounts: func() ([]Address, error) {
-				return []Address{{42}}, nil
-			},
-			OnMeterMemory: meter.MeterMemory,
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+
+				code := []byte(`
+                    transaction {
+                        prepare(signer: auth(Storage) &Account) {
+                            signer.storage.save([[1, 2, 3], [4, 5, 6]], to: /storage/test)
+                        }
+                    }
+                `)
+
+				meter := newTestMemoryGauge()
+
+				runtimeInterface := &TestRuntimeInterface{
+					Storage: NewTestLedger(nil, nil),
+					OnGetSigningAccounts: func() ([]Address, error) {
+						return []Address{{42}}, nil
+					},
+					OnMeterMemory: meter.MeterMemory,
+				}
+
+				config := DefaultTestInterpreterConfig
+				config.StorageFormatV2Enabled = storageFormatV2Enabled
+				runtime := NewTestInterpreterRuntimeWithConfig(config)
+
+				err := runtime.ExecuteTransaction(
+					Script{
+						Source: code,
+					},
+					Context{
+						Interface: runtimeInterface,
+						Location:  common.TransactionLocation{},
+					},
+				)
+
+				require.NoError(t, err)
+
+				var expected uint64
+				if storageFormatV2Enabled {
+					expected = 5
+				} else {
+					expected = 4
+				}
+				assert.Equal(t,
+					expected,
+					meter.getMemory(common.MemoryKindAtreeEncodedSlab),
+				)
+			})
 		}
 
-		runtime := NewTestInterpreterRuntime()
-
-		err := runtime.ExecuteTransaction(
-			Script{
-				Source: code,
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  common.TransactionLocation{},
-			},
-		)
-
-		require.NoError(t, err)
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindAtreeEncodedSlab))
+		for _, storageFormatV2Enabled := range []bool{false, true} {
+			test(storageFormatV2Enabled)
+		}
 	})
 
 	t.Run("storage used non empty", func(t *testing.T) {
 		t.Parallel()
 
-		code := []byte(`
-            transaction {
-                prepare(signer: auth(Storage) &Account) {
-                    signer.storage.save([[1, 2, 3], [4, 5, 6]], to: /storage/test)
-                    signer.storage.used
-                }
-            }
-        `)
+		test := func(storageFormatV2Enabled bool) {
 
-		meter := newTestMemoryGauge()
-		storageUsedInvoked := false
+			name := fmt.Sprintf(
+				"storage format V2 enabled: %v",
+				storageFormatV2Enabled,
+			)
 
-		runtimeInterface := &TestRuntimeInterface{
-			Storage: NewTestLedger(nil, nil),
-			OnGetSigningAccounts: func() ([]Address, error) {
-				return []Address{{42}}, nil
-			},
-			OnMeterMemory: meter.MeterMemory,
-			OnGetStorageUsed: func(_ Address) (uint64, error) {
-				// Before the storageUsed function is invoked, the deltas must have been committed.
-				// So the encoded slabs must have been metered at this point.
-				assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindAtreeEncodedSlab))
-				storageUsedInvoked = true
-				return 1, nil
-			},
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+
+				code := []byte(`
+                    transaction {
+                        prepare(signer: auth(Storage) &Account) {
+                            signer.storage.save([[1, 2, 3], [4, 5, 6]], to: /storage/test)
+                            signer.storage.used
+                        }
+                    }
+                `)
+
+				meter := newTestMemoryGauge()
+				storageUsedInvoked := false
+
+				runtimeInterface := &TestRuntimeInterface{
+					Storage: NewTestLedger(nil, nil),
+					OnGetSigningAccounts: func() ([]Address, error) {
+						return []Address{{42}}, nil
+					},
+					OnMeterMemory: meter.MeterMemory,
+					OnGetStorageUsed: func(_ Address) (uint64, error) {
+						// Before the storageUsed function is invoked, the deltas must have been committed.
+						// So the encoded slabs must have been metered at this point.
+						var expected uint64
+						if storageFormatV2Enabled {
+							expected = 5
+						} else {
+							expected = 4
+						}
+						assert.Equal(t,
+							expected,
+							meter.getMemory(common.MemoryKindAtreeEncodedSlab),
+						)
+
+						storageUsedInvoked = true
+
+						return 1, nil
+					},
+				}
+
+				config := DefaultTestInterpreterConfig
+				config.StorageFormatV2Enabled = storageFormatV2Enabled
+				runtime := NewTestInterpreterRuntimeWithConfig(config)
+
+				err := runtime.ExecuteTransaction(
+					Script{
+						Source: code,
+					},
+					Context{
+						Interface: runtimeInterface,
+						Location:  common.TransactionLocation{},
+					},
+				)
+
+				require.NoError(t, err)
+				assert.True(t, storageUsedInvoked)
+
+				var expected uint64
+				if storageFormatV2Enabled {
+					expected = 5
+				} else {
+					expected = 4
+				}
+				assert.Equal(t,
+					expected,
+					meter.getMemory(common.MemoryKindAtreeEncodedSlab),
+				)
+			})
 		}
 
-		runtime := NewTestInterpreterRuntime()
-
-		err := runtime.ExecuteTransaction(
-			Script{
-				Source: code,
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  common.TransactionLocation{},
-			},
-		)
-
-		require.NoError(t, err)
-		assert.True(t, storageUsedInvoked)
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindAtreeEncodedSlab))
+		for _, storageFormatV2Enabled := range []bool{false, true} {
+			test(storageFormatV2Enabled)
+		}
 	})
 }
 
@@ -930,7 +999,7 @@ func TestRuntimeMemoryMeteringErrors(t *testing.T) {
 
 	type memoryMeter map[common.MemoryKind]uint64
 
-	runtimeInterface := func(meter memoryMeter) *TestRuntimeInterface {
+	runtimeInterface := func(memoryMeter) *TestRuntimeInterface {
 		return &TestRuntimeInterface{
 			OnMeterMemory: func(usage common.MemoryUsage) error {
 				if usage.Kind == common.MemoryKindStringValue ||
@@ -1036,143 +1105,226 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 
 		t.Parallel()
 
-		config := DefaultTestInterpreterConfig
-		config.AtreeValidationEnabled = false
-		rt := NewTestInterpreterRuntimeWithConfig(config)
+		test := func(storageFormatV2Enabled bool) {
 
-		address := common.MustBytesToAddress([]byte{0x1})
-		storage := NewTestLedger(nil, nil)
-		meter := newTestMemoryGauge()
+			name := fmt.Sprintf(
+				"storage format V2 enabled: %v",
+				storageFormatV2Enabled,
+			)
 
-		runtimeInterface := &TestRuntimeInterface{
-			Storage: storage,
-			OnGetSigningAccounts: func() ([]Address, error) {
-				return []Address{address}, nil
-			},
-			OnMeterMemory: meter.MeterMemory,
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+
+				config := DefaultTestInterpreterConfig
+				config.AtreeValidationEnabled = false
+				config.StorageFormatV2Enabled = storageFormatV2Enabled
+				rt := NewTestInterpreterRuntimeWithConfig(config)
+
+				address := common.MustBytesToAddress([]byte{0x1})
+				storage := NewTestLedger(nil, nil)
+				meter := newTestMemoryGauge()
+
+				runtimeInterface := &TestRuntimeInterface{
+					Storage: storage,
+					OnGetSigningAccounts: func() ([]Address, error) {
+						return []Address{address}, nil
+					},
+					OnMeterMemory: meter.MeterMemory,
+				}
+
+				text := "A quick brown fox jumps over the lazy dog"
+
+				err := rt.ExecuteTransaction(
+					Script{
+						Source: []byte(fmt.Sprintf(`
+                            transaction() {
+                                prepare(acc: auth(Storage) &Account) {
+                                    var s = "%s"
+                                    acc.storage.save(s, to:/storage/some_path)
+                                }
+                            }`,
+							text,
+						)),
+					},
+					Context{
+						Interface: runtimeInterface,
+						Location:  common.TransactionLocation{},
+					},
+				)
+
+				require.NoError(t, err)
+
+				var expected uint64
+				if storageFormatV2Enabled {
+					expected = 107
+				} else {
+					expected = 75
+				}
+				assert.Equal(t,
+					expected,
+					meter.getMemory(common.MemoryKindBytes),
+				)
+			})
 		}
 
-		text := "A quick brown fox jumps over the lazy dog"
-
-		err := rt.ExecuteTransaction(
-			Script{
-				Source: []byte(fmt.Sprintf(`
-                transaction() {
-                    prepare(acc: auth(Storage) &Account) {
-                        var s = "%s"
-                        acc.storage.save(s, to:/storage/some_path)
-                    }
-                }`,
-					text,
-				)),
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  common.TransactionLocation{},
-			},
-		)
-
-		require.NoError(t, err)
-		assert.Equal(t, 75, int(meter.getMemory(common.MemoryKindBytes)))
+		for _, storageFormatV2Enabled := range []bool{false, true} {
+			test(storageFormatV2Enabled)
+		}
 	})
 
 	t.Run("string in loop", func(t *testing.T) {
 
 		t.Parallel()
 
-		config := DefaultTestInterpreterConfig
-		config.AtreeValidationEnabled = false
-		rt := NewTestInterpreterRuntimeWithConfig(config)
+		test := func(storageFormatV2Enabled bool) {
 
-		address := common.MustBytesToAddress([]byte{0x1})
-		storage := NewTestLedger(nil, nil)
-		meter := newTestMemoryGauge()
+			name := fmt.Sprintf(
+				"storage format V2 enabled: %v",
+				storageFormatV2Enabled,
+			)
 
-		runtimeInterface := &TestRuntimeInterface{
-			Storage: storage,
-			OnGetSigningAccounts: func() ([]Address, error) {
-				return []Address{address}, nil
-			},
-			OnMeterMemory: meter.MeterMemory,
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+
+				config := DefaultTestInterpreterConfig
+				config.AtreeValidationEnabled = false
+				config.StorageFormatV2Enabled = storageFormatV2Enabled
+				rt := NewTestInterpreterRuntimeWithConfig(config)
+
+				address := common.MustBytesToAddress([]byte{0x1})
+				storage := NewTestLedger(nil, nil)
+				meter := newTestMemoryGauge()
+
+				runtimeInterface := &TestRuntimeInterface{
+					Storage: storage,
+					OnGetSigningAccounts: func() ([]Address, error) {
+						return []Address{address}, nil
+					},
+					OnMeterMemory: meter.MeterMemory,
+				}
+
+				text := "A quick brown fox jumps over the lazy dog"
+
+				err := rt.ExecuteTransaction(
+					Script{
+						Source: []byte(fmt.Sprintf(`
+                            transaction() {
+                                prepare(acc: auth(Storage) &Account) {
+                                    var i = 0
+                                    var s = "%s"
+                                    while i<1000 {
+                                        let path = StoragePath(identifier: "i".concat(i.toString()))!
+                                        acc.storage.save(s, to: path)
+                                        i=i+1
+                                    }
+                                }
+                            }`,
+							text,
+						)),
+					},
+					Context{
+						Interface: runtimeInterface,
+						Location:  common.TransactionLocation{},
+					},
+				)
+
+				require.NoError(t, err)
+
+				var expected uint64
+				if storageFormatV2Enabled {
+					expected = 61494
+				} else {
+					expected = 61455
+				}
+				assert.Equal(t,
+					expected,
+					meter.getMemory(common.MemoryKindBytes),
+				)
+			})
 		}
 
-		text := "A quick brown fox jumps over the lazy dog"
-
-		err := rt.ExecuteTransaction(
-			Script{
-				Source: []byte(fmt.Sprintf(`
-                transaction() {
-                    prepare(acc: auth(Storage) &Account) {
-                        var i = 0
-                        var s = "%s"
-                        while i<1000 {
-                            let path = StoragePath(identifier: "i".concat(i.toString()))!
-                            acc.storage.save(s, to: path)
-                            i=i+1
-                        }
-                    }
-                }`,
-					text,
-				)),
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  common.TransactionLocation{},
-			},
-		)
-
-		require.NoError(t, err)
-		assert.Equal(t, 61455, int(meter.getMemory(common.MemoryKindBytes)))
+		for _, storageFormatV2Enabled := range []bool{false, true} {
+			test(storageFormatV2Enabled)
+		}
 	})
 
 	t.Run("composite", func(t *testing.T) {
 
 		t.Parallel()
 
-		config := DefaultTestInterpreterConfig
-		config.AtreeValidationEnabled = false
-		rt := NewTestInterpreterRuntimeWithConfig(config)
+		test := func(storageFormatV2Enabled bool) {
 
-		address := common.MustBytesToAddress([]byte{0x1})
-		storage := NewTestLedger(nil, nil)
-		meter := newTestMemoryGauge()
+			name := fmt.Sprintf(
+				"storage format V2 enabled: %v",
+				storageFormatV2Enabled,
+			)
 
-		runtimeInterface := &TestRuntimeInterface{
-			Storage: storage,
-			OnGetSigningAccounts: func() ([]Address, error) {
-				return []Address{address}, nil
-			},
-			OnMeterMemory: meter.MeterMemory,
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+
+				config := DefaultTestInterpreterConfig
+				config.AtreeValidationEnabled = false
+				config.StorageFormatV2Enabled = storageFormatV2Enabled
+				rt := NewTestInterpreterRuntimeWithConfig(config)
+
+				address := common.MustBytesToAddress([]byte{0x1})
+				storage := NewTestLedger(nil, nil)
+				meter := newTestMemoryGauge()
+
+				runtimeInterface := &TestRuntimeInterface{
+					Storage: storage,
+					OnGetSigningAccounts: func() ([]Address, error) {
+						return []Address{address}, nil
+					},
+					OnMeterMemory: meter.MeterMemory,
+				}
+
+				_, err := rt.ExecuteScript(
+					Script{
+						Source: []byte(`
+                            access(all) fun main() {
+                                let acc = getAuthAccount<auth(Storage) &Account>(0x02)
+                                var i = 0
+                                var f = Foo()
+                                while i<1000 {
+                                    let path = StoragePath(identifier: "i".concat(i.toString()))!
+                                    acc.storage.save(f, to: path)
+                                    i=i+1
+                                }
+                            }
+
+                            access(all) struct Foo {
+                                access(self) var id: Int
+                                init() {
+                                    self.id = 123456789
+                                }
+                            }
+                        `),
+					},
+					Context{
+						Interface: runtimeInterface,
+						Location:  common.ScriptLocation{},
+					},
+				)
+
+				require.NoError(t, err)
+
+				var expected uint64
+				if storageFormatV2Enabled {
+					expected = 58362
+				} else {
+					expected = 58323
+				}
+
+				assert.Equal(t,
+					expected,
+					meter.getMemory(common.MemoryKindBytes),
+				)
+			})
 		}
 
-		_, err := rt.ExecuteScript(
-			Script{
-				Source: []byte(`
-                access(all) fun main() {
-                    let acc = getAuthAccount<auth(Storage) &Account>(0x02)
-                    var i = 0
-                    var f = Foo()
-                    while i<1000 {
-                        let path = StoragePath(identifier: "i".concat(i.toString()))!
-                        acc.storage.save(f, to: path)
-                        i=i+1
-                    }
-                }
-
-                access(all) struct Foo {
-                    access(self) var id: Int
-                    init() {
-                        self.id = 123456789
-                    }
-                }`),
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-			},
-		)
-
-		require.NoError(t, err)
-		assert.Equal(t, 58323, int(meter.getMemory(common.MemoryKindBytes)))
+		for _, storageFormatV2Enabled := range []bool{false, true} {
+			test(storageFormatV2Enabled)
+		}
 	})
 }
