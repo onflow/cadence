@@ -51,6 +51,31 @@ var _ Value = &SomeValue{}
 var _ EquatableValue = &SomeValue{}
 var _ MemberAccessibleValue = &SomeValue{}
 var _ OptionalValue = &SomeValue{}
+var _ atree.Value = &SomeValue{}
+var _ atree.WrapperValue = &SomeValue{}
+
+// UnwrapAtreeValue returns non-SomeValue and wrapper size.
+func (v *SomeValue) UnwrapAtreeValue() (atree.Value, uint64) {
+	// NOTE:
+	// - non-SomeValue is the same as non-SomeValue in SomeValue.Storable()
+	// - non-SomeValue wrapper size is the same as encoded wrapper size in SomeStorable.ByteSize().
+
+	// Unwrap SomeValue(s)
+	nonSomeValue, nestedLevels := v.nonSomeValue()
+
+	// Get SomeValue(s) wrapper size
+	someStorableEncodedPrefixSize := getSomeStorableEncodedPrefixSize(nestedLevels)
+
+	// Unwrap nonSomeValue if needed
+	switch nonSomeValue := nonSomeValue.(type) {
+	case atree.WrapperValue:
+		unwrappedValue, wrapperSize := nonSomeValue.UnwrapAtreeValue()
+		return unwrappedValue, wrapperSize + uint64(someStorableEncodedPrefixSize)
+
+	default:
+		return nonSomeValue, uint64(someStorableEncodedPrefixSize)
+	}
+}
 
 func (*SomeValue) isValue() {}
 
@@ -225,9 +250,18 @@ func (v *SomeValue) Storable(
 	// The above applies to both immutable non-SomeValue (such as StringValue),
 	// and mutable non-SomeValue (such as ArrayValue).
 
-	if v.valueStorable == nil {
+	// NOTE:
+	// - If SomeValue's inner value is a value with atree.Array or atree.OrderedMap,
+	//   we MUST NOT cache SomeStorable because we need to call nonSomeValue.Storable()
+	//   to trigger container inlining or un-inlining.
+	// - Otherwise, we need to cache SomeStorable because nonSomeValue.Storable() can
+	//   create registers in storage, such as large string.
 
-		nonSomeValue, nestedLevels := v.nonSomeValue()
+	nonSomeValue, nestedLevels := v.nonSomeValue()
+
+	_, isContainerValue := nonSomeValue.(atreeContainerBackedValue)
+
+	if v.valueStorable == nil || isContainerValue {
 
 		someStorableEncodedPrefixSize := getSomeStorableEncodedPrefixSize(nestedLevels)
 
@@ -379,6 +413,31 @@ type SomeStorable struct {
 }
 
 var _ atree.ContainerStorable = SomeStorable{}
+var _ atree.WrapperStorable = SomeStorable{}
+
+func (s SomeStorable) UnwrapAtreeStorable() atree.Storable {
+	storable := s.Storable
+
+	switch storable := storable.(type) {
+	case atree.WrapperStorable:
+		return storable.UnwrapAtreeStorable()
+
+	default:
+		return storable
+	}
+}
+
+// WrapAtreeStorable() wraps storable as innermost wrapped value and
+// returns new wrapped storable.
+func (s SomeStorable) WrapAtreeStorable(storable atree.Storable) atree.Storable {
+	_, nestedLevels := s.nonSomeStorable()
+
+	newStorable := SomeStorable{Storable: storable}
+	for i := 1; i < int(nestedLevels); i++ {
+		newStorable = SomeStorable{Storable: newStorable}
+	}
+	return newStorable
+}
 
 func (s SomeStorable) HasPointer() bool {
 	switch cs := s.Storable.(type) {

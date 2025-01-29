@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"math/big"
+	"math/bits"
 
 	"github.com/onflow/atree"
 
@@ -29,6 +30,37 @@ import (
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
 )
+
+// toTwosComplement sets `res` to the two's complement representation of a big.Int `x` in the given target bit size.
+// `res` is returned and is awlways a positive big.Int.
+func toTwosComplement(res, x *big.Int, targetBitSize uint) *big.Int {
+	bytes := SignedBigIntToSizedBigEndianBytes(x, targetBitSize/8)
+	return res.SetBytes(bytes)
+}
+
+// toTwosComplement converts `res` to the big.Int representation from the two's complement format of a
+// signed integer.
+// `res` is returned and can be positive or negative.
+func fromTwosComplement(res *big.Int) *big.Int {
+	bytes := res.Bytes()
+	return BigEndianBytesToSignedBigInt(bytes)
+}
+
+// truncate trims a big.Int to maxWords by directly modifying its underlying representation.
+func truncate(x *big.Int, maxWords int) *big.Int {
+	// Get the absolute value of x as a nat slice.
+	abs := x.Bits()
+
+	// Limit the nat slice to maxWords.
+	if len(abs) > maxWords {
+		abs = abs[:maxWords]
+	}
+
+	// Update the big.Int's internal representation.
+	x.SetBits(abs)
+
+	return x
+}
 
 // Int128Value
 
@@ -652,20 +684,25 @@ func (v Int128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{
+		panic(NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
-	if !o.BigInt.IsUint64() {
-		panic(OverflowError{
-			LocationRange: locationRange,
-		})
+	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 128 {
+		return NewInt128ValueFromUint64(interpreter, 0)
 	}
+
+	// The maximum shift value at this point is 127, which may lead to an
+	// additional allocation of up to 128 bits. Add usage for possible
+	// intermediate value.
+	common.UseMemory(interpreter, Int128MemoryUsage)
 
 	valueGetter := func() *big.Int {
 		res := new(big.Int)
-		res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-		return res
+		res = toTwosComplement(res, v.BigInt, 128)
+		res = res.Lsh(res, uint(o.BigInt.Uint64()))
+		res = truncate(res, 128/bits.UintSize)
+		return fromTwosComplement(res)
 	}
 
 	return NewInt128ValueFromBigInt(interpreter, valueGetter)
@@ -683,14 +720,12 @@ func (v Int128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{
+		panic(NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
 	if !o.BigInt.IsUint64() {
-		panic(OverflowError{
-			LocationRange: locationRange,
-		})
+		return NewInt128ValueFromUint64(interpreter, 0)
 	}
 
 	valueGetter := func() *big.Int {

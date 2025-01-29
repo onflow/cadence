@@ -85,10 +85,11 @@ func init() {
 
 				// Write new value
 
+				storageDomain, _ := common.StorageDomainFromIdentifier(domain)
 				WriteStored(
 					config,
 					address,
-					domain,
+					storageDomain,
 					interpreter.StringStorageMapKey(identifier),
 					value,
 				)

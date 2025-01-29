@@ -20,6 +20,7 @@ package cadence
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 	"testing"
 	"unicode/utf8"
@@ -58,8 +59,8 @@ func newValueTestCases() map[string]valueTestCase {
 
 	return map[string]valueTestCase{
 		"UInt": {
-			value:        NewUInt(10),
-			string:       "10",
+			value:        NewUInt(math.MaxUint64),
+			string:       "18446744073709551615",
 			expectedType: UIntType,
 		},
 		"UInt8": {
@@ -83,13 +84,13 @@ func newValueTestCases() map[string]valueTestCase {
 			expectedType: UInt64Type,
 		},
 		"UInt128": {
-			value:        NewUInt128(128),
-			string:       "128",
+			value:        NewUInt128(math.MaxUint64),
+			string:       "18446744073709551615",
 			expectedType: UInt128Type,
 		},
 		"UInt256": {
-			value:        NewUInt256(256),
-			string:       "256",
+			value:        NewUInt256(math.MaxUint64),
+			string:       "18446744073709551615",
 			expectedType: UInt256Type,
 		},
 		"Int": {
@@ -148,13 +149,13 @@ func newValueTestCases() map[string]valueTestCase {
 			expectedType: Word64Type,
 		},
 		"Word128": {
-			value:        NewWord128(128),
-			string:       "128",
+			value:        NewWord128(math.MaxUint64),
+			string:       "18446744073709551615",
 			expectedType: Word128Type,
 		},
 		"Word256": {
-			value:        NewWord256(256),
-			string:       "256",
+			value:        NewWord256(math.MaxUint64),
+			string:       "18446744073709551615",
 			expectedType: Word256Type,
 		},
 		"UFix64": {

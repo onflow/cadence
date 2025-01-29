@@ -37,4 +37,6 @@ type Config struct {
 	CoverageReport *CoverageReport
 	// LegacyContractUpgradeEnabled enabled specifies whether to use the old parser when parsing an old contract
 	LegacyContractUpgradeEnabled bool
+	// StorageFormatV2Enabled specifies whether storage format V2 is enabled
+	StorageFormatV2Enabled bool
 }

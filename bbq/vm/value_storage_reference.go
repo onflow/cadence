@@ -86,12 +86,11 @@ func (v *StorageReferenceValue) StaticType(config *Config) StaticType {
 }
 
 func (v *StorageReferenceValue) dereference(config *Config) (*Value, error) {
-	memoryGauge := config.MemoryGauge
 	address := v.TargetStorageAddress
 	domain := v.TargetPath.Domain.Identifier()
 	identifier := v.TargetPath.Identifier
 
-	vmReferencedValue := ReadStored(memoryGauge, config.Storage, address, domain, identifier)
+	vmReferencedValue := ReadStored(config, address, domain, identifier)
 	if vmReferencedValue == nil {
 		return nil, nil
 	}

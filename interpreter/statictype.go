@@ -252,10 +252,6 @@ func (t *VariableSizedStaticType) Copy() atree.TypeInfo {
 	return t
 }
 
-func (t *VariableSizedStaticType) Identifier() string {
-	return string(t.ID())
-}
-
 func (*VariableSizedStaticType) isStaticType() {}
 
 func (*VariableSizedStaticType) elementSize() uint {
@@ -382,10 +378,6 @@ func (t *ConstantSizedStaticType) Copy() atree.TypeInfo {
 	return t
 }
 
-func (t *ConstantSizedStaticType) Identifier() string {
-	return string(t.ID())
-}
-
 func (*ConstantSizedStaticType) isStaticType() {}
 
 func (*ConstantSizedStaticType) elementSize() uint {
@@ -462,10 +454,6 @@ func (*DictionaryStaticType) IsComposite() bool {
 func (t *DictionaryStaticType) Copy() atree.TypeInfo {
 	// DictionaryStaticType is never mutated, return a shallow copy
 	return t
-}
-
-func (t *DictionaryStaticType) Identifier() string {
-	return string(t.ID())
 }
 
 func (*DictionaryStaticType) isStaticType() {}
