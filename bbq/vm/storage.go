@@ -43,33 +43,44 @@ func MustConvertStoredValue(gauge common.MemoryGauge, storage interpreter.Storag
 }
 
 func ReadStored(
-	gauge common.MemoryGauge,
-	storage interpreter.Storage,
+	config *Config,
 	address common.Address,
 	domain string,
 	identifier string,
 ) Value {
-	accountStorage := storage.GetStorageMap(address, domain, false)
+	storage := config.Storage
+
+	storageDomain, _ := common.StorageDomainFromIdentifier(domain)
+
+	accountStorage := storage.GetDomainStorageMap(
+		config.interpreter(),
+		address,
+		storageDomain,
+		false,
+	)
 	if accountStorage == nil {
 		return nil
 	}
 
-	referenced := accountStorage.ReadValue(gauge, interpreter.StringStorageMapKey(identifier))
+	referenced := accountStorage.ReadValue(config.MemoryGauge, interpreter.StringStorageMapKey(identifier))
 	return InterpreterValueToVMValue(storage, referenced)
 }
 
 func WriteStored(
 	config *Config,
 	storageAddress common.Address,
-	domain string,
+	domain common.StorageDomain,
 	key interpreter.StorageMapKey,
 	value Value,
 ) (existed bool) {
-	accountStorage := config.Storage.GetStorageMap(storageAddress, domain, true)
+
+	inter := config.interpreter()
+
+	accountStorage := config.Storage.GetDomainStorageMap(inter, storageAddress, domain, true)
 	interValue := VMValueToInterpreterValue(config, value)
 
 	return accountStorage.WriteValue(
-		config.interpreter(),
+		inter,
 		key,
 		interValue,
 	)
@@ -90,12 +101,17 @@ func RemoveReferencedSlab(storage interpreter.Storage, storable atree.Storable) 
 }
 
 func StoredValueExists(
-	storage interpreter.Storage,
+	config *Config,
 	storageAddress common.Address,
-	domain string,
+	domain common.StorageDomain,
 	identifier interpreter.StorageMapKey,
 ) bool {
-	accountStorage := storage.GetStorageMap(storageAddress, domain, false)
+	accountStorage := config.Storage.GetDomainStorageMap(
+		config.interpreter(),
+		storageAddress,
+		domain,
+		false,
+	)
 	if accountStorage == nil {
 		return false
 	}
