@@ -623,7 +623,7 @@ func (c *Compiler[_]) VisitVariableDeclaration(declaration *ast.VariableDeclarat
 	c.compileExpression(declaration.Value)
 
 	varDeclTypes := c.ExtendedElaboration.VariableDeclarationTypes(declaration)
-	c.emitCheckType(varDeclTypes.TargetType)
+	c.emitTransfer(varDeclTypes.TargetType)
 
 	local := c.currentFunction.declareLocal(declaration.Identifier.Identifier)
 	c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: local.index})
@@ -631,31 +631,47 @@ func (c *Compiler[_]) VisitVariableDeclaration(declaration *ast.VariableDeclarat
 }
 
 func (c *Compiler[_]) VisitAssignmentStatement(statement *ast.AssignmentStatement) (_ struct{}) {
-	c.compileExpression(statement.Value)
-
-	assignmentTypes := c.ExtendedElaboration.AssignmentStatementTypes(statement)
-	c.emitCheckType(assignmentTypes.TargetType)
 
 	switch target := statement.Target.(type) {
 	case *ast.IdentifierExpression:
+		c.compileExpression(statement.Value)
+		assignmentTypes := c.ExtendedElaboration.AssignmentStatementTypes(statement)
+		c.emitTransfer(assignmentTypes.TargetType)
+
 		varName := target.Identifier.Identifier
 		local := c.currentFunction.findLocal(varName)
 		if local != nil {
-			c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: local.index})
+			c.codeGen.Emit(opcode.InstructionSetLocal{
+				LocalIndex: local.index,
+			})
 			return
 		}
 
 		global := c.findGlobal(varName)
-		c.codeGen.Emit(opcode.InstructionSetGlobal{GlobalIndex: global.index})
+		c.codeGen.Emit(opcode.InstructionSetGlobal{
+			GlobalIndex: global.index,
+		})
 
 	case *ast.MemberExpression:
 		c.compileExpression(target.Expression)
+
+		c.compileExpression(statement.Value)
+		assignmentTypes := c.ExtendedElaboration.AssignmentStatementTypes(statement)
+		c.emitTransfer(assignmentTypes.TargetType)
+
 		constant := c.addStringConst(target.Identifier.Identifier)
-		c.codeGen.Emit(opcode.InstructionSetField{FieldNameIndex: constant.index})
+		c.codeGen.Emit(opcode.InstructionSetField{
+			FieldNameIndex: constant.index,
+		})
 
 	case *ast.IndexExpression:
 		c.compileExpression(target.TargetExpression)
 		c.compileExpression(target.IndexingExpression)
+
+		c.compileExpression(statement.Value)
+		assignmentTypes := c.ExtendedElaboration.AssignmentStatementTypes(statement)
+		c.emitTransfer(assignmentTypes.TargetType)
+
 		c.codeGen.Emit(opcode.InstructionSetIndex{})
 
 	default:
@@ -894,7 +910,7 @@ func (c *Compiler[_]) loadArguments(expression *ast.InvocationExpression) {
 	invocationTypes := c.ExtendedElaboration.InvocationExpressionTypes(expression)
 	for index, argument := range expression.Arguments {
 		c.compileExpression(argument.Expression)
-		c.emitCheckType(invocationTypes.ArgumentTypes[index])
+		c.emitTransfer(invocationTypes.ArgumentTypes[index])
 	}
 
 	// TODO: Is this needed?
@@ -928,7 +944,9 @@ func (c *Compiler[_]) loadTypeArguments(expression *ast.InvocationExpression) []
 func (c *Compiler[_]) VisitMemberExpression(expression *ast.MemberExpression) (_ struct{}) {
 	c.compileExpression(expression.Expression)
 	constant := c.addStringConst(expression.Identifier.Identifier)
-	c.codeGen.Emit(opcode.InstructionGetField{FieldNameIndex: constant.index})
+	c.codeGen.Emit(opcode.InstructionGetField{
+		FieldNameIndex: constant.index,
+	})
 	return
 }
 
@@ -1355,7 +1373,7 @@ func (c *Compiler[_]) patchLoop(l *loop) {
 	}
 }
 
-func (c *Compiler[_]) emitCheckType(targetType sema.Type) {
+func (c *Compiler[_]) emitTransfer(targetType sema.Type) {
 	index := c.getOrAddType(targetType)
 
 	c.codeGen.Emit(opcode.InstructionTransfer{TypeIndex: index})

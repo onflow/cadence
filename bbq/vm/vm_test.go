@@ -118,7 +118,7 @@ func TestVM_replaceTop(t *testing.T) {
 	)
 }
 
-func TestVM_pop2NonResource(t *testing.T) {
+func TestVM_pop2(t *testing.T) {
 	t.Parallel()
 
 	program := &bbq.Program[opcode.Instruction]{}
@@ -128,7 +128,7 @@ func TestVM_pop2NonResource(t *testing.T) {
 	vm.push(NewIntValue(2))
 	vm.push(NewIntValue(3))
 
-	a, b := vm.pop2NonResource()
+	a, b := vm.pop2()
 
 	assert.Equal(t, NewIntValue(2), a)
 	assert.Equal(t, NewIntValue(3), b)
@@ -141,7 +141,7 @@ func TestVM_pop2NonResource(t *testing.T) {
 	)
 }
 
-func TestVM_pop3NonResource(t *testing.T) {
+func TestVM_pop3(t *testing.T) {
 	t.Parallel()
 
 	program := &bbq.Program[opcode.Instruction]{}
@@ -162,7 +162,7 @@ func TestVM_pop3NonResource(t *testing.T) {
 		},
 	)
 
-	a, b, c := vm.pop3NonResource()
+	a, b, c := vm.pop3()
 
 	assert.Equal(t, NewIntValue(2), a)
 	assert.Equal(t, NewIntValue(3), b)

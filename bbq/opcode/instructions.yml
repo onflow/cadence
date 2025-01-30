@@ -68,7 +68,7 @@
       type: "index"
   valueEffects:
     pop:
-      - name: "container"
+      - name: "target"
         type: "value"
       - name: "value"
         type: "value"
