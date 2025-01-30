@@ -110,7 +110,7 @@ type Value interface {
 	) bool
 	RecursiveString(seenReferences SeenReferences) string
 	MeteredString(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string
-	IsResourceKinded(interpreter *Interpreter) bool
+	IsResourceKinded(context ValueStaticTypeContext) bool
 	NeedsStoreTo(address atree.Address) bool
 	Transfer(
 		interpreter *Interpreter,

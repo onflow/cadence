@@ -566,7 +566,7 @@ func (UInt64Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (UInt64Value) IsResourceKinded(_ *Interpreter) bool {
+func (UInt64Value) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

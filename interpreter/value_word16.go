@@ -431,7 +431,7 @@ func (Word16Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Word16Value) IsResourceKinded(_ *Interpreter) bool {
+func (Word16Value) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

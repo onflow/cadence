@@ -580,7 +580,7 @@ func (UInt8Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (UInt8Value) IsResourceKinded(_ *Interpreter) bool {
+func (UInt8Value) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

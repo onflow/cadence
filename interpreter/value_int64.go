@@ -639,7 +639,7 @@ func (Int64Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Int64Value) IsResourceKinded(_ *Interpreter) bool {
+func (Int64Value) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

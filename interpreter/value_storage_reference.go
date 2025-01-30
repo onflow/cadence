@@ -378,7 +378,7 @@ func (*StorageReferenceValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*StorageReferenceValue) IsResourceKinded(_ *Interpreter) bool {
+func (*StorageReferenceValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

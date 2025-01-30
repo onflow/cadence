@@ -1583,9 +1583,9 @@ func (v *DictionaryValue) NeedsStoreTo(address atree.Address) bool {
 	return address != v.StorageAddress()
 }
 
-func (v *DictionaryValue) IsResourceKinded(interpreter *Interpreter) bool {
+func (v *DictionaryValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	if v.isResourceKinded == nil {
-		isResourceKinded := v.SemaType(interpreter).IsResourceType()
+		isResourceKinded := v.SemaType(context).IsResourceType()
 		v.isResourceKinded = &isResourceKinded
 	}
 	return *v.isResourceKinded

@@ -255,7 +255,7 @@ func (*SimpleCompositeValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v *SimpleCompositeValue) IsResourceKinded(_ *Interpreter) bool {
+func (v *SimpleCompositeValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

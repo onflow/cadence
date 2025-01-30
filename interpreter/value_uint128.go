@@ -672,7 +672,7 @@ func (UInt128Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (UInt128Value) IsResourceKinded(_ *Interpreter) bool {
+func (UInt128Value) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

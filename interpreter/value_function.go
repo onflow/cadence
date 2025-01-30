@@ -141,7 +141,7 @@ func (*InterpretedFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*InterpretedFunctionValue) IsResourceKinded(_ *Interpreter) bool {
+func (*InterpretedFunctionValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -294,7 +294,7 @@ func (*HostFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*HostFunctionValue) IsResourceKinded(_ *Interpreter) bool {
+func (*HostFunctionValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -485,7 +485,7 @@ func (BoundFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (BoundFunctionValue) IsResourceKinded(_ *Interpreter) bool {
+func (BoundFunctionValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

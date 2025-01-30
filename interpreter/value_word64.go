@@ -460,7 +460,7 @@ func (Word64Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Word64Value) IsResourceKinded(_ *Interpreter) bool {
+func (Word64Value) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

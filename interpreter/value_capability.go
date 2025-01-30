@@ -217,7 +217,7 @@ func (*IDCapabilityValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*IDCapabilityValue) IsResourceKinded(_ *Interpreter) bool {
+func (*IDCapabilityValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

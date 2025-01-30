@@ -577,7 +577,7 @@ func (Word128Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Word128Value) IsResourceKinded(_ *Interpreter) bool {
+func (Word128Value) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

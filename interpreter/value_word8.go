@@ -429,7 +429,7 @@ func (Word8Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Word8Value) IsResourceKinded(_ *Interpreter) bool {
+func (Word8Value) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

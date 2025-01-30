@@ -165,7 +165,7 @@ func (*AccountCapabilityControllerValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*AccountCapabilityControllerValue) IsResourceKinded(_ *Interpreter) bool {
+func (*AccountCapabilityControllerValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

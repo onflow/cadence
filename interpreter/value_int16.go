@@ -648,7 +648,7 @@ func (Int16Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Int16Value) IsResourceKinded(_ *Interpreter) bool {
+func (Int16Value) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

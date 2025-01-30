@@ -432,7 +432,7 @@ func (Word32Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Word32Value) IsResourceKinded(_ *Interpreter) bool {
+func (Word32Value) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

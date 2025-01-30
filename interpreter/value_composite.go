@@ -1159,9 +1159,9 @@ func (v *CompositeValue) NeedsStoreTo(address atree.Address) bool {
 	return address != v.StorageAddress()
 }
 
-func (v *CompositeValue) IsResourceKinded(interpreter *Interpreter) bool {
+func (v *CompositeValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	if v.Kind == common.CompositeKindAttachment {
-		return MustSemaTypeOfValue(v, interpreter).IsResourceType()
+		return MustSemaTypeOfValue(v, context).IsResourceType()
 	}
 	return v.Kind == common.CompositeKindResource
 }

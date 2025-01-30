@@ -322,13 +322,13 @@ func (v *SomeValue) NeedsStoreTo(address atree.Address) bool {
 	return v.value.NeedsStoreTo(address)
 }
 
-func (v *SomeValue) IsResourceKinded(interpreter *Interpreter) bool {
+func (v *SomeValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	// If the inner value is `nil`, then this is an invalidated resource.
 	if v.value == nil {
 		return true
 	}
 
-	return v.value.IsResourceKinded(interpreter)
+	return v.value.IsResourceKinded(context)
 }
 
 func (v *SomeValue) Transfer(

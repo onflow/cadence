@@ -240,7 +240,7 @@ func (*PathCapabilityValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*PathCapabilityValue) IsResourceKinded(_ *Interpreter) bool {
+func (*PathCapabilityValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

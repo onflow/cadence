@@ -1531,9 +1531,9 @@ func (v *ArrayValue) NeedsStoreTo(address atree.Address) bool {
 	return address != v.StorageAddress()
 }
 
-func (v *ArrayValue) IsResourceKinded(interpreter *Interpreter) bool {
+func (v *ArrayValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	if v.isResourceKinded == nil {
-		isResourceKinded := v.SemaType(interpreter).IsResourceType()
+		isResourceKinded := v.SemaType(context).IsResourceType()
 		v.isResourceKinded = &isResourceKinded
 	}
 	return *v.isResourceKinded

@@ -672,7 +672,7 @@ func (UInt256Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (UInt256Value) IsResourceKinded(_ *Interpreter) bool {
+func (UInt256Value) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 func (v UInt256Value) Transfer(
