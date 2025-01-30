@@ -243,10 +243,10 @@ func (p *parser) next() {
 			}
 			parseError, ok := err.(ParseError)
 			if !ok {
-				parseError = NewSyntaxError(
-					token.StartPos,
-					err.Error(),
-				)
+				parseError = &SyntaxError{
+					Pos:     token.StartPos,
+					Message: err.Error(),
+				}
 			}
 			p.report(parseError)
 			continue

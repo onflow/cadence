@@ -237,7 +237,12 @@ func (c TypeCodes) Merge(codes TypeCodes) {
 
 type Storage interface {
 	atree.SlabStorage
-	GetStorageMap(address common.Address, domain common.StorageDomain, createIfNotExists bool) *StorageMap
+	GetDomainStorageMap(
+		inter *Interpreter,
+		address common.Address,
+		domain common.StorageDomain,
+		createIfNotExists bool,
+	) *DomainStorageMap
 	CheckHealth() error
 }
 
@@ -2670,7 +2675,7 @@ func (interpreter *Interpreter) StoredValueExists(
 	domain common.StorageDomain,
 	identifier StorageMapKey,
 ) bool {
-	accountStorage := interpreter.Storage().GetStorageMap(storageAddress, domain, false)
+	accountStorage := interpreter.Storage().GetDomainStorageMap(interpreter, storageAddress, domain, false)
 	if accountStorage == nil {
 		return false
 	}
@@ -2682,7 +2687,7 @@ func (interpreter *Interpreter) ReadStored(
 	domain common.StorageDomain,
 	identifier StorageMapKey,
 ) Value {
-	accountStorage := interpreter.Storage().GetStorageMap(storageAddress, domain, false)
+	accountStorage := interpreter.Storage().GetDomainStorageMap(interpreter, storageAddress, domain, false)
 	if accountStorage == nil {
 		return nil
 	}
@@ -2695,7 +2700,7 @@ func (interpreter *Interpreter) WriteStored(
 	key StorageMapKey,
 	value Value,
 ) (existed bool) {
-	accountStorage := interpreter.Storage().GetStorageMap(storageAddress, domain, true)
+	accountStorage := interpreter.Storage().GetDomainStorageMap(interpreter, storageAddress, domain, true)
 	return accountStorage.WriteValue(interpreter, key, value)
 }
 
@@ -4058,7 +4063,7 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(staticSubType StaticType, su
 }
 
 func (interpreter *Interpreter) domainPaths(address common.Address, domain common.PathDomain) []Value {
-	storageMap := interpreter.Storage().GetStorageMap(address, domain.StorageDomain(), false)
+	storageMap := interpreter.Storage().GetDomainStorageMap(interpreter, address, domain.StorageDomain(), false)
 	if storageMap == nil {
 		return []Value{}
 	}
@@ -4153,7 +4158,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 			parameterTypes := fnType.ParameterTypes()
 			returnType := fnType.ReturnTypeAnnotation.Type
 
-			storageMap := config.Storage.GetStorageMap(address, domain.StorageDomain(), false)
+			storageMap := config.Storage.GetDomainStorageMap(interpreter, address, domain.StorageDomain(), false)
 			if storageMap == nil {
 				// if nothing is stored, no iteration is required
 				return Void

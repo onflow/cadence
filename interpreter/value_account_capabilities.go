@@ -29,6 +29,10 @@ import (
 
 var account_CapabilitiesTypeID = sema.AccountCapabilitiesType.ID()
 var account_CapabilitiesStaticType StaticType = PrimitiveStaticTypeAccount_Capabilities
+var account_CapabilitiesFieldNames = []string{
+	sema.Account_CapabilitiesTypeStorageFieldName,
+	sema.Account_CapabilitiesTypeAccountFieldName,
+}
 
 func NewAccountCapabilitiesValue(
 	gauge common.MemoryGauge,
@@ -42,25 +46,37 @@ func NewAccountCapabilitiesValue(
 	accountCapabilitiesConstructor func() Value,
 ) Value {
 
-	var storageCapabilities Value
-	var accountCapabilities Value
+	var capabilities *SimpleCompositeValue
 
-	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
+	fields := map[string]Value{}
+
+	computeLazyStoredField := func(name string) Value {
 		switch name {
 		case sema.Account_CapabilitiesTypeStorageFieldName:
-			if storageCapabilities == nil {
-				storageCapabilities = storageCapabilitiesConstructor()
-			}
-			return storageCapabilities
-
+			return storageCapabilitiesConstructor()
 		case sema.Account_CapabilitiesTypeAccountFieldName:
-			if accountCapabilities == nil {
-				accountCapabilities = accountCapabilitiesConstructor()
-			}
-			return accountCapabilities
+			return accountCapabilitiesConstructor()
+		case sema.Account_CapabilitiesTypeGetFunctionName:
+			return getFunction(capabilities)
+		case sema.Account_CapabilitiesTypeBorrowFunctionName:
+			return borrowFunction(capabilities)
+		case sema.Account_CapabilitiesTypeExistsFunctionName:
+			return existsFunction(capabilities)
+		case sema.Account_CapabilitiesTypePublishFunctionName:
+			return publishFunction(capabilities)
+		case sema.Account_CapabilitiesTypeUnpublishFunctionName:
+			return unpublishFunction(capabilities)
 		}
 
 		return nil
+	}
+
+	computeField := func(name string, _ *Interpreter, _ LocationRange) Value {
+		field := computeLazyStoredField(name)
+		if field != nil {
+			fields[name] = field
+		}
+		return field
 	}
 
 	var str string
@@ -73,24 +89,16 @@ func NewAccountCapabilitiesValue(
 		return str
 	}
 
-	capabilities := NewSimpleCompositeValue(
+	capabilities = NewSimpleCompositeValue(
 		gauge,
 		account_CapabilitiesTypeID,
 		account_CapabilitiesStaticType,
-		nil,
-		nil,
+		account_CapabilitiesFieldNames,
+		fields,
 		computeField,
 		nil,
 		stringer,
 	)
-
-	capabilities.Fields = map[string]Value{
-		sema.Account_CapabilitiesTypeGetFunctionName:       getFunction(capabilities),
-		sema.Account_CapabilitiesTypeBorrowFunctionName:    borrowFunction(capabilities),
-		sema.Account_CapabilitiesTypeExistsFunctionName:    existsFunction(capabilities),
-		sema.Account_CapabilitiesTypePublishFunctionName:   publishFunction(capabilities),
-		sema.Account_CapabilitiesTypeUnpublishFunctionName: unpublishFunction(capabilities),
-	}
 
 	return capabilities
 }

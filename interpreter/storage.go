@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"bytes"
+	"cmp"
 	"io"
 	"math"
 	"strings"
@@ -106,6 +107,19 @@ type StorageDomainKey struct {
 	Address common.Address
 }
 
+func (k StorageDomainKey) Compare(o StorageDomainKey) int {
+	switch bytes.Compare(k.Address[:], o.Address[:]) {
+	case -1:
+		return -1
+	case 0:
+		return cmp.Compare(k.Domain, o.Domain)
+	case 1:
+		return 1
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
 func NewStorageDomainKey(
 	memoryGauge common.MemoryGauge,
 	address common.Address,
@@ -147,8 +161,8 @@ func (k StorageKey) IsLess(o StorageKey) bool {
 // InMemoryStorage
 type InMemoryStorage struct {
 	*atree.BasicSlabStorage
-	StorageMaps map[StorageDomainKey]*StorageMap
-	memoryGauge common.MemoryGauge
+	DomainStorageMaps map[StorageDomainKey]*DomainStorageMap
+	memoryGauge       common.MemoryGauge
 }
 
 var _ Storage = InMemoryStorage{}
@@ -174,26 +188,27 @@ func NewInMemoryStorage(memoryGauge common.MemoryGauge) InMemoryStorage {
 	)
 
 	return InMemoryStorage{
-		BasicSlabStorage: slabStorage,
-		StorageMaps:      make(map[StorageDomainKey]*StorageMap),
-		memoryGauge:      memoryGauge,
+		BasicSlabStorage:  slabStorage,
+		DomainStorageMaps: make(map[StorageDomainKey]*DomainStorageMap),
+		memoryGauge:       memoryGauge,
 	}
 }
 
-func (i InMemoryStorage) GetStorageMap(
+func (i InMemoryStorage) GetDomainStorageMap(
+	_ *Interpreter,
 	address common.Address,
 	domain common.StorageDomain,
 	createIfNotExists bool,
 ) (
-	storageMap *StorageMap,
+	domainStorageMap *DomainStorageMap,
 ) {
 	key := NewStorageDomainKey(i.memoryGauge, address, domain)
-	storageMap = i.StorageMaps[key]
-	if storageMap == nil && createIfNotExists {
-		storageMap = NewStorageMap(i.memoryGauge, i, atree.Address(address))
-		i.StorageMaps[key] = storageMap
+	domainStorageMap = i.DomainStorageMaps[key]
+	if domainStorageMap == nil && createIfNotExists {
+		domainStorageMap = NewDomainStorageMap(i.memoryGauge, i, atree.Address(address))
+		i.DomainStorageMaps[key] = domainStorageMap
 	}
-	return storageMap
+	return domainStorageMap
 }
 
 func (i InMemoryStorage) CheckHealth() error {

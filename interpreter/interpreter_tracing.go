@@ -30,9 +30,10 @@ const (
 	tracingImportPrefix   = "import."
 
 	// type prefixes
-	tracingArrayPrefix      = "array."
-	tracingDictionaryPrefix = "dictionary."
-	tracingCompositePrefix  = "composite."
+	tracingArrayPrefix            = "array."
+	tracingDictionaryPrefix       = "dictionary."
+	tracingCompositePrefix        = "composite."
+	tracingDomainStorageMapPrefix = "domainstoragemap."
 
 	// Value operation postfixes
 	tracingConstructPostfix            = "construct"
@@ -157,6 +158,20 @@ func (interpreter *Interpreter) reportDictionaryValueDeepRemoveTrace(
 	config.OnRecordTrace(
 		interpreter,
 		tracingDictionaryPrefix+tracingDeepRemovePostfix,
+		duration,
+		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
+	)
+}
+
+func (interpreter *Interpreter) reportDomainStorageMapDeepRemoveTrace(
+	typeInfo string,
+	count int,
+	duration time.Duration,
+) {
+	config := interpreter.SharedState.Config
+	config.OnRecordTrace(
+		interpreter,
+		tracingDomainStorageMapPrefix+tracingDeepRemovePostfix,
 		duration,
 		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
 	)

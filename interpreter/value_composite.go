@@ -236,8 +236,13 @@ var _ HashableValue = &CompositeValue{}
 var _ MemberAccessibleValue = &CompositeValue{}
 var _ ReferenceTrackedResourceKindedValue = &CompositeValue{}
 var _ ContractValue = &CompositeValue{}
+var _ atree.Value = &CompositeValue{}
+var _ atree.WrapperValue = &CompositeValue{}
+var _ atreeContainerBackedValue = &CompositeValue{}
 
 func (*CompositeValue) isValue() {}
+
+func (*CompositeValue) isAtreeContainerBackedValue() {}
 
 func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
 	descend := visitor.VisitCompositeValue(interpreter, v)
@@ -1138,7 +1143,16 @@ func (v *CompositeValue) Storable(
 		return NonStorable{Value: v}, nil
 	}
 
+	// NOTE: Need to change CompositeValue.UnwrapAtreeValue()
+	// if CompositeValue is stored with wrapping.
+
 	return v.dictionary.Storable(storage, address, maxInlineSize)
+}
+
+func (v *CompositeValue) UnwrapAtreeValue() (atree.Value, uint64) {
+	// Wrapper size is 0 because CompositeValue is stored as
+	// atree.OrderedMap without any physical wrapping (see CompositeValue.Storable()).
+	return v.dictionary, 0
 }
 
 func (v *CompositeValue) NeedsStoreTo(address atree.Address) bool {
@@ -1936,4 +1950,8 @@ func (v *CompositeValue) ForEach(
 			return
 		}
 	}
+}
+
+func (v *CompositeValue) Inlined() bool {
+	return v.dictionary.Inlined()
 }
