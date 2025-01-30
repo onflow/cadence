@@ -1945,6 +1945,44 @@ func TestArrayLiteral(t *testing.T) {
 	})
 }
 
+func TestDictionaryLiteral(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("dictionary literal", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            fun test(): {String: Int} {
+                return {"b": 2, "e": 5}
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(checker)
+		program := comp.Compile()
+
+		vmConfig := &vm.Config{}
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		result, err := vmInstance.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+
+		require.IsType(t, &vm.DictionaryValue{}, result)
+		dictionary := result.(*vm.DictionaryValue)
+		assert.Equal(t, 2, dictionary.Count())
+		assert.Equal(t,
+			vm.NewSomeValueNonCopying(vm.NewIntValue(2)),
+			dictionary.GetKey(vmConfig, vm.NewStringValue("b")),
+		)
+		assert.Equal(t,
+			vm.NewSomeValueNonCopying(vm.NewIntValue(5)),
+			dictionary.GetKey(vmConfig, vm.NewStringValue("e")),
+		)
+	})
+}
+
 func TestReference(t *testing.T) {
 
 	t.Parallel()

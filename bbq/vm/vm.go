@@ -643,16 +643,22 @@ func opNewArray(vm *VM, ins opcode.InstructionNewArray) {
 
 	typ := vm.loadType(ins.TypeIndex).(interpreter.ArrayStaticType)
 
-	elements := make([]Value, ins.Size)
-
-	// Must be inserted in the reverse,
-	// since the stack if FILO.
-	for i := int(ins.Size) - 1; i >= 0; i-- {
-		elements[i] = vm.pop()
-	}
-
+	elements := vm.peekN(int(ins.Size))
 	array := NewArrayValue(vm.config, typ, ins.IsResource, elements...)
+	vm.dropN(len(elements))
+
 	vm.push(array)
+}
+
+func opNewDictionary(vm *VM, ins opcode.InstructionNewDictionary) {
+
+	typ := vm.loadType(ins.TypeIndex).(*interpreter.DictionaryStaticType)
+
+	entries := vm.peekN(int(ins.Size * 2))
+	dictionary := NewDictionaryValue(vm.config, typ, entries...)
+	vm.dropN(len(entries))
+
+	vm.push(dictionary)
 }
 
 func opNewRef(vm *VM, ins opcode.InstructionNewRef) {
@@ -734,6 +740,8 @@ func (vm *VM) run() {
 			opNew(vm, ins)
 		case opcode.InstructionNewArray:
 			opNewArray(vm, ins)
+		case opcode.InstructionNewDictionary:
+			opNewDictionary(vm, ins)
 		case opcode.InstructionNewRef:
 			opNewRef(vm, ins)
 		case opcode.InstructionSetField:
