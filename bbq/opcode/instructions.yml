@@ -164,6 +164,26 @@
       - name: "array"
         type: "array"
 
+- name: "newDictionary"
+  description: Creates a new dictionary with the given type and size.
+  operands:
+    - name: "typeIndex"
+      type: "index"
+    - name: "size"
+      type: "size"
+    - name: "isResource"
+      type: "bool"
+  valueEffects:
+    pop:
+      - name: "entries"
+        type: "value"
+        # The number of elements taken from the stack is equal to the size operand of the opcode, multiplied by 2.
+        count: "size * 2"
+    push:
+      - name: "dictionary"
+        type: "dictionary"
+
+
 - name: "newRef"
   description: Creates a new reference with the given type.
   operands:

@@ -748,9 +748,7 @@ func (c *Compiler[_]) VisitArrayExpression(array *ast.ArrayExpression) (_ struct
 	}
 
 	for _, expression := range array.Values {
-		//EmitDup()
 		c.compileExpression(expression)
-		//EmitSetIndex(index)
 	}
 
 	c.codeGen.Emit(
@@ -764,9 +762,30 @@ func (c *Compiler[_]) VisitArrayExpression(array *ast.ArrayExpression) (_ struct
 	return
 }
 
-func (c *Compiler[_]) VisitDictionaryExpression(_ *ast.DictionaryExpression) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler[_]) VisitDictionaryExpression(dictionary *ast.DictionaryExpression) (_ struct{}) {
+	dictionaryTypes := c.ExtendedElaboration.DictionaryExpressionTypes(dictionary)
+
+	typeIndex := c.getOrAddType(dictionaryTypes.DictionaryType)
+
+	size := len(dictionary.Entries)
+	if size >= math.MaxUint16 {
+		panic(errors.NewDefaultUserError("invalid dictionary expression"))
+	}
+
+	for _, entry := range dictionary.Entries {
+		c.compileExpression(entry.Key)
+		c.compileExpression(entry.Value)
+	}
+
+	c.codeGen.Emit(
+		opcode.InstructionNewDictionary{
+			TypeIndex:  typeIndex,
+			Size:       uint16(size),
+			IsResource: dictionaryTypes.DictionaryType.IsResourceType(),
+		},
+	)
+
+	return
 }
 
 func (c *Compiler[_]) VisitIdentifierExpression(expression *ast.IdentifierExpression) (_ struct{}) {

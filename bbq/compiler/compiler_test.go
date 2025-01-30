@@ -40,7 +40,7 @@ func TestCompileRecursionFib(t *testing.T) {
           }
           return fib(n - 1) + fib(n - 2)
       }
-  `)
+    `)
 	require.NoError(t, err)
 
 	compiler := NewBytecodeCompiler(checker)
@@ -115,7 +115,7 @@ func TestCompileImperativeFib(t *testing.T) {
           }
           return fibonacci
       }
-  `)
+    `)
 	require.NoError(t, err)
 
 	compiler := NewBytecodeCompiler(checker)
@@ -208,7 +208,7 @@ func TestCompileBreak(t *testing.T) {
           }
           return i
       }
-  `)
+    `)
 	require.NoError(t, err)
 
 	compiler := NewBytecodeCompiler(checker)
@@ -285,7 +285,7 @@ func TestCompileContinue(t *testing.T) {
           }
           return i
       }
-  `)
+    `)
 	require.NoError(t, err)
 
 	compiler := NewBytecodeCompiler(checker)
@@ -338,6 +338,116 @@ func TestCompileContinue(t *testing.T) {
 			{
 				Data: []byte{0x1},
 				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{0x3},
+				Kind: constantkind.Int,
+			},
+		},
+		program.Constants,
+	)
+}
+
+func TestCompileArray(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun test() {
+          let xs: [Int] = [1, 2, 3]
+      }
+    `)
+	require.NoError(t, err)
+
+	compiler := NewBytecodeCompiler(checker)
+	program := compiler.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	require.Equal(t,
+		[]byte{
+			byte(opcode.GetConstant), 0, 0,
+			byte(opcode.GetConstant), 0, 1,
+			byte(opcode.GetConstant), 0, 2,
+			byte(opcode.NewArray), 0, 0, 0, 3, 0,
+			byte(opcode.Transfer), 0, 0,
+			byte(opcode.SetLocal), 0, 0,
+			byte(opcode.Return),
+		},
+		compiler.ExportFunctions()[0].Code,
+	)
+
+	require.Equal(t,
+		[]*bbq.Constant{
+			{
+				Data: []byte{0x1},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{0x2},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{0x3},
+				Kind: constantkind.Int,
+			},
+		},
+		program.Constants,
+	)
+}
+func TestCompileDictionary(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun test() {
+          let xs: {String: Int} = {"a": 1, "b": 2, "c": 3}
+      }
+    `)
+	require.NoError(t, err)
+
+	compiler := NewBytecodeCompiler(checker)
+	program := compiler.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	require.Equal(t,
+		[]byte{
+			byte(opcode.GetConstant), 0, 0,
+			byte(opcode.GetConstant), 0, 1,
+			byte(opcode.GetConstant), 0, 2,
+			byte(opcode.GetConstant), 0, 3,
+			byte(opcode.GetConstant), 0, 4,
+			byte(opcode.GetConstant), 0, 5,
+			byte(opcode.NewDictionary), 0, 0, 0, 3, 0,
+			byte(opcode.Transfer), 0, 0,
+			byte(opcode.SetLocal), 0, 0,
+			byte(opcode.Return),
+		},
+		compiler.ExportFunctions()[0].Code,
+	)
+
+	require.Equal(t,
+		[]*bbq.Constant{
+			{
+				Data: []byte{'a'},
+				Kind: constantkind.String,
+			},
+			{
+				Data: []byte{0x1},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{'b'},
+				Kind: constantkind.String,
+			},
+			{
+				Data: []byte{0x2},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{'c'},
+				Kind: constantkind.String,
 			},
 			{
 				Data: []byte{0x3},

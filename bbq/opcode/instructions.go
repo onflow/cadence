@@ -415,6 +415,44 @@ func DecodeNewArray(ip *uint16, code []byte) (i InstructionNewArray) {
 	return i
 }
 
+// InstructionNewDictionary
+//
+// Creates a new dictionary with the given type and size.
+type InstructionNewDictionary struct {
+	TypeIndex  uint16
+	Size       uint16
+	IsResource bool
+}
+
+var _ Instruction = InstructionNewDictionary{}
+
+func (InstructionNewDictionary) Opcode() Opcode {
+	return NewDictionary
+}
+
+func (i InstructionNewDictionary) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	printfArgument(&sb, "typeIndex", i.TypeIndex)
+	printfArgument(&sb, "size", i.Size)
+	printfArgument(&sb, "isResource", i.IsResource)
+	return sb.String()
+}
+
+func (i InstructionNewDictionary) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.TypeIndex)
+	emitUint16(code, i.Size)
+	emitBool(code, i.IsResource)
+}
+
+func DecodeNewDictionary(ip *uint16, code []byte) (i InstructionNewDictionary) {
+	i.TypeIndex = decodeUint16(ip, code)
+	i.Size = decodeUint16(ip, code)
+	i.IsResource = decodeBool(ip, code)
+	return i
+}
+
 // InstructionNewRef
 //
 // Creates a new reference with the given type.
@@ -1059,6 +1097,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return DecodeNew(ip, code)
 	case NewArray:
 		return DecodeNewArray(ip, code)
+	case NewDictionary:
+		return DecodeNewDictionary(ip, code)
 	case NewRef:
 		return DecodeNewRef(ip, code)
 	case GetConstant:
