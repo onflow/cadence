@@ -171,6 +171,7 @@ type Elaboration struct {
 	expressionTypes                     map[ast.Expression]ExpressionTypes
 	TransactionTypes                    []*TransactionType
 	semanticAccesses                    map[ast.Access]Access
+	resultVariableTypes                 map[ast.Element]Type
 	isChecking                          bool
 	// IsRecovered is true if the program was recovered (see runtime.Interface.RecoverProgram)
 	IsRecovered bool
@@ -1073,4 +1074,19 @@ func (e *Elaboration) ForStatementType(statement *ast.ForStatement) (types ForSt
 		return
 	}
 	return e.forStatementTypes[statement]
+}
+
+func (e *Elaboration) SetResultVariableType(declaration ast.Element, typ Type) {
+	if e.resultVariableTypes == nil {
+		e.resultVariableTypes = map[ast.Element]Type{}
+	}
+	e.resultVariableTypes[declaration] = typ
+}
+
+func (e *Elaboration) ResultVariableType(declaration ast.Element) (typ Type, exist bool) {
+	if e.resultVariableTypes == nil {
+		return
+	}
+	typ, exist = e.resultVariableTypes[declaration]
+	return
 }

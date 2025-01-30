@@ -29,7 +29,8 @@ import (
 	"github.com/onflow/cadence/stdlib"
 )
 
-const tempResultVariableName = "$result"
+const resultVariableName = "result"
+const tempResultVariableName = "$_result"
 
 // Desugar will rewrite the AST from high-level abstractions to a much lower-level
 // abstractions, so the compiler and vm could work with a minimal set of language features.
@@ -63,20 +64,17 @@ func NewDesugar(
 	checker *sema.Checker,
 ) *Desugar {
 	return &Desugar{
-		memoryGauge: memoryGauge,
-		config:      compilerConfig,
-		elaboration: elaboration,
-		program:     program,
-		checker:     checker,
-		importsSet:  map[common.Location]struct{}{},
+		memoryGauge:                  memoryGauge,
+		config:                       compilerConfig,
+		elaboration:                  elaboration,
+		program:                      program,
+		checker:                      checker,
+		importsSet:                   map[common.Location]struct{}{},
+		inheritedFuncsWithConditions: map[string][]*inheritedFunction{},
 	}
 }
 
 func (d *Desugar) Run() *ast.Program {
-	// TODO: This assumes the program/elaboration is not cached.
-	//   i.e: Modifies the elaboration.
-	//   Handle this properly for cached programs.
-
 	declarations := d.program.Declarations()
 	for _, declaration := range declarations {
 		modifiedDeclaration := d.desugarDeclaration(declaration)
@@ -106,15 +104,13 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration)
 	funcBlock := declaration.FunctionBlock
 	funcName := declaration.Identifier.Identifier
 
-	preConditions := d.desugarConditions(
+	preConditions := d.desugarPreConditions(
 		funcName,
-		ast.ConditionKindPre,
 		funcBlock,
 		declaration.ParameterList,
 	)
-	postConditions := d.desugarConditions(
+	postConditions := d.desugarPostConditions(
 		funcName,
-		ast.ConditionKindPost,
 		funcBlock,
 		declaration.ParameterList,
 	)
@@ -123,6 +119,15 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration)
 	modifiedStatements = append(modifiedStatements, preConditions...)
 
 	if funcBlock.HasStatements() {
+		pos := funcBlock.Block.StartPos
+
+		// Always define a temporary `$_result` variable.
+		// This is because there can be conditional-returns in the middle of the function.
+		// So always assign to the temp-result variable upon a return,
+		// and do the actual return at the end of the function.
+		modifiedStatements = d.declareTempResultVariable(declaration, pos, modifiedStatements)
+
+		// Add the remaining statements that are defined in this function.
 		statements := funcBlock.Block.Statements
 		modifiedStatements = append(modifiedStatements, statements...)
 	}
@@ -132,9 +137,6 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration)
 	// For that, replace the return-stmt with a temporary result assignment,
 	// and once the post conditions are added, then add a new return-stmt
 	// which would return the temp result.
-
-	// TODO: If 'result' variable is used in the user-code,
-	//   this temp assignment must use the 'result' variable.
 
 	// TODO: Handle returns from multiple places
 
@@ -146,79 +148,32 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration)
 		originalReturnStmt, hasReturn = lastStmt.(*ast.ReturnStatement)
 	}
 
+	var returnType sema.Type = sema.VoidType
+
 	if hasReturn {
 		// Remove the return statement from here
 		modifiedStatements = modifiedStatements[:len(modifiedStatements)-1]
 
 		if originalReturnStmt.Expression != nil {
-			// Instead append a temp-result assignment.i.e:
-			// `let $result = <expression>`
-			tempResultAssignmentStmt := ast.NewVariableDeclaration(
-				d.memoryGauge,
-				ast.AccessNotSpecified,
-				true,
-				ast.NewIdentifier(d.memoryGauge, tempResultVariableName, originalReturnStmt.StartPos),
-				declaration.ReturnTypeAnnotation,
-				originalReturnStmt.Expression,
-				ast.NewTransfer(
-					d.memoryGauge,
-					ast.TransferOperationCopy, // TODO: determine based on return value (if resource, this should be a move)
-					originalReturnStmt.StartPos,
-				),
-				originalReturnStmt.StartPos,
-				nil,
-				nil,
-				"",
-			)
-
+			// Instead, append a temp-result assignment.i.e:
+			// `let $_result = <expression>`
 			returnStmtTypes := d.elaboration.ReturnStatementTypes(originalReturnStmt)
-			d.elaboration.SetVariableDeclarationTypes(
-				tempResultAssignmentStmt,
-				sema.VariableDeclarationTypes{
-					ValueType:  returnStmtTypes.ValueType,
-					TargetType: returnStmtTypes.ReturnType,
-				},
-			)
+			returnType = returnStmtTypes.ReturnType
 
+			tempResultAssignmentStmt := d.tempResultAssignment(originalReturnStmt, returnStmtTypes)
 			modifiedStatements = append(modifiedStatements, tempResultAssignmentStmt)
 		}
 	}
 
 	// Once the return statement is removed, then append the post conditions.
-	modifiedStatements = append(modifiedStatements, postConditions...)
+	if len(postConditions) > 0 {
+		modifiedStatements = d.declareResultVariable(funcBlock, modifiedStatements, returnType)
+		modifiedStatements = append(modifiedStatements, postConditions...)
+	}
 
 	// Insert a return statement at the end, after post conditions.
-	var modifiedReturn *ast.ReturnStatement
-	if !hasReturn || originalReturnStmt.Expression == nil {
-		var astRange ast.Range
-		if hasReturn {
-			astRange = originalReturnStmt.Range
-		} else {
-			astRange = ast.EmptyRange
-		}
-
-		// `return`
-		modifiedReturn = ast.NewReturnStatement(
-			d.memoryGauge,
-			nil,
-			astRange,
-		)
-	} else {
-		// `return $result`
-		modifiedReturn = ast.NewReturnStatement(
-			d.memoryGauge,
-			ast.NewIdentifierExpression(
-				d.memoryGauge,
-				ast.NewIdentifier(
-					d.memoryGauge,
-					tempResultVariableName,
-					originalReturnStmt.StartPos,
-				),
-			),
-			originalReturnStmt.Range,
-		)
-	}
-	modifiedStatements = append(modifiedStatements, modifiedReturn)
+	tempResultReturn := d.tempResultReturnStatement(hasReturn, originalReturnStmt, returnType)
+	modifiedStatements = append(modifiedStatements, tempResultReturn)
 
 	modifiedFuncBlock := ast.NewFunctionBlock(
 		d.memoryGauge,
@@ -247,58 +202,285 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration)
 	)
 }
 
-func (d *Desugar) desugarConditions(
+// Assign the return value to the temporary `$_result` synthetic variable.
+func (d *Desugar) tempResultAssignment(
+	originalReturnStmt *ast.ReturnStatement,
+	returnStmtTypes sema.ReturnStatementTypes,
+) *ast.AssignmentStatement {
+
+	transfer := ast.TransferOperationCopy
+	if returnStmtTypes.ReturnType.IsResourceType() {
+		transfer = ast.TransferOperationMove
+	}
+
+	tempResultAssignmentStmt := ast.NewAssignmentStatement(
+		d.memoryGauge,
+		d.tempResultIdentifierExpr(originalReturnStmt.StartPos),
+		ast.NewTransfer(
+			d.memoryGauge,
+			transfer,
+			originalReturnStmt.StartPos,
+		),
+		originalReturnStmt.Expression,
+	)
+
+	d.elaboration.SetAssignmentStatementTypes(
+		tempResultAssignmentStmt,
+		sema.AssignmentStatementTypes{
+			ValueType:  returnStmtTypes.ValueType,
+			TargetType: returnStmtTypes.ReturnType,
+		},
+	)
+	return tempResultAssignmentStmt
+}
+
+// Return the value that was temporary stored in `$_result` synthetic variable.
+func (d *Desugar) tempResultReturnStatement(
+	hasReturn bool,
+	originalReturnStmt *ast.ReturnStatement,
+	returnType sema.Type,
+) *ast.ReturnStatement {
+
+	var returnExpr ast.Expression
+	var astRange ast.Range
+
+	if hasReturn {
+		if originalReturnStmt.Expression != nil {
+			// `return $_result`
+			returnExpr = d.tempResultIdentifierExpr(originalReturnStmt.StartPos)
+
+			// If the return type is resource, then wrap it with a move.
+			if returnType.IsResourceType() {
+				// i.e: `return <- $_result`
+				returnExpr = ast.NewUnaryExpression(
+					d.memoryGauge,
+					ast.OperationMove,
+					returnExpr,
+					originalReturnStmt.StartPos,
+				)
+			}
+
+		}
+		astRange = originalReturnStmt.Range
+	} else {
+		astRange = ast.EmptyRange
+	}
+
+	return ast.NewReturnStatement(
+		d.memoryGauge,
+		returnExpr,
+		astRange,
+	)
+}
+
+// Declare a `$_result` synthetic variable, to temporarily hold return values.
+func (d *Desugar) declareTempResultVariable(
+	declaration *ast.FunctionDeclaration,
+	pos ast.Position,
+	modifiedStatements []ast.Statement,
+) []ast.Statement {
+	tempResultVarDecl := ast.NewVariableDeclaration(
+		d.memoryGauge,
+		ast.AccessNotSpecified,
+		false,
+		ast.NewIdentifier(
+			d.memoryGauge,
+			tempResultVariableName,
+			pos,
+		),
+		declaration.ReturnTypeAnnotation,
+
+		// TODO: What should be the value?
+		//  We just need the variable to be defined. Value is assigned later.
+		nil,
+
+		ast.NewTransfer(
+			d.memoryGauge,
+			ast.TransferOperationCopy, // TODO: determine based on return value (if resource, this should be a move)
+			pos,
+		),
+		pos,
+		nil,
+		nil,
+		"",
+	)
+
+	functionType := d.elaboration.FunctionDeclarationFunctionType(declaration)
+	returnType := functionType.ReturnTypeAnnotation.Type
+	d.elaboration.SetVariableDeclarationTypes(
+		tempResultVarDecl,
+		sema.VariableDeclarationTypes{
+			ValueType:  returnType,
+			TargetType: returnType,
+		},
+	)
+
+	modifiedStatements = append(modifiedStatements, tempResultVarDecl)
+	return modifiedStatements
+}
+
+// Declare the `result` variable which will be made available to the post-conditions.
+func (d *Desugar) declareResultVariable(
+	funcBlock *ast.FunctionBlock,
+	modifiedStatements []ast.Statement,
+	returnType sema.Type,
+) []ast.Statement {
+
+	pos := funcBlock.EndPosition(d.memoryGauge)
+	resultVarType, exist := d.elaboration.ResultVariableType(funcBlock)
+
+	// Declare 'result' variable as needed, and assign the temp-result to it.
+	// i.e: `let result = $_result`
+	if !exist || resultVarType == sema.VoidType {
+		return modifiedStatements
+	}
+
+	var returnValueExpr ast.Expression = d.tempResultIdentifierExpr(pos)
+
+	// If the return type is a resource, then this must be a reference expr.
+	if returnType.IsResourceType() {
+		referenceExpression := ast.NewReferenceExpression(d.memoryGauge, returnValueExpr, pos)
+		d.elaboration.SetReferenceExpressionBorrowType(referenceExpression, resultVarType)
+		returnValueExpr = referenceExpression
+	}
+
+	resultVarDecl := ast.NewVariableDeclaration(
+		d.memoryGauge,
+		ast.AccessNotSpecified,
+		true,
+		ast.NewIdentifier(
+			d.memoryGauge,
+			resultVariableName,
+			pos,
+		),
+
+		// No need of type annotation.
+		// Compiler retrieves types from the elaboration, which is updated below.
+		nil,
+
+		returnValueExpr,
+		ast.NewTransfer(
+			d.memoryGauge,
+			// This is always a copy.
+			// Because result becomes a reference, if the return type is resource.
+			ast.TransferOperationCopy,
+			pos,
+		),
+		pos,
+		nil,
+		nil,
+		"",
+	)
+
+	d.elaboration.SetVariableDeclarationTypes(
+		resultVarDecl,
+		sema.VariableDeclarationTypes{
+			ValueType:  resultVarType,
+			TargetType: resultVarType,
+		},
+	)
+
+	modifiedStatements = append(modifiedStatements, resultVarDecl)
+
+	return modifiedStatements
+}
+
+func (d *Desugar) tempResultIdentifierExpr(pos ast.Position) *ast.IdentifierExpression {
+	return ast.NewIdentifierExpression(
+		d.memoryGauge,
+		ast.NewIdentifier(
+			d.memoryGauge,
+			tempResultVariableName,
+			pos,
+		),
+	)
+}
+
+func (d *Desugar) desugarPreConditions(
 	enclosingFuncName string,
-	kind ast.ConditionKind,
 	funcBlock *ast.FunctionBlock,
 	list *ast.ParameterList,
 ) []ast.Statement {
 
 	desugaredConditions := make([]ast.Statement, 0)
-
 	pos := ast.EmptyPosition
-
-	var conditions *ast.Conditions
+	kind := ast.ConditionKindPre
 
 	// Desugar inherited pre-conditions
-	if kind == ast.ConditionKindPre {
-		if funcBlock != nil {
-			conditions = funcBlock.PreConditions
+	inheritedFuncs := d.inheritedFuncsWithConditions[enclosingFuncName]
+	for _, inheritedFunc := range inheritedFuncs {
+		inheritedPreConditions := inheritedFunc.functionDecl.FunctionBlock.PreConditions
+		if inheritedPreConditions == nil {
+			continue
 		}
 
-		if d.inheritedFuncsWithConditions != nil {
-			inheritedFuncs := d.inheritedFuncsWithConditions[enclosingFuncName]
-			for _, inheritedFunc := range inheritedFuncs {
-				inheritedPreConditions := inheritedFunc.functionDecl.FunctionBlock.PreConditions
-				if inheritedPreConditions == nil {
-					continue
-				}
+		// If the inherited function has pre-conditions, then add an invocation
+		// to call the generated pre-condition-function of the interface.
 
-				// If the inherited function has pre-conditions, then add an invocation
-				// to call the generated pre-condition-function of the interface.
+		// Generate: `FooInterface.bar.&preCondition(a1, a2)`
+		invocation := d.inheritedConditionInvocation(
+			enclosingFuncName,
+			kind,
+			inheritedFunc,
+			nil, // No result variable for pre-conditions
+			pos,
+		)
+		desugaredConditions = append(desugaredConditions, invocation)
+	}
 
-				// Generate: `FooInterface.bar.&preCondition(a1, a2)`
-				invocation := d.inheritedConditionInvocation(
-					enclosingFuncName,
-					kind,
-					inheritedFunc,
-					pos,
-				)
-				desugaredConditions = append(desugaredConditions, invocation)
-			}
+	// Desugar self-defined pre-conditions
+	var conditions *ast.Conditions
+	if funcBlock != nil && funcBlock.PreConditions != nil {
+		conditions = funcBlock.PreConditions
+
+		for _, condition := range conditions.Conditions {
+			desugaredCondition := d.desugarCondition(condition)
+			desugaredConditions = append(desugaredConditions, desugaredCondition)
 		}
-	} else if funcBlock != nil {
-		// Post conditions
+	}
+
+	// If this is a method of a concrete-type, or an interface default method,
+	// then return with the updated statements, and continue desugaring the rest.
+
+	// TODO: Handle default functions with conditions
+
+	if d.canInlineConditions(funcBlock, conditions) {
+		return desugaredConditions
+	}
+
+	// Otherwise, i.e: if this is an interface function with only pre-conditions,
+	// (thus not a default function), then generate a separate function for the conditions.
+	d.generateConditionsFunction(
+		enclosingFuncName,
+		kind,
+		conditions,
+		funcBlock,
+		desugaredConditions,
+		list,
+	)
+
+	return nil
+}
+
+func (d *Desugar) desugarPostConditions(
+	enclosingFuncName string,
+	funcBlock *ast.FunctionBlock,
+	list *ast.ParameterList,
+) []ast.Statement {
+
+	desugaredConditions := make([]ast.Statement, 0)
+	pos := ast.EmptyPosition
+	kind := ast.ConditionKindPost
+
+	var conditions *ast.Conditions
+	if funcBlock != nil {
 		conditions = funcBlock.PostConditions
 	}
 
-	// Desugar self-defined pre/post conditions
+	// Desugar self-defined post-conditions
 	if conditions != nil {
-		conditionsList := conditions.Conditions
-		if kind == ast.ConditionKindPost {
-			postConditionsRewrite := d.elaboration.PostConditionsRewrite(conditions)
-			conditionsList = postConditionsRewrite.RewrittenPostConditions
-		}
+		postConditionsRewrite := d.elaboration.PostConditionsRewrite(conditions)
+		conditionsList := postConditionsRewrite.RewrittenPostConditions
 
 		for _, condition := range conditionsList {
 			desugaredCondition := d.desugarCondition(condition)
@@ -307,25 +489,33 @@ func (d *Desugar) desugarConditions(
 	}
 
 	// Desugar inherited post-conditions
-	if kind == ast.ConditionKindPost {
-		if d.inheritedFuncsWithConditions != nil {
-			inheritedFuncs, ok := d.inheritedFuncsWithConditions[enclosingFuncName]
-			if ok && len(inheritedFuncs) > 0 {
-				// Must be added in reverse order.
-				for i := len(inheritedFuncs) - 1; i >= 0; i-- {
-					inheritedFunc := inheritedFuncs[i]
-					inheritedPostConditions := inheritedFunc.functionDecl.FunctionBlock.PostConditions
-					if inheritedPostConditions == nil {
-						continue
-					}
-					invocation := d.inheritedConditionInvocation(
-						enclosingFuncName,
-						kind,
-						inheritedFunc,
-						pos,
-					)
-					desugaredConditions = append(desugaredConditions, invocation)
-				}
+	inheritedFuncs, ok := d.inheritedFuncsWithConditions[enclosingFuncName]
+	if ok && len(inheritedFuncs) > 0 {
+		// Must be added in reverse order.
+		for i := len(inheritedFuncs) - 1; i >= 0; i-- {
+			inheritedFunc := inheritedFuncs[i]
+			inheritedPostConditions := inheritedFunc.functionDecl.FunctionBlock.PostConditions
+			if inheritedPostConditions == nil {
+				continue
+			}
+
+			resultVarType, resultVarExist := d.elaboration.ResultVariableType(inheritedFunc.functionDecl.FunctionBlock)
+
+			// If the inherited function has post-conditions, then add an invocation
+			// to call the generated post-condition-function of the interface.
+
+			// Generate: `FooInterface.bar.&postCondition(a1, a2)`
+			invocation := d.inheritedConditionInvocation(
+				enclosingFuncName,
+				kind,
+				inheritedFunc,
+				resultVarType,
+				pos,
+			)
+			desugaredConditions = append(desugaredConditions, invocation)
+
+			if resultVarExist {
+				d.elaboration.SetResultVariableType(funcBlock, resultVarType)
 			}
 		}
 	}
@@ -335,18 +525,17 @@ func (d *Desugar) desugarConditions(
 
 	// TODO: Handle default functions with conditions
 
-	if d.enclosingInterfaceType == nil ||
-		funcBlock.HasStatements() ||
-		conditions == nil {
+	if d.canInlineConditions(funcBlock, conditions) {
 		return desugaredConditions
 	}
 
-	// Otherwise, i.e: if this is an interface function with only pre/post conditions,
+	// Otherwise, i.e: if this is an interface function with only post-conditions,
 	// (thus not a default function), then generate a separate function for the conditions.
 	d.generateConditionsFunction(
 		enclosingFuncName,
 		kind,
 		conditions,
+		funcBlock,
 		desugaredConditions,
 		list,
 	)
@@ -354,12 +543,27 @@ func (d *Desugar) desugarConditions(
 	return nil
 }
 
+func (d *Desugar) canInlineConditions(funcBlock *ast.FunctionBlock, conditions *ast.Conditions) bool {
+
+	// Conditions can be inlined if one of the conditions are satisfied:
+	//  - There are no conditions
+	//  - This is a method of a concrete-type (i.e: enclosingInterfaceType is `nil`)
+	//  - This method is an interface default method (i.e: funcBlock has statements)
+
+	return conditions == nil ||
+		d.enclosingInterfaceType == nil ||
+		funcBlock.HasStatements()
+
+}
+
+// Generates a separate function for the provided conditions.
 func (d *Desugar) generateConditionsFunction(
 	enclosingFuncName string,
 	kind ast.ConditionKind,
 	conditions *ast.Conditions,
+	functionBlock *ast.FunctionBlock,
 	desugaredConditions []ast.Statement,
-	list *ast.ParameterList,
+	parameterList *ast.ParameterList,
 ) {
 	pos := conditions.StartPos
 
@@ -382,6 +586,45 @@ func (d *Desugar) generateConditionsFunction(
 		nil,
 	)
 
+	params := make([]*ast.Parameter, len(parameterList.Parameters))
+	copy(params, parameterList.Parameters)
+
+	// For post conditions, also add `result` as a parameter, if needed.
+	_, needResultVar := d.elaboration.ResultVariableType(functionBlock)
+	if kind == ast.ConditionKindPost && needResultVar {
+		params = append(params, ast.NewParameter(
+			d.memoryGauge,
+			sema.ArgumentLabelNotRequired,
+			ast.NewIdentifier(
+				d.memoryGauge,
+				resultVariableName,
+				pos,
+			),
+
+			ast.NewTypeAnnotation(
+				d.memoryGauge,
+				false,
+
+				// TODO: Pass the proper type here. It can be looked-up from the elaboration (see above).
+				//  However, will have to convert the `sema.Type` to `ast.Type`.
+				//  Currently this `ast.Type` is not needed for the compiler, hence passing a dummy type.
+				ast.NewNominalType(
+					d.memoryGauge,
+					ast.NewIdentifier(
+						d.memoryGauge,
+						sema.AnyStructType.Name,
+						pos,
+					),
+					nil,
+				),
+				parameterList.StartPos,
+			),
+
+			nil,
+			parameterList.StartPos,
+		))
+	}
+
 	conditionFunc := ast.NewFunctionDeclaration(
 		d.memoryGauge,
 		ast.AccessAll,
@@ -396,9 +639,11 @@ func (d *Desugar) generateConditionsFunction(
 		),
 		nil,
 
-		// Parameters for the condition is same as
-		// the parameters of the enclosing function.
-		list,
+		ast.NewParameterList(
+			d.memoryGauge,
+			params,
+			parameterList.Range,
+		),
 
 		ast.NewTypeAnnotation(
 			d.memoryGauge,
@@ -418,6 +663,7 @@ func (d *Desugar) inheritedConditionInvocation(
 	funcName string,
 	kind ast.ConditionKind,
 	inheritedFunc *inheritedFunction,
+	resultVarType sema.Type,
 	pos ast.Position,
 ) ast.Statement {
 
@@ -439,6 +685,14 @@ func (d *Desugar) inheritedConditionInvocation(
 		})
 	}
 
+	if resultVarType != nil && kind == ast.ConditionKindPost {
+		semaParams = append(semaParams, sema.Parameter{
+			TypeAnnotation: sema.NewTypeAnnotation(resultVarType),
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     resultVariableName,
+		})
+	}
+
 	funcType := sema.NewSimpleFunctionType(
 		sema.FunctionPurityView,
 		semaParams,
@@ -455,7 +709,7 @@ func (d *Desugar) inheritedConditionInvocation(
 
 	invocation := d.interfaceDelegationMethodCall(
 		inheritedFunc.interfaceType,
-		inheritedFunc.functionDecl,
+		funcType,
 		pos,
 		conditionsFuncName,
 		member,
@@ -642,9 +896,6 @@ func (d *Desugar) inheritedFunctionsWithConditions(compositeType *sema.Composite
 	for _, conformance := range compositeType.EffectiveInterfaceConformances() {
 		interfaceType := conformance.InterfaceType
 
-		// TODO: Merge this elaboration with the current elaboration (d.elaboration).
-		//   Because the inherited functions need their corresponding elaboration
-		//   for code generation.
 		elaboration, err := d.config.ElaborationResolver(interfaceType.Location)
 		if err != nil {
 			panic(err)
@@ -727,9 +978,11 @@ func (d *Desugar) inheritedDefaultFunctions(compositeType *sema.CompositeType, d
 
 		// Generate: `FooInterface.defaultFunc(a1, a2)`
 
+		inheritedFuncType := elaboration.FunctionDeclarationFunctionType(inheritedFunc)
+
 		invocation := d.interfaceDelegationMethodCall(
 			interfaceType,
-			inheritedFunc,
+			inheritedFuncType,
 			pos,
 			memberName,
 			member,
@@ -774,27 +1027,31 @@ func (d *Desugar) inheritedDefaultFunctions(compositeType *sema.CompositeType, d
 
 func (d *Desugar) interfaceDelegationMethodCall(
 	interfaceType *sema.InterfaceType,
-	inheritedFunc *ast.FunctionDeclaration,
+	inheritedFuncType *sema.FunctionType,
 	pos ast.Position,
 	functionName string,
 	member *sema.Member,
 ) *ast.InvocationExpression {
 
 	arguments := make([]*ast.Argument, 0)
-	for _, param := range inheritedFunc.ParameterList.Parameters {
+	for _, param := range inheritedFuncType.Parameters {
 		var arg *ast.Argument
 		if param.Label == "_" {
 			arg = ast.NewUnlabeledArgument(
 				d.memoryGauge,
 				ast.NewIdentifierExpression(
 					d.memoryGauge,
-					param.Identifier,
+					ast.NewIdentifier(
+						d.memoryGauge,
+						param.Identifier,
+						pos,
+					),
 				),
 			)
 		} else {
 			var label string
 			if param.Label == "" {
-				label = param.Identifier.Identifier
+				label = param.Identifier
 			} else {
 				label = param.Label
 			}
@@ -802,11 +1059,15 @@ func (d *Desugar) interfaceDelegationMethodCall(
 			arg = ast.NewArgument(
 				d.memoryGauge,
 				label,
-				&param.StartPos,
-				&param.StartPos,
+				&pos,
+				&pos,
 				ast.NewIdentifierExpression(
 					d.memoryGauge,
-					param.Identifier,
+					ast.NewIdentifier(
+						d.memoryGauge,
+						param.Identifier,
+						pos,
+					),
 				),
 			)
 		}

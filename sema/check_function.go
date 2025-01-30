@@ -359,6 +359,7 @@ func (checker *Checker) declareParameters(
 }
 
 func (checker *Checker) visitWithPostConditions(
+	enclosingElement ast.Element,
 	postConditions *ast.Conditions,
 	returnType Type,
 	returnTypePos ast.HasPosition,
@@ -455,6 +456,8 @@ func (checker *Checker) visitWithPostConditions(
 				resultType = returnType
 			}
 
+			checker.Elaboration.SetResultVariableType(enclosingElement, resultType)
+
 			checker.declareResultVariable(
 				resultType,
 				returnTypePos,
@@ -480,6 +483,7 @@ func (checker *Checker) visitFunctionBlock(
 	}
 
 	checker.visitWithPostConditions(
+		functionBlock,
 		functionBlock.PostConditions,
 		returnType,
 		returnTypePos,
