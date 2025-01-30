@@ -635,7 +635,7 @@ func (v *StringValue) Split(inter *Interpreter, locationRange LocationRange, sep
 // Explode returns a Cadence array of type [String], where each element is a single character of the string
 func (v *StringValue) Explode(inter *Interpreter, locationRange LocationRange) *ArrayValue {
 
-	iterator := v.Iterator(inter, locationRange)
+	iterator := v.Iterator()
 
 	return NewArrayValueWithIterator(
 		inter,
@@ -830,7 +830,7 @@ func (v *StringValue) ConformsToStaticType(
 	return true
 }
 
-func (v *StringValue) Iterator(_ *Interpreter, _ LocationRange) ValueIterator {
+func (v *StringValue) Iterator() StringValueIterator {
 	return StringValueIterator{
 		graphemes: uniseg.NewGraphemes(v.Str),
 	}
@@ -843,7 +843,7 @@ func (v *StringValue) ForEach(
 	transferElements bool,
 	locationRange LocationRange,
 ) {
-	iterator := v.Iterator(interpreter, locationRange)
+	iterator := v.Iterator()
 	for {
 		value := iterator.Next(interpreter, locationRange)
 		if value == nil {

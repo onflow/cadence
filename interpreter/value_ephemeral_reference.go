@@ -22,7 +22,6 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 )
 
@@ -334,11 +333,6 @@ func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter, _ bool) {
 }
 
 func (*EphemeralReferenceValue) isReference() {}
-
-func (v *EphemeralReferenceValue) Iterator(_ *Interpreter, _ LocationRange) ValueIterator {
-	// Not used for now
-	panic(errors.NewUnreachableError())
-}
 
 func (v *EphemeralReferenceValue) ForEach(
 	interpreter *Interpreter,

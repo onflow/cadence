@@ -41,37 +41,6 @@ type ArrayValue struct {
 	isDestroyed      bool
 }
 
-type ArrayValueIterator struct {
-	atreeIterator atree.ArrayIterator
-}
-
-func (v *ArrayValue) Iterator(_ *Interpreter, _ LocationRange) ValueIterator {
-	arrayIterator, err := v.array.Iterator()
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
-	return ArrayValueIterator{
-		atreeIterator: arrayIterator,
-	}
-}
-
-var _ ValueIterator = ArrayValueIterator{}
-
-func (i ArrayValueIterator) Next(context ValueIteratorContext, _ LocationRange) Value {
-	atreeValue, err := i.atreeIterator.Next()
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
-
-	if atreeValue == nil {
-		return nil
-	}
-
-	// atree.Array iterator returns low-level atree.Value,
-	// convert to high-level interpreter.Value
-	return MustConvertStoredValue(context, atreeValue)
-}
-
 func NewArrayValue(
 	interpreter *Interpreter,
 	locationRange LocationRange,
