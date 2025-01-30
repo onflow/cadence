@@ -37,9 +37,9 @@ type UInt128Value struct {
 	BigInt *big.Int
 }
 
-func NewUInt128ValueFromUint64(interpreter *Interpreter, value uint64) UInt128Value {
+func NewUInt128ValueFromUint64(memoryGauge common.MemoryGauge, value uint64) UInt128Value {
 	return NewUInt128ValueFromBigInt(
-		interpreter,
+		memoryGauge,
 		func() *big.Int {
 			return new(big.Int).SetUint64(value)
 		},
@@ -509,19 +509,19 @@ func ConvertUInt128(memoryGauge common.MemoryGauge, value Value, locationRange L
 	)
 }
 
-func (v UInt128Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v UInt128Value) BitwiseOr(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseOr,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
 
 	return NewUInt128ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			res := new(big.Int)
 			return res.Or(v.BigInt, o.BigInt)
@@ -529,19 +529,19 @@ func (v UInt128Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, lo
 	)
 }
 
-func (v UInt128Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v UInt128Value) BitwiseXor(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseXor,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
 
 	return NewUInt128ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			res := new(big.Int)
 			return res.Xor(v.BigInt, o.BigInt)
@@ -549,19 +549,19 @@ func (v UInt128Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, l
 	)
 }
 
-func (v UInt128Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v UInt128Value) BitwiseAnd(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseAnd,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
 
 	return NewUInt128ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			res := new(big.Int)
 			return res.And(v.BigInt, o.BigInt)
@@ -570,13 +570,13 @@ func (v UInt128Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, l
 
 }
 
-func (v UInt128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v UInt128Value) BitwiseLeftShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseLeftShift,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -587,16 +587,16 @@ func (v UInt128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVa
 		})
 	}
 	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 128 {
-		return NewUInt128ValueFromUint64(interpreter, 0)
+		return NewUInt128ValueFromUint64(context, 0)
 	}
 
 	// The maximum shift value at this point is 127, which may lead to an
 	// additional allocation of up to 128 bits. Add usage for possible
 	// intermediate value.
-	common.UseMemory(interpreter, Uint128MemoryUsage)
+	common.UseMemory(context, Uint128MemoryUsage)
 
 	return NewUInt128ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			res := new(big.Int)
 			res = res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
@@ -605,13 +605,13 @@ func (v UInt128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVa
 	)
 }
 
-func (v UInt128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v UInt128Value) BitwiseRightShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseRightShift,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -622,11 +622,11 @@ func (v UInt128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerV
 		})
 	}
 	if !o.BigInt.IsUint64() {
-		return NewUInt128ValueFromUint64(interpreter, 0)
+		return NewUInt128ValueFromUint64(context, 0)
 	}
 
 	return NewUInt128ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			res := new(big.Int)
 			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
