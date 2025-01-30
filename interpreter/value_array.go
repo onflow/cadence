@@ -213,13 +213,17 @@ func newArrayValueFromAtreeArray(
 
 var _ Value = &ArrayValue{}
 var _ atree.Value = &ArrayValue{}
+var _ atree.WrapperValue = &ArrayValue{}
 var _ EquatableValue = &ArrayValue{}
 var _ ValueIndexableValue = &ArrayValue{}
 var _ MemberAccessibleValue = &ArrayValue{}
 var _ ReferenceTrackedResourceKindedValue = &ArrayValue{}
 var _ IterableValue = &ArrayValue{}
+var _ atreeContainerBackedValue = &ArrayValue{}
 
 func (*ArrayValue) isValue() {}
+
+func (*ArrayValue) isAtreeContainerBackedValue() {}
 
 func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
 	descend := visitor.VisitArrayValue(interpreter, v)
@@ -1292,7 +1296,15 @@ func (v *ArrayValue) Storable(
 	address atree.Address,
 	maxInlineSize uint64,
 ) (atree.Storable, error) {
+	// NOTE: Need to change ArrayValue.UnwrapAtreeValue()
+	// if ArrayValue is stored with wrapping.
 	return v.array.Storable(storage, address, maxInlineSize)
+}
+
+func (v *ArrayValue) UnwrapAtreeValue() (atree.Value, uint64) {
+	// Wrapper size is 0 because ArrayValue is stored as
+	// atree.Array without any physical wrapping (see ArrayValue.Storable()).
+	return v.array, 0
 }
 
 func (v *ArrayValue) IsReferenceTrackedResourceKindedValue() {}
@@ -1993,4 +2005,8 @@ func (v *ArrayValue) SetType(staticType ArrayStaticType) {
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
+}
+
+func (v *ArrayValue) Inlined() bool {
+	return v.array.Inlined()
 }

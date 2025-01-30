@@ -54,7 +54,8 @@ func (UnsupportedTagDecodingError) IsInternalError() {}
 
 func (e UnsupportedTagDecodingError) Error() string {
 	return fmt.Sprintf(
-		"internal error: unsupported decoded tag: %d",
+		"%s unsupported decoded tag: %d",
+		errors.InternalErrorMessagePrefix,
 		e.Tag,
 	)
 }
@@ -69,7 +70,8 @@ func (InvalidStringLengthError) IsInternalError() {}
 
 func (e InvalidStringLengthError) Error() string {
 	return fmt.Sprintf(
-		"internal error: invalid string length: got %d, expected max %d",
+		"%s invalid string length: got %d, expected max %d",
+		errors.InternalErrorMessagePrefix,
 		e.Length,
 		goMaxInt,
 	)

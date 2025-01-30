@@ -29,6 +29,7 @@ import (
 
 var account_KeysTypeID = sema.Account_KeysType.ID()
 var account_KeysStaticType StaticType = PrimitiveStaticTypeAccount_Keys
+var account_KeysFieldNames []string = nil
 
 // NewAccountKeysValue constructs an Account.Keys value.
 func NewAccountKeysValue(
@@ -41,12 +42,36 @@ func NewAccountKeysValue(
 	getKeysCount AccountKeysCountGetter,
 ) Value {
 
+	var accountKeys *SimpleCompositeValue
+
+	fields := map[string]Value{}
+
+	computeLazyStoredField := func(name string) Value {
+		switch name {
+		case sema.Account_KeysTypeAddFunctionName:
+			return addFunction(accountKeys)
+		case sema.Account_KeysTypeGetFunctionName:
+			return getFunction(accountKeys)
+		case sema.Account_KeysTypeRevokeFunctionName:
+			return revokeFunction(accountKeys)
+		case sema.Account_KeysTypeForEachFunctionName:
+			return forEachFunction(accountKeys)
+		}
+
+		return nil
+	}
+
 	computeField := func(name string, _ *Interpreter, _ LocationRange) Value {
 		switch name {
 		case sema.Account_KeysTypeCountFieldName:
 			return getKeysCount()
 		}
-		return nil
+
+		field := computeLazyStoredField(name)
+		if field != nil {
+			fields[name] = field
+		}
+		return field
 	}
 
 	var str string
@@ -59,23 +84,16 @@ func NewAccountKeysValue(
 		return str
 	}
 
-	accountKeys := NewSimpleCompositeValue(
+	accountKeys = NewSimpleCompositeValue(
 		gauge,
 		account_KeysTypeID,
 		account_KeysStaticType,
-		nil,
-		nil,
+		account_KeysFieldNames,
+		fields,
 		computeField,
 		nil,
 		stringer,
 	)
-
-	accountKeys.Fields = map[string]Value{
-		sema.Account_KeysTypeAddFunctionName:     addFunction(accountKeys),
-		sema.Account_KeysTypeGetFunctionName:     getFunction(accountKeys),
-		sema.Account_KeysTypeRevokeFunctionName:  revokeFunction(accountKeys),
-		sema.Account_KeysTypeForEachFunctionName: forEachFunction(accountKeys),
-	}
 
 	return accountKeys
 }

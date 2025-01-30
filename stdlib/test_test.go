@@ -2138,7 +2138,7 @@ func TestTestExpectFailure(t *testing.T) {
 		assert.ErrorContains(
 			t,
 			err,
-			"Expected error message to include: \"what is wrong?\".",
+			"Expected error message to include: \"what is wrong?\"",
 		)
 	})
 

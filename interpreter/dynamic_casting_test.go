@@ -736,12 +736,11 @@ func returnResourceCasted(fromType, targetType string, operation ast.Operation) 
 
 func testResourceCastValid(t *testing.T, types, fromType string, targetType string, operation ast.Operation) {
 	inter := parseCheckAndInterpret(t,
-		types+
-			returnResourceCasted(
-				fromType,
-				targetType,
-				operation,
-			),
+		types+returnResourceCasted(
+			fromType,
+			targetType,
+			operation,
+		),
 	)
 
 	value, err := inter.Invoke("test")
@@ -774,12 +773,10 @@ func testResourceCastValid(t *testing.T, types, fromType string, targetType stri
 
 func testResourceCastInvalid(t *testing.T, types, fromType, targetType string, operation ast.Operation) {
 	inter := parseCheckAndInterpret(t,
-		fmt.Sprintf(
-			types+returnResourceCasted(
-				fromType,
-				targetType,
-				operation,
-			),
+		types+returnResourceCasted(
+			fromType,
+			targetType,
+			operation,
 		),
 	)
 
@@ -884,12 +881,11 @@ func returnStructCasted(fromType, targetType string, operation ast.Operation) st
 
 func testStructCastValid(t *testing.T, types, fromType string, targetType string, operation ast.Operation) {
 	inter := parseCheckAndInterpret(t,
-		types+
-			returnStructCasted(
-				fromType,
-				targetType,
-				operation,
-			),
+		types+returnStructCasted(
+			fromType,
+			targetType,
+			operation,
+		),
 	)
 
 	value, err := inter.Invoke("test")
@@ -922,13 +918,10 @@ func testStructCastValid(t *testing.T, types, fromType string, targetType string
 
 func testStructCastInvalid(t *testing.T, types, fromType, targetType string, operation ast.Operation) {
 	inter := parseCheckAndInterpret(t,
-		fmt.Sprintf(
-			types+
-				returnStructCasted(
-					fromType,
-					targetType,
-					operation,
-				),
+		types+returnStructCasted(
+			fromType,
+			targetType,
+			operation,
 		),
 	)
 
@@ -2253,8 +2246,12 @@ func returnReferenceCasted(fromType, targetType string, operation ast.Operation,
 
 func testReferenceCastValid(t *testing.T, types, fromType, targetType string, operation ast.Operation, isResource bool) {
 	inter := parseCheckAndInterpret(t,
-		types+
-			returnReferenceCasted(fromType, targetType, operation, isResource),
+		types+returnReferenceCasted(
+			fromType,
+			targetType,
+			operation,
+			isResource,
+		),
 	)
 
 	value, err := inter.Invoke("test")
@@ -2305,9 +2302,11 @@ func testReferenceCastValid(t *testing.T, types, fromType, targetType string, op
 
 func testReferenceCastInvalid(t *testing.T, types, fromType, targetType string, operation ast.Operation, isResource bool) {
 	inter := parseCheckAndInterpret(t,
-		fmt.Sprintf(
-			types+
-				returnReferenceCasted(fromType, targetType, operation, isResource),
+		types+returnReferenceCasted(
+			fromType,
+			targetType,
+			operation,
+			isResource,
 		),
 	)
 

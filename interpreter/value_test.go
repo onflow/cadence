@@ -3806,7 +3806,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		storageMap := storage.GetStorageMap(testAddress, common.StorageDomainPathStorage, true)
+		storageMap := storage.GetDomainStorageMap(inter, testAddress, common.StorageDomainPathStorage, true)
 		storageMap.WriteValue(inter, StringStorageMapKey("test"), TrueValue)
 
 		value := valueFactory(inter)
