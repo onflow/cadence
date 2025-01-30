@@ -501,7 +501,7 @@ func compositeMember(interpreter *Interpreter, compositeValue Value, memberValue
 	return memberValue
 }
 
-func (v *CompositeValue) isInvalidatedResource(_ *Interpreter) bool {
+func (v *CompositeValue) isInvalidatedResource(context ValueStaticTypeContext) bool {
 	return v.isDestroyed || (v.dictionary == nil && v.Kind == common.CompositeKindResource)
 }
 

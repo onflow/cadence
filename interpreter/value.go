@@ -198,7 +198,7 @@ type ResourceKindedValue interface {
 	Value
 	Destroy(interpreter *Interpreter, locationRange LocationRange)
 	IsDestroyed() bool
-	isInvalidatedResource(*Interpreter) bool
+	isInvalidatedResource(context ValueStaticTypeContext) bool
 }
 
 func maybeDestroy(interpreter *Interpreter, locationRange LocationRange, value Value) {

@@ -404,7 +404,7 @@ func (v *SomeValue) InnerValue() Value {
 	return v.value
 }
 
-func (v *SomeValue) isInvalidatedResource(_ *Interpreter) bool {
+func (v *SomeValue) isInvalidatedResource(context ValueStaticTypeContext) bool {
 	return v.value == nil || v.IsDestroyed()
 }
 

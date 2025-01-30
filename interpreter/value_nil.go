@@ -181,6 +181,6 @@ func (NilValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (NilValue) isInvalidatedResource(_ *Interpreter) bool {
+func (NilValue) isInvalidatedResource(context ValueStaticTypeContext) bool {
 	return false
 }

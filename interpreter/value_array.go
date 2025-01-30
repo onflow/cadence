@@ -323,8 +323,8 @@ func (v *ArrayValue) IsImportable(inter *Interpreter, locationRange LocationRang
 	return importable
 }
 
-func (v *ArrayValue) isInvalidatedResource(interpreter *Interpreter) bool {
-	return v.isDestroyed || (v.array == nil && v.IsResourceKinded(interpreter))
+func (v *ArrayValue) isInvalidatedResource(context ValueStaticTypeContext) bool {
+	return v.isDestroyed || (v.array == nil && v.IsResourceKinded(context))
 }
 
 func (v *ArrayValue) IsStaleResource(interpreter *Interpreter) bool {
