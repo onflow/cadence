@@ -36,7 +36,10 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	t.Run("Bool to Bool?", func(t *testing.T) {
 		inter := newTestInterpreter(t)
 
-		value := inter.BoxOptional(TrueValue, &sema.OptionalType{Type: sema.BoolType})
+		value := inter.BoxOptional(
+			TrueValue,
+			&sema.OptionalType{Type: sema.BoolType},
+		)
 		assert.Equal(t,
 			NewUnmeteredSomeValueNonCopying(TrueValue),
 			value,
@@ -46,7 +49,10 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	t.Run("Bool? to Bool?", func(t *testing.T) {
 		inter := newTestInterpreter(t)
 
-		value := inter.BoxOptional(NewUnmeteredSomeValueNonCopying(TrueValue), &sema.OptionalType{Type: sema.BoolType})
+		value := inter.BoxOptional(
+			NewUnmeteredSomeValueNonCopying(TrueValue),
+			&sema.OptionalType{Type: sema.BoolType},
+		)
 		assert.Equal(t,
 			NewUnmeteredSomeValueNonCopying(TrueValue),
 			value,
@@ -56,7 +62,14 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	t.Run("Bool? to Bool??", func(t *testing.T) {
 		inter := newTestInterpreter(t)
 
-		value := inter.BoxOptional(NewUnmeteredSomeValueNonCopying(TrueValue), &sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}})
+		value := inter.BoxOptional(
+			NewUnmeteredSomeValueNonCopying(TrueValue),
+			&sema.OptionalType{
+				Type: &sema.OptionalType{
+					Type: sema.BoolType,
+				},
+			},
+		)
 		assert.Equal(t,
 			NewUnmeteredSomeValueNonCopying(
 				NewUnmeteredSomeValueNonCopying(TrueValue),
@@ -69,7 +82,14 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		// NOTE:
-		value := inter.BoxOptional(Nil, &sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}})
+		value := inter.BoxOptional(
+			Nil,
+			&sema.OptionalType{
+				Type: &sema.OptionalType{
+					Type: sema.BoolType,
+				},
+			},
+		)
 		assert.Equal(t,
 			Nil,
 			value,
@@ -80,7 +100,14 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		// NOTE:
-		value := inter.BoxOptional(NewUnmeteredSomeValueNonCopying(Nil), &sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}})
+		value := inter.BoxOptional(
+			NewUnmeteredSomeValueNonCopying(Nil),
+			&sema.OptionalType{
+				Type: &sema.OptionalType{
+					Type: sema.BoolType,
+				},
+			},
+		)
 		assert.Equal(t,
 			Nil,
 			value,
