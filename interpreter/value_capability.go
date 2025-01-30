@@ -145,12 +145,12 @@ func (v *IDCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange,
 	switch name {
 	case sema.CapabilityTypeBorrowFunctionName:
 		// this function will panic already if this conversion fails
-		borrowType, _ := interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+		borrowType, _ := MustConvertStaticToSemaType(v.BorrowType, interpreter).(*sema.ReferenceType)
 		return interpreter.capabilityBorrowFunction(v, v.address, v.ID, borrowType)
 
 	case sema.CapabilityTypeCheckFunctionName:
 		// this function will panic already if this conversion fails
-		borrowType, _ := interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+		borrowType, _ := MustConvertStaticToSemaType(v.BorrowType, interpreter).(*sema.ReferenceType)
 		return interpreter.capabilityCheckFunction(v, v.address, v.ID, borrowType)
 
 	case sema.CapabilityTypeAddressFieldName:

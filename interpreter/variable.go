@@ -89,7 +89,7 @@ var _ Variable = &SelfVariable{}
 func NewSelfVariableWithValue(interpreter *Interpreter, value Value, locationRange LocationRange) Variable {
 	common.UseMemory(interpreter, variableMemoryUsage)
 
-	semaType := interpreter.MustSemaTypeOfValue(value)
+	semaType := MustSemaTypeOfValue(value, interpreter)
 
 	// Create an explicit reference to represent the implicit reference behavior of 'self' value.
 	// Authorization doesn't matter, we just need a reference to add to tracking.

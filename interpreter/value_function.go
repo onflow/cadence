@@ -352,7 +352,7 @@ func NewBoundFunctionValue(
 
 	selfRef, selfIsRef := (*self).(ReferenceValue)
 	if !selfIsRef {
-		semaType := interpreter.MustSemaTypeOfValue(*self)
+		semaType := MustSemaTypeOfValue(*self, interpreter)
 		selfRef = NewEphemeralReferenceValue(interpreter, boundAuth, *self, semaType, EmptyLocationRange)
 	}
 

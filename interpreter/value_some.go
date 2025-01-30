@@ -148,8 +148,9 @@ func (v *SomeValue) MeteredString(interpreter *Interpreter, seenReferences SeenR
 func (v *SomeValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
-		innerValueType := interpreter.MustConvertStaticToSemaType(
+		innerValueType := MustConvertStaticToSemaType(
 			v.value.StaticType(interpreter),
+			interpreter,
 		)
 		return NewBoundHostFunctionValue(
 			interpreter,

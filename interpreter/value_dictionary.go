@@ -1574,7 +1574,7 @@ func (v *DictionaryValue) ValueID() atree.ValueID {
 func (v *DictionaryValue) SemaType(interpreter *Interpreter) *sema.DictionaryType {
 	if v.semaType == nil {
 		// this function will panic already if this conversion fails
-		v.semaType, _ = interpreter.MustConvertStaticToSemaType(v.Type).(*sema.DictionaryType)
+		v.semaType, _ = MustConvertStaticToSemaType(v.Type, interpreter).(*sema.DictionaryType)
 	}
 	return v.semaType
 }

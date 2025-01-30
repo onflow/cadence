@@ -150,8 +150,8 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 				}
 
 				result := sema.IsSubType(
-					interpreter.MustConvertStaticToSemaType(staticType),
-					interpreter.MustConvertStaticToSemaType(otherStaticType),
+					MustConvertStaticToSemaType(staticType, interpreter),
+					MustConvertStaticToSemaType(otherStaticType, interpreter),
 				)
 				return AsBoolValue(result)
 			},

@@ -330,7 +330,7 @@ func (interpreter *Interpreter) getReferenceValue(value Value, resultType sema.T
 		if referenceType.Authorization != sema.UnauthorizedAccess || !interpreter.IsSubTypeOfSemaType(staticType, resultType) {
 			panic(InvalidMemberReferenceError{
 				ExpectedType:  resultType,
-				ActualType:    interpreter.MustConvertStaticToSemaType(staticType),
+				ActualType:    MustConvertStaticToSemaType(staticType, interpreter),
 				LocationRange: locationRange,
 			})
 		}
@@ -400,7 +400,7 @@ func (interpreter *Interpreter) checkMemberAccess(
 
 	if _, ok := expectedType.(*sema.OptionalType); ok {
 		if _, ok := targetStaticType.(*OptionalStaticType); !ok {
-			targetSemaType := interpreter.MustConvertStaticToSemaType(targetStaticType)
+			targetSemaType := MustConvertStaticToSemaType(targetStaticType, interpreter)
 
 			panic(MemberAccessTypeError{
 				ExpectedType:  expectedType,
@@ -411,7 +411,7 @@ func (interpreter *Interpreter) checkMemberAccess(
 	}
 
 	if !interpreter.IsSubTypeOfSemaType(targetStaticType, expectedType) {
-		targetSemaType := interpreter.MustConvertStaticToSemaType(targetStaticType)
+		targetSemaType := MustConvertStaticToSemaType(targetStaticType, interpreter)
 
 		panic(MemberAccessTypeError{
 			ExpectedType:  expectedType,
@@ -1229,7 +1229,8 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 	// add the implicit argument to the end of the argument list, if it exists
 	if implicitArg != nil {
 		arguments = append(arguments, *implicitArg)
-		argumentTypes = append(argumentTypes, interpreter.MustSemaTypeOfValue(*implicitArg))
+		argumentType := MustSemaTypeOfValue(*implicitArg, interpreter)
+		argumentTypes = append(argumentTypes, argumentType)
 	}
 
 	interpreter.reportFunctionInvocation()
@@ -1361,7 +1362,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			// otherwise dynamic cast now always unboxes optionals
 			value = interpreter.Unbox(value)
 		}
-		valueSemaType := interpreter.SubstituteMappedEntitlements(interpreter.MustSemaTypeOfValue(value))
+		valueSemaType := interpreter.SubstituteMappedEntitlements(MustSemaTypeOfValue(value, interpreter))
 		valueStaticType := ConvertSemaToStaticType(interpreter, valueSemaType)
 		isSubType := interpreter.IsSubTypeOfSemaType(valueStaticType, expectedType)
 
@@ -1587,7 +1588,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 
 	// within the constructor, the attachment's base and self references should be fully entitled,
 	// as the constructor of the attachment is only callable by the owner of the base
-	baseType := interpreter.MustSemaTypeOfValue(base).(sema.EntitlementSupportingType)
+	baseType := MustSemaTypeOfValue(base, interpreter).(sema.EntitlementSupportingType)
 	baseAccess := baseType.SupportedEntitlements().Access()
 	auth := ConvertSemaAccessToStaticAuthorization(interpreter, baseAccess)
 
@@ -1597,7 +1598,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		interpreter,
 		auth,
 		base,
-		interpreter.MustSemaTypeOfValue(base).(*sema.CompositeType),
+		MustSemaTypeOfValue(base, interpreter).(*sema.CompositeType),
 		locationRange,
 	)
 

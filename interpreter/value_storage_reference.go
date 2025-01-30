@@ -144,7 +144,7 @@ func (v *StorageReferenceValue) dereference(context ValueStaticTypeContext, loca
 		staticType := referenced.StaticType(context)
 
 		if !context.IsSubTypeOfSemaType(staticType, v.BorrowedType) {
-			semaType := context.MustConvertStaticToSemaType(staticType)
+			semaType := MustConvertStaticToSemaType(staticType, context)
 
 			return nil, ForceCastTypeMismatchError{
 				ExpectedType:  v.BorrowedType,
