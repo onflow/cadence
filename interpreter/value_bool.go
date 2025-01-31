@@ -162,7 +162,7 @@ func (BoolValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (BoolValue) IsResourceKinded(_ *Interpreter) bool {
+func (BoolValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

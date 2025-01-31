@@ -24,10 +24,23 @@ import (
 )
 
 type TypeConverter interface {
-	MustConvertStaticToSemaType(staticType StaticType) sema.Type
+	ConvertStaticToSemaType(staticType StaticType) (sema.Type, error)
 }
 
 var _ TypeConverter = &Interpreter{}
+
+func MustConvertStaticToSemaType(staticType StaticType, typeConverter TypeConverter) sema.Type {
+	semaType, err := typeConverter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		panic(err)
+	}
+	return semaType
+}
+
+func MustSemaTypeOfValue(value Value, context ValueStaticTypeContext) sema.Type {
+	staticType := value.StaticType(context)
+	return MustConvertStaticToSemaType(staticType, context)
+}
 
 type SubTypeChecker interface {
 	IsSubTypeOfSemaType(staticSubType StaticType, superType sema.Type) bool

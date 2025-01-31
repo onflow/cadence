@@ -330,13 +330,13 @@ func ConvertWord64(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 	)
 }
 
-func (v Word64Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word64Value) BitwiseOr(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseOr,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -345,16 +345,16 @@ func (v Word64Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, loc
 		return uint64(v | o)
 	}
 
-	return NewWord64Value(interpreter, valueGetter)
+	return NewWord64Value(context, valueGetter)
 }
 
-func (v Word64Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word64Value) BitwiseXor(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseXor,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -363,16 +363,16 @@ func (v Word64Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, lo
 		return uint64(v ^ o)
 	}
 
-	return NewWord64Value(interpreter, valueGetter)
+	return NewWord64Value(context, valueGetter)
 }
 
-func (v Word64Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word64Value) BitwiseAnd(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseAnd,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -381,16 +381,16 @@ func (v Word64Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, lo
 		return uint64(v & o)
 	}
 
-	return NewWord64Value(interpreter, valueGetter)
+	return NewWord64Value(context, valueGetter)
 }
 
-func (v Word64Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word64Value) BitwiseLeftShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseLeftShift,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -399,16 +399,16 @@ func (v Word64Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 		return uint64(v << o)
 	}
 
-	return NewWord64Value(interpreter, valueGetter)
+	return NewWord64Value(context, valueGetter)
 }
 
-func (v Word64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word64Value) BitwiseRightShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseRightShift,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -417,7 +417,7 @@ func (v Word64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 		return uint64(v >> o)
 	}
 
-	return NewWord64Value(interpreter, valueGetter)
+	return NewWord64Value(context, valueGetter)
 }
 
 func (v Word64Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -460,7 +460,7 @@ func (Word64Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Word64Value) IsResourceKinded(_ *Interpreter) bool {
+func (Word64Value) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

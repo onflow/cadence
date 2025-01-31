@@ -254,7 +254,7 @@ func (v *ArrayValue) iterate(
 			// atree.Array iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value
 			elementValue := MustConvertStoredValue(interpreter, element)
-			interpreter.checkInvalidatedResourceOrResourceReference(elementValue, locationRange)
+			checkInvalidatedResourceOrResourceReference(elementValue, locationRange, interpreter)
 
 			if transferElements {
 				// Each element must be transferred before passing onto the function.
@@ -323,8 +323,8 @@ func (v *ArrayValue) IsImportable(inter *Interpreter, locationRange LocationRang
 	return importable
 }
 
-func (v *ArrayValue) isInvalidatedResource(interpreter *Interpreter) bool {
-	return v.isDestroyed || (v.array == nil && v.IsResourceKinded(interpreter))
+func (v *ArrayValue) isInvalidatedResource(context ValueStaticTypeContext) bool {
+	return v.isDestroyed || (v.array == nil && v.IsResourceKinded(context))
 }
 
 func (v *ArrayValue) IsStaleResource(interpreter *Interpreter) bool {
@@ -1522,7 +1522,7 @@ func (v *ArrayValue) GetOwner() common.Address {
 func (v *ArrayValue) SemaType(typeConverter TypeConverter) sema.ArrayType {
 	if v.semaType == nil {
 		// this function will panic already if this conversion fails
-		v.semaType, _ = typeConverter.MustConvertStaticToSemaType(v.Type).(sema.ArrayType)
+		v.semaType, _ = MustConvertStaticToSemaType(v.Type, typeConverter).(sema.ArrayType)
 	}
 	return v.semaType
 }
@@ -1531,9 +1531,9 @@ func (v *ArrayValue) NeedsStoreTo(address atree.Address) bool {
 	return address != v.StorageAddress()
 }
 
-func (v *ArrayValue) IsResourceKinded(interpreter *Interpreter) bool {
+func (v *ArrayValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	if v.isResourceKinded == nil {
-		isResourceKinded := v.SemaType(interpreter).IsResourceType()
+		isResourceKinded := v.SemaType(context).IsResourceType()
 		v.isResourceKinded = &isResourceKinded
 	}
 	return *v.isResourceKinded

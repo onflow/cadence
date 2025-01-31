@@ -110,7 +110,7 @@ type Value interface {
 	) bool
 	RecursiveString(seenReferences SeenReferences) string
 	MeteredString(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string
-	IsResourceKinded(interpreter *Interpreter) bool
+	IsResourceKinded(context ValueStaticTypeContext) bool
 	NeedsStoreTo(address atree.Address) bool
 	Transfer(
 		interpreter *Interpreter,
@@ -198,7 +198,7 @@ type ResourceKindedValue interface {
 	Value
 	Destroy(interpreter *Interpreter, locationRange LocationRange)
 	IsDestroyed() bool
-	isInvalidatedResource(*Interpreter) bool
+	isInvalidatedResource(context ValueStaticTypeContext) bool
 }
 
 func maybeDestroy(interpreter *Interpreter, locationRange LocationRange, value Value) {

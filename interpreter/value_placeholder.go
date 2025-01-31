@@ -75,7 +75,7 @@ func (placeholderValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (placeholderValue) IsResourceKinded(_ *Interpreter) bool {
+func (placeholderValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

@@ -45,7 +45,7 @@ func NewInclusiveRangeValue(
 
 	step := GetSmallIntegerValue(1, rangeStaticType.ElementType)
 	if startComparable.Greater(interpreter, endComparable, locationRange) {
-		elemSemaTy := interpreter.MustConvertStaticToSemaType(rangeStaticType.ElementType)
+		elemSemaTy := MustConvertStaticToSemaType(rangeStaticType.ElementType, interpreter)
 		if elemSemaTy.Tag().BelongsTo(sema.UnsignedIntegerTypeTag) {
 			panic(InclusiveRangeConstructionError{
 				LocationRange: locationRange,

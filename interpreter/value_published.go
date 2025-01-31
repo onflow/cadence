@@ -120,7 +120,7 @@ func (v *PublishedValue) NeedsStoreTo(address atree.Address) bool {
 	return v.Value.NeedsStoreTo(address)
 }
 
-func (*PublishedValue) IsResourceKinded(_ *Interpreter) bool {
+func (*PublishedValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

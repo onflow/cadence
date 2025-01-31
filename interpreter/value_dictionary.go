@@ -343,7 +343,7 @@ func (v *DictionaryValue) Iterate(
 	v.iterate(interpreter, iterate, f, locationRange)
 }
 
-// IterateReadOnlyLoaded iterates over all LOADED key-valye pairs of the array.
+// IterateReadOnlyLoaded iterates over all LOADED key-value pairs of the array.
 // DO NOT perform storage mutations in the callback!
 func (v *DictionaryValue) IterateReadOnlyLoaded(
 	interpreter *Interpreter,
@@ -372,8 +372,8 @@ func (v *DictionaryValue) iterate(
 			keyValue := MustConvertStoredValue(interpreter, key)
 			valueValue := MustConvertStoredValue(interpreter, value)
 
-			interpreter.checkInvalidatedResourceOrResourceReference(keyValue, locationRange)
-			interpreter.checkInvalidatedResourceOrResourceReference(valueValue, locationRange)
+			checkInvalidatedResourceOrResourceReference(keyValue, locationRange, interpreter)
+			checkInvalidatedResourceOrResourceReference(valueValue, locationRange, interpreter)
 
 			resume = f(
 				keyValue,
@@ -474,8 +474,8 @@ func (v *DictionaryValue) IsDestroyed() bool {
 	return v.isDestroyed
 }
 
-func (v *DictionaryValue) isInvalidatedResource(interpreter *Interpreter) bool {
-	return v.isDestroyed || (v.dictionary == nil && v.IsResourceKinded(interpreter))
+func (v *DictionaryValue) isInvalidatedResource(context ValueStaticTypeContext) bool {
+	return v.isDestroyed || (v.dictionary == nil && v.IsResourceKinded(context))
 }
 
 func (v *DictionaryValue) IsStaleResource(interpreter *Interpreter) bool {
@@ -1571,10 +1571,10 @@ func (v *DictionaryValue) ValueID() atree.ValueID {
 	return v.dictionary.ValueID()
 }
 
-func (v *DictionaryValue) SemaType(interpreter *Interpreter) *sema.DictionaryType {
+func (v *DictionaryValue) SemaType(typeConverter TypeConverter) *sema.DictionaryType {
 	if v.semaType == nil {
 		// this function will panic already if this conversion fails
-		v.semaType, _ = interpreter.MustConvertStaticToSemaType(v.Type).(*sema.DictionaryType)
+		v.semaType, _ = MustConvertStaticToSemaType(v.Type, typeConverter).(*sema.DictionaryType)
 	}
 	return v.semaType
 }
@@ -1583,9 +1583,9 @@ func (v *DictionaryValue) NeedsStoreTo(address atree.Address) bool {
 	return address != v.StorageAddress()
 }
 
-func (v *DictionaryValue) IsResourceKinded(interpreter *Interpreter) bool {
+func (v *DictionaryValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	if v.isResourceKinded == nil {
-		isResourceKinded := v.SemaType(interpreter).IsResourceType()
+		isResourceKinded := v.SemaType(context).IsResourceType()
 		v.isResourceKinded = &isResourceKinded
 	}
 	return *v.isResourceKinded

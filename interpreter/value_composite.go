@@ -286,7 +286,7 @@ func (v *CompositeValue) StaticType(context ValueStaticTypeContext) StaticType {
 func (v *CompositeValue) IsImportable(inter *Interpreter, locationRange LocationRange) bool {
 	// Check type is importable
 	staticType := v.StaticType(inter)
-	semaType := inter.MustConvertStaticToSemaType(staticType)
+	semaType := MustConvertStaticToSemaType(staticType, inter)
 	if !semaType.IsImportable(map[*sema.Member]bool{}) {
 		return false
 	}
@@ -382,7 +382,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 		)
 
 		event := constructor.invoke(eventConstructorInvocation).(*CompositeValue)
-		eventType := interpreter.MustSemaTypeOfValue(event).(*sema.CompositeType)
+		eventType := MustSemaTypeOfValue(event, interpreter).(*sema.CompositeType)
 
 		// emit the event once destruction is complete
 		defer interpreter.emitEvent(event, eventType, locationRange)
@@ -501,7 +501,7 @@ func compositeMember(interpreter *Interpreter, compositeValue Value, memberValue
 	return memberValue
 }
 
-func (v *CompositeValue) isInvalidatedResource(_ *Interpreter) bool {
+func (v *CompositeValue) isInvalidatedResource(context ValueStaticTypeContext) bool {
 	return v.isDestroyed || (v.dictionary == nil && v.Kind == common.CompositeKindResource)
 }
 
@@ -985,7 +985,7 @@ func (v *CompositeValue) ConformsToStaticType(
 	}
 
 	staticType := v.StaticType(interpreter)
-	semaType := interpreter.MustConvertStaticToSemaType(staticType)
+	semaType := MustConvertStaticToSemaType(staticType, interpreter)
 
 	switch staticType.(type) {
 	case *CompositeStaticType:
@@ -1159,9 +1159,9 @@ func (v *CompositeValue) NeedsStoreTo(address atree.Address) bool {
 	return address != v.StorageAddress()
 }
 
-func (v *CompositeValue) IsResourceKinded(interpreter *Interpreter) bool {
+func (v *CompositeValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	if v.Kind == common.CompositeKindAttachment {
-		return interpreter.MustSemaTypeOfValue(v).IsResourceType()
+		return MustSemaTypeOfValue(v, context).IsResourceType()
 	}
 	return v.Kind == common.CompositeKindResource
 }
@@ -1556,7 +1556,7 @@ func (v *CompositeValue) forEachField(
 ) {
 	err := atreeIterate(func(key atree.Value, atreeValue atree.Value) (resume bool, err error) {
 		value := MustConvertStoredValue(interpreter, atreeValue)
-		interpreter.checkInvalidatedResourceOrResourceReference(value, locationRange)
+		checkInvalidatedResourceOrResourceReference(value, locationRange, interpreter)
 
 		resume = f(
 			string(key.(StringAtreeValue)),
@@ -1656,7 +1656,7 @@ func (v *CompositeValue) getBaseValue(
 	functionAuthorization Authorization,
 	locationRange LocationRange,
 ) *EphemeralReferenceValue {
-	attachmentType, ok := interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType)
+	attachmentType, ok := MustSemaTypeOfValue(v, interpreter).(*sema.CompositeType)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -1701,7 +1701,7 @@ func (v *CompositeValue) GetAttachments(interpreter *Interpreter, locationRange 
 }
 
 func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, locationRange LocationRange) Value {
-	compositeType := interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType)
+	compositeType := MustSemaTypeOfValue(v, interpreter).(*sema.CompositeType)
 	return NewBoundHostFunctionValue(
 		interpreter,
 		v,
@@ -1722,7 +1722,7 @@ func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, loc
 
 			fn := func(attachment *CompositeValue) {
 
-				attachmentType := inter.MustSemaTypeOfValue(attachment).(*sema.CompositeType)
+				attachmentType := MustSemaTypeOfValue(attachment, inter).(*sema.CompositeType)
 
 				attachmentReference := NewEphemeralReferenceValue(
 					inter,
@@ -1772,7 +1772,7 @@ func attachmentBaseAndSelfValues(
 		interpreter,
 		attachmentReferenceAuth,
 		v,
-		interpreter.MustSemaTypeOfValue(v),
+		MustSemaTypeOfValue(v, interpreter),
 		locationRange,
 	)
 
@@ -1787,7 +1787,7 @@ func (v *CompositeValue) forEachAttachment(
 	// The attachment iteration creates an implicit reference to the composite, and holds onto that referenced-value.
 	// But the reference could get invalidated during the iteration, making that referenced-value invalid.
 	// We create a reference here for the purposes of tracking it during iteration.
-	vType := interpreter.MustSemaTypeOfValue(v)
+	vType := MustSemaTypeOfValue(v, interpreter)
 	compositeReference := NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, v, vType, locationRange)
 	forEachAttachment(interpreter, compositeReference, locationRange, f)
 }
@@ -1819,7 +1819,7 @@ func forEachAttachment(
 
 	for {
 		// Check that the implicit composite reference was not invalidated during iteration
-		interpreter.checkInvalidatedResourceOrResourceReference(compositeReference, locationRange)
+		checkInvalidatedResourceOrResourceReference(compositeReference, locationRange, interpreter)
 		key, value, err := iterator.Next()
 		if err != nil {
 			panic(errors.NewExternalError(err))

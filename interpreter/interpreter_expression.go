@@ -41,7 +41,7 @@ func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression
 
 	case *ast.IndexExpression:
 		if attachmentType, ok := interpreter.Program.Elaboration.AttachmentAccessTypes(expression); ok {
-			return interpreter.typeIndexExpressionGetterSetter(expression, attachmentType)
+			return interpreter.typeIndexExpressionGetterSetter(expression, attachmentType, locationRange)
 		}
 		return interpreter.valueIndexExpressionGetterSetter(expression, locationRange)
 
@@ -89,25 +89,21 @@ func (interpreter *Interpreter) identifierExpressionGetterSetter(
 func (interpreter *Interpreter) typeIndexExpressionGetterSetter(
 	indexExpression *ast.IndexExpression,
 	attachmentType sema.Type,
+	locationRange LocationRange,
 ) getterSetter {
 	target, ok := interpreter.evalExpression(indexExpression.TargetExpression).(TypeIndexableValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: indexExpression,
-	}
-
 	return getterSetter{
 		target: target,
 		get: func(_ bool) Value {
-			interpreter.checkInvalidatedResourceOrResourceReference(target, indexExpression)
+			checkInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
 			return target.GetTypeKey(interpreter, locationRange, attachmentType)
 		},
 		set: func(_ Value) {
-			interpreter.checkInvalidatedResourceOrResourceReference(target, indexExpression)
+			checkInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
 			// writing to composites with indexing syntax is not supported
 			panic(errors.NewUnreachableError())
 		},
@@ -201,14 +197,14 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 
 	if isNestedResourceMove {
 		get = func(_ bool) Value {
-			interpreter.checkInvalidatedResourceOrResourceReference(target, targetExpression)
+			checkInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
 			value := target.RemoveKey(interpreter, locationRange, transferredIndexingValue)
 			target.InsertKey(interpreter, locationRange, transferredIndexingValue, placeholder)
 			return value
 		}
 	} else {
 		get = func(_ bool) Value {
-			interpreter.checkInvalidatedResourceOrResourceReference(target, targetExpression)
+			checkInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
 			value := target.GetKey(interpreter, locationRange, transferredIndexingValue)
 
 			// If the indexing value is a reference, then return a reference for the resulting value.
@@ -220,7 +216,7 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 		target: target,
 		get:    get,
 		set: func(value Value) {
-			interpreter.checkInvalidatedResourceOrResourceReference(target, targetExpression)
+			checkInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
 			target.SetKey(interpreter, locationRange, transferredIndexingValue, value)
 		},
 	}
@@ -330,7 +326,7 @@ func (interpreter *Interpreter) getReferenceValue(value Value, resultType sema.T
 		if referenceType.Authorization != sema.UnauthorizedAccess || !interpreter.IsSubTypeOfSemaType(staticType, resultType) {
 			panic(InvalidMemberReferenceError{
 				ExpectedType:  resultType,
-				ActualType:    interpreter.MustConvertStaticToSemaType(staticType),
+				ActualType:    MustConvertStaticToSemaType(staticType, interpreter),
 				LocationRange: locationRange,
 			})
 		}
@@ -362,7 +358,7 @@ func (interpreter *Interpreter) checkMemberAccess(
 	locationRange LocationRange,
 ) {
 
-	interpreter.checkInvalidatedResourceOrResourceReference(target, memberExpression)
+	checkInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
 
 	memberInfo, _ := interpreter.Program.Elaboration.MemberExpressionMemberAccessInfo(memberExpression)
 	expectedType := memberInfo.AccessedType
@@ -400,7 +396,7 @@ func (interpreter *Interpreter) checkMemberAccess(
 
 	if _, ok := expectedType.(*sema.OptionalType); ok {
 		if _, ok := targetStaticType.(*OptionalStaticType); !ok {
-			targetSemaType := interpreter.MustConvertStaticToSemaType(targetStaticType)
+			targetSemaType := MustConvertStaticToSemaType(targetStaticType, interpreter)
 
 			panic(MemberAccessTypeError{
 				ExpectedType:  expectedType,
@@ -411,7 +407,7 @@ func (interpreter *Interpreter) checkMemberAccess(
 	}
 
 	if !interpreter.IsSubTypeOfSemaType(targetStaticType, expectedType) {
-		targetSemaType := interpreter.MustConvertStaticToSemaType(targetStaticType)
+		targetSemaType := MustConvertStaticToSemaType(targetStaticType, interpreter)
 
 		panic(MemberAccessTypeError{
 			ExpectedType:  expectedType,
@@ -433,15 +429,23 @@ func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.Identi
 
 func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value {
 	result := ast.AcceptExpression[Value](expression, interpreter)
-	interpreter.checkInvalidatedResourceOrResourceReference(result, expression)
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: expression,
+	}
+	checkInvalidatedResourceOrResourceReference(
+		result,
+		locationRange,
+		interpreter,
+	)
 	return result
 }
 
-func (interpreter *Interpreter) checkInvalidatedResourceOrResourceReference(value Value, hasPosition ast.HasPosition) {
-	if interpreter == nil {
-		return
-	}
-
+func checkInvalidatedResourceOrResourceReference(
+	value Value,
+	locationRange LocationRange,
+	context ValueStaticTypeContext,
+) {
 	// Unwrap SomeValue, to access references wrapped inside optionals.
 	someValue, isSomeValue := value.(*SomeValue)
 	for isSomeValue && someValue.value != nil {
@@ -451,28 +455,26 @@ func (interpreter *Interpreter) checkInvalidatedResourceOrResourceReference(valu
 
 	switch value := value.(type) {
 	case ResourceKindedValue:
-		if value.isInvalidatedResource(interpreter) {
+		if value.isInvalidatedResource(context) {
 			panic(InvalidatedResourceError{
-				LocationRange: LocationRange{
-					Location:    interpreter.Location,
-					HasPosition: hasPosition,
-				},
+				LocationRange: locationRange,
 			})
 		}
 	case *EphemeralReferenceValue:
 		if value.Value == nil {
 			panic(InvalidatedResourceReferenceError{
-				LocationRange: LocationRange{
-					Location:    interpreter.Location,
-					HasPosition: hasPosition,
-				},
+				LocationRange: locationRange,
 			})
 		} else {
 			// If the value is there, check whether the referenced value is an invalidated one.
 			// This step is not really needed, since reference tracking is supposed to clear the
 			// `value.Value` if the referenced-value was moved/deleted.
 			// However, have this as a second layer of defensive.
-			interpreter.checkInvalidatedResourceOrResourceReference(value.Value, hasPosition)
+			checkInvalidatedResourceOrResourceReference(
+				value.Value,
+				locationRange,
+				context,
+			)
 		}
 	}
 }
@@ -1229,7 +1231,8 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 	// add the implicit argument to the end of the argument list, if it exists
 	if implicitArg != nil {
 		arguments = append(arguments, *implicitArg)
-		argumentTypes = append(argumentTypes, interpreter.MustSemaTypeOfValue(*implicitArg))
+		argumentType := MustSemaTypeOfValue(*implicitArg, interpreter)
+		argumentTypes = append(argumentTypes, argumentType)
 	}
 
 	interpreter.reportFunctionInvocation()
@@ -1361,7 +1364,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			// otherwise dynamic cast now always unboxes optionals
 			value = interpreter.Unbox(value)
 		}
-		valueSemaType := interpreter.SubstituteMappedEntitlements(interpreter.MustSemaTypeOfValue(value))
+		valueSemaType := interpreter.SubstituteMappedEntitlements(MustSemaTypeOfValue(value, interpreter))
 		valueStaticType := ConvertSemaToStaticType(interpreter, valueSemaType)
 		isSubType := interpreter.IsSubTypeOfSemaType(valueStaticType, expectedType)
 
@@ -1587,7 +1590,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 
 	// within the constructor, the attachment's base and self references should be fully entitled,
 	// as the constructor of the attachment is only callable by the owner of the base
-	baseType := interpreter.MustSemaTypeOfValue(base).(sema.EntitlementSupportingType)
+	baseType := MustSemaTypeOfValue(base, interpreter).(sema.EntitlementSupportingType)
 	baseAccess := baseType.SupportedEntitlements().Access()
 	auth := ConvertSemaAccessToStaticAuthorization(interpreter, baseAccess)
 
@@ -1597,7 +1600,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		interpreter,
 		auth,
 		base,
-		interpreter.MustSemaTypeOfValue(base).(*sema.CompositeType),
+		MustSemaTypeOfValue(base, interpreter).(*sema.CompositeType),
 		locationRange,
 	)
 

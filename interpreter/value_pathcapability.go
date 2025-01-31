@@ -161,7 +161,7 @@ func (v *PathCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRang
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
 			// this function will panic already if this conversion fails
-			borrowType, _ = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+			borrowType, _ = MustConvertStaticToSemaType(v.BorrowType, interpreter).(*sema.ReferenceType)
 		}
 		return v.newBorrowFunction(interpreter, borrowType)
 
@@ -169,7 +169,7 @@ func (v *PathCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRang
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
 			// this function will panic already if this conversion fails
-			borrowType, _ = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+			borrowType, _ = MustConvertStaticToSemaType(v.BorrowType, interpreter).(*sema.ReferenceType)
 		}
 		return v.newCheckFunction(interpreter, borrowType)
 
@@ -240,7 +240,7 @@ func (*PathCapabilityValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*PathCapabilityValue) IsResourceKinded(_ *Interpreter) bool {
+func (*PathCapabilityValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

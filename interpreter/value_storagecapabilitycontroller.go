@@ -190,7 +190,7 @@ func (*StorageCapabilityControllerValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*StorageCapabilityControllerValue) IsResourceKinded(_ *Interpreter) bool {
+func (*StorageCapabilityControllerValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

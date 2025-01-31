@@ -120,7 +120,7 @@ func (PathLinkValue) NeedsStoreTo(_ atree.Address) bool {
 	panic(errors.NewUnreachableError())
 }
 
-func (PathLinkValue) IsResourceKinded(_ *Interpreter) bool {
+func (PathLinkValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	panic(errors.NewUnreachableError())
 }
 
@@ -243,7 +243,7 @@ func (AccountLinkValue) NeedsStoreTo(_ atree.Address) bool {
 	panic(errors.NewUnreachableError())
 }
 
-func (AccountLinkValue) IsResourceKinded(_ *Interpreter) bool {
+func (AccountLinkValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	panic(errors.NewUnreachableError())
 }
 

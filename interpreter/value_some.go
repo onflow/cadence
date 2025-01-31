@@ -148,8 +148,9 @@ func (v *SomeValue) MeteredString(interpreter *Interpreter, seenReferences SeenR
 func (v *SomeValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
-		innerValueType := interpreter.MustConvertStaticToSemaType(
+		innerValueType := MustConvertStaticToSemaType(
 			v.value.StaticType(interpreter),
+			interpreter,
 		)
 		return NewBoundHostFunctionValue(
 			interpreter,
@@ -321,13 +322,13 @@ func (v *SomeValue) NeedsStoreTo(address atree.Address) bool {
 	return v.value.NeedsStoreTo(address)
 }
 
-func (v *SomeValue) IsResourceKinded(interpreter *Interpreter) bool {
+func (v *SomeValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	// If the inner value is `nil`, then this is an invalidated resource.
 	if v.value == nil {
 		return true
 	}
 
-	return v.value.IsResourceKinded(interpreter)
+	return v.value.IsResourceKinded(context)
 }
 
 func (v *SomeValue) Transfer(
@@ -403,7 +404,7 @@ func (v *SomeValue) InnerValue() Value {
 	return v.value
 }
 
-func (v *SomeValue) isInvalidatedResource(_ *Interpreter) bool {
+func (v *SomeValue) isInvalidatedResource(context ValueStaticTypeContext) bool {
 	return v.value == nil || v.IsDestroyed()
 }
 

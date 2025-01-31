@@ -305,7 +305,7 @@ func (*EphemeralReferenceValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*EphemeralReferenceValue) IsResourceKinded(_ *Interpreter) bool {
+func (*EphemeralReferenceValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 
