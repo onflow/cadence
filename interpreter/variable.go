@@ -113,7 +113,7 @@ func (v *SelfVariable) InitializeWithGetter(func() Value) {
 
 func (v *SelfVariable) GetValue(interpreter *Interpreter) Value {
 	// TODO: pass proper location range
-	interpreter.checkInvalidatedResourceOrResourceReference(v.selfRef, EmptyLocationRange)
+	checkInvalidatedResourceOrResourceReference(v.selfRef, EmptyLocationRange, interpreter)
 	return v.value
 }
 

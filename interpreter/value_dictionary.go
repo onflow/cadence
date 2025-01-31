@@ -343,7 +343,7 @@ func (v *DictionaryValue) Iterate(
 	v.iterate(interpreter, iterate, f, locationRange)
 }
 
-// IterateReadOnlyLoaded iterates over all LOADED key-valye pairs of the array.
+// IterateReadOnlyLoaded iterates over all LOADED key-value pairs of the array.
 // DO NOT perform storage mutations in the callback!
 func (v *DictionaryValue) IterateReadOnlyLoaded(
 	interpreter *Interpreter,
@@ -372,8 +372,8 @@ func (v *DictionaryValue) iterate(
 			keyValue := MustConvertStoredValue(interpreter, key)
 			valueValue := MustConvertStoredValue(interpreter, value)
 
-			interpreter.checkInvalidatedResourceOrResourceReference(keyValue, locationRange)
-			interpreter.checkInvalidatedResourceOrResourceReference(valueValue, locationRange)
+			checkInvalidatedResourceOrResourceReference(keyValue, locationRange, interpreter)
+			checkInvalidatedResourceOrResourceReference(valueValue, locationRange, interpreter)
 
 			resume = f(
 				keyValue,

@@ -459,7 +459,7 @@ func (f BoundFunctionValue) invoke(invocation Invocation) Value {
 			})
 		}
 	} else {
-		inter.checkInvalidatedResourceOrResourceReference(f.SelfReference, locationRange)
+		checkInvalidatedResourceOrResourceReference(f.SelfReference, locationRange, inter)
 	}
 
 	return f.Function.invoke(invocation)
