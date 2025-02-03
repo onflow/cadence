@@ -18,7 +18,8 @@ whitespaceItem:
     ;
 
 whitespaceCharacter:
-        U+0000,U+0009,U+000B-U+000C,U+0020
+        // \t, \v, \f, <space>
+        U+0009,U+000B-U+000C,U+0020
     ;
 
 lineBreak:
@@ -572,6 +573,7 @@ innerType:
 
 baseIntersectionType:
         // baseType and typeRestrictions must be adjacent
+        // Invalid since Cadence 1.0
         baseType . typeRestrictions // ast.IntersectionType
     ;
 
