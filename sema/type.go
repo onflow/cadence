@@ -316,6 +316,7 @@ func TypeActivationNestedType(typeActivation *VariableActivation, qualifiedIdent
 type ConformingType interface {
 	Type
 	EffectiveInterfaceConformanceSet() *InterfaceSet
+	EffectiveInterfaceConformances() []Conformance
 }
 
 // CompositeKindedType is a type which has a composite kind

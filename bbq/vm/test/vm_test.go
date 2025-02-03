@@ -3272,3 +3272,120 @@ func TestFunctionPostConditions(t *testing.T) {
 	})
 
 }
+
+func TestDefaultFunctionsWithConditions(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("default in parent, conditions in child", func(t *testing.T) {
+		t.Parallel()
+
+		storage := interpreter.NewInMemoryStorage(nil)
+
+		activation := sema.NewVariableActivation(sema.BaseValueActivation)
+		activation.DeclareValue(stdlib.PanicFunction)
+		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
+			"log",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityView,
+				[]sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: sema.AnyStructTypeAnnotation,
+					},
+				},
+				sema.VoidTypeAnnotation,
+			),
+			"",
+			nil,
+		))
+
+		var logs []string
+		vmConfig := &vm.Config{
+			Storage:        storage,
+			AccountHandler: &testAccountHandler{},
+			//ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+			//	program, ok := programs[location]
+			//	if !ok {
+			//		assert.FailNow(t, "invalid location")
+			//	}
+			//	return program.Program
+			//},
+			//ContractValueHandler: func(_ *vm.Config, location common.Location) *vm.CompositeValue {
+			//	contractValue, ok := contractValues[location]
+			//	if !ok {
+			//		assert.FailNow(t, "invalid location")
+			//	}
+			//	return contractValue
+			//},
+
+			NativeFunctionsProvider: func() map[string]vm.Value {
+				funcs := vm.NativeFunctions()
+				funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+					ParameterCount: len(stdlib.LogFunctionType.Parameters),
+					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+						logs = append(logs, arguments[0].String())
+						return vm.VoidValue{}
+					},
+				}
+
+				return funcs
+			},
+		}
+
+		_, err := compileAndInvokeWithOptions(t, `
+            struct interface Foo {
+                fun test(_ a: Int) {
+                    printMessage("invoked Foo.test()")
+                }
+            }
+
+            struct interface Bar: Foo {
+                fun test(_ a: Int) {
+                    pre {
+                         printMessage("invoked Bar.test() pre-condition")
+                    }
+
+                    post {
+                         printMessage("invoked Bar.test() post-condition")
+                    }
+                }
+            }
+
+            struct Test: Bar {}
+
+            access(all) view fun printMessage(_ msg: String): Bool {
+                log(msg)
+                return true
+            }
+
+            fun main() {
+               Test().test(5)
+            }
+        `,
+			"main",
+			CompilerAndVMOptions{
+				VMConfig: vmConfig,
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Config: &sema.Config{
+						LocationHandler: singleIdentifierLocationResolver(t),
+						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+							return activation
+						},
+					},
+				},
+			},
+		)
+
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			[]string{
+				"invoked Bar.test() pre-condition",
+				"invoked Foo.test()",
+				"invoked Bar.test() post-condition",
+			}, logs,
+		)
+	})
+}

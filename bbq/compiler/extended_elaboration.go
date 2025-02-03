@@ -37,6 +37,8 @@ type ExtendedElaboration struct {
 	assignmentStatementTypes          map[*ast.AssignmentStatement]sema.AssignmentStatementTypes
 	resultVariableTypes               map[ast.Element]sema.Type
 	referenceExpressionBorrowTypes    map[*ast.ReferenceExpression]sema.Type
+	functionDeclarationFunctionTypes  map[*ast.FunctionDeclaration]*sema.FunctionType
+	returnStatementTypes              map[*ast.ReturnStatement]sema.ReturnStatementTypes
 }
 
 func NewExtendedElaboration(elaboration *sema.Elaboration) *ExtendedElaboration {
@@ -83,7 +85,21 @@ func (e *ExtendedElaboration) InterfaceDeclarationType(decl *ast.InterfaceDeclar
 }
 
 func (e *ExtendedElaboration) ReturnStatementTypes(statement *ast.ReturnStatement) sema.ReturnStatementTypes {
+	if e.returnStatementTypes != nil {
+		typ, ok := e.returnStatementTypes[statement]
+		if ok {
+			return typ
+		}
+	}
+
 	return e.elaboration.ReturnStatementTypes(statement)
+}
+
+func (e *ExtendedElaboration) SetReturnStatementTypes(statement *ast.ReturnStatement, types sema.ReturnStatementTypes) {
+	if e.returnStatementTypes == nil {
+		e.returnStatementTypes = map[*ast.ReturnStatement]sema.ReturnStatementTypes{}
+	}
+	e.returnStatementTypes[statement] = types
 }
 
 func (e *ExtendedElaboration) VariableDeclarationTypes(declaration *ast.VariableDeclaration) sema.VariableDeclarationTypes {
@@ -210,10 +226,6 @@ func (e *ExtendedElaboration) CastingExpressionTypes(expression *ast.CastingExpr
 	return e.elaboration.CastingExpressionTypes(expression)
 }
 
-func (e *ExtendedElaboration) FunctionDeclarationFunctionType(declaration *ast.FunctionDeclaration) *sema.FunctionType {
-	return e.elaboration.FunctionDeclarationFunctionType(declaration)
-}
-
 func (e *ExtendedElaboration) ResultVariableType(enclosingBlock ast.Element) (typ sema.Type, exist bool) {
 	if e.resultVariableTypes != nil {
 		types, ok := e.resultVariableTypes[enclosingBlock]
@@ -246,4 +258,24 @@ func (e *ExtendedElaboration) SetReferenceExpressionBorrowType(expression *ast.R
 		e.referenceExpressionBorrowTypes = map[*ast.ReferenceExpression]sema.Type{}
 	}
 	e.referenceExpressionBorrowTypes[expression] = ty
+}
+
+func (e *ExtendedElaboration) FunctionDeclarationFunctionType(declaration *ast.FunctionDeclaration) *sema.FunctionType {
+	if e.functionDeclarationFunctionTypes != nil {
+		typ, ok := e.functionDeclarationFunctionTypes[declaration]
+		if ok {
+			return typ
+		}
+	}
+	return e.elaboration.FunctionDeclarationFunctionType(declaration)
+}
+
+func (e *ExtendedElaboration) SetFunctionDeclarationFunctionType(
+	declaration *ast.FunctionDeclaration,
+	functionType *sema.FunctionType,
+) {
+	if e.functionDeclarationFunctionTypes == nil {
+		e.functionDeclarationFunctionTypes = map[*ast.FunctionDeclaration]*sema.FunctionType{}
+	}
+	e.functionDeclarationFunctionTypes[declaration] = functionType
 }
