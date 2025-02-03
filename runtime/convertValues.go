@@ -286,7 +286,7 @@ func exportSomeValue(
 	cadence.Optional,
 	error,
 ) {
-	innerValue := v.InnerValue(inter, locationRange)
+	innerValue := v.InnerValue()
 
 	if innerValue == nil {
 		return cadence.NewMeteredOptional(inter, nil), nil
@@ -423,7 +423,7 @@ func exportCompositeValue(
 				}
 
 			case *interpreter.CompositeValue:
-				fieldValue = v.GetField(inter, locationRange, fieldName)
+				fieldValue = v.GetField(inter, fieldName)
 				if fieldValue == nil {
 					fieldValue = v.GetComputedField(inter, locationRange, fieldName)
 				}
@@ -637,7 +637,7 @@ func exportCompositeValueAsInclusiveRange(
 	}
 
 	getNonComputedField := func(fieldName string) (cadence.Value, error) {
-		fieldValue := compositeValue.GetField(inter, locationRange, fieldName)
+		fieldValue := compositeValue.GetField(inter, fieldName)
 		if fieldValue == nil {
 			// Bug if the field is absent.
 			panic(errors.NewUnreachableError())

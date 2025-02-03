@@ -57,7 +57,7 @@ func (v *ArrayValue) Iterator(_ *Interpreter, _ LocationRange) ValueIterator {
 
 var _ ValueIterator = ArrayValueIterator{}
 
-func (i ArrayValueIterator) Next(interpreter *Interpreter, _ LocationRange) Value {
+func (i ArrayValueIterator) Next(context ValueIteratorContext, _ LocationRange) Value {
 	atreeValue, err := i.atreeIterator.Next()
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -69,7 +69,7 @@ func (i ArrayValueIterator) Next(interpreter *Interpreter, _ LocationRange) Valu
 
 	// atree.Array iterator returns low-level atree.Value,
 	// convert to high-level interpreter.Value
-	return MustConvertStoredValue(interpreter, atreeValue)
+	return MustConvertStoredValue(context, atreeValue)
 }
 
 func NewArrayValue(
@@ -328,7 +328,7 @@ func (v *ArrayValue) Walk(
 	)
 }
 
-func (v *ArrayValue) StaticType(_ *Interpreter) StaticType {
+func (v *ArrayValue) StaticType(_ ValueStaticTypeContext) StaticType {
 	// TODO meter
 	return v.Type
 }
@@ -499,7 +499,7 @@ func (v *ArrayValue) handleIndexOutOfBoundsError(err error, index int, locationR
 	}
 }
 
-func (v *ArrayValue) Get(interpreter *Interpreter, locationRange LocationRange, index int) Value {
+func (v *ArrayValue) Get(gauge common.MemoryGauge, locationRange LocationRange, index int) Value {
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Get function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -519,7 +519,7 @@ func (v *ArrayValue) Get(interpreter *Interpreter, locationRange LocationRange, 
 		panic(errors.NewExternalError(err))
 	}
 
-	return MustConvertStoredValue(interpreter, storedValue)
+	return MustConvertStoredValue(gauge, storedValue)
 }
 
 func (v *ArrayValue) SetKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
@@ -1174,12 +1174,12 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 	return nil
 }
 
-func (v *ArrayValue) RemoveMember(interpreter *Interpreter, locationRange LocationRange, _ string) Value {
+func (v *ArrayValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	// Arrays have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (v *ArrayValue) SetMember(interpreter *Interpreter, locationRange LocationRange, _ string, _ Value) bool {
+func (v *ArrayValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Arrays have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -1256,7 +1256,7 @@ func (v *ArrayValue) ConformsToStaticType(
 	return !elementMismatch
 }
 
-func (v *ArrayValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+func (v *ArrayValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
 	otherArray, ok := other.(*ArrayValue)
 	if !ok {
 		return false
@@ -1279,11 +1279,11 @@ func (v *ArrayValue) Equal(interpreter *Interpreter, locationRange LocationRange
 	}
 
 	for i := 0; i < count; i++ {
-		value := v.Get(interpreter, locationRange, i)
-		otherValue := otherArray.Get(interpreter, locationRange, i)
+		value := v.Get(context, locationRange, i)
+		otherValue := otherArray.Get(context, locationRange, i)
 
 		equatableValue, ok := value.(EquatableValue)
-		if !ok || !equatableValue.Equal(interpreter, locationRange, otherValue) {
+		if !ok || !equatableValue.Equal(context, locationRange, otherValue) {
 			return false
 		}
 	}
@@ -1550,10 +1550,10 @@ func (v *ArrayValue) GetOwner() common.Address {
 	return common.Address(v.StorageAddress())
 }
 
-func (v *ArrayValue) SemaType(interpreter *Interpreter) sema.ArrayType {
+func (v *ArrayValue) SemaType(typeConverter TypeConverter) sema.ArrayType {
 	if v.semaType == nil {
 		// this function will panic already if this conversion fails
-		v.semaType, _ = interpreter.MustConvertStaticToSemaType(v.Type).(sema.ArrayType)
+		v.semaType, _ = typeConverter.MustConvertStaticToSemaType(v.Type).(sema.ArrayType)
 	}
 	return v.semaType
 }

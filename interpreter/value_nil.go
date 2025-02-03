@@ -51,10 +51,10 @@ func (NilValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (NilValue) StaticType(interpreter *Interpreter) StaticType {
+func (NilValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewOptionalStaticType(
-		interpreter,
-		NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeNever),
+		context,
+		NewPrimitiveStaticType(context, PrimitiveStaticTypeNever),
 	)
 }
 
@@ -84,7 +84,7 @@ func (v NilValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v NilValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v NilValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(interpreter, common.NilValueStringMemoryUsage)
 	return v.String()
 }
@@ -125,7 +125,7 @@ func (v NilValue) ConformsToStaticType(
 	return true
 }
 
-func (v NilValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v NilValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	_, ok := other.(NilValue)
 	return ok
 }

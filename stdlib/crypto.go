@@ -89,7 +89,6 @@ func cryptoAlgorithmEnumValueAndCaseValues[T sema.CryptoAlgorithm](
 
 	value = interpreter.EnumConstructorFunction(
 		nil,
-		interpreter.EmptyLocationRange,
 		enumType,
 		caseValues,
 		constructorNestedVariables,

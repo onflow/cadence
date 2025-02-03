@@ -20,18 +20,20 @@ package interpreter
 
 import (
 	"github.com/onflow/atree"
+
+	"github.com/onflow/cadence/common"
 )
 
 // HashableValue is an immutable value that can be hashed
 type HashableValue interface {
 	Value
-	HashInput(interpreter *Interpreter, locationRange LocationRange, scratch []byte) []byte
+	HashInput(memoryGauge common.MemoryGauge, locationRange LocationRange, scratch []byte) []byte
 }
 
-func newHashInputProvider(interpreter *Interpreter, locationRange LocationRange) atree.HashInputProvider {
+func newHashInputProvider(memoryGauge common.MemoryGauge, locationRange LocationRange) atree.HashInputProvider {
 	return func(value atree.Value, scratch []byte) ([]byte, error) {
-		hashInput := MustConvertStoredValue(interpreter, value).(HashableValue).
-			HashInput(interpreter, locationRange, scratch)
+		hashInput := MustConvertStoredValue(memoryGauge, value).(HashableValue).
+			HashInput(memoryGauge, locationRange, scratch)
 		return hashInput, nil
 	}
 }

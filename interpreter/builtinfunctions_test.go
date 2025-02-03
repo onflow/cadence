@@ -262,7 +262,7 @@ func TestInterpretAddressFromString(t *testing.T) {
 			addressOpt, ok := res.(*interpreter.SomeValue)
 			require.True(t, ok)
 
-			innerValue := addressOpt.InnerValue(inter, interpreter.EmptyLocationRange)
+			innerValue := addressOpt.InnerValue()
 			addressVal, ok := innerValue.(interpreter.AddressValue)
 			require.True(t, ok)
 			require.Equal(t, expected, addressVal.ToAddress().HexWithPrefix())

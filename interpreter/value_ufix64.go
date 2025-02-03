@@ -86,8 +86,8 @@ func (UFix64Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (UFix64Value) StaticType(interpreter *Interpreter) StaticType {
-	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUFix64)
+func (UFix64Value) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeUFix64)
 }
 
 func (UFix64Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -102,7 +102,7 @@ func (v UFix64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v UFix64Value) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v UFix64Value) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
 		interpreter,
 		common.NewRawStringMemoryUsage(
@@ -116,17 +116,17 @@ func (v UFix64Value) ToInt(_ LocationRange) int {
 	return int(v / sema.Fix64Factor)
 }
 
-func (v UFix64Value) Negate(*Interpreter, LocationRange) NumberValue {
+func (v UFix64Value) Negate(NumberValueArithmeticContext, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UFix64Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationPlus,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -135,16 +135,16 @@ func (v UFix64Value) Plus(interpreter *Interpreter, other NumberValue, locationR
 		return safeAddUint64(uint64(v), uint64(o), locationRange)
 	}
 
-	return NewUFix64Value(interpreter, valueGetter)
+	return NewUFix64Value(context, valueGetter)
 }
 
-func (v UFix64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) SaturatingPlus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -158,16 +158,16 @@ func (v UFix64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue,
 		return uint64(sum)
 	}
 
-	return NewUFix64Value(interpreter, valueGetter)
+	return NewUFix64Value(context, valueGetter)
 }
 
-func (v UFix64Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMinus,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -184,16 +184,16 @@ func (v UFix64Value) Minus(interpreter *Interpreter, other NumberValue, location
 		return uint64(diff)
 	}
 
-	return NewUFix64Value(interpreter, valueGetter)
+	return NewUFix64Value(context, valueGetter)
 }
 
-func (v UFix64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) SaturatingMinus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -208,16 +208,16 @@ func (v UFix64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue
 		return uint64(diff)
 	}
 
-	return NewUFix64Value(interpreter, valueGetter)
+	return NewUFix64Value(context, valueGetter)
 }
 
-func (v UFix64Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMul,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -238,16 +238,16 @@ func (v UFix64Value) Mul(interpreter *Interpreter, other NumberValue, locationRa
 		return result.Uint64()
 	}
 
-	return NewUFix64Value(interpreter, valueGetter)
+	return NewUFix64Value(context, valueGetter)
 }
 
-func (v UFix64Value) SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) SaturatingMul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -266,16 +266,16 @@ func (v UFix64Value) SaturatingMul(interpreter *Interpreter, other NumberValue, 
 		return result.Uint64()
 	}
 
-	return NewUFix64Value(interpreter, valueGetter)
+	return NewUFix64Value(context, valueGetter)
 }
 
-func (v UFix64Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationDiv,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -290,68 +290,68 @@ func (v UFix64Value) Div(interpreter *Interpreter, other NumberValue, locationRa
 		return result.Uint64()
 	}
 
-	return NewUFix64Value(interpreter, valueGetter)
+	return NewUFix64Value(context, valueGetter)
 }
 
-func (v UFix64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) SaturatingDiv(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName:  sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:      v.StaticType(interpreter),
-				RightType:     other.StaticType(interpreter),
+				LeftType:      v.StaticType(context),
+				RightType:     other.StaticType(context),
 				LocationRange: locationRange,
 			})
 		}
 	}()
 
-	return v.Div(interpreter, other, locationRange)
+	return v.Div(context, other, locationRange)
 }
 
-func (v UFix64Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix64Value) Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMod,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
 
 	// v - int(v/o) * o
-	quotient, ok := v.Div(interpreter, o, locationRange).(UFix64Value)
+	quotient, ok := v.Div(context, o, locationRange).(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMod,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
 
 	truncatedQuotient := NewUFix64Value(
-		interpreter,
+		context,
 		func() uint64 {
 			return (uint64(quotient) / sema.Fix64Factor) * sema.Fix64Factor
 		},
 	)
 
 	return v.Minus(
-		interpreter,
-		truncatedQuotient.Mul(interpreter, o, locationRange),
+		context,
+		truncatedQuotient.Mul(context, o, locationRange),
 		locationRange,
 	)
 }
 
-func (v UFix64Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v UFix64Value) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationLess,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -359,13 +359,13 @@ func (v UFix64Value) Less(interpreter *Interpreter, other ComparableValue, locat
 	return AsBoolValue(v < o)
 }
 
-func (v UFix64Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v UFix64Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationLessEqual,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -373,13 +373,13 @@ func (v UFix64Value) LessEqual(interpreter *Interpreter, other ComparableValue, 
 	return AsBoolValue(v <= o)
 }
 
-func (v UFix64Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v UFix64Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationGreater,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -387,13 +387,13 @@ func (v UFix64Value) Greater(interpreter *Interpreter, other ComparableValue, lo
 	return AsBoolValue(v > o)
 }
 
-func (v UFix64Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v UFix64Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationGreaterEqual,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -401,7 +401,7 @@ func (v UFix64Value) GreaterEqual(interpreter *Interpreter, other ComparableValu
 	return AsBoolValue(v >= o)
 }
 
-func (v UFix64Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v UFix64Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherUFix64, ok := other.(UFix64Value)
 	if !ok {
 		return false
@@ -412,7 +412,7 @@ func (v UFix64Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeUFix64 (1 byte)
 // - uint64 value encoded in big-endian (8 bytes)
-func (v UFix64Value) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v UFix64Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeUFix64)
 	binary.BigEndian.PutUint64(scratch[1:], uint64(v))
 	return scratch[:9]

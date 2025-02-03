@@ -67,8 +67,8 @@ func (Int8Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (Int8Value) StaticType(interpreter *Interpreter) StaticType {
-	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeInt8)
+func (Int8Value) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeInt8)
 }
 
 func (Int8Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -83,7 +83,7 @@ func (v Int8Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Int8Value) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v Int8Value) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
 		interpreter,
 		common.NewRawStringMemoryUsage(
@@ -97,7 +97,7 @@ func (v Int8Value) ToInt(_ LocationRange) int {
 	return int(v)
 }
 
-func (v Int8Value) Negate(interpreter *Interpreter, locationRange LocationRange) NumberValue {
+func (v Int8Value) Negate(context NumberValueArithmeticContext, locationRange LocationRange) NumberValue {
 	// INT32-C
 	if v == math.MinInt8 {
 		panic(OverflowError{
@@ -109,16 +109,16 @@ func (v Int8Value) Negate(interpreter *Interpreter, locationRange LocationRange)
 		return int8(-v)
 	}
 
-	return NewInt8Value(interpreter, valueGetter)
+	return NewInt8Value(context, valueGetter)
 }
 
-func (v Int8Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int8Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationPlus,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -138,16 +138,16 @@ func (v Int8Value) Plus(interpreter *Interpreter, other NumberValue, locationRan
 		return int8(v + o)
 	}
 
-	return NewInt8Value(interpreter, valueGetter)
+	return NewInt8Value(context, valueGetter)
 }
 
-func (v Int8Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int8Value) SaturatingPlus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -162,16 +162,16 @@ func (v Int8Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, l
 		return int8(v + o)
 	}
 
-	return NewInt8Value(interpreter, valueGetter)
+	return NewInt8Value(context, valueGetter)
 }
 
-func (v Int8Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int8Value) Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMinus,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -191,16 +191,16 @@ func (v Int8Value) Minus(interpreter *Interpreter, other NumberValue, locationRa
 		return int8(v - o)
 	}
 
-	return NewInt8Value(interpreter, valueGetter)
+	return NewInt8Value(context, valueGetter)
 }
 
-func (v Int8Value) SaturatingMinus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int8Value) SaturatingMinus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -215,16 +215,16 @@ func (v Int8Value) SaturatingMinus(interpreter *Interpreter, other NumberValue, 
 		return int8(v - o)
 	}
 
-	return NewInt8Value(interpreter, valueGetter)
+	return NewInt8Value(context, valueGetter)
 }
 
-func (v Int8Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int8Value) Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMod,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -240,16 +240,16 @@ func (v Int8Value) Mod(interpreter *Interpreter, other NumberValue, locationRang
 		return int8(v % o)
 	}
 
-	return NewInt8Value(interpreter, valueGetter)
+	return NewInt8Value(context, valueGetter)
 }
 
-func (v Int8Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int8Value) Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMul,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -293,16 +293,16 @@ func (v Int8Value) Mul(interpreter *Interpreter, other NumberValue, locationRang
 		return int8(v * o)
 	}
 
-	return NewInt8Value(interpreter, valueGetter)
+	return NewInt8Value(context, valueGetter)
 }
 
-func (v Int8Value) SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int8Value) SaturatingMul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -338,16 +338,16 @@ func (v Int8Value) SaturatingMul(interpreter *Interpreter, other NumberValue, lo
 		return int8(v * o)
 	}
 
-	return NewInt8Value(interpreter, valueGetter)
+	return NewInt8Value(context, valueGetter)
 }
 
-func (v Int8Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int8Value) Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationDiv,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -368,16 +368,16 @@ func (v Int8Value) Div(interpreter *Interpreter, other NumberValue, locationRang
 		return int8(v / o)
 	}
 
-	return NewInt8Value(interpreter, valueGetter)
+	return NewInt8Value(context, valueGetter)
 }
 
-func (v Int8Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int8Value) SaturatingDiv(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingDivideFunctionName,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -395,16 +395,16 @@ func (v Int8Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, lo
 		return int8(v / o)
 	}
 
-	return NewInt8Value(interpreter, valueGetter)
+	return NewInt8Value(context, valueGetter)
 }
 
-func (v Int8Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Int8Value) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationLess,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -412,13 +412,13 @@ func (v Int8Value) Less(interpreter *Interpreter, other ComparableValue, locatio
 	return AsBoolValue(v < o)
 }
 
-func (v Int8Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Int8Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationLessEqual,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -426,13 +426,13 @@ func (v Int8Value) LessEqual(interpreter *Interpreter, other ComparableValue, lo
 	return AsBoolValue(v <= o)
 }
 
-func (v Int8Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Int8Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationGreater,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -440,13 +440,13 @@ func (v Int8Value) Greater(interpreter *Interpreter, other ComparableValue, loca
 	return AsBoolValue(v > o)
 }
 
-func (v Int8Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Int8Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationGreaterEqual,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -454,7 +454,7 @@ func (v Int8Value) GreaterEqual(interpreter *Interpreter, other ComparableValue,
 	return AsBoolValue(v >= o)
 }
 
-func (v Int8Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v Int8Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherInt8, ok := other.(Int8Value)
 	if !ok {
 		return false
@@ -465,7 +465,7 @@ func (v Int8Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeInt8 (1 byte)
 // - int8 value (1 byte)
-func (v Int8Value) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v Int8Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeInt8)
 	scratch[1] = byte(v)
 	return scratch[:2]

@@ -65,8 +65,8 @@ func (TypeValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (TypeValue) StaticType(interpreter *Interpreter) StaticType {
-	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeMetaType)
+func (TypeValue) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeMetaType)
 }
 
 func (TypeValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -87,7 +87,7 @@ func (v TypeValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v TypeValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v TypeValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(interpreter, common.TypeValueStringMemoryUsage)
 
 	var typeString string
@@ -98,7 +98,7 @@ func (v TypeValue) MeteredString(interpreter *Interpreter, _ SeenReferences, loc
 	return format.TypeValue(typeString)
 }
 
-func (v TypeValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v TypeValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherTypeValue, ok := other.(TypeValue)
 	if !ok {
 		return false
@@ -336,7 +336,7 @@ func (TypeValue) ChildStorables() []atree.Storable {
 // HashInput returns a byte slice containing:
 // - HashInputTypeType (1 byte)
 // - type id (n bytes)
-func (v TypeValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v TypeValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
 	typeID := v.Type.ID()
 
 	length := 1 + len(typeID)

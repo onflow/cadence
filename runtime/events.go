@@ -35,7 +35,7 @@ func emitEventValue(
 	fields := make([]interpreter.Value, len(eventType.ConstructorParameters))
 
 	for i, parameter := range eventType.ConstructorParameters {
-		value := event.GetField(inter, locationRange, parameter.Identifier)
+		value := event.GetField(inter, parameter.Identifier)
 		fields[i] = value
 	}
 

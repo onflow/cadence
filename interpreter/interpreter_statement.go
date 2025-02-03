@@ -153,12 +153,8 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 	value := interpreter.visitVariableDeclaration(declaration, true)
 
 	if someValue, ok := value.(*SomeValue); ok {
-		locationRange := LocationRange{
-			Location:    interpreter.Location,
-			HasPosition: declaration.Value,
-		}
 
-		innerValue := someValue.InnerValue(interpreter, locationRange)
+		innerValue := someValue.InnerValue()
 
 		interpreter.activations.PushNewWithCurrent()
 		defer interpreter.activations.Pop()

@@ -93,13 +93,13 @@ func (v *StorageReferenceValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v *StorageReferenceValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v *StorageReferenceValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(interpreter, common.StorageReferenceValueStringMemoryUsage)
 	return v.String()
 }
 
-func (v *StorageReferenceValue) StaticType(inter *Interpreter) StaticType {
-	referencedValue, err := v.dereference(inter, EmptyLocationRange)
+func (v *StorageReferenceValue) StaticType(context ValueStaticTypeContext) StaticType {
+	referencedValue, err := v.dereference(context, EmptyLocationRange)
 	if err != nil {
 		panic(err)
 	}
@@ -107,9 +107,9 @@ func (v *StorageReferenceValue) StaticType(inter *Interpreter) StaticType {
 	self := *referencedValue
 
 	return NewReferenceStaticType(
-		inter,
+		context,
 		v.Authorization,
-		self.StaticType(inter),
+		self.StaticType(context),
 	)
 }
 
@@ -121,14 +121,14 @@ func (*StorageReferenceValue) IsImportable(_ *Interpreter, _ LocationRange) bool
 	return false
 }
 
-func (v *StorageReferenceValue) dereference(interpreter *Interpreter, locationRange LocationRange) (*Value, error) {
+func (v *StorageReferenceValue) dereference(context ValueStaticTypeContext, locationRange LocationRange) (*Value, error) {
 	address := v.TargetStorageAddress
 	domain := v.TargetPath.Domain.StorageDomain()
 	identifier := v.TargetPath.Identifier
 
 	storageMapKey := StringStorageMapKey(identifier)
 
-	referenced := interpreter.ReadStored(address, domain, storageMapKey)
+	referenced := context.ReadStored(address, domain, storageMapKey)
 	if referenced == nil {
 		return nil, nil
 	}
@@ -141,10 +141,10 @@ func (v *StorageReferenceValue) dereference(interpreter *Interpreter, locationRa
 	}
 
 	if v.BorrowedType != nil {
-		staticType := referenced.StaticType(interpreter)
+		staticType := referenced.StaticType(context)
 
-		if !interpreter.IsSubTypeOfSemaType(staticType, v.BorrowedType) {
-			semaType := interpreter.MustConvertStaticToSemaType(staticType)
+		if !context.IsSubTypeOfSemaType(staticType, v.BorrowedType) {
+			semaType := context.MustConvertStaticToSemaType(staticType)
 
 			return nil, ForceCastTypeMismatchError{
 				ExpectedType:  v.BorrowedType,
@@ -324,7 +324,7 @@ func (v *StorageReferenceValue) RemoveTypeKey(
 		RemoveTypeKey(interpreter, locationRange, key)
 }
 
-func (v *StorageReferenceValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v *StorageReferenceValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherReference, ok := other.(*StorageReferenceValue)
 	if !ok ||
 		v.TargetStorageAddress != otherReference.TargetStorageAddress ||

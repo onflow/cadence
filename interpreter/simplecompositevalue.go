@@ -103,7 +103,7 @@ func (v *SimpleCompositeValue) Walk(_ *Interpreter, walkChild func(Value), _ Loc
 	})
 }
 
-func (v *SimpleCompositeValue) StaticType(_ *Interpreter) StaticType {
+func (v *SimpleCompositeValue) StaticType(_ ValueStaticTypeContext) StaticType {
 	return v.staticType
 }
 

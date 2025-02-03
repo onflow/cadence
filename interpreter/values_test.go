@@ -809,7 +809,7 @@ func TestInterpretSmokeRandomDictionaryOperations(t *testing.T) {
 			value := importValue(t, inter, pair.Value)
 
 			// Removed value must be same as the original value
-			innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
+			innerValue := someValue.InnerValue()
 			AssertValuesEqual(t, inter, value, innerValue)
 		}
 
@@ -925,7 +925,7 @@ func TestInterpretSmokeRandomDictionaryOperations(t *testing.T) {
 			value := importValue(t, inter, pair.Value)
 
 			// Removed value must be same as the original value
-			innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
+			innerValue := someValue.InnerValue()
 			AssertValuesEqual(t, inter, value, innerValue)
 
 			expectedValue.Pairs[i].Value = newValues[i]
@@ -4024,7 +4024,7 @@ func getNestedValue(
 			)
 			optional := value.(*interpreter.SomeValue)
 
-			value = optional.InnerValue(inter, interpreter.EmptyLocationRange)
+			value = optional.InnerValue()
 
 			require.NotNil(t,
 				value,
@@ -4711,7 +4711,6 @@ func mapKey(inter *interpreter.Interpreter, key interpreter.Value) any {
 			kind:                key.Kind,
 			rawValue: key.GetField(
 				inter,
-				interpreter.EmptyLocationRange,
 				sema.EnumRawValueFieldName,
 			).String(),
 		}
@@ -5171,7 +5170,7 @@ func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
 				require.IsType(t, &interpreter.SomeValue{}, value)
 				someValue := value.(*interpreter.SomeValue)
 
-				innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
+				innerValue := someValue.InnerValue()
 
 				require.IsType(t, &interpreter.DictionaryValue{}, innerValue)
 				innerDictionary := innerValue.(*interpreter.DictionaryValue)
@@ -5270,7 +5269,7 @@ func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
 				require.IsType(t, &interpreter.SomeValue{}, value)
 				someValue := value.(*interpreter.SomeValue)
 
-				innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
+				innerValue := someValue.InnerValue()
 
 				require.IsType(t, &interpreter.ArrayValue{}, innerValue)
 				innerArray := innerValue.(*interpreter.ArrayValue)
@@ -5439,7 +5438,7 @@ func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
 				require.IsType(t, &interpreter.SomeValue{}, value)
 				someValue := value.(*interpreter.SomeValue)
 
-				innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
+				innerValue := someValue.InnerValue()
 
 				require.IsType(t, &interpreter.CompositeValue{}, innerValue)
 				innerStruct := innerValue.(*interpreter.CompositeValue)
@@ -5597,10 +5596,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		// Fill the dictionary until it becomes uninlined
 
-		childDictionary := rootSomeValue.InnerValue(
-			inter,
-			interpreter.EmptyLocationRange,
-		).(*interpreter.DictionaryValue)
+		childDictionary := rootSomeValue.InnerValue().(*interpreter.DictionaryValue)
 
 		require.True(t, childDictionary.Inlined())
 
@@ -5619,7 +5615,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		// Verify the contents of the dictionary
 
-		childDictionary = rootSomeValue.InnerValue(inter, interpreter.EmptyLocationRange).(*interpreter.DictionaryValue)
+		childDictionary = rootSomeValue.InnerValue().(*interpreter.DictionaryValue)
 
 		verify := func(count int) {
 			require.Equal(t, count, childDictionary.Count())
@@ -5701,10 +5697,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 			storageMapKey,
 		).(*interpreter.SomeValue)
 
-		childDictionary = rootSomeValue.InnerValue(
-			inter,
-			interpreter.EmptyLocationRange,
-		).(*interpreter.DictionaryValue)
+		childDictionary = rootSomeValue.InnerValue().(*interpreter.DictionaryValue)
 
 		require.Equal(t, 0, childDictionary.Count())
 		require.True(t, childDictionary.Inlined())
@@ -5756,10 +5749,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 			storageMapKey,
 		).(*interpreter.SomeValue)
 
-		childDictionary := rootSomeValue.InnerValue(
-			inter,
-			interpreter.EmptyLocationRange,
-		).(*interpreter.DictionaryValue)
+		childDictionary := rootSomeValue.InnerValue().(*interpreter.DictionaryValue)
 
 		// Check that the inner dictionary is not inlined.
 		// If the test fails here, adjust the value generation code above
@@ -5803,7 +5793,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 			require.IsType(t, &interpreter.SomeValue{}, existingValue)
 			existingSomeValue := existingValue.(*interpreter.SomeValue)
 
-			existingInnerValue := existingSomeValue.InnerValue(inter, interpreter.EmptyLocationRange)
+			existingInnerValue := existingSomeValue.InnerValue()
 			expectedValue := interpreter.NewUnmeteredIntValueFromInt64(int64(i))
 			AssertValuesEqual(t, inter, expectedValue, existingInnerValue)
 
@@ -5850,10 +5840,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 			storageMapKey,
 		).(*interpreter.SomeValue)
 
-		childDictionary = rootSomeValue.InnerValue(
-			inter,
-			interpreter.EmptyLocationRange,
-		).(*interpreter.DictionaryValue)
+		childDictionary = rootSomeValue.InnerValue().(*interpreter.DictionaryValue)
 
 		verify(uninlinedCount)
 
@@ -5896,10 +5883,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		// Fill the array until it becomes uninlined
 
-		childArray := rootSomeValue.InnerValue(
-			inter,
-			interpreter.EmptyLocationRange,
-		).(*interpreter.ArrayValue)
+		childArray := rootSomeValue.InnerValue().(*interpreter.ArrayValue)
 
 		require.True(t, childArray.Inlined())
 
@@ -5917,10 +5901,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		// Verify the contents of the array
 
-		childArray = rootSomeValue.InnerValue(
-			inter,
-			interpreter.EmptyLocationRange,
-		).(*interpreter.ArrayValue)
+		childArray = rootSomeValue.InnerValue().(*interpreter.ArrayValue)
 
 		verify := func(count int) {
 			require.Equal(t, count, childArray.Count())
@@ -5993,10 +5974,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 			storageMapKey,
 		).(*interpreter.SomeValue)
 
-		childArray = rootSomeValue.InnerValue(
-			inter,
-			interpreter.EmptyLocationRange,
-		).(*interpreter.ArrayValue)
+		childArray = rootSomeValue.InnerValue().(*interpreter.ArrayValue)
 
 		require.Equal(t, 0, childArray.Count())
 		require.True(t, childArray.Inlined())
@@ -6045,10 +6023,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 			storageMapKey,
 		).(*interpreter.SomeValue)
 
-		childArray := rootSomeValue.InnerValue(
-			inter,
-			interpreter.EmptyLocationRange,
-		).(*interpreter.ArrayValue)
+		childArray := rootSomeValue.InnerValue().(*interpreter.ArrayValue)
 
 		// Check that the inner array is not inlined.
 		// If the test fails here, adjust the value generation code above
@@ -6126,10 +6101,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 			storageMapKey,
 		).(*interpreter.SomeValue)
 
-		childArray = rootSomeValue.InnerValue(
-			inter,
-			interpreter.EmptyLocationRange,
-		).(*interpreter.ArrayValue)
+		childArray = rootSomeValue.InnerValue().(*interpreter.ArrayValue)
 
 		verify(uninlinedCount)
 
@@ -6198,10 +6170,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		// Fill the composite until it becomes uninlined
 
-		childComposite := rootSomeValue.InnerValue(
-			inter,
-			interpreter.EmptyLocationRange,
-		).(*interpreter.CompositeValue)
+		childComposite := rootSomeValue.InnerValue().(*interpreter.CompositeValue)
 
 		require.True(t, childComposite.Inlined())
 
@@ -6220,10 +6189,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		// Verify the contents of the composite
 
-		childComposite = rootSomeValue.InnerValue(
-			inter,
-			interpreter.EmptyLocationRange,
-		).(*interpreter.CompositeValue)
+		childComposite = rootSomeValue.InnerValue().(*interpreter.CompositeValue)
 
 		verify := func(count int) {
 			require.Equal(t, count, childComposite.FieldCount())
@@ -6301,10 +6267,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 			storageMapKey,
 		).(*interpreter.SomeValue)
 
-		childComposite = rootSomeValue.InnerValue(
-			inter,
-			interpreter.EmptyLocationRange,
-		).(*interpreter.CompositeValue)
+		childComposite = rootSomeValue.InnerValue().(*interpreter.CompositeValue)
 
 		require.Equal(t, 0, childComposite.FieldCount())
 		require.True(t, childComposite.Inlined())
@@ -6407,10 +6370,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 			storageMapKey,
 		).(*interpreter.SomeValue)
 
-		childComposite := rootSomeValue.InnerValue(
-			inter,
-			interpreter.EmptyLocationRange,
-		).(*interpreter.CompositeValue)
+		childComposite := rootSomeValue.InnerValue().(*interpreter.CompositeValue)
 
 		// Check that the inner composite is not inlined.
 		// If the test fails here, adjust the value generation code above
@@ -6495,10 +6455,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 			storageMapKey,
 		).(*interpreter.SomeValue)
 
-		childComposite = rootSomeValue.InnerValue(
-			inter,
-			interpreter.EmptyLocationRange,
-		).(*interpreter.CompositeValue)
+		childComposite = rootSomeValue.InnerValue().(*interpreter.CompositeValue)
 
 		verify(uninlinedCount)
 

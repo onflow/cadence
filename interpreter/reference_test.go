@@ -453,8 +453,7 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
 		value := inter.Globals.Get("ref").GetValue(inter)
 		require.IsType(t, &interpreter.SomeValue{}, value)
 
-		innerValue := value.(*interpreter.SomeValue).
-			InnerValue(inter, interpreter.EmptyLocationRange)
+		innerValue := value.(*interpreter.SomeValue).InnerValue()
 		require.IsType(t, &interpreter.EphemeralReferenceValue{}, innerValue)
 	})
 
@@ -472,8 +471,7 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
 		value := inter.Globals.Get("ref").GetValue(inter)
 		require.IsType(t, &interpreter.SomeValue{}, value)
 
-		innerValue := value.(*interpreter.SomeValue).
-			InnerValue(inter, interpreter.EmptyLocationRange)
+		innerValue := value.(*interpreter.SomeValue).InnerValue()
 		require.IsType(t, &interpreter.EphemeralReferenceValue{}, innerValue)
 	})
 
@@ -489,8 +487,7 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
 		value := inter.Globals.Get("ref").GetValue(inter)
 		require.IsType(t, &interpreter.SomeValue{}, value)
 
-		innerValue := value.(*interpreter.SomeValue).
-			InnerValue(inter, interpreter.EmptyLocationRange)
+		innerValue := value.(*interpreter.SomeValue).InnerValue()
 		require.IsType(t, &interpreter.EphemeralReferenceValue{}, innerValue)
 	})
 
@@ -506,8 +503,7 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
 		value := inter.Globals.Get("ref").GetValue(inter)
 		require.IsType(t, &interpreter.SomeValue{}, value)
 
-		innerValue := value.(*interpreter.SomeValue).
-			InnerValue(inter, interpreter.EmptyLocationRange)
+		innerValue := value.(*interpreter.SomeValue).InnerValue()
 		require.IsType(t, &interpreter.EphemeralReferenceValue{}, innerValue)
 	})
 
