@@ -323,3 +323,36 @@ func TestInterpretFunctionSubtyping(t *testing.T) {
 		result,
 	)
 }
+
+func TestInterpretDefaultFunctionWithConditions(t *testing.T) {
+
+	t.Parallel()
+
+	inter, getLogs, err := parseCheckAndInterpretWithLogs(t, `
+            struct interface Foo {
+                fun test(_ a: Int) {
+                    log("Calling to Foo.test")
+                }
+            }
+
+            struct interface Bar: Foo {
+                fun test(_ a: Int) {
+                    pre {
+                        a > 10: "a must be greater than 10"
+                    }
+                }
+            }
+
+            struct Test: Bar {}
+
+            fun main() {
+               Test().test(12)
+            }`,
+	)
+
+	_, err = inter.Invoke("main")
+	require.NoError(t, err)
+
+	logs := getLogs()
+	require.Empty(t, logs)
+}
