@@ -83,8 +83,6 @@ repos:
       deps:
         - onflow/cadence
         - onflow/flow-go-sdk
-        - onflow/flow-go
-        - onflow/flowkit/v2
 
 - repo: onflow/flow-evm-gateway
   needsRelease: false
