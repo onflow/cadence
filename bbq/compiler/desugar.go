@@ -1231,17 +1231,6 @@ func (d *Desugar) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaratio
 		d.modifiedDeclarations = append(d.modifiedDeclarations, desugaredMember)
 	}
 
-	// Add inherited default functions.
-	existingFunctions := declaration.Members.FunctionsByIdentifier()
-	inheritedDefaultFuncs := d.inheritedDefaultFunctions(
-		interfaceType,
-		existingFunctions,
-		declaration.StartPos,
-		declaration.Range,
-	)
-
-	d.modifiedDeclarations = append(d.modifiedDeclarations, inheritedDefaultFuncs...)
-
 	// TODO: Optimize: If none of the existing members got updated or,
 	// if there are no inherited members, then return the same declaration as-is.
 
