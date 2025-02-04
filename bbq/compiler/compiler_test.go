@@ -21,6 +21,7 @@ package compiler
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/bbq"
@@ -43,46 +44,46 @@ func TestCompileRecursionFib(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	compiler := NewBytecodeCompiler(checker)
+	compiler := NewInstructionCompiler(checker)
 	program := compiler.Compile()
 
 	require.Len(t, program.Functions, 1)
-	require.Equal(t,
-		[]byte{
+	assert.Equal(t,
+		[]opcode.Instruction{
 			// if n < 2
-			byte(opcode.GetLocal), 0, 0,
-			byte(opcode.GetConstant), 0, 0,
-			byte(opcode.IntLess),
-			byte(opcode.JumpIfFalse), 0, 14,
+			opcode.InstructionGetLocal{LocalIndex: 0x0},
+			opcode.InstructionGetConstant{ConstantIndex: 0x0},
+			opcode.InstructionIntLess{},
+			opcode.InstructionJumpIfFalse{Target: 6},
 			// then return n
-			byte(opcode.GetLocal), 0, 0,
-			byte(opcode.ReturnValue),
+			opcode.InstructionGetLocal{LocalIndex: 0x0},
+			opcode.InstructionReturnValue{},
 			// fib(n - 1)
-			byte(opcode.GetLocal), 0, 0,
-			byte(opcode.GetConstant), 0, 1,
-			byte(opcode.IntSubtract),
-			byte(opcode.Transfer), 0, 0,
-			byte(opcode.GetGlobal), 0, 0,
-			byte(opcode.Invoke), 0, 0,
+			opcode.InstructionGetLocal{LocalIndex: 0x0},
+			opcode.InstructionGetConstant{ConstantIndex: 0x1},
+			opcode.InstructionIntSubtract{},
+			opcode.InstructionTransfer{TypeIndex: 0x0},
+			opcode.InstructionGetGlobal{GlobalIndex: 0x0},
+			opcode.InstructionInvoke{},
 			// fib(n - 2)
-			byte(opcode.GetLocal), 0, 0,
-			byte(opcode.GetConstant), 0, 0,
-			byte(opcode.IntSubtract),
-			byte(opcode.Transfer), 0, 0,
-			byte(opcode.GetGlobal), 0, 0,
-			byte(opcode.Invoke), 0, 0,
-			byte(opcode.IntAdd),
+			opcode.InstructionGetLocal{LocalIndex: 0x0},
+			opcode.InstructionGetConstant{ConstantIndex: 0x0},
+			opcode.InstructionIntSubtract{},
+			opcode.InstructionTransfer{TypeIndex: 0x0},
+			opcode.InstructionGetGlobal{GlobalIndex: 0x0},
+			opcode.InstructionInvoke{},
+			opcode.InstructionIntAdd{},
 			// assign to temp $result
-			byte(opcode.Transfer), 0, 0,
-			byte(opcode.SetLocal), 0, 1,
+			opcode.InstructionTransfer{TypeIndex: 0x0},
+			opcode.InstructionSetLocal{LocalIndex: 0x1},
 			// return $result
-			byte(opcode.GetLocal), 0, 1,
-			byte(opcode.ReturnValue),
+			opcode.InstructionGetLocal{LocalIndex: 0x1},
+			opcode.InstructionReturnValue{},
 		},
 		compiler.ExportFunctions()[0].Code,
 	)
 
-	require.Equal(t,
+	assert.Equal(t,
 		[]*bbq.Constant{
 			{
 				Data: []byte{0x2},
@@ -118,67 +119,67 @@ func TestCompileImperativeFib(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	compiler := NewBytecodeCompiler(checker)
+	compiler := NewInstructionCompiler(checker)
 	program := compiler.Compile()
 
 	require.Len(t, program.Functions, 1)
-	require.Equal(t,
-		[]byte{
+	assert.Equal(t,
+		[]opcode.Instruction{
 			// var fib1 = 1
-			byte(opcode.GetConstant), 0, 0,
-			byte(opcode.Transfer), 0, 0,
-			byte(opcode.SetLocal), 0, 1,
+			opcode.InstructionGetConstant{ConstantIndex: 0x0},
+			opcode.InstructionTransfer{TypeIndex: 0x0},
+			opcode.InstructionSetLocal{LocalIndex: 0x1},
 			// var fib2 = 1
-			byte(opcode.GetConstant), 0, 0,
-			byte(opcode.Transfer), 0, 0,
-			byte(opcode.SetLocal), 0, 2,
+			opcode.InstructionGetConstant{ConstantIndex: 0x0},
+			opcode.InstructionTransfer{TypeIndex: 0x0},
+			opcode.InstructionSetLocal{LocalIndex: 0x2},
 			// var fibonacci = fib1
-			byte(opcode.GetLocal), 0, 1,
-			byte(opcode.Transfer), 0, 0,
-			byte(opcode.SetLocal), 0, 3,
+			opcode.InstructionGetLocal{LocalIndex: 0x1},
+			opcode.InstructionTransfer{TypeIndex: 0x0},
+			opcode.InstructionSetLocal{LocalIndex: 0x3},
 			// var i = 2
-			byte(opcode.GetConstant), 0, 1,
-			byte(opcode.Transfer), 0, 0,
-			byte(opcode.SetLocal), 0, 4,
+			opcode.InstructionGetConstant{ConstantIndex: 0x1},
+			opcode.InstructionTransfer{TypeIndex: 0x0},
+			opcode.InstructionSetLocal{LocalIndex: 0x4},
 			// while i < n
-			byte(opcode.GetLocal), 0, 4,
-			byte(opcode.GetLocal), 0, 0,
-			byte(opcode.IntLess),
-			byte(opcode.JumpIfFalse), 0, 93,
+			opcode.InstructionGetLocal{LocalIndex: 0x4},
+			opcode.InstructionGetLocal{LocalIndex: 0x0},
+			opcode.InstructionIntLess{},
+			opcode.InstructionJumpIfFalse{Target: 33},
 			// fibonacci = fib1 + fib2
-			byte(opcode.GetLocal), 0, 1,
-			byte(opcode.GetLocal), 0, 2,
-			byte(opcode.IntAdd),
-			byte(opcode.Transfer), 0, 0,
-			byte(opcode.SetLocal), 0, 3,
+			opcode.InstructionGetLocal{LocalIndex: 0x1},
+			opcode.InstructionGetLocal{LocalIndex: 0x2},
+			opcode.InstructionIntAdd{},
+			opcode.InstructionTransfer{TypeIndex: 0x0},
+			opcode.InstructionSetLocal{LocalIndex: 0x3},
 			// fib1 = fib2
-			byte(opcode.GetLocal), 0, 2,
-			byte(opcode.Transfer), 0, 0,
-			byte(opcode.SetLocal), 0, 1,
+			opcode.InstructionGetLocal{LocalIndex: 0x2},
+			opcode.InstructionTransfer{TypeIndex: 0x0},
+			opcode.InstructionSetLocal{LocalIndex: 0x1},
 			// fib2 = fibonacci
-			byte(opcode.GetLocal), 0, 3,
-			byte(opcode.Transfer), 0, 0,
-			byte(opcode.SetLocal), 0, 2,
+			opcode.InstructionGetLocal{LocalIndex: 0x3},
+			opcode.InstructionTransfer{TypeIndex: 0x0},
+			opcode.InstructionSetLocal{LocalIndex: 0x2},
 			// i = i + 1
-			byte(opcode.GetLocal), 0, 4,
-			byte(opcode.GetConstant), 0, 0,
-			byte(opcode.IntAdd),
-			byte(opcode.Transfer), 0, 0,
-			byte(opcode.SetLocal), 0, 4,
+			opcode.InstructionGetLocal{LocalIndex: 0x4},
+			opcode.InstructionGetConstant{ConstantIndex: 0x0},
+			opcode.InstructionIntAdd{},
+			opcode.InstructionTransfer{TypeIndex: 0x0},
+			opcode.InstructionSetLocal{LocalIndex: 0x4},
 			// continue loop
-			byte(opcode.Jump), 0, 36,
+			opcode.InstructionJump{Target: 12},
 			// assign to temp $result
-			byte(opcode.GetLocal), 0, 3,
-			byte(opcode.Transfer), 0, 0,
-			byte(opcode.SetLocal), 0, 5,
+			opcode.InstructionGetLocal{LocalIndex: 0x3},
+			opcode.InstructionTransfer{TypeIndex: 0x0},
+			opcode.InstructionSetLocal{LocalIndex: 0x5},
 			// return $result
-			byte(opcode.GetLocal), 0, 5,
-			byte(opcode.ReturnValue),
+			opcode.InstructionGetLocal{LocalIndex: 0x5},
+			opcode.InstructionReturnValue{},
 		},
 		compiler.ExportFunctions()[0].Code,
 	)
 
-	require.Equal(t,
+	assert.Equal(t,
 		[]*bbq.Constant{
 			{
 				Data: []byte{0x1},
@@ -211,46 +212,46 @@ func TestCompileBreak(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	compiler := NewBytecodeCompiler(checker)
+	compiler := NewInstructionCompiler(checker)
 	program := compiler.Compile()
 
 	require.Len(t, program.Functions, 1)
-	require.Equal(t,
-		[]byte{
+	assert.Equal(t,
+		[]opcode.Instruction{
 			// var i = 0
-			byte(opcode.GetConstant), 0, 0,
-			byte(opcode.Transfer), 0, 0,
-			byte(opcode.SetLocal), 0, 0,
+			opcode.InstructionGetConstant{ConstantIndex: 0x0},
+			opcode.InstructionTransfer{TypeIndex: 0x0},
+			opcode.InstructionSetLocal{LocalIndex: 0x0},
 			// while true
-			byte(opcode.True),
-			byte(opcode.JumpIfFalse), 0, 42,
+			opcode.InstructionTrue{},
+			opcode.InstructionJumpIfFalse{Target: 16},
 			// if i > 3
-			byte(opcode.GetLocal), 0, 0,
-			byte(opcode.GetConstant), 0, 1,
-			byte(opcode.IntGreater),
-			byte(opcode.JumpIfFalse), 0, 26,
+			opcode.InstructionGetLocal{LocalIndex: 0x0},
+			opcode.InstructionGetConstant{ConstantIndex: 0x1},
+			opcode.InstructionIntGreater{},
+			opcode.InstructionJumpIfFalse{Target: 10},
 			// break
-			byte(opcode.Jump), 0, 42,
+			opcode.InstructionJump{Target: 16},
 			// i = i + 1
-			byte(opcode.GetLocal), 0, 0,
-			byte(opcode.GetConstant), 0, 2,
-			byte(opcode.IntAdd),
-			byte(opcode.Transfer), 0, 0,
-			byte(opcode.SetLocal), 0, 0,
+			opcode.InstructionGetLocal{LocalIndex: 0x0},
+			opcode.InstructionGetConstant{ConstantIndex: 0x2},
+			opcode.InstructionIntAdd{},
+			opcode.InstructionTransfer{TypeIndex: 0x0},
+			opcode.InstructionSetLocal{LocalIndex: 0x0},
 			// repeat
-			byte(opcode.Jump), 0, 9,
+			opcode.InstructionJump{Target: 3},
 			// assign i to temp $result
-			byte(opcode.GetLocal), 0, 0,
-			byte(opcode.Transfer), 0, 0,
-			byte(opcode.SetLocal), 0, 1,
+			opcode.InstructionGetLocal{LocalIndex: 0x0},
+			opcode.InstructionTransfer{TypeIndex: 0x0},
+			opcode.InstructionSetLocal{LocalIndex: 0x1},
 			// return $result
-			byte(opcode.GetLocal), 0, 1,
-			byte(opcode.ReturnValue),
+			opcode.InstructionGetLocal{LocalIndex: 0x1},
+			opcode.InstructionReturnValue{},
 		},
 		compiler.ExportFunctions()[0].Code,
 	)
 
-	require.Equal(t,
+	assert.Equal(t,
 		[]*bbq.Constant{
 			{
 				Data: []byte{0x0},
@@ -288,48 +289,48 @@ func TestCompileContinue(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	compiler := NewBytecodeCompiler(checker)
+	compiler := NewInstructionCompiler(checker)
 	program := compiler.Compile()
 
 	require.Len(t, program.Functions, 1)
-	require.Equal(t,
-		[]byte{
+	assert.Equal(t,
+		[]opcode.Instruction{
 			// var i = 0
-			byte(opcode.GetConstant), 0, 0,
-			byte(opcode.Transfer), 0, 0,
-			byte(opcode.SetLocal), 0, 0,
+			opcode.InstructionGetConstant{ConstantIndex: 0x0},
+			opcode.InstructionTransfer{TypeIndex: 0x0},
+			opcode.InstructionSetLocal{LocalIndex: 0x0},
 			// while true
-			byte(opcode.True),
-			byte(opcode.JumpIfFalse), 0, 45,
+			opcode.InstructionTrue{},
+			opcode.InstructionJumpIfFalse{Target: 17},
 			// i = i + 1
-			byte(opcode.GetLocal), 0, 0,
-			byte(opcode.GetConstant), 0, 1,
-			byte(opcode.IntAdd),
-			byte(opcode.Transfer), 0, 0,
-			byte(opcode.SetLocal), 0, 0,
+			opcode.InstructionGetLocal{LocalIndex: 0x0},
+			opcode.InstructionGetConstant{ConstantIndex: 0x1},
+			opcode.InstructionIntAdd{},
+			opcode.InstructionTransfer{TypeIndex: 0x0},
+			opcode.InstructionSetLocal{LocalIndex: 0x0},
 			// if i < 3
-			byte(opcode.GetLocal), 0, 0,
-			byte(opcode.GetConstant), 0, 2,
-			byte(opcode.IntLess),
-			byte(opcode.JumpIfFalse), 0, 39,
+			opcode.InstructionGetLocal{LocalIndex: 0x0},
+			opcode.InstructionGetConstant{ConstantIndex: 0x2},
+			opcode.InstructionIntLess{},
+			opcode.InstructionJumpIfFalse{Target: 15},
 			// continue
-			byte(opcode.Jump), 0, 9,
+			opcode.InstructionJump{Target: 3},
 			// break
-			byte(opcode.Jump), 0, 45,
+			opcode.InstructionJump{Target: 17},
 			// repeat
-			byte(opcode.Jump), 0, 9,
+			opcode.InstructionJump{Target: 3},
 			// assign i to temp $result
-			byte(opcode.GetLocal), 0, 0,
-			byte(opcode.Transfer), 0, 0,
-			byte(opcode.SetLocal), 0, 1,
+			opcode.InstructionGetLocal{LocalIndex: 0x0},
+			opcode.InstructionTransfer{TypeIndex: 0x0},
+			opcode.InstructionSetLocal{LocalIndex: 0x1},
 			// return $result
-			byte(opcode.GetLocal), 0, 1,
-			byte(opcode.ReturnValue),
+			opcode.InstructionGetLocal{LocalIndex: 0x1},
+			opcode.InstructionReturnValue{},
 		},
 		compiler.ExportFunctions()[0].Code,
 	)
 
-	require.Equal(t,
+	assert.Equal(t,
 		[]*bbq.Constant{
 			{
 				Data: []byte{0x0},
@@ -359,25 +360,33 @@ func TestCompileArray(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	compiler := NewBytecodeCompiler(checker)
+	compiler := NewInstructionCompiler(checker)
 	program := compiler.Compile()
 
 	require.Len(t, program.Functions, 1)
 
-	require.Equal(t,
-		[]byte{
-			byte(opcode.GetConstant), 0, 0,
-			byte(opcode.GetConstant), 0, 1,
-			byte(opcode.GetConstant), 0, 2,
-			byte(opcode.NewArray), 0, 0, 0, 3, 0,
-			byte(opcode.Transfer), 0, 0,
-			byte(opcode.SetLocal), 0, 0,
-			byte(opcode.Return),
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// [1, 2, 3]
+			opcode.InstructionGetConstant{ConstantIndex: 0x0},
+			opcode.InstructionGetConstant{ConstantIndex: 0x1},
+			opcode.InstructionGetConstant{ConstantIndex: 0x2},
+			opcode.InstructionNewArray{
+				TypeIndex:  0x0,
+				Size:       0x3,
+				IsResource: false,
+			},
+
+			// let xs =
+			opcode.InstructionTransfer{TypeIndex: 0x0},
+			opcode.InstructionSetLocal{LocalIndex: 0x0},
+
+			opcode.InstructionReturn{},
 		},
 		compiler.ExportFunctions()[0].Code,
 	)
 
-	require.Equal(t,
+	assert.Equal(t,
 		[]*bbq.Constant{
 			{
 				Data: []byte{0x1},
@@ -395,6 +404,7 @@ func TestCompileArray(t *testing.T) {
 		program.Constants,
 	)
 }
+
 func TestCompileDictionary(t *testing.T) {
 
 	t.Parallel()
@@ -406,28 +416,35 @@ func TestCompileDictionary(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	compiler := NewBytecodeCompiler(checker)
+	compiler := NewInstructionCompiler(checker)
 	program := compiler.Compile()
 
 	require.Len(t, program.Functions, 1)
 
-	require.Equal(t,
-		[]byte{
-			byte(opcode.GetConstant), 0, 0,
-			byte(opcode.GetConstant), 0, 1,
-			byte(opcode.GetConstant), 0, 2,
-			byte(opcode.GetConstant), 0, 3,
-			byte(opcode.GetConstant), 0, 4,
-			byte(opcode.GetConstant), 0, 5,
-			byte(opcode.NewDictionary), 0, 0, 0, 3, 0,
-			byte(opcode.Transfer), 0, 0,
-			byte(opcode.SetLocal), 0, 0,
-			byte(opcode.Return),
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// {"a": 1, "b": 2, "c": 3}
+			opcode.InstructionGetConstant{ConstantIndex: 0x0},
+			opcode.InstructionGetConstant{ConstantIndex: 0x1},
+			opcode.InstructionGetConstant{ConstantIndex: 0x2},
+			opcode.InstructionGetConstant{ConstantIndex: 0x3},
+			opcode.InstructionGetConstant{ConstantIndex: 0x4},
+			opcode.InstructionGetConstant{ConstantIndex: 0x5},
+			opcode.InstructionNewDictionary{
+				TypeIndex:  0x0,
+				Size:       0x3,
+				IsResource: false,
+			},
+			// let xs =
+			opcode.InstructionTransfer{TypeIndex: 0x0},
+			opcode.InstructionSetLocal{LocalIndex: 0x0},
+
+			opcode.InstructionReturn{},
 		},
 		compiler.ExportFunctions()[0].Code,
 	)
 
-	require.Equal(t,
+	assert.Equal(t,
 		[]*bbq.Constant{
 			{
 				Data: []byte{'a'},
