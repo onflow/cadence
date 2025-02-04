@@ -43,12 +43,17 @@ func newFunction[E any](name string, parameterCount uint16, isCompositeFunction 
 	}
 }
 
+func (f *function[E]) generateLocalIndex() uint16 {
+	index := f.localCount
+	f.localCount++
+	return index
+}
+
 func (f *function[E]) declareLocal(name string) *local {
 	if f.localCount == math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid local declaration"))
 	}
-	index := f.localCount
-	f.localCount++
+	index := f.generateLocalIndex()
 	local := &local{index: index}
 	f.locals.Set(name, local)
 	return local

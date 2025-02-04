@@ -21,6 +21,7 @@ package compiler
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/bbq"
@@ -451,6 +452,67 @@ func TestCompileDictionary(t *testing.T) {
 			},
 			{
 				Data: []byte{0x3},
+				Kind: constantkind.Int,
+			},
+		},
+		program.Constants,
+	)
+}
+
+func TestCompileIfLet(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun test(x: Int?): Int {
+          if let y = x {
+             return y
+          } else {
+             return 2
+          }
+      }
+    `)
+	require.NoError(t, err)
+
+	compiler := NewInstructionCompiler(checker)
+	program := compiler.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// let y = x
+			opcode.InstructionGetLocal{LocalIndex: 0x0},
+			opcode.InstructionSetLocal{LocalIndex: 0x1},
+
+			// if
+			opcode.InstructionGetLocal{LocalIndex: 0x1},
+			opcode.InstructionJumpIfNil{Target: 11},
+
+			// let y = x
+			opcode.InstructionGetLocal{LocalIndex: 0x1},
+			opcode.InstructionUnwrap{},
+			opcode.InstructionTransfer{TypeIndex: 0x0},
+			opcode.InstructionSetLocal{LocalIndex: 0x2},
+
+			// then { return y }
+			opcode.InstructionGetLocal{LocalIndex: 0x2},
+			opcode.InstructionReturnValue{},
+			opcode.InstructionJump{Target: 13},
+
+			// else { return 2 }
+			opcode.InstructionGetConstant{ConstantIndex: 0x0},
+			opcode.InstructionReturnValue{},
+
+			opcode.InstructionReturn{},
+		},
+		compiler.ExportFunctions()[0].Code,
+	)
+
+	assert.Equal(t,
+		[]*bbq.Constant{
+			{
+				Data: []byte{0x2},
 				Kind: constantkind.Int,
 			},
 		},

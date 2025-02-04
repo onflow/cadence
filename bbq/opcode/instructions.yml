@@ -334,6 +334,22 @@
       type: "index"
   controlEffects:
     - jump: "target"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+
+- name: "jumpIfNil"
+  description: Jumps to the given instruction, if the top value on the stack is `nil`.
+  operands:
+    - name: "target"
+      type: "index"
+  controlEffects:
+    - jump: "target"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
 
 - name: "return"
   description: Returns from the current function, without a value.

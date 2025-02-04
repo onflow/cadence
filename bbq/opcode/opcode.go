@@ -31,7 +31,7 @@ const (
 	ReturnValue
 	Jump
 	JumpIfFalse
-	_
+	JumpIfNil
 	_
 	_
 	_

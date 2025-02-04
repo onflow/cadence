@@ -250,6 +250,12 @@ func (c *Compiler[_]) emitUndefinedJumpIfFalse() int {
 	return offset
 }
 
+func (c *Compiler[_]) emitUndefinedJumpIfNil() int {
+	offset := c.codeGen.Offset()
+	c.codeGen.Emit(opcode.InstructionJumpIfNil{Target: math.MaxUint16})
+	return offset
+}
+
 func (c *Compiler[_]) patchJump(opcodeOffset int) {
 	count := c.codeGen.Offset()
 	if count == 0 {
@@ -570,14 +576,33 @@ func (c *Compiler[_]) VisitContinueStatement(_ *ast.ContinueStatement) (_ struct
 
 func (c *Compiler[_]) VisitIfStatement(statement *ast.IfStatement) (_ struct{}) {
 	// TODO: scope
+	var elseJump int
 	switch test := statement.Test.(type) {
 	case ast.Expression:
 		c.compileExpression(test)
+		elseJump = c.emitUndefinedJumpIfFalse()
+
+	case *ast.VariableDeclaration:
+		// TODO: second value
+		c.compileExpression(test.Value)
+
+		tempIndex := c.currentFunction.generateLocalIndex()
+		c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: tempIndex})
+
+		c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: tempIndex})
+		elseJump = c.emitUndefinedJumpIfNil()
+
+		c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: tempIndex})
+		c.codeGen.Emit(opcode.InstructionUnwrap{})
+		varDeclTypes := c.ExtendedElaboration.VariableDeclarationTypes(test)
+		c.emitTransfer(varDeclTypes.TargetType)
+		local := c.currentFunction.declareLocal(test.Identifier.Identifier)
+		c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: local.index})
+
 	default:
-		// TODO:
 		panic(errors.NewUnreachableError())
 	}
-	elseJump := c.emitUndefinedJumpIfFalse()
+
 	c.compileBlock(statement.Then)
 	elseBlock := statement.Else
 	if elseBlock != nil {
@@ -588,6 +613,7 @@ func (c *Compiler[_]) VisitIfStatement(statement *ast.IfStatement) (_ struct{}) 
 	} else {
 		c.patchJump(elseJump)
 	}
+
 	return
 }
 
