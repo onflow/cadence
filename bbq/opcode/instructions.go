@@ -785,6 +785,36 @@ func DecodeJumpIfFalse(ip *uint16, code []byte) (i InstructionJumpIfFalse) {
 	return i
 }
 
+// InstructionJumpIfNil
+//
+// Jumps to the given instruction, if the top value on the stack is `nil`.
+type InstructionJumpIfNil struct {
+	Target uint16
+}
+
+var _ Instruction = InstructionJumpIfNil{}
+
+func (InstructionJumpIfNil) Opcode() Opcode {
+	return JumpIfNil
+}
+
+func (i InstructionJumpIfNil) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	printfArgument(&sb, "target", i.Target)
+	return sb.String()
+}
+
+func (i InstructionJumpIfNil) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.Target)
+}
+
+func DecodeJumpIfNil(ip *uint16, code []byte) (i InstructionJumpIfNil) {
+	i.Target = decodeUint16(ip, code)
+	return i
+}
+
 // InstructionReturn
 //
 // Returns from the current function, without a value.
@@ -1123,6 +1153,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return DecodeJump(ip, code)
 	case JumpIfFalse:
 		return DecodeJumpIfFalse(ip, code)
+	case JumpIfNil:
+		return DecodeJumpIfNil(ip, code)
 	case Return:
 		return InstructionReturn{}
 	case ReturnValue:

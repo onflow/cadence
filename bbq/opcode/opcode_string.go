@@ -13,6 +13,7 @@ func _() {
 	_ = x[ReturnValue-2]
 	_ = x[Jump-3]
 	_ = x[JumpIfFalse-4]
+	_ = x[JumpIfNil-5]
 	_ = x[IntAdd-11]
 	_ = x[IntSubtract-12]
 	_ = x[IntMultiply-13]
@@ -53,7 +54,7 @@ func _() {
 }
 
 const (
-	_Opcode_name_0 = "UnknownReturnReturnValueJumpJumpIfFalse"
+	_Opcode_name_0 = "UnknownReturnReturnValueJumpJumpIfFalseJumpIfNil"
 	_Opcode_name_1 = "IntAddIntSubtractIntMultiplyIntDivideIntModIntLessIntGreaterIntLessOrEqualIntGreaterOrEqual"
 	_Opcode_name_2 = "EqualNotEqualNot"
 	_Opcode_name_3 = "UnwrapDestroyTransferCast"
@@ -64,7 +65,7 @@ const (
 )
 
 var (
-	_Opcode_index_0 = [...]uint8{0, 7, 13, 24, 28, 39}
+	_Opcode_index_0 = [...]uint8{0, 7, 13, 24, 28, 39, 48}
 	_Opcode_index_1 = [...]uint8{0, 6, 17, 28, 37, 43, 50, 60, 74, 91}
 	_Opcode_index_2 = [...]uint8{0, 5, 13, 16}
 	_Opcode_index_3 = [...]uint8{0, 6, 13, 21, 25}
@@ -76,7 +77,7 @@ var (
 
 func (i Opcode) String() string {
 	switch {
-	case i <= 4:
+	case i <= 5:
 		return _Opcode_name_0[_Opcode_index_0[i]:_Opcode_index_0[i+1]]
 	case 11 <= i && i <= 19:
 		i -= 11

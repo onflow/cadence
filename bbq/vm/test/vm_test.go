@@ -3184,3 +3184,51 @@ func TestFunctionPostConditions(t *testing.T) {
 		assert.Equal(t, []string{"A", "D", "F", "E", "C", "B"}, logs)
 	})
 }
+
+func TestIfLet(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("some", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, err := compileAndInvoke(t, `
+			  fun main(x: Int?): Int {
+                  if let y = x {
+                     return y
+                  } else {
+                     return 2
+                  }
+              }
+            `,
+			"main",
+			vm.NewSomeValueNonCopying(
+				vm.NewIntValue(1),
+			),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(1), result)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, err := compileAndInvoke(t, `
+            fun main(x: Int?): Int {
+                  if let y = x {
+                     return y
+                  } else {
+                     return 2
+                  }
+              }
+            `,
+			"main",
+			vm.NilValue{},
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(2), result)
+	})
+}

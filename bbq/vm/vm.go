@@ -344,6 +344,13 @@ func opJumpIfFalse(vm *VM, ins opcode.InstructionJumpIfFalse) {
 	}
 }
 
+func opJumpIfNil(vm *VM, ins opcode.InstructionJumpIfNil) {
+	_, ok := vm.pop().(NilValue)
+	if ok {
+		vm.ip = ins.Target
+	}
+}
+
 func opBinaryIntAdd(vm *VM) {
 	left, right := vm.peekPop()
 	leftNumber := left.(IntValue)
@@ -698,6 +705,8 @@ func (vm *VM) run() {
 			opJump(vm, ins)
 		case opcode.InstructionJumpIfFalse:
 			opJumpIfFalse(vm, ins)
+		case opcode.InstructionJumpIfNil:
+			opJumpIfNil(vm, ins)
 		case opcode.InstructionIntAdd:
 			opBinaryIntAdd(vm)
 		case opcode.InstructionIntSubtract:
