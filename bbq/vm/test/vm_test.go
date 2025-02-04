@@ -3194,7 +3194,7 @@ func TestIfLet(t *testing.T) {
 		t.Parallel()
 
 		result, err := compileAndInvoke(t, `
-			  fun main(x: Int?): Int {
+              fun main(x: Int?): Int {
                   if let y = x {
                      return y
                   } else {
@@ -3216,7 +3216,7 @@ func TestIfLet(t *testing.T) {
 		t.Parallel()
 
 		result, err := compileAndInvoke(t, `
-            fun main(x: Int?): Int {
+              fun main(x: Int?): Int {
                   if let y = x {
                      return y
                   } else {
@@ -3230,5 +3230,82 @@ func TestIfLet(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, vm.NewIntValue(2), result)
+	})
+}
+
+func TestCompileSwitch(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("1", func(t *testing.T) {
+
+		result, err := compileAndInvoke(t,
+			`
+              fun test(x: Int): Int {
+                  var a = 0
+                  switch x {
+                      case 1:
+                          a = a + 1
+                      case 2:
+                          a = a + 2
+                      default:
+                          a = a + 3
+                  }
+                  return a
+              }
+            `,
+			"test",
+			vm.NewIntValue(1),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(1), result)
+	})
+
+	t.Run("2", func(t *testing.T) {
+
+		result, err := compileAndInvoke(t,
+			`
+              fun test(x: Int): Int {
+                  var a = 0
+                  switch x {
+                      case 1:
+                          a = a + 1
+                      case 2:
+                          a = a + 2
+                      default:
+                          a = a + 3
+                  }
+                  return a
+              }
+            `,
+			"test",
+			vm.NewIntValue(2),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(2), result)
+	})
+
+	t.Run("4", func(t *testing.T) {
+
+		result, err := compileAndInvoke(t,
+			`
+              fun test(x: Int): Int {
+                  var a = 0
+                  switch x {
+                      case 1:
+                          a = a + 1
+                      case 2:
+                          a = a + 2
+                      default:
+                          a = a + 3
+                  }
+                  return a
+              }
+            `,
+			"test",
+			vm.NewIntValue(4),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(3), result)
 	})
 }

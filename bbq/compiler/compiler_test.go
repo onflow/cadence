@@ -519,3 +519,106 @@ func TestCompileIfLet(t *testing.T) {
 		program.Constants,
 	)
 }
+
+func TestCompileSwitch(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun test(x: Int): Int {
+          var a = 0
+          switch x {
+              case 1:
+                  a = 1
+              case 2:
+                  a = 2
+              default:
+                  a = 3
+          }
+          return a
+      }
+    `)
+	require.NoError(t, err)
+
+	compiler := NewInstructionCompiler(checker)
+	program := compiler.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// var a = 0
+			opcode.InstructionGetConstant{ConstantIndex: 0x0},
+			opcode.InstructionTransfer{TypeIndex: 0x0},
+			opcode.InstructionSetLocal{LocalIndex: 0x1},
+
+			// switch x
+			opcode.InstructionGetLocal{LocalIndex: 0x0},
+			opcode.InstructionSetLocal{LocalIndex: 0x2},
+
+			// case 1:
+			opcode.InstructionGetLocal{LocalIndex: 0x2},
+			opcode.InstructionGetConstant{ConstantIndex: 0x1},
+			opcode.InstructionEqual{},
+			opcode.InstructionJumpIfFalse{Target: 13},
+
+			// a = 1
+			opcode.InstructionGetConstant{ConstantIndex: 0x1},
+			opcode.InstructionTransfer{TypeIndex: 0x0},
+			opcode.InstructionSetLocal{LocalIndex: 0x1},
+
+			// jump to end
+			opcode.InstructionJump{Target: 24},
+
+			// case 2:
+			opcode.InstructionGetLocal{LocalIndex: 0x2},
+			opcode.InstructionGetConstant{ConstantIndex: 0x2},
+			opcode.InstructionEqual{},
+			opcode.InstructionJumpIfFalse{Target: 21},
+
+			// a = 2
+			opcode.InstructionGetConstant{ConstantIndex: 0x2},
+			opcode.InstructionTransfer{TypeIndex: 0x0},
+			opcode.InstructionSetLocal{LocalIndex: 0x1},
+
+			// jump to end
+			opcode.InstructionJump{Target: 24},
+
+			// default:
+			// a = 3
+			opcode.InstructionGetConstant{ConstantIndex: 0x3},
+			opcode.InstructionTransfer{TypeIndex: 0x0},
+			opcode.InstructionSetLocal{LocalIndex: 0x1},
+
+			// return a
+			opcode.InstructionGetLocal{LocalIndex: 0x1},
+			opcode.InstructionTransfer{TypeIndex: 0x0},
+			opcode.InstructionSetLocal{LocalIndex: 0x3},
+			opcode.InstructionGetLocal{LocalIndex: 0x3},
+			opcode.InstructionReturnValue{},
+		},
+		compiler.ExportFunctions()[0].Code,
+	)
+
+	assert.Equal(t,
+		[]*bbq.Constant{
+			{
+				Data: []byte{0x0},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{0x1},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{0x2},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{0x3},
+				Kind: constantkind.Int,
+			},
+		},
+		program.Constants,
+	)
+}

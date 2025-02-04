@@ -639,9 +639,43 @@ func (c *Compiler[_]) VisitEmitStatement(_ *ast.EmitStatement) (_ struct{}) {
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler[_]) VisitSwitchStatement(_ *ast.SwitchStatement) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler[_]) VisitSwitchStatement(statement *ast.SwitchStatement) (_ struct{}) {
+	c.compileExpression(statement.Expression)
+	localIndex := c.currentFunction.generateLocalIndex()
+	c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: localIndex})
+
+	endJumps := make([]int, 0, len(statement.Cases))
+	previousJump := -1
+
+	for _, switchCase := range statement.Cases {
+		if previousJump >= 0 {
+			c.patchJump(previousJump)
+		}
+
+		isDefault := switchCase.Expression == nil
+		if !isDefault {
+			c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: localIndex})
+			c.compileExpression(switchCase.Expression)
+			c.codeGen.Emit(opcode.InstructionEqual{})
+			previousJump = c.emitUndefinedJumpIfFalse()
+
+		}
+
+		for _, caseStatement := range switchCase.Statements {
+			c.compileStatement(caseStatement)
+		}
+
+		if !isDefault {
+			endJump := c.emitUndefinedJump()
+			endJumps = append(endJumps, endJump)
+		}
+	}
+
+	for _, endJump := range endJumps {
+		c.patchJump(endJump)
+	}
+
+	return
 }
 
 func (c *Compiler[_]) VisitVariableDeclaration(declaration *ast.VariableDeclaration) (_ struct{}) {
