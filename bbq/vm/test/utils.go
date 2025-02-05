@@ -440,7 +440,7 @@ func parseCheckAndCompileCodeWithOptions(
 		options.ParseAndCheckOptions,
 		programs,
 	)
-	programs[location] = &compiledProgram{
+	programs[checker.Location] = &compiledProgram{
 		Elaboration: checker.Elaboration,
 	}
 
@@ -450,7 +450,7 @@ func parseCheckAndCompileCodeWithOptions(
 		checker,
 		programs,
 	)
-	programs[location].Program = program
+	programs[checker.Location].Program = program
 
 	return program
 }

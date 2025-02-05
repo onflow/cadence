@@ -3438,3 +3438,210 @@ func TestCompileSwitch(t *testing.T) {
 		assert.Equal(t, vm.NewIntValue(3), result)
 	})
 }
+
+func TestDefaultFunctionsWithConditions(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("default in parent, conditions in child", func(t *testing.T) {
+		t.Parallel()
+
+		storage := interpreter.NewInMemoryStorage(nil)
+
+		activation := sema.NewVariableActivation(sema.BaseValueActivation)
+		activation.DeclareValue(stdlib.PanicFunction)
+		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
+			"log",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityView,
+				[]sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: sema.AnyStructTypeAnnotation,
+					},
+				},
+				sema.VoidTypeAnnotation,
+			),
+			"",
+			nil,
+		))
+
+		var logs []string
+		vmConfig := &vm.Config{
+			Storage:        storage,
+			AccountHandler: &testAccountHandler{},
+			NativeFunctionsProvider: func() map[string]vm.Value {
+				funcs := vm.NativeFunctions()
+				funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+					ParameterCount: len(stdlib.LogFunctionType.Parameters),
+					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+						logs = append(logs, arguments[0].String())
+						return vm.VoidValue{}
+					},
+				}
+
+				return funcs
+			},
+		}
+
+		_, err := compileAndInvokeWithOptions(t, `
+            struct interface Foo {
+                fun test(_ a: Int) {
+                    printMessage("invoked Foo.test()")
+                }
+            }
+
+            struct interface Bar: Foo {
+                fun test(_ a: Int) {
+                    pre {
+                         printMessage("invoked Bar.test() pre-condition")
+                    }
+
+                    post {
+                         printMessage("invoked Bar.test() post-condition")
+                    }
+                }
+            }
+
+            struct Test: Bar {}
+
+            access(all) view fun printMessage(_ msg: String): Bool {
+                log(msg)
+                return true
+            }
+
+            fun main() {
+               Test().test(5)
+            }
+        `,
+			"main",
+			CompilerAndVMOptions{
+				VMConfig: vmConfig,
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Config: &sema.Config{
+						LocationHandler: singleIdentifierLocationResolver(t),
+						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+							return activation
+						},
+					},
+				},
+			},
+		)
+
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			[]string{
+				"invoked Bar.test() pre-condition",
+				"invoked Foo.test()",
+				"invoked Bar.test() post-condition",
+			}, logs,
+		)
+	})
+
+	t.Run("default and conditions in parent, more conditions in child", func(t *testing.T) {
+		t.Parallel()
+
+		storage := interpreter.NewInMemoryStorage(nil)
+
+		activation := sema.NewVariableActivation(sema.BaseValueActivation)
+		activation.DeclareValue(stdlib.PanicFunction)
+		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
+			"log",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityView,
+				[]sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: sema.AnyStructTypeAnnotation,
+					},
+				},
+				sema.VoidTypeAnnotation,
+			),
+			"",
+			nil,
+		))
+
+		var logs []string
+		vmConfig := &vm.Config{
+			Storage:        storage,
+			AccountHandler: &testAccountHandler{},
+			NativeFunctionsProvider: func() map[string]vm.Value {
+				funcs := vm.NativeFunctions()
+				funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+					ParameterCount: len(stdlib.LogFunctionType.Parameters),
+					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+						logs = append(logs, arguments[0].String())
+						return vm.VoidValue{}
+					},
+				}
+
+				return funcs
+			},
+		}
+
+		_, err := compileAndInvokeWithOptions(t, `
+            struct interface Foo {
+                fun test(_ a: Int) {
+                    pre {
+                         printMessage("invoked Foo.test() pre-condition")
+                    }
+                    post {
+                         printMessage("invoked Foo.test() post-condition")
+                    }
+                    printMessage("invoked Foo.test()")
+                }
+            }
+
+            struct interface Bar: Foo {
+                fun test(_ a: Int) {
+                    pre {
+                         printMessage("invoked Bar.test() pre-condition")
+                    }
+
+                    post {
+                         printMessage("invoked Bar.test() post-condition")
+                    }
+                }
+            }
+
+            struct Test: Bar {}
+
+            access(all) view fun printMessage(_ msg: String): Bool {
+                log(msg)
+                return true
+            }
+
+            fun main() {
+               Test().test(5)
+            }
+        `,
+			"main",
+			CompilerAndVMOptions{
+				VMConfig: vmConfig,
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Config: &sema.Config{
+						LocationHandler: singleIdentifierLocationResolver(t),
+						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+							return activation
+						},
+					},
+				},
+			},
+		)
+
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			[]string{
+				"invoked Bar.test() pre-condition",
+				"invoked Foo.test() pre-condition",
+				"invoked Foo.test()",
+				"invoked Foo.test() post-condition",
+				"invoked Bar.test() post-condition",
+			}, logs,
+		)
+	})
+}
