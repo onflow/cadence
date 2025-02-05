@@ -82,6 +82,10 @@ func (g *InstructionCodeGen) PatchJump(offset int, newTarget uint16) {
 		ins.Target = newTarget
 		(*g.target)[offset] = ins
 
+	case opcode.InstructionJumpIfNil:
+		ins.Target = newTarget
+		(*g.target)[offset] = ins
+
 	default:
 		panic(errors.NewUnreachableError())
 	}

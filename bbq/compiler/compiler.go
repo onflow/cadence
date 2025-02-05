@@ -250,6 +250,12 @@ func (c *Compiler[_]) emitUndefinedJumpIfFalse() int {
 	return offset
 }
 
+func (c *Compiler[_]) emitUndefinedJumpIfNil() int {
+	offset := c.codeGen.Offset()
+	c.codeGen.Emit(opcode.InstructionJumpIfNil{Target: math.MaxUint16})
+	return offset
+}
+
 func (c *Compiler[_]) patchJump(opcodeOffset int) {
 	count := c.codeGen.Offset()
 	if count == 0 {
@@ -570,14 +576,33 @@ func (c *Compiler[_]) VisitContinueStatement(_ *ast.ContinueStatement) (_ struct
 
 func (c *Compiler[_]) VisitIfStatement(statement *ast.IfStatement) (_ struct{}) {
 	// TODO: scope
+	var elseJump int
 	switch test := statement.Test.(type) {
 	case ast.Expression:
 		c.compileExpression(test)
+		elseJump = c.emitUndefinedJumpIfFalse()
+
+	case *ast.VariableDeclaration:
+		// TODO: second value
+		c.compileExpression(test.Value)
+
+		tempIndex := c.currentFunction.generateLocalIndex()
+		c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: tempIndex})
+
+		c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: tempIndex})
+		elseJump = c.emitUndefinedJumpIfNil()
+
+		c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: tempIndex})
+		c.codeGen.Emit(opcode.InstructionUnwrap{})
+		varDeclTypes := c.ExtendedElaboration.VariableDeclarationTypes(test)
+		c.emitTransfer(varDeclTypes.TargetType)
+		local := c.currentFunction.declareLocal(test.Identifier.Identifier)
+		c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: local.index})
+
 	default:
-		// TODO:
 		panic(errors.NewUnreachableError())
 	}
-	elseJump := c.emitUndefinedJumpIfFalse()
+
 	c.compileBlock(statement.Then)
 	elseBlock := statement.Else
 	if elseBlock != nil {
@@ -588,6 +613,7 @@ func (c *Compiler[_]) VisitIfStatement(statement *ast.IfStatement) (_ struct{}) 
 	} else {
 		c.patchJump(elseJump)
 	}
+
 	return
 }
 
@@ -613,9 +639,43 @@ func (c *Compiler[_]) VisitEmitStatement(_ *ast.EmitStatement) (_ struct{}) {
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler[_]) VisitSwitchStatement(_ *ast.SwitchStatement) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler[_]) VisitSwitchStatement(statement *ast.SwitchStatement) (_ struct{}) {
+	c.compileExpression(statement.Expression)
+	localIndex := c.currentFunction.generateLocalIndex()
+	c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: localIndex})
+
+	endJumps := make([]int, 0, len(statement.Cases))
+	previousJump := -1
+
+	for _, switchCase := range statement.Cases {
+		if previousJump >= 0 {
+			c.patchJump(previousJump)
+		}
+
+		isDefault := switchCase.Expression == nil
+		if !isDefault {
+			c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: localIndex})
+			c.compileExpression(switchCase.Expression)
+			c.codeGen.Emit(opcode.InstructionEqual{})
+			previousJump = c.emitUndefinedJumpIfFalse()
+
+		}
+
+		for _, caseStatement := range switchCase.Statements {
+			c.compileStatement(caseStatement)
+		}
+
+		if !isDefault {
+			endJump := c.emitUndefinedJump()
+			endJumps = append(endJumps, endJump)
+		}
+	}
+
+	for _, endJump := range endJumps {
+		c.patchJump(endJump)
+	}
+
+	return
 }
 
 func (c *Compiler[_]) VisitVariableDeclaration(declaration *ast.VariableDeclaration) (_ struct{}) {
@@ -632,38 +692,54 @@ func (c *Compiler[_]) VisitVariableDeclaration(declaration *ast.VariableDeclarat
 	c.compileExpression(declaration.Value)
 
 	varDeclTypes := c.ExtendedElaboration.VariableDeclarationTypes(declaration)
-	c.emitCheckType(varDeclTypes.TargetType)
+	c.emitTransfer(varDeclTypes.TargetType)
 
 	c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: local.index})
 	return
 }
 
 func (c *Compiler[_]) VisitAssignmentStatement(statement *ast.AssignmentStatement) (_ struct{}) {
-	c.compileExpression(statement.Value)
-
-	assignmentTypes := c.ExtendedElaboration.AssignmentStatementTypes(statement)
-	c.emitCheckType(assignmentTypes.TargetType)
 
 	switch target := statement.Target.(type) {
 	case *ast.IdentifierExpression:
+		c.compileExpression(statement.Value)
+		assignmentTypes := c.ExtendedElaboration.AssignmentStatementTypes(statement)
+		c.emitTransfer(assignmentTypes.TargetType)
+
 		varName := target.Identifier.Identifier
 		local := c.currentFunction.findLocal(varName)
 		if local != nil {
-			c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: local.index})
+			c.codeGen.Emit(opcode.InstructionSetLocal{
+				LocalIndex: local.index,
+			})
 			return
 		}
 
 		global := c.findGlobal(varName)
-		c.codeGen.Emit(opcode.InstructionSetGlobal{GlobalIndex: global.index})
+		c.codeGen.Emit(opcode.InstructionSetGlobal{
+			GlobalIndex: global.index,
+		})
 
 	case *ast.MemberExpression:
 		c.compileExpression(target.Expression)
+
+		c.compileExpression(statement.Value)
+		assignmentTypes := c.ExtendedElaboration.AssignmentStatementTypes(statement)
+		c.emitTransfer(assignmentTypes.TargetType)
+
 		constant := c.addStringConst(target.Identifier.Identifier)
-		c.codeGen.Emit(opcode.InstructionSetField{FieldNameIndex: constant.index})
+		c.codeGen.Emit(opcode.InstructionSetField{
+			FieldNameIndex: constant.index,
+		})
 
 	case *ast.IndexExpression:
 		c.compileExpression(target.TargetExpression)
 		c.compileExpression(target.IndexingExpression)
+
+		c.compileExpression(statement.Value)
+		assignmentTypes := c.ExtendedElaboration.AssignmentStatementTypes(statement)
+		c.emitTransfer(assignmentTypes.TargetType)
+
 		c.codeGen.Emit(opcode.InstructionSetIndex{})
 
 	default:
@@ -740,9 +816,7 @@ func (c *Compiler[_]) VisitArrayExpression(array *ast.ArrayExpression) (_ struct
 	}
 
 	for _, expression := range array.Values {
-		//EmitDup()
 		c.compileExpression(expression)
-		//EmitSetIndex(index)
 	}
 
 	c.codeGen.Emit(
@@ -756,9 +830,30 @@ func (c *Compiler[_]) VisitArrayExpression(array *ast.ArrayExpression) (_ struct
 	return
 }
 
-func (c *Compiler[_]) VisitDictionaryExpression(_ *ast.DictionaryExpression) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler[_]) VisitDictionaryExpression(dictionary *ast.DictionaryExpression) (_ struct{}) {
+	dictionaryTypes := c.ExtendedElaboration.DictionaryExpressionTypes(dictionary)
+
+	typeIndex := c.getOrAddType(dictionaryTypes.DictionaryType)
+
+	size := len(dictionary.Entries)
+	if size >= math.MaxUint16 {
+		panic(errors.NewDefaultUserError("invalid dictionary expression"))
+	}
+
+	for _, entry := range dictionary.Entries {
+		c.compileExpression(entry.Key)
+		c.compileExpression(entry.Value)
+	}
+
+	c.codeGen.Emit(
+		opcode.InstructionNewDictionary{
+			TypeIndex:  typeIndex,
+			Size:       uint16(size),
+			IsResource: dictionaryTypes.DictionaryType.IsResourceType(),
+		},
+	)
+
+	return
 }
 
 func (c *Compiler[_]) VisitIdentifierExpression(expression *ast.IdentifierExpression) (_ struct{}) {
@@ -902,7 +997,7 @@ func (c *Compiler[_]) loadArguments(expression *ast.InvocationExpression) {
 	invocationTypes := c.ExtendedElaboration.InvocationExpressionTypes(expression)
 	for index, argument := range expression.Arguments {
 		c.compileExpression(argument.Expression)
-		c.emitCheckType(invocationTypes.ArgumentTypes[index])
+		c.emitTransfer(invocationTypes.ArgumentTypes[index])
 	}
 
 	// TODO: Is this needed?
@@ -936,7 +1031,9 @@ func (c *Compiler[_]) loadTypeArguments(expression *ast.InvocationExpression) []
 func (c *Compiler[_]) VisitMemberExpression(expression *ast.MemberExpression) (_ struct{}) {
 	c.compileExpression(expression.Expression)
 	constant := c.addStringConst(expression.Identifier.Identifier)
-	c.codeGen.Emit(opcode.InstructionGetField{FieldNameIndex: constant.index})
+	c.codeGen.Emit(opcode.InstructionGetField{
+		FieldNameIndex: constant.index,
+	})
 	return
 }
 
@@ -1363,7 +1460,7 @@ func (c *Compiler[_]) patchLoop(l *loop) {
 	}
 }
 
-func (c *Compiler[_]) emitCheckType(targetType sema.Type) {
+func (c *Compiler[_]) emitTransfer(targetType sema.Type) {
 	index := c.getOrAddType(targetType)
 
 	c.codeGen.Emit(opcode.InstructionTransfer{TypeIndex: index})

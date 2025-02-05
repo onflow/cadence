@@ -19,6 +19,8 @@
 package vm
 
 import (
+	goerrors "errors"
+
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/common"
@@ -122,6 +124,42 @@ func (v *DictionaryValue) GetMember(config *Config, name string) Value {
 func (v *DictionaryValue) SetMember(conf *Config, name string, value Value) {
 	// Dictionaries have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
+}
+
+func (v *DictionaryValue) Get(config *Config, keyValue Value) (Value, bool) {
+
+	valueComparator := newValueComparator(config)
+	hashInputProvider := newHashInputProvider(config)
+
+	keyInterpreterValue := VMValueToInterpreterValue(config, keyValue)
+
+	storedValue, err := v.dictionary.Get(
+		valueComparator,
+		hashInputProvider,
+		keyInterpreterValue,
+	)
+	if err != nil {
+		var keyNotFoundError *atree.KeyNotFoundError
+		if goerrors.As(err, &keyNotFoundError) {
+			return nil, false
+		}
+		panic(errors.NewExternalError(err))
+	}
+
+	return MustConvertStoredValue(
+		config.MemoryGauge,
+		config.Storage,
+		storedValue,
+	), true
+}
+
+func (v *DictionaryValue) GetKey(config *Config, keyValue Value) Value {
+	value, ok := v.Get(config, keyValue)
+	if ok {
+		return NewSomeValueNonCopying(value)
+	}
+
+	return Nil
 }
 
 func (v *DictionaryValue) Insert(
@@ -251,7 +289,7 @@ func (v *DictionaryValue) Transfer(
 					return nil, nil, nil
 				}
 
-				key := interpreter.MustConvertStoredValue(config.MemoryGauge, atreeValue)
+				key := interpreter.MustConvertStoredValue(config.MemoryGauge, atreeKey)
 				value := interpreter.MustConvertStoredValue(config.MemoryGauge, atreeValue)
 
 				// TODO: Transfer both key and value before returning.
@@ -324,6 +362,10 @@ func (v *DictionaryValue) ValueID() atree.ValueID {
 
 func (v *DictionaryValue) IsStaleResource() bool {
 	return v.dictionary == nil && v.IsResourceKinded()
+}
+
+func (v *DictionaryValue) Count() int {
+	return int(v.dictionary.Count())
 }
 
 func (v *DictionaryValue) Iterate(

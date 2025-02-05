@@ -206,6 +206,10 @@ func (e *ExtendedElaboration) ArrayExpressionTypes(expression *ast.ArrayExpressi
 	return e.elaboration.ArrayExpressionTypes(expression)
 }
 
+func (e *ExtendedElaboration) DictionaryExpressionTypes(expression *ast.DictionaryExpression) sema.DictionaryExpressionTypes {
+	return e.elaboration.DictionaryExpressionTypes(expression)
+}
+
 func (e *ExtendedElaboration) CastingExpressionTypes(expression *ast.CastingExpression) sema.CastingExpressionTypes {
 	return e.elaboration.CastingExpressionTypes(expression)
 }

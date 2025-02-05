@@ -1945,6 +1945,44 @@ func TestArrayLiteral(t *testing.T) {
 	})
 }
 
+func TestDictionaryLiteral(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("dictionary literal", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            fun test(): {String: Int} {
+                return {"b": 2, "e": 5}
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(checker)
+		program := comp.Compile()
+
+		vmConfig := &vm.Config{}
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		result, err := vmInstance.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+
+		require.IsType(t, &vm.DictionaryValue{}, result)
+		dictionary := result.(*vm.DictionaryValue)
+		assert.Equal(t, 2, dictionary.Count())
+		assert.Equal(t,
+			vm.NewSomeValueNonCopying(vm.NewIntValue(2)),
+			dictionary.GetKey(vmConfig, vm.NewStringValue("b")),
+		)
+		assert.Equal(t,
+			vm.NewSomeValueNonCopying(vm.NewIntValue(5)),
+			dictionary.GetKey(vmConfig, vm.NewStringValue("e")),
+		)
+	})
+}
+
 func TestReference(t *testing.T) {
 
 	t.Parallel()
@@ -3271,4 +3309,132 @@ func TestFunctionPostConditions(t *testing.T) {
 		assert.ErrorContains(t, err, "pre/post condition failed")
 	})
 
+}
+
+func TestIfLet(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("some", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, err := compileAndInvoke(t, `
+              fun main(x: Int?): Int {
+                  if let y = x {
+                     return y
+                  } else {
+                     return 2
+                  }
+              }
+            `,
+			"main",
+			vm.NewSomeValueNonCopying(
+				vm.NewIntValue(1),
+			),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(1), result)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, err := compileAndInvoke(t, `
+              fun main(x: Int?): Int {
+                  if let y = x {
+                     return y
+                  } else {
+                     return 2
+                  }
+              }
+            `,
+			"main",
+			vm.NilValue{},
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(2), result)
+	})
+}
+
+func TestCompileSwitch(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("1", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := compileAndInvoke(t,
+			`
+              fun test(x: Int): Int {
+                  var a = 0
+                  switch x {
+                      case 1:
+                          a = a + 1
+                      case 2:
+                          a = a + 2
+                      default:
+                          a = a + 3
+                  }
+                  return a
+              }
+            `,
+			"test",
+			vm.NewIntValue(1),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(1), result)
+	})
+
+	t.Run("2", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := compileAndInvoke(t,
+			`
+              fun test(x: Int): Int {
+                  var a = 0
+                  switch x {
+                      case 1:
+                          a = a + 1
+                      case 2:
+                          a = a + 2
+                      default:
+                          a = a + 3
+                  }
+                  return a
+              }
+            `,
+			"test",
+			vm.NewIntValue(2),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(2), result)
+	})
+
+	t.Run("4", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := compileAndInvoke(t,
+			`
+              fun test(x: Int): Int {
+                  var a = 0
+                  switch x {
+                      case 1:
+                          a = a + 1
+                      case 2:
+                          a = a + 2
+                      default:
+                          a = a + 3
+                  }
+                  return a
+              }
+            `,
+			"test",
+			vm.NewIntValue(4),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(3), result)
+	})
 }
