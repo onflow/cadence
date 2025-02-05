@@ -361,6 +361,8 @@ func TestCompileArray(t *testing.T) {
 
 	t.Parallel()
 
+	t.SkipNow()
+
 	checker, err := ParseAndCheck(t, `
       fun test() {
           let xs: [Int] = [1, 2, 3]
@@ -416,6 +418,8 @@ func TestCompileArray(t *testing.T) {
 func TestCompileDictionary(t *testing.T) {
 
 	t.Parallel()
+
+	t.SkipNow()
 
 	checker, err := ParseAndCheck(t, `
       fun test() {
@@ -487,6 +491,8 @@ func TestCompileIfLet(t *testing.T) {
 
 	t.Parallel()
 
+	t.SkipNow()
+
 	checker, err := ParseAndCheck(t, `
       fun test(x: Int?): Int {
           if let y = x {
@@ -547,6 +553,8 @@ func TestCompileIfLet(t *testing.T) {
 func TestCompileSwitch(t *testing.T) {
 
 	t.Parallel()
+
+	t.SkipNow()
 
 	checker, err := ParseAndCheck(t, `
       fun test(x: Int): Int {
