@@ -445,11 +445,8 @@ func (d *Desugar) desugarPreConditions(
 		}
 	}
 
-	// If this is a method of a concrete-type, or an interface default method,
-	// then return with the updated statements, and continue desugaring the rest.
-
-	// TODO: Handle default functions with conditions
-
+	// If this is a method of a concrete-type then return with the updated statements,
+	// and continue desugaring the rest.
 	if d.canInlineConditions(funcBlock, conditions) {
 		return desugaredConditions
 	}
@@ -526,11 +523,8 @@ func (d *Desugar) desugarPostConditions(
 		}
 	}
 
-	// If this is a method of a concrete-type, or an interface default method,
-	// then return with the updated statements, and continue desugaring the rest.
-
-	// TODO: Handle default functions with conditions
-
+	// If this is a method of a concrete-type then return with the updated statements,
+	// and continue desugaring the rest.
 	if d.canInlineConditions(funcBlock, conditions) {
 		return desugaredConditions
 	}
@@ -550,16 +544,11 @@ func (d *Desugar) desugarPostConditions(
 }
 
 func (d *Desugar) canInlineConditions(funcBlock *ast.FunctionBlock, conditions *ast.Conditions) bool {
-
 	// Conditions can be inlined if one of the conditions are satisfied:
 	//  - There are no conditions
 	//  - This is a method of a concrete-type (i.e: enclosingInterfaceType is `nil`)
-	//  - This method is an interface default method (i.e: funcBlock has statements)
-
 	return conditions == nil ||
-		d.enclosingInterfaceType == nil ||
-		funcBlock.HasStatements()
-
+		d.enclosingInterfaceType == nil
 }
 
 // Generates a separate function for the provided conditions.
