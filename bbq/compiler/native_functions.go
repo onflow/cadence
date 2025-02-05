@@ -28,8 +28,15 @@ var nativeFunctions []*global
 
 func NativeFunctions() map[string]*global {
 	funcs := make(map[string]*global, len(nativeFunctions))
-	for _, value := range nativeFunctions {
-		funcs[value.name] = value
+	for _, nativeFunction := range nativeFunctions {
+
+		// Always return a copy.
+		// Because the indexes are modified my the imported program.
+		funcs[nativeFunction.name] = &global{
+			name:     nativeFunction.name,
+			location: nativeFunction.location,
+			index:    nativeFunction.index,
+		}
 	}
 	return funcs
 }

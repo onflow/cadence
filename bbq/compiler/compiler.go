@@ -680,12 +680,20 @@ func (c *Compiler[_]) VisitSwitchStatement(statement *ast.SwitchStatement) (_ st
 
 func (c *Compiler[_]) VisitVariableDeclaration(declaration *ast.VariableDeclaration) (_ struct{}) {
 	// TODO: second value
+
+	local := c.currentFunction.declareLocal(declaration.Identifier.Identifier)
+
+	// TODO: This can be nil only for synthetic-result variable
+	//   Any better way to handle this?
+	if declaration.Value == nil {
+		return
+	}
+
 	c.compileExpression(declaration.Value)
 
 	varDeclTypes := c.ExtendedElaboration.VariableDeclarationTypes(declaration)
 	c.emitTransfer(varDeclTypes.TargetType)
 
-	local := c.currentFunction.declareLocal(declaration.Identifier.Identifier)
 	c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: local.index})
 	return
 }

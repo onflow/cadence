@@ -151,7 +151,14 @@ func (d *VariableDeclaration) Doc() prettier.Doc {
 		)
 	}
 
-	valueDoc := d.Value.Doc()
+	// Desugared `result` variable is uninitialized at first,
+	// hence would not have a value.
+	var valueDoc prettier.Doc
+	if d.Value != nil {
+		valueDoc = d.Value.Doc()
+	} else {
+		valueDoc = prettier.Line{}
+	}
 
 	var valuesDoc prettier.Doc
 
