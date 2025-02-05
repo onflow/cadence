@@ -1211,6 +1211,7 @@ type NumericType struct {
 var _ Type = &NumericType{}
 var _ IntegerRangedType = &NumericType{}
 var _ SaturatingArithmeticType = &NumericType{}
+var _ ConformingType = &NumericType{}
 
 func NewNumericType(typeName string) *NumericType {
 	return &NumericType{
@@ -1394,14 +1395,31 @@ func (*NumericType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _
 }
 
 var numericTypeEffectiveInterfaceConformanceSet *InterfaceSet
+var numericTypeEffectiveInterfaceConformances []Conformance
 
 func init() {
+	numericTypeInterfaces := []*InterfaceType{
+		StructStringerType,
+	}
+
 	numericTypeEffectiveInterfaceConformanceSet = NewInterfaceSet()
-	numericTypeEffectiveInterfaceConformanceSet.Add(StructStringerType)
+	for _, interfaceType := range numericTypeInterfaces {
+		numericTypeEffectiveInterfaceConformanceSet.Add(interfaceType)
+	}
+
+	numericTypeEffectiveInterfaceConformances = distinctConformances(
+		numericTypeInterfaces,
+		nil,
+		map[*InterfaceType]struct{}{},
+	)
 }
 
 func (t *NumericType) EffectiveInterfaceConformanceSet() *InterfaceSet {
 	return numericTypeEffectiveInterfaceConformanceSet
+}
+
+func (t *NumericType) EffectiveInterfaceConformances() []Conformance {
+	return numericTypeEffectiveInterfaceConformances
 }
 
 // FixedPointNumericType represents all the types in the fixed-point range.
@@ -4794,6 +4812,7 @@ var _ ContainedType = &CompositeType{}
 var _ LocatedType = &CompositeType{}
 var _ CompositeKindedType = &CompositeType{}
 var _ TypeIndexableType = &CompositeType{}
+var _ ConformingType = &CompositeType{}
 
 func (t *CompositeType) Tag() TypeTag {
 	return CompositeTypeTag
@@ -5732,6 +5751,7 @@ var _ ContainerType = &InterfaceType{}
 var _ ContainedType = &InterfaceType{}
 var _ LocatedType = &InterfaceType{}
 var _ CompositeKindedType = &InterfaceType{}
+var _ ConformingType = &InterfaceType{}
 
 func (*InterfaceType) IsType() {}
 
