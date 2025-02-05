@@ -61,7 +61,7 @@ func DecodeGetLocal(ip *uint16, code []byte) (i InstructionGetLocal) {
 
 // InstructionSetLocal
 //
-// Sets the value of the local at the given index to the top value on the stack.
+// Pops a value off the stack and then sets the local at the given index to that value.
 type InstructionSetLocal struct {
 	LocalIndex uint16
 }
@@ -121,7 +121,7 @@ func DecodeGetGlobal(ip *uint16, code []byte) (i InstructionGetGlobal) {
 
 // InstructionSetGlobal
 //
-// Sets the value of the global at the given index to the top value on the stack.
+// Pops a value off the stack and then sets the global at the given index to that value.
 type InstructionSetGlobal struct {
 	GlobalIndex uint16
 }
@@ -151,7 +151,7 @@ func DecodeSetGlobal(ip *uint16, code []byte) (i InstructionSetGlobal) {
 
 // InstructionGetField
 //
-// Pushes the value of the field at the given index onto the stack.
+// Pops a value off the stack, the target, and then pushes the value of the field at the given index onto the stack.
 type InstructionGetField struct {
 	FieldNameIndex uint16
 }
@@ -181,7 +181,7 @@ func DecodeGetField(ip *uint16, code []byte) (i InstructionGetField) {
 
 // InstructionSetField
 //
-// Sets the value of the field at the given index to the top value on the stack.
+// Pops two values off the stack, the target and the value, and then sets the field at the given index of the target to the value.
 type InstructionSetField struct {
 	FieldNameIndex uint16
 }
@@ -211,7 +211,7 @@ func DecodeSetField(ip *uint16, code []byte) (i InstructionSetField) {
 
 // InstructionGetIndex
 //
-// Pushes the value at the given index onto the stack.
+// Pops two values off the stack, the array and the index, and then pushes the value at the given index of the array onto the stack.
 type InstructionGetIndex struct {
 }
 
@@ -231,7 +231,7 @@ func (i InstructionGetIndex) Encode(code *[]byte) {
 
 // InstructionSetIndex
 //
-// Sets the value at the given index to the top value on the stack.
+// Pops three values off the stack, the array, the index, and the value, and then sets the value at the given index of the array to the value.
 type InstructionSetIndex struct {
 }
 
@@ -311,7 +311,7 @@ func (i InstructionNil) Encode(code *[]byte) {
 
 // InstructionPath
 //
-// Pushes the path with the given domain and identifier onto the stack.
+// Creates a new path with the given domain and identifier and then pushes it onto the stack.
 type InstructionPath struct {
 	Domain          common.PathDomain
 	IdentifierIndex uint16
@@ -345,7 +345,7 @@ func DecodePath(ip *uint16, code []byte) (i InstructionPath) {
 
 // InstructionNew
 //
-// Creates a new instance of the given type.
+// Creates a new instance of the given kind and type and then pushes it onto the stack.
 type InstructionNew struct {
 	Kind      common.CompositeKind
 	TypeIndex uint16
@@ -379,7 +379,7 @@ func DecodeNew(ip *uint16, code []byte) (i InstructionNew) {
 
 // InstructionNewArray
 //
-// Creates a new array with the given type and size.
+// Pops the given number of elements off the stack, creates a new array with the given type, size, and elements, and then pushes it onto the stack.
 type InstructionNewArray struct {
 	TypeIndex  uint16
 	Size       uint16
@@ -417,7 +417,7 @@ func DecodeNewArray(ip *uint16, code []byte) (i InstructionNewArray) {
 
 // InstructionNewDictionary
 //
-// Creates a new dictionary with the given type and size.
+// Pops the given number of entries off the stack (twice the number of the given size), creates a new dictionary with the given type, size, and entries, and then pushes it onto the stack.
 type InstructionNewDictionary struct {
 	TypeIndex  uint16
 	Size       uint16
@@ -455,7 +455,7 @@ func DecodeNewDictionary(ip *uint16, code []byte) (i InstructionNewDictionary) {
 
 // InstructionNewRef
 //
-// Creates a new reference with the given type.
+// Pops a value off the stack, creates a new reference with the given type, and then pushes it onto the stack.
 type InstructionNewRef struct {
 	TypeIndex uint16
 }
@@ -515,7 +515,7 @@ func DecodeGetConstant(ip *uint16, code []byte) (i InstructionGetConstant) {
 
 // InstructionInvoke
 //
-// Invokes the function with the given type arguments.
+// Pops the function and arguments off the stack, invokes the function with the arguments, and then pushes the result back on to the stack.
 type InstructionInvoke struct {
 	TypeArgs []uint16
 }
@@ -545,7 +545,7 @@ func DecodeInvoke(ip *uint16, code []byte) (i InstructionInvoke) {
 
 // InstructionInvokeDynamic
 //
-// Invokes the dynamic function with the given name, type arguments, and argument count.
+// Pops the arguments off the stack, invokes the function with the given name and argument count, and then pushes the result back on to the stack.
 type InstructionInvokeDynamic struct {
 	NameIndex uint16
 	TypeArgs  []uint16
@@ -583,7 +583,7 @@ func DecodeInvokeDynamic(ip *uint16, code []byte) (i InstructionInvokeDynamic) {
 
 // InstructionDup
 //
-// Duplicates the top value on the stack.
+// Pops a value off the stack, duplicates it, and then pushes the original and the copy back on to the stack.
 type InstructionDup struct {
 }
 
@@ -603,7 +603,7 @@ func (i InstructionDup) Encode(code *[]byte) {
 
 // InstructionDrop
 //
-// Removes the top value from the stack.
+// Pops a value off the stack and discards it.
 type InstructionDrop struct {
 }
 
@@ -623,7 +623,7 @@ func (i InstructionDrop) Encode(code *[]byte) {
 
 // InstructionDestroy
 //
-// Destroys the top value on the stack.
+// Pops a resource off the stack and then destroys it.
 type InstructionDestroy struct {
 }
 
@@ -643,7 +643,7 @@ func (i InstructionDestroy) Encode(code *[]byte) {
 
 // InstructionUnwrap
 //
-// Unwraps the top value on the stack.
+// Pops an optional value off the stack, unwraps it, and then pushes the value back on to the stack.
 type InstructionUnwrap struct {
 }
 
@@ -663,7 +663,7 @@ func (i InstructionUnwrap) Encode(code *[]byte) {
 
 // InstructionTransfer
 //
-// Transfers the top value on the stack.
+// Pops a value off the stack, transfers it to the given type, and then pushes it back on to the stack.
 type InstructionTransfer struct {
 	TypeIndex uint16
 }
@@ -693,7 +693,7 @@ func DecodeTransfer(ip *uint16, code []byte) (i InstructionTransfer) {
 
 // InstructionCast
 //
-// Casts the top value on the stack to the given type.
+// Pops a value off the stack, casts it to the given type, and then pushes it back on to the stack.
 type InstructionCast struct {
 	TypeIndex uint16
 	Kind      CastKind
@@ -727,7 +727,7 @@ func DecodeCast(ip *uint16, code []byte) (i InstructionCast) {
 
 // InstructionJump
 //
-// Jumps to the given instruction.
+// Unconditionally jumps to the given instruction.
 type InstructionJump struct {
 	Target uint16
 }
@@ -757,7 +757,7 @@ func DecodeJump(ip *uint16, code []byte) (i InstructionJump) {
 
 // InstructionJumpIfFalse
 //
-// Jumps to the given instruction, if the top value on the stack is `false`.
+// Pops a value off the stack. If it is `false`, jumps to the target instruction.
 type InstructionJumpIfFalse struct {
 	Target uint16
 }
@@ -787,7 +787,7 @@ func DecodeJumpIfFalse(ip *uint16, code []byte) (i InstructionJumpIfFalse) {
 
 // InstructionJumpIfNil
 //
-// Jumps to the given instruction, if the top value on the stack is `nil`.
+// Pops a value off the stack. If it is `nil`, jumps to the target instruction.
 type InstructionJumpIfNil struct {
 	Target uint16
 }
@@ -837,7 +837,7 @@ func (i InstructionReturn) Encode(code *[]byte) {
 
 // InstructionReturnValue
 //
-// Returns from the current function, with the top value on the stack.
+// Pops a value off the stack and then returns from the current function with that value.
 type InstructionReturnValue struct {
 }
 
@@ -857,7 +857,7 @@ func (i InstructionReturnValue) Encode(code *[]byte) {
 
 // InstructionEqual
 //
-// Compares the top two values on the stack for equality.
+// Pops two values off the stack, checks if the first value is equal to the second, and then pushes the result back on to the stack.
 type InstructionEqual struct {
 }
 
@@ -877,7 +877,7 @@ func (i InstructionEqual) Encode(code *[]byte) {
 
 // InstructionNotEqual
 //
-// Compares the top two values on the stack for inequality.
+// Pops two values off the stack, checks if the first value is not equal to the second, and then pushes the result back on to the stack.
 type InstructionNotEqual struct {
 }
 
@@ -897,7 +897,7 @@ func (i InstructionNotEqual) Encode(code *[]byte) {
 
 // InstructionNot
 //
-// Negates the boolean value at the top of the stack.
+// Pops a boolean value off the stack, negates it, and then pushes the result back on to the stack.
 type InstructionNot struct {
 }
 
@@ -917,7 +917,7 @@ func (i InstructionNot) Encode(code *[]byte) {
 
 // InstructionIntAdd
 //
-// Adds the top two values on the stack.
+// Pops two integer values off the stack, adds them together, and then pushes the result back on to the stack.
 type InstructionIntAdd struct {
 }
 
@@ -937,7 +937,7 @@ func (i InstructionIntAdd) Encode(code *[]byte) {
 
 // InstructionIntSubtract
 //
-// Subtracts the top two values on the stack.
+// Pops two integer values off the stack, subtracts the second from the first, and then pushes the result back on to the stack.
 type InstructionIntSubtract struct {
 }
 
@@ -957,7 +957,7 @@ func (i InstructionIntSubtract) Encode(code *[]byte) {
 
 // InstructionIntMultiply
 //
-// Multiplies the top two values on the stack.
+// Pops two integer values off the stack, multiplies them together, and then pushes the result back on to the stack.
 type InstructionIntMultiply struct {
 }
 
@@ -977,7 +977,7 @@ func (i InstructionIntMultiply) Encode(code *[]byte) {
 
 // InstructionIntDivide
 //
-// Divides the top two values on the stack.
+// Pops two integer values off the stack, divides the first by the second, and then pushes the result back on to the stack.
 type InstructionIntDivide struct {
 }
 
@@ -997,7 +997,7 @@ func (i InstructionIntDivide) Encode(code *[]byte) {
 
 // InstructionIntMod
 //
-// Calculates the modulo of the top two values on the stack.
+// Pops two integer values off the stack, calculates the modulus of the first by the second, and then pushes the result back on to the stack.
 type InstructionIntMod struct {
 }
 
@@ -1017,7 +1017,7 @@ func (i InstructionIntMod) Encode(code *[]byte) {
 
 // InstructionIntLess
 //
-// Compares the top two values on the stack for less than.
+// Pops two values off the stack, checks if the first value is less than the second, and then pushes the result back on to the stack.
 type InstructionIntLess struct {
 }
 
@@ -1037,7 +1037,7 @@ func (i InstructionIntLess) Encode(code *[]byte) {
 
 // InstructionIntLessOrEqual
 //
-// Compares the top two values on the stack for less than or equal.
+// Pops two values off the stack, checks if the first value is less than or equal to the second, and then pushes the result back on to the stack.
 type InstructionIntLessOrEqual struct {
 }
 
@@ -1057,7 +1057,7 @@ func (i InstructionIntLessOrEqual) Encode(code *[]byte) {
 
 // InstructionIntGreater
 //
-// Compares the top two values on the stack for greater than.
+// Pops two values off the stack, checks if the first value is greater than the second, and then pushes the result back on to the stack.
 type InstructionIntGreater struct {
 }
 
@@ -1077,7 +1077,7 @@ func (i InstructionIntGreater) Encode(code *[]byte) {
 
 // InstructionIntGreaterOrEqual
 //
-// Compares the top two values on the stack for greater than or equal.
+// Pops two values off the stack, checks if the first value is greater than or equal to the second, and then pushes the result back on to the stack.
 type InstructionIntGreaterOrEqual struct {
 }
 
