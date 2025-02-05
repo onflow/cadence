@@ -3471,21 +3471,6 @@ func TestDefaultFunctionsWithConditions(t *testing.T) {
 		vmConfig := &vm.Config{
 			Storage:        storage,
 			AccountHandler: &testAccountHandler{},
-			//ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
-			//	program, ok := programs[location]
-			//	if !ok {
-			//		assert.FailNow(t, "invalid location")
-			//	}
-			//	return program.Program
-			//},
-			//ContractValueHandler: func(_ *vm.Config, location common.Location) *vm.CompositeValue {
-			//	contractValue, ok := contractValues[location]
-			//	if !ok {
-			//		assert.FailNow(t, "invalid location")
-			//	}
-			//	return contractValue
-			//},
-
 			NativeFunctionsProvider: func() map[string]vm.Value {
 				funcs := vm.NativeFunctions()
 				funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
