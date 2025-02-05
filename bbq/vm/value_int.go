@@ -41,6 +41,9 @@ func (v IntValue) String() string {
 }
 
 var _ Value = IntValue{}
+var _ EquatableValue = IntValue{}
+var _ ComparableValue = IntValue{}
+var _ NumberValue = IntValue{}
 
 func (IntValue) isValue() {}
 
@@ -52,39 +55,83 @@ func (v IntValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
 	return v
 }
 
-func (v IntValue) Add(other IntValue) Value {
-	sum := safeAdd(int(v.SmallInt), int(other.SmallInt))
+func (v IntValue) Add(other NumberValue) NumberValue {
+	otherInt, ok := other.(IntValue)
+	if !ok {
+		panic("invalid operand")
+	}
+	sum := safeAdd(int(v.SmallInt), int(otherInt.SmallInt))
 	return NewIntValue(int64(sum))
 }
 
-func (v IntValue) Subtract(other IntValue) Value {
-	return NewIntValue(v.SmallInt - other.SmallInt)
+func (v IntValue) Subtract(other NumberValue) NumberValue {
+	otherInt, ok := other.(IntValue)
+	if !ok {
+		panic("invalid operand")
+	}
+	return NewIntValue(v.SmallInt - otherInt.SmallInt)
 }
 
-func (v IntValue) Less(other IntValue) Value {
-	if v.SmallInt < other.SmallInt {
-		return TrueValue
+func (v IntValue) Multiply(other NumberValue) NumberValue {
+	otherInt, ok := other.(IntValue)
+	if !ok {
+		panic("invalid operand")
 	}
-	return FalseValue
+	return NewIntValue(v.SmallInt * otherInt.SmallInt)
 }
 
-func (v IntValue) LessOrEqual(other IntValue) Value {
-	if v.SmallInt <= other.SmallInt {
-		return TrueValue
+func (v IntValue) Divide(other NumberValue) NumberValue {
+	otherInt, ok := other.(IntValue)
+	if !ok {
+		panic("invalid operand")
 	}
-	return FalseValue
+	return NewIntValue(v.SmallInt / otherInt.SmallInt)
 }
 
-func (v IntValue) Greater(other IntValue) Value {
-	if v.SmallInt > other.SmallInt {
-		return TrueValue
+func (v IntValue) Mod(other NumberValue) NumberValue {
+	otherInt, ok := other.(IntValue)
+	if !ok {
+		panic("invalid operand")
 	}
-	return FalseValue
+	return NewIntValue(v.SmallInt * otherInt.SmallInt)
 }
 
-func (v IntValue) GreaterOrEqual(other IntValue) Value {
-	if v.SmallInt >= other.SmallInt {
-		return TrueValue
+func (v IntValue) Equal(other Value) BoolValue {
+	otherInt, ok := other.(IntValue)
+	if !ok {
+		return false
 	}
-	return FalseValue
+	return v.SmallInt == otherInt.SmallInt
+}
+
+func (v IntValue) Less(other ComparableValue) BoolValue {
+	otherInt, ok := other.(IntValue)
+	if !ok {
+		panic("invalid operand")
+	}
+	return v.SmallInt < otherInt.SmallInt
+}
+
+func (v IntValue) LessEqual(other ComparableValue) BoolValue {
+	otherInt, ok := other.(IntValue)
+	if !ok {
+		panic("invalid operand")
+	}
+	return v.SmallInt <= otherInt.SmallInt
+}
+
+func (v IntValue) Greater(other ComparableValue) BoolValue {
+	otherInt, ok := other.(IntValue)
+	if !ok {
+		panic("invalid operand")
+	}
+	return v.SmallInt > otherInt.SmallInt
+}
+
+func (v IntValue) GreaterEqual(other ComparableValue) BoolValue {
+	otherInt, ok := other.(IntValue)
+	if !ok {
+		panic("invalid operand")
+	}
+	return v.SmallInt >= otherInt.SmallInt
 }

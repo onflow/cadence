@@ -40,19 +40,19 @@ const (
 
 	// Int operations
 
-	IntAdd
-	IntSubtract
-	IntMultiply
-	IntDivide
-	IntMod
-	IntLess
-	IntGreater
-	IntLessOrEqual
-	IntGreaterOrEqual
+	Add
+	Subtract
+	Multiply
+	Divide
+	Mod
 	_
 	_
 	_
 	_
+	Less
+	Greater
+	LessOrEqual
+	GreaterOrEqual
 	_
 	_
 	_

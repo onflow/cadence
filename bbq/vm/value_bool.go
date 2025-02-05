@@ -31,6 +31,7 @@ var FalseValue Value = BoolValue(false)
 type BoolValue bool
 
 var _ Value = BoolValue(true)
+var _ EquatableValue = BoolValue(true)
 
 func (BoolValue) isValue() {}
 
@@ -44,4 +45,12 @@ func (v BoolValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value 
 
 func (v BoolValue) String() string {
 	return format.Bool(bool(v))
+}
+
+func (v BoolValue) Equal(other Value) BoolValue {
+	otherBool, ok := other.(BoolValue)
+	if !ok {
+		return false
+	}
+	return v == otherBool
 }

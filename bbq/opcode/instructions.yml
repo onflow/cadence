@@ -1,3 +1,4 @@
+# $schema: ./gen/instructions.schema.json
 
 - name: "unknown"
   description: An unknown instruction.
@@ -180,7 +181,7 @@
 
 - name: "newDictionary"
   description:
-    Pops the given number of entries off the stack (twice the number of the given size), 
+    Pops the given number of entries off the stack (twice the number of the given size),
     creates a new dictionary with the given type, size, and entries,
     and then pushes it onto the stack.
   operands:
@@ -402,7 +403,7 @@
 
 - name: "equal"
   description:
-    Pops two values off the stack, checks if the first value is equal to the second, 
+    Pops two values off the stack, checks if the first value is equal to the second,
     and then pushes the result back on to the stack.
   valueEffects:
     pop:
@@ -442,132 +443,132 @@
       - name: "result"
         type: "bool"
 
-# Integer arithmetic instructions
+# Arithmetic instructions
 
-- name: "intAdd"
+- name: "add"
   description:
-    Pops two integer values off the stack, adds them together,
+    Pops two number values off the stack, adds them together,
     and then pushes the result back on to the stack.
   valueEffects:
     pop:
       - name: "left"
-        type: "int"
+        type: "number"
       - name: "right"
-        type: "int"
+        type: "number"
     push:
       - name: "result"
-        type: "int"
+        type: "number"
 
-- name: "intSubtract"
+- name: "subtract"
   description:
-    Pops two integer values off the stack, subtracts the second from the first, 
+    Pops two number values off the stack, subtracts the second from the first,
     and then pushes the result back on to the stack.
   valueEffects:
     pop:
       - name: "left"
-        type: "int"
+        type: "number"
       - name: "right"
-        type: "int"
+        type: "number"
     push:
       - name: "result"
-        type: "int"
+        type: "number"
 
-- name: "intMultiply"
+- name: "multiply"
   description:
-    Pops two integer values off the stack, multiplies them together,
+    Pops two number values off the stack, multiplies them together,
     and then pushes the result back on to the stack.
   valueEffects:
     pop:
       - name: "left"
-        type: "int"
+        type: "number"
       - name: "right"
-        type: "int"
+        type: "number"
     push:
       - name: "result"
-        type: "int"
+        type: "number"
 
-- name: "intDivide"
+- name: "divide"
   description:
-    Pops two integer values off the stack, divides the first by the second,
+    Pops two number values off the stack, divides the first by the second,
     and then pushes the result back on to the stack.
   valueEffects:
     pop:
       - name: "left"
-        type: "int"
+        type: "number"
       - name: "right"
-        type: "int"
+        type: "number"
     push:
       - name: "result"
-        type: "int"
+        type: "number"
 
-- name: "intMod"
+- name: "mod"
   description:
-    Pops two integer values off the stack, calculates the modulus of the first by the second,
+    Pops two number values off the stack, calculates the modulus of the first by the second,
     and then pushes the result back on to the stack.
   valueEffects:
     pop:
       - name: "left"
-        type: "int"
+        type: "number"
       - name: "right"
-        type: "int"
+        type: "number"
     push:
       - name: "result"
-        type: "int"
+        type: "number"
 
 # Integer comparison instructions
 
-- name: "intLess"
+- name: "less"
   description:
     Pops two values off the stack, checks if the first value is less than the second,
     and then pushes the result back on to the stack.
   valueEffects:
     pop:
       - name: "left"
-        type: "int"
+        type: "number"
       - name: "right"
-        type: "int"
+        type: "number"
     push:
       - name: "result"
         type: "bool"
 
-- name: "intLessOrEqual"
+- name: "lessOrEqual"
   description:
     Pops two values off the stack, checks if the first value is less than or equal to the second,
     and then pushes the result back on to the stack.
   valueEffects:
     pop:
       - name: "left"
-        type: "int"
+        type: "number"
       - name: "right"
-        type: "int"
+        type: "number"
     push:
       - name: "result"
         type: "bool"
 
-- name: "intGreater"
+- name: "greater"
   description:
     Pops two values off the stack, checks if the first value is greater than the second,
     and then pushes the result back on to the stack.
   valueEffects:
     pop:
       - name: "left"
-        type: "int"
+        type: "number"
       - name: "right"
-        type: "int"
+        type: "number"
     push:
       - name: "result"
         type: "bool"
 
-- name: "intGreaterOrEqual"
+- name: "greaterOrEqual"
   description:
     Pops two values off the stack, checks if the first value is greater than or equal to the second,
     and then pushes the result back on to the stack.
   valueEffects:
     pop:
       - name: "left"
-        type: "int"
+        type: "number"
       - name: "right"
-        type: "int"
+        type: "number"
     push:
       - name: "result"
         type: "bool"

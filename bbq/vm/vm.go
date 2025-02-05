@@ -351,46 +351,67 @@ func opJumpIfNil(vm *VM, ins opcode.InstructionJumpIfNil) {
 	}
 }
 
-func opBinaryIntAdd(vm *VM) {
+func opAdd(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(IntValue)
-	rightNumber := right.(IntValue)
+	leftNumber := left.(NumberValue)
+	rightNumber := right.(NumberValue)
 	vm.replaceTop(leftNumber.Add(rightNumber))
 }
 
-func opBinaryIntSubtract(vm *VM) {
+func opSubtract(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(IntValue)
-	rightNumber := right.(IntValue)
+	leftNumber := left.(NumberValue)
+	rightNumber := right.(NumberValue)
 	vm.replaceTop(leftNumber.Subtract(rightNumber))
 }
 
-func opBinaryIntLess(vm *VM) {
+func opMultiply(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(IntValue)
-	rightNumber := right.(IntValue)
+	leftNumber := left.(NumberValue)
+	rightNumber := right.(NumberValue)
+	vm.replaceTop(leftNumber.Multiply(rightNumber))
+}
+
+func opDivide(vm *VM) {
+	left, right := vm.peekPop()
+	leftNumber := left.(NumberValue)
+	rightNumber := right.(NumberValue)
+	vm.replaceTop(leftNumber.Divide(rightNumber))
+}
+
+func opMod(vm *VM) {
+	left, right := vm.peekPop()
+	leftNumber := left.(NumberValue)
+	rightNumber := right.(NumberValue)
+	vm.replaceTop(leftNumber.Mod(rightNumber))
+}
+
+func opLess(vm *VM) {
+	left, right := vm.peekPop()
+	leftNumber := left.(NumberValue)
+	rightNumber := right.(NumberValue)
 	vm.replaceTop(leftNumber.Less(rightNumber))
 }
 
-func opBinaryIntLessOrEqual(vm *VM) {
+func opLessOrEqual(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(IntValue)
-	rightNumber := right.(IntValue)
-	vm.replaceTop(leftNumber.LessOrEqual(rightNumber))
+	leftNumber := left.(NumberValue)
+	rightNumber := right.(NumberValue)
+	vm.replaceTop(leftNumber.LessEqual(rightNumber))
 }
 
-func opBinaryIntGreater(vm *VM) {
+func opGreater(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(IntValue)
-	rightNumber := right.(IntValue)
+	leftNumber := left.(NumberValue)
+	rightNumber := right.(NumberValue)
 	vm.replaceTop(leftNumber.Greater(rightNumber))
 }
 
-func opBinaryIntGreaterOrEqual(vm *VM) {
+func opGreaterOrEqual(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(IntValue)
-	rightNumber := right.(IntValue)
-	vm.replaceTop(leftNumber.GreaterOrEqual(rightNumber))
+	leftNumber := left.(NumberValue)
+	rightNumber := right.(NumberValue)
+	vm.replaceTop(leftNumber.GreaterEqual(rightNumber))
 }
 
 func opTrue(vm *VM) {
@@ -625,12 +646,14 @@ func opNil(vm *VM) {
 
 func opEqual(vm *VM) {
 	left, right := vm.peekPop()
-	vm.replaceTop(BoolValue(left == right))
+	result := left.(EquatableValue).Equal(right)
+	vm.replaceTop(result)
 }
 
 func opNotEqual(vm *VM) {
 	left, right := vm.peekPop()
-	vm.replaceTop(BoolValue(left != right))
+	result := !left.(EquatableValue).Equal(right)
+	vm.replaceTop(result)
 }
 
 func opNot(vm *VM) {
@@ -707,18 +730,24 @@ func (vm *VM) run() {
 			opJumpIfFalse(vm, ins)
 		case opcode.InstructionJumpIfNil:
 			opJumpIfNil(vm, ins)
-		case opcode.InstructionIntAdd:
-			opBinaryIntAdd(vm)
-		case opcode.InstructionIntSubtract:
-			opBinaryIntSubtract(vm)
-		case opcode.InstructionIntLess:
-			opBinaryIntLess(vm)
-		case opcode.InstructionIntLessOrEqual:
-			opBinaryIntLessOrEqual(vm)
-		case opcode.InstructionIntGreater:
-			opBinaryIntGreater(vm)
-		case opcode.InstructionIntGreaterOrEqual:
-			opBinaryIntGreaterOrEqual(vm)
+		case opcode.InstructionAdd:
+			opAdd(vm)
+		case opcode.InstructionSubtract:
+			opSubtract(vm)
+		case opcode.InstructionMultiply:
+			opMultiply(vm)
+		case opcode.InstructionDivide:
+			opDivide(vm)
+		case opcode.InstructionMod:
+			opMod(vm)
+		case opcode.InstructionLess:
+			opLess(vm)
+		case opcode.InstructionLessOrEqual:
+			opLessOrEqual(vm)
+		case opcode.InstructionGreater:
+			opGreater(vm)
+		case opcode.InstructionGreaterOrEqual:
+			opGreaterOrEqual(vm)
 		case opcode.InstructionTrue:
 			opTrue(vm)
 		case opcode.InstructionFalse:
