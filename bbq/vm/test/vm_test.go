@@ -3238,7 +3238,7 @@ func TestCompileSwitch(t *testing.T) {
 	t.Parallel()
 
 	t.Run("1", func(t *testing.T) {
-
+		t.Parallel()
 		result, err := compileAndInvoke(t,
 			`
               fun test(x: Int): Int {
