@@ -3239,6 +3239,7 @@ func TestCompileSwitch(t *testing.T) {
 
 	t.Run("1", func(t *testing.T) {
 		t.Parallel()
+
 		result, err := compileAndInvoke(t,
 			`
               fun test(x: Int): Int {
@@ -3262,6 +3263,7 @@ func TestCompileSwitch(t *testing.T) {
 	})
 
 	t.Run("2", func(t *testing.T) {
+		t.Parallel()
 
 		result, err := compileAndInvoke(t,
 			`
@@ -3286,6 +3288,7 @@ func TestCompileSwitch(t *testing.T) {
 	})
 
 	t.Run("4", func(t *testing.T) {
+		t.Parallel()
 
 		result, err := compileAndInvoke(t,
 			`
