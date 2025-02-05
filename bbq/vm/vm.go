@@ -107,24 +107,41 @@ func (vm *VM) pop() Value {
 	return value
 }
 
-// pop2 removes and returns the top two value of the stack.
+// pop2 removes and returns the top two values from the stack:
+// N-2, and N-1, where N is the number of elements on the stack.
 // It is efficient than calling `pop` twice.
 func (vm *VM) pop2() (Value, Value) {
 	lastIndex := len(vm.stack) - 1
-	value1, value2 := vm.stack[lastIndex], vm.stack[lastIndex-1]
-	vm.stack[lastIndex], vm.stack[lastIndex-1] = nil, nil
+	value1, value2 := vm.stack[lastIndex-1], vm.stack[lastIndex]
+	vm.stack[lastIndex-1], vm.stack[lastIndex] = nil, nil
 	vm.stack = vm.stack[:lastIndex-1]
+
+	checkInvalidatedResourceOrResourceReference(value1)
+	checkInvalidatedResourceOrResourceReference(value2)
+
 	return value1, value2
 }
 
-// pop3 removes and returns the top three value of the stack.
+// pop3 removes and returns the top three values from the stack:
+// N-3, N-2, and N-1, where N is the number of elements on the stack.
 // It is efficient than calling `pop` thrice.
 func (vm *VM) pop3() (Value, Value, Value) {
 	lastIndex := len(vm.stack) - 1
-	value1, value2, value3 := vm.stack[lastIndex], vm.stack[lastIndex-1], vm.stack[lastIndex-2]
-	vm.stack[lastIndex], vm.stack[lastIndex-1], vm.stack[lastIndex-2] = nil, nil, nil
+	value1, value2, value3 := vm.stack[lastIndex-2], vm.stack[lastIndex-1], vm.stack[lastIndex]
+	vm.stack[lastIndex-2], vm.stack[lastIndex-1], vm.stack[lastIndex] = nil, nil, nil
 	vm.stack = vm.stack[:lastIndex-2]
+
+	checkInvalidatedResourceOrResourceReference(value1)
+	checkInvalidatedResourceOrResourceReference(value2)
+	checkInvalidatedResourceOrResourceReference(value3)
+
 	return value1, value2, value3
+}
+
+func (vm *VM) peekN(count int) []Value {
+	stackHeight := len(vm.stack)
+	startIndex := stackHeight - count
+	return vm.stack[startIndex:]
 }
 
 func (vm *VM) peek() Value {
@@ -134,10 +151,12 @@ func (vm *VM) peek() Value {
 
 func (vm *VM) dropN(count int) {
 	stackHeight := len(vm.stack)
-	for i := 1; i <= count; i++ {
-		vm.stack[stackHeight-i] = nil
+	startIndex := stackHeight - count
+	for _, value := range vm.stack[startIndex:] {
+		checkInvalidatedResourceOrResourceReference(value)
 	}
-	vm.stack = vm.stack[:stackHeight-count]
+	clear(vm.stack[startIndex:])
+	vm.stack = vm.stack[:startIndex]
 }
 
 func (vm *VM) peekPop() (Value, Value) {
@@ -325,6 +344,13 @@ func opJumpIfFalse(vm *VM, ins opcode.InstructionJumpIfFalse) {
 	}
 }
 
+func opJumpIfNil(vm *VM, ins opcode.InstructionJumpIfNil) {
+	_, ok := vm.pop().(NilValue)
+	if ok {
+		vm.ip = ins.Target
+	}
+}
+
 func opBinaryIntAdd(vm *VM) {
 	left, right := vm.peekPop()
 	leftNumber := left.(IntValue)
@@ -404,30 +430,29 @@ func opSetGlobal(vm *VM, ins opcode.InstructionSetGlobal) {
 }
 
 func opSetIndex(vm *VM) {
-	index, array, element := vm.pop3()
-	indexValue := index.(IntValue)
+	array, index, element := vm.pop3()
 	arrayValue := array.(*ArrayValue)
+	indexValue := index.(IntValue)
 	arrayValue.Set(vm.config, int(indexValue.SmallInt), element)
 }
 
 func opGetIndex(vm *VM) {
-	index, array := vm.pop2()
-	indexValue := index.(IntValue)
+	array, index := vm.pop2()
 	arrayValue := array.(*ArrayValue)
+	indexValue := index.(IntValue)
 	element := arrayValue.Get(vm.config, int(indexValue.SmallInt))
 	vm.push(element)
 }
 
 func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	value := vm.pop()
-	stackHeight := len(vm.stack)
 
 	switch value := value.(type) {
 	case FunctionValue:
 		parameterCount := int(value.Function.ParameterCount)
-		arguments := vm.stack[stackHeight-parameterCount:]
+		arguments := vm.peekN(parameterCount)
 		vm.pushCallFrame(value, arguments)
-		vm.dropN(parameterCount)
+		vm.dropN(len(arguments))
 
 	case NativeFunctionValue:
 		parameterCount := value.ParameterCount
@@ -438,10 +463,9 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 			typeArguments = append(typeArguments, typeArg)
 		}
 
-		arguments := vm.stack[stackHeight-parameterCount:]
-
+		arguments := vm.peekN(parameterCount)
 		result := value.Function(vm.config, typeArguments, arguments...)
-		vm.dropN(parameterCount)
+		vm.dropN(len(arguments))
 		vm.push(result)
 
 	default:
@@ -480,9 +504,11 @@ func opInvokeDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
 	var functionValue = vm.lookupFunction(compositeType.Location, qualifiedFuncName)
 
 	parameterCount := int(functionValue.Function.ParameterCount)
-	arguments := vm.stack[stackHeight-parameterCount:]
+	arguments := vm.peekN(parameterCount)
 	vm.pushCallFrame(functionValue, arguments)
-	vm.dropN(parameterCount)
+	vm.dropN(len(arguments))
+
+	// We do not need to drop the receiver, as the parameter count given in the instruction already includes it
 }
 
 func opDrop(vm *VM) {
@@ -512,15 +538,13 @@ func opNew(vm *VM, ins opcode.InstructionNew) {
 }
 
 func opSetField(vm *VM, ins opcode.InstructionSetField) {
-	// TODO: support all container types
-	structValue := vm.pop().(MemberAccessibleValue)
-
-	fieldValue := vm.pop()
+	target, fieldValue := vm.pop2()
 
 	// VM assumes the field name is always a string.
 	fieldName := getStringConstant(vm, ins.FieldNameIndex)
 
-	structValue.SetMember(vm.config, fieldName, fieldValue)
+	target.(MemberAccessibleValue).
+		SetMember(vm.config, fieldName, fieldValue)
 }
 
 func opGetField(vm *VM, ins opcode.InstructionGetField) {
@@ -559,7 +583,11 @@ func opTransfer(vm *VM, ins opcode.InstructionTransfer) {
 
 	valueType := transferredValue.StaticType(config)
 	if !IsSubType(config, valueType, targetType) {
-		panic(errors.NewUnexpectedError("invalid transfer: expected '%s', found '%s'", targetType, valueType))
+		panic(errors.NewUnexpectedError(
+			"invalid transfer: expected '%s', found '%s'",
+			targetType,
+			valueType,
+		))
 	}
 
 	vm.replaceTop(transferredValue)
@@ -622,16 +650,22 @@ func opNewArray(vm *VM, ins opcode.InstructionNewArray) {
 
 	typ := vm.loadType(ins.TypeIndex).(interpreter.ArrayStaticType)
 
-	elements := make([]Value, ins.Size)
-
-	// Must be inserted in the reverse,
-	// since the stack if FILO.
-	for i := int(ins.Size) - 1; i >= 0; i-- {
-		elements[i] = vm.pop()
-	}
-
+	elements := vm.peekN(int(ins.Size))
 	array := NewArrayValue(vm.config, typ, ins.IsResource, elements...)
+	vm.dropN(len(elements))
+
 	vm.push(array)
+}
+
+func opNewDictionary(vm *VM, ins opcode.InstructionNewDictionary) {
+
+	typ := vm.loadType(ins.TypeIndex).(*interpreter.DictionaryStaticType)
+
+	entries := vm.peekN(int(ins.Size * 2))
+	dictionary := NewDictionaryValue(vm.config, typ, entries...)
+	vm.dropN(len(entries))
+
+	vm.push(dictionary)
 }
 
 func opNewRef(vm *VM, ins opcode.InstructionNewRef) {
@@ -671,6 +705,8 @@ func (vm *VM) run() {
 			opJump(vm, ins)
 		case opcode.InstructionJumpIfFalse:
 			opJumpIfFalse(vm, ins)
+		case opcode.InstructionJumpIfNil:
+			opJumpIfNil(vm, ins)
 		case opcode.InstructionIntAdd:
 			opBinaryIntAdd(vm)
 		case opcode.InstructionIntSubtract:
@@ -713,6 +749,8 @@ func (vm *VM) run() {
 			opNew(vm, ins)
 		case opcode.InstructionNewArray:
 			opNewArray(vm, ins)
+		case opcode.InstructionNewDictionary:
+			opNewDictionary(vm, ins)
 		case opcode.InstructionNewRef:
 			opNewRef(vm, ins)
 		case opcode.InstructionSetField:

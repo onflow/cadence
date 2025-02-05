@@ -68,7 +68,7 @@
       type: "index"
   valueEffects:
     pop:
-      - name: "container"
+      - name: "target"
         type: "value"
       - name: "value"
         type: "value"
@@ -163,6 +163,26 @@
     push:
       - name: "array"
         type: "array"
+
+- name: "newDictionary"
+  description: Creates a new dictionary with the given type and size.
+  operands:
+    - name: "typeIndex"
+      type: "index"
+    - name: "size"
+      type: "size"
+    - name: "isResource"
+      type: "bool"
+  valueEffects:
+    pop:
+      - name: "entries"
+        type: "value"
+        # The number of elements taken from the stack is equal to the size operand of the opcode, multiplied by 2.
+        count: "size * 2"
+    push:
+      - name: "dictionary"
+        type: "dictionary"
+
 
 - name: "newRef"
   description: Creates a new reference with the given type.
@@ -314,6 +334,22 @@
       type: "index"
   controlEffects:
     - jump: "target"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+
+- name: "jumpIfNil"
+  description: Jumps to the given instruction, if the top value on the stack is `nil`.
+  operands:
+    - name: "target"
+      type: "index"
+  controlEffects:
+    - jump: "target"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
 
 - name: "return"
   description: Returns from the current function, without a value.
