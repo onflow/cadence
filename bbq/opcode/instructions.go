@@ -957,7 +957,7 @@ func (i InstructionSubtract) Encode(code *[]byte) {
 
 // InstructionMultiply
 //
-// Pops two integer values off the stack, multiplies them together, and then pushes the result back on to the stack.
+// Pops two number values off the stack, multiplies them together, and then pushes the result back on to the stack.
 type InstructionMultiply struct {
 }
 
@@ -977,7 +977,7 @@ func (i InstructionMultiply) Encode(code *[]byte) {
 
 // InstructionDivide
 //
-// Pops two integer values off the stack, divides the first by the second, and then pushes the result back on to the stack.
+// Pops two number values off the stack, divides the first by the second, and then pushes the result back on to the stack.
 type InstructionDivide struct {
 }
 
@@ -997,7 +997,7 @@ func (i InstructionDivide) Encode(code *[]byte) {
 
 // InstructionMod
 //
-// Pops two integer values off the stack, calculates the modulus of the first by the second, and then pushes the result back on to the stack.
+// Pops two number values off the stack, calculates the modulus of the first by the second, and then pushes the result back on to the stack.
 type InstructionMod struct {
 }
 
