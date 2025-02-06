@@ -1093,27 +1093,27 @@ func (c *Compiler[_]) VisitBinaryExpression(expression *ast.BinaryExpression) (_
 
 		switch expression.Operation {
 		case ast.OperationPlus:
-			c.codeGen.Emit(opcode.InstructionIntAdd{})
+			c.codeGen.Emit(opcode.InstructionAdd{})
 		case ast.OperationMinus:
-			c.codeGen.Emit(opcode.InstructionIntSubtract{})
+			c.codeGen.Emit(opcode.InstructionSubtract{})
 		case ast.OperationMul:
-			c.codeGen.Emit(opcode.InstructionIntMultiply{})
+			c.codeGen.Emit(opcode.InstructionMultiply{})
 		case ast.OperationDiv:
-			c.codeGen.Emit(opcode.InstructionIntDivide{})
+			c.codeGen.Emit(opcode.InstructionDivide{})
 		case ast.OperationMod:
-			c.codeGen.Emit(opcode.InstructionIntMod{})
+			c.codeGen.Emit(opcode.InstructionMod{})
 		case ast.OperationEqual:
 			c.codeGen.Emit(opcode.InstructionEqual{})
 		case ast.OperationNotEqual:
 			c.codeGen.Emit(opcode.InstructionNotEqual{})
 		case ast.OperationLess:
-			c.codeGen.Emit(opcode.InstructionIntLess{})
+			c.codeGen.Emit(opcode.InstructionLess{})
 		case ast.OperationLessEqual:
-			c.codeGen.Emit(opcode.InstructionIntLessOrEqual{})
+			c.codeGen.Emit(opcode.InstructionLessOrEqual{})
 		case ast.OperationGreater:
-			c.codeGen.Emit(opcode.InstructionIntGreater{})
+			c.codeGen.Emit(opcode.InstructionGreater{})
 		case ast.OperationGreaterEqual:
-			c.codeGen.Emit(opcode.InstructionIntGreaterOrEqual{})
+			c.codeGen.Emit(opcode.InstructionGreaterOrEqual{})
 		default:
 			panic(errors.NewUnreachableError())
 		}

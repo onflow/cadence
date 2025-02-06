@@ -55,7 +55,7 @@ func TestCompileRecursionFib(t *testing.T) {
 			// if n < 2
 			opcode.InstructionGetLocal{LocalIndex: 0x0},
 			opcode.InstructionGetConstant{ConstantIndex: 0x0},
-			opcode.InstructionIntLess{},
+			opcode.InstructionLess{},
 			opcode.InstructionJumpIfFalse{Target: 6},
 			// then return n
 			opcode.InstructionGetLocal{LocalIndex: 0x0},
@@ -63,18 +63,18 @@ func TestCompileRecursionFib(t *testing.T) {
 			// fib(n - 1)
 			opcode.InstructionGetLocal{LocalIndex: 0x0},
 			opcode.InstructionGetConstant{ConstantIndex: 0x1},
-			opcode.InstructionIntSubtract{},
+			opcode.InstructionSubtract{},
 			opcode.InstructionTransfer{TypeIndex: 0x0},
 			opcode.InstructionGetGlobal{GlobalIndex: 0x0},
 			opcode.InstructionInvoke{},
 			// fib(n - 2)
 			opcode.InstructionGetLocal{LocalIndex: 0x0},
 			opcode.InstructionGetConstant{ConstantIndex: 0x0},
-			opcode.InstructionIntSubtract{},
+			opcode.InstructionSubtract{},
 			opcode.InstructionTransfer{TypeIndex: 0x0},
 			opcode.InstructionGetGlobal{GlobalIndex: 0x0},
 			opcode.InstructionInvoke{},
-			opcode.InstructionIntAdd{},
+			opcode.InstructionAdd{},
 			// assign to temp $result
 			opcode.InstructionTransfer{TypeIndex: 0x0},
 			opcode.InstructionSetLocal{LocalIndex: 0x1},
@@ -148,12 +148,12 @@ func TestCompileImperativeFib(t *testing.T) {
 			// while i < n
 			opcode.InstructionGetLocal{LocalIndex: 0x4},
 			opcode.InstructionGetLocal{LocalIndex: 0x0},
-			opcode.InstructionIntLess{},
+			opcode.InstructionLess{},
 			opcode.InstructionJumpIfFalse{Target: 33},
 			// fibonacci = fib1 + fib2
 			opcode.InstructionGetLocal{LocalIndex: 0x1},
 			opcode.InstructionGetLocal{LocalIndex: 0x2},
-			opcode.InstructionIntAdd{},
+			opcode.InstructionAdd{},
 			opcode.InstructionTransfer{TypeIndex: 0x0},
 			opcode.InstructionSetLocal{LocalIndex: 0x3},
 			// fib1 = fib2
@@ -167,7 +167,7 @@ func TestCompileImperativeFib(t *testing.T) {
 			// i = i + 1
 			opcode.InstructionGetLocal{LocalIndex: 0x4},
 			opcode.InstructionGetConstant{ConstantIndex: 0x0},
-			opcode.InstructionIntAdd{},
+			opcode.InstructionAdd{},
 			opcode.InstructionTransfer{TypeIndex: 0x0},
 			opcode.InstructionSetLocal{LocalIndex: 0x4},
 			// continue loop
@@ -234,14 +234,14 @@ func TestCompileBreak(t *testing.T) {
 			// if i > 3
 			opcode.InstructionGetLocal{LocalIndex: 0x0},
 			opcode.InstructionGetConstant{ConstantIndex: 0x1},
-			opcode.InstructionIntGreater{},
+			opcode.InstructionGreater{},
 			opcode.InstructionJumpIfFalse{Target: 10},
 			// break
 			opcode.InstructionJump{Target: 16},
 			// i = i + 1
 			opcode.InstructionGetLocal{LocalIndex: 0x0},
 			opcode.InstructionGetConstant{ConstantIndex: 0x2},
-			opcode.InstructionIntAdd{},
+			opcode.InstructionAdd{},
 			opcode.InstructionTransfer{TypeIndex: 0x0},
 			opcode.InstructionSetLocal{LocalIndex: 0x0},
 			// repeat
@@ -313,13 +313,13 @@ func TestCompileContinue(t *testing.T) {
 			// i = i + 1
 			opcode.InstructionGetLocal{LocalIndex: 0x0},
 			opcode.InstructionGetConstant{ConstantIndex: 0x1},
-			opcode.InstructionIntAdd{},
+			opcode.InstructionAdd{},
 			opcode.InstructionTransfer{TypeIndex: 0x0},
 			opcode.InstructionSetLocal{LocalIndex: 0x0},
 			// if i < 3
 			opcode.InstructionGetLocal{LocalIndex: 0x0},
 			opcode.InstructionGetConstant{ConstantIndex: 0x2},
-			opcode.InstructionIntLess{},
+			opcode.InstructionLess{},
 			opcode.InstructionJumpIfFalse{Target: 15},
 			// continue
 			opcode.InstructionJump{Target: 3},

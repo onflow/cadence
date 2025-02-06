@@ -18,38 +18,11 @@
 
 package vm
 
-import (
-	"github.com/onflow/atree"
-
-	"github.com/onflow/cadence/format"
-	"github.com/onflow/cadence/interpreter"
-)
-
-type NilValue struct{}
-
-var _ Value = NilValue{}
-var _ EquatableValue = NilValue{}
-
-var Nil Value = NilValue{}
-
-func (NilValue) isValue() {}
-
-func (NilValue) StaticType(config *Config) StaticType {
-	return interpreter.NewOptionalStaticType(
-		config.MemoryGauge,
-		interpreter.PrimitiveStaticTypeNever,
-	)
-}
-
-func (v NilValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
-	return v
-}
-
-func (v NilValue) String() string {
-	return format.Nil
-}
-
-func (v NilValue) Equal(other Value) BoolValue {
-	_, ok := other.(NilValue)
-	return BoolValue(ok)
+type NumberValue interface {
+	ComparableValue
+	Add(other NumberValue) NumberValue
+	Subtract(other NumberValue) NumberValue
+	Multiply(other NumberValue) NumberValue
+	Divide(other NumberValue) NumberValue
+	Mod(other NumberValue) NumberValue
 }

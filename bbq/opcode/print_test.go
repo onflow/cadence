@@ -33,7 +33,7 @@ func TestPrintRecursionFib(t *testing.T) {
 		// if n < 2
 		byte(GetLocal), 0, 0,
 		byte(GetConstant), 0, 0,
-		byte(IntLess),
+		byte(Less),
 		byte(JumpIfFalse), 0, 14,
 		// then return n
 		byte(GetLocal), 0, 0,
@@ -41,41 +41,41 @@ func TestPrintRecursionFib(t *testing.T) {
 		// fib(n - 1)
 		byte(GetLocal), 0, 0,
 		byte(GetConstant), 0, 1,
-		byte(IntSubtract),
+		byte(Subtract),
 		byte(Transfer), 0, 0,
 		byte(GetGlobal), 0, 0,
 		byte(Invoke), 0, 0,
 		// fib(n - 2)
 		byte(GetLocal), 0, 0,
 		byte(GetConstant), 0, 0,
-		byte(IntSubtract),
+		byte(Subtract),
 		byte(Transfer), 0, 0,
 		byte(GetGlobal), 0, 0,
 		byte(Invoke), 0, 0,
 		// return sum
-		byte(IntAdd),
+		byte(Add),
 		byte(ReturnValue),
 	}
 
 	const expected = `GetLocal localIndex:0
 GetConstant constantIndex:0
-IntLess
+Less
 JumpIfFalse target:14
 GetLocal localIndex:0
 ReturnValue
 GetLocal localIndex:0
 GetConstant constantIndex:1
-IntSubtract
+Subtract
 Transfer typeIndex:0
 GetGlobal globalIndex:0
 Invoke typeArgs:[]
 GetLocal localIndex:0
 GetConstant constantIndex:0
-IntSubtract
+Subtract
 Transfer typeIndex:0
 GetGlobal globalIndex:0
 Invoke typeArgs:[]
-IntAdd
+Add
 ReturnValue
 `
 
@@ -120,15 +120,15 @@ func TestPrintInstruction(t *testing.T) {
 		"Unknown":                     {byte(Unknown)},
 		"Return":                      {byte(Return)},
 		"ReturnValue":                 {byte(ReturnValue)},
-		"IntAdd":                      {byte(IntAdd)},
-		"IntSubtract":                 {byte(IntSubtract)},
-		"IntMultiply":                 {byte(IntMultiply)},
-		"IntDivide":                   {byte(IntDivide)},
-		"IntMod":                      {byte(IntMod)},
-		"IntLess":                     {byte(IntLess)},
-		"IntGreater":                  {byte(IntGreater)},
-		"IntLessOrEqual":              {byte(IntLessOrEqual)},
-		"IntGreaterOrEqual":           {byte(IntGreaterOrEqual)},
+		"Add":                         {byte(Add)},
+		"Subtract":                    {byte(Subtract)},
+		"Multiply":                    {byte(Multiply)},
+		"Divide":                      {byte(Divide)},
+		"Mod":                         {byte(Mod)},
+		"Less":                        {byte(Less)},
+		"Greater":                     {byte(Greater)},
+		"LessOrEqual":                 {byte(LessOrEqual)},
+		"GreaterOrEqual":              {byte(GreaterOrEqual)},
 		"Equal":                       {byte(Equal)},
 		"NotEqual":                    {byte(NotEqual)},
 		"Unwrap":                      {byte(Unwrap)},

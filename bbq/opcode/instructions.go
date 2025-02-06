@@ -915,183 +915,183 @@ func (i InstructionNot) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
-// InstructionIntAdd
+// InstructionAdd
 //
-// Pops two integer values off the stack, adds them together, and then pushes the result back on to the stack.
-type InstructionIntAdd struct {
+// Pops two number values off the stack, adds them together, and then pushes the result back on to the stack.
+type InstructionAdd struct {
 }
 
-var _ Instruction = InstructionIntAdd{}
+var _ Instruction = InstructionAdd{}
 
-func (InstructionIntAdd) Opcode() Opcode {
-	return IntAdd
+func (InstructionAdd) Opcode() Opcode {
+	return Add
 }
 
-func (i InstructionIntAdd) String() string {
+func (i InstructionAdd) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionIntAdd) Encode(code *[]byte) {
+func (i InstructionAdd) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
-// InstructionIntSubtract
+// InstructionSubtract
 //
-// Pops two integer values off the stack, subtracts the second from the first, and then pushes the result back on to the stack.
-type InstructionIntSubtract struct {
+// Pops two number values off the stack, subtracts the second from the first, and then pushes the result back on to the stack.
+type InstructionSubtract struct {
 }
 
-var _ Instruction = InstructionIntSubtract{}
+var _ Instruction = InstructionSubtract{}
 
-func (InstructionIntSubtract) Opcode() Opcode {
-	return IntSubtract
+func (InstructionSubtract) Opcode() Opcode {
+	return Subtract
 }
 
-func (i InstructionIntSubtract) String() string {
+func (i InstructionSubtract) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionIntSubtract) Encode(code *[]byte) {
+func (i InstructionSubtract) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
-// InstructionIntMultiply
+// InstructionMultiply
 //
-// Pops two integer values off the stack, multiplies them together, and then pushes the result back on to the stack.
-type InstructionIntMultiply struct {
+// Pops two number values off the stack, multiplies them together, and then pushes the result back on to the stack.
+type InstructionMultiply struct {
 }
 
-var _ Instruction = InstructionIntMultiply{}
+var _ Instruction = InstructionMultiply{}
 
-func (InstructionIntMultiply) Opcode() Opcode {
-	return IntMultiply
+func (InstructionMultiply) Opcode() Opcode {
+	return Multiply
 }
 
-func (i InstructionIntMultiply) String() string {
+func (i InstructionMultiply) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionIntMultiply) Encode(code *[]byte) {
+func (i InstructionMultiply) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
-// InstructionIntDivide
+// InstructionDivide
 //
-// Pops two integer values off the stack, divides the first by the second, and then pushes the result back on to the stack.
-type InstructionIntDivide struct {
+// Pops two number values off the stack, divides the first by the second, and then pushes the result back on to the stack.
+type InstructionDivide struct {
 }
 
-var _ Instruction = InstructionIntDivide{}
+var _ Instruction = InstructionDivide{}
 
-func (InstructionIntDivide) Opcode() Opcode {
-	return IntDivide
+func (InstructionDivide) Opcode() Opcode {
+	return Divide
 }
 
-func (i InstructionIntDivide) String() string {
+func (i InstructionDivide) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionIntDivide) Encode(code *[]byte) {
+func (i InstructionDivide) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
-// InstructionIntMod
+// InstructionMod
 //
-// Pops two integer values off the stack, calculates the modulus of the first by the second, and then pushes the result back on to the stack.
-type InstructionIntMod struct {
+// Pops two number values off the stack, calculates the modulus of the first by the second, and then pushes the result back on to the stack.
+type InstructionMod struct {
 }
 
-var _ Instruction = InstructionIntMod{}
+var _ Instruction = InstructionMod{}
 
-func (InstructionIntMod) Opcode() Opcode {
-	return IntMod
+func (InstructionMod) Opcode() Opcode {
+	return Mod
 }
 
-func (i InstructionIntMod) String() string {
+func (i InstructionMod) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionIntMod) Encode(code *[]byte) {
+func (i InstructionMod) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
-// InstructionIntLess
+// InstructionLess
 //
 // Pops two values off the stack, checks if the first value is less than the second, and then pushes the result back on to the stack.
-type InstructionIntLess struct {
+type InstructionLess struct {
 }
 
-var _ Instruction = InstructionIntLess{}
+var _ Instruction = InstructionLess{}
 
-func (InstructionIntLess) Opcode() Opcode {
-	return IntLess
+func (InstructionLess) Opcode() Opcode {
+	return Less
 }
 
-func (i InstructionIntLess) String() string {
+func (i InstructionLess) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionIntLess) Encode(code *[]byte) {
+func (i InstructionLess) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
-// InstructionIntLessOrEqual
+// InstructionLessOrEqual
 //
 // Pops two values off the stack, checks if the first value is less than or equal to the second, and then pushes the result back on to the stack.
-type InstructionIntLessOrEqual struct {
+type InstructionLessOrEqual struct {
 }
 
-var _ Instruction = InstructionIntLessOrEqual{}
+var _ Instruction = InstructionLessOrEqual{}
 
-func (InstructionIntLessOrEqual) Opcode() Opcode {
-	return IntLessOrEqual
+func (InstructionLessOrEqual) Opcode() Opcode {
+	return LessOrEqual
 }
 
-func (i InstructionIntLessOrEqual) String() string {
+func (i InstructionLessOrEqual) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionIntLessOrEqual) Encode(code *[]byte) {
+func (i InstructionLessOrEqual) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
-// InstructionIntGreater
+// InstructionGreater
 //
 // Pops two values off the stack, checks if the first value is greater than the second, and then pushes the result back on to the stack.
-type InstructionIntGreater struct {
+type InstructionGreater struct {
 }
 
-var _ Instruction = InstructionIntGreater{}
+var _ Instruction = InstructionGreater{}
 
-func (InstructionIntGreater) Opcode() Opcode {
-	return IntGreater
+func (InstructionGreater) Opcode() Opcode {
+	return Greater
 }
 
-func (i InstructionIntGreater) String() string {
+func (i InstructionGreater) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionIntGreater) Encode(code *[]byte) {
+func (i InstructionGreater) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
-// InstructionIntGreaterOrEqual
+// InstructionGreaterOrEqual
 //
 // Pops two values off the stack, checks if the first value is greater than or equal to the second, and then pushes the result back on to the stack.
-type InstructionIntGreaterOrEqual struct {
+type InstructionGreaterOrEqual struct {
 }
 
-var _ Instruction = InstructionIntGreaterOrEqual{}
+var _ Instruction = InstructionGreaterOrEqual{}
 
-func (InstructionIntGreaterOrEqual) Opcode() Opcode {
-	return IntGreaterOrEqual
+func (InstructionGreaterOrEqual) Opcode() Opcode {
+	return GreaterOrEqual
 }
 
-func (i InstructionIntGreaterOrEqual) String() string {
+func (i InstructionGreaterOrEqual) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionIntGreaterOrEqual) Encode(code *[]byte) {
+func (i InstructionGreaterOrEqual) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
@@ -1165,24 +1165,24 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionNotEqual{}
 	case Not:
 		return InstructionNot{}
-	case IntAdd:
-		return InstructionIntAdd{}
-	case IntSubtract:
-		return InstructionIntSubtract{}
-	case IntMultiply:
-		return InstructionIntMultiply{}
-	case IntDivide:
-		return InstructionIntDivide{}
-	case IntMod:
-		return InstructionIntMod{}
-	case IntLess:
-		return InstructionIntLess{}
-	case IntLessOrEqual:
-		return InstructionIntLessOrEqual{}
-	case IntGreater:
-		return InstructionIntGreater{}
-	case IntGreaterOrEqual:
-		return InstructionIntGreaterOrEqual{}
+	case Add:
+		return InstructionAdd{}
+	case Subtract:
+		return InstructionSubtract{}
+	case Multiply:
+		return InstructionMultiply{}
+	case Divide:
+		return InstructionDivide{}
+	case Mod:
+		return InstructionMod{}
+	case Less:
+		return InstructionLess{}
+	case LessOrEqual:
+		return InstructionLessOrEqual{}
+	case Greater:
+		return InstructionGreater{}
+	case GreaterOrEqual:
+		return InstructionGreaterOrEqual{}
 	}
 
 	panic(errors.NewUnreachableError())
