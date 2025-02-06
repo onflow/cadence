@@ -703,10 +703,10 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
 }
 
 func (interpreter *Interpreter) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) StatementResult {
-	return interpreter.VisitFunctionDeclaration(declaration.FunctionDeclaration)
+	return interpreter.VisitFunctionDeclaration(declaration.FunctionDeclaration, false)
 }
 
-func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) StatementResult {
+func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration, isStatement bool) StatementResult {
 
 	identifier := declaration.Identifier.Identifier
 
@@ -717,6 +717,25 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 
 	// lexical scope: variables in functions are bound to what is visible at declaration time
 	lexicalScope := interpreter.activations.CurrentOrNew()
+	if isStatement {
+		// Cloning the current scope ensures that the function can access variables that are visible,
+		// but not variables which are declared after the function
+		// (variable declarations mutate the current activation in place).
+		//
+		// For example:
+		//
+		//     fun foo(a: Int): Int {
+		//         fun bar(): Int {
+		//             return a
+		//             //     ^ should refer to the `a` parameter of `foo`,
+		//             //     not to the `a` variable declared after `bar`
+		//         }
+		//         let a = 2
+		//         return bar()
+		//     }
+		//
+		lexicalScope = lexicalScope.Clone()
+	}
 
 	// make the function itself available inside the function
 	lexicalScope.Set(identifier, variable)

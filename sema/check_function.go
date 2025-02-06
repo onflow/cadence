@@ -31,7 +31,7 @@ func PurityFromAnnotation(purity ast.FunctionPurity) FunctionPurity {
 
 }
 
-func (checker *Checker) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) (_ struct{}) {
+func (checker *Checker) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration, _ bool) (_ struct{}) {
 	checker.visitFunctionDeclaration(
 		declaration,
 		functionDeclarationOptions{
@@ -46,7 +46,7 @@ func (checker *Checker) VisitFunctionDeclaration(declaration *ast.FunctionDeclar
 }
 
 func (checker *Checker) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) struct{} {
-	return checker.VisitFunctionDeclaration(declaration.FunctionDeclaration)
+	return checker.VisitFunctionDeclaration(declaration.FunctionDeclaration, false)
 }
 
 type functionDeclarationOptions struct {
