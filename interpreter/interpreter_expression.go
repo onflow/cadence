@@ -1316,9 +1316,11 @@ func (interpreter *Interpreter) visitEntries(entries []ast.DictionaryEntry) []Di
 func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.FunctionExpression) Value {
 
 	// lexical scope: variables in functions are bound to what is visible at declaration time.
-	// Cloning the current scope ensures that the function can access variables that are visible,
-	// but not variables which are declared after the function
-	// (variable declarations mutate the current activation in place).
+	lexicalScope := interpreter.activations.CurrentOrNew()
+
+	// Variables which are declared after this function declaration
+	// should not be visible or even overwrite the variables captured by the closure
+	/// (e.g. through shadowing).
 	//
 	// For example:
 	//
@@ -1332,7 +1334,10 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 	//         return bar()
 	//     }
 	//
-	lexicalScope := interpreter.activations.CurrentOrNew().Clone()
+	// As variable declarations mutate the current activation in place,
+	// push a new activation, so that the mutations are not performed
+	// on the captured activation.
+	interpreter.activations.PushNewWithCurrent()
 
 	functionType := interpreter.Program.Elaboration.FunctionExpressionFunctionType(expression)
 

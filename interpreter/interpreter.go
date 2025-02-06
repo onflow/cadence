@@ -717,10 +717,13 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 
 	// lexical scope: variables in functions are bound to what is visible at declaration time
 	lexicalScope := interpreter.activations.CurrentOrNew()
+
 	if isStatement {
-		// Cloning the current scope ensures that the function can access variables that are visible,
-		// but not variables which are declared after the function
-		// (variable declarations mutate the current activation in place).
+		// This function declaration is an inner function.
+		//
+		// Variables which are declared after this function declaration
+		// should not be visible or even overwrite the variables captured by the closure
+		/// (e.g. through shadowing).
 		//
 		// For example:
 		//
@@ -734,7 +737,11 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 		//         return bar()
 		//     }
 		//
-		lexicalScope = lexicalScope.Clone()
+		// As variable declarations mutate the current activation in place,
+		// push a new activation, so that the mutations are not performed
+		// on the captured activation.
+
+		interpreter.activations.PushNewWithCurrent()
 	}
 
 	// make the function itself available inside the function
