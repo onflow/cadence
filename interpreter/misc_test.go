@@ -6916,6 +6916,56 @@ func TestInterpretClosureScopingInnerFunction(t *testing.T) {
 	)
 }
 
+func TestInterpretAssignmentAfterClosureFunctionExpression(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        fun test(): Int {
+            var a = 1
+            let bar = fun(): Int {
+                return a
+            }
+            a = 2
+            return bar()
+        }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(2),
+		value,
+	)
+}
+
+func TestInterpretAssignmentAfterClosureInnerFunction(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        fun test(): Int {
+            var a = 1
+            fun bar(): Int {
+                return a
+            }
+            a = 2
+            return bar()
+        }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(2),
+		value,
+	)
+}
+
 // TestInterpretCompositeFunctionInvocationFromImportingProgram checks
 // that member functions of imported composites can be invoked from an importing program.
 // See https://github.com/dapperlabs/flow-go/issues/838
