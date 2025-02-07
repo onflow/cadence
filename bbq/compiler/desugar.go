@@ -56,6 +56,10 @@ type inheritedFunction struct {
 	elaboration               *sema.Elaboration
 }
 
+func (f inheritedFunction) functionType() *sema.FunctionType {
+	return f.elaboration.FunctionDeclarationFunctionType(f.functionDecl)
+}
+
 var _ ast.DeclarationVisitor[ast.Declaration] = &Desugar{}
 
 func NewDesugar(
@@ -896,19 +900,9 @@ func (d *Desugar) inheritedConditionInvocation(
 		kind,
 	)
 
-	inheritedFuncDecl := inheritedFunc.functionDecl
-
-	params := inheritedFuncDecl.ParameterList.Parameters
-	semaParams := make([]sema.Parameter, 0, len(params))
-	for _, param := range params {
-		paramTypeAnnotation := d.checker.ConvertTypeAnnotation(param.TypeAnnotation)
-
-		semaParams = append(semaParams, sema.Parameter{
-			TypeAnnotation: paramTypeAnnotation,
-			Label:          param.Label,
-			Identifier:     param.Identifier.Identifier,
-		})
-	}
+	inheritedFuncType := inheritedFunc.functionType()
+	parameters := make([]sema.Parameter, len(inheritedFuncType.Parameters))
+	copy(parameters, inheritedFuncType.Parameters)
 
 	var beforeValues []ast.Expression
 
@@ -927,7 +921,7 @@ func (d *Desugar) inheritedConditionInvocation(
 				panic(errors.NewUnreachableError())
 			}
 
-			semaParams = append(semaParams, sema.Parameter{
+			parameters = append(parameters, sema.Parameter{
 				TypeAnnotation: sema.NewTypeAnnotation(varDeclTypes.TargetType),
 				Label:          sema.ArgumentLabelNotRequired,
 				Identifier:     beforeFunctionResultVarName,
@@ -936,7 +930,7 @@ func (d *Desugar) inheritedConditionInvocation(
 
 		// Add 'result' variable as an argument.
 		if resultVarType != nil {
-			semaParams = append(semaParams, sema.Parameter{
+			parameters = append(parameters, sema.Parameter{
 				TypeAnnotation: sema.NewTypeAnnotation(resultVarType),
 				Label:          sema.ArgumentLabelNotRequired,
 				Identifier:     resultVariableName,
@@ -946,7 +940,7 @@ func (d *Desugar) inheritedConditionInvocation(
 
 	funcType := sema.NewSimpleFunctionType(
 		sema.FunctionPurityView,
-		semaParams,
+		parameters,
 		sema.VoidTypeAnnotation,
 	)
 
@@ -984,22 +978,12 @@ func (d *Desugar) inheritedBeforeFunctionInvocation(
 		beforeVarName,
 	)
 
-	inheritedFuncDecl := inheritedFunc.functionDecl
-
-	params := inheritedFuncDecl.ParameterList.Parameters
-	semaParams := make([]sema.Parameter, 0, len(params))
-	for _, param := range params {
-		paramTypeAnnotation := d.checker.ConvertTypeAnnotation(param.TypeAnnotation)
-
-		semaParams = append(semaParams, sema.Parameter{
-			TypeAnnotation: paramTypeAnnotation,
-			Label:          param.Label,
-			Identifier:     param.Identifier.Identifier,
-		})
-	}
+	inheritedFuncType := inheritedFunc.functionType()
+	parameters := make([]sema.Parameter, len(inheritedFuncType.Parameters))
+	copy(parameters, inheritedFuncType.Parameters)
 
 	if resultVarType != nil {
-		semaParams = append(semaParams, sema.Parameter{
+		parameters = append(parameters, sema.Parameter{
 			TypeAnnotation: sema.NewTypeAnnotation(resultVarType),
 			Label:          sema.ArgumentLabelNotRequired,
 			Identifier:     resultVariableName,
@@ -1008,7 +992,7 @@ func (d *Desugar) inheritedBeforeFunctionInvocation(
 
 	funcType := sema.NewSimpleFunctionType(
 		sema.FunctionPurityView,
-		semaParams,
+		parameters,
 		sema.VoidTypeAnnotation,
 	)
 
