@@ -1107,6 +1107,101 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		assert.Equal(t, "\"hello\"", logs[0])
 	})
 
+	t.Run("default and conditions in parent, more conditions in child", func(t *testing.T) {
+
+		t.Parallel()
+
+		var logs []string
+
+		logFunction := stdlib.NewStandardLibraryStaticFunction(
+			"log",
+			&sema.FunctionType{
+				Parameters: []sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
+					},
+				},
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					sema.VoidType,
+				),
+				Purity: sema.FunctionPurityView,
+			},
+			``,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				message := invocation.Arguments[0].MeteredString(
+					invocation.Interpreter,
+					interpreter.SeenReferences{},
+					invocation.LocationRange,
+				)
+				logs = append(logs, message)
+				return interpreter.Void
+			},
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(logFunction)
+
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, logFunction)
+
+		code := `
+            struct interface Foo {
+                fun test() {
+                    pre {
+                         printMessage("invoked Foo.test() pre-condition")
+                    }
+                    post {
+                         printMessage("invoked Foo.test() post-condition")
+                    }
+                    printMessage("invoked Foo.test()")
+                }
+            }
+
+            struct Test: Foo {
+            }
+
+            access(all) view fun printMessage(_ msg: String): Bool {
+                log(msg)
+                return true
+            }
+
+            fun main() {
+               Test().test()
+            }
+        `
+
+		inter, err := parseCheckAndInterpretWithOptions(
+			t,
+			code,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
+				},
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+				HandleCheckerError: nil,
+			},
+		)
+
+		_, err = inter.Invoke("main")
+		require.NoError(t, err)
+
+		require.Equal(
+			t,
+			[]string{
+				"\"invoked Foo.test() pre-condition\"",
+				"\"invoked Foo.test()\"",
+				"\"invoked Foo.test() post-condition\"",
+			}, logs,
+		)
+	})
 }
 
 func TestInterpretNestedInterfaceCast(t *testing.T) {
