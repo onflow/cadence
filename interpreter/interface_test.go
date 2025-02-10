@@ -1189,6 +1189,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 				HandleCheckerError: nil,
 			},
 		)
+		require.NoError(t, err)
 
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)

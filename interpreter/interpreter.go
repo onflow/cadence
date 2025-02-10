@@ -2467,7 +2467,11 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 	lexicalScope *VariableActivation,
 ) FunctionWrapper {
 
-	if declaration.FunctionBlock == nil {
+	if declaration.FunctionBlock == nil ||
+		declaration.FunctionBlock.HasStatements() {
+		// If there's a default implementation (i.e: has statements),
+		// then skip explicitly/separately running the conditions of that functions.
+		// Because the conditions also get executed when the default implementation is executed.
 		return nil
 	}
 
