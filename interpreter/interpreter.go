@@ -1315,6 +1315,16 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 		// the order does not matter.
 
 		for name, functionWrapper := range code.FunctionWrappers { //nolint:maprange
+			// If there's a default implementation, then skip explicitly/separately
+			// running the conditions of that functions.
+			// Because the conditions also get executed when the default implementation is executed.
+			// This works because:
+			// 	- `code.Functions` only contains default implementations.
+			//	- There is always only one default implementation (cannot override by other interfaces).
+			if code.Functions.Contains(name) {
+				continue
+			}
+
 			fn, ok := functions.Get(name)
 			// If there is a wrapper, there MUST be a body.
 			if !ok {
