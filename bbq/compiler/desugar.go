@@ -516,7 +516,8 @@ func (d *Desugar) desugarPostConditions(
 				continue
 			}
 
-			resultVarType, resultVarExist := d.elaboration.ResultVariableType(inheritedFunc.functionDecl.FunctionBlock)
+			// Result variable must be looked-up in the corresponding elaboration.
+			resultVarType, resultVarExist := inheritedFunc.elaboration.ResultVariableType(inheritedFunc.functionDecl.FunctionBlock)
 
 			// If the inherited function has before-statements, then add an invocation
 			// to call the generated before-statements-function of the interface.
@@ -529,7 +530,6 @@ func (d *Desugar) desugarPostConditions(
 					enclosingFuncName,
 					statement,
 					inheritedFunc,
-					resultVarType,
 					pos,
 					beforeFuncResults,
 				)
@@ -583,7 +583,6 @@ func (d *Desugar) desugarInheritedBeforeStatement(
 	enclosingFuncName string,
 	statement ast.Statement,
 	inheritedFunc *inheritedFunction,
-	resultVarType sema.Type,
 	pos ast.Position,
 	beforeFuncResults map[*ast.VariableDeclaration]string,
 ) *ast.VariableDeclaration {
@@ -598,7 +597,6 @@ func (d *Desugar) desugarInheritedBeforeStatement(
 		enclosingFuncName,
 		varDecl.Identifier.Identifier,
 		inheritedFunc,
-		resultVarType,
 		pos,
 	)
 
@@ -805,12 +803,6 @@ func (d *Desugar) generateBeforeFunction(
 	params := make([]*ast.Parameter, len(parameterList.Parameters))
 	copy(params, parameterList.Parameters)
 
-	// For post conditions, also add `result` as a parameter, if needed.
-	_, needResultVar := d.elaboration.ResultVariableType(functionBlock)
-	if needResultVar {
-		params = append(params, d.resultVarParameter(pos))
-	}
-
 	beforeFunction := ast.NewFunctionDeclaration(
 		d.memoryGauge,
 		ast.AccessAll,
@@ -968,7 +960,6 @@ func (d *Desugar) inheritedBeforeFunctionInvocation(
 	funcName string,
 	beforeVarName string,
 	inheritedFunc *inheritedFunction,
-	resultVarType sema.Type,
 	pos ast.Position,
 ) *ast.InvocationExpression {
 
@@ -981,14 +972,6 @@ func (d *Desugar) inheritedBeforeFunctionInvocation(
 	inheritedFuncType := inheritedFunc.functionType()
 	parameters := make([]sema.Parameter, len(inheritedFuncType.Parameters))
 	copy(parameters, inheritedFuncType.Parameters)
-
-	if resultVarType != nil {
-		parameters = append(parameters, sema.Parameter{
-			TypeAnnotation: sema.NewTypeAnnotation(resultVarType),
-			Label:          sema.ArgumentLabelNotRequired,
-			Identifier:     resultVariableName,
-		})
-	}
 
 	funcType := sema.NewSimpleFunctionType(
 		sema.FunctionPurityView,
@@ -1233,7 +1216,7 @@ func (d *Desugar) inheritedFunctionsWithConditions(compositeType sema.Conforming
 			postConditions := functionDecl.FunctionBlock.PostConditions
 			var rewrittenBeforeStatements []ast.Statement
 			if postConditions != nil {
-				postConditionsRewrite := d.elaboration.PostConditionsRewrite(postConditions)
+				postConditionsRewrite := elaboration.PostConditionsRewrite(postConditions)
 				rewrittenBeforeStatements = postConditionsRewrite.BeforeStatements
 			}
 
