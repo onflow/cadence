@@ -1326,6 +1326,8 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 		}
 	}
 
+	config := declarationInterpreter.SharedState.Config
+
 	wrapFunctions := func(ty *sema.InterfaceType, code WrapperCode) {
 
 		// Wrap initializer
@@ -1350,7 +1352,7 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 			// This works because:
 			// 	- `code.Functions` only contains default implementations.
 			//	- There is always only one default implementation (cannot override by other interfaces).
-			if code.Functions.Contains(name) {
+			if config.FunctionConditionsDeduplicationEnabled && code.Functions.Contains(name) {
 				continue
 			}
 
@@ -1392,8 +1394,6 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 	location := declarationInterpreter.Location
 
 	qualifiedIdentifier := compositeType.QualifiedIdentifier()
-
-	config := declarationInterpreter.SharedState.Config
 
 	constructorType := compositeType.ConstructorFunctionType()
 
@@ -2496,8 +2496,10 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 	lexicalScope *VariableActivation,
 ) FunctionWrapper {
 
+	config := interpreter.SharedState.Config
+
 	if declaration.FunctionBlock == nil ||
-		declaration.FunctionBlock.HasStatements() {
+		(config.FunctionConditionsDeduplicationEnabled && declaration.FunctionBlock.HasStatements()) {
 		// If there's a default implementation (i.e: has statements),
 		// then skip explicitly/separately running the conditions of that functions.
 		// Because the conditions also get executed when the default implementation is executed.

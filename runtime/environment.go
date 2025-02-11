@@ -199,6 +199,7 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		LegacyContractUpgradeEnabled:              e.config.LegacyContractUpgradeEnabled,
 		ValidateAccountCapabilitiesGetHandler:     e.newValidateAccountCapabilitiesGetHandler(),
 		ValidateAccountCapabilitiesPublishHandler: e.newValidateAccountCapabilitiesPublishHandler(),
+		FunctionConditionsDeduplicationEnabled:    e.config.FunctionConditionsDeduplicationEnabled,
 	}
 }
 

@@ -1111,42 +1111,44 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		t.Parallel()
 
-		var logs []string
+		testWithConditionsDeduplication := func(conditionsDeduplicationEnabled bool) []string {
 
-		logFunction := stdlib.NewStandardLibraryStaticFunction(
-			"log",
-			&sema.FunctionType{
-				Parameters: []sema.Parameter{
-					{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
+			var logs []string
+
+			logFunction := stdlib.NewStandardLibraryStaticFunction(
+				"log",
+				&sema.FunctionType{
+					Parameters: []sema.Parameter{
+						{
+							Label:          sema.ArgumentLabelNotRequired,
+							Identifier:     "value",
+							TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
+						},
 					},
+					ReturnTypeAnnotation: sema.NewTypeAnnotation(
+						sema.VoidType,
+					),
+					Purity: sema.FunctionPurityView,
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					sema.VoidType,
-				),
-				Purity: sema.FunctionPurityView,
-			},
-			``,
-			func(invocation interpreter.Invocation) interpreter.Value {
-				message := invocation.Arguments[0].MeteredString(
-					invocation.Interpreter,
-					interpreter.SeenReferences{},
-					invocation.LocationRange,
-				)
-				logs = append(logs, message)
-				return interpreter.Void
-			},
-		)
+				``,
+				func(invocation interpreter.Invocation) interpreter.Value {
+					message := invocation.Arguments[0].MeteredString(
+						invocation.Interpreter,
+						interpreter.SeenReferences{},
+						invocation.LocationRange,
+					)
+					logs = append(logs, message)
+					return interpreter.Void
+				},
+			)
 
-		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseValueActivation.DeclareValue(logFunction)
+			baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+			baseValueActivation.DeclareValue(logFunction)
 
-		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-		interpreter.Declare(baseActivation, logFunction)
+			baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+			interpreter.Declare(baseActivation, logFunction)
 
-		code := `
+			code := `
             struct interface Foo {
                 fun test() {
                     pre {
@@ -1172,36 +1174,60 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
             }
         `
 
-		inter, err := parseCheckAndInterpretWithOptions(
-			t,
-			code,
-			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
-					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
-						return baseActivation
+			inter, err := parseCheckAndInterpretWithOptions(
+				t,
+				code,
+				ParseCheckAndInterpretOptions{
+					Config: &interpreter.Config{
+						BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+							return baseActivation
+						},
+						FunctionConditionsDeduplicationEnabled: conditionsDeduplicationEnabled,
 					},
-				},
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
+					HandleCheckerError: nil,
 				},
-				HandleCheckerError: nil,
-			},
-		)
-		require.NoError(t, err)
+			)
+			require.NoError(t, err)
 
-		_, err = inter.Invoke("main")
-		require.NoError(t, err)
+			_, err = inter.Invoke("main")
+			require.NoError(t, err)
+			return logs
+		}
 
-		require.Equal(
-			t,
-			[]string{
-				"\"invoked Foo.test() pre-condition\"",
-				"\"invoked Foo.test()\"",
-				"\"invoked Foo.test() post-condition\"",
-			}, logs,
-		)
+		t.Run("enabled", func(t *testing.T) {
+			t.Parallel()
+
+			logs := testWithConditionsDeduplication(true)
+			require.Equal(
+				t,
+				[]string{
+					"\"invoked Foo.test() pre-condition\"",
+					"\"invoked Foo.test()\"",
+					"\"invoked Foo.test() post-condition\"",
+				}, logs,
+			)
+		})
+
+		t.Run("disabled", func(t *testing.T) {
+			t.Parallel()
+
+			logs := testWithConditionsDeduplication(false)
+			require.Equal(
+				t,
+				[]string{
+					"\"invoked Foo.test() pre-condition\"",
+					"\"invoked Foo.test() pre-condition\"",
+					"\"invoked Foo.test()\"",
+					"\"invoked Foo.test() post-condition\"",
+					"\"invoked Foo.test() post-condition\"",
+				}, logs,
+			)
+		})
 	})
 }
 

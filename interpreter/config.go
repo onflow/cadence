@@ -80,4 +80,7 @@ type Config struct {
 	ExportFixesEnabled bool
 	// FunctionScopingFixEnabled specifies whether to enable the function scoping fix
 	FunctionScopingFixEnabled bool
+	// FunctionConditionsDeduplicationEnabled determines whether to skip running function conditions explicitly
+	// if they are already included as part of the inherited default function.
+	FunctionConditionsDeduplicationEnabled bool
 }
