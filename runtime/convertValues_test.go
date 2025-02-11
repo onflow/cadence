@@ -1902,6 +1902,59 @@ func TestRuntimeExportReferenceValue(t *testing.T) {
 		assert.Equal(t, expected, actual)
 	})
 
+	t.Run("ephemeral, invalidated", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            access(all) resource R {}
+
+            access(all) struct S {
+                access(all) let ref: &R
+
+				init(ref: &R) {
+                    self.ref = ref
+                }
+            }
+
+            access(all) fun main(): S {
+                let r <- create R()
+                let s = S(ref: &r as &R)
+                destroy r
+                return s
+            }
+        `
+
+		actual := exportValueFromScript(t, script)
+
+		expected := cadence.NewStruct([]cadence.Value{nil}).
+			WithType(cadence.NewStructType(
+				common.ScriptLocation{},
+				"S",
+				[]cadence.Field{
+					{
+						Type: cadence.NewReferenceType(
+							cadence.UnauthorizedAccess,
+							cadence.NewResourceType(
+								common.ScriptLocation{},
+								"R",
+								[]cadence.Field{
+									{
+										Identifier: sema.ResourceUUIDFieldName,
+										Type:       cadence.UInt64Type,
+									},
+								},
+								nil,
+							),
+						),
+						Identifier: "ref",
+					},
+				},
+				nil,
+			))
+		assert.Equal(t, expected, actual)
+	})
+
 	t.Run("storage", func(t *testing.T) {
 
 		t.Parallel()
