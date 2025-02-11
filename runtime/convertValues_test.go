@@ -1906,53 +1906,89 @@ func TestRuntimeExportReferenceValue(t *testing.T) {
 
 		t.Parallel()
 
-		script := `
-            access(all) resource R {}
+		test := func(t *testing.T, fixesEnabled bool) (cadence.Value, error) {
+			rt := NewTestInterpreterRuntime()
 
-            access(all) struct S {
-                access(all) let ref: &R
+			script := `
+                access(all) resource R {}
 
-				init(ref: &R) {
-                    self.ref = ref
+                access(all) struct S {
+                    access(all) let ref: &R
+
+		    		init(ref: &R) {
+                        self.ref = ref
+                    }
                 }
-            }
 
-            access(all) fun main(): S {
-                let r <- create R()
-                let s = S(ref: &r as &R)
-                destroy r
-                return s
-            }
-        `
+                access(all) fun main(): S {
+                    let r <- create R()
+                    let s = S(ref: &r as &R)
+                    destroy r
+                    return s
+                }
+            `
 
-		actual := exportValueFromScript(t, script)
-
-		expected := cadence.NewStruct([]cadence.Value{nil}).
-			WithType(cadence.NewStructType(
-				common.ScriptLocation{},
-				"S",
-				[]cadence.Field{
-					{
-						Type: cadence.NewReferenceType(
-							cadence.UnauthorizedAccess,
-							cadence.NewResourceType(
-								common.ScriptLocation{},
-								"R",
-								[]cadence.Field{
-									{
-										Identifier: sema.ResourceUUIDFieldName,
-										Type:       cadence.UInt64Type,
-									},
-								},
-								nil,
-							),
-						),
-						Identifier: "ref",
-					},
+			return rt.ExecuteScript(
+				Script{
+					Source: []byte(script),
 				},
-				nil,
-			))
-		assert.Equal(t, expected, actual)
+				Context{
+					Interface: &TestRuntimeInterface{
+						OnMinimumRequiredVersion: func() (string, error) {
+							if fixesEnabled {
+								return FixesEnabledVersion, nil
+							} else {
+								return "v0.0.0", nil
+							}
+						},
+					},
+					Location: common.ScriptLocation{},
+				},
+			)
+		}
+
+		t.Run("fixes enabled", func(t *testing.T) {
+
+			t.Parallel()
+
+			actual, err := test(t, true)
+			require.NoError(t, err)
+
+			expected := cadence.NewStruct([]cadence.Value{nil}).
+				WithType(cadence.NewStructType(
+					common.ScriptLocation{},
+					"S",
+					[]cadence.Field{
+						{
+							Type: cadence.NewReferenceType(
+								cadence.UnauthorizedAccess,
+								cadence.NewResourceType(
+									common.ScriptLocation{},
+									"R",
+									[]cadence.Field{
+										{
+											Identifier: sema.ResourceUUIDFieldName,
+											Type:       cadence.UInt64Type,
+										},
+									},
+									nil,
+								),
+							),
+							Identifier: "ref",
+						},
+					},
+					nil,
+				),
+				)
+			assert.Equal(t, expected, actual)
+		})
+
+		t.Run("fixes disabled", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := test(t, false)
+			require.ErrorContains(t, err, "nil pointer dereference")
+		})
 	})
 
 	t.Run("storage", func(t *testing.T) {
@@ -5717,11 +5753,29 @@ func TestRuntimeImportResolvedLocation(t *testing.T) {
 func TestExportNil(t *testing.T) {
 	t.Parallel()
 
-	actual, err := ExportValue(
-		nil,
-		NewTestInterpreter(t),
-		interpreter.EmptyLocationRange,
-	)
-	require.NoError(t, err)
-	assert.Nil(t, actual)
+	test := func(t *testing.T, fixesEnabled bool) (cadence.Value, error) {
+		inter := NewTestInterpreter(t)
+		inter.SharedState.Config.ExportFixesEnabled = fixesEnabled
+		return ExportValue(
+			nil,
+			inter,
+			interpreter.EmptyLocationRange,
+		)
+	}
+
+	t.Run("fixes enabled", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err := test(t, true)
+		require.NoError(t, err)
+		assert.Nil(t, actual)
+	})
+
+	t.Run("fixes disabled", func(t *testing.T) {
+		t.Parallel()
+
+		require.Panics(t, func() {
+			_, _ = test(t, false)
+		})
+	})
 }

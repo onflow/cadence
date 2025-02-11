@@ -237,7 +237,10 @@ func exportValueWithInterpreter(
 	case *interpreter.PathCapabilityValue: //nolint:staticcheck
 		return exportPathCapabilityValue(v, inter)
 	case *interpreter.EphemeralReferenceValue:
-		if v.Value == nil {
+		config := inter.SharedState.Config
+		if config.ExportFixesEnabled &&
+			v.Value == nil {
+
 			return nil, nil
 		}
 
@@ -276,11 +279,13 @@ func exportValueWithInterpreter(
 	case interpreter.FunctionValue:
 		return exportFunctionValue(v, inter), nil
 	case nil:
-		return nil, nil
-	default:
-		return nil, &ValueNotExportableError{
-			Type: v.StaticType(inter),
+		config := inter.SharedState.Config
+		if config.ExportFixesEnabled {
+			return nil, nil
 		}
+	}
+	return nil, &ValueNotExportableError{
+		Type: value.StaticType(inter),
 	}
 }
 

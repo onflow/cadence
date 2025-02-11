@@ -76,4 +76,6 @@ type Config struct {
 	ValidateAccountCapabilitiesGetHandler ValidateAccountCapabilitiesGetHandlerFunc
 	// ValidateAccountCapabilitiesPublishHandler is used to handle when a capability of an account is got.
 	ValidateAccountCapabilitiesPublishHandler ValidateAccountCapabilitiesPublishHandlerFunc
+	// ExportFixesEnabled specifies whether to export fixes are enabled
+	ExportFixesEnabled bool
 }
