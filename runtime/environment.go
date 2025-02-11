@@ -1445,4 +1445,5 @@ func (e *interpreterEnvironment) configureVersionedFeatures() {
 
 	fixesEnabled := semver.Compare(minimumRequiredVersion, FixesEnabledVersion) >= 0
 	e.InterpreterConfig.ExportFixesEnabled = fixesEnabled
+	e.InterpreterConfig.FunctionScopingFixEnabled = fixesEnabled
 }

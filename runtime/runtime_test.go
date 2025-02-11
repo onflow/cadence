@@ -12278,3 +12278,117 @@ func TestRuntimeSomeValueChildContainerMutation(t *testing.T) {
 		assert.Equal(t, []string{"5.00000000", "10.00000000"}, logs)
 	})
 }
+
+func TestRuntimeClosureScopingFunctionExpression(t *testing.T) {
+	t.Parallel()
+
+	test := func(t *testing.T, fixEnabled bool) (cadence.Value, error) {
+
+		rt := NewTestInterpreterRuntime()
+
+		script := `
+            access(all) fun main(a: Int): Int {
+                let bar = fun(): Int {
+                    return a
+                }
+                let a = 2
+                return bar()
+            }
+        `
+
+		return rt.ExecuteScript(
+			Script{
+				Source:    []byte(script),
+				Arguments: encodeArgs([]cadence.Value{cadence.NewInt(1)}),
+			},
+			Context{
+				Interface: &TestRuntimeInterface{
+					OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+						return json.Decode(nil, b)
+					},
+					OnMinimumRequiredVersion: func() (string, error) {
+						if fixEnabled {
+							return FixesEnabledVersion, nil
+						} else {
+							return "v0.0.0", nil
+						}
+					},
+				},
+				Location: common.ScriptLocation{},
+			},
+		)
+	}
+
+	t.Run("fix enabled", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err := test(t, true)
+		require.NoError(t, err)
+		require.Equal(t, cadence.NewInt(1), actual)
+	})
+
+	t.Run("fix disabled", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err := test(t, false)
+		require.NoError(t, err)
+		require.Equal(t, cadence.NewInt(2), actual)
+	})
+}
+
+func TestRuntimeClosureScopingInnerFunction(t *testing.T) {
+	t.Parallel()
+
+	test := func(t *testing.T, fixEnabled bool) (cadence.Value, error) {
+
+		rt := NewTestInterpreterRuntime()
+
+		script := `
+            access(all) fun main(a: Int): Int {
+				fun bar(): Int {
+                    return a
+                }
+                let a = 2
+                return bar()
+            }
+        `
+
+		return rt.ExecuteScript(
+			Script{
+				Source:    []byte(script),
+				Arguments: encodeArgs([]cadence.Value{cadence.NewInt(1)}),
+			},
+			Context{
+				Interface: &TestRuntimeInterface{
+					OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+						return json.Decode(nil, b)
+					},
+					OnMinimumRequiredVersion: func() (string, error) {
+						if fixEnabled {
+							return FixesEnabledVersion, nil
+						} else {
+							return "v0.0.0", nil
+						}
+					},
+				},
+				Location: common.ScriptLocation{},
+			},
+		)
+	}
+
+	t.Run("fix enabled", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err := test(t, true)
+		require.NoError(t, err)
+		require.Equal(t, cadence.NewInt(1), actual)
+	})
+
+	t.Run("fix disabled", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err := test(t, false)
+		require.NoError(t, err)
+		require.Equal(t, cadence.NewInt(2), actual)
+	})
+}

@@ -1337,7 +1337,12 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 	// As variable declarations mutate the current activation in place,
 	// push a new activation, so that the mutations are not performed
 	// on the captured activation.
-	interpreter.activations.PushNewWithCurrent()
+
+	config := interpreter.SharedState.Config
+
+	if config.FunctionScopingFixEnabled {
+		interpreter.activations.PushNewWithCurrent()
+	}
 
 	functionType := interpreter.Program.Elaboration.FunctionExpressionFunctionType(expression)
 

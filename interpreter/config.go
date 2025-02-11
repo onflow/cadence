@@ -78,4 +78,6 @@ type Config struct {
 	ValidateAccountCapabilitiesPublishHandler ValidateAccountCapabilitiesPublishHandlerFunc
 	// ExportFixesEnabled specifies whether to export fixes are enabled
 	ExportFixesEnabled bool
+	// FunctionScopingFixEnabled specifies whether to enable the function scoping fix
+	FunctionScopingFixEnabled bool
 }

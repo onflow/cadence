@@ -718,7 +718,10 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 	// lexical scope: variables in functions are bound to what is visible at declaration time
 	lexicalScope := interpreter.activations.CurrentOrNew()
 
-	if isStatement {
+	config := interpreter.SharedState.Config
+
+	if isStatement && config.FunctionScopingFixEnabled {
+
 		// This function declaration is an inner function.
 		//
 		// Variables which are declared after this function declaration
