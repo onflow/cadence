@@ -1111,7 +1111,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		t.Parallel()
 
-		testWithConditionsDeduplication := func(conditionsDeduplicationEnabled bool) []string {
+		testWithConditionsDeduplication := func(t *testing.T, conditionsDeduplicationEnabled bool) []string {
 
 			var logs []string
 
@@ -1164,7 +1164,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
             struct Test: Foo {
             }
 
-            access(all) view fun printMessage(_ msg: String): Bool {
+            view fun printMessage(_ msg: String): Bool {
                 log(msg)
                 return true
             }
@@ -1202,13 +1202,13 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		t.Run("enabled", func(t *testing.T) {
 			t.Parallel()
 
-			logs := testWithConditionsDeduplication(true)
+			logs := testWithConditionsDeduplication(t, true)
 			require.Equal(
 				t,
 				[]string{
-					"\"invoked Foo.test() pre-condition\"",
-					"\"invoked Foo.test()\"",
-					"\"invoked Foo.test() post-condition\"",
+					`"invoked Foo.test() pre-condition"`,
+					`"invoked Foo.test()"`,
+					`"invoked Foo.test() post-condition"`,
 				}, logs,
 			)
 		})
@@ -1216,15 +1216,15 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		t.Run("disabled", func(t *testing.T) {
 			t.Parallel()
 
-			logs := testWithConditionsDeduplication(false)
+			logs := testWithConditionsDeduplication(t, false)
 			require.Equal(
 				t,
 				[]string{
-					"\"invoked Foo.test() pre-condition\"",
-					"\"invoked Foo.test() pre-condition\"",
-					"\"invoked Foo.test()\"",
-					"\"invoked Foo.test() post-condition\"",
-					"\"invoked Foo.test() post-condition\"",
+					`"invoked Foo.test() pre-condition"`,
+					`"invoked Foo.test() pre-condition"`,
+					`"invoked Foo.test()"`,
+					`"invoked Foo.test() post-condition"`,
+					`"invoked Foo.test() post-condition"`,
 				}, logs,
 			)
 		})

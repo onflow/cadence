@@ -39,7 +39,4 @@ type Config struct {
 	LegacyContractUpgradeEnabled bool
 	// StorageFormatV2Enabled specifies whether storage format V2 is enabled
 	StorageFormatV2Enabled bool
-	// FunctionConditionsDeduplicationEnabled determines whether to skip running function conditions explicitly
-	// if they are already included as part of the inherited default function.
-	FunctionConditionsDeduplicationEnabled bool
 }

@@ -12392,3 +12392,93 @@ func TestRuntimeClosureScopingInnerFunction(t *testing.T) {
 		require.Equal(t, cadence.NewInt(2), actual)
 	})
 }
+
+func TestRuntimeInterfaceConditionDeduplication(t *testing.T) {
+	t.Parallel()
+
+	testWithConditionsDeduplication := func(t *testing.T, conditionsDeduplicationEnabled bool) []string {
+
+		script := `
+				access(all) event Log(message: String)
+
+                access(all) struct interface Foo {
+
+                    access(all) fun test() {
+                        pre {
+                             emit Log(message: "invoked Foo.test() pre-condition")
+                        }
+                        post {
+                             emit Log(message: "invoked Foo.test() post-condition")
+                        }
+                        emit Log(message: "invoked Foo.test()")
+                    }
+                }
+
+                access(all) struct Test: Foo {
+                }
+
+                access(all) fun main() {
+                   Test().test()
+                }
+            `
+
+		rt := NewTestInterpreterRuntime()
+
+		var events []string
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: &TestRuntimeInterface{
+					OnMinimumRequiredVersion: func() (string, error) {
+						if conditionsDeduplicationEnabled {
+							return FixesEnabledVersion, nil
+						} else {
+							return "v0.0.0", nil
+						}
+					},
+					OnEmitEvent: func(event cadence.Event) error {
+						events = append(events, event.FieldsMappedByName()["message"].String())
+						return nil
+					},
+				},
+				Location: common.ScriptLocation{},
+			},
+		)
+		require.NoError(t, err)
+
+		return events
+	}
+
+	t.Run("enabled", func(t *testing.T) {
+		t.Parallel()
+
+		logs := testWithConditionsDeduplication(t, true)
+		require.Equal(
+			t,
+			[]string{
+				`"invoked Foo.test() pre-condition"`,
+				`"invoked Foo.test()"`,
+				`"invoked Foo.test() post-condition"`,
+			}, logs,
+		)
+	})
+
+	t.Run("disabled", func(t *testing.T) {
+		t.Parallel()
+
+		logs := testWithConditionsDeduplication(t, false)
+		require.Equal(
+			t,
+			[]string{
+				`"invoked Foo.test() pre-condition"`,
+				`"invoked Foo.test() pre-condition"`,
+				`"invoked Foo.test()"`,
+				`"invoked Foo.test() post-condition"`,
+				`"invoked Foo.test() post-condition"`,
+			}, logs,
+		)
+	})
+}

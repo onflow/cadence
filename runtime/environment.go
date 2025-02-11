@@ -199,7 +199,6 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		LegacyContractUpgradeEnabled:              e.config.LegacyContractUpgradeEnabled,
 		ValidateAccountCapabilitiesGetHandler:     e.newValidateAccountCapabilitiesGetHandler(),
 		ValidateAccountCapabilitiesPublishHandler: e.newValidateAccountCapabilitiesPublishHandler(),
-		FunctionConditionsDeduplicationEnabled:    e.config.FunctionConditionsDeduplicationEnabled,
 	}
 }
 
@@ -1447,4 +1446,5 @@ func (e *interpreterEnvironment) configureVersionedFeatures() {
 	fixesEnabled := semver.Compare(minimumRequiredVersion, FixesEnabledVersion) >= 0
 	e.InterpreterConfig.ExportFixesEnabled = fixesEnabled
 	e.InterpreterConfig.FunctionScopingFixEnabled = fixesEnabled
+	e.InterpreterConfig.FunctionConditionsDeduplicationEnabled = fixesEnabled
 }
