@@ -275,6 +275,8 @@ func exportValueWithInterpreter(
 		)
 	case interpreter.FunctionValue:
 		return exportFunctionValue(v, inter), nil
+	case nil:
+		return nil, nil
 	default:
 		return nil, &ValueNotExportableError{
 			Type: v.StaticType(inter),

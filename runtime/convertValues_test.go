@@ -5713,3 +5713,15 @@ func TestRuntimeImportResolvedLocation(t *testing.T) {
 		actual,
 	)
 }
+
+func TestExportNil(t *testing.T) {
+	t.Parallel()
+
+	actual, err := ExportValue(
+		nil,
+		NewTestInterpreter(t),
+		interpreter.EmptyLocationRange,
+	)
+	require.NoError(t, err)
+	assert.Nil(t, actual)
+}
