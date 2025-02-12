@@ -12282,203 +12282,124 @@ func TestRuntimeSomeValueChildContainerMutation(t *testing.T) {
 func TestRuntimeClosureScopingFunctionExpression(t *testing.T) {
 	t.Parallel()
 
-	test := func(t *testing.T, fixEnabled bool) (cadence.Value, error) {
+	rt := NewTestInterpreterRuntime()
 
-		rt := NewTestInterpreterRuntime()
-
-		script := `
-            access(all) fun main(a: Int): Int {
-                let bar = fun(): Int {
-                    return a
-                }
-                let a = 2
-                return bar()
+	script := `
+        access(all) fun main(a: Int): Int {
+            let bar = fun(): Int {
+                return a
             }
-        `
+            let a = 2
+            return bar()
+        }
+    `
 
-		return rt.ExecuteScript(
-			Script{
-				Source:    []byte(script),
-				Arguments: encodeArgs([]cadence.Value{cadence.NewInt(1)}),
-			},
-			Context{
-				Interface: &TestRuntimeInterface{
-					OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
-						return json.Decode(nil, b)
-					},
-					OnMinimumRequiredVersion: func() (string, error) {
-						if fixEnabled {
-							return FixesEnabledVersion, nil
-						} else {
-							return "v0.0.0", nil
-						}
-					},
+	actual, err := rt.ExecuteScript(
+		Script{
+			Source:    []byte(script),
+			Arguments: encodeArgs([]cadence.Value{cadence.NewInt(1)}),
+		},
+		Context{
+			Interface: &TestRuntimeInterface{
+				OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+					return json.Decode(nil, b)
 				},
-				Location: common.ScriptLocation{},
 			},
-		)
-	}
+			Location: common.ScriptLocation{},
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, cadence.NewInt(1), actual)
 
-	t.Run("fix enabled", func(t *testing.T) {
-		t.Parallel()
-
-		actual, err := test(t, true)
-		require.NoError(t, err)
-		require.Equal(t, cadence.NewInt(1), actual)
-	})
-
-	t.Run("fix disabled", func(t *testing.T) {
-		t.Parallel()
-
-		actual, err := test(t, false)
-		require.NoError(t, err)
-		require.Equal(t, cadence.NewInt(2), actual)
-	})
 }
 
 func TestRuntimeClosureScopingInnerFunction(t *testing.T) {
 	t.Parallel()
 
-	test := func(t *testing.T, fixEnabled bool) (cadence.Value, error) {
+	rt := NewTestInterpreterRuntime()
 
-		rt := NewTestInterpreterRuntime()
-
-		script := `
-            access(all) fun main(a: Int): Int {
-				fun bar(): Int {
-                    return a
-                }
-                let a = 2
-                return bar()
+	script := `
+        access(all) fun main(a: Int): Int {
+			fun bar(): Int {
+                return a
             }
-        `
+            let a = 2
+            return bar()
+        }
+    `
 
-		return rt.ExecuteScript(
-			Script{
-				Source:    []byte(script),
-				Arguments: encodeArgs([]cadence.Value{cadence.NewInt(1)}),
-			},
-			Context{
-				Interface: &TestRuntimeInterface{
-					OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
-						return json.Decode(nil, b)
-					},
-					OnMinimumRequiredVersion: func() (string, error) {
-						if fixEnabled {
-							return FixesEnabledVersion, nil
-						} else {
-							return "v0.0.0", nil
-						}
-					},
+	actual, err := rt.ExecuteScript(
+		Script{
+			Source:    []byte(script),
+			Arguments: encodeArgs([]cadence.Value{cadence.NewInt(1)}),
+		},
+		Context{
+			Interface: &TestRuntimeInterface{
+				OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+					return json.Decode(nil, b)
 				},
-				Location: common.ScriptLocation{},
 			},
-		)
-	}
-
-	t.Run("fix enabled", func(t *testing.T) {
-		t.Parallel()
-
-		actual, err := test(t, true)
-		require.NoError(t, err)
-		require.Equal(t, cadence.NewInt(1), actual)
-	})
-
-	t.Run("fix disabled", func(t *testing.T) {
-		t.Parallel()
-
-		actual, err := test(t, false)
-		require.NoError(t, err)
-		require.Equal(t, cadence.NewInt(2), actual)
-	})
+			Location: common.ScriptLocation{},
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, cadence.NewInt(1), actual)
 }
 
 func TestRuntimeInterfaceConditionDeduplication(t *testing.T) {
 	t.Parallel()
 
-	testWithConditionsDeduplication := func(t *testing.T, conditionsDeduplicationEnabled bool) []string {
+	script := `
+		access(all) event Log(message: String)
 
-		script := `
-				access(all) event Log(message: String)
+        access(all) struct interface Foo {
 
-                access(all) struct interface Foo {
-
-                    access(all) fun test() {
-                        pre {
-                             emit Log(message: "invoked Foo.test() pre-condition")
-                        }
-                        post {
-                             emit Log(message: "invoked Foo.test() post-condition")
-                        }
-                        emit Log(message: "invoked Foo.test()")
-                    }
+            access(all) fun test() {
+                pre {
+                     emit Log(message: "invoked Foo.test() pre-condition")
                 }
-
-                access(all) struct Test: Foo {
+                post {
+                     emit Log(message: "invoked Foo.test() post-condition")
                 }
+                emit Log(message: "invoked Foo.test()")
+            }
+        }
 
-                access(all) fun main() {
-                   Test().test()
-                }
-            `
+        access(all) struct Test: Foo {
+        }
 
-		rt := NewTestInterpreterRuntime()
+        access(all) fun main() {
+           Test().test()
+        }
+    `
 
-		var events []string
+	rt := NewTestInterpreterRuntime()
 
-		_, err := rt.ExecuteScript(
-			Script{
-				Source: []byte(script),
-			},
-			Context{
-				Interface: &TestRuntimeInterface{
-					OnMinimumRequiredVersion: func() (string, error) {
-						if conditionsDeduplicationEnabled {
-							return FixesEnabledVersion, nil
-						} else {
-							return "v0.0.0", nil
-						}
-					},
-					OnEmitEvent: func(event cadence.Event) error {
-						events = append(events, event.FieldsMappedByName()["message"].String())
-						return nil
-					},
+	var events []string
+
+	_, err := rt.ExecuteScript(
+		Script{
+			Source: []byte(script),
+		},
+		Context{
+			Interface: &TestRuntimeInterface{
+				OnEmitEvent: func(event cadence.Event) error {
+					events = append(events, event.FieldsMappedByName()["message"].String())
+					return nil
 				},
-				Location: common.ScriptLocation{},
 			},
-		)
-		require.NoError(t, err)
+			Location: common.ScriptLocation{},
+		},
+	)
+	require.NoError(t, err)
 
-		return events
-	}
-
-	t.Run("enabled", func(t *testing.T) {
-		t.Parallel()
-
-		logs := testWithConditionsDeduplication(t, true)
-		require.Equal(
-			t,
-			[]string{
-				`"invoked Foo.test() pre-condition"`,
-				`"invoked Foo.test()"`,
-				`"invoked Foo.test() post-condition"`,
-			}, logs,
-		)
-	})
-
-	t.Run("disabled", func(t *testing.T) {
-		t.Parallel()
-
-		logs := testWithConditionsDeduplication(t, false)
-		require.Equal(
-			t,
-			[]string{
-				`"invoked Foo.test() pre-condition"`,
-				`"invoked Foo.test() pre-condition"`,
-				`"invoked Foo.test()"`,
-				`"invoked Foo.test() post-condition"`,
-				`"invoked Foo.test() post-condition"`,
-			}, logs,
-		)
-	})
+	require.Equal(
+		t,
+		[]string{
+			`"invoked Foo.test() pre-condition"`,
+			`"invoked Foo.test()"`,
+			`"invoked Foo.test() post-condition"`,
+		},
+		events,
+	)
 }

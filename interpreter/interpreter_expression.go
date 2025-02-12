@@ -1338,11 +1338,7 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 	// push a new activation, so that the mutations are not performed
 	// on the captured activation.
 
-	config := interpreter.SharedState.Config
-
-	if config.FunctionScopingFixEnabled {
-		interpreter.activations.PushNewWithCurrent()
-	}
+	interpreter.activations.PushNewWithCurrent()
 
 	functionType := interpreter.Program.Elaboration.FunctionExpressionFunctionType(expression)
 

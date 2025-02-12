@@ -718,9 +718,7 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 	// lexical scope: variables in functions are bound to what is visible at declaration time
 	lexicalScope := interpreter.activations.CurrentOrNew()
 
-	config := interpreter.SharedState.Config
-
-	if isStatement && config.FunctionScopingFixEnabled {
+	if isStatement {
 
 		// This function declaration is an inner function.
 		//
@@ -1352,7 +1350,7 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 			// This works because:
 			// 	- `code.Functions` only contains default implementations.
 			//	- There is always only one default implementation (cannot override by other interfaces).
-			if config.FunctionConditionsDeduplicationEnabled && code.Functions.Contains(name) {
+			if code.Functions.Contains(name) {
 				continue
 			}
 
@@ -2496,10 +2494,8 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 	lexicalScope *VariableActivation,
 ) FunctionWrapper {
 
-	config := interpreter.SharedState.Config
-
 	if declaration.FunctionBlock == nil ||
-		(config.FunctionConditionsDeduplicationEnabled && declaration.FunctionBlock.HasStatements()) {
+		declaration.FunctionBlock.HasStatements() {
 		// If there's a default implementation (i.e: has statements),
 		// then skip explicitly/separately running the conditions of that functions.
 		// Because the conditions also get executed when the default implementation is executed.

@@ -6867,99 +6867,53 @@ func TestInterpretClosure(t *testing.T) {
 func TestInterpretClosureScopingFunctionExpression(t *testing.T) {
 	t.Parallel()
 
-	test := func(t *testing.T, fixEnabled bool, expected interpreter.Value) {
-
-		inter := parseCheckAndInterpret(t, `
-            fun test(a: Int): Int {
-                let bar = fun(): Int {
-                    return a
-                }
-                let a = 2
-                return bar()
+	inter := parseCheckAndInterpret(t, `
+        fun test(a: Int): Int {
+            let bar = fun(): Int {
+                return a
             }
-        `)
+            let a = 2
+            return bar()
+        }
+    `)
 
-		inter.SharedState.Config.FunctionScopingFixEnabled = fixEnabled
+	actual, err := inter.Invoke("test",
+		interpreter.NewUnmeteredIntValueFromInt64(1),
+	)
+	require.NoError(t, err)
 
-		actual, err := inter.Invoke("test",
-			interpreter.NewUnmeteredIntValueFromInt64(1),
-		)
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			expected,
-			actual,
-		)
-	}
-
-	t.Run("fix enabled", func(t *testing.T) {
-		t.Parallel()
-
-		test(t,
-			true,
-			interpreter.NewUnmeteredIntValueFromInt64(1),
-		)
-	})
-
-	t.Run("fix disabled", func(t *testing.T) {
-		t.Parallel()
-
-		test(t,
-			false,
-			interpreter.NewUnmeteredIntValueFromInt64(2),
-		)
-	})
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(1),
+		actual,
+	)
 }
 
 func TestInterpretClosureScopingInnerFunction(t *testing.T) {
 	t.Parallel()
 
-	test := func(t *testing.T, fixEnabled bool, expected interpreter.Value) {
-
-		inter := parseCheckAndInterpret(t, `
-            fun test(a: Int): Int {
-                fun bar(): Int {
-                    return a
-                }
-                let a = 2
-                return bar()
+	inter := parseCheckAndInterpret(t, `
+        fun test(a: Int): Int {
+            fun bar(): Int {
+                return a
             }
-        `)
+            let a = 2
+            return bar()
+        }
+    `)
 
-		inter.SharedState.Config.FunctionScopingFixEnabled = fixEnabled
+	value, err := inter.Invoke("test",
+		interpreter.NewUnmeteredIntValueFromInt64(1),
+	)
+	require.NoError(t, err)
 
-		value, err := inter.Invoke("test",
-			interpreter.NewUnmeteredIntValueFromInt64(1),
-		)
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			expected,
-			value,
-		)
-	}
-
-	t.Run("fix enabled", func(t *testing.T) {
-		t.Parallel()
-
-		test(t,
-			true,
-			interpreter.NewUnmeteredIntValueFromInt64(1),
-		)
-	})
-
-	t.Run("fix disabled", func(t *testing.T) {
-		t.Parallel()
-
-		test(t,
-			false,
-			interpreter.NewUnmeteredIntValueFromInt64(2),
-		)
-	})
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(1),
+		value,
+	)
 }
 
 func TestInterpretAssignmentAfterClosureFunctionExpression(t *testing.T) {
