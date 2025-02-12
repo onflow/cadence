@@ -575,6 +575,18 @@ func (c *Compiler[_]) VisitContinueStatement(_ *ast.ContinueStatement) (_ struct
 }
 
 func (c *Compiler[_]) VisitIfStatement(statement *ast.IfStatement) (_ struct{}) {
+
+	// If statements can be coming from inherited conditions.
+	// If so, use the corresponding elaboration.
+	stmtElaboration, ok := c.ExtendedElaboration.conditionsElaborations[statement]
+	if ok {
+		prevElaboration := c.ExtendedElaboration
+		c.ExtendedElaboration = stmtElaboration
+		defer func() {
+			c.ExtendedElaboration = prevElaboration
+		}()
+	}
+
 	// TODO: scope
 	var elseJump int
 	switch test := statement.Test.(type) {
@@ -679,6 +691,17 @@ func (c *Compiler[_]) VisitSwitchStatement(statement *ast.SwitchStatement) (_ st
 }
 
 func (c *Compiler[_]) VisitVariableDeclaration(declaration *ast.VariableDeclaration) (_ struct{}) {
+	// Some variable declarations can be coming from inherited before-statements.
+	// If so, use the corresponding elaboration.
+	stmtElaboration, ok := c.ExtendedElaboration.conditionsElaborations[declaration]
+	if ok {
+		prevElaboration := c.ExtendedElaboration
+		c.ExtendedElaboration = stmtElaboration
+		defer func() {
+			c.ExtendedElaboration = prevElaboration
+		}()
+	}
+
 	// TODO: second value
 
 	local := c.currentFunction.declareLocal(declaration.Identifier.Identifier)

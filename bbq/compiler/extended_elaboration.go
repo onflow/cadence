@@ -28,6 +28,10 @@ type ExtendedElaboration struct {
 	// since that would make it easy to mistakenly modify the original elaboration.
 	elaboration *sema.Elaboration
 
+	// Holds the elaborations associated with inherited pre-/post-conditions and
+	// before-statements of those post conditions.
+	conditionsElaborations map[ast.Statement]*ExtendedElaboration
+
 	interfaceMethodStaticCalls        map[*ast.InvocationExpression]struct{}
 	interfaceDeclarationTypes         map[*ast.InterfaceDeclaration]*sema.InterfaceType
 	compositeDeclarationTypes         map[ast.CompositeLikeDeclaration]*sema.CompositeType
@@ -43,7 +47,8 @@ type ExtendedElaboration struct {
 
 func NewExtendedElaboration(elaboration *sema.Elaboration) *ExtendedElaboration {
 	return &ExtendedElaboration{
-		elaboration: elaboration,
+		elaboration:            elaboration,
+		conditionsElaborations: map[ast.Statement]*ExtendedElaboration{},
 	}
 }
 
