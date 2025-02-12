@@ -1517,8 +1517,8 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 
 		require.Len(t, events, 2)
 		require.Equal(t, "A.ResourceDestroyed", events[0].QualifiedIdentifier)
-		require.Equal(t, interpreter.NewUnmeteredStringValue("foo"), events[0].GetField(inter, interpreter.EmptyLocationRange, "foo"))
-		require.Equal(t, interpreter.NewIntValueFromInt64(nil, 2), events[0].GetField(inter, interpreter.EmptyLocationRange, "bar"))
+		require.Equal(t, interpreter.NewUnmeteredStringValue("foo"), events[0].GetField(inter, "foo"))
+		require.Equal(t, interpreter.NewIntValueFromInt64(nil, 2), events[0].GetField(inter, "bar"))
 		require.Equal(t, "R.ResourceDestroyed", events[1].QualifiedIdentifier)
 	})
 }

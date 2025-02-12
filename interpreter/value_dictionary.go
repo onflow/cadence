@@ -445,7 +445,7 @@ func (v *DictionaryValue) Walk(interpreter *Interpreter, walkChild func(Value), 
 	)
 }
 
-func (v *DictionaryValue) StaticType(_ *Interpreter) StaticType {
+func (v *DictionaryValue) StaticType(_ ValueStaticTypeContext) StaticType {
 	// TODO meter
 	return v.Type
 }
@@ -597,13 +597,13 @@ func (v *DictionaryValue) ContainsKey(
 }
 
 func (v *DictionaryValue) Get(
-	interpreter *Interpreter,
+	context ValueComparisonContext,
 	locationRange LocationRange,
 	keyValue Value,
 ) (Value, bool) {
 
-	valueComparator := newValueComparator(interpreter, locationRange)
-	hashInputProvider := newHashInputProvider(interpreter, locationRange)
+	valueComparator := newValueComparator(context, locationRange)
+	hashInputProvider := newHashInputProvider(context, locationRange)
 
 	storedValue, err := v.dictionary.Get(
 		valueComparator,
@@ -618,7 +618,7 @@ func (v *DictionaryValue) Get(
 		panic(errors.NewExternalError(err))
 	}
 
-	return MustConvertStoredValue(interpreter, storedValue), true
+	return MustConvertStoredValue(context, storedValue), true
 }
 
 func (v *DictionaryValue) GetKey(interpreter *Interpreter, locationRange LocationRange, keyValue Value) Value {
@@ -650,7 +650,7 @@ func (v *DictionaryValue) SetKey(
 	var existingValue Value
 	switch value := value.(type) {
 	case *SomeValue:
-		innerValue := value.InnerValue(interpreter, locationRange)
+		innerValue := value.InnerValue()
 		existingValue = v.Insert(interpreter, locationRange, keyValue, innerValue)
 
 	case NilValue:
@@ -1218,7 +1218,7 @@ func (v *DictionaryValue) ConformsToStaticType(
 	}
 }
 
-func (v *DictionaryValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+func (v *DictionaryValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
 
 	otherDictionary, ok := other.(*DictionaryValue)
 	if !ok {
@@ -1251,17 +1251,17 @@ func (v *DictionaryValue) Equal(interpreter *Interpreter, locationRange Location
 		// leading to a different iteration order, as the storage ID is used in the seed
 		otherValue, otherValueExists :=
 			otherDictionary.Get(
-				interpreter,
+				context,
 				locationRange,
-				MustConvertStoredValue(interpreter, key),
+				MustConvertStoredValue(context, key),
 			)
 
 		if !otherValueExists {
 			return false
 		}
 
-		equatableValue, ok := MustConvertStoredValue(interpreter, value).(EquatableValue)
-		if !ok || !equatableValue.Equal(interpreter, locationRange, otherValue) {
+		equatableValue, ok := MustConvertStoredValue(context, value).(EquatableValue)
+		if !ok || !equatableValue.Equal(context, locationRange, otherValue) {
 			return false
 		}
 	}

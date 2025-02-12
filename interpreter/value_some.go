@@ -91,17 +91,17 @@ func (v *SomeValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange)
 	walkChild(v.value)
 }
 
-func (v *SomeValue) StaticType(inter *Interpreter) StaticType {
+func (v *SomeValue) StaticType(context ValueStaticTypeContext) StaticType {
 	if v.isDestroyed {
 		return nil
 	}
 
-	innerType := v.value.StaticType(inter)
+	innerType := v.value.StaticType(context)
 	if innerType == nil {
 		return nil
 	}
 	return NewOptionalStaticType(
-		inter,
+		context,
 		innerType,
 	)
 }
@@ -126,7 +126,7 @@ func (v *SomeValue) IsDestroyed() bool {
 }
 
 func (v *SomeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
-	innerValue := v.InnerValue(interpreter, locationRange)
+	innerValue := v.InnerValue()
 	maybeDestroy(interpreter, locationRange, innerValue)
 
 	v.isDestroyed = true
@@ -192,11 +192,11 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, _ LocationRange, name st
 	return nil
 }
 
-func (v *SomeValue) RemoveMember(interpreter *Interpreter, locationRange LocationRange, _ string) Value {
+func (v *SomeValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (v *SomeValue) SetMember(interpreter *Interpreter, locationRange LocationRange, _ string, _ Value) bool {
+func (v *SomeValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	panic(errors.NewUnreachableError())
 }
 
@@ -210,7 +210,7 @@ func (v *SomeValue) ConformsToStaticType(
 	// SomeValue.StaticType builds type from inner value (if available),
 	// so no need to check it
 
-	innerValue := v.InnerValue(interpreter, locationRange)
+	innerValue := v.InnerValue()
 
 	return innerValue.ConformsToStaticType(
 		interpreter,
@@ -219,20 +219,20 @@ func (v *SomeValue) ConformsToStaticType(
 	)
 }
 
-func (v *SomeValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+func (v *SomeValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
 	otherSome, ok := other.(*SomeValue)
 	if !ok {
 		return false
 	}
 
-	innerValue := v.InnerValue(interpreter, locationRange)
+	innerValue := v.InnerValue()
 
 	equatableValue, ok := innerValue.(EquatableValue)
 	if !ok {
 		return false
 	}
 
-	return equatableValue.Equal(interpreter, locationRange, otherSome.value)
+	return equatableValue.Equal(context, locationRange, otherSome.value)
 }
 
 func (v *SomeValue) Storable(
@@ -399,11 +399,11 @@ func (v *SomeValue) DeepRemove(interpreter *Interpreter, hasNoParentContainer bo
 	}
 }
 
-func (v *SomeValue) InnerValue(_ *Interpreter, _ LocationRange) Value {
+func (v *SomeValue) InnerValue() Value {
 	return v.value
 }
 
-func (v *SomeValue) isInvalidatedResource(interpreter *Interpreter) bool {
+func (v *SomeValue) isInvalidatedResource(_ *Interpreter) bool {
 	return v.value == nil || v.IsDestroyed()
 }
 

@@ -715,7 +715,7 @@ func (t *testEmulatorBackendType) newEventsFunction(
 			case interpreter.NilValue:
 				// Do nothing
 			case *interpreter.SomeValue:
-				innerValue := value.InnerValue(invocation.Interpreter, invocation.LocationRange)
+				innerValue := value.InnerValue()
 				typeValue, ok := innerValue.(interpreter.TypeValue)
 				if !ok {
 					panic(errors.NewUnreachableError())

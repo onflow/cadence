@@ -257,7 +257,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(
 					return typedTarget
 
 				case *SomeValue:
-					target = typedTarget.InnerValue(interpreter, locationRange)
+					target = typedTarget.InnerValue()
 
 				default:
 					panic(errors.NewUnreachableError())
@@ -641,7 +641,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 
 		// only evaluate right-hand side if left-hand side is nil
 		if some, ok := leftValue.(*SomeValue); ok {
-			return some.InnerValue(interpreter, locationRange)
+			return some.InnerValue()
 		}
 
 		value := rightValue()
@@ -662,21 +662,9 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 }
 
 func (interpreter *Interpreter) testEqual(left, right Value, expression *ast.BinaryExpression) BoolValue {
-	left = interpreter.Unbox(
-		LocationRange{
-			Location:    interpreter.Location,
-			HasPosition: expression.Left,
-		},
-		left,
-	)
+	left = interpreter.Unbox(left)
 
-	right = interpreter.Unbox(
-		LocationRange{
-			Location:    interpreter.Location,
-			HasPosition: expression.Right,
-		},
-		right,
-	)
+	right = interpreter.Unbox(right)
 
 	leftEquatable, ok := left.(EquatableValue)
 	if !ok {
@@ -789,7 +777,7 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 
 		if someValue, ok := value.(*SomeValue); ok {
 			isOptional = true
-			value = someValue.InnerValue(interpreter, locationRange)
+			value = someValue.InnerValue()
 		}
 
 		referenceValue, ok := value.(ReferenceValue)
@@ -1203,13 +1191,7 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 			return typedResult
 
 		case *SomeValue:
-			result = typedResult.InnerValue(
-				interpreter,
-				LocationRange{
-					Location:    interpreter.Location,
-					HasPosition: invocationExpression.InvokedExpression,
-				},
-			)
+			result = typedResult.InnerValue()
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -1377,7 +1359,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		unboxedExpectedType := sema.UnwrapOptionalType(expectedType)
 		if !(unboxedExpectedType == sema.AnyStructType || unboxedExpectedType == sema.AnyResourceType) {
 			// otherwise dynamic cast now always unboxes optionals
-			value = interpreter.Unbox(locationRange, value)
+			value = interpreter.Unbox(value)
 		}
 		valueSemaType := interpreter.SubstituteMappedEntitlements(interpreter.MustSemaTypeOfValue(value))
 		valueStaticType := ConvertSemaToStaticType(interpreter, valueSemaType)
@@ -1480,12 +1462,7 @@ func (interpreter *Interpreter) createReference(
 			// References to optionals are transformed into optional references,
 			// so move the *SomeValue out to the reference itself
 
-			locationRange := LocationRange{
-				Location:    interpreter.Location,
-				HasPosition: hasPosition,
-			}
-
-			innerValue := value.InnerValue(interpreter, locationRange)
+			innerValue := value.InnerValue()
 
 			referenceValue := interpreter.createReference(innerType, innerValue, hasPosition)
 
@@ -1508,11 +1485,7 @@ func (interpreter *Interpreter) createReference(
 	case *sema.ReferenceType:
 		// Case (3): target type is non-optional, actual value is optional.
 		if someValue, ok := value.(*SomeValue); ok {
-			locationRange := LocationRange{
-				Location:    interpreter.Location,
-				HasPosition: hasPosition,
-			}
-			innerValue := someValue.InnerValue(interpreter, locationRange)
+			innerValue := someValue.InnerValue()
 
 			return interpreter.createReference(typ, innerValue, hasPosition)
 		}
@@ -1553,11 +1526,7 @@ func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpres
 
 	switch result := result.(type) {
 	case *SomeValue:
-		locationRange := LocationRange{
-			Location:    interpreter.Location,
-			HasPosition: expression.Expression,
-		}
-		return result.InnerValue(interpreter, locationRange)
+		return result.InnerValue()
 
 	case NilValue:
 		panic(

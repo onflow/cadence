@@ -56,8 +56,8 @@ func (BoolValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (BoolValue) StaticType(interpreter *Interpreter) StaticType {
-	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeBool)
+func (BoolValue) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeBool)
 }
 
 func (BoolValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -71,7 +71,7 @@ func (v BoolValue) Negate(_ *Interpreter) BoolValue {
 	return TrueValue
 }
 
-func (v BoolValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v BoolValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherBool, ok := other.(BoolValue)
 	if !ok {
 		return false
@@ -79,7 +79,7 @@ func (v BoolValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 	return bool(v) == bool(otherBool)
 }
 
-func (v BoolValue) Less(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
+func (v BoolValue) Less(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -88,7 +88,7 @@ func (v BoolValue) Less(_ *Interpreter, other ComparableValue, _ LocationRange) 
 	return !v && o
 }
 
-func (v BoolValue) LessEqual(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
+func (v BoolValue) LessEqual(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -97,7 +97,7 @@ func (v BoolValue) LessEqual(_ *Interpreter, other ComparableValue, _ LocationRa
 	return !v || o
 }
 
-func (v BoolValue) Greater(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
+func (v BoolValue) Greater(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -106,7 +106,7 @@ func (v BoolValue) Greater(_ *Interpreter, other ComparableValue, _ LocationRang
 	return v && !o
 }
 
-func (v BoolValue) GreaterEqual(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
+func (v BoolValue) GreaterEqual(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -118,7 +118,7 @@ func (v BoolValue) GreaterEqual(_ *Interpreter, other ComparableValue, _ Locatio
 // HashInput returns a byte slice containing:
 // - HashInputTypeBool (1 byte)
 // - 1/0 (1 byte)
-func (v BoolValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v BoolValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeBool)
 	if v {
 		scratch[1] = 1
@@ -136,7 +136,7 @@ func (v BoolValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v BoolValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v BoolValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	if v {
 		common.UseMemory(interpreter, common.TrueStringMemoryUsage)
 	} else {

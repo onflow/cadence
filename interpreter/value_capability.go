@@ -108,9 +108,9 @@ func (v *IDCapabilityValue) Walk(_ *Interpreter, walkChild func(Value), _ Locati
 	walkChild(v.address)
 }
 
-func (v *IDCapabilityValue) StaticType(inter *Interpreter) StaticType {
+func (v *IDCapabilityValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewCapabilityStaticType(
-		inter,
+		context,
 		v.BorrowType,
 	)
 }
@@ -181,14 +181,14 @@ func (v *IDCapabilityValue) ConformsToStaticType(
 	return true
 }
 
-func (v *IDCapabilityValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+func (v *IDCapabilityValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
 	otherCapability, ok := other.(*IDCapabilityValue)
 	if !ok {
 		return false
 	}
 
 	return otherCapability.ID == v.ID &&
-		otherCapability.address.Equal(interpreter, locationRange, v.address) &&
+		otherCapability.address.Equal(context, locationRange, v.address) &&
 		otherCapability.BorrowType.Equal(v.BorrowType)
 }
 
