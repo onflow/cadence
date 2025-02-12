@@ -2844,7 +2844,7 @@ func TestFunctionPreConditions(t *testing.T) {
     `
 
 		// Only need to compile
-		program := parseCheckAndCompileCodeWithOptions(
+		_ = parseCheckAndCompileCodeWithOptions(
 			t,
 			barContract,
 			barLocation,
@@ -2861,8 +2861,6 @@ func TestFunctionPreConditions(t *testing.T) {
 			},
 			programs,
 		)
-
-		printProgram("Bar", program)
 
 		// Deploy contract with the implementation
 
@@ -2914,8 +2912,6 @@ func TestFunctionPreConditions(t *testing.T) {
 			},
 			programs,
 		)
-
-		printProgram("Foo", fooProgram)
 
 		fooVM := vm.NewVM(fooLocation, fooProgram, vmConfig)
 
@@ -3308,7 +3304,6 @@ func TestFunctionPostConditions(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "pre/post condition failed")
 	})
-
 }
 
 func TestIfLet(t *testing.T) {
@@ -3943,5 +3938,45 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 			[]string{"2", "3", "8", "5"},
 			logs,
 		)
+	})
+
+	t.Run("resource access in inherited before-statement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := compileAndInvoke(t, `
+            resource interface RI {
+                var i: Int
+
+                fun test(_ r: @R) {
+                    post {
+                        before(r.i) == 4
+                    }
+                }
+            }
+
+            resource R: RI {
+                var i: Int
+                init() {
+                    self.i = 4
+                }
+
+                fun test(_ r: @R) {
+                    destroy r
+                }
+            }
+
+            fun main() {
+                var r1 <- create R()
+                var r2 <- create R()
+
+                r1.test(<- r2)
+
+                destroy r1
+            }`,
+			"main",
+		)
+
+		require.NoError(t, err)
 	})
 }
