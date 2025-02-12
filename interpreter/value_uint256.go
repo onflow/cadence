@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // UInt256Value
@@ -402,7 +403,7 @@ func (v UInt256Value) Less(context ValueComparisonContext, other ComparableValue
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp == -1)
+	return BoolValue(cmp == -1)
 }
 
 func (v UInt256Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -417,7 +418,7 @@ func (v UInt256Value) LessEqual(context ValueComparisonContext, other Comparable
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp <= 0)
+	return BoolValue(cmp <= 0)
 }
 
 func (v UInt256Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -432,7 +433,7 @@ func (v UInt256Value) Greater(context ValueComparisonContext, other ComparableVa
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp == 1)
+	return BoolValue(cmp == 1)
 }
 
 func (v UInt256Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -447,7 +448,7 @@ func (v UInt256Value) GreaterEqual(context ValueComparisonContext, other Compara
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp >= 0)
+	return BoolValue(cmp >= 0)
 }
 
 func (v UInt256Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
@@ -463,7 +464,7 @@ func (v UInt256Value) Equal(_ ValueComparisonContext, _ LocationRange, other Val
 // - HashInputTypeUInt256 (1 byte)
 // - big int encoded in big endian (n bytes)
 func (v UInt256Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
-	b := UnsignedBigIntToBigEndianBytes(v.BigInt)
+	b := values.UnsignedBigIntToBigEndianBytes(v.BigInt)
 
 	length := 1 + len(b)
 	var buffer []byte
@@ -649,7 +650,7 @@ func (UInt256Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value
 }
 
 func (v UInt256Value) ToBigEndianBytes() []byte {
-	return UnsignedBigIntToSizedBigEndianBytes(v.BigInt, sema.UInt256TypeSize)
+	return values.UnsignedBigIntToSizedBigEndianBytes(v.BigInt, sema.UInt256TypeSize)
 }
 
 func (v UInt256Value) ConformsToStaticType(
@@ -699,7 +700,7 @@ func (UInt256Value) DeepRemove(_ *Interpreter, _ bool) {
 }
 
 func (v UInt256Value) ByteSize() uint32 {
-	return cborTagSize + getBigIntCBORSize(v.BigInt)
+	return values.CBORTagSize + values.GetBigIntCBORSize(v.BigInt)
 }
 
 func (v UInt256Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {

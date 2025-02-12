@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // Int
@@ -374,7 +375,7 @@ func (v IntValue) Less(context ValueComparisonContext, other ComparableValue, lo
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp == -1)
+	return BoolValue(cmp == -1)
 }
 
 func (v IntValue) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -389,7 +390,7 @@ func (v IntValue) LessEqual(context ValueComparisonContext, other ComparableValu
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp <= 0)
+	return BoolValue(cmp <= 0)
 }
 
 func (v IntValue) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -404,7 +405,7 @@ func (v IntValue) Greater(context ValueComparisonContext, other ComparableValue,
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp == 1)
+	return BoolValue(cmp == 1)
 
 }
 
@@ -420,7 +421,7 @@ func (v IntValue) GreaterEqual(context ValueComparisonContext, other ComparableV
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp >= 0)
+	return BoolValue(cmp >= 0)
 }
 
 func (v IntValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
@@ -436,7 +437,7 @@ func (v IntValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) 
 // - HashInputTypeInt (1 byte)
 // - big int encoded in big-endian (n bytes)
 func (v IntValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
-	b := SignedBigIntToBigEndianBytes(v.BigInt)
+	b := values.SignedBigIntToBigEndianBytes(v.BigInt)
 
 	length := 1 + len(b)
 	var buffer []byte
@@ -595,7 +596,7 @@ func (IntValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bo
 }
 
 func (v IntValue) ToBigEndianBytes() []byte {
-	return SignedBigIntToBigEndianBytes(v.BigInt)
+	return values.SignedBigIntToBigEndianBytes(v.BigInt)
 }
 
 func (v IntValue) ConformsToStaticType(
@@ -607,7 +608,7 @@ func (v IntValue) ConformsToStaticType(
 }
 
 func (v IntValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
-	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
+	return values.MaybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
 func (IntValue) NeedsStoreTo(_ atree.Address) bool {
@@ -642,7 +643,7 @@ func (IntValue) DeepRemove(_ *Interpreter, _ bool) {
 }
 
 func (v IntValue) ByteSize() uint32 {
-	return cborTagSize + getBigIntCBORSize(v.BigInt)
+	return values.CBORTagSize + values.GetBigIntCBORSize(v.BigInt)
 }
 
 func (v IntValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {

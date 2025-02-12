@@ -23,28 +23,20 @@ import (
 
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // BoolValue
 
-type BoolValue bool
+type BoolValue values.BoolValue
 
 var _ Value = BoolValue(false)
-var _ atree.Storable = BoolValue(false)
 var _ EquatableValue = BoolValue(false)
 var _ HashableValue = BoolValue(false)
 
 const TrueValue = BoolValue(true)
 const FalseValue = BoolValue(false)
-
-func AsBoolValue(v bool) BoolValue {
-	if v {
-		return TrueValue
-	}
-	return FalseValue
-}
 
 func (BoolValue) isValue() {}
 
@@ -65,10 +57,7 @@ func (BoolValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 }
 
 func (v BoolValue) Negate(_ *Interpreter) BoolValue {
-	if v == TrueValue {
-		return FalseValue
-	}
-	return TrueValue
+	return BoolValue(values.BoolValue(v).Negate())
 }
 
 func (v BoolValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
@@ -76,7 +65,10 @@ func (v BoolValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value)
 	if !ok {
 		return false
 	}
-	return bool(v) == bool(otherBool)
+	return bool(
+		values.BoolValue(v).
+			EqualBool(values.BoolValue(otherBool)),
+	)
 }
 
 func (v BoolValue) Less(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
@@ -85,7 +77,10 @@ func (v BoolValue) Less(_ ValueComparisonContext, other ComparableValue, _ Locat
 		panic(errors.NewUnreachableError())
 	}
 
-	return !v && o
+	return BoolValue(
+		values.BoolValue(v).
+			LessBool(values.BoolValue(o)),
+	)
 }
 
 func (v BoolValue) LessEqual(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
@@ -94,7 +89,10 @@ func (v BoolValue) LessEqual(_ ValueComparisonContext, other ComparableValue, _ 
 		panic(errors.NewUnreachableError())
 	}
 
-	return !v || o
+	return BoolValue(
+		values.BoolValue(v).
+			LessEqualBool(values.BoolValue(o)),
+	)
 }
 
 func (v BoolValue) Greater(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
@@ -103,7 +101,10 @@ func (v BoolValue) Greater(_ ValueComparisonContext, other ComparableValue, _ Lo
 		panic(errors.NewUnreachableError())
 	}
 
-	return v && !o
+	return BoolValue(
+		values.BoolValue(v).
+			GreaterBool(values.BoolValue(o)),
+	)
 }
 
 func (v BoolValue) GreaterEqual(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
@@ -112,7 +113,10 @@ func (v BoolValue) GreaterEqual(_ ValueComparisonContext, other ComparableValue,
 		panic(errors.NewUnreachableError())
 	}
 
-	return v || !o
+	return BoolValue(
+		values.BoolValue(v).
+			GreaterEqualBool(values.BoolValue(o)),
+	)
 }
 
 // HashInput returns a byte slice containing:
@@ -129,7 +133,7 @@ func (v BoolValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []by
 }
 
 func (v BoolValue) String() string {
-	return format.Bool(bool(v))
+	return values.BoolValue(v).String()
 }
 
 func (v BoolValue) RecursiveString(_ SeenReferences) string {
@@ -155,14 +159,14 @@ func (v BoolValue) ConformsToStaticType(
 }
 
 func (v BoolValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
-	return v, nil
+	return values.BoolValue(v), nil
 }
 
 func (BoolValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (BoolValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (BoolValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -187,16 +191,4 @@ func (v BoolValue) Clone(_ *Interpreter) Value {
 
 func (BoolValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
-}
-
-func (v BoolValue) ByteSize() uint32 {
-	return 1
-}
-
-func (v BoolValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
-	return v, nil
-}
-
-func (BoolValue) ChildStorables() []atree.Storable {
-	return nil
 }
