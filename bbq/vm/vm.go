@@ -64,6 +64,10 @@ func NewVM(
 		conf.NativeFunctionsProvider = NativeFunctions
 	}
 
+	if conf.referencedResourceKindedValues == nil {
+		conf.referencedResourceKindedValues = ReferencedResourceKindedValues{}
+	}
+
 	// linkedGlobalsCache is a local cache-alike that is being used to hold already linked imports.
 	linkedGlobalsCache := map[common.Location]LinkedGlobals{
 		BuiltInLocation: {

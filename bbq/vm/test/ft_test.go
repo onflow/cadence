@@ -36,7 +36,7 @@ import (
 
 func TestFTTransfer(t *testing.T) {
 
-	t.SkipNow()
+	//t.SkipNow()
 
 	// ---- Deploy FT Contract -----
 
@@ -80,6 +80,13 @@ func TestFTTransfer(t *testing.T) {
 		Storage:        storage,
 		AccountHandler: &testAccountHandler{},
 		TypeLoader:     typeLoader,
+		ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+			imported, ok := programs[location]
+			if !ok {
+				return nil
+			}
+			return imported.Program
+		},
 	}
 
 	flowTokenVM := vm.NewVM(

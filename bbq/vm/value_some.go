@@ -31,6 +31,7 @@ type SomeValue struct {
 var _ Value = &SomeValue{}
 var _ MemberAccessibleValue = &SomeValue{}
 var _ ResourceKindedValue = &SomeValue{}
+var _ EquatableValue = &SomeValue{}
 
 func NewSomeValueNonCopying(value Value) *SomeValue {
 	return &SomeValue{
@@ -71,4 +72,18 @@ func (v *SomeValue) SetMember(config *Config, name string, value Value) {
 func (v *SomeValue) IsResourceKinded() bool {
 	resourceKinded, ok := v.value.(ResourceKindedValue)
 	return ok && resourceKinded.IsResourceKinded()
+}
+
+func (v *SomeValue) Equal(other Value) BoolValue {
+	otherSome, ok := other.(*SomeValue)
+	if !ok {
+		return false
+	}
+
+	equatableValue, ok := v.value.(EquatableValue)
+	if !ok {
+		return false
+	}
+
+	return equatableValue.Equal(otherSome.value)
 }
