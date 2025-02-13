@@ -522,7 +522,7 @@ func (UFix64Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (UFix64Value) IsResourceKinded(_ *Interpreter) bool {
+func (UFix64Value) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

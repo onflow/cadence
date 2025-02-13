@@ -301,13 +301,13 @@ func ConvertWord8(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 	)
 }
 
-func (v Word8Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word8Value) BitwiseOr(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseOr,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -316,16 +316,16 @@ func (v Word8Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, loca
 		return uint8(v | o)
 	}
 
-	return NewWord8Value(interpreter, valueGetter)
+	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word8Value) BitwiseXor(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseXor,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -334,16 +334,16 @@ func (v Word8Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, loc
 		return uint8(v ^ o)
 	}
 
-	return NewWord8Value(interpreter, valueGetter)
+	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word8Value) BitwiseAnd(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseAnd,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -352,16 +352,16 @@ func (v Word8Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, loc
 		return uint8(v & o)
 	}
 
-	return NewWord8Value(interpreter, valueGetter)
+	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word8Value) BitwiseLeftShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseLeftShift,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -370,16 +370,16 @@ func (v Word8Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValu
 		return uint8(v << o)
 	}
 
-	return NewWord8Value(interpreter, valueGetter)
+	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word8Value) BitwiseRightShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseRightShift,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -388,7 +388,7 @@ func (v Word8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVal
 		return uint8(v >> o)
 	}
 
-	return NewWord8Value(interpreter, valueGetter)
+	return NewWord8Value(context, valueGetter)
 }
 
 func (v Word8Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -429,7 +429,7 @@ func (Word8Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Word8Value) IsResourceKinded(_ *Interpreter) bool {
+func (Word8Value) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

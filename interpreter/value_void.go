@@ -89,7 +89,7 @@ func (VoidValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (VoidValue) IsResourceKinded(_ *Interpreter) bool {
+func (VoidValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

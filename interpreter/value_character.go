@@ -179,7 +179,7 @@ func (CharacterValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (CharacterValue) IsResourceKinded(_ *Interpreter) bool {
+func (CharacterValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

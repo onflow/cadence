@@ -141,7 +141,7 @@ func (*InterpretedFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*InterpretedFunctionValue) IsResourceKinded(_ *Interpreter) bool {
+func (*InterpretedFunctionValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -294,7 +294,7 @@ func (*HostFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*HostFunctionValue) IsResourceKinded(_ *Interpreter) bool {
+func (*HostFunctionValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -352,7 +352,7 @@ func NewBoundFunctionValue(
 
 	selfRef, selfIsRef := (*self).(ReferenceValue)
 	if !selfIsRef {
-		semaType := interpreter.MustSemaTypeOfValue(*self)
+		semaType := MustSemaTypeOfValue(*self, interpreter)
 		selfRef = NewEphemeralReferenceValue(interpreter, boundAuth, *self, semaType, EmptyLocationRange)
 	}
 
@@ -459,7 +459,7 @@ func (f BoundFunctionValue) invoke(invocation Invocation) Value {
 			})
 		}
 	} else {
-		inter.checkInvalidatedResourceOrResourceReference(f.SelfReference, locationRange)
+		checkInvalidatedResourceOrResourceReference(f.SelfReference, locationRange, inter)
 	}
 
 	return f.Function.invoke(invocation)
@@ -485,7 +485,7 @@ func (BoundFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (BoundFunctionValue) IsResourceKinded(_ *Interpreter) bool {
+func (BoundFunctionValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

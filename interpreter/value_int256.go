@@ -579,13 +579,13 @@ func ConvertInt256(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 	return NewInt256ValueFromBigInt(memoryGauge, converter)
 }
 
-func (v Int256Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Int256Value) BitwiseOr(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseOr,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -596,16 +596,16 @@ func (v Int256Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, loc
 		return res
 	}
 
-	return NewInt256ValueFromBigInt(interpreter, valueGetter)
+	return NewInt256ValueFromBigInt(context, valueGetter)
 }
 
-func (v Int256Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Int256Value) BitwiseXor(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseXor,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -616,16 +616,16 @@ func (v Int256Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, lo
 		return res
 	}
 
-	return NewInt256ValueFromBigInt(interpreter, valueGetter)
+	return NewInt256ValueFromBigInt(context, valueGetter)
 }
 
-func (v Int256Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Int256Value) BitwiseAnd(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseAnd,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -636,16 +636,16 @@ func (v Int256Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, lo
 		return res
 	}
 
-	return NewInt256ValueFromBigInt(interpreter, valueGetter)
+	return NewInt256ValueFromBigInt(context, valueGetter)
 }
 
-func (v Int256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Int256Value) BitwiseLeftShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseLeftShift,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -656,13 +656,13 @@ func (v Int256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 		})
 	}
 	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 256 {
-		return NewInt256ValueFromUint64(interpreter, 0)
+		return NewInt256ValueFromUint64(context, 0)
 	}
 
 	// The maximum shift value at this point is 255, which may lead to an
 	// additional allocation of up to 256 bits. Add usage for possible
 	// intermediate value.
-	common.UseMemory(interpreter, Int256MemoryUsage)
+	common.UseMemory(context, Int256MemoryUsage)
 
 	valueGetter := func() *big.Int {
 		res := new(big.Int)
@@ -672,16 +672,16 @@ func (v Int256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 		return fromTwosComplement(res)
 	}
 
-	return NewInt256ValueFromBigInt(interpreter, valueGetter)
+	return NewInt256ValueFromBigInt(context, valueGetter)
 }
 
-func (v Int256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Int256Value) BitwiseRightShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseRightShift,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -692,7 +692,7 @@ func (v Int256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 		})
 	}
 	if !o.BigInt.IsUint64() {
-		return NewInt256ValueFromUint64(interpreter, 0)
+		return NewInt256ValueFromUint64(context, 0)
 	}
 
 	valueGetter := func() *big.Int {
@@ -701,7 +701,7 @@ func (v Int256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 		return res
 	}
 
-	return NewInt256ValueFromBigInt(interpreter, valueGetter)
+	return NewInt256ValueFromBigInt(context, valueGetter)
 }
 
 func (v Int256Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -738,7 +738,7 @@ func (Int256Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Int256Value) IsResourceKinded(_ *Interpreter) bool {
+func (Int256Value) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

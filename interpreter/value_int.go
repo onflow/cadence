@@ -451,19 +451,19 @@ func (v IntValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byt
 	return buffer
 }
 
-func (v IntValue) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v IntValue) BitwiseOr(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseOr,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
 
 	return NewIntValueFromBigInt(
-		interpreter,
+		context,
 		common.NewBitwiseOrBigIntMemoryUsage(v.BigInt, o.BigInt),
 		func() *big.Int {
 			res := new(big.Int)
@@ -472,19 +472,19 @@ func (v IntValue) BitwiseOr(interpreter *Interpreter, other IntegerValue, locati
 	)
 }
 
-func (v IntValue) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v IntValue) BitwiseXor(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseXor,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
 
 	return NewIntValueFromBigInt(
-		interpreter,
+		context,
 		common.NewBitwiseXorBigIntMemoryUsage(v.BigInt, o.BigInt),
 		func() *big.Int {
 			res := new(big.Int)
@@ -493,19 +493,19 @@ func (v IntValue) BitwiseXor(interpreter *Interpreter, other IntegerValue, locat
 	)
 }
 
-func (v IntValue) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v IntValue) BitwiseAnd(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseAnd,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
 
 	return NewIntValueFromBigInt(
-		interpreter,
+		context,
 		common.NewBitwiseAndBigIntMemoryUsage(v.BigInt, o.BigInt),
 		func() *big.Int {
 			res := new(big.Int)
@@ -514,13 +514,13 @@ func (v IntValue) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locat
 	)
 }
 
-func (v IntValue) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v IntValue) BitwiseLeftShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseLeftShift,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -538,7 +538,7 @@ func (v IntValue) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue,
 	}
 
 	return NewIntValueFromBigInt(
-		interpreter,
+		context,
 		common.NewBitwiseLeftShiftBigIntMemoryUsage(v.BigInt, o.BigInt),
 		func() *big.Int {
 			res := new(big.Int)
@@ -547,13 +547,13 @@ func (v IntValue) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue,
 	)
 }
 
-func (v IntValue) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v IntValue) BitwiseRightShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseRightShift,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -571,7 +571,7 @@ func (v IntValue) BitwiseRightShift(interpreter *Interpreter, other IntegerValue
 	}
 
 	return NewIntValueFromBigInt(
-		interpreter,
+		context,
 		common.NewBitwiseRightShiftBigIntMemoryUsage(v.BigInt, o.BigInt),
 		func() *big.Int {
 			res := new(big.Int)
@@ -614,7 +614,7 @@ func (IntValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (IntValue) IsResourceKinded(_ *Interpreter) bool {
+func (IntValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

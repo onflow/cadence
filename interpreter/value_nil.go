@@ -142,7 +142,7 @@ func (NilValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (NilValue) IsResourceKinded(_ *Interpreter) bool {
+func (NilValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -181,6 +181,6 @@ func (NilValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (NilValue) isInvalidatedResource(_ *Interpreter) bool {
+func (NilValue) isInvalidatedResource(context ValueStaticTypeContext) bool {
 	return false
 }

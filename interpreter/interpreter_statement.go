@@ -597,10 +597,10 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) Stat
 	// Set right value to left target,
 	// and left value to right target
 
-	interpreter.checkInvalidatedResourceOrResourceReference(rightValue, swap.Right)
+	checkInvalidatedResourceOrResourceReference(rightValue, rightLocationRange, interpreter)
 	transferredRightValue := interpreter.transferAndConvert(rightValue, rightType, leftType, rightLocationRange)
 
-	interpreter.checkInvalidatedResourceOrResourceReference(leftValue, swap.Left)
+	checkInvalidatedResourceOrResourceReference(leftValue, leftLocationRange, interpreter)
 	transferredLeftValue := interpreter.transferAndConvert(leftValue, leftType, rightType, leftLocationRange)
 
 	leftGetterSetter.set(transferredRightValue)

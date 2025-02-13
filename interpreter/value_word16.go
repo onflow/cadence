@@ -301,13 +301,13 @@ func ConvertWord16(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 	)
 }
 
-func (v Word16Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word16Value) BitwiseOr(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseOr,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -316,16 +316,16 @@ func (v Word16Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, loc
 		return uint16(v | o)
 	}
 
-	return NewWord16Value(interpreter, valueGetter)
+	return NewWord16Value(context, valueGetter)
 }
 
-func (v Word16Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word16Value) BitwiseXor(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseXor,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -334,16 +334,16 @@ func (v Word16Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, lo
 		return uint16(v ^ o)
 	}
 
-	return NewWord16Value(interpreter, valueGetter)
+	return NewWord16Value(context, valueGetter)
 }
 
-func (v Word16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word16Value) BitwiseAnd(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseAnd,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -352,16 +352,16 @@ func (v Word16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, lo
 		return uint16(v & o)
 	}
 
-	return NewWord16Value(interpreter, valueGetter)
+	return NewWord16Value(context, valueGetter)
 }
 
-func (v Word16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word16Value) BitwiseLeftShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseLeftShift,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -370,16 +370,16 @@ func (v Word16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 		return uint16(v << o)
 	}
 
-	return NewWord16Value(interpreter, valueGetter)
+	return NewWord16Value(context, valueGetter)
 }
 
-func (v Word16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word16Value) BitwiseRightShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseRightShift,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -388,7 +388,7 @@ func (v Word16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 		return uint16(v >> o)
 	}
 
-	return NewWord16Value(interpreter, valueGetter)
+	return NewWord16Value(context, valueGetter)
 }
 
 func (v Word16Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -431,7 +431,7 @@ func (Word16Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Word16Value) IsResourceKinded(_ *Interpreter) bool {
+func (Word16Value) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

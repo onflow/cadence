@@ -150,8 +150,8 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 				}
 
 				result := sema.IsSubType(
-					interpreter.MustConvertStaticToSemaType(staticType),
-					interpreter.MustConvertStaticToSemaType(otherStaticType),
+					MustConvertStaticToSemaType(staticType, interpreter),
+					MustConvertStaticToSemaType(otherStaticType, interpreter),
 				)
 				return AsBoolValue(result)
 			},
@@ -294,7 +294,7 @@ func (TypeValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (TypeValue) IsResourceKinded(_ *Interpreter) bool {
+func (TypeValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

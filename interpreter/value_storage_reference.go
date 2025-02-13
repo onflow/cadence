@@ -144,7 +144,7 @@ func (v *StorageReferenceValue) dereference(context ValueStaticTypeContext, loca
 		staticType := referenced.StaticType(context)
 
 		if !context.IsSubTypeOfSemaType(staticType, v.BorrowedType) {
-			semaType := context.MustConvertStaticToSemaType(staticType)
+			semaType := MustConvertStaticToSemaType(staticType, context)
 
 			return nil, ForceCastTypeMismatchError{
 				ExpectedType:  v.BorrowedType,
@@ -378,7 +378,7 @@ func (*StorageReferenceValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*StorageReferenceValue) IsResourceKinded(_ *Interpreter) bool {
+func (*StorageReferenceValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -449,7 +449,7 @@ func forEachReference(
 		// The loop dereference the reference once, and hold onto that referenced-value.
 		// But the reference could get invalidated during the iteration, making that referenced-value invalid.
 		// So check the validity of the reference, before each iteration.
-		interpreter.checkInvalidatedResourceOrResourceReference(reference, locationRange)
+		checkInvalidatedResourceOrResourceReference(reference, locationRange, interpreter)
 
 		if isResultReference {
 			value = interpreter.getReferenceValue(value, elementType, locationRange)
