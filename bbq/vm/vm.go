@@ -633,11 +633,80 @@ func opCast(vm *VM, ins opcode.InstructionCast) {
 
 	targetType := vm.loadType(ins.TypeIndex)
 
-	// TODO:
-	_ = ins.Kind
-	_ = targetType
+	result := cast(
+		vm.config,
+		ins.Kind,
+		value,
+		targetType,
+	)
 
-	vm.push(value)
+	vm.push(result)
+}
+
+func cast(config *Config, castKind opcode.CastKind, value Value, targetType StaticType) Value {
+	valueType := value.StaticType(config)
+
+	switch castKind {
+	case opcode.FailableCast, opcode.ForceCast:
+		// if the value itself has a mapped entitlement type in its authorization
+		// (e.g. if it is a reference to `self` or `base`  in an attachment function with mapped access)
+		// substitution must also be performed on its entitlements
+		//
+		// we do this here (as opposed to in `IsSubTypeOfSemaType`) because casting is the only way that
+		// an entitlement can "traverse the boundary", so to speak, between runtime and static types, and
+		// thus this is the only place where it becomes necessary to "instantiate" the result of a map to its
+		// concrete outputs. In other places (e.g. interface conformance checks) we want to leave maps generic,
+		// so we don't substitute them.
+
+		// TODO:
+		//valueSemaType := interpreter.SubstituteMappedEntitlements(interpreter.MustSemaTypeOfValue(value))
+		//valueStaticType := ConvertSemaToStaticType(interpreter, valueSemaType)
+
+		// If the target is anystruct or anyresource we want to preserve optionals
+		unboxedExpectedType := UnwrapOptionalType(targetType)
+		if !(unboxedExpectedType == interpreter.PrimitiveStaticTypeAnyStruct ||
+			unboxedExpectedType == interpreter.PrimitiveStaticTypeAnyResource) {
+			// otherwise dynamic cast now always unboxes optionals
+			value = Unbox(value)
+		}
+
+		isSubType := IsSubType(config, valueType, targetType)
+
+		switch castKind {
+		case opcode.FailableCast:
+			if !isSubType {
+				return Nil
+			}
+		case opcode.ForceCast:
+			if !isSubType {
+				panic(ForceCastTypeMismatchError{
+					ExpectedType: targetType,
+					ActualType:   valueType,
+				})
+			}
+		default:
+			panic(errors.NewUnreachableError())
+		}
+
+		// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
+		result := ConvertAndBox(value, valueType, targetType)
+
+		if castKind == opcode.FailableCast {
+			// TODO:
+			// Failable casting is a resource invalidation
+			//interpreter.invalidateResource(value)
+			result = NewSomeValueNonCopying(result)
+		}
+
+		return result
+
+	case opcode.SimpleCast:
+		// The cast may upcast to an optional type, e.g. `1 as Int?`, so box
+		return ConvertAndBox(value, valueType, targetType)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func opNil(vm *VM) {

@@ -53,3 +53,21 @@ func (l MissingMemberValueError) Error() string {
 	return fmt.Sprintf("cannot find member: `%s` in `%T`", l.Name, l.Parent)
 
 }
+
+// ForceCastTypeMismatchError
+type ForceCastTypeMismatchError struct {
+	ExpectedType StaticType
+	ActualType   StaticType
+}
+
+var _ errors.UserError = ForceCastTypeMismatchError{}
+
+func (ForceCastTypeMismatchError) IsUserError() {}
+
+func (e ForceCastTypeMismatchError) Error() string {
+	return fmt.Sprintf(
+		"failed to force-cast value: expected type `%s`, got `%s`",
+		e.ExpectedType.ID(),
+		e.ActualType.ID(),
+	)
+}
