@@ -3645,3 +3645,41 @@ func TestDefaultFunctionsWithConditions(t *testing.T) {
 		)
 	})
 }
+
+func TestCompileEmit(t *testing.T) {
+
+	t.Parallel()
+
+	var eventEmitted bool
+
+	vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+	vmConfig.OnEventEmitted = func(event *vm.CompositeValue, eventType *interpreter.CompositeStaticType) error {
+		require.False(t, eventEmitted)
+		eventEmitted = true
+
+		assert.Equal(t,
+			common.ScriptLocation{0x1}.TypeID(nil, "Inc"),
+			eventType.ID(),
+		)
+
+		return nil
+	}
+
+	_, err := compileAndInvokeWithOptions(t,
+		`
+          event Inc(val: Int)
+
+          fun test(x: Int) {
+              emit Inc(val: x)
+          }
+        `,
+		"test",
+		CompilerAndVMOptions{
+			VMConfig: vmConfig,
+		},
+		vm.NewIntValue(1),
+	)
+	require.NoError(t, err)
+
+	require.True(t, eventEmitted)
+}

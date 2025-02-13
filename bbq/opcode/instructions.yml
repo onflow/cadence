@@ -572,3 +572,16 @@
     push:
       - name: "result"
         type: "bool"
+
+# Other
+
+- name: "emitEvent"
+  description:
+    Pops an event off the stack and then emits it.
+  operands:
+    - name: "typeIndex"
+      type: "index"
+  valueEffects:
+    pop:
+      - name: "event"
+        type: "value"
