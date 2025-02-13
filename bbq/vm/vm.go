@@ -816,13 +816,14 @@ func (vm *VM) run() {
 }
 
 func onEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
-	eventType := vm.loadType(ins.TypeIndex).(*interpreter.CompositeStaticType)
 	eventValue := vm.pop().(*CompositeValue)
 
 	onEventEmitted := vm.config.OnEventEmitted
 	if onEventEmitted == nil {
 		return
 	}
+
+	eventType := vm.loadType(ins.TypeIndex).(*interpreter.CompositeStaticType)
 
 	err := onEventEmitted(eventValue, eventType)
 	if err != nil {
