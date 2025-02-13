@@ -5345,11 +5345,9 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 	}
 }
 
-func (interpreter *Interpreter) maybeTrackReferencedResourceKindedValue(value Value) {
-	if referenceValue, ok := value.(*EphemeralReferenceValue); ok {
-		if value, ok := referenceValue.Value.(ReferenceTrackedResourceKindedValue); ok {
-			interpreter.trackReferencedResourceKindedValue(value.ValueID(), referenceValue)
-		}
+func (interpreter *Interpreter) maybeTrackReferencedResourceKindedValue(referenceValue *EphemeralReferenceValue) {
+	if value, ok := referenceValue.Value.(ReferenceTrackedResourceKindedValue); ok {
+		interpreter.trackReferencedResourceKindedValue(value.ValueID(), referenceValue)
 	}
 }
 

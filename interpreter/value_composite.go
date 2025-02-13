@@ -1789,7 +1789,6 @@ func (v *CompositeValue) forEachAttachment(
 	// We create a reference here for the purposes of tracking it during iteration.
 	vType := interpreter.MustSemaTypeOfValue(v)
 	compositeReference := NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, v, vType, locationRange)
-	interpreter.maybeTrackReferencedResourceKindedValue(compositeReference)
 	forEachAttachment(interpreter, compositeReference, locationRange, f)
 }
 
