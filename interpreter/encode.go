@@ -140,23 +140,6 @@ func (VoidValue) Encode(e *atree.Encoder) error {
 	return e.CBOR.EncodeRawBytes(cborVoidValue)
 }
 
-// Encode encodes the value as
-//
-//	cbor.Tag{
-//			Number:  CBORTagIntValue,
-//			Content: *big.Int(v.BigInt),
-//	}
-func (v IntValue) Encode(e *atree.Encoder) error {
-	err := e.CBOR.EncodeRawBytes([]byte{
-		// tag number
-		0xd8, values.CBORTagIntValue,
-	})
-	if err != nil {
-		return err
-	}
-	return e.CBOR.EncodeBigInt(v.BigInt)
-}
-
 // Encode encodes Int8Value as
 //
 //	cbor.Tag{

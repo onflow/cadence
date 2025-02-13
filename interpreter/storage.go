@@ -98,6 +98,9 @@ func ConvertStoredValue(gauge common.MemoryGauge, value atree.Value) (Value, err
 	case values.BoolValue:
 		return BoolValue(value), nil
 
+	case values.IntValue:
+		return IntValue{IntValue: value}, nil
+
 	case Value:
 		return value, nil
 
