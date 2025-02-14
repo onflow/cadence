@@ -69,8 +69,8 @@ func NewUnmeteredIntValueFromBigInt(value *big.Int) IntValue {
 var _ Value = IntValue{}
 var _ EquatableValue = IntValue{}
 var _ ComparableValue = IntValue{}
-var _ NumberValue = IntValue{}
-var _ IntegerValue = IntValue{}
+var _ NumberValue[IntValue] = IntValue{}
+var _ IntegerValue[IntValue] = IntValue{}
 var _ atree.Storable = IntValue{}
 var _ atree.Value = IntValue{}
 
@@ -80,7 +80,7 @@ func (v IntValue) String() string {
 	return format.BigInt(v.BigInt)
 }
 
-func (v IntValue) Negate(gauge common.MemoryGauge) NumberValue {
+func (v IntValue) Negate(gauge common.MemoryGauge) IntValue {
 	return NewIntValueFromBigInt(
 		gauge,
 		common.NewNegateBigIntMemoryUsage(v.BigInt),
@@ -90,109 +90,84 @@ func (v IntValue) Negate(gauge common.MemoryGauge) NumberValue {
 	)
 }
 
-func (v IntValue) Plus(gauge common.MemoryGauge, other NumberValue) (NumberValue, error) {
-	o, ok := other.(IntValue)
-	if !ok {
-		return nil, InvalidOperandsError{}
-	}
-
+func (v IntValue) Plus(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
 	return NewIntValueFromBigInt(
 		gauge,
-		common.NewPlusBigIntMemoryUsage(v.BigInt, o.BigInt),
+		common.NewPlusBigIntMemoryUsage(v.BigInt, other.BigInt),
 		func() *big.Int {
 			res := new(big.Int)
-			return res.Add(v.BigInt, o.BigInt)
+			return res.Add(v.BigInt, other.BigInt)
 		},
 	), nil
 }
 
-func (v IntValue) SaturatingPlus(gauge common.MemoryGauge, other NumberValue) (NumberValue, error) {
+func (v IntValue) SaturatingPlus(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
 	return v.Plus(gauge, other)
 }
 
-func (v IntValue) Minus(gauge common.MemoryGauge, other NumberValue) (NumberValue, error) {
-	o, ok := other.(IntValue)
-	if !ok {
-		return nil, InvalidOperandsError{}
-	}
-
+func (v IntValue) Minus(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
 	return NewIntValueFromBigInt(
 		gauge,
-		common.NewMinusBigIntMemoryUsage(v.BigInt, o.BigInt),
+		common.NewMinusBigIntMemoryUsage(v.BigInt, other.BigInt),
 		func() *big.Int {
 			res := new(big.Int)
-			return res.Sub(v.BigInt, o.BigInt)
+			return res.Sub(v.BigInt, other.BigInt)
 		},
 	), nil
 }
 
-func (v IntValue) SaturatingMinus(gauge common.MemoryGauge, other NumberValue) (NumberValue, error) {
+func (v IntValue) SaturatingMinus(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
 	return v.Minus(gauge, other)
 }
 
-func (v IntValue) Mod(gauge common.MemoryGauge, other NumberValue) (NumberValue, error) {
-	o, ok := other.(IntValue)
-	if !ok {
-		return nil, InvalidOperandsError{}
-	}
-
+func (v IntValue) Mod(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
 	// INT33-C
-	if o.BigInt.Sign() == 0 {
-		return nil, DivisionByZeroError{}
+	if other.BigInt.Sign() == 0 {
+		return IntValue{}, DivisionByZeroError{}
 	}
 
 	return NewIntValueFromBigInt(
 		gauge,
-		common.NewModBigIntMemoryUsage(v.BigInt, o.BigInt),
+		common.NewModBigIntMemoryUsage(v.BigInt, other.BigInt),
 		func() *big.Int {
 			res := new(big.Int)
-			return res.Rem(v.BigInt, o.BigInt)
+			return res.Rem(v.BigInt, other.BigInt)
 		},
 	), nil
 }
 
-func (v IntValue) Mul(gauge common.MemoryGauge, other NumberValue) (NumberValue, error) {
-	o, ok := other.(IntValue)
-	if !ok {
-		return nil, InvalidOperandsError{}
-	}
-
+func (v IntValue) Mul(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
 	return NewIntValueFromBigInt(
 		gauge,
-		common.NewMulBigIntMemoryUsage(v.BigInt, o.BigInt),
+		common.NewMulBigIntMemoryUsage(v.BigInt, other.BigInt),
 		func() *big.Int {
 			res := new(big.Int)
-			return res.Mul(v.BigInt, o.BigInt)
+			return res.Mul(v.BigInt, other.BigInt)
 		},
 	), nil
 }
 
-func (v IntValue) SaturatingMul(gauge common.MemoryGauge, other NumberValue) (NumberValue, error) {
+func (v IntValue) SaturatingMul(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
 	return v.Mul(gauge, other)
 }
 
-func (v IntValue) Div(gauge common.MemoryGauge, other NumberValue) (NumberValue, error) {
-	o, ok := other.(IntValue)
-	if !ok {
-		return nil, InvalidOperandsError{}
-	}
-
+func (v IntValue) Div(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
 	// INT33-C
-	if o.BigInt.Sign() == 0 {
-		return nil, DivisionByZeroError{}
+	if other.BigInt.Sign() == 0 {
+		return IntValue{}, DivisionByZeroError{}
 	}
 
 	return NewIntValueFromBigInt(
 		gauge,
-		common.NewDivBigIntMemoryUsage(v.BigInt, o.BigInt),
+		common.NewDivBigIntMemoryUsage(v.BigInt, other.BigInt),
 		func() *big.Int {
 			res := new(big.Int)
-			return res.Div(v.BigInt, o.BigInt)
+			return res.Div(v.BigInt, other.BigInt)
 		},
 	), nil
 }
 
-func (v IntValue) SaturatingDiv(gauge common.MemoryGauge, other NumberValue) (NumberValue, error) {
+func (v IntValue) SaturatingDiv(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
 	return v.Div(gauge, other)
 }
 
@@ -246,98 +221,73 @@ func (v IntValue) Equal(other Value) BoolValue {
 	return cmp == 0
 }
 
-func (v IntValue) BitwiseOr(gauge common.MemoryGauge, other IntegerValue) (IntegerValue, error) {
-	o, ok := other.(IntValue)
-	if !ok {
-		return nil, InvalidOperandsError{}
-	}
-
+func (v IntValue) BitwiseOr(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
 	return NewIntValueFromBigInt(
 		gauge,
-		common.NewBitwiseOrBigIntMemoryUsage(v.BigInt, o.BigInt),
+		common.NewBitwiseOrBigIntMemoryUsage(v.BigInt, other.BigInt),
 		func() *big.Int {
 			res := new(big.Int)
-			return res.Or(v.BigInt, o.BigInt)
+			return res.Or(v.BigInt, other.BigInt)
 		},
 	), nil
 }
 
-func (v IntValue) BitwiseXor(gauge common.MemoryGauge, other IntegerValue) (IntegerValue, error) {
-	o, ok := other.(IntValue)
-	if !ok {
-		return nil, InvalidOperandsError{}
-	}
-
+func (v IntValue) BitwiseXor(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
 	return NewIntValueFromBigInt(
 		gauge,
-		common.NewBitwiseXorBigIntMemoryUsage(v.BigInt, o.BigInt),
+		common.NewBitwiseXorBigIntMemoryUsage(v.BigInt, other.BigInt),
 		func() *big.Int {
 			res := new(big.Int)
-			return res.Xor(v.BigInt, o.BigInt)
+			return res.Xor(v.BigInt, other.BigInt)
 		},
 	), nil
 }
 
-func (v IntValue) BitwiseAnd(gauge common.MemoryGauge, other IntegerValue) (IntegerValue, error) {
-	o, ok := other.(IntValue)
-	if !ok {
-		return nil, InvalidOperandsError{}
-	}
-
+func (v IntValue) BitwiseAnd(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
 	return NewIntValueFromBigInt(
 		gauge,
-		common.NewBitwiseAndBigIntMemoryUsage(v.BigInt, o.BigInt),
+		common.NewBitwiseAndBigIntMemoryUsage(v.BigInt, other.BigInt),
 		func() *big.Int {
 			res := new(big.Int)
-			return res.And(v.BigInt, o.BigInt)
+			return res.And(v.BigInt, other.BigInt)
 		},
 	), nil
 }
 
-func (v IntValue) BitwiseLeftShift(gauge common.MemoryGauge, other IntegerValue) (IntegerValue, error) {
-	o, ok := other.(IntValue)
-	if !ok {
-		return nil, InvalidOperandsError{}
+func (v IntValue) BitwiseLeftShift(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
+	if other.BigInt.Sign() < 0 {
+		return IntValue{}, NegativeShiftError{}
 	}
 
-	if o.BigInt.Sign() < 0 {
-		return nil, NegativeShiftError{}
-	}
-
-	if !o.BigInt.IsUint64() {
-		return nil, OverflowError{}
+	if !other.BigInt.IsUint64() {
+		return IntValue{}, OverflowError{}
 	}
 
 	return NewIntValueFromBigInt(
 		gauge,
-		common.NewBitwiseLeftShiftBigIntMemoryUsage(v.BigInt, o.BigInt),
+		common.NewBitwiseLeftShiftBigIntMemoryUsage(v.BigInt, other.BigInt),
 		func() *big.Int {
 			res := new(big.Int)
-			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+			return res.Lsh(v.BigInt, uint(other.BigInt.Uint64()))
 		},
 	), nil
 }
 
-func (v IntValue) BitwiseRightShift(gauge common.MemoryGauge, other IntegerValue) (IntegerValue, error) {
-	o, ok := other.(IntValue)
-	if !ok {
-		return nil, InvalidOperandsError{}
+func (v IntValue) BitwiseRightShift(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
+	if other.BigInt.Sign() < 0 {
+		return IntValue{}, NegativeShiftError{}
 	}
 
-	if o.BigInt.Sign() < 0 {
-		return nil, NegativeShiftError{}
-	}
-
-	if !o.BigInt.IsUint64() {
-		return nil, OverflowError{}
+	if !other.BigInt.IsUint64() {
+		return IntValue{}, OverflowError{}
 	}
 
 	return NewIntValueFromBigInt(
 		gauge,
-		common.NewBitwiseRightShiftBigIntMemoryUsage(v.BigInt, o.BigInt),
+		common.NewBitwiseRightShiftBigIntMemoryUsage(v.BigInt, other.BigInt),
 		func() *big.Int {
 			res := new(big.Int)
-			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
+			return res.Rsh(v.BigInt, uint(other.BigInt.Uint64()))
 		},
 	), nil
 }

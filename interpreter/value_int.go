@@ -168,7 +168,7 @@ func (v IntValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ Lo
 
 func (v IntValue) Negate(context NumberValueArithmeticContext, _ LocationRange) NumberValue {
 	return IntValue{
-		IntValue: v.IntValue.Negate(context).(values.IntValue),
+		IntValue: v.IntValue.Negate(context),
 	}
 }
 
@@ -186,7 +186,7 @@ func (v IntValue) Plus(context NumberValueArithmeticContext, other NumberValue, 
 	if err != nil {
 		panic(err)
 	}
-	return IntValue{IntValue: result.(values.IntValue)}
+	return IntValue{IntValue: result}
 }
 
 func (v IntValue) SaturatingPlus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
@@ -221,7 +221,7 @@ func (v IntValue) Minus(context NumberValueArithmeticContext, other NumberValue,
 		panic(err)
 	}
 	return IntValue{
-		IntValue: result.(values.IntValue),
+		IntValue: result,
 	}
 }
 
@@ -258,7 +258,7 @@ func (v IntValue) Mod(context NumberValueArithmeticContext, other NumberValue, l
 	}
 
 	return IntValue{
-		IntValue: result.(values.IntValue),
+		IntValue: result,
 	}
 }
 
@@ -278,7 +278,7 @@ func (v IntValue) Mul(context NumberValueArithmeticContext, other NumberValue, l
 		panic(err)
 	}
 	return IntValue{
-		IntValue: result.(values.IntValue),
+		IntValue: result,
 	}
 }
 
@@ -315,7 +315,7 @@ func (v IntValue) Div(context NumberValueArithmeticContext, other NumberValue, l
 	}
 
 	return IntValue{
-		IntValue: result.(values.IntValue),
+		IntValue: result,
 	}
 }
 
@@ -456,7 +456,7 @@ func (v IntValue) BitwiseOr(context ValueStaticTypeContext, other IntegerValue, 
 	}
 
 	return IntValue{
-		IntValue: result.(values.IntValue),
+		IntValue: result,
 	}
 }
 
@@ -477,7 +477,7 @@ func (v IntValue) BitwiseXor(context ValueStaticTypeContext, other IntegerValue,
 	}
 
 	return IntValue{
-		IntValue: result.(values.IntValue),
+		IntValue: result,
 	}
 }
 
@@ -498,7 +498,7 @@ func (v IntValue) BitwiseAnd(context ValueStaticTypeContext, other IntegerValue,
 	}
 
 	return IntValue{
-		IntValue: result.(values.IntValue),
+		IntValue: result,
 	}
 }
 
@@ -519,7 +519,7 @@ func (v IntValue) BitwiseLeftShift(context ValueStaticTypeContext, other Integer
 	}
 
 	return IntValue{
-		IntValue: result.(values.IntValue),
+		IntValue: result,
 	}
 }
 
@@ -540,7 +540,7 @@ func (v IntValue) BitwiseRightShift(context ValueStaticTypeContext, other Intege
 	}
 
 	return IntValue{
-		IntValue: result.(values.IntValue),
+		IntValue: result,
 	}
 }
 
