@@ -1149,14 +1149,25 @@ func (c *Compiler[_]) VisitCastingExpression(expression *ast.CastingExpression) 
 	castingTypes := c.ExtendedElaboration.CastingExpressionTypes(expression)
 	index := c.getOrAddType(castingTypes.TargetType)
 
-	castKind := opcode.CastKindFrom(expression.Operation)
-
-	c.codeGen.Emit(
-		opcode.InstructionCast{
+	var castInstruction opcode.Instruction
+	switch expression.Operation {
+	case ast.OperationCast:
+		castInstruction = opcode.InstructionSimpleCast{
 			TypeIndex: index,
-			Kind:      castKind,
-		},
-	)
+		}
+	case ast.OperationFailableCast:
+		castInstruction = opcode.InstructionFailableCast{
+			TypeIndex: index,
+		}
+	case ast.OperationForceCast:
+		castInstruction = opcode.InstructionForceCast{
+			TypeIndex: index,
+		}
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	c.codeGen.Emit(castInstruction)
 	return
 }
 

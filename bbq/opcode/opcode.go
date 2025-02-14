@@ -72,7 +72,12 @@ const (
 	Unwrap
 	Destroy
 	Transfer
-	Cast
+	SimpleCast
+	FailableCast
+	ForceCast
+	_
+	_
+	_
 	_
 	_
 	_
