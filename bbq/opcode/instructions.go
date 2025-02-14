@@ -723,7 +723,7 @@ func DecodeSimpleCast(ip *uint16, code []byte) (i InstructionSimpleCast) {
 
 // InstructionFailableCast
 //
-// Pops a value off the stack, casts it to the given type. If the value is a subtype of the given type, then casted value is pushed back on to the stack. If the value is not a subtype of the given type, then a `nil` is pushed to the stack instead.
+// Pops a value off the stack and casts it to the given type. If the value is a subtype of the given type, then casted value is pushed back on to the stack. If the value is not a subtype of the given type, then a `nil` is pushed to the stack instead.
 type InstructionFailableCast struct {
 	TypeIndex uint16
 }
