@@ -695,3 +695,90 @@ func TestCompileEmit(t *testing.T) {
 
 	assert.Empty(t, program.Constants)
 }
+
+func TestCompileSimpleCast(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        fun test(x: Int): AnyStruct {
+           return x as Int?
+        }
+    `)
+	require.NoError(t, err)
+
+	compiler := NewInstructionCompiler(checker)
+	program := compiler.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionGetLocal{LocalIndex: 0},
+			opcode.InstructionSimpleCast{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
+			opcode.InstructionSetLocal{LocalIndex: 1},
+			opcode.InstructionGetLocal{LocalIndex: 1},
+			opcode.InstructionReturnValue{},
+		},
+		compiler.ExportFunctions()[0].Code,
+	)
+}
+
+func TestCompileForceCast(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        fun test(x: AnyStruct): Int {
+            return x as! Int
+        }
+    `)
+	require.NoError(t, err)
+
+	compiler := NewInstructionCompiler(checker)
+	program := compiler.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionGetLocal{LocalIndex: 0},
+			opcode.InstructionForceCast{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: 1},
+			opcode.InstructionGetLocal{LocalIndex: 1},
+			opcode.InstructionReturnValue{},
+		},
+		compiler.ExportFunctions()[0].Code,
+	)
+}
+
+func TestCompileFailableCast(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        fun test(x: AnyStruct): Int? {
+            return x as? Int
+        }
+    `)
+	require.NoError(t, err)
+
+	compiler := NewInstructionCompiler(checker)
+	program := compiler.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionGetLocal{LocalIndex: 0},
+			opcode.InstructionFailableCast{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
+			opcode.InstructionSetLocal{LocalIndex: 1},
+			opcode.InstructionGetLocal{LocalIndex: 1},
+			opcode.InstructionReturnValue{},
+		},
+		compiler.ExportFunctions()[0].Code,
+	)
+}
