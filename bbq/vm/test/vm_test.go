@@ -3683,3 +3683,95 @@ func TestCompileEmit(t *testing.T) {
 
 	require.True(t, eventEmitted)
 }
+
+func TestCasting(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple cast success", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := compileAndInvoke(t,
+			`
+              fun test(x: Int): AnyStruct {
+                  return x as Int?
+              }
+            `,
+			"test",
+			vm.NewIntValue(2),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewSomeValueNonCopying(vm.NewIntValue(2)), result)
+	})
+
+	t.Run("force cast success", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := compileAndInvoke(t,
+			`
+              fun test(x: AnyStruct): Int {
+                  return x as! Int
+              }
+            `,
+			"test",
+			vm.NewIntValue(2),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(2), result)
+	})
+
+	t.Run("force cast fail", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := compileAndInvoke(t,
+			`
+              fun test(x: AnyStruct): Int {
+                  return x as! Int
+              }
+            `,
+			"test",
+			vm.BoolValue(true),
+		)
+		require.Error(t, err)
+		assert.ErrorIs(
+			t,
+			err,
+			vm.ForceCastTypeMismatchError{
+				ExpectedType: interpreter.PrimitiveStaticTypeInt,
+				ActualType:   interpreter.PrimitiveStaticTypeBool,
+			},
+		)
+	})
+
+	t.Run("failable cast success", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := compileAndInvoke(t,
+			`
+              fun test(x: AnyStruct): Int? {
+                  return x as? Int
+              }
+            `,
+			"test",
+			vm.NewIntValue(2),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewSomeValueNonCopying(vm.NewIntValue(2)), result)
+	})
+
+	t.Run("failable cast fail", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := compileAndInvoke(t,
+			`
+              fun test(x: AnyStruct): Int? {
+                  return x as? Int
+              }
+            `,
+			"test",
+			vm.BoolValue(true),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, vm.Nil, result)
+	})
+}
