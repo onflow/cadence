@@ -634,9 +634,15 @@ func (c *Compiler[_]) VisitForStatement(_ *ast.ForStatement) (_ struct{}) {
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler[_]) VisitEmitStatement(_ *ast.EmitStatement) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler[_]) VisitEmitStatement(statement *ast.EmitStatement) (_ struct{}) {
+	c.compileExpression(statement.InvocationExpression)
+	eventType := c.ExtendedElaboration.EmitStatementEventType(statement)
+	typeIndex := c.getOrAddType(eventType)
+	c.codeGen.Emit(opcode.InstructionEmitEvent{
+		TypeIndex: typeIndex,
+	})
+
+	return
 }
 
 func (c *Compiler[_]) VisitSwitchStatement(statement *ast.SwitchStatement) (_ struct{}) {

@@ -1095,6 +1095,36 @@ func (i InstructionGreaterOrEqual) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
+// InstructionEmitEvent
+//
+// Pops an event off the stack and then emits it.
+type InstructionEmitEvent struct {
+	TypeIndex uint16
+}
+
+var _ Instruction = InstructionEmitEvent{}
+
+func (InstructionEmitEvent) Opcode() Opcode {
+	return EmitEvent
+}
+
+func (i InstructionEmitEvent) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	printfArgument(&sb, "typeIndex", i.TypeIndex)
+	return sb.String()
+}
+
+func (i InstructionEmitEvent) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.TypeIndex)
+}
+
+func DecodeEmitEvent(ip *uint16, code []byte) (i InstructionEmitEvent) {
+	i.TypeIndex = decodeUint16(ip, code)
+	return i
+}
+
 func DecodeInstruction(ip *uint16, code []byte) Instruction {
 	switch Opcode(decodeByte(ip, code)) {
 	case Unknown:
@@ -1183,6 +1213,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionGreater{}
 	case GreaterOrEqual:
 		return InstructionGreaterOrEqual{}
+	case EmitEvent:
+		return DecodeEmitEvent(ip, code)
 	}
 
 	panic(errors.NewUnreachableError())

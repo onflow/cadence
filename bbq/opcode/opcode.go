@@ -142,4 +142,10 @@ const (
 	_
 	_
 	_
+	_
+	_
+	_
+
+	// Other
+	EmitEvent
 )

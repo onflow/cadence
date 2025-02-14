@@ -654,3 +654,44 @@ func TestCompileSwitch(t *testing.T) {
 		program.Constants,
 	)
 }
+
+func TestCompileEmit(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      event Inc(val: Int)
+
+      fun test(x: Int) {
+          emit Inc(val: x)
+      }
+    `)
+	require.NoError(t, err)
+
+	compiler := NewInstructionCompiler(checker)
+	program := compiler.Compile()
+
+	require.Len(t, program.Functions, 2)
+
+	var testFunction *bbq.Function[opcode.Instruction]
+	for _, f := range compiler.ExportFunctions() {
+		if f.Name == "test" {
+			testFunction = f
+		}
+	}
+	require.NotNil(t, testFunction)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionGetLocal{LocalIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionGetGlobal{GlobalIndex: 1},
+			opcode.InstructionInvoke{},
+			opcode.InstructionEmitEvent{TypeIndex: 1},
+			opcode.InstructionReturn{},
+		},
+		testFunction.Code,
+	)
+
+	assert.Empty(t, program.Constants)
+}
