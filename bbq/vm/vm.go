@@ -873,12 +873,30 @@ func (vm *VM) run() {
 			opNot(vm)
 		case opcode.InstructionUnwrap:
 			opUnwrap(vm)
+		case opcode.InstructionEmitEvent:
+			onEmitEvent(vm, ins)
 		default:
 			panic(errors.NewUnexpectedError("cannot execute instruction of type %T", ins))
 		}
 
 		// Faster in Go <1.19:
 		// vmOps[op](vm)
+	}
+}
+
+func onEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
+	eventValue := vm.pop().(*CompositeValue)
+
+	onEventEmitted := vm.config.OnEventEmitted
+	if onEventEmitted == nil {
+		return
+	}
+
+	eventType := vm.loadType(ins.TypeIndex).(*interpreter.CompositeStaticType)
+
+	err := onEventEmitted(eventValue, eventType)
+	if err != nil {
+		panic(err)
 	}
 }
 

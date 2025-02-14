@@ -27,6 +27,12 @@ import (
 	"github.com/onflow/cadence/test_utils/common_utils"
 )
 
+// OnEventEmittedFunc is a function that is triggered when an event is emitted by the program.
+type OnEventEmittedFunc func(
+	event *CompositeValue,
+	eventType *interpreter.CompositeStaticType,
+) error
+
 type Config struct {
 	interpreter.Storage
 	common.MemoryGauge
@@ -40,6 +46,9 @@ type Config struct {
 	CapabilityControllerIterations              map[AddressPath]int
 	MutationDuringCapabilityControllerIteration bool
 	referencedResourceKindedValues              ReferencedResourceKindedValues
+
+	// OnEventEmitted is triggered when an event is emitted by the program
+	OnEventEmitted OnEventEmittedFunc
 
 	// TODO: These are temporary. Remove once storing/reading is supported for VM values.
 	inter      *interpreter.Interpreter
