@@ -742,7 +742,7 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 		// push a new activation, so that the mutations are not performed
 		// on the captured activation.
 
-		interpreter.activations.PushNewWithCurrent()
+		lexicalScope = lexicalScope.Clone()
 	}
 
 	// make the function itself available inside the function
