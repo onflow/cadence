@@ -738,9 +738,8 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 		//         return bar()
 		//     }
 		//
-		// As variable declarations mutate the current activation in place,
-		// push a new activation, so that the mutations are not performed
-		// on the captured activation.
+		// As variable declarations mutate the current activation in place, capture a clone of the current activation,
+		// so that the mutations are not performed on the captured activation.
 
 		lexicalScope = lexicalScope.Clone()
 	}
