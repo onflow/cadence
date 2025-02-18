@@ -237,6 +237,10 @@ func exportValueWithInterpreter(
 	case *interpreter.PathCapabilityValue: //nolint:staticcheck
 		return exportPathCapabilityValue(v, inter)
 	case *interpreter.EphemeralReferenceValue:
+		if v.Value == nil {
+			return nil, nil
+		}
+
 		// Break recursion through references
 		if _, ok := seenReferences[v]; ok {
 			return nil, nil
@@ -262,6 +266,7 @@ func exportValueWithInterpreter(
 		if referencedValue == nil {
 			return nil, nil
 		}
+
 		return exportValueWithInterpreter(
 			*referencedValue,
 			inter,
@@ -270,10 +275,11 @@ func exportValueWithInterpreter(
 		)
 	case interpreter.FunctionValue:
 		return exportFunctionValue(v, inter), nil
-	default:
-		return nil, &ValueNotExportableError{
-			Type: v.StaticType(inter),
-		}
+	case nil:
+		return nil, nil
+	}
+	return nil, &ValueNotExportableError{
+		Type: value.StaticType(inter),
 	}
 }
 

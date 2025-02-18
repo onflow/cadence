@@ -6864,6 +6864,108 @@ func TestInterpretClosure(t *testing.T) {
 	)
 }
 
+func TestInterpretClosureScopingFunctionExpression(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        fun test(a: Int): Int {
+            let bar = fun(): Int {
+                return a
+            }
+            let a = 2
+            return bar()
+        }
+    `)
+
+	actual, err := inter.Invoke("test",
+		interpreter.NewUnmeteredIntValueFromInt64(1),
+	)
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(1),
+		actual,
+	)
+}
+
+func TestInterpretClosureScopingInnerFunction(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        fun test(a: Int): Int {
+            fun bar(): Int {
+                return a
+            }
+            let a = 2
+            return bar()
+        }
+    `)
+
+	value, err := inter.Invoke("test",
+		interpreter.NewUnmeteredIntValueFromInt64(1),
+	)
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(1),
+		value,
+	)
+}
+
+func TestInterpretAssignmentAfterClosureFunctionExpression(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        fun test(): Int {
+            var a = 1
+            let bar = fun(): Int {
+                return a
+            }
+            a = 2
+            return bar()
+        }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(2),
+		value,
+	)
+}
+
+func TestInterpretAssignmentAfterClosureInnerFunction(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        fun test(): Int {
+            var a = 1
+            fun bar(): Int {
+                return a
+            }
+            a = 2
+            return bar()
+        }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(2),
+		value,
+	)
+}
+
 // TestInterpretCompositeFunctionInvocationFromImportingProgram checks
 // that member functions of imported composites can be invoked from an importing program.
 // See https://github.com/dapperlabs/flow-go/issues/838
