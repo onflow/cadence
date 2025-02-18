@@ -703,10 +703,10 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
 }
 
 func (interpreter *Interpreter) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) StatementResult {
-	return interpreter.VisitFunctionDeclaration(declaration.FunctionDeclaration)
+	return interpreter.VisitFunctionDeclaration(declaration.FunctionDeclaration, false)
 }
 
-func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) StatementResult {
+func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration, isStatement bool) StatementResult {
 
 	identifier := declaration.Identifier.Identifier
 
@@ -717,6 +717,33 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 
 	// lexical scope: variables in functions are bound to what is visible at declaration time
 	lexicalScope := interpreter.activations.CurrentOrNew()
+
+	if isStatement {
+
+		// This function declaration is an inner function.
+		//
+		// Variables which are declared after this function declaration
+		// should not be visible or even overwrite the variables captured by the closure
+		/// (e.g. through shadowing).
+		//
+		// For example:
+		//
+		//     fun foo(a: Int): Int {
+		//         fun bar(): Int {
+		//             return a
+		//             //     ^ should refer to the `a` parameter of `foo`,
+		//             //     not to the `a` variable declared after `bar`
+		//         }
+		//         let a = 2
+		//         return bar()
+		//     }
+		//
+		// As variable declarations mutate the current activation in place,
+		// push a new activation, so that the mutations are not performed
+		// on the captured activation.
+
+		interpreter.activations.PushNewWithCurrent()
+	}
 
 	// make the function itself available inside the function
 	lexicalScope.Set(identifier, variable)
@@ -1297,6 +1324,8 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 		}
 	}
 
+	config := declarationInterpreter.SharedState.Config
+
 	wrapFunctions := func(ty *sema.InterfaceType, code WrapperCode) {
 
 		// Wrap initializer
@@ -1315,6 +1344,16 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 		// the order does not matter.
 
 		for name, functionWrapper := range code.FunctionWrappers { //nolint:maprange
+			// If there's a default implementation, then skip explicitly/separately
+			// running the conditions of that functions.
+			// Because the conditions also get executed when the default implementation is executed.
+			// This works because:
+			// 	- `code.Functions` only contains default implementations.
+			//	- There is always only one default implementation (cannot override by other interfaces).
+			if code.Functions.Contains(name) {
+				continue
+			}
+
 			fn, ok := functions.Get(name)
 			// If there is a wrapper, there MUST be a body.
 			if !ok {
@@ -1353,8 +1392,6 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 	location := declarationInterpreter.Location
 
 	qualifiedIdentifier := compositeType.QualifiedIdentifier()
-
-	config := declarationInterpreter.SharedState.Config
 
 	constructorType := compositeType.ConstructorFunctionType()
 
@@ -2446,7 +2483,11 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 	lexicalScope *VariableActivation,
 ) FunctionWrapper {
 
-	if declaration.FunctionBlock == nil {
+	if declaration.FunctionBlock == nil ||
+		declaration.FunctionBlock.HasStatements() {
+		// If there's a default implementation (i.e: has statements),
+		// then skip explicitly/separately running the conditions of that functions.
+		// Because the conditions also get executed when the default implementation is executed.
 		return nil
 	}
 
