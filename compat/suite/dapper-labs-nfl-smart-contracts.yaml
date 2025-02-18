@@ -1,0 +1,7 @@
+description: Dapper Labs NFL Smart Contracts
+maintainers:
+url: https://github.com/dapperlabs/nfl-smart-contracts.git
+branch: main
+go_tests:
+- path: lib/go/test
+  command: make test
