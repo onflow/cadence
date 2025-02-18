@@ -6916,7 +6916,7 @@ func TestInterpretClosureScopingInnerFunction(t *testing.T) {
 	)
 }
 
-func TestInterpretClosureScopingFunctionExpressionInCall(t *testing.T) {
+func TestInterpretClosureScopingFunctionExpressionParameterConfusion(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
@@ -6942,7 +6942,7 @@ func TestInterpretClosureScopingFunctionExpressionInCall(t *testing.T) {
 	)
 }
 
-func TestInterpretClosureScopingInnerFunctionInCall(t *testing.T) {
+func TestInterpretClosureScopingInnerFunctionParameterConfusion(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
@@ -6953,6 +6953,58 @@ func TestInterpretClosureScopingInnerFunctionInCall(t *testing.T) {
         fun test(): Int {
             let a = 1
             foo(a: 2)
+            return a
+        }
+    `)
+
+	actual, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(1),
+		actual,
+	)
+}
+
+func TestInterpretClosureScopingFunctionExpressionInCall(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        fun foo() {
+            fun() {}
+        }
+
+        fun test(): Int {
+            let a = 1
+            foo()
+            return a
+        }
+    `)
+
+	actual, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(1),
+		actual,
+	)
+}
+
+func TestInterpretClosureScopingInnerFunctionInCall(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        fun foo() {
+            let f = fun() {}
+        }
+
+        fun test(): Int {
+            let a = 1
+            foo()
             return a
         }
     `)
