@@ -14,8 +14,8 @@ In the future we can integrate this as part of CI, maybe as a periodic job.
   pip3 install -r requirements.txt
   ```
 
-- Run the suite. For example, to clone the repositories, benchmark, and compare to branch `master`:
+- Run the suite:
 
   ```sh
-  python3 main.py --format=pretty --bench --compare-ref master
+  python3 main.py
   ```
