@@ -602,6 +602,42 @@
       - name: "result"
         type: "bool"
 
+# Iterator
+
+- name: "iterator"
+  description:
+    Pops a value from stack, get an iterator to it, and push the iterator back onto the stack.
+  valueEffects:
+    pop:
+      - name: "iterable"
+        type: "iterable"
+    push:
+      - name: "iterator"
+        type: "iterator"
+
+- name: "iteratorHasNext"
+  description:
+    Pops a value-iterator from stack, calls `hasNext()` method on it, and push the result back onto the stack.
+  valueEffects:
+    pop:
+      - name: "iterator"
+        type: "iterator"
+    push:
+      - name: "hasNext"
+        type: "bool"
+
+
+- name: "iteratorNext"
+  description:
+    Pops a value-iterator from stack, calls `next()` method on it, and push the result back onto the stack.
+  valueEffects:
+    pop:
+      - name: "iterator"
+        type: "iterator"
+    push:
+      - name: "next"
+        type: "value"
+
 # Other
 
 - name: "emitEvent"

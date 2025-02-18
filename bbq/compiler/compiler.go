@@ -629,9 +629,65 @@ func (c *Compiler[_]) VisitWhileStatement(statement *ast.WhileStatement) (_ stru
 	return
 }
 
-func (c *Compiler[_]) VisitForStatement(_ *ast.ForStatement) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler[_]) VisitForStatement(statement *ast.ForStatement) (_ struct{}) {
+	index := statement.Index
+	var indexLocalVar *local
+	if index != nil {
+		indexLocalVar = c.currentFunction.declareLocal(index.Identifier)
+	}
+	elementLocalVar := c.currentFunction.declareLocal(statement.Identifier.Identifier)
+	iteratorLocalIndex := c.currentFunction.generateLocalIndex()
+
+	// Store the iterator in a local index
+	c.compileExpression(statement.Value)
+	c.codeGen.Emit(opcode.InstructionIterator{})
+	c.codeGen.Emit(opcode.InstructionSetLocal{
+		LocalIndex: iteratorLocalIndex,
+	})
+
+	testOffset := c.codeGen.Offset()
+	c.pushLoop(testOffset)
+
+	// Loop test: Get the iterator and call `hasNext()`
+	c.codeGen.Emit(opcode.InstructionGetLocal{
+		LocalIndex: iteratorLocalIndex,
+	})
+	c.codeGen.Emit(opcode.InstructionIteratorHasNext{})
+
+	endJump := c.emitUndefinedJumpIfFalse()
+
+	// Loop Body.
+	// Get the iterator and call `next()`. Store the index (if exist), and element in local var.
+
+	indexNeeded := indexLocalVar != nil
+
+	c.codeGen.Emit(opcode.InstructionGetLocal{
+		LocalIndex: iteratorLocalIndex,
+	})
+	c.codeGen.Emit(opcode.InstructionIteratorNext{
+		// TODO: pass a flag to indicate whether the index is needed?
+	})
+
+	// Store element
+	c.codeGen.Emit(opcode.InstructionSetLocal{
+		LocalIndex: elementLocalVar.index,
+	})
+	// Store index, if needed
+	if indexNeeded {
+		c.codeGen.Emit(opcode.InstructionSetLocal{
+			LocalIndex: indexLocalVar.index,
+		})
+	}
+	// Compile the for-loop body
+	c.compileBlock(statement.Block)
+
+	// Jump back to the loop test. i.e: `hasNext()`
+	c.emitJump(testOffset)
+
+	c.patchJump(endJump)
+	c.popLoop()
+
+	return
 }
 
 func (c *Compiler[_]) VisitEmitStatement(statement *ast.EmitStatement) (_ struct{}) {

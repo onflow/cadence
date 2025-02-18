@@ -3775,3 +3775,29 @@ func TestCasting(t *testing.T) {
 		assert.Equal(t, vm.Nil, result)
 	})
 }
+
+func TestForLoop(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("array", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := compileAndInvoke(t,
+			`
+                fun test(): Int {
+                    var array = [5, 6, 7, 8]
+                    var sum = 0
+                    for e in array {
+                        sum = sum + e
+                    }
+
+                    return sum
+                }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(26), result)
+	})
+}

@@ -53,7 +53,10 @@ func _() {
 	_ = x[InvokeDynamic-91]
 	_ = x[Drop-100]
 	_ = x[Dup-101]
-	_ = x[EmitEvent-108]
+	_ = x[Iterator-108]
+	_ = x[IteratorHasNext-109]
+	_ = x[IteratorNext-110]
+	_ = x[EmitEvent-111]
 }
 
 const (
@@ -66,7 +69,7 @@ const (
 	_Opcode_name_6 = "GetConstantGetLocalSetLocalGetGlobalSetGlobalGetFieldSetFieldSetIndexGetIndex"
 	_Opcode_name_7 = "InvokeInvokeDynamic"
 	_Opcode_name_8 = "DropDup"
-	_Opcode_name_9 = "EmitEvent"
+	_Opcode_name_9 = "IteratorIteratorHasNextIteratorNextEmitEvent"
 )
 
 var (
@@ -79,6 +82,7 @@ var (
 	_Opcode_index_6 = [...]uint8{0, 11, 19, 27, 36, 45, 53, 61, 69, 77}
 	_Opcode_index_7 = [...]uint8{0, 6, 19}
 	_Opcode_index_8 = [...]uint8{0, 4, 7}
+	_Opcode_index_9 = [...]uint8{0, 8, 23, 35, 44}
 )
 
 func (i Opcode) String() string {
@@ -109,8 +113,9 @@ func (i Opcode) String() string {
 	case 100 <= i && i <= 101:
 		i -= 100
 		return _Opcode_name_8[_Opcode_index_8[i]:_Opcode_index_8[i+1]]
-	case i == 108:
-		return _Opcode_name_9
+	case 108 <= i && i <= 111:
+		i -= 108
+		return _Opcode_name_9[_Opcode_index_9[i]:_Opcode_index_9[i+1]]
 	default:
 		return "Opcode(" + strconv.FormatInt(int64(i), 10) + ")"
 	}

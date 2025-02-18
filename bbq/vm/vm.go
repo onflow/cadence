@@ -742,7 +742,6 @@ func opUnwrap(vm *VM) {
 }
 
 func opNewArray(vm *VM, ins opcode.InstructionNewArray) {
-
 	typ := vm.loadType(ins.TypeIndex).(interpreter.ArrayStaticType)
 
 	elements := vm.peekN(int(ins.Size))
@@ -753,7 +752,6 @@ func opNewArray(vm *VM, ins opcode.InstructionNewArray) {
 }
 
 func opNewDictionary(vm *VM, ins opcode.InstructionNewDictionary) {
-
 	typ := vm.loadType(ins.TypeIndex).(*interpreter.DictionaryStaticType)
 
 	entries := vm.peekN(int(ins.Size * 2))
@@ -764,7 +762,6 @@ func opNewDictionary(vm *VM, ins opcode.InstructionNewDictionary) {
 }
 
 func opNewRef(vm *VM, ins opcode.InstructionNewRef) {
-
 	borrowedType := vm.loadType(ins.TypeIndex).(*interpreter.ReferenceStaticType)
 	value := vm.pop()
 
@@ -775,6 +772,27 @@ func opNewRef(vm *VM, ins opcode.InstructionNewRef) {
 		borrowedType.ReferencedType,
 	)
 	vm.push(ref)
+}
+
+func opIterator(vm *VM) {
+	value := vm.pop()
+	iterable := value.(IterableValue)
+	vm.push(iterable.Iterator())
+}
+
+func opIteratorHasNext(vm *VM) {
+	value := vm.pop()
+	iterator := value.(ValueIterator)
+	vm.push(BoolValue(iterator.HasNext()))
+}
+
+func opIteratorNext(vm *VM) {
+	value := vm.pop()
+	iterator := value.(ValueIterator)
+	// TODO: support returning the index
+
+	next := iterator.Next(vm.config)
+	vm.push(next)
 }
 
 func (vm *VM) run() {
@@ -882,6 +900,12 @@ func (vm *VM) run() {
 			opUnwrap(vm)
 		case opcode.InstructionEmitEvent:
 			onEmitEvent(vm, ins)
+		case opcode.InstructionIterator:
+			opIterator(vm)
+		case opcode.InstructionIteratorHasNext:
+			opIteratorHasNext(vm)
+		case opcode.InstructionIteratorNext:
+			opIteratorNext(vm)
 		default:
 			panic(errors.NewUnexpectedError("cannot execute instruction of type %T", ins))
 		}
