@@ -6869,11 +6869,11 @@ func TestInterpretClosureScopingFunctionExpression(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
         fun test(a: Int): Int {
-            let bar = fun(): Int {
-                return a
+            let bar = fun(b: Int): Int {
+                return a + b
             }
             let a = 2
-            return bar()
+            return bar(b: 10)
         }
     `)
 
@@ -6885,7 +6885,7 @@ func TestInterpretClosureScopingFunctionExpression(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewUnmeteredIntValueFromInt64(1),
+		interpreter.NewUnmeteredIntValueFromInt64(11),
 		actual,
 	)
 }
@@ -6895,11 +6895,11 @@ func TestInterpretClosureScopingInnerFunction(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
         fun test(a: Int): Int {
-            fun bar(): Int {
-                return a
+            fun bar(b: Int): Int {
+                return a + b
             }
             let a = 2
-            return bar()
+            return bar(b: 10)
         }
     `)
 
@@ -6911,8 +6911,112 @@ func TestInterpretClosureScopingInnerFunction(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewUnmeteredIntValueFromInt64(1),
+		interpreter.NewUnmeteredIntValueFromInt64(11),
 		value,
+	)
+}
+
+func TestInterpretClosureScopingFunctionExpressionParameterConfusion(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        fun foo(a: Int) {
+            fun() {}
+        }
+
+        fun test(): Int {
+            let a = 1
+            foo(a: 2)
+            return a
+        }
+    `)
+
+	actual, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(1),
+		actual,
+	)
+}
+
+func TestInterpretClosureScopingInnerFunctionParameterConfusion(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        fun foo(a: Int) {
+            let f = fun() {}
+        }
+
+        fun test(): Int {
+            let a = 1
+            foo(a: 2)
+            return a
+        }
+    `)
+
+	actual, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(1),
+		actual,
+	)
+}
+
+func TestInterpretClosureScopingFunctionExpressionInCall(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        fun foo() {
+            fun() {}
+        }
+
+        fun test(): Int {
+            let a = 1
+            foo()
+            return a
+        }
+    `)
+
+	actual, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(1),
+		actual,
+	)
+}
+
+func TestInterpretClosureScopingInnerFunctionInCall(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        fun foo() {
+            let f = fun() {}
+        }
+
+        fun test(): Int {
+            let a = 1
+            foo()
+            return a
+        }
+    `)
+
+	actual, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(1),
+		actual,
 	)
 }
 
@@ -6922,11 +7026,11 @@ func TestInterpretAssignmentAfterClosureFunctionExpression(t *testing.T) {
 	inter := parseCheckAndInterpret(t, `
         fun test(): Int {
             var a = 1
-            let bar = fun(): Int {
-                return a
+            let bar = fun(b: Int): Int {
+                return a + b
             }
             a = 2
-            return bar()
+            return bar(b: 10)
         }
     `)
 
@@ -6936,7 +7040,7 @@ func TestInterpretAssignmentAfterClosureFunctionExpression(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewUnmeteredIntValueFromInt64(2),
+		interpreter.NewUnmeteredIntValueFromInt64(12),
 		value,
 	)
 }
@@ -6947,11 +7051,11 @@ func TestInterpretAssignmentAfterClosureInnerFunction(t *testing.T) {
 	inter := parseCheckAndInterpret(t, `
         fun test(): Int {
             var a = 1
-            fun bar(): Int {
-                return a
+            fun bar(b: Int): Int {
+                return a + b
             }
             a = 2
-            return bar()
+            return bar(b: 10)
         }
     `)
 
@@ -6961,7 +7065,7 @@ func TestInterpretAssignmentAfterClosureInnerFunction(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewUnmeteredIntValueFromInt64(2),
+		interpreter.NewUnmeteredIntValueFromInt64(12),
 		value,
 	)
 }
