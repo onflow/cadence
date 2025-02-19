@@ -285,7 +285,7 @@ func (c *Compiler[_]) popLoop() {
 
 	var previousLoop *loop
 	if lastIndex > 0 {
-		previousLoop = c.loops[lastIndex]
+		previousLoop = c.loops[lastIndex-1]
 	}
 	c.currentLoop = previousLoop
 }

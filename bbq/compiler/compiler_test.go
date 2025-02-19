@@ -27,6 +27,7 @@ import (
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/constantkind"
 	"github.com/onflow/cadence/bbq/opcode"
+	"github.com/onflow/cadence/common"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -926,6 +927,135 @@ func TestCompileFailableCast(t *testing.T) {
 
 			// assign to temp $result
 			opcode.InstructionTransfer{TypeIndex: 1},
+			opcode.InstructionSetLocal{LocalIndex: resultIndex},
+
+			// return $result
+			opcode.InstructionGetLocal{LocalIndex: resultIndex},
+			opcode.InstructionReturnValue{},
+		},
+		compiler.ExportFunctions()[0].Code,
+	)
+}
+
+func TestCompileNestedLoop(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun test(): Int {
+          var i = 0
+          while i < 10 {
+              var j = 0
+              while j < 10 {
+                  if i == j {
+                      break
+                  }
+                  j = j + 1
+                  continue
+              }
+              i = i + 1
+              continue
+          }
+          return i
+      }
+    `)
+	require.NoError(t, err)
+
+	compiler := NewInstructionCompiler(checker)
+	program := compiler.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	const parameterCount = 0
+
+	// resultIndex is the index of the $result variable
+	const resultIndex = parameterCount
+
+	// localsOffset is the offset of the first local variable
+	const localsOffset = resultIndex + 1
+
+	const (
+		// iIndex is the index of the local variable `i`, which is the first local variable
+		iIndex = localsOffset + iota
+		// jIndex is the index of the local variable `j`, which is the second local variable
+		jIndex
+	)
+	const (
+		// zeroIndex is the index of the constant `0`, which is the first constant
+		zeroIndex = iota
+		// tenIndex is the index of the constant `10`, which is the second constant
+		tenIndex
+		// oneIndex is the index of the constant `1`, which is the third constant
+		oneIndex
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// var i = 0
+			opcode.InstructionGetConstant{ConstantIndex: zeroIndex},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: iIndex},
+
+			// i < 10
+			opcode.InstructionGetLocal{LocalIndex: iIndex},
+			opcode.InstructionGetConstant{ConstantIndex: tenIndex},
+			opcode.InstructionLess{},
+
+			opcode.InstructionJumpIfFalse{Target: 33},
+
+			// var j = 0
+			opcode.InstructionGetConstant{ConstantIndex: zeroIndex},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: jIndex},
+
+			// j < 10
+			opcode.InstructionGetLocal{LocalIndex: jIndex},
+			opcode.InstructionGetConstant{ConstantIndex: tenIndex},
+			opcode.InstructionLess{},
+
+			opcode.InstructionJumpIfFalse{Target: 26},
+
+			// i == j
+			opcode.InstructionGetLocal{LocalIndex: iIndex},
+			opcode.InstructionGetLocal{LocalIndex: jIndex},
+			opcode.InstructionEqual{},
+
+			opcode.InstructionJumpIfFalse{Target: 19},
+
+			// break
+			opcode.InstructionJump{Target: 26},
+
+			// j = j + 1
+			opcode.InstructionGetLocal{LocalIndex: jIndex},
+			opcode.InstructionGetConstant{ConstantIndex: oneIndex},
+			opcode.InstructionAdd{},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: jIndex},
+
+			// continue
+			opcode.InstructionJump{Target: 10},
+
+			// repeat
+			opcode.InstructionJump{Target: 10},
+
+			// i = i + 1
+			opcode.InstructionGetLocal{LocalIndex: iIndex},
+			opcode.InstructionGetConstant{ConstantIndex: oneIndex},
+			opcode.InstructionAdd{},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: iIndex},
+
+			// continue
+			opcode.InstructionJump{Target: 3},
+
+			// repeat
+			opcode.InstructionJump{Target: 3},
+
+			// return i
+			opcode.InstructionGetLocal{LocalIndex: iIndex},
+
+			// assign to temp $result
+			opcode.InstructionTransfer{TypeIndex: 0},
 			opcode.InstructionSetLocal{LocalIndex: resultIndex},
 
 			// return $result
