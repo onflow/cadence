@@ -3800,4 +3800,27 @@ func TestForLoop(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, vm.NewIntValue(26), result)
 	})
+
+	t.Run("array with index", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := compileAndInvoke(t,
+			`
+                fun test(): String {
+                    var array = [5, 6, 7, 8]
+                    var keys = ""
+                    var values = ""
+                    for i, e in array {
+                        keys = keys.concat(i.toString())
+                        values = values.concat(e.toString())
+                    }
+
+                    return keys.concat("_").concat(values)
+                }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewStringValue("0123_5678"), result)
+	})
 }

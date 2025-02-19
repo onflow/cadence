@@ -229,6 +229,17 @@ func (c *Compiler[_]) addStringConst(str string) *constant {
 	return c.addConstant(constantkind.String, []byte(str))
 }
 
+func (c *Compiler[_]) intConstLoad(i int64) {
+	constant := c.addIntConst(i)
+	c.codeGen.Emit(opcode.InstructionGetConstant{ConstantIndex: constant.index})
+}
+
+func (c *Compiler[_]) addIntConst(i int64) *constant {
+	var data []byte
+	data = leb128.AppendInt64(data, i)
+	return c.addConstant(constantkind.Int, data)
+}
+
 func (c *Compiler[_]) emitJump(target int) int {
 	if target >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid jump"))
@@ -631,14 +642,23 @@ func (c *Compiler[_]) VisitWhileStatement(statement *ast.WhileStatement) (_ stru
 
 func (c *Compiler[_]) VisitForStatement(statement *ast.ForStatement) (_ struct{}) {
 	index := statement.Index
+	indexNeeded := index != nil
+
 	var indexLocalVar *local
-	if index != nil {
+	if indexNeeded {
+		// `var <index> = -1`
+		// Start with -1 and then increment at the start of the loop,
+		// so that we don't have to deal with early exists of the loop.
 		indexLocalVar = c.currentFunction.declareLocal(index.Identifier)
+		c.intConstLoad(-1)
+		c.codeGen.Emit(opcode.InstructionSetLocal{
+			LocalIndex: indexLocalVar.index,
+		})
 	}
 	elementLocalVar := c.currentFunction.declareLocal(statement.Identifier.Identifier)
 	iteratorLocalIndex := c.currentFunction.generateLocalIndex()
 
-	// Store the iterator in a local index
+	// Store the iterator in a local index.
 	c.compileExpression(statement.Value)
 	c.codeGen.Emit(opcode.InstructionIterator{})
 	c.codeGen.Emit(opcode.InstructionSetLocal{
@@ -648,7 +668,7 @@ func (c *Compiler[_]) VisitForStatement(statement *ast.ForStatement) (_ struct{}
 	testOffset := c.codeGen.Offset()
 	c.pushLoop(testOffset)
 
-	// Loop test: Get the iterator and call `hasNext()`
+	// Loop test: Get the iterator and call `hasNext()`.
 	c.codeGen.Emit(opcode.InstructionGetLocal{
 		LocalIndex: iteratorLocalIndex,
 	})
@@ -656,28 +676,32 @@ func (c *Compiler[_]) VisitForStatement(statement *ast.ForStatement) (_ struct{}
 
 	endJump := c.emitUndefinedJumpIfFalse()
 
-	// Loop Body.
-	// Get the iterator and call `next()`. Store the index (if exist), and element in local var.
-
-	indexNeeded := indexLocalVar != nil
+	// Loop Body. Get the iterator and call `next()`.
 
 	c.codeGen.Emit(opcode.InstructionGetLocal{
 		LocalIndex: iteratorLocalIndex,
 	})
-	c.codeGen.Emit(opcode.InstructionIteratorNext{
-		// TODO: pass a flag to indicate whether the index is needed?
-	})
 
-	// Store element
-	c.codeGen.Emit(opcode.InstructionSetLocal{
-		LocalIndex: elementLocalVar.index,
-	})
-	// Store index, if needed
+	// Store the index if needed, and store in the local var.
 	if indexNeeded {
+		// <index> = <index> + 1
+		c.codeGen.Emit(opcode.InstructionGetLocal{
+			LocalIndex: indexLocalVar.index,
+		})
+		c.intConstLoad(1)
+		c.codeGen.Emit(opcode.InstructionAdd{})
 		c.codeGen.Emit(opcode.InstructionSetLocal{
 			LocalIndex: indexLocalVar.index,
 		})
 	}
+
+	// Get the next entry, and store it in the local var.
+	// <entry> = iterator.next()
+	c.codeGen.Emit(opcode.InstructionIteratorNext{})
+	c.codeGen.Emit(opcode.InstructionSetLocal{
+		LocalIndex: elementLocalVar.index,
+	})
+
 	// Compile the for-loop body
 	c.compileBlock(statement.Block)
 

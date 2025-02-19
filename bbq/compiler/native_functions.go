@@ -42,6 +42,7 @@ func NativeFunctions() map[string]*global {
 }
 
 var builtinTypes = []sema.Type{
+	sema.IntType,
 	sema.StringType,
 	sema.AccountType,
 	&sema.CapabilityType{},

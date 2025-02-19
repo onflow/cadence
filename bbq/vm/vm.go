@@ -789,10 +789,8 @@ func opIteratorHasNext(vm *VM) {
 func opIteratorNext(vm *VM) {
 	value := vm.pop()
 	iterator := value.(ValueIterator)
-	// TODO: support returning the index
-
-	next := iterator.Next(vm.config)
-	vm.push(next)
+	element := iterator.Next(vm.config)
+	vm.push(element)
 }
 
 func (vm *VM) run() {
