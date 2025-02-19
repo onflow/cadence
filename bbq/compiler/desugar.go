@@ -100,7 +100,7 @@ func (d *Desugar) VisitVariableDeclaration(declaration *ast.VariableDeclaration)
 	return declaration
 }
 
-func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) ast.Declaration {
+func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration, _ bool) ast.Declaration {
 	funcBlock := declaration.FunctionBlock
 	funcName := declaration.Identifier.Identifier
 
