@@ -269,12 +269,12 @@ func (v *CompositeValue) Walk(interpreter *Interpreter, walkChild func(Value), l
 	}, locationRange)
 }
 
-func (v *CompositeValue) StaticType(interpreter *Interpreter) StaticType {
+func (v *CompositeValue) StaticType(context ValueStaticTypeContext) StaticType {
 	if v.staticType == nil {
 		// NOTE: Instead of using NewCompositeStaticType, which always generates the type ID,
 		// use the TypeID accessor, which may return an already computed type ID
 		v.staticType = NewCompositeStaticType(
-			interpreter,
+			context,
 			v.Location,
 			v.QualifiedIdentifier,
 			v.TypeID(),
@@ -286,7 +286,7 @@ func (v *CompositeValue) StaticType(interpreter *Interpreter) StaticType {
 func (v *CompositeValue) IsImportable(inter *Interpreter, locationRange LocationRange) bool {
 	// Check type is importable
 	staticType := v.StaticType(inter)
-	semaType := inter.MustConvertStaticToSemaType(staticType)
+	semaType := MustConvertStaticToSemaType(staticType, inter)
 	if !semaType.IsImportable(map[*sema.Member]bool{}) {
 		return false
 	}
@@ -382,7 +382,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 		)
 
 		event := constructor.invoke(eventConstructorInvocation).(*CompositeValue)
-		eventType := interpreter.MustSemaTypeOfValue(event).(*sema.CompositeType)
+		eventType := MustSemaTypeOfValue(event, interpreter).(*sema.CompositeType)
 
 		// emit the event once destruction is complete
 		defer interpreter.emitEvent(event, eventType, locationRange)
@@ -462,7 +462,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		}
 	}
 
-	if field := v.GetField(interpreter, locationRange, name); field != nil {
+	if field := v.GetField(interpreter, name); field != nil {
 		return compositeMember(interpreter, v, field)
 	}
 
@@ -501,7 +501,7 @@ func compositeMember(interpreter *Interpreter, compositeValue Value, memberValue
 	return memberValue
 }
 
-func (v *CompositeValue) isInvalidatedResource(_ *Interpreter) bool {
+func (v *CompositeValue) isInvalidatedResource(context ValueStaticTypeContext) bool {
 	return v.isDestroyed || (v.dictionary == nil && v.Kind == common.CompositeKindResource)
 }
 
@@ -863,7 +863,7 @@ func formatComposite(
 	return format.Composite(typeId, preparedFields)
 }
 
-func (v *CompositeValue) GetField(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v *CompositeValue) GetField(memoryGauge common.MemoryGauge, name string) Value {
 	storedValue, err := v.dictionary.Get(
 		StringAtreeValueComparator,
 		StringAtreeValueHashInput,
@@ -877,16 +877,16 @@ func (v *CompositeValue) GetField(interpreter *Interpreter, locationRange Locati
 		panic(errors.NewExternalError(err))
 	}
 
-	return MustConvertStoredValue(interpreter, storedValue)
+	return MustConvertStoredValue(memoryGauge, storedValue)
 }
 
-func (v *CompositeValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+func (v *CompositeValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
 	otherComposite, ok := other.(*CompositeValue)
 	if !ok {
 		return false
 	}
 
-	if !v.StaticType(interpreter).Equal(otherComposite.StaticType(interpreter)) ||
+	if !v.StaticType(context).Equal(otherComposite.StaticType(context)) ||
 		v.Kind != otherComposite.Kind ||
 		v.dictionary.Count() != otherComposite.dictionary.Count() {
 
@@ -911,10 +911,10 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, locationRange LocationR
 
 		// NOTE: Do NOT use an iterator, iteration order of fields may be different
 		// (if stored in different account, as storage ID is used as hash seed)
-		otherValue := otherComposite.GetField(interpreter, locationRange, fieldName)
+		otherValue := otherComposite.GetField(context, fieldName)
 
-		equatableValue, ok := MustConvertStoredValue(interpreter, value).(EquatableValue)
-		if !ok || !equatableValue.Equal(interpreter, locationRange, otherValue) {
+		equatableValue, ok := MustConvertStoredValue(context, value).(EquatableValue)
+		if !ok || !equatableValue.Equal(context, locationRange, otherValue) {
 			return false
 		}
 	}
@@ -924,13 +924,13 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, locationRange LocationR
 // - HashInputTypeEnum (1 byte)
 // - type id (n bytes)
 // - hash input of raw value field name (n bytes)
-func (v *CompositeValue) HashInput(interpreter *Interpreter, locationRange LocationRange, scratch []byte) []byte {
+func (v *CompositeValue) HashInput(memoryGauge common.MemoryGauge, locationRange LocationRange, scratch []byte) []byte {
 	if v.Kind == common.CompositeKindEnum {
 		typeID := v.TypeID()
 
-		rawValue := v.GetField(interpreter, locationRange, sema.EnumRawValueFieldName)
+		rawValue := v.GetField(memoryGauge, sema.EnumRawValueFieldName)
 		rawValueHashInput := rawValue.(HashableValue).
-			HashInput(interpreter, locationRange, scratch)
+			HashInput(memoryGauge, locationRange, scratch)
 
 		length := 1 + len(typeID) + len(rawValueHashInput)
 		if length <= len(scratch) {
@@ -985,7 +985,7 @@ func (v *CompositeValue) ConformsToStaticType(
 	}
 
 	staticType := v.StaticType(interpreter)
-	semaType := interpreter.MustConvertStaticToSemaType(staticType)
+	semaType := MustConvertStaticToSemaType(staticType, interpreter)
 
 	switch staticType.(type) {
 	case *CompositeStaticType:
@@ -1036,7 +1036,7 @@ func (v *CompositeValue) CompositeStaticTypeConformsToStaticType(
 	}
 
 	for _, fieldName := range compositeType.Fields {
-		value := v.GetField(interpreter, locationRange, fieldName)
+		value := v.GetField(interpreter, fieldName)
 		if value == nil {
 			if computedFields == nil {
 				return false
@@ -1086,7 +1086,7 @@ func (v *CompositeValue) InclusiveRangeStaticTypeConformsToStaticType(
 
 	expectedMemberStaticType := ConvertSemaToStaticType(interpreter, inclusiveRangeType.MemberType)
 	for _, fieldName := range sema.InclusiveRangeTypeFieldNames {
-		value := v.GetField(interpreter, locationRange, fieldName)
+		value := v.GetField(interpreter, fieldName)
 
 		fieldStaticType := value.StaticType(interpreter)
 
@@ -1159,9 +1159,9 @@ func (v *CompositeValue) NeedsStoreTo(address atree.Address) bool {
 	return address != v.StorageAddress()
 }
 
-func (v *CompositeValue) IsResourceKinded(interpreter *Interpreter) bool {
+func (v *CompositeValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	if v.Kind == common.CompositeKindAttachment {
-		return interpreter.MustSemaTypeOfValue(v).IsResourceType()
+		return MustSemaTypeOfValue(v, context).IsResourceType()
 	}
 	return v.Kind == common.CompositeKindResource
 }
@@ -1364,8 +1364,8 @@ func (v *CompositeValue) Transfer(
 	return res
 }
 
-func (v *CompositeValue) ResourceUUID(interpreter *Interpreter, locationRange LocationRange) *UInt64Value {
-	fieldValue := v.GetField(interpreter, locationRange, sema.ResourceUUIDFieldName)
+func (v *CompositeValue) ResourceUUID(interpreter *Interpreter) *UInt64Value {
+	fieldValue := v.GetField(interpreter, sema.ResourceUUIDFieldName)
 	uuid, ok := fieldValue.(UInt64Value)
 	if !ok {
 		return nil
@@ -1556,7 +1556,7 @@ func (v *CompositeValue) forEachField(
 ) {
 	err := atreeIterate(func(key atree.Value, atreeValue atree.Value) (resume bool, err error) {
 		value := MustConvertStoredValue(interpreter, atreeValue)
-		interpreter.checkInvalidatedResourceOrResourceReference(value, locationRange)
+		checkInvalidatedResourceOrResourceReference(value, locationRange, interpreter)
 
 		resume = f(
 			string(key.(StringAtreeValue)),
@@ -1656,7 +1656,7 @@ func (v *CompositeValue) getBaseValue(
 	functionAuthorization Authorization,
 	locationRange LocationRange,
 ) *EphemeralReferenceValue {
-	attachmentType, ok := interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType)
+	attachmentType, ok := MustSemaTypeOfValue(v, interpreter).(*sema.CompositeType)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -1701,7 +1701,7 @@ func (v *CompositeValue) GetAttachments(interpreter *Interpreter, locationRange 
 }
 
 func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, locationRange LocationRange) Value {
-	compositeType := interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType)
+	compositeType := MustSemaTypeOfValue(v, interpreter).(*sema.CompositeType)
 	return NewBoundHostFunctionValue(
 		interpreter,
 		v,
@@ -1722,7 +1722,7 @@ func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, loc
 
 			fn := func(attachment *CompositeValue) {
 
-				attachmentType := inter.MustSemaTypeOfValue(attachment).(*sema.CompositeType)
+				attachmentType := MustSemaTypeOfValue(attachment, inter).(*sema.CompositeType)
 
 				attachmentReference := NewEphemeralReferenceValue(
 					inter,
@@ -1772,7 +1772,7 @@ func attachmentBaseAndSelfValues(
 		interpreter,
 		attachmentReferenceAuth,
 		v,
-		interpreter.MustSemaTypeOfValue(v),
+		MustSemaTypeOfValue(v, interpreter),
 		locationRange,
 	)
 
@@ -1787,9 +1787,8 @@ func (v *CompositeValue) forEachAttachment(
 	// The attachment iteration creates an implicit reference to the composite, and holds onto that referenced-value.
 	// But the reference could get invalidated during the iteration, making that referenced-value invalid.
 	// We create a reference here for the purposes of tracking it during iteration.
-	vType := interpreter.MustSemaTypeOfValue(v)
+	vType := MustSemaTypeOfValue(v, interpreter)
 	compositeReference := NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, v, vType, locationRange)
-	interpreter.maybeTrackReferencedResourceKindedValue(compositeReference)
 	forEachAttachment(interpreter, compositeReference, locationRange, f)
 }
 
@@ -1820,7 +1819,7 @@ func forEachAttachment(
 
 	for {
 		// Check that the implicit composite reference was not invalidated during iteration
-		interpreter.checkInvalidatedResourceOrResourceReference(compositeReference, locationRange)
+		checkInvalidatedResourceOrResourceReference(compositeReference, locationRange, interpreter)
 		key, value, err := iterator.Next()
 		if err != nil {
 			panic(errors.NewExternalError(err))

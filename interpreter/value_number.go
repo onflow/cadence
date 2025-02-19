@@ -26,20 +26,26 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
+type NumberValueArithmeticContext interface {
+	ValueStaticTypeContext
+}
+
+var _ NumberValueArithmeticContext = &Interpreter{}
+
 // NumberValue
 type NumberValue interface {
 	ComparableValue
 	ToInt(locationRange LocationRange) int
-	Negate(*Interpreter, LocationRange) NumberValue
-	Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
-	SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
-	Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
-	SaturatingMinus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
-	Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
-	Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
-	SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
-	Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
-	SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
+	Negate(context NumberValueArithmeticContext, locationRange LocationRange) NumberValue
+	Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	SaturatingPlus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	SaturatingMinus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	SaturatingMul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	SaturatingDiv(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
 	ToBigEndianBytes() []byte
 }
 
@@ -162,11 +168,11 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 
 type IntegerValue interface {
 	NumberValue
-	BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue
-	BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue
-	BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue
-	BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue
-	BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue
+	BitwiseOr(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue
+	BitwiseXor(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue
+	BitwiseAnd(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue
+	BitwiseLeftShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue
+	BitwiseRightShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue
 }
 
 // BigNumberValue is a number value with an integer value outside the range of int64

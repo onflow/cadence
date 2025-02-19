@@ -108,9 +108,9 @@ func (v *IDCapabilityValue) Walk(_ *Interpreter, walkChild func(Value), _ Locati
 	walkChild(v.address)
 }
 
-func (v *IDCapabilityValue) StaticType(inter *Interpreter) StaticType {
+func (v *IDCapabilityValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewCapabilityStaticType(
-		inter,
+		context,
 		v.BorrowType,
 	)
 }
@@ -145,12 +145,12 @@ func (v *IDCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange,
 	switch name {
 	case sema.CapabilityTypeBorrowFunctionName:
 		// this function will panic already if this conversion fails
-		borrowType, _ := interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+		borrowType, _ := MustConvertStaticToSemaType(v.BorrowType, interpreter).(*sema.ReferenceType)
 		return interpreter.capabilityBorrowFunction(v, v.address, v.ID, borrowType)
 
 	case sema.CapabilityTypeCheckFunctionName:
 		// this function will panic already if this conversion fails
-		borrowType, _ := interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+		borrowType, _ := MustConvertStaticToSemaType(v.BorrowType, interpreter).(*sema.ReferenceType)
 		return interpreter.capabilityCheckFunction(v, v.address, v.ID, borrowType)
 
 	case sema.CapabilityTypeAddressFieldName:
@@ -181,14 +181,14 @@ func (v *IDCapabilityValue) ConformsToStaticType(
 	return true
 }
 
-func (v *IDCapabilityValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+func (v *IDCapabilityValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
 	otherCapability, ok := other.(*IDCapabilityValue)
 	if !ok {
 		return false
 	}
 
 	return otherCapability.ID == v.ID &&
-		otherCapability.address.Equal(interpreter, locationRange, v.address) &&
+		otherCapability.address.Equal(context, locationRange, v.address) &&
 		otherCapability.BorrowType.Equal(v.BorrowType)
 }
 
@@ -217,7 +217,7 @@ func (*IDCapabilityValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*IDCapabilityValue) IsResourceKinded(_ *Interpreter) bool {
+func (*IDCapabilityValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

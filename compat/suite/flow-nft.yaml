@@ -1,7 +1,5 @@
 description: Flow Non-Fungible Token
 maintainers:
-  - bastian.mueller@flowfoundation.org
-  - joshua.hannan@flowfoundation.org
 url: https://github.com/onflow/flow-nft.git
 branch: master
 go_tests:

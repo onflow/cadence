@@ -400,7 +400,7 @@ func loadStorageKey(
 
 					if composite, ok := v.(*interpreter.CompositeValue); ok &&
 						composite.Kind == common.CompositeKindResource &&
-						composite.ResourceUUID(inter, interpreter.EmptyLocationRange) == nil {
+						composite.ResourceUUID(inter) == nil {
 
 						log.Printf(
 							"Failed to get UUID for resource @ 0x%x %s",
