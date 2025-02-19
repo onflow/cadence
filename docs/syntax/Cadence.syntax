@@ -112,7 +112,7 @@ nonquotedTextItemCharacter:
 
 escapedCharacter:
         escapedUnicodeScalar
-    |   escapedCCharacter
+    |   escapedCharacter
     ;
 
 escapedUnicodeScalar:
@@ -121,7 +121,7 @@ escapedUnicodeScalar:
 unicodeScalarDigit:
         "0123456789abcdefABCDEF" ;
 
-escapedCCharacter:
+escapedCharacter:
         "\\" "0\\tnr\"'" ;
 
 %parser
@@ -139,8 +139,8 @@ access:
     |   accessMapping      // ast.Access
     |   accessSelf         // ast.Access
     |   accessEntitlement  // ast.Access
-    |   accessPub          //            { error( "'pub' access modifier not supported" ) }
-    |   accessPriv
+    |   accessPub          // error: `pub` and `pub(set)` are no longer valid access keywords
+    |   accessPriv         // error: `priv` is no longer a valid access keyword
     |   accessNotSpecified // ast.AccessNotSpecified
     ;
 
@@ -173,11 +173,13 @@ accessPub:
     ;
 
 accessPubSet:
+        // error: `pub(set)` is no longer a valid access keyword
         "(" setKeyword ")"
     ;
 
 accessPriv:
-        privKeyword // error: `priv` is no longer a valid access keyword
+        // error: `priv` is no longer a valid access keyword
+        privKeyword 
     ;
 
 argument:
@@ -525,6 +527,7 @@ fullType:
     |   fullTypeNested // ast.FullType
     ;
 
+// TODO split this rule up and to encode the precedence rules
 fullTypeNormal:
         *1fullTypeReference innerType *fullTypeOptional
     ;
