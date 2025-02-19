@@ -1065,3 +1065,173 @@ func TestCompileNestedLoop(t *testing.T) {
 		compiler.ExportFunctions()[0].Code,
 	)
 }
+
+func TestCompileAssignLocal(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        fun test() {
+            var x = 0
+            x = 1
+        }
+    `)
+	require.NoError(t, err)
+
+	compiler := NewInstructionCompiler(checker)
+	program := compiler.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	const parameterCount = 0
+
+	// resultIndex is the index of the $result variable
+	const resultIndex = parameterCount
+
+	// localsOffset is the offset of the first local variable
+	const localsOffset = resultIndex + 1
+
+	// xIndex is the index of the local variable `x`, which is the first local variable
+	const xIndex = localsOffset
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// var x = 0
+			opcode.InstructionGetConstant{ConstantIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: xIndex},
+
+			// x = 1
+			opcode.InstructionGetConstant{ConstantIndex: 1},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: xIndex},
+
+			opcode.InstructionReturn{},
+		},
+		compiler.ExportFunctions()[0].Code,
+	)
+}
+
+func TestCompileAssignGlobal(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        var x = 0
+
+        fun test() {
+            x = 1
+        }
+    `)
+	require.NoError(t, err)
+
+	compiler := NewInstructionCompiler(checker)
+	program := compiler.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// x = 1
+			opcode.InstructionGetConstant{ConstantIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetGlobal{GlobalIndex: 0},
+
+			opcode.InstructionReturn{},
+		},
+		compiler.ExportFunctions()[0].Code,
+	)
+}
+
+func TestCompileAssignIndex(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        fun test(array: [Int], index: Int, value: Int) {
+            array[index] = value
+        }
+    `)
+	require.NoError(t, err)
+
+	compiler := NewInstructionCompiler(checker)
+	program := compiler.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	const parameterCount = 3
+
+	const (
+		// arrayIndex is the index of the parameter `array`, which is the first parameter
+		arrayIndex = iota
+		// indexIndex is the index of the parameter `index`, which is the second parameter
+		indexIndex
+		// valueIndex is the index of the parameter `value`, which is the third parameter
+		valueIndex
+	)
+
+	// resultIndex is the index of the $result variable
+	const resultIndex = parameterCount
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionGetLocal{LocalIndex: arrayIndex},
+			opcode.InstructionGetLocal{LocalIndex: indexIndex},
+			opcode.InstructionGetLocal{LocalIndex: valueIndex},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetIndex{},
+			opcode.InstructionReturn{},
+		},
+		compiler.ExportFunctions()[0].Code,
+	)
+}
+
+func TestCompileAssignMember(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        struct Test {
+            var x: Int
+
+            init(value: Int) {
+                self.x = value
+            }
+        }
+    `)
+	require.NoError(t, err)
+
+	compiler := NewInstructionCompiler(checker)
+	program := compiler.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	const (
+		// valueIndex is the index of the parameter `value`, which is the first parameter
+		valueIndex = iota
+		// selfIndex is the index of the `self` variable
+		selfIndex
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// let self = Test()
+			opcode.InstructionNew{
+				Kind:      common.CompositeKindStructure,
+				TypeIndex: 0,
+			},
+			opcode.InstructionSetLocal{LocalIndex: selfIndex},
+
+			// self.x = value
+			opcode.InstructionGetLocal{LocalIndex: selfIndex},
+			opcode.InstructionGetLocal{LocalIndex: valueIndex},
+			opcode.InstructionTransfer{TypeIndex: 1},
+			opcode.InstructionSetField{FieldNameIndex: 0},
+
+			// return $result
+			opcode.InstructionGetLocal{LocalIndex: selfIndex},
+			opcode.InstructionReturnValue{},
+		},
+		compiler.ExportFunctions()[0].Code,
+	)
+}
