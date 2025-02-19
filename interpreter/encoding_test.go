@@ -35,6 +35,7 @@ import (
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	"github.com/onflow/cadence/values"
 )
 
 type encodeDecodeTest struct {
@@ -168,7 +169,7 @@ func TestEncodeDecodeVoidValue(t *testing.T) {
 			value: Void,
 			encoded: []byte{
 				// tag
-				0xd8, CBORTagVoidValue,
+				0xd8, values.CBORTagVoidValue,
 				// null
 				0xf6,
 			},
@@ -226,7 +227,7 @@ func TestEncodeDecodeString(t *testing.T) {
 				value: expected,
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagStringValue,
+					0xd8, values.CBORTagStringValue,
 
 					//  UTF-8 string, 0 bytes follow
 					0x60,
@@ -245,7 +246,7 @@ func TestEncodeDecodeString(t *testing.T) {
 				value: expected,
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagStringValue,
+					0xd8, values.CBORTagStringValue,
 
 					// UTF-8 string, 3 bytes follow
 					0x63,
@@ -563,7 +564,7 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredIntValueFromInt64(0),
 				encoded: []byte{
-					0xd8, CBORTagIntValue,
+					0xd8, values.CBORTagIntValue,
 					// positive bignum
 					0xc2,
 					// byte string, length 0
@@ -580,7 +581,7 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredIntValueFromInt64(42),
 				encoded: []byte{
-					0xd8, CBORTagIntValue,
+					0xd8, values.CBORTagIntValue,
 					// positive bignum
 					0xc2,
 					// byte string, length 1
@@ -598,7 +599,7 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredIntValueFromInt64(-1),
 				encoded: []byte{
-					0xd8, CBORTagIntValue,
+					0xd8, values.CBORTagIntValue,
 					// negative bignum
 					0xc3,
 					// byte string, length 0
@@ -615,7 +616,7 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredIntValueFromInt64(-42),
 				encoded: []byte{
-					0xd8, CBORTagIntValue,
+					0xd8, values.CBORTagIntValue,
 					// negative bignum
 					0xc3,
 					// byte string, length 1
@@ -640,7 +641,7 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredIntValueFromBigInt(setString),
 				encoded: []byte{
-					0xd8, CBORTagIntValue,
+					0xd8, values.CBORTagIntValue,
 					// negative bignum
 					0xc3,
 					// byte string, length 9
@@ -663,7 +664,7 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 				value: NewUnmeteredIntValueFromBigInt(bigInt),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagIntValue,
+					0xd8, values.CBORTagIntValue,
 					// positive bignum
 					0xc2,
 					// byte string, length 9
@@ -716,7 +717,7 @@ func TestEncodeDecodeInt8Value(t *testing.T) {
 				value: NewUnmeteredInt8Value(0),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt8Value,
+					0xd8, values.CBORTagInt8Value,
 					// integer 0
 					0x0,
 				},
@@ -732,7 +733,7 @@ func TestEncodeDecodeInt8Value(t *testing.T) {
 				value: NewUnmeteredInt8Value(-42),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt8Value,
+					0xd8, values.CBORTagInt8Value,
 					// negative integer 42
 					0x38,
 					0x29,
@@ -749,7 +750,7 @@ func TestEncodeDecodeInt8Value(t *testing.T) {
 				value: NewUnmeteredInt8Value(42),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt8Value,
+					0xd8, values.CBORTagInt8Value,
 					// positive integer 42
 					0x18,
 					0x2a,
@@ -766,7 +767,7 @@ func TestEncodeDecodeInt8Value(t *testing.T) {
 				value: NewUnmeteredInt8Value(math.MinInt8),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt8Value,
+					0xd8, values.CBORTagInt8Value,
 					// negative integer 0x7f
 					0x38,
 					0x7f,
@@ -782,7 +783,7 @@ func TestEncodeDecodeInt8Value(t *testing.T) {
 			encodeDecodeTest{
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt8Value,
+					0xd8, values.CBORTagInt8Value,
 					// negative integer 0xf00
 					0x38,
 					0xff,
@@ -800,7 +801,7 @@ func TestEncodeDecodeInt8Value(t *testing.T) {
 				value: NewUnmeteredInt8Value(math.MaxInt8),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt8Value,
+					0xd8, values.CBORTagInt8Value,
 					// positive integer 0x7f00
 					0x18,
 					0x7f,
@@ -816,7 +817,7 @@ func TestEncodeDecodeInt8Value(t *testing.T) {
 			encodeDecodeTest{
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt8Value,
+					0xd8, values.CBORTagInt8Value,
 					// positive integer 0xff
 					0x18,
 					0xff,
@@ -839,7 +840,7 @@ func TestEncodeDecodeInt16Value(t *testing.T) {
 				value: NewUnmeteredInt16Value(0),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt16Value,
+					0xd8, values.CBORTagInt16Value,
 					// integer 0
 					0x0,
 				},
@@ -855,7 +856,7 @@ func TestEncodeDecodeInt16Value(t *testing.T) {
 				value: NewUnmeteredInt16Value(-42),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt16Value,
+					0xd8, values.CBORTagInt16Value,
 					// negative integer 42
 					0x38,
 					0x29,
@@ -872,7 +873,7 @@ func TestEncodeDecodeInt16Value(t *testing.T) {
 				value: NewUnmeteredInt16Value(42),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt16Value,
+					0xd8, values.CBORTagInt16Value,
 					// positive integer 42
 					0x18,
 					0x2a,
@@ -889,7 +890,7 @@ func TestEncodeDecodeInt16Value(t *testing.T) {
 				value: NewUnmeteredInt16Value(math.MinInt16),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt16Value,
+					0xd8, values.CBORTagInt16Value,
 					// negative integer 0x7fff
 					0x39,
 					0x7f, 0xff,
@@ -905,7 +906,7 @@ func TestEncodeDecodeInt16Value(t *testing.T) {
 			encodeDecodeTest{
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt16Value,
+					0xd8, values.CBORTagInt16Value,
 					// negative integer 0xffff
 					0x39,
 					0xff, 0xff,
@@ -923,7 +924,7 @@ func TestEncodeDecodeInt16Value(t *testing.T) {
 				value: NewUnmeteredInt16Value(math.MaxInt16),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt16Value,
+					0xd8, values.CBORTagInt16Value,
 					// positive integer 0x7fff
 					0x19,
 					0x7f, 0xff,
@@ -939,7 +940,7 @@ func TestEncodeDecodeInt16Value(t *testing.T) {
 			encodeDecodeTest{
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt16Value,
+					0xd8, values.CBORTagInt16Value,
 					// positive integer 0xffff
 					0x19,
 					0xff, 0xff,
@@ -962,7 +963,7 @@ func TestEncodeDecodeInt32Value(t *testing.T) {
 				value: NewUnmeteredInt32Value(0),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt32Value,
+					0xd8, values.CBORTagInt32Value,
 					// integer 0
 					0x0,
 				},
@@ -978,7 +979,7 @@ func TestEncodeDecodeInt32Value(t *testing.T) {
 				value: NewUnmeteredInt32Value(-42),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt32Value,
+					0xd8, values.CBORTagInt32Value,
 					// negative integer 42
 					0x38,
 					0x29,
@@ -995,7 +996,7 @@ func TestEncodeDecodeInt32Value(t *testing.T) {
 				value: NewUnmeteredInt32Value(42),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt32Value,
+					0xd8, values.CBORTagInt32Value,
 					// positive integer 42
 					0x18,
 					0x2a,
@@ -1012,7 +1013,7 @@ func TestEncodeDecodeInt32Value(t *testing.T) {
 				value: NewUnmeteredInt32Value(math.MinInt32),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt32Value,
+					0xd8, values.CBORTagInt32Value,
 					// negative integer 0x7fffffff
 					0x3a,
 					0x7f, 0xff, 0xff, 0xff,
@@ -1028,7 +1029,7 @@ func TestEncodeDecodeInt32Value(t *testing.T) {
 			encodeDecodeTest{
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt32Value,
+					0xd8, values.CBORTagInt32Value,
 					// negative integer 0xffffffff
 					0x3a,
 					0xff, 0xff, 0xff, 0xff,
@@ -1046,7 +1047,7 @@ func TestEncodeDecodeInt32Value(t *testing.T) {
 				value: NewUnmeteredInt32Value(math.MaxInt32),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt32Value,
+					0xd8, values.CBORTagInt32Value,
 					// positive integer 0x7fffffff
 					0x1a,
 					0x7f, 0xff, 0xff, 0xff,
@@ -1062,7 +1063,7 @@ func TestEncodeDecodeInt32Value(t *testing.T) {
 			encodeDecodeTest{
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt32Value,
+					0xd8, values.CBORTagInt32Value,
 					// positive integer 0xffffffff
 					0x1a,
 					0xff, 0xff, 0xff, 0xff,
@@ -1085,7 +1086,7 @@ func TestEncodeDecodeInt64Value(t *testing.T) {
 				value: NewUnmeteredInt64Value(0),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt64Value,
+					0xd8, values.CBORTagInt64Value,
 					// integer 0
 					0x0,
 				},
@@ -1101,7 +1102,7 @@ func TestEncodeDecodeInt64Value(t *testing.T) {
 				value: NewUnmeteredInt64Value(-42),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt64Value,
+					0xd8, values.CBORTagInt64Value,
 					// negative integer 42
 					0x38,
 					0x29,
@@ -1118,7 +1119,7 @@ func TestEncodeDecodeInt64Value(t *testing.T) {
 				value: NewUnmeteredInt64Value(42),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt64Value,
+					0xd8, values.CBORTagInt64Value,
 					// positive integer 42
 					0x18,
 					0x2a,
@@ -1135,7 +1136,7 @@ func TestEncodeDecodeInt64Value(t *testing.T) {
 				value: NewUnmeteredInt64Value(math.MinInt64),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt64Value,
+					0xd8, values.CBORTagInt64Value,
 					// negative integer: 0x7fffffffffffffff
 					0x3b,
 					0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -1151,7 +1152,7 @@ func TestEncodeDecodeInt64Value(t *testing.T) {
 			encodeDecodeTest{
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt64Value,
+					0xd8, values.CBORTagInt64Value,
 					// negative integer 0xffffffffffffffff
 					0x3b,
 					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -1169,7 +1170,7 @@ func TestEncodeDecodeInt64Value(t *testing.T) {
 				value: NewUnmeteredInt64Value(math.MaxInt64),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt64Value,
+					0xd8, values.CBORTagInt64Value,
 					// positive integer: 0x7fffffffffffffff
 					0x1b,
 					0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -1185,7 +1186,7 @@ func TestEncodeDecodeInt64Value(t *testing.T) {
 			encodeDecodeTest{
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt64Value,
+					0xd8, values.CBORTagInt64Value,
 					// positive integer 0xffffffffffffffff
 					0x1b,
 					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -1207,7 +1208,7 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredInt128ValueFromInt64(0),
 				encoded: []byte{
-					0xd8, CBORTagInt128Value,
+					0xd8, values.CBORTagInt128Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 0
@@ -1224,7 +1225,7 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredInt128ValueFromInt64(42),
 				encoded: []byte{
-					0xd8, CBORTagInt128Value,
+					0xd8, values.CBORTagInt128Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 1
@@ -1242,7 +1243,7 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredInt128ValueFromInt64(-1),
 				encoded: []byte{
-					0xd8, CBORTagInt128Value,
+					0xd8, values.CBORTagInt128Value,
 					// negative bignum
 					0xc3,
 					// byte string, length 0
@@ -1259,7 +1260,7 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredInt128ValueFromInt64(-42),
 				encoded: []byte{
-					0xd8, CBORTagInt128Value,
+					0xd8, values.CBORTagInt128Value,
 					// negative bignum
 					0xc3,
 					// byte string, length 1
@@ -1277,7 +1278,7 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
 				encoded: []byte{
-					0xd8, CBORTagInt128Value,
+					0xd8, values.CBORTagInt128Value,
 					// negative bignum
 					0xc3,
 					// byte string, length 16
@@ -1295,7 +1296,7 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
-					0xd8, CBORTagInt128Value,
+					0xd8, values.CBORTagInt128Value,
 					// negative bignum
 					0xc3,
 					// byte string, length 16
@@ -1315,7 +1316,7 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
 				encoded: []byte{
-					0xd8, CBORTagInt128Value,
+					0xd8, values.CBORTagInt128Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 16
@@ -1333,7 +1334,7 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
-					0xd8, CBORTagInt128Value,
+					0xd8, values.CBORTagInt128Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 16
@@ -1358,7 +1359,7 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 				value: NewUnmeteredInt128ValueFromBigInt(rfcValue),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt128Value,
+					0xd8, values.CBORTagInt128Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 9
@@ -1381,7 +1382,7 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredInt256ValueFromInt64(0),
 				encoded: []byte{
-					0xd8, CBORTagInt256Value,
+					0xd8, values.CBORTagInt256Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 0
@@ -1398,7 +1399,7 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredInt256ValueFromInt64(42),
 				encoded: []byte{
-					0xd8, CBORTagInt256Value,
+					0xd8, values.CBORTagInt256Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 1
@@ -1416,7 +1417,7 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredInt256ValueFromInt64(-1),
 				encoded: []byte{
-					0xd8, CBORTagInt256Value,
+					0xd8, values.CBORTagInt256Value,
 					// negative bignum
 					0xc3,
 					// byte string, length 0
@@ -1433,7 +1434,7 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredInt256ValueFromInt64(-42),
 				encoded: []byte{
-					0xd8, CBORTagInt256Value,
+					0xd8, values.CBORTagInt256Value,
 					// negative bignum
 					0xc3,
 					// byte string, length 1
@@ -1451,7 +1452,7 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
 				encoded: []byte{
-					0xd8, CBORTagInt256Value,
+					0xd8, values.CBORTagInt256Value,
 					// negative bignum
 					0xc3,
 					// byte string, length 32
@@ -1471,7 +1472,7 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
-					0xd8, CBORTagInt256Value,
+					0xd8, values.CBORTagInt256Value,
 					// negative bignum
 					0xc3,
 					// byte string, length 32
@@ -1493,7 +1494,7 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
 				encoded: []byte{
-					0xd8, CBORTagInt256Value,
+					0xd8, values.CBORTagInt256Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 32
@@ -1513,7 +1514,7 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
-					0xd8, CBORTagInt256Value,
+					0xd8, values.CBORTagInt256Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 32
@@ -1540,7 +1541,7 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 				value: NewUnmeteredInt256ValueFromBigInt(rfcValue),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagInt256Value,
+					0xd8, values.CBORTagInt256Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 9
@@ -1563,7 +1564,7 @@ func TestEncodeDecodeUIntValue(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredUIntValueFromUint64(0),
 				encoded: []byte{
-					0xd8, CBORTagUIntValue,
+					0xd8, values.CBORTagUIntValue,
 					// positive bignum
 					0xc2,
 					// byte string, length 0
@@ -1579,7 +1580,7 @@ func TestEncodeDecodeUIntValue(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
-					0xd8, CBORTagUIntValue,
+					0xd8, values.CBORTagUIntValue,
 					// negative bignum
 					0xc3,
 					// byte string, length 1
@@ -1598,7 +1599,7 @@ func TestEncodeDecodeUIntValue(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredUIntValueFromUint64(42),
 				encoded: []byte{
-					0xd8, CBORTagUIntValue,
+					0xd8, values.CBORTagUIntValue,
 					// positive bignum
 					0xc2,
 					// byte string, length 1
@@ -1621,7 +1622,7 @@ func TestEncodeDecodeUIntValue(t *testing.T) {
 				value: NewUnmeteredUIntValueFromBigInt(rfcValue),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagUIntValue,
+					0xd8, values.CBORTagUIntValue,
 					// positive bignum
 					0xc2,
 					// byte string, length 9
@@ -1674,7 +1675,7 @@ func TestEncodeDecodeUInt8Value(t *testing.T) {
 				value: NewUnmeteredUInt8Value(0),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagUInt8Value,
+					0xd8, values.CBORTagUInt8Value,
 					// integer 0
 					0x0,
 				},
@@ -1689,7 +1690,7 @@ func TestEncodeDecodeUInt8Value(t *testing.T) {
 			encodeDecodeTest{
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagUInt8Value,
+					0xd8, values.CBORTagUInt8Value,
 					// negative integer 42
 					0x38,
 					0x29,
@@ -1707,7 +1708,7 @@ func TestEncodeDecodeUInt8Value(t *testing.T) {
 				value: NewUnmeteredUInt8Value(42),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagUInt8Value,
+					0xd8, values.CBORTagUInt8Value,
 					// positive integer 42
 					0x18,
 					0x2a,
@@ -1724,7 +1725,7 @@ func TestEncodeDecodeUInt8Value(t *testing.T) {
 				value: NewUnmeteredUInt8Value(math.MaxUint8),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagUInt8Value,
+					0xd8, values.CBORTagUInt8Value,
 					// positive integer 0xff
 					0x18,
 					0xff,
@@ -1740,7 +1741,7 @@ func TestEncodeDecodeUInt8Value(t *testing.T) {
 			encodeDecodeTest{
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagUInt8Value,
+					0xd8, values.CBORTagUInt8Value,
 					// positive integer 0xffff
 					0x19,
 					0xff, 0xff,
@@ -1763,7 +1764,7 @@ func TestEncodeDecodeUInt16Value(t *testing.T) {
 				value: NewUnmeteredUInt16Value(0),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagUInt16Value,
+					0xd8, values.CBORTagUInt16Value,
 					// integer 0
 					0x0,
 				},
@@ -1778,7 +1779,7 @@ func TestEncodeDecodeUInt16Value(t *testing.T) {
 			encodeDecodeTest{
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagUInt16Value,
+					0xd8, values.CBORTagUInt16Value,
 					// negative integer 42
 					0x38,
 					0x29,
@@ -1796,7 +1797,7 @@ func TestEncodeDecodeUInt16Value(t *testing.T) {
 				value: NewUnmeteredUInt16Value(42),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagUInt16Value,
+					0xd8, values.CBORTagUInt16Value,
 					// positive integer 42
 					0x18,
 					0x2a,
@@ -1813,7 +1814,7 @@ func TestEncodeDecodeUInt16Value(t *testing.T) {
 				value: NewUnmeteredUInt16Value(math.MaxUint16),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagUInt16Value,
+					0xd8, values.CBORTagUInt16Value,
 					// positive integer 0xffff
 					0x19,
 					0xff, 0xff,
@@ -1829,7 +1830,7 @@ func TestEncodeDecodeUInt16Value(t *testing.T) {
 			encodeDecodeTest{
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagUInt16Value,
+					0xd8, values.CBORTagUInt16Value,
 					// positive integer 0xffffffff
 					0x1a,
 					0xff, 0xff, 0xff, 0xff,
@@ -1852,7 +1853,7 @@ func TestEncodeDecodeUInt32Value(t *testing.T) {
 				value: NewUnmeteredUInt32Value(0),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagUInt32Value,
+					0xd8, values.CBORTagUInt32Value,
 					// integer 0
 					0x0,
 				},
@@ -1867,7 +1868,7 @@ func TestEncodeDecodeUInt32Value(t *testing.T) {
 			encodeDecodeTest{
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagUInt32Value,
+					0xd8, values.CBORTagUInt32Value,
 					// negative integer 42
 					0x38,
 					0x29,
@@ -1885,7 +1886,7 @@ func TestEncodeDecodeUInt32Value(t *testing.T) {
 				value: NewUnmeteredUInt32Value(42),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagUInt32Value,
+					0xd8, values.CBORTagUInt32Value,
 					// positive integer 42
 					0x18,
 					0x2a,
@@ -1902,7 +1903,7 @@ func TestEncodeDecodeUInt32Value(t *testing.T) {
 				value: NewUnmeteredUInt32Value(math.MaxUint32),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagUInt32Value,
+					0xd8, values.CBORTagUInt32Value,
 					// positive integer 0xffffffff
 					0x1a,
 					0xff, 0xff, 0xff, 0xff,
@@ -1918,7 +1919,7 @@ func TestEncodeDecodeUInt32Value(t *testing.T) {
 			encodeDecodeTest{
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagUInt32Value,
+					0xd8, values.CBORTagUInt32Value,
 					// positive integer 0xffffffffffffffff
 					0x1b,
 					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -1941,7 +1942,7 @@ func TestEncodeDecodeUInt64Value(t *testing.T) {
 				value: NewUnmeteredUInt64Value(0),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagUInt64Value,
+					0xd8, values.CBORTagUInt64Value,
 					// integer 0
 					0x0,
 				},
@@ -1956,7 +1957,7 @@ func TestEncodeDecodeUInt64Value(t *testing.T) {
 			encodeDecodeTest{
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagUInt64Value,
+					0xd8, values.CBORTagUInt64Value,
 					// negative integer 42
 					0x38,
 					0x29,
@@ -1974,7 +1975,7 @@ func TestEncodeDecodeUInt64Value(t *testing.T) {
 				value: NewUnmeteredUInt64Value(42),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagUInt64Value,
+					0xd8, values.CBORTagUInt64Value,
 					// positive integer 42
 					0x18,
 					0x2a,
@@ -1991,7 +1992,7 @@ func TestEncodeDecodeUInt64Value(t *testing.T) {
 				value: NewUnmeteredUInt64Value(math.MaxUint64),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagUInt64Value,
+					0xd8, values.CBORTagUInt64Value,
 					// positive integer 0xffffffffffffffff
 					0x1b,
 					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -2012,7 +2013,7 @@ func TestEncodeDecodeUInt128Value(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredUInt128ValueFromUint64(0),
 				encoded: []byte{
-					0xd8, CBORTagUInt128Value,
+					0xd8, values.CBORTagUInt128Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 0
@@ -2029,7 +2030,7 @@ func TestEncodeDecodeUInt128Value(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredUInt128ValueFromUint64(42),
 				encoded: []byte{
-					0xd8, CBORTagUInt128Value,
+					0xd8, values.CBORTagUInt128Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 1
@@ -2047,7 +2048,7 @@ func TestEncodeDecodeUInt128Value(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
 				encoded: []byte{
-					0xd8, CBORTagUInt128Value,
+					0xd8, values.CBORTagUInt128Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 16
@@ -2065,7 +2066,7 @@ func TestEncodeDecodeUInt128Value(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
-					0xd8, CBORTagUInt128Value,
+					0xd8, values.CBORTagUInt128Value,
 					// negative bignum
 					0xc3,
 					// byte string, length 1
@@ -2083,7 +2084,7 @@ func TestEncodeDecodeUInt128Value(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
-					0xd8, CBORTagUInt128Value,
+					0xd8, values.CBORTagUInt128Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 17
@@ -2109,7 +2110,7 @@ func TestEncodeDecodeUInt128Value(t *testing.T) {
 				value: NewUnmeteredUInt128ValueFromBigInt(rfcValue),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagUInt128Value,
+					0xd8, values.CBORTagUInt128Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 9
@@ -2132,7 +2133,7 @@ func TestEncodeDecodeUInt256Value(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredUInt256ValueFromUint64(0),
 				encoded: []byte{
-					0xd8, CBORTagUInt256Value,
+					0xd8, values.CBORTagUInt256Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 0
@@ -2149,7 +2150,7 @@ func TestEncodeDecodeUInt256Value(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredUInt256ValueFromUint64(42),
 				encoded: []byte{
-					0xd8, CBORTagUInt256Value,
+					0xd8, values.CBORTagUInt256Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 1
@@ -2166,7 +2167,7 @@ func TestEncodeDecodeUInt256Value(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
-					0xd8, CBORTagUInt256Value,
+					0xd8, values.CBORTagUInt256Value,
 					// negative bignum
 					0xc3,
 					// byte string, length 1
@@ -2184,7 +2185,7 @@ func TestEncodeDecodeUInt256Value(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
-					0xd8, CBORTagUInt256Value,
+					0xd8, values.CBORTagUInt256Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 65
@@ -2216,7 +2217,7 @@ func TestEncodeDecodeUInt256Value(t *testing.T) {
 				value: NewUnmeteredUInt256ValueFromBigInt(rfcValue),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagUInt256Value,
+					0xd8, values.CBORTagUInt256Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 9
@@ -2240,7 +2241,7 @@ func TestEncodeDecodeWord8Value(t *testing.T) {
 				value: NewUnmeteredWord8Value(0),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagWord8Value,
+					0xd8, values.CBORTagWord8Value,
 					// integer 0
 					0x0,
 				},
@@ -2255,7 +2256,7 @@ func TestEncodeDecodeWord8Value(t *testing.T) {
 			encodeDecodeTest{
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagWord8Value,
+					0xd8, values.CBORTagWord8Value,
 					// negative integer 42
 					0x38,
 					0x29,
@@ -2273,7 +2274,7 @@ func TestEncodeDecodeWord8Value(t *testing.T) {
 				value: NewUnmeteredWord8Value(42),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagWord8Value,
+					0xd8, values.CBORTagWord8Value,
 					// positive integer 42
 					0x18,
 					0x2a,
@@ -2290,7 +2291,7 @@ func TestEncodeDecodeWord8Value(t *testing.T) {
 				value: NewUnmeteredWord8Value(math.MaxUint8),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagWord8Value,
+					0xd8, values.CBORTagWord8Value,
 					// positive integer 0xff
 					0x18,
 					0xff,
@@ -2306,7 +2307,7 @@ func TestEncodeDecodeWord8Value(t *testing.T) {
 			encodeDecodeTest{
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagWord8Value,
+					0xd8, values.CBORTagWord8Value,
 					// positive integer 0xffff
 					0x19,
 					0xff, 0xff,
@@ -2329,7 +2330,7 @@ func TestEncodeDecodeWord16Value(t *testing.T) {
 				value: NewUnmeteredWord16Value(0),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagWord16Value,
+					0xd8, values.CBORTagWord16Value,
 					// integer 0
 					0x0,
 				},
@@ -2345,7 +2346,7 @@ func TestEncodeDecodeWord16Value(t *testing.T) {
 				value: NewUnmeteredWord16Value(42),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagWord16Value,
+					0xd8, values.CBORTagWord16Value,
 					// positive integer 42
 					0x18,
 					0x2a,
@@ -2362,7 +2363,7 @@ func TestEncodeDecodeWord16Value(t *testing.T) {
 				value: NewUnmeteredWord16Value(math.MaxUint16),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagWord16Value,
+					0xd8, values.CBORTagWord16Value,
 					// positive integer 0xffff
 					0x19,
 					0xff, 0xff,
@@ -2378,7 +2379,7 @@ func TestEncodeDecodeWord16Value(t *testing.T) {
 			encodeDecodeTest{
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagWord16Value,
+					0xd8, values.CBORTagWord16Value,
 					// positive integer 0xffffffff
 					0x1a,
 					0xff, 0xff, 0xff, 0xff,
@@ -2401,7 +2402,7 @@ func TestEncodeDecodeWord32Value(t *testing.T) {
 				value: NewUnmeteredWord32Value(0),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagWord32Value,
+					0xd8, values.CBORTagWord32Value,
 					// integer 0
 					0x0,
 				},
@@ -2417,7 +2418,7 @@ func TestEncodeDecodeWord32Value(t *testing.T) {
 				value: NewUnmeteredWord32Value(42),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagWord32Value,
+					0xd8, values.CBORTagWord32Value,
 					// positive integer 42
 					0x18,
 					0x2a,
@@ -2434,7 +2435,7 @@ func TestEncodeDecodeWord32Value(t *testing.T) {
 				value: NewUnmeteredWord32Value(math.MaxUint32),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagWord32Value,
+					0xd8, values.CBORTagWord32Value,
 					// positive integer 0xffffffff
 					0x1a,
 					0xff, 0xff, 0xff, 0xff,
@@ -2450,7 +2451,7 @@ func TestEncodeDecodeWord32Value(t *testing.T) {
 			encodeDecodeTest{
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagWord32Value,
+					0xd8, values.CBORTagWord32Value,
 					// positive integer 0xffffffffffffffff
 					0x1b,
 					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -2473,7 +2474,7 @@ func TestEncodeDecodeWord64Value(t *testing.T) {
 				value: NewUnmeteredWord64Value(0),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagWord64Value,
+					0xd8, values.CBORTagWord64Value,
 					// integer 0
 					0x0,
 				},
@@ -2489,7 +2490,7 @@ func TestEncodeDecodeWord64Value(t *testing.T) {
 				value: NewUnmeteredWord64Value(42),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagWord64Value,
+					0xd8, values.CBORTagWord64Value,
 					// positive integer 42
 					0x18,
 					0x2a,
@@ -2506,7 +2507,7 @@ func TestEncodeDecodeWord64Value(t *testing.T) {
 				value: NewUnmeteredWord64Value(math.MaxUint64),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagWord64Value,
+					0xd8, values.CBORTagWord64Value,
 					// positive integer 0xffffffffffffffff
 					0x1b,
 					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -2527,7 +2528,7 @@ func TestEncodeDecodeWord128Value(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredWord128ValueFromUint64(0),
 				encoded: []byte{
-					0xd8, CBORTagWord128Value,
+					0xd8, values.CBORTagWord128Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 0
@@ -2544,7 +2545,7 @@ func TestEncodeDecodeWord128Value(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredWord128ValueFromUint64(42),
 				encoded: []byte{
-					0xd8, CBORTagWord128Value,
+					0xd8, values.CBORTagWord128Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 1
@@ -2562,7 +2563,7 @@ func TestEncodeDecodeWord128Value(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredWord128ValueFromBigInt(sema.Word128TypeMaxIntBig),
 				encoded: []byte{
-					0xd8, CBORTagWord128Value,
+					0xd8, values.CBORTagWord128Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 16
@@ -2580,7 +2581,7 @@ func TestEncodeDecodeWord128Value(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
-					0xd8, CBORTagWord128Value,
+					0xd8, values.CBORTagWord128Value,
 					// negative bignum
 					0xc3,
 					// byte string, length 1
@@ -2598,7 +2599,7 @@ func TestEncodeDecodeWord128Value(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
-					0xd8, CBORTagWord128Value,
+					0xd8, values.CBORTagWord128Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 17
@@ -2624,7 +2625,7 @@ func TestEncodeDecodeWord128Value(t *testing.T) {
 				value: NewUnmeteredWord128ValueFromBigInt(rfcValue),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagWord128Value,
+					0xd8, values.CBORTagWord128Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 9
@@ -2647,7 +2648,7 @@ func TestEncodeDecodeWord256Value(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredWord256ValueFromUint64(0),
 				encoded: []byte{
-					0xd8, CBORTagWord256Value,
+					0xd8, values.CBORTagWord256Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 0
@@ -2664,7 +2665,7 @@ func TestEncodeDecodeWord256Value(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredWord256ValueFromUint64(42),
 				encoded: []byte{
-					0xd8, CBORTagWord256Value,
+					0xd8, values.CBORTagWord256Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 1
@@ -2682,7 +2683,7 @@ func TestEncodeDecodeWord256Value(t *testing.T) {
 			encodeDecodeTest{
 				value: NewUnmeteredWord256ValueFromBigInt(sema.Word256TypeMaxIntBig),
 				encoded: []byte{
-					0xd8, CBORTagWord256Value,
+					0xd8, values.CBORTagWord256Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 32
@@ -2702,7 +2703,7 @@ func TestEncodeDecodeWord256Value(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
-					0xd8, CBORTagWord256Value,
+					0xd8, values.CBORTagWord256Value,
 					// negative bignum
 					0xc3,
 					// byte string, length 1
@@ -2720,7 +2721,7 @@ func TestEncodeDecodeWord256Value(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
-					0xd8, CBORTagWord256Value,
+					0xd8, values.CBORTagWord256Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 65
@@ -2752,7 +2753,7 @@ func TestEncodeDecodeWord256Value(t *testing.T) {
 				value: NewUnmeteredWord256ValueFromBigInt(rfcValue),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagWord256Value,
+					0xd8, values.CBORTagWord256Value,
 					// positive bignum
 					0xc2,
 					// byte string, length 9
@@ -2777,7 +2778,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 				value: NewUnmeteredSomeValueNonCopying(Nil),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagSomeValue,
+					0xd8, values.CBORTagSomeValue,
 					// null
 					0xf6,
 				},
@@ -2795,7 +2796,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 					NewUnmeteredSomeValueNonCopying(Nil)),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagSomeValueWithNestedLevels,
+					0xd8, values.CBORTagSomeValueWithNestedLevels,
 					// array of 2 elements
 					0x82,
 					// nested levels: 2
@@ -2819,7 +2820,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 							Nil))),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagSomeValueWithNestedLevels,
+					0xd8, values.CBORTagSomeValueWithNestedLevels,
 					// array of 2 elements
 					0x82,
 					// nested levels: 3
@@ -2839,7 +2840,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 				value: NewUnmeteredSomeValueNonCopying(TrueValue),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagSomeValue,
+					0xd8, values.CBORTagSomeValue,
 					// true
 					0xf5,
 				},
@@ -2857,7 +2858,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 						TrueValue)),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagSomeValueWithNestedLevels,
+					0xd8, values.CBORTagSomeValueWithNestedLevels,
 					// array of 2 elements
 					0x82,
 					// nested levels: 2
@@ -2880,7 +2881,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 							TrueValue))),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagSomeValueWithNestedLevels,
+					0xd8, values.CBORTagSomeValueWithNestedLevels,
 					// array of 2 elements
 					0x82,
 					// nested levels: 3
@@ -2902,9 +2903,9 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 				value: NewUnmeteredSomeValueNonCopying(expectedString),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagSomeValue,
+					0xd8, values.CBORTagSomeValue,
 					// tag
-					0xd8, CBORTagStringValue,
+					0xd8, values.CBORTagStringValue,
 					// UTF-8 string, length 4
 					0x64,
 					// t, e, s, t
@@ -2926,13 +2927,13 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 						expectedString)),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagSomeValueWithNestedLevels,
+					0xd8, values.CBORTagSomeValueWithNestedLevels,
 					// array of 2 elements
 					0x82,
 					// nested levels: 2
 					0x02,
 					// tag
-					0xd8, CBORTagStringValue,
+					0xd8, values.CBORTagStringValue,
 					// UTF-8 string, length 4
 					0x64,
 					// t, e, s, t
@@ -2955,13 +2956,13 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 							expectedString))),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagSomeValueWithNestedLevels,
+					0xd8, values.CBORTagSomeValueWithNestedLevels,
 					// array of 2 elements
 					0x82,
 					// nested levels: 3
 					0x03,
 					// tag
-					0xd8, CBORTagStringValue,
+					0xd8, values.CBORTagStringValue,
 					// UTF-8 string, length 4
 					0x64,
 					// t, e, s, t
@@ -2975,17 +2976,13 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		t.Parallel()
 
-		const (
-			cborTagSize = 2
-		)
-
 		var str *StringValue
 		maxInlineElementSize := uint64(64) // use a small max inline size for testing
 		for i := uint64(0); i < maxInlineElementSize; i++ {
 			str = NewUnmeteredStringValue(strings.Repeat("x", int(maxInlineElementSize-i)))
 			size, err := StorableSize(str)
 			require.NoError(t, err)
-			if uint64(size) < maxInlineElementSize-cborTagSize {
+			if uint64(size) < maxInlineElementSize-values.CBORTagSize {
 				break
 			}
 		}
@@ -2998,9 +2995,9 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 				maxInlineElementSize: maxInlineElementSize,
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagSomeValue,
+					0xd8, values.CBORTagSomeValue,
 					// tag
-					0xd8, CBORTagStringValue,
+					0xd8, values.CBORTagStringValue,
 					// text string (57 bytes)
 					0x78, 0x39,
 					0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78,
@@ -3021,7 +3018,6 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 		t.Parallel()
 
 		const (
-			cborTagSize      = 2
 			arraySize        = 1
 			nestedLevelsSize = 1
 		)
@@ -3032,7 +3028,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 			str = NewUnmeteredStringValue(strings.Repeat("x", int(maxInlineElementSize-i)))
 			size, err := StorableSize(str)
 			require.NoError(t, err)
-			if uint64(size) < maxInlineElementSize-cborTagSize-arraySize-nestedLevelsSize {
+			if uint64(size) < maxInlineElementSize-values.CBORTagSize-arraySize-nestedLevelsSize {
 				break
 			}
 		}
@@ -3045,13 +3041,13 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 				maxInlineElementSize: maxInlineElementSize,
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagSomeValueWithNestedLevels,
+					0xd8, values.CBORTagSomeValueWithNestedLevels,
 					// array of 2 elements
 					0x82,
 					// nested levels: 2
 					0x02,
 					// tag
-					0xd8, CBORTagStringValue,
+					0xd8, values.CBORTagStringValue,
 					// text string (55 bytes)
 					0x78, 0x37,
 					0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78,
@@ -3091,7 +3087,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 				maxInlineElementSize: maxInlineElementSize,
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagSomeValue,
+					0xd8, values.CBORTagSomeValue,
 					// value
 					0xd8, atree.CBORTagSlabID,
 					// storage ID
@@ -3126,7 +3122,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 				maxInlineElementSize: maxInlineElementSize,
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagSomeValueWithNestedLevels,
+					0xd8, values.CBORTagSomeValueWithNestedLevels,
 					// array of 2 elements
 					0x82,
 					// nested levels
@@ -3158,7 +3154,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		expectedEncoded := []byte{
 			// tag
-			0xd8, CBORTagSomeValue,
+			0xd8, values.CBORTagSomeValue,
 
 			// tag
 			0xd8, atree.CBORTagInlinedArray,
@@ -3210,7 +3206,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		expectedEncoded := []byte{
 			// tag
-			0xd8, CBORTagSomeValueWithNestedLevels,
+			0xd8, values.CBORTagSomeValueWithNestedLevels,
 
 			// array of 2 elements
 			0x82,
@@ -3278,7 +3274,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 				maxInlineElementSize: maxInlineElementSize,
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagSomeValue,
+					0xd8, values.CBORTagSomeValue,
 					// value
 					0xd8, atree.CBORTagSlabID,
 					// storage ID
@@ -3317,7 +3313,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 				maxInlineElementSize: maxInlineElementSize,
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagSomeValueWithNestedLevels,
+					0xd8, values.CBORTagSomeValueWithNestedLevels,
 					// array of 2 elements
 					0x82,
 					// nested levels: 2
@@ -3360,7 +3356,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		expectedEncoded := []byte{
 			// tag
-			0xd8, CBORTagSomeValueWithNestedLevels,
+			0xd8, values.CBORTagSomeValueWithNestedLevels,
 			// array of 2 elements
 			0x82,
 			// nested levels: 2
@@ -3377,13 +3373,13 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 			0x99, 0x00, 0x01,
 			// element 0: SomeValue { SomeValue { SomeValue { 1 } } }
 			// tag
-			0xd8, CBORTagSomeValueWithNestedLevels,
+			0xd8, values.CBORTagSomeValueWithNestedLevels,
 			// array of 2 elements
 			0x82,
 			// nested levels: 3
 			0x03,
 			// tag
-			0xd8, CBORTagUInt64Value,
+			0xd8, values.CBORTagUInt64Value,
 			// integer 1
 			0x1,
 		}
@@ -3416,7 +3412,7 @@ func TestEncodeDecodeFix64Value(t *testing.T) {
 				value: NewUnmeteredFix64Value(0),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagFix64Value,
+					0xd8, values.CBORTagFix64Value,
 					// integer 0
 					0x0,
 				},
@@ -3432,7 +3428,7 @@ func TestEncodeDecodeFix64Value(t *testing.T) {
 				value: NewUnmeteredFix64Value(-42),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagFix64Value,
+					0xd8, values.CBORTagFix64Value,
 					// negative integer 42
 					0x38,
 					0x29,
@@ -3449,7 +3445,7 @@ func TestEncodeDecodeFix64Value(t *testing.T) {
 				value: NewUnmeteredFix64Value(42),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagFix64Value,
+					0xd8, values.CBORTagFix64Value,
 					// positive integer 42
 					0x18,
 					0x2a,
@@ -3466,7 +3462,7 @@ func TestEncodeDecodeFix64Value(t *testing.T) {
 				value: NewUnmeteredFix64Value(math.MinInt64),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagFix64Value,
+					0xd8, values.CBORTagFix64Value,
 					// negative integer: 0x7fffffffffffffff
 					0x3b,
 					0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -3482,7 +3478,7 @@ func TestEncodeDecodeFix64Value(t *testing.T) {
 			encodeDecodeTest{
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagFix64Value,
+					0xd8, values.CBORTagFix64Value,
 					// negative integer 0xffffffffffffffff
 					0x3b,
 					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -3500,7 +3496,7 @@ func TestEncodeDecodeFix64Value(t *testing.T) {
 				value: NewUnmeteredFix64Value(math.MaxInt64),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagFix64Value,
+					0xd8, values.CBORTagFix64Value,
 					// positive integer: 0x7fffffffffffffff
 					0x1b,
 					0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -3516,7 +3512,7 @@ func TestEncodeDecodeFix64Value(t *testing.T) {
 			encodeDecodeTest{
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagFix64Value,
+					0xd8, values.CBORTagFix64Value,
 					// positive integer 0xffffffffffffffff
 					0x1b,
 					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -3540,7 +3536,7 @@ func TestEncodeDecodeUFix64Value(t *testing.T) {
 				value: NewUnmeteredUFix64Value(0),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagUFix64Value,
+					0xd8, values.CBORTagUFix64Value,
 					// integer 0
 					0x0,
 				},
@@ -3555,7 +3551,7 @@ func TestEncodeDecodeUFix64Value(t *testing.T) {
 			encodeDecodeTest{
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagUFix64Value,
+					0xd8, values.CBORTagUFix64Value,
 					// negative integer 42
 					0x38,
 					0x29,
@@ -3573,7 +3569,7 @@ func TestEncodeDecodeUFix64Value(t *testing.T) {
 				value: NewUnmeteredUFix64Value(42),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagUFix64Value,
+					0xd8, values.CBORTagUFix64Value,
 					// positive integer 42
 					0x18,
 					0x2a,
@@ -3590,7 +3586,7 @@ func TestEncodeDecodeUFix64Value(t *testing.T) {
 				value: NewUnmeteredUFix64Value(math.MaxUint64),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagUFix64Value,
+					0xd8, values.CBORTagUFix64Value,
 					// positive integer 0xffffffffffffffff
 					0x1b,
 					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -3612,7 +3608,7 @@ func TestEncodeDecodeAddressValue(t *testing.T) {
 				value: AddressValue{},
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagAddressValue,
+					0xd8, values.CBORTagAddressValue,
 					// byte sequence, length 0
 					0x40,
 				},
@@ -3628,7 +3624,7 @@ func TestEncodeDecodeAddressValue(t *testing.T) {
 				value: AddressValue(common.MustBytesToAddress([]byte{0x42})),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagAddressValue,
+					0xd8, values.CBORTagAddressValue,
 					// byte sequence, length 1
 					0x41,
 					// address
@@ -3646,7 +3642,7 @@ func TestEncodeDecodeAddressValue(t *testing.T) {
 				value: AddressValue(common.MustBytesToAddress([]byte{0x0, 0x42})),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagAddressValue,
+					0xd8, values.CBORTagAddressValue,
 					// byte sequence, length 1
 					0x41,
 					// address
@@ -3664,7 +3660,7 @@ func TestEncodeDecodeAddressValue(t *testing.T) {
 				value: AddressValue(common.MustBytesToAddress([]byte{0x0, 0x42, 0x0, 0x43, 0x0})),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagAddressValue,
+					0xd8, values.CBORTagAddressValue,
 					// byte sequence, length 4
 					0x44,
 					// address
@@ -3681,7 +3677,7 @@ func TestEncodeDecodeAddressValue(t *testing.T) {
 			encodeDecodeTest{
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagAddressValue,
+					0xd8, values.CBORTagAddressValue,
 					// byte sequence, length 22
 					0x56,
 					// address
@@ -3715,7 +3711,7 @@ func TestEncodeDecodePathValue(t *testing.T) {
 
 		encoded := []byte{
 			// tag
-			0xd8, CBORTagPathValue,
+			0xd8, values.CBORTagPathValue,
 			// array, 2 items follow
 			0x82,
 			// positive integer 2
@@ -3740,7 +3736,7 @@ func TestEncodeDecodePathValue(t *testing.T) {
 
 		encoded := []byte{
 			// tag
-			0xd8, CBORTagPathValue,
+			0xd8, values.CBORTagPathValue,
 			// array, 2 items follow
 			0x82,
 			// positive integer 3
@@ -3797,11 +3793,11 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 		encoded := []byte{
 			// tag
-			0xd8, CBORTagCapabilityValue,
+			0xd8, values.CBORTagCapabilityValue,
 			// array, 3 items follow
 			0x83,
 			// tag for address
-			0xd8, CBORTagAddressValue,
+			0xd8, values.CBORTagAddressValue,
 			// byte sequence, length 1
 			0x41,
 			// address
@@ -3833,11 +3829,11 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 		encoded := []byte{
 			// tag
-			0xd8, CBORTagCapabilityValue,
+			0xd8, values.CBORTagCapabilityValue,
 			// array, 3 items follow
 			0x83,
 			// tag for address
-			0xd8, CBORTagAddressValue,
+			0xd8, values.CBORTagAddressValue,
 			// byte sequence, length 1
 			0x41,
 			// address
@@ -3845,7 +3841,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 			// positive integer 4
 			0x4,
 			// tag for borrow type
-			0xd8, CBORTagPrimitiveStaticType,
+			0xd8, values.CBORTagPrimitiveStaticType,
 			// bool
 			0x6,
 		}
@@ -3908,11 +3904,11 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 
 		encoded := []byte{
 			// tag
-			0xd8, CBORTagTypeValue,
+			0xd8, values.CBORTagTypeValue,
 			// array, 1 items follow
 			0x81,
 			// tag
-			0xd8, CBORTagPrimitiveStaticType,
+			0xd8, values.CBORTagPrimitiveStaticType,
 			// positive integer 0
 			0x6,
 		}
@@ -3935,11 +3931,11 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 
 		encoded := []byte{
 			// tag
-			0xd8, CBORTagTypeValue,
+			0xd8, values.CBORTagTypeValue,
 			// array, 1 items follow
 			0x81,
 			// tag
-			0xd8, CBORTagPrimitiveStaticType,
+			0xd8, values.CBORTagPrimitiveStaticType,
 			// positive integer 36
 			0x18, 0x24,
 		}
@@ -3964,13 +3960,13 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 
 		encoded := []byte{
 			// tag
-			0xd8, CBORTagTypeValue,
+			0xd8, values.CBORTagTypeValue,
 			// array, 1 items follow
 			0x81,
 			// tag
-			0xd8, CBORTagInclusiveRangeStaticType,
+			0xd8, values.CBORTagInclusiveRangeStaticType,
 			// tag
-			0xd8, CBORTagPrimitiveStaticType,
+			0xd8, values.CBORTagPrimitiveStaticType,
 			// positive integer 36
 			0x18, 0x24,
 		}
@@ -3995,13 +3991,13 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 
 		encoded := []byte{
 			// tag
-			0xd8, CBORTagTypeValue,
+			0xd8, values.CBORTagTypeValue,
 			// array, 1 items follow
 			0x81,
 			// tag
-			0xd8, CBORTagInclusiveRangeStaticType,
+			0xd8, values.CBORTagInclusiveRangeStaticType,
 			// tag
-			0xd8, CBORTagPrimitiveStaticType,
+			0xd8, values.CBORTagPrimitiveStaticType,
 			// positive integer 50
 			0x18, 0x32,
 		}
@@ -4024,7 +4020,7 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 
 		encoded := []byte{
 			// tag
-			0xd8, CBORTagTypeValue,
+			0xd8, values.CBORTagTypeValue,
 			// array, 1 items follow
 			0x81,
 			// nil
@@ -4090,7 +4086,7 @@ func TestEncodeDecodeStaticType(t *testing.T) {
 
 		encoded := cbor.RawMessage{
 			// tag
-			0xd8, CBORTagCompositeStaticType,
+			0xd8, values.CBORTagCompositeStaticType,
 			// array, 2 items follow
 			0x82,
 			// location: nil
@@ -4117,7 +4113,7 @@ func TestCBORTagValue(t *testing.T) {
 	t.Parallel()
 
 	t.Run("No new types added in between", func(t *testing.T) {
-		require.Equal(t, byte(231), byte(CBORTag_Count))
+		require.Equal(t, byte(231), byte(values.CBORTag_Count))
 	})
 }
 
@@ -4128,7 +4124,7 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 	assemble := func(bytes ...byte) []byte {
 		result := []byte{
 			// tag
-			0xd8, CBORTagStorageCapabilityControllerValue,
+			0xd8, values.CBORTagStorageCapabilityControllerValue,
 			// array, 3 items follow
 			0x83,
 		}
@@ -4136,7 +4132,7 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 		result = append(result,
 			// positive integer 42
 			0x18, 0x2A,
-			0xd8, CBORTagPathValue,
+			0xd8, values.CBORTagPathValue,
 			// array, 2 items follow
 			0x82,
 			// positive integer 3
@@ -4157,7 +4153,7 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 
 		encoded := assemble(
 			// tag
-			0xd8, CBORTagPrimitiveStaticType,
+			0xd8, values.CBORTagPrimitiveStaticType,
 			0x6,
 		)
 
@@ -4185,16 +4181,16 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 
 		encoded := assemble(
 			// tag
-			0xd8, CBORTagReferenceStaticType,
+			0xd8, values.CBORTagReferenceStaticType,
 			// array, 2 items follow
 			0x82,
 			// authorization:
 			// tag
-			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			0xd8, values.CBORTagUnauthorizedStaticAuthorization,
 			// null
 			0xf6,
 			// tag
-			0xd8, CBORTagPrimitiveStaticType,
+			0xd8, values.CBORTagPrimitiveStaticType,
 			0x6,
 		)
 
@@ -4223,18 +4219,18 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 
 		encoded := assemble(
 			// tag
-			0xd8, CBORTagReferenceStaticType,
+			0xd8, values.CBORTagReferenceStaticType,
 			// array, 2 items follow
 			0x82,
 			// authorization:
 			// tag
-			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			0xd8, values.CBORTagUnauthorizedStaticAuthorization,
 			// null
 			0xf6,
 			// tag
-			0xd8, CBORTagOptionalStaticType,
+			0xd8, values.CBORTagOptionalStaticType,
 			// tag
-			0xd8, CBORTagPrimitiveStaticType,
+			0xd8, values.CBORTagPrimitiveStaticType,
 			0x6,
 		)
 
@@ -4265,20 +4261,20 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 
 		encoded := assemble(
 			// tag
-			0xd8, CBORTagReferenceStaticType,
+			0xd8, values.CBORTagReferenceStaticType,
 			// array, 2 items follow
 			0x82,
 			// authorization:
 			// tag
-			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			0xd8, values.CBORTagUnauthorizedStaticAuthorization,
 			// null
 			0xf6,
 			// tag
-			0xd8, CBORTagCompositeStaticType,
+			0xd8, values.CBORTagCompositeStaticType,
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, CBORTagStringLocation,
+			0xd8, values.CBORTagStringLocation,
 			// UTF-8 string, length 4
 			0x64,
 			// t, e, s, t
@@ -4312,20 +4308,20 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 
 		encoded := assemble(
 			// tag
-			0xd8, CBORTagReferenceStaticType,
+			0xd8, values.CBORTagReferenceStaticType,
 			// array, 2 items follow
 			0x82,
 			// authorization:
 			// tag
-			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			0xd8, values.CBORTagUnauthorizedStaticAuthorization,
 			// null
 			0xf6,
 			// tag
-			0xd8, CBORTagInterfaceStaticType,
+			0xd8, values.CBORTagInterfaceStaticType,
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, CBORTagStringLocation,
+			0xd8, values.CBORTagStringLocation,
 			// UTF-8 string, length 4
 			0x64,
 			// t, e, s, t
@@ -4361,18 +4357,18 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 
 		encoded := assemble(
 			// tag
-			0xd8, CBORTagReferenceStaticType,
+			0xd8, values.CBORTagReferenceStaticType,
 			// array, 2 items follow
 			0x82,
 			// authorization:
 			// tag
-			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			0xd8, values.CBORTagUnauthorizedStaticAuthorization,
 			// null
 			0xf6,
 			// tag
-			0xd8, CBORTagVariableSizedStaticType,
+			0xd8, values.CBORTagVariableSizedStaticType,
 			// tag
-			0xd8, CBORTagPrimitiveStaticType,
+			0xd8, values.CBORTagPrimitiveStaticType,
 			0x6,
 		)
 
@@ -4402,22 +4398,22 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 
 		encoded := assemble(
 			// tag
-			0xd8, CBORTagReferenceStaticType,
+			0xd8, values.CBORTagReferenceStaticType,
 			// array, 2 items follow
 			0x82,
 			// authorization:
 			// tag
-			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			0xd8, values.CBORTagUnauthorizedStaticAuthorization,
 			// null
 			0xf6,
 			// tag
-			0xd8, CBORTagConstantSizedStaticType,
+			0xd8, values.CBORTagConstantSizedStaticType,
 			// array, 2 items follow
 			0x82,
 			// positive integer 42
 			0x18, 0x2A,
 			// tag
-			0xd8, CBORTagPrimitiveStaticType,
+			0xd8, values.CBORTagPrimitiveStaticType,
 			0x6,
 		)
 
@@ -4447,23 +4443,23 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 
 		encoded := assemble(
 			// tag
-			0xd8, CBORTagReferenceStaticType,
+			0xd8, values.CBORTagReferenceStaticType,
 			// array, 2 items follow
 			0x82,
 			// authorization:
 			// tag
-			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			0xd8, values.CBORTagUnauthorizedStaticAuthorization,
 			// null
 			0xf6,
 			// tag
-			0xd8, CBORTagDictionaryStaticType,
+			0xd8, values.CBORTagDictionaryStaticType,
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, CBORTagPrimitiveStaticType,
+			0xd8, values.CBORTagPrimitiveStaticType,
 			0x6,
 			// tag
-			0xd8, CBORTagPrimitiveStaticType,
+			0xd8, values.CBORTagPrimitiveStaticType,
 			0x8,
 		)
 
@@ -4495,16 +4491,16 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 
 		encoded := assemble(
 			// tag
-			0xd8, CBORTagReferenceStaticType,
+			0xd8, values.CBORTagReferenceStaticType,
 			// array, 2 items follow
 			0x82,
 			// authorization:
 			// tag
-			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			0xd8, values.CBORTagUnauthorizedStaticAuthorization,
 			// null
 			0xf6,
 			// tag
-			0xd8, CBORTagIntersectionStaticType,
+			0xd8, values.CBORTagIntersectionStaticType,
 			// array, length 2
 			0x82,
 			// nil
@@ -4512,11 +4508,11 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 			// array, length 2
 			0x82,
 			// tag
-			0xd8, CBORTagInterfaceStaticType,
+			0xd8, values.CBORTagInterfaceStaticType,
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, CBORTagStringLocation,
+			0xd8, values.CBORTagStringLocation,
 			// UTF-8 string, length 4
 			0x64,
 			// t, e, s, t
@@ -4526,11 +4522,11 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 			// I1
 			0x49, 0x31,
 			// tag
-			0xd8, CBORTagInterfaceStaticType,
+			0xd8, values.CBORTagInterfaceStaticType,
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, CBORTagStringLocation,
+			0xd8, values.CBORTagStringLocation,
 			// UTF-8 string, length 4
 			0x64,
 			// t, e, s, t
@@ -4593,7 +4589,7 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 	assemble := func(bytes ...byte) []byte {
 		result := []byte{
 			// tag
-			0xd8, CBORTagAccountCapabilityControllerValue,
+			0xd8, values.CBORTagAccountCapabilityControllerValue,
 			// array, 2 items follow
 			0x82,
 		}
@@ -4613,7 +4609,7 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 
 		encoded := assemble(
 			// tag
-			0xd8, CBORTagPrimitiveStaticType,
+			0xd8, values.CBORTagPrimitiveStaticType,
 			0x6,
 		)
 
@@ -4640,15 +4636,15 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 
 		encoded := assemble(
 			// tag
-			0xd8, CBORTagReferenceStaticType,
+			0xd8, values.CBORTagReferenceStaticType,
 			// array, 2 items follow
 			0x82,
 			// authorization:
 			// tag
-			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			0xd8, values.CBORTagUnauthorizedStaticAuthorization,
 			// null
 			0xf6,
-			0xd8, CBORTagPrimitiveStaticType,
+			0xd8, values.CBORTagPrimitiveStaticType,
 			// unsigned 90
 			0x18, 0x5a,
 		)
@@ -4675,15 +4671,15 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 
 		encoded := assemble(
 			// tag
-			0xd8, CBORTagReferenceStaticType,
+			0xd8, values.CBORTagReferenceStaticType,
 			// array, 2 items follow
 			0x82,
 			// authorization:
 			// tag
-			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			0xd8, values.CBORTagUnauthorizedStaticAuthorization,
 			// null
 			0xf6,
-			0xd8, CBORTagPrimitiveStaticType,
+			0xd8, values.CBORTagPrimitiveStaticType,
 			// unsigned 105
 			0x18, 0x69,
 		)
@@ -4714,16 +4710,16 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 
 		encoded := assemble(
 			// tag
-			0xd8, CBORTagReferenceStaticType,
+			0xd8, values.CBORTagReferenceStaticType,
 			// array, 2 items follow
 			0x82,
 			// authorization:
 			// tag
-			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			0xd8, values.CBORTagUnauthorizedStaticAuthorization,
 			// null
 			0xf6,
 			// tag
-			0xd8, CBORTagIntersectionStaticType,
+			0xd8, values.CBORTagIntersectionStaticType,
 			// array, length 2
 			0x82,
 			// nil
@@ -4731,11 +4727,11 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 			// array, 1 item follows
 			0x81,
 			// tag
-			0xd8, CBORTagInterfaceStaticType,
+			0xd8, values.CBORTagInterfaceStaticType,
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, CBORTagStringLocation,
+			0xd8, values.CBORTagStringLocation,
 			// UTF-8 string, length 4
 			0x64,
 			// t, e, s, t

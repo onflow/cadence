@@ -566,7 +566,7 @@ func newTestTypeEqualFunction(
 							otherValue,
 						)
 
-						return interpreter.AsBoolValue(equal)
+						return interpreter.BoolValue(equal)
 					},
 				)
 
@@ -622,7 +622,7 @@ func newTestTypeBeEmptyFunction(
 							panic(errors.NewDefaultUserError("expected Array or Dictionary argument"))
 						}
 
-						return interpreter.AsBoolValue(isEmpty)
+						return interpreter.BoolValue(isEmpty)
 					},
 				)
 
@@ -688,7 +688,7 @@ func newTestTypeHaveElementCountFunction(
 							panic(errors.NewDefaultUserError("expected Array or Dictionary argument"))
 						}
 
-						return interpreter.AsBoolValue(matchingCount)
+						return interpreter.BoolValue(matchingCount)
 					},
 				)
 

@@ -24,6 +24,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/values"
 )
 
 // PublishedValue
@@ -113,7 +114,7 @@ func (*PublishedValue) IsStorable() bool {
 }
 
 func (v *PublishedValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
-	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
+	return values.MaybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
 func (v *PublishedValue) NeedsStoreTo(address atree.Address) bool {

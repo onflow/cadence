@@ -16,13 +16,15 @@
  * limitations under the License.
  */
 
-package interpreter
+package values
 
 import (
 	"math/big"
 
 	"github.com/onflow/cadence/errors"
 )
+
+var bigOne = big.NewInt(1)
 
 func SignedBigIntToBigEndianBytes(bigInt *big.Int) []byte {
 

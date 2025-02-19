@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // PathValue
@@ -213,7 +214,7 @@ func (v PathValue) Storable(
 	address atree.Address,
 	maxInlineSize uint64,
 ) (atree.Storable, error) {
-	return maybeLargeImmutableStorable(
+	return values.MaybeLargeImmutableStorable(
 		v,
 		storage,
 		address,
@@ -254,7 +255,10 @@ func (PathValue) DeepRemove(_ *Interpreter, _ bool) {
 
 func (v PathValue) ByteSize() uint32 {
 	// tag number (2 bytes) + array head (1 byte) + domain (CBOR uint) + identifier (CBOR string)
-	return cborTagSize + 1 + getUintCBORSize(uint64(v.Domain)) + getBytesCBORSize([]byte(v.Identifier))
+	return values.CBORTagSize +
+		1 +
+		values.GetUintCBORSize(uint64(v.Domain)) +
+		values.GetBytesCBORSize([]byte(v.Identifier))
 }
 
 func (v PathValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {

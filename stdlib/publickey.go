@@ -285,7 +285,7 @@ func newPublicKeyVerifySignatureFunction(
 				panic(interpreter.WrappedExternalError(err))
 			}
 
-			return interpreter.AsBoolValue(valid)
+			return interpreter.BoolValue(valid)
 		},
 	)
 }
@@ -337,7 +337,7 @@ func newPublicKeyVerifyPoPFunction(
 			if err != nil {
 				panic(interpreter.WrappedExternalError(err))
 			}
-			return interpreter.AsBoolValue(valid)
+			return interpreter.BoolValue(valid)
 		},
 	)
 }

@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 //go:generate go run golang.org/x/tools/cmd/stringer -type=PrimitiveStaticType -trimprefix=PrimitiveStaticType
@@ -274,13 +275,13 @@ func (t PrimitiveStaticType) elementSize() uint {
 		return uint(len(cborVoidValue))
 
 	case PrimitiveStaticTypeNever:
-		return cborTagSize + 1
+		return values.CBORTagSize + 1
 
 	case PrimitiveStaticTypeBool:
-		return cborTagSize + 1
+		return values.CBORTagSize + 1
 
 	case PrimitiveStaticTypeAddress:
-		return cborTagSize + 8 // address length is 8 bytes
+		return values.CBORTagSize + 8 // address length is 8 bytes
 
 	case PrimitiveStaticTypeString,
 		PrimitiveStaticTypeCharacter,
@@ -290,7 +291,7 @@ func (t PrimitiveStaticType) elementSize() uint {
 
 	case PrimitiveStaticTypeFixedPoint,
 		PrimitiveStaticTypeSignedFixedPoint:
-		return cborTagSize + 8
+		return values.CBORTagSize + 8
 
 	// values of these types may wrap big.Int
 	case PrimitiveStaticTypeInt,
@@ -311,24 +312,24 @@ func (t PrimitiveStaticType) elementSize() uint {
 	case PrimitiveStaticTypeInt8,
 		PrimitiveStaticTypeUInt8,
 		PrimitiveStaticTypeWord8:
-		return cborTagSize + 2
+		return values.CBORTagSize + 2
 
 	case PrimitiveStaticTypeInt16,
 		PrimitiveStaticTypeUInt16,
 		PrimitiveStaticTypeWord16:
-		return cborTagSize + 3
+		return values.CBORTagSize + 3
 
 	case PrimitiveStaticTypeInt32,
 		PrimitiveStaticTypeUInt32,
 		PrimitiveStaticTypeWord32:
-		return cborTagSize + 5
+		return values.CBORTagSize + 5
 
 	case PrimitiveStaticTypeInt64,
 		PrimitiveStaticTypeUInt64,
 		PrimitiveStaticTypeWord64,
 		PrimitiveStaticTypeFix64,
 		PrimitiveStaticTypeUFix64:
-		return cborTagSize + 9
+		return values.CBORTagSize + 9
 
 	case PrimitiveStaticTypePath,
 		PrimitiveStaticTypeCapability,

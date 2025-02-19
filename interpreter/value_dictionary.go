@@ -593,7 +593,7 @@ func (v *DictionaryValue) ContainsKey(
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
-	return AsBoolValue(exists)
+	return BoolValue(exists)
 }
 
 func (v *DictionaryValue) Get(

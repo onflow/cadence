@@ -31,12 +31,12 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	"github.com/onflow/cadence/values"
 )
 
 func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 	const (
-		cborTagSize                                   = 2
 		someStorableWithMultipleNestedLevelsArraySize = 1
 	)
 
@@ -49,7 +49,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		unwrappedValue, wrapperSize := v.UnwrapAtreeValue()
 		require.Equal(t, bv, unwrappedValue)
-		require.Equal(t, uint64(cborTagSize), wrapperSize)
+		require.Equal(t, uint64(values.CBORTagSize), wrapperSize)
 	})
 
 	t.Run("SomeValue(SomeValue(bool))", func(t *testing.T) {
@@ -61,7 +61,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		unwrappedValue, wrapperSize := v.UnwrapAtreeValue()
 		require.Equal(t, bv, unwrappedValue)
-		require.Equal(t, uint64(cborTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
+		require.Equal(t, uint64(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
 	})
 
 	t.Run("SomeValue(SomeValue(ArrayValue(...)))", func(t *testing.T) {
@@ -86,7 +86,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		address := common.Address{'A'}
 
-		values := []interpreter.Value{
+		elements := []interpreter.Value{
 			interpreter.NewUnmeteredUInt64Value(0),
 			interpreter.NewUnmeteredUInt64Value(1),
 		}
@@ -98,7 +98,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
 			address,
-			values...,
+			elements...,
 		)
 
 		v := interpreter.NewUnmeteredSomeValueNonCopying(
@@ -107,13 +107,13 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		unwrappedValue, wrapperSize := v.UnwrapAtreeValue()
 		require.IsType(t, &atree.Array{}, unwrappedValue)
-		require.Equal(t, uint64(cborTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
+		require.Equal(t, uint64(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
 
 		atreeArray := unwrappedValue.(*atree.Array)
 		require.Equal(t, atree.Address(address), atreeArray.Address())
-		require.Equal(t, uint64(len(values)), atreeArray.Count())
+		require.Equal(t, uint64(len(elements)), atreeArray.Count())
 
-		for i, expectedValue := range values {
+		for i, expectedValue := range elements {
 			v, err := atreeArray.Get(uint64(i))
 			require.NoError(t, err)
 			require.Equal(t, expectedValue, v)
@@ -142,7 +142,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		address := common.Address{'A'}
 
-		values := []interpreter.Value{
+		elements := []interpreter.Value{
 			interpreter.NewUnmeteredUInt64Value(0),
 			interpreter.NewUnmeteredStringValue("a"),
 			interpreter.NewUnmeteredUInt64Value(1),
@@ -157,7 +157,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
 			address,
-			values...,
+			elements...,
 		)
 
 		v := interpreter.NewUnmeteredSomeValueNonCopying(
@@ -166,12 +166,12 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		unwrappedValue, wrapperSize := v.UnwrapAtreeValue()
 		require.IsType(t, &atree.OrderedMap{}, unwrappedValue)
-		require.Equal(t, uint64(cborTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
+		require.Equal(t, uint64(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
 
 		// Verify unwrapped value
 		atreeMap := unwrappedValue.(*atree.OrderedMap)
 		require.Equal(t, atree.Address(address), atreeMap.Address())
-		require.Equal(t, uint64(len(values)/2), atreeMap.Count())
+		require.Equal(t, uint64(len(elements)/2), atreeMap.Count())
 
 		valueComparator := func(
 			storage atree.SlabStorage,
@@ -192,9 +192,9 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 			return hashInput, nil
 		}
 
-		for i := 0; i < len(values); i += 2 {
-			key := values[i]
-			expectedValue := values[i+1]
+		for i := 0; i < len(elements); i += 2 {
+			key := elements[i]
+			expectedValue := elements[i+1]
 
 			v, err := atreeMap.Get(
 				valueComparator,
@@ -264,7 +264,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		unwrappedValue, wrapperSize := v.UnwrapAtreeValue()
 		require.IsType(t, &atree.OrderedMap{}, unwrappedValue)
-		require.Equal(t, uint64(cborTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
+		require.Equal(t, uint64(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
 
 		// Verify unwrapped value
 		atreeMap := unwrappedValue.(*atree.OrderedMap)
@@ -301,7 +301,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 		require.IsType(t, interpreter.SomeStorable{}, storable)
 
 		unwrappedStorable := storable.(interpreter.SomeStorable).UnwrapAtreeStorable()
-		require.Equal(t, interpreter.BoolValue(true), unwrappedStorable)
+		require.Equal(t, values.BoolValue(true), unwrappedStorable)
 	})
 
 	t.Run("SomeValue(SomeValue(bool))", func(t *testing.T) {
@@ -317,7 +317,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 		require.IsType(t, interpreter.SomeStorable{}, storable)
 
 		unwrappedStorable := storable.(interpreter.SomeStorable).UnwrapAtreeStorable()
-		require.Equal(t, interpreter.BoolValue(true), unwrappedStorable)
+		require.Equal(t, values.BoolValue(true), unwrappedStorable)
 	})
 
 	t.Run("SomeValue(SomeValue(ArrayValue(...))), small ArrayValue", func(t *testing.T) {

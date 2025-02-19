@@ -27,6 +27,7 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // TypeValue
@@ -153,7 +154,7 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 					MustConvertStaticToSemaType(staticType, interpreter),
 					MustConvertStaticToSemaType(otherStaticType, interpreter),
 				)
-				return AsBoolValue(result)
+				return BoolValue(result)
 			},
 		)
 
@@ -173,7 +174,7 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 			return FalseValue
 		}
 
-		return AsBoolValue(elaboration.IsRecovered)
+		return BoolValue(elaboration.IsRecovered)
 
 	case sema.MetaTypeAddressFieldName:
 		staticType := v.Type
@@ -282,7 +283,7 @@ func (v TypeValue) Storable(
 	address atree.Address,
 	maxInlineSize uint64,
 ) (atree.Storable, error) {
-	return maybeLargeImmutableStorable(
+	return values.MaybeLargeImmutableStorable(
 		v,
 		storage,
 		address,

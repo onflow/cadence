@@ -820,7 +820,7 @@ func (v *ArrayValue) Contains(
 		locationRange,
 	)
 
-	return AsBoolValue(result)
+	return BoolValue(result)
 }
 
 func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {

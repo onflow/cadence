@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 const InvalidCapabilityID UInt64Value = 0
@@ -205,7 +206,7 @@ func (v *IDCapabilityValue) Storable(
 	address atree.Address,
 	maxInlineSize uint64,
 ) (atree.Storable, error) {
-	return maybeLargeImmutableStorable(
+	return values.MaybeLargeImmutableStorable(
 		v,
 		storage,
 		address,

@@ -27,6 +27,7 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // CharacterValue
@@ -207,7 +208,7 @@ func (CharacterValue) DeepRemove(_ *Interpreter, _ bool) {
 }
 
 func (v CharacterValue) ByteSize() uint32 {
-	return cborTagSize + getBytesCBORSize([]byte(v.Str))
+	return values.CBORTagSize + values.GetBytesCBORSize([]byte(v.Str))
 }
 
 func (v CharacterValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
