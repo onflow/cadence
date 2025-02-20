@@ -50,8 +50,14 @@ type Desugar struct {
 }
 
 type inheritedFunction struct {
-	interfaceType *sema.InterfaceType
-	functionDecl  *ast.FunctionDeclaration
+	interfaceType             *sema.InterfaceType
+	functionDecl              *ast.FunctionDeclaration
+	rewrittenBeforeStatements []ast.Statement
+	elaboration               *sema.Elaboration
+}
+
+func (f inheritedFunction) functionType() *sema.FunctionType {
+	return f.elaboration.FunctionDeclarationFunctionType(f.functionDecl)
 }
 
 var _ ast.DeclarationVisitor[ast.Declaration] = &Desugar{}
@@ -109,7 +115,7 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration,
 		funcBlock,
 		declaration.ParameterList,
 	)
-	postConditions := d.desugarPostConditions(
+	postConditions, beforeStatements := d.desugarPostConditions(
 		funcName,
 		funcBlock,
 		declaration.ParameterList,
@@ -117,6 +123,8 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration,
 
 	modifiedStatements := make([]ast.Statement, 0)
 	modifiedStatements = append(modifiedStatements, preConditions...)
+
+	modifiedStatements = append(modifiedStatements, beforeStatements...)
 
 	if funcBlock.HasStatements() {
 		pos := funcBlock.Block.StartPos
@@ -405,7 +413,7 @@ func (d *Desugar) tempResultIdentifierExpr(pos ast.Position) *ast.IdentifierExpr
 func (d *Desugar) desugarPreConditions(
 	enclosingFuncName string,
 	funcBlock *ast.FunctionBlock,
-	list *ast.ParameterList,
+	parameterList *ast.ParameterList,
 ) []ast.Statement {
 
 	desugaredConditions := make([]ast.Statement, 0)
@@ -429,6 +437,7 @@ func (d *Desugar) desugarPreConditions(
 			kind,
 			inheritedFunc,
 			nil, // No result variable for pre-conditions
+			nil, // No before functions for pre-conditions
 			pos,
 		)
 		desugaredConditions = append(desugaredConditions, invocation)
@@ -459,7 +468,8 @@ func (d *Desugar) desugarPreConditions(
 		conditions,
 		funcBlock,
 		desugaredConditions,
-		list,
+		parameterList,
+		nil,
 	)
 
 	return nil
@@ -468,10 +478,10 @@ func (d *Desugar) desugarPreConditions(
 func (d *Desugar) desugarPostConditions(
 	enclosingFuncName string,
 	funcBlock *ast.FunctionBlock,
-	list *ast.ParameterList,
-) []ast.Statement {
+	parameterList *ast.ParameterList,
+) (desugaredConditions []ast.Statement, beforeStatements []ast.Statement) {
 
-	desugaredConditions := make([]ast.Statement, 0)
+	desugaredConditions = make([]ast.Statement, 0)
 	pos := ast.EmptyPosition
 	kind := ast.ConditionKindPost
 
@@ -480,10 +490,12 @@ func (d *Desugar) desugarPostConditions(
 		conditions = funcBlock.PostConditions
 	}
 
-	// Desugar self-defined post-conditions
+	// Desugar locally-defined post-conditions
 	if conditions != nil {
 		postConditionsRewrite := d.elaboration.PostConditionsRewrite(conditions)
 		conditionsList := postConditionsRewrite.RewrittenPostConditions
+
+		beforeStatements = postConditionsRewrite.BeforeStatements
 
 		for _, condition := range conditionsList {
 			desugaredCondition := d.desugarCondition(condition)
@@ -494,6 +506,8 @@ func (d *Desugar) desugarPostConditions(
 	// Desugar inherited post-conditions
 	inheritedFuncs, ok := d.inheritedFuncsWithConditions[enclosingFuncName]
 	if ok && len(inheritedFuncs) > 0 {
+		beforeFuncResults := map[*ast.VariableDeclaration]string{}
+
 		// Must be added in reverse order.
 		for i := len(inheritedFuncs) - 1; i >= 0; i-- {
 			inheritedFunc := inheritedFuncs[i]
@@ -502,7 +516,26 @@ func (d *Desugar) desugarPostConditions(
 				continue
 			}
 
-			resultVarType, resultVarExist := d.elaboration.ResultVariableType(inheritedFunc.functionDecl.FunctionBlock)
+			// Result variable must be looked-up in the corresponding elaboration.
+			resultVarType, resultVarExist := inheritedFunc.elaboration.ResultVariableType(inheritedFunc.functionDecl.FunctionBlock)
+
+			// If the inherited function has before-statements, then add an invocation
+			// to call the generated before-statements-function of the interface.
+			//
+			// IMPORTANT: inherited before-functions must be visited before the
+			// inherited post-conditions, because the results of inherited before-functions
+			// are being passed as arguments to the inherited post conditions.
+			for _, statement := range inheritedFunc.rewrittenBeforeStatements {
+				beforeVarDecl := d.desugarInheritedBeforeStatement(
+					enclosingFuncName,
+					statement,
+					inheritedFunc,
+					pos,
+					beforeFuncResults,
+				)
+
+				beforeStatements = append(beforeStatements, beforeVarDecl)
+			}
 
 			// If the inherited function has post-conditions, then add an invocation
 			// to call the generated post-condition-function of the interface.
@@ -513,6 +546,7 @@ func (d *Desugar) desugarPostConditions(
 				kind,
 				inheritedFunc,
 				resultVarType,
+				beforeFuncResults,
 				pos,
 			)
 			desugaredConditions = append(desugaredConditions, invocation)
@@ -526,21 +560,84 @@ func (d *Desugar) desugarPostConditions(
 	// If this is a method of a concrete-type then return with the updated statements,
 	// and continue desugaring the rest.
 	if d.canInlineConditions(funcBlock, conditions) {
-		return desugaredConditions
+		return desugaredConditions, beforeStatements
 	}
 
 	// Otherwise, i.e: if this is an interface function with only post-conditions,
 	// (thus not a default function), then generate a separate function for the conditions.
+
 	d.generateConditionsFunction(
 		enclosingFuncName,
 		kind,
 		conditions,
 		funcBlock,
 		desugaredConditions,
-		list,
+		parameterList,
+		beforeStatements,
 	)
 
-	return nil
+	return nil, nil
+}
+
+func (d *Desugar) desugarInheritedBeforeStatement(
+	enclosingFuncName string,
+	statement ast.Statement,
+	inheritedFunc *inheritedFunction,
+	pos ast.Position,
+	beforeFuncResults map[*ast.VariableDeclaration]string,
+) *ast.VariableDeclaration {
+
+	varDecl, ok := statement.(*ast.VariableDeclaration)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// Call to the inherited synthetic function, to get the before-statement results
+	beforeFuncInvocation := d.inheritedBeforeFunctionInvocation(
+		enclosingFuncName,
+		varDecl.Identifier.Identifier,
+		inheritedFunc,
+		pos,
+	)
+
+	// Store the result in a variable.
+	beforeVarDecl := ast.NewVariableDeclaration(
+		d.memoryGauge,
+		varDecl.Access,
+		varDecl.IsConstant,
+		d.beforeFunctionResultVarName(beforeFuncResults, varDecl),
+		varDecl.TypeAnnotation,
+		beforeFuncInvocation,
+		ast.NewTransfer(
+			d.memoryGauge,
+			ast.TransferOperationCopy,
+			pos,
+		),
+		pos,
+		nil,
+		nil,
+		"",
+	)
+
+	beforeFuncResults[varDecl] = beforeVarDecl.Identifier.Identifier
+
+	beforeVarDeclTypes := inheritedFunc.elaboration.VariableDeclarationTypes(varDecl)
+	d.elaboration.SetVariableDeclarationTypes(
+		beforeVarDecl,
+		beforeVarDeclTypes,
+	)
+	return beforeVarDecl
+}
+
+func (d *Desugar) beforeFunctionResultVarName(beforeFuncResults map[*ast.VariableDeclaration]string, varDecl *ast.VariableDeclaration) ast.Identifier {
+	offset := len(beforeFuncResults)
+	varName := fmt.Sprintf("$_before%d", offset)
+
+	return ast.NewIdentifier(
+		nil,
+		varName,
+		ast.EmptyPosition,
+	)
 }
 
 func (d *Desugar) canInlineConditions(funcBlock *ast.FunctionBlock, conditions *ast.Conditions) bool {
@@ -559,6 +656,7 @@ func (d *Desugar) generateConditionsFunction(
 	functionBlock *ast.FunctionBlock,
 	desugaredConditions []ast.Statement,
 	parameterList *ast.ParameterList,
+	beforeStatements []ast.Statement,
 ) {
 	pos := conditions.StartPos
 
@@ -584,40 +682,50 @@ func (d *Desugar) generateConditionsFunction(
 	params := make([]*ast.Parameter, len(parameterList.Parameters))
 	copy(params, parameterList.Parameters)
 
-	// For post conditions, also add `result` as a parameter, if needed.
-	_, needResultVar := d.elaboration.ResultVariableType(functionBlock)
-	if kind == ast.ConditionKindPost && needResultVar {
-		params = append(params, ast.NewParameter(
-			d.memoryGauge,
-			sema.ArgumentLabelNotRequired,
-			ast.NewIdentifier(
-				d.memoryGauge,
-				resultVariableName,
-				pos,
-			),
+	if kind == ast.ConditionKindPost {
 
-			ast.NewTypeAnnotation(
-				d.memoryGauge,
-				false,
+		// If there are before statements, then add their results
+		// to be passed in as parameters.
+		for _, statement := range beforeStatements {
+			varDecl, isVarDecl := statement.(*ast.VariableDeclaration)
+			if !isVarDecl {
+				panic(errors.NewUnreachableError())
+			}
 
-				// TODO: Pass the proper type here. It can be looked-up from the elaboration (see above).
-				//  However, will have to convert the `sema.Type` to `ast.Type`.
-				//  Currently this `ast.Type` is not needed for the compiler, hence passing a dummy type.
-				ast.NewNominalType(
+			d.generateBeforeFunction(
+				enclosingFuncName,
+				functionBlock,
+				parameterList,
+				varDecl,
+			)
+
+			// Add parameter to pass in 'before' values.
+			params = append(params, ast.NewParameter(
+				d.memoryGauge,
+				sema.ArgumentLabelNotRequired,
+				varDecl.Identifier,
+
+				ast.NewTypeAnnotation(
 					d.memoryGauge,
-					ast.NewIdentifier(
-						d.memoryGauge,
-						sema.AnyStructType.Name,
-						pos,
-					),
-					nil,
-				),
-				parameterList.StartPos,
-			),
+					false,
 
-			nil,
-			parameterList.StartPos,
-		))
+					// TODO: Pass the proper type here. It can be looked-up from the elaboration (see above).
+					//  However, will have to convert the `sema.Type` to `ast.Type`.
+					//  Currently this `ast.Type` is not needed for the compiler, hence passing a dummy type.
+					d.anyStructType(pos),
+					parameterList.StartPos,
+				),
+
+				nil,
+				parameterList.StartPos,
+			))
+		}
+
+		// For post conditions, also add `result` as a parameter, if needed.
+		_, needResultVar := d.elaboration.ResultVariableType(functionBlock)
+		if needResultVar {
+			params = append(params, d.resultVarParameter(pos))
+		}
 	}
 
 	conditionFunc := ast.NewFunctionDeclaration(
@@ -656,11 +764,125 @@ func (d *Desugar) generateConditionsFunction(
 	d.modifiedDeclarations = append(d.modifiedDeclarations, conditionFunc)
 }
 
+// Generates a separate function for the before statements.
+func (d *Desugar) generateBeforeFunction(
+	enclosingFuncName string,
+	functionBlock *ast.FunctionBlock,
+	parameterList *ast.ParameterList,
+	beforeVarDecl *ast.VariableDeclaration,
+) {
+	pos := beforeVarDecl.StartPos
+
+	astRange := functionBlock.PostConditions.Range
+
+	beforeValueReturnStmt := ast.NewReturnStatement(d.memoryGauge, beforeVarDecl.Value, astRange)
+
+	beforeVarDeclTypes := d.elaboration.VariableDeclarationTypes(beforeVarDecl)
+
+	d.elaboration.SetReturnStatementTypes(
+		beforeValueReturnStmt,
+		sema.ReturnStatementTypes{
+			ValueType:  beforeVarDeclTypes.TargetType,
+			ReturnType: beforeVarDeclTypes.TargetType,
+		},
+	)
+
+	modifiedFuncBlock := ast.NewFunctionBlock(
+		d.memoryGauge,
+		ast.NewBlock(
+			d.memoryGauge,
+			[]ast.Statement{
+				beforeValueReturnStmt,
+			},
+			astRange,
+		),
+		nil,
+		nil,
+	)
+
+	params := make([]*ast.Parameter, len(parameterList.Parameters))
+	copy(params, parameterList.Parameters)
+
+	beforeFunction := ast.NewFunctionDeclaration(
+		d.memoryGauge,
+		ast.AccessAll,
+		ast.FunctionPurityView,
+		false,
+		false,
+		generatedBeforeFuncIdentifier(
+			d.enclosingInterfaceType,
+			enclosingFuncName,
+			beforeVarDecl.Identifier.Identifier,
+			pos,
+		),
+		nil,
+
+		ast.NewParameterList(
+			d.memoryGauge,
+			params,
+			parameterList.Range,
+		),
+
+		ast.NewTypeAnnotation(
+			d.memoryGauge,
+			false,
+			d.anyStructType(pos),
+			pos,
+		),
+		modifiedFuncBlock,
+		pos,
+		"",
+	)
+
+	// TODO: Is the generated function needed to be desugared?
+
+	d.modifiedDeclarations = append(d.modifiedDeclarations, beforeFunction)
+}
+
+func (d *Desugar) resultVarParameter(pos ast.Position) *ast.Parameter {
+	return ast.NewParameter(
+		d.memoryGauge,
+		sema.ArgumentLabelNotRequired,
+		ast.NewIdentifier(
+			d.memoryGauge,
+			resultVariableName,
+			pos,
+		),
+
+		ast.NewTypeAnnotation(
+			d.memoryGauge,
+			false,
+
+			// TODO: Pass the proper type here. It can be looked-up from the elaboration (see above).
+			//  However, will have to convert the `sema.Type` to `ast.Type`.
+			//  Currently this `ast.Type` is not needed for the compiler, hence passing a dummy type.
+			d.anyStructType(pos),
+			pos,
+		),
+
+		nil,
+		pos,
+	)
+}
+
+func (d *Desugar) anyStructType(pos ast.Position) *ast.NominalType {
+	return ast.NewNominalType(
+		d.memoryGauge,
+		ast.NewIdentifier(
+			d.memoryGauge,
+			sema.AnyStructType.Name,
+			pos,
+		),
+		nil,
+	)
+}
+
 func (d *Desugar) inheritedConditionInvocation(
 	funcName string,
 	kind ast.ConditionKind,
 	inheritedFunc *inheritedFunction,
 	resultVarType sema.Type,
+	beforeFuncResults map[*ast.VariableDeclaration]string,
 	pos ast.Position,
 ) ast.Statement {
 
@@ -670,29 +892,47 @@ func (d *Desugar) inheritedConditionInvocation(
 		kind,
 	)
 
-	params := inheritedFunc.functionDecl.ParameterList.Parameters
-	semaParams := make([]sema.Parameter, 0, len(params))
-	for _, param := range params {
-		paramTypeAnnotation := d.checker.ConvertTypeAnnotation(param.TypeAnnotation)
+	inheritedFuncType := inheritedFunc.functionType()
+	parameters := make([]sema.Parameter, len(inheritedFuncType.Parameters))
+	copy(parameters, inheritedFuncType.Parameters)
 
-		semaParams = append(semaParams, sema.Parameter{
-			TypeAnnotation: paramTypeAnnotation,
-			Label:          param.Label,
-			Identifier:     param.Identifier.Identifier,
-		})
-	}
+	var beforeValues []ast.Expression
 
-	if resultVarType != nil && kind == ast.ConditionKindPost {
-		semaParams = append(semaParams, sema.Parameter{
-			TypeAnnotation: sema.NewTypeAnnotation(resultVarType),
-			Label:          sema.ArgumentLabelNotRequired,
-			Identifier:     resultVariableName,
-		})
+	if kind == ast.ConditionKindPost {
+		// Add 'before' function results as arguments.
+		for _, statement := range inheritedFunc.rewrittenBeforeStatements {
+			varDecl, ok := statement.(*ast.VariableDeclaration)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			varDeclTypes := inheritedFunc.elaboration.VariableDeclarationTypes(varDecl)
+
+			beforeFunctionResultVarName, ok := beforeFuncResults[varDecl]
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			parameters = append(parameters, sema.Parameter{
+				TypeAnnotation: sema.NewTypeAnnotation(varDeclTypes.TargetType),
+				Label:          sema.ArgumentLabelNotRequired,
+				Identifier:     beforeFunctionResultVarName,
+			})
+		}
+
+		// Add 'result' variable as an argument.
+		if resultVarType != nil {
+			parameters = append(parameters, sema.Parameter{
+				TypeAnnotation: sema.NewTypeAnnotation(resultVarType),
+				Label:          sema.ArgumentLabelNotRequired,
+				Identifier:     resultVariableName,
+			})
+		}
 	}
 
 	funcType := sema.NewSimpleFunctionType(
 		sema.FunctionPurityView,
-		semaParams,
+		parameters,
 		sema.VoidTypeAnnotation,
 	)
 
@@ -710,9 +950,51 @@ func (d *Desugar) inheritedConditionInvocation(
 		pos,
 		conditionsFuncName,
 		member,
+		beforeValues,
 	)
 
 	return ast.NewExpressionStatement(d.memoryGauge, invocation)
+}
+
+func (d *Desugar) inheritedBeforeFunctionInvocation(
+	funcName string,
+	beforeVarName string,
+	inheritedFunc *inheritedFunction,
+	pos ast.Position,
+) *ast.InvocationExpression {
+
+	beforeFuncName := generatedBeforeFuncName(
+		inheritedFunc.interfaceType,
+		funcName,
+		beforeVarName,
+	)
+
+	inheritedFuncType := inheritedFunc.functionType()
+	parameters := make([]sema.Parameter, len(inheritedFuncType.Parameters))
+	copy(parameters, inheritedFuncType.Parameters)
+
+	funcType := sema.NewSimpleFunctionType(
+		sema.FunctionPurityView,
+		parameters,
+		sema.VoidTypeAnnotation,
+	)
+
+	member := sema.NewPublicFunctionMember(
+		d.memoryGauge,
+		inheritedFunc.interfaceType,
+		beforeFuncName,
+		funcType,
+		"",
+	)
+
+	return d.interfaceDelegationMethodCall(
+		inheritedFunc.interfaceType,
+		funcType,
+		pos,
+		beforeFuncName,
+		member,
+		nil,
+	)
 }
 
 func generatedConditionsFuncName(interfaceType *sema.InterfaceType, funcName string, kind ast.ConditionKind) string {
@@ -728,6 +1010,27 @@ func generatedConditionsFuncIdentifier(
 	return ast.NewIdentifier(
 		nil,
 		generatedConditionsFuncName(interfaceType, funcName, kind),
+		pos,
+	)
+}
+
+func generatedBeforeFuncName(
+	interfaceType *sema.InterfaceType,
+	funcName string,
+	beforeVarName string,
+) string {
+	return fmt.Sprintf("$%s.%s.%s", interfaceType.Identifier, funcName, beforeVarName)
+}
+
+func generatedBeforeFuncIdentifier(
+	interfaceType *sema.InterfaceType,
+	funcName string,
+	beforeVarName string,
+	pos ast.Position,
+) ast.Identifier {
+	return ast.NewIdentifier(
+		nil,
+		generatedBeforeFuncName(interfaceType, funcName, beforeVarName),
 		pos,
 	)
 }
@@ -909,9 +1212,19 @@ func (d *Desugar) inheritedFunctionsWithConditions(compositeType sema.Conforming
 				continue
 			}
 			funcs := inheritedFunctions[name]
+
+			postConditions := functionDecl.FunctionBlock.PostConditions
+			var rewrittenBeforeStatements []ast.Statement
+			if postConditions != nil {
+				postConditionsRewrite := elaboration.PostConditionsRewrite(postConditions)
+				rewrittenBeforeStatements = postConditionsRewrite.BeforeStatements
+			}
+
 			funcs = append(funcs, &inheritedFunction{
-				interfaceType: interfaceType,
-				functionDecl:  functionDecl,
+				interfaceType:             interfaceType,
+				functionDecl:              functionDecl,
+				rewrittenBeforeStatements: rewrittenBeforeStatements,
+				elaboration:               elaboration,
 			})
 			inheritedFunctions[name] = funcs
 		}
@@ -984,6 +1297,7 @@ func (d *Desugar) inheritedDefaultFunctions(
 				pos,
 				funcName,
 				member,
+				nil,
 			)
 
 			funcReturnType := inheritedFuncType.ReturnTypeAnnotation.Type
@@ -1069,6 +1383,7 @@ func (d *Desugar) interfaceDelegationMethodCall(
 	pos ast.Position,
 	functionName string,
 	member *sema.Member,
+	extraArguments []ast.Expression,
 ) *ast.InvocationExpression {
 
 	arguments := make([]*ast.Argument, 0)
@@ -1109,6 +1424,15 @@ func (d *Desugar) interfaceDelegationMethodCall(
 				),
 			)
 		}
+		arguments = append(arguments, arg)
+	}
+
+	for _, argument := range extraArguments {
+		arg := ast.NewUnlabeledArgument(
+			d.memoryGauge,
+			argument,
+		)
+
 		arguments = append(arguments, arg)
 	}
 
