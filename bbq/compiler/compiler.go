@@ -575,44 +575,48 @@ func (c *Compiler[_]) VisitContinueStatement(_ *ast.ContinueStatement) (_ struct
 }
 
 func (c *Compiler[_]) VisitIfStatement(statement *ast.IfStatement) (_ struct{}) {
-	// TODO: scope
-	var elseJump int
-	switch test := statement.Test.(type) {
-	case ast.Expression:
-		c.compileExpression(test)
-		elseJump = c.emitUndefinedJumpIfFalse()
+	// If statements can be coming from inherited conditions.
+	// If so, use the corresponding elaboration.
+	c.withConditionExtendedElaboration(statement, func() {
+		// TODO: scope
+		var elseJump int
+		switch test := statement.Test.(type) {
+		case ast.Expression:
+			c.compileExpression(test)
+			elseJump = c.emitUndefinedJumpIfFalse()
 
-	case *ast.VariableDeclaration:
-		// TODO: second value
-		c.compileExpression(test.Value)
+		case *ast.VariableDeclaration:
+			// TODO: second value
+			c.compileExpression(test.Value)
 
-		tempIndex := c.currentFunction.generateLocalIndex()
-		c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: tempIndex})
+			tempIndex := c.currentFunction.generateLocalIndex()
+			c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: tempIndex})
 
-		c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: tempIndex})
-		elseJump = c.emitUndefinedJumpIfNil()
+			c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: tempIndex})
+			elseJump = c.emitUndefinedJumpIfNil()
 
-		c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: tempIndex})
-		c.codeGen.Emit(opcode.InstructionUnwrap{})
-		varDeclTypes := c.ExtendedElaboration.VariableDeclarationTypes(test)
-		c.emitTransfer(varDeclTypes.TargetType)
-		local := c.currentFunction.declareLocal(test.Identifier.Identifier)
-		c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: local.index})
+			c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: tempIndex})
+			c.codeGen.Emit(opcode.InstructionUnwrap{})
+			varDeclTypes := c.ExtendedElaboration.VariableDeclarationTypes(test)
+			c.emitTransfer(varDeclTypes.TargetType)
+			local := c.currentFunction.declareLocal(test.Identifier.Identifier)
+			c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: local.index})
 
-	default:
-		panic(errors.NewUnreachableError())
-	}
+		default:
+			panic(errors.NewUnreachableError())
+		}
 
-	c.compileBlock(statement.Then)
-	elseBlock := statement.Else
-	if elseBlock != nil {
-		thenJump := c.emitUndefinedJump()
-		c.patchJump(elseJump)
-		c.compileBlock(elseBlock)
-		c.patchJump(thenJump)
-	} else {
-		c.patchJump(elseJump)
-	}
+		c.compileBlock(statement.Then)
+		elseBlock := statement.Else
+		if elseBlock != nil {
+			thenJump := c.emitUndefinedJump()
+			c.patchJump(elseJump)
+			c.compileBlock(elseBlock)
+			c.patchJump(thenJump)
+		} else {
+			c.patchJump(elseJump)
+		}
+	})
 
 	return
 }
@@ -685,22 +689,27 @@ func (c *Compiler[_]) VisitSwitchStatement(statement *ast.SwitchStatement) (_ st
 }
 
 func (c *Compiler[_]) VisitVariableDeclaration(declaration *ast.VariableDeclaration) (_ struct{}) {
-	// TODO: second value
+	// Some variable declarations can be coming from inherited before-statements.
+	// If so, use the corresponding elaboration.
+	c.withConditionExtendedElaboration(declaration, func() {
+		// TODO: second value
 
-	local := c.currentFunction.declareLocal(declaration.Identifier.Identifier)
+		local := c.currentFunction.declareLocal(declaration.Identifier.Identifier)
 
-	// TODO: This can be nil only for synthetic-result variable
-	//   Any better way to handle this?
-	if declaration.Value == nil {
-		return
-	}
+		// TODO: This can be nil only for synthetic-result variable
+		//   Any better way to handle this?
+		if declaration.Value == nil {
+			return
+		}
 
-	c.compileExpression(declaration.Value)
+		c.compileExpression(declaration.Value)
 
-	varDeclTypes := c.ExtendedElaboration.VariableDeclarationTypes(declaration)
-	c.emitTransfer(varDeclTypes.TargetType)
+		varDeclTypes := c.ExtendedElaboration.VariableDeclarationTypes(declaration)
+		c.emitTransfer(varDeclTypes.TargetType)
 
-	c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: local.index})
+		c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: local.index})
+	})
+
 	return
 }
 
@@ -1541,4 +1550,16 @@ func (c *Compiler[E]) declareParameters(function *function[E], paramList *ast.Pa
 
 func (c *Compiler[_]) generateEmptyInit() {
 	c.VisitSpecialFunctionDeclaration(emptyInitializer)
+}
+
+func (c *Compiler[_]) withConditionExtendedElaboration(statement ast.Statement, f func()) {
+	stmtElaboration, ok := c.ExtendedElaboration.conditionsElaborations[statement]
+	if ok {
+		prevElaboration := c.ExtendedElaboration
+		c.ExtendedElaboration = stmtElaboration
+		defer func() {
+			c.ExtendedElaboration = prevElaboration
+		}()
+	}
+	f()
 }

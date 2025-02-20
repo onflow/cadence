@@ -36,8 +36,6 @@ import (
 
 func TestFTTransfer(t *testing.T) {
 
-	t.SkipNow()
-
 	// ---- Deploy FT Contract -----
 
 	storage := interpreter.NewInMemoryStorage(nil)
@@ -66,20 +64,25 @@ func TestFTTransfer(t *testing.T) {
 
 	ftLocation := common.NewAddressLocation(nil, contractsAddress, "FungibleToken")
 
-	ftContractProgram := parseCheckAndCompile(t, realFungibleTokenContractInterface, ftLocation, programs)
-	printProgram("FungibleToken", ftContractProgram)
+	_ = parseCheckAndCompile(t, realFungibleTokenContractInterface, ftLocation, programs)
 
 	// ----- Deploy FlowToken Contract -----
 
 	flowTokenLocation := common.NewAddressLocation(nil, contractsAddress, "FlowToken")
 
 	flowTokenProgram := parseCheckAndCompile(t, realFlowContract, flowTokenLocation, programs)
-	printProgram("FlowToken", flowTokenProgram)
 
 	config := &vm.Config{
 		Storage:        storage,
 		AccountHandler: &testAccountHandler{},
 		TypeLoader:     typeLoader,
+		ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+			imported, ok := programs[location]
+			if !ok {
+				return nil
+			}
+			return imported.Program
+		},
 	}
 
 	flowTokenVM := vm.NewVM(
@@ -138,7 +141,6 @@ func TestFTTransfer(t *testing.T) {
 	// Mint FLOW to sender
 
 	program := parseCheckAndCompile(t, realMintFlowTokenTransaction, nil, programs)
-	printProgram("Setup FlowToken Tx", program)
 
 	mintTxVM := vm.NewVM(txLocation(), program, vmConfig)
 
@@ -157,7 +159,6 @@ func TestFTTransfer(t *testing.T) {
 	// ----- Run token transfer transaction -----
 
 	tokenTransferTxProgram := parseCheckAndCompile(t, realFlowTokenTransferTransaction, nil, programs)
-	printProgram("FT Transfer Tx", tokenTransferTxProgram)
 
 	tokenTransferTxVM := vm.NewVM(txLocation(), tokenTransferTxProgram, vmConfig)
 
