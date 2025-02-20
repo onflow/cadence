@@ -64,7 +64,7 @@ func TestInterpretResultVariable(t *testing.T) {
 			t,
 			inter,
 			interpreter.UInt8Value(1),
-			resource.GetField(inter, interpreter.EmptyLocationRange, "id"),
+			resource.GetField(inter, "id"),
 		)
 	})
 
@@ -93,7 +93,7 @@ func TestInterpretResultVariable(t *testing.T) {
 		require.IsType(t, &interpreter.SomeValue{}, result)
 		someValue := result.(*interpreter.SomeValue)
 
-		innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
+		innerValue := someValue.InnerValue()
 		require.IsType(t, &interpreter.CompositeValue{}, innerValue)
 
 		resource := innerValue.(*interpreter.CompositeValue)
@@ -102,7 +102,7 @@ func TestInterpretResultVariable(t *testing.T) {
 			t,
 			inter,
 			interpreter.UInt8Value(1),
-			resource.GetField(inter, interpreter.EmptyLocationRange, "id"),
+			resource.GetField(inter, "id"),
 		)
 	})
 
@@ -157,7 +157,7 @@ func TestInterpretResultVariable(t *testing.T) {
 		require.IsType(t, &interpreter.SomeValue{}, result)
 		someValue := result.(*interpreter.SomeValue)
 
-		innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
+		innerValue := someValue.InnerValue()
 		require.IsType(t, &interpreter.CompositeValue{}, innerValue)
 
 		resource := innerValue.(*interpreter.CompositeValue)
@@ -166,7 +166,7 @@ func TestInterpretResultVariable(t *testing.T) {
 			t,
 			inter,
 			interpreter.UInt8Value(1),
-			resource.GetField(inter, interpreter.EmptyLocationRange, "id"),
+			resource.GetField(inter, "id"),
 		)
 	})
 

@@ -713,7 +713,7 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 
 			require.IsType(t, &interpreter.SomeValue{}, value)
 
-			innerValue := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
+			innerValue := value.(*interpreter.SomeValue).InnerValue()
 
 			assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
 
@@ -790,7 +790,7 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 
 			require.IsType(t, &interpreter.SomeValue{}, value)
 
-			innerValue := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
+			innerValue := value.(*interpreter.SomeValue).InnerValue()
 
 			assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
 
@@ -872,7 +872,7 @@ func TestInterpretAccountStorageCopy(t *testing.T) {
 
 			require.IsType(t, &interpreter.SomeValue{}, value)
 
-			innerValue := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
+			innerValue := value.(*interpreter.SomeValue).InnerValue()
 
 			assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
 
@@ -1005,7 +1005,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 
 			require.IsType(t, &interpreter.SomeValue{}, value)
 
-			innerValue := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
+			innerValue := value.(*interpreter.SomeValue).InnerValue()
 
 			assert.IsType(t, &interpreter.StorageReferenceValue{}, innerValue)
 
@@ -1044,7 +1044,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 
 			require.IsType(t, &interpreter.SomeValue{}, value)
 
-			innerValue = value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
+			innerValue = value.(*interpreter.SomeValue).InnerValue()
 
 			assert.IsType(t, &interpreter.StorageReferenceValue{}, innerValue)
 
@@ -1183,7 +1183,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 
 			require.IsType(t, &interpreter.SomeValue{}, value)
 
-			innerValue := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
+			innerValue := value.(*interpreter.SomeValue).InnerValue()
 
 			assert.IsType(t, &interpreter.StorageReferenceValue{}, innerValue)
 
@@ -1222,7 +1222,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 
 			require.IsType(t, &interpreter.SomeValue{}, value)
 
-			innerValue = value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
+			innerValue = value.(*interpreter.SomeValue).InnerValue()
 
 			assert.IsType(t, &interpreter.StorageReferenceValue{}, innerValue)
 

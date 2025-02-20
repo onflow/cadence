@@ -69,9 +69,9 @@ func (v *PathCapabilityValue) Walk(_ *Interpreter, walkChild func(Value), _ Loca
 	walkChild(v.Path)
 }
 
-func (v *PathCapabilityValue) StaticType(inter *Interpreter) StaticType {
+func (v *PathCapabilityValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewCapabilityStaticType(
-		inter,
+		context,
 		v.BorrowType,
 	)
 }
@@ -161,7 +161,7 @@ func (v *PathCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRang
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
 			// this function will panic already if this conversion fails
-			borrowType, _ = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+			borrowType, _ = MustConvertStaticToSemaType(v.BorrowType, interpreter).(*sema.ReferenceType)
 		}
 		return v.newBorrowFunction(interpreter, borrowType)
 
@@ -169,7 +169,7 @@ func (v *PathCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRang
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
 			// this function will panic already if this conversion fails
-			borrowType, _ = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+			borrowType, _ = MustConvertStaticToSemaType(v.BorrowType, interpreter).(*sema.ReferenceType)
 		}
 		return v.newCheckFunction(interpreter, borrowType)
 
@@ -199,7 +199,7 @@ func (v *PathCapabilityValue) ConformsToStaticType(
 	return true
 }
 
-func (v *PathCapabilityValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+func (v *PathCapabilityValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
 	otherCapability, ok := other.(*PathCapabilityValue)
 	if !ok {
 		return false
@@ -215,8 +215,8 @@ func (v *PathCapabilityValue) Equal(interpreter *Interpreter, locationRange Loca
 		return false
 	}
 
-	return otherCapability.address.Equal(interpreter, locationRange, v.address) &&
-		otherCapability.Path.Equal(interpreter, locationRange, v.Path)
+	return otherCapability.address.Equal(context, locationRange, v.address) &&
+		otherCapability.Path.Equal(context, locationRange, v.Path)
 }
 
 func (*PathCapabilityValue) IsStorable() bool {
@@ -240,7 +240,7 @@ func (*PathCapabilityValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*PathCapabilityValue) IsResourceKinded(_ *Interpreter) bool {
+func (*PathCapabilityValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

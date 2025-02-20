@@ -83,7 +83,7 @@ func TestCompositeStorage(t *testing.T) {
 		t,
 		inter,
 		TrueValue,
-		storedComposite.GetField(inter, EmptyLocationRange, fieldName),
+		storedComposite.GetField(inter, fieldName),
 	)
 }
 
@@ -139,7 +139,7 @@ func TestInclusiveRangeStorage(t *testing.T) {
 		t,
 		inter,
 		NewUnmeteredInt16Value(10),
-		storedComposite.GetField(inter, EmptyLocationRange, stepFieldName),
+		storedComposite.GetField(inter, stepFieldName),
 	)
 }
 

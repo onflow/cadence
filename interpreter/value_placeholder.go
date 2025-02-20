@@ -51,7 +51,7 @@ func (f placeholderValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (f placeholderValue) StaticType(_ *Interpreter) StaticType {
+func (f placeholderValue) StaticType(_ ValueStaticTypeContext) StaticType {
 	return PrimitiveStaticTypeNever
 }
 
@@ -75,7 +75,7 @@ func (placeholderValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (placeholderValue) IsResourceKinded(_ *Interpreter) bool {
+func (placeholderValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

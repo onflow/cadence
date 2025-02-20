@@ -20,6 +20,8 @@ package vm
 
 import (
 	"github.com/onflow/atree"
+
+	"github.com/onflow/cadence/interpreter"
 )
 
 type Value interface {
@@ -54,4 +56,84 @@ type ReferenceTrackedResourceKindedValue interface {
 	IsReferenceTrackedResourceKindedValue()
 	ValueID() atree.ValueID
 	IsStaleResource() bool
+}
+
+// ConvertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
+func ConvertAndBox(
+	value Value,
+	valueType, targetType StaticType,
+) Value {
+	value = convert(value, valueType, targetType)
+	return BoxOptional(value, targetType)
+}
+
+func convert(value Value, valueType, targetType StaticType) Value {
+	if valueType == nil {
+		return value
+	}
+
+	unwrappedTargetType := UnwrapOptionalType(targetType)
+
+	// if the value is optional, convert the inner value to the unwrapped target type
+	if optionalValueType, valueIsOptional := valueType.(*interpreter.OptionalStaticType); valueIsOptional {
+		switch value := value.(type) {
+		case NilValue:
+			return value
+
+		case *SomeValue:
+			if !optionalValueType.Type.Equal(unwrappedTargetType) {
+				innerValue := convert(value.value, optionalValueType.Type, unwrappedTargetType)
+				return NewSomeValueNonCopying(innerValue)
+			}
+			return value
+		}
+	}
+
+	switch unwrappedTargetType {
+	// TODO: add other cases
+	default:
+		return value
+	}
+}
+
+func Unbox(value Value) Value {
+	for {
+		some, ok := value.(*SomeValue)
+		if !ok {
+			return value
+		}
+
+		value = some.value
+	}
+}
+
+// BoxOptional boxes a value in optionals, if necessary
+func BoxOptional(
+	value Value,
+	targetType StaticType,
+) Value {
+
+	inner := value
+
+	for {
+		optionalType, ok := targetType.(*interpreter.OptionalStaticType)
+		if !ok {
+			break
+		}
+
+		switch typedInner := inner.(type) {
+		case *SomeValue:
+			inner = typedInner.value
+
+		case NilValue:
+			// NOTE: nested nil will be unboxed!
+			return inner
+
+		default:
+			value = NewSomeValueNonCopying(value)
+		}
+
+		targetType = optionalType.Type
+	}
+	return value
 }

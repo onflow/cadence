@@ -101,7 +101,9 @@ func TestPrintInstruction(t *testing.T) {
 
 		"New kind:CompositeKind(258) typeIndex:772": {byte(New), 1, 2, 3, 4},
 
-		"Cast typeIndex:258 kind:3": {byte(Cast), 1, 2, 3},
+		"SimpleCast typeIndex:258":   {byte(SimpleCast), 1, 2, 3},
+		"FailableCast typeIndex:258": {byte(FailableCast), 1, 2, 3},
+		"ForceCast typeIndex:258":    {byte(ForceCast), 1, 2, 3},
 
 		`Path domain:PathDomainStorage identifierIndex:5`: {byte(Path), 1, 0, 5},
 

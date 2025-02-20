@@ -230,6 +230,10 @@ func (e *ExtendedElaboration) CastingExpressionTypes(expression *ast.CastingExpr
 	return e.elaboration.CastingExpressionTypes(expression)
 }
 
+func (e *ExtendedElaboration) EmitStatementEventType(statement *ast.EmitStatement) *sema.CompositeType {
+	return e.elaboration.EmitStatementEventType(statement)
+}
+
 func (e *ExtendedElaboration) ResultVariableType(enclosingBlock ast.Element) (typ sema.Type, exist bool) {
 	if e.resultVariableTypes != nil {
 		types, ok := e.resultVariableTypes[enclosingBlock]

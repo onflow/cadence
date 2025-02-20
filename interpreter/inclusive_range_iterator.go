@@ -19,6 +19,7 @@
 package interpreter
 
 import (
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 )
@@ -35,19 +36,24 @@ type InclusiveRangeIterator struct {
 
 var _ ValueIterator = &InclusiveRangeIterator{}
 
+type InclusiveRangeIteratorContext interface {
+	common.MemoryGauge
+	NumberValueArithmeticContext
+}
+
 func NewInclusiveRangeIterator(
-	interpreter *Interpreter,
+	context InclusiveRangeIteratorContext,
 	locationRange LocationRange,
 	v *CompositeValue,
 	typ InclusiveRangeStaticType,
 ) *InclusiveRangeIterator {
-	startValue := getFieldAsIntegerValue(interpreter, v, locationRange, sema.InclusiveRangeTypeStartFieldName)
+	startValue := getFieldAsIntegerValue(context, v, sema.InclusiveRangeTypeStartFieldName)
 
 	zeroValue := GetSmallIntegerValue(0, typ.ElementType)
-	endValue := getFieldAsIntegerValue(interpreter, v, locationRange, sema.InclusiveRangeTypeEndFieldName)
+	endValue := getFieldAsIntegerValue(context, v, sema.InclusiveRangeTypeEndFieldName)
 
-	stepValue := getFieldAsIntegerValue(interpreter, v, locationRange, sema.InclusiveRangeTypeStepFieldName)
-	stepNegative := stepValue.Less(interpreter, zeroValue, locationRange)
+	stepValue := getFieldAsIntegerValue(context, v, sema.InclusiveRangeTypeStepFieldName)
+	stepNegative := stepValue.Less(context, zeroValue, locationRange)
 
 	return &InclusiveRangeIterator{
 		rangeValue:   v,
@@ -58,18 +64,18 @@ func NewInclusiveRangeIterator(
 	}
 }
 
-func (i *InclusiveRangeIterator) Next(interpreter *Interpreter, locationRange LocationRange) Value {
+func (i *InclusiveRangeIterator) Next(context ValueIteratorContext, locationRange LocationRange) Value {
 	valueToReturn := i.next
 
 	// Ensure that valueToReturn is within the bounds.
-	if i.stepNegative && bool(valueToReturn.Less(interpreter, i.end, locationRange)) {
+	if i.stepNegative && bool(valueToReturn.Less(context, i.end, locationRange)) {
 		return nil
-	} else if !i.stepNegative && bool(valueToReturn.Greater(interpreter, i.end, locationRange)) {
+	} else if !i.stepNegative && bool(valueToReturn.Greater(context, i.end, locationRange)) {
 		return nil
 	}
 
 	// Update the next value.
-	nextValueToReturn, ok := valueToReturn.Plus(interpreter, i.step, locationRange).(IntegerValue)
+	nextValueToReturn, ok := valueToReturn.Plus(context, i.step, locationRange).(IntegerValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
