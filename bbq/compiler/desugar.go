@@ -490,7 +490,7 @@ func (d *Desugar) desugarPostConditions(
 			resultVarType, resultVarExist := inheritedFunc.elaboration.ResultVariableType(inheritedFunctionBlock)
 
 			// If the inherited function has post-conditions (and before statements),
-			// then include them as well, by copying them over.
+			// then include them as well, by bringing them over (inlining).
 
 			rewrittenBeforeStatements := inheritedFunc.rewrittenConditions.BeforeStatements
 			beforeStatements = append(beforeStatements, rewrittenBeforeStatements...)
@@ -526,7 +526,7 @@ func (d *Desugar) desugarInheritedCondition(condition ast.Condition, inheritedFu
 	desugaredCondition := d.desugarCondition(condition)
 	d.elaboration = prevElaboration
 
-	// Elaboration to be used by the condition must be set in the current elaborations
+	// Elaboration to be used by the condition must be set in the current elaboration.
 	// (Not in the inherited function's elaboration)
 	d.elaboration.conditionsElaborations[desugaredCondition] = inheritedFunc.elaboration
 	return desugaredCondition
