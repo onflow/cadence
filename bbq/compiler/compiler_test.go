@@ -1064,6 +1064,24 @@ func TestCompileNestedLoop(t *testing.T) {
 		},
 		compiler.ExportFunctions()[0].Code,
 	)
+
+	assert.Equal(t,
+		[]*bbq.Constant{
+			{
+				Data: []byte{0x0},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{0xa},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{0x1},
+				Kind: constantkind.Int,
+			},
+		},
+		program.Constants,
+	)
 }
 
 func TestCompileAssignLocal(t *testing.T) {
@@ -1110,11 +1128,27 @@ func TestCompileAssignLocal(t *testing.T) {
 		},
 		compiler.ExportFunctions()[0].Code,
 	)
+
+	assert.Equal(t,
+		[]*bbq.Constant{
+			{
+				Data: []byte{0x0},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{0x1},
+				Kind: constantkind.Int,
+			},
+		},
+		program.Constants,
+	)
 }
 
 func TestCompileAssignGlobal(t *testing.T) {
 
 	t.Parallel()
+
+	// TODO: compile global variables
 
 	checker, err := ParseAndCheck(t, `
         var x = 0
@@ -1138,6 +1172,63 @@ func TestCompileAssignGlobal(t *testing.T) {
 			opcode.InstructionSetGlobal{GlobalIndex: 0},
 
 			opcode.InstructionReturn{},
+		},
+		compiler.ExportFunctions()[0].Code,
+	)
+
+	assert.Equal(t,
+		[]*bbq.Constant{
+			{
+				Data: []byte{0x1},
+				Kind: constantkind.Int,
+			},
+		},
+		program.Constants,
+	)
+}
+
+func TestCompileIndex(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        fun test(array: [Int], index: Int): Int {
+            return array[index]
+        }
+    `)
+	require.NoError(t, err)
+
+	compiler := NewInstructionCompiler(checker)
+	program := compiler.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	const parameterCount = 2
+
+	const (
+		// arrayIndex is the index of the parameter `array`, which is the first parameter
+		arrayIndex = iota
+		// indexIndex is the index of the parameter `index`, which is the second parameter
+		indexIndex
+	)
+
+	// resultIndex is the index of the $result variable
+	const resultIndex = parameterCount
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// array[index]
+			opcode.InstructionGetLocal{LocalIndex: arrayIndex},
+			opcode.InstructionGetLocal{LocalIndex: indexIndex},
+			opcode.InstructionGetIndex{},
+
+			// assign to temp $result
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: resultIndex},
+
+			// return $result
+			opcode.InstructionGetLocal{LocalIndex: resultIndex},
+			opcode.InstructionReturnValue{},
 		},
 		compiler.ExportFunctions()[0].Code,
 	)
@@ -1231,6 +1322,188 @@ func TestCompileAssignMember(t *testing.T) {
 			// return $result
 			opcode.InstructionGetLocal{LocalIndex: selfIndex},
 			opcode.InstructionReturnValue{},
+		},
+		compiler.ExportFunctions()[0].Code,
+	)
+}
+
+func TestCompileExpressionStatement(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        fun f() {}
+
+        fun test(){
+            f()
+        }
+    `)
+	require.NoError(t, err)
+
+	compiler := NewInstructionCompiler(checker)
+	program := compiler.Compile()
+
+	require.Len(t, program.Functions, 2)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionReturn{},
+		},
+		compiler.ExportFunctions()[0].Code,
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// f()
+			opcode.InstructionGetGlobal{GlobalIndex: 0},
+			opcode.InstructionInvoke{TypeArgs: nil},
+			opcode.InstructionDrop{},
+
+			opcode.InstructionReturn{},
+		},
+		compiler.ExportFunctions()[1].Code,
+	)
+}
+
+func TestCompileBool(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+
+        fun test() {
+            let yes = true
+            let no = false
+        }
+    `)
+	require.NoError(t, err)
+
+	compiler := NewInstructionCompiler(checker)
+	program := compiler.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	const parameterCount = 0
+
+	// resultIndex is the index of the $result variable
+	const resultIndex = parameterCount
+
+	// localsOffset is the offset of the first local variable
+	const localsOffset = resultIndex + 1
+
+	const (
+		// yesIndex is the index of the local variable `yes`, which is the first local variable
+		yesIndex = localsOffset + iota
+		// noIndex is the index of the local variable `no`, which is the second local variable
+		noIndex
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// let yes = true
+			opcode.InstructionTrue{},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: yesIndex},
+
+			// let no = false
+			opcode.InstructionFalse{},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: noIndex},
+
+			opcode.InstructionReturn{},
+		},
+		compiler.ExportFunctions()[0].Code,
+	)
+}
+
+func TestCompileString(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+
+        fun test(): String {
+            return "Hello, world!"
+        }
+    `)
+	require.NoError(t, err)
+
+	compiler := NewInstructionCompiler(checker)
+	program := compiler.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	const parameterCount = 0
+
+	// resultIndex is the index of the $result variable
+	const resultIndex = parameterCount
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// return "Hello, world!"
+			opcode.InstructionGetConstant{ConstantIndex: 0},
+
+			// assign to temp $result
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: resultIndex},
+
+			// return $result
+			opcode.InstructionGetLocal{LocalIndex: resultIndex},
+			opcode.InstructionReturnValue{},
+		},
+		compiler.ExportFunctions()[0].Code,
+	)
+
+	assert.Equal(t,
+		[]*bbq.Constant{
+			{
+				Data: []byte("Hello, world!"),
+				Kind: constantkind.String,
+			},
+		},
+		program.Constants,
+	)
+}
+
+func TestCompileUnary(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+
+        fun test() {
+            let no = !true
+        }
+    `)
+	require.NoError(t, err)
+
+	compiler := NewInstructionCompiler(checker)
+	program := compiler.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	const parameterCount = 0
+
+	// resultIndex is the index of the $result variable
+	const resultIndex = parameterCount
+
+	// localsOffset is the offset of the first local variable
+	const localsOffset = resultIndex + 1
+
+	const (
+		// noIndex is the index of the local variable `no`, which is the first local variable
+		noIndex = localsOffset + iota
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// let no = !true
+			opcode.InstructionTrue{},
+			opcode.InstructionNot{},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: noIndex},
+
+			opcode.InstructionReturn{},
 		},
 		compiler.ExportFunctions()[0].Code,
 	)
