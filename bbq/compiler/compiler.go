@@ -1302,7 +1302,7 @@ func (c *Compiler[_]) compileInitializer(declaration *ast.SpecialFunctionDeclara
 	c.codeGen.Emit(opcode.InstructionReturnValue{})
 }
 
-func (c *Compiler[_]) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) (_ struct{}) {
+func (c *Compiler[_]) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration, _ bool) (_ struct{}) {
 	declareReceiver := !c.compositeTypeStack.isEmpty()
 	function := c.declareFunction(declaration, declareReceiver)
 

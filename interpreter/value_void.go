@@ -47,8 +47,8 @@ func (VoidValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (VoidValue) StaticType(interpreter *Interpreter) StaticType {
-	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeVoid)
+func (VoidValue) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeVoid)
 }
 
 func (VoidValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -63,7 +63,7 @@ func (v VoidValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v VoidValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v VoidValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(interpreter, common.VoidStringMemoryUsage)
 	return v.String()
 }
@@ -76,7 +76,7 @@ func (v VoidValue) ConformsToStaticType(
 	return true
 }
 
-func (v VoidValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v VoidValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	_, ok := other.(VoidValue)
 	return ok
 }
@@ -89,7 +89,7 @@ func (VoidValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (VoidValue) IsResourceKinded(_ *Interpreter) bool {
+func (VoidValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

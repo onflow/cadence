@@ -69,8 +69,8 @@ func (Int16Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (Int16Value) StaticType(interpreter *Interpreter) StaticType {
-	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeInt16)
+func (Int16Value) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeInt16)
 }
 
 func (Int16Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -85,7 +85,7 @@ func (v Int16Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Int16Value) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v Int16Value) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
 		interpreter,
 		common.NewRawStringMemoryUsage(
@@ -99,7 +99,7 @@ func (v Int16Value) ToInt(_ LocationRange) int {
 	return int(v)
 }
 
-func (v Int16Value) Negate(interpreter *Interpreter, locationRange LocationRange) NumberValue {
+func (v Int16Value) Negate(context NumberValueArithmeticContext, locationRange LocationRange) NumberValue {
 	// INT32-C
 	if v == math.MinInt16 {
 		panic(OverflowError{
@@ -111,16 +111,16 @@ func (v Int16Value) Negate(interpreter *Interpreter, locationRange LocationRange
 		return int16(-v)
 	}
 
-	return NewInt16Value(interpreter, valueGetter)
+	return NewInt16Value(context, valueGetter)
 }
 
-func (v Int16Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int16Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationPlus,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -140,16 +140,16 @@ func (v Int16Value) Plus(interpreter *Interpreter, other NumberValue, locationRa
 		return int16(v + o)
 	}
 
-	return NewInt16Value(interpreter, valueGetter)
+	return NewInt16Value(context, valueGetter)
 }
 
-func (v Int16Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int16Value) SaturatingPlus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -164,16 +164,16 @@ func (v Int16Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, 
 		return int16(v + o)
 	}
 
-	return NewInt16Value(interpreter, valueGetter)
+	return NewInt16Value(context, valueGetter)
 }
 
-func (v Int16Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int16Value) Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMinus,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -193,16 +193,16 @@ func (v Int16Value) Minus(interpreter *Interpreter, other NumberValue, locationR
 		return int16(v - o)
 	}
 
-	return NewInt16Value(interpreter, valueGetter)
+	return NewInt16Value(context, valueGetter)
 }
 
-func (v Int16Value) SaturatingMinus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int16Value) SaturatingMinus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -217,16 +217,16 @@ func (v Int16Value) SaturatingMinus(interpreter *Interpreter, other NumberValue,
 		return int16(v - o)
 	}
 
-	return NewInt16Value(interpreter, valueGetter)
+	return NewInt16Value(context, valueGetter)
 }
 
-func (v Int16Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int16Value) Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMod,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -242,16 +242,16 @@ func (v Int16Value) Mod(interpreter *Interpreter, other NumberValue, locationRan
 		return int16(v % o)
 	}
 
-	return NewInt16Value(interpreter, valueGetter)
+	return NewInt16Value(context, valueGetter)
 }
 
-func (v Int16Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int16Value) Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMul,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -295,16 +295,16 @@ func (v Int16Value) Mul(interpreter *Interpreter, other NumberValue, locationRan
 		return int16(v * o)
 	}
 
-	return NewInt16Value(interpreter, valueGetter)
+	return NewInt16Value(context, valueGetter)
 }
 
-func (v Int16Value) SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int16Value) SaturatingMul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -339,16 +339,16 @@ func (v Int16Value) SaturatingMul(interpreter *Interpreter, other NumberValue, l
 		return int16(v * o)
 	}
 
-	return NewInt16Value(interpreter, valueGetter)
+	return NewInt16Value(context, valueGetter)
 }
 
-func (v Int16Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int16Value) Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationDiv,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -369,16 +369,16 @@ func (v Int16Value) Div(interpreter *Interpreter, other NumberValue, locationRan
 		return int16(v / o)
 	}
 
-	return NewInt16Value(interpreter, valueGetter)
+	return NewInt16Value(context, valueGetter)
 }
 
-func (v Int16Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Int16Value) SaturatingDiv(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingDivideFunctionName,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -396,16 +396,16 @@ func (v Int16Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, l
 		return int16(v / o)
 	}
 
-	return NewInt16Value(interpreter, valueGetter)
+	return NewInt16Value(context, valueGetter)
 }
 
-func (v Int16Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Int16Value) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationLess,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -413,13 +413,13 @@ func (v Int16Value) Less(interpreter *Interpreter, other ComparableValue, locati
 	return AsBoolValue(v < o)
 }
 
-func (v Int16Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Int16Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationLessEqual,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -427,13 +427,13 @@ func (v Int16Value) LessEqual(interpreter *Interpreter, other ComparableValue, l
 	return AsBoolValue(v <= o)
 }
 
-func (v Int16Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Int16Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationGreater,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -441,13 +441,13 @@ func (v Int16Value) Greater(interpreter *Interpreter, other ComparableValue, loc
 	return AsBoolValue(v > o)
 }
 
-func (v Int16Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Int16Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationGreaterEqual,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -455,7 +455,7 @@ func (v Int16Value) GreaterEqual(interpreter *Interpreter, other ComparableValue
 	return AsBoolValue(v >= o)
 }
 
-func (v Int16Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v Int16Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherInt16, ok := other.(Int16Value)
 	if !ok {
 		return false
@@ -466,7 +466,7 @@ func (v Int16Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeInt16 (1 byte)
 // - int16 value encoded in big-endian (2 bytes)
-func (v Int16Value) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v Int16Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeInt16)
 	binary.BigEndian.PutUint16(scratch[1:], uint16(v))
 	return scratch[:3]
@@ -510,13 +510,13 @@ func ConvertInt16(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 	return NewInt16Value(memoryGauge, converter)
 }
 
-func (v Int16Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Int16Value) BitwiseOr(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseOr,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -525,16 +525,16 @@ func (v Int16Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, loca
 		return int16(v | o)
 	}
 
-	return NewInt16Value(interpreter, valueGetter)
+	return NewInt16Value(context, valueGetter)
 }
 
-func (v Int16Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Int16Value) BitwiseXor(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseXor,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -543,16 +543,16 @@ func (v Int16Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, loc
 		return int16(v ^ o)
 	}
 
-	return NewInt16Value(interpreter, valueGetter)
+	return NewInt16Value(context, valueGetter)
 }
 
-func (v Int16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Int16Value) BitwiseAnd(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseAnd,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -561,16 +561,16 @@ func (v Int16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, loc
 		return int16(v & o)
 	}
 
-	return NewInt16Value(interpreter, valueGetter)
+	return NewInt16Value(context, valueGetter)
 }
 
-func (v Int16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Int16Value) BitwiseLeftShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseLeftShift,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -585,16 +585,16 @@ func (v Int16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValu
 		return int16(v << o)
 	}
 
-	return NewInt16Value(interpreter, valueGetter)
+	return NewInt16Value(context, valueGetter)
 }
 
-func (v Int16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Int16Value) BitwiseRightShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseRightShift,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -609,7 +609,7 @@ func (v Int16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVal
 		return int16(v >> o)
 	}
 
-	return NewInt16Value(interpreter, valueGetter)
+	return NewInt16Value(context, valueGetter)
 }
 
 func (v Int16Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -648,7 +648,7 @@ func (Int16Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Int16Value) IsResourceKinded(_ *Interpreter) bool {
+func (Int16Value) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

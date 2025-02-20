@@ -107,6 +107,19 @@ func (a *Activation[T]) Set(name string, value T) {
 	a.entries[name] = value
 }
 
+func (a *Activation[T]) Clone() *Activation[T] {
+	clone := NewActivation[T](a.MemoryGauge, a.Parent)
+
+	if a.entries != nil {
+		clone.entries = make(map[string]T, len(a.entries))
+		for name, value := range a.entries { //nolint:maprange
+			clone.entries[name] = value
+		}
+	}
+
+	return clone
+}
+
 // Activations is a stack of activation records.
 // Each entry represents a new activation record.
 //

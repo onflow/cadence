@@ -1046,7 +1046,7 @@ func newAccountInboxUnpublishFunction(
 				if !inter.IsSubTypeOfSemaType(publishedType, ty) {
 					panic(interpreter.ForceCastTypeMismatchError{
 						ExpectedType:  ty,
-						ActualType:    inter.MustConvertStaticToSemaType(publishedType),
+						ActualType:    interpreter.MustConvertStaticToSemaType(publishedType, inter),
 						LocationRange: locationRange,
 					})
 				}
@@ -1136,7 +1136,7 @@ func newAccountInboxClaimFunction(
 				if !inter.IsSubTypeOfSemaType(publishedType, ty) {
 					panic(interpreter.ForceCastTypeMismatchError{
 						ExpectedType:  ty,
-						ActualType:    inter.MustConvertStaticToSemaType(publishedType),
+						ActualType:    interpreter.MustConvertStaticToSemaType(publishedType, inter),
 						LocationRange: locationRange,
 					})
 				}
@@ -3766,7 +3766,7 @@ func getCheckedCapabilityController(
 	controllerBorrowStaticType := controller.CapabilityControllerBorrowType()
 
 	controllerBorrowType, ok :=
-		inter.MustConvertStaticToSemaType(controllerBorrowStaticType).(*sema.ReferenceType)
+		interpreter.MustConvertStaticToSemaType(controllerBorrowStaticType, inter).(*sema.ReferenceType)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -3995,7 +3995,7 @@ func newAccountCapabilitiesGetFunction(
 				}
 
 				capabilityBorrowType, ok :=
-					inter.MustConvertStaticToSemaType(capabilityStaticBorrowType).(*sema.ReferenceType)
+					interpreter.MustConvertStaticToSemaType(capabilityStaticBorrowType, inter).(*sema.ReferenceType)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}

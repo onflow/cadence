@@ -86,8 +86,8 @@ func (CharacterValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (CharacterValue) StaticType(interpreter *Interpreter) StaticType {
-	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeCharacter)
+func (CharacterValue) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeCharacter)
 }
 
 func (CharacterValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -102,13 +102,13 @@ func (v CharacterValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v CharacterValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v CharacterValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	l := format.FormattedStringLength(v.Str)
 	common.UseMemory(interpreter, common.NewRawStringMemoryUsage(l))
 	return v.String()
 }
 
-func (v CharacterValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v CharacterValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		return false
@@ -116,7 +116,7 @@ func (v CharacterValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool
 	return v.Str == otherChar.Str
 }
 
-func (v CharacterValue) Less(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) Less(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -124,7 +124,7 @@ func (v CharacterValue) Less(_ *Interpreter, other ComparableValue, _ LocationRa
 	return v.Str < otherChar.Str
 }
 
-func (v CharacterValue) LessEqual(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) LessEqual(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -132,7 +132,7 @@ func (v CharacterValue) LessEqual(_ *Interpreter, other ComparableValue, _ Locat
 	return v.Str <= otherChar.Str
 }
 
-func (v CharacterValue) Greater(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) Greater(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -140,7 +140,7 @@ func (v CharacterValue) Greater(_ *Interpreter, other ComparableValue, _ Locatio
 	return v.Str > otherChar.Str
 }
 
-func (v CharacterValue) GreaterEqual(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) GreaterEqual(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -148,7 +148,7 @@ func (v CharacterValue) GreaterEqual(_ *Interpreter, other ComparableValue, _ Lo
 	return v.Str >= otherChar.Str
 }
 
-func (v CharacterValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v CharacterValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
 	s := []byte(v.Str)
 	length := 1 + len(s)
 	var buffer []byte
@@ -179,7 +179,7 @@ func (CharacterValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (CharacterValue) IsResourceKinded(_ *Interpreter) bool {
+func (CharacterValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

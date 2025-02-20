@@ -121,8 +121,8 @@ func (*StringValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (*StringValue) StaticType(interpreter *Interpreter) StaticType {
-	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeString)
+func (*StringValue) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeString)
 }
 
 func (*StringValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -137,13 +137,13 @@ func (v *StringValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v *StringValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v *StringValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	l := format.FormattedStringLength(v.Str)
 	common.UseMemory(interpreter, common.NewRawStringMemoryUsage(l))
 	return v.String()
 }
 
-func (v *StringValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v *StringValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		return false
@@ -151,13 +151,13 @@ func (v *StringValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 	return v.Str == otherString.Str
 }
 
-func (v *StringValue) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v *StringValue) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationLess,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -165,13 +165,13 @@ func (v *StringValue) Less(interpreter *Interpreter, other ComparableValue, loca
 	return AsBoolValue(v.Str < otherString.Str)
 }
 
-func (v *StringValue) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v *StringValue) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationLessEqual,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -179,13 +179,13 @@ func (v *StringValue) LessEqual(interpreter *Interpreter, other ComparableValue,
 	return AsBoolValue(v.Str <= otherString.Str)
 }
 
-func (v *StringValue) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v *StringValue) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationGreater,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -193,13 +193,13 @@ func (v *StringValue) Greater(interpreter *Interpreter, other ComparableValue, l
 	return AsBoolValue(v.Str > otherString.Str)
 }
 
-func (v *StringValue) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v *StringValue) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationGreaterEqual,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -210,7 +210,7 @@ func (v *StringValue) GreaterEqual(interpreter *Interpreter, other ComparableVal
 // HashInput returns a byte slice containing:
 // - HashInputTypeString (1 byte)
 // - string value (n bytes)
-func (v *StringValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v *StringValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
 	length := 1 + len(v.Str)
 	var buffer []byte
 	if length <= len(scratch) {
@@ -635,7 +635,7 @@ func (v *StringValue) Split(inter *Interpreter, locationRange LocationRange, sep
 // Explode returns a Cadence array of type [String], where each element is a single character of the string
 func (v *StringValue) Explode(inter *Interpreter, locationRange LocationRange) *ArrayValue {
 
-	iterator := v.Iterator(inter, locationRange)
+	iterator := v.Iterator()
 
 	return NewArrayValueWithIterator(
 		inter,
@@ -734,7 +734,7 @@ func (*StringValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*StringValue) IsResourceKinded(_ *Interpreter) bool {
+func (*StringValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -830,7 +830,7 @@ func (v *StringValue) ConformsToStaticType(
 	return true
 }
 
-func (v *StringValue) Iterator(_ *Interpreter, _ LocationRange) ValueIterator {
+func (v *StringValue) Iterator() StringValueIterator {
 	return StringValueIterator{
 		graphemes: uniseg.NewGraphemes(v.Str),
 	}
@@ -843,7 +843,7 @@ func (v *StringValue) ForEach(
 	transferElements bool,
 	locationRange LocationRange,
 ) {
-	iterator := v.Iterator(interpreter, locationRange)
+	iterator := v.Iterator()
 	for {
 		value := iterator.Next(interpreter, locationRange)
 		if value == nil {
@@ -1068,7 +1068,7 @@ type StringValueIterator struct {
 
 var _ ValueIterator = StringValueIterator{}
 
-func (i StringValueIterator) Next(_ *Interpreter, _ LocationRange) Value {
+func (i StringValueIterator) Next(_ ValueIteratorContext, _ LocationRange) Value {
 	if !i.graphemes.Next() {
 		return nil
 	}

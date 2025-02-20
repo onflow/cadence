@@ -102,7 +102,7 @@ jobs:
       # Upload checking results for later use
 
       - name: Archive checking results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.chain }}-checking-results
           path: |
