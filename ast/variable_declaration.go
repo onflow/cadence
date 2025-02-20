@@ -152,7 +152,7 @@ func (d *VariableDeclaration) Doc() prettier.Doc {
 	}
 
 	// Desugared `result` variable is uninitialized at first,
-	// hence would not have a value.
+	// hence would not have a value or transfer.
 	var valueDoc, transferDoc prettier.Doc
 	if d.Value != nil {
 		valueDoc = d.Value.Doc()
