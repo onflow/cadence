@@ -331,14 +331,43 @@
       - name: "value"
         type: "value"
 
-- name: "cast"
+- name: "simpleCast"
   description:
     Pops a value off the stack, casts it to the given type, and then pushes it back on to the stack.
   operands:
     - name: "typeIndex"
       type: "index"
-    - name: "kind"
-      type: "castKind"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "failableCast"
+  description:
+    Pops a value off the stack and casts it to the given type.
+    If the value is a subtype of the given type, then casted value is pushed back on to the stack.
+    If the value is not a subtype of the given type, then a `nil` is pushed to the stack instead.
+  operands:
+    - name: "typeIndex"
+      type: "index"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+    push:
+      - name: "value"
+        type: "optional"
+
+- name: "forceCast"
+  description:
+    Pops a value off the stack, force-casts it to the given type, and then pushes it back on to the stack.
+    Panics if the value is not a subtype of the given type.
+  operands:
+    - name: "typeIndex"
+      type: "index"
   valueEffects:
     pop:
       - name: "value"
@@ -572,3 +601,16 @@
     push:
       - name: "result"
         type: "bool"
+
+# Other
+
+- name: "emitEvent"
+  description:
+    Pops an event off the stack and then emits it.
+  operands:
+    - name: "typeIndex"
+      type: "index"
+  valueEffects:
+    pop:
+      - name: "event"
+        type: "value"

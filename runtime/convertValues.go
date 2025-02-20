@@ -237,6 +237,10 @@ func exportValueWithInterpreter(
 	case *interpreter.PathCapabilityValue: //nolint:staticcheck
 		return exportPathCapabilityValue(v, inter)
 	case *interpreter.EphemeralReferenceValue:
+		if v.Value == nil {
+			return nil, nil
+		}
+
 		// Break recursion through references
 		if _, ok := seenReferences[v]; ok {
 			return nil, nil
@@ -262,6 +266,7 @@ func exportValueWithInterpreter(
 		if referencedValue == nil {
 			return nil, nil
 		}
+
 		return exportValueWithInterpreter(
 			*referencedValue,
 			inter,
@@ -270,10 +275,11 @@ func exportValueWithInterpreter(
 		)
 	case interpreter.FunctionValue:
 		return exportFunctionValue(v, inter), nil
-	default:
-		return nil, &ValueNotExportableError{
-			Type: v.StaticType(inter),
-		}
+	case nil:
+		return nil, nil
+	}
+	return nil, &ValueNotExportableError{
+		Type: value.StaticType(inter),
 	}
 }
 
@@ -286,7 +292,7 @@ func exportSomeValue(
 	cadence.Optional,
 	error,
 ) {
-	innerValue := v.InnerValue(inter, locationRange)
+	innerValue := v.InnerValue()
 
 	if innerValue == nil {
 		return cadence.NewMeteredOptional(inter, nil), nil
@@ -423,7 +429,7 @@ func exportCompositeValue(
 				}
 
 			case *interpreter.CompositeValue:
-				fieldValue = v.GetField(inter, locationRange, fieldName)
+				fieldValue = v.GetField(inter, fieldName)
 				if fieldValue == nil {
 					fieldValue = v.GetComputedField(inter, locationRange, fieldName)
 				}
@@ -637,7 +643,7 @@ func exportCompositeValueAsInclusiveRange(
 	}
 
 	getNonComputedField := func(fieldName string) (cadence.Value, error) {
-		fieldValue := compositeValue.GetField(inter, locationRange, fieldName)
+		fieldValue := compositeValue.GetField(inter, fieldName)
 		if fieldValue == nil {
 			// Bug if the field is absent.
 			panic(errors.NewUnreachableError())
@@ -688,7 +694,7 @@ func exportPathValue(gauge common.MemoryGauge, v interpreter.PathValue) (cadence
 func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) cadence.TypeValue {
 	var typ sema.Type
 	if v.Type != nil {
-		typ = inter.MustConvertStaticToSemaType(v.Type)
+		typ = interpreter.MustConvertStaticToSemaType(v.Type, inter)
 	}
 	return cadence.NewMeteredTypeValue(
 		inter,
@@ -700,7 +706,7 @@ func exportCapabilityValue(
 	v *interpreter.IDCapabilityValue,
 	inter *interpreter.Interpreter,
 ) (cadence.Capability, error) {
-	borrowType := inter.MustConvertStaticToSemaType(v.BorrowType)
+	borrowType := interpreter.MustConvertStaticToSemaType(v.BorrowType, inter)
 	exportedBorrowType := ExportMeteredType(inter, borrowType, map[sema.TypeID]cadence.Type{})
 
 	return cadence.NewMeteredCapability(
@@ -718,7 +724,7 @@ func exportPathCapabilityValue(
 	var exportedBorrowType cadence.Type
 
 	if v.BorrowType != nil {
-		borrowType := inter.MustConvertStaticToSemaType(v.BorrowType)
+		borrowType := interpreter.MustConvertStaticToSemaType(v.BorrowType, inter)
 		exportedBorrowType = ExportMeteredType(inter, borrowType, map[sema.TypeID]cadence.Type{})
 	}
 

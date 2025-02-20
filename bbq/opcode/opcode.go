@@ -72,7 +72,12 @@ const (
 	Unwrap
 	Destroy
 	Transfer
-	Cast
+	SimpleCast
+	FailableCast
+	ForceCast
+	_
+	_
+	_
 	_
 	_
 	_
@@ -142,4 +147,10 @@ const (
 	_
 	_
 	_
+	_
+	_
+	_
+
+	// Other
+	EmitEvent
 )

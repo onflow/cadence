@@ -32,7 +32,7 @@ def cadence_replacement(cadence_version: Optional[str]) -> str:
     if cadence_version:
         return f'github.com/onflow/cadence@{cadence_version}'
     # default: point to local cadence repo
-    return shlex.quote(Path.cwd().parent.absolute().resolve().as_posix())
+    return shlex.quote(Path(__file__).parent.parent.absolute().resolve().as_posix())
 
 def flowgo_replacement(flowgo_version: Optional[str]) -> str:
     if flowgo_version:
@@ -101,11 +101,6 @@ class CadenceTest:
         with cwd(working_dir / self.path):
             result = subprocess.run(self.command, shell=True, env=env)
             return result.returncode == 0
-
-def load_index(path: Path) -> List[str]:
-    logger.info(f"Loading suite index from {path} ...")
-    with path.open(mode="r") as f:
-        return yaml.safe_load(f)
 
 @dataclass
 class Description:
@@ -308,7 +303,7 @@ def run(
     all_succeeded = True
 
     if not names:
-        names = load_index(SUITE_PATH / "index.yaml")
+        names = [f.stem for f in SUITE_PATH.glob("*.yaml")]
 
     for name in names:
 

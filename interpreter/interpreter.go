@@ -703,10 +703,10 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
 }
 
 func (interpreter *Interpreter) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) StatementResult {
-	return interpreter.VisitFunctionDeclaration(declaration.FunctionDeclaration)
+	return interpreter.VisitFunctionDeclaration(declaration.FunctionDeclaration, false)
 }
 
-func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) StatementResult {
+func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration, isStatement bool) StatementResult {
 
 	identifier := declaration.Identifier.Identifier
 
@@ -717,6 +717,32 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 
 	// lexical scope: variables in functions are bound to what is visible at declaration time
 	lexicalScope := interpreter.activations.CurrentOrNew()
+
+	if isStatement {
+
+		// This function declaration is an inner function.
+		//
+		// Variables which are declared after this function declaration
+		// should not be visible or even overwrite the variables captured by the closure
+		/// (e.g. through shadowing).
+		//
+		// For example:
+		//
+		//     fun foo(a: Int): Int {
+		//         fun bar(): Int {
+		//             return a
+		//             //     ^ should refer to the `a` parameter of `foo`,
+		//             //     not to the `a` variable declared after `bar`
+		//         }
+		//         let a = 2
+		//         return bar()
+		//     }
+		//
+		// As variable declarations mutate the current activation in place, capture a clone of the current activation,
+		// so that the mutations are not performed on the captured activation.
+
+		lexicalScope = lexicalScope.Clone()
+	}
 
 	// make the function itself available inside the function
 	lexicalScope.Set(identifier, variable)
@@ -1056,7 +1082,7 @@ func (interpreter *Interpreter) evaluateDefaultDestroyEvent(
 	if containingResourceComposite.Kind == common.CompositeKindAttachment {
 		var base *EphemeralReferenceValue
 		// in evaluation of destroy events, base and self are fully entitled, as the value must be owned
-		entitlementSupportingType, ok := interpreter.MustSemaTypeOfValue(containingResourceComposite).(sema.EntitlementSupportingType)
+		entitlementSupportingType, ok := MustSemaTypeOfValue(containingResourceComposite, interpreter).(sema.EntitlementSupportingType)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
@@ -1297,6 +1323,8 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 		}
 	}
 
+	config := declarationInterpreter.SharedState.Config
+
 	wrapFunctions := func(ty *sema.InterfaceType, code WrapperCode) {
 
 		// Wrap initializer
@@ -1315,6 +1343,16 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 		// the order does not matter.
 
 		for name, functionWrapper := range code.FunctionWrappers { //nolint:maprange
+			// If there's a default implementation, then skip explicitly/separately
+			// running the conditions of that functions.
+			// Because the conditions also get executed when the default implementation is executed.
+			// This works because:
+			// 	- `code.Functions` only contains default implementations.
+			//	- There is always only one default implementation (cannot override by other interfaces).
+			if code.Functions.Contains(name) {
+				continue
+			}
+
 			fn, ok := functions.Get(name)
 			// If there is a wrapper, there MUST be a body.
 			if !ok {
@@ -1353,8 +1391,6 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 	location := declarationInterpreter.Location
 
 	qualifiedIdentifier := compositeType.QualifiedIdentifier()
-
-	config := declarationInterpreter.SharedState.Config
 
 	constructorType := compositeType.ConstructorFunctionType()
 
@@ -1441,7 +1477,7 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 				var self Value = value
 				if declaration.Kind() == common.CompositeKindAttachment {
 
-					attachmentType := interpreter.MustSemaTypeOfValue(value).(*sema.CompositeType)
+					attachmentType := MustSemaTypeOfValue(value, interpreter).(*sema.CompositeType)
 					// Self's type in the constructor is fully entitled, since
 					// the constructor can only be called when in possession of the base resource
 
@@ -1600,13 +1636,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 		HasPosition: declaration,
 	}
 
-	value := EnumConstructorFunction(
-		interpreter,
-		locationRange,
-		compositeType,
-		caseValues,
-		constructorNestedVariables,
-	)
+	value := EnumConstructorFunction(interpreter, compositeType, caseValues, constructorNestedVariables)
 	variable.SetValue(
 		interpreter,
 		locationRange,
@@ -1618,7 +1648,6 @@ func (interpreter *Interpreter) declareEnumConstructor(
 
 func EnumConstructorFunction(
 	gauge common.MemoryGauge,
-	locationRange LocationRange,
 	enumType *sema.CompositeType,
 	cases []EnumCase,
 	nestedVariables map[string]Variable,
@@ -1893,7 +1922,7 @@ func (interpreter *Interpreter) transferAndConvert(
 	if targetType != nil &&
 		!interpreter.IsSubTypeOfSemaType(resultStaticType, targetType) {
 
-		resultSemaType := interpreter.MustConvertStaticToSemaType(resultStaticType)
+		resultSemaType := MustConvertStaticToSemaType(resultStaticType, interpreter)
 
 		panic(ValueTransferTypeError{
 			ExpectedType:  targetType,
@@ -1912,7 +1941,7 @@ func (interpreter *Interpreter) ConvertAndBox(
 	valueType, targetType sema.Type,
 ) Value {
 	value = interpreter.convert(value, valueType, targetType, locationRange)
-	return interpreter.BoxOptional(locationRange, value, targetType)
+	return interpreter.BoxOptional(value, targetType)
 }
 
 // Produces the `valueStaticType` argument into a new static type that conforms
@@ -2151,7 +2180,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 				return value
 			}
 
-			targetElementType := interpreter.MustConvertStaticToSemaType(arrayStaticType.ElementType())
+			targetElementType := MustConvertStaticToSemaType(arrayStaticType.ElementType(), interpreter)
 
 			array := arrayValue.array
 
@@ -2175,7 +2204,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 					}
 
 					value := MustConvertStoredValue(interpreter, element)
-					valueType := interpreter.MustConvertStaticToSemaType(value.StaticType(interpreter))
+					valueType := MustConvertStaticToSemaType(value.StaticType(interpreter), interpreter)
 					return interpreter.convert(value, valueType, targetElementType, locationRange)
 				},
 			)
@@ -2191,8 +2220,8 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 				return value
 			}
 
-			targetKeyType := interpreter.MustConvertStaticToSemaType(dictStaticType.KeyType)
-			targetValueType := interpreter.MustConvertStaticToSemaType(dictStaticType.ValueType)
+			targetKeyType := MustConvertStaticToSemaType(dictStaticType.KeyType, interpreter)
+			targetValueType := MustConvertStaticToSemaType(dictStaticType.ValueType, interpreter)
 
 			dictionary := dictValue.dictionary
 
@@ -2221,8 +2250,8 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 					key := MustConvertStoredValue(interpreter, k)
 					value := MustConvertStoredValue(interpreter, v)
 
-					keyType := interpreter.MustConvertStaticToSemaType(key.StaticType(interpreter))
-					valueType := interpreter.MustConvertStaticToSemaType(value.StaticType(interpreter))
+					keyType := MustConvertStaticToSemaType(key.StaticType(interpreter), interpreter)
+					valueType := MustConvertStaticToSemaType(value.StaticType(interpreter), interpreter)
 
 					convertedKey := interpreter.convert(key, keyType, targetKeyType, locationRange)
 					convertedValue := interpreter.convert(value, valueType, targetValueType, locationRange)
@@ -2315,11 +2344,7 @@ func checkMappedEntitlements(unwrappedTargetType *sema.ReferenceType, locationRa
 }
 
 // BoxOptional boxes a value in optionals, if necessary
-func (interpreter *Interpreter) BoxOptional(
-	locationRange LocationRange,
-	value Value,
-	targetType sema.Type,
-) Value {
+func (interpreter *Interpreter) BoxOptional(value Value, targetType sema.Type) Value {
 
 	inner := value
 
@@ -2331,7 +2356,7 @@ func (interpreter *Interpreter) BoxOptional(
 
 		switch typedInner := inner.(type) {
 		case *SomeValue:
-			inner = typedInner.InnerValue(interpreter, locationRange)
+			inner = typedInner.InnerValue()
 
 		case NilValue:
 			// NOTE: nested nil will be unboxed!
@@ -2346,14 +2371,14 @@ func (interpreter *Interpreter) BoxOptional(
 	return value
 }
 
-func (interpreter *Interpreter) Unbox(locationRange LocationRange, value Value) Value {
+func (interpreter *Interpreter) Unbox(value Value) Value {
 	for {
 		some, ok := value.(*SomeValue)
 		if !ok {
 			return value
 		}
 
-		value = some.InnerValue(interpreter, locationRange)
+		value = some.InnerValue()
 	}
 }
 
@@ -2457,7 +2482,11 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 	lexicalScope *VariableActivation,
 ) FunctionWrapper {
 
-	if declaration.FunctionBlock == nil {
+	if declaration.FunctionBlock == nil ||
+		declaration.FunctionBlock.HasStatements() {
+		// If there's a default implementation (i.e: has statements),
+		// then skip explicitly/separately running the conditions of that functions.
+		// Because the conditions also get executed when the default implementation is executed.
 		return nil
 	}
 
@@ -3533,6 +3562,8 @@ func init() {
 }
 
 func dictionaryTypeFunction(invocation Invocation) Value {
+	inter := invocation.Interpreter
+
 	keyTypeValue, ok := invocation.Arguments[0].(TypeValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -3549,18 +3580,18 @@ func dictionaryTypeFunction(invocation Invocation) Value {
 	// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
 	if keyType == nil ||
 		!sema.IsSubType(
-			invocation.Interpreter.MustConvertStaticToSemaType(keyType),
+			MustConvertStaticToSemaType(keyType, inter),
 			sema.HashableStructType,
 		) {
 		return Nil
 	}
 
 	return NewSomeValueNonCopying(
-		invocation.Interpreter,
+		inter,
 		NewTypeValue(
-			invocation.Interpreter,
+			inter,
 			NewDictionaryStaticType(
-				invocation.Interpreter,
+				inter,
 				keyType,
 				valueType,
 			),
@@ -3667,7 +3698,7 @@ func functionTypeFunction(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	returnType := interpreter.MustConvertStaticToSemaType(typeValue.Type)
+	returnType := MustConvertStaticToSemaType(typeValue.Type, interpreter)
 
 	var parameterTypes []sema.Parameter
 	parameterCount := parameters.Count()
@@ -3676,7 +3707,7 @@ func functionTypeFunction(invocation Invocation) Value {
 		parameters.Iterate(
 			interpreter,
 			func(param Value) bool {
-				semaType := interpreter.MustConvertStaticToSemaType(param.(TypeValue).Type)
+				semaType := MustConvertStaticToSemaType(param.(TypeValue).Type, interpreter)
 				parameterTypes = append(
 					parameterTypes,
 					sema.Parameter{
@@ -3970,7 +4001,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 
 				ty := typeValue.Type
 				// InclusiveRanges must hold integers
-				elemSemaTy := inter.MustConvertStaticToSemaType(ty)
+				elemSemaTy := MustConvertStaticToSemaType(ty, inter)
 				if !sema.IsSameTypeKind(elemSemaTy, sema.IntegerType) {
 					return Nil
 				}
@@ -4041,7 +4072,7 @@ func (interpreter *Interpreter) IsSubType(subType StaticType, superType StaticTy
 		return true
 	}
 
-	semaType := interpreter.MustConvertStaticToSemaType(superType)
+	semaType := MustConvertStaticToSemaType(superType, interpreter)
 
 	return interpreter.IsSubTypeOfSemaType(subType, semaType)
 }
@@ -4068,7 +4099,7 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(staticSubType StaticType, su
 		return superType == sema.AnyStructType
 	}
 
-	semaSubType := interpreter.MustConvertStaticToSemaType(staticSubType)
+	semaSubType := MustConvertStaticToSemaType(staticSubType, interpreter)
 
 	return sema.IsSubType(semaSubType, superType)
 }
@@ -4477,7 +4508,7 @@ func (interpreter *Interpreter) authAccountReadFunction(
 			valueStaticType := value.StaticType(interpreter)
 
 			if !interpreter.IsSubTypeOfSemaType(valueStaticType, ty) {
-				valueSemaType := interpreter.MustConvertStaticToSemaType(valueStaticType)
+				valueSemaType := MustConvertStaticToSemaType(valueStaticType, interpreter)
 
 				panic(ForceCastTypeMismatchError{
 					ExpectedType:  ty,
@@ -4699,24 +4730,8 @@ func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) (
 	)
 }
 
-func (interpreter *Interpreter) MustSemaTypeOfValue(value Value) sema.Type {
-	return interpreter.MustConvertStaticToSemaType(value.StaticType(interpreter))
-}
-
-func (interpreter *Interpreter) MustConvertStaticToSemaType(staticType StaticType) sema.Type {
-	semaType, err := interpreter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		panic(err)
-	}
-	return semaType
-}
-
 func (interpreter *Interpreter) MustConvertStaticAuthorizationToSemaAccess(auth Authorization) sema.Access {
-	access, err := ConvertStaticAuthorizationToSemaAccess(
-		interpreter,
-		auth,
-		interpreter,
-	)
+	access, err := ConvertStaticAuthorizationToSemaAccess(auth, interpreter)
 	if err != nil {
 		panic(err)
 	}
@@ -4798,7 +4813,7 @@ func GetNativeCompositeValueComputedFields(qualifiedIdentifier string) map[strin
 				locationRange LocationRange,
 				v *CompositeValue,
 			) Value {
-				publicKeyValue := v.GetField(interpreter, locationRange, sema.PublicKeyTypePublicKeyFieldName)
+				publicKeyValue := v.GetField(interpreter, sema.PublicKeyTypePublicKeyFieldName)
 				return publicKeyValue.Transfer(
 					interpreter,
 					locationRange,
@@ -5172,7 +5187,7 @@ func (interpreter *Interpreter) ExpectType(
 	valueStaticType := value.StaticType(interpreter)
 
 	if !interpreter.IsSubTypeOfSemaType(valueStaticType, expectedType) {
-		valueSemaType := interpreter.MustConvertStaticToSemaType(valueStaticType)
+		valueSemaType := MustConvertStaticToSemaType(valueStaticType, interpreter)
 
 		panic(TypeMismatchError{
 			ExpectedType:  expectedType,
@@ -5189,8 +5204,8 @@ func (interpreter *Interpreter) checkContainerMutation(
 ) {
 	if !interpreter.IsSubType(element.StaticType(interpreter), elementType) {
 		panic(ContainerMutationError{
-			ExpectedType:  interpreter.MustConvertStaticToSemaType(elementType),
-			ActualType:    interpreter.MustSemaTypeOfValue(element),
+			ExpectedType:  MustConvertStaticToSemaType(elementType, interpreter),
+			ActualType:    MustSemaTypeOfValue(element, interpreter),
 			LocationRange: locationRange,
 		})
 	}
@@ -5360,11 +5375,9 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 	}
 }
 
-func (interpreter *Interpreter) maybeTrackReferencedResourceKindedValue(value Value) {
-	if referenceValue, ok := value.(*EphemeralReferenceValue); ok {
-		if value, ok := referenceValue.Value.(ReferenceTrackedResourceKindedValue); ok {
-			interpreter.trackReferencedResourceKindedValue(value.ValueID(), referenceValue)
-		}
+func (interpreter *Interpreter) maybeTrackReferencedResourceKindedValue(referenceValue *EphemeralReferenceValue) {
+	if value, ok := referenceValue.Value.(ReferenceTrackedResourceKindedValue); ok {
+		interpreter.trackReferencedResourceKindedValue(value.ValueID(), referenceValue)
 	}
 }
 

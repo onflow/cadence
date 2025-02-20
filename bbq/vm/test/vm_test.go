@@ -3980,3 +3980,133 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestCompileEmit(t *testing.T) {
+
+	t.Parallel()
+
+	var eventEmitted bool
+
+	vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+	vmConfig.OnEventEmitted = func(event *vm.CompositeValue, eventType *interpreter.CompositeStaticType) error {
+		require.False(t, eventEmitted)
+		eventEmitted = true
+
+		assert.Equal(t,
+			common.ScriptLocation{0x1}.TypeID(nil, "Inc"),
+			eventType.ID(),
+		)
+
+		return nil
+	}
+
+	_, err := compileAndInvokeWithOptions(t,
+		`
+          event Inc(val: Int)
+
+          fun test(x: Int) {
+              emit Inc(val: x)
+          }
+        `,
+		"test",
+		CompilerAndVMOptions{
+			VMConfig: vmConfig,
+		},
+		vm.NewIntValue(1),
+	)
+	require.NoError(t, err)
+
+	require.True(t, eventEmitted)
+}
+
+func TestCasting(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple cast success", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := compileAndInvoke(t,
+			`
+              fun test(x: Int): AnyStruct {
+                  return x as Int?
+              }
+            `,
+			"test",
+			vm.NewIntValue(2),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewSomeValueNonCopying(vm.NewIntValue(2)), result)
+	})
+
+	t.Run("force cast success", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := compileAndInvoke(t,
+			`
+              fun test(x: AnyStruct): Int {
+                  return x as! Int
+              }
+            `,
+			"test",
+			vm.NewIntValue(2),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(2), result)
+	})
+
+	t.Run("force cast fail", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := compileAndInvoke(t,
+			`
+              fun test(x: AnyStruct): Int {
+                  return x as! Int
+              }
+            `,
+			"test",
+			vm.BoolValue(true),
+		)
+		require.Error(t, err)
+		assert.ErrorIs(
+			t,
+			err,
+			vm.ForceCastTypeMismatchError{
+				ExpectedType: interpreter.PrimitiveStaticTypeInt,
+				ActualType:   interpreter.PrimitiveStaticTypeBool,
+			},
+		)
+	})
+
+	t.Run("failable cast success", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := compileAndInvoke(t,
+			`
+              fun test(x: AnyStruct): Int? {
+                  return x as? Int
+              }
+            `,
+			"test",
+			vm.NewIntValue(2),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewSomeValueNonCopying(vm.NewIntValue(2)), result)
+	})
+
+	t.Run("failable cast fail", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := compileAndInvoke(t,
+			`
+              fun test(x: AnyStruct): Int? {
+                  return x as? Int
+              }
+            `,
+			"test",
+			vm.BoolValue(true),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, vm.Nil, result)
+	})
+}

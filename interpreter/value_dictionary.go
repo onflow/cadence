@@ -343,7 +343,7 @@ func (v *DictionaryValue) Iterate(
 	v.iterate(interpreter, iterate, f, locationRange)
 }
 
-// IterateReadOnlyLoaded iterates over all LOADED key-valye pairs of the array.
+// IterateReadOnlyLoaded iterates over all LOADED key-value pairs of the array.
 // DO NOT perform storage mutations in the callback!
 func (v *DictionaryValue) IterateReadOnlyLoaded(
 	interpreter *Interpreter,
@@ -372,8 +372,8 @@ func (v *DictionaryValue) iterate(
 			keyValue := MustConvertStoredValue(interpreter, key)
 			valueValue := MustConvertStoredValue(interpreter, value)
 
-			interpreter.checkInvalidatedResourceOrResourceReference(keyValue, locationRange)
-			interpreter.checkInvalidatedResourceOrResourceReference(valueValue, locationRange)
+			checkInvalidatedResourceOrResourceReference(keyValue, locationRange, interpreter)
+			checkInvalidatedResourceOrResourceReference(valueValue, locationRange, interpreter)
 
 			resume = f(
 				keyValue,
@@ -445,7 +445,7 @@ func (v *DictionaryValue) Walk(interpreter *Interpreter, walkChild func(Value), 
 	)
 }
 
-func (v *DictionaryValue) StaticType(_ *Interpreter) StaticType {
+func (v *DictionaryValue) StaticType(_ ValueStaticTypeContext) StaticType {
 	// TODO meter
 	return v.Type
 }
@@ -474,8 +474,8 @@ func (v *DictionaryValue) IsDestroyed() bool {
 	return v.isDestroyed
 }
 
-func (v *DictionaryValue) isInvalidatedResource(interpreter *Interpreter) bool {
-	return v.isDestroyed || (v.dictionary == nil && v.IsResourceKinded(interpreter))
+func (v *DictionaryValue) isInvalidatedResource(context ValueStaticTypeContext) bool {
+	return v.isDestroyed || (v.dictionary == nil && v.IsResourceKinded(context))
 }
 
 func (v *DictionaryValue) IsStaleResource(interpreter *Interpreter) bool {
@@ -597,13 +597,13 @@ func (v *DictionaryValue) ContainsKey(
 }
 
 func (v *DictionaryValue) Get(
-	interpreter *Interpreter,
+	context ValueComparisonContext,
 	locationRange LocationRange,
 	keyValue Value,
 ) (Value, bool) {
 
-	valueComparator := newValueComparator(interpreter, locationRange)
-	hashInputProvider := newHashInputProvider(interpreter, locationRange)
+	valueComparator := newValueComparator(context, locationRange)
+	hashInputProvider := newHashInputProvider(context, locationRange)
 
 	storedValue, err := v.dictionary.Get(
 		valueComparator,
@@ -618,7 +618,7 @@ func (v *DictionaryValue) Get(
 		panic(errors.NewExternalError(err))
 	}
 
-	return MustConvertStoredValue(interpreter, storedValue), true
+	return MustConvertStoredValue(context, storedValue), true
 }
 
 func (v *DictionaryValue) GetKey(interpreter *Interpreter, locationRange LocationRange, keyValue Value) Value {
@@ -650,7 +650,7 @@ func (v *DictionaryValue) SetKey(
 	var existingValue Value
 	switch value := value.(type) {
 	case *SomeValue:
-		innerValue := value.InnerValue(interpreter, locationRange)
+		innerValue := value.InnerValue()
 		existingValue = v.Insert(interpreter, locationRange, keyValue, innerValue)
 
 	case NilValue:
@@ -1218,7 +1218,7 @@ func (v *DictionaryValue) ConformsToStaticType(
 	}
 }
 
-func (v *DictionaryValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+func (v *DictionaryValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
 
 	otherDictionary, ok := other.(*DictionaryValue)
 	if !ok {
@@ -1251,17 +1251,17 @@ func (v *DictionaryValue) Equal(interpreter *Interpreter, locationRange Location
 		// leading to a different iteration order, as the storage ID is used in the seed
 		otherValue, otherValueExists :=
 			otherDictionary.Get(
-				interpreter,
+				context,
 				locationRange,
-				MustConvertStoredValue(interpreter, key),
+				MustConvertStoredValue(context, key),
 			)
 
 		if !otherValueExists {
 			return false
 		}
 
-		equatableValue, ok := MustConvertStoredValue(interpreter, value).(EquatableValue)
-		if !ok || !equatableValue.Equal(interpreter, locationRange, otherValue) {
+		equatableValue, ok := MustConvertStoredValue(context, value).(EquatableValue)
+		if !ok || !equatableValue.Equal(context, locationRange, otherValue) {
 			return false
 		}
 	}
@@ -1571,10 +1571,10 @@ func (v *DictionaryValue) ValueID() atree.ValueID {
 	return v.dictionary.ValueID()
 }
 
-func (v *DictionaryValue) SemaType(interpreter *Interpreter) *sema.DictionaryType {
+func (v *DictionaryValue) SemaType(typeConverter TypeConverter) *sema.DictionaryType {
 	if v.semaType == nil {
 		// this function will panic already if this conversion fails
-		v.semaType, _ = interpreter.MustConvertStaticToSemaType(v.Type).(*sema.DictionaryType)
+		v.semaType, _ = MustConvertStaticToSemaType(v.Type, typeConverter).(*sema.DictionaryType)
 	}
 	return v.semaType
 }
@@ -1583,9 +1583,9 @@ func (v *DictionaryValue) NeedsStoreTo(address atree.Address) bool {
 	return address != v.StorageAddress()
 }
 
-func (v *DictionaryValue) IsResourceKinded(interpreter *Interpreter) bool {
+func (v *DictionaryValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	if v.isResourceKinded == nil {
-		isResourceKinded := v.SemaType(interpreter).IsResourceType()
+		isResourceKinded := v.SemaType(context).IsResourceType()
 		v.isResourceKinded = &isResourceKinded
 	}
 	return *v.isResourceKinded

@@ -153,12 +153,8 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 	value := interpreter.visitVariableDeclaration(declaration, true)
 
 	if someValue, ok := value.(*SomeValue); ok {
-		locationRange := LocationRange{
-			Location:    interpreter.Location,
-			HasPosition: declaration.Value,
-		}
 
-		innerValue := someValue.InnerValue(interpreter, locationRange)
+		innerValue := someValue.InnerValue()
 
 		interpreter.activations.PushNewWithCurrent()
 		defer interpreter.activations.Pop()
@@ -601,10 +597,10 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) Stat
 	// Set right value to left target,
 	// and left value to right target
 
-	interpreter.checkInvalidatedResourceOrResourceReference(rightValue, swap.Right)
+	checkInvalidatedResourceOrResourceReference(rightValue, rightLocationRange, interpreter)
 	transferredRightValue := interpreter.transferAndConvert(rightValue, rightType, leftType, rightLocationRange)
 
-	interpreter.checkInvalidatedResourceOrResourceReference(leftValue, swap.Left)
+	checkInvalidatedResourceOrResourceReference(leftValue, leftLocationRange, interpreter)
 	transferredLeftValue := interpreter.transferAndConvert(leftValue, leftType, rightType, leftLocationRange)
 
 	leftGetterSetter.set(transferredRightValue)

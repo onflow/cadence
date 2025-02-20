@@ -94,16 +94,6 @@ func emitPathDomain(code *[]byte, domain common.PathDomain) {
 	emitByte(code, byte(domain))
 }
 
-// CastKind
-
-func decodeCastKind(ip *uint16, code []byte) CastKind {
-	return CastKind(decodeByte(ip, code))
-}
-
-func emitCastKind(code *[]byte, kind CastKind) {
-	emitByte(code, byte(kind))
-}
-
 // CompositeKind
 
 func decodeCompositeKind(ip *uint16, code []byte) common.CompositeKind {

@@ -691,37 +691,93 @@ func DecodeTransfer(ip *uint16, code []byte) (i InstructionTransfer) {
 	return i
 }
 
-// InstructionCast
+// InstructionSimpleCast
 //
 // Pops a value off the stack, casts it to the given type, and then pushes it back on to the stack.
-type InstructionCast struct {
+type InstructionSimpleCast struct {
 	TypeIndex uint16
-	Kind      CastKind
 }
 
-var _ Instruction = InstructionCast{}
+var _ Instruction = InstructionSimpleCast{}
 
-func (InstructionCast) Opcode() Opcode {
-	return Cast
+func (InstructionSimpleCast) Opcode() Opcode {
+	return SimpleCast
 }
 
-func (i InstructionCast) String() string {
+func (i InstructionSimpleCast) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
 	printfArgument(&sb, "typeIndex", i.TypeIndex)
-	printfArgument(&sb, "kind", i.Kind)
 	return sb.String()
 }
 
-func (i InstructionCast) Encode(code *[]byte) {
+func (i InstructionSimpleCast) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 	emitUint16(code, i.TypeIndex)
-	emitCastKind(code, i.Kind)
 }
 
-func DecodeCast(ip *uint16, code []byte) (i InstructionCast) {
+func DecodeSimpleCast(ip *uint16, code []byte) (i InstructionSimpleCast) {
 	i.TypeIndex = decodeUint16(ip, code)
-	i.Kind = decodeCastKind(ip, code)
+	return i
+}
+
+// InstructionFailableCast
+//
+// Pops a value off the stack and casts it to the given type. If the value is a subtype of the given type, then casted value is pushed back on to the stack. If the value is not a subtype of the given type, then a `nil` is pushed to the stack instead.
+type InstructionFailableCast struct {
+	TypeIndex uint16
+}
+
+var _ Instruction = InstructionFailableCast{}
+
+func (InstructionFailableCast) Opcode() Opcode {
+	return FailableCast
+}
+
+func (i InstructionFailableCast) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	printfArgument(&sb, "typeIndex", i.TypeIndex)
+	return sb.String()
+}
+
+func (i InstructionFailableCast) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.TypeIndex)
+}
+
+func DecodeFailableCast(ip *uint16, code []byte) (i InstructionFailableCast) {
+	i.TypeIndex = decodeUint16(ip, code)
+	return i
+}
+
+// InstructionForceCast
+//
+// Pops a value off the stack, force-casts it to the given type, and then pushes it back on to the stack. Panics if the value is not a subtype of the given type.
+type InstructionForceCast struct {
+	TypeIndex uint16
+}
+
+var _ Instruction = InstructionForceCast{}
+
+func (InstructionForceCast) Opcode() Opcode {
+	return ForceCast
+}
+
+func (i InstructionForceCast) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	printfArgument(&sb, "typeIndex", i.TypeIndex)
+	return sb.String()
+}
+
+func (i InstructionForceCast) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.TypeIndex)
+}
+
+func DecodeForceCast(ip *uint16, code []byte) (i InstructionForceCast) {
+	i.TypeIndex = decodeUint16(ip, code)
 	return i
 }
 
@@ -1095,6 +1151,36 @@ func (i InstructionGreaterOrEqual) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
+// InstructionEmitEvent
+//
+// Pops an event off the stack and then emits it.
+type InstructionEmitEvent struct {
+	TypeIndex uint16
+}
+
+var _ Instruction = InstructionEmitEvent{}
+
+func (InstructionEmitEvent) Opcode() Opcode {
+	return EmitEvent
+}
+
+func (i InstructionEmitEvent) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	printfArgument(&sb, "typeIndex", i.TypeIndex)
+	return sb.String()
+}
+
+func (i InstructionEmitEvent) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.TypeIndex)
+}
+
+func DecodeEmitEvent(ip *uint16, code []byte) (i InstructionEmitEvent) {
+	i.TypeIndex = decodeUint16(ip, code)
+	return i
+}
+
 func DecodeInstruction(ip *uint16, code []byte) Instruction {
 	switch Opcode(decodeByte(ip, code)) {
 	case Unknown:
@@ -1147,8 +1233,12 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionUnwrap{}
 	case Transfer:
 		return DecodeTransfer(ip, code)
-	case Cast:
-		return DecodeCast(ip, code)
+	case SimpleCast:
+		return DecodeSimpleCast(ip, code)
+	case FailableCast:
+		return DecodeFailableCast(ip, code)
+	case ForceCast:
+		return DecodeForceCast(ip, code)
 	case Jump:
 		return DecodeJump(ip, code)
 	case JumpIfFalse:
@@ -1183,6 +1273,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionGreater{}
 	case GreaterOrEqual:
 		return InstructionGreaterOrEqual{}
+	case EmitEvent:
+		return DecodeEmitEvent(ip, code)
 	}
 
 	panic(errors.NewUnreachableError())

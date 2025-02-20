@@ -2645,7 +2645,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(1),
-		test.GetField(inter, interpreter.EmptyLocationRange, "foo"),
+		test.GetField(inter, "foo"),
 	)
 
 	value, err := inter.Invoke("callTest")
@@ -2662,7 +2662,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(3),
-		test.GetField(inter, interpreter.EmptyLocationRange, "foo"),
+		test.GetField(inter, "foo"),
 	)
 }
 
@@ -6767,9 +6767,9 @@ func TestInterpretResourceMoveInArrayAndDestroy(t *testing.T) {
 
 	require.Len(t, events, 2)
 	require.Equal(t, "Foo.ResourceDestroyed", events[0].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, interpreter.EmptyLocationRange, "bar"))
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, "bar"))
 	require.Equal(t, "Foo.ResourceDestroyed", events[1].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 2), events[1].GetField(inter, interpreter.EmptyLocationRange, "bar"))
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 2), events[1].GetField(inter, "bar"))
 }
 
 func TestInterpretResourceMoveInDictionaryAndDestroy(t *testing.T) {
@@ -6809,9 +6809,9 @@ func TestInterpretResourceMoveInDictionaryAndDestroy(t *testing.T) {
 
 	require.Len(t, events, 2)
 	require.Equal(t, "Foo.ResourceDestroyed", events[0].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, interpreter.EmptyLocationRange, "bar"))
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, "bar"))
 	require.Equal(t, "Foo.ResourceDestroyed", events[1].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 2), events[1].GetField(inter, interpreter.EmptyLocationRange, "bar"))
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 2), events[1].GetField(inter, "bar"))
 }
 
 func TestInterpretClosure(t *testing.T) {
@@ -6860,6 +6860,212 @@ func TestInterpretClosure(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(3),
+		value,
+	)
+}
+
+func TestInterpretClosureScopingFunctionExpression(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        fun test(a: Int): Int {
+            let bar = fun(b: Int): Int {
+                return a + b
+            }
+            let a = 2
+            return bar(b: 10)
+        }
+    `)
+
+	actual, err := inter.Invoke("test",
+		interpreter.NewUnmeteredIntValueFromInt64(1),
+	)
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(11),
+		actual,
+	)
+}
+
+func TestInterpretClosureScopingInnerFunction(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        fun test(a: Int): Int {
+            fun bar(b: Int): Int {
+                return a + b
+            }
+            let a = 2
+            return bar(b: 10)
+        }
+    `)
+
+	value, err := inter.Invoke("test",
+		interpreter.NewUnmeteredIntValueFromInt64(1),
+	)
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(11),
+		value,
+	)
+}
+
+func TestInterpretClosureScopingFunctionExpressionParameterConfusion(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        fun foo(a: Int) {
+            fun() {}
+        }
+
+        fun test(): Int {
+            let a = 1
+            foo(a: 2)
+            return a
+        }
+    `)
+
+	actual, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(1),
+		actual,
+	)
+}
+
+func TestInterpretClosureScopingInnerFunctionParameterConfusion(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        fun foo(a: Int) {
+            let f = fun() {}
+        }
+
+        fun test(): Int {
+            let a = 1
+            foo(a: 2)
+            return a
+        }
+    `)
+
+	actual, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(1),
+		actual,
+	)
+}
+
+func TestInterpretClosureScopingFunctionExpressionInCall(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        fun foo() {
+            fun() {}
+        }
+
+        fun test(): Int {
+            let a = 1
+            foo()
+            return a
+        }
+    `)
+
+	actual, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(1),
+		actual,
+	)
+}
+
+func TestInterpretClosureScopingInnerFunctionInCall(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        fun foo() {
+            let f = fun() {}
+        }
+
+        fun test(): Int {
+            let a = 1
+            foo()
+            return a
+        }
+    `)
+
+	actual, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(1),
+		actual,
+	)
+}
+
+func TestInterpretAssignmentAfterClosureFunctionExpression(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        fun test(): Int {
+            var a = 1
+            let bar = fun(b: Int): Int {
+                return a + b
+            }
+            a = 2
+            return bar(b: 10)
+        }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(12),
+		value,
+	)
+}
+
+func TestInterpretAssignmentAfterClosureInnerFunction(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        fun test(): Int {
+            var a = 1
+            fun bar(b: Int): Int {
+                return a + b
+            }
+            a = 2
+            return bar(b: 10)
+        }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(12),
 		value,
 	)
 }
@@ -7120,9 +7326,9 @@ func TestInterpretResourceDestroyExpressionNestedResources(t *testing.T) {
 
 	require.Len(t, events, 2)
 	require.Equal(t, "B.ResourceDestroyed", events[0].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 5), events[0].GetField(inter, interpreter.EmptyLocationRange, "foo"))
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 5), events[0].GetField(inter, "foo"))
 	require.Equal(t, "A.ResourceDestroyed", events[1].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 5), events[1].GetField(inter, interpreter.EmptyLocationRange, "foo"))
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 5), events[1].GetField(inter, "foo"))
 }
 
 func TestInterpretResourceDestroyArray(t *testing.T) {
@@ -7461,7 +7667,7 @@ func TestInterpretReferenceEventParameter(t *testing.T) {
 		inter,
 		interpreter.UnauthorizedAccess,
 		arrayValue,
-		inter.MustConvertStaticToSemaType(arrayStaticType),
+		interpreter.MustConvertStaticToSemaType(arrayStaticType, inter),
 		interpreter.EmptyLocationRange,
 	)
 
@@ -7898,8 +8104,7 @@ func TestInterpretSwapResourceDictionaryElementReturnDictionary(t *testing.T) {
 
 	assert.IsType(t,
 		&interpreter.CompositeValue{},
-		foo.(*interpreter.SomeValue).
-			InnerValue(inter, interpreter.EmptyLocationRange),
+		foo.(*interpreter.SomeValue).InnerValue(),
 	)
 }
 
@@ -7929,8 +8134,7 @@ func TestInterpretSwapResourceDictionaryElementRemoveUsingNil(t *testing.T) {
 
 	assert.IsType(t,
 		&interpreter.CompositeValue{},
-		value.(*interpreter.SomeValue).
-			InnerValue(inter, interpreter.EmptyLocationRange),
+		value.(*interpreter.SomeValue).InnerValue(),
 	)
 }
 
@@ -8117,8 +8321,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		values[0],
 	)
 
-	firstValue := values[0].(*interpreter.SomeValue).
-		InnerValue(inter, interpreter.EmptyLocationRange)
+	firstValue := values[0].(*interpreter.SomeValue).InnerValue()
 
 	require.IsType(t,
 		&interpreter.CompositeValue{},
@@ -8131,7 +8334,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
-		firstResource.GetField(inter, interpreter.EmptyLocationRange, "id"),
+		firstResource.GetField(inter, "id"),
 	)
 
 	require.IsType(t,
@@ -8139,8 +8342,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		values[1],
 	)
 
-	secondValue := values[1].(*interpreter.SomeValue).
-		InnerValue(inter, interpreter.EmptyLocationRange)
+	secondValue := values[1].(*interpreter.SomeValue).InnerValue()
 
 	require.IsType(t,
 		&interpreter.CompositeValue{},
@@ -8153,7 +8355,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(1),
-		secondResource.GetField(inter, interpreter.EmptyLocationRange, "id"),
+		secondResource.GetField(inter, "id"),
 	)
 }
 
@@ -8301,8 +8503,7 @@ func TestInterpretOptionalChainingFunctionRead(t *testing.T) {
 
 	assert.IsType(t,
 		interpreter.BoundFunctionValue{},
-		inter.Globals.Get("x2").GetValue(inter).(*interpreter.SomeValue).
-			InnerValue(inter, interpreter.EmptyLocationRange),
+		inter.Globals.Get("x2").GetValue(inter).(*interpreter.SomeValue).InnerValue(),
 	)
 }
 
@@ -9665,14 +9866,14 @@ func TestInterpretNestedDestroy(t *testing.T) {
 
 	require.Len(t, events, 4)
 	require.Equal(t, "B.ResourceDestroyed", events[0].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 2), events[0].GetField(inter, interpreter.EmptyLocationRange, "id"))
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 2), events[0].GetField(inter, "id"))
 	require.Equal(t, "B.ResourceDestroyed", events[1].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 3), events[1].GetField(inter, interpreter.EmptyLocationRange, "id"))
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 3), events[1].GetField(inter, "id"))
 	require.Equal(t, "B.ResourceDestroyed", events[2].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 4), events[2].GetField(inter, interpreter.EmptyLocationRange, "id"))
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 4), events[2].GetField(inter, "id"))
 	require.Equal(t, "A.ResourceDestroyed", events[3].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[3].GetField(inter, interpreter.EmptyLocationRange, "id"))
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 3), events[3].GetField(inter, interpreter.EmptyLocationRange, "bCount"))
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[3].GetField(inter, "id"))
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 3), events[3].GetField(inter, "bCount"))
 
 	AssertValuesEqual(
 		t,

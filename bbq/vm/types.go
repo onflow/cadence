@@ -27,3 +27,15 @@ func IsSubType(config *Config, sourceType, targetType StaticType) bool {
 	inter := config.interpreter()
 	return inter.IsSubType(sourceType, targetType)
 }
+
+// UnwrapOptionalType returns the type if it is not an optional type,
+// or the inner-most type if it is (optional types are repeatedly unwrapped)
+func UnwrapOptionalType(ty StaticType) StaticType {
+	for {
+		optionalType, ok := ty.(*interpreter.OptionalStaticType)
+		if !ok {
+			return ty
+		}
+		ty = optionalType.Type
+	}
+}

@@ -638,9 +638,15 @@ func (c *Compiler[_]) VisitForStatement(_ *ast.ForStatement) (_ struct{}) {
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler[_]) VisitEmitStatement(_ *ast.EmitStatement) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler[_]) VisitEmitStatement(statement *ast.EmitStatement) (_ struct{}) {
+	c.compileExpression(statement.InvocationExpression)
+	eventType := c.ExtendedElaboration.EmitStatementEventType(statement)
+	typeIndex := c.getOrAddType(eventType)
+	c.codeGen.Emit(opcode.InstructionEmitEvent{
+		TypeIndex: typeIndex,
+	})
+
+	return
 }
 
 func (c *Compiler[_]) VisitSwitchStatement(statement *ast.SwitchStatement) (_ struct{}) {
@@ -1152,14 +1158,25 @@ func (c *Compiler[_]) VisitCastingExpression(expression *ast.CastingExpression) 
 	castingTypes := c.ExtendedElaboration.CastingExpressionTypes(expression)
 	index := c.getOrAddType(castingTypes.TargetType)
 
-	castKind := opcode.CastKindFrom(expression.Operation)
-
-	c.codeGen.Emit(
-		opcode.InstructionCast{
+	var castInstruction opcode.Instruction
+	switch expression.Operation {
+	case ast.OperationCast:
+		castInstruction = opcode.InstructionSimpleCast{
 			TypeIndex: index,
-			Kind:      castKind,
-		},
-	)
+		}
+	case ast.OperationFailableCast:
+		castInstruction = opcode.InstructionFailableCast{
+			TypeIndex: index,
+		}
+	case ast.OperationForceCast:
+		castInstruction = opcode.InstructionForceCast{
+			TypeIndex: index,
+		}
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	c.codeGen.Emit(castInstruction)
 	return
 }
 
@@ -1294,7 +1311,7 @@ func (c *Compiler[_]) compileInitializer(declaration *ast.SpecialFunctionDeclara
 	c.codeGen.Emit(opcode.InstructionReturnValue{})
 }
 
-func (c *Compiler[_]) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) (_ struct{}) {
+func (c *Compiler[_]) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration, _ bool) (_ struct{}) {
 	declareReceiver := !c.compositeTypeStack.isEmpty()
 	function := c.declareFunction(declaration, declareReceiver)
 

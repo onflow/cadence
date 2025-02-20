@@ -47,7 +47,7 @@ func (v *SomeValue) StaticType(config *Config) StaticType {
 		return nil
 	}
 	return interpreter.NewOptionalStaticType(
-		config,
+		config.MemoryGauge,
 		innerType,
 	)
 }

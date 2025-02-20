@@ -94,7 +94,7 @@ type Value interface {
 	isValue()
 	Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange)
 	Walk(interpreter *Interpreter, walkChild func(Value), locationRange LocationRange)
-	StaticType(interpreter *Interpreter) StaticType
+	StaticType(context ValueStaticTypeContext) StaticType
 	// ConformsToStaticType returns true if the value (i.e. its dynamic type)
 	// conforms to its own static type.
 	// Non-container values trivially always conform to their own static type.
@@ -110,7 +110,7 @@ type Value interface {
 	) bool
 	RecursiveString(seenReferences SeenReferences) string
 	MeteredString(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string
-	IsResourceKinded(interpreter *Interpreter) bool
+	IsResourceKinded(context ValueStaticTypeContext) bool
 	NeedsStoreTo(address atree.Address) bool
 	Transfer(
 		interpreter *Interpreter,
@@ -159,30 +159,37 @@ type MemberAccessibleValue interface {
 	SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value) bool
 }
 
+type ValueComparisonContext interface {
+	common.MemoryGauge
+	ValueStaticTypeContext
+}
+
+var _ ValueComparisonContext = &Interpreter{}
+
 // EquatableValue
 
 type EquatableValue interface {
 	Value
 	// Equal returns true if the given value is equal to this value.
 	// If no location range is available, pass e.g. EmptyLocationRange
-	Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool
+	Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool
 }
 
-func newValueComparator(interpreter *Interpreter, locationRange LocationRange) atree.ValueComparator {
+func newValueComparator(context ValueComparisonContext, locationRange LocationRange) atree.ValueComparator {
 	return func(storage atree.SlabStorage, atreeValue atree.Value, otherStorable atree.Storable) (bool, error) {
-		value := MustConvertStoredValue(interpreter, atreeValue)
-		otherValue := StoredValue(interpreter, otherStorable, storage)
-		return value.(EquatableValue).Equal(interpreter, locationRange, otherValue), nil
+		value := MustConvertStoredValue(context, atreeValue)
+		otherValue := StoredValue(context, otherStorable, storage)
+		return value.(EquatableValue).Equal(context, locationRange, otherValue), nil
 	}
 }
 
 // ComparableValue
 type ComparableValue interface {
 	EquatableValue
-	Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
-	LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
-	Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
-	GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
+	Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue
+	LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue
+	Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue
+	GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue
 }
 
 // ResourceKindedValue
@@ -191,7 +198,7 @@ type ResourceKindedValue interface {
 	Value
 	Destroy(interpreter *Interpreter, locationRange LocationRange)
 	IsDestroyed() bool
-	isInvalidatedResource(*Interpreter) bool
+	isInvalidatedResource(context ValueStaticTypeContext) bool
 }
 
 func maybeDestroy(interpreter *Interpreter, locationRange LocationRange, value Value) {
@@ -224,7 +231,6 @@ type ContractValue interface {
 // IterableValue is a value which can be iterated over, e.g. with a for-loop
 type IterableValue interface {
 	Value
-	Iterator(interpreter *Interpreter, locationRange LocationRange) ValueIterator
 	ForEach(
 		interpreter *Interpreter,
 		elementType sema.Type,
@@ -240,10 +246,15 @@ type OwnedValue interface {
 	GetOwner() common.Address
 }
 
+type ValueIteratorContext interface {
+	common.MemoryGauge
+	NumberValueArithmeticContext
+}
+
 // ValueIterator is an iterator which returns values.
 // When Next returns nil, it signals the end of the iterator.
 type ValueIterator interface {
-	Next(interpreter *Interpreter, locationRange LocationRange) Value
+	Next(context ValueIteratorContext, locationRange LocationRange) Value
 }
 
 // atreeContainerBackedValue is an interface for values using atree containers
