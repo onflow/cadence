@@ -1076,24 +1076,24 @@ func (c *Compiler[_]) VisitBinaryExpression(expression *ast.BinaryExpression) (_
 
 	switch expression.Operation {
 	case ast.OperationNilCoalesce:
-		// create a duplicate to perform the equal check.
-		// So if the condition succeeds, then the condition's result will be at the top of the stack.
+		// Duplicate the value for the nil equality check.
 		c.codeGen.Emit(opcode.InstructionDup{})
+		elseJump := c.emitUndefinedJumpIfNil()
 
-		c.codeGen.Emit(opcode.InstructionNil{})
-		c.codeGen.Emit(opcode.InstructionEqual{})
-		elseJump := c.emitUndefinedJumpIfFalse()
+		// Then branch
+		c.codeGen.Emit(opcode.InstructionUnwrap{})
+		thenJump := c.emitUndefinedJump()
 
-		// Drop the duplicated condition result.
-		// It is not needed for the 'then' path.
+		// Else branch
+		c.patchJump(elseJump)
+		// Drop the duplicated condition result,
+		// as it is not needed for the 'else' path.
 		c.codeGen.Emit(opcode.InstructionDrop{})
-
 		c.compileExpression(expression.Right)
 
-		thenJump := c.emitUndefinedJump()
-		c.patchJump(elseJump)
-		c.codeGen.Emit(opcode.InstructionUnwrap{})
+		// End
 		c.patchJump(thenJump)
+
 	default:
 		c.compileExpression(expression.Right)
 

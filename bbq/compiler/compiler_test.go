@@ -1619,5 +1619,69 @@ func TestCompileUnary(t *testing.T) {
 		functions[0].Code,
 	)
 }
+
+func TestCompileNilCoalesce(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+
+        fun test(_ value: Int?): Int {
+            return value ?? 0
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
+
+	const parameterCount = 1
+
+	// valueIndex is the index of the parameter `value`, which is the first parameter
+	const valueIndex = 0
+
+	const resultIndex = parameterCount
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// value ??
+			opcode.InstructionGetLocal{LocalIndex: valueIndex},
+			opcode.InstructionDup{},
+			opcode.InstructionJumpIfNil{Target: 5},
+
+			// value
+			opcode.InstructionUnwrap{},
+			opcode.InstructionJump{Target: 7},
+
+			// 0
+			opcode.InstructionDrop{},
+			opcode.InstructionGetConstant{ConstantIndex: 0},
+
+			// assign to temp $result
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: resultIndex},
+
+			// return $result
+			opcode.InstructionGetLocal{LocalIndex: resultIndex},
+			opcode.InstructionReturnValue{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]*bbq.Constant{
+			{
+				Data: []byte{0},
+				Kind: constantkind.Int,
+			},
+		},
+		program.Constants,
+	)
+}
 	)
 }
