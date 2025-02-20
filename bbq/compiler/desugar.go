@@ -54,10 +54,6 @@ type inheritedFunction struct {
 	elaboration         *ExtendedElaboration
 }
 
-func (f inheritedFunction) functionType() *sema.FunctionType {
-	return f.elaboration.FunctionDeclarationFunctionType(f.functionDecl)
-}
-
 var _ ast.DeclarationVisitor[ast.Declaration] = &Desugar{}
 
 func NewDesugar(
@@ -538,44 +534,6 @@ func (d *Desugar) includeConditions(conditions *ast.Conditions) bool {
 	//  - This is a method of a concrete-type (i.e: enclosingInterfaceType is `nil`)
 	return conditions == nil ||
 		d.enclosingInterfaceType == nil
-}
-
-func (d *Desugar) resultVarParameter(pos ast.Position) *ast.Parameter {
-	return ast.NewParameter(
-		d.memoryGauge,
-		sema.ArgumentLabelNotRequired,
-		ast.NewIdentifier(
-			d.memoryGauge,
-			resultVariableName,
-			pos,
-		),
-
-		ast.NewTypeAnnotation(
-			d.memoryGauge,
-			false,
-
-			// TODO: Pass the proper type here. It can be looked-up from the elaboration (see above).
-			//  However, will have to convert the `sema.Type` to `ast.Type`.
-			//  Currently this `ast.Type` is not needed for the compiler, hence passing a dummy type.
-			d.anyStructType(pos),
-			pos,
-		),
-
-		nil,
-		pos,
-	)
-}
-
-func (d *Desugar) anyStructType(pos ast.Position) *ast.NominalType {
-	return ast.NewNominalType(
-		d.memoryGauge,
-		ast.NewIdentifier(
-			d.memoryGauge,
-			sema.AnyStructType.Name,
-			pos,
-		),
-		nil,
-	)
 }
 
 var conditionFailedMessage = ast.NewStringExpression(nil, "pre/post condition failed", ast.EmptyRange)

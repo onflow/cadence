@@ -381,7 +381,7 @@ func singleIdentifierLocationResolver(t testing.TB) func(
 	}
 }
 
-func printProgram(name string, program *bbq.Program[opcode.Instruction]) {
+func printProgram(name string, program *bbq.Program[opcode.Instruction]) { //nolint:unused
 	printer := bbq.NewInstructionsProgramPrinter()
 	fmt.Println("===================", name, "===================")
 	fmt.Println(printer.PrintProgram(program))
