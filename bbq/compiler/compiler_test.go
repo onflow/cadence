@@ -1620,6 +1620,68 @@ func TestCompileUnary(t *testing.T) {
 	)
 }
 
+func TestCompileBinary(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+
+        fun test() {
+            let three = 1 + 2
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
+
+	const parameterCount = 0
+
+	// resultIndex is the index of the $result variable
+	const resultIndex = parameterCount
+
+	// localsOffset is the offset of the first local variable
+	const localsOffset = resultIndex + 1
+
+	const (
+		// threeIndex is the index of the local variable `three`, which is the first local variable
+		threeIndex = localsOffset + iota
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// let three = 1 + 2
+			opcode.InstructionGetConstant{ConstantIndex: 0},
+			opcode.InstructionGetConstant{ConstantIndex: 1},
+			opcode.InstructionAdd{},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: threeIndex},
+
+			opcode.InstructionReturn{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]*bbq.Constant{
+			{
+				Data: []byte{0x1},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{0x2},
+				Kind: constantkind.Int,
+			},
+		},
+		program.Constants,
+	)
+}
+
 func TestCompileNilCoalesce(t *testing.T) {
 
 	t.Parallel()
@@ -1683,5 +1745,223 @@ func TestCompileNilCoalesce(t *testing.T) {
 		program.Constants,
 	)
 }
+
+func TestCompileMethodInvocation(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        struct Foo {
+            fun f(_ x: Bool) {}
+        }
+
+        fun test() {
+            let foo = Foo()
+            foo.f(true)
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
+
+	require.Len(t, program.Functions, 3)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
+
+	{
+		const parameterCount = 0
+
+		const resultIndex = parameterCount
+
+		const localsOffset = resultIndex + 1
+
+		const (
+			// fooIndex is the index of the local variable `foo`, which is the first local variable
+			fooIndex = localsOffset + iota
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// let foo = Foo()
+				opcode.InstructionGetGlobal{GlobalIndex: 1},
+				opcode.InstructionInvoke{TypeArgs: nil},
+				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionSetLocal{LocalIndex: fooIndex},
+
+				// foo.f(true)
+				opcode.InstructionGetLocal{LocalIndex: fooIndex},
+				opcode.InstructionTrue{},
+				opcode.InstructionTransfer{TypeIndex: 1},
+				opcode.InstructionGetGlobal{GlobalIndex: 2},
+				opcode.InstructionInvoke{TypeArgs: nil},
+				opcode.InstructionDrop{},
+
+				opcode.InstructionReturn{},
+			},
+			functions[0].Code,
+		)
+	}
+
+	{
+		const parameterCount = 0
+
+		const resultIndex = parameterCount
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// Foo()
+				opcode.InstructionNew{
+					Kind:      common.CompositeKindStructure,
+					TypeIndex: 0,
+				},
+
+				// assign to temp $result
+				opcode.InstructionSetLocal{LocalIndex: resultIndex},
+
+				// return $result
+				opcode.InstructionGetLocal{LocalIndex: resultIndex},
+				opcode.InstructionReturnValue{},
+			},
+			functions[1].Code,
+		)
+	}
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionReturn{},
+		},
+		functions[2].Code,
+	)
+}
+
+func TestCompileResourceCreateAndDestroy(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        resource Foo {}
+
+        fun test() {
+            let foo <- create Foo()
+            destroy foo
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
+
+	require.Len(t, program.Functions, 2)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(functions), len(program.Functions))
+
+	{
+		const parameterCount = 0
+
+		const resultIndex = parameterCount
+
+		const localsOffset = resultIndex + 1
+
+		const (
+			// fooIndex is the index of the local variable `foo`, which is the first local variable
+			fooIndex = localsOffset + iota
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// let foo <- create Foo()
+				opcode.InstructionGetGlobal{GlobalIndex: 1},
+				opcode.InstructionInvoke{TypeArgs: nil},
+				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionSetLocal{LocalIndex: fooIndex},
+
+				// destroy foo
+				opcode.InstructionGetLocal{LocalIndex: fooIndex},
+				opcode.InstructionDestroy{},
+
+				opcode.InstructionReturn{},
+			},
+			functions[0].Code,
+		)
+	}
+
+	{
+		const parameterCount = 0
+
+		const resultIndex = parameterCount
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// Foo()
+				opcode.InstructionNew{
+					Kind:      common.CompositeKindResource,
+					TypeIndex: 0,
+				},
+
+				// assign to temp $result
+				opcode.InstructionSetLocal{LocalIndex: resultIndex},
+
+				// return $result
+				opcode.InstructionGetLocal{LocalIndex: resultIndex},
+				opcode.InstructionReturnValue{},
+			},
+			functions[1].Code,
+		)
+	}
+}
+
+func TestCompilePath(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        fun test(): Path {
+            return /storage/foo
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(functions), len(program.Functions))
+
+	const parameterCount = 0
+
+	// resultIndex is the index of the $result variable
+	const resultIndex = parameterCount
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionPath{
+				Domain:          common.PathDomainStorage,
+				IdentifierIndex: 0,
+			},
+
+			// assign to temp $result
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: resultIndex},
+
+			// return $result
+			opcode.InstructionGetLocal{LocalIndex: resultIndex},
+			opcode.InstructionReturnValue{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]*bbq.Constant{
+			{
+				Data: []byte("foo"),
+				Kind: constantkind.String,
+			},
+		},
+		program.Constants,
 	)
 }
