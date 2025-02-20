@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package compiler
+package compiler_test
 
 import (
 	"testing"
@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/compiler"
 	"github.com/onflow/cadence/bbq/constantkind"
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
@@ -47,10 +48,14 @@ func TestCompileRecursionFib(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	compiler := NewInstructionCompiler(checker)
-	program := compiler.Compile()
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
+
 	assert.Equal(t,
 		[]opcode.Instruction{
 			// if n < 2
@@ -83,7 +88,7 @@ func TestCompileRecursionFib(t *testing.T) {
 			opcode.InstructionGetLocal{LocalIndex: 0x1},
 			opcode.InstructionReturnValue{},
 		},
-		compiler.ExportFunctions()[0].Code,
+		functions[0].Code,
 	)
 
 	assert.Equal(t,
@@ -122,8 +127,8 @@ func TestCompileImperativeFib(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	compiler := NewInstructionCompiler(checker)
-	program := compiler.Compile()
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
 
 	const parameterCount = 1
 
@@ -148,6 +153,10 @@ func TestCompileImperativeFib(t *testing.T) {
 	)
 
 	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
+
 	assert.Equal(t,
 		[]opcode.Instruction{
 			// var fib1 = 1
@@ -214,7 +223,7 @@ func TestCompileImperativeFib(t *testing.T) {
 			opcode.InstructionGetLocal{LocalIndex: resultIndex},
 			opcode.InstructionReturnValue{},
 		},
-		compiler.ExportFunctions()[0].Code,
+		functions[0].Code,
 	)
 
 	assert.Equal(t,
@@ -250,8 +259,8 @@ func TestCompileBreak(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	compiler := NewInstructionCompiler(checker)
-	program := compiler.Compile()
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
 
 	const parameterCount = 0
 
@@ -265,6 +274,10 @@ func TestCompileBreak(t *testing.T) {
 	const iIndex = localsOffset
 
 	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
+
 	assert.Equal(t,
 		[]opcode.Instruction{
 			// var i = 0
@@ -306,7 +319,7 @@ func TestCompileBreak(t *testing.T) {
 			opcode.InstructionGetLocal{LocalIndex: resultIndex},
 			opcode.InstructionReturnValue{},
 		},
-		compiler.ExportFunctions()[0].Code,
+		functions[0].Code,
 	)
 
 	assert.Equal(t,
@@ -347,8 +360,13 @@ func TestCompileContinue(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	compiler := NewInstructionCompiler(checker)
-	program := compiler.Compile()
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
 
 	const parameterCount = 0
 
@@ -361,7 +379,6 @@ func TestCompileContinue(t *testing.T) {
 	// iIndex is the index of the local variable `i`, which is the first local variable
 	const iIndex = localsOffset
 
-	require.Len(t, program.Functions, 1)
 	assert.Equal(t,
 		[]opcode.Instruction{
 			// var i = 0
@@ -406,7 +423,7 @@ func TestCompileContinue(t *testing.T) {
 			opcode.InstructionGetLocal{LocalIndex: resultIndex},
 			opcode.InstructionReturnValue{},
 		},
-		compiler.ExportFunctions()[0].Code,
+		functions[0].Code,
 	)
 
 	assert.Equal(t,
@@ -439,10 +456,13 @@ func TestCompileArray(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	compiler := NewInstructionCompiler(checker)
-	program := compiler.Compile()
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
 
 	const parameterCount = 0
 
@@ -473,7 +493,7 @@ func TestCompileArray(t *testing.T) {
 
 			opcode.InstructionReturn{},
 		},
-		compiler.ExportFunctions()[0].Code,
+		functions[0].Code,
 	)
 
 	assert.Equal(t,
@@ -506,10 +526,13 @@ func TestCompileDictionary(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	compiler := NewInstructionCompiler(checker)
-	program := compiler.Compile()
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
 
 	const parameterCount = 0
 
@@ -542,7 +565,7 @@ func TestCompileDictionary(t *testing.T) {
 
 			opcode.InstructionReturn{},
 		},
-		compiler.ExportFunctions()[0].Code,
+		functions[0].Code,
 	)
 
 	assert.Equal(t,
@@ -593,10 +616,13 @@ func TestCompileIfLet(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	compiler := NewInstructionCompiler(checker)
-	program := compiler.Compile()
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -625,7 +651,7 @@ func TestCompileIfLet(t *testing.T) {
 
 			opcode.InstructionReturn{},
 		},
-		compiler.ExportFunctions()[0].Code,
+		functions[0].Code,
 	)
 
 	assert.Equal(t,
@@ -659,10 +685,13 @@ func TestCompileSwitch(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	compiler := NewInstructionCompiler(checker)
-	program := compiler.Compile()
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
 
 	const parameterCount = 1
 
@@ -738,7 +767,7 @@ func TestCompileSwitch(t *testing.T) {
 			opcode.InstructionGetLocal{LocalIndex: resultIndex},
 			opcode.InstructionReturnValue{},
 		},
-		compiler.ExportFunctions()[0].Code,
+		functions[0].Code,
 	)
 
 	assert.Equal(t,
@@ -777,13 +806,16 @@ func TestCompileEmit(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	compiler := NewInstructionCompiler(checker)
-	program := compiler.Compile()
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
 
 	require.Len(t, program.Functions, 2)
 
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
+
 	var testFunction *bbq.Function[opcode.Instruction]
-	for _, f := range compiler.ExportFunctions() {
+	for _, f := range functions {
 		if f.Name == "test" {
 			testFunction = f
 		}
@@ -822,10 +854,13 @@ func TestCompileSimpleCast(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	compiler := NewInstructionCompiler(checker)
-	program := compiler.Compile()
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
 
 	const parameterCount = 1
 
@@ -849,7 +884,7 @@ func TestCompileSimpleCast(t *testing.T) {
 			opcode.InstructionGetLocal{LocalIndex: resultIndex},
 			opcode.InstructionReturnValue{},
 		},
-		compiler.ExportFunctions()[0].Code,
+		functions[0].Code,
 	)
 }
 
@@ -864,10 +899,13 @@ func TestCompileForceCast(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	compiler := NewInstructionCompiler(checker)
-	program := compiler.Compile()
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
 
 	const parameterCount = 1
 
@@ -891,7 +929,7 @@ func TestCompileForceCast(t *testing.T) {
 			opcode.InstructionGetLocal{LocalIndex: resultIndex},
 			opcode.InstructionReturnValue{},
 		},
-		compiler.ExportFunctions()[0].Code,
+		functions[0].Code,
 	)
 }
 
@@ -906,10 +944,13 @@ func TestCompileFailableCast(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	compiler := NewInstructionCompiler(checker)
-	program := compiler.Compile()
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
 
 	const parameterCount = 1
 
@@ -933,7 +974,7 @@ func TestCompileFailableCast(t *testing.T) {
 			opcode.InstructionGetLocal{LocalIndex: resultIndex},
 			opcode.InstructionReturnValue{},
 		},
-		compiler.ExportFunctions()[0].Code,
+		functions[0].Code,
 	)
 }
 
@@ -961,10 +1002,13 @@ func TestCompileNestedLoop(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	compiler := NewInstructionCompiler(checker)
-	program := compiler.Compile()
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
 
 	const parameterCount = 0
 
@@ -1062,7 +1106,7 @@ func TestCompileNestedLoop(t *testing.T) {
 			opcode.InstructionGetLocal{LocalIndex: resultIndex},
 			opcode.InstructionReturnValue{},
 		},
-		compiler.ExportFunctions()[0].Code,
+		functions[0].Code,
 	)
 
 	assert.Equal(t,
@@ -1096,10 +1140,13 @@ func TestCompileAssignLocal(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	compiler := NewInstructionCompiler(checker)
-	program := compiler.Compile()
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
 
 	const parameterCount = 0
 
@@ -1126,7 +1173,7 @@ func TestCompileAssignLocal(t *testing.T) {
 
 			opcode.InstructionReturn{},
 		},
-		compiler.ExportFunctions()[0].Code,
+		functions[0].Code,
 	)
 
 	assert.Equal(t,
@@ -1159,10 +1206,13 @@ func TestCompileAssignGlobal(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	compiler := NewInstructionCompiler(checker)
-	program := compiler.Compile()
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -1173,7 +1223,7 @@ func TestCompileAssignGlobal(t *testing.T) {
 
 			opcode.InstructionReturn{},
 		},
-		compiler.ExportFunctions()[0].Code,
+		functions[0].Code,
 	)
 
 	assert.Equal(t,
@@ -1198,10 +1248,13 @@ func TestCompileIndex(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	compiler := NewInstructionCompiler(checker)
-	program := compiler.Compile()
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
 
 	const parameterCount = 2
 
@@ -1230,7 +1283,7 @@ func TestCompileIndex(t *testing.T) {
 			opcode.InstructionGetLocal{LocalIndex: resultIndex},
 			opcode.InstructionReturnValue{},
 		},
-		compiler.ExportFunctions()[0].Code,
+		functions[0].Code,
 	)
 }
 
@@ -1245,12 +1298,13 @@ func TestCompileAssignIndex(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	compiler := NewInstructionCompiler(checker)
-	program := compiler.Compile()
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
 
-	const parameterCount = 3
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
 
 	const (
 		// arrayIndex is the index of the parameter `array`, which is the first parameter
@@ -1261,9 +1315,6 @@ func TestCompileAssignIndex(t *testing.T) {
 		valueIndex
 	)
 
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
-
 	assert.Equal(t,
 		[]opcode.Instruction{
 			opcode.InstructionGetLocal{LocalIndex: arrayIndex},
@@ -1273,57 +1324,105 @@ func TestCompileAssignIndex(t *testing.T) {
 			opcode.InstructionSetIndex{},
 			opcode.InstructionReturn{},
 		},
-		compiler.ExportFunctions()[0].Code,
+		functions[0].Code,
 	)
 }
 
-func TestCompileAssignMember(t *testing.T) {
+func TestCompileMember(t *testing.T) {
 
 	t.Parallel()
 
 	checker, err := ParseAndCheck(t, `
         struct Test {
-            var x: Int
+            var foo: Int
 
             init(value: Int) {
-                self.x = value
+                self.foo = value
+            }
+
+            fun getValue(): Int {
+                return self.foo
             }
         }
     `)
 	require.NoError(t, err)
 
-	compiler := NewInstructionCompiler(checker)
-	program := compiler.Compile()
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
+	require.Len(t, program.Functions, 2)
 
-	const (
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
+
+	{
+		const parameterCount = 1
+
 		// valueIndex is the index of the parameter `value`, which is the first parameter
-		valueIndex = iota
-		// selfIndex is the index of the `self` variable
-		selfIndex
-	)
+		const valueIndex = iota
+
+		// localsOffset is the offset of the first local variable.
+		// Initializers do not have a $result variable
+		const localsOffset = parameterCount
+
+		const (
+			// selfIndex is the index of the local variable `self`, which is the first local variable
+			selfIndex = localsOffset + iota
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// let self = Test()
+				opcode.InstructionNew{
+					Kind:      common.CompositeKindStructure,
+					TypeIndex: 0,
+				},
+				opcode.InstructionSetLocal{LocalIndex: selfIndex},
+
+				// self.x = value
+				opcode.InstructionGetLocal{LocalIndex: selfIndex},
+				opcode.InstructionGetLocal{LocalIndex: valueIndex},
+				opcode.InstructionTransfer{TypeIndex: 1},
+				opcode.InstructionSetField{FieldNameIndex: 0},
+
+				// return self
+				opcode.InstructionGetLocal{LocalIndex: selfIndex},
+				opcode.InstructionReturnValue{},
+			},
+			functions[0].Code,
+		)
+	}
+
+	{
+		const parameterCount = 1
+
+		// nIndex is the index of the parameter `self`, which is the first parameter
+		const selfIndex = 0
+
+		// resultIndex is the index of the $result variable
+		const resultIndex = parameterCount
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				opcode.InstructionGetLocal{LocalIndex: selfIndex},
+				opcode.InstructionGetField{FieldNameIndex: 0},
+				opcode.InstructionTransfer{TypeIndex: 1},
+				opcode.InstructionSetLocal{LocalIndex: resultIndex},
+				opcode.InstructionGetLocal{LocalIndex: resultIndex},
+				opcode.InstructionReturnValue{},
+			},
+			functions[1].Code,
+		)
+	}
 
 	assert.Equal(t,
-		[]opcode.Instruction{
-			// let self = Test()
-			opcode.InstructionNew{
-				Kind:      common.CompositeKindStructure,
-				TypeIndex: 0,
+		[]*bbq.Constant{
+			{
+				Data: []byte("foo"),
+				Kind: constantkind.String,
 			},
-			opcode.InstructionSetLocal{LocalIndex: selfIndex},
-
-			// self.x = value
-			opcode.InstructionGetLocal{LocalIndex: selfIndex},
-			opcode.InstructionGetLocal{LocalIndex: valueIndex},
-			opcode.InstructionTransfer{TypeIndex: 1},
-			opcode.InstructionSetField{FieldNameIndex: 0},
-
-			// return $result
-			opcode.InstructionGetLocal{LocalIndex: selfIndex},
-			opcode.InstructionReturnValue{},
 		},
-		compiler.ExportFunctions()[0].Code,
+		program.Constants,
 	)
 }
 
@@ -1334,22 +1433,25 @@ func TestCompileExpressionStatement(t *testing.T) {
 	checker, err := ParseAndCheck(t, `
         fun f() {}
 
-        fun test(){
+        fun test() {
             f()
         }
     `)
 	require.NoError(t, err)
 
-	compiler := NewInstructionCompiler(checker)
-	program := compiler.Compile()
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
 
 	require.Len(t, program.Functions, 2)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
 
 	assert.Equal(t,
 		[]opcode.Instruction{
 			opcode.InstructionReturn{},
 		},
-		compiler.ExportFunctions()[0].Code,
+		functions[0].Code,
 	)
 
 	assert.Equal(t,
@@ -1361,7 +1463,7 @@ func TestCompileExpressionStatement(t *testing.T) {
 
 			opcode.InstructionReturn{},
 		},
-		compiler.ExportFunctions()[1].Code,
+		functions[1].Code,
 	)
 }
 
@@ -1378,10 +1480,13 @@ func TestCompileBool(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	compiler := NewInstructionCompiler(checker)
-	program := compiler.Compile()
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
 
 	const parameterCount = 0
 
@@ -1412,7 +1517,7 @@ func TestCompileBool(t *testing.T) {
 
 			opcode.InstructionReturn{},
 		},
-		compiler.ExportFunctions()[0].Code,
+		functions[0].Code,
 	)
 }
 
@@ -1428,10 +1533,13 @@ func TestCompileString(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	compiler := NewInstructionCompiler(checker)
-	program := compiler.Compile()
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
 
 	const parameterCount = 0
 
@@ -1451,7 +1559,7 @@ func TestCompileString(t *testing.T) {
 			opcode.InstructionGetLocal{LocalIndex: resultIndex},
 			opcode.InstructionReturnValue{},
 		},
-		compiler.ExportFunctions()[0].Code,
+		functions[0].Code,
 	)
 
 	assert.Equal(t,
@@ -1477,10 +1585,13 @@ func TestCompileUnary(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	compiler := NewInstructionCompiler(checker)
-	program := compiler.Compile()
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
 
 	const parameterCount = 0
 
@@ -1505,6 +1616,8 @@ func TestCompileUnary(t *testing.T) {
 
 			opcode.InstructionReturn{},
 		},
-		compiler.ExportFunctions()[0].Code,
+		functions[0].Code,
+	)
+}
 	)
 }
