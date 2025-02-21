@@ -532,7 +532,10 @@ func (c *Compiler[_]) compileDeclaration(declaration ast.Declaration) {
 }
 
 func (c *Compiler[_]) compileBlock(block *ast.Block) {
-	// TODO: scope
+	locals := c.currentFunction.locals
+	locals.PushNewWithCurrent()
+	defer locals.Pop()
+
 	for _, statement := range block.Statements {
 		c.compileStatement(statement)
 	}
@@ -582,8 +585,11 @@ func (c *Compiler[_]) VisitContinueStatement(_ *ast.ContinueStatement) (_ struct
 }
 
 func (c *Compiler[_]) VisitIfStatement(statement *ast.IfStatement) (_ struct{}) {
-	// TODO: scope
-	var elseJump int
+	var (
+		elseJump            int
+		additionalThenScope bool
+	)
+
 	switch test := statement.Test.(type) {
 	case ast.Expression:
 		c.compileExpression(test)
@@ -591,26 +597,41 @@ func (c *Compiler[_]) VisitIfStatement(statement *ast.IfStatement) (_ struct{}) 
 
 	case *ast.VariableDeclaration:
 		// TODO: second value
+
+		// Compile the value expression *before* declaring the variable
 		c.compileExpression(test.Value)
 
 		tempIndex := c.currentFunction.generateLocalIndex()
 		c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: tempIndex})
 
+		// Test: check if the optional is nil,
+		// and jump to the else branch if it is
 		c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: tempIndex})
 		elseJump = c.emitUndefinedJumpIfNil()
 
+		// Then branch: unwrap the optional and declare the variable
 		c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: tempIndex})
 		c.codeGen.Emit(opcode.InstructionUnwrap{})
 		varDeclTypes := c.ExtendedElaboration.VariableDeclarationTypes(test)
 		c.emitTransfer(varDeclTypes.TargetType)
-		local := c.currentFunction.declareLocal(test.Identifier.Identifier)
-		c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: local.index})
+
+		// Declare the variable *after* unwrapping the optional,
+		// in a new scope
+		c.currentFunction.locals.PushNewWithCurrent()
+		additionalThenScope = true
+		localIndex := c.currentFunction.declareLocal(test.Identifier.Identifier)
+		c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: localIndex.index})
 
 	default:
 		panic(errors.NewUnreachableError())
 	}
 
 	c.compileBlock(statement.Then)
+
+	if additionalThenScope {
+		c.currentFunction.locals.Pop()
+	}
+
 	elseBlock := statement.Else
 	if elseBlock != nil {
 		thenJump := c.emitUndefinedJump()
@@ -706,20 +727,23 @@ func (c *Compiler[_]) VisitSwitchStatement(statement *ast.SwitchStatement) (_ st
 func (c *Compiler[_]) VisitVariableDeclaration(declaration *ast.VariableDeclaration) (_ struct{}) {
 	// TODO: second value
 
-	local := c.currentFunction.declareLocal(declaration.Identifier.Identifier)
-
+	name := declaration.Identifier.Identifier
 	// TODO: This can be nil only for synthetic-result variable
 	//   Any better way to handle this?
 	if declaration.Value == nil {
-		return
+		c.currentFunction.declareLocal(name)
+	} else {
+		// Compile the value expression *before* declaring the variable
+		c.compileExpression(declaration.Value)
+
+		varDeclTypes := c.ExtendedElaboration.VariableDeclarationTypes(declaration)
+		c.emitTransfer(varDeclTypes.TargetType)
+
+		// Declare the variable *after* compiling the value expression
+		local := c.currentFunction.declareLocal(name)
+		c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: local.index})
 	}
 
-	c.compileExpression(declaration.Value)
-
-	varDeclTypes := c.ExtendedElaboration.VariableDeclarationTypes(declaration)
-	c.emitTransfer(varDeclTypes.TargetType)
-
-	c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: local.index})
 	return
 }
 
@@ -1497,8 +1521,10 @@ func (c *Compiler[_]) emitTransfer(targetType sema.Type) {
 }
 
 func (c *Compiler[_]) getOrAddType(targetType sema.Type) uint16 {
+	typeID := targetType.ID()
+
 	// Optimization: Re-use types in the pool.
-	index, ok := c.typesInPool[targetType.ID()]
+	index, ok := c.typesInPool[typeID]
 	if !ok {
 		staticType := interpreter.ConvertSemaToStaticType(c.memoryGauge, targetType)
 		bytes, err := interpreter.StaticTypeToBytes(staticType)
@@ -1506,8 +1532,9 @@ func (c *Compiler[_]) getOrAddType(targetType sema.Type) uint16 {
 			panic(err)
 		}
 		index = c.addType(bytes)
-		c.typesInPool[targetType.ID()] = index
+		c.typesInPool[typeID] = index
 	}
+
 	return index
 }
 

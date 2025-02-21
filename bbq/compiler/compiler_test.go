@@ -665,6 +665,119 @@ func TestCompileIfLet(t *testing.T) {
 	)
 }
 
+func TestCompileIfLetScope(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        fun test(y: Int?): Int {
+            let x = 1
+            var z = 0
+            if let x = y {
+                z = x
+            } else {
+                z = x
+            }
+            return x
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(functions), len(program.Functions))
+
+	const parameterCount = 1
+
+	// yIndex is the index of the parameter `y`, which is the first parameter
+	const yIndex = 0
+
+	// resultIndex is the index of the $result variable
+	const resultIndex = parameterCount
+
+	// localsOffset is the offset of the first local variable
+	const localsOffset = resultIndex + 1
+
+	const (
+		// x1Index is the index of the local variable `x` in the first block, which is the first local variable
+		x1Index = localsOffset + iota
+		// zIndex is the index of the local variable `z`, which is the second local variable
+		zIndex
+		// tempIfLetIndex is the index of the temporary variable
+		tempIfLetIndex
+		// x2Index is the index of the local variable `x` in the second block, which is the third local variable
+		x2Index
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// let x = 1
+			opcode.InstructionGetConstant{ConstantIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: x1Index},
+
+			// var z = 0
+			opcode.InstructionGetConstant{ConstantIndex: 1},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: zIndex},
+
+			// if let x = y
+			opcode.InstructionGetLocal{LocalIndex: yIndex},
+			opcode.InstructionSetLocal{LocalIndex: tempIfLetIndex},
+
+			opcode.InstructionGetLocal{LocalIndex: tempIfLetIndex},
+			opcode.InstructionJumpIfNil{Target: 18},
+
+			// then
+			opcode.InstructionGetLocal{LocalIndex: tempIfLetIndex},
+			opcode.InstructionUnwrap{},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: x2Index},
+
+			// z = x
+			opcode.InstructionGetLocal{LocalIndex: x2Index},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: zIndex},
+			opcode.InstructionJump{Target: 21},
+
+			// else { z = x }
+			opcode.InstructionGetLocal{LocalIndex: x1Index},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: zIndex},
+
+			// return x
+			opcode.InstructionGetLocal{LocalIndex: x1Index},
+
+			// assign to temp $result
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: resultIndex},
+
+			// return $result
+			opcode.InstructionGetLocal{LocalIndex: resultIndex},
+			opcode.InstructionReturnValue{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]*bbq.Constant{
+			{
+				Data: []byte{1},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{0},
+				Kind: constantkind.Int,
+			},
+		},
+		program.Constants,
+	)
+}
+
 func TestCompileSwitch(t *testing.T) {
 
 	t.Parallel()
@@ -2157,6 +2270,219 @@ func TestCompilePath(t *testing.T) {
 			{
 				Data: []byte("foo"),
 				Kind: constantkind.String,
+			},
+		},
+		program.Constants,
+	)
+}
+
+func TestCompileBlockScope(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        fun test(y: Bool): Int {
+            let x = 1
+            if y {
+                let x = 2
+            } else {
+                let x = 3
+            }
+            return x
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(functions), len(program.Functions))
+
+	const parameterCount = 1
+
+	// yIndex is the index of the parameter `y`, which is the first parameter
+	const yIndex = 0
+
+	// resultIndex is the index of the $result variable
+	const resultIndex = parameterCount
+
+	// localsOffset is the offset of the first local variable
+	const localsOffset = resultIndex + 1
+
+	const (
+		// x1Index is the index of the local variable `x` in the first block, which is the first local variable
+		x1Index = localsOffset + iota
+		// x2Index is the index of the local variable `x` in the second block, which is the second local variable
+		x2Index
+		// x3Index is the index of the local variable `x` in the third block, which is the third local variable
+		x3Index
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// let x = 1
+			opcode.InstructionGetConstant{ConstantIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: x1Index},
+
+			// if y
+			opcode.InstructionGetLocal{LocalIndex: yIndex},
+			opcode.InstructionJumpIfFalse{Target: 9},
+
+			// { let x = 2 }
+			opcode.InstructionGetConstant{ConstantIndex: 1},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: x2Index},
+
+			opcode.InstructionJump{Target: 12},
+
+			// else { let x = 3 }
+			opcode.InstructionGetConstant{ConstantIndex: 2},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: x3Index},
+
+			// return x
+			opcode.InstructionGetLocal{LocalIndex: x1Index},
+
+			// assign to temp $result
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: resultIndex},
+
+			// return $result
+			opcode.InstructionGetLocal{LocalIndex: resultIndex},
+			opcode.InstructionReturnValue{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]*bbq.Constant{
+			{
+				Data: []byte{1},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{2},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{3},
+				Kind: constantkind.Int,
+			},
+		},
+		program.Constants,
+	)
+}
+
+func TestCompileBlockScope2(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        fun test(y: Bool): Int {
+            let x = 1
+            if y {
+                var x = x
+                x = 2
+            } else {
+                var x = x
+                x = 3
+            }
+            return x
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(functions), len(program.Functions))
+
+	const parameterCount = 1
+
+	// yIndex is the index of the parameter `y`, which is the first parameter
+	const yIndex = 0
+
+	// resultIndex is the index of the $result variable
+	const resultIndex = parameterCount
+
+	// localsOffset is the offset of the first local variable
+	const localsOffset = resultIndex + 1
+
+	const (
+		// x1Index is the index of the local variable `x` in the first block, which is the first local variable
+		x1Index = localsOffset + iota
+		// x2Index is the index of the local variable `x` in the second block, which is the second local variable
+		x2Index
+		// x3Index is the index of the local variable `x` in the third block, which is the third local variable
+		x3Index
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// let x = 1
+			opcode.InstructionGetConstant{ConstantIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: x1Index},
+
+			// if y
+			opcode.InstructionGetLocal{LocalIndex: yIndex},
+			opcode.InstructionJumpIfFalse{Target: 12},
+
+			// var x = x
+			opcode.InstructionGetLocal{LocalIndex: x1Index},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: x2Index},
+
+			// x = 2
+			opcode.InstructionGetConstant{ConstantIndex: 1},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: x2Index},
+
+			opcode.InstructionJump{Target: 18},
+
+			// var x = x
+			opcode.InstructionGetLocal{LocalIndex: x1Index},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: x3Index},
+
+			opcode.InstructionGetConstant{ConstantIndex: 2},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: x3Index},
+
+			// return x
+			opcode.InstructionGetLocal{LocalIndex: x1Index},
+
+			// assign to temp $result
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: resultIndex},
+
+			// return $result
+			opcode.InstructionGetLocal{LocalIndex: resultIndex},
+			opcode.InstructionReturnValue{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]*bbq.Constant{
+			{
+				Data: []byte{1},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{2},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{3},
+				Kind: constantkind.Int,
 			},
 		},
 		program.Constants,
