@@ -48,8 +48,8 @@ type Compiler[E any] struct {
 	globals             map[string]*global
 	importedGlobals     map[string]*global
 	usedImportedGlobals []*global
-	loops               []*loop
-	currentLoop         *loop
+	controlFlows        []controlFlow
+	currentControlFlow  *controlFlow
 	staticTypes         [][]byte
 
 	// Cache alike for staticTypes and constants in the pool.
@@ -267,27 +267,31 @@ func (c *Compiler[_]) patchJump(opcodeOffset int) {
 	c.codeGen.PatchJump(opcodeOffset, uint16(count))
 }
 
-func (c *Compiler[_]) pushLoop(start int) {
-	loop := &loop{
-		start: start,
+func (c *Compiler[_]) patchJumps(offsets []int) {
+	for _, offset := range offsets {
+		c.patchJump(offset)
 	}
-	c.loops = append(c.loops, loop)
-	c.currentLoop = loop
 }
 
-func (c *Compiler[_]) popLoop() {
-	lastIndex := len(c.loops) - 1
-	l := c.loops[lastIndex]
-	c.loops[lastIndex] = nil
-	c.loops = c.loops[:lastIndex]
+func (c *Compiler[_]) pushControlFlow(start int) {
+	index := len(c.controlFlows)
+	c.controlFlows = append(c.controlFlows, controlFlow{start: start})
+	c.currentControlFlow = &c.controlFlows[index]
+}
 
-	c.patchLoop(l)
+func (c *Compiler[_]) popControlFlow() {
+	lastIndex := len(c.controlFlows) - 1
+	l := c.controlFlows[lastIndex]
+	c.controlFlows[lastIndex] = controlFlow{}
+	c.controlFlows = c.controlFlows[:lastIndex]
 
-	var previousLoop *loop
+	c.patchJumps(l.breaks)
+
+	var previousControlFlow *controlFlow
 	if lastIndex > 0 {
-		previousLoop = c.loops[lastIndex-1]
+		previousControlFlow = &c.controlFlows[lastIndex-1]
 	}
-	c.currentLoop = previousLoop
+	c.currentControlFlow = previousControlFlow
 }
 
 func (c *Compiler[E]) Compile() *bbq.Program[E] {
@@ -563,14 +567,17 @@ func (c *Compiler[_]) VisitReturnStatement(statement *ast.ReturnStatement) (_ st
 }
 
 func (c *Compiler[_]) VisitBreakStatement(_ *ast.BreakStatement) (_ struct{}) {
-	offset := c.codeGen.Offset()
-	c.currentLoop.breaks = append(c.currentLoop.breaks, offset)
-	c.emitUndefinedJump()
+	offset := c.emitUndefinedJump()
+	c.currentControlFlow.appendBreak(offset)
 	return
 }
 
 func (c *Compiler[_]) VisitContinueStatement(_ *ast.ContinueStatement) (_ struct{}) {
-	c.emitJump(c.currentLoop.start)
+	start := c.currentControlFlow.start
+	if start <= 0 {
+		panic(errors.NewUnreachableError())
+	}
+	c.emitJump(start)
 	return
 }
 
@@ -619,13 +626,21 @@ func (c *Compiler[_]) VisitIfStatement(statement *ast.IfStatement) (_ struct{}) 
 
 func (c *Compiler[_]) VisitWhileStatement(statement *ast.WhileStatement) (_ struct{}) {
 	testOffset := c.codeGen.Offset()
-	c.pushLoop(testOffset)
+
+	c.pushControlFlow(testOffset)
+	defer c.popControlFlow()
+
 	c.compileExpression(statement.Test)
 	endJump := c.emitUndefinedJumpIfFalse()
+
+	// Compile the body
 	c.compileBlock(statement.Block)
+	// Repeat, jump back to the test
 	c.emitJump(testOffset)
+
+	// Patch the failed test to jump here
 	c.patchJump(endJump)
-	c.popLoop()
+
 	return
 }
 
@@ -650,12 +665,17 @@ func (c *Compiler[_]) VisitSwitchStatement(statement *ast.SwitchStatement) (_ st
 	localIndex := c.currentFunction.generateLocalIndex()
 	c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: localIndex})
 
-	endJumps := make([]int, 0, len(statement.Cases))
+	// Pass an invalid start offset to pushControlFlow to indicate that this is a switch statement,
+	// which does not allow jumps to the start (i.e., no continue statements).
+	c.pushControlFlow(-1)
+	defer c.popControlFlow()
+
 	previousJump := -1
 
 	for _, switchCase := range statement.Cases {
 		if previousJump >= 0 {
 			c.patchJump(previousJump)
+			previousJump = -1
 		}
 
 		isDefault := switchCase.Expression == nil
@@ -664,7 +684,6 @@ func (c *Compiler[_]) VisitSwitchStatement(statement *ast.SwitchStatement) (_ st
 			c.compileExpression(switchCase.Expression)
 			c.codeGen.Emit(opcode.InstructionEqual{})
 			previousJump = c.emitUndefinedJumpIfFalse()
-
 		}
 
 		for _, caseStatement := range switchCase.Statements {
@@ -672,13 +691,13 @@ func (c *Compiler[_]) VisitSwitchStatement(statement *ast.SwitchStatement) (_ st
 		}
 
 		if !isDefault {
-			endJump := c.emitUndefinedJump()
-			endJumps = append(endJumps, endJump)
+			breakOffset := c.emitUndefinedJump()
+			c.currentControlFlow.appendBreak(breakOffset)
 		}
 	}
 
-	for _, endJump := range endJumps {
-		c.patchJump(endJump)
+	if previousJump >= 0 {
+		c.patchJump(previousJump)
 	}
 
 	return
@@ -1469,12 +1488,6 @@ func (c *Compiler[_]) VisitRemoveStatement(_ *ast.RemoveStatement) (_ struct{}) 
 func (c *Compiler[_]) VisitAttachExpression(_ *ast.AttachExpression) (_ struct{}) {
 	// TODO
 	panic(errors.NewUnreachableError())
-}
-
-func (c *Compiler[_]) patchLoop(l *loop) {
-	for _, breakOffset := range l.breaks {
-		c.patchJump(breakOffset)
-	}
 }
 
 func (c *Compiler[_]) emitTransfer(targetType sema.Type) {

@@ -793,6 +793,203 @@ func TestCompileSwitch(t *testing.T) {
 	)
 }
 
+func TestSwitchBreak(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun test(x: Int) {
+          switch x {
+              case 1:
+                  break
+              case 2:
+                  break
+              default:
+                  break
+          }
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
+
+	const parameterCount = 1
+
+	// xIndex is the index of the parameter `x`, which is the first parameter
+	const xIndex = 0
+
+	// resultIndex is the index of the $result variable
+	const resultIndex = parameterCount
+
+	// localsOffset is the offset of the first local variable
+	const localsOffset = resultIndex + 1
+
+	const (
+		// switchIndex is the index of the local variable used to store the value of the switch expression
+		switchIndex = localsOffset + iota
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// switch x
+			opcode.InstructionGetLocal{LocalIndex: xIndex},
+			opcode.InstructionSetLocal{LocalIndex: switchIndex},
+
+			// case 1:
+			opcode.InstructionGetLocal{LocalIndex: switchIndex},
+			opcode.InstructionGetConstant{ConstantIndex: 0},
+			opcode.InstructionEqual{},
+			opcode.InstructionJumpIfFalse{Target: 8},
+			// break
+			opcode.InstructionJump{Target: 15},
+			// end of case
+			opcode.InstructionJump{Target: 15},
+
+			// case 1:
+			opcode.InstructionGetLocal{LocalIndex: switchIndex},
+			opcode.InstructionGetConstant{ConstantIndex: 1},
+			opcode.InstructionEqual{},
+			opcode.InstructionJumpIfFalse{Target: 14},
+			// break
+			opcode.InstructionJump{Target: 15},
+			// end of case
+			opcode.InstructionJump{Target: 15},
+
+			// default:
+			// break
+			opcode.InstructionJump{Target: 15},
+
+			opcode.InstructionReturn{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]*bbq.Constant{
+			{
+				Data: []byte{0x1},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{0x2},
+				Kind: constantkind.Int,
+			},
+		},
+		program.Constants,
+	)
+}
+
+func TestWhileSwitchBreak(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun test(): Int {
+          var x = 0
+          while true {
+              switch x {
+                  case 1:
+                      break
+              }
+              x = x + 1
+          }
+          return x
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
+
+	const parameterCount = 0
+
+	// resultIndex is the index of the $result variable
+	const resultIndex = parameterCount
+
+	// localsOffset is the offset of the first local variable
+	const localsOffset = resultIndex + 1
+
+	const (
+		// xIndex is the index of the local variable `x`, which is the first local variable
+		xIndex = localsOffset + iota
+		// switchIndex is the index of the local variable used to store the value of the switch expression
+		switchIndex
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// var x = 0
+			opcode.InstructionGetConstant{ConstantIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: xIndex},
+
+			// while true
+			opcode.InstructionTrue{},
+			opcode.InstructionJumpIfFalse{Target: 19},
+
+			// switch x
+			opcode.InstructionGetLocal{LocalIndex: xIndex},
+			opcode.InstructionSetLocal{LocalIndex: switchIndex},
+
+			// case 1:
+			opcode.InstructionGetLocal{LocalIndex: switchIndex},
+			opcode.InstructionGetConstant{ConstantIndex: 1},
+			opcode.InstructionEqual{},
+			opcode.InstructionJumpIfFalse{Target: 13},
+
+			// break
+			opcode.InstructionJump{Target: 13},
+			// end of case
+			opcode.InstructionJump{Target: 13},
+
+			// x = x + 1
+			opcode.InstructionGetLocal{LocalIndex: xIndex},
+			opcode.InstructionGetConstant{ConstantIndex: 1},
+			opcode.InstructionAdd{},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: xIndex},
+
+			// repeat
+			opcode.InstructionJump{Target: 3},
+
+			// assign to temp $result
+			opcode.InstructionGetLocal{LocalIndex: xIndex},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: resultIndex},
+
+			// return $result
+			opcode.InstructionGetLocal{LocalIndex: resultIndex},
+			opcode.InstructionReturnValue{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]*bbq.Constant{
+			{
+				Data: []byte{0x0},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{0x1},
+				Kind: constantkind.Int,
+			},
+		},
+		program.Constants,
+	)
+}
+
 func TestCompileEmit(t *testing.T) {
 
 	t.Parallel()
