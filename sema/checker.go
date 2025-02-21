@@ -1465,7 +1465,6 @@ func (checker *Checker) recordFunctionDeclarationOrigin(
 }
 
 func (checker *Checker) enterValueScope() {
-	//fmt.Printf("ENTER: %d\n", checker.valueActivations.Depth())
 	checker.valueActivations.Enter()
 }
 
