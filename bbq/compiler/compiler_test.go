@@ -19,6 +19,7 @@
 package compiler
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,6 +28,8 @@ import (
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/constantkind"
 	"github.com/onflow/cadence/bbq/opcode"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -934,4 +937,625 @@ func TestCompileFailableCast(t *testing.T) {
 		},
 		compiler.ExportFunctions()[0].Code,
 	)
+}
+
+func TestCompileDefaultFunction(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        struct interface IA {
+            fun test(): Int {
+                return 42
+            }
+        }
+
+        struct Test: IA {}
+    `)
+	require.NoError(t, err)
+
+	compiler := NewInstructionCompiler(checker).
+		WithConfig(&Config{
+			ElaborationResolver: func(location common.Location) (*sema.Elaboration, error) {
+				if location == checker.Location {
+					return checker.Elaboration, nil
+				}
+
+				return nil, fmt.Errorf("cannot find elaboration for: %s", location)
+			},
+		})
+
+	program := compiler.Compile()
+
+	require.Len(t, program.Functions, 3)
+
+	const (
+		concreteTypeConstructorIndex uint16 = iota
+		concreteTypeFunctionIndex
+		interfaceFunctionIndex
+	)
+
+	// 	`Test` type's constructor
+	// Not interested in the content of the constructor.
+	const concreteTypeConstructorName = "Test"
+	constructor := program.Functions[concreteTypeConstructorIndex]
+	require.Equal(t, concreteTypeConstructorName, constructor.Name)
+
+	// Also check if the globals are linked properly.
+	assert.Equal(t, concreteTypeConstructorIndex, compiler.globals[concreteTypeConstructorName].index)
+
+	// `Test` type's `test` function.
+
+	const concreteTypeTestFuncName = "Test.test"
+	concreteTypeTestFunc := program.Functions[concreteTypeFunctionIndex]
+	require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.Name)
+
+	// Also check if the globals are linked properly.
+	assert.Equal(t, concreteTypeFunctionIndex, compiler.globals[concreteTypeTestFuncName].index)
+
+	// Should be calling into interface's default function.
+	// ```
+	//     fun test(): Int {
+	//        var $_result: Int
+	//        $_result = self.test()
+	//        return $_result
+	//    }
+	// ```
+
+	const (
+		selfIndex = iota
+		tempResultIndex
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// self.test()
+			opcode.InstructionGetLocal{LocalIndex: selfIndex},
+			opcode.InstructionGetGlobal{GlobalIndex: interfaceFunctionIndex}, // must be interface method's index
+			opcode.InstructionInvoke{},
+
+			// assign to temp $result
+			opcode.InstructionTransfer{TypeIndex: 1},
+			opcode.InstructionSetLocal{LocalIndex: tempResultIndex},
+
+			// return $result
+			opcode.InstructionGetLocal{LocalIndex: tempResultIndex},
+			opcode.InstructionReturnValue{},
+		},
+		concreteTypeTestFunc.Code,
+	)
+
+	// 	`IA` type's `test` function
+
+	const interfaceTypeTestFuncName = "IA.test"
+	interfaceTypeTestFunc := program.Functions[interfaceFunctionIndex]
+	require.Equal(t, interfaceTypeTestFuncName, interfaceTypeTestFunc.Name)
+
+	// Also check if the globals are linked properly.
+	assert.Equal(t, interfaceFunctionIndex, compiler.globals[interfaceTypeTestFuncName].index)
+
+	// Should contain the implementation.
+	// ```
+	//    fun test(): Int {
+	//        var $_result: Int
+	//        $_result = 42
+	//        return $_result
+	//    }
+	// ```
+
+	// Since the function is an object-method, receiver becomes the first parameter.
+	const parameterCount = 1
+
+	// resultIndex is the index of the $result variable
+	const resultIndex = parameterCount
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// 42
+			opcode.InstructionGetConstant{ConstantIndex: 0},
+
+			// assign to temp $result
+			opcode.InstructionTransfer{TypeIndex: 1},
+			opcode.InstructionSetLocal{LocalIndex: resultIndex},
+
+			// return $result
+			opcode.InstructionGetLocal{LocalIndex: resultIndex},
+			opcode.InstructionReturnValue{},
+		},
+		interfaceTypeTestFunc.Code,
+	)
+}
+
+func TestCompileFunctionConditions(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("pre condition", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+        fun test(x: Int): Int {
+            pre {x > 0}
+            return 5
+        }
+    `)
+		require.NoError(t, err)
+
+		compiler := NewInstructionCompiler(checker)
+		program := compiler.Compile()
+
+		require.Len(t, program.Functions, 1)
+
+		const (
+			xIndex = iota
+			tempResultIndex
+		)
+
+		// Would be equivalent to:
+		// fun test(x: Int): Int {
+		//    if !(x > 0) {
+		//        panic("pre/post condition failed")
+		//    }
+		//    $_result = 5
+		//    return $_result
+		// }
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// x > 0
+				opcode.InstructionGetLocal{LocalIndex: xIndex},
+				opcode.InstructionGetConstant{ConstantIndex: 0},
+				opcode.InstructionGreater{},
+
+				// if !<condition>
+				opcode.InstructionNot{},
+				opcode.InstructionJumpIfFalse{Target: 10},
+
+				// panic("pre/post condition failed")
+				opcode.InstructionGetConstant{ConstantIndex: 1}, // error message
+				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionGetGlobal{GlobalIndex: 1}, // global index 1 is 'panic' function
+				opcode.InstructionInvoke{},
+
+				// Drop since it's a statement-expression
+				opcode.InstructionDrop{},
+
+				// $_result = 5
+				opcode.InstructionGetConstant{ConstantIndex: 2},
+				opcode.InstructionTransfer{TypeIndex: 1},
+				opcode.InstructionSetLocal{LocalIndex: tempResultIndex},
+
+				// return $_result
+				opcode.InstructionGetLocal{LocalIndex: tempResultIndex},
+				opcode.InstructionReturnValue{},
+			},
+			program.Functions[0].Code,
+		)
+	})
+
+	t.Run("post condition", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+        fun test(x: Int): Int {
+            post {x > 0}
+            return 5
+        }
+    `)
+		require.NoError(t, err)
+
+		compiler := NewInstructionCompiler(checker)
+		program := compiler.Compile()
+
+		require.Len(t, program.Functions, 1)
+
+		// xIndex is the index of the parameter `x`, which is the first parameter
+		const (
+			xIndex = iota
+			tempResultIndex
+			resultIndex
+		)
+
+		// Would be equivalent to:
+		// fun test(x: Int): Int {
+		//    $_result = 5
+		//    let result = $_result
+		//    if !(x > 0) {
+		//        panic("pre/post condition failed")
+		//    }
+		//    return $_result
+		// }
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// $_result = 5
+				opcode.InstructionGetConstant{ConstantIndex: 0},
+				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionSetLocal{LocalIndex: tempResultIndex},
+
+				// let result = $_result
+				opcode.InstructionGetLocal{LocalIndex: tempResultIndex},
+				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionSetLocal{LocalIndex: resultIndex},
+
+				// x > 0
+				opcode.InstructionGetLocal{LocalIndex: xIndex},
+				opcode.InstructionGetConstant{ConstantIndex: 1},
+				opcode.InstructionGreater{},
+
+				// if !<condition>
+				opcode.InstructionNot{},
+				opcode.InstructionJumpIfFalse{Target: 16},
+
+				// panic("pre/post condition failed")
+				opcode.InstructionGetConstant{ConstantIndex: 2}, // error message
+				opcode.InstructionTransfer{TypeIndex: 1},
+				opcode.InstructionGetGlobal{GlobalIndex: 1}, // global index 1 is 'panic' function
+				opcode.InstructionInvoke{},
+
+				// Drop since it's a statement-expression
+				opcode.InstructionDrop{},
+
+				// return $_result
+				opcode.InstructionGetLocal{LocalIndex: tempResultIndex},
+				opcode.InstructionReturnValue{},
+			},
+			program.Functions[0].Code,
+		)
+	})
+
+	t.Run("resource typed result var", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+        fun test(x: @AnyResource?): @AnyResource? {
+            post {result != nil}
+            return <- x
+        }
+    `)
+		require.NoError(t, err)
+
+		compiler := NewInstructionCompiler(checker)
+		program := compiler.Compile()
+
+		require.Len(t, program.Functions, 1)
+
+		// xIndex is the index of the parameter `x`, which is the first parameter
+		const (
+			xIndex = iota
+			tempResultIndex
+			resultIndex
+		)
+
+		// Would be equivalent to:
+		// fun test(x: @AnyResource?): @AnyResource? {
+		//    var $_result <-x
+		//    let result = &$_result
+		//    if !(result != nil) {
+		//        panic("pre/post condition failed")
+		//    }
+		//    return <-$_result
+		//}
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// $_result = x
+				opcode.InstructionGetLocal{LocalIndex: xIndex},
+				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionSetLocal{LocalIndex: tempResultIndex},
+
+				// Get the reference and assign to `result`.
+				// i.e: `let result = &$_result`
+				opcode.InstructionGetLocal{LocalIndex: tempResultIndex},
+				opcode.InstructionNewRef{TypeIndex: 1},
+				opcode.InstructionTransfer{TypeIndex: 1},
+				opcode.InstructionSetLocal{LocalIndex: resultIndex},
+
+				// result != nil
+				opcode.InstructionGetLocal{LocalIndex: resultIndex},
+				opcode.InstructionNil{},
+				opcode.InstructionNotEqual{},
+
+				// if !<condition>
+				opcode.InstructionNot{},
+				opcode.InstructionJumpIfFalse{Target: 17},
+
+				// panic("pre/post condition failed")
+				opcode.InstructionGetConstant{ConstantIndex: 0}, // error message
+				opcode.InstructionTransfer{TypeIndex: 2},
+				opcode.InstructionGetGlobal{GlobalIndex: 1}, // global index 1 is 'panic' function
+				opcode.InstructionInvoke{},
+
+				// Drop since it's a statement-expression
+				opcode.InstructionDrop{},
+
+				// return $_result
+				opcode.InstructionGetLocal{LocalIndex: tempResultIndex},
+				opcode.InstructionReturnValue{},
+			},
+			program.Functions[0].Code,
+		)
+	})
+
+	t.Run("inherited conditions", func(t *testing.T) {
+
+		checker, err := ParseAndCheck(t, `
+            struct interface IA {
+                fun test(x: Int, y: Int): Int {
+                    pre {x > 0}
+                    post {y > 0}
+                }
+            }
+
+            struct Test: IA {
+                fun test(x: Int, y: Int): Int {
+                    return 42
+                }
+            }
+        `)
+		require.NoError(t, err)
+
+		compiler := NewInstructionCompiler(checker).
+			WithConfig(&Config{
+				ElaborationResolver: func(location common.Location) (*sema.Elaboration, error) {
+					if location == checker.Location {
+						return checker.Elaboration, nil
+					}
+
+					return nil, fmt.Errorf("cannot find elaboration for: %s", location)
+				},
+			})
+
+		program := compiler.Compile()
+		require.Len(t, program.Functions, 2)
+
+		// Function indexes
+		const (
+			concreteTypeConstructorIndex uint16 = iota
+			concreteTypeFunctionIndex
+			panicFunctionIndex
+		)
+
+		// 	`Test` type's constructor
+		// Not interested in the content of the constructor.
+		const concreteTypeConstructorName = "Test"
+		constructor := program.Functions[concreteTypeConstructorIndex]
+		require.Equal(t, concreteTypeConstructorName, constructor.Name)
+
+		// Also check if the globals are linked properly.
+		assert.Equal(t, concreteTypeConstructorIndex, compiler.globals[concreteTypeConstructorName].index)
+
+		// `Test` type's `test` function.
+
+		// local var indexes
+		const (
+			xIndex = iota + 1
+			yIndex
+			tempResultIndex
+			resultIndex
+		)
+
+		// const indexes var indexes
+		const (
+			const0Index = iota
+			constPanicMessageIndex
+			const42Index
+		)
+
+		const concreteTypeTestFuncName = "Test.test"
+		concreteTypeTestFunc := program.Functions[concreteTypeFunctionIndex]
+		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.Name)
+
+		// Also check if the globals are linked properly.
+		assert.Equal(t, concreteTypeFunctionIndex, compiler.globals[concreteTypeTestFuncName].index)
+
+		// Would be equivalent to:
+		// ```
+		//     fun test(x: Int, y: Int): Int {
+		//        if !(x > 0) {
+		//            panic("pre/post condition failed")
+		//        }
+		//
+		//        var $_result = 42
+		//        let result = $_result
+		//
+		//        if !(y > 0) {
+		//            panic("pre/post condition failed")
+		//        }
+		//
+		//        return $_result
+		//    }
+		// ```
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// Inherited pre-condition
+				// x > 0
+				opcode.InstructionGetLocal{LocalIndex: xIndex},
+				opcode.InstructionGetConstant{ConstantIndex: const0Index},
+				opcode.InstructionGreater{},
+
+				// if !<condition>
+				opcode.InstructionNot{},
+				opcode.InstructionJumpIfFalse{Target: 10},
+
+				// panic("pre/post condition failed")
+				opcode.InstructionGetConstant{ConstantIndex: constPanicMessageIndex},
+				opcode.InstructionTransfer{TypeIndex: 1},
+				opcode.InstructionGetGlobal{GlobalIndex: panicFunctionIndex},
+				opcode.InstructionInvoke{},
+
+				// Drop since it's a statement-expression
+				opcode.InstructionDrop{},
+
+				// Function body
+
+				// $_result = 42
+				opcode.InstructionGetConstant{ConstantIndex: const42Index},
+				opcode.InstructionTransfer{TypeIndex: 2},
+				opcode.InstructionSetLocal{LocalIndex: tempResultIndex},
+
+				// let result = $_result
+				opcode.InstructionGetLocal{LocalIndex: tempResultIndex},
+				opcode.InstructionTransfer{TypeIndex: 2},
+				opcode.InstructionSetLocal{LocalIndex: resultIndex},
+
+				// Inherited post condition
+
+				// y > 0
+				opcode.InstructionGetLocal{LocalIndex: yIndex},
+				opcode.InstructionGetConstant{ConstantIndex: const0Index},
+				opcode.InstructionGreater{},
+
+				// if !<condition>
+				opcode.InstructionNot{},
+				opcode.InstructionJumpIfFalse{Target: 26},
+
+				// panic("pre/post condition failed")
+				opcode.InstructionGetConstant{ConstantIndex: constPanicMessageIndex},
+				opcode.InstructionTransfer{TypeIndex: 1},
+				opcode.InstructionGetGlobal{GlobalIndex: panicFunctionIndex},
+				opcode.InstructionInvoke{},
+
+				// Drop since it's a statement-expression
+				opcode.InstructionDrop{},
+
+				// return $_result
+				opcode.InstructionGetLocal{LocalIndex: tempResultIndex},
+				opcode.InstructionReturnValue{},
+			},
+			concreteTypeTestFunc.Code,
+		)
+	})
+
+	t.Run("inherited before function", func(t *testing.T) {
+
+		checker, err := ParseAndCheck(t, `
+            struct interface IA {
+                fun test(x: Int): Int {
+                    post {before(x) < x}
+                }
+            }
+
+            struct Test: IA {
+                fun test(x: Int): Int {
+                    return 42
+                }
+            }
+        `)
+		require.NoError(t, err)
+
+		compiler := NewInstructionCompiler(checker).
+			WithConfig(&Config{
+				ElaborationResolver: func(location common.Location) (*sema.Elaboration, error) {
+					if location == checker.Location {
+						return checker.Elaboration, nil
+					}
+
+					return nil, fmt.Errorf("cannot find elaboration for: %s", location)
+				},
+			})
+
+		program := compiler.Compile()
+		require.Len(t, program.Functions, 2)
+
+		// Function indexes
+		const (
+			concreteTypeConstructorIndex uint16 = iota
+			concreteTypeFunctionIndex
+			panicFunctionIndex
+		)
+
+		// 	`Test` type's constructor
+		// Not interested in the content of the constructor.
+		const concreteTypeConstructorName = "Test"
+		constructor := program.Functions[concreteTypeConstructorIndex]
+		require.Equal(t, concreteTypeConstructorName, constructor.Name)
+
+		// Also check if the globals are linked properly.
+		assert.Equal(t, concreteTypeConstructorIndex, compiler.globals[concreteTypeConstructorName].index)
+
+		// `Test` type's `test` function.
+
+		// local var indexes
+		const (
+			// Since the function is an object-method, receiver becomes the first parameter.
+			xIndex = iota + 1
+			beforeVarIndex
+			tempResultIndex
+			resultIndex
+		)
+
+		// const indexes var indexes
+		const (
+			const42Index = iota
+			constPanicMessageIndex
+		)
+
+		const concreteTypeTestFuncName = "Test.test"
+		concreteTypeTestFunc := program.Functions[concreteTypeFunctionIndex]
+		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.Name)
+
+		// Also check if the globals are linked properly.
+		assert.Equal(t, concreteTypeFunctionIndex, compiler.globals[concreteTypeTestFuncName].index)
+
+		// Would be equivalent to:
+		// ```
+		// struct Test: IA {
+		//    fun test(x: Int): Int {
+		//        var $before_0 = x
+		//        var $_result = 42
+		//        let result = $_result
+		//        if !($before_0 < x) {
+		//            panic("pre/post condition failed")
+		//        }
+		//        return $_result
+		//    }
+		//}
+		// ```
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// Inherited before function
+				// var $before_0 = x
+				opcode.InstructionGetLocal{LocalIndex: xIndex},
+				opcode.InstructionTransfer{TypeIndex: 1},
+				opcode.InstructionSetLocal{LocalIndex: beforeVarIndex},
+
+				// Function body
+
+				// $_result = 42
+				opcode.InstructionGetConstant{ConstantIndex: const42Index},
+				opcode.InstructionTransfer{TypeIndex: 1},
+				opcode.InstructionSetLocal{LocalIndex: tempResultIndex},
+
+				// let result = $_result
+				opcode.InstructionGetLocal{LocalIndex: tempResultIndex},
+				opcode.InstructionTransfer{TypeIndex: 1},
+				opcode.InstructionSetLocal{LocalIndex: resultIndex},
+
+				// Inherited post condition
+
+				// $before_0 < x
+				opcode.InstructionGetLocal{LocalIndex: beforeVarIndex},
+				opcode.InstructionGetLocal{LocalIndex: xIndex},
+				opcode.InstructionLess{},
+
+				// if !<condition>
+				opcode.InstructionNot{},
+				opcode.InstructionJumpIfFalse{Target: 19},
+
+				// panic("pre/post condition failed")
+				opcode.InstructionGetConstant{ConstantIndex: constPanicMessageIndex},
+				opcode.InstructionTransfer{TypeIndex: 2},
+				opcode.InstructionGetGlobal{GlobalIndex: panicFunctionIndex},
+				opcode.InstructionInvoke{},
+
+				// Drop since it's a statement-expression
+				opcode.InstructionDrop{},
+
+				// return $_result
+				opcode.InstructionGetLocal{LocalIndex: tempResultIndex},
+				opcode.InstructionReturnValue{},
+			},
+			concreteTypeTestFunc.Code,
+		)
+	})
 }
