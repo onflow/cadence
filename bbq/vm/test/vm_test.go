@@ -4390,3 +4390,42 @@ func TestIntegers(t *testing.T) {
 
 	test(sema.IntType)
 }
+
+func TestFixedPoint(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(fixedPointType sema.Type) {
+
+		t.Run(fixedPointType.String(), func(t *testing.T) {
+
+			t.Parallel()
+
+			result, err := compileAndInvoke(t,
+				fmt.Sprintf(`
+                        fun test(): %s {
+                            return 2.1 + 7.9
+                        }
+                    `,
+					fixedPointType,
+				),
+				"test",
+			)
+			require.NoError(t, err)
+
+			assert.Equal(t,
+				vm.NewUFix64Value(10*sema.Fix64Factor),
+				result,
+			)
+		})
+	}
+
+	for _, fixedPointType := range sema.AllUnsignedFixedPointTypes {
+		test(fixedPointType)
+	}
+
+	// TODO:
+	//for _, fixedPointType := range sema.AllSignedFixedPointTypes {
+	//	test(fixedPointType)
+	//}
+}
