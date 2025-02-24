@@ -370,13 +370,13 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 		case values.CBORTagAccountCapabilityControllerValue:
 			storable, err = d.decodeAccountCapabilityController()
 
-		case values.CBORTagPathCapabilityValue:
+		case values.CBORTagPathCapabilityValue: //nolint:staticcheck
 			storable, err = d.decodePathCapability()
 
-		case values.CBORTagPathLinkValue:
+		case values.CBORTagPathLinkValue: //nolint:staticcheck
 			storable, err = d.decodePathLink()
 
-		case values.CBORTagAccountLinkValue:
+		case values.CBORTagAccountLinkValue: //nolint:staticcheck
 			storable, err = d.decodeAccountLink()
 
 		default:

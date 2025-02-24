@@ -308,7 +308,7 @@ func (v PathLinkValue) Encode(e *atree.Encoder) error {
 	// Encode tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, values.CBORTagPathLinkValue,
+		0xd8, values.CBORTagPathLinkValue, //nolint:staticcheck
 		// array, 2 items follow
 		0x82,
 	})
@@ -332,7 +332,7 @@ func (v PathLinkValue) Encode(e *atree.Encoder) error {
 //	}
 var cborAccountLinkValue = []byte{
 	// tag
-	0xd8, values.CBORTagAccountLinkValue,
+	0xd8, values.CBORTagAccountLinkValue, //nolint:staticcheck
 	// null
 	0xf6,
 }

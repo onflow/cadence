@@ -323,7 +323,7 @@ func (v *PathCapabilityValue) Encode(e *atree.Encoder) error {
 	// Encode tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, values.CBORTagPathCapabilityValue,
+		0xd8, values.CBORTagPathCapabilityValue, //nolint:staticcheck
 		// array, 3 items follow
 		0x83,
 	})
