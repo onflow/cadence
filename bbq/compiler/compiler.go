@@ -705,7 +705,8 @@ func (c *Compiler[_]) VisitForStatement(statement *ast.ForStatement) (_ struct{}
 	})
 
 	testOffset := c.codeGen.Offset()
-	c.pushLoop(testOffset)
+	c.pushControlFlow(testOffset)
+	defer c.popControlFlow()
 
 	// Loop test: Get the iterator and call `hasNext()`.
 	c.codeGen.Emit(opcode.InstructionGetLocal{
@@ -734,22 +735,20 @@ func (c *Compiler[_]) VisitForStatement(statement *ast.ForStatement) (_ struct{}
 		})
 	}
 
-	// Get the next entry, and store it in the local var.
+	// Get the next entry (value for arrays, key for dictionaries, etc.), and store it in the local var.
 	// <entry> = iterator.next()
 	c.codeGen.Emit(opcode.InstructionIteratorNext{})
 	c.codeGen.Emit(opcode.InstructionSetLocal{
 		LocalIndex: elementLocalVar.index,
 	})
 
-	// Compile the for-loop body
+	// Compile the for-loop body.
 	c.compileBlock(statement.Block)
 
 	// Jump back to the loop test. i.e: `hasNext()`
 	c.emitJump(testOffset)
 
 	c.patchJump(endJump)
-	c.popLoop()
-
 	return
 }
 
