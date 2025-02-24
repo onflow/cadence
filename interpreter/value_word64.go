@@ -260,7 +260,7 @@ func (v Word64Value) Less(context ValueComparisonContext, other ComparableValue,
 		})
 	}
 
-	return BoolValue(v < o)
+	return v < o
 }
 
 func (v Word64Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -274,7 +274,7 @@ func (v Word64Value) LessEqual(context ValueComparisonContext, other ComparableV
 		})
 	}
 
-	return BoolValue(v <= o)
+	return v <= o
 }
 
 func (v Word64Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -288,7 +288,7 @@ func (v Word64Value) Greater(context ValueComparisonContext, other ComparableVal
 		})
 	}
 
-	return BoolValue(v > o)
+	return v > o
 }
 
 func (v Word64Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -302,7 +302,7 @@ func (v Word64Value) GreaterEqual(context ValueComparisonContext, other Comparab
 		})
 	}
 
-	return BoolValue(v >= o)
+	return v >= o
 }
 
 func (v Word64Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {

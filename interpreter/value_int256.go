@@ -473,7 +473,7 @@ func (v Int256Value) Less(context ValueComparisonContext, other ComparableValue,
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return BoolValue(cmp == -1)
+	return cmp == -1
 }
 
 func (v Int256Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -488,7 +488,7 @@ func (v Int256Value) LessEqual(context ValueComparisonContext, other ComparableV
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return BoolValue(cmp <= 0)
+	return cmp <= 0
 }
 
 func (v Int256Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -503,7 +503,7 @@ func (v Int256Value) Greater(context ValueComparisonContext, other ComparableVal
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return BoolValue(cmp == 1)
+	return cmp == 1
 }
 
 func (v Int256Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -518,7 +518,7 @@ func (v Int256Value) GreaterEqual(context ValueComparisonContext, other Comparab
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return BoolValue(cmp >= 0)
+	return cmp >= 0
 }
 
 func (v Int256Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {

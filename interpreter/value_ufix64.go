@@ -357,7 +357,7 @@ func (v UFix64Value) Less(context ValueComparisonContext, other ComparableValue,
 		})
 	}
 
-	return BoolValue(v < o)
+	return v < o
 }
 
 func (v UFix64Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -371,7 +371,7 @@ func (v UFix64Value) LessEqual(context ValueComparisonContext, other ComparableV
 		})
 	}
 
-	return BoolValue(v <= o)
+	return v <= o
 }
 
 func (v UFix64Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -385,7 +385,7 @@ func (v UFix64Value) Greater(context ValueComparisonContext, other ComparableVal
 		})
 	}
 
-	return BoolValue(v > o)
+	return v > o
 }
 
 func (v UFix64Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -399,7 +399,7 @@ func (v UFix64Value) GreaterEqual(context ValueComparisonContext, other Comparab
 		})
 	}
 
-	return BoolValue(v >= o)
+	return v >= o
 }
 
 func (v UFix64Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {

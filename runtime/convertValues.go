@@ -827,7 +827,7 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 	case cadence.Optional:
 		return i.importOptionalValue(v, expectedType)
 	case cadence.Bool:
-		return interpreter.BoolValue(bool(v)), nil
+		return interpreter.BoolValue(v), nil
 	case cadence.String:
 		return i.importString(v), nil
 	case cadence.Character:
