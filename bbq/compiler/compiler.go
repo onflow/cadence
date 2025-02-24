@@ -235,8 +235,7 @@ func (c *Compiler[_]) intConstLoad(i int64) {
 }
 
 func (c *Compiler[_]) addIntConst(i int64) *constant {
-	var data []byte
-	data = leb128.AppendInt64(data, i)
+	data := leb128.AppendInt64(nil, i)
 	return c.addConstant(constantkind.Int, data)
 }
 
