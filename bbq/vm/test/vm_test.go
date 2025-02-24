@@ -3427,11 +3427,9 @@ func TestIfLet(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("some", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, err := compileAndInvoke(t, `
+	test := func(t *testing.T, argument vm.Value) vm.Value {
+		result, err := compileAndInvoke(t,
+			`
               fun main(x: Int?): Int {
                   if let y = x {
                      return y
@@ -3441,37 +3439,80 @@ func TestIfLet(t *testing.T) {
               }
             `,
 			"main",
+			argument,
+		)
+		require.NoError(t, err)
+		return result
+	}
+
+	t.Run("some", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual := test(t,
 			vm.NewSomeValueNonCopying(
 				vm.NewIntValue(1),
 			),
 		)
-		require.NoError(t, err)
-		assert.Equal(t, vm.NewIntValue(1), result)
+		assert.Equal(t, vm.NewIntValue(1), actual)
 	})
 
 	t.Run("nil", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, err := compileAndInvoke(t, `
-              fun main(x: Int?): Int {
-                  if let y = x {
-                     return y
-                  } else {
-                     return 2
-                  }
-              }
-            `,
-			"main",
-			vm.NilValue{},
-		)
-
-		require.NoError(t, err)
-		assert.Equal(t, vm.NewIntValue(2), result)
+		actual := test(t, vm.NilValue{})
+		assert.Equal(t, vm.NewIntValue(2), actual)
 	})
 }
 
-func TestCompileSwitch(t *testing.T) {
+func TestIfLetScope(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, argument vm.Value) vm.Value {
+		result, err := compileAndInvoke(t,
+			`
+                fun test(y: Int?): Int {
+                    let x = 1
+                    var z = 0
+                    if let x = y {
+                        z = x
+                    } else {
+                        z = x
+                    }
+                    return x + z
+                }
+            `,
+			"test",
+			argument,
+		)
+		require.NoError(t, err)
+		return result
+	}
+
+	t.Run("some", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual := test(t,
+			vm.NewSomeValueNonCopying(
+				vm.NewIntValue(10),
+			),
+		)
+		assert.Equal(t, vm.NewIntValue(11), actual)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual := test(t, vm.NilValue{})
+		assert.Equal(t, vm.NewIntValue(2), actual)
+	})
+}
+
+func TestSwitch(t *testing.T) {
 
 	t.Parallel()
 
@@ -4098,7 +4139,7 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 	})
 }
 
-func TestCompileEmit(t *testing.T) {
+func TestEmit(t *testing.T) {
 
 	t.Parallel()
 
@@ -4225,5 +4266,90 @@ func TestCasting(t *testing.T) {
 		)
 		require.NoError(t, err)
 		assert.Equal(t, vm.Nil, result)
+	})
+}
+
+func TestBlockScope(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, argument vm.Value) vm.Value {
+
+		result, err := compileAndInvoke(t,
+			`
+                fun test(y: Bool): Int {
+                    let x = 1
+                    if y {
+                        let x = 2
+                    } else {
+                        let x = 3
+                    }
+                    return x
+                }
+            `,
+			"test",
+			argument,
+		)
+		require.NoError(t, err)
+		return result
+	}
+
+	t.Run("true", func(t *testing.T) {
+		t.Parallel()
+
+		actual := test(t, vm.BoolValue(true))
+		require.Equal(t, vm.NewIntValue(1), actual)
+	})
+
+	t.Run("false", func(t *testing.T) {
+		t.Parallel()
+
+		actual := test(t, vm.BoolValue(false))
+		require.Equal(t, vm.NewIntValue(1), actual)
+	})
+}
+
+func TestBlockScope2(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, argument vm.Value) vm.Value {
+
+		result, err := compileAndInvoke(t,
+			`
+                fun test(y: Bool): Int {
+                    let x = 1
+                    var z = 0
+                    if y {
+                        var x = x
+                        x = 2
+                        z = x
+                    } else {
+                        var x = x
+                        x = 3
+                        z = x
+                    }
+                    return x + z
+                }
+            `,
+			"test",
+			argument,
+		)
+		require.NoError(t, err)
+		return result
+	}
+
+	t.Run("true", func(t *testing.T) {
+		t.Parallel()
+
+		actual := test(t, vm.BoolValue(true))
+		require.Equal(t, vm.NewIntValue(3), actual)
+	})
+
+	t.Run("false", func(t *testing.T) {
+		t.Parallel()
+
+		actual := test(t, vm.BoolValue(false))
+		require.Equal(t, vm.NewIntValue(4), actual)
 	})
 }
