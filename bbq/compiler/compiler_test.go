@@ -1885,6 +1885,82 @@ func TestCompileString(t *testing.T) {
 	)
 }
 
+func TestCompileIntegers(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, integerType sema.Type) {
+
+		t.Run(integerType.String(), func(t *testing.T) {
+
+			t.Parallel()
+
+			checker, err := ParseAndCheck(t,
+				fmt.Sprintf(`
+                    fun test() {
+                        let v: %s = 2
+                    }
+                `,
+					integerType,
+				),
+			)
+			require.NoError(t, err)
+
+			comp := compiler.NewInstructionCompiler(checker)
+			program := comp.Compile()
+
+			require.Len(t, program.Functions, 1)
+
+			functions := comp.ExportFunctions()
+			require.Equal(t, len(program.Functions), len(functions))
+
+			const parameterCount = 0
+
+			// resultIndex is the index of the $result variable
+			const resultIndex = parameterCount
+
+			// localsOffset is the offset of the first local variable
+			const localsOffset = resultIndex + 1
+
+			const (
+				// vIndex is the index of the local variable `v`, which is the first local variable
+				vIndex = localsOffset + iota
+			)
+
+			assert.Equal(t,
+				[]opcode.Instruction{
+					// let yes = true
+					opcode.InstructionGetConstant{ConstantIndex: 0},
+					opcode.InstructionTransfer{TypeIndex: 0},
+					opcode.InstructionSetLocal{LocalIndex: vIndex},
+
+					opcode.InstructionReturn{},
+				},
+				functions[0].Code,
+			)
+
+			expectedConstantKind := constantkind.FromSemaType(integerType)
+
+			assert.Equal(t,
+				[]*bbq.Constant{
+					{
+						Data: []byte{0x2},
+						Kind: expectedConstantKind,
+					},
+				},
+				program.Constants,
+			)
+		})
+	}
+
+	for _, integerType := range common.Concat(
+		sema.AllUnsignedIntegerTypes,
+		sema.AllSignedIntegerTypes,
+	) {
+		test(t, integerType)
+	}
+}
+
 func TestCompileUnary(t *testing.T) {
 
 	t.Parallel()
