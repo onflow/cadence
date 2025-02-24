@@ -117,7 +117,7 @@ func TestImperativeFib(t *testing.T) {
 	require.Equal(t, 0, vmInstance.StackSize())
 }
 
-func TestBreak(t *testing.T) {
+func TestWhileBreak(t *testing.T) {
 
 	t.Parallel()
 
@@ -132,7 +132,7 @@ func TestBreak(t *testing.T) {
           }
           return i
       }
-  `)
+    `)
 	require.NoError(t, err)
 
 	comp := compiler.NewInstructionCompiler(checker)
@@ -146,6 +146,117 @@ func TestBreak(t *testing.T) {
 
 	require.Equal(t, vm.NewIntValue(4), result)
 	require.Equal(t, 0, vmInstance.StackSize())
+}
+
+func TestSwitchBreak(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, value int64) vm.Value {
+
+		checker, err := ParseAndCheck(t, `
+          fun test(x: Int): Int {
+              switch x {
+                  case 1:
+                      break
+                  default:
+                      return 3
+              }
+              return 1
+          }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(checker)
+		program := comp.Compile()
+
+		vmConfig := &vm.Config{}
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		result, err := vmInstance.Invoke("test", vm.NewIntValue(value))
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+
+		return result
+	}
+
+	t.Run("1", func(t *testing.T) {
+		t.Parallel()
+
+		result := test(t, 1)
+		require.Equal(t, vm.NewIntValue(1), result)
+	})
+
+	t.Run("2", func(t *testing.T) {
+		t.Parallel()
+
+		result := test(t, 2)
+		require.Equal(t, vm.NewIntValue(3), result)
+	})
+
+	t.Run("3", func(t *testing.T) {
+		t.Parallel()
+
+		result := test(t, 3)
+		require.Equal(t, vm.NewIntValue(3), result)
+	})
+}
+
+func TestWhileSwitchBreak(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, value int64) vm.Value {
+
+		checker, err := ParseAndCheck(t, `
+          fun test(x: Int): Int {
+              while true {
+                  switch x {
+                      case 1:
+                          break
+                      default:
+                          return 3
+                  }
+                  return 1
+              }
+              return 2
+          }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(checker)
+		program := comp.Compile()
+
+		vmConfig := &vm.Config{}
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		result, err := vmInstance.Invoke("test", vm.NewIntValue(value))
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+
+		return result
+	}
+
+	t.Run("1", func(t *testing.T) {
+		t.Parallel()
+
+		result := test(t, 1)
+		require.Equal(t, vm.NewIntValue(1), result)
+	})
+
+	t.Run("2", func(t *testing.T) {
+		t.Parallel()
+
+		result := test(t, 2)
+		require.Equal(t, vm.NewIntValue(3), result)
+	})
+
+	t.Run("3", func(t *testing.T) {
+		t.Parallel()
+
+		result := test(t, 3)
+		require.Equal(t, vm.NewIntValue(3), result)
+	})
 }
 
 func TestContinue(t *testing.T) {
@@ -1356,6 +1467,7 @@ func TestTransaction(t *testing.T) {
 
 		transaction, err := vmInstance.Invoke(commons.TransactionWrapperCompositeName)
 		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
 
 		require.IsType(t, &vm.CompositeValue{}, transaction)
 		compositeValue := transaction.(*vm.CompositeValue)
@@ -1366,6 +1478,7 @@ func TestTransaction(t *testing.T) {
 		// Invoke 'prepare'
 		_, err = vmInstance.Invoke(commons.TransactionPrepareFunctionName, transaction)
 		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
 
 		// Once 'prepare' is called, 'a' is initialized to "Hello!"
 		assert.Equal(t, vm.NewStringValue("Hello!"), compositeValue.GetMember(vmConfig, "a"))
@@ -1373,6 +1486,7 @@ func TestTransaction(t *testing.T) {
 		// Invoke 'execute'
 		_, err = vmInstance.Invoke(commons.TransactionExecuteFunctionName, transaction)
 		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
 
 		// Once 'execute' is called, 'a' is initialized to "Hello, again!"
 		assert.Equal(t, vm.NewStringValue("Hello again!"), compositeValue.GetMember(vmConfig, "a"))
@@ -1412,6 +1526,7 @@ func TestTransaction(t *testing.T) {
 
 		transaction, err := vmInstance.Invoke(commons.TransactionWrapperCompositeName)
 		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
 
 		require.IsType(t, &vm.CompositeValue{}, transaction)
 		compositeValue := transaction.(*vm.CompositeValue)
@@ -1422,6 +1537,7 @@ func TestTransaction(t *testing.T) {
 		// Invoke 'prepare'
 		_, err = vmInstance.Invoke(commons.TransactionPrepareFunctionName, transaction)
 		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
 
 		// Once 'prepare' is called, 'a' is initialized to "Hello!"
 		assert.Equal(t, vm.NewStringValue("Hello!"), compositeValue.GetMember(vmConfig, "a"))
@@ -1429,6 +1545,7 @@ func TestTransaction(t *testing.T) {
 		// Invoke 'execute'
 		_, err = vmInstance.Invoke(commons.TransactionExecuteFunctionName, transaction)
 		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
 
 		// Once 'execute' is called, 'a' is initialized to "Hello, again!"
 		assert.Equal(t, vm.NewStringValue("Hello again!"), compositeValue.GetMember(vmConfig, "a"))
