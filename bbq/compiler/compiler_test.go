@@ -1889,7 +1889,7 @@ func TestCompileIntegers(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(t *testing.T, integerType sema.Type) {
+	test := func(integerType sema.Type) {
 
 		t.Run(integerType.String(), func(t *testing.T) {
 
@@ -1957,7 +1957,7 @@ func TestCompileIntegers(t *testing.T) {
 		sema.AllUnsignedIntegerTypes,
 		sema.AllSignedIntegerTypes,
 	) {
-		test(t, integerType)
+		test(integerType)
 	}
 }
 
@@ -1965,7 +1965,7 @@ func TestCompileFixedPoint(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(t *testing.T, fixedPointType sema.Type, isSigned bool) {
+	test := func(fixedPointType sema.Type, isSigned bool) {
 
 		t.Run(fixedPointType.String(), func(t *testing.T) {
 
@@ -2037,11 +2037,11 @@ func TestCompileFixedPoint(t *testing.T) {
 	}
 
 	for _, fixedPointType := range sema.AllUnsignedFixedPointTypes {
-		test(t, fixedPointType, false)
+		test(fixedPointType, false)
 	}
 
 	for _, fixedPointType := range sema.AllSignedFixedPointTypes {
-		test(t, fixedPointType, true)
+		test(fixedPointType, true)
 	}
 }
 

@@ -4353,3 +4353,40 @@ func TestBlockScope2(t *testing.T) {
 		require.Equal(t, vm.NewIntValue(4), actual)
 	})
 }
+
+func TestIntegers(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(integerType sema.Type) {
+
+		t.Run(integerType.String(), func(t *testing.T) {
+
+			t.Parallel()
+
+			result, err := compileAndInvoke(t,
+				fmt.Sprintf(`
+                        fun test(): %s {
+                            return 2 + 3
+                        }
+                    `,
+					integerType,
+				),
+				"test",
+			)
+			require.NoError(t, err)
+
+			assert.Equal(t, vm.NewIntValue(5), result)
+		})
+	}
+
+	// TODO:
+	//for _, integerType := range common.Concat(
+	//	sema.AllUnsignedIntegerTypes,
+	//	sema.AllSignedIntegerTypes,
+	//) {
+	//	test(t, integerType)
+	//}
+
+	test(sema.IntType)
+}
