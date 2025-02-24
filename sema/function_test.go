@@ -648,3 +648,33 @@ func TestCheckViewFunctionWithErrors(t *testing.T) {
 		assert.IsType(t, &sema.PurityError{}, errs[1])
 	})
 }
+
+func TestCheckInvalidFunctionSubtyping(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      resource R {}
+
+      entitlement E
+
+      fun test() {
+          var f: fun (&R) = fun(ref: &R) {}
+          f = fun(ref: auth(E) &R) {}
+      }
+    `)
+	errs := RequireCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+
+	var errTypeMismatch *sema.TypeMismatchError
+	require.ErrorAs(t, err, &errTypeMismatch)
+	assert.Equal(t, 8, errTypeMismatch.StartPos.Line)
+	assert.Equal(t,
+		common.TypeID("fun(&S.test.R):Void"),
+		errTypeMismatch.ExpectedType.ID(),
+	)
+	assert.Equal(t,
+		common.TypeID("fun(auth(S.test.E)&S.test.R):Void"),
+		errTypeMismatch.ActualType.ID(),
+	)
+}

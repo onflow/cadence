@@ -137,13 +137,16 @@ func (v IntValue) GreaterEqual(other ComparableValue) BoolValue {
 	return v.SmallInt >= otherInt.SmallInt
 }
 
+// members
+
 func init() {
 	typeName := interpreter.PrimitiveStaticTypeInt.String()
 
 	RegisterTypeBoundFunction(typeName, sema.ToStringFunctionName, NativeFunctionValue{
 		ParameterCount: len(sema.ToStringFunctionType.Parameters),
-		Function: func(config *Config, typeArguments []StaticType, values ...Value) Value {
-			return NewStringValue(values[0].String())
+		Function: func(config *Config, typeArguments []StaticType, value ...Value) Value {
+			number := value[0].(IntValue)
+			return NewStringValue(number.String())
 		},
 	})
 }

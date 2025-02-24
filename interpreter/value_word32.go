@@ -68,8 +68,8 @@ func (Word32Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (Word32Value) StaticType(interpreter *Interpreter) StaticType {
-	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeWord32)
+func (Word32Value) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeWord32)
 }
 
 func (Word32Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
@@ -84,7 +84,7 @@ func (v Word32Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Word32Value) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v Word32Value) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
 		interpreter,
 		common.NewRawStringMemoryUsage(
@@ -98,17 +98,17 @@ func (v Word32Value) ToInt(_ LocationRange) int {
 	return int(v)
 }
 
-func (v Word32Value) Negate(*Interpreter, LocationRange) NumberValue {
+func (v Word32Value) Negate(NumberValueArithmeticContext, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word32Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word32Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationPlus,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -117,20 +117,20 @@ func (v Word32Value) Plus(interpreter *Interpreter, other NumberValue, locationR
 		return uint32(v + o)
 	}
 
-	return NewWord32Value(interpreter, valueGetter)
+	return NewWord32Value(context, valueGetter)
 }
 
-func (v Word32Value) SaturatingPlus(*Interpreter, NumberValue, LocationRange) NumberValue {
+func (v Word32Value) SaturatingPlus(NumberValueArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word32Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word32Value) Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMinus,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -139,20 +139,20 @@ func (v Word32Value) Minus(interpreter *Interpreter, other NumberValue, location
 		return uint32(v - o)
 	}
 
-	return NewWord32Value(interpreter, valueGetter)
+	return NewWord32Value(context, valueGetter)
 }
 
-func (v Word32Value) SaturatingMinus(*Interpreter, NumberValue, LocationRange) NumberValue {
+func (v Word32Value) SaturatingMinus(NumberValueArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word32Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word32Value) Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMod,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -167,16 +167,16 @@ func (v Word32Value) Mod(interpreter *Interpreter, other NumberValue, locationRa
 		return uint32(v % o)
 	}
 
-	return NewWord32Value(interpreter, valueGetter)
+	return NewWord32Value(context, valueGetter)
 }
 
-func (v Word32Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word32Value) Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationMul,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -185,20 +185,20 @@ func (v Word32Value) Mul(interpreter *Interpreter, other NumberValue, locationRa
 		return uint32(v * o)
 	}
 
-	return NewWord32Value(interpreter, valueGetter)
+	return NewWord32Value(context, valueGetter)
 }
 
-func (v Word32Value) SaturatingMul(*Interpreter, NumberValue, LocationRange) NumberValue {
+func (v Word32Value) SaturatingMul(NumberValueArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word32Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word32Value) Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationDiv,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -213,20 +213,20 @@ func (v Word32Value) Div(interpreter *Interpreter, other NumberValue, locationRa
 		return uint32(v / o)
 	}
 
-	return NewWord32Value(interpreter, valueGetter)
+	return NewWord32Value(context, valueGetter)
 }
 
-func (v Word32Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) NumberValue {
+func (v Word32Value) SaturatingDiv(NumberValueArithmeticContext, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word32Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word32Value) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationLess,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -234,13 +234,13 @@ func (v Word32Value) Less(interpreter *Interpreter, other ComparableValue, locat
 	return AsBoolValue(v < o)
 }
 
-func (v Word32Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word32Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationLessEqual,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -248,13 +248,13 @@ func (v Word32Value) LessEqual(interpreter *Interpreter, other ComparableValue, 
 	return AsBoolValue(v <= o)
 }
 
-func (v Word32Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word32Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationGreater,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -262,13 +262,13 @@ func (v Word32Value) Greater(interpreter *Interpreter, other ComparableValue, lo
 	return AsBoolValue(v > o)
 }
 
-func (v Word32Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word32Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationGreaterEqual,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -276,7 +276,7 @@ func (v Word32Value) GreaterEqual(interpreter *Interpreter, other ComparableValu
 	return AsBoolValue(v >= o)
 }
 
-func (v Word32Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v Word32Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherWord32, ok := other.(Word32Value)
 	if !ok {
 		return false
@@ -287,7 +287,7 @@ func (v Word32Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeWord32 (1 byte)
 // - uint32 value encoded in big-endian (4 bytes)
-func (v Word32Value) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v Word32Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeWord32)
 	binary.BigEndian.PutUint32(scratch[1:], uint32(v))
 	return scratch[:5]
@@ -302,13 +302,13 @@ func ConvertWord32(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 	)
 }
 
-func (v Word32Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word32Value) BitwiseOr(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseOr,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -317,16 +317,16 @@ func (v Word32Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, loc
 		return uint32(v | o)
 	}
 
-	return NewWord32Value(interpreter, valueGetter)
+	return NewWord32Value(context, valueGetter)
 }
 
-func (v Word32Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word32Value) BitwiseXor(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseXor,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -335,16 +335,16 @@ func (v Word32Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, lo
 		return uint32(v ^ o)
 	}
 
-	return NewWord32Value(interpreter, valueGetter)
+	return NewWord32Value(context, valueGetter)
 }
 
-func (v Word32Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word32Value) BitwiseAnd(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseAnd,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -353,16 +353,16 @@ func (v Word32Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, lo
 		return uint32(v & o)
 	}
 
-	return NewWord32Value(interpreter, valueGetter)
+	return NewWord32Value(context, valueGetter)
 }
 
-func (v Word32Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word32Value) BitwiseLeftShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseLeftShift,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -371,16 +371,16 @@ func (v Word32Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 		return uint32(v << o)
 	}
 
-	return NewWord32Value(interpreter, valueGetter)
+	return NewWord32Value(context, valueGetter)
 }
 
-func (v Word32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word32Value) BitwiseRightShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationBitwiseRightShift,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
 			LocationRange: locationRange,
 		})
 	}
@@ -389,7 +389,7 @@ func (v Word32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 		return uint32(v >> o)
 	}
 
-	return NewWord32Value(interpreter, valueGetter)
+	return NewWord32Value(context, valueGetter)
 }
 
 func (v Word32Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -432,7 +432,7 @@ func (Word32Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Word32Value) IsResourceKinded(_ *Interpreter) bool {
+func (Word32Value) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

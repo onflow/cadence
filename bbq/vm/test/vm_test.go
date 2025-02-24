@@ -117,7 +117,7 @@ func TestImperativeFib(t *testing.T) {
 	require.Equal(t, 0, vmInstance.StackSize())
 }
 
-func TestBreak(t *testing.T) {
+func TestWhileBreak(t *testing.T) {
 
 	t.Parallel()
 
@@ -132,7 +132,7 @@ func TestBreak(t *testing.T) {
           }
           return i
       }
-  `)
+    `)
 	require.NoError(t, err)
 
 	comp := compiler.NewInstructionCompiler(checker)
@@ -146,6 +146,117 @@ func TestBreak(t *testing.T) {
 
 	require.Equal(t, vm.NewIntValue(4), result)
 	require.Equal(t, 0, vmInstance.StackSize())
+}
+
+func TestSwitchBreak(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, value int64) vm.Value {
+
+		checker, err := ParseAndCheck(t, `
+          fun test(x: Int): Int {
+              switch x {
+                  case 1:
+                      break
+                  default:
+                      return 3
+              }
+              return 1
+          }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(checker)
+		program := comp.Compile()
+
+		vmConfig := &vm.Config{}
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		result, err := vmInstance.Invoke("test", vm.NewIntValue(value))
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+
+		return result
+	}
+
+	t.Run("1", func(t *testing.T) {
+		t.Parallel()
+
+		result := test(t, 1)
+		require.Equal(t, vm.NewIntValue(1), result)
+	})
+
+	t.Run("2", func(t *testing.T) {
+		t.Parallel()
+
+		result := test(t, 2)
+		require.Equal(t, vm.NewIntValue(3), result)
+	})
+
+	t.Run("3", func(t *testing.T) {
+		t.Parallel()
+
+		result := test(t, 3)
+		require.Equal(t, vm.NewIntValue(3), result)
+	})
+}
+
+func TestWhileSwitchBreak(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, value int64) vm.Value {
+
+		checker, err := ParseAndCheck(t, `
+          fun test(x: Int): Int {
+              while true {
+                  switch x {
+                      case 1:
+                          break
+                      default:
+                          return 3
+                  }
+                  return 1
+              }
+              return 2
+          }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(checker)
+		program := comp.Compile()
+
+		vmConfig := &vm.Config{}
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		result, err := vmInstance.Invoke("test", vm.NewIntValue(value))
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+
+		return result
+	}
+
+	t.Run("1", func(t *testing.T) {
+		t.Parallel()
+
+		result := test(t, 1)
+		require.Equal(t, vm.NewIntValue(1), result)
+	})
+
+	t.Run("2", func(t *testing.T) {
+		t.Parallel()
+
+		result := test(t, 2)
+		require.Equal(t, vm.NewIntValue(3), result)
+	})
+
+	t.Run("3", func(t *testing.T) {
+		t.Parallel()
+
+		result := test(t, 3)
+		require.Equal(t, vm.NewIntValue(3), result)
+	})
 }
 
 func TestContinue(t *testing.T) {
@@ -1356,6 +1467,7 @@ func TestTransaction(t *testing.T) {
 
 		transaction, err := vmInstance.Invoke(commons.TransactionWrapperCompositeName)
 		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
 
 		require.IsType(t, &vm.CompositeValue{}, transaction)
 		compositeValue := transaction.(*vm.CompositeValue)
@@ -1366,6 +1478,7 @@ func TestTransaction(t *testing.T) {
 		// Invoke 'prepare'
 		_, err = vmInstance.Invoke(commons.TransactionPrepareFunctionName, transaction)
 		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
 
 		// Once 'prepare' is called, 'a' is initialized to "Hello!"
 		assert.Equal(t, vm.NewStringValue("Hello!"), compositeValue.GetMember(vmConfig, "a"))
@@ -1373,6 +1486,7 @@ func TestTransaction(t *testing.T) {
 		// Invoke 'execute'
 		_, err = vmInstance.Invoke(commons.TransactionExecuteFunctionName, transaction)
 		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
 
 		// Once 'execute' is called, 'a' is initialized to "Hello, again!"
 		assert.Equal(t, vm.NewStringValue("Hello again!"), compositeValue.GetMember(vmConfig, "a"))
@@ -1412,6 +1526,7 @@ func TestTransaction(t *testing.T) {
 
 		transaction, err := vmInstance.Invoke(commons.TransactionWrapperCompositeName)
 		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
 
 		require.IsType(t, &vm.CompositeValue{}, transaction)
 		compositeValue := transaction.(*vm.CompositeValue)
@@ -1422,6 +1537,7 @@ func TestTransaction(t *testing.T) {
 		// Invoke 'prepare'
 		_, err = vmInstance.Invoke(commons.TransactionPrepareFunctionName, transaction)
 		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
 
 		// Once 'prepare' is called, 'a' is initialized to "Hello!"
 		assert.Equal(t, vm.NewStringValue("Hello!"), compositeValue.GetMember(vmConfig, "a"))
@@ -1429,6 +1545,7 @@ func TestTransaction(t *testing.T) {
 		// Invoke 'execute'
 		_, err = vmInstance.Invoke(commons.TransactionExecuteFunctionName, transaction)
 		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
 
 		// Once 'execute' is called, 'a' is initialized to "Hello, again!"
 		assert.Equal(t, vm.NewStringValue("Hello again!"), compositeValue.GetMember(vmConfig, "a"))
@@ -2844,7 +2961,7 @@ func TestFunctionPreConditions(t *testing.T) {
     `
 
 		// Only need to compile
-		program := parseCheckAndCompileCodeWithOptions(
+		_ = parseCheckAndCompileCodeWithOptions(
 			t,
 			barContract,
 			barLocation,
@@ -2861,8 +2978,6 @@ func TestFunctionPreConditions(t *testing.T) {
 			},
 			programs,
 		)
-
-		printProgram("Bar", program)
 
 		// Deploy contract with the implementation
 
@@ -2914,8 +3029,6 @@ func TestFunctionPreConditions(t *testing.T) {
 			},
 			programs,
 		)
-
-		printProgram("Foo", fooProgram)
 
 		fooVM := vm.NewVM(fooLocation, fooProgram, vmConfig)
 
@@ -3308,18 +3421,15 @@ func TestFunctionPostConditions(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "pre/post condition failed")
 	})
-
 }
 
 func TestIfLet(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("some", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, err := compileAndInvoke(t, `
+	test := func(t *testing.T, argument vm.Value) vm.Value {
+		result, err := compileAndInvoke(t,
+			`
               fun main(x: Int?): Int {
                   if let y = x {
                      return y
@@ -3329,37 +3439,80 @@ func TestIfLet(t *testing.T) {
               }
             `,
 			"main",
+			argument,
+		)
+		require.NoError(t, err)
+		return result
+	}
+
+	t.Run("some", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual := test(t,
 			vm.NewSomeValueNonCopying(
 				vm.NewIntValue(1),
 			),
 		)
-		require.NoError(t, err)
-		assert.Equal(t, vm.NewIntValue(1), result)
+		assert.Equal(t, vm.NewIntValue(1), actual)
 	})
 
 	t.Run("nil", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, err := compileAndInvoke(t, `
-              fun main(x: Int?): Int {
-                  if let y = x {
-                     return y
-                  } else {
-                     return 2
-                  }
-              }
-            `,
-			"main",
-			vm.NilValue{},
-		)
-
-		require.NoError(t, err)
-		assert.Equal(t, vm.NewIntValue(2), result)
+		actual := test(t, vm.NilValue{})
+		assert.Equal(t, vm.NewIntValue(2), actual)
 	})
 }
 
-func TestCompileSwitch(t *testing.T) {
+func TestIfLetScope(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, argument vm.Value) vm.Value {
+		result, err := compileAndInvoke(t,
+			`
+                fun test(y: Int?): Int {
+                    let x = 1
+                    var z = 0
+                    if let x = y {
+                        z = x
+                    } else {
+                        z = x
+                    }
+                    return x + z
+                }
+            `,
+			"test",
+			argument,
+		)
+		require.NoError(t, err)
+		return result
+	}
+
+	t.Run("some", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual := test(t,
+			vm.NewSomeValueNonCopying(
+				vm.NewIntValue(10),
+			),
+		)
+		assert.Equal(t, vm.NewIntValue(11), actual)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual := test(t, vm.NilValue{})
+		assert.Equal(t, vm.NewIntValue(2), actual)
+	})
+}
+
+func TestSwitch(t *testing.T) {
 
 	t.Parallel()
 
@@ -3644,9 +3797,349 @@ func TestDefaultFunctionsWithConditions(t *testing.T) {
 			}, logs,
 		)
 	})
+
 }
 
-func TestCompileEmit(t *testing.T) {
+func TestBeforeFunctionInPostConditions(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("condition in same type", func(t *testing.T) {
+		t.Parallel()
+
+		storage := interpreter.NewInMemoryStorage(nil)
+
+		activation := sema.NewVariableActivation(sema.BaseValueActivation)
+		activation.DeclareValue(stdlib.PanicFunction)
+		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
+			"log",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityView,
+				[]sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: sema.AnyStructTypeAnnotation,
+					},
+				},
+				sema.VoidTypeAnnotation,
+			),
+			"",
+			nil,
+		))
+
+		var logs []string
+		vmConfig := &vm.Config{
+			Storage:        storage,
+			AccountHandler: &testAccountHandler{},
+			NativeFunctionsProvider: func() map[string]vm.Value {
+				funcs := vm.NativeFunctions()
+				funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+					ParameterCount: len(stdlib.LogFunctionType.Parameters),
+					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+						logs = append(logs, arguments[0].String())
+						return vm.VoidValue{}
+					},
+				}
+
+				return funcs
+			},
+		}
+
+		_, err := compileAndInvokeWithOptions(t, `
+            struct Test {
+                var i: Int
+
+                init() {
+                    self.i = 2
+                }
+
+                fun test() {
+                    post {
+                        print(before(self.i).toString())
+                        print(self.i.toString())
+                    }
+                    self.i = 5
+                }
+            }
+
+            access(all) view fun print(_ msg: String): Bool {
+                log(msg)
+                return true
+            }
+
+            fun main() {
+               Test().test()
+            }
+        `,
+			"main",
+			CompilerAndVMOptions{
+				VMConfig: vmConfig,
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Config: &sema.Config{
+						LocationHandler: singleIdentifierLocationResolver(t),
+						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+							return activation
+						},
+					},
+				},
+			},
+		)
+
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			[]string{
+				"2",
+				"5",
+			}, logs,
+		)
+	})
+
+	t.Run("inherited condition", func(t *testing.T) {
+		t.Parallel()
+
+		storage := interpreter.NewInMemoryStorage(nil)
+
+		activation := sema.NewVariableActivation(sema.BaseValueActivation)
+		activation.DeclareValue(stdlib.PanicFunction)
+		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
+			"log",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityView,
+				[]sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: sema.AnyStructTypeAnnotation,
+					},
+				},
+				sema.VoidTypeAnnotation,
+			),
+			"",
+			nil,
+		))
+
+		var logs []string
+		vmConfig := &vm.Config{
+			Storage:        storage,
+			AccountHandler: &testAccountHandler{},
+			NativeFunctionsProvider: func() map[string]vm.Value {
+				funcs := vm.NativeFunctions()
+				funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+					ParameterCount: len(stdlib.LogFunctionType.Parameters),
+					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+						logs = append(logs, arguments[0].String())
+						return vm.VoidValue{}
+					},
+				}
+
+				return funcs
+			},
+		}
+
+		_, err := compileAndInvokeWithOptions(t, `
+            struct interface Foo {
+                var i: Int
+
+                fun test() {
+                    post {
+                        print(before(self.i).toString())
+                        print(self.i.toString())
+                    }
+                    self.i = 5
+                }
+            }
+
+            struct Test: Foo {
+                var i: Int
+
+                init() {
+                    self.i = 2
+                }
+            }
+
+            access(all) view fun print(_ msg: String): Bool {
+                log(msg)
+                return true
+            }
+
+            fun main() {
+               Test().test()
+            }
+        `,
+			"main",
+			CompilerAndVMOptions{
+				VMConfig: vmConfig,
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Config: &sema.Config{
+						LocationHandler: singleIdentifierLocationResolver(t),
+						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+							return activation
+						},
+					},
+				},
+			},
+		)
+
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			[]string{
+				"2",
+				"5",
+			}, logs,
+		)
+	})
+
+	t.Run("multiple inherited conditions", func(t *testing.T) {
+		t.Parallel()
+
+		storage := interpreter.NewInMemoryStorage(nil)
+
+		activation := sema.NewVariableActivation(sema.BaseValueActivation)
+		activation.DeclareValue(stdlib.PanicFunction)
+		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
+			"log",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityView,
+				[]sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: sema.AnyStructTypeAnnotation,
+					},
+				},
+				sema.VoidTypeAnnotation,
+			),
+			"",
+			nil,
+		))
+
+		var logs []string
+		vmConfig := &vm.Config{
+			Storage:        storage,
+			AccountHandler: &testAccountHandler{},
+			NativeFunctionsProvider: func() map[string]vm.Value {
+				funcs := vm.NativeFunctions()
+				funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+					ParameterCount: len(stdlib.LogFunctionType.Parameters),
+					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+						logs = append(logs, arguments[0].String())
+						return vm.VoidValue{}
+					},
+				}
+
+				return funcs
+			},
+		}
+
+		_, err := compileAndInvokeWithOptions(t, `
+            struct interface Foo {
+                var i: Int
+
+                fun test() {
+                    post {
+                        print(before(self.i).toString())
+                        print(before(self.i + 1).toString())
+                        print(self.i.toString())
+                    }
+                    self.i = 8
+                }
+            }
+
+            struct interface Bar: Foo {
+                var i: Int
+
+                fun test() {
+                    post {
+                        print(before(self.i + 3).toString())
+                    }
+                }
+            }
+
+
+            struct Test: Bar {
+                var i: Int
+
+                init() {
+                    self.i = 2
+                }
+            }
+
+            access(all) view fun print(_ msg: String): Bool {
+                log(msg)
+                return true
+            }
+
+            fun main() {
+               Test().test()
+            }
+        `,
+			"main",
+			CompilerAndVMOptions{
+				VMConfig: vmConfig,
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Config: &sema.Config{
+						LocationHandler: singleIdentifierLocationResolver(t),
+						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+							return activation
+						},
+					},
+				},
+			},
+		)
+
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			[]string{"2", "3", "8", "5"},
+			logs,
+		)
+	})
+
+	t.Run("resource access in inherited before-statement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := compileAndInvoke(t, `
+            resource interface RI {
+                var i: Int
+
+                fun test(_ r: @R) {
+                    post {
+                        before(r.i) == 4
+                    }
+                }
+            }
+
+            resource R: RI {
+                var i: Int
+                init() {
+                    self.i = 4
+                }
+
+                fun test(_ r: @R) {
+                    destroy r
+                }
+            }
+
+            fun main() {
+                var r1 <- create R()
+                var r2 <- create R()
+
+                r1.test(<- r2)
+
+                destroy r1
+            }`,
+			"main",
+		)
+
+		require.NoError(t, err)
+	})
+}
+
+func TestEmit(t *testing.T) {
 
 	t.Parallel()
 
@@ -3773,6 +4266,91 @@ func TestCasting(t *testing.T) {
 		)
 		require.NoError(t, err)
 		assert.Equal(t, vm.Nil, result)
+	})
+}
+
+func TestBlockScope(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, argument vm.Value) vm.Value {
+
+		result, err := compileAndInvoke(t,
+			`
+                fun test(y: Bool): Int {
+                    let x = 1
+                    if y {
+                        let x = 2
+                    } else {
+                        let x = 3
+                    }
+                    return x
+                }
+            `,
+			"test",
+			argument,
+		)
+		require.NoError(t, err)
+		return result
+	}
+
+	t.Run("true", func(t *testing.T) {
+		t.Parallel()
+
+		actual := test(t, vm.BoolValue(true))
+		require.Equal(t, vm.NewIntValue(1), actual)
+	})
+
+	t.Run("false", func(t *testing.T) {
+		t.Parallel()
+
+		actual := test(t, vm.BoolValue(false))
+		require.Equal(t, vm.NewIntValue(1), actual)
+	})
+}
+
+func TestBlockScope2(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, argument vm.Value) vm.Value {
+
+		result, err := compileAndInvoke(t,
+			`
+                fun test(y: Bool): Int {
+                    let x = 1
+                    var z = 0
+                    if y {
+                        var x = x
+                        x = 2
+                        z = x
+                    } else {
+                        var x = x
+                        x = 3
+                        z = x
+                    }
+                    return x + z
+                }
+            `,
+			"test",
+			argument,
+		)
+		require.NoError(t, err)
+		return result
+	}
+
+	t.Run("true", func(t *testing.T) {
+		t.Parallel()
+
+		actual := test(t, vm.BoolValue(true))
+		require.Equal(t, vm.NewIntValue(3), actual)
+	})
+
+	t.Run("false", func(t *testing.T) {
+		t.Parallel()
+
+		actual := test(t, vm.BoolValue(false))
+		require.Equal(t, vm.NewIntValue(4), actual)
 	})
 }
 

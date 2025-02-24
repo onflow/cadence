@@ -96,7 +96,7 @@ func (v *AccountCapabilityControllerValue) Walk(_ *Interpreter, walkChild func(V
 	walkChild(v.CapabilityID)
 }
 
-func (v *AccountCapabilityControllerValue) StaticType(_ *Interpreter) StaticType {
+func (v *AccountCapabilityControllerValue) StaticType(_ ValueStaticTypeContext) StaticType {
 	return PrimitiveStaticTypeAccountCapabilityController
 }
 
@@ -136,18 +136,14 @@ func (v *AccountCapabilityControllerValue) ConformsToStaticType(
 	return true
 }
 
-func (v *AccountCapabilityControllerValue) Equal(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	other Value,
-) bool {
+func (v *AccountCapabilityControllerValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
 	otherController, ok := other.(*AccountCapabilityControllerValue)
 	if !ok {
 		return false
 	}
 
 	return otherController.BorrowType.Equal(v.BorrowType) &&
-		otherController.CapabilityID.Equal(interpreter, locationRange, v.CapabilityID)
+		otherController.CapabilityID.Equal(context, locationRange, v.CapabilityID)
 }
 
 func (*AccountCapabilityControllerValue) IsStorable() bool {
@@ -169,7 +165,7 @@ func (*AccountCapabilityControllerValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*AccountCapabilityControllerValue) IsResourceKinded(_ *Interpreter) bool {
+func (*AccountCapabilityControllerValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	return false
 }
 

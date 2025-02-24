@@ -18,7 +18,11 @@
 
 package compiler
 
-type loop struct {
-	breaks []int
+type controlFlow struct {
 	start  int
+	breaks []int
+}
+
+func (f *controlFlow) appendBreak(offset int) {
+	f.breaks = append(f.breaks, offset)
 }

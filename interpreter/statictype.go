@@ -1166,13 +1166,9 @@ func ConvertSemaInterfaceTypeToStaticInterfaceType(
 }
 
 func ConvertStaticAuthorizationToSemaAccess(
-	memoryGauge common.MemoryGauge,
 	auth Authorization,
 	handler StaticAuthorizationConversionHandler,
-) (
-	sema.Access,
-	error,
-) {
+) (sema.Access, error) {
 
 	switch auth := auth.(type) {
 	case Unauthorized:
@@ -1364,11 +1360,7 @@ func ConvertStaticToSemaType(
 			return nil, err
 		}
 
-		access, err := ConvertStaticAuthorizationToSemaAccess(
-			memoryGauge,
-			t.Authorization,
-			handler,
-		)
+		access, err := ConvertStaticAuthorizationToSemaAccess(t.Authorization, handler)
 
 		if err != nil {
 			return nil, err

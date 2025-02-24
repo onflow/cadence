@@ -185,7 +185,7 @@ func (*generator) VisitVariableDeclaration(_ *ast.VariableDeclaration) struct{} 
 	panic("variable declarations are not supported")
 }
 
-func (g *generator) VisitFunctionDeclaration(decl *ast.FunctionDeclaration) (_ struct{}) {
+func (g *generator) VisitFunctionDeclaration(decl *ast.FunctionDeclaration, _ bool) (_ struct{}) {
 	if len(g.typeStack) == 0 {
 		panic("global function declarations are not supported")
 	}

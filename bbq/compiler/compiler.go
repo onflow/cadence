@@ -45,11 +45,11 @@ type Compiler[E any] struct {
 
 	functions           []*function[E]
 	constants           []*constant
-	globals             map[string]*global
+	Globals             map[string]*global
 	importedGlobals     map[string]*global
 	usedImportedGlobals []*global
-	loops               []*loop
-	currentLoop         *loop
+	controlFlows        []controlFlow
+	currentControlFlow  *controlFlow
 	staticTypes         [][]byte
 
 	// Cache alike for staticTypes and constants in the pool.
@@ -98,7 +98,7 @@ func newCompiler[E any](
 		ExtendedElaboration: NewExtendedElaboration(checker.Elaboration),
 		Config:              &Config{},
 		checker:             checker,
-		globals:             make(map[string]*global),
+		Globals:             make(map[string]*global),
 		importedGlobals:     NativeFunctions(),
 		typesInPool:         make(map[sema.TypeID]uint16),
 		constantsInPool:     make(map[constantsCacheKey]*constant),
@@ -115,7 +115,7 @@ func (c *Compiler[E]) WithConfig(config *Config) *Compiler[E] {
 }
 
 func (c *Compiler[_]) findGlobal(name string) *global {
-	global, ok := c.globals[name]
+	global, ok := c.Globals[name]
 	if ok {
 		return global
 	}
@@ -126,7 +126,7 @@ func (c *Compiler[_]) findGlobal(name string) *global {
 	if !c.compositeTypeStack.isEmpty() {
 		enclosingContract := c.compositeTypeStack.bottom()
 		typeQualifiedName := commons.TypeQualifiedName(enclosingContract.GetIdentifier(), name)
-		global, ok = c.globals[typeQualifiedName]
+		global, ok = c.Globals[typeQualifiedName]
 		if ok {
 			return global
 		}
@@ -143,12 +143,12 @@ func (c *Compiler[_]) findGlobal(name string) *global {
 	//
 	// If a global is found in imported globals, that means the index is not set.
 	// So set an index and add it to the 'globals'.
-	count := len(c.globals)
+	count := len(c.Globals)
 	if count >= math.MaxUint16 {
 		panic(errors.NewUnexpectedError("invalid global declaration '%s'", name))
 	}
-	importedGlobal.index = uint16(count)
-	c.globals[name] = importedGlobal
+	importedGlobal.Index = uint16(count)
+	c.Globals[name] = importedGlobal
 
 	// Also add it to the usedImportedGlobals.
 	// This is later used to export the imports, which is eventually used by the linker.
@@ -164,22 +164,22 @@ func (c *Compiler[_]) findGlobal(name string) *global {
 }
 
 func (c *Compiler[_]) addGlobal(name string) *global {
-	count := len(c.globals)
+	count := len(c.Globals)
 	if count >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid global declaration"))
 	}
 	global := &global{
-		index: uint16(count),
+		Index: uint16(count),
 	}
-	c.globals[name] = global
+	c.Globals[name] = global
 	return global
 }
 
 func (c *Compiler[_]) addImportedGlobal(location common.Location, name string) *global {
 	// Index is not set here. It is set only if this imported global is used.
 	global := &global{
-		location: location,
-		name:     name,
+		Location: location,
+		Name:     name,
 	}
 	c.importedGlobals[name] = global
 	return global
@@ -278,27 +278,31 @@ func (c *Compiler[_]) patchJump(opcodeOffset int) {
 	c.codeGen.PatchJump(opcodeOffset, uint16(count))
 }
 
-func (c *Compiler[_]) pushLoop(start int) {
-	loop := &loop{
-		start: start,
+func (c *Compiler[_]) patchJumps(offsets []int) {
+	for _, offset := range offsets {
+		c.patchJump(offset)
 	}
-	c.loops = append(c.loops, loop)
-	c.currentLoop = loop
 }
 
-func (c *Compiler[_]) popLoop() {
-	lastIndex := len(c.loops) - 1
-	l := c.loops[lastIndex]
-	c.loops[lastIndex] = nil
-	c.loops = c.loops[:lastIndex]
+func (c *Compiler[_]) pushControlFlow(start int) {
+	index := len(c.controlFlows)
+	c.controlFlows = append(c.controlFlows, controlFlow{start: start})
+	c.currentControlFlow = &c.controlFlows[index]
+}
 
-	c.patchLoop(l)
+func (c *Compiler[_]) popControlFlow() {
+	lastIndex := len(c.controlFlows) - 1
+	l := c.controlFlows[lastIndex]
+	c.controlFlows[lastIndex] = controlFlow{}
+	c.controlFlows = c.controlFlows[:lastIndex]
 
-	var previousLoop *loop
+	c.patchJumps(l.breaks)
+
+	var previousControlFlow *controlFlow
 	if lastIndex > 0 {
-		previousLoop = c.loops[lastIndex]
+		previousControlFlow = &c.controlFlows[lastIndex-1]
 	}
-	c.currentLoop = previousLoop
+	c.currentControlFlow = previousControlFlow
 }
 
 func (c *Compiler[E]) Compile() *bbq.Program[E] {
@@ -457,8 +461,8 @@ func (c *Compiler[_]) exportImports() []*bbq.Import {
 	exportedImports := make([]*bbq.Import, 0)
 	for _, importedGlobal := range c.usedImportedGlobals {
 		bbqImport := &bbq.Import{
-			Location: importedGlobal.location,
-			Name:     importedGlobal.name,
+			Location: importedGlobal.Location,
+			Name:     importedGlobal.Name,
 		}
 		exportedImports = append(exportedImports, bbqImport)
 	}
@@ -539,7 +543,10 @@ func (c *Compiler[_]) compileDeclaration(declaration ast.Declaration) {
 }
 
 func (c *Compiler[_]) compileBlock(block *ast.Block) {
-	// TODO: scope
+	locals := c.currentFunction.locals
+	locals.PushNewWithCurrent()
+	defer locals.Pop()
+
 	for _, statement := range block.Statements {
 		c.compileStatement(statement)
 	}
@@ -574,69 +581,101 @@ func (c *Compiler[_]) VisitReturnStatement(statement *ast.ReturnStatement) (_ st
 }
 
 func (c *Compiler[_]) VisitBreakStatement(_ *ast.BreakStatement) (_ struct{}) {
-	offset := c.codeGen.Offset()
-	c.currentLoop.breaks = append(c.currentLoop.breaks, offset)
-	c.emitUndefinedJump()
+	offset := c.emitUndefinedJump()
+	c.currentControlFlow.appendBreak(offset)
 	return
 }
 
 func (c *Compiler[_]) VisitContinueStatement(_ *ast.ContinueStatement) (_ struct{}) {
-	c.emitJump(c.currentLoop.start)
+	start := c.currentControlFlow.start
+	if start <= 0 {
+		panic(errors.NewUnreachableError())
+	}
+	c.emitJump(start)
 	return
 }
 
 func (c *Compiler[_]) VisitIfStatement(statement *ast.IfStatement) (_ struct{}) {
-	// TODO: scope
-	var elseJump int
-	switch test := statement.Test.(type) {
-	case ast.Expression:
-		c.compileExpression(test)
-		elseJump = c.emitUndefinedJumpIfFalse()
+	// If statements can be coming from inherited conditions.
+	// If so, use the corresponding elaboration.
+	c.withConditionExtendedElaboration(statement, func() {
+		var (
+			elseJump            int
+			additionalThenScope bool
+		)
 
-	case *ast.VariableDeclaration:
-		// TODO: second value
-		c.compileExpression(test.Value)
+		switch test := statement.Test.(type) {
+		case ast.Expression:
+			c.compileExpression(test)
+			elseJump = c.emitUndefinedJumpIfFalse()
 
-		tempIndex := c.currentFunction.generateLocalIndex()
-		c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: tempIndex})
+		case *ast.VariableDeclaration:
+			// TODO: second value
 
-		c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: tempIndex})
-		elseJump = c.emitUndefinedJumpIfNil()
+			// Compile the value expression *before* declaring the variable
+			c.compileExpression(test.Value)
 
-		c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: tempIndex})
-		c.codeGen.Emit(opcode.InstructionUnwrap{})
-		varDeclTypes := c.ExtendedElaboration.VariableDeclarationTypes(test)
-		c.emitTransfer(varDeclTypes.TargetType)
-		local := c.currentFunction.declareLocal(test.Identifier.Identifier)
-		c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: local.index})
+			tempIndex := c.currentFunction.generateLocalIndex()
+			c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: tempIndex})
 
-	default:
-		panic(errors.NewUnreachableError())
-	}
+			// Test: check if the optional is nil,
+			// and jump to the else branch if it is
+			c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: tempIndex})
+			elseJump = c.emitUndefinedJumpIfNil()
 
-	c.compileBlock(statement.Then)
-	elseBlock := statement.Else
-	if elseBlock != nil {
-		thenJump := c.emitUndefinedJump()
-		c.patchJump(elseJump)
-		c.compileBlock(elseBlock)
-		c.patchJump(thenJump)
-	} else {
-		c.patchJump(elseJump)
-	}
+			// Then branch: unwrap the optional and declare the variable
+			c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: tempIndex})
+			c.codeGen.Emit(opcode.InstructionUnwrap{})
+			varDeclTypes := c.ExtendedElaboration.VariableDeclarationTypes(test)
+			c.emitTransfer(varDeclTypes.TargetType)
 
+			// Declare the variable *after* unwrapping the optional,
+			// in a new scope
+			c.currentFunction.locals.PushNewWithCurrent()
+			additionalThenScope = true
+			localIndex := c.currentFunction.declareLocal(test.Identifier.Identifier)
+			c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: localIndex.index})
+
+		default:
+			panic(errors.NewUnreachableError())
+		}
+
+		c.compileBlock(statement.Then)
+
+		if additionalThenScope {
+			c.currentFunction.locals.Pop()
+		}
+
+		elseBlock := statement.Else
+		if elseBlock != nil {
+			thenJump := c.emitUndefinedJump()
+			c.patchJump(elseJump)
+			c.compileBlock(elseBlock)
+			c.patchJump(thenJump)
+		} else {
+			c.patchJump(elseJump)
+		}
+	})
 	return
 }
 
 func (c *Compiler[_]) VisitWhileStatement(statement *ast.WhileStatement) (_ struct{}) {
 	testOffset := c.codeGen.Offset()
-	c.pushLoop(testOffset)
+
+	c.pushControlFlow(testOffset)
+	defer c.popControlFlow()
+
 	c.compileExpression(statement.Test)
 	endJump := c.emitUndefinedJumpIfFalse()
+
+	// Compile the body
 	c.compileBlock(statement.Block)
+	// Repeat, jump back to the test
 	c.emitJump(testOffset)
+
+	// Patch the failed test to jump here
 	c.patchJump(endJump)
-	c.popLoop()
+
 	return
 }
 
@@ -730,12 +769,17 @@ func (c *Compiler[_]) VisitSwitchStatement(statement *ast.SwitchStatement) (_ st
 	localIndex := c.currentFunction.generateLocalIndex()
 	c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: localIndex})
 
-	endJumps := make([]int, 0, len(statement.Cases))
+	// Pass an invalid start offset to pushControlFlow to indicate that this is a switch statement,
+	// which does not allow jumps to the start (i.e., no continue statements).
+	c.pushControlFlow(-1)
+	defer c.popControlFlow()
+
 	previousJump := -1
 
 	for _, switchCase := range statement.Cases {
 		if previousJump >= 0 {
 			c.patchJump(previousJump)
+			previousJump = -1
 		}
 
 		isDefault := switchCase.Expression == nil
@@ -744,7 +788,6 @@ func (c *Compiler[_]) VisitSwitchStatement(statement *ast.SwitchStatement) (_ st
 			c.compileExpression(switchCase.Expression)
 			c.codeGen.Emit(opcode.InstructionEqual{})
 			previousJump = c.emitUndefinedJumpIfFalse()
-
 		}
 
 		for _, caseStatement := range switchCase.Statements {
@@ -752,35 +795,43 @@ func (c *Compiler[_]) VisitSwitchStatement(statement *ast.SwitchStatement) (_ st
 		}
 
 		if !isDefault {
-			endJump := c.emitUndefinedJump()
-			endJumps = append(endJumps, endJump)
+			breakOffset := c.emitUndefinedJump()
+			c.currentControlFlow.appendBreak(breakOffset)
 		}
 	}
 
-	for _, endJump := range endJumps {
-		c.patchJump(endJump)
+	if previousJump >= 0 {
+		c.patchJump(previousJump)
 	}
 
 	return
 }
 
 func (c *Compiler[_]) VisitVariableDeclaration(declaration *ast.VariableDeclaration) (_ struct{}) {
-	// TODO: second value
+	// Some variable declarations can be coming from inherited before-statements.
+	// If so, use the corresponding elaboration.
+	c.withConditionExtendedElaboration(declaration, func() {
 
-	local := c.currentFunction.declareLocal(declaration.Identifier.Identifier)
+		// TODO: second value
 
-	// TODO: This can be nil only for synthetic-result variable
-	//   Any better way to handle this?
-	if declaration.Value == nil {
-		return
-	}
+		name := declaration.Identifier.Identifier
+		// TODO: This can be nil only for synthetic-result variable
+		//   Any better way to handle this?
+		if declaration.Value == nil {
+			c.currentFunction.declareLocal(name)
+		} else {
+			// Compile the value expression *before* declaring the variable
+			c.compileExpression(declaration.Value)
 
-	c.compileExpression(declaration.Value)
+			varDeclTypes := c.ExtendedElaboration.VariableDeclarationTypes(declaration)
+			c.emitTransfer(varDeclTypes.TargetType)
 
-	varDeclTypes := c.ExtendedElaboration.VariableDeclarationTypes(declaration)
-	c.emitTransfer(varDeclTypes.TargetType)
+			// Declare the variable *after* compiling the value expression
+			local := c.currentFunction.declareLocal(name)
+			c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: local.index})
+		}
+	})
 
-	c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: local.index})
 	return
 }
 
@@ -803,7 +854,7 @@ func (c *Compiler[_]) VisitAssignmentStatement(statement *ast.AssignmentStatemen
 
 		global := c.findGlobal(varName)
 		c.codeGen.Emit(opcode.InstructionSetGlobal{
-			GlobalIndex: global.index,
+			GlobalIndex: global.Index,
 		})
 
 	case *ast.MemberExpression:
@@ -955,7 +1006,7 @@ func (c *Compiler[_]) emitVariableLoad(name string) {
 	}
 
 	global := c.findGlobal(name)
-	c.codeGen.Emit(opcode.InstructionGetGlobal{GlobalIndex: global.index})
+	c.codeGen.Emit(opcode.InstructionGetGlobal{GlobalIndex: global.Index})
 }
 
 func (c *Compiler[_]) VisitInvocationExpression(expression *ast.InvocationExpression) (_ struct{}) {
@@ -1156,24 +1207,24 @@ func (c *Compiler[_]) VisitBinaryExpression(expression *ast.BinaryExpression) (_
 
 	switch expression.Operation {
 	case ast.OperationNilCoalesce:
-		// create a duplicate to perform the equal check.
-		// So if the condition succeeds, then the condition's result will be at the top of the stack.
+		// Duplicate the value for the nil equality check.
 		c.codeGen.Emit(opcode.InstructionDup{})
+		elseJump := c.emitUndefinedJumpIfNil()
 
-		c.codeGen.Emit(opcode.InstructionNil{})
-		c.codeGen.Emit(opcode.InstructionEqual{})
-		elseJump := c.emitUndefinedJumpIfFalse()
+		// Then branch
+		c.codeGen.Emit(opcode.InstructionUnwrap{})
+		thenJump := c.emitUndefinedJump()
 
-		// Drop the duplicated condition result.
-		// It is not needed for the 'then' path.
+		// Else branch
+		c.patchJump(elseJump)
+		// Drop the duplicated condition result,
+		// as it is not needed for the 'else' path.
 		c.codeGen.Emit(opcode.InstructionDrop{})
-
 		c.compileExpression(expression.Right)
 
-		thenJump := c.emitUndefinedJump()
-		c.patchJump(elseJump)
-		c.codeGen.Emit(opcode.InstructionUnwrap{})
+		// End
 		c.patchJump(thenJump)
+
 	default:
 		c.compileExpression(expression.Right)
 
@@ -1369,7 +1420,7 @@ func (c *Compiler[_]) compileInitializer(declaration *ast.SpecialFunctionDeclara
 		c.codeGen.Emit(opcode.InstructionDup{})
 		global := c.findGlobal(enclosingCompositeTypeName)
 
-		c.codeGen.Emit(opcode.InstructionSetGlobal{GlobalIndex: global.index})
+		c.codeGen.Emit(opcode.InstructionSetGlobal{GlobalIndex: global.Index})
 	}
 
 	c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: self.index})
@@ -1382,7 +1433,7 @@ func (c *Compiler[_]) compileInitializer(declaration *ast.SpecialFunctionDeclara
 	c.codeGen.Emit(opcode.InstructionReturnValue{})
 }
 
-func (c *Compiler[_]) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) (_ struct{}) {
+func (c *Compiler[_]) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration, _ bool) (_ struct{}) {
 	declareReceiver := !c.compositeTypeStack.isEmpty()
 	function := c.declareFunction(declaration, declareReceiver)
 
@@ -1551,12 +1602,6 @@ func (c *Compiler[_]) VisitAttachExpression(_ *ast.AttachExpression) (_ struct{}
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler[_]) patchLoop(l *loop) {
-	for _, breakOffset := range l.breaks {
-		c.patchJump(breakOffset)
-	}
-}
-
 func (c *Compiler[_]) emitTransfer(targetType sema.Type) {
 	index := c.getOrAddType(targetType)
 
@@ -1564,8 +1609,10 @@ func (c *Compiler[_]) emitTransfer(targetType sema.Type) {
 }
 
 func (c *Compiler[_]) getOrAddType(targetType sema.Type) uint16 {
+	typeID := targetType.ID()
+
 	// Optimization: Re-use types in the pool.
-	index, ok := c.typesInPool[targetType.ID()]
+	index, ok := c.typesInPool[typeID]
 	if !ok {
 		staticType := interpreter.ConvertSemaToStaticType(c.memoryGauge, targetType)
 		bytes, err := interpreter.StaticTypeToBytes(staticType)
@@ -1573,8 +1620,9 @@ func (c *Compiler[_]) getOrAddType(targetType sema.Type) uint16 {
 			panic(err)
 		}
 		index = c.addType(bytes)
-		c.typesInPool[targetType.ID()] = index
+		c.typesInPool[typeID] = index
 	}
+
 	return index
 }
 
@@ -1621,4 +1669,16 @@ func (c *Compiler[E]) declareParameters(function *function[E], paramList *ast.Pa
 
 func (c *Compiler[_]) generateEmptyInit() {
 	c.VisitSpecialFunctionDeclaration(emptyInitializer)
+}
+
+func (c *Compiler[_]) withConditionExtendedElaboration(statement ast.Statement, f func()) {
+	stmtElaboration, ok := c.ExtendedElaboration.conditionsElaborations[statement]
+	if ok {
+		prevElaboration := c.ExtendedElaboration
+		c.ExtendedElaboration = stmtElaboration
+		defer func() {
+			c.ExtendedElaboration = prevElaboration
+		}()
+	}
+	f()
 }

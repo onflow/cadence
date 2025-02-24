@@ -12385,3 +12385,128 @@ func TestRuntimeSomeValueChildContainerMutation(t *testing.T) {
 		assert.Equal(t, []string{"5.00000000", "10.00000000"}, logs)
 	})
 }
+
+func TestRuntimeClosureScopingFunctionExpression(t *testing.T) {
+	t.Parallel()
+
+	rt := NewTestInterpreterRuntime()
+
+	script := `
+        access(all) fun main(a: Int): Int {
+            let bar = fun(): Int {
+                return a
+            }
+            let a = 2
+            return bar()
+        }
+    `
+
+	actual, err := rt.ExecuteScript(
+		Script{
+			Source:    []byte(script),
+			Arguments: encodeArgs([]cadence.Value{cadence.NewInt(1)}),
+		},
+		Context{
+			Interface: &TestRuntimeInterface{
+				OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+					return json.Decode(nil, b)
+				},
+			},
+			Location: common.ScriptLocation{},
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, cadence.NewInt(1), actual)
+
+}
+
+func TestRuntimeClosureScopingInnerFunction(t *testing.T) {
+	t.Parallel()
+
+	rt := NewTestInterpreterRuntime()
+
+	script := `
+        access(all) fun main(a: Int): Int {
+			fun bar(): Int {
+                return a
+            }
+            let a = 2
+            return bar()
+        }
+    `
+
+	actual, err := rt.ExecuteScript(
+		Script{
+			Source:    []byte(script),
+			Arguments: encodeArgs([]cadence.Value{cadence.NewInt(1)}),
+		},
+		Context{
+			Interface: &TestRuntimeInterface{
+				OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+					return json.Decode(nil, b)
+				},
+			},
+			Location: common.ScriptLocation{},
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, cadence.NewInt(1), actual)
+}
+
+func TestRuntimeInterfaceConditionDeduplication(t *testing.T) {
+	t.Parallel()
+
+	script := `
+		access(all) event Log(message: String)
+
+        access(all) struct interface Foo {
+
+            access(all) fun test() {
+                pre {
+                     emit Log(message: "invoked Foo.test() pre-condition")
+                }
+                post {
+                     emit Log(message: "invoked Foo.test() post-condition")
+                }
+                emit Log(message: "invoked Foo.test()")
+            }
+        }
+
+        access(all) struct Test: Foo {
+        }
+
+        access(all) fun main() {
+           Test().test()
+        }
+    `
+
+	rt := NewTestInterpreterRuntime()
+
+	var events []string
+
+	_, err := rt.ExecuteScript(
+		Script{
+			Source: []byte(script),
+		},
+		Context{
+			Interface: &TestRuntimeInterface{
+				OnEmitEvent: func(event cadence.Event) error {
+					events = append(events, event.FieldsMappedByName()["message"].String())
+					return nil
+				},
+			},
+			Location: common.ScriptLocation{},
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(
+		t,
+		[]string{
+			`"invoked Foo.test() pre-condition"`,
+			`"invoked Foo.test()"`,
+			`"invoked Foo.test() post-condition"`,
+		},
+		events,
+	)
+}
