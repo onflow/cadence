@@ -20,11 +20,11 @@ package values
 
 import "github.com/onflow/cadence/common"
 
-type IntegerValue interface {
-	NumberValue
-	BitwiseOr(gauge common.MemoryGauge, other IntegerValue) (IntegerValue, error)
-	BitwiseXor(gauge common.MemoryGauge, other IntegerValue) (IntegerValue, error)
-	BitwiseAnd(gauge common.MemoryGauge, other IntegerValue) (IntegerValue, error)
-	BitwiseLeftShift(gauge common.MemoryGauge, other IntegerValue) (IntegerValue, error)
-	BitwiseRightShift(gauge common.MemoryGauge, other IntegerValue) (IntegerValue, error)
+type IntegerValue[T Value] interface {
+	NumberValue[T]
+	BitwiseOr(gauge common.MemoryGauge, other T) (T, error)
+	BitwiseXor(gauge common.MemoryGauge, other T) (T, error)
+	BitwiseAnd(gauge common.MemoryGauge, other T) (T, error)
+	BitwiseLeftShift(gauge common.MemoryGauge, other T) (T, error)
+	BitwiseRightShift(gauge common.MemoryGauge, other T) (T, error)
 }
