@@ -79,7 +79,7 @@ func (v BoolValue) Less(_ ValueComparisonContext, other ComparableValue, _ Locat
 
 	return BoolValue(
 		values.BoolValue(v).
-			LessBool(values.BoolValue(o)),
+			Less(values.BoolValue(o)),
 	)
 }
 
@@ -91,7 +91,7 @@ func (v BoolValue) LessEqual(_ ValueComparisonContext, other ComparableValue, _ 
 
 	return BoolValue(
 		values.BoolValue(v).
-			LessEqualBool(values.BoolValue(o)),
+			LessEqual(values.BoolValue(o)),
 	)
 }
 
@@ -103,7 +103,7 @@ func (v BoolValue) Greater(_ ValueComparisonContext, other ComparableValue, _ Lo
 
 	return BoolValue(
 		values.BoolValue(v).
-			GreaterBool(values.BoolValue(o)),
+			Greater(values.BoolValue(o)),
 	)
 }
 
@@ -115,7 +115,7 @@ func (v BoolValue) GreaterEqual(_ ValueComparisonContext, other ComparableValue,
 
 	return BoolValue(
 		values.BoolValue(v).
-			GreaterEqualBool(values.BoolValue(o)),
+			GreaterEqual(values.BoolValue(o)),
 	)
 }
 

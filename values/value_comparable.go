@@ -18,10 +18,10 @@
 
 package values
 
-type ComparableValue interface {
+type ComparableValue[T Value] interface {
 	EquatableValue
-	Less(other ComparableValue) (BoolValue, error)
-	LessEqual(other ComparableValue) (BoolValue, error)
-	Greater(other ComparableValue) (BoolValue, error)
-	GreaterEqual(other ComparableValue) (BoolValue, error)
+	Less(other T) bool
+	LessEqual(other T) bool
+	Greater(other T) bool
+	GreaterEqual(other T) bool
 }

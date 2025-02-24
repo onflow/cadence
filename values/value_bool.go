@@ -30,7 +30,7 @@ type BoolValue bool
 
 var _ Value = BoolValue(false)
 var _ EquatableValue = BoolValue(false)
-var _ ComparableValue = BoolValue(false)
+var _ ComparableValue[BoolValue] = BoolValue(false)
 var _ atree.Value = BoolValue(false)
 var _ atree.Storable = BoolValue(false)
 
@@ -62,54 +62,20 @@ func (v BoolValue) EqualBool(other BoolValue) BoolValue {
 	return bool(v) == bool(other)
 }
 
-func (v BoolValue) Less(other ComparableValue) (BoolValue, error) {
-	o, ok := other.(BoolValue)
-	if !ok {
-		return false, InvalidOperandsError{}
-	}
-	return v.LessBool(o), nil
+func (v BoolValue) Less(other BoolValue) bool {
+	return bool(!v && other)
 }
 
-func (v BoolValue) LessBool(other BoolValue) BoolValue {
-	return !v && other
+func (v BoolValue) LessEqual(other BoolValue) bool {
+	return bool(!v || other)
 }
 
-func (v BoolValue) LessEqual(other ComparableValue) (BoolValue, error) {
-	o, ok := other.(BoolValue)
-	if !ok {
-		return false, InvalidOperandsError{}
-	}
-	return v.LessEqualBool(o), nil
+func (v BoolValue) Greater(other BoolValue) bool {
+	return bool(v && !other)
 }
 
-func (v BoolValue) LessEqualBool(other BoolValue) BoolValue {
-	return !v || other
-}
-
-func (v BoolValue) Greater(other ComparableValue) (BoolValue, error) {
-	o, ok := other.(BoolValue)
-	if !ok {
-		return false, InvalidOperandsError{}
-	}
-
-	return v.GreaterBool(o), nil
-}
-
-func (v BoolValue) GreaterBool(o BoolValue) BoolValue {
-	return v && !o
-}
-
-func (v BoolValue) GreaterEqual(other ComparableValue) (BoolValue, error) {
-	o, ok := other.(BoolValue)
-	if !ok {
-		return false, InvalidOperandsError{}
-	}
-
-	return v.GreaterEqualBool(o), nil
-}
-
-func (v BoolValue) GreaterEqualBool(o BoolValue) BoolValue {
-	return v || !o
+func (v BoolValue) GreaterEqual(other BoolValue) bool {
+	return bool(v || !other)
 }
 
 func (v BoolValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {

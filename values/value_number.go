@@ -21,7 +21,7 @@ package values
 import "github.com/onflow/cadence/common"
 
 type NumberValue[T Value] interface {
-	ComparableValue
+	ComparableValue[T]
 	ToInt() (int, error)
 	Negate(gauge common.MemoryGauge) T
 	Plus(gauge common.MemoryGauge, other T) (T, error)

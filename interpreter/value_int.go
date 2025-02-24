@@ -346,12 +346,7 @@ func (v IntValue) Less(context ValueComparisonContext, other ComparableValue, lo
 		})
 	}
 
-	result, err := v.IntValue.Less(o.IntValue)
-	if err != nil {
-		panic(err)
-	}
-
-	return BoolValue(result)
+	return BoolValue(v.IntValue.Less(o.IntValue))
 }
 
 func (v IntValue) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -365,12 +360,7 @@ func (v IntValue) LessEqual(context ValueComparisonContext, other ComparableValu
 		})
 	}
 
-	result, err := v.IntValue.LessEqual(o.IntValue)
-	if err != nil {
-		panic(err)
-	}
-
-	return BoolValue(result)
+	return BoolValue(v.IntValue.LessEqual(o.IntValue))
 }
 
 func (v IntValue) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -384,12 +374,7 @@ func (v IntValue) Greater(context ValueComparisonContext, other ComparableValue,
 		})
 	}
 
-	result, err := v.IntValue.Greater(o.IntValue)
-	if err != nil {
-		panic(err)
-	}
-
-	return BoolValue(result)
+	return BoolValue(v.IntValue.Greater(o.IntValue))
 }
 
 func (v IntValue) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -403,12 +388,7 @@ func (v IntValue) GreaterEqual(context ValueComparisonContext, other ComparableV
 		})
 	}
 
-	result, err := v.IntValue.GreaterEqual(o.IntValue)
-	if err != nil {
-		panic(err)
-	}
-
-	return BoolValue(result)
+	return BoolValue(v.IntValue.GreaterEqual(o.IntValue))
 }
 
 func (v IntValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {

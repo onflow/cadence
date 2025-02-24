@@ -68,7 +68,7 @@ func NewUnmeteredIntValueFromBigInt(value *big.Int) IntValue {
 
 var _ Value = IntValue{}
 var _ EquatableValue = IntValue{}
-var _ ComparableValue = IntValue{}
+var _ ComparableValue[IntValue] = IntValue{}
 var _ NumberValue[IntValue] = IntValue{}
 var _ IntegerValue[IntValue] = IntValue{}
 var _ atree.Storable = IntValue{}
@@ -171,45 +171,25 @@ func (v IntValue) SaturatingDiv(gauge common.MemoryGauge, other IntValue) (IntVa
 	return v.Div(gauge, other)
 }
 
-func (v IntValue) Less(other ComparableValue) (BoolValue, error) {
-	o, ok := other.(IntValue)
-	if !ok {
-		return false, InvalidOperandsError{}
-	}
-
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == -1, nil
+func (v IntValue) Less(other IntValue) bool {
+	cmp := v.BigInt.Cmp(other.BigInt)
+	return cmp == -1
 }
 
-func (v IntValue) LessEqual(other ComparableValue) (BoolValue, error) {
-	o, ok := other.(IntValue)
-	if !ok {
-		return false, InvalidOperandsError{}
-	}
-
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp <= 0, nil
+func (v IntValue) LessEqual(other IntValue) bool {
+	cmp := v.BigInt.Cmp(other.BigInt)
+	return cmp <= 0
 }
 
-func (v IntValue) Greater(other ComparableValue) (BoolValue, error) {
-	o, ok := other.(IntValue)
-	if !ok {
-		return false, InvalidOperandsError{}
-	}
-
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == 1, nil
+func (v IntValue) Greater(other IntValue) bool {
+	cmp := v.BigInt.Cmp(other.BigInt)
+	return cmp == 1
 
 }
 
-func (v IntValue) GreaterEqual(other ComparableValue) (BoolValue, error) {
-	o, ok := other.(IntValue)
-	if !ok {
-		return false, InvalidOperandsError{}
-	}
-
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp >= 0, nil
+func (v IntValue) GreaterEqual(other IntValue) bool {
+	cmp := v.BigInt.Cmp(other.BigInt)
+	return cmp >= 0
 }
 
 func (v IntValue) Equal(other Value) BoolValue {
