@@ -24,6 +24,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
 )
 
 type IntValue struct {
@@ -134,4 +135,18 @@ func (v IntValue) GreaterEqual(other ComparableValue) BoolValue {
 		panic("invalid operand")
 	}
 	return v.SmallInt >= otherInt.SmallInt
+}
+
+// members
+
+func init() {
+	typeName := interpreter.PrimitiveStaticTypeInt.String()
+
+	RegisterTypeBoundFunction(typeName, sema.ToStringFunctionName, NativeFunctionValue{
+		ParameterCount: len(sema.ToStringFunctionType.Parameters),
+		Function: func(config *Config, typeArguments []StaticType, value ...Value) Value {
+			number := value[0].(IntValue)
+			return NewStringValue(number.String())
+		},
+	})
 }

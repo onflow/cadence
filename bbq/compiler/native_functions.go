@@ -32,10 +32,10 @@ func NativeFunctions() map[string]*global {
 
 		// Always return a copy.
 		// Because the indexes are modified my the imported program.
-		funcs[nativeFunction.name] = &global{
-			name:     nativeFunction.name,
-			location: nativeFunction.location,
-			index:    nativeFunction.index,
+		funcs[nativeFunction.Name] = &global{
+			Name:     nativeFunction.Name,
+			Location: nativeFunction.Location,
+			Index:    nativeFunction.Index,
 		}
 	}
 	return funcs
@@ -44,6 +44,7 @@ func NativeFunctions() map[string]*global {
 var builtinTypes = []sema.Type{
 	sema.StringType,
 	sema.AccountType,
+	sema.IntType,
 	&sema.CapabilityType{},
 }
 
@@ -83,7 +84,7 @@ func registerBoundFunctions(typ sema.Type) {
 
 func addNativeFunction(name string) {
 	global := &global{
-		name: name,
+		Name: name,
 	}
 	nativeFunctions = append(nativeFunctions, global)
 }

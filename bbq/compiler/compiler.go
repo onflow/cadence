@@ -45,7 +45,7 @@ type Compiler[E any] struct {
 
 	functions           []*function[E]
 	constants           []*constant
-	globals             map[string]*global
+	Globals             map[string]*global
 	importedGlobals     map[string]*global
 	usedImportedGlobals []*global
 	controlFlows        []controlFlow
@@ -98,7 +98,7 @@ func newCompiler[E any](
 		ExtendedElaboration: NewExtendedElaboration(checker.Elaboration),
 		Config:              &Config{},
 		checker:             checker,
-		globals:             make(map[string]*global),
+		Globals:             make(map[string]*global),
 		importedGlobals:     NativeFunctions(),
 		typesInPool:         make(map[sema.TypeID]uint16),
 		constantsInPool:     make(map[constantsCacheKey]*constant),
@@ -115,7 +115,7 @@ func (c *Compiler[E]) WithConfig(config *Config) *Compiler[E] {
 }
 
 func (c *Compiler[_]) findGlobal(name string) *global {
-	global, ok := c.globals[name]
+	global, ok := c.Globals[name]
 	if ok {
 		return global
 	}
@@ -126,7 +126,7 @@ func (c *Compiler[_]) findGlobal(name string) *global {
 	if !c.compositeTypeStack.isEmpty() {
 		enclosingContract := c.compositeTypeStack.bottom()
 		typeQualifiedName := commons.TypeQualifiedName(enclosingContract.GetIdentifier(), name)
-		global, ok = c.globals[typeQualifiedName]
+		global, ok = c.Globals[typeQualifiedName]
 		if ok {
 			return global
 		}
@@ -143,12 +143,12 @@ func (c *Compiler[_]) findGlobal(name string) *global {
 	//
 	// If a global is found in imported globals, that means the index is not set.
 	// So set an index and add it to the 'globals'.
-	count := len(c.globals)
+	count := len(c.Globals)
 	if count >= math.MaxUint16 {
 		panic(errors.NewUnexpectedError("invalid global declaration '%s'", name))
 	}
-	importedGlobal.index = uint16(count)
-	c.globals[name] = importedGlobal
+	importedGlobal.Index = uint16(count)
+	c.Globals[name] = importedGlobal
 
 	// Also add it to the usedImportedGlobals.
 	// This is later used to export the imports, which is eventually used by the linker.
@@ -164,22 +164,22 @@ func (c *Compiler[_]) findGlobal(name string) *global {
 }
 
 func (c *Compiler[_]) addGlobal(name string) *global {
-	count := len(c.globals)
+	count := len(c.Globals)
 	if count >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid global declaration"))
 	}
 	global := &global{
-		index: uint16(count),
+		Index: uint16(count),
 	}
-	c.globals[name] = global
+	c.Globals[name] = global
 	return global
 }
 
 func (c *Compiler[_]) addImportedGlobal(location common.Location, name string) *global {
 	// Index is not set here. It is set only if this imported global is used.
 	global := &global{
-		location: location,
-		name:     name,
+		Location: location,
+		Name:     name,
 	}
 	c.importedGlobals[name] = global
 	return global
@@ -450,8 +450,8 @@ func (c *Compiler[_]) exportImports() []*bbq.Import {
 	exportedImports := make([]*bbq.Import, 0)
 	for _, importedGlobal := range c.usedImportedGlobals {
 		bbqImport := &bbq.Import{
-			Location: importedGlobal.location,
-			Name:     importedGlobal.name,
+			Location: importedGlobal.Location,
+			Name:     importedGlobal.Name,
 		}
 		exportedImports = append(exportedImports, bbqImport)
 	}
@@ -585,63 +585,66 @@ func (c *Compiler[_]) VisitContinueStatement(_ *ast.ContinueStatement) (_ struct
 }
 
 func (c *Compiler[_]) VisitIfStatement(statement *ast.IfStatement) (_ struct{}) {
-	var (
-		elseJump            int
-		additionalThenScope bool
-	)
+	// If statements can be coming from inherited conditions.
+	// If so, use the corresponding elaboration.
+	c.withConditionExtendedElaboration(statement, func() {
+		var (
+			elseJump            int
+			additionalThenScope bool
+		)
 
-	switch test := statement.Test.(type) {
-	case ast.Expression:
-		c.compileExpression(test)
-		elseJump = c.emitUndefinedJumpIfFalse()
+		switch test := statement.Test.(type) {
+		case ast.Expression:
+			c.compileExpression(test)
+			elseJump = c.emitUndefinedJumpIfFalse()
 
-	case *ast.VariableDeclaration:
-		// TODO: second value
+		case *ast.VariableDeclaration:
+			// TODO: second value
 
-		// Compile the value expression *before* declaring the variable
-		c.compileExpression(test.Value)
+			// Compile the value expression *before* declaring the variable
+			c.compileExpression(test.Value)
 
-		tempIndex := c.currentFunction.generateLocalIndex()
-		c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: tempIndex})
+			tempIndex := c.currentFunction.generateLocalIndex()
+			c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: tempIndex})
 
-		// Test: check if the optional is nil,
-		// and jump to the else branch if it is
-		c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: tempIndex})
-		elseJump = c.emitUndefinedJumpIfNil()
+			// Test: check if the optional is nil,
+			// and jump to the else branch if it is
+			c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: tempIndex})
+			elseJump = c.emitUndefinedJumpIfNil()
 
-		// Then branch: unwrap the optional and declare the variable
-		c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: tempIndex})
-		c.codeGen.Emit(opcode.InstructionUnwrap{})
-		varDeclTypes := c.ExtendedElaboration.VariableDeclarationTypes(test)
-		c.emitTransfer(varDeclTypes.TargetType)
+			// Then branch: unwrap the optional and declare the variable
+			c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: tempIndex})
+			c.codeGen.Emit(opcode.InstructionUnwrap{})
+			varDeclTypes := c.ExtendedElaboration.VariableDeclarationTypes(test)
+			c.emitTransfer(varDeclTypes.TargetType)
 
-		// Declare the variable *after* unwrapping the optional,
-		// in a new scope
-		c.currentFunction.locals.PushNewWithCurrent()
-		additionalThenScope = true
-		localIndex := c.currentFunction.declareLocal(test.Identifier.Identifier)
-		c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: localIndex.index})
+			// Declare the variable *after* unwrapping the optional,
+			// in a new scope
+			c.currentFunction.locals.PushNewWithCurrent()
+			additionalThenScope = true
+			localIndex := c.currentFunction.declareLocal(test.Identifier.Identifier)
+			c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: localIndex.index})
 
-	default:
-		panic(errors.NewUnreachableError())
-	}
+		default:
+			panic(errors.NewUnreachableError())
+		}
 
-	c.compileBlock(statement.Then)
+		c.compileBlock(statement.Then)
 
-	if additionalThenScope {
-		c.currentFunction.locals.Pop()
-	}
+		if additionalThenScope {
+			c.currentFunction.locals.Pop()
+		}
 
-	elseBlock := statement.Else
-	if elseBlock != nil {
-		thenJump := c.emitUndefinedJump()
-		c.patchJump(elseJump)
-		c.compileBlock(elseBlock)
-		c.patchJump(thenJump)
-	} else {
-		c.patchJump(elseJump)
-	}
-
+		elseBlock := statement.Else
+		if elseBlock != nil {
+			thenJump := c.emitUndefinedJump()
+			c.patchJump(elseJump)
+			c.compileBlock(elseBlock)
+			c.patchJump(thenJump)
+		} else {
+			c.patchJump(elseJump)
+		}
+	})
 	return
 }
 
@@ -725,24 +728,29 @@ func (c *Compiler[_]) VisitSwitchStatement(statement *ast.SwitchStatement) (_ st
 }
 
 func (c *Compiler[_]) VisitVariableDeclaration(declaration *ast.VariableDeclaration) (_ struct{}) {
-	// TODO: second value
+	// Some variable declarations can be coming from inherited before-statements.
+	// If so, use the corresponding elaboration.
+	c.withConditionExtendedElaboration(declaration, func() {
 
-	name := declaration.Identifier.Identifier
-	// TODO: This can be nil only for synthetic-result variable
-	//   Any better way to handle this?
-	if declaration.Value == nil {
-		c.currentFunction.declareLocal(name)
-	} else {
-		// Compile the value expression *before* declaring the variable
-		c.compileExpression(declaration.Value)
+		// TODO: second value
 
-		varDeclTypes := c.ExtendedElaboration.VariableDeclarationTypes(declaration)
-		c.emitTransfer(varDeclTypes.TargetType)
+		name := declaration.Identifier.Identifier
+		// TODO: This can be nil only for synthetic-result variable
+		//   Any better way to handle this?
+		if declaration.Value == nil {
+			c.currentFunction.declareLocal(name)
+		} else {
+			// Compile the value expression *before* declaring the variable
+			c.compileExpression(declaration.Value)
 
-		// Declare the variable *after* compiling the value expression
-		local := c.currentFunction.declareLocal(name)
-		c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: local.index})
-	}
+			varDeclTypes := c.ExtendedElaboration.VariableDeclarationTypes(declaration)
+			c.emitTransfer(varDeclTypes.TargetType)
+
+			// Declare the variable *after* compiling the value expression
+			local := c.currentFunction.declareLocal(name)
+			c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: local.index})
+		}
+	})
 
 	return
 }
@@ -766,7 +774,7 @@ func (c *Compiler[_]) VisitAssignmentStatement(statement *ast.AssignmentStatemen
 
 		global := c.findGlobal(varName)
 		c.codeGen.Emit(opcode.InstructionSetGlobal{
-			GlobalIndex: global.index,
+			GlobalIndex: global.Index,
 		})
 
 	case *ast.MemberExpression:
@@ -918,7 +926,7 @@ func (c *Compiler[_]) emitVariableLoad(name string) {
 	}
 
 	global := c.findGlobal(name)
-	c.codeGen.Emit(opcode.InstructionGetGlobal{GlobalIndex: global.index})
+	c.codeGen.Emit(opcode.InstructionGetGlobal{GlobalIndex: global.Index})
 }
 
 func (c *Compiler[_]) VisitInvocationExpression(expression *ast.InvocationExpression) (_ struct{}) {
@@ -1332,7 +1340,7 @@ func (c *Compiler[_]) compileInitializer(declaration *ast.SpecialFunctionDeclara
 		c.codeGen.Emit(opcode.InstructionDup{})
 		global := c.findGlobal(enclosingCompositeTypeName)
 
-		c.codeGen.Emit(opcode.InstructionSetGlobal{GlobalIndex: global.index})
+		c.codeGen.Emit(opcode.InstructionSetGlobal{GlobalIndex: global.Index})
 	}
 
 	c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: self.index})
@@ -1581,4 +1589,16 @@ func (c *Compiler[E]) declareParameters(function *function[E], paramList *ast.Pa
 
 func (c *Compiler[_]) generateEmptyInit() {
 	c.VisitSpecialFunctionDeclaration(emptyInitializer)
+}
+
+func (c *Compiler[_]) withConditionExtendedElaboration(statement ast.Statement, f func()) {
+	stmtElaboration, ok := c.ExtendedElaboration.conditionsElaborations[statement]
+	if ok {
+		prevElaboration := c.ExtendedElaboration
+		c.ExtendedElaboration = stmtElaboration
+		defer func() {
+			c.ExtendedElaboration = prevElaboration
+		}()
+	}
+	f()
 }
