@@ -1961,6 +1961,90 @@ func TestCompileIntegers(t *testing.T) {
 	}
 }
 
+func TestCompileFixedPoint(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, fixedPointType sema.Type, isSigned bool) {
+
+		t.Run(fixedPointType.String(), func(t *testing.T) {
+
+			t.Parallel()
+
+			checker, err := ParseAndCheck(t,
+				fmt.Sprintf(`
+                    fun test() {
+                        let v: %s = 2.3
+                    }
+                `,
+					fixedPointType,
+				),
+			)
+			require.NoError(t, err)
+
+			comp := compiler.NewInstructionCompiler(checker)
+			program := comp.Compile()
+
+			require.Len(t, program.Functions, 1)
+
+			functions := comp.ExportFunctions()
+			require.Equal(t, len(program.Functions), len(functions))
+
+			const parameterCount = 0
+
+			// resultIndex is the index of the $result variable
+			const resultIndex = parameterCount
+
+			// localsOffset is the offset of the first local variable
+			const localsOffset = resultIndex + 1
+
+			const (
+				// vIndex is the index of the local variable `v`, which is the first local variable
+				vIndex = localsOffset + iota
+			)
+
+			assert.Equal(t,
+				[]opcode.Instruction{
+					// let yes = true
+					opcode.InstructionGetConstant{ConstantIndex: 0},
+					opcode.InstructionTransfer{TypeIndex: 0},
+					opcode.InstructionSetLocal{LocalIndex: vIndex},
+
+					opcode.InstructionReturn{},
+				},
+				functions[0].Code,
+			)
+
+			expectedConstantKind := constantkind.FromSemaType(fixedPointType)
+
+			var expectedData []byte
+			if isSigned {
+				expectedData = []byte{0x80, 0x8b, 0xd6, 0xed, 0x0}
+			} else {
+				expectedData = []byte{0x80, 0x8b, 0xd6, 0x6d}
+			}
+
+			assert.Equal(t,
+				[]*bbq.Constant{
+					{
+						Data: expectedData,
+						Kind: expectedConstantKind,
+					},
+				},
+				program.Constants,
+			)
+		})
+	}
+
+	for _, fixedPointType := range sema.AllUnsignedFixedPointTypes {
+		test(t, fixedPointType, false)
+	}
+
+	for _, fixedPointType := range sema.AllSignedFixedPointTypes {
+		test(t, fixedPointType, true)
+	}
+}
+
 func TestCompileUnary(t *testing.T) {
 
 	t.Parallel()

@@ -223,6 +223,10 @@ func (e *ExtendedElaboration) IntegerExpressionType(expression *ast.IntegerExpre
 	return e.elaboration.IntegerExpressionType(expression)
 }
 
+func (e *ExtendedElaboration) FixedPointExpressionType(expression *ast.FixedPointExpression) sema.Type {
+	return e.elaboration.FixedPointExpression(expression)
+}
+
 func (e *ExtendedElaboration) ArrayExpressionTypes(expression *ast.ArrayExpression) sema.ArrayExpressionTypes {
 	return e.elaboration.ArrayExpressionTypes(expression)
 }
