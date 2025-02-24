@@ -45,7 +45,7 @@ type Compiler[E any] struct {
 
 	functions           []*function[E]
 	constants           []*constant
-	globals             map[string]*global
+	Globals             map[string]*global
 	importedGlobals     map[string]*global
 	usedImportedGlobals []*global
 	loops               []*loop
@@ -98,7 +98,7 @@ func newCompiler[E any](
 		ExtendedElaboration: NewExtendedElaboration(checker.Elaboration),
 		Config:              &Config{},
 		checker:             checker,
-		globals:             make(map[string]*global),
+		Globals:             make(map[string]*global),
 		importedGlobals:     NativeFunctions(),
 		typesInPool:         make(map[sema.TypeID]uint16),
 		constantsInPool:     make(map[constantsCacheKey]*constant),
@@ -115,7 +115,7 @@ func (c *Compiler[E]) WithConfig(config *Config) *Compiler[E] {
 }
 
 func (c *Compiler[_]) findGlobal(name string) *global {
-	global, ok := c.globals[name]
+	global, ok := c.Globals[name]
 	if ok {
 		return global
 	}
@@ -126,7 +126,7 @@ func (c *Compiler[_]) findGlobal(name string) *global {
 	if !c.compositeTypeStack.isEmpty() {
 		enclosingContract := c.compositeTypeStack.bottom()
 		typeQualifiedName := commons.TypeQualifiedName(enclosingContract.GetIdentifier(), name)
-		global, ok = c.globals[typeQualifiedName]
+		global, ok = c.Globals[typeQualifiedName]
 		if ok {
 			return global
 		}
@@ -143,12 +143,12 @@ func (c *Compiler[_]) findGlobal(name string) *global {
 	//
 	// If a global is found in imported globals, that means the index is not set.
 	// So set an index and add it to the 'globals'.
-	count := len(c.globals)
+	count := len(c.Globals)
 	if count >= math.MaxUint16 {
 		panic(errors.NewUnexpectedError("invalid global declaration '%s'", name))
 	}
-	importedGlobal.index = uint16(count)
-	c.globals[name] = importedGlobal
+	importedGlobal.Index = uint16(count)
+	c.Globals[name] = importedGlobal
 
 	// Also add it to the usedImportedGlobals.
 	// This is later used to export the imports, which is eventually used by the linker.
@@ -164,22 +164,22 @@ func (c *Compiler[_]) findGlobal(name string) *global {
 }
 
 func (c *Compiler[_]) addGlobal(name string) *global {
-	count := len(c.globals)
+	count := len(c.Globals)
 	if count >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid global declaration"))
 	}
 	global := &global{
-		index: uint16(count),
+		Index: uint16(count),
 	}
-	c.globals[name] = global
+	c.Globals[name] = global
 	return global
 }
 
 func (c *Compiler[_]) addImportedGlobal(location common.Location, name string) *global {
 	// Index is not set here. It is set only if this imported global is used.
 	global := &global{
-		location: location,
-		name:     name,
+		Location: location,
+		Name:     name,
 	}
 	c.importedGlobals[name] = global
 	return global
@@ -285,7 +285,7 @@ func (c *Compiler[_]) popLoop() {
 
 	var previousLoop *loop
 	if lastIndex > 0 {
-		previousLoop = c.loops[lastIndex]
+		previousLoop = c.loops[lastIndex-1]
 	}
 	c.currentLoop = previousLoop
 }
@@ -446,8 +446,8 @@ func (c *Compiler[_]) exportImports() []*bbq.Import {
 	exportedImports := make([]*bbq.Import, 0)
 	for _, importedGlobal := range c.usedImportedGlobals {
 		bbqImport := &bbq.Import{
-			Location: importedGlobal.location,
-			Name:     importedGlobal.name,
+			Location: importedGlobal.Location,
+			Name:     importedGlobal.Name,
 		}
 		exportedImports = append(exportedImports, bbqImport)
 	}
@@ -732,7 +732,7 @@ func (c *Compiler[_]) VisitAssignmentStatement(statement *ast.AssignmentStatemen
 
 		global := c.findGlobal(varName)
 		c.codeGen.Emit(opcode.InstructionSetGlobal{
-			GlobalIndex: global.index,
+			GlobalIndex: global.Index,
 		})
 
 	case *ast.MemberExpression:
@@ -884,7 +884,7 @@ func (c *Compiler[_]) emitVariableLoad(name string) {
 	}
 
 	global := c.findGlobal(name)
-	c.codeGen.Emit(opcode.InstructionGetGlobal{GlobalIndex: global.index})
+	c.codeGen.Emit(opcode.InstructionGetGlobal{GlobalIndex: global.Index})
 }
 
 func (c *Compiler[_]) VisitInvocationExpression(expression *ast.InvocationExpression) (_ struct{}) {
@@ -1085,24 +1085,24 @@ func (c *Compiler[_]) VisitBinaryExpression(expression *ast.BinaryExpression) (_
 
 	switch expression.Operation {
 	case ast.OperationNilCoalesce:
-		// create a duplicate to perform the equal check.
-		// So if the condition succeeds, then the condition's result will be at the top of the stack.
+		// Duplicate the value for the nil equality check.
 		c.codeGen.Emit(opcode.InstructionDup{})
+		elseJump := c.emitUndefinedJumpIfNil()
 
-		c.codeGen.Emit(opcode.InstructionNil{})
-		c.codeGen.Emit(opcode.InstructionEqual{})
-		elseJump := c.emitUndefinedJumpIfFalse()
+		// Then branch
+		c.codeGen.Emit(opcode.InstructionUnwrap{})
+		thenJump := c.emitUndefinedJump()
 
-		// Drop the duplicated condition result.
-		// It is not needed for the 'then' path.
+		// Else branch
+		c.patchJump(elseJump)
+		// Drop the duplicated condition result,
+		// as it is not needed for the 'else' path.
 		c.codeGen.Emit(opcode.InstructionDrop{})
-
 		c.compileExpression(expression.Right)
 
-		thenJump := c.emitUndefinedJump()
-		c.patchJump(elseJump)
-		c.codeGen.Emit(opcode.InstructionUnwrap{})
+		// End
 		c.patchJump(thenJump)
+
 	default:
 		c.compileExpression(expression.Right)
 
@@ -1298,7 +1298,7 @@ func (c *Compiler[_]) compileInitializer(declaration *ast.SpecialFunctionDeclara
 		c.codeGen.Emit(opcode.InstructionDup{})
 		global := c.findGlobal(enclosingCompositeTypeName)
 
-		c.codeGen.Emit(opcode.InstructionSetGlobal{GlobalIndex: global.index})
+		c.codeGen.Emit(opcode.InstructionSetGlobal{GlobalIndex: global.Index})
 	}
 
 	c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: self.index})
