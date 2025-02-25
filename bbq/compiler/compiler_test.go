@@ -38,8 +38,6 @@ func TestCompileRecursionFib(t *testing.T) {
 
 	t.Parallel()
 
-	t.SkipNow()
-
 	checker, err := ParseAndCheck(t, `
       fun fib(_ n: Int): Int {
           if n < 2 {
@@ -605,8 +603,6 @@ func TestCompileIfLet(t *testing.T) {
 
 	t.Parallel()
 
-	t.SkipNow()
-
 	checker, err := ParseAndCheck(t, `
       fun test(x: Int?): Int {
           if let y = x {
@@ -626,29 +622,35 @@ func TestCompileIfLet(t *testing.T) {
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(program.Functions), len(functions))
 
+	const (
+		xIndex = iota
+		_
+		tempYIndex
+		yIndex
+	)
 	assert.Equal(t,
 		[]opcode.Instruction{
-			// let y = x
-			opcode.InstructionGetLocal{LocalIndex: 0x0},
-			opcode.InstructionSetLocal{LocalIndex: 0x1},
+			// let y' = x
+			opcode.InstructionGetLocal{LocalIndex: xIndex},
+			opcode.InstructionSetLocal{LocalIndex: tempYIndex},
 
-			// if
-			opcode.InstructionGetLocal{LocalIndex: 0x1},
+			// if nil
+			opcode.InstructionGetLocal{LocalIndex: tempYIndex},
 			opcode.InstructionJumpIfNil{Target: 11},
 
-			// let y = x
-			opcode.InstructionGetLocal{LocalIndex: 0x1},
+			// let y = y'
+			opcode.InstructionGetLocal{LocalIndex: tempYIndex},
 			opcode.InstructionUnwrap{},
-			opcode.InstructionTransfer{TypeIndex: 0x0},
-			opcode.InstructionSetLocal{LocalIndex: 0x2},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: yIndex},
 
 			// then { return y }
-			opcode.InstructionGetLocal{LocalIndex: 0x2},
+			opcode.InstructionGetLocal{LocalIndex: yIndex},
 			opcode.InstructionReturnValue{},
 			opcode.InstructionJump{Target: 13},
 
 			// else { return 2 }
-			opcode.InstructionGetConstant{ConstantIndex: 0x0},
+			opcode.InstructionGetConstant{ConstantIndex: 0},
 			opcode.InstructionReturnValue{},
 
 			opcode.InstructionReturn{},
