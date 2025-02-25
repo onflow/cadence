@@ -28,6 +28,8 @@ func _() {
 	_ = x[Word16-20]
 	_ = x[Word32-21]
 	_ = x[Word64-22]
+	_ = x[Word128-23]
+	_ = x[Word256-24]
 	_ = x[Fix64-30]
 	_ = x[UFix64-38]
 }
@@ -35,7 +37,7 @@ func _() {
 const (
 	_ConstantKind_name_0 = "UnknownStringIntInt8Int16Int32Int64Int128Int256"
 	_ConstantKind_name_1 = "UIntUInt8UInt16UInt32UInt64UInt128UInt256"
-	_ConstantKind_name_2 = "Word8Word16Word32Word64"
+	_ConstantKind_name_2 = "Word8Word16Word32Word64Word128Word256"
 	_ConstantKind_name_3 = "Fix64"
 	_ConstantKind_name_4 = "UFix64"
 )
@@ -43,7 +45,7 @@ const (
 var (
 	_ConstantKind_index_0 = [...]uint8{0, 7, 13, 16, 20, 25, 30, 35, 41, 47}
 	_ConstantKind_index_1 = [...]uint8{0, 4, 9, 15, 21, 27, 34, 41}
-	_ConstantKind_index_2 = [...]uint8{0, 5, 11, 17, 23}
+	_ConstantKind_index_2 = [...]uint8{0, 5, 11, 17, 23, 30, 37}
 )
 
 func (i ConstantKind) String() string {
@@ -53,7 +55,7 @@ func (i ConstantKind) String() string {
 	case 10 <= i && i <= 16:
 		i -= 10
 		return _ConstantKind_name_1[_ConstantKind_index_1[i]:_ConstantKind_index_1[i+1]]
-	case 19 <= i && i <= 22:
+	case 19 <= i && i <= 24:
 		i -= 19
 		return _ConstantKind_name_2[_ConstantKind_index_2[i]:_ConstantKind_index_2[i+1]]
 	case i == 30:

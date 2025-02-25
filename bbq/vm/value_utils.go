@@ -33,3 +33,12 @@ func safeAdd(a, b int) int {
 	}
 	return a + b
 }
+
+func safeAddUint64(a, b uint64) uint64 {
+	sum := a + b
+	// INT30-C
+	if sum < a {
+		panic(interpreter.OverflowError{})
+	}
+	return sum
+}
