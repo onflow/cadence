@@ -1225,9 +1225,22 @@ func (c *Compiler[_]) VisitIndexExpression(expression *ast.IndexExpression) (_ s
 	return
 }
 
-func (c *Compiler[_]) VisitConditionalExpression(_ *ast.ConditionalExpression) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler[_]) VisitConditionalExpression(expression *ast.ConditionalExpression) (_ struct{}) {
+	// Test
+	c.compileExpression(expression.Test)
+	elseJump := c.emitUndefinedJumpIfFalse()
+
+	// Then branch
+	c.compileExpression(expression.Then)
+	thenJump := c.emitUndefinedJump()
+
+	// Else branch
+	c.patchJump(elseJump)
+	c.compileExpression(expression.Else)
+
+	c.patchJump(thenJump)
+
+	return
 }
 
 func (c *Compiler[_]) VisitUnaryExpression(expression *ast.UnaryExpression) (_ struct{}) {
