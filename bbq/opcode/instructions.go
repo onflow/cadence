@@ -1151,6 +1151,66 @@ func (i InstructionGreaterOrEqual) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
+// InstructionIterator
+//
+// Pops an iterable value from the stack, get an iterator to it, and push the iterator back onto the stack.
+type InstructionIterator struct {
+}
+
+var _ Instruction = InstructionIterator{}
+
+func (InstructionIterator) Opcode() Opcode {
+	return Iterator
+}
+
+func (i InstructionIterator) String() string {
+	return i.Opcode().String()
+}
+
+func (i InstructionIterator) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+}
+
+// InstructionIteratorHasNext
+//
+// Pops a value-iterator from the stack, calls `hasNext()` method on it, and push the result back onto the stack.
+type InstructionIteratorHasNext struct {
+}
+
+var _ Instruction = InstructionIteratorHasNext{}
+
+func (InstructionIteratorHasNext) Opcode() Opcode {
+	return IteratorHasNext
+}
+
+func (i InstructionIteratorHasNext) String() string {
+	return i.Opcode().String()
+}
+
+func (i InstructionIteratorHasNext) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+}
+
+// InstructionIteratorNext
+//
+// Pops a value-iterator from stack, calls `next()` method on it, and push the result back onto the stack.
+type InstructionIteratorNext struct {
+}
+
+var _ Instruction = InstructionIteratorNext{}
+
+func (InstructionIteratorNext) Opcode() Opcode {
+	return IteratorNext
+}
+
+func (i InstructionIteratorNext) String() string {
+	return i.Opcode().String()
+}
+
+func (i InstructionIteratorNext) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+}
+
 // InstructionEmitEvent
 //
 // Pops an event off the stack and then emits it.
@@ -1273,6 +1333,12 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionGreater{}
 	case GreaterOrEqual:
 		return InstructionGreaterOrEqual{}
+	case Iterator:
+		return InstructionIterator{}
+	case IteratorHasNext:
+		return InstructionIteratorHasNext{}
+	case IteratorNext:
+		return InstructionIteratorNext{}
 	case EmitEvent:
 		return DecodeEmitEvent(ip, code)
 	}

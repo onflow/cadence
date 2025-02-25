@@ -38,6 +38,7 @@ type ArrayValue struct {
 
 var _ Value = &ArrayValue{}
 var _ ReferenceTrackedResourceKindedValue = &ArrayValue{}
+var _ IterableValue = &ArrayValue{}
 
 func NewArrayValue(
 	config *Config,
@@ -419,4 +420,79 @@ func (v *ArrayValue) iterate(
 
 	iterate()
 	//interpreter.withMutationPrevention(v.ValueID(), iterate)
+}
+
+func (v *ArrayValue) Iterator() ValueIterator {
+	arrayIterator, err := v.array.Iterator()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+	return &ArrayIterator{
+		atreeIterator: arrayIterator,
+	}
+}
+
+// Array iterator
+
+type ArrayIterator struct {
+	atreeIterator atree.ArrayIterator
+	next          atree.Value
+}
+
+var _ ValueIterator = &ArrayIterator{}
+
+func (i *ArrayIterator) isValue() {}
+
+func (i *ArrayIterator) StaticType(_ *Config) StaticType {
+	// Iterator is an internal-only value.
+	// Hence, this should never be called.
+	panic(errors.NewUnreachableError())
+}
+
+func (i *ArrayIterator) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
+	return i
+}
+
+func (i *ArrayIterator) String() string {
+	panic(errors.NewUnreachableError())
+}
+
+func (i *ArrayIterator) HasNext() bool {
+	if i.next != nil {
+		return true
+	}
+
+	var err error
+	i.next, err = i.atreeIterator.Next()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+
+	return i.next != nil
+}
+
+func (i *ArrayIterator) Next(config *Config) Value {
+	var atreeValue atree.Value
+	if i.next != nil {
+		// If there's already a `next` (i.e: `hasNext()` was called before this)
+		// then use that.
+		atreeValue = i.next
+
+		// Clear the cached `next`.
+		i.next = nil
+	} else {
+		var err error
+		atreeValue, err = i.atreeIterator.Next()
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+	}
+
+	if atreeValue == nil {
+		return nil
+	}
+
+	// atree.Array iterator returns low-level atree.Value,
+	// convert to high-level interpreter.Value
+	return MustConvertStoredValue(config.MemoryGauge, config.Storage, atreeValue)
 }

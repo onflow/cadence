@@ -231,6 +231,16 @@ func (c *Compiler[_]) addStringConst(str string) *constant {
 	return c.addConstant(constantkind.String, []byte(str))
 }
 
+func (c *Compiler[_]) intConstLoad(intKind constantkind.ConstantKind, i int64) {
+	constant := c.addIntConst(intKind, i)
+	c.codeGen.Emit(opcode.InstructionGetConstant{ConstantIndex: constant.index})
+}
+
+func (c *Compiler[_]) addIntConst(intKind constantkind.ConstantKind, i int64) *constant {
+	data := leb128.AppendInt64(nil, i)
+	return c.addConstant(intKind, data)
+}
+
 func (c *Compiler[_]) emitJump(target int) int {
 	if target >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid jump"))
@@ -670,9 +680,83 @@ func (c *Compiler[_]) VisitWhileStatement(statement *ast.WhileStatement) (_ stru
 	return
 }
 
-func (c *Compiler[_]) VisitForStatement(_ *ast.ForStatement) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler[_]) VisitForStatement(statement *ast.ForStatement) (_ struct{}) {
+	// Evaluate the expression
+	c.compileExpression(statement.Value)
+
+	// Get an iterator to the resulting value, and store it in a local index.
+	c.codeGen.Emit(opcode.InstructionIterator{})
+	iteratorLocalIndex := c.currentFunction.generateLocalIndex()
+	c.codeGen.Emit(opcode.InstructionSetLocal{
+		LocalIndex: iteratorLocalIndex,
+	})
+
+	// Initialize 'index' variable, if needed.
+	index := statement.Index
+	indexNeeded := index != nil
+	var indexLocalVar *local
+
+	if indexNeeded {
+		// `var <index> = -1`
+		// Start with -1 and then increment at the start of the loop,
+		// so that we don't have to deal with early exists of the loop.
+		indexLocalVar = c.currentFunction.declareLocal(index.Identifier)
+		c.intConstLoad(constantkind.Int, -1)
+		c.codeGen.Emit(opcode.InstructionSetLocal{
+			LocalIndex: indexLocalVar.index,
+		})
+	}
+
+	testOffset := c.codeGen.Offset()
+	c.pushControlFlow(testOffset)
+	defer c.popControlFlow()
+
+	// Loop test: Get the iterator and call `hasNext()`.
+	c.codeGen.Emit(opcode.InstructionGetLocal{
+		LocalIndex: iteratorLocalIndex,
+	})
+	c.codeGen.Emit(opcode.InstructionIteratorHasNext{})
+
+	endJump := c.emitUndefinedJumpIfFalse()
+
+	// Loop Body.
+
+	// Increment the index if needed.
+	// This is done as the first thing inside the loop, so that we don't need to
+	// worry about loop-control statements (e.g: continue, return, break) in the body.
+	if indexNeeded {
+		// <index> = <index> + 1
+		c.codeGen.Emit(opcode.InstructionGetLocal{
+			LocalIndex: indexLocalVar.index,
+		})
+		c.intConstLoad(constantkind.Int, 1)
+		c.codeGen.Emit(opcode.InstructionAdd{})
+		c.codeGen.Emit(opcode.InstructionSetLocal{
+			LocalIndex: indexLocalVar.index,
+		})
+	}
+
+	// Get the iterator and call `next()` (value for arrays, key for dictionaries, etc.)
+	c.codeGen.Emit(opcode.InstructionGetLocal{
+		LocalIndex: iteratorLocalIndex,
+	})
+	c.codeGen.Emit(opcode.InstructionIteratorNext{})
+
+	// Store it (next entry) in a local var.
+	// `<entry> = iterator.next()`
+	elementLocalVar := c.currentFunction.declareLocal(statement.Identifier.Identifier)
+	c.codeGen.Emit(opcode.InstructionSetLocal{
+		LocalIndex: elementLocalVar.index,
+	})
+
+	// Compile the for-loop body.
+	c.compileBlock(statement.Block)
+
+	// Jump back to the loop test. i.e: `hasNext()`
+	c.emitJump(testOffset)
+
+	c.patchJump(endJump)
+	return
 }
 
 func (c *Compiler[_]) VisitEmitStatement(statement *ast.EmitStatement) (_ struct{}) {
@@ -850,12 +934,8 @@ func (c *Compiler[_]) VisitIntegerExpression(expression *ast.IntegerExpression) 
 	integerType := c.ExtendedElaboration.IntegerExpressionType(expression)
 	constantKind := constantkind.FromSemaType(integerType)
 
-	// TODO:
-	data := leb128.AppendInt64(nil, expression.Value.Int64())
-
-	constant := c.addConstant(constantKind, data)
-	c.codeGen.Emit(opcode.InstructionGetConstant{ConstantIndex: constant.index})
-
+	// TODO: Support all integer types
+	c.intConstLoad(constantKind, expression.Value.Int64())
 	return
 }
 

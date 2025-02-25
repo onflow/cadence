@@ -151,6 +151,12 @@ const (
 	_
 	_
 
+	// Iterator related
+
+	Iterator
+	IteratorHasNext
+	IteratorNext
+
 	// Other
 	EmitEvent
 )

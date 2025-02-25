@@ -58,6 +58,18 @@ type ReferenceTrackedResourceKindedValue interface {
 	IsStaleResource() bool
 }
 
+// IterableValue is a value which can be iterated over, e.g. with a for-loop
+type IterableValue interface {
+	Value
+	Iterator() ValueIterator
+}
+
+type ValueIterator interface {
+	Value
+	HasNext() bool
+	Next(config *Config) Value
+}
+
 // ConvertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
 func ConvertAndBox(
 	value Value,

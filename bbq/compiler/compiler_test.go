@@ -3271,3 +3271,203 @@ func TestCompileFunctionConditions(t *testing.T) {
 		)
 	})
 }
+
+func TestForLoop(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("array", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            fun test(array: [Int]) {
+                for e in array {
+                }
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(checker)
+		program := comp.Compile()
+		require.Len(t, program.Functions, 1)
+
+		const (
+			arrayValueIndex = iota
+			_               // result index (unused)
+			iteratorVarIndex
+			elementVarIndex
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// Get the iterator and store in local var.
+				// `var <iterator> = array.Iterator`
+				opcode.InstructionGetLocal{LocalIndex: arrayValueIndex},
+				opcode.InstructionIterator{},
+				opcode.InstructionSetLocal{LocalIndex: iteratorVarIndex},
+
+				// Loop condition: Check whether `iterator.hasNext()`
+				opcode.InstructionGetLocal{LocalIndex: iteratorVarIndex},
+				opcode.InstructionIteratorHasNext{},
+
+				// If false, then jump to the end of the loop
+				opcode.InstructionJumpIfFalse{Target: 10},
+
+				// If true, get the next element and store in local var.
+				// var e = iterator.next()
+				opcode.InstructionGetLocal{LocalIndex: iteratorVarIndex},
+				opcode.InstructionIteratorNext{},
+				opcode.InstructionSetLocal{LocalIndex: elementVarIndex},
+
+				// Jump to the beginning (condition) of the loop.
+				opcode.InstructionJump{Target: 3},
+
+				// Return
+				opcode.InstructionReturn{},
+			},
+			program.Functions[0].Code,
+		)
+	})
+
+	t.Run("array with index", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            fun test(array: [Int]) {
+                for i, e in array {
+                }
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(checker)
+		program := comp.Compile()
+		require.Len(t, program.Functions, 1)
+
+		const (
+			arrayValueIndex = iota
+			_               // result index (unused)
+			iteratorVarIndex
+			indexVarIndex
+			elementVarIndex
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// Get the iterator and store in local var.
+				// `var <iterator> = array.Iterator`
+				opcode.InstructionGetLocal{LocalIndex: arrayValueIndex},
+				opcode.InstructionIterator{},
+				opcode.InstructionSetLocal{LocalIndex: iteratorVarIndex},
+
+				// Initialize index.
+				// `var i = -1`
+				opcode.InstructionGetConstant{ConstantIndex: 0},
+				opcode.InstructionSetLocal{LocalIndex: indexVarIndex},
+
+				// Loop condition: Check whether `iterator.hasNext()`
+				opcode.InstructionGetLocal{LocalIndex: iteratorVarIndex},
+				opcode.InstructionIteratorHasNext{},
+
+				// If false, then jump to the end of the loop
+				opcode.InstructionJumpIfFalse{Target: 16},
+
+				// If true:
+
+				// Increment the index
+				opcode.InstructionGetLocal{LocalIndex: indexVarIndex},
+				opcode.InstructionGetConstant{ConstantIndex: 1},
+				opcode.InstructionAdd{},
+				opcode.InstructionSetLocal{LocalIndex: indexVarIndex},
+
+				// Get the next element and store in local var.
+				// var e = iterator.next()
+				opcode.InstructionGetLocal{LocalIndex: iteratorVarIndex},
+				opcode.InstructionIteratorNext{},
+				opcode.InstructionSetLocal{LocalIndex: elementVarIndex},
+
+				// Jump to the beginning (condition) of the loop.
+				opcode.InstructionJump{Target: 5},
+
+				// Return
+				opcode.InstructionReturn{},
+			},
+			program.Functions[0].Code,
+		)
+	})
+
+	t.Run("array scope", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            fun test(array: [Int]) {
+                var x = 5
+                for e in array {
+                    var e = e
+                    var x = 8
+                }
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(checker)
+		program := comp.Compile()
+		require.Len(t, program.Functions, 1)
+
+		const (
+			arrayValueIndex = iota
+			_               // result index (unused)
+			x1Index
+			iteratorVarIndex
+			e1Index
+			e2Index
+			x2Index
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+
+				// x = 5
+				opcode.InstructionGetConstant{ConstantIndex: 0},
+				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionSetLocal{LocalIndex: x1Index},
+
+				// Get the iterator and store in local var.
+				// `var <iterator> = array.Iterator`
+				opcode.InstructionGetLocal{LocalIndex: arrayValueIndex},
+				opcode.InstructionIterator{},
+				opcode.InstructionSetLocal{LocalIndex: iteratorVarIndex},
+
+				// Loop condition: Check whether `iterator.hasNext()`
+				opcode.InstructionGetLocal{LocalIndex: iteratorVarIndex},
+				opcode.InstructionIteratorHasNext{},
+
+				// If false, then jump to the end of the loop
+				opcode.InstructionJumpIfFalse{Target: 19},
+
+				// If true, get the next element and store in local var.
+				// var e = iterator.next()
+				opcode.InstructionGetLocal{LocalIndex: iteratorVarIndex},
+				opcode.InstructionIteratorNext{},
+				opcode.InstructionSetLocal{LocalIndex: e1Index},
+
+				// var e = e
+				opcode.InstructionGetLocal{LocalIndex: e1Index},
+				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionSetLocal{LocalIndex: e2Index},
+
+				// var x = 8
+				opcode.InstructionGetConstant{ConstantIndex: 1},
+				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionSetLocal{LocalIndex: x2Index},
+
+				// Jump to the beginning (condition) of the loop.
+				opcode.InstructionJump{Target: 6},
+
+				// Return
+				opcode.InstructionReturn{},
+			},
+			program.Functions[0].Code,
+		)
+	})
+}

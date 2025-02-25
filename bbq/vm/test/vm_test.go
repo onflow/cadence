@@ -4429,3 +4429,78 @@ func TestFixedPoint(t *testing.T) {
 	//	test(fixedPointType)
 	//}
 }
+
+func TestForLoop(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("array", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := compileAndInvoke(t,
+			`
+                fun test(): Int {
+                    var array = [5, 6, 7, 8]
+                    var sum = 0
+                    for e in array {
+                        sum = sum + e
+                    }
+
+                    return sum
+                }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(26), result)
+	})
+
+	t.Run("array with index", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := compileAndInvoke(t,
+			`
+                fun test(): String {
+                    var array = [5, 6, 7, 8]
+                    var keys = ""
+                    var values = ""
+                    for i, e in array {
+                        keys = keys.concat(i.toString())
+                        values = values.concat(e.toString())
+                    }
+
+                    return keys.concat("_").concat(values)
+                }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewStringValue("0123_5678"), result)
+	})
+
+	t.Run("array loop scoping", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := compileAndInvoke(t,
+			`
+                fun test(): String {
+                    var array = [5, 6, 7, 8]
+
+                    var offset = 10
+                    var values = ""
+
+                    for e in array {
+                        var offset = 1
+                        var e = e + offset
+                        values = values.concat(e.toString())
+                    }
+
+                    return values
+                }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewStringValue("6789"), result)
+	})
+}
