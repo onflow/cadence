@@ -2268,7 +2268,7 @@ func NewAccountKeyValue(
 			},
 			locationRange,
 		),
-		interpreter.AsBoolValue(accountKey.IsRevoked),
+		interpreter.BoolValue(accountKey.IsRevoked),
 	)
 }
 
@@ -3880,7 +3880,7 @@ func CheckCapabilityController(
 		false,
 	)
 
-	return interpreter.AsBoolValue(referencedValue != nil)
+	return interpreter.BoolValue(referencedValue != nil)
 }
 
 func newAccountCapabilitiesGetFunction(
@@ -4108,7 +4108,7 @@ func newAccountCapabilitiesExistsFunction(
 
 				storageMapKey := interpreter.StringStorageMapKey(identifier)
 
-				return interpreter.AsBoolValue(
+				return interpreter.BoolValue(
 					inter.StoredValueExists(address, domain, storageMapKey),
 				)
 			},

@@ -996,7 +996,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.AsBoolValue(true),
+				interpreter.BoolValue(true),
 				checkRes,
 			)
 
@@ -1035,7 +1035,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.AsBoolValue(true),
+				interpreter.BoolValue(true),
 				checkRes,
 			)
 
@@ -1058,7 +1058,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.AsBoolValue(false),
+				interpreter.BoolValue(false),
 				checkRes,
 			)
 
@@ -1085,7 +1085,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.AsBoolValue(false),
+				interpreter.BoolValue(false),
 				checkRes,
 			)
 		})
@@ -1174,7 +1174,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.AsBoolValue(true),
+				interpreter.BoolValue(true),
 				checkRes,
 			)
 
@@ -1213,7 +1213,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.AsBoolValue(true),
+				interpreter.BoolValue(true),
 				checkRes,
 			)
 
@@ -1236,7 +1236,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.AsBoolValue(false),
+				interpreter.BoolValue(false),
 				checkRes,
 			)
 

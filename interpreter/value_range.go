@@ -221,7 +221,7 @@ func rangeContains(
 		result = mod.Equal(interpreter, locationRange, zeroValue)
 	}
 
-	return AsBoolValue(result)
+	return BoolValue(result)
 }
 
 func getFieldAsIntegerValue(memoryGauge common.MemoryGauge, rangeValue *CompositeValue, name string) IntegerValue {

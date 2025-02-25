@@ -41,6 +41,7 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 type getterSetter struct {
@@ -3050,18 +3051,18 @@ var fromBigEndianBytesFunctionValues = func() map[string]fromBigEndianBytesFunct
 		}),
 		newFromBigEndianBytesFunction(sema.Int128Type, 16, func(i *Interpreter, b []byte) Value {
 			return NewInt128ValueFromBigInt(i, func() *big.Int {
-				bi := BigEndianBytesToSignedBigInt(b)
+				bi := values.BigEndianBytesToSignedBigInt(b)
 				return bi
 			})
 		}),
 		newFromBigEndianBytesFunction(sema.Int256Type, 32, func(i *Interpreter, b []byte) Value {
 			return NewInt256ValueFromBigInt(i, func() *big.Int {
-				bi := BigEndianBytesToSignedBigInt(b)
+				bi := values.BigEndianBytesToSignedBigInt(b)
 				return bi
 			})
 		}),
 		newFromBigEndianBytesFunction(sema.IntType, 0, func(i *Interpreter, b []byte) Value {
-			bi := BigEndianBytesToSignedBigInt(b)
+			bi := values.BigEndianBytesToSignedBigInt(b)
 			memoryUsage := common.NewBigIntMemoryUsage(
 				common.BigIntByteLength(bi),
 			)
@@ -3095,16 +3096,16 @@ var fromBigEndianBytesFunctionValues = func() map[string]fromBigEndianBytesFunct
 		}),
 		newFromBigEndianBytesFunction(sema.UInt128Type, 16, func(i *Interpreter, b []byte) Value {
 			return NewUInt128ValueFromBigInt(i, func() *big.Int {
-				return BigEndianBytesToUnsignedBigInt(b)
+				return values.BigEndianBytesToUnsignedBigInt(b)
 			})
 		}),
 		newFromBigEndianBytesFunction(sema.UInt256Type, 32, func(i *Interpreter, b []byte) Value {
 			return NewUInt256ValueFromBigInt(i, func() *big.Int {
-				return BigEndianBytesToUnsignedBigInt(b)
+				return values.BigEndianBytesToUnsignedBigInt(b)
 			})
 		}),
 		newFromBigEndianBytesFunction(sema.UIntType, 0, func(i *Interpreter, b []byte) Value {
-			bi := BigEndianBytesToUnsignedBigInt(b)
+			bi := values.BigEndianBytesToUnsignedBigInt(b)
 			memoryUsage := common.NewBigIntMemoryUsage(
 				common.BigIntByteLength(bi),
 			)
@@ -3138,12 +3139,12 @@ var fromBigEndianBytesFunctionValues = func() map[string]fromBigEndianBytesFunct
 		}),
 		newFromBigEndianBytesFunction(sema.Word128Type, 16, func(i *Interpreter, b []byte) Value {
 			return NewWord128ValueFromBigInt(i, func() *big.Int {
-				return BigEndianBytesToUnsignedBigInt(b)
+				return values.BigEndianBytesToUnsignedBigInt(b)
 			})
 		}),
 		newFromBigEndianBytesFunction(sema.Word256Type, 32, func(i *Interpreter, b []byte) Value {
 			return NewWord256ValueFromBigInt(i, func() *big.Int {
-				return BigEndianBytesToUnsignedBigInt(b)
+				return values.BigEndianBytesToUnsignedBigInt(b)
 			})
 		}),
 
@@ -4648,7 +4649,7 @@ func (interpreter *Interpreter) authAccountCheckFunction(
 
 			valueStaticType := value.StaticType(interpreter)
 
-			return AsBoolValue(interpreter.IsSubTypeOfSemaType(valueStaticType, ty))
+			return BoolValue(interpreter.IsSubTypeOfSemaType(valueStaticType, ty))
 		},
 	)
 }
@@ -5155,7 +5156,7 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) FunctionValue {
 
 			// NOTE: not invocation.Self, as that is only set for composite values
 			selfType := self.StaticType(interpreter)
-			return AsBoolValue(
+			return BoolValue(
 				interpreter.IsSubType(selfType, staticType),
 			)
 		},

@@ -32,6 +32,7 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // UFix64Value
@@ -356,7 +357,7 @@ func (v UFix64Value) Less(context ValueComparisonContext, other ComparableValue,
 		})
 	}
 
-	return AsBoolValue(v < o)
+	return BoolValue(v < o)
 }
 
 func (v UFix64Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -370,7 +371,7 @@ func (v UFix64Value) LessEqual(context ValueComparisonContext, other ComparableV
 		})
 	}
 
-	return AsBoolValue(v <= o)
+	return BoolValue(v <= o)
 }
 
 func (v UFix64Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -384,7 +385,7 @@ func (v UFix64Value) Greater(context ValueComparisonContext, other ComparableVal
 		})
 	}
 
-	return AsBoolValue(v > o)
+	return BoolValue(v > o)
 }
 
 func (v UFix64Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -398,7 +399,7 @@ func (v UFix64Value) GreaterEqual(context ValueComparisonContext, other Comparab
 		})
 	}
 
-	return AsBoolValue(v >= o)
+	return BoolValue(v >= o)
 }
 
 func (v UFix64Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
@@ -550,7 +551,7 @@ func (UFix64Value) DeepRemove(_ *Interpreter, _ bool) {
 }
 
 func (v UFix64Value) ByteSize() uint32 {
-	return cborTagSize + getUintCBORSize(uint64(v))
+	return values.CBORTagSize + values.GetUintCBORSize(uint64(v))
 }
 
 func (v UFix64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
