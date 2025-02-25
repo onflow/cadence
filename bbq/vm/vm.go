@@ -944,6 +944,11 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 		value = NewIntValue(smallInt)
 	case constantkind.String:
 		value = NewStringValueFromBytes(constant.Data)
+
+	case constantkind.UFix64:
+		smallInt, _, _ := leb128.ReadUint64(constant.Data)
+		value = NewUFix64Value(smallInt)
+
 	default:
 		// TODO:
 		panic(errors.NewUnexpectedError("unsupported constant kind '%s'", constant.Kind.String()))

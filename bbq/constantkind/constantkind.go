@@ -57,8 +57,8 @@ const (
 	Word16
 	Word32
 	Word64
-	_ // future: Word128
-	_ // future: Word256
+	Word128
+	Word256
 	_
 
 	// Fix*
@@ -83,6 +83,9 @@ const (
 
 func FromSemaType(ty sema.Type) ConstantKind {
 	switch ty {
+	case sema.StringType:
+		return String
+
 	// Int*
 	case sema.IntType, sema.IntegerType:
 		return Int
@@ -124,6 +127,10 @@ func FromSemaType(ty sema.Type) ConstantKind {
 		return Word32
 	case sema.Word64Type:
 		return Word64
+	case sema.Word128Type:
+		return Word128
+	case sema.Word256Type:
+		return Word256
 
 	// Fix*
 	case sema.Fix64Type:

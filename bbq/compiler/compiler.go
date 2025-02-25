@@ -20,6 +20,7 @@ package compiler
 
 import (
 	"math"
+	"math/big"
 	"strings"
 
 	"github.com/onflow/cadence/ast"
@@ -30,6 +31,7 @@ import (
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -937,9 +939,51 @@ func (c *Compiler[_]) VisitIntegerExpression(expression *ast.IntegerExpression) 
 	return
 }
 
-func (c *Compiler[_]) VisitFixedPointExpression(_ *ast.FixedPointExpression) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler[_]) VisitFixedPointExpression(expression *ast.FixedPointExpression) (_ struct{}) {
+	// TODO: adjust once/if we support more fixed point types
+
+	fixedPointSubType := c.ExtendedElaboration.FixedPointExpressionType(expression)
+
+	value := fixedpoint.ConvertToFixedPointBigInt(
+		expression.Negative,
+		expression.UnsignedInteger,
+		expression.Fractional,
+		expression.Scale,
+		sema.Fix64Scale,
+	)
+
+	var con *constant
+
+	switch fixedPointSubType {
+	case sema.Fix64Type, sema.SignedFixedPointType:
+		con = c.addFix64Constant(value)
+
+	case sema.UFix64Type:
+		con = c.addUFix64Constant(value)
+
+	case sema.FixedPointType:
+		if expression.Negative {
+			con = c.addFix64Constant(value)
+		} else {
+			con = c.addUFix64Constant(value)
+		}
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	c.codeGen.Emit(opcode.InstructionGetConstant{ConstantIndex: con.index})
+
+	return
+}
+
+func (c *Compiler[_]) addUFix64Constant(value *big.Int) *constant {
+	data := leb128.AppendUint64(nil, value.Uint64())
+	return c.addConstant(constantkind.UFix64, data)
+}
+
+func (c *Compiler[_]) addFix64Constant(value *big.Int) *constant {
+	data := leb128.AppendInt64(nil, value.Int64())
+	return c.addConstant(constantkind.Fix64, data)
 }
 
 func (c *Compiler[_]) VisitArrayExpression(array *ast.ArrayExpression) (_ struct{}) {
