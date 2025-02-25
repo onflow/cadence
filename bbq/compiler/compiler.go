@@ -262,6 +262,12 @@ func (c *Compiler[_]) emitUndefinedJumpIfFalse() int {
 	return offset
 }
 
+func (c *Compiler[_]) emitUndefinedJumpIfTrue() int {
+	offset := c.codeGen.Offset()
+	c.codeGen.Emit(opcode.InstructionJumpIfTrue{Target: math.MaxUint16})
+	return offset
+}
+
 func (c *Compiler[_]) emitUndefinedJumpIfNil() int {
 	offset := c.codeGen.Offset()
 	c.codeGen.Emit(opcode.InstructionJumpIfNil{Target: math.MaxUint16})
@@ -1282,6 +1288,44 @@ func (c *Compiler[_]) VisitBinaryExpression(expression *ast.BinaryExpression) (_
 		// End
 		c.patchJump(thenJump)
 
+	case ast.OperationOr:
+		// TODO: optimize chains of ors / ands
+
+		leftTrueJump := c.emitUndefinedJumpIfTrue()
+
+		c.compileExpression(expression.Right)
+		rightFalseJump := c.emitUndefinedJumpIfFalse()
+
+		// Left or right is true
+		c.patchJump(leftTrueJump)
+		c.codeGen.Emit(opcode.InstructionTrue{})
+		trueJump := c.emitUndefinedJump()
+
+		// Left and right are false
+		c.patchJump(rightFalseJump)
+		c.codeGen.Emit(opcode.InstructionFalse{})
+
+		c.patchJump(trueJump)
+
+	case ast.OperationAnd:
+		// TODO: optimize chains of ors / ands
+
+		leftFalseJump := c.emitUndefinedJumpIfFalse()
+
+		c.compileExpression(expression.Right)
+		rightFalseJump := c.emitUndefinedJumpIfFalse()
+
+		// Left and right are true
+		c.codeGen.Emit(opcode.InstructionTrue{})
+		trueJump := c.emitUndefinedJump()
+
+		// Left or right is false
+		c.patchJump(leftFalseJump)
+		c.patchJump(rightFalseJump)
+		c.codeGen.Emit(opcode.InstructionFalse{})
+
+		c.patchJump(trueJump)
+
 	default:
 		c.compileExpression(expression.Right)
 
@@ -1296,10 +1340,12 @@ func (c *Compiler[_]) VisitBinaryExpression(expression *ast.BinaryExpression) (_
 			c.codeGen.Emit(opcode.InstructionDivide{})
 		case ast.OperationMod:
 			c.codeGen.Emit(opcode.InstructionMod{})
+
 		case ast.OperationEqual:
 			c.codeGen.Emit(opcode.InstructionEqual{})
 		case ast.OperationNotEqual:
 			c.codeGen.Emit(opcode.InstructionNotEqual{})
+
 		case ast.OperationLess:
 			c.codeGen.Emit(opcode.InstructionLess{})
 		case ast.OperationLessEqual:
