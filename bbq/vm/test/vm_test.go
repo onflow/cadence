@@ -4401,4 +4401,30 @@ func TestForLoop(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, vm.NewStringValue("0123_5678"), result)
 	})
+
+	t.Run("array loop scoping", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := compileAndInvoke(t,
+			`
+                fun test(): String {
+                    var array = [5, 6, 7, 8]
+
+                    var offset = 10
+                    var values = ""
+
+                    for e in array {
+                        var offset = 1
+                        var e = e + offset
+                        values = values.concat(e.toString())
+                    }
+
+                    return values
+                }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewStringValue("6789"), result)
+	})
 }

@@ -1153,7 +1153,7 @@ func (i InstructionGreaterOrEqual) Encode(code *[]byte) {
 
 // InstructionIterator
 //
-// Pops a value from stack, get an iterator to it, and push the iterator back onto the stack.
+// Pops an iterable value from the stack, get an iterator to it, and push the iterator back onto the stack.
 type InstructionIterator struct {
 }
 
@@ -1173,7 +1173,7 @@ func (i InstructionIterator) Encode(code *[]byte) {
 
 // InstructionIteratorHasNext
 //
-// Pops a value-iterator from stack, calls `hasNext()` method on it, and push the result back onto the stack.
+// Pops a value-iterator from the stack, calls `hasNext()` method on it, and push the result back onto the stack.
 type InstructionIteratorHasNext struct {
 }
 

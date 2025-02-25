@@ -679,10 +679,21 @@ func (c *Compiler[_]) VisitWhileStatement(statement *ast.WhileStatement) (_ stru
 }
 
 func (c *Compiler[_]) VisitForStatement(statement *ast.ForStatement) (_ struct{}) {
+	// Evaluate the expression
+	c.compileExpression(statement.Value)
+
+	// Get an iterator to the resulting value, and store it in a local index.
+	c.codeGen.Emit(opcode.InstructionIterator{})
+	iteratorLocalIndex := c.currentFunction.generateLocalIndex()
+	c.codeGen.Emit(opcode.InstructionSetLocal{
+		LocalIndex: iteratorLocalIndex,
+	})
+
+	// Initialize 'index' variable, if needed.
 	index := statement.Index
 	indexNeeded := index != nil
-
 	var indexLocalVar *local
+
 	if indexNeeded {
 		// `var <index> = -1`
 		// Start with -1 and then increment at the start of the loop,
@@ -693,15 +704,6 @@ func (c *Compiler[_]) VisitForStatement(statement *ast.ForStatement) (_ struct{}
 			LocalIndex: indexLocalVar.index,
 		})
 	}
-	elementLocalVar := c.currentFunction.declareLocal(statement.Identifier.Identifier)
-	iteratorLocalIndex := c.currentFunction.generateLocalIndex()
-
-	// Store the iterator in a local index.
-	c.compileExpression(statement.Value)
-	c.codeGen.Emit(opcode.InstructionIterator{})
-	c.codeGen.Emit(opcode.InstructionSetLocal{
-		LocalIndex: iteratorLocalIndex,
-	})
 
 	testOffset := c.codeGen.Offset()
 	c.pushControlFlow(testOffset)
@@ -715,13 +717,11 @@ func (c *Compiler[_]) VisitForStatement(statement *ast.ForStatement) (_ struct{}
 
 	endJump := c.emitUndefinedJumpIfFalse()
 
-	// Loop Body. Get the iterator and call `next()`.
+	// Loop Body.
 
-	c.codeGen.Emit(opcode.InstructionGetLocal{
-		LocalIndex: iteratorLocalIndex,
-	})
-
-	// Store the index if needed, and store in the local var.
+	// Increment the index if needed.
+	// This is done as the first thing inside the loop, so that we don't need to
+	// worry about loop-control statements (e.g: continue, return, break) in the body.
 	if indexNeeded {
 		// <index> = <index> + 1
 		c.codeGen.Emit(opcode.InstructionGetLocal{
@@ -734,9 +734,15 @@ func (c *Compiler[_]) VisitForStatement(statement *ast.ForStatement) (_ struct{}
 		})
 	}
 
-	// Get the next entry (value for arrays, key for dictionaries, etc.), and store it in the local var.
-	// <entry> = iterator.next()
+	// Get the iterator and call `next()` (value for arrays, key for dictionaries, etc.)
+	c.codeGen.Emit(opcode.InstructionGetLocal{
+		LocalIndex: iteratorLocalIndex,
+	})
 	c.codeGen.Emit(opcode.InstructionIteratorNext{})
+
+	// Store it (next entry) in a local var.
+	// `<entry> = iterator.next()`
+	elementLocalVar := c.currentFunction.declareLocal(statement.Identifier.Identifier)
 	c.codeGen.Emit(opcode.InstructionSetLocal{
 		LocalIndex: elementLocalVar.index,
 	})

@@ -443,9 +443,10 @@ var _ ValueIterator = &ArrayIterator{}
 
 func (i *ArrayIterator) isValue() {}
 
-func (i *ArrayIterator) StaticType(config *Config) StaticType {
-	//TODO implement me
-	panic("implement me")
+func (i *ArrayIterator) StaticType(_ *Config) StaticType {
+	// Iterator is an internal-only value.
+	// Hence, this should never be called.
+	panic(errors.NewUnreachableError())
 }
 
 func (i *ArrayIterator) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
