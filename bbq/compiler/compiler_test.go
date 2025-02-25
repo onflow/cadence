@@ -623,9 +623,9 @@ func TestCompileIfLet(t *testing.T) {
 	require.Equal(t, len(program.Functions), len(functions))
 
 	const (
-		xIndex = iota
-		_
-		tempYIndex
+		xIndex     = iota
+		_          // result index (unused)
+		tempYIndex // index for the temp var to hold the value of the expression
 		yIndex
 	)
 	assert.Equal(t,
