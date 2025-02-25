@@ -129,17 +129,6 @@ func (v UInt64Value) Negate(NumberValueArithmeticContext, LocationRange) NumberV
 	panic(errors.NewUnreachableError())
 }
 
-func safeAddUint64(a, b uint64, locationRange LocationRange) uint64 {
-	sum := a + b
-	// INT30-C
-	if sum < a {
-		panic(OverflowError{
-			LocationRange: locationRange,
-		})
-	}
-	return sum
-}
-
 func (v UInt64Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
@@ -154,7 +143,16 @@ func (v UInt64Value) Plus(context NumberValueArithmeticContext, other NumberValu
 	return NewUInt64Value(
 		context,
 		func() uint64 {
-			return safeAddUint64(uint64(v), uint64(o), locationRange)
+			result, err := values.SafeAddUint64(uint64(v), uint64(o))
+			if err != nil {
+				if _, ok := err.(values.OverflowError); ok {
+					panic(OverflowError{
+						LocationRange: locationRange,
+					})
+				}
+				panic(err)
+			}
+			return result
 		},
 	)
 }

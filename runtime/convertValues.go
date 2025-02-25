@@ -204,7 +204,7 @@ func exportValueWithInterpreter(
 	case interpreter.Fix64Value:
 		return cadence.Fix64(v), nil
 	case interpreter.UFix64Value:
-		return cadence.UFix64(v), nil
+		return cadence.UFix64(v.UFix64Value), nil
 	case *interpreter.CompositeValue:
 		return exportCompositeValue(
 			v,

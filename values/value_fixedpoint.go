@@ -18,7 +18,9 @@
 
 package values
 
-type EquatableValue interface {
-	Value
-	Equal(other Value) bool
+// FixedPointValue is a fixed-point number value
+type FixedPointValue[T Value, U uint64 | int64] interface {
+	NumberValue[T]
+	IntegerPart() U
+	Scale() int
 }

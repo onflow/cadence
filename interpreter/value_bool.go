@@ -65,10 +65,8 @@ func (v BoolValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value)
 	if !ok {
 		return false
 	}
-	return bool(
-		values.BoolValue(v).
-			EqualBool(values.BoolValue(otherBool)),
-	)
+	return values.BoolValue(v).
+		Equal(values.BoolValue(otherBool))
 }
 
 func (v BoolValue) Less(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {

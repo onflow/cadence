@@ -192,7 +192,7 @@ func (v IntValue) GreaterEqual(other IntValue) bool {
 	return cmp >= 0
 }
 
-func (v IntValue) Equal(other Value) BoolValue {
+func (v IntValue) Equal(other Value) bool {
 	otherInt, ok := other.(IntValue)
 	if !ok {
 		return false

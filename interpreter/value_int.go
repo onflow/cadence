@@ -21,7 +21,6 @@ package interpreter
 import (
 	"math"
 	"math/big"
-	"unsafe"
 
 	"github.com/onflow/atree"
 
@@ -37,8 +36,6 @@ import (
 type IntValue struct {
 	values.IntValue
 }
-
-const int64Size = int(unsafe.Sizeof(int64(0)))
 
 func NewIntValueFromInt64(memoryGauge common.MemoryGauge, value int64) IntValue {
 	return IntValue{
@@ -397,7 +394,7 @@ func (v IntValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) 
 		return false
 	}
 
-	return bool(v.IntValue.Equal(otherInt.IntValue))
+	return v.IntValue.Equal(otherInt.IntValue)
 }
 
 // HashInput returns a byte slice containing:

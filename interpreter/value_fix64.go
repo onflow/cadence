@@ -480,7 +480,7 @@ func ConvertFix64(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 		return value
 
 	case UFix64Value:
-		if value > Fix64MaxValue {
+		if value.UFix64Value > Fix64MaxValue {
 			panic(OverflowError{
 				LocationRange: locationRange,
 			})
@@ -488,7 +488,7 @@ func ConvertFix64(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 		return NewFix64Value(
 			memoryGauge,
 			func() int64 {
-				return int64(value)
+				return int64(value.UFix64Value)
 			},
 		)
 

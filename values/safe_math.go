@@ -18,7 +18,11 @@
 
 package values
 
-type EquatableValue interface {
-	Value
-	Equal(other Value) bool
+func SafeAddUint64(a, b uint64) (uint64, error) {
+	sum := a + b
+	// INT30-C
+	if sum < a {
+		return 0, OverflowError{}
+	}
+	return sum, nil
 }

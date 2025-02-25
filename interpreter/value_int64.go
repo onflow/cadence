@@ -21,6 +21,7 @@ package interpreter
 import (
 	"encoding/binary"
 	"math"
+	"unsafe"
 
 	"github.com/onflow/atree"
 
@@ -35,6 +36,8 @@ import (
 // Int64Value
 
 type Int64Value int64
+
+const int64Size = int(unsafe.Sizeof(int64(0)))
 
 var Int64MemoryUsage = common.NewNumberMemoryUsage(int64Size)
 
