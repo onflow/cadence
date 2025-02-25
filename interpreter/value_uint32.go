@@ -325,7 +325,7 @@ func (v UInt32Value) Less(context ValueComparisonContext, other ComparableValue,
 		})
 	}
 
-	return BoolValue(v < o)
+	return v < o
 }
 
 func (v UInt32Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -339,7 +339,7 @@ func (v UInt32Value) LessEqual(context ValueComparisonContext, other ComparableV
 		})
 	}
 
-	return BoolValue(v <= o)
+	return v <= o
 }
 
 func (v UInt32Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -353,7 +353,7 @@ func (v UInt32Value) Greater(context ValueComparisonContext, other ComparableVal
 		})
 	}
 
-	return BoolValue(v > o)
+	return v > o
 }
 
 func (v UInt32Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -367,7 +367,7 @@ func (v UInt32Value) GreaterEqual(context ValueComparisonContext, other Comparab
 		})
 	}
 
-	return BoolValue(v >= o)
+	return v >= o
 }
 
 func (v UInt32Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {

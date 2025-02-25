@@ -101,6 +101,9 @@ func ConvertStoredValue(gauge common.MemoryGauge, value atree.Value) (Value, err
 	case values.IntValue:
 		return IntValue{IntValue: value}, nil
 
+	case values.UFix64Value:
+		return UFix64Value{UFix64Value: value}, nil
+
 	case Value:
 		return value, nil
 

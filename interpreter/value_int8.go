@@ -410,7 +410,7 @@ func (v Int8Value) Less(context ValueComparisonContext, other ComparableValue, l
 		})
 	}
 
-	return BoolValue(v < o)
+	return v < o
 }
 
 func (v Int8Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -424,7 +424,7 @@ func (v Int8Value) LessEqual(context ValueComparisonContext, other ComparableVal
 		})
 	}
 
-	return BoolValue(v <= o)
+	return v <= o
 }
 
 func (v Int8Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -438,7 +438,7 @@ func (v Int8Value) Greater(context ValueComparisonContext, other ComparableValue
 		})
 	}
 
-	return BoolValue(v > o)
+	return v > o
 }
 
 func (v Int8Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -452,7 +452,7 @@ func (v Int8Value) GreaterEqual(context ValueComparisonContext, other Comparable
 		})
 	}
 
-	return BoolValue(v >= o)
+	return v >= o
 }
 
 func (v Int8Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {

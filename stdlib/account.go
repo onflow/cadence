@@ -3880,7 +3880,7 @@ func CheckCapabilityController(
 		false,
 	)
 
-	return interpreter.BoolValue(referencedValue != nil)
+	return referencedValue != nil
 }
 
 func newAccountCapabilitiesGetFunction(

@@ -412,7 +412,7 @@ func (v Fix64Value) Less(context ValueComparisonContext, other ComparableValue, 
 		})
 	}
 
-	return BoolValue(v < o)
+	return v < o
 }
 
 func (v Fix64Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -426,7 +426,7 @@ func (v Fix64Value) LessEqual(context ValueComparisonContext, other ComparableVa
 		})
 	}
 
-	return BoolValue(v <= o)
+	return v <= o
 }
 
 func (v Fix64Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -440,7 +440,7 @@ func (v Fix64Value) Greater(context ValueComparisonContext, other ComparableValu
 		})
 	}
 
-	return BoolValue(v > o)
+	return v > o
 }
 
 func (v Fix64Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -454,7 +454,7 @@ func (v Fix64Value) GreaterEqual(context ValueComparisonContext, other Comparabl
 		})
 	}
 
-	return BoolValue(v >= o)
+	return v >= o
 }
 
 func (v Fix64Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
@@ -480,7 +480,7 @@ func ConvertFix64(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 		return value
 
 	case UFix64Value:
-		if value > Fix64MaxValue {
+		if value.UFix64Value > Fix64MaxValue {
 			panic(OverflowError{
 				LocationRange: locationRange,
 			})
@@ -488,7 +488,7 @@ func ConvertFix64(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 		return NewFix64Value(
 			memoryGauge,
 			func() int64 {
-				return int64(value)
+				return int64(value.UFix64Value)
 			},
 		)
 

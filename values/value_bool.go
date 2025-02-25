@@ -50,16 +50,12 @@ func (v BoolValue) Negate() BoolValue {
 	return TrueValue
 }
 
-func (v BoolValue) Equal(other Value) BoolValue {
+func (v BoolValue) Equal(other Value) bool {
 	otherBool, ok := other.(BoolValue)
 	if !ok {
 		return false
 	}
-	return v.EqualBool(otherBool)
-}
-
-func (v BoolValue) EqualBool(other BoolValue) BoolValue {
-	return bool(v) == bool(other)
+	return bool(v) == bool(otherBool)
 }
 
 func (v BoolValue) Less(other BoolValue) bool {

@@ -851,9 +851,9 @@ func (d StorableDecoder) decodeUFix64() (UFix64Value, error) {
 	value, err := decodeUint64(d.decoder, d.memoryGauge)
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return 0, errors.NewUnexpectedError("unknown UFix64 encoding: %s", e.ActualType.String())
+			return UFix64Value{}, errors.NewUnexpectedError("unknown UFix64 encoding: %s", e.ActualType.String())
 		}
-		return 0, err
+		return UFix64Value{}, err
 	}
 
 	// Already metered at `decodeUint64`

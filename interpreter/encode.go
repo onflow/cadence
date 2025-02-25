@@ -480,23 +480,6 @@ func (v Fix64Value) Encode(e *atree.Encoder) error {
 	return e.CBOR.EncodeInt64(int64(v))
 }
 
-// Encode encodes UFix64Value as
-//
-//	cbor.Tag{
-//			Number:  CBORTagUFix64Value,
-//			Content: uint64(v),
-//	}
-func (v UFix64Value) Encode(e *atree.Encoder) error {
-	err := e.CBOR.EncodeRawBytes([]byte{
-		// tag number
-		0xd8, values.CBORTagUFix64Value,
-	})
-	if err != nil {
-		return err
-	}
-	return e.CBOR.EncodeUint64(uint64(v))
-}
-
 var _ atree.ContainerStorable = &SomeStorable{}
 
 func (s SomeStorable) Encode(e *atree.Encoder) error {

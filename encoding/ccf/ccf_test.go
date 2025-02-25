@@ -7744,7 +7744,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			cadence.NewReferenceType(
 				cadence.NewEntitlementMapAuthorization(
 					nil,
-					common.TypeID("foo"),
+					"foo",
 				),
 				cadence.StringType,
 			),

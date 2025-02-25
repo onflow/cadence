@@ -163,7 +163,7 @@ func (v *StringValue) Less(context ValueComparisonContext, other ComparableValue
 		})
 	}
 
-	return BoolValue(v.Str < otherString.Str)
+	return v.Str < otherString.Str
 }
 
 func (v *StringValue) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -177,7 +177,7 @@ func (v *StringValue) LessEqual(context ValueComparisonContext, other Comparable
 		})
 	}
 
-	return BoolValue(v.Str <= otherString.Str)
+	return v.Str <= otherString.Str
 }
 
 func (v *StringValue) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -191,7 +191,7 @@ func (v *StringValue) Greater(context ValueComparisonContext, other ComparableVa
 		})
 	}
 
-	return BoolValue(v.Str > otherString.Str)
+	return v.Str > otherString.Str
 }
 
 func (v *StringValue) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -205,7 +205,7 @@ func (v *StringValue) GreaterEqual(context ValueComparisonContext, other Compara
 		})
 	}
 
-	return BoolValue(v.Str >= otherString.Str)
+	return v.Str >= otherString.Str
 }
 
 // HashInput returns a byte slice containing:
@@ -1028,7 +1028,7 @@ func (v *StringValue) indexOf(inter *Interpreter, other *StringValue) (character
 
 func (v *StringValue) Contains(inter *Interpreter, other *StringValue) BoolValue {
 	characterIndex, _ := v.indexOf(inter, other)
-	return BoolValue(characterIndex >= 0)
+	return characterIndex >= 0
 }
 
 func (v *StringValue) Count(inter *Interpreter, locationRange LocationRange, other *StringValue) IntValue {

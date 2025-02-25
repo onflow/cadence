@@ -21,6 +21,7 @@ package interpreter
 import (
 	"encoding/binary"
 	"math"
+	"unsafe"
 
 	"github.com/onflow/atree"
 
@@ -35,6 +36,8 @@ import (
 // Int64Value
 
 type Int64Value int64
+
+const int64Size = int(unsafe.Sizeof(int64(0)))
 
 var Int64MemoryUsage = common.NewNumberMemoryUsage(int64Size)
 
@@ -411,7 +414,7 @@ func (v Int64Value) Less(context ValueComparisonContext, other ComparableValue, 
 		})
 	}
 
-	return BoolValue(v < o)
+	return v < o
 }
 
 func (v Int64Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -425,7 +428,7 @@ func (v Int64Value) LessEqual(context ValueComparisonContext, other ComparableVa
 		})
 	}
 
-	return BoolValue(v <= o)
+	return v <= o
 }
 
 func (v Int64Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -439,7 +442,7 @@ func (v Int64Value) Greater(context ValueComparisonContext, other ComparableValu
 		})
 	}
 
-	return BoolValue(v > o)
+	return v > o
 
 }
 
@@ -454,7 +457,7 @@ func (v Int64Value) GreaterEqual(context ValueComparisonContext, other Comparabl
 		})
 	}
 
-	return BoolValue(v >= o)
+	return v >= o
 }
 
 func (v Int64Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
