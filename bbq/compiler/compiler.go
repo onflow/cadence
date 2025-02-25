@@ -229,14 +229,14 @@ func (c *Compiler[_]) addStringConst(str string) *constant {
 	return c.addConstant(constantkind.String, []byte(str))
 }
 
-func (c *Compiler[_]) intConstLoad(i int64) {
-	constant := c.addIntConst(i)
+func (c *Compiler[_]) intConstLoad(intKind constantkind.ConstantKind, i int64) {
+	constant := c.addIntConst(intKind, i)
 	c.codeGen.Emit(opcode.InstructionGetConstant{ConstantIndex: constant.index})
 }
 
-func (c *Compiler[_]) addIntConst(i int64) *constant {
+func (c *Compiler[_]) addIntConst(intKind constantkind.ConstantKind, i int64) *constant {
 	data := leb128.AppendInt64(nil, i)
-	return c.addConstant(constantkind.Int, data)
+	return c.addConstant(intKind, data)
 }
 
 func (c *Compiler[_]) emitJump(target int) int {
@@ -699,7 +699,7 @@ func (c *Compiler[_]) VisitForStatement(statement *ast.ForStatement) (_ struct{}
 		// Start with -1 and then increment at the start of the loop,
 		// so that we don't have to deal with early exists of the loop.
 		indexLocalVar = c.currentFunction.declareLocal(index.Identifier)
-		c.intConstLoad(-1)
+		c.intConstLoad(constantkind.Int, -1)
 		c.codeGen.Emit(opcode.InstructionSetLocal{
 			LocalIndex: indexLocalVar.index,
 		})
@@ -727,7 +727,7 @@ func (c *Compiler[_]) VisitForStatement(statement *ast.ForStatement) (_ struct{}
 		c.codeGen.Emit(opcode.InstructionGetLocal{
 			LocalIndex: indexLocalVar.index,
 		})
-		c.intConstLoad(1)
+		c.intConstLoad(constantkind.Int, 1)
 		c.codeGen.Emit(opcode.InstructionAdd{})
 		c.codeGen.Emit(opcode.InstructionSetLocal{
 			LocalIndex: indexLocalVar.index,
@@ -932,12 +932,8 @@ func (c *Compiler[_]) VisitIntegerExpression(expression *ast.IntegerExpression) 
 	integerType := c.ExtendedElaboration.IntegerExpressionType(expression)
 	constantKind := constantkind.FromSemaType(integerType)
 
-	// TODO:
-	var data []byte
-	data = leb128.AppendInt64(data, expression.Value.Int64())
-
-	constant := c.addConstant(constantKind, data)
-	c.codeGen.Emit(opcode.InstructionGetConstant{ConstantIndex: constant.index})
+	// TODO: Support all integer types
+	c.intConstLoad(constantKind, expression.Value.Int64())
 	return
 }
 
