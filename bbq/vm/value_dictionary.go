@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -112,7 +113,7 @@ func newDictionaryValueFromAtreeMap(
 
 func (*DictionaryValue) isValue() {}
 
-func (v *DictionaryValue) StaticType(*Config) StaticType {
+func (v *DictionaryValue) StaticType(*Config) bbq.StaticType {
 	return v.Type
 }
 

@@ -16,30 +16,16 @@
  * limitations under the License.
  */
 
-package vm
+package bbq
 
 import (
-	"github.com/onflow/atree"
-
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/interpreter"
 )
 
-type VoidValue struct{}
+type StaticType = interpreter.StaticType
 
-var Void Value = VoidValue{}
-
-func (VoidValue) isValue() {}
-
-func (VoidValue) StaticType(*Config) bbq.StaticType {
-	return interpreter.PrimitiveStaticTypeVoid
-}
-
-func (v VoidValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
-	return v
-}
-
-func (v VoidValue) String() string {
-	return format.Void
+func StaticTypeFromBytes(bytes []byte) (StaticType, error) {
+	dec := interpreter.CBORDecMode.NewByteStreamDecoder(bytes)
+	typeDecoder := interpreter.NewTypeDecoder(dec, nil)
+	return typeDecoder.DecodeStaticType()
 }

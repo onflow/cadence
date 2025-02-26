@@ -21,12 +21,13 @@ package vm
 import (
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
 )
 
 type SimpleCompositeValue struct {
 	typeID     common.TypeID
-	staticType StaticType
+	staticType bbq.StaticType
 	Kind       common.CompositeKind
 
 	fields       map[string]Value
@@ -55,7 +56,7 @@ func NewSimpleCompositeValue(
 
 func (*SimpleCompositeValue) isValue() {}
 
-func (v *SimpleCompositeValue) StaticType(*Config) StaticType {
+func (v *SimpleCompositeValue) StaticType(*Config) bbq.StaticType {
 	return v.staticType
 }
 

@@ -21,6 +21,7 @@ package vm
 import (
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/interpreter"
 )
@@ -73,7 +74,7 @@ func (v *EphemeralReferenceValue) BorrowType() interpreter.StaticType {
 	return v.BorrowedType
 }
 
-func (v *EphemeralReferenceValue) StaticType(config *Config) StaticType {
+func (v *EphemeralReferenceValue) StaticType(config *Config) bbq.StaticType {
 	return interpreter.NewReferenceStaticType(
 		config.MemoryGauge,
 		v.Authorization,

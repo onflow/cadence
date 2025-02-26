@@ -21,6 +21,7 @@ package vm
 import (
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -67,7 +68,7 @@ func init() {
 		sema.Account_CapabilitiesTypeGetFunctionName,
 		NativeFunctionValue{
 			ParameterCount: len(sema.Account_CapabilitiesTypeGetFunctionType.Parameters),
-			Function: func(config *Config, typeArguments []StaticType, args ...Value) Value {
+			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.Capabilities)
 				address := getAddressMetaInfoFromValue(args[0])
 
@@ -108,7 +109,7 @@ func init() {
 		sema.Account_CapabilitiesTypePublishFunctionName,
 		NativeFunctionValue{
 			ParameterCount: len(sema.Account_CapabilitiesTypePublishFunctionType.Parameters),
-			Function: func(config *Config, typeArguments []StaticType, args ...Value) Value {
+			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.Capabilities)
 				accountAddress := getAddressMetaInfoFromValue(args[0])
 

@@ -16,30 +16,35 @@
  * limitations under the License.
  */
 
-package vm
+package compiler
 
 import (
-	"github.com/onflow/atree"
-
 	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/interpreter"
 )
 
-type VoidValue struct{}
-
-var Void Value = VoidValue{}
-
-func (VoidValue) isValue() {}
-
-func (VoidValue) StaticType(*Config) bbq.StaticType {
-	return interpreter.PrimitiveStaticTypeVoid
+type TypeGen[T any] interface {
+	CompileType(staticType bbq.StaticType) T
 }
 
-func (v VoidValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
-	return v
+type DecodedTypeGen struct {
 }
 
-func (v VoidValue) String() string {
-	return format.Void
+var _ TypeGen[bbq.StaticType] = &DecodedTypeGen{}
+
+func (d DecodedTypeGen) CompileType(staticType bbq.StaticType) bbq.StaticType {
+	return staticType
+}
+
+type EncodedTypeGen struct {
+}
+
+var _ TypeGen[[]byte] = &EncodedTypeGen{}
+
+func (d EncodedTypeGen) CompileType(staticType bbq.StaticType) []byte {
+	bytes, err := interpreter.StaticTypeToBytes(staticType)
+	if err != nil {
+		panic(err)
+	}
+	return bytes
 }
