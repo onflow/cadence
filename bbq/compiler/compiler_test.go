@@ -3637,3 +3637,117 @@ func TestCompileConditional(t *testing.T) {
 		program.Constants,
 	)
 }
+
+func TestCompileOr(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun test(x: Bool, y: Bool): Bool {
+          return x || y
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
+
+	const parameterCount = 2
+
+	const (
+		// xIndex is the index of the parameter `x`, which is the first parameter
+		xIndex = iota
+		// yIndex is the index of the parameter `y`, which is the second parameter
+		yIndex
+	)
+
+	// resultIndex is the index of the $result variable
+	const resultIndex = parameterCount
+
+	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// return x || y
+			opcode.InstructionGetLocal{LocalIndex: xIndex},
+			opcode.InstructionJumpIfTrue{Target: 4},
+
+			opcode.InstructionGetLocal{LocalIndex: yIndex},
+			opcode.InstructionJumpIfFalse{Target: 6},
+
+			opcode.InstructionTrue{},
+			opcode.InstructionJump{Target: 7},
+
+			opcode.InstructionFalse{},
+
+			// assign to temp $result
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: resultIndex},
+
+			// return $result
+			opcode.InstructionGetLocal{LocalIndex: resultIndex},
+			opcode.InstructionReturnValue{},
+		},
+		functions[0].Code,
+	)
+}
+
+func TestCompileAnd(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun test(x: Bool, y: Bool): Bool {
+          return x && y
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
+
+	const parameterCount = 2
+
+	const (
+		// xIndex is the index of the parameter `x`, which is the first parameter
+		xIndex = iota
+		// yIndex is the index of the parameter `y`, which is the second parameter
+		yIndex
+	)
+
+	// resultIndex is the index of the $result variable
+	const resultIndex = parameterCount
+
+	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// return x && y
+			opcode.InstructionGetLocal{LocalIndex: xIndex},
+			opcode.InstructionJumpIfFalse{Target: 6},
+
+			opcode.InstructionGetLocal{LocalIndex: yIndex},
+			opcode.InstructionJumpIfFalse{Target: 6},
+
+			opcode.InstructionTrue{},
+			opcode.InstructionJump{Target: 7},
+
+			opcode.InstructionFalse{},
+
+			// assign to temp $result
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: resultIndex},
+
+			// return $result
+			opcode.InstructionGetLocal{LocalIndex: resultIndex},
+			opcode.InstructionReturnValue{},
+		},
+		functions[0].Code,
+	)
+}

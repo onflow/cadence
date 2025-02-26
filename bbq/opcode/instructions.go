@@ -841,6 +841,36 @@ func DecodeJumpIfFalse(ip *uint16, code []byte) (i InstructionJumpIfFalse) {
 	return i
 }
 
+// InstructionJumpIfTrue
+//
+// Pops a value off the stack. If it is `true`, jumps to the target instruction.
+type InstructionJumpIfTrue struct {
+	Target uint16
+}
+
+var _ Instruction = InstructionJumpIfTrue{}
+
+func (InstructionJumpIfTrue) Opcode() Opcode {
+	return JumpIfTrue
+}
+
+func (i InstructionJumpIfTrue) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	printfArgument(&sb, "target", i.Target)
+	return sb.String()
+}
+
+func (i InstructionJumpIfTrue) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.Target)
+}
+
+func DecodeJumpIfTrue(ip *uint16, code []byte) (i InstructionJumpIfTrue) {
+	i.Target = decodeUint16(ip, code)
+	return i
+}
+
 // InstructionJumpIfNil
 //
 // Pops a value off the stack. If it is `nil`, jumps to the target instruction.
@@ -1303,6 +1333,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return DecodeJump(ip, code)
 	case JumpIfFalse:
 		return DecodeJumpIfFalse(ip, code)
+	case JumpIfTrue:
+		return DecodeJumpIfTrue(ip, code)
 	case JumpIfNil:
 		return DecodeJumpIfNil(ip, code)
 	case Return:
