@@ -565,6 +565,10 @@ func (c *Compiler[_, _]) compileBlock(block *ast.Block) {
 }
 
 func (c *Compiler[_, _]) compileFunctionBlock(functionBlock *ast.FunctionBlock) {
+	if functionBlock == nil {
+		return
+	}
+
 	// Function conditions must have been desugared to statements.
 	// So there shouldn't be any condition at this point.
 	if functionBlock.PreConditions != nil ||
@@ -572,9 +576,7 @@ func (c *Compiler[_, _]) compileFunctionBlock(functionBlock *ast.FunctionBlock) 
 		panic(errors.NewUnreachableError())
 	}
 
-	if functionBlock != nil {
-		c.compileBlock(functionBlock.Block)
-	}
+	c.compileBlock(functionBlock.Block)
 }
 
 func (c *Compiler[_, _]) compileStatement(statement ast.Statement) {
