@@ -286,7 +286,18 @@ func (vm *VM) InitializeContract(arguments ...Value) (*CompositeValue, error) {
 	return contractValue, nil
 }
 
-func (vm *VM) ExecuteTransaction(transactionArgs []Value, signers ...Value) error {
+func (vm *VM) ExecuteTransaction(transactionArgs []Value, signers ...Value) (err error) {
+	defer func() {
+		recovered := recover()
+		if recovered == nil {
+			return
+		}
+
+		// TODO: pass proper location
+		codesAndPrograms := runtime.NewCodesAndPrograms()
+		err = runtime.GetWrappedError(recovered, nil, codesAndPrograms)
+	}()
+
 	// Create transaction value
 	transaction, err := vm.Invoke(commons.TransactionWrapperCompositeName)
 	if err != nil {

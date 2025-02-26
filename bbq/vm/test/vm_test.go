@@ -1548,6 +1548,368 @@ func TestTransaction(t *testing.T) {
 		// Once 'execute' is called, 'a' is initialized to "Hello, again!"
 		assert.Equal(t, vm.NewStringValue("Hello again!"), compositeValue.GetMember(vmConfig, "a"))
 	})
+
+	t.Run("conditions with execute", func(t *testing.T) {
+
+		location := common.TransactionLocation{0x1}
+
+		activation := sema.NewVariableActivation(sema.BaseValueActivation)
+		activation.DeclareValue(stdlib.PanicFunction)
+		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
+			"log",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityView,
+				[]sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: sema.AnyStructTypeAnnotation,
+					},
+				},
+				sema.VoidTypeAnnotation,
+			),
+			"",
+			nil,
+		))
+
+		parseAndCheckOptions := ParseAndCheckOptions{
+			Location: location,
+			Config: &sema.Config{
+				LocationHandler: singleIdentifierLocationResolver(t),
+				BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+					return activation
+				},
+			},
+		}
+
+		checker, err := ParseAndCheckWithOptions(t, `
+            transaction {
+                var count: Int
+
+                prepare() {
+                    self.count = 2
+                }
+
+                pre {
+                    print(self.count)
+                }
+
+                execute {
+                    self.count = 10
+                }
+
+                post {
+                    print(self.count)
+                }
+            }
+
+
+            access(all) view fun print(_ n: Int): Bool {
+                log(n.toString())
+                return true
+            }`,
+			parseAndCheckOptions,
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(checker)
+		program := comp.Compile()
+
+		var logs []string
+		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+
+		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
+			funcs := vm.NativeFunctions()
+			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+				ParameterCount: len(stdlib.LogFunctionType.Parameters),
+				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+					logs = append(logs, arguments[0].String())
+					return vm.VoidValue{}
+				},
+			}
+
+			return funcs
+		}
+
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		err = vmInstance.ExecuteTransaction(nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+
+		assert.Equal(t, []string{"2", "10"}, logs)
+	})
+
+	t.Run("conditions without execute", func(t *testing.T) {
+
+		location := common.TransactionLocation{0x1}
+
+		activation := sema.NewVariableActivation(sema.BaseValueActivation)
+		activation.DeclareValue(stdlib.PanicFunction)
+		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
+			"log",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityView,
+				[]sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: sema.AnyStructTypeAnnotation,
+					},
+				},
+				sema.VoidTypeAnnotation,
+			),
+			"",
+			nil,
+		))
+
+		parseAndCheckOptions := ParseAndCheckOptions{
+			Location: location,
+			Config: &sema.Config{
+				LocationHandler: singleIdentifierLocationResolver(t),
+				BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+					return activation
+				},
+			},
+		}
+
+		checker, err := ParseAndCheckWithOptions(t, `
+            transaction {
+                var count: Int
+
+                prepare() {
+                    self.count = 2
+                }
+
+                pre {
+                    print(self.count)
+                }
+
+                post {
+                    print(self.count)
+                }
+            }
+
+
+            access(all) view fun print(_ n: Int): Bool {
+                log(n.toString())
+                return true
+            }`,
+			parseAndCheckOptions,
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(checker)
+		program := comp.Compile()
+
+		var logs []string
+		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+
+		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
+			funcs := vm.NativeFunctions()
+			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+				ParameterCount: len(stdlib.LogFunctionType.Parameters),
+				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+					logs = append(logs, arguments[0].String())
+					return vm.VoidValue{}
+				},
+			}
+
+			return funcs
+		}
+
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		err = vmInstance.ExecuteTransaction(nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+
+		assert.Equal(t, []string{"2", "2"}, logs)
+	})
+
+	t.Run("pre condition failed", func(t *testing.T) {
+
+		location := common.TransactionLocation{0x1}
+
+		activation := sema.NewVariableActivation(sema.BaseValueActivation)
+		activation.DeclareValue(stdlib.PanicFunction)
+		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
+			"log",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityView,
+				[]sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: sema.AnyStructTypeAnnotation,
+					},
+				},
+				sema.VoidTypeAnnotation,
+			),
+			"",
+			nil,
+		))
+
+		parseAndCheckOptions := ParseAndCheckOptions{
+			Location: location,
+			Config: &sema.Config{
+				LocationHandler: singleIdentifierLocationResolver(t),
+				BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+					return activation
+				},
+			},
+		}
+
+		checker, err := ParseAndCheckWithOptions(t, `
+            transaction {
+                var count: Int
+
+                prepare() {
+                    self.count = 2
+                }
+
+                pre {
+                    print(self.count)
+                    false
+                }
+
+                execute {
+                    self.count = 10
+                }
+
+                post {
+                    print(self.count)
+                }
+            }
+
+
+            access(all) view fun print(_ n: Int): Bool {
+                log(n.toString())
+                return true
+            }`,
+			parseAndCheckOptions,
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(checker)
+		program := comp.Compile()
+
+		var logs []string
+		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+
+		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
+			funcs := vm.NativeFunctions()
+			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+				ParameterCount: len(stdlib.LogFunctionType.Parameters),
+				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+					logs = append(logs, arguments[0].String())
+					return vm.VoidValue{}
+				},
+			}
+
+			return funcs
+		}
+
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		err = vmInstance.ExecuteTransaction(nil)
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "pre/post condition failed")
+
+		assert.Equal(t, []string{"2"}, logs)
+	})
+
+	t.Run("post condition failed", func(t *testing.T) {
+
+		location := common.TransactionLocation{0x1}
+
+		activation := sema.NewVariableActivation(sema.BaseValueActivation)
+		activation.DeclareValue(stdlib.PanicFunction)
+		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
+			"log",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityView,
+				[]sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: sema.AnyStructTypeAnnotation,
+					},
+				},
+				sema.VoidTypeAnnotation,
+			),
+			"",
+			nil,
+		))
+
+		parseAndCheckOptions := ParseAndCheckOptions{
+			Location: location,
+			Config: &sema.Config{
+				LocationHandler: singleIdentifierLocationResolver(t),
+				BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+					return activation
+				},
+			},
+		}
+
+		checker, err := ParseAndCheckWithOptions(t, `
+            transaction {
+                var count: Int
+
+                prepare() {
+                    self.count = 2
+                }
+
+                pre {
+                    print(self.count)
+                }
+
+                execute {
+                    self.count = 10
+                }
+
+                post {
+                    print(self.count)
+                    false
+                }
+            }
+
+
+            access(all) view fun print(_ n: Int): Bool {
+                log(n.toString())
+                return true
+            }`,
+			parseAndCheckOptions,
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(checker)
+		program := comp.Compile()
+
+		var logs []string
+		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+
+		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
+			funcs := vm.NativeFunctions()
+			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+				ParameterCount: len(stdlib.LogFunctionType.Parameters),
+				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+					logs = append(logs, arguments[0].String())
+					return vm.VoidValue{}
+				},
+			}
+
+			return funcs
+		}
+
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		err = vmInstance.ExecuteTransaction(nil)
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "pre/post condition failed")
+
+		assert.Equal(t, []string{"2", "10"}, logs)
+	})
 }
 
 func TestInterfaceMethodCall(t *testing.T) {

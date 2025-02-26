@@ -1065,8 +1065,6 @@ func (d *Desugar) VisitEntitlementMappingDeclaration(declaration *ast.Entitlemen
 }
 
 func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclaration) ast.Declaration {
-	// TODO: add pre/post conditions
-
 	// Converts a transaction into a composite type declaration.
 	// Transaction parameters are converted into global variables.
 	// An initializer is generated to set parameters to above generated global variables.
@@ -1151,11 +1149,51 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 	}
 
 	var members []ast.Declaration
-	if transaction.Execute != nil {
-		members = append(members, transaction.Execute.FunctionDeclaration)
+
+	prepareBlock := transaction.Prepare
+	if prepareBlock != nil {
+		prepareFunction := d.desugarDeclaration(prepareBlock.FunctionDeclaration)
+		members = append(members, prepareFunction)
 	}
-	if transaction.Prepare != nil {
-		members = append(members, transaction.Prepare)
+
+	var executeFunc *ast.FunctionDeclaration
+	if transaction.Execute != nil {
+		executeFunc = transaction.Execute.FunctionDeclaration
+	}
+
+	preConditions := transaction.PreConditions
+	postConditions := transaction.PostConditions
+
+	if preConditions != nil || postConditions != nil {
+		if executeFunc == nil {
+			// If there is no execute block, create an empty one.
+			executeFunc = &ast.FunctionDeclaration{
+				Access: ast.AccessNotSpecified,
+				Identifier: ast.Identifier{
+					Identifier: commons.ExecuteFunctionName,
+				},
+				ReturnTypeAnnotation: nil,
+				FunctionBlock: &ast.FunctionBlock{
+					Block: &ast.Block{},
+				},
+			}
+
+			executeFuncType := sema.NewSimpleFunctionType(
+				sema.FunctionPurityImpure,
+				nil,
+				sema.VoidTypeAnnotation,
+			)
+
+			d.elaboration.SetFunctionDeclarationFunctionType(executeFunc, executeFuncType)
+		}
+
+		executeFunc.FunctionBlock.PreConditions = preConditions
+		executeFunc.FunctionBlock.PostConditions = postConditions
+	}
+
+	if executeFunc != nil {
+		desugaredExecuteFunc := d.desugarDeclaration(executeFunc)
+		members = append(members, desugaredExecuteFunc)
 	}
 
 	compositeType := &sema.CompositeType{
