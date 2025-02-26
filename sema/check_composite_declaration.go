@@ -2339,6 +2339,8 @@ func (checker *Checker) checkSpecialFunction(
 		VoidTypeAnnotation,
 	)
 
+	checker.Elaboration.SetFunctionDeclarationFunctionType(specialFunction.FunctionDeclaration, functionType)
+
 	checker.checkFunction(
 		specialFunction.FunctionDeclaration.ParameterList,
 		nil,
