@@ -21,12 +21,11 @@ package commons
 import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/sema"
 )
 
-type ImportHandler func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType]
+type ImportHandler func(location common.Location) *bbq.InstructionProgram
 
 type LocationHandler func(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error)
 

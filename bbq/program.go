@@ -29,4 +29,4 @@ type Program[E, T any] struct {
 	Types     []T
 }
 
-type InstructionProgram Program[opcode.Instruction, StaticType]
+type InstructionProgram = Program[opcode.Instruction, StaticType]

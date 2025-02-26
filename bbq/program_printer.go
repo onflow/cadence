@@ -31,17 +31,22 @@ import (
 type ProgramPrinter[E, T any] struct {
 	stringBuilder strings.Builder
 	codePrinter   func(builder *strings.Builder, code []E) error
+	typeDecoder   func(bytes T) (StaticType, error)
 }
 
 func NewBytecodeProgramPrinter() *ProgramPrinter[byte, []byte] {
 	return &ProgramPrinter[byte, []byte]{
 		codePrinter: opcode.PrintBytecode,
+		typeDecoder: StaticTypeFromBytes,
 	}
 }
 
 func NewInstructionsProgramPrinter() *ProgramPrinter[opcode.Instruction, StaticType] {
 	return &ProgramPrinter[opcode.Instruction, StaticType]{
 		codePrinter: opcode.PrintInstructions,
+		typeDecoder: func(typ StaticType) (StaticType, error) {
+			return typ, nil
+		},
 	}
 }
 
@@ -98,19 +103,17 @@ func (p *ProgramPrinter[_, T]) printConstantPool(constants []*Constant) {
 func (p *ProgramPrinter[_, T]) printTypePool(types []T) {
 	p.stringBuilder.WriteString("-- Type Pool --\n")
 
-	//for index, typeBytes := range types {
-	//	dec := interpreter.CBORDecMode.NewByteStreamDecoder(typeBytes)
-	//	typeDecoder := interpreter.NewTypeDecoder(dec, nil)
-	//	staticType, err := typeDecoder.DecodeStaticType()
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//
-	//	p.stringBuilder.WriteString(fmt.Sprint(index))
-	//	p.stringBuilder.WriteString(" | ")
-	//	p.stringBuilder.WriteString(string(staticType.ID()))
-	//	p.stringBuilder.WriteRune('\n')
-	//}
+	for index, typ := range types {
+		staticType, err := p.typeDecoder(typ)
+		if err != nil {
+			panic(err)
+		}
+
+		p.stringBuilder.WriteString(fmt.Sprint(index))
+		p.stringBuilder.WriteString(" | ")
+		p.stringBuilder.WriteString(string(staticType.ID()))
+		p.stringBuilder.WriteRune('\n')
+	}
 
 	p.stringBuilder.WriteRune('\n')
 }

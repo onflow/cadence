@@ -49,7 +49,7 @@ type VM struct {
 
 func NewVM(
 	location common.Location,
-	program *bbq.Program[opcode.Instruction, bbq.StaticType],
+	program *bbq.InstructionProgram,
 	conf *Config,
 ) *VM {
 	// TODO: Remove initializing config. Following is for testing purpose only.

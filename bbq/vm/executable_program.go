@@ -20,7 +20,6 @@ package vm
 
 import (
 	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
 )
 
@@ -31,7 +30,7 @@ import (
 // i.e: indexes used in opcodes refer to the indexes of its ExecutableProgram.
 type ExecutableProgram struct {
 	Location    common.Location
-	Program     *bbq.Program[opcode.Instruction, bbq.StaticType]
+	Program     *bbq.InstructionProgram
 	Globals     []Value
 	Constants   []Value
 	StaticTypes []bbq.StaticType
@@ -39,7 +38,7 @@ type ExecutableProgram struct {
 
 func NewExecutableProgram(
 	location common.Location,
-	program *bbq.Program[opcode.Instruction, bbq.StaticType],
+	program *bbq.InstructionProgram,
 	globals []Value,
 ) *ExecutableProgram {
 	return &ExecutableProgram{

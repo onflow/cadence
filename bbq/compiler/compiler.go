@@ -61,7 +61,8 @@ type Compiler[E, T any] struct {
 	// TODO: initialize
 	memoryGauge common.MemoryGauge
 
-	codeGen CodeGen[E, T]
+	codeGen CodeGen[E]
+	typeGen TypeGen[T]
 }
 
 type constantsCacheKey struct {
@@ -79,6 +80,7 @@ func NewBytecodeCompiler(
 	return newCompiler(
 		checker,
 		&ByteCodeGen{},
+		&EncodedTypeGen{},
 	)
 }
 
@@ -88,12 +90,14 @@ func NewInstructionCompiler(
 	return newCompiler(
 		checker,
 		&InstructionCodeGen{},
+		&DecodedTypeGen{},
 	)
 }
 
 func newCompiler[E, T any](
 	checker *sema.Checker,
-	codeGen CodeGen[E, T],
+	codeGen CodeGen[E],
+	typeGen TypeGen[T],
 ) *Compiler[E, T] {
 	return &Compiler[E, T]{
 		Program:             checker.Program,
@@ -108,6 +112,7 @@ func newCompiler[E, T any](
 			elements: make([]sema.CompositeKindedType, 0),
 		},
 		codeGen: codeGen,
+		typeGen: typeGen,
 	}
 }
 
@@ -1660,7 +1665,7 @@ func (c *Compiler[_, T]) getOrAddType(targetType sema.Type) uint16 {
 
 	if !ok {
 		staticType := interpreter.ConvertSemaToStaticType(c.memoryGauge, targetType)
-		typ := c.codeGen.AddType(staticType)
+		typ := c.typeGen.CompileType(staticType)
 		index = c.addType(typ)
 		c.typesInPool[typeID] = index
 	}

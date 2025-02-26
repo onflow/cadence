@@ -20,7 +20,6 @@ package test
 
 import (
 	"fmt"
-	"github.com/onflow/cadence/bbq/opcode"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -381,7 +380,7 @@ func singleIdentifierLocationResolver(t testing.TB) func(
 	}
 }
 
-func printProgram(name string, program *bbq.Program[opcode.Instruction, bbq.StaticType]) { //nolint:unused
+func printProgram(name string, program *bbq.InstructionProgram) { //nolint:unused
 	printer := bbq.NewInstructionsProgramPrinter()
 	fmt.Println("===================", name, "===================")
 	fmt.Println(printer.PrintProgram(program))
@@ -401,7 +400,7 @@ func baseValueActivation(common.Location) *sema.VariableActivation {
 }
 
 type compiledProgram struct {
-	*bbq.Program[opcode.Instruction, bbq.StaticType]
+	Program *bbq.InstructionProgram
 	*sema.Elaboration
 }
 
@@ -416,7 +415,7 @@ func parseCheckAndCompile(
 	code string,
 	location common.Location,
 	programs map[common.Location]*compiledProgram,
-) *bbq.Program[opcode.Instruction, bbq.StaticType] {
+) *bbq.InstructionProgram {
 	return parseCheckAndCompileCodeWithOptions(
 		t,
 		code,
@@ -432,7 +431,7 @@ func parseCheckAndCompileCodeWithOptions(
 	location common.Location,
 	options CompilerAndVMOptions,
 	programs map[common.Location]*compiledProgram,
-) *bbq.Program[opcode.Instruction, bbq.StaticType] {
+) *bbq.InstructionProgram {
 	checker := parseAndCheckWithOptions(
 		t,
 		code,
@@ -512,12 +511,12 @@ func compile(
 	config *compiler.Config,
 	checker *sema.Checker,
 	programs map[common.Location]*compiledProgram,
-) *bbq.Program[opcode.Instruction, bbq.StaticType] {
+) *bbq.InstructionProgram {
 
 	if config == nil {
 		config = &compiler.Config{
 			LocationHandler: singleIdentifierLocationResolver(t),
-			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
+			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 				imported, ok := programs[location]
 				if !ok {
 					return nil

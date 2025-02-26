@@ -19,18 +19,15 @@
 package compiler
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/interpreter"
 )
 
-type CodeGen[E, T any] interface {
+type CodeGen[E any] interface {
 	Offset() int
 	SetTarget(code *[]E)
 	Emit(instruction opcode.Instruction)
 	PatchJump(offset int, newTarget uint16)
-	AddType(staticType bbq.StaticType) T
 }
 
 // ByteCodeGen is a CodeGen implementation that emits bytecode
@@ -38,7 +35,7 @@ type ByteCodeGen struct {
 	target *[]byte
 }
 
-var _ CodeGen[byte, []byte] = &ByteCodeGen{}
+var _ CodeGen[byte] = &ByteCodeGen{}
 
 func (g *ByteCodeGen) Offset() int {
 	return len(*g.target)
@@ -56,20 +53,12 @@ func (g *ByteCodeGen) PatchJump(offset int, newTarget uint16) {
 	opcode.PatchJump(g.target, offset, newTarget)
 }
 
-func (g *ByteCodeGen) AddType(staticType bbq.StaticType) []byte {
-	bytes, err := interpreter.StaticTypeToBytes(staticType)
-	if err != nil {
-		panic(err)
-	}
-	return bytes
-}
-
 // InstructionCodeGen is a CodeGen implementation that emits opcode.Instruction
 type InstructionCodeGen struct {
 	target *[]opcode.Instruction
 }
 
-var _ CodeGen[opcode.Instruction, bbq.StaticType] = &InstructionCodeGen{}
+var _ CodeGen[opcode.Instruction] = &InstructionCodeGen{}
 
 func (g *InstructionCodeGen) Offset() int {
 	return len(*g.target)
@@ -100,8 +89,4 @@ func (g *InstructionCodeGen) PatchJump(offset int, newTarget uint16) {
 	default:
 		panic(errors.NewUnreachableError())
 	}
-}
-
-func (g *InstructionCodeGen) AddType(staticType bbq.StaticType) bbq.StaticType {
-	return staticType
 }

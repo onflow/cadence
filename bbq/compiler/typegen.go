@@ -16,16 +16,35 @@
  * limitations under the License.
  */
 
-package bbq
+package compiler
 
 import (
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/interpreter"
 )
 
-type StaticType = interpreter.StaticType
+type TypeGen[T any] interface {
+	CompileType(staticType bbq.StaticType) T
+}
 
-func StaticTypeFromBytes(bytes []byte) (StaticType, error) {
-	dec := interpreter.CBORDecMode.NewByteStreamDecoder(bytes)
-	typeDecoder := interpreter.NewTypeDecoder(dec, nil)
-	return typeDecoder.DecodeStaticType()
+type DecodedTypeGen struct {
+}
+
+var _ TypeGen[bbq.StaticType] = &DecodedTypeGen{}
+
+func (d DecodedTypeGen) CompileType(staticType bbq.StaticType) bbq.StaticType {
+	return staticType
+}
+
+type EncodedTypeGen struct {
+}
+
+var _ TypeGen[[]byte] = &EncodedTypeGen{}
+
+func (d EncodedTypeGen) CompileType(staticType bbq.StaticType) []byte {
+	bytes, err := interpreter.StaticTypeToBytes(staticType)
+	if err != nil {
+		panic(err)
+	}
+	return bytes
 }

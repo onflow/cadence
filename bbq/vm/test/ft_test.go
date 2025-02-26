@@ -20,7 +20,6 @@ package test
 
 import (
 	"fmt"
-	"github.com/onflow/cadence/bbq/opcode"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -76,7 +75,7 @@ func TestFTTransfer(t *testing.T) {
 		Storage:        storage,
 		AccountHandler: &testAccountHandler{},
 		TypeLoader:     typeLoader,
-		ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
+		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 			imported, ok := programs[location]
 			if !ok {
 				return nil
@@ -99,7 +98,7 @@ func TestFTTransfer(t *testing.T) {
 
 	vmConfig := &vm.Config{
 		Storage: storage,
-		ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
+		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 			imported, ok := programs[location]
 			if !ok {
 				return nil
@@ -253,7 +252,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	vmConfig := &vm.Config{
 		Storage: storage,
-		ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
+		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 			imported, ok := programs[location]
 			if !ok {
 				return nil
