@@ -839,6 +839,38 @@ func opIteratorNext(vm *VM) {
 	vm.push(element)
 }
 
+func deref(vm *VM, value Value) Value {
+	if _, ok := value.(NilValue); ok {
+		return Nil
+	}
+
+	var isOptional bool
+
+	if someValue, ok := value.(*SomeValue); ok {
+		isOptional = true
+		value = someValue.value
+	}
+
+	referenceValue, ok := value.(ReferenceValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// TODO: port and use interpreter.DereferenceValue
+	dereferencedValue := *referenceValue.ReferencedValue(vm.config, true)
+	if isOptional {
+		return NewSomeValueNonCopying(dereferencedValue)
+	} else {
+		return dereferencedValue
+	}
+}
+
+func opDeref(vm *VM) {
+	value := vm.pop()
+	dereferenced := deref(vm, value)
+	vm.push(dereferenced)
+}
+
 func (vm *VM) run() {
 	for {
 
@@ -962,12 +994,11 @@ func (vm *VM) run() {
 			opIteratorHasNext(vm)
 		case opcode.InstructionIteratorNext:
 			opIteratorNext(vm)
+		case opcode.InstructionDeref:
+			opDeref(vm)
 		default:
 			panic(errors.NewUnexpectedError("cannot execute instruction of type %T", ins))
 		}
-
-		// Faster in Go <1.19:
-		// vmOps[op](vm)
 	}
 }
 

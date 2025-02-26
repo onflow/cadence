@@ -781,6 +781,26 @@ func DecodeForceCast(ip *uint16, code []byte) (i InstructionForceCast) {
 	return i
 }
 
+// InstructionDeref
+//
+// Pops an (optional) reference off the stack, dereferences it, and then pushes the value back on to the stack.
+type InstructionDeref struct {
+}
+
+var _ Instruction = InstructionDeref{}
+
+func (InstructionDeref) Opcode() Opcode {
+	return Deref
+}
+
+func (i InstructionDeref) String() string {
+	return i.Opcode().String()
+}
+
+func (i InstructionDeref) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+}
+
 // InstructionJump
 //
 // Unconditionally jumps to the given instruction.
@@ -1429,6 +1449,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return DecodeFailableCast(ip, code)
 	case ForceCast:
 		return DecodeForceCast(ip, code)
+	case Deref:
+		return InstructionDeref{}
 	case Jump:
 		return DecodeJump(ip, code)
 	case JumpIfFalse:

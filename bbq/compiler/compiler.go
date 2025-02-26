@@ -1250,12 +1250,18 @@ func (c *Compiler[_]) VisitConditionalExpression(expression *ast.ConditionalExpr
 }
 
 func (c *Compiler[_]) VisitUnaryExpression(expression *ast.UnaryExpression) (_ struct{}) {
+	c.compileExpression(expression.Expression)
+
 	switch expression.Operation {
-	case ast.OperationMove:
-		c.compileExpression(expression.Expression)
 	case ast.OperationNegate:
-		c.compileExpression(expression.Expression)
 		c.codeGen.Emit(opcode.InstructionNot{})
+
+	case ast.OperationMul:
+		c.codeGen.Emit(opcode.InstructionDeref{})
+
+	case ast.OperationMove:
+		// TODO: invalidate
+
 	default:
 		// TODO
 		panic(errors.NewUnreachableError())

@@ -4733,6 +4733,66 @@ func TestCompileAnd(t *testing.T) {
 	})
 }
 
+func TestCompileUnaryDeref(t *testing.T) {
+
+	t.Parallel()
+
+	actual, err := compileAndInvoke(t,
+		`
+            fun test(): Int {
+                let x = 42
+                let ref: &Int = &x
+                return *ref
+            }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, vm.NewIntValue(42), actual)
+}
+
+func TestCompileUnaryDerefSome(t *testing.T) {
+
+	t.Parallel()
+
+	actual, err := compileAndInvoke(t,
+		`
+            fun test(): Int? {
+                let x = 42
+                let ref: &Int = &x
+                let optRef = ref as? &Int
+                return *optRef
+            }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		vm.NewSomeValueNonCopying(vm.NewIntValue(42)),
+		actual,
+	)
+}
+
+func TestCompileUnaryDerefNil(t *testing.T) {
+
+	t.Parallel()
+
+	actual, err := compileAndInvoke(t,
+		`
+            fun test(): Int? {
+                let optRef: &Int? = nil
+                return *optRef
+            }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, vm.Nil, actual)
+}
+
 func TestBinary(t *testing.T) {
 
 	t.Parallel()
