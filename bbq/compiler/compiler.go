@@ -1341,6 +1341,17 @@ func (c *Compiler[_]) VisitBinaryExpression(expression *ast.BinaryExpression) (_
 		case ast.OperationMod:
 			c.codeGen.Emit(opcode.InstructionMod{})
 
+		case ast.OperationBitwiseOr:
+			c.codeGen.Emit(opcode.InstructionBitwiseOr{})
+		case ast.OperationBitwiseAnd:
+			c.codeGen.Emit(opcode.InstructionBitwiseAnd{})
+		case ast.OperationBitwiseXor:
+			c.codeGen.Emit(opcode.InstructionBitwiseXor{})
+		case ast.OperationBitwiseLeftShift:
+			c.codeGen.Emit(opcode.InstructionBitwiseLeftShift{})
+		case ast.OperationBitwiseRightShift:
+			c.codeGen.Emit(opcode.InstructionBitwiseRightShift{})
+
 		case ast.OperationEqual:
 			c.codeGen.Emit(opcode.InstructionEqual{})
 		case ast.OperationNotEqual:

@@ -49,22 +49,30 @@ const (
 	_
 	_
 	_
+
+	// Bitwise operations
+
+	BitwiseOr
+	BitwiseAnd
+	BitwiseXor
+	BitwiseLeftShift
+	BitwiseRightShift
+	_
+
+	// Comparison
+
 	Less
 	Greater
 	LessOrEqual
 	GreaterOrEqual
-	_
-	_
-	_
-	_
-	_
-	_
-	_
 
-	// Unary/Binary operators
+	// Equality
 
 	Equal
 	NotEqual
+
+	// Unary/Binary operators
+
 	Not
 	_
 	_
@@ -158,5 +166,6 @@ const (
 	IteratorNext
 
 	// Other
+
 	EmitEvent
 )

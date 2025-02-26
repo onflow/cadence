@@ -2098,62 +2098,100 @@ func TestCompileBinary(t *testing.T) {
 
 	t.Parallel()
 
-	checker, err := ParseAndCheck(t, `
+	test := func(op string, instruction opcode.Instruction) {
 
-        fun test() {
-            let three = 1 + 2
-        }
-    `)
-	require.NoError(t, err)
+		t.Run(op, func(t *testing.T) {
 
-	comp := compiler.NewInstructionCompiler(checker)
-	program := comp.Compile()
+			t.Parallel()
 
-	require.Len(t, program.Functions, 1)
+			checker, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
+                        fun test() {
+                            let v = 6 %s 3
+                        }
+                    `,
+					op,
+				),
+			)
+			require.NoError(t, err)
 
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+			comp := compiler.NewInstructionCompiler(checker)
+			program := comp.Compile()
 
-	const parameterCount = 0
+			require.Len(t, program.Functions, 1)
 
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
+			functions := comp.ExportFunctions()
+			require.Equal(t, len(program.Functions), len(functions))
 
-	// localsOffset is the offset of the first local variable
-	const localsOffset = resultIndex + 1
+			const parameterCount = 0
 
-	const (
-		// threeIndex is the index of the local variable `three`, which is the first local variable
-		threeIndex = localsOffset + iota
-	)
+			// resultIndex is the index of the $result variable
+			const resultIndex = parameterCount
 
-	assert.Equal(t,
-		[]opcode.Instruction{
-			// let three = 1 + 2
-			opcode.InstructionGetConstant{ConstantIndex: 0},
-			opcode.InstructionGetConstant{ConstantIndex: 1},
-			opcode.InstructionAdd{},
-			opcode.InstructionTransfer{TypeIndex: 0},
-			opcode.InstructionSetLocal{LocalIndex: threeIndex},
+			// localsOffset is the offset of the first local variable
+			const localsOffset = resultIndex + 1
 
-			opcode.InstructionReturn{},
-		},
-		functions[0].Code,
-	)
+			const (
+				// vIndex is the index of the local variable `v`, which is the first local variable
+				vIndex = localsOffset + iota
+			)
 
-	assert.Equal(t,
-		[]*bbq.Constant{
-			{
-				Data: []byte{0x1},
-				Kind: constantkind.Int,
-			},
-			{
-				Data: []byte{0x2},
-				Kind: constantkind.Int,
-			},
-		},
-		program.Constants,
-	)
+			assert.Equal(t,
+				[]opcode.Instruction{
+					// let three = 1 + 2
+					opcode.InstructionGetConstant{ConstantIndex: 0},
+					opcode.InstructionGetConstant{ConstantIndex: 1},
+					instruction,
+					opcode.InstructionTransfer{TypeIndex: 0},
+					opcode.InstructionSetLocal{LocalIndex: vIndex},
+
+					opcode.InstructionReturn{},
+				},
+				functions[0].Code,
+			)
+
+			assert.Equal(t,
+				[]*bbq.Constant{
+					{
+						Data: []byte{0x6},
+						Kind: constantkind.Int,
+					},
+					{
+						Data: []byte{0x3},
+						Kind: constantkind.Int,
+					},
+				},
+				program.Constants,
+			)
+		})
+	}
+
+	binaryInstructions := map[string]opcode.Instruction{
+		"+": opcode.InstructionAdd{},
+		"-": opcode.InstructionSubtract{},
+		"*": opcode.InstructionMultiply{},
+		"/": opcode.InstructionDivide{},
+		"%": opcode.InstructionMod{},
+
+		"<":  opcode.InstructionLess{},
+		"<=": opcode.InstructionLessOrEqual{},
+		">":  opcode.InstructionGreater{},
+		">=": opcode.InstructionGreaterOrEqual{},
+
+		"==": opcode.InstructionEqual{},
+		"!=": opcode.InstructionNotEqual{},
+
+		"&":  opcode.InstructionBitwiseAnd{},
+		"|":  opcode.InstructionBitwiseOr{},
+		"^":  opcode.InstructionBitwiseXor{},
+		"<<": opcode.InstructionBitwiseLeftShift{},
+		">>": opcode.InstructionBitwiseRightShift{},
+	}
+
+	for op, instruction := range binaryInstructions {
+		test(op, instruction)
+	}
 }
 
 func TestCompileNilCoalesce(t *testing.T) {

@@ -74,7 +74,8 @@
             "reference",
             "function",
             "resource",
-            "optional"
+            "optional",
+            "iterator"
           ]
         },
         "count": {

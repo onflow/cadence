@@ -1181,6 +1181,106 @@ func (i InstructionGreaterOrEqual) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
+// InstructionBitwiseOr
+//
+// Pops two integer values off the stack, performs a bitwise OR operation on them, and then pushes the result back on to the stack.
+type InstructionBitwiseOr struct {
+}
+
+var _ Instruction = InstructionBitwiseOr{}
+
+func (InstructionBitwiseOr) Opcode() Opcode {
+	return BitwiseOr
+}
+
+func (i InstructionBitwiseOr) String() string {
+	return i.Opcode().String()
+}
+
+func (i InstructionBitwiseOr) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+}
+
+// InstructionBitwiseXor
+//
+// Pops two integer values off the stack, performs a bitwise XOR operation on them, and then pushes the result back on to the stack.
+type InstructionBitwiseXor struct {
+}
+
+var _ Instruction = InstructionBitwiseXor{}
+
+func (InstructionBitwiseXor) Opcode() Opcode {
+	return BitwiseXor
+}
+
+func (i InstructionBitwiseXor) String() string {
+	return i.Opcode().String()
+}
+
+func (i InstructionBitwiseXor) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+}
+
+// InstructionBitwiseAnd
+//
+// Pops two integer values off the stack, performs a bitwise AND operation on them, and then pushes the result back on to the stack.
+type InstructionBitwiseAnd struct {
+}
+
+var _ Instruction = InstructionBitwiseAnd{}
+
+func (InstructionBitwiseAnd) Opcode() Opcode {
+	return BitwiseAnd
+}
+
+func (i InstructionBitwiseAnd) String() string {
+	return i.Opcode().String()
+}
+
+func (i InstructionBitwiseAnd) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+}
+
+// InstructionBitwiseLeftShift
+//
+// Pops two integer values off the stack, performs a bitwise left shift operation on them, and then pushes the result back on to the stack.
+type InstructionBitwiseLeftShift struct {
+}
+
+var _ Instruction = InstructionBitwiseLeftShift{}
+
+func (InstructionBitwiseLeftShift) Opcode() Opcode {
+	return BitwiseLeftShift
+}
+
+func (i InstructionBitwiseLeftShift) String() string {
+	return i.Opcode().String()
+}
+
+func (i InstructionBitwiseLeftShift) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+}
+
+// InstructionBitwiseRightShift
+//
+// Pops two integer values off the stack, performs a bitwise right shift operation on them, and then pushes the result back on to the stack.
+type InstructionBitwiseRightShift struct {
+}
+
+var _ Instruction = InstructionBitwiseRightShift{}
+
+func (InstructionBitwiseRightShift) Opcode() Opcode {
+	return BitwiseRightShift
+}
+
+func (i InstructionBitwiseRightShift) String() string {
+	return i.Opcode().String()
+}
+
+func (i InstructionBitwiseRightShift) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+}
+
 // InstructionIterator
 //
 // Pops an iterable value from the stack, get an iterator to it, and push the iterator back onto the stack.
@@ -1365,6 +1465,16 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionGreater{}
 	case GreaterOrEqual:
 		return InstructionGreaterOrEqual{}
+	case BitwiseOr:
+		return InstructionBitwiseOr{}
+	case BitwiseXor:
+		return InstructionBitwiseXor{}
+	case BitwiseAnd:
+		return InstructionBitwiseAnd{}
+	case BitwiseLeftShift:
+		return InstructionBitwiseLeftShift{}
+	case BitwiseRightShift:
+		return InstructionBitwiseRightShift{}
 	case Iterator:
 		return InstructionIterator{}
 	case IteratorHasNext:
