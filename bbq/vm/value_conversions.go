@@ -31,6 +31,8 @@ func InterpreterValueToVMValue(storage interpreter.Storage, value interpreter.Va
 	switch value := value.(type) {
 	case nil:
 		return nil
+	case interpreter.BoolValue:
+		return BoolValue(value)
 	case interpreter.NilValue:
 		return Nil
 	case interpreter.IntValue:
@@ -99,6 +101,8 @@ func VMValueToInterpreterValue(config *Config, value Value) interpreter.Value {
 	switch value := value.(type) {
 	case nil:
 		return nil
+	case BoolValue:
+		return interpreter.BoolValue(value)
 	case NilValue:
 		return interpreter.Nil
 	case IntValue:

@@ -1440,7 +1440,7 @@ func TestTransaction(t *testing.T) {
 
 		checker, err := ParseAndCheck(t, `
             transaction {
-				var a: String
+                var a: String
                 prepare() {
                     self.a = "Hello!"
                 }
@@ -1494,7 +1494,7 @@ func TestTransaction(t *testing.T) {
 
 		checker, err := ParseAndCheck(t, `
             transaction(param1: String, param2: String) {
-				var a: String
+                var a: String
                 prepare() {
                     self.a = param1
                 }
@@ -4510,16 +4510,16 @@ func TestCompileIf(t *testing.T) {
 	test := func(t *testing.T, argument vm.Value) vm.Value {
 		result, err := compileAndInvoke(t,
 			`
-				fun test(x: Bool): Int {
+                fun test(x: Bool): Int {
                     var y = 0
-					if x {
+                    if x {
                         y = 1
                     } else {
                         y = 2
                     }
                     return y
-				}
-			`,
+                }
+            `,
 			"test",
 			argument,
 		)
@@ -4549,10 +4549,10 @@ func TestCompileConditional(t *testing.T) {
 	test := func(t *testing.T, argument vm.Value) vm.Value {
 		result, err := compileAndInvoke(t,
 			`
-				fun test(x: Bool): Int {
-					return x ? 1 : 2
-				}
-			`,
+                fun test(x: Bool): Int {
+                    return x ? 1 : 2
+                }
+            `,
 			"test",
 			argument,
 		)
@@ -4572,5 +4572,161 @@ func TestCompileConditional(t *testing.T) {
 
 		actual := test(t, vm.BoolValue(false))
 		require.Equal(t, vm.NewIntValue(2), actual)
+	})
+}
+
+func TestCompileOr(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, x, y vm.Value) vm.Value {
+		result, err := compileAndInvoke(t,
+			`
+                struct Tester {
+                    let x: Bool
+                    let y: Bool
+                    var z: Int
+
+                    init(x: Bool, y: Bool) {
+                        self.x = x
+                        self.y = y
+                        self.z = 0
+                    }
+
+                    fun a(): Bool {
+                        self.z = 1
+                        return self.x
+                    }
+
+                    fun b(): Bool {
+                        self.z = 2
+                        return self.y
+                    }
+
+                    fun test(): Int {
+                        if self.a() || self.b() { 
+                            return self.z + 10
+                        } else {
+                            return self.z + 20
+                        }
+                    }
+                }
+
+                fun test(x: Bool, y: Bool): Int {
+                    return Tester(x: x, y: y).test()
+                }
+            `,
+			"test",
+			x,
+			y,
+		)
+		require.NoError(t, err)
+		return result
+	}
+
+	t.Run("true, true", func(t *testing.T) {
+		t.Parallel()
+
+		actual := test(t, vm.BoolValue(true), vm.BoolValue(true))
+		require.Equal(t, vm.NewIntValue(11), actual)
+	})
+
+	t.Run("true, false", func(t *testing.T) {
+		t.Parallel()
+
+		actual := test(t, vm.BoolValue(true), vm.BoolValue(false))
+		require.Equal(t, vm.NewIntValue(11), actual)
+	})
+
+	t.Run("false, true", func(t *testing.T) {
+		t.Parallel()
+
+		actual := test(t, vm.BoolValue(false), vm.BoolValue(true))
+		require.Equal(t, vm.NewIntValue(12), actual)
+	})
+
+	t.Run("false, false", func(t *testing.T) {
+		t.Parallel()
+
+		actual := test(t, vm.BoolValue(false), vm.BoolValue(false))
+		require.Equal(t, vm.NewIntValue(22), actual)
+	})
+}
+
+func TestCompileAnd(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, x, y vm.Value) vm.Value {
+		result, err := compileAndInvoke(t,
+			`
+                struct Tester {
+                    let x: Bool
+                    let y: Bool
+                    var z: Int
+
+                    init(x: Bool, y: Bool) {
+                        self.x = x
+                        self.y = y
+                        self.z = 0
+                    }
+
+                    fun a(): Bool {
+                        self.z = 1
+                        return self.x
+                    }
+
+                    fun b(): Bool {
+                        self.z = 2
+                        return self.y
+                    }
+
+                    fun test(): Int {
+                        if self.a() && self.b() { 
+                            return self.z + 10
+                        } else {
+                            return self.z + 20
+                        }
+                    }
+                }
+
+                fun test(x: Bool, y: Bool): Int {
+                    return Tester(x: x, y: y).test()
+                }
+            `,
+			"test",
+			x,
+			y,
+		)
+		require.NoError(t, err)
+		return result
+	}
+
+	t.Run("true, true", func(t *testing.T) {
+		t.Parallel()
+
+		actual := test(t, vm.BoolValue(true), vm.BoolValue(true))
+		require.Equal(t, vm.NewIntValue(12), actual)
+	})
+
+	t.Run("true, false", func(t *testing.T) {
+		t.Parallel()
+
+		actual := test(t, vm.BoolValue(true), vm.BoolValue(false))
+		require.Equal(t, vm.NewIntValue(22), actual)
+	})
+
+	t.Run("false, true", func(t *testing.T) {
+		t.Parallel()
+
+		actual := test(t, vm.BoolValue(false), vm.BoolValue(true))
+		require.Equal(t, vm.NewIntValue(21), actual)
+	})
+
+	t.Run("false, false", func(t *testing.T) {
+		t.Parallel()
+
+		actual := test(t, vm.BoolValue(false), vm.BoolValue(false))
+		require.Equal(t, vm.NewIntValue(21), actual)
 	})
 }

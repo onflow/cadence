@@ -400,6 +400,19 @@
       - name: "value"
         type: "value"
 
+- name: "jumpIfTrue"
+  description:
+    Pops a value off the stack. If it is `true`, jumps to the target instruction.
+  operands:
+    - name: "target"
+      type: "index"
+  controlEffects:
+    - jump: "target"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+
 - name: "jumpIfNil"
   description:
     Pops a value off the stack. If it is `nil`, jumps to the target instruction.

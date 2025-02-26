@@ -348,6 +348,13 @@ func opJumpIfFalse(vm *VM, ins opcode.InstructionJumpIfFalse) {
 	}
 }
 
+func opJumpIfTrue(vm *VM, ins opcode.InstructionJumpIfTrue) {
+	value := vm.pop().(BoolValue)
+	if value {
+		vm.ip = ins.Target
+	}
+}
+
 func opJumpIfNil(vm *VM, ins opcode.InstructionJumpIfNil) {
 	_, ok := vm.pop().(NilValue)
 	if ok {
@@ -820,6 +827,8 @@ func (vm *VM) run() {
 			opJump(vm, ins)
 		case opcode.InstructionJumpIfFalse:
 			opJumpIfFalse(vm, ins)
+		case opcode.InstructionJumpIfTrue:
+			opJumpIfTrue(vm, ins)
 		case opcode.InstructionJumpIfNil:
 			opJumpIfNil(vm, ins)
 		case opcode.InstructionAdd:
