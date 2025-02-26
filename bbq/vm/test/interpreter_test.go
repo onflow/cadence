@@ -799,21 +799,21 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 	amount := interpreter.NewUnmeteredIntValueFromInt64(transferAmount)
 	receiver := interpreter.AddressValue(receiverAddress)
 
-	inter, err = parseCheckAndInterpretWithOptions(
-		b,
-		realFlowTokenTransferTransaction,
-		txLocation(),
-		ParseCheckAndInterpretOptions{
-			Config:        interConfig,
-			CheckerConfig: checkerConfig,
-		},
-	)
-	require.NoError(b, err)
-
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
+		inter, err = parseCheckAndInterpretWithOptions(
+			b,
+			realFlowTokenTransferTransaction,
+			txLocation(),
+			ParseCheckAndInterpretOptions{
+				Config:        interConfig,
+				CheckerConfig: checkerConfig,
+			},
+		)
+		require.NoError(b, err)
+
 		err = inter.InvokeTransaction(
 			0,
 			amount,

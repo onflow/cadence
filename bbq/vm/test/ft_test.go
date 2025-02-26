@@ -26,7 +26,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
@@ -76,7 +75,7 @@ func TestFTTransfer(t *testing.T) {
 		Storage:        storage,
 		AccountHandler: &testAccountHandler{},
 		TypeLoader:     typeLoader,
-		ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 			imported, ok := programs[location]
 			if !ok {
 				return nil
@@ -99,7 +98,7 @@ func TestFTTransfer(t *testing.T) {
 
 	vmConfig := &vm.Config{
 		Storage: storage,
-		ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 			imported, ok := programs[location]
 			if !ok {
 				return nil
@@ -253,7 +252,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	vmConfig := &vm.Config{
 		Storage: storage,
-		ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 			imported, ok := programs[location]
 			if !ok {
 				return nil
@@ -321,12 +320,11 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	tokenTransferTxAuthorizer := vm.NewAuthAccountReferenceValue(vmConfig, senderAddress)
 
-	tokenTransferTxProgram := parseCheckAndCompile(b, realFlowTokenTransferTransaction, nil, programs)
-
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
+		tokenTransferTxProgram := parseCheckAndCompile(b, realFlowTokenTransferTransaction, nil, programs)
 		tokenTransferTxVM := vm.NewVM(txLocation(), tokenTransferTxProgram, vmConfig)
 		err = tokenTransferTxVM.ExecuteTransaction(tokenTransferTxArgs, tokenTransferTxAuthorizer)
 		require.NoError(b, err)

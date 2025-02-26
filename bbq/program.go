@@ -18,11 +18,15 @@
 
 package bbq
 
-type Program[E any] struct {
+import "github.com/onflow/cadence/bbq/opcode"
+
+type Program[E, T any] struct {
 	Contract  *Contract
 	Imports   []*Import
 	Functions []*Function[E]
 	Constants []*Constant
 	Variables []*Variable
-	Types     [][]byte
+	Types     []T
 }
+
+type InstructionProgram = Program[opcode.Instruction, StaticType]

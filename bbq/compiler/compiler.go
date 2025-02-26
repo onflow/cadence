@@ -36,7 +36,7 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-type Compiler[E any] struct {
+type Compiler[E, T any] struct {
 	Program             *ast.Program
 	ExtendedElaboration *ExtendedElaboration
 	Config              *Config
@@ -52,7 +52,7 @@ type Compiler[E any] struct {
 	usedImportedGlobals []*global
 	controlFlows        []controlFlow
 	currentControlFlow  *controlFlow
-	staticTypes         [][]byte
+	staticTypes         []T
 
 	// Cache alike for staticTypes and constants in the pool.
 	typesInPool     map[sema.TypeID]uint16
@@ -62,6 +62,7 @@ type Compiler[E any] struct {
 	memoryGauge common.MemoryGauge
 
 	codeGen CodeGen[E]
+	typeGen TypeGen[T]
 }
 
 type constantsCacheKey struct {
@@ -69,33 +70,36 @@ type constantsCacheKey struct {
 	kind constantkind.ConstantKind
 }
 
-var _ ast.DeclarationVisitor[struct{}] = &Compiler[any]{}
-var _ ast.StatementVisitor[struct{}] = &Compiler[any]{}
-var _ ast.ExpressionVisitor[struct{}] = &Compiler[any]{}
+var _ ast.DeclarationVisitor[struct{}] = &Compiler[any, any]{}
+var _ ast.StatementVisitor[struct{}] = &Compiler[any, any]{}
+var _ ast.ExpressionVisitor[struct{}] = &Compiler[any, any]{}
 
 func NewBytecodeCompiler(
 	checker *sema.Checker,
-) *Compiler[byte] {
+) *Compiler[byte, []byte] {
 	return newCompiler(
 		checker,
 		&ByteCodeGen{},
+		&EncodedTypeGen{},
 	)
 }
 
 func NewInstructionCompiler(
 	checker *sema.Checker,
-) *Compiler[opcode.Instruction] {
+) *Compiler[opcode.Instruction, bbq.StaticType] {
 	return newCompiler(
 		checker,
 		&InstructionCodeGen{},
+		&DecodedTypeGen{},
 	)
 }
 
-func newCompiler[E any](
+func newCompiler[E, T any](
 	checker *sema.Checker,
 	codeGen CodeGen[E],
-) *Compiler[E] {
-	return &Compiler[E]{
+	typeGen TypeGen[T],
+) *Compiler[E, T] {
+	return &Compiler[E, T]{
 		Program:             checker.Program,
 		ExtendedElaboration: NewExtendedElaboration(checker.Elaboration),
 		Config:              &Config{},
@@ -108,15 +112,16 @@ func newCompiler[E any](
 			elements: make([]sema.CompositeKindedType, 0),
 		},
 		codeGen: codeGen,
+		typeGen: typeGen,
 	}
 }
 
-func (c *Compiler[E]) WithConfig(config *Config) *Compiler[E] {
+func (c *Compiler[E, T]) WithConfig(config *Config) *Compiler[E, T] {
 	c.Config = config
 	return c
 }
 
-func (c *Compiler[_]) findGlobal(name string) *global {
+func (c *Compiler[_, _]) findGlobal(name string) *global {
 	global, ok := c.Globals[name]
 	if ok {
 		return global
@@ -165,7 +170,7 @@ func (c *Compiler[_]) findGlobal(name string) *global {
 	return importedGlobal
 }
 
-func (c *Compiler[_]) addGlobal(name string) *global {
+func (c *Compiler[_, _]) addGlobal(name string) *global {
 	count := len(c.Globals)
 	if count >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid global declaration"))
@@ -177,7 +182,7 @@ func (c *Compiler[_]) addGlobal(name string) *global {
 	return global
 }
 
-func (c *Compiler[_]) addImportedGlobal(location common.Location, name string) *global {
+func (c *Compiler[_, _]) addImportedGlobal(location common.Location, name string) *global {
 	// Index is not set here. It is set only if this imported global is used.
 	global := &global{
 		Location: location,
@@ -187,7 +192,7 @@ func (c *Compiler[_]) addImportedGlobal(location common.Location, name string) *
 	return global
 }
 
-func (c *Compiler[E]) addFunction(name string, parameterCount uint16) *function[E] {
+func (c *Compiler[E, T]) addFunction(name string, parameterCount uint16) *function[E] {
 	isCompositeFunction := !c.compositeTypeStack.isEmpty()
 
 	function := newFunction[E](name, parameterCount, isCompositeFunction)
@@ -197,7 +202,7 @@ func (c *Compiler[E]) addFunction(name string, parameterCount uint16) *function[
 	return function
 }
 
-func (c *Compiler[_]) addConstant(kind constantkind.ConstantKind, data []byte) *constant {
+func (c *Compiler[_, _]) addConstant(kind constantkind.ConstantKind, data []byte) *constant {
 	count := len(c.constants)
 	if count >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid constant declaration"))
@@ -222,26 +227,26 @@ func (c *Compiler[_]) addConstant(kind constantkind.ConstantKind, data []byte) *
 	return constant
 }
 
-func (c *Compiler[_]) stringConstLoad(str string) {
+func (c *Compiler[_, _]) stringConstLoad(str string) {
 	constant := c.addStringConst(str)
 	c.codeGen.Emit(opcode.InstructionGetConstant{ConstantIndex: constant.index})
 }
 
-func (c *Compiler[_]) addStringConst(str string) *constant {
+func (c *Compiler[_, _]) addStringConst(str string) *constant {
 	return c.addConstant(constantkind.String, []byte(str))
 }
 
-func (c *Compiler[_]) intConstLoad(intKind constantkind.ConstantKind, i int64) {
+func (c *Compiler[_, _]) intConstLoad(intKind constantkind.ConstantKind, i int64) {
 	constant := c.addIntConst(intKind, i)
 	c.codeGen.Emit(opcode.InstructionGetConstant{ConstantIndex: constant.index})
 }
 
-func (c *Compiler[_]) addIntConst(intKind constantkind.ConstantKind, i int64) *constant {
+func (c *Compiler[_, _]) addIntConst(intKind constantkind.ConstantKind, i int64) *constant {
 	data := leb128.AppendInt64(nil, i)
 	return c.addConstant(intKind, data)
 }
 
-func (c *Compiler[_]) emitJump(target int) int {
+func (c *Compiler[_, _]) emitJump(target int) int {
 	if target >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid jump"))
 	}
@@ -250,31 +255,31 @@ func (c *Compiler[_]) emitJump(target int) int {
 	return offset
 }
 
-func (c *Compiler[_]) emitUndefinedJump() int {
+func (c *Compiler[_, _]) emitUndefinedJump() int {
 	offset := c.codeGen.Offset()
 	c.codeGen.Emit(opcode.InstructionJump{Target: math.MaxUint16})
 	return offset
 }
 
-func (c *Compiler[_]) emitUndefinedJumpIfFalse() int {
+func (c *Compiler[_, _]) emitUndefinedJumpIfFalse() int {
 	offset := c.codeGen.Offset()
 	c.codeGen.Emit(opcode.InstructionJumpIfFalse{Target: math.MaxUint16})
 	return offset
 }
 
-func (c *Compiler[_]) emitUndefinedJumpIfTrue() int {
+func (c *Compiler[_, _]) emitUndefinedJumpIfTrue() int {
 	offset := c.codeGen.Offset()
 	c.codeGen.Emit(opcode.InstructionJumpIfTrue{Target: math.MaxUint16})
 	return offset
 }
 
-func (c *Compiler[_]) emitUndefinedJumpIfNil() int {
+func (c *Compiler[_, _]) emitUndefinedJumpIfNil() int {
 	offset := c.codeGen.Offset()
 	c.codeGen.Emit(opcode.InstructionJumpIfNil{Target: math.MaxUint16})
 	return offset
 }
 
-func (c *Compiler[_]) patchJump(opcodeOffset int) {
+func (c *Compiler[_, _]) patchJump(opcodeOffset int) {
 	count := c.codeGen.Offset()
 	if count == 0 {
 		panic(errors.NewUnreachableError())
@@ -285,19 +290,19 @@ func (c *Compiler[_]) patchJump(opcodeOffset int) {
 	c.codeGen.PatchJump(opcodeOffset, uint16(count))
 }
 
-func (c *Compiler[_]) patchJumps(offsets []int) {
+func (c *Compiler[_, _]) patchJumps(offsets []int) {
 	for _, offset := range offsets {
 		c.patchJump(offset)
 	}
 }
 
-func (c *Compiler[_]) pushControlFlow(start int) {
+func (c *Compiler[_, _]) pushControlFlow(start int) {
 	index := len(c.controlFlows)
 	c.controlFlows = append(c.controlFlows, controlFlow{start: start})
 	c.currentControlFlow = &c.controlFlows[index]
 }
 
-func (c *Compiler[_]) popControlFlow() {
+func (c *Compiler[_, _]) popControlFlow() {
 	lastIndex := len(c.controlFlows) - 1
 	l := c.controlFlows[lastIndex]
 	c.controlFlows[lastIndex] = controlFlow{}
@@ -312,7 +317,7 @@ func (c *Compiler[_]) popControlFlow() {
 	c.currentControlFlow = previousControlFlow
 }
 
-func (c *Compiler[E]) Compile() *bbq.Program[E] {
+func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 
 	// Desugar the program before compiling.
 	desugar := NewDesugar(
@@ -362,7 +367,7 @@ func (c *Compiler[E]) Compile() *bbq.Program[E] {
 	imports := c.exportImports()
 	variables := c.exportVariables(variableDeclarations)
 
-	return &bbq.Program[E]{
+	return &bbq.Program[E, T]{
 		Functions: functions,
 		Constants: constants,
 		Types:     types,
@@ -372,7 +377,7 @@ func (c *Compiler[E]) Compile() *bbq.Program[E] {
 	}
 }
 
-func (c *Compiler[_]) reserveGlobalVars(
+func (c *Compiler[_, _]) reserveGlobalVars(
 	compositeTypeName string,
 	variableDecls []*ast.VariableDeclaration,
 	specialFunctionDecls []*ast.SpecialFunctionDeclaration,
@@ -446,7 +451,7 @@ func (c *Compiler[_]) reserveGlobalVars(
 	}
 }
 
-func (c *Compiler[_]) exportConstants() []*bbq.Constant {
+func (c *Compiler[_, _]) exportConstants() []*bbq.Constant {
 	constants := make([]*bbq.Constant, 0, len(c.constants))
 	for _, constant := range c.constants {
 		constants = append(
@@ -460,11 +465,11 @@ func (c *Compiler[_]) exportConstants() []*bbq.Constant {
 	return constants
 }
 
-func (c *Compiler[_]) exportTypes() [][]byte {
+func (c *Compiler[_, T]) exportTypes() []T {
 	return c.staticTypes
 }
 
-func (c *Compiler[_]) exportImports() []*bbq.Import {
+func (c *Compiler[_, _]) exportImports() []*bbq.Import {
 	exportedImports := make([]*bbq.Import, 0)
 	for _, importedGlobal := range c.usedImportedGlobals {
 		bbqImport := &bbq.Import{
@@ -477,7 +482,7 @@ func (c *Compiler[_]) exportImports() []*bbq.Import {
 	return exportedImports
 }
 
-func (c *Compiler[E]) ExportFunctions() []*bbq.Function[E] {
+func (c *Compiler[E, T]) ExportFunctions() []*bbq.Function[E] {
 	functions := make([]*bbq.Function[E], 0, len(c.functions))
 	for _, function := range c.functions {
 		functions = append(
@@ -494,7 +499,7 @@ func (c *Compiler[E]) ExportFunctions() []*bbq.Function[E] {
 	return functions
 }
 
-func (c *Compiler[_]) exportVariables(variableDecls []*ast.VariableDeclaration) []*bbq.Variable {
+func (c *Compiler[_, _]) exportVariables(variableDecls []*ast.VariableDeclaration) []*bbq.Variable {
 	variables := make([]*bbq.Variable, 0, len(c.functions))
 	for _, varDecl := range variableDecls {
 		variables = append(
@@ -507,7 +512,7 @@ func (c *Compiler[_]) exportVariables(variableDecls []*ast.VariableDeclaration) 
 	return variables
 }
 
-func (c *Compiler[_]) contractType() (contractType sema.CompositeKindedType) {
+func (c *Compiler[_, _]) contractType() (contractType sema.CompositeKindedType) {
 	contractDecl := c.Program.SoleContractDeclaration()
 	if contractDecl != nil {
 		contractType = c.ExtendedElaboration.CompositeDeclarationType(contractDecl)
@@ -523,7 +528,7 @@ func (c *Compiler[_]) contractType() (contractType sema.CompositeKindedType) {
 	return nil
 }
 
-func (c *Compiler[_]) exportContract() (*bbq.Contract, sema.CompositeKindedType) {
+func (c *Compiler[_, _]) exportContract() (*bbq.Contract, sema.CompositeKindedType) {
 	var location common.Location
 	var name string
 
@@ -545,11 +550,11 @@ func (c *Compiler[_]) exportContract() (*bbq.Contract, sema.CompositeKindedType)
 	}, contractType
 }
 
-func (c *Compiler[_]) compileDeclaration(declaration ast.Declaration) {
+func (c *Compiler[_, _]) compileDeclaration(declaration ast.Declaration) {
 	ast.AcceptDeclaration[struct{}](declaration, c)
 }
 
-func (c *Compiler[_]) compileBlock(block *ast.Block) {
+func (c *Compiler[_, _]) compileBlock(block *ast.Block) {
 	locals := c.currentFunction.locals
 	locals.PushNewWithCurrent()
 	defer locals.Pop()
@@ -559,7 +564,7 @@ func (c *Compiler[_]) compileBlock(block *ast.Block) {
 	}
 }
 
-func (c *Compiler[_]) compileFunctionBlock(functionBlock *ast.FunctionBlock) {
+func (c *Compiler[_, _]) compileFunctionBlock(functionBlock *ast.FunctionBlock) {
 	// Function conditions must have been desugared to statements.
 	// So there shouldn't be any condition at this point.
 	if functionBlock != nil {
@@ -567,15 +572,15 @@ func (c *Compiler[_]) compileFunctionBlock(functionBlock *ast.FunctionBlock) {
 	}
 }
 
-func (c *Compiler[_]) compileStatement(statement ast.Statement) {
+func (c *Compiler[_, _]) compileStatement(statement ast.Statement) {
 	ast.AcceptStatement[struct{}](statement, c)
 }
 
-func (c *Compiler[_]) compileExpression(expression ast.Expression) {
+func (c *Compiler[_, _]) compileExpression(expression ast.Expression) {
 	ast.AcceptExpression[struct{}](expression, c)
 }
 
-func (c *Compiler[_]) VisitReturnStatement(statement *ast.ReturnStatement) (_ struct{}) {
+func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_ struct{}) {
 	expression := statement.Expression
 	if expression != nil {
 		// TODO: copy
@@ -587,13 +592,13 @@ func (c *Compiler[_]) VisitReturnStatement(statement *ast.ReturnStatement) (_ st
 	return
 }
 
-func (c *Compiler[_]) VisitBreakStatement(_ *ast.BreakStatement) (_ struct{}) {
+func (c *Compiler[_, _]) VisitBreakStatement(_ *ast.BreakStatement) (_ struct{}) {
 	offset := c.emitUndefinedJump()
 	c.currentControlFlow.appendBreak(offset)
 	return
 }
 
-func (c *Compiler[_]) VisitContinueStatement(_ *ast.ContinueStatement) (_ struct{}) {
+func (c *Compiler[_, _]) VisitContinueStatement(_ *ast.ContinueStatement) (_ struct{}) {
 	start := c.currentControlFlow.start
 	if start <= 0 {
 		panic(errors.NewUnreachableError())
@@ -602,7 +607,7 @@ func (c *Compiler[_]) VisitContinueStatement(_ *ast.ContinueStatement) (_ struct
 	return
 }
 
-func (c *Compiler[_]) VisitIfStatement(statement *ast.IfStatement) (_ struct{}) {
+func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{}) {
 	// If statements can be coming from inherited conditions.
 	// If so, use the corresponding elaboration.
 	c.withConditionExtendedElaboration(statement, func() {
@@ -666,7 +671,7 @@ func (c *Compiler[_]) VisitIfStatement(statement *ast.IfStatement) (_ struct{}) 
 	return
 }
 
-func (c *Compiler[_]) VisitWhileStatement(statement *ast.WhileStatement) (_ struct{}) {
+func (c *Compiler[_, _]) VisitWhileStatement(statement *ast.WhileStatement) (_ struct{}) {
 	testOffset := c.codeGen.Offset()
 
 	c.pushControlFlow(testOffset)
@@ -686,7 +691,7 @@ func (c *Compiler[_]) VisitWhileStatement(statement *ast.WhileStatement) (_ stru
 	return
 }
 
-func (c *Compiler[_]) VisitForStatement(statement *ast.ForStatement) (_ struct{}) {
+func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struct{}) {
 	// Evaluate the expression
 	c.compileExpression(statement.Value)
 
@@ -765,7 +770,7 @@ func (c *Compiler[_]) VisitForStatement(statement *ast.ForStatement) (_ struct{}
 	return
 }
 
-func (c *Compiler[_]) VisitEmitStatement(statement *ast.EmitStatement) (_ struct{}) {
+func (c *Compiler[_, _]) VisitEmitStatement(statement *ast.EmitStatement) (_ struct{}) {
 	c.compileExpression(statement.InvocationExpression)
 	eventType := c.ExtendedElaboration.EmitStatementEventType(statement)
 	typeIndex := c.getOrAddType(eventType)
@@ -776,7 +781,7 @@ func (c *Compiler[_]) VisitEmitStatement(statement *ast.EmitStatement) (_ struct
 	return
 }
 
-func (c *Compiler[_]) VisitSwitchStatement(statement *ast.SwitchStatement) (_ struct{}) {
+func (c *Compiler[_, _]) VisitSwitchStatement(statement *ast.SwitchStatement) (_ struct{}) {
 	c.compileExpression(statement.Expression)
 	localIndex := c.currentFunction.generateLocalIndex()
 	c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: localIndex})
@@ -819,7 +824,7 @@ func (c *Compiler[_]) VisitSwitchStatement(statement *ast.SwitchStatement) (_ st
 	return
 }
 
-func (c *Compiler[_]) VisitVariableDeclaration(declaration *ast.VariableDeclaration) (_ struct{}) {
+func (c *Compiler[_, _]) VisitVariableDeclaration(declaration *ast.VariableDeclaration) (_ struct{}) {
 	// Some variable declarations can be coming from inherited before-statements.
 	// If so, use the corresponding elaboration.
 	c.withConditionExtendedElaboration(declaration, func() {
@@ -847,7 +852,7 @@ func (c *Compiler[_]) VisitVariableDeclaration(declaration *ast.VariableDeclarat
 	return
 }
 
-func (c *Compiler[_]) VisitAssignmentStatement(statement *ast.AssignmentStatement) (_ struct{}) {
+func (c *Compiler[_, _]) VisitAssignmentStatement(statement *ast.AssignmentStatement) (_ struct{}) {
 
 	switch target := statement.Target.(type) {
 	case *ast.IdentifierExpression:
@@ -898,12 +903,12 @@ func (c *Compiler[_]) VisitAssignmentStatement(statement *ast.AssignmentStatemen
 	return
 }
 
-func (c *Compiler[_]) VisitSwapStatement(_ *ast.SwapStatement) (_ struct{}) {
+func (c *Compiler[_, _]) VisitSwapStatement(_ *ast.SwapStatement) (_ struct{}) {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler[_]) VisitExpressionStatement(statement *ast.ExpressionStatement) (_ struct{}) {
+func (c *Compiler[_, _]) VisitExpressionStatement(statement *ast.ExpressionStatement) (_ struct{}) {
 	c.compileExpression(statement.Expression)
 
 	switch statement.Expression.(type) {
@@ -917,12 +922,12 @@ func (c *Compiler[_]) VisitExpressionStatement(statement *ast.ExpressionStatemen
 	return
 }
 
-func (c *Compiler[_]) VisitVoidExpression(_ *ast.VoidExpression) (_ struct{}) {
+func (c *Compiler[_, _]) VisitVoidExpression(_ *ast.VoidExpression) (_ struct{}) {
 	//TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler[_]) VisitBoolExpression(expression *ast.BoolExpression) (_ struct{}) {
+func (c *Compiler[_, _]) VisitBoolExpression(expression *ast.BoolExpression) (_ struct{}) {
 	if expression.Value {
 		c.codeGen.Emit(opcode.InstructionTrue{})
 	} else {
@@ -931,12 +936,12 @@ func (c *Compiler[_]) VisitBoolExpression(expression *ast.BoolExpression) (_ str
 	return
 }
 
-func (c *Compiler[_]) VisitNilExpression(_ *ast.NilExpression) (_ struct{}) {
+func (c *Compiler[_, _]) VisitNilExpression(_ *ast.NilExpression) (_ struct{}) {
 	c.codeGen.Emit(opcode.InstructionNil{})
 	return
 }
 
-func (c *Compiler[_]) VisitIntegerExpression(expression *ast.IntegerExpression) (_ struct{}) {
+func (c *Compiler[_, _]) VisitIntegerExpression(expression *ast.IntegerExpression) (_ struct{}) {
 	integerType := c.ExtendedElaboration.IntegerExpressionType(expression)
 	constantKind := constantkind.FromSemaType(integerType)
 
@@ -945,7 +950,7 @@ func (c *Compiler[_]) VisitIntegerExpression(expression *ast.IntegerExpression) 
 	return
 }
 
-func (c *Compiler[_]) VisitFixedPointExpression(expression *ast.FixedPointExpression) (_ struct{}) {
+func (c *Compiler[_, _]) VisitFixedPointExpression(expression *ast.FixedPointExpression) (_ struct{}) {
 	// TODO: adjust once/if we support more fixed point types
 
 	fixedPointSubType := c.ExtendedElaboration.FixedPointExpressionType(expression)
@@ -982,17 +987,17 @@ func (c *Compiler[_]) VisitFixedPointExpression(expression *ast.FixedPointExpres
 	return
 }
 
-func (c *Compiler[_]) addUFix64Constant(value *big.Int) *constant {
+func (c *Compiler[_, _]) addUFix64Constant(value *big.Int) *constant {
 	data := leb128.AppendUint64(nil, value.Uint64())
 	return c.addConstant(constantkind.UFix64, data)
 }
 
-func (c *Compiler[_]) addFix64Constant(value *big.Int) *constant {
+func (c *Compiler[_, _]) addFix64Constant(value *big.Int) *constant {
 	data := leb128.AppendInt64(nil, value.Int64())
 	return c.addConstant(constantkind.Fix64, data)
 }
 
-func (c *Compiler[_]) VisitArrayExpression(array *ast.ArrayExpression) (_ struct{}) {
+func (c *Compiler[_, _]) VisitArrayExpression(array *ast.ArrayExpression) (_ struct{}) {
 	arrayTypes := c.ExtendedElaboration.ArrayExpressionTypes(array)
 
 	typeIndex := c.getOrAddType(arrayTypes.ArrayType)
@@ -1017,7 +1022,7 @@ func (c *Compiler[_]) VisitArrayExpression(array *ast.ArrayExpression) (_ struct
 	return
 }
 
-func (c *Compiler[_]) VisitDictionaryExpression(dictionary *ast.DictionaryExpression) (_ struct{}) {
+func (c *Compiler[_, _]) VisitDictionaryExpression(dictionary *ast.DictionaryExpression) (_ struct{}) {
 	dictionaryTypes := c.ExtendedElaboration.DictionaryExpressionTypes(dictionary)
 
 	typeIndex := c.getOrAddType(dictionaryTypes.DictionaryType)
@@ -1043,12 +1048,12 @@ func (c *Compiler[_]) VisitDictionaryExpression(dictionary *ast.DictionaryExpres
 	return
 }
 
-func (c *Compiler[_]) VisitIdentifierExpression(expression *ast.IdentifierExpression) (_ struct{}) {
+func (c *Compiler[_, _]) VisitIdentifierExpression(expression *ast.IdentifierExpression) (_ struct{}) {
 	c.emitVariableLoad(expression.Identifier.Identifier)
 	return
 }
 
-func (c *Compiler[_]) emitVariableLoad(name string) {
+func (c *Compiler[_, _]) emitVariableLoad(name string) {
 	local := c.currentFunction.findLocal(name)
 	if local != nil {
 		c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: local.index})
@@ -1059,7 +1064,7 @@ func (c *Compiler[_]) emitVariableLoad(name string) {
 	c.codeGen.Emit(opcode.InstructionGetGlobal{GlobalIndex: global.Index})
 }
 
-func (c *Compiler[_]) VisitInvocationExpression(expression *ast.InvocationExpression) (_ struct{}) {
+func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExpression) (_ struct{}) {
 	// TODO: copy
 
 	switch invokedExpr := expression.InvokedExpression.(type) {
@@ -1180,7 +1185,7 @@ func TypeName(typ sema.Type) string {
 	}
 }
 
-func (c *Compiler[_]) loadArguments(expression *ast.InvocationExpression) {
+func (c *Compiler[_, _]) loadArguments(expression *ast.InvocationExpression) {
 	invocationTypes := c.ExtendedElaboration.InvocationExpressionTypes(expression)
 	for index, argument := range expression.Arguments {
 		c.compileExpression(argument.Expression)
@@ -1194,7 +1199,7 @@ func (c *Compiler[_]) loadArguments(expression *ast.InvocationExpression) {
 	//}
 }
 
-func (c *Compiler[_]) loadTypeArguments(expression *ast.InvocationExpression) []uint16 {
+func (c *Compiler[_, _]) loadTypeArguments(expression *ast.InvocationExpression) []uint16 {
 	invocationTypes := c.ExtendedElaboration.InvocationExpressionTypes(expression)
 
 	typeArgsCount := invocationTypes.TypeArguments.Len()
@@ -1215,7 +1220,7 @@ func (c *Compiler[_]) loadTypeArguments(expression *ast.InvocationExpression) []
 	return typeArgs
 }
 
-func (c *Compiler[_]) VisitMemberExpression(expression *ast.MemberExpression) (_ struct{}) {
+func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression) (_ struct{}) {
 	c.compileExpression(expression.Expression)
 	constant := c.addStringConst(expression.Identifier.Identifier)
 	c.codeGen.Emit(opcode.InstructionGetField{
@@ -1224,14 +1229,14 @@ func (c *Compiler[_]) VisitMemberExpression(expression *ast.MemberExpression) (_
 	return
 }
 
-func (c *Compiler[_]) VisitIndexExpression(expression *ast.IndexExpression) (_ struct{}) {
+func (c *Compiler[_, _]) VisitIndexExpression(expression *ast.IndexExpression) (_ struct{}) {
 	c.compileExpression(expression.TargetExpression)
 	c.compileExpression(expression.IndexingExpression)
 	c.codeGen.Emit(opcode.InstructionGetIndex{})
 	return
 }
 
-func (c *Compiler[_]) VisitConditionalExpression(expression *ast.ConditionalExpression) (_ struct{}) {
+func (c *Compiler[_, _]) VisitConditionalExpression(expression *ast.ConditionalExpression) (_ struct{}) {
 	// Test
 	c.compileExpression(expression.Test)
 	elseJump := c.emitUndefinedJumpIfFalse()
@@ -1249,7 +1254,7 @@ func (c *Compiler[_]) VisitConditionalExpression(expression *ast.ConditionalExpr
 	return
 }
 
-func (c *Compiler[_]) VisitUnaryExpression(expression *ast.UnaryExpression) (_ struct{}) {
+func (c *Compiler[_, _]) VisitUnaryExpression(expression *ast.UnaryExpression) (_ struct{}) {
 	c.compileExpression(expression.Expression)
 
 	switch expression.Operation {
@@ -1272,7 +1277,7 @@ func (c *Compiler[_]) VisitUnaryExpression(expression *ast.UnaryExpression) (_ s
 	return
 }
 
-func (c *Compiler[_]) VisitBinaryExpression(expression *ast.BinaryExpression) (_ struct{}) {
+func (c *Compiler[_, _]) VisitBinaryExpression(expression *ast.BinaryExpression) (_ struct{}) {
 	c.compileExpression(expression.Left)
 	// TODO: add support for other types
 
@@ -1381,22 +1386,22 @@ func (c *Compiler[_]) VisitBinaryExpression(expression *ast.BinaryExpression) (_
 	return
 }
 
-func (c *Compiler[_]) VisitFunctionExpression(_ *ast.FunctionExpression) (_ struct{}) {
+func (c *Compiler[_, _]) VisitFunctionExpression(_ *ast.FunctionExpression) (_ struct{}) {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler[_]) VisitStringExpression(expression *ast.StringExpression) (_ struct{}) {
+func (c *Compiler[_, _]) VisitStringExpression(expression *ast.StringExpression) (_ struct{}) {
 	c.stringConstLoad(expression.Value)
 	return
 }
 
-func (c *Compiler[_]) VisitStringTemplateExpression(_ *ast.StringTemplateExpression) (_ struct{}) {
+func (c *Compiler[_, _]) VisitStringTemplateExpression(_ *ast.StringTemplateExpression) (_ struct{}) {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler[_]) VisitCastingExpression(expression *ast.CastingExpression) (_ struct{}) {
+func (c *Compiler[_, _]) VisitCastingExpression(expression *ast.CastingExpression) (_ struct{}) {
 	c.compileExpression(expression.Expression)
 
 	castingTypes := c.ExtendedElaboration.CastingExpressionTypes(expression)
@@ -1424,18 +1429,18 @@ func (c *Compiler[_]) VisitCastingExpression(expression *ast.CastingExpression) 
 	return
 }
 
-func (c *Compiler[_]) VisitCreateExpression(expression *ast.CreateExpression) (_ struct{}) {
+func (c *Compiler[_, _]) VisitCreateExpression(expression *ast.CreateExpression) (_ struct{}) {
 	c.compileExpression(expression.InvocationExpression)
 	return
 }
 
-func (c *Compiler[_]) VisitDestroyExpression(expression *ast.DestroyExpression) (_ struct{}) {
+func (c *Compiler[_, _]) VisitDestroyExpression(expression *ast.DestroyExpression) (_ struct{}) {
 	c.compileExpression(expression.Expression)
 	c.codeGen.Emit(opcode.InstructionDestroy{})
 	return
 }
 
-func (c *Compiler[_]) VisitReferenceExpression(expression *ast.ReferenceExpression) (_ struct{}) {
+func (c *Compiler[_, _]) VisitReferenceExpression(expression *ast.ReferenceExpression) (_ struct{}) {
 	c.compileExpression(expression.Expression)
 	borrowType := c.ExtendedElaboration.ReferenceExpressionBorrowType(expression)
 	index := c.getOrAddType(borrowType)
@@ -1443,12 +1448,12 @@ func (c *Compiler[_]) VisitReferenceExpression(expression *ast.ReferenceExpressi
 	return
 }
 
-func (c *Compiler[_]) VisitForceExpression(_ *ast.ForceExpression) (_ struct{}) {
+func (c *Compiler[_, _]) VisitForceExpression(_ *ast.ForceExpression) (_ struct{}) {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler[_]) VisitPathExpression(expression *ast.PathExpression) (_ struct{}) {
+func (c *Compiler[_, _]) VisitPathExpression(expression *ast.PathExpression) (_ struct{}) {
 	domain := common.PathDomainFromIdentifier(expression.Domain.Identifier)
 	identifier := expression.Identifier.Identifier
 	if len(identifier) >= math.MaxUint16 {
@@ -1466,7 +1471,7 @@ func (c *Compiler[_]) VisitPathExpression(expression *ast.PathExpression) (_ str
 	return
 }
 
-func (c *Compiler[_]) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) (_ struct{}) {
+func (c *Compiler[_, _]) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) (_ struct{}) {
 	kind := declaration.DeclarationKind()
 	switch kind {
 	case common.DeclarationKindInitializer:
@@ -1480,7 +1485,7 @@ func (c *Compiler[_]) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFu
 	return
 }
 
-func (c *Compiler[_]) compileInitializer(declaration *ast.SpecialFunctionDeclaration) {
+func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDeclaration) {
 	enclosingCompositeTypeName := c.enclosingCompositeTypeFullyQualifiedName()
 	enclosingType := c.compositeTypeStack.top()
 	kind := enclosingType.GetCompositeKind()
@@ -1555,7 +1560,7 @@ func (c *Compiler[_]) compileInitializer(declaration *ast.SpecialFunctionDeclara
 	c.codeGen.Emit(opcode.InstructionReturnValue{})
 }
 
-func (c *Compiler[_]) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration, _ bool) (_ struct{}) {
+func (c *Compiler[_, _]) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration, _ bool) (_ struct{}) {
 	declareReceiver := !c.compositeTypeStack.isEmpty()
 	function := c.declareFunction(declaration, declareReceiver)
 
@@ -1565,7 +1570,7 @@ func (c *Compiler[_]) VisitFunctionDeclaration(declaration *ast.FunctionDeclarat
 	return
 }
 
-func (c *Compiler[E]) declareFunction(declaration *ast.FunctionDeclaration, declareReceiver bool) *function[E] {
+func (c *Compiler[E, T]) declareFunction(declaration *ast.FunctionDeclaration, declareReceiver bool) *function[E] {
 	enclosingCompositeTypeName := c.enclosingCompositeTypeFullyQualifiedName()
 	functionName := commons.TypeQualifiedName(enclosingCompositeTypeName, declaration.Identifier.Identifier)
 
@@ -1587,7 +1592,7 @@ func (c *Compiler[E]) declareFunction(declaration *ast.FunctionDeclaration, decl
 	return c.addFunction(functionName, uint16(parameterCount))
 }
 
-func (c *Compiler[_]) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) (_ struct{}) {
+func (c *Compiler[_, _]) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) (_ struct{}) {
 	compositeType := c.ExtendedElaboration.CompositeDeclarationType(declaration)
 	c.compositeTypeStack.push(compositeType)
 	defer func() {
@@ -1623,7 +1628,7 @@ func (c *Compiler[_]) VisitCompositeDeclaration(declaration *ast.CompositeDeclar
 	return
 }
 
-func (c *Compiler[_]) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) (_ struct{}) {
+func (c *Compiler[_, _]) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) (_ struct{}) {
 	interfaceType := c.ExtendedElaboration.InterfaceDeclarationType(declaration)
 	c.compositeTypeStack.push(interfaceType)
 	defer func() {
@@ -1642,17 +1647,17 @@ func (c *Compiler[_]) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclar
 	return
 }
 
-func (c *Compiler[_]) VisitFieldDeclaration(_ *ast.FieldDeclaration) (_ struct{}) {
+func (c *Compiler[_, _]) VisitFieldDeclaration(_ *ast.FieldDeclaration) (_ struct{}) {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler[_]) VisitPragmaDeclaration(_ *ast.PragmaDeclaration) (_ struct{}) {
+func (c *Compiler[_, _]) VisitPragmaDeclaration(_ *ast.PragmaDeclaration) (_ struct{}) {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler[_]) VisitImportDeclaration(declaration *ast.ImportDeclaration) (_ struct{}) {
+func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclaration) (_ struct{}) {
 	resolvedLocations, err := commons.ResolveLocation(
 		c.Config.LocationHandler,
 		declaration.Identifiers,
@@ -1689,66 +1694,64 @@ func (c *Compiler[_]) VisitImportDeclaration(declaration *ast.ImportDeclaration)
 	return
 }
 
-func (c *Compiler[_]) VisitTransactionDeclaration(_ *ast.TransactionDeclaration) (_ struct{}) {
+func (c *Compiler[_, _]) VisitTransactionDeclaration(_ *ast.TransactionDeclaration) (_ struct{}) {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler[_]) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) (_ struct{}) {
+func (c *Compiler[_, _]) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) (_ struct{}) {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler[_]) VisitAttachmentDeclaration(_ *ast.AttachmentDeclaration) (_ struct{}) {
+func (c *Compiler[_, _]) VisitAttachmentDeclaration(_ *ast.AttachmentDeclaration) (_ struct{}) {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler[_]) VisitEntitlementDeclaration(_ *ast.EntitlementDeclaration) (_ struct{}) {
+func (c *Compiler[_, _]) VisitEntitlementDeclaration(_ *ast.EntitlementDeclaration) (_ struct{}) {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler[_]) VisitEntitlementMappingDeclaration(_ *ast.EntitlementMappingDeclaration) (_ struct{}) {
+func (c *Compiler[_, _]) VisitEntitlementMappingDeclaration(_ *ast.EntitlementMappingDeclaration) (_ struct{}) {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler[_]) VisitRemoveStatement(_ *ast.RemoveStatement) (_ struct{}) {
+func (c *Compiler[_, _]) VisitRemoveStatement(_ *ast.RemoveStatement) (_ struct{}) {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler[_]) VisitAttachExpression(_ *ast.AttachExpression) (_ struct{}) {
+func (c *Compiler[_, _]) VisitAttachExpression(_ *ast.AttachExpression) (_ struct{}) {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler[_]) emitTransfer(targetType sema.Type) {
+func (c *Compiler[_, _]) emitTransfer(targetType sema.Type) {
 	index := c.getOrAddType(targetType)
 
 	c.codeGen.Emit(opcode.InstructionTransfer{TypeIndex: index})
 }
 
-func (c *Compiler[_]) getOrAddType(targetType sema.Type) uint16 {
+func (c *Compiler[_, T]) getOrAddType(targetType sema.Type) uint16 {
 	typeID := targetType.ID()
 
 	// Optimization: Re-use types in the pool.
 	index, ok := c.typesInPool[typeID]
+
 	if !ok {
 		staticType := interpreter.ConvertSemaToStaticType(c.memoryGauge, targetType)
-		bytes, err := interpreter.StaticTypeToBytes(staticType)
-		if err != nil {
-			panic(err)
-		}
-		index = c.addType(bytes)
+		typ := c.typeGen.CompileType(staticType)
+		index = c.addType(typ)
 		c.typesInPool[typeID] = index
 	}
 
 	return index
 }
 
-func (c *Compiler[_]) addType(data []byte) uint16 {
+func (c *Compiler[_, T]) addType(data T) uint16 {
 	count := len(c.staticTypes)
 	if count >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid type declaration"))
@@ -1758,7 +1761,7 @@ func (c *Compiler[_]) addType(data []byte) uint16 {
 	return uint16(count)
 }
 
-func (c *Compiler[_]) enclosingCompositeTypeFullyQualifiedName() string {
+func (c *Compiler[_, _]) enclosingCompositeTypeFullyQualifiedName() string {
 	if c.compositeTypeStack.isEmpty() {
 		return ""
 	}
@@ -1774,7 +1777,7 @@ func (c *Compiler[_]) enclosingCompositeTypeFullyQualifiedName() string {
 	return sb.String()
 }
 
-func (c *Compiler[E]) declareParameters(function *function[E], paramList *ast.ParameterList, declareReceiver bool) {
+func (c *Compiler[E, T]) declareParameters(function *function[E], paramList *ast.ParameterList, declareReceiver bool) {
 	if declareReceiver {
 		// Declare receiver as `self`.
 		// Receiver is always at the zero-th index of params.
@@ -1789,11 +1792,11 @@ func (c *Compiler[E]) declareParameters(function *function[E], paramList *ast.Pa
 	}
 }
 
-func (c *Compiler[_]) generateEmptyInit() {
+func (c *Compiler[_, _]) generateEmptyInit() {
 	c.VisitSpecialFunctionDeclaration(emptyInitializer)
 }
 
-func (c *Compiler[_]) withConditionExtendedElaboration(statement ast.Statement, f func()) {
+func (c *Compiler[_, _]) withConditionExtendedElaboration(statement ast.Statement, f func()) {
 	stmtElaboration, ok := c.ExtendedElaboration.conditionsElaborations[statement]
 	if ok {
 		prevElaboration := c.ExtendedElaboration

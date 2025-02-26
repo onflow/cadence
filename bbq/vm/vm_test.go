@@ -25,13 +25,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/opcode"
 )
 
 func TestVM_pop(t *testing.T) {
 	t.Parallel()
 
-	program := &bbq.Program[opcode.Instruction]{}
+	program := &bbq.InstructionProgram{}
 	vm := NewVM(nil, program, nil)
 
 	vm.push(NewIntValue(1))
@@ -60,7 +59,7 @@ func TestVM_pop(t *testing.T) {
 func TestVM_peekPop(t *testing.T) {
 	t.Parallel()
 
-	program := &bbq.Program[opcode.Instruction]{}
+	program := &bbq.InstructionProgram{}
 	vm := NewVM(nil, program, nil)
 
 	vm.push(NewIntValue(1))
@@ -93,7 +92,7 @@ func TestVM_peekPop(t *testing.T) {
 func TestVM_replaceTop(t *testing.T) {
 	t.Parallel()
 
-	program := &bbq.Program[opcode.Instruction]{}
+	program := &bbq.InstructionProgram{}
 	vm := NewVM(nil, program, nil)
 
 	vm.push(NewIntValue(1))
@@ -121,7 +120,7 @@ func TestVM_replaceTop(t *testing.T) {
 func TestVM_pop2(t *testing.T) {
 	t.Parallel()
 
-	program := &bbq.Program[opcode.Instruction]{}
+	program := &bbq.InstructionProgram{}
 	vm := NewVM(nil, program, nil)
 
 	vm.push(NewIntValue(1))
@@ -144,7 +143,7 @@ func TestVM_pop2(t *testing.T) {
 func TestVM_pop3(t *testing.T) {
 	t.Parallel()
 
-	program := &bbq.Program[opcode.Instruction]{}
+	program := &bbq.InstructionProgram{}
 	vm := NewVM(nil, program, nil)
 
 	vm.push(NewIntValue(1))
@@ -179,7 +178,7 @@ func TestVM_pop3(t *testing.T) {
 func TestVM_peek(t *testing.T) {
 	t.Parallel()
 
-	program := &bbq.Program[opcode.Instruction]{}
+	program := &bbq.InstructionProgram{}
 	vm := NewVM(nil, program, nil)
 
 	vm.push(NewIntValue(1))
@@ -212,7 +211,7 @@ func TestVM_peek(t *testing.T) {
 func TestVM_peekN(t *testing.T) {
 	t.Parallel()
 
-	program := &bbq.Program[opcode.Instruction]{}
+	program := &bbq.InstructionProgram{}
 	vm := NewVM(nil, program, nil)
 
 	vm.push(NewIntValue(1))
@@ -246,7 +245,7 @@ func TestVM_peekN(t *testing.T) {
 func TestVM_dropN(t *testing.T) {
 	t.Parallel()
 
-	program := &bbq.Program[opcode.Instruction]{}
+	program := &bbq.InstructionProgram{}
 	vm := NewVM(nil, program, nil)
 
 	vm.push(NewIntValue(1))

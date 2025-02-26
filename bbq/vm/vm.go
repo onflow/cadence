@@ -49,7 +49,7 @@ type VM struct {
 
 func NewVM(
 	location common.Location,
-	program *bbq.Program[opcode.Instruction],
+	program *bbq.InstructionProgram,
 	conf *Config,
 ) *VM {
 	// TODO: Remove initializing config. Following is for testing purpose only.
@@ -529,7 +529,7 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	case NativeFunctionValue:
 		parameterCount := value.ParameterCount
 
-		var typeArguments []StaticType
+		var typeArguments []bbq.StaticType
 		for _, index := range ins.TypeArgs {
 			typeArg := vm.loadType(index)
 			typeArguments = append(typeArguments, typeArg)
@@ -550,7 +550,7 @@ func opInvokeDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
 	receiver := vm.stack[stackHeight-int(ins.ArgCount)-1]
 
 	// TODO:
-	var typeArguments []StaticType
+	var typeArguments []bbq.StaticType
 	for _, index := range ins.TypeArgs {
 		typeArg := vm.loadType(index)
 		typeArguments = append(typeArguments, typeArg)
@@ -735,7 +735,7 @@ func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 	vm.push(result)
 }
 
-func castValueAndValueType(config *Config, targetType StaticType, value Value) (Value, StaticType) {
+func castValueAndValueType(config *Config, targetType bbq.StaticType, value Value) (Value, bbq.StaticType) {
 	valueType := value.StaticType(config)
 
 	// if the value itself has a mapped entitlement type in its authorization
@@ -1050,31 +1050,13 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 	return value
 }
 
-func (vm *VM) loadType(index uint16) StaticType {
+func (vm *VM) loadType(index uint16) bbq.StaticType {
 	staticType := vm.callFrame.executable.StaticTypes[index]
 	if staticType == nil {
-		// TODO: Remove. Should never reach because of the
-		// pre loading-decoding of types.
-		staticType = vm.initializeType(index)
+		// Should never reach.
+		panic(errors.NewUnreachableError())
 	}
 
-	return staticType
-}
-
-func (vm *VM) initializeType(index uint16) interpreter.StaticType {
-	executable := vm.callFrame.executable
-	typeBytes := executable.Program.Types[index]
-	staticType := decodeType(typeBytes)
-	executable.StaticTypes[index] = staticType
-	return staticType
-}
-
-func decodeType(typeBytes []byte) interpreter.StaticType {
-	dec := interpreter.CBORDecMode.NewByteStreamDecoder(typeBytes)
-	staticType, err := interpreter.NewTypeDecoder(dec, nil).DecodeStaticType()
-	if err != nil {
-		panic(err)
-	}
 	return staticType
 }
 

@@ -19,6 +19,7 @@
 package vm
 
 import (
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -50,7 +51,7 @@ func init() {
 		sema.Account_StorageCapabilitiesTypeIssueFunctionName,
 		NativeFunctionValue{
 			ParameterCount: len(sema.Account_StorageCapabilitiesTypeIssueFunctionType.Parameters),
-			Function: func(config *Config, typeArguments []StaticType, args ...Value) Value {
+			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.StorageCapabilities)
 				accountAddress := getAddressMetaInfoFromValue(args[0])
 

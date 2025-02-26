@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -87,7 +88,7 @@ func newCompositeValueFromOrderedMap(
 
 func (*CompositeValue) isValue() {}
 
-func (v *CompositeValue) StaticType(*Config) StaticType {
+func (v *CompositeValue) StaticType(*Config) bbq.StaticType {
 	return v.CompositeType
 }
 

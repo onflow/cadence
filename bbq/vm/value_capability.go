@@ -21,6 +21,7 @@ package vm
 import (
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
@@ -32,13 +33,13 @@ import (
 
 type CapabilityValue struct {
 	Address    AddressValue
-	BorrowType StaticType
+	BorrowType bbq.StaticType
 	ID         IntValue // TODO: UInt64Value
 }
 
 var _ Value = CapabilityValue{}
 
-func NewCapabilityValue(address AddressValue, id IntValue, borrowType StaticType) CapabilityValue {
+func NewCapabilityValue(address AddressValue, id IntValue, borrowType bbq.StaticType) CapabilityValue {
 	return CapabilityValue{
 		Address:    address,
 		BorrowType: borrowType,
@@ -48,7 +49,7 @@ func NewCapabilityValue(address AddressValue, id IntValue, borrowType StaticType
 
 func NewInvalidCapabilityValue(
 	address common.Address,
-	borrowType StaticType,
+	borrowType bbq.StaticType,
 ) CapabilityValue {
 	return CapabilityValue{
 		ID:         InvalidCapabilityID,
@@ -59,7 +60,7 @@ func NewInvalidCapabilityValue(
 
 func (CapabilityValue) isValue() {}
 
-func (v CapabilityValue) StaticType(config *Config) StaticType {
+func (v CapabilityValue) StaticType(config *Config) bbq.StaticType {
 	return interpreter.NewCapabilityStaticType(config.MemoryGauge, v.BorrowType)
 }
 
@@ -90,7 +91,7 @@ func init() {
 		sema.CapabilityTypeBorrowFunctionName,
 		NativeFunctionValue{
 			ParameterCount: 0,
-			Function: func(config *Config, typeArguments []StaticType, args ...Value) Value {
+			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
 				capabilityValue := getReceiver[CapabilityValue](config, args[0])
 				capabilityID := capabilityValue.ID
 

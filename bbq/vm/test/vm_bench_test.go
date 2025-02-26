@@ -27,7 +27,6 @@ import (
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -245,7 +244,7 @@ func BenchmarkContractImport(b *testing.B) {
 	require.NoError(b, err)
 
 	vmConfig := &vm.Config{
-		ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
 		},
 		ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *vm.CompositeValue {
@@ -286,7 +285,7 @@ func BenchmarkContractImport(b *testing.B) {
 		require.NoError(b, err)
 
 		comp := compiler.NewInstructionCompiler(checker)
-		comp.Config.ImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction] {
+		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
 		}
 		program := comp.Compile()
@@ -365,14 +364,14 @@ func BenchmarkMethodCall(b *testing.B) {
 		require.NoError(b, err)
 
 		comp := compiler.NewInstructionCompiler(checker)
-		comp.Config.ImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction] {
+		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
 		}
 
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{
-			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 				return importedProgram
 			},
 			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *vm.CompositeValue {
@@ -467,14 +466,14 @@ func BenchmarkMethodCall(b *testing.B) {
 		require.NoError(b, err)
 
 		comp := compiler.NewInstructionCompiler(checker)
-		comp.Config.ImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction] {
+		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
 		}
 
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{
-			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 				return importedProgram
 			},
 			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *vm.CompositeValue {

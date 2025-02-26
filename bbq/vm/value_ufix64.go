@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/interpreter"
@@ -46,7 +47,7 @@ var _ NumberValue = UFix64Value(0)
 
 func (UFix64Value) isValue() {}
 
-func (UFix64Value) StaticType(*Config) StaticType {
+func (UFix64Value) StaticType(*Config) bbq.StaticType {
 	return interpreter.PrimitiveStaticTypeUFix64
 }
 

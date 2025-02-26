@@ -21,6 +21,7 @@ package vm
 import (
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
@@ -96,7 +97,7 @@ func (v *StorageCapabilityControllerValue) CapabilityControllerBorrowType() *int
 	return v.BorrowType
 }
 
-func (v *StorageCapabilityControllerValue) StaticType(*Config) StaticType {
+func (v *StorageCapabilityControllerValue) StaticType(*Config) bbq.StaticType {
 	return interpreter.PrimitiveStaticTypeStorageCapabilityController
 }
 
@@ -163,7 +164,7 @@ func init() {
 		sema.StorageCapabilityControllerTypeSetTagFunctionName,
 		NativeFunctionValue{
 			ParameterCount: 0,
-			Function: func(config *Config, typeArguments []StaticType, args ...Value) Value {
+			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
 				capabilityValue := args[0].(*StorageCapabilityControllerValue)
 
 				//stdlib.SetCapabilityControllerTag(config.interpreter())

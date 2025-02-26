@@ -19,6 +19,7 @@
 package vm
 
 import (
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -252,7 +253,7 @@ func checkAndIssueStorageCapabilityControllerWithType(
 	idGenerator AccountIDGenerator,
 	address common.Address,
 	targetPathValue PathValue,
-	ty StaticType,
+	ty bbq.StaticType,
 ) CapabilityValue {
 
 	borrowType, ok := ty.(*interpreter.ReferenceStaticType)

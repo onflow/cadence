@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -49,7 +50,7 @@ var _ IntegerValue = IntValue{}
 
 func (IntValue) isValue() {}
 
-func (IntValue) StaticType(*Config) StaticType {
+func (IntValue) StaticType(*Config) bbq.StaticType {
 	return interpreter.PrimitiveStaticTypeInt
 }
 
@@ -207,7 +208,7 @@ func init() {
 
 	RegisterTypeBoundFunction(typeName, sema.ToStringFunctionName, NativeFunctionValue{
 		ParameterCount: len(sema.ToStringFunctionType.Parameters),
-		Function: func(config *Config, typeArguments []StaticType, value ...Value) Value {
+		Function: func(config *Config, typeArguments []bbq.StaticType, value ...Value) Value {
 			number := value[0].(IntValue)
 			return NewStringValue(number.String())
 		},

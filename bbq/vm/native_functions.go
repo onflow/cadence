@@ -21,8 +21,8 @@ package vm
 import (
 	"fmt"
 
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
-
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/stdlib"
@@ -59,7 +59,7 @@ func RegisterTypeBoundFunction(typeName, functionName string, functionValue Nati
 func init() {
 	RegisterFunction(commons.LogFunctionName, NativeFunctionValue{
 		ParameterCount: len(stdlib.LogFunctionType.Parameters),
-		Function: func(config *Config, typeArguments []StaticType, arguments ...Value) Value {
+		Function: func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
 			// TODO: Properly implement
 			fmt.Println(arguments[0].String())
 			return VoidValue{}
@@ -68,7 +68,7 @@ func init() {
 
 	RegisterFunction(commons.PanicFunctionName, NativeFunctionValue{
 		ParameterCount: len(stdlib.PanicFunctionType.Parameters),
-		Function: func(config *Config, typeArguments []StaticType, arguments ...Value) Value {
+		Function: func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
 			// TODO: Properly implement
 			messageValue, ok := arguments[0].(StringValue)
 			if !ok {
@@ -84,7 +84,7 @@ func init() {
 
 	RegisterFunction(commons.GetAccountFunctionName, NativeFunctionValue{
 		ParameterCount: len(stdlib.PanicFunctionType.Parameters),
-		Function: func(config *Config, typeArguments []StaticType, arguments ...Value) Value {
+		Function: func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
 			address := arguments[0].(AddressValue)
 			return NewAccountReferenceValue(config, common.Address(address))
 		},
