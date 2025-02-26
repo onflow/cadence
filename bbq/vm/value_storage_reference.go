@@ -20,9 +20,10 @@ package vm
 
 import (
 	"fmt"
-	"github.com/onflow/atree"
-	"github.com/onflow/cadence/bbq"
 
+	"github.com/onflow/atree"
+
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/interpreter"
@@ -104,6 +105,8 @@ func (v *StorageReferenceValue) dereference(config *Config) (*Value, error) {
 
 		if !IsSubType(config, staticType, v.BorrowedType) {
 			panic(fmt.Errorf("type mismatch: expected %s, found %s", v.BorrowedType, staticType))
+
+			// TODO:
 			//semaType := interpreter.MustConvertStaticToSemaType(staticType)
 			//
 			//return nil, ForceCastTypeMismatchError{

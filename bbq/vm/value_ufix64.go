@@ -19,11 +19,11 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"math/big"
 
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"

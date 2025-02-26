@@ -20,10 +20,9 @@ package vm
 
 import (
 	"fmt"
+
 	"github.com/onflow/cadence/bbq"
-
 	"github.com/onflow/cadence/bbq/commons"
-
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/stdlib"

@@ -20,9 +20,10 @@ package vm
 
 import (
 	goerrors "errors"
-	"github.com/onflow/atree"
-	"github.com/onflow/cadence/bbq"
 
+	"github.com/onflow/atree"
+
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
