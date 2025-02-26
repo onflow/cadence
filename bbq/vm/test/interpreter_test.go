@@ -292,6 +292,15 @@ func TestInterpreterFTTransfer(t *testing.T) {
 				accountHandler,
 			)
 		},
+		OnEventEmitted: func(
+			_ *interpreter.Interpreter,
+			_ interpreter.LocationRange,
+			_ *interpreter.CompositeValue,
+			_ *sema.CompositeType,
+		) error {
+			// NO-OP
+			return nil
+		},
 	}
 
 	accountHandler.parseAndCheckProgram =
@@ -370,10 +379,9 @@ func TestInterpreterFTTransfer(t *testing.T) {
 
 	authorization := sema.NewEntitlementSetAccess(
 		[]*sema.EntitlementType{
+			sema.CapabilitiesType,
+			sema.StorageType,
 			sema.BorrowValueType,
-			sema.IssueStorageCapabilityControllerType,
-			sema.PublishCapabilityType,
-			sema.SaveValueType,
 		},
 		sema.Conjunction,
 	)
@@ -407,7 +415,7 @@ func TestInterpreterFTTransfer(t *testing.T) {
 
 	// Mint FLOW to sender
 
-	total := int64(1000000)
+	total := uint64(1000000)
 
 	inter, err = parseCheckAndInterpretWithOptions(
 		t,
@@ -431,14 +439,14 @@ func TestInterpreterFTTransfer(t *testing.T) {
 	err = inter.InvokeTransaction(
 		0,
 		interpreter.AddressValue(senderAddress),
-		interpreter.NewUnmeteredIntValueFromInt64(total),
+		interpreter.NewUnmeteredUFix64ValueWithInteger(total, interpreter.EmptyLocationRange),
 		signer,
 	)
 	require.NoError(t, err)
 
 	// ----- Run token transfer transaction -----
 
-	transferAmount := int64(1)
+	transferAmount := uint64(1)
 
 	inter, err = parseCheckAndInterpretWithOptions(
 		t,
@@ -461,7 +469,7 @@ func TestInterpreterFTTransfer(t *testing.T) {
 
 	err = inter.InvokeTransaction(
 		0,
-		interpreter.NewUnmeteredIntValueFromInt64(transferAmount),
+		interpreter.NewUnmeteredUFix64ValueWithInteger(transferAmount, interpreter.EmptyLocationRange),
 		interpreter.AddressValue(receiverAddress),
 		signer,
 	)
@@ -491,9 +499,23 @@ func TestInterpreterFTTransfer(t *testing.T) {
 		require.NoError(t, err)
 
 		if address == senderAddress {
-			assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(total-transferAmount), result)
+			assert.Equal(
+				t,
+				interpreter.NewUnmeteredUFix64ValueWithInteger(
+					total-transferAmount,
+					interpreter.EmptyLocationRange,
+				),
+				result,
+			)
 		} else {
-			assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(transferAmount), result)
+			assert.Equal(
+				t,
+				interpreter.NewUnmeteredUFix64ValueWithInteger(
+					transferAmount,
+					interpreter.EmptyLocationRange,
+				),
+				result,
+			)
 		}
 	}
 }
