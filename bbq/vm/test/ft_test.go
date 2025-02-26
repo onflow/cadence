@@ -143,11 +143,11 @@ func TestFTTransfer(t *testing.T) {
 
 	mintTxVM := vm.NewVM(txLocation(), program, vmConfig)
 
-	total := int64(1000000)
+	total := uint64(1000000) * sema.Fix64Factor
 
 	mintTxArgs := []vm.Value{
 		vm.AddressValue(senderAddress),
-		vm.NewIntValue(total),
+		vm.NewUFix64Value(total),
 	}
 
 	mintTxAuthorizer := vm.NewAuthAccountReferenceValue(vmConfig, contractsAddress)
@@ -161,10 +161,10 @@ func TestFTTransfer(t *testing.T) {
 
 	tokenTransferTxVM := vm.NewVM(txLocation(), tokenTransferTxProgram, vmConfig)
 
-	transferAmount := int64(1)
+	transferAmount := uint64(1) * sema.Fix64Factor
 
 	tokenTransferTxArgs := []vm.Value{
-		vm.NewIntValue(transferAmount),
+		vm.NewUFix64Value(transferAmount),
 		vm.AddressValue(receiverAddress),
 	}
 
@@ -189,9 +189,9 @@ func TestFTTransfer(t *testing.T) {
 		require.Equal(t, 0, validationScriptVM.StackSize())
 
 		if address == senderAddress {
-			assert.Equal(t, vm.NewIntValue(total-transferAmount), result)
+			assert.Equal(t, vm.NewUFix64Value(total-transferAmount), result)
 		} else {
-			assert.Equal(t, vm.NewIntValue(transferAmount), result)
+			assert.Equal(t, vm.NewUFix64Value(transferAmount), result)
 		}
 	}
 }

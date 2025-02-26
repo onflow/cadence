@@ -37,6 +37,8 @@ func InterpreterValueToVMValue(storage interpreter.Storage, value interpreter.Va
 		return Nil
 	case interpreter.IntValue:
 		return NewIntValue(value.BigInt.Int64())
+	case interpreter.UFix64Value:
+		return UFix64Value(value)
 	case *interpreter.StringValue:
 		return NewStringValue(value.Str)
 	case *interpreter.CompositeValue:
@@ -107,6 +109,8 @@ func VMValueToInterpreterValue(config *Config, value Value) interpreter.Value {
 		return interpreter.Nil
 	case IntValue:
 		return interpreter.NewIntValueFromInt64(nil, value.SmallInt)
+	case UFix64Value:
+		return interpreter.NewUnmeteredUFix64Value(uint64(value))
 	case StringValue:
 		return interpreter.NewUnmeteredStringValue(string(value.Str))
 	case *CompositeValue:
