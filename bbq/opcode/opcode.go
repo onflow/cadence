@@ -38,14 +38,14 @@ const (
 	_
 	_
 
-	// Int operations
+	// Number operations
 
 	Add
 	Subtract
 	Multiply
 	Divide
 	Mod
-	_
+	Negate
 	_
 	_
 	_
@@ -83,7 +83,7 @@ const (
 	SimpleCast
 	FailableCast
 	ForceCast
-	_
+	Deref
 	_
 	_
 	_
@@ -168,4 +168,7 @@ const (
 	// Other
 
 	EmitEvent
+
+	// NOTE: not an actual opcode, must be last item
+	OpcodeMax
 )

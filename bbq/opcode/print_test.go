@@ -95,9 +95,13 @@ func TestPrintInstruction(t *testing.T) {
 		"SetLocal localIndex:258":       {byte(SetLocal), 1, 2},
 		"GetGlobal globalIndex:258":     {byte(GetGlobal), 1, 2},
 		"SetGlobal globalIndex:258":     {byte(SetGlobal), 1, 2},
-		"Jump target:258":               {byte(Jump), 1, 2},
-		"JumpIfFalse target:258":        {byte(JumpIfFalse), 1, 2},
-		"Transfer typeIndex:258":        {byte(Transfer), 1, 2},
+
+		"Jump target:258":        {byte(Jump), 1, 2},
+		"JumpIfFalse target:258": {byte(JumpIfFalse), 1, 2},
+		"JumpIfTrue target:258":  {byte(JumpIfTrue), 1, 2},
+		"JumpIfNil target:258":   {byte(JumpIfNil), 1, 2},
+
+		"Transfer typeIndex:258": {byte(Transfer), 1, 2},
 
 		"New kind:CompositeKind(258) typeIndex:772": {byte(New), 1, 2, 3, 4},
 
@@ -116,23 +120,30 @@ func TestPrintInstruction(t *testing.T) {
 		},
 
 		"NewRef typeIndex:258": {byte(NewRef), 1, 2},
+		"Deref":                {byte(Deref)},
 
-		"NewArray typeIndex:258 size:772 isResource:true": {byte(NewArray), 1, 2, 3, 4, 1},
+		"NewArray typeIndex:258 size:772 isResource:true":      {byte(NewArray), 1, 2, 3, 4, 1},
+		"NewDictionary typeIndex:258 size:772 isResource:true": {byte(NewDictionary), 1, 2, 3, 4, 1},
 
-		"Unknown":                     {byte(Unknown)},
-		"Return":                      {byte(Return)},
-		"ReturnValue":                 {byte(ReturnValue)},
-		"Add":                         {byte(Add)},
-		"Subtract":                    {byte(Subtract)},
-		"Multiply":                    {byte(Multiply)},
-		"Divide":                      {byte(Divide)},
-		"Mod":                         {byte(Mod)},
-		"Less":                        {byte(Less)},
-		"Greater":                     {byte(Greater)},
-		"LessOrEqual":                 {byte(LessOrEqual)},
-		"GreaterOrEqual":              {byte(GreaterOrEqual)},
-		"Equal":                       {byte(Equal)},
-		"NotEqual":                    {byte(NotEqual)},
+		"Unknown":     {byte(Unknown)},
+		"Return":      {byte(Return)},
+		"ReturnValue": {byte(ReturnValue)},
+
+		"Add":      {byte(Add)},
+		"Subtract": {byte(Subtract)},
+		"Multiply": {byte(Multiply)},
+		"Divide":   {byte(Divide)},
+		"Mod":      {byte(Mod)},
+		"Negate":   {byte(Negate)},
+
+		"Less":           {byte(Less)},
+		"Greater":        {byte(Greater)},
+		"LessOrEqual":    {byte(LessOrEqual)},
+		"GreaterOrEqual": {byte(GreaterOrEqual)},
+
+		"Equal":    {byte(Equal)},
+		"NotEqual": {byte(NotEqual)},
+
 		"Unwrap":                      {byte(Unwrap)},
 		"Destroy":                     {byte(Destroy)},
 		"True":                        {byte(True)},
@@ -144,7 +155,37 @@ func TestPrintInstruction(t *testing.T) {
 		"GetIndex":                    {byte(GetIndex)},
 		"Drop":                        {byte(Drop)},
 		"Dup":                         {byte(Dup)},
+		"Not":                         {byte(Not)},
+
+		"BitwiseOr":         {byte(BitwiseOr)},
+		"BitwiseAnd":        {byte(BitwiseAnd)},
+		"BitwiseXor":        {byte(BitwiseXor)},
+		"BitwiseLeftShift":  {byte(BitwiseLeftShift)},
+		"BitwiseRightShift": {byte(BitwiseRightShift)},
+
+		"Iterator":        {byte(Iterator)},
+		"IteratorHasNext": {byte(IteratorHasNext)},
+		"IteratorNext":    {byte(IteratorNext)},
+
+		"EmitEvent typeIndex:258": {byte(EmitEvent), 1, 2},
 	}
+
+	// Check if there is any opcode that is not tested
+
+	tested := map[string]struct{}{}
+	for expected := range instructions {
+		name := strings.SplitN(expected, " ", 2)[0]
+		tested[name] = struct{}{}
+	}
+
+	for opcode := range OpcodeMax {
+		name := opcode.String()
+		if !strings.HasPrefix(name, "Opcode(") {
+			assert.Contains(t, tested, name, "missing test for opcode %s", name)
+		}
+	}
+
+	// Run tests
 
 	for expected, code := range instructions {
 		t.Run(expected, func(t *testing.T) {

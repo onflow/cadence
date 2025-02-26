@@ -20,6 +20,7 @@ package vm
 
 type NumberValue interface {
 	ComparableValue
+	Negate() NumberValue
 	Add(other NumberValue) NumberValue
 	Subtract(other NumberValue) NumberValue
 	Multiply(other NumberValue) NumberValue

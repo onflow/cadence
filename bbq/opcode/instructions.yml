@@ -376,6 +376,18 @@
       - name: "value"
         type: "value"
 
+- name: deref
+  description:
+    Pops an (optional) reference off the stack, dereferences it,
+    and then pushes the value back on to the stack.
+  valueEffects:
+    pop:
+      - name: reference
+        type: value
+    push:
+      - name: value
+        type: value
+
 # Control flow instructions
 
 - name: "jump"
@@ -556,6 +568,18 @@
     push:
       - name: "result"
         type: "number"
+
+- name: negate
+  description:
+    Pops a number value off the stack, negates it,
+    and then pushes the result back on to the stack.
+  valueEffects:
+    pop:
+      - name: value
+        type: number
+    push:
+      - name: result
+        type: number
 
 # Integer comparison instructions
 

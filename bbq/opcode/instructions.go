@@ -781,6 +781,26 @@ func DecodeForceCast(ip *uint16, code []byte) (i InstructionForceCast) {
 	return i
 }
 
+// InstructionDeref
+//
+// Pops an (optional) reference off the stack, dereferences it, and then pushes the value back on to the stack.
+type InstructionDeref struct {
+}
+
+var _ Instruction = InstructionDeref{}
+
+func (InstructionDeref) Opcode() Opcode {
+	return Deref
+}
+
+func (i InstructionDeref) String() string {
+	return i.Opcode().String()
+}
+
+func (i InstructionDeref) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+}
+
 // InstructionJump
 //
 // Unconditionally jumps to the given instruction.
@@ -1098,6 +1118,26 @@ func (i InstructionMod) String() string {
 }
 
 func (i InstructionMod) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+}
+
+// InstructionNegate
+//
+// Pops a number value off the stack, negates it, and then pushes the result back on to the stack.
+type InstructionNegate struct {
+}
+
+var _ Instruction = InstructionNegate{}
+
+func (InstructionNegate) Opcode() Opcode {
+	return Negate
+}
+
+func (i InstructionNegate) String() string {
+	return i.Opcode().String()
+}
+
+func (i InstructionNegate) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
@@ -1429,6 +1469,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return DecodeFailableCast(ip, code)
 	case ForceCast:
 		return DecodeForceCast(ip, code)
+	case Deref:
+		return InstructionDeref{}
 	case Jump:
 		return DecodeJump(ip, code)
 	case JumpIfFalse:
@@ -1457,6 +1499,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionDivide{}
 	case Mod:
 		return InstructionMod{}
+	case Negate:
+		return InstructionNegate{}
 	case Less:
 		return InstructionLess{}
 	case LessOrEqual:
