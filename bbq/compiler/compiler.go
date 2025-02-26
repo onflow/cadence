@@ -1256,6 +1256,9 @@ func (c *Compiler[_]) VisitUnaryExpression(expression *ast.UnaryExpression) (_ s
 	case ast.OperationNegate:
 		c.codeGen.Emit(opcode.InstructionNot{})
 
+	case ast.OperationMinus:
+		c.codeGen.Emit(opcode.InstructionNegate{})
+
 	case ast.OperationMul:
 		c.codeGen.Emit(opcode.InstructionDeref{})
 
@@ -1263,7 +1266,6 @@ func (c *Compiler[_]) VisitUnaryExpression(expression *ast.UnaryExpression) (_ s
 		// TODO: invalidate
 
 	default:
-		// TODO
 		panic(errors.NewUnreachableError())
 	}
 

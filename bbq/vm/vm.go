@@ -397,6 +397,11 @@ func opMod(vm *VM) {
 	vm.replaceTop(leftNumber.Mod(rightNumber))
 }
 
+func opNegate(vm *VM) {
+	value := vm.pop().(NumberValue)
+	vm.push(value.Negate())
+}
+
 func opBitwiseOr(vm *VM) {
 	left, right := vm.peekPop()
 	leftNumber := left.(IntegerValue)
@@ -908,6 +913,8 @@ func (vm *VM) run() {
 			opDivide(vm)
 		case opcode.InstructionMod:
 			opMod(vm)
+		case opcode.InstructionNegate:
+			opNegate(vm)
 		case opcode.InstructionBitwiseOr:
 			opBitwiseOr(vm)
 		case opcode.InstructionBitwiseXor:

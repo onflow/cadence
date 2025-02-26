@@ -569,6 +569,18 @@
       - name: "result"
         type: "number"
 
+- name: negate
+  description:
+    Pops a number value off the stack, negates it,
+    and then pushes the result back on to the stack.
+  valueEffects:
+    pop:
+      - name: value
+        type: number
+    push:
+      - name: result
+        type: number
+
 # Integer comparison instructions
 
 - name: "less"

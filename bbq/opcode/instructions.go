@@ -1121,6 +1121,26 @@ func (i InstructionMod) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
+// InstructionNegate
+//
+// Pops a number value off the stack, negates it, and then pushes the result back on to the stack.
+type InstructionNegate struct {
+}
+
+var _ Instruction = InstructionNegate{}
+
+func (InstructionNegate) Opcode() Opcode {
+	return Negate
+}
+
+func (i InstructionNegate) String() string {
+	return i.Opcode().String()
+}
+
+func (i InstructionNegate) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+}
+
 // InstructionLess
 //
 // Pops two values off the stack, checks if the first value is less than the second, and then pushes the result back on to the stack.
@@ -1479,6 +1499,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionDivide{}
 	case Mod:
 		return InstructionMod{}
+	case Negate:
+		return InstructionNegate{}
 	case Less:
 		return InstructionLess{}
 	case LessOrEqual:

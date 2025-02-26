@@ -4733,6 +4733,59 @@ func TestCompileAnd(t *testing.T) {
 	})
 }
 
+func TestCompileUnaryNot(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, argument vm.Value) vm.Value {
+
+		actual, err := compileAndInvoke(t,
+			`
+            fun test(x: Bool): Bool {
+                return !x
+            }
+        `,
+			"test",
+			argument,
+		)
+		require.NoError(t, err)
+
+		return actual
+	}
+
+	t.Run("true", func(t *testing.T) {
+		t.Parallel()
+
+		actual := test(t, vm.BoolValue(true))
+		require.Equal(t, vm.BoolValue(false), actual)
+	})
+
+	t.Run("false", func(t *testing.T) {
+		t.Parallel()
+
+		actual := test(t, vm.BoolValue(false))
+		require.Equal(t, vm.BoolValue(true), actual)
+	})
+}
+
+func TestCompileUnaryNegate(t *testing.T) {
+
+	t.Parallel()
+
+	actual, err := compileAndInvoke(t,
+		`
+            fun test(x: Int): Int {
+                return -x
+            }
+        `,
+		"test",
+		vm.NewIntValue(42),
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, vm.NewIntValue(-42), actual)
+}
+
 func TestCompileUnaryDeref(t *testing.T) {
 
 	t.Parallel()
