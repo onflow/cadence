@@ -1164,6 +1164,8 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 	preConditions := transaction.PreConditions
 	postConditions := transaction.PostConditions
 
+	// If there are pre/post conditions,
+	// add them to the execute function.
 	if preConditions != nil || postConditions != nil {
 		if executeFunc == nil {
 			// If there is no execute block, create an empty one.
@@ -1191,6 +1193,8 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 		executeFunc.FunctionBlock.PostConditions = postConditions
 	}
 
+	// Then desugar the execute function so that the conditions will be
+	// inlined to the start and end of the execute function body.
 	if executeFunc != nil {
 		desugaredExecuteFunc := d.desugarDeclaration(executeFunc)
 		members = append(members, desugaredExecuteFunc)
