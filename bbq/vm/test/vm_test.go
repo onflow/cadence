@@ -4502,3 +4502,75 @@ func TestForLoop(t *testing.T) {
 		assert.Equal(t, vm.NewStringValue("6789"), result)
 	})
 }
+
+func TestCompileIf(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, argument vm.Value) vm.Value {
+		result, err := compileAndInvoke(t,
+			`
+				fun test(x: Bool): Int {
+                    var y = 0
+					if x {
+                        y = 1
+                    } else {
+                        y = 2
+                    }
+                    return y
+				}
+			`,
+			"test",
+			argument,
+		)
+		require.NoError(t, err)
+		return result
+	}
+
+	t.Run("true", func(t *testing.T) {
+		t.Parallel()
+
+		actual := test(t, vm.BoolValue(true))
+		require.Equal(t, vm.NewIntValue(1), actual)
+	})
+
+	t.Run("false", func(t *testing.T) {
+		t.Parallel()
+
+		actual := test(t, vm.BoolValue(false))
+		require.Equal(t, vm.NewIntValue(2), actual)
+	})
+}
+
+func TestCompileConditional(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, argument vm.Value) vm.Value {
+		result, err := compileAndInvoke(t,
+			`
+				fun test(x: Bool): Int {
+					return x ? 1 : 2
+				}
+			`,
+			"test",
+			argument,
+		)
+		require.NoError(t, err)
+		return result
+	}
+
+	t.Run("true", func(t *testing.T) {
+		t.Parallel()
+
+		actual := test(t, vm.BoolValue(true))
+		require.Equal(t, vm.NewIntValue(1), actual)
+	})
+
+	t.Run("false", func(t *testing.T) {
+		t.Parallel()
+
+		actual := test(t, vm.BoolValue(false))
+		require.Equal(t, vm.NewIntValue(2), actual)
+	})
+}
