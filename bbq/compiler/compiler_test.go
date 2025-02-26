@@ -1899,10 +1899,10 @@ func TestCompileIntegers(t *testing.T) {
 
 			checker, err := ParseAndCheck(t,
 				fmt.Sprintf(`
-                    fun test() {
-                        let v: %s = 2
-                    }
-                `,
+                        fun test() {
+                            let v: %s = 2
+                        }
+                    `,
 					integerType,
 				),
 			)
@@ -1975,10 +1975,10 @@ func TestCompileFixedPoint(t *testing.T) {
 
 			checker, err := ParseAndCheck(t,
 				fmt.Sprintf(`
-                    fun test() {
-                        let v: %s = 2.3
-                    }
-                `,
+                        fun test() {
+                            let v: %s = 2.3
+                        }
+                    `,
 					fixedPointType,
 				),
 			)
@@ -2047,12 +2047,11 @@ func TestCompileFixedPoint(t *testing.T) {
 	}
 }
 
-func TestCompileUnary(t *testing.T) {
+func TestCompileUnaryNot(t *testing.T) {
 
 	t.Parallel()
 
 	checker, err := ParseAndCheck(t, `
-
         fun test() {
             let no = !true
         }
@@ -2087,6 +2086,104 @@ func TestCompileUnary(t *testing.T) {
 			opcode.InstructionNot{},
 			opcode.InstructionTransfer{TypeIndex: 0},
 			opcode.InstructionSetLocal{LocalIndex: noIndex},
+
+			opcode.InstructionReturn{},
+		},
+		functions[0].Code,
+	)
+}
+
+func TestCompileUnaryNegate(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        fun test(x: Int) {
+            let v = -x
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
+
+	const parameterCount = 1
+
+	// xIndex is the index of the parameter `x`, which is the first parameter
+	const xIndex = 0
+
+	// resultIndex is the index of the $result variable
+	const resultIndex = parameterCount
+
+	// localsOffset is the offset of the first local variable
+	const localsOffset = resultIndex + 1
+
+	const (
+		// vIndex is the index of the local variable `v`, which is the first local variable
+		vIndex = localsOffset + iota
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// let v = -x
+			opcode.InstructionGetLocal{LocalIndex: xIndex},
+			opcode.InstructionNegate{},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: vIndex},
+
+			opcode.InstructionReturn{},
+		},
+		functions[0].Code,
+	)
+}
+
+func TestCompileUnaryDeref(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        fun test(ref: &Int) {
+            let v = *ref
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
+
+	const parameterCount = 1
+
+	// refIndex is the index of the parameter `ref`, which is the first parameter
+	const refIndex = 0
+
+	// resultIndex is the index of the $result variable
+	const resultIndex = parameterCount
+
+	// localsOffset is the offset of the first local variable
+	const localsOffset = resultIndex + 1
+
+	const (
+		// vIndex is the index of the local variable `v`, which is the first local variable
+		vIndex = localsOffset + iota
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// let v = *ref
+			opcode.InstructionGetLocal{LocalIndex: refIndex},
+			opcode.InstructionDeref{},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: vIndex},
 
 			opcode.InstructionReturn{},
 		},
@@ -2139,7 +2236,7 @@ func TestCompileBinary(t *testing.T) {
 
 			assert.Equal(t,
 				[]opcode.Instruction{
-					// let three = 1 + 2
+					// let v = 6 ... 3
 					opcode.InstructionGetConstant{ConstantIndex: 0},
 					opcode.InstructionGetConstant{ConstantIndex: 1},
 					instruction,
@@ -3519,11 +3616,11 @@ func TestCompileIf(t *testing.T) {
 	checker, err := ParseAndCheck(t, `
       fun test(x: Bool): Int {
           var y = 0
-		  if x {
-			 y = 1
-		  } else {
-			 y = 2
-		  }
+          if x {
+             y = 1
+          } else {
+             y = 2
+          }
           return y
       }
     `)
