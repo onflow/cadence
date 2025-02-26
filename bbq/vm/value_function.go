@@ -20,7 +20,6 @@ package vm
 
 import (
 	"github.com/onflow/atree"
-
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/errors"
@@ -35,7 +34,7 @@ var _ Value = FunctionValue{}
 
 func (FunctionValue) isValue() {}
 
-func (FunctionValue) StaticType(*Config) StaticType {
+func (FunctionValue) StaticType(*Config) bbq.StaticType {
 	panic(errors.NewUnreachableError())
 }
 
@@ -48,7 +47,7 @@ func (v FunctionValue) String() string {
 	panic("implement me")
 }
 
-type NativeFunction func(config *Config, typeArguments []StaticType, arguments ...Value) Value
+type NativeFunction func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value
 
 type NativeFunctionValue struct {
 	Name           string
@@ -60,7 +59,7 @@ var _ Value = NativeFunctionValue{}
 
 func (NativeFunctionValue) isValue() {}
 
-func (NativeFunctionValue) StaticType(*Config) StaticType {
+func (NativeFunctionValue) StaticType(*Config) bbq.StaticType {
 	panic(errors.NewUnreachableError())
 }
 

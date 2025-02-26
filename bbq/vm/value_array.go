@@ -20,8 +20,8 @@ package vm
 
 import (
 	goerrors "errors"
-
 	"github.com/onflow/atree"
+	"github.com/onflow/cadence/bbq"
 
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -139,7 +139,7 @@ func (v *ArrayValue) isValue() {
 	panic("implement me")
 }
 
-func (v *ArrayValue) StaticType(*Config) StaticType {
+func (v *ArrayValue) StaticType(*Config) bbq.StaticType {
 	return v.Type
 }
 
@@ -443,7 +443,7 @@ var _ ValueIterator = &ArrayIterator{}
 
 func (i *ArrayIterator) isValue() {}
 
-func (i *ArrayIterator) StaticType(_ *Config) StaticType {
+func (i *ArrayIterator) StaticType(_ *Config) bbq.StaticType {
 	// Iterator is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())

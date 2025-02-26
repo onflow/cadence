@@ -20,7 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/atree"
-
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
@@ -38,7 +38,7 @@ var _ Value = PathValue{}
 
 func (PathValue) isValue() {}
 
-func (v PathValue) StaticType(*Config) StaticType {
+func (v PathValue) StaticType(*Config) bbq.StaticType {
 	switch v.Domain {
 	case common.PathDomainStorage:
 		return interpreter.PrimitiveStaticTypeStoragePath

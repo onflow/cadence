@@ -20,7 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/atree"
-
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -53,7 +53,7 @@ func init() {
 		sema.Account_StorageTypeSaveFunctionName,
 		NativeFunctionValue{
 			ParameterCount: len(sema.Account_StorageTypeSaveFunctionType.Parameters),
-			Function: func(config *Config, typeArs []StaticType, args ...Value) Value {
+			Function: func(config *Config, typeArs []bbq.StaticType, args ...Value) Value {
 				address := getAddressMetaInfoFromValue(args[0])
 
 				value := args[1]
@@ -104,7 +104,7 @@ func init() {
 		sema.Account_StorageTypeBorrowFunctionName,
 		NativeFunctionValue{
 			ParameterCount: len(sema.Account_StorageTypeBorrowFunctionType.Parameters),
-			Function: func(config *Config, typeArgs []StaticType, args ...Value) Value {
+			Function: func(config *Config, typeArgs []bbq.StaticType, args ...Value) Value {
 				address := getAddressMetaInfoFromValue(args[0])
 
 				path, ok := args[1].(PathValue)

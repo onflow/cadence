@@ -20,9 +20,9 @@ package test
 
 import (
 	"fmt"
+	"github.com/onflow/cadence/bbq/opcode"
 	"testing"
 
-	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/interpreter"
 
 	"github.com/stretchr/testify/assert"
@@ -485,14 +485,14 @@ func TestImport(t *testing.T) {
 	require.NoError(t, err)
 
 	importCompiler := compiler.NewInstructionCompiler(checker)
-	importCompiler.Config.ImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction] {
+	importCompiler.Config.ImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 		return importedProgram
 	}
 
 	program := importCompiler.Compile()
 
 	vmConfig := &vm.Config{
-		ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+		ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 			return importedProgram
 		},
 	}
@@ -572,14 +572,14 @@ func TestContractImport(t *testing.T) {
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(checker)
-		comp.Config.ImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction] {
+		comp.Config.ImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 			return importedProgram
 		}
 
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{
-			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 				return importedProgram
 			},
 			ContractValueHandler: func(*vm.Config, common.Location) *vm.CompositeValue {
@@ -647,14 +647,14 @@ func TestContractImport(t *testing.T) {
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(checker)
-		comp.Config.ImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction] {
+		comp.Config.ImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 			return importedProgram
 		}
 
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{
-			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 				return importedProgram
 			},
 			ContractValueHandler: func(*vm.Config, common.Location) *vm.CompositeValue {
@@ -739,7 +739,7 @@ func TestContractImport(t *testing.T) {
 
 		barCompiler := compiler.NewInstructionCompiler(barChecker)
 		barCompiler.Config.LocationHandler = singleIdentifierLocationResolver(t)
-		barCompiler.Config.ImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction] {
+		barCompiler.Config.ImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 			require.Equal(t, fooLocation, location)
 			return fooProgram
 		}
@@ -747,7 +747,7 @@ func TestContractImport(t *testing.T) {
 		barProgram := barCompiler.Compile()
 
 		vmConfig := &vm.Config{
-			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 				require.Equal(t, fooLocation, location)
 				return fooProgram
 			},
@@ -796,7 +796,7 @@ func TestContractImport(t *testing.T) {
 
 		comp := compiler.NewInstructionCompiler(checker)
 		comp.Config.LocationHandler = singleIdentifierLocationResolver(t)
-		comp.Config.ImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction] {
+		comp.Config.ImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 			switch location {
 			case fooLocation:
 				return fooProgram
@@ -811,7 +811,7 @@ func TestContractImport(t *testing.T) {
 		program := comp.Compile()
 
 		vmConfig = &vm.Config{
-			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 				switch location {
 				case fooLocation:
 					return fooProgram
@@ -906,7 +906,7 @@ func TestContractImport(t *testing.T) {
 
 		barCompiler := compiler.NewInstructionCompiler(barChecker)
 		barCompiler.Config.LocationHandler = singleIdentifierLocationResolver(t)
-		barCompiler.Config.ImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction] {
+		barCompiler.Config.ImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 			require.Equal(t, fooLocation, location)
 			return fooProgram
 		}
@@ -925,7 +925,7 @@ func TestContractImport(t *testing.T) {
 		barProgram := barCompiler.Compile()
 
 		vmConfig := &vm.Config{
-			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 				require.Equal(t, fooLocation, location)
 				return fooProgram
 			},
@@ -970,7 +970,7 @@ func TestContractImport(t *testing.T) {
 
 		comp := compiler.NewInstructionCompiler(checker)
 		comp.Config.LocationHandler = singleIdentifierLocationResolver(t)
-		comp.Config.ImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction] {
+		comp.Config.ImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 			switch location {
 			case fooLocation:
 				return fooProgram
@@ -985,7 +985,7 @@ func TestContractImport(t *testing.T) {
 		program := comp.Compile()
 
 		vmConfig = &vm.Config{
-			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 				switch location {
 				case fooLocation:
 					return fooProgram
@@ -1261,7 +1261,7 @@ func TestContractField(t *testing.T) {
 
 		comp := compiler.NewInstructionCompiler(checker).
 			WithConfig(&compiler.Config{
-				ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+				ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 					return importedProgram
 				},
 			})
@@ -1269,7 +1269,7 @@ func TestContractField(t *testing.T) {
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{
-			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 				return importedProgram
 			},
 			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *vm.CompositeValue {
@@ -1332,14 +1332,14 @@ func TestContractField(t *testing.T) {
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(checker)
-		comp.Config.ImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction] {
+		comp.Config.ImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 			return importedProgram
 		}
 
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{
-			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 				return importedProgram
 			},
 			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *vm.CompositeValue {
@@ -1637,14 +1637,14 @@ func TestInterfaceMethodCall(t *testing.T) {
 
 		comp := compiler.NewInstructionCompiler(checker)
 		comp.Config.LocationHandler = singleIdentifierLocationResolver(t)
-		comp.Config.ImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction] {
+		comp.Config.ImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 			return importedProgram
 		}
 
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{
-			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 				return importedProgram
 			},
 			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *vm.CompositeValue {
@@ -1776,7 +1776,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		bazImportHandler := func(location common.Location) *bbq.Program[opcode.Instruction] {
+		bazImportHandler := func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 			switch location {
 			case fooLocation:
 				return fooProgram
@@ -1851,7 +1851,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		scriptImportHandler := func(location common.Location) *bbq.Program[opcode.Instruction] {
+		scriptImportHandler := func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 			switch location {
 			case barLocation:
 				return barProgram
@@ -1932,7 +1932,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		scriptImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction] {
+		scriptImportHandler = func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 			switch location {
 			case fooLocation:
 				return fooProgram
@@ -2332,7 +2332,7 @@ func TestDefaultFunctions(t *testing.T) {
 		vmConfig := &vm.Config{
 			Storage:        storage,
 			AccountHandler: &testAccountHandler{},
-			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 				program, ok := programs[location]
 				if !ok {
 					assert.FailNow(t, "invalid location")
@@ -2445,7 +2445,7 @@ func TestDefaultFunctions(t *testing.T) {
 		vmConfig := &vm.Config{
 			Storage:        storage,
 			AccountHandler: &testAccountHandler{},
-			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 				program, ok := programs[location]
 				if !ok {
 					assert.FailNow(t, "invalid location")
@@ -2549,7 +2549,7 @@ func TestDefaultFunctions(t *testing.T) {
 		vmConfig := &vm.Config{
 			Storage:        storage,
 			AccountHandler: &testAccountHandler{},
-			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 				program, ok := programs[location]
 				if !ok {
 					assert.FailNow(t, "invalid location")
@@ -2878,7 +2878,7 @@ func TestFunctionPreConditions(t *testing.T) {
 		vmConfig := &vm.Config{
 			Storage:        storage,
 			AccountHandler: &testAccountHandler{},
-			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction] {
+			ImportHandler: func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 				program, ok := programs[location]
 				if !ok {
 					assert.FailNow(t, "invalid location")

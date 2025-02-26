@@ -20,7 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/atree"
-
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/interpreter"
 )
 
@@ -41,7 +41,7 @@ func NewSomeValueNonCopying(value Value) *SomeValue {
 
 func (*SomeValue) isValue() {}
 
-func (v *SomeValue) StaticType(config *Config) StaticType {
+func (v *SomeValue) StaticType(config *Config) bbq.StaticType {
 	innerType := v.value.StaticType(config)
 	if innerType == nil {
 		return nil

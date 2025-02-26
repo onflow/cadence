@@ -20,7 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/atree"
-
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/interpreter"
 )
@@ -35,7 +35,7 @@ var _ EquatableValue = BoolValue(true)
 
 func (BoolValue) isValue() {}
 
-func (BoolValue) StaticType(*Config) StaticType {
+func (BoolValue) StaticType(*Config) bbq.StaticType {
 	return interpreter.PrimitiveStaticTypeBool
 }
 

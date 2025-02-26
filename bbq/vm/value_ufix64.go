@@ -19,6 +19,7 @@
 package vm
 
 import (
+	"github.com/onflow/cadence/bbq"
 	"math/big"
 
 	"github.com/onflow/atree"
@@ -45,7 +46,7 @@ var _ NumberValue = UFix64Value(0)
 
 func (UFix64Value) isValue() {}
 
-func (UFix64Value) StaticType(*Config) StaticType {
+func (UFix64Value) StaticType(*Config) bbq.StaticType {
 	return interpreter.PrimitiveStaticTypeUFix64
 }
 

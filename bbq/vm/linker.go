@@ -20,10 +20,8 @@ package vm
 
 import (
 	"fmt"
-
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/opcode"
-
 	"github.com/onflow/cadence/common"
 )
 
@@ -38,7 +36,7 @@ type LinkedGlobals struct {
 // LinkGlobals performs the linking of global functions and variables for a given program.
 func LinkGlobals(
 	location common.Location,
-	program *bbq.Program[opcode.Instruction],
+	program *bbq.Program[opcode.Instruction, bbq.StaticType],
 	conf *Config,
 	linkedGlobalsCache map[common.Location]LinkedGlobals,
 ) LinkedGlobals {
@@ -92,7 +90,7 @@ func LinkGlobals(
 		importedGlobals = append(importedGlobals, importedGlobal)
 	}
 
-	executable := NewLoadedExecutableProgram(location, program)
+	executable := NewExecutableProgram(location, program, nil)
 
 	globalsLen := len(program.Variables) + len(program.Functions) + len(importedGlobals) + 1
 	indexedGlobalsLen := len(program.Functions)

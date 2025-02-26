@@ -26,27 +26,26 @@ import (
 	"github.com/onflow/cadence/bbq/leb128"
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/interpreter"
 )
 
-type ProgramPrinter[E any] struct {
+type ProgramPrinter[E, T any] struct {
 	stringBuilder strings.Builder
 	codePrinter   func(builder *strings.Builder, code []E) error
 }
 
-func NewBytecodeProgramPrinter() *ProgramPrinter[byte] {
-	return &ProgramPrinter[byte]{
+func NewBytecodeProgramPrinter() *ProgramPrinter[byte, []byte] {
+	return &ProgramPrinter[byte, []byte]{
 		codePrinter: opcode.PrintBytecode,
 	}
 }
 
-func NewInstructionsProgramPrinter() *ProgramPrinter[opcode.Instruction] {
-	return &ProgramPrinter[opcode.Instruction]{
+func NewInstructionsProgramPrinter() *ProgramPrinter[opcode.Instruction, StaticType] {
+	return &ProgramPrinter[opcode.Instruction, StaticType]{
 		codePrinter: opcode.PrintInstructions,
 	}
 }
 
-func (p *ProgramPrinter[E]) PrintProgram(program *Program[E]) string {
+func (p *ProgramPrinter[E, T]) PrintProgram(program *Program[E, T]) string {
 	p.printImports(program.Imports)
 	p.printConstantPool(program.Constants)
 	p.printTypePool(program.Types)
@@ -59,7 +58,7 @@ func (p *ProgramPrinter[E]) PrintProgram(program *Program[E]) string {
 	return p.stringBuilder.String()
 }
 
-func (p *ProgramPrinter[E]) printFunction(function *Function[E]) {
+func (p *ProgramPrinter[E, T]) printFunction(function *Function[E]) {
 	p.stringBuilder.WriteString("-- " + function.Name + " --\n")
 	err := p.codePrinter(&p.stringBuilder, function.Code)
 	if err != nil {
@@ -68,7 +67,7 @@ func (p *ProgramPrinter[E]) printFunction(function *Function[E]) {
 	}
 }
 
-func (p *ProgramPrinter[_]) printConstantPool(constants []*Constant) {
+func (p *ProgramPrinter[_, T]) printConstantPool(constants []*Constant) {
 	p.stringBuilder.WriteString("-- Constant Pool --\n")
 
 	for index, constant := range constants {
@@ -96,27 +95,27 @@ func (p *ProgramPrinter[_]) printConstantPool(constants []*Constant) {
 	p.stringBuilder.WriteRune('\n')
 }
 
-func (p *ProgramPrinter[_]) printTypePool(types [][]byte) {
+func (p *ProgramPrinter[_, T]) printTypePool(types []T) {
 	p.stringBuilder.WriteString("-- Type Pool --\n")
 
-	for index, typeBytes := range types {
-		dec := interpreter.CBORDecMode.NewByteStreamDecoder(typeBytes)
-		typeDecoder := interpreter.NewTypeDecoder(dec, nil)
-		staticType, err := typeDecoder.DecodeStaticType()
-		if err != nil {
-			panic(err)
-		}
-
-		p.stringBuilder.WriteString(fmt.Sprint(index))
-		p.stringBuilder.WriteString(" | ")
-		p.stringBuilder.WriteString(string(staticType.ID()))
-		p.stringBuilder.WriteRune('\n')
-	}
+	//for index, typeBytes := range types {
+	//	dec := interpreter.CBORDecMode.NewByteStreamDecoder(typeBytes)
+	//	typeDecoder := interpreter.NewTypeDecoder(dec, nil)
+	//	staticType, err := typeDecoder.DecodeStaticType()
+	//	if err != nil {
+	//		panic(err)
+	//	}
+	//
+	//	p.stringBuilder.WriteString(fmt.Sprint(index))
+	//	p.stringBuilder.WriteString(" | ")
+	//	p.stringBuilder.WriteString(string(staticType.ID()))
+	//	p.stringBuilder.WriteRune('\n')
+	//}
 
 	p.stringBuilder.WriteRune('\n')
 }
 
-func (p *ProgramPrinter[_]) printImports(imports []*Import) {
+func (p *ProgramPrinter[_, _]) printImports(imports []*Import) {
 	p.stringBuilder.WriteString("-- Imports --\n")
 	for _, impt := range imports {
 		location := impt.Location

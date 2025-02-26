@@ -148,7 +148,7 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 		contractsAddress.HexWithPrefix(),
 	)
 
-	importHandler := func(location common.Location) *bbq.Program[opcode.Instruction] {
+	importHandler := func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType] {
 		switch location {
 		case barLocation:
 			return barProgram

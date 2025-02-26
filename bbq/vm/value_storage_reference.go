@@ -20,8 +20,8 @@ package vm
 
 import (
 	"fmt"
-
 	"github.com/onflow/atree"
+	"github.com/onflow/cadence/bbq"
 
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/format"
@@ -70,7 +70,7 @@ func (v *StorageReferenceValue) BorrowType() interpreter.StaticType {
 	return v.BorrowedType
 }
 
-func (v *StorageReferenceValue) StaticType(config *Config) StaticType {
+func (v *StorageReferenceValue) StaticType(config *Config) bbq.StaticType {
 	referencedValue, err := v.dereference(config)
 	if err != nil {
 		panic(err)

@@ -16,27 +16,10 @@
  * limitations under the License.
  */
 
-package vm
+package bbq
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/interpreter"
 )
 
-func IsSubType(config *Config, sourceType, targetType bbq.StaticType) bool {
-	// TODO: Avoid conversion to sema types.
-	inter := config.interpreter()
-	return inter.IsSubType(sourceType, targetType)
-}
-
-// UnwrapOptionalType returns the type if it is not an optional type,
-// or the inner-most type if it is (optional types are repeatedly unwrapped)
-func UnwrapOptionalType(ty bbq.StaticType) bbq.StaticType {
-	for {
-		optionalType, ok := ty.(*interpreter.OptionalStaticType)
-		if !ok {
-			return ty
-		}
-		ty = optionalType.Type
-	}
-}
+type StaticType = interpreter.StaticType

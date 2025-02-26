@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-type ImportHandler func(location common.Location) *bbq.Program[opcode.Instruction]
+type ImportHandler func(location common.Location) *bbq.Program[opcode.Instruction, bbq.StaticType]
 
 type LocationHandler func(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error)
 

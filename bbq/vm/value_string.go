@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -47,7 +48,7 @@ func NewStringValueFromBytes(bytes []byte) StringValue {
 
 func (StringValue) isValue() {}
 
-func (StringValue) StaticType(*Config) StaticType {
+func (StringValue) StaticType(*Config) bbq.StaticType {
 	return interpreter.PrimitiveStaticTypeString
 }
 
@@ -70,7 +71,7 @@ func init() {
 
 	RegisterTypeBoundFunction(typeName, StringConcatFunctionName, NativeFunctionValue{
 		ParameterCount: len(sema.StringTypeConcatFunctionType.Parameters),
-		Function: func(config *Config, typeArguments []StaticType, value ...Value) Value {
+		Function: func(config *Config, typeArguments []bbq.StaticType, value ...Value) Value {
 			first := value[0].(StringValue)
 			second := value[1].(StringValue)
 			var sb strings.Builder

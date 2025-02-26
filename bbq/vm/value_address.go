@@ -20,7 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/atree"
-
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/interpreter"
@@ -32,7 +32,7 @@ var _ Value = AddressValue{}
 
 func (AddressValue) isValue() {}
 
-func (AddressValue) StaticType(*Config) StaticType {
+func (AddressValue) StaticType(*Config) bbq.StaticType {
 	return interpreter.PrimitiveStaticTypeAddress
 }
 

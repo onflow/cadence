@@ -20,7 +20,7 @@ package vm
 
 import (
 	"fmt"
-
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/errors"
 )
 
@@ -56,8 +56,8 @@ func (l MissingMemberValueError) Error() string {
 
 // ForceCastTypeMismatchError
 type ForceCastTypeMismatchError struct {
-	ExpectedType StaticType
-	ActualType   StaticType
+	ExpectedType bbq.StaticType
+	ActualType   bbq.StaticType
 }
 
 var _ errors.UserError = ForceCastTypeMismatchError{}

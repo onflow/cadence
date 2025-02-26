@@ -31,15 +31,15 @@ import (
 // i.e: indexes used in opcodes refer to the indexes of its ExecutableProgram.
 type ExecutableProgram struct {
 	Location    common.Location
-	Program     *bbq.Program[opcode.Instruction]
+	Program     *bbq.Program[opcode.Instruction, bbq.StaticType]
 	Globals     []Value
 	Constants   []Value
-	StaticTypes []StaticType
+	StaticTypes []bbq.StaticType
 }
 
 func NewExecutableProgram(
 	location common.Location,
-	program *bbq.Program[opcode.Instruction],
+	program *bbq.Program[opcode.Instruction, bbq.StaticType],
 	globals []Value,
 ) *ExecutableProgram {
 	return &ExecutableProgram{
@@ -47,23 +47,6 @@ func NewExecutableProgram(
 		Program:     program,
 		Globals:     globals,
 		Constants:   make([]Value, len(program.Constants)),
-		StaticTypes: make([]StaticType, len(program.Types)),
+		StaticTypes: program.Types,
 	}
-}
-
-// NewLoadedExecutableProgram returns an ExecutableProgram with types decoded.
-// Note that the returned program **doesn't** have the globals linked.
-func NewLoadedExecutableProgram(
-	location common.Location,
-	program *bbq.Program[opcode.Instruction],
-) *ExecutableProgram {
-	executable := NewExecutableProgram(location, program, nil)
-
-	// Optimization: Pre load/decode types
-	for index, bytes := range program.Types {
-		staticType := decodeType(bytes)
-		executable.StaticTypes[index] = staticType
-	}
-
-	return executable
 }

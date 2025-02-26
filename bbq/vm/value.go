@@ -20,13 +20,13 @@ package vm
 
 import (
 	"github.com/onflow/atree"
-
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/interpreter"
 )
 
 type Value interface {
 	isValue()
-	StaticType(*Config) StaticType
+	StaticType(*Config) bbq.StaticType
 	Transfer(
 		config *Config,
 		address atree.Address,
@@ -73,13 +73,13 @@ type ValueIterator interface {
 // ConvertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
 func ConvertAndBox(
 	value Value,
-	valueType, targetType StaticType,
+	valueType, targetType bbq.StaticType,
 ) Value {
 	value = convert(value, valueType, targetType)
 	return BoxOptional(value, targetType)
 }
 
-func convert(value Value, valueType, targetType StaticType) Value {
+func convert(value Value, valueType, targetType bbq.StaticType) Value {
 	if valueType == nil {
 		return value
 	}
@@ -122,7 +122,7 @@ func Unbox(value Value) Value {
 // BoxOptional boxes a value in optionals, if necessary
 func BoxOptional(
 	value Value,
-	targetType StaticType,
+	targetType bbq.StaticType,
 ) Value {
 
 	inner := value
