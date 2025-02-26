@@ -615,7 +615,80 @@
       - name: "result"
         type: "bool"
 
-# Iterator
+# Bitwise instructions
+
+- name: "bitwiseOr"
+  description:
+    Pops two integer values off the stack, performs a bitwise OR operation on them,
+    and then pushes the result back on to the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "integer"
+      - name: "right"
+        type: "integer"
+    push:
+      - name: "result"
+        type: "integer"
+
+
+- name: "bitwiseXor"
+  description:
+    Pops two integer values off the stack, performs a bitwise XOR operation on them,
+    and then pushes the result back on to the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "integer"
+      - name: "right"
+        type: "integer"
+    push:
+      - name: "result"
+        type: "integer"
+
+- name: "bitwiseAnd"
+  description:
+    Pops two integer values off the stack, performs a bitwise AND operation on them,
+    and then pushes the result back on to the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "integer"
+      - name: "right"
+        type: "integer"
+    push:
+      - name: "result"
+        type: "integer"
+
+- name: "bitwiseLeftShift"
+  description:
+    Pops two integer values off the stack, performs a bitwise left shift operation on them,
+    and then pushes the result back on to the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "integer"
+      - name: "right"
+        type: "integer"
+    push:
+      - name: "result"
+        type: "integer"
+
+- name: "bitwiseRightShift"
+  description:
+      Pops two integer values off the stack, performs a bitwise right shift operation on them,
+      and then pushes the result back on to the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "integer"
+      - name: "right"
+        type: "integer"
+    push:
+      - name: "result"
+        type: "integer"
+
+  # Iterator
 
 - name: "iterator"
   description:
@@ -623,7 +696,7 @@
   valueEffects:
     pop:
       - name: "iterable"
-        type: "iterable"
+        type: "value"
     push:
       - name: "iterator"
         type: "iterator"

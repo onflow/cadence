@@ -397,6 +397,41 @@ func opMod(vm *VM) {
 	vm.replaceTop(leftNumber.Mod(rightNumber))
 }
 
+func opBitwiseOr(vm *VM) {
+	left, right := vm.peekPop()
+	leftNumber := left.(IntegerValue)
+	rightNumber := right.(IntegerValue)
+	vm.replaceTop(leftNumber.BitwiseOr(rightNumber))
+}
+
+func opBitwiseXor(vm *VM) {
+	left, right := vm.peekPop()
+	leftNumber := left.(IntegerValue)
+	rightNumber := right.(IntegerValue)
+	vm.replaceTop(leftNumber.BitwiseXor(rightNumber))
+}
+
+func opBitwiseAnd(vm *VM) {
+	left, right := vm.peekPop()
+	leftNumber := left.(IntegerValue)
+	rightNumber := right.(IntegerValue)
+	vm.replaceTop(leftNumber.BitwiseAnd(rightNumber))
+}
+
+func opBitwiseLeftShift(vm *VM) {
+	left, right := vm.peekPop()
+	leftNumber := left.(IntegerValue)
+	rightNumber := right.(IntegerValue)
+	vm.replaceTop(leftNumber.BitwiseLeftShift(rightNumber))
+}
+
+func opBitwiseRightShift(vm *VM) {
+	left, right := vm.peekPop()
+	leftNumber := left.(IntegerValue)
+	rightNumber := right.(IntegerValue)
+	vm.replaceTop(leftNumber.BitwiseRightShift(rightNumber))
+}
+
 func opLess(vm *VM) {
 	left, right := vm.peekPop()
 	leftNumber := left.(NumberValue)
@@ -841,6 +876,16 @@ func (vm *VM) run() {
 			opDivide(vm)
 		case opcode.InstructionMod:
 			opMod(vm)
+		case opcode.InstructionBitwiseOr:
+			opBitwiseOr(vm)
+		case opcode.InstructionBitwiseXor:
+			opBitwiseXor(vm)
+		case opcode.InstructionBitwiseAnd:
+			opBitwiseAnd(vm)
+		case opcode.InstructionBitwiseLeftShift:
+			opBitwiseLeftShift(vm)
+		case opcode.InstructionBitwiseRightShift:
+			opBitwiseRightShift(vm)
 		case opcode.InstructionLess:
 			opLess(vm)
 		case opcode.InstructionLessOrEqual:

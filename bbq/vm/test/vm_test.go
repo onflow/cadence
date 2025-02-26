@@ -4732,3 +4732,56 @@ func TestCompileAnd(t *testing.T) {
 		require.Equal(t, vm.NewIntValue(21), actual)
 	})
 }
+
+func TestBinary(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(op string, expected vm.Value) {
+
+		t.Run(op, func(t *testing.T) {
+
+			t.Parallel()
+
+			actual, err := compileAndInvoke(t,
+				fmt.Sprintf(`
+                        fun test(): AnyStruct {
+                            return 6 %s 4
+                        }
+                    `,
+					op,
+				),
+				"test",
+			)
+			require.NoError(t, err)
+
+			assert.Equal(t, expected, actual)
+		})
+	}
+
+	tests := map[string]vm.Value{
+		"+": vm.NewIntValue(10),
+		"-": vm.NewIntValue(2),
+		"*": vm.NewIntValue(24),
+		"/": vm.NewIntValue(1),
+		"%": vm.NewIntValue(2),
+
+		"<":  vm.BoolValue(false),
+		"<=": vm.BoolValue(false),
+		">":  vm.BoolValue(true),
+		">=": vm.BoolValue(true),
+
+		"==": vm.BoolValue(false),
+		"!=": vm.BoolValue(true),
+
+		"&":  vm.NewIntValue(4),
+		"|":  vm.NewIntValue(6),
+		"^":  vm.NewIntValue(2),
+		"<<": vm.NewIntValue(96),
+		">>": vm.NewIntValue(0),
+	}
+
+	for op, value := range tests {
+		test(op, value)
+	}
+}

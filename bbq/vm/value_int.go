@@ -45,6 +45,7 @@ var _ Value = IntValue{}
 var _ EquatableValue = IntValue{}
 var _ ComparableValue = IntValue{}
 var _ NumberValue = IntValue{}
+var _ IntegerValue = IntValue{}
 
 func (IntValue) isValue() {}
 
@@ -94,7 +95,7 @@ func (v IntValue) Mod(other NumberValue) NumberValue {
 	if !ok {
 		panic("invalid operand")
 	}
-	return NewIntValue(v.SmallInt * otherInt.SmallInt)
+	return NewIntValue(v.SmallInt % otherInt.SmallInt)
 }
 
 func (v IntValue) Equal(other Value) BoolValue {
@@ -135,6 +136,64 @@ func (v IntValue) GreaterEqual(other ComparableValue) BoolValue {
 		panic("invalid operand")
 	}
 	return v.SmallInt >= otherInt.SmallInt
+}
+
+func (v IntValue) BitwiseOr(other IntegerValue) IntegerValue {
+	o, ok := other.(IntValue)
+	if !ok {
+		panic("invalid operand")
+
+	}
+
+	return NewIntValue(v.SmallInt | o.SmallInt)
+}
+
+func (v IntValue) BitwiseXor(other IntegerValue) IntegerValue {
+	o, ok := other.(IntValue)
+	if !ok {
+		panic("invalid operand")
+
+	}
+
+	return NewIntValue(v.SmallInt ^ o.SmallInt)
+}
+
+func (v IntValue) BitwiseAnd(other IntegerValue) IntegerValue {
+	o, ok := other.(IntValue)
+	if !ok {
+		panic("invalid operand")
+
+	}
+
+	return NewIntValue(v.SmallInt & o.SmallInt)
+}
+
+func (v IntValue) BitwiseLeftShift(other IntegerValue) IntegerValue {
+	o, ok := other.(IntValue)
+	if !ok {
+		panic("invalid operand")
+
+	}
+
+	if o.SmallInt < 0 {
+		panic(interpreter.NegativeShiftError{})
+	}
+
+	return NewIntValue(v.SmallInt << o.SmallInt)
+}
+
+func (v IntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
+	o, ok := other.(IntValue)
+	if !ok {
+		panic("invalid operand")
+
+	}
+
+	if o.SmallInt < 0 {
+		panic(interpreter.NegativeShiftError{})
+	}
+
+	return NewIntValue(v.SmallInt >> o.SmallInt)
 }
 
 // members
