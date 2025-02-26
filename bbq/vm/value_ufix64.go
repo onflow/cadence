@@ -24,6 +24,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -52,6 +53,10 @@ func (UFix64Value) StaticType(*Config) bbq.StaticType {
 
 func (v UFix64Value) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
 	return v
+}
+
+func (UFix64Value) Negate() NumberValue {
+	panic(errors.NewUnreachableError())
 }
 
 func (v UFix64Value) Add(other NumberValue) NumberValue {

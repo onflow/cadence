@@ -58,6 +58,10 @@ func (v IntValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
 	return v
 }
 
+func (v IntValue) Negate() NumberValue {
+	return NewIntValue(-v.SmallInt)
+}
+
 func (v IntValue) Add(other NumberValue) NumberValue {
 	otherInt, ok := other.(IntValue)
 	if !ok {
