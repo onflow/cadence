@@ -1065,8 +1065,6 @@ func (d *Desugar) VisitEntitlementMappingDeclaration(declaration *ast.Entitlemen
 }
 
 func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclaration) ast.Declaration {
-	// TODO: add pre/post conditions
-
 	// Converts a transaction into a composite type declaration.
 	// Transaction parameters are converted into global variables.
 	// An initializer is generated to set parameters to above generated global variables.
@@ -1082,39 +1080,62 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 		for index, parameter := range transaction.ParameterList.Parameters {
 			// Create global variables
 			// i.e: `var a: Type`
-			field := &ast.VariableDeclaration{
-				Access:         ast.AccessSelf,
-				IsConstant:     false,
-				Identifier:     parameter.Identifier,
-				TypeAnnotation: parameter.TypeAnnotation,
-			}
+			field := ast.NewVariableDeclaration(
+				d.memoryGauge,
+				ast.AccessSelf,
+				false,
+				parameter.Identifier,
+				parameter.TypeAnnotation,
+				nil,
+				nil,
+				parameter.StartPos,
+				nil,
+				nil,
+				"",
+			)
+
 			varDeclarations = append(varDeclarations, field)
 
 			// Create assignment from param to global var.
 			// i.e: `a = $param_a`
 			modifiedParamName := commons.TransactionGeneratedParamPrefix + parameter.Identifier.Identifier
-			modifiedParameter := &ast.Parameter{
-				Label: "",
-				Identifier: ast.Identifier{
-					Identifier: modifiedParamName,
-				},
-				TypeAnnotation: parameter.TypeAnnotation,
-			}
+
+			modifiedParameter := ast.NewParameter(
+				d.memoryGauge,
+				"",
+				ast.NewIdentifier(
+					d.memoryGauge,
+					modifiedParamName,
+					parameter.StartPos,
+				),
+				parameter.TypeAnnotation,
+				nil,
+				parameter.StartPos,
+			)
+
 			parameters = append(parameters, modifiedParameter)
 
-			assignment := &ast.AssignmentStatement{
-				Target: &ast.IdentifierExpression{
-					Identifier: parameter.Identifier,
-				},
-				Value: &ast.IdentifierExpression{
-					Identifier: ast.Identifier{
-						Identifier: modifiedParamName,
-					},
-				},
-				Transfer: &ast.Transfer{
-					Operation: ast.TransferOperationCopy,
-				},
-			}
+			assignment := ast.NewAssignmentStatement(
+				d.memoryGauge,
+				ast.NewIdentifierExpression(
+					d.memoryGauge,
+					parameter.Identifier,
+				),
+				ast.NewTransfer(
+					d.memoryGauge,
+					ast.TransferOperationCopy,
+					parameter.StartPos,
+				),
+				ast.NewIdentifierExpression(
+					d.memoryGauge,
+					ast.NewIdentifier(
+						d.memoryGauge,
+						modifiedParamName,
+						parameter.StartPos,
+					),
+				),
+			)
+
 			statements = append(statements, assignment)
 
 			transactionTypes := d.elaboration.TransactionDeclarationType(transaction)
@@ -1133,37 +1154,58 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 		//     b = $param_b
 		//     ...
 		// }
-		initFunction = &ast.FunctionDeclaration{
-			Access: ast.AccessNotSpecified,
-			Identifier: ast.Identifier{
-				Identifier: commons.ProgramInitFunctionName,
-			},
-			ParameterList: &ast.ParameterList{
-				Parameters: parameters,
-			},
-			ReturnTypeAnnotation: nil,
-			FunctionBlock: &ast.FunctionBlock{
-				Block: &ast.Block{
-					Statements: statements,
-				},
-			},
-		}
+		initFunction = simpleFunctionDeclaration(
+			d.memoryGauge,
+			commons.ProgramInitFunctionName,
+			parameters,
+			statements,
+			transaction.StartPos,
+			transaction.Range,
+		)
 	}
 
 	var members []ast.Declaration
-	if transaction.Execute != nil {
-		members = append(members, transaction.Execute.FunctionDeclaration)
-	}
-	if transaction.Prepare != nil {
-		members = append(members, transaction.Prepare)
+
+	prepareBlock := transaction.Prepare
+	if prepareBlock != nil {
+		prepareFunction := d.desugarDeclaration(prepareBlock.FunctionDeclaration)
+		members = append(members, prepareFunction)
 	}
 
-	compositeType := &sema.CompositeType{
-		Location:    nil,
-		Identifier:  commons.TransactionWrapperCompositeName,
-		Kind:        common.CompositeKindStructure,
-		NestedTypes: &sema.StringTypeOrderedMap{},
-		Members:     &sema.StringMemberOrderedMap{},
+	var executeFunc *ast.FunctionDeclaration
+	if transaction.Execute != nil {
+		executeFunc = transaction.Execute.FunctionDeclaration
+	}
+
+	preConditions := transaction.PreConditions
+	postConditions := transaction.PostConditions
+
+	// If there are pre/post conditions,
+	// add them to the execute function.
+	if preConditions != nil || postConditions != nil {
+		if executeFunc == nil {
+			// If there is no execute block, create an empty one.
+			executeFunc = simpleFunctionDeclaration(
+				d.memoryGauge,
+				commons.ExecuteFunctionName,
+				nil,
+				nil,
+				transaction.StartPos,
+				transaction.Range,
+			)
+
+			d.elaboration.SetFunctionDeclarationFunctionType(executeFunc, executeFuncType)
+		}
+
+		executeFunc.FunctionBlock.PreConditions = preConditions
+		executeFunc.FunctionBlock.PostConditions = postConditions
+	}
+
+	// Then desugar the execute function so that the conditions will be
+	// inlined to the start and end of the execute function body.
+	if executeFunc != nil {
+		desugaredExecuteFunc := d.desugarDeclaration(executeFunc)
+		members = append(members, desugaredExecuteFunc)
 	}
 
 	compositeDecl := ast.NewCompositeDeclaration(
@@ -1181,7 +1223,7 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 		ast.EmptyRange,
 	)
 
-	d.elaboration.SetCompositeDeclarationType(compositeDecl, compositeType)
+	d.elaboration.SetCompositeDeclarationType(compositeDecl, transactionCompositeType)
 
 	// We can only return one declaration.
 	// So manually add the rest of the declarations.
@@ -1261,3 +1303,64 @@ var emptyInitializer = func() *ast.SpecialFunctionDeclaration {
 		initializer,
 	)
 }()
+
+func simpleFunctionDeclaration(
+	memoryGauge common.MemoryGauge,
+	functionName string,
+	parameters []*ast.Parameter,
+	statements []ast.Statement,
+	startPos ast.Position,
+	astRange ast.Range,
+) *ast.FunctionDeclaration {
+
+	var paramList *ast.ParameterList
+	if parameters != nil {
+		paramList = ast.NewParameterList(
+			memoryGauge,
+			parameters,
+			astRange,
+		)
+	}
+
+	return ast.NewFunctionDeclaration(
+		memoryGauge,
+		ast.AccessNotSpecified,
+		ast.FunctionPurityUnspecified,
+		false,
+		false,
+		ast.NewIdentifier(
+			memoryGauge,
+			functionName,
+			startPos,
+		),
+		nil,
+		paramList,
+		nil,
+		ast.NewFunctionBlock(
+			memoryGauge,
+			ast.NewBlock(
+				memoryGauge,
+				statements,
+				astRange,
+			),
+			nil,
+			nil,
+		),
+		startPos,
+		"",
+	)
+}
+
+var transactionCompositeType = &sema.CompositeType{
+	Location:    nil,
+	Identifier:  commons.TransactionWrapperCompositeName,
+	Kind:        common.CompositeKindStructure,
+	NestedTypes: &sema.StringTypeOrderedMap{},
+	Members:     &sema.StringMemberOrderedMap{},
+}
+
+var executeFuncType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityImpure,
+	nil,
+	sema.VoidTypeAnnotation,
+)

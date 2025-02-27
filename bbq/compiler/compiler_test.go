@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/compiler"
 	"github.com/onflow/cadence/bbq/constantkind"
 	"github.com/onflow/cadence/bbq/opcode"
@@ -3884,5 +3885,173 @@ func TestCompileAnd(t *testing.T) {
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
+	)
+}
+
+func TestCompileTransaction(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        transaction {
+            var count: Int
+
+            prepare() {
+                self.count = 2
+            }
+
+            pre {
+                self.count == 2
+            }
+
+            execute {
+                self.count = 10
+            }
+
+            post {
+                self.count == 10
+            }
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker).
+		WithConfig(&compiler.Config{
+			ElaborationResolver: func(location common.Location) (*sema.Elaboration, error) {
+				if location == checker.Location {
+					return checker.Elaboration, nil
+				}
+
+				return nil, fmt.Errorf("cannot find elaboration for: %s", location)
+			},
+		})
+
+	program := comp.Compile()
+	require.Len(t, program.Functions, 3)
+
+	// Function indexes
+	const (
+		transactionInitFunctionIndex uint16 = iota
+		prepareFunctionIndex
+		executeFunctionIndex
+	)
+
+	// Transaction constructor
+	// Not interested in the content of the constructor.
+	constructor := program.Functions[transactionInitFunctionIndex]
+	require.Equal(t, commons.TransactionWrapperCompositeName, constructor.Name)
+
+	// Also check if the globals are linked properly.
+	assert.Equal(t, transactionInitFunctionIndex, comp.Globals[commons.TransactionWrapperCompositeName].Index)
+
+	// constant indexes
+	const (
+		const2Index = iota
+		constFieldNameIndex
+		constErrorMsgIndex
+		const10Index
+	)
+
+	// Prepare function.
+	// local var indexes
+	const (
+		selfIndex = iota
+	)
+
+	prepareFunction := program.Functions[prepareFunctionIndex]
+	require.Equal(t, commons.TransactionPrepareFunctionName, prepareFunction.Name)
+
+	// Also check if the globals are linked properly.
+	assert.Equal(t, prepareFunctionIndex, comp.Globals[commons.TransactionPrepareFunctionName].Index)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// self.count = 2
+			opcode.InstructionGetLocal{LocalIndex: selfIndex},
+			opcode.InstructionGetConstant{ConstantIndex: const2Index},
+			opcode.InstructionTransfer{TypeIndex: 1},
+			opcode.InstructionSetField{FieldNameIndex: constFieldNameIndex},
+
+			// return
+			opcode.InstructionReturn{},
+		},
+		prepareFunction.Code,
+	)
+
+	// Execute function.
+
+	// Would be equivalent to:
+	//    fun execute {
+	//        if !(self.count == 2) {
+	//            panic("pre/post condition failed")
+	//        }
+	//
+	//        var $_result
+	//        self.count = 10
+	//
+	//        if !(self.count == 10) {
+	//            panic("pre/post condition failed")
+	//        }
+	//        return
+	//    }
+
+	executeFunction := program.Functions[executeFunctionIndex]
+	require.Equal(t, commons.TransactionExecuteFunctionName, executeFunction.Name)
+
+	// Also check if the globals are linked properly.
+	assert.Equal(t, executeFunctionIndex, comp.Globals[commons.TransactionExecuteFunctionName].Index)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// Pre condition
+			// `self.count == 2`
+			opcode.InstructionGetLocal{LocalIndex: selfIndex},
+			opcode.InstructionGetField{FieldNameIndex: constFieldNameIndex},
+			opcode.InstructionGetConstant{ConstantIndex: const2Index},
+			opcode.InstructionEqual{},
+
+			// if !<condition>
+			opcode.InstructionNot{},
+			opcode.InstructionJumpIfFalse{Target: 11},
+
+			// panic("pre/post condition failed")
+			opcode.InstructionGetConstant{ConstantIndex: constErrorMsgIndex},
+			opcode.InstructionTransfer{TypeIndex: 2},
+			opcode.InstructionGetGlobal{GlobalIndex: 3}, // global index 3 is 'panic' function
+			opcode.InstructionInvoke{},
+
+			// Drop since it's a statement-expression
+			opcode.InstructionDrop{},
+
+			// self.count = 10
+			opcode.InstructionGetLocal{LocalIndex: selfIndex},
+			opcode.InstructionGetConstant{ConstantIndex: const10Index},
+			opcode.InstructionTransfer{TypeIndex: 1},
+			opcode.InstructionSetField{FieldNameIndex: constFieldNameIndex},
+
+			// Post condition
+			// `self.count == 10`
+			opcode.InstructionGetLocal{LocalIndex: selfIndex},
+			opcode.InstructionGetField{FieldNameIndex: constFieldNameIndex},
+			opcode.InstructionGetConstant{ConstantIndex: const10Index},
+			opcode.InstructionEqual{},
+
+			// if !<condition>
+			opcode.InstructionNot{},
+			opcode.InstructionJumpIfFalse{Target: 26},
+
+			// panic("pre/post condition failed")
+			opcode.InstructionGetConstant{ConstantIndex: constErrorMsgIndex},
+			opcode.InstructionTransfer{TypeIndex: 2},
+			opcode.InstructionGetGlobal{GlobalIndex: 3}, // global index 3 is 'panic' function
+			opcode.InstructionInvoke{},
+
+			// Drop since it's a statement-expression
+			opcode.InstructionDrop{},
+
+			// return
+			opcode.InstructionReturn{},
+		},
+		executeFunction.Code,
 	)
 }

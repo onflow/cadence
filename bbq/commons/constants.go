@@ -20,6 +20,7 @@ package commons
 
 const (
 	InitFunctionName                = "init"
+	ExecuteFunctionName             = "execute"
 	TransactionWrapperCompositeName = "transaction"
 	TransactionExecuteFunctionName  = "transaction.execute"
 	TransactionPrepareFunctionName  = "transaction.prepare"
