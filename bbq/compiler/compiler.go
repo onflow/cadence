@@ -1455,9 +1455,10 @@ func (c *Compiler[_, _]) VisitReferenceExpression(expression *ast.ReferenceExpre
 	return
 }
 
-func (c *Compiler[_, _]) VisitForceExpression(_ *ast.ForceExpression) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler[_, _]) VisitForceExpression(expression *ast.ForceExpression) (_ struct{}) {
+	c.compileExpression(expression.Expression)
+	c.codeGen.Emit(opcode.InstructionUnwrap{})
+	return
 }
 
 func (c *Compiler[_, _]) VisitPathExpression(expression *ast.PathExpression) (_ struct{}) {

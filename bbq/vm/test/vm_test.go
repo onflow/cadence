@@ -5258,3 +5258,37 @@ func TestBinary(t *testing.T) {
 		test(op, value)
 	}
 }
+
+func TestCompileForce(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, argument vm.Value) (vm.Value, error) {
+
+		return compileAndInvoke(t,
+			`
+                fun test(x: Int?): Int {
+                    return x!
+                }
+            `,
+			"test",
+			argument,
+		)
+	}
+
+	t.Run("non-nil", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err := test(t, vm.NewSomeValueNonCopying(vm.NewIntValue(42)))
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(42), actual)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := test(t, vm.Nil)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, vm.ForceNilError{})
+	})
+}
