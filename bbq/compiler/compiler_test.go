@@ -4060,43 +4060,88 @@ func TestCompileForce(t *testing.T) {
 
 	t.Parallel()
 
-	checker, err := ParseAndCheck(t, `
-        fun test(x: Int?): Int {
-            return x!
-        }
-    `)
-	require.NoError(t, err)
+	t.Run("optional", func(t *testing.T) {
 
-	comp := compiler.NewInstructionCompiler(checker)
-	program := comp.Compile()
+		checker, err := ParseAndCheck(t, `
+            fun test(x: Int?): Int {
+                return x!
+            }
+        `)
+		require.NoError(t, err)
 
-	require.Len(t, program.Functions, 1)
+		comp := compiler.NewInstructionCompiler(checker)
+		program := comp.Compile()
 
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+		require.Len(t, program.Functions, 1)
 
-	const parameterCount = 1
+		functions := comp.ExportFunctions()
+		require.Equal(t, len(program.Functions), len(functions))
 
-	// xIndex is the index of the parameter `x`, which is the first parameter
-	const xIndex = 0
+		const parameterCount = 1
 
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
+		// xIndex is the index of the parameter `x`, which is the first parameter
+		const xIndex = 0
 
-	assert.Equal(t,
-		[]opcode.Instruction{
-			// return x!
-			opcode.InstructionGetLocal{LocalIndex: xIndex},
-			opcode.InstructionUnwrap{},
+		// resultIndex is the index of the $result variable
+		const resultIndex = parameterCount
 
-			// assign to temp $result
-			opcode.InstructionTransfer{TypeIndex: 0},
-			opcode.InstructionSetLocal{LocalIndex: resultIndex},
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// return x!
+				opcode.InstructionGetLocal{LocalIndex: xIndex},
+				opcode.InstructionUnwrap{},
 
-			// return $result
-			opcode.InstructionGetLocal{LocalIndex: resultIndex},
-			opcode.InstructionReturnValue{},
-		},
-		functions[0].Code,
-	)
+				// assign to temp $result
+				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionSetLocal{LocalIndex: resultIndex},
+
+				// return $result
+				opcode.InstructionGetLocal{LocalIndex: resultIndex},
+				opcode.InstructionReturnValue{},
+			},
+			functions[0].Code,
+		)
+	})
+
+	t.Run("non-optional", func(t *testing.T) {
+
+		checker, err := ParseAndCheck(t, `
+            fun test(x: Int): Int {
+                return x!
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(checker)
+		program := comp.Compile()
+
+		require.Len(t, program.Functions, 1)
+
+		functions := comp.ExportFunctions()
+		require.Equal(t, len(program.Functions), len(functions))
+
+		const parameterCount = 1
+
+		// xIndex is the index of the parameter `x`, which is the first parameter
+		const xIndex = 0
+
+		// resultIndex is the index of the $result variable
+		const resultIndex = parameterCount
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// return x!
+				opcode.InstructionGetLocal{LocalIndex: xIndex},
+
+				// assign to temp $result
+				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionSetLocal{LocalIndex: resultIndex},
+
+				// return $result
+				opcode.InstructionGetLocal{LocalIndex: resultIndex},
+				opcode.InstructionReturnValue{},
+			},
+			functions[0].Code,
+		)
+	})
 }

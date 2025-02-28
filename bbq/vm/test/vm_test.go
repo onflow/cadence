@@ -5263,23 +5263,19 @@ func TestCompileForce(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(t *testing.T, argument vm.Value) (vm.Value, error) {
+	t.Run("non-nil", func(t *testing.T) {
+		t.Parallel()
 
-		return compileAndInvoke(t,
+		actual, err := compileAndInvoke(t,
 			`
                 fun test(x: Int?): Int {
                     return x!
                 }
             `,
 			"test",
-			argument,
+			vm.NewSomeValueNonCopying(vm.NewIntValue(42)),
 		)
-	}
 
-	t.Run("non-nil", func(t *testing.T) {
-		t.Parallel()
-
-		actual, err := test(t, vm.NewSomeValueNonCopying(vm.NewIntValue(42)))
 		require.NoError(t, err)
 		assert.Equal(t, vm.NewIntValue(42), actual)
 	})
@@ -5287,8 +5283,32 @@ func TestCompileForce(t *testing.T) {
 	t.Run("nil", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := test(t, vm.Nil)
+		_, err := compileAndInvoke(t,
+			`
+                fun test(x: Int?): Int {
+                    return x!
+                }
+            `,
+			"test",
+			vm.Nil,
+		)
 		require.Error(t, err)
 		assert.ErrorIs(t, err, vm.ForceNilError{})
+	})
+
+	t.Run("non-optional", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err := compileAndInvoke(t,
+			`
+                fun test(x: Int): Int {
+                    return x!
+                }
+            `,
+			"test",
+			vm.NewIntValue(42),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(42), actual)
 	})
 }
