@@ -3047,7 +3047,7 @@ func TestInterpretIdentityMapping(t *testing.T) {
 	})
 }
 
-func NoTestInterpretMappingInclude(t *testing.T) {
+func TestInterpretMappingInclude(t *testing.T) {
 
 	t.Parallel()
 
