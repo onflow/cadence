@@ -802,6 +802,8 @@ func opUnwrap(vm *VM) {
 		vm.replaceTop(value.value)
 	case NilValue:
 		panic(ForceNilError{})
+	default:
+		panic(errors.NewUnreachableError())
 	}
 }
 
