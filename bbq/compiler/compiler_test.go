@@ -4132,6 +4132,7 @@ func TestCompileForce(t *testing.T) {
 			[]opcode.Instruction{
 				// return x!
 				opcode.InstructionGetLocal{LocalIndex: xIndex},
+				opcode.InstructionUnwrap{},
 
 				// assign to temp $result
 				opcode.InstructionTransfer{TypeIndex: 0},
