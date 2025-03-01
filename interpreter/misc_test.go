@@ -9550,6 +9550,24 @@ func TestInterpretForce(t *testing.T) {
 		)
 	})
 
+	t.Run("non-nil, AnyStruct", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let x: Int? = 1
+          let y: AnyStruct = x
+          let z = y!
+        `)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+			inter.Globals.Get("z").GetValue(inter),
+		)
+	})
+
 	t.Run("nil", func(t *testing.T) {
 
 		t.Parallel()
@@ -9568,6 +9586,25 @@ func TestInterpretForce(t *testing.T) {
 		require.ErrorAs(t, err, &interpreter.ForceNilError{})
 	})
 
+	t.Run("nil, AnyStruct", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let x: Int? = nil
+
+          fun test(): AnyStruct {
+              let y: AnyStruct = x
+              return y!
+           }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.ForceNilError{})
+	})
+
 	t.Run("non-optional", func(t *testing.T) {
 
 		t.Parallel()
@@ -9575,6 +9612,24 @@ func TestInterpretForce(t *testing.T) {
 		inter := parseCheckAndInterpret(t, `
           let x: Int = 1
           let y = x!
+        `)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+			inter.Globals.Get("y").GetValue(inter),
+		)
+	})
+
+	t.Run("non-optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let x: Int = 1
+          let y: AnyStruct = x
+          let z = y!
         `)
 
 		AssertValuesEqual(

@@ -119,31 +119,23 @@ func TestWhileBreak(t *testing.T) {
 
 	t.Parallel()
 
-	checker, err := ParseAndCheck(t, `
-      fun test(): Int {
-          var i = 0
-          while true {
-              if i > 3 {
-                 break
+	result, err := compileAndInvoke(t,
+		`
+          fun test(): Int {
+              var i = 0
+              while true {
+                  if i > 3 {
+                     break
+                  }
+                  i = i + 1
               }
-              i = i + 1
+              return i
           }
-          return i
-      }
-    `)
+        `,
+		"test",
+	)
 	require.NoError(t, err)
-
-	comp := compiler.NewInstructionCompiler(checker)
-	program := comp.Compile()
-
-	vmConfig := &vm.Config{}
-	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-
-	result, err := vmInstance.Invoke("test")
-	require.NoError(t, err)
-
 	require.Equal(t, vm.NewIntValue(4), result)
-	require.Equal(t, 0, vmInstance.StackSize())
 }
 
 func TestSwitchBreak(t *testing.T) {
@@ -151,30 +143,22 @@ func TestSwitchBreak(t *testing.T) {
 	t.Parallel()
 
 	test := func(t *testing.T, value int64) vm.Value {
-
-		checker, err := ParseAndCheck(t, `
-          fun test(x: Int): Int {
-              switch x {
-                  case 1:
-                      break
-                  default:
-                      return 3
+		result, err := compileAndInvoke(t,
+			`
+              fun test(x: Int): Int {
+                  switch x {
+                      case 1:
+                          break
+                      default:
+                          return 3
+                  }
+                  return 1
               }
-              return 1
-          }
-        `)
+            `,
+			"test",
+			vm.NewIntValue(value),
+		)
 		require.NoError(t, err)
-
-		comp := compiler.NewInstructionCompiler(checker)
-		program := comp.Compile()
-
-		vmConfig := &vm.Config{}
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-
-		result, err := vmInstance.Invoke("test", vm.NewIntValue(value))
-		require.NoError(t, err)
-		require.Equal(t, 0, vmInstance.StackSize())
-
 		return result
 	}
 
@@ -205,33 +189,25 @@ func TestWhileSwitchBreak(t *testing.T) {
 	t.Parallel()
 
 	test := func(t *testing.T, value int64) vm.Value {
-
-		checker, err := ParseAndCheck(t, `
-          fun test(x: Int): Int {
-              while true {
-                  switch x {
-                      case 1:
-                          break
-                      default:
-                          return 3
+		result, err := compileAndInvoke(t,
+			`
+                fun test(x: Int): Int {
+                  while true {
+                      switch x {
+                          case 1:
+                              break
+                          default:
+                              return 3
+                      }
+                      return 1
                   }
-                  return 1
+                  return 2
               }
-              return 2
-          }
-        `)
+            `,
+			"test",
+			vm.NewIntValue(value),
+		)
 		require.NoError(t, err)
-
-		comp := compiler.NewInstructionCompiler(checker)
-		program := comp.Compile()
-
-		vmConfig := &vm.Config{}
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-
-		result, err := vmInstance.Invoke("test", vm.NewIntValue(value))
-		require.NoError(t, err)
-		require.Equal(t, 0, vmInstance.StackSize())
-
 		return result
 	}
 
@@ -261,86 +237,58 @@ func TestContinue(t *testing.T) {
 
 	t.Parallel()
 
-	checker, err := ParseAndCheck(t, `
-      fun test(): Int {
-          var i = 0
-          while true {
-              i = i + 1
-              if i < 3 {
-                 continue
+	result, err := compileAndInvoke(t,
+		`
+          fun test(): Int {
+              var i = 0
+              while true {
+                  i = i + 1
+                  if i < 3 {
+                     continue
+                  }
+                  break
               }
-              break
+              return i
           }
-          return i
-      }
-  `)
-	require.NoError(t, err)
-
-	comp := compiler.NewInstructionCompiler(checker)
-	program := comp.Compile()
-
-	vmConfig := &vm.Config{}
-	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-
-	result, err := vmInstance.Invoke("test")
+        `,
+		"test",
+	)
 	require.NoError(t, err)
 
 	require.Equal(t, vm.NewIntValue(3), result)
-	require.Equal(t, 0, vmInstance.StackSize())
 }
 
 func TestNilCoalesce(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("true", func(t *testing.T) {
+	test := func(t *testing.T, argument vm.Value) vm.Value {
+		actual, err := compileAndInvoke(t,
+			`
+                fun test(i: Int?): Int {
+                    var j = i ?? 3
+                    return j
+                }
+            `,
+			"test",
+			argument,
+		)
+		require.NoError(t, err)
+		return actual
+	}
+
+	t.Run("non-nil", func(t *testing.T) {
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
-            fun test(): Int {
-                var i: Int? = 2
-                var j = i ?? 3
-                return j
-            }
-        `)
-		require.NoError(t, err)
-
-		comp := compiler.NewInstructionCompiler(checker)
-		program := comp.Compile()
-
-		vmConfig := &vm.Config{}
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-
-		result, err := vmInstance.Invoke("test")
-		require.NoError(t, err)
-
-		require.Equal(t, vm.NewIntValue(2), result)
-		require.Equal(t, 0, vmInstance.StackSize())
+		actual := test(t, vm.NewSomeValueNonCopying(vm.NewIntValue(2)))
+		require.Equal(t, vm.NewIntValue(2), actual)
 	})
 
-	t.Run("false", func(t *testing.T) {
+	t.Run("nil", func(t *testing.T) {
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
-            fun test(): Int {
-                var i: Int? = nil
-                var j = i ?? 3
-                return j
-            }
-        `)
-		require.NoError(t, err)
-
-		comp := compiler.NewInstructionCompiler(checker)
-		program := comp.Compile()
-
-		vmConfig := &vm.Config{}
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-
-		result, err := vmInstance.Invoke("test")
-		require.NoError(t, err)
-
-		require.Equal(t, vm.NewIntValue(3), result)
-		require.Equal(t, 0, vmInstance.StackSize())
+		actual := test(t, vm.Nil)
+		require.Equal(t, vm.NewIntValue(3), actual)
 	})
 }
 
@@ -5257,4 +5205,111 @@ func TestBinary(t *testing.T) {
 	for op, value := range tests {
 		test(op, value)
 	}
+}
+
+func TestCompileForce(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("non-nil", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err := compileAndInvoke(t,
+			`
+                fun test(x: Int?): Int {
+                    return x!
+                }
+            `,
+			"test",
+			vm.NewSomeValueNonCopying(vm.NewIntValue(42)),
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(42), actual)
+	})
+
+	t.Run("non-nil, AnyStruct", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err := compileAndInvoke(t,
+			`
+                fun test(x: Int?): AnyStruct {
+                    let y: AnyStruct = x
+                    return y!
+                }
+            `,
+			"test",
+			vm.NewSomeValueNonCopying(vm.NewIntValue(42)),
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(42), actual)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := compileAndInvoke(t,
+			`
+                fun test(x: Int?): Int {
+                    return x!
+                }
+            `,
+			"test",
+			vm.Nil,
+		)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, vm.ForceNilError{})
+	})
+
+	t.Run("nil, AnyStruct", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := compileAndInvoke(t,
+			`
+                fun test(x: Int?): AnyStruct {
+                    let y: AnyStruct = x
+                    return y!
+                }
+            `,
+			"test",
+			vm.Nil,
+		)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, vm.ForceNilError{})
+	})
+
+	t.Run("non-optional", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err := compileAndInvoke(t,
+			`
+                fun test(x: Int): Int {
+                    return x!
+                }
+            `,
+			"test",
+			vm.NewIntValue(42),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(42), actual)
+	})
+
+	t.Run("non-optional, AnyStruct", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err := compileAndInvoke(t,
+			`
+                fun test(x: Int): AnyStruct {
+                    let y: AnyStruct = x
+                    return y!
+                }
+            `,
+			"test",
+			vm.NewIntValue(42),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(42), actual)
+	})
+
 }

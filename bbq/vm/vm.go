@@ -797,9 +797,13 @@ func opNot(vm *VM) {
 
 func opUnwrap(vm *VM) {
 	value := vm.peek()
-	if someValue, ok := value.(*SomeValue); ok {
-		value = someValue.value
-		vm.replaceTop(value)
+	switch value := value.(type) {
+	case *SomeValue:
+		vm.replaceTop(value.value)
+	case NilValue:
+		panic(ForceNilError{})
+	default:
+		// Non-optional. Leave as is.
 	}
 }
 
