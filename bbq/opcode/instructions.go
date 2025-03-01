@@ -643,7 +643,7 @@ func (i InstructionDestroy) Encode(code *[]byte) {
 
 // InstructionUnwrap
 //
-// Pops an optional value off the stack, unwraps it, and then pushes the value back on to the stack.
+// Pops a value off the stack. If the value is an optional, pushes the optional's inner value back on to the stack. Panics if the value is `nil`. If the value is not an option, pushes the value back on to the stack.
 type InstructionUnwrap struct {
 }
 
