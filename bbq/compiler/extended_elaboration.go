@@ -296,7 +296,3 @@ func (e *ExtendedElaboration) SetFunctionDeclarationFunctionType(
 	}
 	e.functionDeclarationFunctionTypes[declaration] = functionType
 }
-
-func (e *ExtendedElaboration) ForceExpressionType(expression *ast.ForceExpression) interface{} {
-	return e.elaboration.ForceExpressionType(expression)
-}

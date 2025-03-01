@@ -803,7 +803,7 @@ func opUnwrap(vm *VM) {
 	case NilValue:
 		panic(ForceNilError{})
 	default:
-		panic(errors.NewUnreachableError())
+		// Non-optional. Leave as is.
 	}
 }
 

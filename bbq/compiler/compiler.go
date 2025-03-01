@@ -1457,13 +1457,7 @@ func (c *Compiler[_, _]) VisitReferenceExpression(expression *ast.ReferenceExpre
 
 func (c *Compiler[_, _]) VisitForceExpression(expression *ast.ForceExpression) (_ struct{}) {
 	c.compileExpression(expression.Expression)
-
-	// Unwrap if optional
-	valueType := c.ExtendedElaboration.ForceExpressionType(expression)
-	if _, ok := valueType.(*sema.OptionalType); ok {
-		c.codeGen.Emit(opcode.InstructionUnwrap{})
-	}
-
+	c.codeGen.Emit(opcode.InstructionUnwrap{})
 	return
 }
 
