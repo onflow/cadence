@@ -40,7 +40,9 @@ func (checker *Checker) VisitForceExpression(expression *ast.ForceExpression) Ty
 		ResourceInvalidationKindMoveDefinite,
 	)
 
-	checker.Elaboration.SetForceExpressionType(expression, valueType)
+	if checker.Config.ExtendedElaborationEnabled {
+		checker.Elaboration.SetForceExpressionType(expression, valueType)
+	}
 
 	optionalType, ok := valueType.(*OptionalType)
 	if !ok {
