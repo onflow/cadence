@@ -3484,7 +3484,7 @@ func TestHashable(t *testing.T) {
 	pkgs, err := packages.Load(
 		&packages.Config{
 			// https://github.com/golang/go/issues/45218
-			Mode: packages.NeedImports | packages.NeedTypes,
+			Mode: packages.NeedImports | packages.NeedDeps | packages.NeedTypes,
 		},
 		"github.com/onflow/cadence/interpreter",
 	)
