@@ -4055,3 +4055,94 @@ func TestCompileTransaction(t *testing.T) {
 		executeFunction.Code,
 	)
 }
+
+func TestCompileForce(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("optional", func(t *testing.T) {
+
+		checker, err := ParseAndCheck(t, `
+            fun test(x: Int?): Int {
+                return x!
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(checker)
+		program := comp.Compile()
+
+		require.Len(t, program.Functions, 1)
+
+		functions := comp.ExportFunctions()
+		require.Equal(t, len(program.Functions), len(functions))
+
+		const parameterCount = 1
+
+		// xIndex is the index of the parameter `x`, which is the first parameter
+		const xIndex = 0
+
+		// resultIndex is the index of the $result variable
+		const resultIndex = parameterCount
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// return x!
+				opcode.InstructionGetLocal{LocalIndex: xIndex},
+				opcode.InstructionUnwrap{},
+
+				// assign to temp $result
+				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionSetLocal{LocalIndex: resultIndex},
+
+				// return $result
+				opcode.InstructionGetLocal{LocalIndex: resultIndex},
+				opcode.InstructionReturnValue{},
+			},
+			functions[0].Code,
+		)
+	})
+
+	t.Run("non-optional", func(t *testing.T) {
+
+		checker, err := ParseAndCheck(t, `
+            fun test(x: Int): Int {
+                return x!
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(checker)
+		program := comp.Compile()
+
+		require.Len(t, program.Functions, 1)
+
+		functions := comp.ExportFunctions()
+		require.Equal(t, len(program.Functions), len(functions))
+
+		const parameterCount = 1
+
+		// xIndex is the index of the parameter `x`, which is the first parameter
+		const xIndex = 0
+
+		// resultIndex is the index of the $result variable
+		const resultIndex = parameterCount
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// return x!
+				opcode.InstructionGetLocal{LocalIndex: xIndex},
+				opcode.InstructionUnwrap{},
+
+				// assign to temp $result
+				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionSetLocal{LocalIndex: resultIndex},
+
+				// return $result
+				opcode.InstructionGetLocal{LocalIndex: resultIndex},
+				opcode.InstructionReturnValue{},
+			},
+			functions[0].Code,
+		)
+	})
+}

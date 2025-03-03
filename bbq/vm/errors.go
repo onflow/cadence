@@ -72,3 +72,14 @@ func (e ForceCastTypeMismatchError) Error() string {
 		e.ActualType.ID(),
 	)
 }
+
+// ForceNilError
+type ForceNilError struct{}
+
+var _ errors.UserError = ForceNilError{}
+
+func (ForceNilError) IsUserError() {}
+
+func (e ForceNilError) Error() string {
+	return "unexpectedly found nil while forcing an Optional value"
+}
