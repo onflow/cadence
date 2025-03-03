@@ -113,7 +113,8 @@ func LinkGlobals(
 	// Iterate through `program.Functions` to be deterministic.
 	// Order of globals must be same as index set at `Compiler.addGlobal()`.
 	// TODO: include non-function globals
-	for _, function := range program.Functions {
+	for i := range program.Functions {
+		function := &program.Functions[i]
 		value := FunctionValue{
 			Function:   function,
 			Executable: executable,

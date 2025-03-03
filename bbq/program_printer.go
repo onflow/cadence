@@ -63,7 +63,7 @@ func (p *ProgramPrinter[E, T]) PrintProgram(program *Program[E, T]) string {
 	return p.stringBuilder.String()
 }
 
-func (p *ProgramPrinter[E, T]) printFunction(function *Function[E]) {
+func (p *ProgramPrinter[E, T]) printFunction(function Function[E]) {
 	p.stringBuilder.WriteString("-- " + function.Name + " --\n")
 	err := p.codePrinter(&p.stringBuilder, function.Code)
 	if err != nil {
@@ -72,7 +72,7 @@ func (p *ProgramPrinter[E, T]) printFunction(function *Function[E]) {
 	}
 }
 
-func (p *ProgramPrinter[_, T]) printConstantPool(constants []*Constant) {
+func (p *ProgramPrinter[_, T]) printConstantPool(constants []Constant) {
 	p.stringBuilder.WriteString("-- Constant Pool --\n")
 
 	for index, constant := range constants {
@@ -118,7 +118,7 @@ func (p *ProgramPrinter[_, T]) printTypePool(types []T) {
 	p.stringBuilder.WriteRune('\n')
 }
 
-func (p *ProgramPrinter[_, _]) printImports(imports []*Import) {
+func (p *ProgramPrinter[_, _]) printImports(imports []Import) {
 	p.stringBuilder.WriteString("-- Imports --\n")
 	for _, impt := range imports {
 		location := impt.Location
