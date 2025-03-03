@@ -296,7 +296,7 @@ func (v *ArrayValue) Get(config *Config, index int) Value {
 
 	return MustConvertStoredValue(
 		config.MemoryGauge,
-		config.Storage,
+		config,
 		storedValue,
 	)
 }
@@ -348,7 +348,7 @@ func (v *ArrayValue) Set(config *Config, index int, element Value) {
 	//interpreter.maybeValidateAtreeValue(v.array)
 	//interpreter.maybeValidateAtreeStorage()
 
-	existingValue := StoredValue(config.MemoryGauge, existingStorable, config.Storage)
+	existingValue := StoredValue(config.MemoryGauge, existingStorable, config)
 	_ = existingValue
 
 	//interpreter.checkResourceLoss(existingValue, locationRange)
@@ -495,5 +495,5 @@ func (i *ArrayIterator) Next(config *Config) Value {
 
 	// atree.Array iterator returns low-level atree.Value,
 	// convert to high-level interpreter.Value
-	return MustConvertStoredValue(config.MemoryGauge, config.Storage, atreeValue)
+	return MustConvertStoredValue(config.MemoryGauge, config, atreeValue)
 }

@@ -149,7 +149,7 @@ func (v *DictionaryValue) Get(config *Config, keyValue Value) (Value, bool) {
 
 	return MustConvertStoredValue(
 		config.MemoryGauge,
-		config.Storage,
+		config,
 		storedValue,
 	), true
 }
@@ -196,7 +196,7 @@ func (v *DictionaryValue) Insert(
 	existingValue := StoredValue(
 		conf,
 		existingValueStorable,
-		conf.Storage,
+		conf,
 	).Transfer(
 		conf,
 		atree.Address{},
@@ -408,8 +408,8 @@ func (v *DictionaryValue) iterate(
 			// atree.OrderedMap iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value
 
-			keyValue := MustConvertStoredValue(config.MemoryGauge, config.Storage, key)
-			valueValue := MustConvertStoredValue(config.MemoryGauge, config.Storage, value)
+			keyValue := MustConvertStoredValue(config.MemoryGauge, config, key)
+			valueValue := MustConvertStoredValue(config.MemoryGauge, config, value)
 
 			checkInvalidatedResourceOrResourceReference(keyValue)
 			checkInvalidatedResourceOrResourceReference(valueValue)
@@ -433,7 +433,7 @@ func (v *DictionaryValue) iterate(
 
 func newValueComparator(conf *Config) atree.ValueComparator {
 	return func(storage atree.SlabStorage, atreeValue atree.Value, otherStorable atree.Storable) (bool, error) {
-		inter := conf.interpreter()
+		inter := conf.Interpreter()
 		locationRange := interpreter.EmptyLocationRange
 		value := interpreter.MustConvertStoredValue(inter, atreeValue)
 		otherValue := interpreter.StoredValue(inter, otherStorable, storage)
@@ -443,7 +443,7 @@ func newValueComparator(conf *Config) atree.ValueComparator {
 
 func newHashInputProvider(conf *Config) atree.HashInputProvider {
 	return func(value atree.Value, scratch []byte) ([]byte, error) {
-		inter := conf.interpreter()
+		inter := conf.Interpreter()
 		locationRange := interpreter.EmptyLocationRange
 		hashInput := interpreter.MustConvertStoredValue(inter, value).(interpreter.HashableValue).
 			HashInput(inter, locationRange, scratch)

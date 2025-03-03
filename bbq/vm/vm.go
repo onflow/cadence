@@ -20,7 +20,6 @@ package vm
 
 import (
 	"github.com/onflow/atree"
-
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/constantkind"
@@ -532,8 +531,18 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 
 	switch value := value.(type) {
 	case FunctionValue:
+
 		parameterCount := int(value.Function.ParameterCount)
 		arguments := vm.peekN(parameterCount)
+
+		// TODO: Fix: constructor can have params
+		if value.Function.IsCompositeFunction && value.Function.ParameterCount > 0 {
+			self := arguments[0]
+			if selfRef, isRef := self.(ReferenceValue); isRef {
+				vm.config.currentEntitlementMappedValue = selfRef.GetAuthorization()
+			}
+		}
+
 		vm.pushCallFrame(value, arguments)
 		vm.dropN(len(arguments))
 
@@ -759,9 +768,8 @@ func castValueAndValueType(config *Config, targetType bbq.StaticType, value Valu
 	// concrete outputs. In other places (e.g. interface conformance checks) we want to leave maps generic,
 	// so we don't substitute them.
 
-	// TODO: Substitute entitlements
-	//valueSemaType := interpreter.SubstituteMappedEntitlements(interpreter.MustSemaTypeOfValue(value))
-	//valueType = ConvertSemaToStaticType(interpreter, valueSemaType)
+	valueType = SubstituteMappedEntitlementsInType(config, valueType)
+	targetType = SubstituteMappedEntitlementsInType(config, targetType)
 
 	// If the target is anystruct or anyresource we want to preserve optionals
 	unboxedExpectedType := UnwrapOptionalType(targetType)
@@ -827,13 +835,30 @@ func opNewRef(vm *VM, ins opcode.InstructionNewRef) {
 	borrowedType := vm.loadType(ins.TypeIndex).(*interpreter.ReferenceStaticType)
 	value := vm.pop()
 
+	auth := vm.getEffectiveAuthorization(borrowedType)
+
 	ref := NewEphemeralReferenceValue(
 		vm.config,
 		value,
-		borrowedType.Authorization,
+		auth,
 		borrowedType.ReferencedType,
 	)
 	vm.push(ref)
+}
+
+func (vm *VM) getEffectiveAuthorization(referenceType *interpreter.ReferenceStaticType) interpreter.Authorization {
+	authorization := referenceType.Authorization
+	_, isMapped := authorization.(interpreter.EntitlementMapAuthorization)
+
+	if isMapped && vm.config.currentEntitlementMappedValue != nil {
+		authorization, _ = SubstituteMappedEntitlement(
+			vm.config,
+			authorization,
+		)
+
+	}
+
+	return authorization
 }
 
 func opIterator(vm *VM) {

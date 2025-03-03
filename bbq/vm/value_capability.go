@@ -211,7 +211,7 @@ func getCapabilityController(
 	storageMapKey := interpreter.Uint64StorageMapKey(capabilityID)
 
 	accountStorage := config.Storage.GetDomainStorageMap(
-		config.interpreter(),
+		config.Interpreter(),
 		address,
 		common.StorageDomainCapabilityController,
 		false,
@@ -221,7 +221,7 @@ func getCapabilityController(
 	}
 
 	referenced := accountStorage.ReadValue(config.MemoryGauge, storageMapKey)
-	vmReferencedValue := InterpreterValueToVMValue(config.Storage, referenced)
+	vmReferencedValue := InterpreterValueToVMValue(config, referenced)
 
 	controller, ok := vmReferencedValue.(CapabilityControllerValue)
 	if !ok {

@@ -32,14 +32,14 @@ import (
 //		CheckHealth() error
 //	}
 
-func StoredValue(gauge common.MemoryGauge, storable atree.Storable, storage interpreter.Storage) Value {
-	value := interpreter.StoredValue(gauge, storable, storage)
-	return InterpreterValueToVMValue(storage, value)
+func StoredValue(gauge common.MemoryGauge, storable atree.Storable, config *Config) Value {
+	value := interpreter.StoredValue(gauge, storable, config.Storage)
+	return InterpreterValueToVMValue(config, value)
 }
 
-func MustConvertStoredValue(gauge common.MemoryGauge, storage interpreter.Storage, storedValue atree.Value) Value {
+func MustConvertStoredValue(gauge common.MemoryGauge, config *Config, storedValue atree.Value) Value {
 	value := interpreter.MustConvertStoredValue(gauge, storedValue)
-	return InterpreterValueToVMValue(storage, value)
+	return InterpreterValueToVMValue(config, value)
 }
 
 func ReadStored(
@@ -53,7 +53,7 @@ func ReadStored(
 	storageDomain, _ := common.StorageDomainFromIdentifier(domain)
 
 	accountStorage := storage.GetDomainStorageMap(
-		config.interpreter(),
+		config.Interpreter(),
 		address,
 		storageDomain,
 		false,
@@ -63,7 +63,7 @@ func ReadStored(
 	}
 
 	referenced := accountStorage.ReadValue(config.MemoryGauge, interpreter.StringStorageMapKey(identifier))
-	return InterpreterValueToVMValue(storage, referenced)
+	return InterpreterValueToVMValue(config, referenced)
 }
 
 func WriteStored(
@@ -74,7 +74,7 @@ func WriteStored(
 	value Value,
 ) (existed bool) {
 
-	inter := config.interpreter()
+	inter := config.Interpreter()
 
 	accountStorage := config.Storage.GetDomainStorageMap(inter, storageAddress, domain, true)
 	interValue := VMValueToInterpreterValue(config, value)
@@ -107,7 +107,7 @@ func StoredValueExists(
 	identifier interpreter.StorageMapKey,
 ) bool {
 	accountStorage := config.Storage.GetDomainStorageMap(
-		config.interpreter(),
+		config.Interpreter(),
 		storageAddress,
 		domain,
 		false,

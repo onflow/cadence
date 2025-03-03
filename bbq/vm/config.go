@@ -46,6 +46,7 @@ type Config struct {
 	CapabilityControllerIterations              map[AddressPath]int
 	MutationDuringCapabilityControllerIteration bool
 	referencedResourceKindedValues              ReferencedResourceKindedValues
+	currentEntitlementMappedValue               interpreter.Authorization
 
 	// OnEventEmitted is triggered when an event is emitted by the program
 	OnEventEmitted OnEventEmittedFunc
@@ -75,14 +76,21 @@ func (c *Config) WithAccountHandler(handler stdlib.AccountHandler) *Config {
 }
 
 // TODO: This is temporary. Remove once storing/reading is supported for VM values.
-func (c *Config) interpreter() *interpreter.Interpreter {
+func (c *Config) Interpreter() *interpreter.Interpreter {
 	if c.inter == nil {
 		inter, err := interpreter.NewInterpreter(
 			nil,
 			common_utils.TestLocation,
 			&interpreter.Config{
-				Storage:               c.Storage,
-				ImportLocationHandler: nil,
+				Storage: c.Storage,
+				ImportLocationHandler: func(inter *interpreter.Interpreter, importLocation common.Location) interpreter.Import {
+					//if inter.Location != importLocation {
+					//	panic(fmt.Errorf("cannot finc interpreter for location %s", importLocation))
+					//}
+					return interpreter.InterpreterImport{
+						Interpreter: inter,
+					}
+				},
 				CompositeTypeHandler: func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 					return c.TypeLoader(location, typeID).(*sema.CompositeType)
 				},

@@ -28,7 +28,7 @@ import (
 
 type ReferenceValue interface {
 	Value
-	//AuthorizedValue
+	interpreter.AuthorizedValue
 	isReference()
 	ReferencedValue(config *Config, errorOnFailedDereference bool) *Value
 	BorrowType() interpreter.StaticType
@@ -98,4 +98,8 @@ func (v *EphemeralReferenceValue) GetMember(config *Config, name string) Value {
 func (v *EphemeralReferenceValue) SetMember(config *Config, name string, value Value) {
 	memberAccessibleValue := v.Value.(MemberAccessibleValue)
 	memberAccessibleValue.SetMember(config, name, value)
+}
+
+func (v *EphemeralReferenceValue) GetAuthorization() interpreter.Authorization {
+	return v.Authorization
 }

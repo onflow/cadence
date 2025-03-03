@@ -19,13 +19,15 @@
 package vm
 
 import (
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
 )
 
 func IsSubType(config *Config, sourceType, targetType bbq.StaticType) bool {
 	// TODO: Avoid conversion to sema types.
-	inter := config.interpreter()
+	inter := config.Interpreter()
 	return inter.IsSubType(sourceType, targetType)
 }
 
@@ -39,4 +41,50 @@ func UnwrapOptionalType(ty bbq.StaticType) bbq.StaticType {
 		}
 		ty = optionalType.Type
 	}
+}
+
+func SubstituteMappedEntitlementsInType(
+	config *Config,
+	typ bbq.StaticType,
+) bbq.StaticType {
+
+	// TODO: Visit types recursively
+	refType, ok := typ.(*interpreter.ReferenceStaticType)
+	if !ok {
+		return typ
+	}
+
+	newAuthorization, substituted := SubstituteMappedEntitlement(config, refType.Authorization)
+	if !substituted {
+		return refType
+	}
+
+	return interpreter.NewReferenceStaticType(
+		config.MemoryGauge,
+		newAuthorization,
+		refType.ReferencedType,
+	)
+}
+
+func SubstituteMappedEntitlement(
+	config *Config,
+	authorization interpreter.Authorization,
+) (interpreter.Authorization, bool) {
+	mappedAccess, isMappedAuth := authorization.(interpreter.EntitlementMapAuthorization)
+	if !isMappedAuth {
+		return nil, false
+	}
+
+	inter := config.Interpreter()
+
+	mappedSemaAccess := inter.MustConvertStaticAuthorizationToSemaAccess(mappedAccess).(*sema.EntitlementMapAccess)
+
+	selfAccess := inter.MustConvertStaticAuthorizationToSemaAccess(config.currentEntitlementMappedValue)
+	imageAccess, err := mappedSemaAccess.Image(selfAccess, func() ast.Range { return ast.EmptyRange })
+	if err != nil {
+		panic(err)
+	}
+
+	newAuthorization := interpreter.ConvertSemaAccessToStaticAuthorization(inter, imageAccess)
+	return newAuthorization, true
 }

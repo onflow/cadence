@@ -147,3 +147,7 @@ func (v *StorageReferenceValue) SetMember(config *Config, name string, value Val
 	memberAccessibleValue := (*referencedValue).(MemberAccessibleValue)
 	memberAccessibleValue.SetMember(config, name, value)
 }
+
+func (v *StorageReferenceValue) GetAuthorization() interpreter.Authorization {
+	return v.Authorization
+}

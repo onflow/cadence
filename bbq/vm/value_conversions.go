@@ -27,7 +27,7 @@ import (
 // Utility methods to convert between old and new values.
 // These are temporary until all parts of the interpreter are migrated to the vm.
 
-func InterpreterValueToVMValue(storage interpreter.Storage, value interpreter.Value) Value {
+func InterpreterValueToVMValue(conf *Config, value interpreter.Value) Value {
 	switch value := value.(type) {
 	case nil:
 		return nil
@@ -62,7 +62,7 @@ func InterpreterValueToVMValue(storage interpreter.Storage, value interpreter.Va
 	case *interpreter.SimpleCompositeValue:
 		fields := make(map[string]Value)
 		for name, field := range value.Fields { //nolint:maprange
-			fields[name] = InterpreterValueToVMValue(storage, field)
+			fields[name] = InterpreterValueToVMValue(conf, field)
 		}
 		return NewSimpleCompositeValue(
 			common.CompositeKindStructure,
@@ -85,13 +85,20 @@ func InterpreterValueToVMValue(storage interpreter.Storage, value interpreter.Va
 		return NewStorageCapabilityControllerValue(
 			value.BorrowType,
 			NewIntValue(int64(value.CapabilityID.ToInt(interpreter.EmptyLocationRange))),
-			InterpreterValueToVMValue(storage, value.TargetPath).(PathValue),
+			InterpreterValueToVMValue(conf, value.TargetPath).(PathValue),
 		)
 	case *interpreter.StorageReferenceValue:
 		return NewStorageReferenceValue(
 			value.Authorization,
 			value.TargetStorageAddress,
-			InterpreterValueToVMValue(storage, value.TargetPath).(PathValue),
+			InterpreterValueToVMValue(conf, value.TargetPath).(PathValue),
+			interpreter.ConvertSemaToStaticType(nil, value.BorrowedType),
+		)
+	case *interpreter.EphemeralReferenceValue:
+		return NewEphemeralReferenceValue(
+			conf,
+			InterpreterValueToVMValue(conf, value.Value),
+			value.Authorization,
 			interpreter.ConvertSemaToStaticType(nil, value.BorrowedType),
 		)
 	default:
@@ -172,8 +179,21 @@ func VMValueToInterpreterValue(config *Config, value Value) interpreter.Value {
 			nil,
 			nil,
 		)
+	case *EphemeralReferenceValue:
+		inter := config.Interpreter()
+		semaBorrowType, err := inter.ConvertStaticToSemaType(value.BorrowedType)
+		if err != nil {
+			panic(err)
+		}
+		return interpreter.NewEphemeralReferenceValue(
+			nil,
+			value.Authorization,
+			VMValueToInterpreterValue(config, value.Value),
+			semaBorrowType,
+			interpreter.EmptyLocationRange,
+		)
 	case *StorageReferenceValue:
-		inter := config.interpreter()
+		inter := config.Interpreter()
 		semaBorrowType, err := inter.ConvertStaticToSemaType(value.BorrowedType)
 		if err != nil {
 			panic(err)
@@ -193,6 +213,6 @@ func VMValueToInterpreterValue(config *Config, value Value) interpreter.Value {
 			VMValueToInterpreterValue(config, value.TargetPath).(interpreter.PathValue),
 		)
 	default:
-		panic(errors.NewUnreachableError())
+		panic(errors.NewUnexpectedError("cannot convert vm value of type %T to interpreter value", value))
 	}
 }

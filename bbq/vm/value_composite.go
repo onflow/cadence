@@ -110,7 +110,7 @@ func (v *CompositeValue) GetField(config *Config, name string) Value {
 		panic(errors.NewExternalError(err))
 	}
 
-	return MustConvertStoredValue(config.MemoryGauge, config.Storage, storedValue)
+	return MustConvertStoredValue(config.MemoryGauge, config, storedValue)
 }
 
 func (v *CompositeValue) SetMember(config *Config, name string, value Value) {
@@ -139,7 +139,7 @@ func (v *CompositeValue) SetMember(config *Config, name string, value Value) {
 	}
 
 	if existingStorable != nil {
-		inter := config.interpreter()
+		inter := config.Interpreter()
 		existingValue := interpreter.StoredValue(nil, existingStorable, config.Storage)
 
 		existingValue.DeepRemove(inter, true) // existingValue is standalone because it was overwritten in parent container.
@@ -248,7 +248,7 @@ func (v *CompositeValue) Transfer(
 				value := interpreter.MustConvertStoredValue(config.MemoryGauge, atreeValue)
 
 				// TODO:
-				vmValue := InterpreterValueToVMValue(config.Storage, value)
+				vmValue := InterpreterValueToVMValue(config, value)
 				vmValue.Transfer(config, address, remove, nil)
 
 				return atreeKey, value, nil
@@ -456,7 +456,7 @@ func (v *CompositeValue) forEachField(
 	err := atreeIterate(func(key atree.Value, atreeValue atree.Value) (resume bool, err error) {
 		value := MustConvertStoredValue(
 			config.MemoryGauge,
-			config.Storage,
+			config,
 			atreeValue,
 		)
 

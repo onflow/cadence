@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
+	"github.com/onflow/cadence/test_utils/common_utils"
 	"github.com/onflow/cadence/test_utils/runtime_utils"
 	"github.com/onflow/cadence/test_utils/sema_utils"
 
@@ -564,7 +565,7 @@ func compileAndInvokeWithOptions(
 
 	programs := map[common.Location]*compiledProgram{}
 
-	location := common.ScriptLocation{0x1}
+	location := common_utils.TestLocation
 	program := parseCheckAndCompileCodeWithOptions(
 		t,
 		code,
@@ -593,10 +594,14 @@ func compileAndInvokeWithOptions(
 		}
 	}
 
-	scriptLocation := runtime_utils.NewScriptLocationGenerator()
+	inter := vmConfig.Interpreter()
+
+	inter.Program = &interpreter.Program{
+		Elaboration: programs[location].Elaboration,
+	}
 
 	programVM := vm.NewVM(
-		scriptLocation(),
+		location,
 		program,
 		vmConfig,
 	)

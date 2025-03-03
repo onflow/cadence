@@ -5258,3 +5258,193 @@ func TestBinary(t *testing.T) {
 		test(op, value)
 	}
 }
+
+func TestEntitlementMappings(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("in field", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, err := compileAndInvoke(t,
+			`
+		entitlement X
+		entitlement Y
+		entitlement mapping M {
+			X -> Y
+		}
+		struct S {
+			access(mapping M) let foo: auth(mapping M) &Int
+			init() {
+				self.foo = &2 as auth(Y) &Int
+			}
+		}
+		fun test(): auth(Y) &Int {
+			let s = S()
+			let ref = &s as auth(X) &S
+			let i = ref.foo
+			return i
+		}
+        `,
+			"test",
+		)
+		require.NoError(t, err)
+
+		var refType *vm.EphemeralReferenceValue
+		require.IsType(t, result, refType)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID { return []common.TypeID{"S.test.Y"} },
+				1,
+				sema.Conjunction,
+			).Equal(result.(*vm.EphemeralReferenceValue).Authorization),
+		)
+
+		require.Equal(
+			t,
+			vm.NewIntValue(2),
+			result.(*vm.EphemeralReferenceValue).Value,
+		)
+	})
+
+	t.Run("function return", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, err := compileAndInvoke(t,
+			`
+		entitlement X
+		entitlement Y
+		entitlement mapping M {
+			X -> Y
+		}
+		struct S {
+			access(mapping M) fun foo(): auth(mapping M) &Int {
+				return &1 as auth(mapping M) &Int
+			}
+		}
+		fun test(): auth(Y) &Int {
+			let s = S()
+			let ref = &s as auth(X) &S
+			let i = ref.foo()
+			return i
+		}
+        `,
+			"test",
+		)
+		require.NoError(t, err)
+
+		var refType *vm.EphemeralReferenceValue
+		require.IsType(t, result, refType)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID { return []common.TypeID{"S.test.Y"} },
+				1,
+				sema.Conjunction,
+			).Equal(result.(*vm.EphemeralReferenceValue).Authorization),
+		)
+
+		require.Equal(
+			t,
+			vm.NewIntValue(1),
+			result.(*vm.EphemeralReferenceValue).Value,
+		)
+	})
+
+	t.Run("function subtype return", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, err := compileAndInvoke(t,
+			`
+		entitlement X
+		entitlement Y
+		entitlement Z
+		entitlement mapping M {
+			X -> Y
+		}
+		struct S {
+			access(mapping M) fun foo(): auth(mapping M) &Int {
+				return &1 as auth(Y, Z) &Int
+			}
+		}
+		fun test(): Bool {
+			let s = S()
+			let ref = &s as auth(X) &S
+			let i = ref.foo()
+			return (i as? auth(Y, Z) &Int) == nil
+		}
+        `,
+			"test",
+		)
+		require.NoError(t, err)
+
+		require.Equal(
+			t,
+			vm.TrueValue,
+			result,
+		)
+	})
+
+	t.Run("map applies to static types at runtime", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, err := compileAndInvoke(t,
+			`
+            entitlement X
+            entitlement Y
+            entitlement E
+            entitlement F
+            entitlement mapping M {
+                X -> Y
+                E -> F
+            }
+
+            struct S {
+                access(mapping M) let foo: auth(mapping M) &Int
+                init() {
+                    self.foo = &3 as auth(F, Y) &Int
+                }
+            }
+
+            fun test(): auth(Y) &Int {
+                let s = S()
+                let ref = &s as auth(X, E) &S
+                let upref = ref as auth(X) &S
+                let i = upref.foo
+                return i
+            }
+        `,
+			"test",
+		)
+		require.NoError(t, err)
+
+		var refType *vm.EphemeralReferenceValue
+		require.IsType(t, result, refType)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID { return []common.TypeID{"S.test.Y"} },
+				1,
+				sema.Conjunction,
+			).Equal(result.(*vm.EphemeralReferenceValue).Authorization),
+		)
+
+		require.Equal(
+			t,
+			vm.NewIntValue(3),
+			result.(*vm.EphemeralReferenceValue).Value,
+		)
+	})
+
+}
