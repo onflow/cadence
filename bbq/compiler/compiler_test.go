@@ -4229,3 +4229,61 @@ func TestCompileInnerFunction(t *testing.T) {
 		)
 	}
 }
+
+func TestCompileInnerFunctionOuterVariableUse(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+
+        fun test() {
+            let x = 1
+            fun inner(): Int {
+                return x
+            }
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
+
+	require.Len(t, program.Functions, 2)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
+
+	const parameterCount = 0
+
+	// resultIndex is the index of the $result variable
+	const resultIndex = parameterCount
+
+	// localsOffset is the offset of the first local variable
+	const localsOffset = resultIndex + 1
+
+	const (
+		// xIndex is the index of the local variable `x`, which is the first local variable
+		xIndex = localsOffset + iota
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// let x = 1
+			opcode.InstructionGetConstant{ConstantIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: xIndex},
+
+			opcode.InstructionReturn{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// return x
+			opcode.InstructionGetLocal{LocalIndex: xIndex},
+			opcode.InstructionReturnValue{},
+		},
+		functions[1].Code,
+	)
+}

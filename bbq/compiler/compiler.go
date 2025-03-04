@@ -23,6 +23,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
@@ -44,6 +45,8 @@ type Compiler[E, T any] struct {
 
 	currentFunction *function[E]
 	functionStack   *Stack[*function[E]]
+
+	locals *activations.Activations[*local]
 
 	compositeTypeStack *Stack[sema.CompositeKindedType]
 
@@ -114,6 +117,7 @@ func newCompiler[E, T any](
 		functionStack:       &Stack[*function[E]]{},
 		codeGen:             codeGen,
 		typeGen:             typeGen,
+		locals:              activations.NewActivations[*local](nil),
 	}
 }
 
@@ -598,9 +602,8 @@ func (c *Compiler[_, _]) compileDeclaration(declaration ast.Declaration) {
 }
 
 func (c *Compiler[_, _]) compileBlock(block *ast.Block) {
-	locals := c.currentFunction.locals
-	locals.PushNewWithCurrent()
-	defer locals.Pop()
+	c.locals.PushNewWithCurrent()
+	defer c.locals.Pop()
 
 	for _, statement := range block.Statements {
 		c.compileStatement(statement)
@@ -693,9 +696,9 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 
 			// Declare the variable *after* unwrapping the optional,
 			// in a new scope
-			c.currentFunction.locals.PushNewWithCurrent()
+			c.locals.PushNewWithCurrent()
 			additionalThenScope = true
-			localIndex := c.currentFunction.declareLocal(test.Identifier.Identifier)
+			localIndex := c.declareLocal(test.Identifier.Identifier)
 			c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: localIndex.index})
 
 		default:
@@ -705,7 +708,7 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 		c.compileBlock(statement.Then)
 
 		if additionalThenScope {
-			c.currentFunction.locals.Pop()
+			c.locals.Pop()
 		}
 
 		elseBlock := statement.Else
@@ -761,7 +764,7 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 		// `var <index> = -1`
 		// Start with -1 and then increment at the start of the loop,
 		// so that we don't have to deal with early exists of the loop.
-		indexLocalVar = c.currentFunction.declareLocal(index.Identifier)
+		indexLocalVar = c.declareLocal(index.Identifier)
 		c.intConstLoad(constantkind.Int, -1)
 		c.codeGen.Emit(opcode.InstructionSetLocal{
 			LocalIndex: indexLocalVar.index,
@@ -805,7 +808,7 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 
 	// Store it (next entry) in a local var.
 	// `<entry> = iterator.next()`
-	elementLocalVar := c.currentFunction.declareLocal(statement.Identifier.Identifier)
+	elementLocalVar := c.declareLocal(statement.Identifier.Identifier)
 	c.codeGen.Emit(opcode.InstructionSetLocal{
 		LocalIndex: elementLocalVar.index,
 	})
@@ -885,7 +888,7 @@ func (c *Compiler[_, _]) VisitVariableDeclaration(declaration *ast.VariableDecla
 		// TODO: This can be nil only for synthetic-result variable
 		//   Any better way to handle this?
 		if declaration.Value == nil {
-			c.currentFunction.declareLocal(name)
+			c.declareLocal(name)
 		} else {
 			// Compile the value expression *before* declaring the variable
 			c.compileExpression(declaration.Value)
@@ -894,7 +897,7 @@ func (c *Compiler[_, _]) VisitVariableDeclaration(declaration *ast.VariableDecla
 			c.emitTransfer(varDeclTypes.TargetType)
 
 			// Declare the variable *after* compiling the value expression
-			local := c.currentFunction.declareLocal(name)
+			local := c.declareLocal(name)
 			c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: local.index})
 		}
 	})
@@ -911,7 +914,7 @@ func (c *Compiler[_, _]) VisitAssignmentStatement(statement *ast.AssignmentState
 		c.emitTransfer(assignmentTypes.TargetType)
 
 		varName := target.Identifier.Identifier
-		local := c.currentFunction.findLocal(varName)
+		local := c.findLocal(varName)
 		if local != nil {
 			c.codeGen.Emit(opcode.InstructionSetLocal{
 				LocalIndex: local.index,
@@ -1104,7 +1107,7 @@ func (c *Compiler[_, _]) VisitIdentifierExpression(expression *ast.IdentifierExp
 }
 
 func (c *Compiler[_, _]) emitVariableLoad(name string) {
-	local := c.currentFunction.findLocal(name)
+	local := c.findLocal(name)
 	if local != nil {
 		c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: local.index})
 		return
@@ -1567,10 +1570,10 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	c.pushFunction(function)
 	defer c.popFunction()
 
-	c.declareParameters(function, parameterList, false)
+	c.declareParameters(parameterList, false)
 
 	// Declare `self`
-	self := c.currentFunction.declareLocal(sema.SelfIdentifier)
+	self := c.declareLocal(sema.SelfIdentifier)
 
 	// Initialize an empty struct and assign to `self`.
 	// i.e: `self = New()`
@@ -1622,7 +1625,7 @@ func (c *Compiler[_, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 	c.pushFunction(function)
 	defer c.popFunction()
 
-	c.declareParameters(function, declaration.ParameterList, declareReceiver)
+	c.declareParameters(declaration.ParameterList, declareReceiver)
 	c.compileFunctionBlock(declaration.FunctionBlock)
 
 	// TODO: if isStatement, create closure and assign to a variable
@@ -1837,17 +1840,17 @@ func (c *Compiler[_, _]) enclosingCompositeTypeFullyQualifiedName() string {
 	return sb.String()
 }
 
-func (c *Compiler[E, T]) declareParameters(function *function[E], paramList *ast.ParameterList, declareReceiver bool) {
+func (c *Compiler[E, T]) declareParameters(paramList *ast.ParameterList, declareReceiver bool) {
 	if declareReceiver {
 		// Declare receiver as `self`.
 		// Receiver is always at the zero-th index of params.
-		function.declareLocal(sema.SelfIdentifier)
+		c.declareLocal(sema.SelfIdentifier)
 	}
 
 	if paramList != nil {
 		for _, parameter := range paramList.Parameters {
 			parameterName := parameter.Identifier.Identifier
-			function.declareLocal(parameterName)
+			c.declareLocal(parameterName)
 		}
 	}
 }
@@ -1866,4 +1869,16 @@ func (c *Compiler[_, _]) withConditionExtendedElaboration(statement ast.Statemen
 		}()
 	}
 	f()
+}
+
+func (c *Compiler[_, _]) declareLocal(name string) *local {
+	f := c.currentFunction
+	index := f.generateLocalIndex()
+	local := &local{index: index}
+	c.locals.Set(name, local)
+	return local
+}
+
+func (c *Compiler[_, _]) findLocal(name string) *local {
+	return c.locals.Find(name)
 }
