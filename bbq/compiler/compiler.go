@@ -1075,19 +1075,7 @@ func (c *Compiler[_, _]) VisitAssignmentStatement(statement *ast.AssignmentState
 		assignmentTypes := c.ExtendedElaboration.AssignmentStatementTypes(statement)
 		c.emitTransfer(assignmentTypes.TargetType)
 
-		varName := target.Identifier.Identifier
-		local := c.findLocal(varName)
-		if local != nil {
-			c.codeGen.Emit(opcode.InstructionSetLocal{
-				LocalIndex: local.index,
-			})
-			return
-		}
-
-		global := c.findGlobal(varName)
-		c.codeGen.Emit(opcode.InstructionSetGlobal{
-			GlobalIndex: global.Index,
-		})
+		c.emitVariableStore(target.Identifier.Identifier)
 
 	case *ast.MemberExpression:
 		c.compileExpression(target.Expression)
@@ -1271,12 +1259,31 @@ func (c *Compiler[_, _]) VisitIdentifierExpression(expression *ast.IdentifierExp
 func (c *Compiler[_, _]) emitVariableLoad(name string) {
 	local := c.findLocal(name)
 	if local != nil {
-		c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: local.index})
+		c.codeGen.Emit(opcode.InstructionGetLocal{
+			LocalIndex: local.index,
+		})
 		return
 	}
 
 	global := c.findGlobal(name)
-	c.codeGen.Emit(opcode.InstructionGetGlobal{GlobalIndex: global.Index})
+	c.codeGen.Emit(opcode.InstructionGetGlobal{
+		GlobalIndex: global.Index,
+	})
+}
+
+func (c *Compiler[_, _]) emitVariableStore(name string) {
+	local := c.findLocal(name)
+	if local != nil {
+		c.codeGen.Emit(opcode.InstructionSetLocal{
+			LocalIndex: local.index,
+		})
+		return
+	}
+
+	global := c.findGlobal(name)
+	c.codeGen.Emit(opcode.InstructionSetGlobal{
+		GlobalIndex: global.Index,
+	})
 }
 
 func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExpression) (_ struct{}) {
