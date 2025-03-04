@@ -4211,23 +4211,37 @@ func TestCompileInnerFunction(t *testing.T) {
 	{
 		// TODO: inner function should also have / use a result variable
 
-		// xIndex is the index of the local variable `x`, which is the first local variable
-		const xIndex = 0
+		// yIndex is the index of the local variable `y`, which is the first local variable
+		const yIndex = 0
 
 		assert.Equal(t,
 			[]opcode.Instruction{
-				// let x = 2
+				// let y = 2
 				opcode.InstructionGetConstant{ConstantIndex: 1},
 				opcode.InstructionTransfer{TypeIndex: 0},
-				opcode.InstructionSetLocal{LocalIndex: xIndex},
+				opcode.InstructionSetLocal{LocalIndex: yIndex},
 
-				// return x
-				opcode.InstructionGetLocal{LocalIndex: xIndex},
+				// return y
+				opcode.InstructionGetLocal{LocalIndex: yIndex},
 				opcode.InstructionReturnValue{},
 			},
 			functions[1].Code,
 		)
 	}
+
+	assert.Equal(t,
+		[]bbq.Constant{
+			{
+				Data: []byte{0x1},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{0x2},
+				Kind: constantkind.Int,
+			},
+		},
+		program.Constants,
+	)
 }
 
 func TestCompileInnerFunctionOuterVariableUse(t *testing.T) {
@@ -4239,7 +4253,8 @@ func TestCompileInnerFunctionOuterVariableUse(t *testing.T) {
         fun test() {
             let x = 1
             fun inner(): Int {
-                return x
+                let y = 2
+                return x + y
             }
         }
     `)
@@ -4278,12 +4293,38 @@ func TestCompileInnerFunctionOuterVariableUse(t *testing.T) {
 		functions[0].Code,
 	)
 
+	// TODO: inner function should also have / use a result variable
+
+	// yIndex is the index of the local variable `y`, which is the first local variable
+	const yIndex = 0
+
 	assert.Equal(t,
 		[]opcode.Instruction{
-			// return x
+			// let y = 2
+			opcode.InstructionGetConstant{ConstantIndex: 1},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: yIndex},
+
+			// return x + y
 			opcode.InstructionGetLocal{LocalIndex: xIndex},
+			opcode.InstructionGetLocal{LocalIndex: yIndex},
+			opcode.InstructionAdd{},
 			opcode.InstructionReturnValue{},
 		},
 		functions[1].Code,
+	)
+
+	assert.Equal(t,
+		[]bbq.Constant{
+			{
+				Data: []byte{0x1},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{0x2},
+				Kind: constantkind.Int,
+			},
+		},
+		program.Constants,
 	)
 }

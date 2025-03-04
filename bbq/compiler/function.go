@@ -30,13 +30,20 @@ type function[E any] struct {
 	localCount          uint16
 	parameterCount      uint16
 	isCompositeFunction bool
+	localsDepth         int
 }
 
-func newFunction[E any](name string, parameterCount uint16, isCompositeFunction bool) *function[E] {
+func newFunction[E any](
+	name string,
+	parameterCount uint16,
+	isCompositeFunction bool,
+	localsDepth int,
+) *function[E] {
 	return &function[E]{
 		name:                name,
 		parameterCount:      parameterCount,
 		isCompositeFunction: isCompositeFunction,
+		localsDepth:         localsDepth,
 	}
 }
 
