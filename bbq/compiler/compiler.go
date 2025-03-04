@@ -42,7 +42,9 @@ type Compiler[E, T any] struct {
 	Config              *Config
 	checker             *sema.Checker
 
-	currentFunction    *function[E]
+	currentFunction *function[E]
+	functionStack   *Stack[*function[E]]
+
 	compositeTypeStack *Stack[sema.CompositeKindedType]
 
 	functions           []*function[E]
@@ -108,11 +110,10 @@ func newCompiler[E, T any](
 		importedGlobals:     NativeFunctions(),
 		typesInPool:         make(map[sema.TypeID]uint16),
 		constantsInPool:     make(map[constantsCacheKey]*constant),
-		compositeTypeStack: &Stack[sema.CompositeKindedType]{
-			elements: make([]sema.CompositeKindedType, 0),
-		},
-		codeGen: codeGen,
-		typeGen: typeGen,
+		compositeTypeStack:  &Stack[sema.CompositeKindedType]{},
+		functionStack:       &Stack[*function[E]]{},
+		codeGen:             codeGen,
+		typeGen:             typeGen,
 	}
 }
 
@@ -197,9 +198,28 @@ func (c *Compiler[E, T]) addFunction(name string, parameterCount uint16) *functi
 
 	function := newFunction[E](name, parameterCount, isCompositeFunction)
 	c.functions = append(c.functions, function)
+	return function
+}
+
+func (c *Compiler[E, T]) pushFunction(function *function[E]) {
+	c.functionStack.push(function)
 	c.currentFunction = function
 	c.codeGen.SetTarget(&function.code)
-	return function
+}
+
+func (c *Compiler[E, T]) popFunction() {
+	c.functionStack.pop()
+
+	var (
+		previousFunction *function[E]
+		previousCode     *[]E
+	)
+	if !c.functionStack.isEmpty() {
+		previousFunction = c.functionStack.top()
+		previousCode = &previousFunction.code
+	}
+	c.currentFunction = previousFunction
+	c.codeGen.SetTarget(previousCode)
 }
 
 func (c *Compiler[_, _]) addConstant(kind constantkind.ConstantKind, data []byte) *constant {
@@ -1543,6 +1563,10 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	}
 
 	function := c.addFunction(functionName, uint16(parameterCount))
+
+	c.pushFunction(function)
+	defer c.popFunction()
+
 	c.declareParameters(function, parameterList, false)
 
 	// Declare `self`
@@ -1591,8 +1615,12 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 }
 
 func (c *Compiler[_, _]) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration, _ bool) (_ struct{}) {
+	// TODO: do not declare receiver for inner functions of methods
 	declareReceiver := !c.compositeTypeStack.isEmpty()
 	function := c.declareFunction(declaration, declareReceiver)
+
+	c.pushFunction(function)
+	defer c.popFunction()
 
 	c.declareParameters(function, declaration.ParameterList, declareReceiver)
 	c.compileFunctionBlock(declaration.FunctionBlock)

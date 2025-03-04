@@ -4146,3 +4146,86 @@ func TestCompileForce(t *testing.T) {
 		)
 	})
 }
+
+func TestCompileInnerFunction(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+
+        fun test(): Int {
+            let x = 1
+            fun inner(): Int {
+                let y = 2
+                return y
+            }
+            return x
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
+
+	require.Len(t, program.Functions, 2)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
+
+	{
+		const parameterCount = 0
+
+		// resultIndex is the index of the $result variable
+		const resultIndex = parameterCount
+
+		// localsOffset is the offset of the first local variable
+		const localsOffset = resultIndex + 1
+
+		const (
+			// xIndex is the index of the local variable `x`, which is the first local variable
+			xIndex = localsOffset + iota
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// let x = 1
+				opcode.InstructionGetConstant{ConstantIndex: 0},
+				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionSetLocal{LocalIndex: xIndex},
+
+				// return x
+				opcode.InstructionGetLocal{LocalIndex: xIndex},
+
+				// assign to temp $result
+				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionSetLocal{LocalIndex: resultIndex},
+
+				// return $result
+				opcode.InstructionGetLocal{LocalIndex: resultIndex},
+				opcode.InstructionReturnValue{},
+			},
+			functions[0].Code,
+		)
+	}
+
+	{
+		// TODO: inner function should also have / use a result variable
+
+		// xIndex is the index of the local variable `x`, which is the first local variable
+		const xIndex = 0
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// let x = 2
+				opcode.InstructionGetConstant{ConstantIndex: 1},
+				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionSetLocal{LocalIndex: xIndex},
+
+				// return x
+				opcode.InstructionGetLocal{LocalIndex: xIndex},
+				opcode.InstructionReturnValue{},
+			},
+			functions[1].Code,
+		)
+	}
+}
