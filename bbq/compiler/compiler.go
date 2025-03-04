@@ -1614,7 +1614,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	c.codeGen.Emit(opcode.InstructionReturnValue{})
 }
 
-func (c *Compiler[_, _]) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration, _ bool) (_ struct{}) {
+func (c *Compiler[_, _]) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration, isStatement bool) (_ struct{}) {
 	// TODO: do not declare receiver for inner functions of methods
 	declareReceiver := !c.compositeTypeStack.isEmpty()
 	function := c.declareFunction(declaration, declareReceiver)
@@ -1624,6 +1624,8 @@ func (c *Compiler[_, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 
 	c.declareParameters(function, declaration.ParameterList, declareReceiver)
 	c.compileFunctionBlock(declaration.FunctionBlock)
+
+	// TODO: if isStatement, create closure and assign to a variable
 
 	return
 }
