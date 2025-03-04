@@ -863,8 +863,8 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 			// in a new scope
 			c.locals.PushNewWithCurrent()
 			additionalThenScope = true
-			localIndex := c.declareLocal(test.Identifier.Identifier)
-			c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: localIndex.index})
+			name := test.Identifier.Identifier
+			c.emitDeclareLocal(name)
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -929,11 +929,8 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 		// `var <index> = -1`
 		// Start with -1 and then increment at the start of the loop,
 		// so that we don't have to deal with early exists of the loop.
-		indexLocalVar = c.declareLocal(index.Identifier)
 		c.intConstLoad(constantkind.Int, -1)
-		c.codeGen.Emit(opcode.InstructionSetLocal{
-			LocalIndex: indexLocalVar.index,
-		})
+		indexLocalVar = c.emitDeclareLocal(index.Identifier)
 	}
 
 	testOffset := c.codeGen.Offset()
@@ -973,10 +970,7 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 
 	// Store it (next entry) in a local var.
 	// `<entry> = iterator.next()`
-	elementLocalVar := c.declareLocal(statement.Identifier.Identifier)
-	c.codeGen.Emit(opcode.InstructionSetLocal{
-		LocalIndex: elementLocalVar.index,
-	})
+	c.emitDeclareLocal(statement.Identifier.Identifier)
 
 	// Compile the for-loop body.
 	c.compileBlock(statement.Block, common.DeclarationKindUnknown)
@@ -1062,12 +1056,19 @@ func (c *Compiler[_, _]) VisitVariableDeclaration(declaration *ast.VariableDecla
 			c.emitTransfer(varDeclTypes.TargetType)
 
 			// Declare the variable *after* compiling the value expression
-			local := c.declareLocal(name)
-			c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: local.index})
+			c.emitDeclareLocal(name)
 		}
 	})
 
 	return
+}
+
+func (c *Compiler[_, _]) emitDeclareLocal(name string) *local {
+	local := c.declareLocal(name)
+	c.codeGen.Emit(opcode.InstructionSetLocal{
+		LocalIndex: local.index,
+	})
+	return local
 }
 
 func (c *Compiler[_, _]) VisitAssignmentStatement(statement *ast.AssignmentStatement) (_ struct{}) {
@@ -2112,9 +2113,8 @@ func (c *Compiler[_, _]) withConditionExtendedElaboration(statement ast.Statemen
 
 func (c *Compiler[_, _]) declareLocal(name string) *local {
 	f := c.currentFunction
-	index := f.generateLocalIndex()
 	local := &local{
-		index: index,
+		index: f.generateLocalIndex(),
 		depth: c.locals.Depth(),
 	}
 	c.locals.Set(name, local)
