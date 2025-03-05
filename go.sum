@@ -72,8 +72,8 @@ github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db h1:62I3jR2Em
 github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db/go.mod h1:l0dey0ia/Uv7NcFFVbCLtqEBQbrT4OCwCSKTEv6enCw=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e h1:fD57ERR4JtEqsWbfPhv4DMiApHyliiK5xCTNVSPiaAs=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
-github.com/onflow/atree v0.9.0 h1:M+Z/UPwzv0/Yy7ChI5T1ZIHD3YN1cs/hxGEs/HWhzaY=
-github.com/onflow/atree v0.9.0/go.mod h1:FT6udJF9Q7VQTu3wknDhFX+VV4D44ZGdqtTAE5iztck=
+github.com/onflow/atree v0.9.1-0.20250304155408-bdd2ecbd917b h1:r7Y6d35625/yi+Cdy4Rb0VlsXQ4Fc5R9BJwoKorbG6c=
+github.com/onflow/atree v0.9.1-0.20250304155408-bdd2ecbd917b/go.mod h1:7f7VyrEV2AkLcdpeYS9GsVyH24LSL5ZPcmMiFWCUVvs=
 github.com/onflow/crypto v0.25.0 h1:BeWbLsh3ZD13Ej+Uky6kg1PL1ZIVBDVX+2MVBNwqddg=
 github.com/onflow/crypto v0.25.0/go.mod h1:C8FbaX0x8y+FxWjbkHy0Q4EASCDR9bSPWZqlpCLYyVI=
 github.com/pkg/diff v0.0.0-20210226163009-20ebb0f2a09e/go.mod h1:pJLUxLENpZxwdsKMEsNbx1VGcRFpLqf3715MtcvvzbA=
