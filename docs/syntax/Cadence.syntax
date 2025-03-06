@@ -286,17 +286,33 @@ execute:
     ;
 
 importDeclaration:
-        importKeyword *1importDeclarationFromPhrase importDeclarationSource // ast.ImportDeclaration
+        importKeyword *1importNamesFrom location // ast.ImportDeclaration
     ;
 
-importDeclarationFromPhrase:
-        1*identifier( "," ) fromKeyword // [ast.Identifier]
+importNamesFrom:
+        1*importName fromKeyword
     ;
 
-importDeclarationSource:
-        stringExpression
-    |   positiveHexadecimalExpression
-    |   identifier
+importName:
+        identifier
+    ;
+
+location:
+        stringLocation      // ast.StringLocation
+    |   identifierLocation  // ast.IdentifierLocation
+    |   addressLocation     // ast.AddressLocation
+    ;
+
+stringLocation:
+        stringExpression    // ast.StringLocation
+    ;
+
+identifierLocation:
+        identifier          // ast.IdentifierLocation
+    ;
+
+addressLocation:
+        positiveHexadecimalExpression   // ast.AddressLocation
     ;
 
 conformances:
