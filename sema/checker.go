@@ -1838,7 +1838,7 @@ func (checker *Checker) checkDeclarationAccessModifier(
 	case *EntitlementMapAccess:
 		checker.checkEntitlementMapAccess(access, declarationKind, declarationType, containerKind, startPos)
 	case EntitlementSetAccess:
-		checker.checkEntitlementSetAccess(declarationType, containerKind, startPos)
+		checker.checkEntitlementSetAccess(containerKind, startPos)
 	}
 }
 
@@ -1976,7 +1976,6 @@ func (checker *Checker) checkEntitlementMapAccess(
 }
 
 func (checker *Checker) checkEntitlementSetAccess(
-	declarationType Type,
 	containerKind *common.CompositeKind,
 	startPos ast.Position,
 ) {
