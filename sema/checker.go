@@ -117,7 +117,6 @@ type Checker struct {
 	errors                             []error
 	functionActivations                *FunctionActivations
 	purityCheckScopes                  []PurityCheckScope
-	entitlementMappingInScope          *EntitlementMapType
 	inCondition                        bool
 	inInterface                        bool
 	allowSelfResourceFieldInvalidation bool
@@ -1051,30 +1050,26 @@ func (checker *Checker) convertIntersectionType(t *ast.IntersectionType) Type {
 
 func (checker *Checker) convertReferenceType(t *ast.ReferenceType) Type {
 
-	var access Access = UnauthorizedAccess
-	var ty Type
+	access := UnauthorizedAccess
 
 	if t.Authorization != nil {
 		switch auth := t.Authorization.(type) {
 		case ast.EntitlementSet:
 			access = checker.accessFromAstAccess(ast.EntitlementAccess{EntitlementSet: auth})
-		case *ast.MappedAccess:
-			access = checker.accessFromAstAccess(auth)
-		}
 
-		if mapAccess, isMapAccess := access.(*EntitlementMapAccess); isMapAccess {
-			// mapped auth types are only allowed in the annotations of composite fields and accessor functions
-			if checker.entitlementMappingInScope == nil || !checker.entitlementMappingInScope.Equal(mapAccess.Type) {
-				checker.report(&InvalidMappedAuthorizationOutsideOfFieldError{
-					Range: ast.NewRangeFromPositioned(checker.memoryGauge, t),
-					Map:   mapAccess.Type,
-				})
-				access = UnauthorizedAccess
-			}
+		case *ast.MappedAccess:
+			access = UnauthorizedAccess
+
+			checker.report(&InvalidMappingAuthorizationError{
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, auth),
+			})
+
+		default:
+			panic(errors.NewUnexpectedError("unsupported reference type authorization: %T", auth))
 		}
 	}
 
-	ty = checker.ConvertType(t.Type)
+	ty := checker.ConvertType(t.Type)
 
 	return &ReferenceType{
 		Authorization: access,
@@ -1292,14 +1287,6 @@ func (checker *Checker) functionType(
 	parameterList *ast.ParameterList,
 	returnTypeAnnotation *ast.TypeAnnotation,
 ) *FunctionType {
-
-	oldMappedAccess := checker.entitlementMappingInScope
-	if mapAccess, isMapAccess := access.(*EntitlementMapAccess); isMapAccess {
-		checker.entitlementMappingInScope = mapAccess.Type
-	} else {
-		checker.entitlementMappingInScope = nil
-	}
-	defer func() { checker.entitlementMappingInScope = oldMappedAccess }()
 
 	// Convert type parameters (if any)
 
@@ -1932,23 +1919,13 @@ func (checker *Checker) checkEntitlementMapAccess(
 	containerKind *common.CompositeKind,
 	startPos ast.Position,
 ) {
-	// mapped entitlements may only be used in structs, resources and attachments
+	// mapped entitlements may only be used in structs and resources
 	if containerKind == nil ||
 		(*containerKind != common.CompositeKindResource &&
-			*containerKind != common.CompositeKindStructure &&
-			*containerKind != common.CompositeKindAttachment) {
-		checker.report(
-			&InvalidMappedEntitlementMemberError{
-				Pos: startPos,
-			},
-		)
-		return
-	}
+			*containerKind != common.CompositeKindStructure) {
 
-	// due to potential security issues, entitlement mappings are disabled on attachments for now
-	if *containerKind == common.CompositeKindAttachment {
 		checker.report(
-			&InvalidAttachmentMappedEntitlementMemberError{
+			&InvalidMappingAccessMemberError{
 				Pos: startPos,
 			},
 		)
@@ -1970,16 +1947,20 @@ func (checker *Checker) checkEntitlementMapAccess(
 
 	switch ty := entitledType.(type) {
 	case *ReferenceType:
+		// TODO:
 		if ty.Authorization.Equal(access) {
 			return
 		}
+
 	case *OptionalType:
 		switch optionalType := ty.Type.(type) {
 		case *ReferenceType:
+			// TODO:
 			if optionalType.Authorization.Equal(access) {
 				return
 			}
 		}
+
 	default:
 		// Also allow entitlement mappings for container-typed fields
 		if declarationType.ContainFieldsOrElements() {
@@ -1988,7 +1969,7 @@ func (checker *Checker) checkEntitlementMapAccess(
 	}
 
 	checker.report(
-		&InvalidMappedEntitlementMemberError{
+		&InvalidMappingAccessMemberError{
 			Pos: startPos,
 		},
 	)
@@ -2009,29 +1990,6 @@ func (checker *Checker) checkEntitlementSetAccess(
 			},
 		)
 		return
-	}
-
-	// when using entitlement set access, it is not permitted for the value to be declared with a mapped entitlement
-	switch ty := declarationType.(type) {
-	case *ReferenceType:
-		if _, isMap := ty.Authorization.(*EntitlementMapAccess); isMap {
-			checker.report(
-				&InvalidMappedEntitlementMemberError{
-					Pos: startPos,
-				},
-			)
-		}
-	case *OptionalType:
-		switch optionalType := ty.Type.(type) {
-		case *ReferenceType:
-			if _, isMap := optionalType.Authorization.(*EntitlementMapAccess); isMap {
-				checker.report(
-					&InvalidMappedEntitlementMemberError{
-						Pos: startPos,
-					},
-				)
-			}
-		}
 	}
 }
 

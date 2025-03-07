@@ -467,7 +467,6 @@ func (interpreter *Interpreter) InvokeExternally(
 
 	var self *Value
 	var base *EphemeralReferenceValue
-	var boundAuth Authorization
 	if boundFunc, ok := functionValue.(BoundFunctionValue); ok {
 		self = boundFunc.SelfReference.ReferencedValue(
 			interpreter,
@@ -475,7 +474,6 @@ func (interpreter *Interpreter) InvokeExternally(
 			true,
 		)
 		base = boundFunc.Base
-		boundAuth = boundFunc.BoundAuthorization
 	}
 
 	// NOTE: can't fill argument types, as they are unknown
@@ -483,7 +481,6 @@ func (interpreter *Interpreter) InvokeExternally(
 		interpreter,
 		self,
 		base,
-		boundAuth,
 		preparedArguments,
 		nil,
 		nil,
@@ -1875,25 +1872,6 @@ func (interpreter *Interpreter) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclarat
 	panic(errors.NewUnreachableError())
 }
 
-func (interpreter *Interpreter) SubstituteMappedEntitlements(ty sema.Type) sema.Type {
-	if interpreter.SharedState.currentEntitlementMappedValue == nil {
-		return ty
-	}
-
-	return ty.Map(interpreter, make(map[*sema.TypeParameter]*sema.TypeParameter), func(t sema.Type) sema.Type {
-		switch refType := t.(type) {
-		case *sema.ReferenceType:
-			if _, isMappedAuth := refType.Authorization.(*sema.EntitlementMapAccess); isMappedAuth {
-				authorization := interpreter.MustConvertStaticAuthorizationToSemaAccess(
-					interpreter.SharedState.currentEntitlementMappedValue,
-				)
-				return sema.NewReferenceType(interpreter, authorization, refType.Type)
-			}
-		}
-		return t
-	})
-}
-
 func (interpreter *Interpreter) ValueIsSubtypeOfSemaType(value Value, targetType sema.Type) bool {
 	return interpreter.IsSubTypeOfSemaType(value.StaticType(interpreter), targetType)
 }
@@ -1913,8 +1891,6 @@ func (interpreter *Interpreter) transferAndConvert(
 		nil,
 		true, // value is standalone.
 	)
-
-	targetType = interpreter.SubstituteMappedEntitlements(targetType)
 
 	result := interpreter.ConvertAndBox(
 		locationRange,
@@ -5067,78 +5043,6 @@ func (interpreter *Interpreter) getAccessOfMember(self Value, identifier string)
 		return sema.UnauthorizedAccess
 	}
 	return member.Resolve(interpreter, identifier, ast.EmptyRange, func(err error) {}).Access
-}
-
-func (interpreter *Interpreter) mapMemberValueAuthorization(
-	self Value,
-	memberAccess sema.Access,
-	resultValue Value,
-	resultingType sema.Type,
-	locationRange LocationRange,
-) Value {
-
-	if memberAccess == nil {
-		return resultValue
-	}
-
-	if mappedAccess, isMappedAccess := (memberAccess).(*sema.EntitlementMapAccess); isMappedAccess {
-		var auth Authorization
-		switch selfValue := self.(type) {
-		case AuthorizedValue:
-			selfAccess := interpreter.MustConvertStaticAuthorizationToSemaAccess(selfValue.GetAuthorization())
-			imageAccess, err := mappedAccess.Image(selfAccess, func() ast.Range { return ast.EmptyRange })
-			if err != nil {
-				panic(err)
-			}
-			auth = ConvertSemaAccessToStaticAuthorization(interpreter, imageAccess)
-
-		default:
-			var access sema.Access
-			if mappedAccess.Type.IncludesIdentity {
-				access = sema.AllSupportedEntitlements(resultingType)
-			}
-
-			if access == nil {
-				access = mappedAccess.Codomain()
-			}
-
-			auth = ConvertSemaAccessToStaticAuthorization(interpreter, access)
-		}
-
-		switch refValue := resultValue.(type) {
-		case *EphemeralReferenceValue:
-			return NewEphemeralReferenceValue(interpreter, auth, refValue.Value, refValue.BorrowedType, locationRange)
-		case *StorageReferenceValue:
-			return NewStorageReferenceValue(interpreter, auth, refValue.TargetStorageAddress, refValue.TargetPath, refValue.BorrowedType)
-		case BoundFunctionValue:
-			return NewBoundFunctionValueFromSelfReference(
-				interpreter,
-				refValue.Function,
-				refValue.SelfReference,
-				refValue.selfIsReference,
-				refValue.Base,
-				auth,
-			)
-		}
-	}
-	return resultValue
-}
-
-func (interpreter *Interpreter) getMemberWithAuthMapping(
-	self Value,
-	locationRange LocationRange,
-	identifier string,
-	memberAccessInfo sema.MemberAccessInfo,
-) Value {
-
-	result := interpreter.getMember(self, locationRange, identifier)
-	if result == nil {
-		return nil
-	}
-	// once we have obtained the member, if it was declared with entitlement-mapped access, we must compute the output of the map based
-	// on the runtime authorizations of the accessing reference or composite
-	memberAccess := interpreter.getAccessOfMember(self, identifier)
-	return interpreter.mapMemberValueAuthorization(self, memberAccess, result, memberAccessInfo.ResultingType, locationRange)
 }
 
 // getMember gets the member value by the given identifier from the given Value depending on its type.

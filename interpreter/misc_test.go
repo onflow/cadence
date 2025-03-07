@@ -51,33 +51,39 @@ type ParseCheckAndInterpretOptions struct {
 	HandleCheckerError func(error)
 }
 
-func parseCheckAndInterpret(t testing.TB, code string) *interpreter.Interpreter {
-	inter, err := parseCheckAndInterpretWithOptions(t, code, ParseCheckAndInterpretOptions{})
-	require.NoError(t, err)
+func parseCheckAndInterpret(tb testing.TB, code string) *interpreter.Interpreter {
+	tb.Helper()
+
+	inter, err := parseCheckAndInterpretWithOptions(tb, code, ParseCheckAndInterpretOptions{})
+	require.NoError(tb, err)
 	return inter
 }
 
 func parseCheckAndInterpretWithOptions(
-	t testing.TB,
+	tb testing.TB,
 	code string,
 	options ParseCheckAndInterpretOptions,
 ) (
 	inter *interpreter.Interpreter,
 	err error,
 ) {
-	return parseCheckAndInterpretWithOptionsAndMemoryMetering(t, code, options, nil)
+	tb.Helper()
+
+	return parseCheckAndInterpretWithOptionsAndMemoryMetering(tb, code, options, nil)
 }
 
 func parseCheckAndInterpretWithAtreeValidationsDisabled(
-	t testing.TB,
+	tb testing.TB,
 	code string,
 	options ParseCheckAndInterpretOptions,
 ) (
 	inter *interpreter.Interpreter,
 	err error,
 ) {
+	tb.Helper()
+
 	return parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
-		t,
+		tb,
 		code,
 		options,
 		nil,
@@ -93,6 +99,8 @@ func parseCheckAndInterpretWithLogs(
 	getLogs func() []string,
 	err error,
 ) {
+	tb.Helper()
+
 	var logs []string
 
 	logFunction := stdlib.NewStandardLibraryStaticFunction(
@@ -153,16 +161,17 @@ func parseCheckAndInterpretWithLogs(
 }
 
 func parseCheckAndInterpretWithMemoryMetering(
-	t testing.TB,
+	tb testing.TB,
 	code string,
 	memoryGauge common.MemoryGauge,
 ) *interpreter.Interpreter {
+	tb.Helper()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
 	inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
-		t,
+		tb,
 		code,
 		ParseCheckAndInterpretOptions{
 			CheckerConfig: &sema.Config{
@@ -173,12 +182,12 @@ func parseCheckAndInterpretWithMemoryMetering(
 		},
 		memoryGauge,
 	)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	return inter
 }
 
 func parseCheckAndInterpretWithOptionsAndMemoryMetering(
-	t testing.TB,
+	tb testing.TB,
 	code string,
 	options ParseCheckAndInterpretOptions,
 	memoryGauge common.MemoryGauge,
@@ -186,13 +195,14 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 	inter *interpreter.Interpreter,
 	err error,
 ) {
+	tb.Helper()
 
 	// Atree validation should be disabled for memory metering tests.
 	// Otherwise, validation may also affect the memory consumption.
 	enableAtreeValidations := memoryGauge == nil
 
 	return parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
-		t,
+		tb,
 		code,
 		options,
 		memoryGauge,
@@ -201,7 +211,7 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 }
 
 func parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
-	t testing.TB,
+	tb testing.TB,
 	code string,
 	options ParseCheckAndInterpretOptions,
 	memoryGauge common.MemoryGauge,
@@ -210,8 +220,9 @@ func parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
 	inter *interpreter.Interpreter,
 	err error,
 ) {
+	tb.Helper()
 
-	checker, err := ParseAndCheckWithOptionsAndMemoryMetering(t,
+	checker, err := ParseAndCheckWithOptionsAndMemoryMetering(tb,
 		code,
 		ParseAndCheckOptions{
 			Config: options.CheckerConfig,
@@ -221,7 +232,7 @@ func parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
 
 	if options.HandleCheckerError != nil {
 		options.HandleCheckerError(err)
-	} else if !assert.NoError(t, err) {
+	} else if !assert.NoError(tb, err) {
 		var sb strings.Builder
 		location := checker.Location
 		printErr := pretty.NewErrorPrettyPrinter(&sb, true).
@@ -229,7 +240,7 @@ func parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
 		if printErr != nil {
 			panic(printErr)
 		}
-		assert.Fail(t, sb.String())
+		assert.Fail(tb, sb.String())
 		return nil, err
 	}
 
@@ -268,7 +279,7 @@ func parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
 		&config,
 	)
 
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	err = inter.Interpret()
 
@@ -306,6 +317,8 @@ func parseCheckAndInterpretWithEvents(t *testing.T, code string) (
 	getEvents func() []testEvent,
 	err error,
 ) {
+	t.Helper()
+
 	var events []testEvent
 
 	inter, err = parseCheckAndInterpretWithOptions(t,
@@ -8858,7 +8871,7 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 				},
 			},
 		)
-		require.Error(t, err)
+		RequireError(t, err)
 		assert.ErrorContains(t, err, "error: member `account` is used before it has been initialized")
 	})
 }

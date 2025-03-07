@@ -3742,12 +3742,8 @@ func getCheckedCapabilityController(
 ) {
 	if wantedBorrowType == nil {
 		wantedBorrowType = capabilityBorrowType
-	} else {
-		wantedBorrowType = inter.SubstituteMappedEntitlements(wantedBorrowType).(*sema.ReferenceType)
-
-		if !canBorrow(wantedBorrowType, capabilityBorrowType) {
-			return nil, nil
-		}
+	} else if !canBorrow(wantedBorrowType, capabilityBorrowType) {
+		return nil, nil
 	}
 
 	capabilityAddress := capabilityAddressValue.ToAddress()

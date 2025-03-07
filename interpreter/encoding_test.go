@@ -92,7 +92,7 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 	decodedStorable, err := DecodeStorable(decoder, test.slabStorageID, nil, nil)
 
 	if test.invalid {
-		require.Error(t, err)
+		RequireError(t, err)
 	} else {
 		require.NoError(t, err)
 		inter, err := NewInterpreter(

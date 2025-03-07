@@ -268,7 +268,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(
 			if isNestedResourceMove {
 				resultValue = target.(MemberAccessibleValue).RemoveMember(interpreter, locationRange, identifier)
 			} else {
-				resultValue = interpreter.getMemberWithAuthMapping(target, locationRange, identifier, memberAccessInfo)
+				resultValue = interpreter.getMember(target, locationRange, identifier)
 			}
 
 			if resultValue == nil && !allowMissing {
@@ -336,24 +336,15 @@ func (interpreter *Interpreter) getReferenceValue(value Value, resultType sema.T
 		}
 
 		return value
+
 	case *SomeValue:
 		innerValue := interpreter.getReferenceValue(value.value, resultType, locationRange)
 		return NewSomeValueNonCopying(interpreter, innerValue)
 	}
 
-	auth := interpreter.getEffectiveAuthorization(referenceType)
+	auth := ConvertSemaAccessToStaticAuthorization(interpreter, referenceType.Authorization)
 
 	return NewEphemeralReferenceValue(interpreter, auth, value, referenceType.Type, locationRange)
-}
-
-func (interpreter *Interpreter) getEffectiveAuthorization(referenceType *sema.ReferenceType) Authorization {
-	_, isMapped := referenceType.Authorization.(*sema.EntitlementMapAccess)
-
-	if isMapped && interpreter.SharedState.currentEntitlementMappedValue != nil {
-		return interpreter.SharedState.currentEntitlementMappedValue
-	}
-
-	return ConvertSemaAccessToStaticAuthorization(interpreter, referenceType.Authorization)
 }
 
 func (interpreter *Interpreter) checkMemberAccess(
@@ -1380,7 +1371,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 	}
 
 	castingExpressionTypes := interpreter.Program.Elaboration.CastingExpressionTypes(expression)
-	expectedType := interpreter.SubstituteMappedEntitlements(castingExpressionTypes.TargetType)
+	expectedType := castingExpressionTypes.TargetType
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
@@ -1400,7 +1391,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			// otherwise dynamic cast now always unboxes optionals
 			value = interpreter.Unbox(locationRange, value)
 		}
-		valueSemaType := interpreter.SubstituteMappedEntitlements(interpreter.MustSemaTypeOfValue(value))
+		valueSemaType := interpreter.MustSemaTypeOfValue(value)
 		valueStaticType := ConvertSemaToStaticType(interpreter, valueSemaType)
 		isSubType := interpreter.IsSubTypeOfSemaType(valueStaticType, expectedType)
 
@@ -1553,7 +1544,7 @@ func (interpreter *Interpreter) newEphemeralReference(
 ) *EphemeralReferenceValue {
 	// If we are currently interpreting a function that was declared with mapped entitlement access, any appearances
 	// of that mapped access in the body of the function should be replaced with the computed output of the map
-	auth := interpreter.getEffectiveAuthorization(typ)
+	auth := ConvertSemaAccessToStaticAuthorization(interpreter, typ.Authorization)
 
 	locationRange := LocationRange{
 		Location:    interpreter.Location,

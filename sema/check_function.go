@@ -210,24 +210,14 @@ func (checker *Checker) checkFunction(
 			functionActivation.InitializationInfo = initializationInfo
 
 			if functionBlock != nil {
-				func() {
-					oldMappedAccess := checker.entitlementMappingInScope
-					if mappedAccess, isMappedAccess := access.(*EntitlementMapAccess); isMappedAccess {
-						checker.entitlementMappingInScope = mappedAccess.Type
-					} else {
-						checker.entitlementMappingInScope = nil
-					}
-					defer func() { checker.entitlementMappingInScope = oldMappedAccess }()
-
-					checker.InNewPurityScope(functionType.Purity == FunctionPurityView, func() {
-						checker.visitFunctionBlock(
-							functionBlock,
-							functionType.ReturnTypeAnnotation.Type,
-							returnTypeAnnotation,
-							checkResourceLoss,
-						)
-					})
-				}()
+				checker.InNewPurityScope(functionType.Purity == FunctionPurityView, func() {
+					checker.visitFunctionBlock(
+						functionBlock,
+						functionType.ReturnTypeAnnotation.Type,
+						returnTypeAnnotation,
+						checkResourceLoss,
+					)
+				})
 
 				if mustExit {
 					returnType := functionType.ReturnTypeAnnotation.Type
@@ -434,6 +424,8 @@ func (checker *Checker) visitWithPostConditions(
 				// }
 				//
 				// Here, the `result` value in the `post` block will have type `auth(E, X, Y) &R`.
+
+				// TODO: check how mapping is handled
 
 				if entitlementSupportingType, ok := innerType.(EntitlementSupportingType); ok {
 					supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
