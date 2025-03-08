@@ -4265,27 +4265,51 @@ func (e *InvalidNonEntitlementTypeInMapError) EndPosition(common.MemoryGauge) as
 	return e.Pos
 }
 
-// InvalidMappingAccessMemberError
-type InvalidMappingAccessMemberError struct {
+// InvalidMappingAccessError
+type InvalidMappingAccessError struct {
 	Pos ast.Position
 }
 
-var _ SemanticError = &InvalidMappingAccessMemberError{}
-var _ errors.UserError = &InvalidMappingAccessMemberError{}
+var _ SemanticError = &InvalidMappingAccessError{}
+var _ errors.UserError = &InvalidMappingAccessError{}
 
-func (*InvalidMappingAccessMemberError) isSemanticError() {}
+func (*InvalidMappingAccessError) isSemanticError() {}
 
-func (*InvalidMappingAccessMemberError) IsUserError() {}
+func (*InvalidMappingAccessError) IsUserError() {}
 
-func (e *InvalidMappingAccessMemberError) Error() string {
-	return "mapped entitlement access modifiers may only be used for members in structs and resources"
+func (e *InvalidMappingAccessError) Error() string {
+	return "access(mapping ...) may only be used in structs and resources"
 }
 
-func (e *InvalidMappingAccessMemberError) StartPosition() ast.Position {
+func (e *InvalidMappingAccessError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *InvalidMappingAccessMemberError) EndPosition(common.MemoryGauge) ast.Position {
+func (e *InvalidMappingAccessError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+// InvalidMappingAccessMemberTypeError
+type InvalidMappingAccessMemberTypeError struct {
+	Pos ast.Position
+}
+
+var _ SemanticError = &InvalidMappingAccessMemberTypeError{}
+var _ errors.UserError = &InvalidMappingAccessMemberTypeError{}
+
+func (*InvalidMappingAccessMemberTypeError) isSemanticError() {}
+
+func (*InvalidMappingAccessMemberTypeError) IsUserError() {}
+
+func (e *InvalidMappingAccessMemberTypeError) Error() string {
+	return "invalid type for access(mapping ...) declaration"
+}
+
+func (e *InvalidMappingAccessMemberTypeError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidMappingAccessMemberTypeError) EndPosition(_ common.MemoryGauge) ast.Position {
 	return e.Pos
 }
 

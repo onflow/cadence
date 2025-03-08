@@ -1919,13 +1919,13 @@ func (checker *Checker) checkEntitlementMapAccess(
 	containerKind *common.CompositeKind,
 	startPos ast.Position,
 ) {
-	// mapped entitlements may only be used in structs and resources
+	// Mapping access may only be used inside of structs and resources.
 	if containerKind == nil ||
 		(*containerKind != common.CompositeKindResource &&
 			*containerKind != common.CompositeKindStructure) {
 
 		checker.report(
-			&InvalidMappingAccessMemberError{
+			&InvalidMappingAccessError{
 				Pos: startPos,
 			},
 		)
@@ -1969,7 +1969,7 @@ func (checker *Checker) checkEntitlementMapAccess(
 	}
 
 	checker.report(
-		&InvalidMappingAccessMemberError{
+		&InvalidMappingAccessMemberTypeError{
 			Pos: startPos,
 		},
 	)

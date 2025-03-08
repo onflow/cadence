@@ -636,7 +636,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("optional valid", func(t *testing.T) {
@@ -653,7 +653,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("non-reference field", func(t *testing.T) {
@@ -669,7 +669,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[0])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[0])
 	})
 
 	t.Run("non-auth reference field", func(t *testing.T) {
@@ -685,7 +685,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[0])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[0])
 	})
 
 	t.Run("non-reference container field", func(t *testing.T) {
@@ -718,7 +718,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("mismatched entitlement mapping to set", func(t *testing.T) {
@@ -736,7 +736,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[0])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[0])
 	})
 
 	t.Run("function", func(t *testing.T) {
@@ -752,7 +752,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[0])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[0])
 	})
 
 	t.Run("accessor function in contract", func(t *testing.T) {
@@ -769,7 +769,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessError{}, errs[1])
 	})
 
 	t.Run("accessor function no container", func(t *testing.T) {
@@ -786,7 +786,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessError{}, errs[1])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
 
 	})
@@ -805,7 +805,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("accessor function non mapped return", func(t *testing.T) {
@@ -823,7 +823,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[0])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[0])
 	})
 
 	t.Run("accessor function non mapped access", func(t *testing.T) {
@@ -858,7 +858,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("accessor function with impl", func(t *testing.T) {
@@ -877,7 +877,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
 	})
 
@@ -899,7 +899,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
 	})
 
@@ -928,7 +928,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("accessor function with impl supertype", func(t *testing.T) {
@@ -960,7 +960,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 4)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[3])
 	})
@@ -990,7 +990,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 4)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
 
 		var typeMismatchError *sema.TypeMismatchError
@@ -1035,7 +1035,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 5)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[3])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[4])
@@ -1074,7 +1074,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
 	})
 
@@ -1113,7 +1113,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 4)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
 
 		var invalidAccessErr *sema.InvalidAccessError
@@ -1170,9 +1170,9 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 4)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[2])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[2])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[1])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[3])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[3])
 	})
 
 	t.Run("accessor function with invalid object access impl", func(t *testing.T) {
@@ -1219,9 +1219,9 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 5)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[2])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[2])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[1])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[3])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[3])
 
 		var invalidAccessErr *sema.InvalidAccessError
 		require.ErrorAs(t, errs[4], &invalidAccessErr)
@@ -1290,9 +1290,9 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[1])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[2])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[2])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[3])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[4])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[4])
 	})
 
 	t.Run("accessor function with composed mapping object access impl", func(t *testing.T) {
@@ -1341,10 +1341,10 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[1])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[3])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[3])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[4])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[5])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[6])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[5])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[6])
 	})
 
 	t.Run("accessor function with invalid composed mapping object access impl", func(t *testing.T) {
@@ -1392,10 +1392,10 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[1])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[3])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[3])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[4])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[5])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[6])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[5])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[6])
 	})
 
 	t.Run("accessor function with superset composed mapping object access input", func(t *testing.T) {
@@ -1445,10 +1445,10 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[1])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[3])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[3])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[4])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[5])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[6])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[5])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[6])
 	})
 
 	t.Run("accessor function with composed mapping object access skipped step", func(t *testing.T) {
@@ -1500,10 +1500,10 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[1])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[3])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[3])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[4])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[5])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[6])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[5])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[6])
 	})
 
 	t.Run("accessor function with composed mapping object access included intermediate step", func(t *testing.T) {
@@ -1556,10 +1556,10 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[1])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[3])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[3])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[4])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[5])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[6])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[5])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[6])
 	})
 
 	t.Run("accessor function array", func(t *testing.T) {
@@ -1576,7 +1576,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("accessor function with mapped ref arg", func(t *testing.T) {
@@ -1606,7 +1606,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[1])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[2])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[2])
 	})
 
 	t.Run("accessor function with full mapped ref arg", func(t *testing.T) {
@@ -1636,7 +1636,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[1])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[2])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[2])
 	})
 
 	t.Run("invalid mapping", func(t *testing.T) {
@@ -1706,7 +1706,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("valid in contract interface", func(t *testing.T) {
@@ -1726,7 +1726,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("qualified", func(t *testing.T) {
@@ -1749,8 +1749,8 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[1])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[2])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[3])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[2])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[3])
 	})
 
 	t.Run("ref array field", func(t *testing.T) {
@@ -1790,7 +1790,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[0])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[0])
 	})
 }
 
@@ -2055,7 +2055,7 @@ func TestCheckInvalidEntitlementMappingAuth(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("optional ref field", func(t *testing.T) {
@@ -2072,7 +2072,7 @@ func TestCheckInvalidEntitlementMappingAuth(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("fun ref field", func(t *testing.T) {
@@ -2090,7 +2090,7 @@ func TestCheckInvalidEntitlementMappingAuth(t *testing.T) {
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[1])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[2])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[2])
 	})
 
 	t.Run("optional fun ref field", func(t *testing.T) {
@@ -2107,7 +2107,7 @@ func TestCheckInvalidEntitlementMappingAuth(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("mapped ref unmapped field", func(t *testing.T) {
@@ -2170,7 +2170,7 @@ func TestCheckInvalidEntitlementMappingAuth(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[0])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[0])
 	})
 
 	t.Run("different map", func(t *testing.T) {
@@ -2196,7 +2196,7 @@ func TestCheckInvalidEntitlementMappingAuth(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 }
 
@@ -2215,7 +2215,7 @@ func TestCheckInvalidEntitlementMappingAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[0])
+		assert.IsType(t, &sema.InvalidMappingAccessError{}, errs[0])
 	})
 
 	t.Run("nonreference field", func(t *testing.T) {
@@ -2231,7 +2231,7 @@ func TestCheckInvalidEntitlementMappingAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[0])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[0])
 	})
 
 	t.Run("optional nonreference field", func(t *testing.T) {
@@ -2247,7 +2247,7 @@ func TestCheckInvalidEntitlementMappingAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[0])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[0])
 	})
 
 	t.Run("invalid fun decl", func(t *testing.T) {
@@ -2261,7 +2261,7 @@ func TestCheckInvalidEntitlementMappingAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[0])
+		assert.IsType(t, &sema.InvalidMappingAccessError{}, errs[0])
 	})
 
 	t.Run("invalid contract field", func(t *testing.T) {
@@ -2277,7 +2277,7 @@ func TestCheckInvalidEntitlementMappingAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[0])
+		assert.IsType(t, &sema.InvalidMappingAccessError{}, errs[0])
 	})
 
 	t.Run("invalid contract interface field", func(t *testing.T) {
@@ -2293,7 +2293,7 @@ func TestCheckInvalidEntitlementMappingAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[0])
+		assert.IsType(t, &sema.InvalidMappingAccessError{}, errs[0])
 	})
 
 	t.Run("invalid event", func(t *testing.T) {
@@ -2310,7 +2310,7 @@ func TestCheckInvalidEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessError{}, errs[1])
 	})
 
 	t.Run("invalid enum case", func(t *testing.T) {
@@ -2575,8 +2575,8 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[1])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[2])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[3])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[2])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[3])
 	})
 
 	t.Run("valid mapped interface", func(t *testing.T) {
@@ -2603,8 +2603,8 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[1])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[2])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[3])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[2])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[3])
 	})
 
 	t.Run("mismatched mapped", func(t *testing.T) {
@@ -2636,8 +2636,8 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[1])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[2])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[3])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[2])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[3])
 		assert.IsType(t, &sema.ConformanceError{}, errs[4])
 	})
 
@@ -2667,9 +2667,9 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[1])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[2])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[2])
 		assert.IsType(t, &sema.InterfaceMemberConflictError{}, errs[3])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[4])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[4])
 	})
 
 	t.Run("access(all) subtyping invalid", func(t *testing.T) {
@@ -2886,7 +2886,7 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.ConformanceError{}, errs[2])
 	})
 
@@ -2917,7 +2917,7 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.ConformanceError{}, errs[2])
 	})
 
@@ -2948,7 +2948,7 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.ConformanceError{}, errs[2])
 	})
 
@@ -2979,7 +2979,7 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.ConformanceError{}, errs[2])
 	})
 
@@ -3346,7 +3346,7 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
 	})
 }
@@ -3861,7 +3861,7 @@ func TestCheckAttachmentEntitlementAccessAnnotation(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[0])
+		assert.IsType(t, &sema.InvalidMappingAccessError{}, errs[0])
 	})
 
 	t.Run("entitlement set not allowed", func(t *testing.T) {
@@ -3892,6 +3892,7 @@ func TestCheckAttachmentEntitlementAccessAnnotation(t *testing.T) {
             entitlement mapping E {
                 X -> Y
             }
+
             access(mapping E) attachment A for AnyStruct {
                 fun foo() {}
             }
@@ -3900,7 +3901,7 @@ func TestCheckAttachmentEntitlementAccessAnnotation(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[0])
+		assert.IsType(t, &sema.InvalidMappingAccessError{}, errs[0])
 	})
 
 	t.Run("entitlement set not allowed in contract", func(t *testing.T) {
@@ -4099,7 +4100,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("basic with optional access", func(t *testing.T) {
@@ -4129,7 +4130,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("basic with optional access return", func(t *testing.T) {
@@ -4157,7 +4158,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("basic with optional full entitled map", func(t *testing.T) {
@@ -4191,7 +4192,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("basic with optional partial map", func(t *testing.T) {
@@ -4225,7 +4226,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 4)
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 
 		var typeMismatchError *sema.TypeMismatchError
 		require.ErrorAs(t, errs[2], &typeMismatchError)
@@ -4277,7 +4278,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 4)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
 
 		var typeMismatchErr *sema.TypeMismatchError
@@ -4319,7 +4320,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 
 		var typeMismatchErr *sema.TypeMismatchError
 		require.ErrorAs(t, errs[2], &typeMismatchErr)
@@ -4356,7 +4357,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("do not retain entitlements", func(t *testing.T) {
@@ -4382,7 +4383,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 
 		// X is not retained in the entitlements for ref
 		var typeMismatchErr *sema.TypeMismatchError
@@ -4423,7 +4424,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 
 		// access gives B, not Y
 		var typeMismatchErr *sema.TypeMismatchError
@@ -4464,7 +4465,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("unrepresentable disjoint", func(t *testing.T) {
@@ -4495,7 +4496,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.UnrepresentableEntitlementMapOutputError{}, errs[2])
 
 	})
@@ -4528,7 +4529,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 
 		// theoretically this should be allowed, because ((Y & B) | (Y & B)) simplifies to
 		// just (Y & B), but this would require us to build in a simplifier for boolean expressions,
@@ -4562,7 +4563,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("unmapped entitlements do not pass through map", func(t *testing.T) {
@@ -4591,7 +4592,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 
 		// access results in access(all) access because D is not mapped
 		var typeMismatchErr *sema.TypeMismatchError
@@ -4631,7 +4632,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("multiple inputs", func(t *testing.T) {
@@ -4663,7 +4664,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("multiple inputs and outputs", func(t *testing.T) {
@@ -4698,7 +4699,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("multiple inputs and outputs mismatch", func(t *testing.T) {
@@ -4732,7 +4733,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 
 		// access gives B & C, not X & Y
 		var typeMismatchErr *sema.TypeMismatchError
@@ -4770,7 +4771,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("unauthorized downcast", func(t *testing.T) {
@@ -4796,7 +4797,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 
 		// result is not authorized
 		var typeMismatchErr *sema.TypeMismatchError
@@ -4838,7 +4839,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("basic with update", func(t *testing.T) {
@@ -4870,7 +4871,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("basic with update error", func(t *testing.T) {
@@ -4902,7 +4903,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 
 		// init of map needs full authorization of codomain
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
@@ -4933,7 +4934,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 
 		// init of map needs full authorization of codomain
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
@@ -4966,7 +4967,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 
 		// init of map needs full authorization of codomain
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
@@ -4999,7 +5000,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 
 		// init of map needs full authorization of codomain
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
@@ -5032,7 +5033,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 
 		// init of map needs full authorization of codomain
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
@@ -5208,7 +5209,7 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 4)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessError{}, errs[1])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[3])
 	})
@@ -5241,7 +5242,7 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 4)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessError{}, errs[1])
 
 		var typeMismatchErr *sema.TypeMismatchError
 		require.ErrorAs(t, errs[2], &typeMismatchErr)
@@ -5374,6 +5375,7 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 
           attachment A for S {
               access(mapping M) let x: auth(mapping M) &S
+
               init() {
                   self.x = &S() as auth(Y) &S
               }
@@ -5383,7 +5385,7 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessError{}, errs[1])
 	})
 
 	t.Run("access(all) decl", func(t *testing.T) {
@@ -5698,9 +5700,9 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
           }
 
           attachment A for S {
+
               access(mapping M) fun foo(): auth(mapping M) &Int {
                   let s: auth(mapping M) &A = base[A]!
-
                   return &1
               }
           }
@@ -5709,7 +5711,7 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessError{}, errs[1])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
 	})
 
@@ -5729,9 +5731,9 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
           }
 
           attachment A for S {
+
               access(mapping M) fun foo(): auth(mapping M) &Int {
                   let s: auth(Y) &A? = base[A]
-
                   return &1
               }
           }
@@ -5740,7 +5742,7 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessError{}, errs[1])
 
 		var typeMismatchErr *sema.TypeMismatchError
 		require.ErrorAs(t, errs[2], &typeMismatchErr)
@@ -6269,7 +6271,7 @@ func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[2])
 	})
 
@@ -6301,7 +6303,7 @@ func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[2])
 	})
 
@@ -6451,7 +6453,7 @@ func TestCheckIdentityMapping(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 4)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
 
 		var typeMismatchError *sema.TypeMismatchError
@@ -6493,7 +6495,7 @@ func TestCheckIdentityMapping(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 4)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[3])
 	})
@@ -6526,7 +6528,7 @@ func TestCheckIdentityMapping(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
 	})
 
@@ -6555,7 +6557,7 @@ func TestCheckIdentityMapping(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
 	})
 
@@ -6623,11 +6625,11 @@ func TestCheckIdentityMapping(t *testing.T) {
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[1])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[3])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[4])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[5])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[6])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[4])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[5])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[6])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[7])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[8])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[8])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[9])
 	})
 
@@ -6695,12 +6697,12 @@ func TestCheckIdentityMapping(t *testing.T) {
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[1])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[3])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[4])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[5])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[4])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[5])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[6])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[7])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[7])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[8])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[9])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[9])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[10])
 	})
 
@@ -6741,7 +6743,7 @@ func TestCheckIdentityMapping(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[0])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[0])
 	})
 
 	t.Run("owned value, with entitlements, function ref typed field", func(t *testing.T) {
@@ -6780,7 +6782,7 @@ func TestCheckIdentityMapping(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 
 		var typeMismatchError *sema.TypeMismatchError
 		require.ErrorAs(t, errs[2], &typeMismatchError)
@@ -6818,7 +6820,7 @@ func TestCheckIdentityMapping(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
 	})
 
@@ -6859,7 +6861,7 @@ func TestCheckIdentityMapping(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("initializer with included Identity", func(t *testing.T) {
@@ -6883,7 +6885,7 @@ func TestCheckIdentityMapping(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
 	})
 }
@@ -7089,7 +7091,7 @@ func TestCheckIdentityIncludedMaps(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("only identity included error", func(t *testing.T) {
@@ -7118,7 +7120,7 @@ func TestCheckIdentityIncludedMaps(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 
 		var typeMismatchError *sema.TypeMismatchError
 		require.ErrorAs(t, errs[2], &typeMismatchError)
@@ -7155,7 +7157,7 @@ func TestCheckIdentityIncludedMaps(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("identity included disjoint", func(t *testing.T) {
@@ -7192,7 +7194,7 @@ func TestCheckIdentityIncludedMaps(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 
 		// because the Identity map will always try to create conjunctions of the input with
 		// any additional relations, it is functionally impossible to map a disjointly authorized
@@ -7235,7 +7237,7 @@ func TestCheckGeneralIncludedMaps(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("multiple includes", func(t *testing.T) {
@@ -7274,7 +7276,7 @@ func TestCheckGeneralIncludedMaps(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("multiple includes with overlap", func(t *testing.T) {
@@ -7316,7 +7318,7 @@ func TestCheckGeneralIncludedMaps(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("multilayer include", func(t *testing.T) {
@@ -7356,7 +7358,7 @@ func TestCheckGeneralIncludedMaps(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("diamond include", func(t *testing.T) {
@@ -7401,7 +7403,7 @@ func TestCheckGeneralIncludedMaps(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("multilayer include identity", func(t *testing.T) {
@@ -7442,7 +7444,7 @@ func TestCheckGeneralIncludedMaps(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 
 		assert.True(t, checker.Elaboration.EntitlementMapType("S.test.A").IncludesIdentity)
 		assert.True(t, checker.Elaboration.EntitlementMapType("S.test.B").IncludesIdentity)
@@ -7823,7 +7825,7 @@ func TestCheckEntitlementOptionalChaining(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 }
 
@@ -7859,7 +7861,7 @@ func TestCheckEntitlementMissingInMap(t *testing.T) {
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 		assert.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[1])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[3])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[3])
 	})
 
 	t.Run("non entitlement type", func(t *testing.T) {
@@ -7889,7 +7891,7 @@ func TestCheckEntitlementMissingInMap(t *testing.T) {
 
 		assert.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errs[0])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[1])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[2])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[2])
 	})
 }
 
@@ -7934,7 +7936,7 @@ func TestCheckEntitlementMappingEscalation(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
 	})
 
@@ -7984,7 +7986,7 @@ func TestCheckEntitlementMappingEscalation(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
 	})
 
@@ -8024,7 +8026,7 @@ func TestCheckEntitlementMappingEscalation(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
 	})
 
@@ -8068,7 +8070,7 @@ func TestCheckEntitlementMappingEscalation(t *testing.T) {
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
 		assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[2])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[2])
 	})
 
 	t.Run("member expression in indexing assignment", func(t *testing.T) {
@@ -8099,7 +8101,7 @@ func TestCheckEntitlementMappingEscalation(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.UnauthorizedReferenceAssignmentError{}, errs[2])
 	})
 
@@ -8135,7 +8137,7 @@ func TestCheckEntitlementMappingEscalation(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
 	})
 
@@ -8210,7 +8212,7 @@ func TestCheckEntitlementMappingEscalation(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.InvalidAccessError{}, errs[2])
 	})
 
@@ -8247,7 +8249,7 @@ func TestCheckEntitlementMappingEscalation(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
 	})
 
@@ -8360,7 +8362,7 @@ func TestCheckEntitlementMappingComplexFields(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("array mapped field escape", func(t *testing.T) {
@@ -8403,7 +8405,7 @@ func TestCheckEntitlementMappingComplexFields(t *testing.T) {
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[1])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[2])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[2])
 	})
 
 	t.Run("dictionary mapped field", func(t *testing.T) {
@@ -8509,7 +8511,7 @@ func TestCheckEntitlementMappingComplexFields(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("lambda mapped array field", func(t *testing.T) {
@@ -8601,7 +8603,7 @@ func TestCheckEntitlementMappingComplexFields(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
 	})
 }
