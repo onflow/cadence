@@ -351,7 +351,8 @@ func NewBoundFunctionValue(
 	selfRef, selfIsRef := (*self).(ReferenceValue)
 	if !selfIsRef {
 		semaType := interpreter.MustSemaTypeOfValue(*self)
-		// TODO: unauthorized correct?
+		// Create an unauthorized reference. The purpose of it is only to track and invalidate resource moves,
+		// it is not directly exposed to the users
 		selfRef = NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, *self, semaType, EmptyLocationRange)
 	}
 
