@@ -6460,10 +6460,10 @@ func TestCheckIdentityMapping(t *testing.T) {
 		var typeMismatchError *sema.TypeMismatchError
 		require.ErrorAs(t, errs[3], &typeMismatchError)
 
-		assert.IsType(t, &sema.ReferenceType{}, typeMismatchError.ActualType)
+		require.IsType(t, &sema.ReferenceType{}, typeMismatchError.ActualType)
 		actualReference := typeMismatchError.ActualType.(*sema.ReferenceType)
 
-		assert.IsType(t, sema.EntitlementSetAccess{}, actualReference.Authorization)
+		require.IsType(t, sema.EntitlementSetAccess{}, actualReference.Authorization)
 		actualAuth := actualReference.Authorization.(sema.EntitlementSetAccess)
 
 		assert.Equal(t, 0, actualAuth.Entitlements.Len())
@@ -6789,13 +6789,13 @@ func TestCheckIdentityMapping(t *testing.T) {
 		require.ErrorAs(t, errs[2], &typeMismatchError)
 
 		actualType := typeMismatchError.ActualType
-		assert.IsType(t, &sema.OptionalType{}, actualType)
+		require.IsType(t, &sema.OptionalType{}, actualType)
 		optionalType := actualType.(*sema.OptionalType)
 
-		assert.IsType(t, &sema.ReferenceType{}, optionalType.Type)
+		require.IsType(t, &sema.ReferenceType{}, optionalType.Type)
 		referenceType := optionalType.Type.(*sema.ReferenceType)
 
-		assert.IsType(t, sema.EntitlementSetAccess{}, referenceType.Authorization)
+		require.IsType(t, sema.EntitlementSetAccess{}, referenceType.Authorization)
 		auth := referenceType.Authorization.(sema.EntitlementSetAccess)
 
 		// Entitlements of function return type `X` must NOT be
