@@ -8702,3 +8702,111 @@ func TestCheckInvalidAuthMapping(t *testing.T) {
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
 	})
 }
+
+func TestCheckNestedReferenceMemberAccess(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("struct entitlement escalation", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+		entitlement E
+
+		struct T {
+			access(E) fun foo() {}
+		}
+
+		struct S {
+			access(mapping Identity) var ref: AnyStruct
+
+			init(_ a: AnyStruct){
+			self.ref = a
+		}
+		}
+
+		fun test() {
+			let t = T()
+			let pubTRef = &t as &T
+			var s = &S(pubTRef) as auth(E) &S
+			var tRef = s.ref as! auth(E) &T
+			tRef.foo()
+			>>>>>>> b0a7629c1 (refactor interpreter tests to sema tests)
+		}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[0])
+	})
+
+	t.Run("entitled struct escalation", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+		entitlement E
+
+		struct T {
+			access(E) fun foo() {}
+		}
+
+		struct S {
+			access(mapping Identity) var ref: AnyStruct
+
+			init(_ a: AnyStruct){
+			self.ref = a
+		}
+		}
+
+		fun test() {
+			let t = T()
+			let pubTRef = &t as auth(E) &T
+			var s = &S(pubTRef) as auth(E) &S
+			var member = s.ref
+			var tRef = member as! auth(E) &T
+			tRef.foo()
+		}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[0])
+	})
+
+	t.Run("resource entitlement escalation", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+		entitlement E
+
+		resource R {
+			access(E) fun foo() {}
+		}
+
+		struct S {
+			access(mapping Identity) var ref: AnyStruct
+
+			init(_ a: AnyStruct){
+			self.ref = a
+		}
+		}
+
+		fun test() {
+			let r <- create R()
+			let pubRef = &r as &R
+			var s = &S(pubRef) as auth(E) &S
+			var entitledRef = s.ref as! auth(E) &R
+			entitledRef.foo()
+
+			destroy r
+		}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[0])
+	})
+}
