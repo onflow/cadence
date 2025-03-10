@@ -1836,7 +1836,7 @@ func (checker *Checker) checkDeclarationAccessModifier(
 	case PrimitiveAccess:
 		checker.checkPrimitiveAccess(access, isConstant, declarationKind, startPos)
 	case *EntitlementMapAccess:
-		checker.checkEntitlementMapAccess(access, declarationKind, declarationType, containerKind, startPos)
+		checker.checkEntitlementMapAccess(declarationType, containerKind, startPos)
 	case EntitlementSetAccess:
 		checker.checkEntitlementSetAccess(containerKind, startPos)
 	}
@@ -1913,8 +1913,6 @@ func (checker *Checker) checkPrimitiveAccess(
 }
 
 func (checker *Checker) checkEntitlementMapAccess(
-	access *EntitlementMapAccess,
-	declarationKind common.DeclarationKind,
 	declarationType Type,
 	containerKind *common.CompositeKind,
 	startPos ast.Position,
@@ -1932,47 +1930,36 @@ func (checker *Checker) checkEntitlementMapAccess(
 		return
 	}
 
-	// mapped entitlement fields must be one of:
-	// 1) An [optional] reference that is authorized to the same mapped entitlement.
-	// 2) A function that return an [optional] reference authorized to the same mapped entitlement.
-	// 3) A container - So if the parent is a reference, entitlements can be granted to the resulting field reference.
-
-	entitledType := declarationType
-
-	if functionType, isFunction := declarationType.(*FunctionType); isFunction {
-		if declarationKind == common.DeclarationKindFunction {
-			entitledType = functionType.ReturnTypeAnnotation.Type
-		}
+	if !isValidMappingAccessMemberType(declarationType) {
+		checker.report(
+			&InvalidMappingAccessMemberTypeError{
+				Pos: startPos,
+			},
+		)
 	}
+}
 
-	switch ty := entitledType.(type) {
+func isValidMappingAccessMemberType(ty Type) bool {
+
+	// Forbid potential reference values, statically or dynamically,
+	// to prevent reference-to-reference when the field is accessed
+	// on a reference value.
+
+	switch declarationType := ty.(type) {
 	case *ReferenceType:
-		// TODO:
-		if ty.Authorization.Equal(access) {
-			return
-		}
+		return false
 
 	case *OptionalType:
-		switch optionalType := ty.Type.(type) {
-		case *ReferenceType:
-			// TODO:
-			if optionalType.Authorization.Equal(access) {
-				return
-			}
-		}
+		return isValidMappingAccessMemberType(declarationType.Type)
 
 	default:
-		// Also allow entitlement mappings for container-typed fields
-		if declarationType.ContainFieldsOrElements() {
-			return
+		switch ty {
+		case AnyStructType, AnyType:
+			return false
 		}
-	}
 
-	checker.report(
-		&InvalidMappingAccessMemberTypeError{
-			Pos: startPos,
-		},
-	)
+		return ty.ContainFieldsOrElements()
+	}
 }
 
 func (checker *Checker) checkEntitlementSetAccess(
