@@ -92,6 +92,10 @@ func main() {
 		log.Fatalf("failed to send HTTP request: %s", err)
 	}
 
+	if res.StatusCode != http.StatusOK {
+		log.Fatalf("unexpected status code: %d", res.StatusCode)
+	}
+
 	reader := csv.NewReader(res.Body)
 	reader.FieldsPerRecord = -1
 
