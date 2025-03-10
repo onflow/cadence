@@ -178,7 +178,9 @@ func RequireCheckerErrors(t *testing.T, err error, count int) []error {
 
 	errs := checkerErr.Errors
 
-	require.Len(t, errs, count)
+	if !assert.Len(t, errs, count) {
+		t.Log(err.Error())
+	}
 
 	// Get the error message, to check that it can be successfully generated
 

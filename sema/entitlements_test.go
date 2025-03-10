@@ -20,6 +20,7 @@ package sema_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -8809,4 +8810,113 @@ func TestCheckNestedReferenceMemberAccess(t *testing.T) {
 
 		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[0])
 	})
+}
+
+func TestCheckMappingAccessFieldType(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, mapping, ty string, valid bool) {
+
+		testName := fmt.Sprintf("%s, %s", mapping, ty)
+
+		t.Run(testName, func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
+                      entitlement X
+                      entitlement Y
+
+                      entitlement mapping M {
+                          X -> Y
+                      }
+
+                      struct S {
+                          access(mapping %[1]s) var x: %[2]s
+
+                          init(_ x: %[2]s) {
+                              self.x = x
+                          }
+                      }
+
+                      struct T {
+                          let ref: &Int
+
+                          init(_ ref: &Int) {
+                              self.ref = ref
+                          }
+                      }
+                    `,
+					mapping,
+					ty,
+				),
+			)
+			if valid {
+				require.NoError(t, err)
+
+			} else if strings.HasPrefix(ty, "&") {
+				// TODO: ideally remove this case:
+				//     currently, the type checker also reports an error for the assignment
+
+				errs := RequireCheckerErrors(t, err, 2)
+
+				assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+
+			} else {
+				errs := RequireCheckerErrors(t, err, 1)
+				assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[0])
+			}
+		})
+	}
+
+	for _, mapping := range []string{"Identity", "M"} {
+		// Primitive
+		test(t, mapping, "Int", false)
+		// Reference to primitive
+		test(t, mapping, "&Int", false)
+
+		// AnyStruct
+		test(t, mapping, "AnyStruct", false)
+		// Reference to AnyStruct
+		test(t, mapping, "&AnyStruct", false)
+
+		// Struct with reference field
+		test(t, mapping, "T", true)
+		// Reference to struct with reference field
+		test(t, mapping, "&T", false)
+
+		// Array
+		test(t, mapping, "[Int]", true)
+		test(t, mapping, "[&Int]", true)
+		test(t, mapping, "[AnyStruct]", true)
+		test(t, mapping, "[&AnyStruct]", true)
+		test(t, mapping, "[T]", true)
+		test(t, mapping, "[&T]", true)
+		// Reference to array
+		test(t, mapping, "&[Int]", false)
+		test(t, mapping, "&[&Int]", false)
+		test(t, mapping, "&[AnyStruct]", false)
+		test(t, mapping, "&[&AnyStruct]", false)
+		test(t, mapping, "&[T]", false)
+		test(t, mapping, "&[&T]", false)
+
+		// Dictionary
+		test(t, mapping, "{Int: Int}", true)
+		test(t, mapping, "{Int: &Int}", true)
+		test(t, mapping, "{Int: AnyStruct}", true)
+		test(t, mapping, "{Int: &AnyStruct}", true)
+		test(t, mapping, "{Int: T}", true)
+		test(t, mapping, "{Int: &T}", true)
+		// Reference to dictionary
+		test(t, mapping, "&{Int: Int}", false)
+		test(t, mapping, "&{Int: &Int}", false)
+		test(t, mapping, "&{Int: AnyStruct}", false)
+		test(t, mapping, "&{Int: &AnyStruct}", false)
+		test(t, mapping, "&{Int: T}", false)
+		test(t, mapping, "&{Int: &T}", false)
+	}
 }
