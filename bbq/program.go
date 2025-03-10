@@ -22,10 +22,10 @@ import "github.com/onflow/cadence/bbq/opcode"
 
 type Program[E, T any] struct {
 	Contract  *Contract
-	Imports   []*Import
-	Functions []*Function[E]
-	Constants []*Constant
-	Variables []*Variable
+	Imports   []Import
+	Functions []Function[E]
+	Constants []Constant
+	Variables []Variable
 	Types     []T
 }
 

@@ -451,17 +451,23 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 	}
 }
 
-func (c *Compiler[_, _]) exportConstants() []*bbq.Constant {
-	constants := make([]*bbq.Constant, 0, len(c.constants))
-	for _, constant := range c.constants {
-		constants = append(
-			constants,
-			&bbq.Constant{
-				Data: constant.data,
-				Kind: constant.kind,
-			},
-		)
+func (c *Compiler[_, _]) exportConstants() []bbq.Constant {
+	var constants []bbq.Constant
+
+	count := len(c.constants)
+	if count > 0 {
+		constants = make([]bbq.Constant, 0, count)
+		for _, constant := range c.constants {
+			constants = append(
+				constants,
+				bbq.Constant{
+					Data: constant.data,
+					Kind: constant.kind,
+				},
+			)
+		}
 	}
+
 	return constants
 }
 
@@ -469,46 +475,63 @@ func (c *Compiler[_, T]) exportTypes() []T {
 	return c.staticTypes
 }
 
-func (c *Compiler[_, _]) exportImports() []*bbq.Import {
-	exportedImports := make([]*bbq.Import, 0)
-	for _, importedGlobal := range c.usedImportedGlobals {
-		bbqImport := &bbq.Import{
-			Location: importedGlobal.Location,
-			Name:     importedGlobal.Name,
+func (c *Compiler[_, _]) exportImports() []bbq.Import {
+	var exportedImports []bbq.Import
+
+	count := len(c.usedImportedGlobals)
+	if count > 0 {
+		exportedImports = make([]bbq.Import, 0, count)
+		for _, importedGlobal := range c.usedImportedGlobals {
+			bbqImport := bbq.Import{
+				Location: importedGlobal.Location,
+				Name:     importedGlobal.Name,
+			}
+			exportedImports = append(exportedImports, bbqImport)
 		}
-		exportedImports = append(exportedImports, bbqImport)
 	}
 
 	return exportedImports
 }
 
-func (c *Compiler[E, T]) ExportFunctions() []*bbq.Function[E] {
-	functions := make([]*bbq.Function[E], 0, len(c.functions))
-	for _, function := range c.functions {
-		functions = append(
-			functions,
-			&bbq.Function[E]{
-				Name:                function.name,
-				Code:                function.code,
-				LocalCount:          function.localCount,
-				ParameterCount:      function.parameterCount,
-				IsCompositeFunction: function.isCompositeFunction,
-			},
-		)
+func (c *Compiler[E, T]) ExportFunctions() []bbq.Function[E] {
+	var functions []bbq.Function[E]
+
+	count := len(c.functions)
+	if count > 0 {
+		functions = make([]bbq.Function[E], 0, count)
+		for _, function := range c.functions {
+			functions = append(
+				functions,
+				bbq.Function[E]{
+					Name:                function.name,
+					Code:                function.code,
+					LocalCount:          function.localCount,
+					ParameterCount:      function.parameterCount,
+					IsCompositeFunction: function.isCompositeFunction,
+				},
+			)
+		}
 	}
+
 	return functions
 }
 
-func (c *Compiler[_, _]) exportVariables(variableDecls []*ast.VariableDeclaration) []*bbq.Variable {
-	variables := make([]*bbq.Variable, 0, len(c.functions))
-	for _, varDecl := range variableDecls {
-		variables = append(
-			variables,
-			&bbq.Variable{
-				Name: varDecl.Identifier.Identifier,
-			},
-		)
+func (c *Compiler[_, _]) exportVariables(variableDecls []*ast.VariableDeclaration) []bbq.Variable {
+	var variables []bbq.Variable
+
+	count := len(c.functions)
+	if count > 0 {
+		variables = make([]bbq.Variable, 0, count)
+		for _, varDecl := range variableDecls {
+			variables = append(
+				variables,
+				bbq.Variable{
+					Name: varDecl.Identifier.Identifier,
+				},
+			)
+		}
 	}
+
 	return variables
 }
 
@@ -1214,15 +1237,14 @@ func (c *Compiler[_, _]) loadTypeArguments(expression *ast.InvocationExpression)
 		panic(errors.NewDefaultUserError("invalid number of type arguments: %d", typeArgsCount))
 	}
 
-	if typeArgsCount == 0 {
-		return nil
+	var typeArgs []uint16
+	if typeArgsCount > 0 {
+		typeArgs = make([]uint16, 0, typeArgsCount)
+
+		invocationTypes.TypeArguments.Foreach(func(key *sema.TypeParameter, typeParam sema.Type) {
+			typeArgs = append(typeArgs, c.getOrAddType(typeParam))
+		})
 	}
-
-	typeArgs := make([]uint16, 0, typeArgsCount)
-
-	invocationTypes.TypeArguments.Foreach(func(key *sema.TypeParameter, typeParam sema.Type) {
-		typeArgs = append(typeArgs, c.getOrAddType(typeParam))
-	})
 
 	return typeArgs
 }
