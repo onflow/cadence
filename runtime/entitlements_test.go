@@ -1173,7 +1173,7 @@ func TestRuntimeImportedEntitlementMapInclude(t *testing.T) {
                 access(mapping M) let x: [Int]
 
                 init() {
-                    self.x = []
+                    self.x = [1]
                 }
             }
         }
@@ -1200,6 +1200,7 @@ func TestRuntimeImportedEntitlementMapInclude(t *testing.T) {
                 ) &Int
             >()
             assert(type1 != nil)
+            assert(ref1.x[0].getType() == Type<Int>())
 
             let ref2 = &Test.S() as auth(FurtherUpstream.Y, Upstream.A, Test.F) &Test.S
             ref2.x
@@ -1214,9 +1215,11 @@ func TestRuntimeImportedEntitlementMapInclude(t *testing.T) {
                 ) &Int
             >()
             assert(type2 != nil)
+            assert(ref2.x[0].getType() == Type<Int>())
 
             let ref3 = &Test.S() as auth(FurtherUpstream.Z, Upstream.B, Test.G) &Test.S
             ref3.x
+            assert(ref3.x[0].getType() == Type<Int>())
         }
      `)
 
