@@ -264,12 +264,10 @@ func (e EntitlementSetAccess) PermitsAccess(other Access) bool {
 // EntitlementMapAccess
 
 type EntitlementMapAccess struct {
-	Type         *EntitlementMapType
-	domain       EntitlementSetAccess
-	domainOnce   sync.Once
-	codomain     EntitlementSetAccess
-	codomainOnce sync.Once
-	images       sync.Map
+	Type       *EntitlementMapType
+	domain     EntitlementSetAccess
+	domainOnce sync.Once
+	images     sync.Map
 }
 
 var _ Access = &EntitlementMapAccess{}
@@ -319,40 +317,7 @@ func (e *EntitlementMapAccess) PermitsAccess(other Access) bool {
 	switch otherAccess := other.(type) {
 	case PrimitiveAccess:
 		return otherAccess == PrimitiveAccess(ast.AccessSelf)
-	case *EntitlementMapAccess:
-		return e.Type.Equal(otherAccess.Type)
-	// if we are initializing a field that was declared with an entitlement-mapped reference type,
-	// the type we are using to initialize that member must be fully authorized for the entire codomain
-	// of the map. That is, for some field declared `access(M) let x: auth(M) &T`, when `x` is intialized
-	// by `self.x = y`, `y` must be a reference of type `auth(X, Y, Z, ...) &T` where `{X, Y, Z, ...}` is
-	// a superset of all the possible output types of `M` (all the possible entitlements `x` may have)
-	//
-	// as an example:
-	//
-	// entitlement mapping M {
-	//    X -> Y
-	//    E -> F
-	// }
-	// resource R {
-	//    access(M) let x: auth(M) &T
-	//    init(tref: auth(Y, F) &T) {
-	//        self.x = tref
-	//    }
-	// }
-	//
-	// the tref value used to initialize `x` must be entitled to the full output of `M` (in this case)
-	// `(Y, F)`, because the mapped access of `x` may provide either (or both) `Y` and `F` depending on
-	// the input entitlement. It is only safe for `R` to give out these entitlements if it actually
-	// possesses them, so we require the initializing value to have every possible entitlement that may
-	// be produced by the map
-	//
-	// However, if the map is or includes the `Identity`, there is no possible set that is permitted by
-	// this map, since the theoretical codomain of the Identity map is infinite
-	case EntitlementSetAccess:
-		if e.Type.IncludesIdentity {
-			return false
-		}
-		return e.Codomain().PermitsAccess(otherAccess)
+
 	default:
 		return false
 	}
@@ -369,19 +334,6 @@ func (e *EntitlementMapAccess) Domain() EntitlementSetAccess {
 		e.domain = NewEntitlementSetAccess(domain, Conjunction)
 	})
 	return e.domain
-}
-
-func (e *EntitlementMapAccess) Codomain() Access {
-	e.codomainOnce.Do(func() {
-		codomain := common.MappedSliceWithNoDuplicates(
-			e.Type.Relations,
-			func(r EntitlementRelation) *EntitlementType {
-				return r.Output
-			},
-		)
-		e.codomain = NewEntitlementSetAccess(codomain, Conjunction)
-	})
-	return e.codomain
 }
 
 // produces the image set of a single entitlement through a map
