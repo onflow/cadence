@@ -8607,3 +8607,98 @@ func TestCheckEntitlementMappingComplexFields(t *testing.T) {
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
 	})
 }
+
+func TestCheckInvalidAuthMapping(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("variable", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			let x: auth(mapping Identity) &Int = &1 as &Int
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
+	})
+
+	t.Run("field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct S {
+                let x: auth(mapping Identity) &Int
+
+                init() {
+                    self.x = &1 as &Int
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
+	})
+
+	t.Run("function parameter type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test(x: auth(mapping Identity) &Int) {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
+	})
+
+	t.Run("function return type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test(): auth(mapping Identity) &Int {
+                return &1 as &Int
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
+	})
+
+	t.Run("casting", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test(x: AnyStruct) {
+                x as! auth(mapping Identity) &Int
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
+	})
+
+	t.Run("type argument", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                Type<auth(mapping Identity) &Int>()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
+	})
+}
