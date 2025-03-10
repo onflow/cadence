@@ -180,6 +180,7 @@ func RequireCheckerErrors(t *testing.T, err error, count int) []error {
 
 	if !assert.Len(t, errs, count) {
 		t.Log(err.Error())
+		t.FailNow()
 	}
 
 	// Get the error message, to check that it can be successfully generated
