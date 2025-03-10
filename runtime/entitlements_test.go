@@ -1114,6 +1114,181 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 	})
 }
 
+func TestRuntimeImportedEntitlementMapInclude(t *testing.T) {
+	t.Parallel()
+
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
+	accountCodes := map[Location][]byte{}
+
+	furtherUpstreamDeployTx := DeploymentTransaction("FurtherUpstream", []byte(`
+        access(all) contract FurtherUpstream {
+            access(all) entitlement X
+            access(all) entitlement Y
+            access(all) entitlement Z
+
+            access(all) entitlement mapping M {
+                X -> Y
+                Y -> Z
+            }
+        }
+    `))
+
+	upstreamDeployTx := DeploymentTransaction("Upstream", []byte(`
+        import FurtherUpstream from 0x1
+
+        access(all) contract Upstream {
+            access(all) entitlement A
+            access(all) entitlement B
+            access(all) entitlement C
+
+            access(all) entitlement mapping M {
+                include FurtherUpstream.M
+
+                A -> FurtherUpstream.Y
+                FurtherUpstream.X -> B
+            }
+        }
+    `))
+
+	testDeployTx := DeploymentTransaction("Test", []byte(`
+        import FurtherUpstream from 0x1
+        import Upstream from 0x1
+
+        access(all) contract Test {
+            access(all) entitlement E
+            access(all) entitlement F
+            access(all) entitlement G
+
+            access(all) entitlement mapping M {
+                include Upstream.M
+
+                E -> FurtherUpstream.Z
+                E -> G
+                F -> Upstream.C
+                Upstream.C -> FurtherUpstream.X
+            }
+
+            access(all) struct S {
+                access(mapping M) let x: [Int]
+
+                init() {
+                    self.x = []
+                }
+            }
+        }
+    `))
+
+	script := []byte(`
+        import Test from 0x1
+        import Upstream from 0x1
+        import FurtherUpstream from 0x1
+
+        access(all) fun main() {
+            let ref1 = &Test.S() as auth(FurtherUpstream.X, Upstream.C, Test.E) &Test.S
+            ref1.x
+            let type1 = Type<
+                auth(
+                    // from map of FurtherUpstream.X
+                    FurtherUpstream.Y,
+                    Upstream.B,
+                    // from map of Upstream.C
+                    FurtherUpstream.X,
+                    // from map of Test.E
+                    FurtherUpstream.Z,
+                    Test.G
+                ) &Int
+            >()
+            assert(type1 != nil)
+
+            let ref2 = &Test.S() as auth(FurtherUpstream.Y, Upstream.A, Test.F) &Test.S
+            ref2.x
+            let type2 = Type<
+                auth(
+                    // from map of FurtherUpstream.Y
+                    FurtherUpstream.Z,
+                    // from map of Upstream.A
+                    FurtherUpstream.Y,
+                    // from map of Test.F
+                    Upstream.C
+                ) &Int
+            >()
+            assert(type2 != nil)
+
+            let ref3 = &Test.S() as auth(FurtherUpstream.Z, Upstream.B, Test.G) &Test.S
+            ref3.x
+        }
+     `)
+
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage:      storage,
+		OnProgramLog: func(message string) {},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	err := rt.ExecuteTransaction(
+		Script{
+			Source: furtherUpstreamDeployTx,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = rt.ExecuteTransaction(
+		Script{
+			Source: upstreamDeployTx,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = rt.ExecuteTransaction(
+		Script{
+			Source: testDeployTx,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = rt.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextScriptLocation(),
+		},
+	)
+
+	require.NoError(t, err)
+}
+
 func TestRuntimeEntitlementMapIncludeDeduped(t *testing.T) {
 	t.Parallel()
 
@@ -1291,7 +1466,7 @@ func TestRuntimeEntitlementMapIncludeDeduped(t *testing.T) {
 	  include P1
 	  include P2
 	  include P3
-	}      
+	}
 	
 	access(all) fun main() {}
     `)
