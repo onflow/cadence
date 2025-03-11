@@ -7789,33 +7789,25 @@ func TestCheckMappingAccessFieldType(t *testing.T) {
 func TestCheckEntitlementSetAccessIsNotMapping(t *testing.T) {
 	t.Parallel()
 
-	_, err := ParseAndCheckWithOptions(t,
-		`
-          entitlement E
+	_, err := ParseAndCheck(t, `
+      entitlement E
 
-          struct S {
-              access(E) var x: [Int]
+      struct S {
+          access(E) var x: [Int]
 
-              init() {
-                  self.x = [1]
-              }
+          init() {
+              self.x = [1]
           }
+      }
 
-          fun foo() {
-              let s = S()
-              let ref = &s as auth(E) &S
-              let ref2: auth(E) &[Int] = ref.x
-          }
-        `,
-		ParseAndCheckOptions{
-			Config: &sema.Config{
-				SuggestionsEnabled: true,
-			},
-		},
-	)
+      fun foo() {
+          let s = S()
+          let ref = &s as auth(E) &S
+          let ref2: auth(E) &[Int] = ref.x
+      }
+    `)
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	// TODO:
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }

@@ -21,7 +21,6 @@ package sema
 import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 )
 
 // NOTE: only called if the member expression is *not* an assignment
@@ -297,7 +296,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 
 	// Check access and report if inaccessible
 	accessRange := func() ast.Range { return ast.NewRangeFromPositioned(checker.memoryGauge, expression) }
-	isReadable, resultingAuthorization := checker.isReadableMember(accessedType, member, accessRange)
+	isReadable := checker.isReadableMember(accessedType, member, accessRange)
 	if !isReadable {
 		// if the member being accessed has entitled access,
 		// also report the authorization possessed by the reference so that developers
@@ -357,11 +356,12 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 		shouldReturnReference(accessedType, resultingType, isAssignment) &&
 		member.DeclarationKind == common.DeclarationKindField {
 
-		// Get a reference to the type
-		if resultingAuthorization == nil {
-			panic(errors.NewUnreachableError())
+		authorization := UnauthorizedAccess
+		if mappedAccess, ok := member.Access.(*EntitlementMapAccess); ok {
+			authorization = checker.mapAccessToAuthorization(mappedAccess, accessedType, accessRange)
 		}
-		resultingType = checker.getReferenceType(resultingType, resultingAuthorization)
+
+		resultingType = checker.getReferenceType(resultingType, authorization)
 		returnReference = true
 	}
 
@@ -370,7 +370,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 
 // isReadableMember returns true if the given member can be read from
 // in the current location of the checker, along with the authorization with which the result can be used
-func (checker *Checker) isReadableMember(accessedType Type, member *Member, accessRange func() ast.Range) (bool, Access) {
+func (checker *Checker) isReadableMember(accessedType Type, member *Member, accessRange func() ast.Range) bool {
 
 	// TODO: check if this is correct
 	if checker.Config.AccessCheckMode.IsReadableAccess(member.Access) ||
@@ -378,11 +378,7 @@ func (checker *Checker) isReadableMember(accessedType Type, member *Member, acce
 		// this prevents rights escalation attacks on entitlements
 		(member.Access.IsPrimitiveAccess() && checker.containerTypes[member.ContainerType]) {
 
-		if mappedAccess, isMappedAccess := member.Access.(*EntitlementMapAccess); isMappedAccess {
-			return true, checker.mapAccessToAuthorization(mappedAccess, accessedType, accessRange)
-		}
-
-		return true, member.Access
+		return true
 	}
 
 	switch access := member.Access.(type) {
@@ -394,7 +390,7 @@ func (checker *Checker) isReadableMember(accessedType Type, member *Member, acce
 
 			contractType := containingContractKindedType(member.ContainerType)
 			if checker.containerTypes[contractType] {
-				return true, member.Access
+				return true
 			}
 
 		case ast.AccessAccount:
@@ -403,12 +399,12 @@ func (checker *Checker) isReadableMember(accessedType Type, member *Member, acce
 
 			location := member.ContainerType.(LocatedType).GetLocation()
 			if common.LocationsInSameAccount(checker.Location, location) {
-				return true, member.Access
+				return true
 			}
 
 			memberAccountAccessHandler := checker.Config.MemberAccountAccessHandler
 			if memberAccountAccessHandler != nil {
-				return memberAccountAccessHandler(checker, location), member.Access
+				return memberAccountAccessHandler(checker, location)
 			}
 		}
 
@@ -420,19 +416,19 @@ func (checker *Checker) isReadableMember(accessedType Type, member *Member, acce
 		case *ReferenceType:
 			// when accessing a member on a reference, the read is allowed if
 			// the member's access permits the reference's authorization
-			return member.Access.PermitsAccess(ty.Authorization), member.Access
+			return member.Access.PermitsAccess(ty.Authorization)
 
 		default:
 			// when accessing a member on a non-reference, the read is always
 			// allowed as an owned value is considered fully authorized
-			return true, member.Access
+			return true
 		}
 
 	case *EntitlementMapAccess:
-		return true, checker.mapAccessToAuthorization(access, accessedType, accessRange)
+		return true
 	}
 
-	return false, member.Access
+	return false
 }
 
 func (checker *Checker) mapAccessToAuthorization(
