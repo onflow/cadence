@@ -5561,21 +5561,19 @@ func TestCheckIdentityIncludedMaps(t *testing.T) {
             }
 
             struct S {
-                access(mapping M) fun foo(): auth(mapping M) &Int {
-                    return &3
+                access(mapping M) let foo: [Int]
+
+                init() {
+                    self.foo = []
                 }
             }
 
-            fun foo(s: auth(E, F) &S): auth(E, F, G) &Int {
-                return s.foo()
+            fun foo(s: auth(E, F) &S): auth(E, F, G) &[Int] {
+                return s.foo
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 3)
-
-		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+		require.NoError(t, err)
 	})
 
 	t.Run("identity included disjoint", func(t *testing.T) {
@@ -5645,21 +5643,19 @@ func TestCheckGeneralIncludedMaps(t *testing.T) {
             }
 
             struct S {
-                access(mapping M) fun foo(): auth(mapping M) &Int {
-                    return &3
+                access(mapping M) let foo: [Int]
+
+                init() {
+                    self.foo = []
                 }
             }
 
-            fun foo(s: auth(E, X) &S): auth(F, Y) &Int {
-                return s.foo()
+            fun foo(s: auth(E, X) &S): auth(F, Y) &[Int] {
+                return s.foo
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 3)
-
-		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+		require.NoError(t, err)
 	})
 
 	t.Run("multiple includes", func(t *testing.T) {
@@ -5685,21 +5681,19 @@ func TestCheckGeneralIncludedMaps(t *testing.T) {
             }
 
             struct S {
-                access(mapping M) fun foo(): auth(mapping M) &Int {
-                    return &3
+                access(mapping M) let foo: [Int]
+
+                init() {
+                    self.foo = []
                 }
             }
 
-            fun foo(s: auth(E, X) &S): auth(F, Y) &Int {
-                return s.foo()
+            fun foo(s: auth(E, X) &S): auth(F, Y) &[Int] {
+                return s.foo
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 3)
-
-		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+		require.NoError(t, err)
 	})
 
 	t.Run("multiple includes with overlap", func(t *testing.T) {
@@ -5728,21 +5722,19 @@ func TestCheckGeneralIncludedMaps(t *testing.T) {
             }
 
             struct S {
-                access(mapping M) fun foo(): auth(mapping M) &Int {
-                    return &3
+                access(mapping M) let foo: [Int]
+
+                init() {
+                    self.foo = []
                 }
             }
 
-            fun foo(s: auth(E, X, F) &S): auth(F, Y, X) &Int {
-                return s.foo()
+            fun foo(s: auth(E, X, F) &S): auth(F, Y, X) &[Int] {
+                return s.foo
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 3)
-
-		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+		require.NoError(t, err)
 	})
 
 	t.Run("multilayer include", func(t *testing.T) {
@@ -5769,21 +5761,19 @@ func TestCheckGeneralIncludedMaps(t *testing.T) {
             }
 
             struct S {
-                access(mapping M) fun foo(): auth(mapping M) &Int {
-                    return &3
+                access(mapping M) let foo: [Int]
+
+                init() {
+                    self.foo = []
                 }
             }
 
-            fun foo(s: auth(E, X, F) &S): auth(F, Y, X) &Int {
-                return s.foo()
+            fun foo(s: auth(E, X, F) &S): auth(F, Y, X) &[Int] {
+                return s.foo
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 3)
-
-		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+		require.NoError(t, err)
 	})
 
 	t.Run("diamond include", func(t *testing.T) {
@@ -5815,21 +5805,19 @@ func TestCheckGeneralIncludedMaps(t *testing.T) {
             }
 
             struct S {
-                access(mapping M) fun foo(): auth(mapping M) &Int {
-                    return &3
+                access(mapping M) let foo: [Int]
+
+                init() {
+                    self.foo = []
                 }
             }
 
-            fun foo(s: auth(E, X, F) &S): auth(F, Y, X) &Int {
-                return s.foo()
+            fun foo(s: auth(E, X, F) &S): auth(F, Y, X) &[Int] {
+                return s.foo
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 3)
-
-		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+		require.NoError(t, err)
 	})
 
 	t.Run("multilayer include identity", func(t *testing.T) {
@@ -5857,21 +5845,19 @@ func TestCheckGeneralIncludedMaps(t *testing.T) {
             }
 
             struct S {
-                access(mapping M) fun foo(): auth(mapping M) &Int {
-                    return &3
+                access(mapping M) let foo: [Int]
+
+                init() {
+                    self.foo = []
                 }
             }
 
-            fun foo(s: auth(E, X, F) &S): auth(E, F, Y, X) &Int {
-                return s.foo()
+            fun foo(s: auth(E, X, F) &S): auth(E, F, Y, X) &[Int] {
+                return s.foo
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 3)
-
-		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+		require.NoError(t, err)
 
 		assert.True(t, checker.Elaboration.EntitlementMapType("S.test.A").IncludesIdentity)
 		assert.True(t, checker.Elaboration.EntitlementMapType("S.test.B").IncludesIdentity)
@@ -6180,8 +6166,8 @@ func TestCheckEntitlementOptionalChaining(t *testing.T) {
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		var invalidAccessErr *sema.InvalidAccessError
-		require.ErrorAs(t, errs[0], &invalidAccessErr)
+
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	})
 
 	t.Run("optional chain field access", func(t *testing.T) {
@@ -6193,6 +6179,7 @@ func TestCheckEntitlementOptionalChaining(t *testing.T) {
 
             struct S {
                 access(X, Y) let foo: Int
+
                 init() {
                     self.foo = 0
                 }
@@ -6208,7 +6195,7 @@ func TestCheckEntitlementOptionalChaining(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	})
 
-	t.Run("optional chain non reference", func(t *testing.T) {
+	t.Run("optional chain non-reference", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -6242,23 +6229,19 @@ func TestCheckEntitlementOptionalChaining(t *testing.T) {
             }
 
             struct S {
-                access(mapping E) let foo: auth(mapping E) &Int
+                access(mapping E) let foo: [Int]
 
                 init() {
-                    self.foo = &0 as auth(Y) &Int
+                    self.foo = []
                 }
             }
 
-            fun bar(r: (auth(X) &S)?): (auth(Y) &Int)? {
+            fun bar(r: auth(X) &S?): auth(Y) &[Int]? {
                 return r?.foo
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 3)
-
-		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+		require.NoError(t, err)
 	})
 }
 
