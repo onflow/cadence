@@ -3350,21 +3350,16 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
           }
 
           struct interface S {
-              access(mapping M) let x: auth(mapping M) &Int
+              access(mapping M) let x: [Int]
           }
 
           fun foo(ref1: auth(A) &{S}, ref2: auth(B) &{S}) {
-              let x1: auth(C) &Int = ref1.x
-              let x2: auth(C) &Int = ref2.x
+              let x1: auth(C) &[Int] = ref1.x
+              let x2: auth(C) &[Int] = ref2.x
           }
         `)
 
-		errs := RequireCheckerErrors(t, err, 4)
-
-		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[3])
+		require.NoError(t, err)
 	})
 
 	t.Run("multiple inputs and outputs", func(t *testing.T) {
@@ -3386,22 +3381,17 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
           }
 
           struct interface S {
-              access(mapping M) let x: auth(mapping M) &Int
+              access(mapping M) let x: [Int]
           }
 
           fun foo(ref: auth(A, X) &{S}) {
-              let x: auth(B, C, Y, Z) &Int = ref.x
+              let x: auth(B, C, Y, Z) &[Int] = ref.x
               let upRef = ref as auth(A) &{S}
-              let upX: auth(B, C) &Int = upRef.x
+              let upX: auth(B, C) &[Int] = upRef.x
           }
         `)
 
-		errs := RequireCheckerErrors(t, err, 4)
-
-		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[3])
+		require.NoError(t, err)
 	})
 
 	t.Run("multiple inputs and outputs mismatch", func(t *testing.T) {
@@ -3423,29 +3413,26 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
           }
 
           struct interface S {
-              access(mapping M) let x: auth(mapping M) &Int
+              access(mapping M) let x: [Int]
           }
 
           fun foo(ref: auth(A, X) &{S}) {
               let upRef = ref as auth(A) &{S}
-              let upX: auth(X, Y) &Int = upRef.x
+              let upX: auth(X, Y) &[Int] = upRef.x
           }
         `)
 
-		errs := RequireCheckerErrors(t, err, 3)
+		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
-
-		// access unauthorized, not X & Y
+		// access is B & C, not X & Y
 		var typeMismatchErr *sema.TypeMismatchError
-		require.ErrorAs(t, errs[2], &typeMismatchErr)
+		require.ErrorAs(t, errs[0], &typeMismatchErr)
 		assert.Equal(t,
-			"auth(X, Y) &Int",
+			"auth(X, Y) &[Int]",
 			typeMismatchErr.ExpectedType.QualifiedString(),
 		)
 		assert.Equal(t,
-			"&Int",
+			"auth(B, C) &[Int]",
 			typeMismatchErr.ActualType.QualifiedString(),
 		)
 	})
@@ -3462,18 +3449,15 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
           }
 
           struct interface S {
-              access(mapping M) let x: auth(mapping M) &Int
+              access(mapping M) let x: [Int]
           }
 
           fun foo(ref: &{S}) {
-              let x: &Int = ref.x
+              let x: &[Int] = ref.x
           }
         `)
 
-		errs := RequireCheckerErrors(t, err, 2)
-
-		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
+		require.NoError(t, err)
 	})
 
 	t.Run("unauthorized downcast", func(t *testing.T) {
@@ -3488,28 +3472,25 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
           }
 
           struct interface S {
-              access(mapping M) let x: auth(mapping M) &Int
+              access(mapping M) let x: [Int]
           }
 
           fun foo(ref: &{S}) {
-              let x: auth(Y) &Int = ref.x
+              let x: auth(Y) &[Int] = ref.x
           }
         `)
 
-		errs := RequireCheckerErrors(t, err, 3)
-
-		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
+		errs := RequireCheckerErrors(t, err, 1)
 
 		// result is not authorized
 		var typeMismatchErr *sema.TypeMismatchError
-		require.ErrorAs(t, errs[2], &typeMismatchErr)
+		require.ErrorAs(t, errs[0], &typeMismatchErr)
 		assert.Equal(t,
-			"auth(Y) &Int",
+			"auth(Y) &[Int]",
 			typeMismatchErr.ExpectedType.QualifiedString(),
 		)
 		assert.Equal(t,
-			"&Int",
+			"&[Int]",
 			typeMismatchErr.ActualType.QualifiedString(),
 		)
 	})
@@ -3528,20 +3509,18 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
           }
 
           struct S {
-              access(mapping M) let x: auth(mapping M) &Int
+              access(mapping M) let x: [Int]
+
               init() {
-                  self.x = &1 as auth(Y, Z) &Int
+                  self.x = []
               }
           }
 
           let ref = &S() as auth(X) &S
-          let x = ref.x
+          let x: auth(Y, Z) &[Int] = ref.x
         `)
 
-		errs := RequireCheckerErrors(t, err, 2)
-
-		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
+		require.NoError(t, err)
 	})
 
 	t.Run("basic with update", func(t *testing.T) {
@@ -3558,57 +3537,22 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
           }
 
           struct S {
-              access(mapping M) var x: auth(mapping M) &Int
+              access(mapping M) var x: [Int]
 
               init() {
-                  self.x = &1 as auth(Y, Z) &Int
+                  self.x = []
               }
 
-              fun updateX(x: auth(Y, Z) &Int) {
+              fun updateX(x: [Int]) {
                   self.x = x
               }
           }
         `)
 
-		errs := RequireCheckerErrors(t, err, 2)
-
-		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
+		require.NoError(t, err)
 	})
 
-	t.Run("basic with update error", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-          entitlement X
-          entitlement Y
-          entitlement Z
-
-          entitlement mapping M {
-              X -> Y
-              X -> Z
-          }
-
-          struct S {
-              access(mapping M) var x: auth(mapping M) &Int
-
-              init() {
-                  self.x = &1 as auth(Y, Z) &Int
-              }
-
-              fun updateX(x: auth(Z) &Int) {
-                  self.x = x
-              }
-          }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 2)
-
-		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
-	})
-
-	t.Run("basic with unauthorized init", func(t *testing.T) {
+	t.Run("owned set field", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -3620,113 +3564,53 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
           }
 
           struct S {
-              access(mapping M) let x: auth(mapping M) &Int
+              access(mapping M) var x: [Int]
+
               init() {
-                  self.x = &1 as &Int
+                  self.x = []
               }
           }
 
-          let ref = &S() as auth(X) &S
-          let x = ref.x
+          fun test() {
+              let s = S()
+              s.x = [1]
+          }
         `)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
+		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[0])
 	})
 
-	t.Run("basic with underauthorized init", func(t *testing.T) {
+	t.Run("reference set field", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
           entitlement X
           entitlement Y
-          entitlement Z
 
           entitlement mapping M {
               X -> Y
-              X -> Z
           }
 
           struct S {
-              access(mapping M) let x: auth(mapping M) &Int
+              access(mapping M) var x: [Int]
 
               init() {
-                  self.x = &1 as auth(Y) &Int
+                  self.x = []
               }
           }
 
-          let ref = &S() as auth(X) &S
-          let x = ref.x
+          fun test() {
+              let ref = &S() as auth(X) &S
+              ref.x = []
+          }
         `)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
-	})
-
-	t.Run("basic with underauthorized disjunction init", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-          entitlement X
-          entitlement Y
-          entitlement Z
-
-          entitlement mapping M {
-              X -> Y
-              X -> Z
-          }
-
-          struct S {
-              access(mapping M) let x: auth(mapping M) &Int
-
-              init() {
-                  self.x = (&1 as auth(Y) &Int) as auth(Y | Z) &Int
-              }
-          }
-
-          let ref = &S() as auth(X) &S
-          let x = ref.x
-        `)
-
-		errs := RequireCheckerErrors(t, err, 2)
-
-		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
-	})
-
-	t.Run("basic with non-reference init", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-          entitlement X
-          entitlement Y
-          entitlement Z
-
-          entitlement mapping M {
-              X -> Y
-              X -> Z
-          }
-
-          struct S {
-              access(mapping M) let x: auth(mapping M) &Int
-
-              init() {
-                  self.x = &1 as &Int
-              }
-          }
-
-          let ref = &S() as auth(X) &S
-          let x = ref.x
-        `)
-
-		errs := RequireCheckerErrors(t, err, 2)
-
-		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
+		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[0])
+		// TODO: type mismatch error for assignment?
 	})
 }
 
@@ -4895,6 +4779,7 @@ func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
 
             struct S {
                 access(E) var x: Int
+
                 init() {
                     self.x = 1
                 }
@@ -4907,6 +4792,7 @@ func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
+
 		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[0])
 	})
 
@@ -4918,6 +4804,7 @@ func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
 
             struct S {
                 access(E) var x: Int
+
                 init() {
                     self.x = 1
                 }
@@ -4931,6 +4818,7 @@ func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
+
 		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[0])
 	})
 
@@ -4946,23 +4834,22 @@ func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
             }
 
             struct S {
-                access(mapping M) var x: auth(mapping M) &Int
+                access(mapping M) var x: [Int]
+
                 init() {
-                    self.x = &1 as auth(Y) &Int
+                    self.x = []
                 }
             }
 
             fun foo() {
                 let s = S()
-                s.x = &1 as auth(Y) &Int
+                s.x = []
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 3)
+		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
-		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[2])
+		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[0])
 	})
 
 	t.Run("mapped authorized", func(t *testing.T) {
@@ -4977,24 +4864,23 @@ func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
           }
 
           struct S {
-              access(mapping M) var x: auth(mapping M) &Int
+              access(mapping M) var x: [Int]
+
               init() {
-                  self.x = &1 as auth(Y) &Int
+                  self.x = []
               }
           }
 
           fun foo() {
               let s = S()
               let ref = &s as auth(X) &S
-              ref.x = &1 as auth(Y) &Int
+              ref.x = []
           }
         `)
 
-		errs := RequireCheckerErrors(t, err, 3)
+		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
-		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[2])
+		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[0])
 	})
 
 	t.Run("basic mutate", func(t *testing.T) {
@@ -5005,6 +4891,7 @@ func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
 
             struct S {
                 access(E) var x: [Int]
+
                 init() {
                     self.x = [1]
                 }
