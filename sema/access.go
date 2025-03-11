@@ -359,46 +359,54 @@ func (e *EntitlementMapAccess) entitlementImage(entitlement *EntitlementType) *E
 	return imageMap
 }
 
-// Image applies all the entitlements in the `argumentAccess` to the function
-// defined by the map in `e`, producing a new entitlement set of the image of the
-// arguments.
-func (e *EntitlementMapAccess) Image(inputs Access, astRange func() ast.Range) (Access, error) {
+// Image applies all the entitlements in the `argumentAccess` to the function defined by the map in `e`,
+// producing a new entitlement set of the image of the arguments.
+func (e *EntitlementMapAccess) Image(gauge common.MemoryGauge, inputs Access, pos ast.HasPosition) (Access, error) {
 
 	switch inputs := inputs.(type) {
 	// primitive access always passes trivially through the map
 	case PrimitiveAccess:
 		return inputs, nil
+
 	case EntitlementSetAccess:
 		output := orderedmap.New[EntitlementOrderedSet](inputs.Entitlements.Len())
-		var err error = nil
+
+		var err error
 		inputs.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
 			entitlementImage := e.entitlementImage(entitlement)
-			// the image of a single element is always a conjunctive set; consider a mapping
-			// M defined as X -> Y, X -> Z, A -> B, A -> C. M(X) = Y & Z and M(A) = B & C.
+			output.SetAll(entitlementImage)
+
+			// The image of a single element is always a conjunctive set;
+			// consider a mapping M defined as X -> Y, X -> Z, A -> B, A -> C. M(X) = Y & Z and M(A) = B & C.
 			// Thus M(X | A) would be ((Y & Z) | (B & C)), which is a disjunction of two conjunctions,
-			// which is too complex to be represented in Cadence as a type. Thus whenever such a type
-			// would arise, we raise an error instead
-			if inputs.SetKind == Disjunction && entitlementImage.Len() > 1 {
+			// which is too complex to be represented in Cadence as a type.
+			// Thus, whenever such a type would arise, we raise an error instead
+			if err == nil &&
+				inputs.SetKind == Disjunction &&
+				entitlementImage.Len() > 1 {
+
 				err = &UnrepresentableEntitlementMapOutputError{
 					Input: inputs,
 					Map:   e.Type,
-					Range: astRange(),
+					Range: ast.NewRangeFromPositioned(gauge, pos),
 				}
 			}
-			output.SetAll(entitlementImage)
 		})
 		if err != nil {
 			return nil, err
 		}
+
 		// the image of a set through a map is the conjunction of all the output sets
 		if output.Len() == 0 {
 			return UnauthorizedAccess, nil
 		}
+
 		return EntitlementSetAccess{
 			Entitlements: output,
 			SetKind:      inputs.SetKind,
 		}, nil
 	}
+
 	return UnauthorizedAccess, nil
 }
 

@@ -295,8 +295,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 	}
 
 	// Check access and report if inaccessible
-	accessRange := func() ast.Range { return ast.NewRangeFromPositioned(checker.memoryGauge, expression) }
-	isReadable := checker.isReadableMember(accessedType, member, accessRange)
+	isReadable := checker.isReadableMember(accessedType, member)
 	if !isReadable {
 		// if the member being accessed has entitled access,
 		// also report the authorization possessed by the reference so that developers
@@ -314,7 +313,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 				PossessedAccess:     possessedAccess,
 				DeclarationKind:     member.DeclarationKind,
 				suggestEntitlements: checker.Config.SuggestionsEnabled,
-				Range:               accessRange(),
+				Range:               ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 			},
 		)
 	}
@@ -358,7 +357,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 
 		authorization := UnauthorizedAccess
 		if mappedAccess, ok := member.Access.(*EntitlementMapAccess); ok {
-			authorization = checker.mapAccessToAuthorization(mappedAccess, accessedType, accessRange)
+			authorization = checker.mapAccessToAuthorization(mappedAccess, accessedType, expression)
 		}
 
 		resultingType = checker.getReferenceType(resultingType, authorization)
@@ -370,7 +369,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 
 // isReadableMember returns true if the given member can be read from
 // in the current location of the checker, along with the authorization with which the result can be used
-func (checker *Checker) isReadableMember(accessedType Type, member *Member, accessRange func() ast.Range) bool {
+func (checker *Checker) isReadableMember(accessedType Type, member *Member) bool {
 
 	// TODO: check if this is correct
 	if checker.Config.AccessCheckMode.IsReadableAccess(member.Access) ||
@@ -411,7 +410,7 @@ func (checker *Checker) isReadableMember(accessedType Type, member *Member, acce
 	case EntitlementSetAccess:
 		switch ty := accessedType.(type) {
 		case *OptionalType:
-			return checker.isReadableMember(ty.Type, member, accessRange)
+			return checker.isReadableMember(ty.Type, member)
 
 		case *ReferenceType:
 			// when accessing a member on a reference, the read is allowed if
@@ -434,12 +433,16 @@ func (checker *Checker) isReadableMember(accessedType Type, member *Member, acce
 func (checker *Checker) mapAccessToAuthorization(
 	mappedAccess *EntitlementMapAccess,
 	accessedType Type,
-	accessRange func() ast.Range,
+	pos ast.HasPosition,
 ) Access {
 
 	switch accessedType := accessedType.(type) {
 	case *ReferenceType:
-		grantedAccess, err := mappedAccess.Image(accessedType.Authorization, accessRange)
+		grantedAccess, err := mappedAccess.Image(
+			checker.memoryGauge,
+			accessedType.Authorization,
+			pos,
+		)
 		if err != nil {
 			checker.report(err)
 			return UnauthorizedAccess
@@ -448,7 +451,11 @@ func (checker *Checker) mapAccessToAuthorization(
 		return grantedAccess
 
 	case *OptionalType:
-		return checker.mapAccessToAuthorization(mappedAccess, accessedType.Type, accessRange)
+		return checker.mapAccessToAuthorization(
+			mappedAccess,
+			accessedType.Type,
+			pos,
+		)
 
 	default:
 		return UnauthorizedAccess
