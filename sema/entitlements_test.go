@@ -7324,6 +7324,11 @@ func TestCheckMappingAccessFieldType(t *testing.T) {
 		test(t, mapping, "&{Int: &AnyStruct}", false)
 		test(t, mapping, "&{Int: T}", false)
 		test(t, mapping, "&{Int: &T}", false)
+
+		// Capability
+		test(t, mapping, "Capability", false)
+		// Reference to capability
+		test(t, mapping, "&Capability", false)
 	}
 }
 
