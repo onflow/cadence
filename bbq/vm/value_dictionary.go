@@ -433,7 +433,7 @@ func (v *DictionaryValue) iterate(
 
 func newValueComparator(conf *Config) atree.ValueComparator {
 	return func(storage atree.SlabStorage, atreeValue atree.Value, otherStorable atree.Storable) (bool, error) {
-		inter := conf.interpreter()
+		inter := conf.Interpreter()
 		locationRange := interpreter.EmptyLocationRange
 		value := interpreter.MustConvertStoredValue(inter, atreeValue)
 		otherValue := interpreter.StoredValue(inter, otherStorable, storage)
@@ -443,7 +443,7 @@ func newValueComparator(conf *Config) atree.ValueComparator {
 
 func newHashInputProvider(conf *Config) atree.HashInputProvider {
 	return func(value atree.Value, scratch []byte) ([]byte, error) {
-		inter := conf.interpreter()
+		inter := conf.Interpreter()
 		locationRange := interpreter.EmptyLocationRange
 		hashInput := interpreter.MustConvertStoredValue(inter, value).(interpreter.HashableValue).
 			HashInput(inter, locationRange, scratch)

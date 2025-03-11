@@ -25,7 +25,7 @@ import (
 
 func IsSubType(config *Config, sourceType, targetType bbq.StaticType) bool {
 	// TODO: Avoid conversion to sema types.
-	inter := config.interpreter()
+	inter := config.Interpreter()
 	return inter.IsSubType(sourceType, targetType)
 }
 

@@ -211,7 +211,7 @@ func getCapabilityController(
 	storageMapKey := interpreter.Uint64StorageMapKey(capabilityID)
 
 	accountStorage := config.Storage.GetDomainStorageMap(
-		config.interpreter(),
+		config.Interpreter(),
 		address,
 		common.StorageDomainCapabilityController,
 		false,
