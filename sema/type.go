@@ -157,7 +157,7 @@ type Type interface {
 	//  - Interfaces
 	//  - Arrays (Variable/Constant sized)
 	//  - Dictionaries
-	//  - Restricted types
+	//  - Intersection types
 	//  - Optionals of the above.
 	//  - Then there are also built-in simple types, like StorageCapabilityControllerType, BlockType, etc.
 	//    where the type is implemented as a simple type, but they also have fields.
