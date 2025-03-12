@@ -413,17 +413,19 @@ func (checker *Checker) isReadableMember(accessedType Type, member *Member) bool
 			return checker.isReadableMember(ty.Type, member)
 
 		case *ReferenceType:
-			// when accessing a member on a reference, the read is allowed if
+			// When accessing a member on a reference, the read is allowed if
 			// the member's access permits the reference's authorization
 			return member.Access.PermitsAccess(ty.Authorization)
 
 		default:
-			// when accessing a member on a non-reference, the read is always
+			// When accessing a member on a non-reference, the read is always
 			// allowed as an owned value is considered fully authorized
 			return true
 		}
 
 	case *EntitlementMapAccess:
+		// Accessing a member with mapping access, on a non-reference or a reference,
+		// is always allowed. Only the entitlements granted through the mapping will differ
 		return true
 	}
 
