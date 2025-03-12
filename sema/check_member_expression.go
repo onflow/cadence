@@ -372,16 +372,16 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 func (checker *Checker) isReadableMember(accessedType Type, member *Member) bool {
 
 	// TODO: check if this is correct
-	if checker.Config.AccessCheckMode.IsReadableAccess(member.Access) ||
-		// only allow references unrestricted access to members in their own container that are not entitled
-		// this prevents rights escalation attacks on entitlements
-		(member.Access.IsPrimitiveAccess() && checker.containerTypes[member.ContainerType]) {
-
+	if checker.Config.AccessCheckMode.IsReadableAccess(member.Access) {
 		return true
 	}
 
 	switch access := member.Access.(type) {
 	case PrimitiveAccess:
+		if checker.containerTypes[member.ContainerType] {
+			return true
+		}
+
 		switch ast.PrimitiveAccess(access) {
 		case ast.AccessContract:
 			// If the member allows access from the containing contract,
