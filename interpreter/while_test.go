@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 )
 
@@ -32,7 +31,7 @@ func TestInterpretWhileStatement(t *testing.T) {
 
 	t.Parallel()
 
-	invokable := test_utils.ParseCheckAndPrepare(t, `
+	invokable := parseCheckAndPrepare(t, `
        fun test(): Int {
            var x = 0
            while x < 5 {
@@ -58,7 +57,7 @@ func TestInterpretWhileStatementWithReturn(t *testing.T) {
 
 	t.Parallel()
 
-	invokable := test_utils.ParseCheckAndPrepare(t, `
+	invokable := parseCheckAndPrepare(t, `
        fun test(): Int {
            var x = 0
            while x < 10 {
@@ -86,7 +85,7 @@ func TestInterpretWhileStatementWithContinue(t *testing.T) {
 
 	t.Parallel()
 
-	invokable := test_utils.ParseCheckAndPrepare(t, `
+	invokable := parseCheckAndPrepare(t, `
        fun test(): Int {
            var i = 0
            var x = 0
@@ -116,7 +115,7 @@ func TestInterpretWhileStatementWithBreak(t *testing.T) {
 
 	t.Parallel()
 
-	invokable := test_utils.ParseCheckAndPrepare(t, `
+	invokable := parseCheckAndPrepare(t, `
        fun test(): Int {
            var x = 0
            while x < 10 {
