@@ -1956,7 +1956,7 @@ func isValidMappingAccessMemberType(ty Type) bool {
 			return false
 		}
 
-		return ty.ContainFieldsOrElements()
+		return true
 	}
 }
 

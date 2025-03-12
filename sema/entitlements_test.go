@@ -2034,12 +2034,11 @@ func TestCheckEntitlementInheritance(t *testing.T) {
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 4)
+		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
-		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[3])
+		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[1])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
 	})
 }
 
@@ -3002,14 +3001,13 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
           }
         `)
 
-		errs := RequireCheckerErrors(t, err, 4)
+		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
-		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
+		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[1])
 
 		var typeMismatchErr *sema.TypeMismatchError
-		require.ErrorAs(t, errs[3], &typeMismatchErr)
+		require.ErrorAs(t, errs[2], &typeMismatchErr)
 		assert.Equal(t,
 			"auth(X, Y) &Int?",
 			typeMismatchErr.ExpectedType.QualifiedString(),
@@ -6523,11 +6521,10 @@ func TestCheckEntitlementMappingEscalation(t *testing.T) {
             }
     `)
 
-		errs := RequireCheckerErrors(t, err, 3)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
 
 	t.Run("member expression in indexer", func(t *testing.T) {
@@ -6762,12 +6759,11 @@ func TestCheckEntitlementMappingComplexFields(t *testing.T) {
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 4)
+		errs := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
 		assert.IsType(t, &sema.InvalidAccessError{}, errs[2])
-		assert.IsType(t, &sema.InvalidAccessError{}, errs[3])
 	})
 
 	t.Run("array mapped field escape", func(t *testing.T) {
@@ -6809,11 +6805,10 @@ func TestCheckEntitlementMappingComplexFields(t *testing.T) {
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 3)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[1])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[2])
 	})
 
 	t.Run("dictionary mapped field", func(t *testing.T) {
@@ -6923,10 +6918,9 @@ func TestCheckEntitlementMappingComplexFields(t *testing.T) {
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
 	})
 
 	t.Run("lambda mapped array field", func(t *testing.T) {
@@ -7018,11 +7012,10 @@ func TestCheckEntitlementMappingComplexFields(t *testing.T) {
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 3)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
-		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[2])
+		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[1])
 	})
 }
 
@@ -7281,7 +7274,7 @@ func TestCheckMappingAccessFieldType(t *testing.T) {
 
 	for _, mapping := range []string{"Identity", "M"} {
 		// Primitive
-		test(t, mapping, "Int", false)
+		test(t, mapping, "Int", true)
 		// Reference to primitive
 		test(t, mapping, "&Int", false)
 
@@ -7326,9 +7319,12 @@ func TestCheckMappingAccessFieldType(t *testing.T) {
 		test(t, mapping, "&{Int: &T}", false)
 
 		// Capability
-		test(t, mapping, "Capability", false)
+		test(t, mapping, "Capability", true)
 		// Reference to capability
 		test(t, mapping, "&Capability", false)
+
+		// Function
+		test(t, mapping, "fun()", true)
 	}
 }
 
