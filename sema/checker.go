@@ -512,7 +512,6 @@ func (checker *Checker) declareGlobalFunctionDeclaration(declaration *ast.Functi
 	functionType := checker.functionType(
 		declaration.IsNative(),
 		declaration.Purity,
-		UnauthorizedAccess,
 		declaration.TypeParameterList,
 		declaration.ParameterList,
 		declaration.ReturnTypeAnnotation,
@@ -1282,7 +1281,6 @@ func (checker *Checker) ConvertTypeAnnotation(typeAnnotation *ast.TypeAnnotation
 func (checker *Checker) functionType(
 	isNative bool,
 	purity ast.FunctionPurity,
-	access Access,
 	typeParameterList *ast.TypeParameterList,
 	parameterList *ast.ParameterList,
 	returnTypeAnnotation *ast.TypeAnnotation,

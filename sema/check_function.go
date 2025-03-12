@@ -104,7 +104,6 @@ func (checker *Checker) visitFunctionDeclaration(
 		functionType = checker.functionType(
 			declaration.IsNative(),
 			declaration.Purity,
-			access,
 			declaration.TypeParameterList,
 			declaration.ParameterList,
 			declaration.ReturnTypeAnnotation,
@@ -534,7 +533,6 @@ func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpressi
 	functionType := checker.functionType(
 		false,
 		expression.Purity,
-		UnauthorizedAccess,
 		nil,
 		expression.ParameterList,
 		expression.ReturnTypeAnnotation,

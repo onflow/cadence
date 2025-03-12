@@ -1865,7 +1865,6 @@ func (checker *Checker) defaultMembersAndOrigins(
 		functionType := checker.functionType(
 			function.IsNative(),
 			function.Purity,
-			functionAccess,
 			function.TypeParameterList,
 			function.ParameterList,
 			function.ReturnTypeAnnotation,
