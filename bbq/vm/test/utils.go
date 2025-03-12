@@ -562,6 +562,17 @@ func compileAndInvokeWithOptions(
 	arguments ...vm.Value,
 ) (vm.Value, error) {
 
+	programVM := CompileAndPrepareToInvoke(t, code, options)
+
+	result, err := programVM.Invoke(funcName, arguments...)
+	if err == nil {
+		require.Equal(t, 0, programVM.StackSize())
+	}
+
+	return result, err
+}
+
+func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMOptions) *vm.VM {
 	programs := map[common.Location]*compiledProgram{}
 
 	location := common.ScriptLocation{0x1}
@@ -600,13 +611,7 @@ func compileAndInvokeWithOptions(
 		program,
 		vmConfig,
 	)
-
-	result, err := programVM.Invoke(funcName, arguments...)
-	if err == nil {
-		require.Equal(t, 0, programVM.StackSize())
-	}
-
-	return result, err
+	return programVM
 }
 
 func compileAndInvokeWithOptionsAndPrograms(

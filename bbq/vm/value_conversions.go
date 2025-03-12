@@ -173,7 +173,7 @@ func VMValueToInterpreterValue(config *Config, value Value) interpreter.Value {
 			nil,
 		)
 	case *StorageReferenceValue:
-		inter := config.interpreter()
+		inter := config.Interpreter()
 		semaBorrowType, err := inter.ConvertStaticToSemaType(value.BorrowedType)
 		if err != nil {
 			panic(err)

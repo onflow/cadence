@@ -139,7 +139,7 @@ func (v *CompositeValue) SetMember(config *Config, name string, value Value) {
 	}
 
 	if existingStorable != nil {
-		inter := config.interpreter()
+		inter := config.Interpreter()
 		existingValue := interpreter.StoredValue(nil, existingStorable, config.Storage)
 
 		existingValue.DeepRemove(inter, true) // existingValue is standalone because it was overwritten in parent container.

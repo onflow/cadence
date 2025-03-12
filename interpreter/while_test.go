@@ -31,7 +31,7 @@ func TestInterpretWhileStatement(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	invokable := parseCheckAndPrepare(t, `
        fun test(): Int {
            var x = 0
            while x < 5 {
@@ -42,12 +42,12 @@ func TestInterpretWhileStatement(t *testing.T) {
 
     `)
 
-	value, err := inter.Invoke("test")
+	value, err := invokable.Invoke("test")
 	require.NoError(t, err)
 
 	AssertValuesEqual(
 		t,
-		inter,
+		invokable,
 		interpreter.NewUnmeteredIntValueFromInt64(6),
 		value,
 	)
@@ -57,7 +57,7 @@ func TestInterpretWhileStatementWithReturn(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	invokable := parseCheckAndPrepare(t, `
        fun test(): Int {
            var x = 0
            while x < 10 {
@@ -70,12 +70,12 @@ func TestInterpretWhileStatementWithReturn(t *testing.T) {
        }
     `)
 
-	value, err := inter.Invoke("test")
+	value, err := invokable.Invoke("test")
 	require.NoError(t, err)
 
 	AssertValuesEqual(
 		t,
-		inter,
+		invokable,
 		interpreter.NewUnmeteredIntValueFromInt64(6),
 		value,
 	)
@@ -85,7 +85,7 @@ func TestInterpretWhileStatementWithContinue(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	invokable := parseCheckAndPrepare(t, `
        fun test(): Int {
            var i = 0
            var x = 0
@@ -100,12 +100,12 @@ func TestInterpretWhileStatementWithContinue(t *testing.T) {
        }
     `)
 
-	value, err := inter.Invoke("test")
+	value, err := invokable.Invoke("test")
 	require.NoError(t, err)
 
 	AssertValuesEqual(
 		t,
-		inter,
+		invokable,
 		interpreter.NewUnmeteredIntValueFromInt64(6),
 		value,
 	)
@@ -115,7 +115,7 @@ func TestInterpretWhileStatementWithBreak(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	invokable := parseCheckAndPrepare(t, `
        fun test(): Int {
            var x = 0
            while x < 10 {
@@ -128,12 +128,12 @@ func TestInterpretWhileStatementWithBreak(t *testing.T) {
        }
     `)
 
-	value, err := inter.Invoke("test")
+	value, err := invokable.Invoke("test")
 	require.NoError(t, err)
 
 	AssertValuesEqual(
 		t,
-		inter,
+		invokable,
 		interpreter.NewUnmeteredIntValueFromInt64(5),
 		value,
 	)

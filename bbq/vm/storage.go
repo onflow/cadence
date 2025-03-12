@@ -53,7 +53,7 @@ func ReadStored(
 	storageDomain, _ := common.StorageDomainFromIdentifier(domain)
 
 	accountStorage := storage.GetDomainStorageMap(
-		config.interpreter(),
+		config.Interpreter(),
 		address,
 		storageDomain,
 		false,
@@ -74,7 +74,7 @@ func WriteStored(
 	value Value,
 ) (existed bool) {
 
-	inter := config.interpreter()
+	inter := config.Interpreter()
 
 	accountStorage := config.Storage.GetDomainStorageMap(inter, storageAddress, domain, true)
 	interValue := VMValueToInterpreterValue(config, value)
@@ -107,7 +107,7 @@ func StoredValueExists(
 	identifier interpreter.StorageMapKey,
 ) bool {
 	accountStorage := config.Storage.GetDomainStorageMap(
-		config.interpreter(),
+		config.Interpreter(),
 		storageAddress,
 		domain,
 		false,

@@ -75,7 +75,7 @@ func (c *Config) WithAccountHandler(handler stdlib.AccountHandler) *Config {
 }
 
 // TODO: This is temporary. Remove once storing/reading is supported for VM values.
-func (c *Config) interpreter() *interpreter.Interpreter {
+func (c *Config) Interpreter() *interpreter.Interpreter {
 	if c.inter == nil {
 		inter, err := interpreter.NewInterpreter(
 			nil,

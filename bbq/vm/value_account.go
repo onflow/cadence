@@ -259,7 +259,7 @@ func checkAndIssueStorageCapabilityControllerWithType(
 	borrowType, ok := ty.(*interpreter.ReferenceStaticType)
 	if !ok {
 		// TODO: remove conversion. se static type in error
-		semaType, err := config.interpreter().ConvertStaticToSemaType(ty)
+		semaType, err := config.Interpreter().ConvertStaticToSemaType(ty)
 		if err != nil {
 			panic(err)
 		}
@@ -376,7 +376,7 @@ func recordStorageCapabilityController(
 	storageMapKey := interpreter.StringStorageMapKey(identifier)
 
 	accountStorage := config.Storage.GetDomainStorageMap(
-		config.interpreter(),
+		config.Interpreter(),
 		address,
 		common.StorageDomainPathCapability,
 		true,
@@ -396,7 +396,7 @@ func recordStorageCapabilityController(
 			setValue,
 		)
 		capabilityIDSetInterValue := VMValueToInterpreterValue(config, capabilityIDSet)
-		accountStorage.SetValue(config.interpreter(), storageMapKey, capabilityIDSetInterValue)
+		accountStorage.SetValue(config.Interpreter(), storageMapKey, capabilityIDSetInterValue)
 	} else {
 		capabilityIDSet := readValue.(*DictionaryValue)
 		existing := capabilityIDSet.Insert(config, setKey, setValue)
