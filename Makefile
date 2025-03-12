@@ -63,13 +63,15 @@ build-compatibility-check:
 ci:
 	# test all packages
 	go test -coverprofile=coverage.txt -covermode=atomic -parallel 8 -race -coverpkg $(COVERPKGS) ./...
+	test-with-compiler
+	test-tools
 	# run interpreter smoke tests. results from run above are reused, so no tests runs are duplicated
 	go test -count=5 ./interpreter/... -runSmokeTests=true -validateAtree=false
 	# remove coverage of empty functions from report
 	sed -i -e 's/^.* 0 0$$//' coverage.txt
 
 .PHONY: test
-test: test-all-packages test-tools
+test: test-all-packages test-tools test-with-compiler
 
 .PHONY: test-all-packages
 test-all-packages:
@@ -81,6 +83,12 @@ test-tools:
 	(cd ./tools/compatibility-check && go test -parallel 8 ./)
 	(cd ./tools/constructorcheck && go test -parallel 8 ./)
 	(cd ./tools/maprange && go test -parallel 8 ./)
+
+
+.PHONY: test-with-compiler
+test-with-compiler:
+	(go test -parallel 8 ./interpreter/... -compile=true)
+
 
 .PHONY: lint-github-actions
 lint-github-actions: build-linter

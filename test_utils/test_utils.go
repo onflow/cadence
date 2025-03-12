@@ -43,13 +43,6 @@ type ParseCheckAndInterpretOptions struct {
 	HandleCheckerError func(error)
 }
 
-var compile = false
-
-func init() {
-	// TODO: Set the env-variable and re-run the tests.
-	// compile = os.Getenv("COMPILE") == "true"
-}
-
 type Invokable interface {
 	interpreter.ValueComparisonContext
 	Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error)
@@ -78,7 +71,7 @@ func (v *VMInvokable) Invoke(functionName string, arguments ...interpreter.Value
 	return interpreterValue, err
 }
 
-func ParseCheckAndPrepare(t testing.TB, code string) Invokable {
+func ParseCheckAndPrepare(t testing.TB, code string, compile bool) Invokable {
 	t.Helper()
 
 	if !compile {
