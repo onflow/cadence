@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"flag"
 	"fmt"
 	"testing"
 
@@ -27,7 +28,15 @@ import (
 	"github.com/onflow/cadence/common"
 	. "github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/test_utils"
 )
+
+var compile = flag.Bool("compile", false, "Run tests using the compiler")
+
+func parseCheckAndPrepare(tb testing.TB, code string) test_utils.Invokable {
+	tb.Helper()
+	return test_utils.ParseCheckAndPrepare(tb, code, *compile)
+}
 
 func TestInterpreterOptionalBoxing(t *testing.T) {
 
