@@ -7275,18 +7275,27 @@ func TestCheckMappingAccessFieldType(t *testing.T) {
 	for _, mapping := range []string{"Identity", "M"} {
 		// Primitive
 		test(t, mapping, "Int", true)
+		test(t, mapping, "Int?", true)
 		// Reference to primitive
 		test(t, mapping, "&Int", false)
+		test(t, mapping, "(&Int)?", false)
+		test(t, mapping, "&(Int?)", false)
 
 		// AnyStruct
 		test(t, mapping, "AnyStruct", false)
+		test(t, mapping, "AnyStruct?", false)
 		// Reference to AnyStruct
 		test(t, mapping, "&AnyStruct", false)
+		test(t, mapping, "(&AnyStruct)?", false)
+		test(t, mapping, "&(AnyStruct?)", false)
 
 		// Struct with reference field
 		test(t, mapping, "T", true)
+		test(t, mapping, "T?", true)
 		// Reference to struct with reference field
 		test(t, mapping, "&T", false)
+		test(t, mapping, "(&T)?", false)
+		test(t, mapping, "&(T?)", false)
 
 		// Array
 		test(t, mapping, "[Int]", true)
@@ -7295,6 +7304,20 @@ func TestCheckMappingAccessFieldType(t *testing.T) {
 		test(t, mapping, "[&AnyStruct]", true)
 		test(t, mapping, "[T]", true)
 		test(t, mapping, "[&T]", true)
+		// Optional array
+		test(t, mapping, "[Int]?", true)
+		test(t, mapping, "[&Int]?", true)
+		test(t, mapping, "[AnyStruct]?", true)
+		test(t, mapping, "[&AnyStruct]?", true)
+		test(t, mapping, "[T]?", true)
+		test(t, mapping, "[&T]?", true)
+		// Array of optional
+		test(t, mapping, "[Int?]", true)
+		test(t, mapping, "[&Int?]", true)
+		test(t, mapping, "[AnyStruct?]", true)
+		test(t, mapping, "[&AnyStruct?]", true)
+		test(t, mapping, "[T?]", true)
+		test(t, mapping, "[&T?]", true)
 		// Reference to array
 		test(t, mapping, "&[Int]", false)
 		test(t, mapping, "&[&Int]", false)
@@ -7302,6 +7325,20 @@ func TestCheckMappingAccessFieldType(t *testing.T) {
 		test(t, mapping, "&[&AnyStruct]", false)
 		test(t, mapping, "&[T]", false)
 		test(t, mapping, "&[&T]", false)
+		// Optional reference to array
+		test(t, mapping, "(&[Int])?", false)
+		test(t, mapping, "(&[&Int])?", false)
+		test(t, mapping, "(&[AnyStruct])?", false)
+		test(t, mapping, "(&[&AnyStruct])?", false)
+		test(t, mapping, "(&[T])?", false)
+		test(t, mapping, "(&[&T])?", false)
+		// Reference to optional array
+		test(t, mapping, "&([Int]?)", false)
+		test(t, mapping, "&([&Int]?)", false)
+		test(t, mapping, "&([AnyStruct]?)", false)
+		test(t, mapping, "&([&AnyStruct]?)", false)
+		test(t, mapping, "&([T]?)", false)
+		test(t, mapping, "&([&T]?)", false)
 
 		// Dictionary
 		test(t, mapping, "{Int: Int}", true)
@@ -7310,6 +7347,21 @@ func TestCheckMappingAccessFieldType(t *testing.T) {
 		test(t, mapping, "{Int: &AnyStruct}", true)
 		test(t, mapping, "{Int: T}", true)
 		test(t, mapping, "{Int: &T}", true)
+		// Optional dictionary
+		test(t, mapping, "{Int: Int}?", true)
+		test(t, mapping, "{Int: &Int}?", true)
+		test(t, mapping, "{Int: AnyStruct}?", true)
+		test(t, mapping, "{Int: &AnyStruct}?", true)
+		test(t, mapping, "{Int: T}?", true)
+		test(t, mapping, "{Int: &T}?", true)
+		// Dictionary of optional
+		test(t, mapping, "{Int: Int?}", true)
+		test(t, mapping, "{Int: &Int?}", true)
+		test(t, mapping, "{Int: AnyStruct?}", true)
+		test(t, mapping, "{Int: &AnyStruct?}", true)
+		test(t, mapping, "{Int: T?}", true)
+		test(t, mapping, "{Int: &T?}", true)
+
 		// Reference to dictionary
 		test(t, mapping, "&{Int: Int}", false)
 		test(t, mapping, "&{Int: &Int}", false)
@@ -7317,14 +7369,36 @@ func TestCheckMappingAccessFieldType(t *testing.T) {
 		test(t, mapping, "&{Int: &AnyStruct}", false)
 		test(t, mapping, "&{Int: T}", false)
 		test(t, mapping, "&{Int: &T}", false)
+		// Optional reference to dictionary
+		test(t, mapping, "(&{Int: Int})?", false)
+		test(t, mapping, "(&{Int: &Int})?", false)
+		test(t, mapping, "(&{Int: AnyStruct})?", false)
+		test(t, mapping, "(&{Int: &AnyStruct})?", false)
+		test(t, mapping, "(&{Int: T})?", false)
+		test(t, mapping, "(&{Int: &T})?", false)
+		// Reference to optional dictionary
+		test(t, mapping, "&({Int: Int}?)", false)
+		test(t, mapping, "&({Int: &Int}?)", false)
+		test(t, mapping, "&({Int: AnyStruct}?)", false)
+		test(t, mapping, "&({Int: &AnyStruct}?)", false)
+		test(t, mapping, "&({Int: T}?)", false)
+		test(t, mapping, "&({Int: &T}?)", false)
 
 		// Capability
 		test(t, mapping, "Capability", true)
+		test(t, mapping, "Capability?", true)
 		// Reference to capability
 		test(t, mapping, "&Capability", false)
+		test(t, mapping, "(&Capability)?", false)
+		test(t, mapping, "&(Capability?)", false)
 
 		// Function
 		test(t, mapping, "fun()", true)
+		test(t, mapping, "fun()?", true)
+		// Reference to function
+		test(t, mapping, "&fun()", false)
+		test(t, mapping, "(&fun())?", false)
+		test(t, mapping, "&(fun()?)", false)
 	}
 }
 
