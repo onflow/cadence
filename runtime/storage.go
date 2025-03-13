@@ -36,9 +36,7 @@ const (
 	AccountStorageKey = "stored"
 )
 
-type StorageConfig struct {
-	StorageFormatV2Enabled bool
-}
+type StorageConfig struct{}
 
 type StorageFormat uint8
 
@@ -69,9 +67,7 @@ type Storage struct {
 
 	Config StorageConfig
 
-	AccountStorageV1      *AccountStorageV1
-	AccountStorageV2      *AccountStorageV2
-	scheduledV2Migrations []common.Address
+	AccountStorage *AccountStorage
 }
 
 var _ atree.SlabStorage = &Storage{}
@@ -119,28 +115,18 @@ func NewStorage(
 ) *Storage {
 	persistentSlabStorage := NewPersistentSlabStorage(ledger, memoryGauge)
 
-	accountStorageV1 := NewAccountStorageV1(
+	accountStorage := NewAccountStorage(
 		ledger,
 		persistentSlabStorage,
 		memoryGauge,
 	)
-
-	var accountStorageV2 *AccountStorageV2
-	if config.StorageFormatV2Enabled {
-		accountStorageV2 = NewAccountStorageV2(
-			ledger,
-			persistentSlabStorage,
-			memoryGauge,
-		)
-	}
 
 	return &Storage{
 		Ledger:                ledger,
 		PersistentSlabStorage: persistentSlabStorage,
 		memoryGauge:           memoryGauge,
 		Config:                config,
-		AccountStorageV1:      accountStorageV1,
-		AccountStorageV2:      accountStorageV2,
+		AccountStorage:        accountStorage,
 	}
 }
 
@@ -176,23 +162,6 @@ func (s *Storage) GetDomainStorageMap(
 		}
 	}()
 
-	if !s.Config.StorageFormatV2Enabled {
-
-		// When StorageFormatV2 is disabled, handle all accounts as v1 accounts.
-
-		// Only read requested domain register.
-
-		domainStorageMap = s.getDomainStorageMapForV1Account(
-			address,
-			domain,
-			createIfNotExists,
-		)
-
-		return
-	}
-
-	// StorageFormatV2 is enabled.
-
 	// Check if cached account format is available.
 
 	cachedFormat, known := s.getCachedAccountFormat(address)
@@ -219,12 +188,14 @@ func (s *Storage) GetDomainStorageMap(
 
 	// Check if account is v1 (by reading requested domain register).
 
-	if s.hasDomainRegister(address, domain) {
-		return s.getDomainStorageMapForV1Account(
-			address,
-			domain,
-			createIfNotExists,
-		)
+	ok, err := hasDomainRegister(s.Ledger, address, domain)
+	if err != nil {
+		panic(err)
+	}
+	if ok {
+		panic(AccountStorageFormatV1Error{
+			Address: address,
+		})
 	}
 
 	// Domain register doesn't exist.
@@ -240,11 +211,9 @@ func (s *Storage) GetDomainStorageMap(
 	// Check if account is v1 (by reading more domain registers)
 
 	if s.isV1Account(address) {
-		return s.getDomainStorageMapForV1Account(
-			address,
-			domain,
-			createIfNotExists,
-		)
+		panic(AccountStorageFormatV1Error{
+			Address: address,
+		})
 	}
 
 	// New account is treated as v2 account when feature flag is enabled.
@@ -257,29 +226,13 @@ func (s *Storage) GetDomainStorageMap(
 	)
 }
 
-func (s *Storage) getDomainStorageMapForV1Account(
-	address common.Address,
-	domain common.StorageDomain,
-	createIfNotExists bool,
-) *interpreter.DomainStorageMap {
-	domainStorageMap := s.AccountStorageV1.GetDomainStorageMap(
-		address,
-		domain,
-		createIfNotExists,
-	)
-
-	s.cacheIsV1Account(address, true)
-
-	return domainStorageMap
-}
-
 func (s *Storage) getDomainStorageMapForV2Account(
 	inter *interpreter.Interpreter,
 	address common.Address,
 	domain common.StorageDomain,
 	createIfNotExists bool,
 ) *interpreter.DomainStorageMap {
-	domainStorageMap := s.AccountStorageV2.GetDomainStorageMap(
+	domainStorageMap := s.AccountStorage.GetDomainStorageMap(
 		inter,
 		address,
 		domain,
@@ -301,11 +254,7 @@ func (s *Storage) getDomainStorageMap(
 	switch format {
 
 	case StorageFormatV1:
-		return s.getDomainStorageMapForV1Account(
-			address,
-			domain,
-			createIfNotExists,
-		)
+		panic(AccountStorageFormatV1Error{Address: address})
 
 	case StorageFormatV2:
 		return s.getDomainStorageMapForV2Account(
@@ -342,21 +291,6 @@ func (s *Storage) isV2Account(address common.Address) bool {
 	return accountStorageMapExists
 }
 
-// hasDomainRegister returns true if given account has given domain register.
-// NOTE: account storage format v1 has domain registers.
-func (s *Storage) hasDomainRegister(address common.Address, domain common.StorageDomain) (domainExists bool) {
-	_, domainExists, err := readSlabIndexFromRegister(
-		s.Ledger,
-		address,
-		[]byte(domain.Identifier()),
-	)
-	if err != nil {
-		panic(err)
-	}
-
-	return domainExists
-}
-
 // isV1Account returns true if given account is in account storage format v1
 // by checking if any of the domain registers exist.
 func (s *Storage) isV1Account(address common.Address) (isV1 bool) {
@@ -364,7 +298,11 @@ func (s *Storage) isV1Account(address common.Address) (isV1 bool) {
 	// Check if a storage map register exists for any of the domains.
 	// Check the most frequently used domains first, such as storage, public, private.
 	for _, domain := range common.AllStorageDomains {
-		domainExists := s.hasDomainRegister(address, domain)
+		domainExists, err := hasDomainRegister(s.Ledger, address, domain)
+		if err != nil {
+			panic(err)
+		}
+
 		if domainExists {
 			return true
 		}
@@ -475,21 +413,9 @@ func (s *Storage) commit(inter *interpreter.Interpreter, commitContractUpdates b
 		s.commitContractUpdates(inter)
 	}
 
-	err := s.AccountStorageV1.commit()
+	err := s.AccountStorage.commit()
 	if err != nil {
 		return err
-	}
-
-	if s.Config.StorageFormatV2Enabled {
-		err = s.AccountStorageV2.commit()
-		if err != nil {
-			return err
-		}
-
-		err = s.migrateV1AccountsToV2(inter)
-		if err != nil {
-			return err
-		}
 	}
 
 	// Commit the underlying slab storage's writes
@@ -512,96 +438,6 @@ func (s *Storage) commit(inter *interpreter.Interpreter, commitContractUpdates b
 	} else {
 		return slabStorage.NondeterministicFastCommit(runtime.NumCPU())
 	}
-}
-
-func (s *Storage) ScheduleV2Migration(address common.Address) bool {
-	if !s.Config.StorageFormatV2Enabled {
-		return false
-	}
-	s.scheduledV2Migrations = append(s.scheduledV2Migrations, address)
-	return true
-}
-
-func (s *Storage) ScheduleV2MigrationForModifiedAccounts() bool {
-	for address, isV1 := range s.cachedV1Accounts { //nolint:maprange
-		if isV1 && s.PersistentSlabStorage.HasUnsavedChanges(atree.Address(address)) {
-			if !s.ScheduleV2Migration(address) {
-				return false
-			}
-		}
-	}
-
-	return true
-}
-
-func (s *Storage) migrateV1AccountsToV2(inter *interpreter.Interpreter) error {
-
-	if !s.Config.StorageFormatV2Enabled {
-		return errors.NewUnexpectedError("cannot migrate to storage format v2, as it is not enabled")
-	}
-
-	if len(s.scheduledV2Migrations) == 0 {
-		return nil
-	}
-
-	// getDomainStorageMap function returns cached domain storage map if it is available
-	// before loading domain storage map from storage.
-	// This is necessary to migrate uncommitted (new) but cached domain storage map.
-	getDomainStorageMap := func(
-		ledger atree.Ledger,
-		storage atree.SlabStorage,
-		address common.Address,
-		domain common.StorageDomain,
-	) (*interpreter.DomainStorageMap, error) {
-		domainStorageKey := interpreter.NewStorageDomainKey(s.memoryGauge, address, domain)
-
-		// Get cached domain storage map if available.
-		domainStorageMap := s.cachedDomainStorageMaps[domainStorageKey]
-
-		if domainStorageMap != nil {
-			return domainStorageMap, nil
-		}
-
-		return getDomainStorageMapFromV1DomainRegister(ledger, storage, address, domain)
-	}
-
-	migrator := NewDomainRegisterMigration(
-		s.Ledger,
-		s.PersistentSlabStorage,
-		inter,
-		s.memoryGauge,
-		getDomainStorageMap,
-	)
-
-	// Ensure the scheduled accounts are migrated in a deterministic order
-
-	sort.Slice(
-		s.scheduledV2Migrations,
-		func(i, j int) bool {
-			address1 := s.scheduledV2Migrations[i]
-			address2 := s.scheduledV2Migrations[j]
-			return address1.Compare(address2) < 0
-		},
-	)
-
-	for _, address := range s.scheduledV2Migrations {
-
-		accountStorageMap, err := migrator.MigrateAccount(address)
-		if err != nil {
-			return err
-		}
-
-		s.AccountStorageV2.cacheAccountStorageMap(
-			address,
-			accountStorageMap,
-		)
-
-		s.cacheIsV1Account(address, false)
-	}
-
-	s.scheduledV2Migrations = nil
-
-	return nil
 }
 
 func (s *Storage) CheckHealth() error {
@@ -630,29 +466,11 @@ func (s *Storage) CheckHealth() error {
 
 	var storageMapStorageIDs []atree.SlabID
 
-	if s.Config.StorageFormatV2Enabled {
-		// Get cached account storage map slab IDs.
-		storageMapStorageIDs = append(
-			storageMapStorageIDs,
-			s.AccountStorageV2.cachedRootSlabIDs()...,
-		)
-	}
-
-	// Get slab IDs of cached domain storage maps that are in account storage format v1.
-	for storageKey, storageMap := range s.cachedDomainStorageMaps { //nolint:maprange
-		address := storageKey.Address
-
-		// Only accounts in storage format v1 store domain storage maps
-		// directly at the root of the account
-		if !s.isV1Account(address) {
-			continue
-		}
-
-		storageMapStorageIDs = append(
-			storageMapStorageIDs,
-			storageMap.SlabID(),
-		)
-	}
+	// Get cached account storage map slab IDs.
+	storageMapStorageIDs = append(
+		storageMapStorageIDs,
+		s.AccountStorage.cachedRootSlabIDs()...,
+	)
 
 	sort.Slice(
 		storageMapStorageIDs,
@@ -726,10 +544,8 @@ func (s *Storage) AccountStorageFormat(address common.Address) (format StorageFo
 		}
 	}()
 
-	if s.Config.StorageFormatV2Enabled {
-		if s.isV2Account(address) {
-			return StorageFormatV2
-		}
+	if s.isV2Account(address) {
+		return StorageFormatV2
 	}
 
 	if s.isV1Account(address) {
@@ -752,5 +568,21 @@ func (e UnreferencedRootSlabsError) Error() string {
 		"%s slabs not referenced: %s",
 		errors.InternalErrorMessagePrefix,
 		e.UnreferencedRootSlabIDs,
+	)
+}
+
+type AccountStorageFormatV1Error struct {
+	Address common.Address
+}
+
+var _ errors.InternalError = UnreferencedRootSlabsError{}
+
+func (AccountStorageFormatV1Error) IsUserError() {}
+
+func (e AccountStorageFormatV1Error) Error() string {
+	return fmt.Sprintf(
+		"%s account %s is still in account storage format V1",
+		errors.InternalErrorMessagePrefix,
+		e.Address.HexWithPrefix(),
 	)
 }
