@@ -26,6 +26,7 @@ import (
 
 	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -646,6 +647,65 @@ func TestInterpretMemberAccess(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
+	})
+
+	t.Run("composite reference, nil in optional field", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct Test {
+                var x: [Int]?
+                init() {
+                    self.x = nil
+                }
+            }
+
+            fun test(): &[Int]? {
+                let test = Test()
+                let testRef = &test as &Test
+                return testRef.x
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.Nil,
+			value,
+		)
+	})
+
+	t.Run("composite reference, nil in anystruct field", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct Test {
+                var x: AnyStruct
+                init() {
+                    self.x = nil
+                }
+            }
+
+            fun test(): &AnyStruct {
+                let test = Test()
+                let testRef = &test as &Test
+                return testRef.x
+            }
+        `)
+
+		// Currently a runtime error
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.Nil,
+			value,
+		)
 	})
 
 	t.Run("composite reference, primitive field", func(t *testing.T) {
