@@ -25,7 +25,7 @@ import (
 
 // NOTE: only called if the member expression is *not* an assignment
 func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) Type {
-	accessedType, memberType, member, isOptional := checker.visitMember(expression, false)
+	accessedType, memberType, member, _ := checker.visitMember(expression, false)
 
 	if !accessedType.IsInvalidType() {
 		memberAccessType := accessedType
@@ -82,14 +82,6 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 	}
 
 	checker.checkResourceMemberCapturingInFunction(expression, member, memberType)
-
-	// If the member access is optional chaining, only wrap the result value
-	// in an optional, if it is not already an optional value
-	if isOptional {
-		if _, ok := memberType.(*OptionalType); !ok {
-			memberType = NewOptionalType(checker.memoryGauge, memberType)
-		}
-	}
 
 	return memberType
 }
@@ -203,7 +195,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 	// i.e. a Go type switch would be sufficient.
 	// However, for some types (e.g. reference types) this depends on what type is referenced
 
-	getMemberForType := func(expressionType Type) {
+	findAndSetResultingType := func(expressionType Type, optional bool) {
 		resolver, ok := expressionType.GetMembers()[identifier]
 		if !ok {
 			return
@@ -216,6 +208,16 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 			checker.report,
 		)
 		resultingType = member.TypeAnnotation.Type
+
+		// If the member is accessed using optional-chaining, then the resulting type also should be optional.
+		// However, if the member is already optional, then no need to double-wrap from optionals.
+		if optional {
+			if _, memberIsOptional := resultingType.(*OptionalType); !memberIsOptional {
+				resultingType = NewOptionalType(checker.memoryGauge, resultingType)
+			}
+		}
+
+		isOptional = optional
 	}
 
 	// Get the member from the accessed value based
@@ -229,8 +231,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 		if optionalExpressionType, ok := accessedType.(*OptionalType); ok {
 			// The accessed type is optional, get the member from the wrapped type
 
-			getMemberForType(optionalExpressionType.Type)
-			isOptional = true
+			findAndSetResultingType(optionalExpressionType.Type, true)
 		} else {
 			// Optional chaining was used on a non-optional type, report an error
 
@@ -247,14 +248,12 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 			// to avoid spurious error that member does not exist,
 			// even if the non-optional accessed type has the member
 
-			getMemberForType(accessedType)
+			findAndSetResultingType(accessedType, false)
 		}
 	} else {
 		// The member is accessed directly without optional chaining.
 		// Get the member directly from the accessed type
-
-		getMemberForType(accessedType)
-		isOptional = false
+		findAndSetResultingType(accessedType, false)
 	}
 
 	if member == nil {

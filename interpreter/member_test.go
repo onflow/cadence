@@ -696,16 +696,9 @@ func TestInterpretMemberAccess(t *testing.T) {
             }
         `)
 
-		// Currently a runtime error
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.Nil,
-			value,
-		)
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.NonOptionalReferenceToNilError{})
 	})
 
 	t.Run("composite reference, primitive field", func(t *testing.T) {
