@@ -82,11 +82,7 @@ func TestCompileRecursionFib(t *testing.T) {
 			opcode.InstructionGetGlobal{GlobalIndex: 0x0},
 			opcode.InstructionInvoke{},
 			opcode.InstructionAdd{},
-			// assign to temp $result
-			opcode.InstructionTransfer{TypeIndex: 0x0},
-			opcode.InstructionSetLocal{LocalIndex: 0x1},
-			// return $result
-			opcode.InstructionGetLocal{LocalIndex: 0x1},
+			// return
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
@@ -131,16 +127,13 @@ func TestCompileImperativeFib(t *testing.T) {
 	comp := compiler.NewInstructionCompiler(checker)
 	program := comp.Compile()
 
-	const parameterCount = 1
+	const parameterCount = 0
 
 	// nIndex is the index of the parameter `n`, which is the first parameter
 	const nIndex = 0
 
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
-
 	// localsOffset is the offset of the first local variable
-	const localsOffset = resultIndex + 1
+	const localsOffset = parameterCount + 1
 
 	const (
 		// fib1Index is the index of the local variable `fib1`, which is the first local variable
@@ -215,13 +208,6 @@ func TestCompileImperativeFib(t *testing.T) {
 
 			// return fibonacci
 			opcode.InstructionGetLocal{LocalIndex: fibonacciIndex},
-
-			// assign to temp $result
-			opcode.InstructionTransfer{TypeIndex: 0},
-			opcode.InstructionSetLocal{LocalIndex: resultIndex},
-
-			// return $result
-			opcode.InstructionGetLocal{LocalIndex: resultIndex},
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
@@ -263,16 +249,8 @@ func TestCompileBreak(t *testing.T) {
 	comp := compiler.NewInstructionCompiler(checker)
 	program := comp.Compile()
 
-	const parameterCount = 0
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
-
-	// localsOffset is the offset of the first local variable
-	const localsOffset = resultIndex + 1
-
 	// iIndex is the index of the local variable `i`, which is the first local variable
-	const iIndex = localsOffset
+	const iIndex = 0
 
 	require.Len(t, program.Functions, 1)
 
@@ -311,13 +289,6 @@ func TestCompileBreak(t *testing.T) {
 
 			// return i
 			opcode.InstructionGetLocal{LocalIndex: iIndex},
-
-			// assign to temp $result
-			opcode.InstructionTransfer{TypeIndex: 0},
-			opcode.InstructionSetLocal{LocalIndex: resultIndex},
-
-			// return $result
-			opcode.InstructionGetLocal{LocalIndex: resultIndex},
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
@@ -369,16 +340,8 @@ func TestCompileContinue(t *testing.T) {
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(program.Functions), len(functions))
 
-	const parameterCount = 0
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
-
-	// localsOffset is the offset of the first local variable
-	const localsOffset = resultIndex + 1
-
 	// iIndex is the index of the local variable `i`, which is the first local variable
-	const iIndex = localsOffset
+	const iIndex = 0
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -415,13 +378,6 @@ func TestCompileContinue(t *testing.T) {
 
 			// return i
 			opcode.InstructionGetLocal{LocalIndex: iIndex},
-
-			// assign to temp $result
-			opcode.InstructionTransfer{TypeIndex: 0},
-			opcode.InstructionSetLocal{LocalIndex: resultIndex},
-
-			// return $result
-			opcode.InstructionGetLocal{LocalIndex: resultIndex},
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
@@ -465,16 +421,8 @@ func TestCompileArray(t *testing.T) {
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(program.Functions), len(functions))
 
-	const parameterCount = 0
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
-
-	// localsOffset is the offset of the first local variable
-	const localsOffset = resultIndex + 1
-
 	// xsIndex is the index of the local variable `xs`, which is the first local variable
-	const xsIndex = localsOffset
+	const xsIndex = 0
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -535,16 +483,8 @@ func TestCompileDictionary(t *testing.T) {
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(program.Functions), len(functions))
 
-	const parameterCount = 0
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
-
-	// localsOffset is the offset of the first local variable
-	const localsOffset = resultIndex + 1
-
 	// xsIndex is the index of the local variable `xs`, which is the first local variable
-	const xsIndex = localsOffset
+	const xsIndex = 0
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -625,7 +565,6 @@ func TestCompileIfLet(t *testing.T) {
 
 	const (
 		xIndex     = iota
-		_          // result index (unused)
 		tempYIndex // index for the temp var to hold the value of the expression
 		yIndex
 	)
@@ -696,20 +635,11 @@ func TestCompileIfLetScope(t *testing.T) {
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(functions), len(program.Functions))
 
-	const parameterCount = 1
-
-	// yIndex is the index of the parameter `y`, which is the first parameter
-	const yIndex = 0
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
-
-	// localsOffset is the offset of the first local variable
-	const localsOffset = resultIndex + 1
-
 	const (
+		// yIndex is the index of the parameter `y`, which is the first parameter
+		yIndex = iota
 		// x1Index is the index of the local variable `x` in the first block, which is the first local variable
-		x1Index = localsOffset + iota
+		x1Index
 		// zIndex is the index of the local variable `z`, which is the second local variable
 		zIndex
 		// tempIfLetIndex is the index of the temporary variable
@@ -756,13 +686,6 @@ func TestCompileIfLetScope(t *testing.T) {
 
 			// return x
 			opcode.InstructionGetLocal{LocalIndex: x1Index},
-
-			// assign to temp $result
-			opcode.InstructionTransfer{TypeIndex: 0},
-			opcode.InstructionSetLocal{LocalIndex: resultIndex},
-
-			// return $result
-			opcode.InstructionGetLocal{LocalIndex: resultIndex},
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
@@ -811,20 +734,11 @@ func TestCompileSwitch(t *testing.T) {
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(program.Functions), len(functions))
 
-	const parameterCount = 1
-
-	// xIndex is the index of the parameter `x`, which is the first parameter
-	const xIndex = 0
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
-
-	// localsOffset is the offset of the first local variable
-	const localsOffset = resultIndex + 1
-
 	const (
+		// xIndex is the index of the parameter `x`, which is the first parameter
+		xIndex = iota
 		// aIndex is the index of the local variable `a`, which is the first local variable
-		aIndex = localsOffset + iota
+		aIndex
 		// switchIndex is the index of the local variable used to store the value of the switch expression
 		switchIndex
 	)
@@ -876,13 +790,6 @@ func TestCompileSwitch(t *testing.T) {
 
 			// return a
 			opcode.InstructionGetLocal{LocalIndex: aIndex},
-
-			// assign to temp $result
-			opcode.InstructionTransfer{TypeIndex: 0},
-			opcode.InstructionSetLocal{LocalIndex: resultIndex},
-
-			// return $result
-			opcode.InstructionGetLocal{LocalIndex: resultIndex},
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
@@ -937,20 +844,11 @@ func TestSwitchBreak(t *testing.T) {
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(program.Functions), len(functions))
 
-	const parameterCount = 1
-
-	// xIndex is the index of the parameter `x`, which is the first parameter
-	const xIndex = 0
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
-
-	// localsOffset is the offset of the first local variable
-	const localsOffset = resultIndex + 1
-
 	const (
+		// xIndex is the index of the parameter `x`, which is the first parameter
+		xIndex = iota
 		// switchIndex is the index of the local variable used to store the value of the switch expression
-		switchIndex = localsOffset + iota
+		switchIndex
 	)
 
 	assert.Equal(t,
@@ -1030,17 +928,9 @@ func TestWhileSwitchBreak(t *testing.T) {
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(program.Functions), len(functions))
 
-	const parameterCount = 0
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
-
-	// localsOffset is the offset of the first local variable
-	const localsOffset = resultIndex + 1
-
 	const (
 		// xIndex is the index of the local variable `x`, which is the first local variable
-		xIndex = localsOffset + iota
+		xIndex = iota
 		// switchIndex is the index of the local variable used to store the value of the switch expression
 		switchIndex
 	)
@@ -1081,13 +971,8 @@ func TestWhileSwitchBreak(t *testing.T) {
 			// repeat
 			opcode.InstructionJump{Target: 3},
 
-			// assign to temp $result
+			// return x
 			opcode.InstructionGetLocal{LocalIndex: xIndex},
-			opcode.InstructionTransfer{TypeIndex: 0},
-			opcode.InstructionSetLocal{LocalIndex: resultIndex},
-
-			// return $result
-			opcode.InstructionGetLocal{LocalIndex: resultIndex},
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
@@ -1177,13 +1062,8 @@ func TestCompileSimpleCast(t *testing.T) {
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(program.Functions), len(functions))
 
-	const parameterCount = 1
-
 	// xIndex is the index of the parameter `x`, which is the first parameter
 	const xIndex = 0
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -1191,12 +1071,7 @@ func TestCompileSimpleCast(t *testing.T) {
 			opcode.InstructionGetLocal{LocalIndex: xIndex},
 			opcode.InstructionSimpleCast{TypeIndex: 0},
 
-			// assign to temp $result
-			opcode.InstructionTransfer{TypeIndex: 1},
-			opcode.InstructionSetLocal{LocalIndex: resultIndex},
-
-			// return $result
-			opcode.InstructionGetLocal{LocalIndex: resultIndex},
+			// return
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
@@ -1222,13 +1097,8 @@ func TestCompileForceCast(t *testing.T) {
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(program.Functions), len(functions))
 
-	const parameterCount = 1
-
 	// xIndex is the index of the parameter `x`, which is the first parameter
 	const xIndex = 0
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -1236,12 +1106,7 @@ func TestCompileForceCast(t *testing.T) {
 			opcode.InstructionGetLocal{LocalIndex: xIndex},
 			opcode.InstructionForceCast{TypeIndex: 0},
 
-			// assign to temp $result
-			opcode.InstructionTransfer{TypeIndex: 0},
-			opcode.InstructionSetLocal{LocalIndex: resultIndex},
-
-			// return $result
-			opcode.InstructionGetLocal{LocalIndex: resultIndex},
+			// return
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
@@ -1267,13 +1132,8 @@ func TestCompileFailableCast(t *testing.T) {
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(program.Functions), len(functions))
 
-	const parameterCount = 1
-
 	// xIndex is the index of the parameter `x`, which is the first parameter
 	const xIndex = 0
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -1281,12 +1141,7 @@ func TestCompileFailableCast(t *testing.T) {
 			opcode.InstructionGetLocal{LocalIndex: xIndex},
 			opcode.InstructionFailableCast{TypeIndex: 0},
 
-			// assign to temp $result
-			opcode.InstructionTransfer{TypeIndex: 1},
-			opcode.InstructionSetLocal{LocalIndex: resultIndex},
-
-			// return $result
-			opcode.InstructionGetLocal{LocalIndex: resultIndex},
+			// return
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
@@ -1325,17 +1180,9 @@ func TestCompileNestedLoop(t *testing.T) {
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(program.Functions), len(functions))
 
-	const parameterCount = 0
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
-
-	// localsOffset is the offset of the first local variable
-	const localsOffset = resultIndex + 1
-
 	const (
 		// iIndex is the index of the local variable `i`, which is the first local variable
-		iIndex = localsOffset + iota
+		iIndex = iota
 		// jIndex is the index of the local variable `j`, which is the second local variable
 		jIndex
 	)
@@ -1412,13 +1259,6 @@ func TestCompileNestedLoop(t *testing.T) {
 
 			// return i
 			opcode.InstructionGetLocal{LocalIndex: iIndex},
-
-			// assign to temp $result
-			opcode.InstructionTransfer{TypeIndex: 0},
-			opcode.InstructionSetLocal{LocalIndex: resultIndex},
-
-			// return $result
-			opcode.InstructionGetLocal{LocalIndex: resultIndex},
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
@@ -1463,16 +1303,8 @@ func TestCompileAssignLocal(t *testing.T) {
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(program.Functions), len(functions))
 
-	const parameterCount = 0
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
-
-	// localsOffset is the offset of the first local variable
-	const localsOffset = resultIndex + 1
-
 	// xIndex is the index of the local variable `x`, which is the first local variable
-	const xIndex = localsOffset
+	const xIndex = 0
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -1571,17 +1403,12 @@ func TestCompileIndex(t *testing.T) {
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(program.Functions), len(functions))
 
-	const parameterCount = 2
-
 	const (
 		// arrayIndex is the index of the parameter `array`, which is the first parameter
 		arrayIndex = iota
 		// indexIndex is the index of the parameter `index`, which is the second parameter
 		indexIndex
 	)
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -1590,12 +1417,7 @@ func TestCompileIndex(t *testing.T) {
 			opcode.InstructionGetLocal{LocalIndex: indexIndex},
 			opcode.InstructionGetIndex{},
 
-			// assign to temp $result
-			opcode.InstructionTransfer{TypeIndex: 0},
-			opcode.InstructionSetLocal{LocalIndex: resultIndex},
-
-			// return $result
-			opcode.InstructionGetLocal{LocalIndex: resultIndex},
+			// return
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
@@ -1709,21 +1531,13 @@ func TestCompileMember(t *testing.T) {
 	}
 
 	{
-		const parameterCount = 1
-
 		// nIndex is the index of the parameter `self`, which is the first parameter
 		const selfIndex = 0
-
-		// resultIndex is the index of the $result variable
-		const resultIndex = parameterCount
 
 		assert.Equal(t,
 			[]opcode.Instruction{
 				opcode.InstructionGetLocal{LocalIndex: selfIndex},
 				opcode.InstructionGetField{FieldNameIndex: 0},
-				opcode.InstructionTransfer{TypeIndex: 1},
-				opcode.InstructionSetLocal{LocalIndex: resultIndex},
-				opcode.InstructionGetLocal{LocalIndex: resultIndex},
 				opcode.InstructionReturnValue{},
 			},
 			functions[1].Code,
@@ -1803,17 +1617,9 @@ func TestCompileBool(t *testing.T) {
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(program.Functions), len(functions))
 
-	const parameterCount = 0
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
-
-	// localsOffset is the offset of the first local variable
-	const localsOffset = resultIndex + 1
-
 	const (
 		// yesIndex is the index of the local variable `yes`, which is the first local variable
-		yesIndex = localsOffset + iota
+		yesIndex = iota
 		// noIndex is the index of the local variable `no`, which is the second local variable
 		noIndex
 	)
@@ -1856,22 +1662,10 @@ func TestCompileString(t *testing.T) {
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(program.Functions), len(functions))
 
-	const parameterCount = 0
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
-
 	assert.Equal(t,
 		[]opcode.Instruction{
 			// return "Hello, world!"
 			opcode.InstructionGetConstant{ConstantIndex: 0},
-
-			// assign to temp $result
-			opcode.InstructionTransfer{TypeIndex: 0},
-			opcode.InstructionSetLocal{LocalIndex: resultIndex},
-
-			// return $result
-			opcode.InstructionGetLocal{LocalIndex: resultIndex},
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
@@ -1917,17 +1711,9 @@ func TestCompileIntegers(t *testing.T) {
 			functions := comp.ExportFunctions()
 			require.Equal(t, len(program.Functions), len(functions))
 
-			const parameterCount = 0
-
-			// resultIndex is the index of the $result variable
-			const resultIndex = parameterCount
-
-			// localsOffset is the offset of the first local variable
-			const localsOffset = resultIndex + 1
-
 			const (
 				// vIndex is the index of the local variable `v`, which is the first local variable
-				vIndex = localsOffset + iota
+				vIndex = iota
 			)
 
 			assert.Equal(t,
@@ -1993,17 +1779,9 @@ func TestCompileFixedPoint(t *testing.T) {
 			functions := comp.ExportFunctions()
 			require.Equal(t, len(program.Functions), len(functions))
 
-			const parameterCount = 0
-
-			// resultIndex is the index of the $result variable
-			const resultIndex = parameterCount
-
-			// localsOffset is the offset of the first local variable
-			const localsOffset = resultIndex + 1
-
 			const (
 				// vIndex is the index of the local variable `v`, which is the first local variable
-				vIndex = localsOffset + iota
+				vIndex = iota
 			)
 
 			assert.Equal(t,
@@ -2067,17 +1845,9 @@ func TestCompileUnaryNot(t *testing.T) {
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(program.Functions), len(functions))
 
-	const parameterCount = 0
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
-
-	// localsOffset is the offset of the first local variable
-	const localsOffset = resultIndex + 1
-
 	const (
 		// noIndex is the index of the local variable `no`, which is the first local variable
-		noIndex = localsOffset + iota
+		noIndex = iota
 	)
 
 	assert.Equal(t,
@@ -2113,20 +1883,11 @@ func TestCompileUnaryNegate(t *testing.T) {
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(program.Functions), len(functions))
 
-	const parameterCount = 1
-
-	// xIndex is the index of the parameter `x`, which is the first parameter
-	const xIndex = 0
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
-
-	// localsOffset is the offset of the first local variable
-	const localsOffset = resultIndex + 1
-
 	const (
+		// xIndex is the index of the parameter `x`, which is the first parameter
+		xIndex = iota
 		// vIndex is the index of the local variable `v`, which is the first local variable
-		vIndex = localsOffset + iota
+		vIndex
 	)
 
 	assert.Equal(t,
@@ -2162,20 +1923,11 @@ func TestCompileUnaryDeref(t *testing.T) {
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(program.Functions), len(functions))
 
-	const parameterCount = 1
-
-	// refIndex is the index of the parameter `ref`, which is the first parameter
-	const refIndex = 0
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
-
-	// localsOffset is the offset of the first local variable
-	const localsOffset = resultIndex + 1
-
 	const (
+		// refIndex is the index of the parameter `ref`, which is the first parameter
+		refIndex = iota
 		// vIndex is the index of the local variable `v`, which is the first local variable
-		vIndex = localsOffset + iota
+		vIndex
 	)
 
 	assert.Equal(t,
@@ -2222,17 +1974,9 @@ func TestCompileBinary(t *testing.T) {
 			functions := comp.ExportFunctions()
 			require.Equal(t, len(program.Functions), len(functions))
 
-			const parameterCount = 0
-
-			// resultIndex is the index of the $result variable
-			const resultIndex = parameterCount
-
-			// localsOffset is the offset of the first local variable
-			const localsOffset = resultIndex + 1
-
 			const (
 				// vIndex is the index of the local variable `v`, which is the first local variable
-				vIndex = localsOffset + iota
+				vIndex = iota
 			)
 
 			assert.Equal(t,
@@ -2312,12 +2056,8 @@ func TestCompileNilCoalesce(t *testing.T) {
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(program.Functions), len(functions))
 
-	const parameterCount = 1
-
 	// valueIndex is the index of the parameter `value`, which is the first parameter
 	const valueIndex = 0
-
-	const resultIndex = parameterCount
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -2334,12 +2074,7 @@ func TestCompileNilCoalesce(t *testing.T) {
 			opcode.InstructionDrop{},
 			opcode.InstructionGetConstant{ConstantIndex: 0},
 
-			// assign to temp $result
-			opcode.InstructionTransfer{TypeIndex: 0},
-			opcode.InstructionSetLocal{LocalIndex: resultIndex},
-
-			// return $result
-			opcode.InstructionGetLocal{LocalIndex: resultIndex},
+			// return
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
@@ -2381,15 +2116,9 @@ func TestCompileMethodInvocation(t *testing.T) {
 	require.Equal(t, len(program.Functions), len(functions))
 
 	{
-		const parameterCount = 0
-
-		const resultIndex = parameterCount
-
-		const localsOffset = resultIndex + 1
-
 		const (
 			// fooIndex is the index of the local variable `foo`, which is the first local variable
-			fooIndex = localsOffset + iota
+			fooIndex = iota
 		)
 
 		assert.Equal(t,
@@ -2417,7 +2146,7 @@ func TestCompileMethodInvocation(t *testing.T) {
 	{
 		const parameterCount = 0
 
-		const resultIndex = parameterCount
+		const selfIndex = parameterCount
 
 		assert.Equal(t,
 			[]opcode.Instruction{
@@ -2427,11 +2156,11 @@ func TestCompileMethodInvocation(t *testing.T) {
 					TypeIndex: 0,
 				},
 
-				// assign to temp $result
-				opcode.InstructionSetLocal{LocalIndex: resultIndex},
+				// assign to self
+				opcode.InstructionSetLocal{LocalIndex: selfIndex},
 
-				// return $result
-				opcode.InstructionGetLocal{LocalIndex: resultIndex},
+				// return self
+				opcode.InstructionGetLocal{LocalIndex: selfIndex},
 				opcode.InstructionReturnValue{},
 			},
 			functions[1].Code,
@@ -2469,15 +2198,9 @@ func TestCompileResourceCreateAndDestroy(t *testing.T) {
 	require.Equal(t, len(functions), len(program.Functions))
 
 	{
-		const parameterCount = 0
-
-		const resultIndex = parameterCount
-
-		const localsOffset = resultIndex + 1
-
 		const (
 			// fooIndex is the index of the local variable `foo`, which is the first local variable
-			fooIndex = localsOffset + iota
+			fooIndex = iota
 		)
 
 		assert.Equal(t,
@@ -2501,7 +2224,7 @@ func TestCompileResourceCreateAndDestroy(t *testing.T) {
 	{
 		const parameterCount = 0
 
-		const resultIndex = parameterCount
+		const selfIndex = parameterCount
 
 		assert.Equal(t,
 			[]opcode.Instruction{
@@ -2511,11 +2234,11 @@ func TestCompileResourceCreateAndDestroy(t *testing.T) {
 					TypeIndex: 0,
 				},
 
-				// assign to temp $result
-				opcode.InstructionSetLocal{LocalIndex: resultIndex},
+				// assign to self
+				opcode.InstructionSetLocal{LocalIndex: selfIndex},
 
-				// return $result
-				opcode.InstructionGetLocal{LocalIndex: resultIndex},
+				// return self
+				opcode.InstructionGetLocal{LocalIndex: selfIndex},
 				opcode.InstructionReturnValue{},
 			},
 			functions[1].Code,
@@ -2542,11 +2265,6 @@ func TestCompilePath(t *testing.T) {
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(functions), len(program.Functions))
 
-	const parameterCount = 0
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
-
 	assert.Equal(t,
 		[]opcode.Instruction{
 			opcode.InstructionPath{
@@ -2554,12 +2272,7 @@ func TestCompilePath(t *testing.T) {
 				IdentifierIndex: 0,
 			},
 
-			// assign to temp $result
-			opcode.InstructionTransfer{TypeIndex: 0},
-			opcode.InstructionSetLocal{LocalIndex: resultIndex},
-
-			// return $result
-			opcode.InstructionGetLocal{LocalIndex: resultIndex},
+			// return
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
@@ -2601,20 +2314,11 @@ func TestCompileBlockScope(t *testing.T) {
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(functions), len(program.Functions))
 
-	const parameterCount = 1
-
-	// yIndex is the index of the parameter `y`, which is the first parameter
-	const yIndex = 0
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
-
-	// localsOffset is the offset of the first local variable
-	const localsOffset = resultIndex + 1
-
 	const (
+		// yIndex is the index of the parameter `y`, which is the first parameter
+		yIndex = iota
 		// x1Index is the index of the local variable `x` in the first block, which is the first local variable
-		x1Index = localsOffset + iota
+		x1Index
 		// x2Index is the index of the local variable `x` in the second block, which is the second local variable
 		x2Index
 		// x3Index is the index of the local variable `x` in the third block, which is the third local variable
@@ -2646,13 +2350,6 @@ func TestCompileBlockScope(t *testing.T) {
 
 			// return x
 			opcode.InstructionGetLocal{LocalIndex: x1Index},
-
-			// assign to temp $result
-			opcode.InstructionTransfer{TypeIndex: 0},
-			opcode.InstructionSetLocal{LocalIndex: resultIndex},
-
-			// return $result
-			opcode.InstructionGetLocal{LocalIndex: resultIndex},
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
@@ -2704,20 +2401,11 @@ func TestCompileBlockScope2(t *testing.T) {
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(functions), len(program.Functions))
 
-	const parameterCount = 1
-
-	// yIndex is the index of the parameter `y`, which is the first parameter
-	const yIndex = 0
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
-
-	// localsOffset is the offset of the first local variable
-	const localsOffset = resultIndex + 1
-
 	const (
+		// yIndex is the index of the parameter `y`, which is the first parameter
+		yIndex = iota
 		// x1Index is the index of the local variable `x` in the first block, which is the first local variable
-		x1Index = localsOffset + iota
+		x1Index
 		// x2Index is the index of the local variable `x` in the second block, which is the second local variable
 		x2Index
 		// x3Index is the index of the local variable `x` in the third block, which is the third local variable
@@ -2758,13 +2446,6 @@ func TestCompileBlockScope2(t *testing.T) {
 
 			// return x
 			opcode.InstructionGetLocal{LocalIndex: x1Index},
-
-			// assign to temp $result
-			opcode.InstructionTransfer{TypeIndex: 0},
-			opcode.InstructionSetLocal{LocalIndex: resultIndex},
-
-			// return $result
-			opcode.InstructionGetLocal{LocalIndex: resultIndex},
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
@@ -2846,15 +2527,12 @@ func TestCompileDefaultFunction(t *testing.T) {
 	// Should be calling into interface's default function.
 	// ```
 	//     fun test(): Int {
-	//        var $_result: Int
-	//        $_result = self.test()
-	//        return $_result
+	//        return self.test()
 	//    }
 	// ```
 
 	const (
 		selfIndex = iota
-		tempResultIndex
 	)
 
 	assert.Equal(t,
@@ -2864,12 +2542,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 			opcode.InstructionGetGlobal{GlobalIndex: interfaceFunctionIndex}, // must be interface method's index
 			opcode.InstructionInvoke{},
 
-			// assign to temp $result
-			opcode.InstructionTransfer{TypeIndex: 1},
-			opcode.InstructionSetLocal{LocalIndex: tempResultIndex},
-
-			// return $result
-			opcode.InstructionGetLocal{LocalIndex: tempResultIndex},
+			// return
 			opcode.InstructionReturnValue{},
 		},
 		concreteTypeTestFunc.Code,
@@ -2887,29 +2560,16 @@ func TestCompileDefaultFunction(t *testing.T) {
 	// Should contain the implementation.
 	// ```
 	//    fun test(): Int {
-	//        var $_result: Int
-	//        $_result = 42
-	//        return $_result
+	//        return 42
 	//    }
 	// ```
-
-	// Since the function is an object-method, receiver becomes the first parameter.
-	const parameterCount = 1
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
 
 	assert.Equal(t,
 		[]opcode.Instruction{
 			// 42
 			opcode.InstructionGetConstant{ConstantIndex: 0},
 
-			// assign to temp $result
-			opcode.InstructionTransfer{TypeIndex: 1},
-			opcode.InstructionSetLocal{LocalIndex: resultIndex},
-
-			// return $result
-			opcode.InstructionGetLocal{LocalIndex: resultIndex},
+			// return
 			opcode.InstructionReturnValue{},
 		},
 		interfaceTypeTestFunc.Code,
@@ -2938,7 +2598,6 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		const (
 			xIndex = iota
-			tempResultIndex
 		)
 
 		// Would be equivalent to:
@@ -2946,8 +2605,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		//    if !(x > 0) {
 		//        panic("pre/post condition failed")
 		//    }
-		//    $_result = 5
-		//    return $_result
+		//    return 5
 		// }
 		assert.Equal(t,
 			[]opcode.Instruction{
@@ -2969,13 +2627,8 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// Drop since it's a statement-expression
 				opcode.InstructionDrop{},
 
-				// $_result = 5
+				// return 5
 				opcode.InstructionGetConstant{ConstantIndex: 2},
-				opcode.InstructionTransfer{TypeIndex: 1},
-				opcode.InstructionSetLocal{LocalIndex: tempResultIndex},
-
-				// return $_result
-				opcode.InstructionGetLocal{LocalIndex: tempResultIndex},
 				opcode.InstructionReturnValue{},
 			},
 			program.Functions[0].Code,
@@ -3018,8 +2671,10 @@ func TestCompileFunctionConditions(t *testing.T) {
 			[]opcode.Instruction{
 				// $_result = 5
 				opcode.InstructionGetConstant{ConstantIndex: 0},
-				opcode.InstructionTransfer{TypeIndex: 0},
 				opcode.InstructionSetLocal{LocalIndex: tempResultIndex},
+
+				// jump to post conditions
+				opcode.InstructionJump{Target: 3},
 
 				// let result = $_result
 				opcode.InstructionGetLocal{LocalIndex: tempResultIndex},
@@ -3088,14 +2743,16 @@ func TestCompileFunctionConditions(t *testing.T) {
 			[]opcode.Instruction{
 				// $_result = x
 				opcode.InstructionGetLocal{LocalIndex: xIndex},
-				opcode.InstructionTransfer{TypeIndex: 0},
 				opcode.InstructionSetLocal{LocalIndex: tempResultIndex},
+
+				// jump to post conditions
+				opcode.InstructionJump{Target: 3},
 
 				// Get the reference and assign to `result`.
 				// i.e: `let result = &$_result`
 				opcode.InstructionGetLocal{LocalIndex: tempResultIndex},
-				opcode.InstructionNewRef{TypeIndex: 1},
-				opcode.InstructionTransfer{TypeIndex: 1},
+				opcode.InstructionNewRef{TypeIndex: 0},
+				opcode.InstructionTransfer{TypeIndex: 0},
 				opcode.InstructionSetLocal{LocalIndex: resultIndex},
 
 				// result != nil
@@ -3109,7 +2766,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// panic("pre/post condition failed")
 				opcode.InstructionGetConstant{ConstantIndex: 0}, // error message
-				opcode.InstructionTransfer{TypeIndex: 2},
+				opcode.InstructionTransfer{TypeIndex: 1},
 				opcode.InstructionGetGlobal{GlobalIndex: 1}, // global index 1 is 'panic' function
 				opcode.InstructionInvoke{},
 
@@ -3239,8 +2896,10 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// $_result = 42
 				opcode.InstructionGetConstant{ConstantIndex: const42Index},
-				opcode.InstructionTransfer{TypeIndex: 2},
 				opcode.InstructionSetLocal{LocalIndex: tempResultIndex},
+
+				// jump to post conditions
+				opcode.InstructionJump{Target: 13},
 
 				// let result = $_result
 				opcode.InstructionGetLocal{LocalIndex: tempResultIndex},
@@ -3373,8 +3032,10 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// $_result = 42
 				opcode.InstructionGetConstant{ConstantIndex: const42Index},
-				opcode.InstructionTransfer{TypeIndex: 1},
 				opcode.InstructionSetLocal{LocalIndex: tempResultIndex},
+
+				// jump to post conditions
+				opcode.InstructionJump{Target: 6},
 
 				// let result = $_result
 				opcode.InstructionGetLocal{LocalIndex: tempResultIndex},
@@ -3431,7 +3092,6 @@ func TestForLoop(t *testing.T) {
 
 		const (
 			arrayValueIndex = iota
-			_               // result index (unused)
 			iteratorVarIndex
 			elementVarIndex
 		)
@@ -3484,7 +3144,6 @@ func TestForLoop(t *testing.T) {
 
 		const (
 			arrayValueIndex = iota
-			_               // result index (unused)
 			iteratorVarIndex
 			indexVarIndex
 			elementVarIndex
@@ -3554,7 +3213,6 @@ func TestForLoop(t *testing.T) {
 
 		const (
 			arrayValueIndex = iota
-			_               // result index (unused)
 			x1Index
 			iteratorVarIndex
 			e1Index
@@ -3630,20 +3288,11 @@ func TestCompileIf(t *testing.T) {
 	comp := compiler.NewInstructionCompiler(checker)
 	program := comp.Compile()
 
-	const parameterCount = 1
-
-	// xIndex is the index of the parameter `x`, which is the first parameter
-	const xIndex = 0
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
-
-	// localsOffset is the offset of the first local variable
-	const localsOffset = resultIndex + 1
-
 	const (
+		// xIndex is the index of the parameter `x`, which is the first parameter
+		xIndex = iota
 		// yIndex is the index of the local variable `y`, which is the first local variable
-		yIndex = localsOffset + iota
+		yIndex
 	)
 
 	require.Len(t, program.Functions, 1)
@@ -3676,13 +3325,6 @@ func TestCompileIf(t *testing.T) {
 
 			// return y
 			opcode.InstructionGetLocal{LocalIndex: yIndex},
-
-			// assign to temp $result
-			opcode.InstructionTransfer{TypeIndex: 0},
-			opcode.InstructionSetLocal{LocalIndex: resultIndex},
-
-			// return $result
-			opcode.InstructionGetLocal{LocalIndex: resultIndex},
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
@@ -3721,13 +3363,8 @@ func TestCompileConditional(t *testing.T) {
 	comp := compiler.NewInstructionCompiler(checker)
 	program := comp.Compile()
 
-	const parameterCount = 1
-
 	// xIndex is the index of the parameter `x`, which is the first parameter
 	const xIndex = 0
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
 
 	require.Len(t, program.Functions, 1)
 
@@ -3748,12 +3385,7 @@ func TestCompileConditional(t *testing.T) {
 			// else: 2
 			opcode.InstructionGetConstant{ConstantIndex: 1},
 
-			// assign to temp $result
-			opcode.InstructionTransfer{TypeIndex: 0},
-			opcode.InstructionSetLocal{LocalIndex: resultIndex},
-
-			// return $result
-			opcode.InstructionGetLocal{LocalIndex: resultIndex},
+			// return
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
@@ -3788,17 +3420,12 @@ func TestCompileOr(t *testing.T) {
 	comp := compiler.NewInstructionCompiler(checker)
 	program := comp.Compile()
 
-	const parameterCount = 2
-
 	const (
 		// xIndex is the index of the parameter `x`, which is the first parameter
 		xIndex = iota
 		// yIndex is the index of the parameter `y`, which is the second parameter
 		yIndex
 	)
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
 
 	require.Len(t, program.Functions, 1)
 
@@ -3819,12 +3446,7 @@ func TestCompileOr(t *testing.T) {
 
 			opcode.InstructionFalse{},
 
-			// assign to temp $result
-			opcode.InstructionTransfer{TypeIndex: 0},
-			opcode.InstructionSetLocal{LocalIndex: resultIndex},
-
-			// return $result
-			opcode.InstructionGetLocal{LocalIndex: resultIndex},
+			// return
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
@@ -3845,17 +3467,12 @@ func TestCompileAnd(t *testing.T) {
 	comp := compiler.NewInstructionCompiler(checker)
 	program := comp.Compile()
 
-	const parameterCount = 2
-
 	const (
 		// xIndex is the index of the parameter `x`, which is the first parameter
 		xIndex = iota
 		// yIndex is the index of the parameter `y`, which is the second parameter
 		yIndex
 	)
-
-	// resultIndex is the index of the $result variable
-	const resultIndex = parameterCount
 
 	require.Len(t, program.Functions, 1)
 
@@ -3876,12 +3493,7 @@ func TestCompileAnd(t *testing.T) {
 
 			opcode.InstructionFalse{},
 
-			// assign to temp $result
-			opcode.InstructionTransfer{TypeIndex: 0},
-			opcode.InstructionSetLocal{LocalIndex: resultIndex},
-
-			// return $result
-			opcode.InstructionGetLocal{LocalIndex: resultIndex},
+			// return
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
@@ -4077,26 +3689,14 @@ func TestCompileForce(t *testing.T) {
 		functions := comp.ExportFunctions()
 		require.Equal(t, len(program.Functions), len(functions))
 
-		const parameterCount = 1
-
 		// xIndex is the index of the parameter `x`, which is the first parameter
 		const xIndex = 0
-
-		// resultIndex is the index of the $result variable
-		const resultIndex = parameterCount
 
 		assert.Equal(t,
 			[]opcode.Instruction{
 				// return x!
 				opcode.InstructionGetLocal{LocalIndex: xIndex},
 				opcode.InstructionUnwrap{},
-
-				// assign to temp $result
-				opcode.InstructionTransfer{TypeIndex: 0},
-				opcode.InstructionSetLocal{LocalIndex: resultIndex},
-
-				// return $result
-				opcode.InstructionGetLocal{LocalIndex: resultIndex},
 				opcode.InstructionReturnValue{},
 			},
 			functions[0].Code,
@@ -4120,26 +3720,14 @@ func TestCompileForce(t *testing.T) {
 		functions := comp.ExportFunctions()
 		require.Equal(t, len(program.Functions), len(functions))
 
-		const parameterCount = 1
-
 		// xIndex is the index of the parameter `x`, which is the first parameter
 		const xIndex = 0
-
-		// resultIndex is the index of the $result variable
-		const resultIndex = parameterCount
 
 		assert.Equal(t,
 			[]opcode.Instruction{
 				// return x!
 				opcode.InstructionGetLocal{LocalIndex: xIndex},
 				opcode.InstructionUnwrap{},
-
-				// assign to temp $result
-				opcode.InstructionTransfer{TypeIndex: 0},
-				opcode.InstructionSetLocal{LocalIndex: resultIndex},
-
-				// return $result
-				opcode.InstructionGetLocal{LocalIndex: resultIndex},
 				opcode.InstructionReturnValue{},
 			},
 			functions[0].Code,

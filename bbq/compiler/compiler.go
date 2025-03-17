@@ -52,7 +52,12 @@ type Compiler[E, T any] struct {
 	usedImportedGlobals []*global
 	controlFlows        []controlFlow
 	currentControlFlow  *controlFlow
+	returns             []returns
+	currentReturn       *returns
 	staticTypes         []T
+
+	postConditionsIndices map[ast.Declaration]int
+	postConditionsIndex   int
 
 	// Cache alike for staticTypes and constants in the pool.
 	typesInPool     map[sema.TypeID]uint16
@@ -111,8 +116,9 @@ func newCompiler[E, T any](
 		compositeTypeStack: &Stack[sema.CompositeKindedType]{
 			elements: make([]sema.CompositeKindedType, 0),
 		},
-		codeGen: codeGen,
-		typeGen: typeGen,
+		codeGen:             codeGen,
+		typeGen:             typeGen,
+		postConditionsIndex: -1,
 	}
 }
 
@@ -317,6 +323,24 @@ func (c *Compiler[_, _]) popControlFlow() {
 	c.currentControlFlow = previousControlFlow
 }
 
+func (c *Compiler[_, _]) pushReturns() {
+	index := len(c.returns)
+	c.returns = append(c.returns, returns{})
+	c.currentReturn = &c.returns[index]
+}
+
+func (c *Compiler[_, _]) popReturns() {
+	lastIndex := len(c.returns) - 1
+	c.returns[lastIndex] = returns{}
+	c.returns = c.returns[:lastIndex]
+
+	var previousReturns *returns
+	if lastIndex > 0 {
+		previousReturns = &c.returns[lastIndex-1]
+	}
+	c.currentReturn = previousReturns
+}
+
 func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 
 	// Desugar the program before compiling.
@@ -327,7 +351,7 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 		c.ExtendedElaboration,
 		c.checker,
 	)
-	c.Program = desugar.Run()
+	c.Program, c.postConditionsIndices = desugar.Run()
 
 	for _, declaration := range c.Program.ImportDeclarations() {
 		c.compileDeclaration(declaration)
@@ -577,17 +601,55 @@ func (c *Compiler[_, _]) compileDeclaration(declaration ast.Declaration) {
 	ast.AcceptDeclaration[struct{}](declaration, c)
 }
 
-func (c *Compiler[_, _]) compileBlock(block *ast.Block) {
+func (c *Compiler[_, _]) compileBlock(block *ast.Block, isRegularFunctionBlock bool) {
 	locals := c.currentFunction.locals
 	locals.PushNewWithCurrent()
 	defer locals.Pop()
 
-	for _, statement := range block.Statements {
+	if isRegularFunctionBlock && c.hasPostConditions() {
+		c.pushReturns()
+	}
+
+	for index, statement := range block.Statements {
+		if index == c.postConditionsIndex {
+			c.patchJumps(c.currentReturn.returns)
+		}
 		c.compileStatement(statement)
+	}
+
+	if isRegularFunctionBlock {
+		if c.hasPostConditions() {
+			c.popReturns()
+			local := c.currentFunction.findLocal(tempResultVariableName)
+			if local == nil {
+				c.codeGen.Emit(opcode.InstructionReturn{})
+			} else {
+				c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: local.index})
+				c.codeGen.Emit(opcode.InstructionReturnValue{})
+			}
+		} else {
+			// If there are no post conditions,
+			// and if there is no return statement at the end,
+			// then emit an empty return.
+			if needsSyntheticReturn(block.Statements) {
+				c.codeGen.Emit(opcode.InstructionReturn{})
+			}
+		}
 	}
 }
 
-func (c *Compiler[_, _]) compileFunctionBlock(functionBlock *ast.FunctionBlock) {
+func needsSyntheticReturn(statements []ast.Statement) bool {
+	length := len(statements)
+	if length == 0 {
+		return true
+	}
+
+	lastStatement := statements[length-1]
+	_, isReturn := lastStatement.(*ast.ReturnStatement)
+	return !isReturn
+}
+
+func (c *Compiler[_, _]) compileFunctionBlock(functionBlock *ast.FunctionBlock, isRegularFunction bool) {
 	if functionBlock == nil {
 		return
 	}
@@ -599,7 +661,7 @@ func (c *Compiler[_, _]) compileFunctionBlock(functionBlock *ast.FunctionBlock) 
 		panic(errors.NewUnreachableError())
 	}
 
-	c.compileBlock(functionBlock.Block)
+	c.compileBlock(functionBlock.Block, isRegularFunction)
 }
 
 func (c *Compiler[_, _]) compileStatement(statement ast.Statement) {
@@ -615,11 +677,42 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 	if expression != nil {
 		// TODO: copy
 		c.compileExpression(expression)
-		c.codeGen.Emit(opcode.InstructionReturnValue{})
+
+		if c.hasPostConditions() {
+			tempResultVar := c.currentFunction.findLocal(tempResultVariableName)
+
+			if tempResultVar != nil {
+				// Assign the return value to the temp-result variable.
+				c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: tempResultVar.index})
+			} else {
+				// If there is no temp-result variable, that means the return type is void.
+				// So just drop the void-value.
+				c.codeGen.Emit(opcode.InstructionDrop{})
+			}
+
+			// And jump to the start of the post conditions.
+			offset := c.emitUndefinedJump()
+			c.currentReturn.appendReturn(offset)
+		} else {
+			// If there are no post conditions, return then-and-there.
+			c.codeGen.Emit(opcode.InstructionReturnValue{})
+		}
 	} else {
-		c.codeGen.Emit(opcode.InstructionReturn{})
+		if c.hasPostConditions() {
+			// If there are post conditions, jump to the start of the post conditions.
+			offset := c.emitUndefinedJump()
+			c.currentReturn.appendReturn(offset)
+		} else {
+			// If there are no post conditions, return then-and-there.
+			c.codeGen.Emit(opcode.InstructionReturn{})
+		}
 	}
+
 	return
+}
+
+func (c *Compiler[_, _]) hasPostConditions() bool {
+	return c.postConditionsIndex >= 0
 }
 
 func (c *Compiler[_, _]) VisitBreakStatement(_ *ast.BreakStatement) (_ struct{}) {
@@ -682,7 +775,7 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 			panic(errors.NewUnreachableError())
 		}
 
-		c.compileBlock(statement.Then)
+		c.compileBlock(statement.Then, false)
 
 		if additionalThenScope {
 			c.currentFunction.locals.Pop()
@@ -692,7 +785,7 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 		if elseBlock != nil {
 			thenJump := c.emitUndefinedJump()
 			c.patchJump(elseJump)
-			c.compileBlock(elseBlock)
+			c.compileBlock(elseBlock, false)
 			c.patchJump(thenJump)
 		} else {
 			c.patchJump(elseJump)
@@ -711,7 +804,7 @@ func (c *Compiler[_, _]) VisitWhileStatement(statement *ast.WhileStatement) (_ s
 	endJump := c.emitUndefinedJumpIfFalse()
 
 	// Compile the body
-	c.compileBlock(statement.Block)
+	c.compileBlock(statement.Block, false)
 	// Repeat, jump back to the test
 	c.emitJump(testOffset)
 
@@ -791,7 +884,7 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 	})
 
 	// Compile the for-loop body.
-	c.compileBlock(statement.Block)
+	c.compileBlock(statement.Block, false)
 
 	// Jump back to the loop test. i.e: `hasNext()`
 	c.emitJump(testOffset)
@@ -1583,7 +1676,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: self.index})
 
 	// emit for the statements in `init()` body.
-	c.compileFunctionBlock(declaration.FunctionDeclaration.FunctionBlock)
+	c.compileFunctionBlock(declaration.FunctionDeclaration.FunctionBlock, false)
 
 	// Constructor should return the created the struct. i.e: return `self`
 	c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: self.index})
@@ -1595,7 +1688,19 @@ func (c *Compiler[_, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 	function := c.declareFunction(declaration, declareReceiver)
 
 	c.declareParameters(function, declaration.ParameterList, declareReceiver)
-	c.compileFunctionBlock(declaration.FunctionBlock)
+
+	prevPostConditionIndex := c.postConditionsIndex
+	index, ok := c.postConditionsIndices[declaration]
+	if ok {
+		c.postConditionsIndex = index
+	} else {
+		c.postConditionsIndex = -1
+	}
+	defer func() {
+		c.postConditionsIndex = prevPostConditionIndex
+	}()
+
+	c.compileFunctionBlock(declaration.FunctionBlock, true)
 
 	return
 }

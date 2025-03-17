@@ -296,7 +296,9 @@ func TestNewStruct(t *testing.T) {
 
 	t.Parallel()
 
-	checker, err := ParseAndCheck(t, `
+	vmConfig := &vm.Config{}
+
+	vmInstance := CompileAndPrepareToInvoke(t, `
       struct Foo {
           var id : Int
 
@@ -315,14 +317,11 @@ func TestNewStruct(t *testing.T) {
           }
           return r
       }
-  `)
-	require.NoError(t, err)
-
-	comp := compiler.NewInstructionCompiler(checker)
-	program := comp.Compile()
-
-	vmConfig := &vm.Config{}
-	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+  `,
+		CompilerAndVMOptions{
+			VMConfig: vmConfig,
+		},
+	)
 
 	result, err := vmInstance.Invoke("test", vm.NewIntValue(10))
 	require.NoError(t, err)
@@ -5311,5 +5310,53 @@ func TestCompileForce(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, vm.NewIntValue(42), actual)
 	})
+}
 
+func TestCompileReturnStatements(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("conditional return", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err := compileAndInvoke(t,
+			`
+                fun test(a: Bool): Int {
+                    if a {
+                        return 1
+                    }
+                    return 2
+                }
+            `,
+			"test",
+			vm.BoolValue(true),
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(1), actual)
+	})
+
+	t.Run("conditional return with post condition", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err := compileAndInvoke(t,
+			`
+                fun test(a: Bool): Int {
+                    post {
+                        true
+                    }
+
+                    if a {
+                        return 1
+                    }
+                    return 2
+                }
+            `,
+			"test",
+			vm.BoolValue(true),
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewIntValue(1), actual)
+	})
 }
