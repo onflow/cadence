@@ -24,11 +24,15 @@ type RuntimeTypeConstructor struct {
 	DocString string
 }
 
-var MetaTypeFunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	nil,
-	MetaTypeAnnotation,
-)
+var MetaTypeFunctionType = func() *FunctionType {
+	return &FunctionType{
+		Purity: FunctionPurityView,
+		TypeParameters: []*TypeParameter{
+			{Name: "T"},
+		},
+		ReturnTypeAnnotation: MetaTypeAnnotation,
+	}
+}()
 
 const OptionalTypeFunctionName = "OptionalType"
 
@@ -198,6 +202,11 @@ var InclusiveRangeTypeFunctionType = NewSimpleFunctionType(
 )
 
 var runtimeTypeConstructors = []*RuntimeTypeConstructor{
+	{
+		Name:      MetaTypeName,
+		Value:     MetaTypeFunctionType,
+		DocString: "Creates a run-time type representing the given static type as a value",
+	},
 	{
 		Name:      OptionalTypeFunctionName,
 		Value:     OptionalTypeFunctionType,

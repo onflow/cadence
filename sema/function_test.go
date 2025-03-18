@@ -678,3 +678,53 @@ func TestCheckInvalidFunctionSubtyping(t *testing.T) {
 		errTypeMismatch.ActualType.ID(),
 	)
 }
+
+func TestCheckGenericFunctionSubtyping(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("generic function to a differently typed generic-function-typed var", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test(storage: Account.Storage) {
+                var func = storage.load
+                func = storage.copy
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errors[0], &typeMismatchError)
+	})
+
+	t.Run("generic function to a differently typed generic-function-typed var", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test(storage: Account.Storage) {
+                var func = storage.copy
+                func = storage.load
+            }
+        `)
+		errors := RequireCheckerErrors(t, err, 1)
+
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errors[0], &typeMismatchError)
+	})
+
+	t.Run("generic function to a non-generic var", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test(storage: Account.Storage) {
+                var func: fun(StoragePath):AnyStruct = storage.copy
+            }
+        `)
+		errors := RequireCheckerErrors(t, err, 1)
+
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errors[0], &typeMismatchError)
+	})
+}

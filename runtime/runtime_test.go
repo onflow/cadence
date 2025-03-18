@@ -12403,3 +12403,98 @@ func TestRuntimeInterfaceConditionDeduplication(t *testing.T) {
 		events,
 	)
 }
+
+func TestRuntimeFunctionTypeConfusion(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntime()
+
+	imported := []byte(`
+        access(all) resource interface Receiver {
+            access(all) balance: Int
+            access(all) fun deposit(from: @{Receiver})
+        }
+
+        access(all) resource Vault: Receiver {
+
+            access(all) var balance: Int
+
+            init(balance: Int) {
+                self.balance = balance
+            }
+
+            access(all) fun withdraw(amount: Int): @Vault {
+                self.balance = self.balance - amount
+                return <-create Vault(balance: amount)
+            }
+
+            access(all) fun deposit(from: @{Receiver}) {
+                self.balance = self.balance + from.balance
+                destroy from
+            }
+        }
+
+        access(all) fun createVault(): @Vault {
+            return <-create Vault(balance: 5)
+        }
+    `)
+
+	script1 := []byte(`
+        import Receiver, createVault from "imported"
+
+        transaction {
+
+            prepare(acc: auth(Storage) &Account) {
+
+                acc.storage.save(<-createVault(), to: /storage/r)
+
+                var g = [ acc.storage.load ]
+
+                var r = &g as auth(Mutate) &[fun(StoragePath):AnyStruct]
+
+                r.append(acc.storage.copy as! fun(StoragePath):AnyStruct)
+				
+                var c <- g[1]<@{Receiver}>(/storage/r)!
+				
+                var vr = acc.storage.borrow<&{Receiver}>(from: /storage/r)!
+                vr.deposit(from:<-c)
+            }
+        }
+    `)
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
+			switch location {
+			case common.StringLocation("imported"):
+				return imported, nil
+			default:
+				return nil, fmt.Errorf("unknown import location: %s", location)
+			}
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{{42}}, nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: script1,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+
+	RequireError(t, err)
+
+	var typeErr *sema.TypeMismatchError
+	require.ErrorAs(t, err, &typeErr)
+}

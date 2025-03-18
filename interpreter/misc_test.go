@@ -10181,6 +10181,9 @@ func TestInterpretHostFunctionStaticType(t *testing.T) {
 				&sema.FunctionType{
 					Purity:               sema.FunctionPurityView,
 					ReturnTypeAnnotation: sema.MetaTypeAnnotation,
+					TypeParameters: []*sema.TypeParameter{
+						{Name: "T"},
+					},
 				},
 			),
 			value.StaticType(inter),

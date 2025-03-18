@@ -323,3 +323,50 @@ func TestInterpretFunctionSubtyping(t *testing.T) {
 		result,
 	)
 }
+
+func TestInterpretGenericFunctionSubtyping(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("storage.load as non-generic function", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, nil, `
+            fun test() {
+                var boxedFunc: AnyStruct = account.storage.load
+                var unboxedFunc = boxedFunc as! fun(StoragePath):AnyStruct
+            }
+            `,
+			sema.Config{},
+		)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		var typeErr interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &typeErr)
+	})
+
+	t.Run("storage.copy as non-generic function", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, nil, `
+            fun test() {
+                var boxedFunc: AnyStruct = account.storage.copy
+                var unboxedFunc = boxedFunc as! fun(StoragePath):AnyStruct
+            }
+            `,
+			sema.Config{},
+		)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		var typeErr interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &typeErr)
+	})
+}

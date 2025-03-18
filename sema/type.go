@@ -4676,19 +4676,6 @@ func init() {
 	}
 
 	BaseValueActivation.Set(
-		typeName,
-		baseFunctionVariable(
-			typeName,
-			&FunctionType{
-				Purity:               FunctionPurityView,
-				TypeParameters:       []*TypeParameter{{Name: "T"}},
-				ReturnTypeAnnotation: MetaTypeAnnotation,
-			},
-			"Creates a run-time type representing the given static type as a value",
-		),
-	)
-
-	BaseValueActivation.Set(
 		PublicPathType.String(),
 		baseFunctionVariable(
 			PublicPathType.String(),
@@ -7675,11 +7662,27 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			return false
 		}
 
-		if len(typedSubType.Parameters) != len(typedSuperType.Parameters) {
+		// Type parameters must be subtypes.
+		// TODO: or should they be an exact match?
+		if len(typedSubType.TypeParameters) != len(typedSuperType.TypeParameters) {
 			return false
 		}
 
+		for i, subParameter := range typedSubType.TypeParameters {
+			superParameter := typedSuperType.TypeParameters[i]
+			if !IsSubType(
+				subParameter.TypeBound,
+				superParameter.TypeBound,
+			) {
+				return false
+			}
+		}
+
 		// Functions are contravariant in their parameter types
+
+		if len(typedSubType.Parameters) != len(typedSuperType.Parameters) {
+			return false
+		}
 
 		for i, subParameter := range typedSubType.Parameters {
 			superParameter := typedSuperType.Parameters[i]
