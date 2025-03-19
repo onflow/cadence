@@ -696,7 +696,7 @@ func TestCheckGenericFunctionSubtyping(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter1,
 				},
-				ReturnTypeAnnotation: sema.AnyStructTypeAnnotation,
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 			"",
 			nil,
@@ -713,7 +713,7 @@ func TestCheckGenericFunctionSubtyping(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter2,
 				},
-				ReturnTypeAnnotation: sema.AnyStructTypeAnnotation,
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 			"",
 			nil,
@@ -780,7 +780,9 @@ func TestCheckGenericFunctionSubtyping(t *testing.T) {
 			sema.IntegerType,
 		)
 
-		require.NoError(t, err)
+		errors := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errors[0], &typeMismatchError)
 	})
 
 	t.Run("second bound type is a super-type", func(t *testing.T) {
@@ -796,7 +798,6 @@ func TestCheckGenericFunctionSubtyping(t *testing.T) {
 		)
 
 		errors := RequireCheckerErrors(t, err, 1)
-
 		var typeMismatchError *sema.TypeMismatchError
 		require.ErrorAs(t, errors[0], &typeMismatchError)
 	})

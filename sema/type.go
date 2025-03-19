@@ -7662,18 +7662,22 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			return false
 		}
 
-		// Type parameters must be subtypes.
-		// TODO: or should they be an exact match?
+		// Type parameters must be equivalent.
+		// This is because for subtyping of functions, parameters must be *contravariant/supertypes*,
+		// whereas, return types be *covariant/subtypes*. Since type parameters can be used in
+		// both parameters and return types, inorder to satisfies both above conditions,
+		// bound type of type parameters can only be strictly equal, but not subtypes/supertypes of one another.
 		if len(typedSubType.TypeParameters) != len(typedSuperType.TypeParameters) {
 			return false
 		}
 
 		for i, subParameter := range typedSubType.TypeParameters {
 			superParameter := typedSuperType.TypeParameters[i]
-			if !IsSubType(
-				subParameter.TypeBound,
-				superParameter.TypeBound,
-			) {
+			if subParameter.TypeBound == nil {
+				return superParameter.TypeBound == nil
+			}
+
+			if !subParameter.TypeBound.Equal(superParameter.TypeBound) {
 				return false
 			}
 		}

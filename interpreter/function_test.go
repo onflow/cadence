@@ -347,7 +347,7 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				ReturnTypeAnnotation: sema.AnyStructTypeAnnotation,
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 			"",
 			nil,
@@ -379,7 +379,7 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 	t.Run("generic function as non-generic function", func(t *testing.T) {
 		t.Parallel()
 
-		inter, _ := parseCheckAndInterpretWithGenericFunction(t, `
+		inter, err := parseCheckAndInterpretWithGenericFunction(t, `
             fun test() {
                 var boxedFunc: AnyStruct = foo  // fun<T Integer>(): Void
 
@@ -388,8 +388,9 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
             `,
 			sema.IntegerType,
 		)
+		require.NoError(t, err)
 
-		_, err := inter.Invoke("test")
+		_, err = inter.Invoke("test")
 		require.Error(t, err)
 
 		var typeErr interpreter.ForceCastTypeMismatchError
