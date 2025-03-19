@@ -24,9 +24,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
@@ -328,39 +330,63 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("storage.load as non-generic function", func(t *testing.T) {
-		t.Parallel()
+	parseCheckAndInterpretWithGenericFunction := func(
+		tt *testing.T,
+		code string,
+		boundType sema.Type,
+	) (*interpreter.Interpreter, error) {
 
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+		typeParameter := &sema.TypeParameter{
+			Name:      "T",
+			TypeBound: boundType,
+		}
 
-		inter, _ := testAccount(t, address, true, nil, `
-            fun test() {
-                var boxedFunc: AnyStruct = account.storage.load
-                var unboxedFunc = boxedFunc as! fun(StoragePath):AnyStruct
-            }
-            `,
-			sema.Config{},
+		function1 := stdlib.NewStandardLibraryStaticFunction(
+			"foo",
+			&sema.FunctionType{
+				TypeParameters: []*sema.TypeParameter{
+					typeParameter,
+				},
+				ReturnTypeAnnotation: sema.AnyStructTypeAnnotation,
+			},
+			"",
+			nil,
 		)
 
-		_, err := inter.Invoke("test")
-		require.Error(t, err)
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(function1)
 
-		var typeErr interpreter.ForceCastTypeMismatchError
-		require.ErrorAs(t, err, &typeErr)
-	})
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, function1)
 
-	t.Run("storage.copy as non-generic function", func(t *testing.T) {
+		return parseCheckAndInterpretWithOptions(t,
+			code,
+			ParseCheckAndInterpretOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+				Config: &interpreter.Config{
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
+				},
+			},
+		)
+	}
+
+	t.Run("generic function as non-generic function", func(t *testing.T) {
 		t.Parallel()
 
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _ := parseCheckAndInterpretWithGenericFunction(t, `
             fun test() {
-                var boxedFunc: AnyStruct = account.storage.copy
-                var unboxedFunc = boxedFunc as! fun(StoragePath):AnyStruct
+                var boxedFunc: AnyStruct = foo  // fun<T Integer>(): Void
+
+                var unboxedFunc = boxedFunc as! fun():Void
             }
             `,
-			sema.Config{},
+			sema.IntegerType,
 		)
 
 		_, err := inter.Invoke("test")
