@@ -640,13 +640,11 @@ func (c *Compiler[_, _]) compileBlock(block *ast.Block, enclosingDeclKind common
 				c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: local.index})
 				c.codeGen.Emit(opcode.InstructionReturnValue{})
 			}
-		} else {
+		} else if needsSyntheticReturn(block.Statements) {
 			// If there are no post conditions,
 			// and if there is no return statement at the end,
 			// then emit an empty return.
-			if needsSyntheticReturn(block.Statements) {
-				c.codeGen.Emit(opcode.InstructionReturn{})
-			}
+			c.codeGen.Emit(opcode.InstructionReturn{})
 		}
 	case common.DeclarationKindInitializer:
 		// Initializers don't return anything explicitly. So do not add a return here.
@@ -714,7 +712,7 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 	//	        (1.a.i) Return value is non-empty -> Store the value in temp-var and jump to post conditions
 	//	        (1.a.ii) Return value is void -> Drop and jump to post conditions
 	//	    (1.b) No post conditions -> Return in-place
-	//	(2) Emtpy return
+	//	(2) Empty return
 	//	    (2.a) With post conditions -> Jump to post conditions
 	//	    (2.b) No post conditions -> Return in-place
 	//

@@ -649,8 +649,6 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 		programs,
 	)
 
-	printProgram("", program)
-
 	vmConfig := options.VMConfig
 	if vmConfig == nil {
 		storage := interpreter.NewInMemoryStorage(nil)

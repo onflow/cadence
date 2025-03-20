@@ -3922,12 +3922,6 @@ func TestCompileReturns(t *testing.T) {
 		functions := comp.ExportFunctions()
 		require.Equal(t, len(program.Functions), len(functions))
 
-		const (
-			tempResultIndex = iota
-			aIndex
-			resultIndex
-		)
-
 		assert.Equal(t,
 			[]opcode.Instruction{
 				// invoke `voidReturnFunc()`
