@@ -539,6 +539,7 @@ func (d *Desugar) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFuncti
 	if desugaredDecl == declaration.FunctionDeclaration {
 		return declaration
 	}
+
 	return ast.NewSpecialFunctionDeclaration(
 		d.memoryGauge,
 		declaration.Kind,
@@ -555,10 +556,15 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 
 	// Recursively de-sugar nested declarations (functions, types, etc.)
 
-	prevInheritedFuncs := d.inheritedFuncsWithConditions
+	prevInheritedFuncsWithConditions := d.inheritedFuncsWithConditions
+	prevEnclosingInterfaceType := d.enclosingInterfaceType
+
 	d.inheritedFuncsWithConditions = d.inheritedFunctionsWithConditions(compositeType)
+	d.enclosingInterfaceType = nil
+
 	defer func() {
-		d.inheritedFuncsWithConditions = prevInheritedFuncs
+		d.inheritedFuncsWithConditions = prevInheritedFuncsWithConditions
+		d.enclosingInterfaceType = prevEnclosingInterfaceType
 	}()
 
 	var desugaredMembers []ast.Declaration
@@ -936,18 +942,15 @@ func (d *Desugar) interfaceDelegationMethodCall(
 func (d *Desugar) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) ast.Declaration {
 	interfaceType := d.elaboration.InterfaceDeclarationType(declaration)
 
-	prevModifiedDecls := d.modifiedDeclarations
 	prevEnclosingInterfaceType := d.enclosingInterfaceType
-
-	d.modifiedDeclarations = nil
 	d.enclosingInterfaceType = interfaceType
-
 	defer func() {
-		d.modifiedDeclarations = prevModifiedDecls
 		d.enclosingInterfaceType = prevEnclosingInterfaceType
 	}()
 
 	// Recursively de-sugar nested declarations (functions, types, etc.)
+
+	var desugaredMembers []ast.Declaration
 
 	existingMembers := declaration.Members.Declarations()
 	for _, member := range existingMembers {
@@ -955,7 +958,7 @@ func (d *Desugar) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaratio
 		if desugaredMember == nil {
 			continue
 		}
-		d.modifiedDeclarations = append(d.modifiedDeclarations, desugaredMember)
+		desugaredMembers = append(desugaredMembers, desugaredMember)
 	}
 
 	// TODO: Optimize: If none of the existing members got updated or,
@@ -967,7 +970,7 @@ func (d *Desugar) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaratio
 		declaration.CompositeKind,
 		declaration.Identifier,
 		declaration.Conformances,
-		ast.NewMembers(d.memoryGauge, d.modifiedDeclarations),
+		ast.NewMembers(d.memoryGauge, desugaredMembers),
 		declaration.DocString,
 		declaration.Range,
 	)
