@@ -649,7 +649,7 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 		programs,
 	)
 
-	//printProgram("", program)
+	printProgram("", program)
 
 	vmConfig := options.VMConfig
 	if vmConfig == nil {

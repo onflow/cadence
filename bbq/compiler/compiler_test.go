@@ -3734,3 +3734,226 @@ func TestCompileForce(t *testing.T) {
 		)
 	})
 }
+
+func TestCompileReturns(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty return", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            fun test() {
+                return
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(checker)
+		program := comp.Compile()
+
+		require.Len(t, program.Functions, 1)
+
+		functions := comp.ExportFunctions()
+		require.Equal(t, len(program.Functions), len(functions))
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// return
+				opcode.InstructionReturn{},
+			},
+			functions[0].Code,
+		)
+	})
+
+	t.Run("value return", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            fun test(x: Int): Int {
+                return x
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(checker)
+		program := comp.Compile()
+
+		require.Len(t, program.Functions, 1)
+
+		functions := comp.ExportFunctions()
+		require.Equal(t, len(program.Functions), len(functions))
+
+		// xIndex is the index of the parameter `x`, which is the first parameter
+		const xIndex = 0
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// return x
+				opcode.InstructionGetLocal{LocalIndex: xIndex},
+				opcode.InstructionReturnValue{},
+			},
+			functions[0].Code,
+		)
+	})
+
+	t.Run("empty return with post condition", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            fun test() {
+                post {true}
+                return
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(checker)
+		program := comp.Compile()
+
+		require.Len(t, program.Functions, 1)
+
+		functions := comp.ExportFunctions()
+		require.Equal(t, len(program.Functions), len(functions))
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// Jump to post conditions
+				opcode.InstructionJump{Target: 1},
+
+				// Post condition
+				opcode.InstructionTrue{},
+				opcode.InstructionNot{},
+				opcode.InstructionJumpIfFalse{Target: 9},
+				opcode.InstructionGetConstant{ConstantIndex: 0},
+				opcode.InstructionTransfer{TypeIndex: 0x0},
+				opcode.InstructionGetGlobal{GlobalIndex: 1},
+				opcode.InstructionInvoke{},
+				opcode.InstructionDrop{},
+
+				// return
+				opcode.InstructionReturn{},
+			},
+			functions[0].Code,
+		)
+	})
+
+	t.Run("value return with post condition", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            fun test(): Int {
+                post {true}
+                var a = 5
+                return a
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(checker)
+		program := comp.Compile()
+
+		require.Len(t, program.Functions, 1)
+
+		functions := comp.ExportFunctions()
+		require.Equal(t, len(program.Functions), len(functions))
+
+		const (
+			tempResultIndex = iota
+			aIndex
+			resultIndex
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// var a = 5
+				opcode.InstructionGetConstant{ConstantIndex: 0x0},
+				opcode.InstructionTransfer{TypeIndex: 0x0},
+				opcode.InstructionSetLocal{LocalIndex: aIndex},
+
+				// $_result = a
+				opcode.InstructionGetLocal{LocalIndex: aIndex},
+				opcode.InstructionSetLocal{LocalIndex: tempResultIndex},
+
+				// Jump to post conditions
+				opcode.InstructionJump{Target: 6},
+
+				// result = $_result
+				opcode.InstructionGetLocal{LocalIndex: tempResultIndex},
+				opcode.InstructionTransfer{TypeIndex: 0x0},
+				opcode.InstructionSetLocal{LocalIndex: resultIndex},
+
+				// Post condition
+				opcode.InstructionTrue{},
+				opcode.InstructionNot{},
+				opcode.InstructionJumpIfFalse{Target: 17},
+				opcode.InstructionGetConstant{ConstantIndex: 1},
+				opcode.InstructionTransfer{TypeIndex: 1},
+				opcode.InstructionGetGlobal{GlobalIndex: 1},
+				opcode.InstructionInvoke{},
+				opcode.InstructionDrop{},
+
+				// return $_result
+				opcode.InstructionGetLocal{LocalIndex: tempResultIndex},
+				opcode.InstructionReturnValue{},
+			},
+			functions[0].Code,
+		)
+	})
+
+	t.Run("void value return with post condition", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            fun test() {
+                post {true}
+                return voidReturnFunc()
+            }
+
+            fun voidReturnFunc() {}
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(checker)
+		program := comp.Compile()
+
+		require.Len(t, program.Functions, 2)
+
+		functions := comp.ExportFunctions()
+		require.Equal(t, len(program.Functions), len(functions))
+
+		const (
+			tempResultIndex = iota
+			aIndex
+			resultIndex
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// invoke `voidReturnFunc()`
+				opcode.InstructionGetGlobal{GlobalIndex: 1},
+				opcode.InstructionInvoke{},
+
+				// Drop the returning void value
+				opcode.InstructionDrop{},
+
+				// Jump to post conditions
+				opcode.InstructionJump{Target: 4},
+
+				// Post condition
+				opcode.InstructionTrue{},
+				opcode.InstructionNot{},
+				opcode.InstructionJumpIfFalse{Target: 12},
+				opcode.InstructionGetConstant{ConstantIndex: 0},
+				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionGetGlobal{GlobalIndex: 2},
+				opcode.InstructionInvoke{},
+				opcode.InstructionDrop{},
+
+				// return $_result
+				opcode.InstructionReturn{},
+			},
+			functions[0].Code,
+		)
+	})
+}

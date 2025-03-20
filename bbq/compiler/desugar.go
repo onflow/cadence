@@ -19,6 +19,7 @@
 package compiler
 
 import (
+	"fmt"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
@@ -89,7 +90,7 @@ func (d *Desugar) Run() (*ast.Program, map[ast.Declaration]int) {
 
 	program := ast.NewProgram(d.memoryGauge, d.modifiedDeclarations)
 
-	//fmt.Println(ast.Prettier(program))
+	fmt.Println(ast.Prettier(program))
 
 	return program, d.postConditionIndices
 }
@@ -187,38 +188,6 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration,
 		declaration.StartPos,
 		declaration.DocString,
 	)
-}
-
-// Assign the return value to the temporary `$_result` synthetic variable.
-func (d *Desugar) tempResultAssignment(
-	originalReturnStmt *ast.ReturnStatement,
-	returnStmtTypes sema.ReturnStatementTypes,
-) *ast.AssignmentStatement {
-
-	transfer := ast.TransferOperationCopy
-	if returnStmtTypes.ReturnType.IsResourceType() {
-		transfer = ast.TransferOperationMove
-	}
-
-	tempResultAssignmentStmt := ast.NewAssignmentStatement(
-		d.memoryGauge,
-		d.tempResultIdentifierExpr(originalReturnStmt.StartPos),
-		ast.NewTransfer(
-			d.memoryGauge,
-			transfer,
-			originalReturnStmt.StartPos,
-		),
-		originalReturnStmt.Expression,
-	)
-
-	d.elaboration.SetAssignmentStatementTypes(
-		tempResultAssignmentStmt,
-		sema.AssignmentStatementTypes{
-			ValueType:  returnStmtTypes.ValueType,
-			TargetType: returnStmtTypes.ReturnType,
-		},
-	)
-	return tempResultAssignmentStmt
 }
 
 // Declare a `$_result` synthetic variable, to temporarily hold return values.

@@ -5212,7 +5212,7 @@ func TestCompileForce(t *testing.T) {
 	})
 }
 
-func TestCompileReturnStatements(t *testing.T) {
+func TestReturnStatements(t *testing.T) {
 
 	t.Parallel()
 

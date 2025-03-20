@@ -19,8 +19,7 @@
 package compiler
 
 type returns struct {
-	tempResultIndex uint16
-	returns         []int
+	returns []int
 }
 
 func (f *returns) appendReturn(offset int) {
