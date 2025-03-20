@@ -154,11 +154,17 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration,
 	}
 
 	if len(postConditions) > 0 {
+		// Keep track of where the post conditions start, for each function.
+		// This is used by the compiler to patch the jumps for return statements.
+		// Note: always use the "modifiedDecl" for tracking.
 		postConditionIndex := len(modifiedStatements)
 		defer func() {
 			d.postConditionIndices[modifiedDecl] = postConditionIndex
 		}()
+
+		// TODO: Declare the `result` variable only if it is used in the post conditions
 		modifiedStatements = d.declareResultVariable(funcBlock, modifiedStatements, returnType)
+
 		modifiedStatements = append(modifiedStatements, postConditions...)
 	}
 

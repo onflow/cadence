@@ -615,9 +615,12 @@ func (c *Compiler[_, _]) compileBlock(block *ast.Block, enclosingDeclKind common
 	}
 
 	for index, statement := range block.Statements {
+		// Once the post conditions are reached, patch all the previous return statements
+		// to jump to the current index (i.e: update them to jump to the post conditions).
 		if index == c.postConditionsIndex {
 			c.patchJumps(c.currentReturn.returns)
 		}
+
 		c.compileStatement(statement)
 	}
 
