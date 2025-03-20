@@ -19,7 +19,6 @@
 package compiler
 
 import (
-	"fmt"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
@@ -90,7 +89,7 @@ func (d *Desugar) Run() (*ast.Program, map[ast.Declaration]int) {
 
 	program := ast.NewProgram(d.memoryGauge, d.modifiedDeclarations)
 
-	fmt.Println(ast.Prettier(program))
+	//fmt.Println(ast.Prettier(program))
 
 	return program, d.postConditionIndices
 }
@@ -562,7 +561,15 @@ func (d *Desugar) desugarCondition(condition ast.Condition) ast.Statement {
 }
 
 func (d *Desugar) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) ast.Declaration {
-	return declaration
+	desugaredDecl := d.desugarDeclaration(declaration.FunctionDeclaration).(*ast.FunctionDeclaration)
+	if desugaredDecl == declaration.FunctionDeclaration {
+		return declaration
+	}
+	return ast.NewSpecialFunctionDeclaration(
+		d.memoryGauge,
+		declaration.Kind,
+		desugaredDecl,
+	)
 }
 
 func (d *Desugar) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) ast.Declaration {
