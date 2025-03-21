@@ -4744,7 +4744,7 @@ func init() {
 		),
 	)
 
-	for _, v := range runtimeTypeConstructors {
+	for _, v := range RuntimeTypeConstructors {
 		BaseValueActivation.Set(
 			v.Name,
 			baseFunctionVariable(

@@ -3462,14 +3462,18 @@ func lookupComposite(interpreter *Interpreter, typeID string) (*sema.CompositeTy
 	return typ, nil
 }
 
-func lookupEntitlement(interpreter *Interpreter, typeID string) (*sema.EntitlementType, error) {
-	_, _, err := common.DecodeTypeID(interpreter, typeID)
+func LookupEntitlement(
+	memoryGauge common.MemoryGauge,
+	authConversionHandler StaticAuthorizationConversionHandler,
+	typeID string,
+) (*sema.EntitlementType, error) {
+	_, _, err := common.DecodeTypeID(memoryGauge, typeID)
 	// if the typeID is invalid, return nil
 	if err != nil {
 		return nil, err
 	}
 
-	typ, err := interpreter.GetEntitlementType(common.TypeID(typeID))
+	typ, err := authConversionHandler.GetEntitlementType(common.TypeID(typeID))
 	if err != nil {
 		return nil, err
 	}
@@ -3614,13 +3618,15 @@ func referenceTypeFunction(invocation Invocation) Value {
 	errInIteration := false
 	entitlementsCount := entitlementValues.Count()
 
+	inter := invocation.Interpreter
+
 	if entitlementsCount > 0 {
 		authorization = NewEntitlementSetAuthorization(
-			invocation.Interpreter,
+			inter,
 			func() []common.TypeID {
 				entitlements := make([]common.TypeID, 0, entitlementsCount)
 				entitlementValues.Iterate(
-					invocation.Interpreter,
+					inter,
 					func(element Value) (resume bool) {
 						entitlementString, isString := element.(*StringValue)
 						if !isString {
@@ -3628,7 +3634,7 @@ func referenceTypeFunction(invocation Invocation) Value {
 							return false
 						}
 
-						_, err := lookupEntitlement(invocation.Interpreter, entitlementString.Str)
+						_, err := LookupEntitlement(inter, inter, entitlementString.Str)
 						if err != nil {
 							errInIteration = true
 							return false

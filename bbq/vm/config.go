@@ -19,7 +19,9 @@
 package vm
 
 import (
+	"fmt"
 	"github.com/onflow/atree"
+	"github.com/onflow/cadence/errors"
 
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
@@ -54,10 +56,11 @@ type Config struct {
 
 	// TODO: These are temporary. Remove once storing/reading is supported for VM values.
 	inter      *interpreter.Interpreter
-	TypeLoader func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType
+	TypeLoader func(location common.Location, typeID interpreter.TypeID) sema.Type
 }
 
 var _ ReferenceTracker = &Config{}
+var _ interpreter.TypeConverter = &Config{}
 
 func NewConfig(storage interpreter.Storage) *Config {
 	return &Config{
@@ -132,6 +135,42 @@ func (c *Config) ReferencedResourceKindedValues(valueID atree.ValueID) map[*Ephe
 
 func (c *Config) ClearReferenceTracking(valueID atree.ValueID) {
 	delete(c.referencedResourceKindedValues, valueID)
+}
+
+func (c *Config) GetEntitlementType(typeID interpreter.TypeID) (*sema.EntitlementType, error) {
+	location, qualifiedIdentifier, err := common.DecodeTypeID(c.MemoryGauge, string(typeID))
+	if err != nil {
+		return nil, err
+	}
+
+	if location == nil {
+		ty := sema.BuiltinEntitlements[qualifiedIdentifier]
+		if ty == nil {
+			return nil, interpreter.TypeLoadingError{
+				TypeID: typeID,
+			}
+		}
+
+		return ty, nil
+	}
+
+	typ := c.TypeLoader(location, typeID)
+
+	entitlementType, ok := typ.(*sema.EntitlementType)
+	if !ok {
+		return nil, fmt.Errorf("expected an entitlement type, found %s", typ.ID())
+	}
+
+	return entitlementType, nil
+}
+
+func (c *Config) GetEntitlementMapType(typeID interpreter.TypeID) (*sema.EntitlementMapType, error) {
+	//TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (c *Config) ConvertStaticToSemaType(staticType interpreter.StaticType) (sema.Type, error) {
+	return c.Interpreter().ConvertStaticToSemaType(staticType)
 }
 
 type ContractValueHandler func(conf *Config, location common.Location) *CompositeValue

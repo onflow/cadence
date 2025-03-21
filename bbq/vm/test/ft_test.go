@@ -40,7 +40,7 @@ func TestFTTransfer(t *testing.T) {
 	storage := interpreter.NewInMemoryStorage(nil)
 	programs := map[common.Location]*compiledProgram{}
 
-	typeLoader := func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
+	typeLoader := func(location common.Location, typeID interpreter.TypeID) sema.Type {
 		program, ok := programs[location]
 		if !ok {
 			panic(fmt.Errorf("cannot find elaboration for: %s", location))
@@ -203,7 +203,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 	storage := interpreter.NewInMemoryStorage(nil)
 	programs := map[common.Location]*compiledProgram{}
 
-	typeLoader := func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
+	typeLoader := func(location common.Location, typeID interpreter.TypeID) sema.Type {
 		program, ok := programs[location]
 		if !ok {
 			panic(fmt.Errorf("cannot find elaboration for: %s", location))

@@ -1958,7 +1958,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *vm.CompositeValue {
 				return importedContractValue
 			},
-			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
+			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.Type {
 				elaboration := importedChecker.Elaboration
 				compositeType := elaboration.CompositeType(typeID)
 				if compositeType != nil {
@@ -5311,5 +5311,50 @@ func TestCompileForce(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, vm.NewIntValue(42), actual)
 	})
+}
 
+func TestTypeConstructorTest(t *testing.T) {
+	t.Parallel()
+
+	t.Run("simple type", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err := compileAndInvoke(t,
+			`
+                fun test(): Type {
+                    return Type<Int>()
+                }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+		assert.Equal(t, vm.NewTypeValue(interpreter.PrimitiveStaticTypeInt), actual)
+	})
+
+	t.Run("user defined type", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err := compileAndInvoke(t,
+			`
+                struct Foo{}
+
+                fun test(): Type {
+                    return Type<Foo>()
+                }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			vm.NewTypeValue(
+				interpreter.NewCompositeStaticTypeComputeTypeID(
+					nil,
+					common.ScriptLocation{0x1},
+					"Foo",
+				),
+			),
+			actual,
+		)
+	})
 }
