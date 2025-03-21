@@ -139,14 +139,14 @@ func init() {
 }
 
 func GetCheckedCapabilityControllerReference(
-	storageContext StorageContext,
+	context StaticTypeContext,
 	capabilityAddressValue AddressValue,
 	capabilityIDValue IntValue,
 	wantedBorrowType *interpreter.ReferenceStaticType,
 	capabilityBorrowType *interpreter.ReferenceStaticType,
 ) ReferenceValue {
 	controller, resultBorrowType := getCheckedCapabilityController(
-		storageContext,
+		context,
 		capabilityAddressValue,
 		capabilityIDValue,
 		wantedBorrowType,
@@ -165,7 +165,7 @@ func GetCheckedCapabilityControllerReference(
 }
 
 func getCheckedCapabilityController(
-	storageContext StorageContext,
+	context StaticTypeContext,
 	capabilityAddressValue AddressValue,
 	capabilityIDValue IntValue,
 	wantedBorrowType *interpreter.ReferenceStaticType,
@@ -180,7 +180,7 @@ func getCheckedCapabilityController(
 		// TODO:
 		//   wantedBorrowType = inter.SubstituteMappedEntitlements(wantedBorrowType).(*sema.ReferenceType)
 
-		if !canBorrow(storageContext, wantedBorrowType, capabilityBorrowType) {
+		if !canBorrow(context, wantedBorrowType, capabilityBorrowType) {
 			return nil, nil
 		}
 	}
@@ -188,13 +188,13 @@ func getCheckedCapabilityController(
 	capabilityAddress := common.Address(capabilityAddressValue)
 	capabilityID := uint64(capabilityIDValue.SmallInt)
 
-	controller := getCapabilityController(storageContext, capabilityAddress, capabilityID)
+	controller := getCapabilityController(context, capabilityAddress, capabilityID)
 	if controller == nil {
 		return nil, nil
 	}
 
 	controllerBorrowType := controller.CapabilityControllerBorrowType()
-	if !canBorrow(storageContext, wantedBorrowType, controllerBorrowType) {
+	if !canBorrow(context, wantedBorrowType, controllerBorrowType) {
 		return nil, nil
 	}
 
@@ -203,24 +203,18 @@ func getCheckedCapabilityController(
 
 // getCapabilityController gets the capability controller for the given capability ID
 func getCapabilityController(
-	storageContext StorageContext,
+	storageContext interpreter.StorageReader,
 	address common.Address,
 	capabilityID uint64,
 ) CapabilityControllerValue {
 
 	storageMapKey := interpreter.Uint64StorageMapKey(capabilityID)
 
-	accountStorage := storageContext.GetDomainStorageMap(
-		storageContext.Interpreter(),
+	referenced := storageContext.ReadStored(
 		address,
 		common.StorageDomainCapabilityController,
-		false,
+		storageMapKey,
 	)
-	if accountStorage == nil {
-		return nil
-	}
-
-	referenced := accountStorage.ReadValue(storageContext, storageMapKey)
 	vmReferencedValue := InterpreterValueToVMValue(referenced)
 
 	controller, ok := vmReferencedValue.(CapabilityControllerValue)
@@ -232,7 +226,7 @@ func getCapabilityController(
 }
 
 func canBorrow(
-	context TypeConverterContext,
+	context StaticTypeContext,
 	wantedBorrowType *interpreter.ReferenceStaticType,
 	capabilityBorrowType *interpreter.ReferenceStaticType,
 ) bool {
@@ -247,13 +241,11 @@ func canBorrow(
 
 	// Ensure the wanted borrow type is a subtype or supertype of the capability borrow type
 
-	return IsSubType(
-		context,
+	return context.IsSubType(
 		wantedBorrowType.ReferencedType,
 		capabilityBorrowType.ReferencedType,
 	) ||
-		IsSubType(
-			context,
+		context.IsSubType(
 			capabilityBorrowType.ReferencedType,
 			wantedBorrowType.ReferencedType,
 		)

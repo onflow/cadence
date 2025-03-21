@@ -99,7 +99,7 @@ func InterpreterValueToVMValue(value interpreter.Value) Value {
 	}
 }
 
-func VMValueToInterpreterValue(typeConverterContext TypeConverterContext, value Value) interpreter.Value {
+func VMValueToInterpreterValue(typeConverter interpreter.TypeConverter, value Value) interpreter.Value {
 	switch value := value.(type) {
 	case nil:
 		return nil
@@ -137,7 +137,7 @@ func VMValueToInterpreterValue(typeConverterContext TypeConverterContext, value 
 		return interpreter.NewCapabilityValue(
 			nil,
 			interpreter.NewUnmeteredUInt64Value(uint64(value.ID.SmallInt)), // TODO: properly convert
-			VMValueToInterpreterValue(typeConverterContext, value.Address).(interpreter.AddressValue),
+			VMValueToInterpreterValue(typeConverter, value.Address).(interpreter.AddressValue),
 			value.BorrowType,
 		)
 	//case LinkValue:
@@ -158,7 +158,7 @@ func VMValueToInterpreterValue(typeConverterContext TypeConverterContext, value 
 
 		// TODO: Fields names order matters. However, this is temporary. So ignore for now.
 		for name, field := range value.fields { //nolint:maprange
-			fields[name] = VMValueToInterpreterValue(typeConverterContext, field)
+			fields[name] = VMValueToInterpreterValue(typeConverter, field)
 			fieldNames = append(fieldNames, name)
 		}
 
@@ -173,8 +173,7 @@ func VMValueToInterpreterValue(typeConverterContext TypeConverterContext, value 
 			nil,
 		)
 	case *StorageReferenceValue:
-		inter := typeConverterContext.Interpreter()
-		semaBorrowType, err := inter.ConvertStaticToSemaType(value.BorrowedType)
+		semaBorrowType, err := typeConverter.ConvertStaticToSemaType(value.BorrowedType)
 		if err != nil {
 			panic(err)
 		}
@@ -182,7 +181,7 @@ func VMValueToInterpreterValue(typeConverterContext TypeConverterContext, value 
 			nil,
 			value.Authorization,
 			value.TargetStorageAddress,
-			VMValueToInterpreterValue(typeConverterContext, value.TargetPath).(interpreter.PathValue),
+			VMValueToInterpreterValue(typeConverter, value.TargetPath).(interpreter.PathValue),
 			semaBorrowType,
 		)
 	case *StorageCapabilityControllerValue:
@@ -190,7 +189,7 @@ func VMValueToInterpreterValue(typeConverterContext TypeConverterContext, value 
 			nil,
 			value.BorrowType,
 			interpreter.NewUnmeteredUInt64Value(uint64(value.CapabilityID.SmallInt)),
-			VMValueToInterpreterValue(typeConverterContext, value.TargetPath).(interpreter.PathValue),
+			VMValueToInterpreterValue(typeConverter, value.TargetPath).(interpreter.PathValue),
 		)
 	default:
 		panic(errors.NewUnreachableError())

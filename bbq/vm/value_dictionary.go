@@ -431,13 +431,12 @@ func (v *DictionaryValue) iterate(
 	iterate()
 }
 
-func newValueComparator(typeConverterContext TypeConverterContext) atree.ValueComparator {
+func newValueComparator(comparisonContext interpreter.ValueComparisonContext) atree.ValueComparator {
 	return func(storage atree.SlabStorage, atreeValue atree.Value, otherStorable atree.Storable) (bool, error) {
-		inter := typeConverterContext.Interpreter()
 		locationRange := interpreter.EmptyLocationRange
-		value := interpreter.MustConvertStoredValue(inter, atreeValue)
-		otherValue := interpreter.StoredValue(inter, otherStorable, storage)
-		return value.(interpreter.EquatableValue).Equal(inter, locationRange, otherValue), nil
+		value := interpreter.MustConvertStoredValue(comparisonContext, atreeValue)
+		otherValue := interpreter.StoredValue(comparisonContext, otherStorable, storage)
+		return value.(interpreter.EquatableValue).Equal(comparisonContext, locationRange, otherValue), nil
 	}
 }
 

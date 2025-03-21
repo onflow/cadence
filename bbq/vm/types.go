@@ -23,12 +23,6 @@ import (
 	"github.com/onflow/cadence/interpreter"
 )
 
-func IsSubType(context TypeConverterContext, sourceType, targetType bbq.StaticType) bool {
-	// TODO: Avoid conversion to sema types.
-	inter := context.Interpreter()
-	return inter.IsSubType(sourceType, targetType)
-}
-
 // UnwrapOptionalType returns the type if it is not an optional type,
 // or the inner-most type if it is (optional types are repeatedly unwrapped)
 func UnwrapOptionalType(ty bbq.StaticType) bbq.StaticType {

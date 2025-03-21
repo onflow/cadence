@@ -43,24 +43,13 @@ func MustConvertStoredValue(gauge common.MemoryGauge, storedValue atree.Value) V
 }
 
 func ReadStored(
-	storageContext StorageContext,
+	storageReader interpreter.StorageReader,
 	address common.Address,
 	domain string,
 	identifier string,
 ) Value {
 	storageDomain, _ := common.StorageDomainFromIdentifier(domain)
-
-	accountStorage := storageContext.GetDomainStorageMap(
-		storageContext.Interpreter(),
-		address,
-		storageDomain,
-		false,
-	)
-	if accountStorage == nil {
-		return nil
-	}
-
-	referenced := accountStorage.ReadValue(storageContext, interpreter.StringStorageMapKey(identifier))
+	referenced := storageReader.ReadStored(address, storageDomain, interpreter.StringStorageMapKey(identifier))
 	return InterpreterValueToVMValue(referenced)
 }
 
@@ -72,16 +61,9 @@ func WriteStored(
 	value Value,
 ) (existed bool) {
 
-	inter := storageContext.Interpreter()
-
-	accountStorage := storageContext.GetDomainStorageMap(inter, storageAddress, domain, true)
 	interValue := VMValueToInterpreterValue(storageContext, value)
 
-	return accountStorage.WriteValue(
-		inter,
-		key,
-		interValue,
-	)
+	return storageContext.WriteStored(storageAddress, domain, key, interValue)
 	//interpreter.recordStorageMutation()
 }
 

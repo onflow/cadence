@@ -665,7 +665,7 @@ func opTransfer(vm *VM, ins opcode.InstructionTransfer) {
 	)
 
 	valueType := transferredValue.StaticType(config)
-	if !IsSubType(config, valueType, targetType) {
+	if !vm.config.IsSubType(valueType, targetType) {
 		panic(errors.NewUnexpectedError(
 			"invalid transfer: expected '%s', found '%s'",
 			targetType,
@@ -707,7 +707,7 @@ func opFailableCast(vm *VM, ins opcode.InstructionFailableCast) {
 
 	targetType := vm.loadType(ins.TypeIndex)
 	value, valueType := castValueAndValueType(vm.config, targetType, value)
-	isSubType := IsSubType(vm.config, valueType, targetType)
+	isSubType := vm.config.IsSubType(valueType, targetType)
 
 	var result Value
 	if isSubType {
@@ -731,7 +731,7 @@ func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 
 	targetType := vm.loadType(ins.TypeIndex)
 	value, valueType := castValueAndValueType(vm.config, targetType, value)
-	isSubType := IsSubType(vm.config, valueType, targetType)
+	isSubType := vm.config.IsSubType(valueType, targetType)
 
 	var result Value
 	if !isSubType {

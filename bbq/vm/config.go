@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
@@ -58,6 +59,10 @@ type Config struct {
 }
 
 var _ ReferenceTracker = &Config{}
+var _ StaticTypeContext = &Config{}
+var _ TransferContext = &Config{}
+var _ interpreter.StaticTypeConversionHandler = &Config{}
+var _ interpreter.ValueComparisonContext = &Config{}
 
 func NewConfig(storage interpreter.Storage) *Config {
 	return &Config{
@@ -132,6 +137,79 @@ func (c *Config) ReferencedResourceKindedValues(valueID atree.ValueID) map[*Ephe
 
 func (c *Config) ClearReferenceTracking(valueID atree.ValueID) {
 	delete(c.referencedResourceKindedValues, valueID)
+}
+
+func (c *Config) ReadStored(storageAddress common.Address, domain common.StorageDomain, identifier interpreter.StorageMapKey) interpreter.Value {
+	accountStorage := c.GetDomainStorageMap(
+		c.Interpreter(),
+		storageAddress,
+		domain,
+		false,
+	)
+	if accountStorage == nil {
+		return nil
+	}
+
+	return accountStorage.ReadValue(c, identifier)
+}
+
+func (c *Config) WriteStored(
+	storageAddress common.Address,
+	domain common.StorageDomain,
+	key interpreter.StorageMapKey,
+	value interpreter.Value,
+) (existed bool) {
+	inter := c.Interpreter()
+	accountStorage := c.GetDomainStorageMap(inter, storageAddress, domain, true)
+
+	return accountStorage.WriteValue(
+		inter,
+		key,
+		value,
+	)
+}
+
+func (c *Config) ConvertStaticToSemaType(staticType interpreter.StaticType) (sema.Type, error) {
+	inter := c.Interpreter()
+	return inter.ConvertStaticToSemaType(staticType)
+}
+
+func (c *Config) IsSubType(subType interpreter.StaticType, superType interpreter.StaticType) bool {
+	inter := c.Interpreter()
+	return inter.IsSubType(subType, superType)
+}
+
+func (c *Config) IsSubTypeOfSemaType(staticSubType interpreter.StaticType, superType sema.Type) bool {
+	inter := c.Interpreter()
+	return inter.IsSubTypeOfSemaType(staticSubType, superType)
+}
+
+func (c *Config) GetEntitlementType(typeID interpreter.TypeID) (*sema.EntitlementType, error) {
+	//TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (c *Config) GetEntitlementMapType(typeID interpreter.TypeID) (*sema.EntitlementMapType, error) {
+	//TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (c *Config) GetInterfaceType(
+	location common.Location,
+	qualifiedIdentifier string,
+	typeID interpreter.TypeID,
+) (*sema.InterfaceType, error) {
+	//TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (c *Config) GetCompositeType(
+	location common.Location,
+	qualifiedIdentifier string,
+	typeID interpreter.TypeID,
+) (*sema.CompositeType, error) {
+	//TODO
+	panic(errors.NewUnreachableError())
 }
 
 type ContractValueHandler func(conf *Config, location common.Location) *CompositeValue

@@ -38,14 +38,13 @@ type Value interface {
 	String() string
 }
 
-type StaticTypeContext interface {
-	StorageContext
-}
+type StaticTypeContext = interpreter.ValueStaticTypeContext
 
 type StorageContext interface {
-	interpreter.Storage
+	StaticTypeContext
 	common.MemoryGauge
-	TypeConverterContext
+	interpreter.Storage
+	interpreter.StorageWriter
 }
 
 type TransferContext interface {
