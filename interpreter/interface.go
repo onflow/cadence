@@ -43,6 +43,7 @@ func MustSemaTypeOfValue(value Value, context ValueStaticTypeContext) sema.Type 
 }
 
 type SubTypeChecker interface {
+	IsSubType(subType StaticType, superType StaticType) bool
 	IsSubTypeOfSemaType(staticSubType StaticType, superType sema.Type) bool
 }
 
@@ -54,6 +55,15 @@ type StorageReader interface {
 		domain common.StorageDomain,
 		identifier StorageMapKey,
 	) Value
+}
+
+type StorageWriter interface {
+	WriteStored(
+		storageAddress common.Address,
+		domain common.StorageDomain,
+		key StorageMapKey,
+		value Value,
+	) (existed bool)
 }
 
 var _ StorageReader = &Interpreter{}
