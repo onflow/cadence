@@ -97,7 +97,7 @@ func (v *StorageCapabilityControllerValue) CapabilityControllerBorrowType() *int
 	return v.BorrowType
 }
 
-func (v *StorageCapabilityControllerValue) StaticType(*Config) bbq.StaticType {
+func (v *StorageCapabilityControllerValue) StaticType(StaticTypeContext) bbq.StaticType {
 	return interpreter.PrimitiveStaticTypeStorageCapabilityController
 }
 
@@ -110,12 +110,7 @@ func (v *StorageCapabilityControllerValue) String() string {
 	)
 }
 
-func (v *StorageCapabilityControllerValue) Transfer(
-	config *Config,
-	address atree.Address,
-	remove bool,
-	storable atree.Storable,
-) Value {
+func (v *StorageCapabilityControllerValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
 	//if remove {
 	//	interpreter.RemoveReferencedSlab(storable)
 	//}

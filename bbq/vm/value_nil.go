@@ -35,14 +35,14 @@ var Nil Value = NilValue{}
 
 func (NilValue) isValue() {}
 
-func (NilValue) StaticType(config *Config) bbq.StaticType {
+func (NilValue) StaticType(staticTypeContext StaticTypeContext) bbq.StaticType {
 	return interpreter.NewOptionalStaticType(
-		config.MemoryGauge,
+		staticTypeContext,
 		interpreter.PrimitiveStaticTypeNever,
 	)
 }
 
-func (v NilValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
+func (v NilValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
 	return v
 }
 

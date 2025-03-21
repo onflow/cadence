@@ -26,7 +26,7 @@ import (
 
 type ReferencedResourceKindedValues map[atree.ValueID]map[*EphemeralReferenceValue]struct{}
 
-func maybeTrackReferencedResourceKindedValue(conf *Config, value Value) {
+func maybeTrackReferencedResourceKindedValue(referenceTracker ReferenceTracker, value Value) {
 	referenceValue, ok := value.(*EphemeralReferenceValue)
 	if !ok {
 		return
@@ -37,24 +37,10 @@ func maybeTrackReferencedResourceKindedValue(conf *Config, value Value) {
 		return
 	}
 
-	trackReferencedResourceKindedValue(
-		conf,
+	referenceTracker.TrackReferencedResourceKindedValue(
 		referenceTRackedValue.ValueID(),
 		referenceValue,
 	)
-}
-
-func trackReferencedResourceKindedValue(
-	conf *Config,
-	id atree.ValueID,
-	value *EphemeralReferenceValue,
-) {
-	values := conf.referencedResourceKindedValues[id]
-	if values == nil {
-		values = map[*EphemeralReferenceValue]struct{}{}
-		conf.referencedResourceKindedValues[id] = values
-	}
-	values[value] = struct{}{}
 }
 
 func checkInvalidatedResourceOrResourceReference(value Value) {
@@ -92,7 +78,7 @@ func checkInvalidatedResourceOrResourceReference(value Value) {
 }
 
 func invalidateReferencedResources(
-	conf *Config,
+	context TransferContext,
 	value Value,
 ) {
 	// skip non-resource typed values
@@ -106,9 +92,9 @@ func invalidateReferencedResources(
 	switch value := resourceKinded.(type) {
 	case *CompositeValue:
 		value.ForEachReadOnlyLoadedField(
-			conf,
+			context,
 			func(_ string, fieldValue Value) (resume bool) {
-				invalidateReferencedResources(conf, fieldValue)
+				invalidateReferencedResources(context, fieldValue)
 				// continue iteration
 				return true
 			},
@@ -117,9 +103,9 @@ func invalidateReferencedResources(
 
 	case *DictionaryValue:
 		value.IterateReadOnlyLoaded(
-			conf,
+			context,
 			func(_, value Value) (resume bool) {
-				invalidateReferencedResources(conf, value)
+				invalidateReferencedResources(context, value)
 				return true
 			},
 		)
@@ -127,16 +113,16 @@ func invalidateReferencedResources(
 
 	case *ArrayValue:
 		value.IterateReadOnlyLoaded(
-			conf,
+			context,
 			func(element Value) (resume bool) {
-				invalidateReferencedResources(conf, element)
+				invalidateReferencedResources(context, element)
 				return true
 			},
 		)
 		valueID = value.ValueID()
 
 	case *SomeValue:
-		invalidateReferencedResources(conf, value.value)
+		invalidateReferencedResources(context, value.value)
 		return
 
 	default:
@@ -144,7 +130,7 @@ func invalidateReferencedResources(
 		return
 	}
 
-	values := conf.referencedResourceKindedValues[valueID]
+	values := context.ReferencedResourceKindedValues(valueID)
 	if values == nil {
 		return
 	}
@@ -157,5 +143,5 @@ func invalidateReferencedResources(
 	// So no need to track those stale resources anymore. We will not need to update/clear them again.
 	// Therefore, remove them from the mapping.
 	// This is only to allow GC. No impact to the behavior.
-	delete(conf.referencedResourceKindedValues, valueID)
+	context.ClearReferenceTracking(valueID)
 }

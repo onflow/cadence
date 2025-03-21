@@ -113,7 +113,7 @@ func newDictionaryValueFromAtreeMap(
 
 func (*DictionaryValue) isValue() {}
 
-func (v *DictionaryValue) StaticType(*Config) bbq.StaticType {
+func (v *DictionaryValue) StaticType(StaticTypeContext) bbq.StaticType {
 	return v.Type
 }
 
@@ -149,7 +149,6 @@ func (v *DictionaryValue) Get(config *Config, keyValue Value) (Value, bool) {
 
 	return MustConvertStoredValue(
 		config.MemoryGauge,
-		config.Storage,
 		storedValue,
 	), true
 }
@@ -250,20 +249,21 @@ func (v *DictionaryValue) String() string {
 }
 
 func (v *DictionaryValue) Transfer(
-	config *Config,
+	transferContext TransferContext,
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
 ) Value {
-	storage := config.Storage
+	storage := transferContext
+
 	dictionary := v.dictionary
 
 	needsStoreTo := v.NeedsStoreTo(address)
 	isResourceKinded := v.IsResourceKinded()
 
 	if needsStoreTo || !isResourceKinded {
-		valueComparator := newValueComparator(config)
-		hashInputProvider := newHashInputProvider(config)
+		valueComparator := newValueComparator(transferContext)
+		hashInputProvider := newHashInputProvider(transferContext)
 
 		// Use non-readonly iterator here because iterated
 		// value can be removed if remove parameter is true.
@@ -290,8 +290,8 @@ func (v *DictionaryValue) Transfer(
 					return nil, nil, nil
 				}
 
-				key := interpreter.MustConvertStoredValue(config.MemoryGauge, atreeKey)
-				value := interpreter.MustConvertStoredValue(config.MemoryGauge, atreeValue)
+				key := interpreter.MustConvertStoredValue(transferContext, atreeKey)
+				value := interpreter.MustConvertStoredValue(transferContext, atreeValue)
 
 				// TODO: Transfer both key and value before returning.
 				return key, value, nil
@@ -325,7 +325,7 @@ func (v *DictionaryValue) Transfer(
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		invalidateReferencedResources(config, v)
+		invalidateReferencedResources(transferContext, v)
 
 		v.dictionary = nil
 	}
@@ -388,18 +388,18 @@ func (v *DictionaryValue) Iterate(
 // IterateReadOnlyLoaded iterates over all LOADED key-valye pairs of the array.
 // DO NOT perform storage mutations in the callback!
 func (v *DictionaryValue) IterateReadOnlyLoaded(
-	config *Config,
+	memoryGauge common.MemoryGauge,
 	f func(key, value Value) (resume bool),
 ) {
 	v.iterate(
-		config,
+		memoryGauge,
 		v.dictionary.IterateReadOnlyLoadedValues,
 		f,
 	)
 }
 
 func (v *DictionaryValue) iterate(
-	config *Config,
+	memoryGauge common.MemoryGauge,
 	atreeIterate func(fn atree.MapEntryIterationFunc) error,
 	f func(key Value, value Value) (resume bool),
 ) {
@@ -408,8 +408,8 @@ func (v *DictionaryValue) iterate(
 			// atree.OrderedMap iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value
 
-			keyValue := MustConvertStoredValue(config.MemoryGauge, config.Storage, key)
-			valueValue := MustConvertStoredValue(config.MemoryGauge, config.Storage, value)
+			keyValue := MustConvertStoredValue(memoryGauge, key)
+			valueValue := MustConvertStoredValue(memoryGauge, value)
 
 			checkInvalidatedResourceOrResourceReference(keyValue)
 			checkInvalidatedResourceOrResourceReference(valueValue)
@@ -431,9 +431,9 @@ func (v *DictionaryValue) iterate(
 	iterate()
 }
 
-func newValueComparator(conf *Config) atree.ValueComparator {
+func newValueComparator(typeConverterContext TypeConverterContext) atree.ValueComparator {
 	return func(storage atree.SlabStorage, atreeValue atree.Value, otherStorable atree.Storable) (bool, error) {
-		inter := conf.Interpreter()
+		inter := typeConverterContext.Interpreter()
 		locationRange := interpreter.EmptyLocationRange
 		value := interpreter.MustConvertStoredValue(inter, atreeValue)
 		otherValue := interpreter.StoredValue(inter, otherStorable, storage)
@@ -441,12 +441,11 @@ func newValueComparator(conf *Config) atree.ValueComparator {
 	}
 }
 
-func newHashInputProvider(conf *Config) atree.HashInputProvider {
+func newHashInputProvider(gauge common.MemoryGauge) atree.HashInputProvider {
 	return func(value atree.Value, scratch []byte) ([]byte, error) {
-		inter := conf.Interpreter()
 		locationRange := interpreter.EmptyLocationRange
-		hashInput := interpreter.MustConvertStoredValue(inter, value).(interpreter.HashableValue).
-			HashInput(inter, locationRange, scratch)
+		hashInput := interpreter.MustConvertStoredValue(gauge, value).(interpreter.HashableValue).
+			HashInput(gauge, locationRange, scratch)
 		return hashInput, nil
 	}
 }

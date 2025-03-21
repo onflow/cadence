@@ -19,6 +19,8 @@
 package vm
 
 import (
+	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
@@ -54,6 +56,8 @@ type Config struct {
 	inter      *interpreter.Interpreter
 	TypeLoader func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType
 }
+
+var _ ReferenceTracker = &Config{}
 
 func NewConfig(storage interpreter.Storage) *Config {
 	return &Config{
@@ -100,6 +104,34 @@ func (c *Config) Interpreter() *interpreter.Interpreter {
 	}
 
 	return c.inter
+}
+
+func (c *Config) MeterMemory(usage common.MemoryUsage) error {
+	if c.MemoryGauge == nil {
+		return nil
+	}
+
+	return c.MemoryGauge.MeterMemory(usage)
+}
+
+func (c *Config) TrackReferencedResourceKindedValue(
+	id atree.ValueID,
+	value *EphemeralReferenceValue,
+) {
+	values := c.referencedResourceKindedValues[id]
+	if values == nil {
+		values = map[*EphemeralReferenceValue]struct{}{}
+		c.referencedResourceKindedValues[id] = values
+	}
+	values[value] = struct{}{}
+}
+
+func (c *Config) ReferencedResourceKindedValues(valueID atree.ValueID) map[*EphemeralReferenceValue]struct{} {
+	return c.referencedResourceKindedValues[valueID]
+}
+
+func (c *Config) ClearReferenceTracking(valueID atree.ValueID) {
+	delete(c.referencedResourceKindedValues, valueID)
 }
 
 type ContractValueHandler func(conf *Config, location common.Location) *CompositeValue

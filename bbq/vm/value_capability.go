@@ -60,11 +60,11 @@ func NewInvalidCapabilityValue(
 
 func (CapabilityValue) isValue() {}
 
-func (v CapabilityValue) StaticType(config *Config) bbq.StaticType {
-	return interpreter.NewCapabilityStaticType(config.MemoryGauge, v.BorrowType)
+func (v CapabilityValue) StaticType(context StaticTypeContext) bbq.StaticType {
+	return interpreter.NewCapabilityStaticType(context, v.BorrowType)
 }
 
-func (v CapabilityValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
+func (v CapabilityValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
 	return v
 }
 
@@ -139,14 +139,14 @@ func init() {
 }
 
 func GetCheckedCapabilityControllerReference(
-	config *Config,
+	storageContext StorageContext,
 	capabilityAddressValue AddressValue,
 	capabilityIDValue IntValue,
 	wantedBorrowType *interpreter.ReferenceStaticType,
 	capabilityBorrowType *interpreter.ReferenceStaticType,
 ) ReferenceValue {
 	controller, resultBorrowType := getCheckedCapabilityController(
-		config,
+		storageContext,
 		capabilityAddressValue,
 		capabilityIDValue,
 		wantedBorrowType,
@@ -165,7 +165,7 @@ func GetCheckedCapabilityControllerReference(
 }
 
 func getCheckedCapabilityController(
-	config *Config,
+	storageContext StorageContext,
 	capabilityAddressValue AddressValue,
 	capabilityIDValue IntValue,
 	wantedBorrowType *interpreter.ReferenceStaticType,
@@ -180,7 +180,7 @@ func getCheckedCapabilityController(
 		// TODO:
 		//   wantedBorrowType = inter.SubstituteMappedEntitlements(wantedBorrowType).(*sema.ReferenceType)
 
-		if !canBorrow(config, wantedBorrowType, capabilityBorrowType) {
+		if !canBorrow(storageContext, wantedBorrowType, capabilityBorrowType) {
 			return nil, nil
 		}
 	}
@@ -188,13 +188,13 @@ func getCheckedCapabilityController(
 	capabilityAddress := common.Address(capabilityAddressValue)
 	capabilityID := uint64(capabilityIDValue.SmallInt)
 
-	controller := getCapabilityController(config, capabilityAddress, capabilityID)
+	controller := getCapabilityController(storageContext, capabilityAddress, capabilityID)
 	if controller == nil {
 		return nil, nil
 	}
 
 	controllerBorrowType := controller.CapabilityControllerBorrowType()
-	if !canBorrow(config, wantedBorrowType, controllerBorrowType) {
+	if !canBorrow(storageContext, wantedBorrowType, controllerBorrowType) {
 		return nil, nil
 	}
 
@@ -203,15 +203,15 @@ func getCheckedCapabilityController(
 
 // getCapabilityController gets the capability controller for the given capability ID
 func getCapabilityController(
-	config *Config,
+	storageContext StorageContext,
 	address common.Address,
 	capabilityID uint64,
 ) CapabilityControllerValue {
 
 	storageMapKey := interpreter.Uint64StorageMapKey(capabilityID)
 
-	accountStorage := config.Storage.GetDomainStorageMap(
-		config.Interpreter(),
+	accountStorage := storageContext.GetDomainStorageMap(
+		storageContext.Interpreter(),
 		address,
 		common.StorageDomainCapabilityController,
 		false,
@@ -220,8 +220,8 @@ func getCapabilityController(
 		return nil
 	}
 
-	referenced := accountStorage.ReadValue(config.MemoryGauge, storageMapKey)
-	vmReferencedValue := InterpreterValueToVMValue(config.Storage, referenced)
+	referenced := accountStorage.ReadValue(storageContext, storageMapKey)
+	vmReferencedValue := InterpreterValueToVMValue(referenced)
 
 	controller, ok := vmReferencedValue.(CapabilityControllerValue)
 	if !ok {
@@ -232,7 +232,7 @@ func getCapabilityController(
 }
 
 func canBorrow(
-	config *Config,
+	context TypeConverterContext,
 	wantedBorrowType *interpreter.ReferenceStaticType,
 	capabilityBorrowType *interpreter.ReferenceStaticType,
 ) bool {
@@ -248,12 +248,12 @@ func canBorrow(
 	// Ensure the wanted borrow type is a subtype or supertype of the capability borrow type
 
 	return IsSubType(
-		config,
+		context,
 		wantedBorrowType.ReferencedType,
 		capabilityBorrowType.ReferencedType,
 	) ||
 		IsSubType(
-			config,
+			context,
 			capabilityBorrowType.ReferencedType,
 			wantedBorrowType.ReferencedType,
 		)

@@ -23,9 +23,9 @@ import (
 	"github.com/onflow/cadence/interpreter"
 )
 
-func IsSubType(config *Config, sourceType, targetType bbq.StaticType) bool {
+func IsSubType(context TypeConverterContext, sourceType, targetType bbq.StaticType) bool {
 	// TODO: Avoid conversion to sema types.
-	inter := config.Interpreter()
+	inter := context.Interpreter()
 	return inter.IsSubType(sourceType, targetType)
 }
 

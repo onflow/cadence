@@ -71,27 +71,25 @@ func (v *StorageReferenceValue) BorrowType() interpreter.StaticType {
 	return v.BorrowedType
 }
 
-func (v *StorageReferenceValue) StaticType(config *Config) bbq.StaticType {
-	referencedValue, err := v.dereference(config)
+func (v *StorageReferenceValue) StaticType(context StaticTypeContext) bbq.StaticType {
+	referencedValue, err := v.dereference(context)
 	if err != nil {
 		panic(err)
 	}
 
-	memoryGauge := config.MemoryGauge
-
 	return interpreter.NewReferenceStaticType(
-		memoryGauge,
+		context,
 		v.Authorization,
-		(*referencedValue).StaticType(config),
+		(*referencedValue).StaticType(context),
 	)
 }
 
-func (v *StorageReferenceValue) dereference(config *Config) (*Value, error) {
+func (v *StorageReferenceValue) dereference(context StaticTypeContext) (*Value, error) {
 	address := v.TargetStorageAddress
 	domain := v.TargetPath.Domain.Identifier()
 	identifier := v.TargetPath.Identifier
 
-	vmReferencedValue := ReadStored(config, address, domain, identifier)
+	vmReferencedValue := ReadStored(context, address, domain, identifier)
 	if vmReferencedValue == nil {
 		return nil, nil
 	}
@@ -101,9 +99,9 @@ func (v *StorageReferenceValue) dereference(config *Config) (*Value, error) {
 	}
 
 	if v.BorrowedType != nil {
-		staticType := vmReferencedValue.StaticType(config)
+		staticType := vmReferencedValue.StaticType(context)
 
-		if !IsSubType(config, staticType, v.BorrowedType) {
+		if !IsSubType(context, staticType, v.BorrowedType) {
 			panic(fmt.Errorf("type mismatch: expected %s, found %s", v.BorrowedType, staticType))
 
 			// TODO:
@@ -120,7 +118,7 @@ func (v *StorageReferenceValue) dereference(config *Config) (*Value, error) {
 	return &vmReferencedValue, nil
 }
 
-func (v *StorageReferenceValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
+func (v *StorageReferenceValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
 	return v
 }
 

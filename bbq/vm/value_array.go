@@ -140,13 +140,18 @@ func (v *ArrayValue) isValue() {
 	panic("implement me")
 }
 
-func (v *ArrayValue) StaticType(*Config) bbq.StaticType {
+func (v *ArrayValue) StaticType(StaticTypeContext) bbq.StaticType {
 	return v.Type
 }
 
-func (v *ArrayValue) Transfer(config *Config, address atree.Address, remove bool, storable atree.Storable) Value {
+func (v *ArrayValue) Transfer(
+	transferContext TransferContext,
+	address atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
 
-	storage := config.Storage
+	storage := transferContext
 
 	array := v.array
 
@@ -175,7 +180,7 @@ func (v *ArrayValue) Transfer(config *Config, address atree.Address, remove bool
 		}
 
 		array, err = atree.NewArrayFromBatchData(
-			config.Storage,
+			transferContext,
 			address,
 			v.array.Type(),
 			func() (atree.Value, error) {
@@ -187,7 +192,7 @@ func (v *ArrayValue) Transfer(config *Config, address atree.Address, remove bool
 					return nil, nil
 				}
 
-				element := interpreter.MustConvertStoredValue(config.MemoryGauge, value)
+				element := interpreter.MustConvertStoredValue(transferContext, value)
 
 				// TODO: Transfer before returning.
 				return element, nil
@@ -224,7 +229,7 @@ func (v *ArrayValue) Transfer(config *Config, address atree.Address, remove bool
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		invalidateReferencedResources(config, v)
+		invalidateReferencedResources(transferContext, v)
 
 		v.array = nil
 	}
@@ -296,7 +301,6 @@ func (v *ArrayValue) Get(config *Config, index int) Value {
 
 	return MustConvertStoredValue(
 		config.MemoryGauge,
-		config.Storage,
 		storedValue,
 	)
 }
@@ -359,12 +363,12 @@ func (v *ArrayValue) Set(config *Config, index int, element Value) {
 }
 
 func (v *ArrayValue) Iterate(
-	config *Config,
+	context TransferContext,
 	f func(element Value) (resume bool),
 	transferElements bool,
 ) {
 	v.iterate(
-		config,
+		context,
 		v.array.Iterate,
 		f,
 		transferElements,
@@ -374,13 +378,13 @@ func (v *ArrayValue) Iterate(
 // IterateReadOnlyLoaded iterates over all LOADED elements of the array.
 // DO NOT perform storage mutations in the callback!
 func (v *ArrayValue) IterateReadOnlyLoaded(
-	config *Config,
+	context TransferContext,
 	f func(element Value) (resume bool),
 ) {
 	const transferElements = false
 
 	v.iterate(
-		config,
+		context,
 		v.array.IterateReadOnlyLoadedValues,
 		f,
 		transferElements,
@@ -388,7 +392,7 @@ func (v *ArrayValue) IterateReadOnlyLoaded(
 }
 
 func (v *ArrayValue) iterate(
-	config *Config,
+	context TransferContext,
 	atreeIterate func(fn atree.ArrayIterationFunc) error,
 	f func(element Value) (resume bool),
 	transferElements bool,
@@ -397,13 +401,13 @@ func (v *ArrayValue) iterate(
 		err := atreeIterate(func(element atree.Value) (resume bool, err error) {
 			// atree.Array iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value
-			elementValue := MustConvertStoredValue(config, config, element)
+			elementValue := MustConvertStoredValue(context, element)
 			checkInvalidatedResourceOrResourceReference(elementValue)
 
 			if transferElements {
 				// Each element must be transferred before passing onto the function.
 				elementValue = elementValue.Transfer(
-					config,
+					context,
 					atree.Address{},
 					false,
 					nil,
@@ -444,13 +448,13 @@ var _ ValueIterator = &ArrayIterator{}
 
 func (i *ArrayIterator) isValue() {}
 
-func (i *ArrayIterator) StaticType(_ *Config) bbq.StaticType {
+func (i *ArrayIterator) StaticType(_ StaticTypeContext) bbq.StaticType {
 	// Iterator is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
 }
 
-func (i *ArrayIterator) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
+func (i *ArrayIterator) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
 	return i
 }
 
@@ -495,5 +499,5 @@ func (i *ArrayIterator) Next(config *Config) Value {
 
 	// atree.Array iterator returns low-level atree.Value,
 	// convert to high-level interpreter.Value
-	return MustConvertStoredValue(config.MemoryGauge, config.Storage, atreeValue)
+	return MustConvertStoredValue(config.MemoryGauge, atreeValue)
 }

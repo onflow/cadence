@@ -32,11 +32,11 @@ var Void Value = VoidValue{}
 
 func (VoidValue) isValue() {}
 
-func (VoidValue) StaticType(*Config) bbq.StaticType {
+func (VoidValue) StaticType(StaticTypeContext) bbq.StaticType {
 	return interpreter.PrimitiveStaticTypeVoid
 }
 
-func (v VoidValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
+func (v VoidValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
 	return v
 }
 

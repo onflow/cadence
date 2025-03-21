@@ -48,11 +48,11 @@ func NewStringValueFromBytes(bytes []byte) StringValue {
 
 func (StringValue) isValue() {}
 
-func (StringValue) StaticType(*Config) bbq.StaticType {
+func (StringValue) StaticType(StaticTypeContext) bbq.StaticType {
 	return interpreter.PrimitiveStaticTypeString
 }
 
-func (v StringValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
+func (v StringValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
 	return v
 }
 

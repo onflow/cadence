@@ -35,11 +35,11 @@ var _ Value = FunctionValue{}
 
 func (FunctionValue) isValue() {}
 
-func (FunctionValue) StaticType(*Config) bbq.StaticType {
+func (FunctionValue) StaticType(StaticTypeContext) bbq.StaticType {
 	panic(errors.NewUnreachableError())
 }
 
-func (v FunctionValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
+func (v FunctionValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
 	return v
 }
 
@@ -60,11 +60,11 @@ var _ Value = NativeFunctionValue{}
 
 func (NativeFunctionValue) isValue() {}
 
-func (NativeFunctionValue) StaticType(*Config) bbq.StaticType {
+func (NativeFunctionValue) StaticType(StaticTypeContext) bbq.StaticType {
 	panic(errors.NewUnreachableError())
 }
 
-func (v NativeFunctionValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
+func (v NativeFunctionValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
 	return v
 }
 

@@ -33,11 +33,11 @@ var _ Value = AddressValue{}
 
 func (AddressValue) isValue() {}
 
-func (AddressValue) StaticType(*Config) bbq.StaticType {
+func (AddressValue) StaticType(StaticTypeContext) bbq.StaticType {
 	return interpreter.PrimitiveStaticTypeAddress
 }
 
-func (v AddressValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
+func (v AddressValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
 	return v
 }
 

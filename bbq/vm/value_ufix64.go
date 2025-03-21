@@ -47,11 +47,11 @@ var _ NumberValue = UFix64Value(0)
 
 func (UFix64Value) isValue() {}
 
-func (UFix64Value) StaticType(*Config) bbq.StaticType {
+func (UFix64Value) StaticType(StaticTypeContext) bbq.StaticType {
 	return interpreter.PrimitiveStaticTypeUFix64
 }
 
-func (v UFix64Value) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
+func (v UFix64Value) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
 	return v
 }
 

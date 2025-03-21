@@ -50,11 +50,11 @@ var _ IntegerValue = IntValue{}
 
 func (IntValue) isValue() {}
 
-func (IntValue) StaticType(*Config) bbq.StaticType {
+func (IntValue) StaticType(StaticTypeContext) bbq.StaticType {
 	return interpreter.PrimitiveStaticTypeInt
 }
 
-func (v IntValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
+func (v IntValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
 	return v
 }
 

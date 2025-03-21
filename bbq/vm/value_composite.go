@@ -88,7 +88,7 @@ func newCompositeValueFromOrderedMap(
 
 func (*CompositeValue) isValue() {}
 
-func (v *CompositeValue) StaticType(*Config) bbq.StaticType {
+func (v *CompositeValue) StaticType(StaticTypeContext) bbq.StaticType {
 	return v.CompositeType
 }
 
@@ -96,7 +96,7 @@ func (v *CompositeValue) GetMember(config *Config, name string) Value {
 	return v.GetField(config, name)
 }
 
-func (v *CompositeValue) GetField(config *Config, name string) Value {
+func (v *CompositeValue) GetField(gauge common.MemoryGauge, name string) Value {
 	storedValue, err := v.dictionary.Get(
 		interpreter.StringAtreeValueComparator,
 		interpreter.StringAtreeValueHashInput,
@@ -110,7 +110,7 @@ func (v *CompositeValue) GetField(config *Config, name string) Value {
 		panic(errors.NewExternalError(err))
 	}
 
-	return MustConvertStoredValue(config.MemoryGauge, config.Storage, storedValue)
+	return MustConvertStoredValue(gauge, storedValue)
 }
 
 func (v *CompositeValue) SetMember(config *Config, name string, value Value) {
@@ -166,7 +166,7 @@ func (v *CompositeValue) String() string {
 }
 
 func (v *CompositeValue) Transfer(
-	config *Config,
+	transferContext TransferContext,
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -208,7 +208,7 @@ func (v *CompositeValue) Transfer(
 
 	if needsStoreTo && v.Kind == common.CompositeKindContract {
 		panic(interpreter.NonTransferableValueError{
-			Value: VMValueToInterpreterValue(config, v),
+			Value: VMValueToInterpreterValue(transferContext, v),
 		})
 	}
 
@@ -222,10 +222,10 @@ func (v *CompositeValue) Transfer(
 		}
 
 		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), 0)
-		common.UseMemory(config.MemoryGauge, elementMemoryUse)
+		common.UseMemory(transferContext, elementMemoryUse)
 
 		dictionary, err = atree.NewMapFromBatchData(
-			config.Storage,
+			transferContext,
 			address,
 			atree.NewDefaultDigesterBuilder(),
 			v.dictionary.Type(),
@@ -245,11 +245,11 @@ func (v *CompositeValue) Transfer(
 				// NOTE: key is stringAtreeValue
 				// and does not need to be converted or copied
 
-				value := interpreter.MustConvertStoredValue(config.MemoryGauge, atreeValue)
+				value := interpreter.MustConvertStoredValue(transferContext, atreeValue)
 
 				// TODO:
-				vmValue := InterpreterValueToVMValue(config.Storage, value)
-				vmValue.Transfer(config, address, remove, nil)
+				vmValue := InterpreterValueToVMValue(value)
+				vmValue.Transfer(transferContext, address, remove, nil)
 
 				return atreeKey, value, nil
 			},
@@ -260,15 +260,15 @@ func (v *CompositeValue) Transfer(
 
 		if remove {
 			err = v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
-				RemoveReferencedSlab(config.Storage, nameStorable)
-				RemoveReferencedSlab(config.Storage, valueStorable)
+				RemoveReferencedSlab(transferContext, nameStorable)
+				RemoveReferencedSlab(transferContext, valueStorable)
 			})
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
 			//interpreter.maybeValidateAtreeValue(v.dictionary)
 
-			RemoveReferencedSlab(config.Storage, storable)
+			RemoveReferencedSlab(transferContext, storable)
 		}
 	}
 
@@ -284,7 +284,7 @@ func (v *CompositeValue) Transfer(
 		// This allows raising an error when the resource is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		invalidateReferencedResources(config, v)
+		invalidateReferencedResources(transferContext, v)
 
 		v.dictionary = nil
 	}
@@ -438,25 +438,24 @@ func (v *CompositeValue) ForEachField(
 // It does NOT iterate over computed fields and functions!
 // DO NOT perform storage mutations in the callback!
 func (v *CompositeValue) ForEachReadOnlyLoadedField(
-	config *Config,
+	memoryGauge common.MemoryGauge,
 	f func(fieldName string, fieldValue Value) (resume bool),
 ) {
 	v.forEachField(
-		config,
+		memoryGauge,
 		v.dictionary.IterateReadOnlyLoadedValues,
 		f,
 	)
 }
 
 func (v *CompositeValue) forEachField(
-	config *Config,
+	memoryGauge common.MemoryGauge,
 	atreeIterate func(fn atree.MapEntryIterationFunc) error,
 	f func(fieldName string, fieldValue Value) (resume bool),
 ) {
 	err := atreeIterate(func(key atree.Value, atreeValue atree.Value) (resume bool, err error) {
 		value := MustConvertStoredValue(
-			config.MemoryGauge,
-			config.Storage,
+			memoryGauge,
 			atreeValue,
 		)
 
