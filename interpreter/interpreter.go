@@ -5225,7 +5225,7 @@ func (interpreter *Interpreter) RemoveReferencedSlab(storable atree.Storable) {
 	}
 }
 
-func (interpreter *Interpreter) maybeValidateAtreeValue(v atree.Value) {
+func (interpreter *Interpreter) MaybeValidateAtreeValue(v atree.Value) {
 	config := interpreter.SharedState.Config
 
 	if config.AtreeValueValidationEnabled {
@@ -5233,7 +5233,7 @@ func (interpreter *Interpreter) maybeValidateAtreeValue(v atree.Value) {
 	}
 }
 
-func (interpreter *Interpreter) maybeValidateAtreeStorage() {
+func (interpreter *Interpreter) MaybeValidateAtreeStorage() {
 	config := interpreter.SharedState.Config
 
 	if config.AtreeStorageValidationEnabled {
@@ -5376,7 +5376,7 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 	}
 }
 
-func (interpreter *Interpreter) maybeTrackReferencedResourceKindedValue(referenceValue *EphemeralReferenceValue) {
+func (interpreter *Interpreter) MaybeTrackReferencedResourceKindedValue(referenceValue *EphemeralReferenceValue) {
 	if value, ok := referenceValue.Value.(ReferenceTrackedResourceKindedValue); ok {
 		interpreter.trackReferencedResourceKindedValue(value.ValueID(), referenceValue)
 	}
@@ -5395,7 +5395,7 @@ func (interpreter *Interpreter) trackReferencedResourceKindedValue(
 }
 
 // TODO: Remove the `destroyed` flag
-func (interpreter *Interpreter) invalidateReferencedResources(
+func (interpreter *Interpreter) InvalidateReferencedResources(
 	value Value,
 	locationRange LocationRange,
 ) {
@@ -5411,7 +5411,7 @@ func (interpreter *Interpreter) invalidateReferencedResources(
 		value.ForEachReadOnlyLoadedField(
 			interpreter,
 			func(_ string, fieldValue Value) (resume bool) {
-				interpreter.invalidateReferencedResources(fieldValue, locationRange)
+				interpreter.InvalidateReferencedResources(fieldValue, locationRange)
 				// continue iteration
 				return true
 			},
@@ -5424,7 +5424,7 @@ func (interpreter *Interpreter) invalidateReferencedResources(
 			interpreter,
 			locationRange,
 			func(_, value Value) (resume bool) {
-				interpreter.invalidateReferencedResources(value, locationRange)
+				interpreter.InvalidateReferencedResources(value, locationRange)
 				return true
 			},
 		)
@@ -5434,7 +5434,7 @@ func (interpreter *Interpreter) invalidateReferencedResources(
 		value.IterateReadOnlyLoaded(
 			interpreter,
 			func(element Value) (resume bool) {
-				interpreter.invalidateReferencedResources(element, locationRange)
+				interpreter.InvalidateReferencedResources(element, locationRange)
 				return true
 			},
 			locationRange,
@@ -5442,7 +5442,7 @@ func (interpreter *Interpreter) invalidateReferencedResources(
 		valueID = value.ValueID()
 
 	case *SomeValue:
-		interpreter.invalidateReferencedResources(value.value, locationRange)
+		interpreter.InvalidateReferencedResources(value.value, locationRange)
 		return
 
 	default:
@@ -5763,4 +5763,21 @@ func (interpreter *Interpreter) checkResourceLoss(value Value, locationRange Loc
 			LocationRange: locationRange,
 		})
 	}
+}
+
+func (interpreter *Interpreter) OnResourceOwnerChange(resource *CompositeValue, oldOwner common.Address, newOwner common.Address) {
+	onResourceOwnerChange := interpreter.SharedState.Config.OnResourceOwnerChange
+	if onResourceOwnerChange == nil {
+		return
+	}
+
+	onResourceOwnerChange(interpreter, resource, oldOwner, newOwner)
+}
+
+func (interpreter *Interpreter) TracingEnabled() bool {
+	return interpreter.SharedState.Config.TracingEnabled
+}
+
+func (interpreter *Interpreter) CheckInvalidatedResourceOrResourceReference(value Value, locationRange LocationRange) {
+	checkInvalidatedResourceOrResourceReference(value, locationRange, interpreter)
 }

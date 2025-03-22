@@ -147,7 +147,7 @@ func (NilValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 }
 
 func (v NilValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -156,7 +156,7 @@ func (v NilValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		context.RemoveReferencedSlab(storable)
 	}
 	return v
 }
@@ -165,7 +165,7 @@ func (v NilValue) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (NilValue) DeepRemove(_ *Interpreter, _ bool) {
+func (NilValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

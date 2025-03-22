@@ -63,7 +63,7 @@ func NewUnmeteredEphemeralReferenceValue(
 		BorrowedType:  borrowedType,
 	}
 
-	interpreter.maybeTrackReferencedResourceKindedValue(ref)
+	interpreter.MaybeTrackReferencedResourceKindedValue(ref)
 
 	return ref
 }
@@ -310,7 +310,7 @@ func (*EphemeralReferenceValue) IsResourceKinded(context ValueStaticTypeContext)
 }
 
 func (v *EphemeralReferenceValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -319,7 +319,7 @@ func (v *EphemeralReferenceValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		context.RemoveReferencedSlab(storable)
 	}
 	return v
 }
@@ -328,7 +328,7 @@ func (v *EphemeralReferenceValue) Clone(inter *Interpreter) Value {
 	return NewUnmeteredEphemeralReferenceValue(inter, v.Authorization, v.Value, v.BorrowedType, EmptyLocationRange)
 }
 
-func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter, _ bool) {
+func (*EphemeralReferenceValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

@@ -146,7 +146,7 @@ func (*InterpretedFunctionValue) IsResourceKinded(context ValueStaticTypeContext
 }
 
 func (f *InterpretedFunctionValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -156,7 +156,7 @@ func (f *InterpretedFunctionValue) Transfer(
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		context.RemoveReferencedSlab(storable)
 	}
 	return f
 }
@@ -165,7 +165,7 @@ func (f *InterpretedFunctionValue) Clone(_ *Interpreter) Value {
 	return f
 }
 
-func (*InterpretedFunctionValue) DeepRemove(_ *Interpreter, _ bool) {
+func (*InterpretedFunctionValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
@@ -299,7 +299,7 @@ func (*HostFunctionValue) IsResourceKinded(context ValueStaticTypeContext) bool 
 }
 
 func (f *HostFunctionValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -309,7 +309,7 @@ func (f *HostFunctionValue) Transfer(
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		context.RemoveReferencedSlab(storable)
 	}
 	return f
 }
@@ -318,7 +318,7 @@ func (f *HostFunctionValue) Clone(_ *Interpreter) Value {
 	return f
 }
 
-func (*HostFunctionValue) DeepRemove(_ *Interpreter, _ bool) {
+func (*HostFunctionValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
@@ -490,7 +490,7 @@ func (BoundFunctionValue) IsResourceKinded(context ValueStaticTypeContext) bool 
 }
 
 func (f BoundFunctionValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -500,7 +500,7 @@ func (f BoundFunctionValue) Transfer(
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		context.RemoveReferencedSlab(storable)
 	}
 	return f
 }
@@ -509,7 +509,7 @@ func (f BoundFunctionValue) Clone(_ *Interpreter) Value {
 	return f
 }
 
-func (BoundFunctionValue) DeepRemove(_ *Interpreter, _ bool) {
+func (BoundFunctionValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

@@ -525,7 +525,7 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 
 	v.isDestroyed = true
 
-	interpreter.invalidateReferencedResources(v, locationRange)
+	interpreter.InvalidateReferencedResources(v, locationRange)
 
 	v.dictionary = nil
 }
@@ -950,8 +950,8 @@ func (v *DictionaryValue) RemoveWithoutTransfer(
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.maybeValidateAtreeValue(v.dictionary)
-	interpreter.maybeValidateAtreeStorage()
+	interpreter.MaybeValidateAtreeValue(v.dictionary)
+	interpreter.MaybeValidateAtreeStorage()
 
 	return existingKeyStorable, existingValueStorable
 }
@@ -1030,8 +1030,8 @@ func (v *DictionaryValue) InsertWithoutTransfer(
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.maybeValidateAtreeValue(v.dictionary)
-	interpreter.maybeValidateAtreeStorage()
+	interpreter.MaybeValidateAtreeValue(v.dictionary)
+	interpreter.MaybeValidateAtreeStorage()
 
 	return existingValueStorable
 }
@@ -1286,7 +1286,7 @@ func (v *DictionaryValue) UnwrapAtreeValue() (atree.Value, uint64) {
 func (v *DictionaryValue) IsReferenceTrackedResourceKindedValue() {}
 
 func (v *DictionaryValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	address atree.Address,
 	remove bool,
@@ -1295,21 +1295,19 @@ func (v *DictionaryValue) Transfer(
 	hasNoParentContainer bool,
 ) Value {
 
-	config := interpreter.SharedState.Config
-
-	interpreter.ReportComputation(
+	context.ReportComputation(
 		common.ComputationKindTransferDictionaryValue,
 		uint(v.Count()),
 	)
 
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
 		count := v.Count()
 
 		defer func() {
-			interpreter.reportDictionaryValueTransferTrace(
+			context.reportDictionaryValueTransferTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -1332,12 +1330,12 @@ func (v *DictionaryValue) Transfer(
 	dictionary := v.dictionary
 
 	needsStoreTo := v.NeedsStoreTo(address)
-	isResourceKinded := v.IsResourceKinded(interpreter)
+	isResourceKinded := v.IsResourceKinded(context)
 
 	if needsStoreTo || !isResourceKinded {
 
-		valueComparator := newValueComparator(interpreter, locationRange)
-		hashInputProvider := newHashInputProvider(interpreter, locationRange)
+		valueComparator := newValueComparator(context, locationRange)
+		hashInputProvider := newHashInputProvider(context, locationRange)
 
 		// Use non-readonly iterator here because iterated
 		// value can be removed if remove parameter is true.
@@ -1352,18 +1350,18 @@ func (v *DictionaryValue) Transfer(
 			elementCount,
 			v.elementSize,
 		)
-		common.UseMemory(interpreter, elementOverhead)
-		common.UseMemory(interpreter, dataUse)
-		common.UseMemory(interpreter, metaDataUse)
+		common.UseMemory(context, elementOverhead)
+		common.UseMemory(context, dataUse)
+		common.UseMemory(context, metaDataUse)
 
 		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(
 			elementCount,
 			v.elementSize,
 		)
-		common.UseMemory(config.MemoryGauge, elementMemoryUse)
+		common.UseMemory(context, elementMemoryUse)
 
 		dictionary, err = atree.NewMapFromBatchData(
-			config.Storage,
+			context.Storage(),
 			address,
 			atree.NewDefaultDigesterBuilder(),
 			v.dictionary.Type(),
@@ -1380,9 +1378,9 @@ func (v *DictionaryValue) Transfer(
 					return nil, nil, nil
 				}
 
-				key := MustConvertStoredValue(interpreter, atreeKey).
+				key := MustConvertStoredValue(context, atreeKey).
 					Transfer(
-						interpreter,
+						context,
 						locationRange,
 						address,
 						remove,
@@ -1391,9 +1389,9 @@ func (v *DictionaryValue) Transfer(
 						false, // atreeKey has parent container because it is returned from iterator.
 					)
 
-				value := MustConvertStoredValue(interpreter, atreeValue).
+				value := MustConvertStoredValue(context, atreeValue).
 					Transfer(
-						interpreter,
+						context,
 						locationRange,
 						address,
 						remove,
@@ -1411,19 +1409,19 @@ func (v *DictionaryValue) Transfer(
 
 		if remove {
 			err = v.dictionary.PopIterate(func(keyStorable atree.Storable, valueStorable atree.Storable) {
-				interpreter.RemoveReferencedSlab(keyStorable)
-				interpreter.RemoveReferencedSlab(valueStorable)
+				context.RemoveReferencedSlab(keyStorable)
+				context.RemoveReferencedSlab(valueStorable)
 			})
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
 
-			interpreter.maybeValidateAtreeValue(v.dictionary)
+			context.MaybeValidateAtreeValue(v.dictionary)
 			if hasNoParentContainer {
-				interpreter.maybeValidateAtreeStorage()
+				context.MaybeValidateAtreeStorage()
 			}
 
-			interpreter.RemoveReferencedSlab(storable)
+			context.RemoveReferencedSlab(storable)
 		}
 	}
 
@@ -1437,13 +1435,13 @@ func (v *DictionaryValue) Transfer(
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		interpreter.invalidateReferencedResources(v, locationRange)
+		context.InvalidateReferencedResources(v, locationRange)
 
 		v.dictionary = nil
 	}
 
 	res := newDictionaryValueFromAtreeMap(
-		interpreter,
+		context,
 		v.Type,
 		v.elementSize,
 		dictionary,
@@ -1512,18 +1510,16 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 	return dictionary
 }
 
-func (v *DictionaryValue) DeepRemove(interpreter *Interpreter, hasNoParentContainer bool) {
+func (v *DictionaryValue) DeepRemove(context ValueRemoveContext, hasNoParentContainer bool) {
 
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
 		count := v.Count()
 
 		defer func() {
-			interpreter.reportDictionaryValueDeepRemoveTrace(
+			context.reportDictionaryValueDeepRemoveTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -1537,21 +1533,21 @@ func (v *DictionaryValue) DeepRemove(interpreter *Interpreter, hasNoParentContai
 
 	err := v.dictionary.PopIterate(func(keyStorable atree.Storable, valueStorable atree.Storable) {
 
-		key := StoredValue(interpreter, keyStorable, storage)
-		key.DeepRemove(interpreter, false) // key is an element of v.dictionary because it is from PopIterate() callback.
-		interpreter.RemoveReferencedSlab(keyStorable)
+		key := StoredValue(context, keyStorable, storage)
+		key.DeepRemove(context, false) // key is an element of v.dictionary because it is from PopIterate() callback.
+		context.RemoveReferencedSlab(keyStorable)
 
-		value := StoredValue(interpreter, valueStorable, storage)
-		value.DeepRemove(interpreter, false) // value is an element of v.dictionary because it is from PopIterate() callback.
-		interpreter.RemoveReferencedSlab(valueStorable)
+		value := StoredValue(context, valueStorable, storage)
+		value.DeepRemove(context, false) // value is an element of v.dictionary because it is from PopIterate() callback.
+		context.RemoveReferencedSlab(valueStorable)
 	})
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.maybeValidateAtreeValue(v.dictionary)
+	context.MaybeValidateAtreeValue(v.dictionary)
 	if hasNoParentContainer {
-		interpreter.maybeValidateAtreeStorage()
+		context.MaybeValidateAtreeStorage()
 	}
 }
 

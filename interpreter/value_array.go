@@ -370,7 +370,7 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 
 	v.isDestroyed = true
 
-	interpreter.invalidateReferencedResources(v, locationRange)
+	interpreter.InvalidateReferencedResources(v, locationRange)
 
 	v.array = nil
 }
@@ -534,8 +534,8 @@ func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, 
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.maybeValidateAtreeValue(v.array)
-	interpreter.maybeValidateAtreeStorage()
+	interpreter.MaybeValidateAtreeValue(v.array)
+	interpreter.MaybeValidateAtreeStorage()
 
 	existingValue := StoredValue(interpreter, existingStorable, interpreter.Storage())
 	interpreter.checkResourceLoss(existingValue, locationRange)
@@ -614,8 +614,8 @@ func (v *ArrayValue) Append(interpreter *Interpreter, locationRange LocationRang
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.maybeValidateAtreeValue(v.array)
-	interpreter.maybeValidateAtreeStorage()
+	interpreter.MaybeValidateAtreeValue(v.array)
+	interpreter.MaybeValidateAtreeStorage()
 }
 
 func (v *ArrayValue) AppendAll(interpreter *Interpreter, locationRange LocationRange, other *ArrayValue) {
@@ -668,8 +668,8 @@ func (v *ArrayValue) InsertWithoutTransfer(
 
 		panic(errors.NewExternalError(err))
 	}
-	interpreter.maybeValidateAtreeValue(v.array)
-	interpreter.maybeValidateAtreeStorage()
+	interpreter.MaybeValidateAtreeValue(v.array)
+	interpreter.MaybeValidateAtreeStorage()
 }
 
 func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRange, index int, element Value) {
@@ -731,8 +731,8 @@ func (v *ArrayValue) RemoveWithoutTransfer(
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.maybeValidateAtreeValue(v.array)
-	interpreter.maybeValidateAtreeStorage()
+	interpreter.MaybeValidateAtreeValue(v.array)
+	interpreter.MaybeValidateAtreeStorage()
 
 	return storable
 }
@@ -1279,7 +1279,7 @@ func (v *ArrayValue) UnwrapAtreeValue() (atree.Value, uint64) {
 func (v *ArrayValue) IsReferenceTrackedResourceKindedValue() {}
 
 func (v *ArrayValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	address atree.Address,
 	remove bool,
@@ -1288,21 +1288,19 @@ func (v *ArrayValue) Transfer(
 	hasNoParentContainer bool,
 ) Value {
 
-	config := interpreter.SharedState.Config
-
-	interpreter.ReportComputation(
+	context.ReportComputation(
 		common.ComputationKindTransferArrayValue,
 		uint(v.Count()),
 	)
 
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
 		count := v.Count()
 
 		defer func() {
-			interpreter.reportArrayValueTransferTrace(
+			context.reportArrayValueTransferTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -1325,7 +1323,7 @@ func (v *ArrayValue) Transfer(
 	array := v.array
 
 	needsStoreTo := v.NeedsStoreTo(address)
-	isResourceKinded := v.IsResourceKinded(interpreter)
+	isResourceKinded := v.IsResourceKinded(context)
 
 	if needsStoreTo || !isResourceKinded {
 
@@ -1340,12 +1338,12 @@ func (v *ArrayValue) Transfer(
 			v.array.Count(),
 			v.elementSize,
 		)
-		common.UseMemory(interpreter, elementUsage)
-		common.UseMemory(interpreter, dataSlabs)
-		common.UseMemory(interpreter, metaDataSlabs)
+		common.UseMemory(context, elementUsage)
+		common.UseMemory(context, dataSlabs)
+		common.UseMemory(context, metaDataSlabs)
 
 		array, err = atree.NewArrayFromBatchData(
-			config.Storage,
+			context.Storage(),
 			address,
 			v.array.Type(),
 			func() (atree.Value, error) {
@@ -1357,9 +1355,9 @@ func (v *ArrayValue) Transfer(
 					return nil, nil
 				}
 
-				element := MustConvertStoredValue(interpreter, value).
+				element := MustConvertStoredValue(context, value).
 					Transfer(
-						interpreter,
+						context,
 						locationRange,
 						address,
 						remove,
@@ -1376,17 +1374,17 @@ func (v *ArrayValue) Transfer(
 		}
 
 		if remove {
-			err = v.array.PopIterate(interpreter.RemoveReferencedSlab)
+			err = v.array.PopIterate(context.RemoveReferencedSlab)
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
 
-			interpreter.maybeValidateAtreeValue(v.array)
+			context.MaybeValidateAtreeValue(v.array)
 			if hasNoParentContainer {
-				interpreter.maybeValidateAtreeStorage()
+				context.MaybeValidateAtreeStorage()
 			}
 
-			interpreter.RemoveReferencedSlab(storable)
+			context.RemoveReferencedSlab(storable)
 		}
 	}
 
@@ -1400,13 +1398,13 @@ func (v *ArrayValue) Transfer(
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		interpreter.invalidateReferencedResources(v, locationRange)
+		context.InvalidateReferencedResources(v, locationRange)
 
 		v.array = nil
 	}
 
 	res := newArrayValueFromAtreeArray(
-		interpreter,
+		context,
 		v.Type,
 		v.elementSize,
 		array,
@@ -1466,17 +1464,15 @@ func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 	return array
 }
 
-func (v *ArrayValue) DeepRemove(interpreter *Interpreter, hasNoParentContainer bool) {
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+func (v *ArrayValue) DeepRemove(context ValueRemoveContext, hasNoParentContainer bool) {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
 		count := v.Count()
 
 		defer func() {
-			interpreter.reportArrayValueDeepRemoveTrace(
+			context.reportArrayValueDeepRemoveTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -1489,17 +1485,17 @@ func (v *ArrayValue) DeepRemove(interpreter *Interpreter, hasNoParentContainer b
 	storage := v.array.Storage
 
 	err := v.array.PopIterate(func(storable atree.Storable) {
-		value := StoredValue(interpreter, storable, storage)
-		value.DeepRemove(interpreter, false) // existingValue is an element of v.array because it is from PopIterate() callback.
-		interpreter.RemoveReferencedSlab(storable)
+		value := StoredValue(context, storable, storage)
+		value.DeepRemove(context, false) // existingValue is an element of v.array because it is from PopIterate() callback.
+		context.RemoveReferencedSlab(storable)
 	})
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.maybeValidateAtreeValue(v.array)
+	context.MaybeValidateAtreeValue(v.array)
 	if hasNoParentContainer {
-		interpreter.maybeValidateAtreeStorage()
+		context.MaybeValidateAtreeStorage()
 	}
 }
 
