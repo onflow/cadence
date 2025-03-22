@@ -80,7 +80,7 @@ func (placeholderValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 }
 
 func (f placeholderValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -90,7 +90,7 @@ func (f placeholderValue) Transfer(
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		context.RemoveReferencedSlab(storable)
 	}
 	return f
 }
@@ -99,6 +99,6 @@ func (f placeholderValue) Clone(_ *Interpreter) Value {
 	return f
 }
 
-func (placeholderValue) DeepRemove(_ *Interpreter, _ bool) {
+func (placeholderValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }

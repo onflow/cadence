@@ -196,7 +196,7 @@ func (*StorageCapabilityControllerValue) IsResourceKinded(context ValueStaticTyp
 }
 
 func (v *StorageCapabilityControllerValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -205,7 +205,7 @@ func (v *StorageCapabilityControllerValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		context.RemoveReferencedSlab(storable)
 	}
 	return v
 }
@@ -218,7 +218,7 @@ func (v *StorageCapabilityControllerValue) Clone(interpreter *Interpreter) Value
 	}
 }
 
-func (v *StorageCapabilityControllerValue) DeepRemove(_ *Interpreter, _ bool) {
+func (v *StorageCapabilityControllerValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

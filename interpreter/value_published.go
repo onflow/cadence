@@ -126,12 +126,13 @@ func (*PublishedValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 }
 
 func (v *PublishedValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
-	preventTransfer map[atree.ValueID]struct{},
+	preventTransfer map[atree.ValueID]struct {
+	},
 	hasNoParentContainer bool,
 ) Value {
 	// NB: if the inner value of a PublishedValue can be a resource,
@@ -140,7 +141,7 @@ func (v *PublishedValue) Transfer(
 	if v.NeedsStoreTo(address) {
 
 		innerValue := v.Value.Transfer(
-			interpreter,
+			context,
 			locationRange,
 			address,
 			remove,
@@ -150,7 +151,7 @@ func (v *PublishedValue) Transfer(
 		).(*IDCapabilityValue)
 
 		addressValue := v.Recipient.Transfer(
-			interpreter,
+			context,
 			locationRange,
 			address,
 			remove,
@@ -160,10 +161,10 @@ func (v *PublishedValue) Transfer(
 		).(AddressValue)
 
 		if remove {
-			interpreter.RemoveReferencedSlab(storable)
+			context.RemoveReferencedSlab(storable)
 		}
 
-		return NewPublishedValue(interpreter, addressValue, innerValue)
+		return NewPublishedValue(context, addressValue, innerValue)
 	}
 
 	return v
@@ -177,7 +178,7 @@ func (v *PublishedValue) Clone(interpreter *Interpreter) Value {
 	}
 }
 
-func (*PublishedValue) DeepRemove(_ *Interpreter, _ bool) {
+func (*PublishedValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

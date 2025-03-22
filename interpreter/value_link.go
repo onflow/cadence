@@ -126,7 +126,7 @@ func (PathLinkValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 }
 
 func (v PathLinkValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -135,7 +135,7 @@ func (v PathLinkValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		context.RemoveReferencedSlab(storable)
 	}
 	return v
 }
@@ -147,7 +147,7 @@ func (v PathLinkValue) Clone(inter *Interpreter) Value {
 	}
 }
 
-func (PathLinkValue) DeepRemove(_ *Interpreter, _ bool) {
+func (PathLinkValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
@@ -249,7 +249,7 @@ func (AccountLinkValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 }
 
 func (v AccountLinkValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -258,7 +258,7 @@ func (v AccountLinkValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		context.RemoveReferencedSlab(storable)
 	}
 	return v
 }
@@ -267,7 +267,7 @@ func (AccountLinkValue) Clone(_ *Interpreter) Value {
 	return AccountLinkValue{}
 }
 
-func (AccountLinkValue) DeepRemove(_ *Interpreter, _ bool) {
+func (AccountLinkValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

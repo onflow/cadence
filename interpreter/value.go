@@ -113,7 +113,7 @@ type Value interface {
 	IsResourceKinded(context ValueStaticTypeContext) bool
 	NeedsStoreTo(address atree.Address) bool
 	Transfer(
-		interpreter *Interpreter,
+		transferContext ValueTransferContext,
 		locationRange LocationRange,
 		address atree.Address,
 		remove bool,
@@ -122,7 +122,7 @@ type Value interface {
 		hasNoParentContainer bool, // hasNoParentContainer is true when transferred value isn't an element of another container.
 	) Value
 	DeepRemove(
-		interpreter *Interpreter,
+		removeContext ValueRemoveContext,
 		hasNoParentContainer bool, // hasNoParentContainer is true when transferred value isn't an element of another container.
 	)
 	// Clone returns a new value that is equal to this value.
