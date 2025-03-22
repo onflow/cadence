@@ -170,7 +170,7 @@ func (*AccountCapabilityControllerValue) IsResourceKinded(context ValueStaticTyp
 }
 
 func (v *AccountCapabilityControllerValue) Transfer(
-	interpreter *Interpreter,
+	transferContext ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -179,7 +179,7 @@ func (v *AccountCapabilityControllerValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		transferContext.RemoveReferencedSlab(storable)
 	}
 	return v
 }
@@ -191,7 +191,7 @@ func (v *AccountCapabilityControllerValue) Clone(_ *Interpreter) Value {
 	}
 }
 
-func (v *AccountCapabilityControllerValue) DeepRemove(_ *Interpreter, _ bool) {
+func (v *AccountCapabilityControllerValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

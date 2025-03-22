@@ -571,7 +571,7 @@ func (Fix64Value) IsResourceKinded(context ValueStaticTypeContext) bool {
 }
 
 func (v Fix64Value) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -580,7 +580,7 @@ func (v Fix64Value) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		context.RemoveReferencedSlab(storable)
 	}
 	return v
 }
@@ -589,7 +589,7 @@ func (v Fix64Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (Fix64Value) DeepRemove(_ *Interpreter, _ bool) {
+func (Fix64Value) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

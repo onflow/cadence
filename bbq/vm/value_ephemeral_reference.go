@@ -57,7 +57,7 @@ func NewEphemeralReferenceValue(
 		BorrowedType:  borrowedType,
 	}
 
-	maybeTrackReferencedResourceKindedValue(referenceTracker, ref)
+	referenceTracker.MaybeTrackReferencedResourceKindedValue(ref)
 
 	return ref
 }

@@ -222,7 +222,7 @@ func (*IDCapabilityValue) IsResourceKinded(context ValueStaticTypeContext) bool 
 }
 
 func (v *IDCapabilityValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -231,8 +231,8 @@ func (v *IDCapabilityValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		v.DeepRemove(interpreter, true)
-		interpreter.RemoveReferencedSlab(storable)
+		v.DeepRemove(context, true)
+		context.RemoveReferencedSlab(storable)
 	}
 	return v
 }
@@ -245,8 +245,8 @@ func (v *IDCapabilityValue) Clone(interpreter *Interpreter) Value {
 	)
 }
 
-func (v *IDCapabilityValue) DeepRemove(interpreter *Interpreter, _ bool) {
-	v.address.DeepRemove(interpreter, false)
+func (v *IDCapabilityValue) DeepRemove(context ValueRemoveContext, _ bool) {
+	v.address.DeepRemove(context, false)
 }
 
 func (v *IDCapabilityValue) ByteSize() uint32 {

@@ -332,23 +332,24 @@ func (v *SomeValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 }
 
 func (v *SomeValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
-	preventTransfer map[atree.ValueID]struct{},
+	preventTransfer map[atree.ValueID]struct {
+	},
 	hasNoParentContainer bool,
 ) Value {
 	innerValue := v.value
 
 	needsStoreTo := v.NeedsStoreTo(address)
-	isResourceKinded := v.IsResourceKinded(interpreter)
+	isResourceKinded := v.IsResourceKinded(context)
 
 	if needsStoreTo || !isResourceKinded {
 
 		innerValue = v.value.Transfer(
-			interpreter,
+			context,
 			locationRange,
 			address,
 			remove,
@@ -358,8 +359,8 @@ func (v *SomeValue) Transfer(
 		)
 
 		if remove {
-			interpreter.RemoveReferencedSlab(v.valueStorable)
-			interpreter.RemoveReferencedSlab(storable)
+			context.RemoveReferencedSlab(v.valueStorable)
+			context.RemoveReferencedSlab(storable)
 		}
 	}
 
@@ -376,12 +377,12 @@ func (v *SomeValue) Transfer(
 		// we don't need to invalidate referenced resources if this resource was moved
 		// to storage, as the earlier transfer will have done this already
 		if !needsStoreTo {
-			interpreter.invalidateReferencedResources(v.value, locationRange)
+			context.InvalidateReferencedResources(v.value, locationRange)
 		}
 		v.value = nil
 	}
 
-	res := NewSomeValueNonCopying(interpreter, innerValue)
+	res := NewSomeValueNonCopying(context, innerValue)
 	res.valueStorable = nil
 	res.isDestroyed = v.isDestroyed
 
@@ -393,10 +394,10 @@ func (v *SomeValue) Clone(interpreter *Interpreter) Value {
 	return NewUnmeteredSomeValueNonCopying(innerValue)
 }
 
-func (v *SomeValue) DeepRemove(interpreter *Interpreter, hasNoParentContainer bool) {
-	v.value.DeepRemove(interpreter, hasNoParentContainer)
+func (v *SomeValue) DeepRemove(context ValueRemoveContext, hasNoParentContainer bool) {
+	v.value.DeepRemove(context, hasNoParentContainer)
 	if v.valueStorable != nil {
-		interpreter.RemoveReferencedSlab(v.valueStorable)
+		context.RemoveReferencedSlab(v.valueStorable)
 	}
 }
 

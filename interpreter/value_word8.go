@@ -434,7 +434,7 @@ func (Word8Value) IsResourceKinded(context ValueStaticTypeContext) bool {
 }
 
 func (v Word8Value) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -443,7 +443,7 @@ func (v Word8Value) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		context.RemoveReferencedSlab(storable)
 	}
 	return v
 }
@@ -452,7 +452,7 @@ func (v Word8Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (Word8Value) DeepRemove(_ *Interpreter, _ bool) {
+func (Word8Value) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

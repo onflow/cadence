@@ -583,7 +583,7 @@ func (Word256Value) IsResourceKinded(context ValueStaticTypeContext) bool {
 }
 
 func (v Word256Value) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -592,7 +592,7 @@ func (v Word256Value) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		context.RemoveReferencedSlab(storable)
 	}
 	return v
 }
@@ -601,7 +601,7 @@ func (v Word256Value) Clone(_ *Interpreter) Value {
 	return NewUnmeteredWord256ValueFromBigInt(v.BigInt)
 }
 
-func (Word256Value) DeepRemove(_ *Interpreter, _ bool) {
+func (Word256Value) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

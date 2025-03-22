@@ -37,7 +37,6 @@ type OnEventEmittedFunc func(
 ) error
 
 type Config struct {
-	interpreter.Storage
 	common.MemoryGauge
 	commons.ImportHandler
 	ContractValueHandler
@@ -46,6 +45,7 @@ type Config struct {
 	NativeFunctionsProvider
 
 	// TODO: Move these to a 'shared state'?
+	storage                                     interpreter.Storage
 	CapabilityControllerIterations              map[AddressPath]int
 	MutationDuringCapabilityControllerIteration bool
 	referencedResourceKindedValues              ReferencedResourceKindedValues
@@ -61,12 +61,13 @@ type Config struct {
 var _ ReferenceTracker = &Config{}
 var _ StaticTypeContext = &Config{}
 var _ TransferContext = &Config{}
+var _ StorageContext = &Config{}
 var _ interpreter.StaticTypeConversionHandler = &Config{}
 var _ interpreter.ValueComparisonContext = &Config{}
 
 func NewConfig(storage interpreter.Storage) *Config {
 	return &Config{
-		Storage:              storage,
+		storage:              storage,
 		MemoryGauge:          nil,
 		ImportHandler:        nil,
 		ContractValueHandler: nil,
@@ -90,7 +91,7 @@ func (c *Config) Interpreter() *interpreter.Interpreter {
 			nil,
 			common_utils.TestLocation,
 			&interpreter.Config{
-				Storage:               c.Storage,
+				Storage:               c.storage,
 				ImportLocationHandler: nil,
 				CompositeTypeHandler: func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 					return c.TypeLoader(location, typeID).(*sema.CompositeType)
@@ -119,28 +120,12 @@ func (c *Config) MeterMemory(usage common.MemoryUsage) error {
 	return c.MemoryGauge.MeterMemory(usage)
 }
 
-func (c *Config) TrackReferencedResourceKindedValue(
-	id atree.ValueID,
-	value *EphemeralReferenceValue,
-) {
-	values := c.referencedResourceKindedValues[id]
-	if values == nil {
-		values = map[*EphemeralReferenceValue]struct{}{}
-		c.referencedResourceKindedValues[id] = values
-	}
-	values[value] = struct{}{}
-}
-
-func (c *Config) ReferencedResourceKindedValues(valueID atree.ValueID) map[*EphemeralReferenceValue]struct{} {
-	return c.referencedResourceKindedValues[valueID]
-}
-
-func (c *Config) ClearReferenceTracking(valueID atree.ValueID) {
-	delete(c.referencedResourceKindedValues, valueID)
+func (c *Config) Storage() interpreter.Storage {
+	return c.storage
 }
 
 func (c *Config) ReadStored(storageAddress common.Address, domain common.StorageDomain, identifier interpreter.StorageMapKey) interpreter.Value {
-	accountStorage := c.GetDomainStorageMap(
+	accountStorage := c.storage.GetDomainStorageMap(
 		c.Interpreter(),
 		storageAddress,
 		domain,
@@ -160,7 +145,7 @@ func (c *Config) WriteStored(
 	value interpreter.Value,
 ) (existed bool) {
 	inter := c.Interpreter()
-	accountStorage := c.GetDomainStorageMap(inter, storageAddress, domain, true)
+	accountStorage := c.storage.GetDomainStorageMap(inter, storageAddress, domain, true)
 
 	return accountStorage.WriteValue(
 		inter,
@@ -208,6 +193,21 @@ func (c *Config) GetCompositeType(
 	qualifiedIdentifier string,
 	typeID interpreter.TypeID,
 ) (*sema.CompositeType, error) {
+	//TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (c *Config) RemoveReferencedSlab(storable atree.Storable) {
+	//TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (c *Config) MaybeValidateAtreeValue(v atree.Value) {
+	//TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (c *Config) MaybeValidateAtreeStorage() {
 	//TODO
 	panic(errors.NewUnreachableError())
 }

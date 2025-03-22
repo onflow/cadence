@@ -739,16 +739,17 @@ func (*StringValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 }
 
 func (v *StringValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
-	_ map[atree.ValueID]struct{},
+	_ map[atree.ValueID]struct {
+	},
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		context.RemoveReferencedSlab(storable)
 	}
 	return v
 }
@@ -757,7 +758,7 @@ func (v *StringValue) Clone(_ *Interpreter) Value {
 	return NewUnmeteredStringValue(v.Str)
 }
 
-func (*StringValue) DeepRemove(_ *Interpreter, _ bool) {
+func (*StringValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

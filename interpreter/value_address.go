@@ -232,7 +232,7 @@ func (AddressValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 }
 
 func (v AddressValue) Transfer(
-	interpreter *Interpreter,
+	transferContext ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -241,7 +241,7 @@ func (v AddressValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		transferContext.RemoveReferencedSlab(storable)
 	}
 	return v
 }
@@ -250,7 +250,7 @@ func (v AddressValue) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (AddressValue) DeepRemove(_ *Interpreter, _ bool) {
+func (AddressValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

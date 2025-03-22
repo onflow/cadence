@@ -138,13 +138,15 @@ func (v *CompositeValue) SetMember(config *Config, name string, value Value) {
 		panic(errors.NewExternalError(err))
 	}
 
+	storage := config.Storage()
+
 	if existingStorable != nil {
 		inter := config.Interpreter()
-		existingValue := interpreter.StoredValue(nil, existingStorable, config.Storage)
+		existingValue := interpreter.StoredValue(nil, existingStorable, storage)
 
 		existingValue.DeepRemove(inter, true) // existingValue is standalone because it was overwritten in parent container.
 
-		RemoveReferencedSlab(config.Storage, existingStorable)
+		RemoveReferencedSlab(storage, existingStorable)
 	}
 }
 
@@ -212,6 +214,8 @@ func (v *CompositeValue) Transfer(
 		})
 	}
 
+	storage := transferContext.Storage()
+
 	if needsStoreTo || !isResourceKinded {
 		iterator, err := v.dictionary.Iterator(
 			interpreter.StringAtreeValueComparator,
@@ -225,7 +229,7 @@ func (v *CompositeValue) Transfer(
 		common.UseMemory(transferContext, elementMemoryUse)
 
 		dictionary, err = atree.NewMapFromBatchData(
-			transferContext,
+			storage,
 			address,
 			atree.NewDefaultDigesterBuilder(),
 			v.dictionary.Type(),
@@ -260,15 +264,15 @@ func (v *CompositeValue) Transfer(
 
 		if remove {
 			err = v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
-				RemoveReferencedSlab(transferContext, nameStorable)
-				RemoveReferencedSlab(transferContext, valueStorable)
+				RemoveReferencedSlab(storage, nameStorable)
+				RemoveReferencedSlab(storage, valueStorable)
 			})
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
 			//interpreter.maybeValidateAtreeValue(v.dictionary)
 
-			RemoveReferencedSlab(transferContext, storable)
+			RemoveReferencedSlab(storage, storable)
 		}
 	}
 
@@ -284,7 +288,7 @@ func (v *CompositeValue) Transfer(
 		// This allows raising an error when the resource is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		invalidateReferencedResources(transferContext, v)
+		transferContext.InvalidateReferencedResources(v)
 
 		v.dictionary = nil
 	}
@@ -438,28 +442,28 @@ func (v *CompositeValue) ForEachField(
 // It does NOT iterate over computed fields and functions!
 // DO NOT perform storage mutations in the callback!
 func (v *CompositeValue) ForEachReadOnlyLoadedField(
-	memoryGauge common.MemoryGauge,
+	config *Config,
 	f func(fieldName string, fieldValue Value) (resume bool),
 ) {
 	v.forEachField(
-		memoryGauge,
+		config,
 		v.dictionary.IterateReadOnlyLoadedValues,
 		f,
 	)
 }
 
 func (v *CompositeValue) forEachField(
-	memoryGauge common.MemoryGauge,
+	config *Config,
 	atreeIterate func(fn atree.MapEntryIterationFunc) error,
 	f func(fieldName string, fieldValue Value) (resume bool),
 ) {
 	err := atreeIterate(func(key atree.Value, atreeValue atree.Value) (resume bool, err error) {
 		value := MustConvertStoredValue(
-			memoryGauge,
+			config,
 			atreeValue,
 		)
 
-		checkInvalidatedResourceOrResourceReference(value)
+		config.CheckInvalidatedResourceOrResourceReference(value)
 
 		resume = f(
 			string(key.(interpreter.StringAtreeValue)),

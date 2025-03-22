@@ -776,7 +776,7 @@ func (Int128Value) IsResourceKinded(context ValueStaticTypeContext) bool {
 }
 
 func (v Int128Value) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -785,7 +785,7 @@ func (v Int128Value) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		context.RemoveReferencedSlab(storable)
 	}
 	return v
 }
@@ -794,7 +794,7 @@ func (v Int128Value) Clone(_ *Interpreter) Value {
 	return NewUnmeteredInt128ValueFromBigInt(v.BigInt)
 }
 
-func (Int128Value) DeepRemove(_ *Interpreter, _ bool) {
+func (Int128Value) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

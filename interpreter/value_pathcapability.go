@@ -245,7 +245,7 @@ func (*PathCapabilityValue) IsResourceKinded(context ValueStaticTypeContext) boo
 }
 
 func (v *PathCapabilityValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -254,8 +254,8 @@ func (v *PathCapabilityValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		v.DeepRemove(interpreter, true)
-		interpreter.RemoveReferencedSlab(storable)
+		v.DeepRemove(context, true)
+		context.RemoveReferencedSlab(storable)
 	}
 	return v
 }
@@ -268,9 +268,9 @@ func (v *PathCapabilityValue) Clone(interpreter *Interpreter) Value {
 	}
 }
 
-func (v *PathCapabilityValue) DeepRemove(interpreter *Interpreter, _ bool) {
-	v.address.DeepRemove(interpreter, false)
-	v.Path.DeepRemove(interpreter, false)
+func (v *PathCapabilityValue) DeepRemove(context ValueRemoveContext, _ bool) {
+	v.address.DeepRemove(context, false)
+	v.Path.DeepRemove(context, false)
 }
 
 func (v *PathCapabilityValue) ByteSize() uint32 {

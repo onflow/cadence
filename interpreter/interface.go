@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/sema"
 )
@@ -76,3 +78,43 @@ type ValueStaticTypeContext interface {
 }
 
 var _ ValueStaticTypeContext = &Interpreter{}
+
+type StorageContext interface {
+	ValueStaticTypeContext
+	common.MemoryGauge
+
+	StorageReader
+	StorageWriter
+
+	Storage() Storage
+	RemoveReferencedSlab(storable atree.Storable)
+	MaybeValidateAtreeValue(v atree.Value)
+	MaybeValidateAtreeStorage()
+}
+
+type ReferenceTracker interface {
+	InvalidateReferencedResources(v Value, locationRange LocationRange)
+	CheckInvalidatedResourceOrResourceReference(value Value, locationRange LocationRange)
+	MaybeTrackReferencedResourceKindedValue(ref *EphemeralReferenceValue)
+}
+
+type ValueTransferContext interface {
+	StorageContext
+	ReferenceTracker
+	ComputationReporter
+	Tracer
+
+	OnResourceOwnerChange(
+		resource *CompositeValue,
+		oldOwner common.Address,
+		newOwner common.Address,
+	)
+}
+
+var _ ValueTransferContext = &Interpreter{}
+
+type ValueRemoveContext = ValueTransferContext
+
+type ComputationReporter interface {
+	ReportComputation(compKind common.ComputationKind, intensity uint)
+}

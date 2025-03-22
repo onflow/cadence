@@ -260,7 +260,7 @@ func (v *SimpleCompositeValue) IsResourceKinded(context ValueStaticTypeContext) 
 }
 
 func (v *SimpleCompositeValue) Transfer(
-	interpreter *Interpreter,
+	transferContext ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -270,7 +270,7 @@ func (v *SimpleCompositeValue) Transfer(
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		transferContext.RemoveReferencedSlab(storable)
 	}
 
 	if v.isTransaction {
@@ -303,6 +303,6 @@ func (v *SimpleCompositeValue) Clone(interpreter *Interpreter) Value {
 	}
 }
 
-func (v *SimpleCompositeValue) DeepRemove(_ *Interpreter, _ bool) {
+func (v *SimpleCompositeValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }

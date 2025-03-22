@@ -88,7 +88,7 @@ func NewArrayValueWithIterator(
 ) *ArrayValue {
 	constructor := func() *atree.Array {
 		array, err := atree.NewArrayFromBatchData(
-			config.Storage,
+			config.Storage(),
 			atree.Address(address),
 			arrayType,
 			func() (atree.Value, error) {
@@ -151,7 +151,7 @@ func (v *ArrayValue) Transfer(
 	storable atree.Storable,
 ) Value {
 
-	storage := transferContext
+	storage := transferContext.Storage()
 
 	array := v.array
 
@@ -180,7 +180,7 @@ func (v *ArrayValue) Transfer(
 		}
 
 		array, err = atree.NewArrayFromBatchData(
-			transferContext,
+			storage,
 			address,
 			v.array.Type(),
 			func() (atree.Value, error) {
@@ -229,7 +229,7 @@ func (v *ArrayValue) Transfer(
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		invalidateReferencedResources(transferContext, v)
+		transferContext.InvalidateReferencedResources(v)
 
 		v.array = nil
 	}
@@ -352,14 +352,16 @@ func (v *ArrayValue) Set(config *Config, index int, element Value) {
 	//interpreter.maybeValidateAtreeValue(v.array)
 	//interpreter.maybeValidateAtreeStorage()
 
-	existingValue := StoredValue(config.MemoryGauge, existingStorable, config.Storage)
+	storage := config.Storage()
+
+	existingValue := StoredValue(config.MemoryGauge, existingStorable, storage)
 	_ = existingValue
 
 	//interpreter.checkResourceLoss(existingValue, locationRange)
 
 	//existingValue.DeepRemove(interpreter, true) // existingValue is standalone because it was overwritten in parent container.
 
-	RemoveReferencedSlab(config.Storage, existingStorable)
+	RemoveReferencedSlab(storage, existingStorable)
 }
 
 func (v *ArrayValue) Iterate(
@@ -402,7 +404,7 @@ func (v *ArrayValue) iterate(
 			// atree.Array iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value
 			elementValue := MustConvertStoredValue(context, element)
-			checkInvalidatedResourceOrResourceReference(elementValue)
+			context.CheckInvalidatedResourceOrResourceReference(elementValue)
 
 			if transferElements {
 				// Each element must be transferred before passing onto the function.
