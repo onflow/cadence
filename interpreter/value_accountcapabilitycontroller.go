@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // AccountCapabilityControllerValue
@@ -158,7 +159,7 @@ func (v *AccountCapabilityControllerValue) Storable(
 	atree.Storable,
 	error,
 ) {
-	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
+	return values.MaybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
 func (*AccountCapabilityControllerValue) NeedsStoreTo(_ atree.Address) bool {

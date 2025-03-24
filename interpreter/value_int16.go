@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // Int16Value
@@ -410,7 +411,7 @@ func (v Int16Value) Less(context ValueComparisonContext, other ComparableValue, 
 		})
 	}
 
-	return AsBoolValue(v < o)
+	return v < o
 }
 
 func (v Int16Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -424,7 +425,7 @@ func (v Int16Value) LessEqual(context ValueComparisonContext, other ComparableVa
 		})
 	}
 
-	return AsBoolValue(v <= o)
+	return v <= o
 }
 
 func (v Int16Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -438,7 +439,7 @@ func (v Int16Value) Greater(context ValueComparisonContext, other ComparableValu
 		})
 	}
 
-	return AsBoolValue(v > o)
+	return v > o
 }
 
 func (v Int16Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -452,7 +453,7 @@ func (v Int16Value) GreaterEqual(context ValueComparisonContext, other Comparabl
 		})
 	}
 
-	return AsBoolValue(v >= o)
+	return v >= o
 }
 
 func (v Int16Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
@@ -676,7 +677,7 @@ func (Int16Value) DeepRemove(_ ValueRemoveContext, _ bool) {
 }
 
 func (v Int16Value) ByteSize() uint32 {
-	return cborTagSize + getIntCBORSize(int64(v))
+	return values.CBORTagSize + values.GetIntCBORSize(int64(v))
 }
 
 func (v Int16Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {

@@ -24,6 +24,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/values"
 )
 
 // TODO: remove once migrated
@@ -113,7 +114,7 @@ func (PathLinkValue) IsStorable() bool {
 }
 
 func (v PathLinkValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
-	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
+	return values.MaybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
 func (PathLinkValue) NeedsStoreTo(_ atree.Address) bool {
@@ -236,7 +237,7 @@ func (AccountLinkValue) IsStorable() bool {
 }
 
 func (v AccountLinkValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
-	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
+	return values.MaybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
 func (AccountLinkValue) NeedsStoreTo(_ atree.Address) bool {
@@ -307,7 +308,7 @@ func (v PathLinkValue) Encode(e *atree.Encoder) error {
 	// Encode tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagPathLinkValue,
+		0xd8, values.CBORTagPathLinkValue, //nolint:staticcheck
 		// array, 2 items follow
 		0x82,
 	})
@@ -331,7 +332,7 @@ func (v PathLinkValue) Encode(e *atree.Encoder) error {
 //	}
 var cborAccountLinkValue = []byte{
 	// tag
-	0xd8, CBORTagAccountLinkValue,
+	0xd8, values.CBORTagAccountLinkValue, //nolint:staticcheck
 	// null
 	0xf6,
 }

@@ -34,6 +34,7 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // StringValue
@@ -162,7 +163,7 @@ func (v *StringValue) Less(context ValueComparisonContext, other ComparableValue
 		})
 	}
 
-	return AsBoolValue(v.Str < otherString.Str)
+	return v.Str < otherString.Str
 }
 
 func (v *StringValue) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -176,7 +177,7 @@ func (v *StringValue) LessEqual(context ValueComparisonContext, other Comparable
 		})
 	}
 
-	return AsBoolValue(v.Str <= otherString.Str)
+	return v.Str <= otherString.Str
 }
 
 func (v *StringValue) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -190,7 +191,7 @@ func (v *StringValue) Greater(context ValueComparisonContext, other ComparableVa
 		})
 	}
 
-	return AsBoolValue(v.Str > otherString.Str)
+	return v.Str > otherString.Str
 }
 
 func (v *StringValue) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -204,7 +205,7 @@ func (v *StringValue) GreaterEqual(context ValueComparisonContext, other Compara
 		})
 	}
 
-	return AsBoolValue(v.Str >= otherString.Str)
+	return v.Str >= otherString.Str
 }
 
 // HashInput returns a byte slice containing:
@@ -727,7 +728,7 @@ func (v *StringValue) ReplaceAll(
 }
 
 func (v *StringValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
-	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
+	return values.MaybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
 func (*StringValue) NeedsStoreTo(_ atree.Address) bool {
@@ -763,7 +764,7 @@ func (*StringValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 }
 
 func (v *StringValue) ByteSize() uint32 {
-	return cborTagSize + getBytesCBORSize([]byte(v.Str))
+	return values.CBORTagSize + values.GetBytesCBORSize([]byte(v.Str))
 }
 
 func (v *StringValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -1028,7 +1029,7 @@ func (v *StringValue) indexOf(inter *Interpreter, other *StringValue) (character
 
 func (v *StringValue) Contains(inter *Interpreter, other *StringValue) BoolValue {
 	characterIndex, _ := v.indexOf(inter, other)
-	return AsBoolValue(characterIndex >= 0)
+	return characterIndex >= 0
 }
 
 func (v *StringValue) Count(inter *Interpreter, locationRange LocationRange, other *StringValue) IntValue {

@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 type CapabilityControllerValue interface {
@@ -183,7 +184,7 @@ func (v *StorageCapabilityControllerValue) Storable(
 	atree.Storable,
 	error,
 ) {
-	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
+	return values.MaybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
 func (*StorageCapabilityControllerValue) NeedsStoreTo(_ atree.Address) bool {

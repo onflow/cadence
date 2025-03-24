@@ -24,6 +24,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // SomeValue
@@ -452,9 +453,11 @@ func (s SomeStorable) HasPointer() bool {
 
 func getSomeStorableEncodedPrefixSize(nestedLevels uint64) uint32 {
 	if nestedLevels == 1 {
-		return cborTagSize
+		return values.CBORTagSize
 	}
-	return cborTagSize + someStorableWithMultipleNestedlevelsArraySize + getUintCBORSize(nestedLevels)
+	return values.CBORTagSize +
+		someStorableWithMultipleNestedlevelsArraySize +
+		values.GetUintCBORSize(nestedLevels)
 }
 
 func (s SomeStorable) ByteSize() uint32 {
