@@ -138,11 +138,11 @@ func (v BoolValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v BoolValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v BoolValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	if v {
-		common.UseMemory(interpreter, common.TrueStringMemoryUsage)
+		common.UseMemory(context, common.TrueStringMemoryUsage)
 	} else {
-		common.UseMemory(interpreter, common.FalseStringMemoryUsage)
+		common.UseMemory(context, common.FalseStringMemoryUsage)
 	}
 
 	return v.String()

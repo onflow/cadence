@@ -103,9 +103,9 @@ func (v CharacterValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v CharacterValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v CharacterValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	l := format.FormattedStringLength(v.Str)
-	common.UseMemory(interpreter, common.NewRawStringMemoryUsage(l))
+	common.UseMemory(context, common.NewRawStringMemoryUsage(l))
 	return v.String()
 }
 

@@ -102,26 +102,22 @@ func (v *PathCapabilityValue) RecursiveString(seenReferences SeenReferences) str
 	}
 }
 
-func (v *PathCapabilityValue) MeteredString(
-	interpreter *Interpreter,
-	seenReferences SeenReferences,
-	locationRange LocationRange,
-) string {
-	common.UseMemory(interpreter, common.PathCapabilityValueStringMemoryUsage)
+func (v *PathCapabilityValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+	common.UseMemory(context, common.PathCapabilityValueStringMemoryUsage)
 
 	borrowType := v.BorrowType
 	if borrowType == nil {
 		return fmt.Sprintf(
 			"Capability(address: %s, path: %s)",
-			v.address.MeteredString(interpreter, seenReferences, locationRange),
-			v.Path.MeteredString(interpreter, seenReferences, locationRange),
+			v.address.MeteredString(context, seenReferences, locationRange),
+			v.Path.MeteredString(context, seenReferences, locationRange),
 		)
 	} else {
 		return fmt.Sprintf(
 			"Capability<%s>(address: %s, path: %s)",
 			borrowType.String(),
-			v.address.MeteredString(interpreter, seenReferences, locationRange),
-			v.Path.MeteredString(interpreter, seenReferences, locationRange),
+			v.address.MeteredString(context, seenReferences, locationRange),
+			v.Path.MeteredString(context, seenReferences, locationRange),
 		)
 	}
 }

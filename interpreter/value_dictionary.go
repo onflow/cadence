@@ -310,7 +310,7 @@ func (v *DictionaryValue) iterateKeys(
 		}
 	}
 
-	interpreter.withMutationPrevention(v.ValueID(), iterate)
+	interpreter.WithMutationPrevention(v.ValueID(), iterate)
 }
 
 func (v *DictionaryValue) IterateReadOnly(
@@ -327,12 +327,12 @@ func (v *DictionaryValue) IterateReadOnly(
 }
 
 func (v *DictionaryValue) Iterate(
-	interpreter *Interpreter,
+	context ValueIterationContext,
 	locationRange LocationRange,
 	f func(key, value Value) (resume bool),
 ) {
-	valueComparator := newValueComparator(interpreter, locationRange)
-	hashInputProvider := newHashInputProvider(interpreter, locationRange)
+	valueComparator := newValueComparator(context, locationRange)
+	hashInputProvider := newHashInputProvider(context, locationRange)
 	iterate := func(fn atree.MapEntryIterationFunc) error {
 		return v.dictionary.Iterate(
 			valueComparator,
@@ -340,7 +340,7 @@ func (v *DictionaryValue) Iterate(
 			fn,
 		)
 	}
-	v.iterate(interpreter, iterate, f, locationRange)
+	v.iterate(context, iterate, f, locationRange)
 }
 
 // IterateReadOnlyLoaded iterates over all LOADED key-value pairs of the array.
@@ -359,7 +359,7 @@ func (v *DictionaryValue) IterateReadOnlyLoaded(
 }
 
 func (v *DictionaryValue) iterate(
-	interpreter *Interpreter,
+	context ValueIterationContext,
 	atreeIterate func(fn atree.MapEntryIterationFunc) error,
 	f func(key Value, value Value) (resume bool),
 	locationRange LocationRange,
@@ -369,11 +369,11 @@ func (v *DictionaryValue) iterate(
 			// atree.OrderedMap iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value
 
-			keyValue := MustConvertStoredValue(interpreter, key)
-			valueValue := MustConvertStoredValue(interpreter, value)
+			keyValue := MustConvertStoredValue(context, key)
+			valueValue := MustConvertStoredValue(context, value)
 
-			checkInvalidatedResourceOrResourceReference(keyValue, locationRange, interpreter)
-			checkInvalidatedResourceOrResourceReference(valueValue, locationRange, interpreter)
+			checkInvalidatedResourceOrResourceReference(keyValue, locationRange, context)
+			checkInvalidatedResourceOrResourceReference(valueValue, locationRange, context)
 
 			resume = f(
 				keyValue,
@@ -387,7 +387,7 @@ func (v *DictionaryValue) iterate(
 		}
 	}
 
-	interpreter.withMutationPrevention(v.ValueID(), iterate)
+	context.WithMutationPrevention(v.ValueID(), iterate)
 }
 
 type DictionaryKeyIterator struct {
@@ -573,7 +573,7 @@ func (v *DictionaryValue) ForEachKey(
 		}
 	}
 
-	interpreter.withMutationPrevention(v.ValueID(), iterate)
+	interpreter.WithMutationPrevention(v.ValueID(), iterate)
 }
 
 func (v *DictionaryValue) ContainsKey(
@@ -673,10 +673,10 @@ func (v *DictionaryValue) String() string {
 }
 
 func (v *DictionaryValue) RecursiveString(seenReferences SeenReferences) string {
-	return v.MeteredString(nil, seenReferences, EmptyLocationRange)
+	return v.MeteredString(NoOpStringContext{}, seenReferences, EmptyLocationRange)
 }
 
-func (v *DictionaryValue) MeteredString(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
+func (v *DictionaryValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
 
 	pairs := make([]struct {
 		Key   string
@@ -686,7 +686,7 @@ func (v *DictionaryValue) MeteredString(interpreter *Interpreter, seenReferences
 	index := 0
 
 	v.Iterate(
-		interpreter,
+		context,
 		locationRange,
 		func(key, value Value) (resume bool) {
 			// atree.OrderedMap iteration provides low-level atree.Value,
@@ -696,8 +696,8 @@ func (v *DictionaryValue) MeteredString(interpreter *Interpreter, seenReferences
 				Key   string
 				Value string
 			}{
-				Key:   key.MeteredString(interpreter, seenReferences, locationRange),
-				Value: value.MeteredString(interpreter, seenReferences, locationRange),
+				Key:   key.MeteredString(context, seenReferences, locationRange),
+				Value: value.MeteredString(context, seenReferences, locationRange),
 			}
 			index++
 			return true
@@ -714,7 +714,7 @@ func (v *DictionaryValue) MeteredString(interpreter *Interpreter, seenReferences
 	// String of each key and value are metered separately.
 	strLen := len(pairs)*4 + 2
 
-	common.UseMemory(interpreter, common.NewRawStringMemoryUsage(strLen))
+	common.UseMemory(context, common.NewRawStringMemoryUsage(strLen))
 
 	return format.Dictionary(pairs)
 }

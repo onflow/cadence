@@ -118,11 +118,11 @@ func (v Word256Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Word256Value) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v Word256Value) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
-		interpreter,
+		context,
 		common.NewRawStringMemoryUsage(
-			OverEstimateNumberStringLength(interpreter, v),
+			OverEstimateNumberStringLength(context, v),
 		),
 	)
 	return v.String()
@@ -579,7 +579,7 @@ func (Word256Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Word256Value) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (Word256Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 

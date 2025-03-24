@@ -5695,7 +5695,7 @@ func (interpreter *Interpreter) validateMutation(valueID atree.ValueID, location
 	})
 }
 
-func (interpreter *Interpreter) withMutationPrevention(valueID atree.ValueID, f func()) {
+func (interpreter *Interpreter) WithMutationPrevention(valueID atree.ValueID, f func()) {
 	if interpreter == nil {
 		f()
 		return

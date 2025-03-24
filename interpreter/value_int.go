@@ -153,11 +153,11 @@ func (v IntValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v IntValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v IntValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
-		interpreter,
+		context,
 		common.NewRawStringMemoryUsage(
-			OverEstimateNumberStringLength(interpreter, v),
+			OverEstimateNumberStringLength(context, v),
 		),
 	)
 	return v.String()

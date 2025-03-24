@@ -108,10 +108,10 @@ func NewAccountStorageValue(
 	}
 
 	var str string
-	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
+	stringer := func(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
 		if str == "" {
-			common.UseMemory(interpreter, common.AccountStorageStringMemoryUsage)
-			addressStr := address.MeteredString(interpreter, seenReferences, locationRange)
+			common.UseMemory(context, common.AccountStorageStringMemoryUsage)
+			addressStr := address.MeteredString(context, seenReferences, locationRange)
 			str = fmt.Sprintf("Account.Storage(%s)", addressStr)
 		}
 		return str

@@ -75,10 +75,10 @@ func NewAccountKeysValue(
 	}
 
 	var str string
-	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
+	stringer := func(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
 		if str == "" {
-			common.UseMemory(interpreter, common.AccountKeysStringMemoryUsage)
-			addressStr := address.MeteredString(interpreter, seenReferences, locationRange)
+			common.UseMemory(context, common.AccountKeysStringMemoryUsage)
+			addressStr := address.MeteredString(context, seenReferences, locationRange)
 			str = fmt.Sprintf("Account.Keys(%s)", addressStr)
 		}
 		return str

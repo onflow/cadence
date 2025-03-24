@@ -82,10 +82,10 @@ func NewAccountContractsValue(
 	}
 
 	var str string
-	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
+	stringer := func(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
 		if str == "" {
-			common.UseMemory(interpreter, common.AccountContractsStringMemoryUsage)
-			addressStr := address.MeteredString(interpreter, seenReferences, locationRange)
+			common.UseMemory(context, common.AccountContractsStringMemoryUsage)
+			addressStr := address.MeteredString(context, seenReferences, locationRange)
 			str = fmt.Sprintf("Account.Contracts(%s)", addressStr)
 		}
 		return str
