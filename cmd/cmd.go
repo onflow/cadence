@@ -261,7 +261,7 @@ func (*StandardLibraryHandler) GetAccountAvailableBalance(_ common.Address) (uin
 	return 0, goerrors.New("accounts are not supported in this environment")
 }
 
-func (*StandardLibraryHandler) CommitStorageTemporarily(_ *interpreter.Interpreter) error {
+func (*StandardLibraryHandler) CommitStorageTemporarily(_ interpreter.ValueTransferContext) error {
 	// NO-OP
 	return nil
 }

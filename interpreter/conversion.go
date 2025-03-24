@@ -95,9 +95,9 @@ func ByteValueToByte(memoryGauge common.MemoryGauge, element Value, locationRang
 	return b, nil
 }
 
-func ByteSliceToByteArrayValue(interpreter *Interpreter, buf []byte) *ArrayValue {
+func ByteSliceToByteArrayValue(context ArrayCreationContext, buf []byte) *ArrayValue {
 
-	common.UseMemory(interpreter, common.NewBytesMemoryUsage(len(buf)))
+	common.UseMemory(context, common.NewBytesMemoryUsage(len(buf)))
 
 	var values []Value
 
@@ -110,7 +110,7 @@ func ByteSliceToByteArrayValue(interpreter *Interpreter, buf []byte) *ArrayValue
 	}
 
 	return NewArrayValue(
-		interpreter,
+		context,
 		EmptyLocationRange,
 		ByteArrayStaticType,
 		common.ZeroAddress,

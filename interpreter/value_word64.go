@@ -421,8 +421,8 @@ func (v Word64Value) BitwiseRightShift(context ValueStaticTypeContext, other Int
 	return NewWord64Value(context, valueGetter)
 }
 
-func (v Word64Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	return getNumberValueMember(interpreter, v, name, sema.Word64Type, locationRange)
+func (v Word64Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	return getNumberValueMember(context, v, name, sema.Word64Type, locationRange)
 }
 
 func (Word64Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
@@ -430,7 +430,7 @@ func (Word64Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value
 	panic(errors.NewUnreachableError())
 }
 
-func (Word64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (Word64Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -475,7 +475,7 @@ func (v Word64Value) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		context.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }

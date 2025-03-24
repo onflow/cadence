@@ -664,7 +664,7 @@ func (v *DictionaryValue) SetKey(
 	}
 
 	if existingValue != nil {
-		interpreter.checkResourceLoss(existingValue, locationRange)
+		checkResourceLoss(interpreter, existingValue, locationRange)
 	}
 }
 
@@ -719,21 +719,15 @@ func (v *DictionaryValue) MeteredString(context ValueStringContext, seenReferenc
 	return format.Dictionary(pairs)
 }
 
-func (v *DictionaryValue) GetMember(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	name string,
-) Value {
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+func (v *DictionaryValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
 		count := v.Count()
 
 		defer func() {
-			interpreter.reportDictionaryValueGetMemberTrace(
+			context.reportDictionaryValueGetMemberTrace(
 				typeInfo,
 				count,
 				name,
@@ -744,7 +738,7 @@ func (v *DictionaryValue) GetMember(
 
 	switch name {
 	case "length":
-		return NewIntValueFromInt64(interpreter, int64(v.Count()))
+		return NewIntValueFromInt64(context, int64(v.Count()))
 
 	case "keys":
 
@@ -754,8 +748,8 @@ func (v *DictionaryValue) GetMember(
 		}
 
 		return NewArrayValueWithIterator(
-			interpreter,
-			NewVariableSizedStaticType(interpreter, v.Type.KeyType),
+			context,
+			NewVariableSizedStaticType(context, v.Type.KeyType),
 			common.ZeroAddress,
 			v.dictionary.Count(),
 			func() Value {
@@ -768,9 +762,9 @@ func (v *DictionaryValue) GetMember(
 					return nil
 				}
 
-				return MustConvertStoredValue(interpreter, key).
+				return MustConvertStoredValue(context, key).
 					Transfer(
-						interpreter,
+						context,
 						locationRange,
 						atree.Address{},
 						false,
@@ -790,8 +784,8 @@ func (v *DictionaryValue) GetMember(
 		}
 
 		return NewArrayValueWithIterator(
-			interpreter,
-			NewVariableSizedStaticType(interpreter, v.Type.ValueType),
+			context,
+			NewVariableSizedStaticType(context, v.Type.ValueType),
 			common.ZeroAddress,
 			v.dictionary.Count(),
 			func() Value {
@@ -804,9 +798,9 @@ func (v *DictionaryValue) GetMember(
 					return nil
 				}
 
-				return MustConvertStoredValue(interpreter, value).
+				return MustConvertStoredValue(context, value).
 					Transfer(
-						interpreter,
+						context,
 						locationRange,
 						atree.Address{},
 						false,
@@ -818,10 +812,10 @@ func (v *DictionaryValue) GetMember(
 
 	case "remove":
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.DictionaryRemoveFunctionType(
-				v.SemaType(interpreter),
+				v.SemaType(context),
 			),
 			func(v *DictionaryValue, invocation Invocation) Value {
 				keyValue := invocation.Arguments[0]
@@ -836,10 +830,10 @@ func (v *DictionaryValue) GetMember(
 
 	case "insert":
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.DictionaryInsertFunctionType(
-				v.SemaType(interpreter),
+				v.SemaType(context),
 			),
 			func(v *DictionaryValue, invocation Invocation) Value {
 				keyValue := invocation.Arguments[0]
@@ -856,10 +850,10 @@ func (v *DictionaryValue) GetMember(
 
 	case "containsKey":
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.DictionaryContainsKeyFunctionType(
-				v.SemaType(interpreter),
+				v.SemaType(context),
 			),
 			func(v *DictionaryValue, invocation Invocation) Value {
 				return v.ContainsKey(
@@ -871,10 +865,10 @@ func (v *DictionaryValue) GetMember(
 		)
 	case "forEachKey":
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.DictionaryForEachKeyFunctionType(
-				v.SemaType(interpreter),
+				v.SemaType(context),
 			),
 			func(v *DictionaryValue, invocation Invocation) Value {
 				interpreter := invocation.Interpreter
@@ -903,7 +897,7 @@ func (v *DictionaryValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string
 	panic(errors.NewUnreachableError())
 }
 
-func (v *DictionaryValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (v *DictionaryValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Dictionaries have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -974,7 +968,7 @@ func (v *DictionaryValue) Remove(
 
 	existingKeyValue := StoredValue(interpreter, existingKeyStorable, storage)
 	existingKeyValue.DeepRemove(interpreter, true) // existingValue is standalone because it was removed from parent container.
-	interpreter.RemoveReferencedSlab(existingKeyStorable)
+	RemoveReferencedSlab(interpreter, existingKeyStorable)
 
 	// Value
 
@@ -1107,7 +1101,7 @@ func (v *DictionaryValue) Insert(
 		}
 
 		// Remove slab containing transferred enum value from storage.
-		interpreter.RemoveReferencedSlab(atree.SlabIDStorable(keyCompositeSlabID))
+		RemoveReferencedSlab(interpreter, atree.SlabIDStorable(keyCompositeSlabID))
 	}
 
 	storage := interpreter.Storage()
@@ -1186,7 +1180,7 @@ func (v *DictionaryValue) ConformsToStaticType(
 		// convert to high-level interpreter.Value
 		entryKey := MustConvertStoredValue(interpreter, key)
 
-		if !interpreter.IsSubType(entryKey.StaticType(interpreter), keyType) {
+		if !IsSubType(interpreter, entryKey.StaticType(interpreter), keyType) {
 			return false
 		}
 
@@ -1204,7 +1198,7 @@ func (v *DictionaryValue) ConformsToStaticType(
 		// convert to high-level interpreter.Value
 		entryValue := MustConvertStoredValue(interpreter, value)
 
-		if !interpreter.IsSubType(entryValue.StaticType(interpreter), valueType) {
+		if !IsSubType(interpreter, entryValue.StaticType(interpreter), valueType) {
 			return false
 		}
 
@@ -1409,8 +1403,8 @@ func (v *DictionaryValue) Transfer(
 
 		if remove {
 			err = v.dictionary.PopIterate(func(keyStorable atree.Storable, valueStorable atree.Storable) {
-				context.RemoveReferencedSlab(keyStorable)
-				context.RemoveReferencedSlab(valueStorable)
+				RemoveReferencedSlab(context, keyStorable)
+				RemoveReferencedSlab(context, valueStorable)
 			})
 			if err != nil {
 				panic(errors.NewExternalError(err))
@@ -1421,7 +1415,7 @@ func (v *DictionaryValue) Transfer(
 				context.MaybeValidateAtreeStorage()
 			}
 
-			context.RemoveReferencedSlab(storable)
+			RemoveReferencedSlab(context, storable)
 		}
 	}
 
@@ -1535,11 +1529,11 @@ func (v *DictionaryValue) DeepRemove(context ValueRemoveContext, hasNoParentCont
 
 		key := StoredValue(context, keyStorable, storage)
 		key.DeepRemove(context, false) // key is an element of v.dictionary because it is from PopIterate() callback.
-		context.RemoveReferencedSlab(keyStorable)
+		RemoveReferencedSlab(context, keyStorable)
 
 		value := StoredValue(context, valueStorable, storage)
 		value.DeepRemove(context, false) // value is an element of v.dictionary because it is from PopIterate() callback.
-		context.RemoveReferencedSlab(valueStorable)
+		RemoveReferencedSlab(context, valueStorable)
 	})
 	if err != nil {
 		panic(errors.NewExternalError(err))

@@ -98,7 +98,7 @@ var nilValueMapFunction = NewUnmeteredStaticHostFunctionValue(
 	},
 )
 
-func (v NilValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v NilValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
 		return nilValueMapFunction
@@ -112,7 +112,7 @@ func (NilValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (NilValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (NilValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Nil has no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -156,7 +156,7 @@ func (v NilValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		context.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }

@@ -90,7 +90,7 @@ func (f placeholderValue) Transfer(
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
-		context.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return f
 }

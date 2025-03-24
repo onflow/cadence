@@ -110,12 +110,12 @@ func (v PathValue) MeteredString(context ValueStringContext, _ SeenReferences, _
 	return v.String()
 }
 
-func (v PathValue) GetMember(inter *Interpreter, locationRange LocationRange, name string) Value {
+func (v PathValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewBoundHostFunctionValue(
-			inter,
+			context,
 			v,
 			sema.ToStringFunctionType,
 			func(v PathValue, invocation Invocation) Value {
@@ -145,7 +145,7 @@ func (PathValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (PathValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (PathValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Paths have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -240,7 +240,7 @@ func (v PathValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		context.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }

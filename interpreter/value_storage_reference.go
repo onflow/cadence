@@ -143,7 +143,7 @@ func (v *StorageReferenceValue) dereference(context ValueStaticTypeContext, loca
 	if v.BorrowedType != nil {
 		staticType := referenced.StaticType(context)
 
-		if !context.IsSubTypeOfSemaType(staticType, v.BorrowedType) {
+		if !IsSubTypeOfSemaType(context, staticType, v.BorrowedType) {
 			semaType := MustConvertStaticToSemaType(staticType, context)
 
 			return nil, ForceCastTypeMismatchError{
@@ -157,8 +157,12 @@ func (v *StorageReferenceValue) dereference(context ValueStaticTypeContext, loca
 	return &referenced, nil
 }
 
-func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter, locationRange LocationRange, errorOnFailedDereference bool) *Value {
-	referencedValue, err := v.dereference(interpreter, locationRange)
+func (v *StorageReferenceValue) ReferencedValue(
+	context ValueStaticTypeContext,
+	locationRange LocationRange,
+	errorOnFailedDereference bool,
+) *Value {
+	referencedValue, err := v.dereference(context, locationRange)
 	if err == nil {
 		return referencedValue
 	}
@@ -177,10 +181,10 @@ func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter, locati
 }
 
 func (v *StorageReferenceValue) mustReferencedValue(
-	interpreter *Interpreter,
+	context ValueStaticTypeContext,
 	locationRange LocationRange,
 ) Value {
-	referencedValue := v.ReferencedValue(interpreter, locationRange, true)
+	referencedValue := v.ReferencedValue(context, locationRange, true)
 	if referencedValue == nil {
 		panic(DereferenceError{
 			Cause:         "no value is stored at this path",
@@ -191,14 +195,15 @@ func (v *StorageReferenceValue) mustReferencedValue(
 	return *referencedValue
 }
 
-func (v *StorageReferenceValue) GetMember(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	name string,
-) Value {
-	referencedValue := v.mustReferencedValue(interpreter, locationRange)
+func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	referencedValue := v.mustReferencedValue(context, locationRange)
 
-	member := interpreter.getMember(referencedValue, locationRange, name)
+	member := getMember(
+		context,
+		referencedValue,
+		locationRange,
+		name,
+	)
 
 	// If the member is a function, it is always a bound-function.
 	// By default, bound functions create and hold an ephemeral reference (`SelfReference`).
@@ -224,15 +229,16 @@ func (v *StorageReferenceValue) RemoveMember(
 	return self.(MemberAccessibleValue).RemoveMember(interpreter, locationRange, name)
 }
 
-func (v *StorageReferenceValue) SetMember(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	name string,
-	value Value,
-) bool {
-	self := v.mustReferencedValue(interpreter, locationRange)
+func (v *StorageReferenceValue) SetMember(context MemberAccessibleContext, locationRange LocationRange, name string, value Value) bool {
+	self := v.mustReferencedValue(context, locationRange)
 
-	return interpreter.setMember(self, locationRange, name, value)
+	return setMember(
+		context,
+		self,
+		locationRange,
+		name,
+		value,
+	)
 }
 
 func (v *StorageReferenceValue) GetKey(
@@ -293,7 +299,7 @@ func (v *StorageReferenceValue) GetTypeKey(
 			interpreter,
 			locationRange,
 			key,
-			interpreter.MustConvertStaticAuthorizationToSemaAccess(v.Authorization),
+			MustConvertStaticAuthorizationToSemaAccess(interpreter, v.Authorization),
 		)
 	}
 
@@ -355,7 +361,7 @@ func (v *StorageReferenceValue) ConformsToStaticType(
 
 	staticType := self.StaticType(interpreter)
 
-	if !interpreter.IsSubTypeOfSemaType(staticType, v.BorrowedType) {
+	if !IsSubTypeOfSemaType(interpreter, staticType, v.BorrowedType) {
 		return false
 	}
 
@@ -392,7 +398,7 @@ func (v *StorageReferenceValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		context.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }

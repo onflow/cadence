@@ -377,7 +377,7 @@ func exportCompositeValue(
 
 	staticType := v.StaticType(inter)
 
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	semaType, err := interpreter.ConvertStaticToSemaType(inter, staticType)
 	if err != nil {
 		return nil, err
 	}
@@ -1204,7 +1204,7 @@ func (i valueImporter) importTypeValue(v cadence.Type) (interpreter.TypeValue, e
 	//
 	// If this fails, the import is invalid
 
-	_, err := inter.ConvertStaticToSemaType(typ)
+	_, err := interpreter.ConvertStaticToSemaType(inter, typ)
 	if err != nil {
 		// unmetered because when err != nil, value should be ignored
 		return interpreter.EmptyTypeValue, err
@@ -1304,7 +1304,7 @@ func (i valueImporter) importArrayValue(
 		types := make([]sema.Type, len(v.Values))
 
 		for i, value := range values {
-			typ, err := inter.ConvertStaticToSemaType(value.StaticType(inter))
+			typ, err := interpreter.ConvertStaticToSemaType(inter, value.StaticType(inter))
 			if err != nil {
 				return nil, err
 			}
@@ -1375,13 +1375,13 @@ func (i valueImporter) importDictionaryValue(
 		valueTypes := make([]sema.Type, size)
 
 		for i := 0; i < size; i++ {
-			keyType, err := inter.ConvertStaticToSemaType(keysAndValues[i*2].StaticType(inter))
+			keyType, err := interpreter.ConvertStaticToSemaType(inter, keysAndValues[i*2].StaticType(inter))
 			if err != nil {
 				return nil, err
 			}
 			keyTypes[i] = keyType
 
-			valueType, err := inter.ConvertStaticToSemaType(keysAndValues[i*2+1].StaticType(inter))
+			valueType, err := interpreter.ConvertStaticToSemaType(inter, keysAndValues[i*2+1].StaticType(inter))
 			if err != nil {
 				return nil, err
 			}
@@ -1460,7 +1460,7 @@ func (i valueImporter) importInclusiveRangeValue(
 	startType := startValue.StaticType(inter)
 
 	if inclusiveRangeType == nil {
-		memberSemaType, err := inter.ConvertStaticToSemaType(startType)
+		memberSemaType, err := interpreter.ConvertStaticToSemaType(inter, startType)
 		if err != nil {
 			return nil, err
 		}
