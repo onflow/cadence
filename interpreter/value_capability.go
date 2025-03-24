@@ -132,13 +132,13 @@ func (v *IDCapabilityValue) RecursiveString(seenReferences SeenReferences) strin
 	)
 }
 
-func (v *IDCapabilityValue) MeteredString(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
-	common.UseMemory(interpreter, common.IDCapabilityValueStringMemoryUsage)
+func (v *IDCapabilityValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+	common.UseMemory(context, common.IDCapabilityValueStringMemoryUsage)
 
 	return format.Capability(
-		v.BorrowType.MeteredString(interpreter),
-		v.address.MeteredString(interpreter, seenReferences, locationRange),
-		v.ID.MeteredString(interpreter, seenReferences, locationRange),
+		v.BorrowType.MeteredString(context),
+		v.address.MeteredString(context, seenReferences, locationRange),
+		v.ID.MeteredString(context, seenReferences, locationRange),
 	)
 }
 

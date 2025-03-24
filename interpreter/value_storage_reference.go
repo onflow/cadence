@@ -93,8 +93,8 @@ func (v *StorageReferenceValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v *StorageReferenceValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
-	common.UseMemory(interpreter, common.StorageReferenceValueStringMemoryUsage)
+func (v *StorageReferenceValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+	common.UseMemory(context, common.StorageReferenceValueStringMemoryUsage)
 	return v.String()
 }
 
@@ -378,7 +378,7 @@ func (*StorageReferenceValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*StorageReferenceValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (*StorageReferenceValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 

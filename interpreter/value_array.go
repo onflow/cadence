@@ -210,13 +210,13 @@ func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor, locationR
 }
 
 func (v *ArrayValue) Iterate(
-	interpreter *Interpreter,
+	context ValueIterationContext,
 	f func(element Value) (resume bool),
 	transferElements bool,
 	locationRange LocationRange,
 ) {
 	v.iterate(
-		interpreter,
+		context,
 		v.array.Iterate,
 		f,
 		transferElements,
@@ -227,14 +227,14 @@ func (v *ArrayValue) Iterate(
 // IterateReadOnlyLoaded iterates over all LOADED elements of the array.
 // DO NOT perform storage mutations in the callback!
 func (v *ArrayValue) IterateReadOnlyLoaded(
-	interpreter *Interpreter,
+	context ValueIterationContext,
 	f func(element Value) (resume bool),
 	locationRange LocationRange,
 ) {
 	const transferElements = false
 
 	v.iterate(
-		interpreter,
+		context,
 		v.array.IterateReadOnlyLoadedValues,
 		f,
 		transferElements,
@@ -243,7 +243,7 @@ func (v *ArrayValue) IterateReadOnlyLoaded(
 }
 
 func (v *ArrayValue) iterate(
-	interpreter *Interpreter,
+	context ValueIterationContext,
 	atreeIterate func(fn atree.ArrayIterationFunc) error,
 	f func(element Value) (resume bool),
 	transferElements bool,
@@ -253,13 +253,13 @@ func (v *ArrayValue) iterate(
 		err := atreeIterate(func(element atree.Value) (resume bool, err error) {
 			// atree.Array iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value
-			elementValue := MustConvertStoredValue(interpreter, element)
-			checkInvalidatedResourceOrResourceReference(elementValue, locationRange, interpreter)
+			elementValue := MustConvertStoredValue(context, element)
+			checkInvalidatedResourceOrResourceReference(elementValue, locationRange, context)
 
 			if transferElements {
 				// Each element must be transferred before passing onto the function.
 				elementValue = elementValue.Transfer(
-					interpreter,
+					context,
 					locationRange,
 					atree.Address{},
 					false,
@@ -278,7 +278,7 @@ func (v *ArrayValue) iterate(
 		}
 	}
 
-	interpreter.withMutationPrevention(v.ValueID(), iterate)
+	context.WithMutationPrevention(v.ValueID(), iterate)
 }
 
 func (v *ArrayValue) Walk(
@@ -549,28 +549,28 @@ func (v *ArrayValue) String() string {
 }
 
 func (v *ArrayValue) RecursiveString(seenReferences SeenReferences) string {
-	return v.MeteredString(nil, seenReferences, EmptyLocationRange)
+	return v.MeteredString(NoOpStringContext{}, seenReferences, EmptyLocationRange)
 }
 
-func (v *ArrayValue) MeteredString(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
+func (v *ArrayValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
 	// if n > 0:
 	// len = open-bracket + close-bracket + ((n-1) comma+space)
 	//     = 2 + 2n - 2
 	//     = 2n
 	// Always +2 to include empty array case (over estimate).
 	// Each elements' string value is metered individually.
-	common.UseMemory(interpreter, common.NewRawStringMemoryUsage(v.Count()*2+2))
+	common.UseMemory(context, common.NewRawStringMemoryUsage(v.Count()*2+2))
 
 	values := make([]string, v.Count())
 
 	i := 0
 
 	v.Iterate(
-		interpreter,
+		context,
 		func(value Value) (resume bool) {
 			// ok to not meter anything created as part of this iteration, since we will discard the result
 			// upon creating the string
-			values[i] = value.MeteredString(interpreter, seenReferences, locationRange)
+			values[i] = value.MeteredString(context, seenReferences, locationRange)
 			i++
 			return true
 		},

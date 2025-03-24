@@ -142,8 +142,8 @@ func (v *SomeValue) RecursiveString(seenReferences SeenReferences) string {
 	return v.value.RecursiveString(seenReferences)
 }
 
-func (v *SomeValue) MeteredString(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
-	return v.value.MeteredString(interpreter, seenReferences, locationRange)
+func (v *SomeValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+	return v.value.MeteredString(context, seenReferences, locationRange)
 }
 
 func (v *SomeValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
@@ -406,7 +406,7 @@ func (v *SomeValue) InnerValue() Value {
 	return v.value
 }
 
-func (v *SomeValue) isInvalidatedResource(context ValueStaticTypeContext) bool {
+func (v *SomeValue) isInvalidatedResource(_ ValueStaticTypeContext) bool {
 	return v.value == nil || v.IsDestroyed()
 }
 
