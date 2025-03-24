@@ -934,7 +934,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
         `)
 
 		owner := stdlib.NewAccountReferenceValue(
-			nil,
+			inter,
 			nil,
 			interpreter.AddressValue{1},
 			interpreter.UnauthorizedAccess,

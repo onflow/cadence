@@ -1725,14 +1725,13 @@ func TestStaticTypeConversion(t *testing.T) {
 }
 
 type staticTypeConversionHandler struct {
-	common.MemoryGauge
 	getInterfaceType      func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.InterfaceType, error)
 	getCompositeType      func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.CompositeType, error)
 	getEntitlementType    func(typeID common.TypeID) (*sema.EntitlementType, error)
 	getEntitlementMapType func(typeID common.TypeID) (*sema.EntitlementMapType, error)
 }
 
-var _ StaticTypeConversionHandler = staticTypeConversionHandler{}
+var _ TypeConverter = staticTypeConversionHandler{}
 
 func (s staticTypeConversionHandler) GetInterfaceType(
 	location common.Location,
@@ -1756,6 +1755,11 @@ func (s staticTypeConversionHandler) GetEntitlementType(typeID TypeID) (*sema.En
 
 func (s staticTypeConversionHandler) GetEntitlementMapType(typeID TypeID) (*sema.EntitlementMapType, error) {
 	return s.getEntitlementMapType(typeID)
+}
+
+func (s staticTypeConversionHandler) MeterMemory(_ common.MemoryUsage) error {
+	// NO-OP
+	return nil
 }
 
 func TestIntersectionStaticType_ID(t *testing.T) {
