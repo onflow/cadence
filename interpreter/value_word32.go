@@ -393,8 +393,8 @@ func (v Word32Value) BitwiseRightShift(context ValueStaticTypeContext, other Int
 	return NewWord32Value(context, valueGetter)
 }
 
-func (v Word32Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	return getNumberValueMember(interpreter, v, name, sema.Word32Type, locationRange)
+func (v Word32Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	return getNumberValueMember(context, v, name, sema.Word32Type, locationRange)
 }
 
 func (Word32Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
@@ -402,7 +402,7 @@ func (Word32Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value
 	panic(errors.NewUnreachableError())
 }
 
-func (Word32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (Word32Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -447,7 +447,7 @@ func (v Word32Value) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		context.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }

@@ -161,7 +161,7 @@ func (v *PublishedValue) Transfer(
 		).(AddressValue)
 
 		if remove {
-			context.RemoveReferencedSlab(storable)
+			RemoveReferencedSlab(context, storable)
 		}
 
 		return NewPublishedValue(context, addressValue, innerValue)

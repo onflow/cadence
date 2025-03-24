@@ -123,11 +123,11 @@ func (v *PathCapabilityValue) MeteredString(context ValueStringContext, seenRefe
 }
 
 func (v *PathCapabilityValue) newBorrowFunction(
-	interpreter *Interpreter,
+	context FunctionCreationContext,
 	borrowType *sema.ReferenceType,
 ) BoundFunctionValue {
 	return NewBoundHostFunctionValue(
-		interpreter,
+		context,
 		v,
 		sema.CapabilityTypeBorrowFunctionType(borrowType),
 		func(_ Value, _ Invocation) Value {
@@ -138,11 +138,11 @@ func (v *PathCapabilityValue) newBorrowFunction(
 }
 
 func (v *PathCapabilityValue) newCheckFunction(
-	interpreter *Interpreter,
+	context FunctionCreationContext,
 	borrowType *sema.ReferenceType,
 ) BoundFunctionValue {
 	return NewBoundHostFunctionValue(
-		interpreter,
+		context,
 		v,
 		sema.CapabilityTypeCheckFunctionType(borrowType),
 		func(_ Value, _ Invocation) Value {
@@ -152,23 +152,23 @@ func (v *PathCapabilityValue) newCheckFunction(
 	)
 }
 
-func (v *PathCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v *PathCapabilityValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
 	switch name {
 	case sema.CapabilityTypeBorrowFunctionName:
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
 			// this function will panic already if this conversion fails
-			borrowType, _ = MustConvertStaticToSemaType(v.BorrowType, interpreter).(*sema.ReferenceType)
+			borrowType, _ = MustConvertStaticToSemaType(v.BorrowType, context).(*sema.ReferenceType)
 		}
-		return v.newBorrowFunction(interpreter, borrowType)
+		return v.newBorrowFunction(context, borrowType)
 
 	case sema.CapabilityTypeCheckFunctionName:
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
 			// this function will panic already if this conversion fails
-			borrowType, _ = MustConvertStaticToSemaType(v.BorrowType, interpreter).(*sema.ReferenceType)
+			borrowType, _ = MustConvertStaticToSemaType(v.BorrowType, context).(*sema.ReferenceType)
 		}
-		return v.newCheckFunction(interpreter, borrowType)
+		return v.newCheckFunction(context, borrowType)
 
 	case sema.CapabilityTypeAddressFieldName:
 		return v.address
@@ -184,7 +184,7 @@ func (*PathCapabilityValue) RemoveMember(_ *Interpreter, _ LocationRange, _ stri
 	panic(errors.NewUnreachableError())
 }
 
-func (*PathCapabilityValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (*PathCapabilityValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	panic(errors.NewUnreachableError())
 }
 
@@ -252,7 +252,7 @@ func (v *PathCapabilityValue) Transfer(
 ) Value {
 	if remove {
 		v.DeepRemove(context, true)
-		context.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }

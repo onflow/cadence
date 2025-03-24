@@ -53,12 +53,16 @@ type Tracer interface {
 
 	reportArrayValueDeepRemoveTrace(typeInfo string, count int, duration time.Duration)
 	reportArrayValueTransferTrace(info string, count int, since time.Duration)
+	reportArrayValueConstructTrace(typeInfo string, count int, duration time.Duration)
 
 	reportDictionaryValueTransferTrace(info string, count int, since time.Duration)
 	reportDictionaryValueDeepRemoveTrace(info string, count int, since time.Duration)
+	reportDictionaryValueGetMemberTrace(info string, count int, name string, since time.Duration)
 
 	reportCompositeValueDeepRemoveTrace(owner string, id string, kind string, since time.Duration)
 	reportCompositeValueTransferTrace(owner string, id string, kind string, since time.Duration)
+	reportCompositeValueSetMemberTrace(owner string, id string, kind string, name string, since time.Duration)
+	reportCompositeValueGetMemberTrace(owner string, typeID string, kind string, name string, duration time.Duration)
 
 	reportDomainStorageMapDeepRemoveTrace(info string, i int, since time.Duration)
 }

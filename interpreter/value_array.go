@@ -42,7 +42,7 @@ type ArrayValue struct {
 }
 
 func NewArrayValue(
-	interpreter *Interpreter,
+	context ArrayCreationContext,
 	locationRange LocationRange,
 	arrayType ArrayStaticType,
 	address common.Address,
@@ -53,7 +53,7 @@ func NewArrayValue(
 	count := len(values)
 
 	return NewArrayValueWithIterator(
-		interpreter,
+		context,
 		arrayType,
 		address,
 		uint64(count),
@@ -67,7 +67,7 @@ func NewArrayValue(
 			index++
 
 			value = value.Transfer(
-				interpreter,
+				context,
 				locationRange,
 				atree.Address(address),
 				true,
@@ -82,19 +82,17 @@ func NewArrayValue(
 }
 
 func NewArrayValueWithIterator(
-	interpreter *Interpreter,
+	context ArrayCreationContext,
 	arrayType ArrayStaticType,
 	address common.Address,
 	countOverestimate uint64,
 	values func() Value,
 ) *ArrayValue {
-	interpreter.ReportComputation(common.ComputationKindCreateArrayValue, 1)
-
-	config := interpreter.SharedState.Config
+	context.ReportComputation(common.ComputationKindCreateArrayValue, 1)
 
 	var v *ArrayValue
 
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		defer func() {
@@ -107,7 +105,7 @@ func NewArrayValueWithIterator(
 			typeInfo := v.Type.String()
 			count := v.Count()
 
-			interpreter.reportArrayValueConstructTrace(
+			context.reportArrayValueConstructTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -117,7 +115,7 @@ func NewArrayValueWithIterator(
 
 	constructor := func() *atree.Array {
 		array, err := atree.NewArrayFromBatchData(
-			config.Storage,
+			context.Storage(),
 			atree.Address(address),
 			arrayType,
 			func() (atree.Value, error) {
@@ -130,7 +128,7 @@ func NewArrayValueWithIterator(
 		return array
 	}
 	// must assign to v here for tracing to work properly
-	v = newArrayValueFromConstructor(interpreter, arrayType, countOverestimate, constructor)
+	v = newArrayValueFromConstructor(context, arrayType, countOverestimate, constructor)
 	return v
 }
 
@@ -538,10 +536,10 @@ func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, 
 	interpreter.MaybeValidateAtreeStorage()
 
 	existingValue := StoredValue(interpreter, existingStorable, interpreter.Storage())
-	interpreter.checkResourceLoss(existingValue, locationRange)
+	checkResourceLoss(interpreter, existingValue, locationRange)
 	existingValue.DeepRemove(interpreter, true) // existingValue is standalone because it was overwritten in parent container.
 
-	interpreter.RemoveReferencedSlab(existingStorable)
+	RemoveReferencedSlab(interpreter, existingStorable)
 }
 
 func (v *ArrayValue) String() string {
@@ -823,17 +821,17 @@ func (v *ArrayValue) Contains(
 	return BoolValue(result)
 }
 
-func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v *ArrayValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
 	switch name {
 	case "length":
-		return NewIntValueFromInt64(interpreter, int64(v.Count()))
+		return NewIntValueFromInt64(context, int64(v.Count()))
 
 	case "append":
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayAppendFunctionType(
-				v.SemaType(interpreter).ElementType(false),
+				v.SemaType(context).ElementType(false),
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
 				v.Append(
@@ -847,10 +845,10 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 
 	case "appendAll":
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayAppendAllFunctionType(
-				v.SemaType(interpreter),
+				v.SemaType(context),
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
 				otherArray, ok := invocation.Arguments[0].(*ArrayValue)
@@ -868,10 +866,10 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 
 	case "concat":
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayConcatFunctionType(
-				v.SemaType(interpreter),
+				v.SemaType(context),
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
 				otherArray, ok := invocation.Arguments[0].(*ArrayValue)
@@ -888,10 +886,10 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 
 	case "insert":
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayInsertFunctionType(
-				v.SemaType(interpreter).ElementType(false),
+				v.SemaType(context).ElementType(false),
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
 				inter := invocation.Interpreter
@@ -917,10 +915,10 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 
 	case "remove":
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayRemoveFunctionType(
-				v.SemaType(interpreter).ElementType(false),
+				v.SemaType(context).ElementType(false),
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
 				inter := invocation.Interpreter
@@ -942,10 +940,10 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 
 	case "removeFirst":
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayRemoveFirstFunctionType(
-				v.SemaType(interpreter).ElementType(false),
+				v.SemaType(context).ElementType(false),
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
 				return v.RemoveFirst(
@@ -957,10 +955,10 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 
 	case "removeLast":
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayRemoveLastFunctionType(
-				v.SemaType(interpreter).ElementType(false),
+				v.SemaType(context).ElementType(false),
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
 				return v.RemoveLast(
@@ -972,10 +970,10 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 
 	case "firstIndex":
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayFirstIndexFunctionType(
-				v.SemaType(interpreter).ElementType(false),
+				v.SemaType(context).ElementType(false),
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
 				return v.FirstIndex(
@@ -988,10 +986,10 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 
 	case "contains":
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayContainsFunctionType(
-				v.SemaType(interpreter).ElementType(false),
+				v.SemaType(context).ElementType(false),
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
 				return v.Contains(
@@ -1004,10 +1002,10 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 
 	case "slice":
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArraySliceFunctionType(
-				v.SemaType(interpreter).ElementType(false),
+				v.SemaType(context).ElementType(false),
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
 				from, ok := invocation.Arguments[0].(IntValue)
@@ -1031,10 +1029,10 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 
 	case sema.ArrayTypeReverseFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayReverseFunctionType(
-				v.SemaType(interpreter),
+				v.SemaType(context),
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
 				return v.Reverse(
@@ -1046,11 +1044,11 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 
 	case sema.ArrayTypeFilterFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayFilterFunctionType(
-				interpreter,
-				v.SemaType(interpreter).ElementType(false),
+				context,
+				v.SemaType(context).ElementType(false),
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
 				interpreter := invocation.Interpreter
@@ -1070,11 +1068,11 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 
 	case sema.ArrayTypeMapFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayMapFunctionType(
-				interpreter,
-				v.SemaType(interpreter),
+				context,
+				v.SemaType(context),
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
 				interpreter := invocation.Interpreter
@@ -1094,10 +1092,10 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 
 	case sema.ArrayTypeToVariableSizedFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayToVariableSizedFunctionType(
-				v.SemaType(interpreter).ElementType(false),
+				v.SemaType(context).ElementType(false),
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
 				interpreter := invocation.Interpreter
@@ -1111,10 +1109,10 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 
 	case sema.ArrayTypeToConstantSizedFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayToConstantSizedFunctionType(
-				v.SemaType(interpreter).ElementType(false),
+				v.SemaType(context).ElementType(false),
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
 				interpreter := invocation.Interpreter
@@ -1148,7 +1146,7 @@ func (v *ArrayValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Val
 	panic(errors.NewUnreachableError())
 }
 
-func (v *ArrayValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (v *ArrayValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Arrays have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -1199,7 +1197,7 @@ func (v *ArrayValue) ConformsToStaticType(
 		interpreter,
 		func(element Value) (resume bool) {
 
-			if !interpreter.IsSubType(element.StaticType(interpreter), elementType) {
+			if !IsSubType(interpreter, element.StaticType(interpreter), elementType) {
 				elementMismatch = true
 				// stop iteration
 				return false
@@ -1374,7 +1372,9 @@ func (v *ArrayValue) Transfer(
 		}
 
 		if remove {
-			err = v.array.PopIterate(context.RemoveReferencedSlab)
+			err = v.array.PopIterate(func(storable atree.Storable) {
+				RemoveReferencedSlab(context, storable)
+			})
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
@@ -1384,7 +1384,7 @@ func (v *ArrayValue) Transfer(
 				context.MaybeValidateAtreeStorage()
 			}
 
-			context.RemoveReferencedSlab(storable)
+			RemoveReferencedSlab(context, storable)
 		}
 	}
 
@@ -1487,7 +1487,7 @@ func (v *ArrayValue) DeepRemove(context ValueRemoveContext, hasNoParentContainer
 	err := v.array.PopIterate(func(storable atree.Storable) {
 		value := StoredValue(context, storable, storage)
 		value.DeepRemove(context, false) // existingValue is an element of v.array because it is from PopIterate() callback.
-		context.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	})
 	if err != nil {
 		panic(errors.NewExternalError(err))

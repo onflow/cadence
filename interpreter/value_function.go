@@ -156,7 +156,7 @@ func (f *InterpretedFunctionValue) Transfer(
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
-		context.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return f
 }
@@ -259,10 +259,10 @@ func (f *HostFunctionValue) invoke(invocation Invocation) Value {
 	return f.Function(invocation)
 }
 
-func (f *HostFunctionValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
+func (f *HostFunctionValue) GetMember(context MemberAccessibleContext, _ LocationRange, name string) Value {
 	if f.NestedVariables != nil {
 		if variable, ok := f.NestedVariables[name]; ok {
-			return variable.GetValue(inter)
+			return variable.GetValue(context)
 		}
 	}
 	return nil
@@ -273,7 +273,7 @@ func (*HostFunctionValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string
 	panic(errors.NewUnreachableError())
 }
 
-func (*HostFunctionValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (*HostFunctionValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Host functions have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -309,7 +309,7 @@ func (f *HostFunctionValue) Transfer(
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
-		context.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return f
 }
@@ -339,7 +339,7 @@ var _ Value = BoundFunctionValue{}
 var _ FunctionValue = BoundFunctionValue{}
 
 func NewBoundFunctionValue(
-	interpreter *Interpreter,
+	context FunctionCreationContext,
 	function FunctionValue,
 	self *Value,
 	base *EphemeralReferenceValue,
@@ -352,12 +352,12 @@ func NewBoundFunctionValue(
 
 	selfRef, selfIsRef := (*self).(ReferenceValue)
 	if !selfIsRef {
-		semaType := MustSemaTypeOfValue(*self, interpreter)
-		selfRef = NewEphemeralReferenceValue(interpreter, boundAuth, *self, semaType, EmptyLocationRange)
+		semaType := MustSemaTypeOfValue(*self, context)
+		selfRef = NewEphemeralReferenceValue(context, boundAuth, *self, semaType, EmptyLocationRange)
 	}
 
 	return NewBoundFunctionValueFromSelfReference(
-		interpreter,
+		context,
 		function,
 		selfRef,
 		selfIsRef,
@@ -367,7 +367,7 @@ func NewBoundFunctionValue(
 }
 
 func NewBoundFunctionValueFromSelfReference(
-	interpreter *Interpreter,
+	gauge common.MemoryGauge,
 	function FunctionValue,
 	selfReference ReferenceValue,
 	selfIsReference bool,
@@ -380,7 +380,7 @@ func NewBoundFunctionValueFromSelfReference(
 		return boundFunc
 	}
 
-	common.UseMemory(interpreter, common.BoundFunctionValueMemoryUsage)
+	common.UseMemory(gauge, common.BoundFunctionValueMemoryUsage)
 
 	return BoundFunctionValue{
 		Function:           function,
@@ -500,7 +500,7 @@ func (f BoundFunctionValue) Transfer(
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
-		context.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return f
 }
@@ -515,7 +515,7 @@ func (BoundFunctionValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 
 // NewBoundHostFunctionValue creates a bound-function value for a host-function.
 func NewBoundHostFunctionValue[T Value](
-	interpreter *Interpreter,
+	context FunctionCreationContext,
 	self Value,
 	funcType *sema.FunctionType,
 	function func(self T, invocation Invocation) Value,
@@ -529,10 +529,10 @@ func NewBoundHostFunctionValue[T Value](
 		return function(self, invocation)
 	}
 
-	hostFunc := NewStaticHostFunctionValue(interpreter, funcType, wrappedFunction)
+	hostFunc := NewStaticHostFunctionValue(context, funcType, wrappedFunction)
 
 	return NewBoundFunctionValue(
-		interpreter,
+		context,
 		hostFunc,
 		&self,
 		nil,

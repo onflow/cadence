@@ -71,7 +71,7 @@ func NewAccountCapabilitiesValue(
 		return nil
 	}
 
-	computeField := func(name string, _ *Interpreter, _ LocationRange) Value {
+	computeField := func(name string, _ MemberAccessibleContext, _ LocationRange) Value {
 		field := computeLazyStoredField(name)
 		if field != nil {
 			fields[name] = field

@@ -135,7 +135,7 @@ func (v PathLinkValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		context.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
@@ -258,7 +258,7 @@ func (v AccountLinkValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		context.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }

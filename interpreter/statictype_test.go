@@ -1695,9 +1695,8 @@ func TestStaticTypeConversion(t *testing.T) {
 			}
 
 			convertedSemaType, err := ConvertStaticToSemaType(
-				nil,
-				test.staticType,
 				handler,
+				test.staticType,
 			)
 			require.NoError(t, err)
 			require.Equal(t,
@@ -1726,6 +1725,7 @@ func TestStaticTypeConversion(t *testing.T) {
 }
 
 type staticTypeConversionHandler struct {
+	common.MemoryGauge
 	getInterfaceType      func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.InterfaceType, error)
 	getCompositeType      func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.CompositeType, error)
 	getEntitlementType    func(typeID common.TypeID) (*sema.EntitlementType, error)

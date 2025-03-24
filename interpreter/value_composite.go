@@ -64,7 +64,7 @@ type CompositeValue struct {
 	isDestroyed         bool
 }
 
-type ComputedField func(*Interpreter, LocationRange, *CompositeValue) Value
+type ComputedField func(ValueTransferContext, LocationRange, *CompositeValue) Value
 
 type CompositeField struct {
 	Value Value
@@ -414,26 +414,25 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 	v.dictionary = nil
 }
 
-func (v *CompositeValue) getBuiltinMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v *CompositeValue) getBuiltinMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
 
 	switch name {
 	case sema.ResourceOwnerFieldName:
 		if v.Kind == common.CompositeKindResource {
-			return v.OwnerValue(interpreter, locationRange)
+			return v.OwnerValue(context, locationRange)
 		}
 	case sema.CompositeForEachAttachmentFunctionName:
 		if v.Kind.SupportsAttachments() {
-			return v.forEachAttachmentFunction(interpreter, locationRange)
+			return v.forEachAttachmentFunction(context, locationRange)
 		}
 	}
 
 	return nil
 }
 
-func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	config := interpreter.SharedState.Config
+func (v *CompositeValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
 
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		owner := v.GetOwner().String()
@@ -441,7 +440,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		kind := v.Kind.String()
 
 		defer func() {
-			interpreter.reportCompositeValueGetMemberTrace(
+			context.reportCompositeValueGetMemberTrace(
 				owner,
 				typeID,
 				kind,
@@ -451,51 +450,52 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		}()
 	}
 
-	if builtin := v.getBuiltinMember(interpreter, locationRange, name); builtin != nil {
-		return compositeMember(interpreter, v, builtin)
+	if builtin := v.getBuiltinMember(context, locationRange, name); builtin != nil {
+		return compositeMember(context, v, builtin)
 	}
 
 	// Give computed fields precedence over stored fields for built-in types
 	if v.Location == nil {
-		if computedField := v.GetComputedField(interpreter, locationRange, name); computedField != nil {
+		if computedField := v.GetComputedField(context, locationRange, name); computedField != nil {
 			return computedField
 		}
 	}
 
-	if field := v.GetField(interpreter, name); field != nil {
-		return compositeMember(interpreter, v, field)
+	if field := v.GetField(context, name); field != nil {
+		return compositeMember(context, v, field)
 	}
 
 	if v.NestedVariables != nil {
 		variable, ok := v.NestedVariables[name]
 		if ok {
-			return variable.GetValue(interpreter)
+			return variable.GetValue(context)
 		}
 	}
 
-	interpreter = v.getInterpreter(interpreter)
+	// TODO:
+	//context = v.getInterpreter(context)
 
 	// Dynamically link in the computed fields, injected fields, and functions
 
-	if computedField := v.GetComputedField(interpreter, locationRange, name); computedField != nil {
+	if computedField := v.GetComputedField(context, locationRange, name); computedField != nil {
 		return computedField
 	}
 
-	if injectedField := v.GetInjectedField(interpreter, name); injectedField != nil {
+	if injectedField := v.GetInjectedField(context, name); injectedField != nil {
 		return injectedField
 	}
 
-	if function := v.GetFunction(interpreter, locationRange, name); function != nil {
+	if function := v.GetFunction(context, locationRange, name); function != nil {
 		return function
 	}
 
 	return nil
 }
 
-func compositeMember(interpreter *Interpreter, compositeValue Value, memberValue Value) Value {
+func compositeMember(context FunctionCreationContext, compositeValue Value, memberValue Value) Value {
 	hostFunc, isHostFunc := memberValue.(*HostFunctionValue)
 	if isHostFunc {
-		return NewBoundFunctionValue(interpreter, hostFunc, &compositeValue, nil, nil)
+		return NewBoundFunctionValue(context, hostFunc, &compositeValue, nil, nil)
 	}
 
 	return memberValue
@@ -523,27 +523,27 @@ func (v *CompositeValue) getInterpreter(interpreter *Interpreter) *Interpreter {
 	return interpreter.EnsureLoaded(v.Location)
 }
 
-func (v *CompositeValue) GetComputedFields(interpreter *Interpreter) map[string]ComputedField {
+func (v *CompositeValue) GetComputedFields() map[string]ComputedField {
 	if v.computedFields == nil {
-		v.computedFields = interpreter.GetCompositeValueComputedFields(v)
+		v.computedFields = GetCompositeValueComputedFields(v)
 	}
 	return v.computedFields
 }
 
-func (v *CompositeValue) GetComputedField(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	computedFields := v.GetComputedFields(interpreter)
+func (v *CompositeValue) GetComputedField(context ValueTransferContext, locationRange LocationRange, name string) Value {
+	computedFields := v.GetComputedFields()
 
 	computedField, ok := computedFields[name]
 	if !ok {
 		return nil
 	}
 
-	return computedField(interpreter, locationRange, v)
+	return computedField(context, locationRange, v)
 }
 
-func (v *CompositeValue) GetInjectedField(interpreter *Interpreter, name string) Value {
+func (v *CompositeValue) GetInjectedField(context MemberAccessibleContext, name string) Value {
 	if v.injectedFields == nil {
-		v.injectedFields = interpreter.GetCompositeValueInjectedFields(v)
+		v.injectedFields = GetCompositeValueInjectedFields(context, v)
 	}
 
 	value, ok := v.injectedFields[name]
@@ -554,9 +554,9 @@ func (v *CompositeValue) GetInjectedField(interpreter *Interpreter, name string)
 	return value
 }
 
-func (v *CompositeValue) GetFunction(interpreter *Interpreter, locationRange LocationRange, name string) FunctionValue {
+func (v *CompositeValue) GetFunction(context FunctionCreationContext, locationRange LocationRange, name string) FunctionValue {
 	if v.Functions == nil {
-		v.Functions = interpreter.GetCompositeValueFunctions(v, locationRange)
+		v.Functions = context.GetCompositeValueFunctions(v, locationRange)
 	}
 	// if no functions were produced, the `Get` below will be nil
 	if v.Functions == nil {
@@ -571,7 +571,7 @@ func (v *CompositeValue) GetFunction(interpreter *Interpreter, locationRange Loc
 	var base *EphemeralReferenceValue
 	var self Value = v
 	if v.Kind == common.CompositeKindAttachment {
-		functionAccess := interpreter.getAccessOfMember(v, name)
+		functionAccess := getAccessOfMember(context, v, name)
 
 		// with respect to entitlements, any access inside an attachment that is not an entitlement access
 		// does not provide any entitlements to base and self
@@ -591,41 +591,42 @@ func (v *CompositeValue) GetFunction(interpreter *Interpreter, locationRange Loc
 		if functionAccess.IsPrimitiveAccess() {
 			functionAccess = sema.UnauthorizedAccess
 		}
-		base, self = attachmentBaseAndSelfValues(interpreter, functionAccess, v, locationRange)
+		base, self = attachmentBaseAndSelfValues(context, functionAccess, v, locationRange)
 	}
 
 	// If the function is already a bound function, then do not re-wrap.
 	// `NewBoundFunctionValue` already handles this.
-	return NewBoundFunctionValue(interpreter, function, &self, base, nil)
+	return NewBoundFunctionValue(context, function, &self, base, nil)
 }
 
-func (v *CompositeValue) OwnerValue(interpreter *Interpreter, locationRange LocationRange) OptionalValue {
+func (v *CompositeValue) OwnerValue(context MemberAccessibleContext, locationRange LocationRange) OptionalValue {
 	address := v.StorageAddress()
 
 	if address == (atree.Address{}) {
 		return NilOptionalValue
 	}
 
-	config := interpreter.SharedState.Config
+	accountHandler := context.AccountHandler()
 
-	ownerAccount := config.AccountHandler(interpreter, AddressValue(address))
+	ownerAccount := accountHandler(context, AddressValue(address))
 
 	// Owner must be of `Account` type.
-	interpreter.ExpectType(
+	ExpectType(
+		context,
 		ownerAccount,
 		sema.AccountType,
 		locationRange,
 	)
 
 	reference := NewEphemeralReferenceValue(
-		interpreter,
+		context,
 		UnauthorizedAccess,
 		ownerAccount,
 		sema.AccountType,
 		locationRange,
 	)
 
-	return NewSomeValueNonCopying(interpreter, reference)
+	return NewSomeValueNonCopying(context, reference)
 }
 
 func (v *CompositeValue) RemoveMember(
@@ -673,7 +674,7 @@ func (v *CompositeValue) RemoveMember(
 	interpreter.MaybeValidateAtreeStorage()
 
 	// Key
-	interpreter.RemoveReferencedSlab(existingKeyStorable)
+	RemoveReferencedSlab(interpreter, existingKeyStorable)
 
 	// Value
 
@@ -695,16 +696,15 @@ func (v *CompositeValue) RemoveMember(
 }
 
 func (v *CompositeValue) SetMemberWithoutTransfer(
-	interpreter *Interpreter,
+	context MemberAccessibleContext,
 	locationRange LocationRange,
 	name string,
 	value Value,
 ) bool {
-	config := interpreter.SharedState.Config
 
-	interpreter.enforceNotResourceDestruction(v.ValueID(), locationRange)
+	context.EnforceNotResourceDestruction(v.ValueID(), locationRange)
 
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		owner := v.GetOwner().String()
@@ -712,7 +712,7 @@ func (v *CompositeValue) SetMemberWithoutTransfer(
 		kind := v.Kind.String()
 
 		defer func() {
-			interpreter.reportCompositeValueSetMemberTrace(
+			context.reportCompositeValueSetMemberTrace(
 				owner,
 				typeID,
 				kind,
@@ -725,40 +725,35 @@ func (v *CompositeValue) SetMemberWithoutTransfer(
 	existingStorable, err := v.dictionary.Set(
 		StringAtreeValueComparator,
 		StringAtreeValueHashInput,
-		NewStringAtreeValue(interpreter, name),
+		NewStringAtreeValue(context, name),
 		value,
 	)
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.MaybeValidateAtreeValue(v.dictionary)
-	interpreter.MaybeValidateAtreeStorage()
+	context.MaybeValidateAtreeValue(v.dictionary)
+	context.MaybeValidateAtreeStorage()
 
 	if existingStorable != nil {
-		existingValue := StoredValue(interpreter, existingStorable, config.Storage)
+		existingValue := StoredValue(context, existingStorable, context.Storage())
 
-		interpreter.checkResourceLoss(existingValue, locationRange)
+		checkResourceLoss(context, existingValue, locationRange)
 
-		existingValue.DeepRemove(interpreter, true) // existingValue is standalone because it was overwritten in parent container.
+		existingValue.DeepRemove(context, true) // existingValue is standalone because it was overwritten in parent container.
 
-		interpreter.RemoveReferencedSlab(existingStorable)
+		RemoveReferencedSlab(context, existingStorable)
 		return true
 	}
 
 	return false
 }
 
-func (v *CompositeValue) SetMember(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	name string,
-	value Value,
-) bool {
+func (v *CompositeValue) SetMember(context MemberAccessibleContext, locationRange LocationRange, name string, value Value) bool {
 	address := v.StorageAddress()
 
 	value = value.Transfer(
-		interpreter,
+		context,
 		locationRange,
 		address,
 		true,
@@ -770,7 +765,7 @@ func (v *CompositeValue) SetMember(
 	)
 
 	return v.SetMemberWithoutTransfer(
-		interpreter,
+		context,
 		locationRange,
 		name,
 		value,
@@ -1024,7 +1019,7 @@ func (v *CompositeValue) CompositeStaticTypeConformsToStaticType(
 
 	fieldsLen := v.FieldCount()
 
-	computedFields := v.GetComputedFields(interpreter)
+	computedFields := v.GetComputedFields()
 	if computedFields != nil {
 		fieldsLen += len(computedFields)
 	}
@@ -1057,7 +1052,7 @@ func (v *CompositeValue) CompositeStaticTypeConformsToStaticType(
 
 		fieldStaticType := value.StaticType(interpreter)
 
-		if !interpreter.IsSubTypeOfSemaType(fieldStaticType, member.TypeAnnotation.Type) {
+		if !IsSubTypeOfSemaType(interpreter, fieldStaticType, member.TypeAnnotation.Type) {
 			return false
 		}
 
@@ -1292,8 +1287,8 @@ func (v *CompositeValue) Transfer(
 
 		if remove {
 			err = v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
-				context.RemoveReferencedSlab(nameStorable)
-				context.RemoveReferencedSlab(valueStorable)
+				RemoveReferencedSlab(context, nameStorable)
+				RemoveReferencedSlab(context, valueStorable)
 			})
 			if err != nil {
 				panic(errors.NewExternalError(err))
@@ -1304,7 +1299,7 @@ func (v *CompositeValue) Transfer(
 				context.MaybeValidateAtreeStorage()
 			}
 
-			context.RemoveReferencedSlab(storable)
+			RemoveReferencedSlab(context, storable)
 		}
 	}
 
@@ -1450,11 +1445,11 @@ func (v *CompositeValue) DeepRemove(context ValueRemoveContext, hasNoParentConta
 	err := v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
 		// NOTE: key / field name is stringAtreeValue,
 		// and not a Value, so no need to deep remove
-		context.RemoveReferencedSlab(nameStorable)
+		RemoveReferencedSlab(context, nameStorable)
 
 		value := StoredValue(context, valueStorable, storage)
 		value.DeepRemove(context, false) // value is an element of v.dictionary because it is from PopIterate() callback.
-		context.RemoveReferencedSlab(valueStorable)
+		RemoveReferencedSlab(context, valueStorable)
 	})
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -1576,7 +1571,7 @@ func (v *CompositeValue) ValueID() atree.ValueID {
 }
 
 func (v *CompositeValue) RemoveField(
-	interpreter *Interpreter,
+	context ValueRemoveContext,
 	locationRange LocationRange,
 	name string,
 ) {
@@ -1594,20 +1589,20 @@ func (v *CompositeValue) RemoveField(
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.MaybeValidateAtreeValue(v.dictionary)
-	interpreter.MaybeValidateAtreeStorage()
+	context.MaybeValidateAtreeValue(v.dictionary)
+	context.MaybeValidateAtreeStorage()
 
 	// Key
 
 	// NOTE: key / field name is stringAtreeValue,
 	// and not a Value, so no need to deep remove
-	interpreter.RemoveReferencedSlab(existingKeyStorable)
+	RemoveReferencedSlab(context, existingKeyStorable)
 
 	// Value
-	existingValue := StoredValue(interpreter, existingValueStorable, interpreter.Storage())
-	interpreter.checkResourceLoss(existingValue, locationRange)
-	existingValue.DeepRemove(interpreter, true) // existingValue is standalone because it was removed from parent container.
-	interpreter.RemoveReferencedSlab(existingValueStorable)
+	existingValue := StoredValue(context, existingValueStorable, context.Storage())
+	checkResourceLoss(context, existingValue, locationRange)
+	existingValue.DeepRemove(context, true) // existingValue is standalone because it was removed from parent container.
+	RemoveReferencedSlab(context, existingValueStorable)
 }
 
 func (v *CompositeValue) SetNestedVariables(variables map[string]Variable) {
@@ -1645,11 +1640,11 @@ func NewEnumCaseValue(
 }
 
 func (v *CompositeValue) getBaseValue(
-	interpreter *Interpreter,
+	context StaticTypeAndReferenceContext,
 	functionAuthorization Authorization,
 	locationRange LocationRange,
 ) *EphemeralReferenceValue {
-	attachmentType, ok := MustSemaTypeOfValue(v, interpreter).(*sema.CompositeType)
+	attachmentType, ok := MustSemaTypeOfValue(v, context).(*sema.CompositeType)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -1662,7 +1657,7 @@ func (v *CompositeValue) getBaseValue(
 		baseType = ty
 	}
 
-	return NewEphemeralReferenceValue(interpreter, functionAuthorization, v.base, baseType, locationRange)
+	return NewEphemeralReferenceValue(context, functionAuthorization, v.base, baseType, locationRange)
 }
 
 func (v *CompositeValue) setBaseValue(base *CompositeValue) {
@@ -1693,10 +1688,10 @@ func (v *CompositeValue) GetAttachments(interpreter *Interpreter, locationRange 
 	return attachments
 }
 
-func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, locationRange LocationRange) Value {
-	compositeType := MustSemaTypeOfValue(v, interpreter).(*sema.CompositeType)
+func (v *CompositeValue) forEachAttachmentFunction(context FunctionCreationContext, locationRange LocationRange) Value {
+	compositeType := MustSemaTypeOfValue(v, context).(*sema.CompositeType)
 	return NewBoundHostFunctionValue(
-		interpreter,
+		context,
 		v,
 		sema.CompositeForEachAttachmentFunctionType(
 			compositeType.GetCompositeKind(),
@@ -1752,20 +1747,20 @@ func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, loc
 }
 
 func attachmentBaseAndSelfValues(
-	interpreter *Interpreter,
+	context StaticTypeAndReferenceContext,
 	fnAccess sema.Access,
 	v *CompositeValue,
 	locationRange LocationRange,
 ) (base *EphemeralReferenceValue, self *EphemeralReferenceValue) {
-	attachmentReferenceAuth := ConvertSemaAccessToStaticAuthorization(interpreter, fnAccess)
+	attachmentReferenceAuth := ConvertSemaAccessToStaticAuthorization(context, fnAccess)
 
-	base = v.getBaseValue(interpreter, attachmentReferenceAuth, locationRange)
+	base = v.getBaseValue(context, attachmentReferenceAuth, locationRange)
 	// in attachment functions, self is a reference value
 	self = NewEphemeralReferenceValue(
-		interpreter,
+		context,
 		attachmentReferenceAuth,
 		v,
-		MustSemaTypeOfValue(v, interpreter),
+		MustSemaTypeOfValue(v, context),
 		locationRange,
 	)
 

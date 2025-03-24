@@ -76,7 +76,7 @@ func NewAccountValue(
 		return nil
 	}
 
-	computeField := func(name string, _ *Interpreter, _ LocationRange) Value {
+	computeField := func(name string, _ MemberAccessibleContext, _ LocationRange) Value {
 		switch name {
 		case sema.AccountTypeBalanceFieldName:
 			return accountBalanceGet()

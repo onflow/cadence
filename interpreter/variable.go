@@ -24,8 +24,8 @@ import (
 )
 
 type Variable interface {
-	GetValue(interpreter *Interpreter) Value
-	SetValue(interpreter *Interpreter, locationRange LocationRange, value Value)
+	GetValue(ValueStaticTypeContext) Value
+	SetValue(context ValueStaticTypeContext, locationRange LocationRange, value Value)
 	InitializeWithValue(value Value)
 	InitializeWithGetter(getter func() Value)
 }
@@ -46,7 +46,7 @@ func (v *SimpleVariable) InitializeWithGetter(getter func() Value) {
 	v.getter = getter
 }
 
-func (v *SimpleVariable) GetValue(*Interpreter) Value {
+func (v *SimpleVariable) GetValue(ValueStaticTypeContext) Value {
 	if v.getter != nil {
 		v.value = v.getter()
 		v.getter = nil
@@ -54,10 +54,10 @@ func (v *SimpleVariable) GetValue(*Interpreter) Value {
 	return v.value
 }
 
-func (v *SimpleVariable) SetValue(interpreter *Interpreter, locationRange LocationRange, value Value) {
-	existingValue := v.GetValue(interpreter)
+func (v *SimpleVariable) SetValue(context ValueStaticTypeContext, locationRange LocationRange, value Value) {
+	existingValue := v.GetValue(context)
 	if existingValue != nil {
-		interpreter.checkResourceLoss(existingValue, locationRange)
+		checkResourceLoss(context, existingValue, locationRange)
 	}
 	v.getter = nil
 	v.value = value
@@ -111,13 +111,13 @@ func (v *SelfVariable) InitializeWithGetter(func() Value) {
 	panic(errors.NewUnreachableError())
 }
 
-func (v *SelfVariable) GetValue(interpreter *Interpreter) Value {
+func (v *SelfVariable) GetValue(context ValueStaticTypeContext) Value {
 	// TODO: pass proper location range
-	checkInvalidatedResourceOrResourceReference(v.selfRef, EmptyLocationRange, interpreter)
+	checkInvalidatedResourceOrResourceReference(v.selfRef, EmptyLocationRange, context)
 	return v.value
 }
 
-func (v *SelfVariable) SetValue(*Interpreter, LocationRange, Value) {
+func (v *SelfVariable) SetValue(ValueStaticTypeContext, LocationRange, Value) {
 	// self variable cannot be updated.
 	panic(errors.NewUnreachableError())
 }

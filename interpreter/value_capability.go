@@ -142,17 +142,17 @@ func (v *IDCapabilityValue) MeteredString(context ValueStringContext, seenRefere
 	)
 }
 
-func (v *IDCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v *IDCapabilityValue) GetMember(context MemberAccessibleContext, _ LocationRange, name string) Value {
 	switch name {
 	case sema.CapabilityTypeBorrowFunctionName:
 		// this function will panic already if this conversion fails
-		borrowType, _ := MustConvertStaticToSemaType(v.BorrowType, interpreter).(*sema.ReferenceType)
-		return interpreter.capabilityBorrowFunction(v, v.address, v.ID, borrowType)
+		borrowType, _ := MustConvertStaticToSemaType(v.BorrowType, context).(*sema.ReferenceType)
+		return capabilityBorrowFunction(context, v, v.address, v.ID, borrowType)
 
 	case sema.CapabilityTypeCheckFunctionName:
 		// this function will panic already if this conversion fails
-		borrowType, _ := MustConvertStaticToSemaType(v.BorrowType, interpreter).(*sema.ReferenceType)
-		return interpreter.capabilityCheckFunction(v, v.address, v.ID, borrowType)
+		borrowType, _ := MustConvertStaticToSemaType(v.BorrowType, context).(*sema.ReferenceType)
+		return capabilityCheckFunction(context, v, v.address, v.ID, borrowType)
 
 	case sema.CapabilityTypeAddressFieldName:
 		return v.address
@@ -169,7 +169,7 @@ func (*IDCapabilityValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string
 	panic(errors.NewUnreachableError())
 }
 
-func (*IDCapabilityValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (*IDCapabilityValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Capabilities have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -233,7 +233,7 @@ func (v *IDCapabilityValue) Transfer(
 ) Value {
 	if remove {
 		v.DeepRemove(context, true)
-		context.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }

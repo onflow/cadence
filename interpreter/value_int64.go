@@ -607,8 +607,8 @@ func (v Int64Value) BitwiseRightShift(context ValueStaticTypeContext, other Inte
 	return NewInt64Value(context, valueGetter)
 }
 
-func (v Int64Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	return getNumberValueMember(interpreter, v, name, sema.Int64Type, locationRange)
+func (v Int64Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	return getNumberValueMember(context, v, name, sema.Int64Type, locationRange)
 }
 
 func (Int64Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
@@ -616,7 +616,7 @@ func (Int64Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value 
 	panic(errors.NewUnreachableError())
 }
 
-func (Int64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (Int64Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -657,7 +657,7 @@ func (v Int64Value) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		context.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
