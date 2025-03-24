@@ -254,8 +254,21 @@ func TestInterpretTransactions(t *testing.T) {
           }
         `)
 
-		signer1 := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{1}, interpreter.UnauthorizedAccess, interpreter.EmptyLocationRange)
-		signer2 := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{2}, interpreter.UnauthorizedAccess, interpreter.EmptyLocationRange)
+		signer1 := stdlib.NewAccountReferenceValue(
+			inter,
+			nil,
+			interpreter.AddressValue{1},
+			interpreter.UnauthorizedAccess,
+			interpreter.EmptyLocationRange,
+		)
+
+		signer2 := stdlib.NewAccountReferenceValue(
+			inter,
+			nil,
+			interpreter.AddressValue{2},
+			interpreter.UnauthorizedAccess,
+			interpreter.EmptyLocationRange,
+		)
 
 		// first transaction
 		err := inter.InvokeTransaction(0, signer1)
@@ -291,7 +304,7 @@ func TestInterpretTransactions(t *testing.T) {
 		address := common.MustBytesToAddress([]byte{0x1})
 
 		account := stdlib.NewAccountReferenceValue(
-			nil,
+			NoOpFunctionCreationContext{},
 			nil,
 			interpreter.AddressValue(address),
 			interpreter.UnauthorizedAccess,
@@ -361,7 +374,7 @@ func TestInterpretTransactions(t *testing.T) {
 		address := common.MustBytesToAddress([]byte{0x1})
 
 		account := stdlib.NewAccountReferenceValue(
-			nil,
+			NoOpFunctionCreationContext{},
 			nil,
 			interpreter.AddressValue(address),
 			interpreter.UnauthorizedAccess,
@@ -428,7 +441,7 @@ func TestRuntimeInvalidTransferInExecute(t *testing.T) {
 		},
 	})
 
-	signer1 := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{1}, interpreter.UnauthorizedAccess, interpreter.EmptyLocationRange)
+	signer1 := stdlib.NewAccountReferenceValue(inter, nil, interpreter.AddressValue{1}, interpreter.UnauthorizedAccess, interpreter.EmptyLocationRange)
 	err := inter.InvokeTransaction(0, signer1)
 	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 }

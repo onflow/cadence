@@ -387,6 +387,68 @@ func (t *testAccountHandler) IsContractBeingAdded(common.AddressLocation) bool {
 	return false
 }
 
+type NoOpReferenceCreationContext struct{}
+
+var _ interpreter.ReferenceCreationContext = NoOpReferenceCreationContext{}
+
+func (n NoOpReferenceCreationContext) InvalidateReferencedResources(v interpreter.Value, locationRange interpreter.LocationRange) {
+	// NO-OP
+}
+
+func (n NoOpReferenceCreationContext) CheckInvalidatedResourceOrResourceReference(value interpreter.Value, locationRange interpreter.LocationRange) {
+	// NO-OP
+}
+
+func (n NoOpReferenceCreationContext) MaybeTrackReferencedResourceKindedValue(ref *interpreter.EphemeralReferenceValue) {
+	// NO-OP
+}
+
+func (n NoOpReferenceCreationContext) MeterMemory(usage common.MemoryUsage) error {
+	// NO-OP
+	return nil
+}
+
+type NoOpFunctionCreationContext struct {
+	NoOpReferenceCreationContext
+}
+
+func (n NoOpFunctionCreationContext) ReadStored(storageAddress common.Address, domain common.StorageDomain, identifier interpreter.StorageMapKey) interpreter.Value {
+	// NO-OP
+	return nil
+}
+
+func (n NoOpFunctionCreationContext) GetEntitlementType(typeID interpreter.TypeID) (*sema.EntitlementType, error) {
+	// NO-OP
+	return nil, nil
+}
+
+func (n NoOpFunctionCreationContext) GetEntitlementMapType(typeID interpreter.TypeID) (*sema.EntitlementMapType, error) {
+	// NO-OP
+	return nil, nil
+}
+
+func (n NoOpFunctionCreationContext) GetInterfaceType(location common.Location, qualifiedIdentifier string, typeID interpreter.TypeID) (*sema.InterfaceType, error) {
+	// NO-OP
+	return nil, nil
+}
+
+func (n NoOpFunctionCreationContext) GetCompositeType(location common.Location, qualifiedIdentifier string, typeID interpreter.TypeID) (*sema.CompositeType, error) {
+	// NO-OP
+	return nil, nil
+}
+
+func (n NoOpFunctionCreationContext) IsRecovered(location common.Location) bool {
+	// NO-OP
+	return false
+}
+
+func (n NoOpFunctionCreationContext) GetCompositeValueFunctions(v *interpreter.CompositeValue, locationRange interpreter.LocationRange) *interpreter.FunctionOrderedMap {
+	// NO-OP
+	return nil
+}
+
+var _ interpreter.FunctionCreationContext = NoOpFunctionCreationContext{}
+
 func testAccountWithErrorHandler(
 	t *testing.T,
 	address interpreter.AddressValue,
@@ -407,7 +469,7 @@ func testAccountWithErrorHandler(
 		Name: "authAccount",
 		Type: sema.FullyEntitledAccountReferenceType,
 		Value: interpreter.NewEphemeralReferenceValue(
-			nil,
+			NoOpReferenceCreationContext{},
 			interpreter.FullyEntitledAccountAccess,
 			account,
 			sema.AccountType,
@@ -423,7 +485,7 @@ func testAccountWithErrorHandler(
 		Name: "pubAccount",
 		Type: sema.AccountReferenceType,
 		Value: interpreter.NewEphemeralReferenceValue(
-			nil,
+			NoOpReferenceCreationContext{},
 			interpreter.UnauthorizedAccess,
 			account,
 			sema.AccountType,
