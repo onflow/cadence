@@ -75,7 +75,7 @@ type Environment interface {
 		error,
 	)
 	CommitStorage(inter *interpreter.Interpreter) error
-	NewAccountValue(inter *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value
+	NewAccountValue(context interpreter.FunctionCreationContext, address interpreter.AddressValue) interpreter.Value
 
 	ResolveLocation(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error)
 }
@@ -339,9 +339,9 @@ func (e *interpreterEnvironment) GetAccountAvailableBalance(address common.Addre
 	return e.runtimeInterface.GetAccountAvailableBalance(address)
 }
 
-func (e *interpreterEnvironment) CommitStorageTemporarily(inter *interpreter.Interpreter) error {
+func (e *interpreterEnvironment) CommitStorageTemporarily(context interpreter.ValueTransferContext) error {
 	const commitContractUpdates = false
-	return e.storage.Commit(inter, commitContractUpdates)
+	return e.storage.Commit(context, commitContractUpdates)
 }
 
 func (e *interpreterEnvironment) GetStorageUsed(address common.Address) (uint64, error) {
@@ -870,10 +870,10 @@ func (e *interpreterEnvironment) newOnRecordTraceHandler() interpreter.OnRecordT
 }
 
 func (e *interpreterEnvironment) NewAccountValue(
-	inter *interpreter.Interpreter,
+	context interpreter.FunctionCreationContext,
 	address interpreter.AddressValue,
 ) interpreter.Value {
-	return stdlib.NewAccountValue(inter, e, address)
+	return stdlib.NewAccountValue(context, e, address)
 }
 
 func (e *interpreterEnvironment) ValidatePublicKey(publicKey *stdlib.PublicKey) error {
@@ -995,7 +995,7 @@ func (e *interpreterEnvironment) newOnEventEmittedHandler() interpreter.OnEventE
 
 func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter.InjectedCompositeFieldsHandlerFunc {
 	return func(
-		inter *interpreter.Interpreter,
+		context interpreter.FunctionCreationContext,
 		location Location,
 		_ string,
 		compositeKind common.CompositeKind,
@@ -1013,13 +1013,13 @@ func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter
 			}
 
 			addressValue := interpreter.NewAddressValue(
-				inter,
+				context,
 				address,
 			)
 
 			return map[string]interpreter.Value{
 				sema.ContractAccountFieldName: stdlib.NewAccountReferenceValue(
-					inter,
+					context,
 					e,
 					addressValue,
 					interpreter.FullyEntitledAccountAccess,

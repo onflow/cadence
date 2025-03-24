@@ -112,7 +112,7 @@ func (v *StorageCapabilityControllerValue) String() string {
 
 func (v *StorageCapabilityControllerValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
 	//if remove {
-	//	context.RemoveReferencedSlab(storable)
+	//	RemoveReferencedSlab(context, storable)
 	//}
 	return v
 }

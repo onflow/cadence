@@ -156,12 +156,12 @@ func (v AddressValue) ToAddress() common.Address {
 	return common.Address(v)
 }
 
-func (v AddressValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v AddressValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ToStringFunctionType,
 			func(v AddressValue, invocation Invocation) Value {
@@ -184,7 +184,7 @@ func (v AddressValue) GetMember(interpreter *Interpreter, _ LocationRange, name 
 
 	case sema.AddressTypeToBytesFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.AddressTypeToBytesFunctionType,
 			func(v AddressValue, invocation Invocation) Value {
@@ -203,7 +203,7 @@ func (AddressValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Valu
 	panic(errors.NewUnreachableError())
 }
 
-func (AddressValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (AddressValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Addresses have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -242,7 +242,7 @@ func (v AddressValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		transferContext.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(transferContext, storable)
 	}
 	return v
 }

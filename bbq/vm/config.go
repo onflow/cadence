@@ -156,17 +156,17 @@ func (c *Config) WriteStored(
 
 func (c *Config) ConvertStaticToSemaType(staticType interpreter.StaticType) (sema.Type, error) {
 	inter := c.Interpreter()
-	return inter.ConvertStaticToSemaType(staticType)
+	return interpreter.ConvertStaticToSemaType(inter, staticType)
 }
 
 func (c *Config) IsSubType(subType interpreter.StaticType, superType interpreter.StaticType) bool {
 	inter := c.Interpreter()
-	return inter.IsSubType(subType, superType)
+	return interpreter.IsSubType(inter, subType, superType)
 }
 
 func (c *Config) IsSubTypeOfSemaType(staticSubType interpreter.StaticType, superType sema.Type) bool {
 	inter := c.Interpreter()
-	return inter.IsSubTypeOfSemaType(staticSubType, superType)
+	return interpreter.IsSubTypeOfSemaType(inter, staticSubType, superType)
 }
 
 func (c *Config) GetEntitlementType(typeID interpreter.TypeID) (*sema.EntitlementType, error) {
@@ -197,17 +197,22 @@ func (c *Config) GetCompositeType(
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Config) RemoveReferencedSlab(storable atree.Storable) {
-	//TODO
-	panic(errors.NewUnreachableError())
-}
-
 func (c *Config) MaybeValidateAtreeValue(v atree.Value) {
 	//TODO
 	panic(errors.NewUnreachableError())
 }
 
 func (c *Config) MaybeValidateAtreeStorage() {
+	//TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (c *Config) RecordStorageMutation() {
+	//TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (c *Config) IsRecovered(location common.Location) bool {
 	//TODO
 	panic(errors.NewUnreachableError())
 }

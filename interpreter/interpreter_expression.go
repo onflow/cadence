@@ -294,7 +294,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(
 		},
 		set: func(value Value) {
 			interpreter.checkMemberAccess(memberExpression, target, locationRange)
-			interpreter.setMember(target, locationRange, identifier, value)
+			setMember(interpreter, target, locationRange, identifier, value)
 		},
 	}
 }
@@ -323,7 +323,7 @@ func (interpreter *Interpreter) getReferenceValue(value Value, resultType sema.T
 		// result reference type is unauthorized
 
 		staticType := value.StaticType(interpreter)
-		if referenceType.Authorization != sema.UnauthorizedAccess || !interpreter.IsSubTypeOfSemaType(staticType, resultType) {
+		if referenceType.Authorization != sema.UnauthorizedAccess || !IsSubTypeOfSemaType(interpreter, staticType, resultType) {
 			panic(InvalidMemberReferenceError{
 				ExpectedType:  resultType,
 				ActualType:    MustConvertStaticToSemaType(staticType, interpreter),
@@ -406,7 +406,7 @@ func (interpreter *Interpreter) checkMemberAccess(
 		}
 	}
 
-	if !interpreter.IsSubTypeOfSemaType(targetStaticType, expectedType) {
+	if !IsSubTypeOfSemaType(interpreter, targetStaticType, expectedType) {
 		targetSemaType := MustConvertStaticToSemaType(targetStaticType, interpreter)
 
 		panic(MemberAccessTypeError{
@@ -1387,7 +1387,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		}
 		valueSemaType := interpreter.SubstituteMappedEntitlements(MustSemaTypeOfValue(value, interpreter))
 		valueStaticType := ConvertSemaToStaticType(interpreter, valueSemaType)
-		isSubType := interpreter.IsSubTypeOfSemaType(valueStaticType, expectedType)
+		isSubType := IsSubTypeOfSemaType(interpreter, valueStaticType, expectedType)
 
 		switch expression.Operation {
 		case ast.OperationFailableCast:

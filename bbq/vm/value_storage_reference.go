@@ -101,7 +101,7 @@ func (v *StorageReferenceValue) dereference(context StaticTypeContext) (*Value, 
 	if v.BorrowedType != nil {
 		staticType := vmReferencedValue.StaticType(context)
 
-		if !context.IsSubType(staticType, v.BorrowedType) {
+		if !interpreter.IsSubType(context, staticType, v.BorrowedType) {
 			panic(fmt.Errorf("type mismatch: expected %s, found %s", v.BorrowedType, staticType))
 
 			// TODO:

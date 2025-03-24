@@ -496,8 +496,8 @@ func (v UInt16Value) BitwiseRightShift(context ValueStaticTypeContext, other Int
 	)
 }
 
-func (v UInt16Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	return getNumberValueMember(interpreter, v, name, sema.UInt16Type, locationRange)
+func (v UInt16Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	return getNumberValueMember(context, v, name, sema.UInt16Type, locationRange)
 }
 
 func (UInt16Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
@@ -505,7 +505,7 @@ func (UInt16Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value
 	panic(errors.NewUnreachableError())
 }
 
-func (UInt16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (UInt16Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -550,7 +550,7 @@ func (v UInt16Value) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		context.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }

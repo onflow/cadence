@@ -241,11 +241,13 @@ func canBorrow(
 
 	// Ensure the wanted borrow type is a subtype or supertype of the capability borrow type
 
-	return context.IsSubType(
+	return interpreter.IsSubType(
+		context,
 		wantedBorrowType.ReferencedType,
 		capabilityBorrowType.ReferencedType,
 	) ||
-		context.IsSubType(
+		interpreter.IsSubType(
+			context,
 			capabilityBorrowType.ReferencedType,
 			wantedBorrowType.ReferencedType,
 		)

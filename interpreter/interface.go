@@ -29,13 +29,14 @@ import (
 )
 
 type TypeConverter interface {
-	ConvertStaticToSemaType(staticType StaticType) (sema.Type, error)
+	common.MemoryGauge
+	StaticTypeConversionHandler
 }
 
 var _ TypeConverter = &Interpreter{}
 
 func MustConvertStaticToSemaType(staticType StaticType, typeConverter TypeConverter) sema.Type {
-	semaType, err := typeConverter.ConvertStaticToSemaType(staticType)
+	semaType, err := ConvertStaticToSemaType(typeConverter, staticType)
 	if err != nil {
 		panic(err)
 	}
@@ -47,12 +48,7 @@ func MustSemaTypeOfValue(value Value, context ValueStaticTypeContext) sema.Type 
 	return MustConvertStaticToSemaType(staticType, context)
 }
 
-type SubTypeChecker interface {
-	IsSubType(subType StaticType, superType StaticType) bool
-	IsSubTypeOfSemaType(staticSubType StaticType, superType sema.Type) bool
-}
-
-var _ SubTypeChecker = &Interpreter{}
+//var _ SubTypeChecker = &Interpreter{}
 
 type StorageReader interface {
 	ReadStored(
@@ -77,7 +73,7 @@ type ValueStaticTypeContext interface {
 	common.MemoryGauge
 	StorageReader
 	TypeConverter
-	SubTypeChecker
+	IsRecovered(location common.Location) bool
 }
 
 var _ ValueStaticTypeContext = &Interpreter{}
@@ -85,12 +81,11 @@ var _ ValueStaticTypeContext = &Interpreter{}
 type StorageContext interface {
 	ValueStaticTypeContext
 	common.MemoryGauge
-
+	StorageMutationTracker
 	StorageReader
 	StorageWriter
 
 	Storage() Storage
-	RemoveReferencedSlab(storable atree.Storable)
 	MaybeValidateAtreeValue(v atree.Value)
 	MaybeValidateAtreeStorage()
 }
@@ -129,6 +124,52 @@ type ValueIterationContext interface {
 
 type ValueStringContext interface {
 	ValueIterationContext
+}
+
+type ReferenceCreationContext interface {
+	common.MemoryGauge
+	ReferenceTracker
+}
+
+type MemberAccessibleContext interface {
+	FunctionCreationContext
+	ArrayCreationContext
+	ResourceDestructionHandler
+
+	AccountHandler() AccountHandlerFunc
+	InjectedCompositeFieldsHandler() InjectedCompositeFieldsHandlerFunc
+}
+
+type FunctionCreationContext interface {
+	StaticTypeAndReferenceContext
+	GetCompositeValueFunctions(v *CompositeValue, locationRange LocationRange) *FunctionOrderedMap
+}
+
+type StaticTypeAndReferenceContext interface {
+	common.MemoryGauge
+	ValueStaticTypeContext
+	ReferenceTracker
+}
+
+type ArrayCreationContext interface {
+	common.MemoryGauge
+	ValueStaticTypeContext
+	ReferenceTracker
+	ComputationReporter
+	Tracer
+	StorageContext
+	ValueTransferContext
+}
+
+type StorageMutationTracker interface {
+	RecordStorageMutation()
+}
+
+type ResourceDestructionHandler interface {
+	EnforceNotResourceDestruction(
+		valueID atree.ValueID,
+		locationRange LocationRange,
+	)
 }
 
 // NoOpStringContext is the ValueStringContext implementation used in Value.RecursiveString method.
@@ -175,10 +216,6 @@ func (n NoOpStringContext) Storage() Storage {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) RemoveReferencedSlab(_ atree.Storable) {
-	panic(errors.NewUnreachableError())
-}
-
 func (n NoOpStringContext) MaybeValidateAtreeValue(_ atree.Value) {
 	panic(errors.NewUnreachableError())
 }
@@ -215,6 +252,10 @@ func (n NoOpStringContext) reportArrayValueTransferTrace(_ string, _ int, _ time
 	panic(errors.NewUnreachableError())
 }
 
+func (n NoOpStringContext) reportArrayValueConstructTrace(_ string, _ int, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
 func (n NoOpStringContext) reportDictionaryValueTransferTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
@@ -227,7 +268,19 @@ func (n NoOpStringContext) reportCompositeValueDeepRemoveTrace(_ string, _ strin
 	panic(errors.NewUnreachableError())
 }
 
+func (n NoOpStringContext) reportDictionaryValueGetMemberTrace(_ string, _ int, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
 func (n NoOpStringContext) reportCompositeValueTransferTrace(_ string, _ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (n NoOpStringContext) reportCompositeValueSetMemberTrace(_ string, id string, _ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (c NoOpStringContext) reportCompositeValueGetMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -236,5 +289,29 @@ func (n NoOpStringContext) reportDomainStorageMapDeepRemoveTrace(_ string, _ int
 }
 
 func (n NoOpStringContext) OnResourceOwnerChange(_ *CompositeValue, _ common.Address, _ common.Address) {
+	panic(errors.NewUnreachableError())
+}
+
+func (n NoOpStringContext) RecordStorageMutation() {
+	panic(errors.NewUnreachableError())
+}
+
+func (n NoOpStringContext) GetEntitlementType(_ TypeID) (*sema.EntitlementType, error) {
+	panic(errors.NewUnreachableError())
+}
+
+func (n NoOpStringContext) GetEntitlementMapType(_ TypeID) (*sema.EntitlementMapType, error) {
+	panic(errors.NewUnreachableError())
+}
+
+func (n NoOpStringContext) GetInterfaceType(_ common.Location, _ string, _ TypeID) (*sema.InterfaceType, error) {
+	panic(errors.NewUnreachableError())
+}
+
+func (n NoOpStringContext) GetCompositeType(_ common.Location, _ string, _ TypeID) (*sema.CompositeType, error) {
+	panic(errors.NewUnreachableError())
+}
+
+func (n NoOpStringContext) IsRecovered(location common.Location) bool {
 	panic(errors.NewUnreachableError())
 }

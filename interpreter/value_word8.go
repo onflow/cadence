@@ -392,8 +392,8 @@ func (v Word8Value) BitwiseRightShift(context ValueStaticTypeContext, other Inte
 	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	return getNumberValueMember(interpreter, v, name, sema.Word8Type, locationRange)
+func (v Word8Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	return getNumberValueMember(context, v, name, sema.Word8Type, locationRange)
 }
 
 func (Word8Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
@@ -401,7 +401,7 @@ func (Word8Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value 
 	panic(errors.NewUnreachableError())
 }
 
-func (Word8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (Word8Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -444,7 +444,7 @@ func (v Word8Value) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		context.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }

@@ -259,7 +259,7 @@ func checkAndIssueStorageCapabilityControllerWithType(
 	borrowType, ok := ty.(*interpreter.ReferenceStaticType)
 	if !ok {
 		// TODO: remove conversion. se static type in error
-		semaType, err := config.Interpreter().ConvertStaticToSemaType(ty)
+		semaType, err := interpreter.ConvertStaticToSemaType(config.Interpreter(), ty)
 		if err != nil {
 			panic(err)
 		}
