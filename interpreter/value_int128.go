@@ -29,12 +29,13 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // toTwosComplement sets `res` to the two's complement representation of a big.Int `x` in the given target bit size.
 // `res` is returned and is awlways a positive big.Int.
 func toTwosComplement(res, x *big.Int, targetBitSize uint) *big.Int {
-	bytes := SignedBigIntToSizedBigEndianBytes(x, targetBitSize/8)
+	bytes := values.SignedBigIntToSizedBigEndianBytes(x, targetBitSize/8)
 	return res.SetBytes(bytes)
 }
 
@@ -43,7 +44,7 @@ func toTwosComplement(res, x *big.Int, targetBitSize uint) *big.Int {
 // `res` is returned and can be positive or negative.
 func fromTwosComplement(res *big.Int) *big.Int {
 	bytes := res.Bytes()
-	return BigEndianBytesToSignedBigInt(bytes)
+	return values.BigEndianBytesToSignedBigInt(bytes)
 }
 
 // truncate trims a big.Int to maxWords by directly modifying its underlying representation.
@@ -505,7 +506,7 @@ func (v Int128Value) Less(context ValueComparisonContext, other ComparableValue,
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp == -1)
+	return cmp == -1
 }
 
 func (v Int128Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -520,7 +521,7 @@ func (v Int128Value) LessEqual(context ValueComparisonContext, other ComparableV
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp <= 0)
+	return cmp <= 0
 }
 
 func (v Int128Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -535,7 +536,7 @@ func (v Int128Value) Greater(context ValueComparisonContext, other ComparableVal
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp == 1)
+	return cmp == 1
 }
 
 func (v Int128Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -550,7 +551,7 @@ func (v Int128Value) GreaterEqual(context ValueComparisonContext, other Comparab
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp >= 0)
+	return cmp >= 0
 }
 
 func (v Int128Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
@@ -566,7 +567,7 @@ func (v Int128Value) Equal(_ ValueComparisonContext, _ LocationRange, other Valu
 // - HashInputTypeInt128 (1 byte)
 // - big int value encoded in big-endian (n bytes)
 func (v Int128Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
-	b := SignedBigIntToBigEndianBytes(v.BigInt)
+	b := values.SignedBigIntToBigEndianBytes(v.BigInt)
 
 	length := 1 + len(b)
 	var buffer []byte
@@ -752,7 +753,7 @@ func (Int128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value)
 }
 
 func (v Int128Value) ToBigEndianBytes() []byte {
-	return SignedBigIntToSizedBigEndianBytes(v.BigInt, sema.Int128TypeSize)
+	return values.SignedBigIntToSizedBigEndianBytes(v.BigInt, sema.Int128TypeSize)
 }
 
 func (v Int128Value) ConformsToStaticType(
@@ -799,7 +800,7 @@ func (Int128Value) DeepRemove(_ *Interpreter, _ bool) {
 }
 
 func (v Int128Value) ByteSize() uint32 {
-	return cborTagSize + getBigIntCBORSize(v.BigInt)
+	return values.CBORTagSize + values.GetBigIntCBORSize(v.BigInt)
 }
 
 func (v Int128Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {

@@ -451,9 +451,9 @@ func TestInclusiveRange(t *testing.T) {
 			for i, tc := range testCase.containsTests {
 				var expectedValue interpreter.Value
 				if withStep {
-					expectedValue = interpreter.AsBoolValue(tc.expectedWithStep)
+					expectedValue = interpreter.BoolValue(tc.expectedWithStep)
 				} else {
-					expectedValue = interpreter.AsBoolValue(tc.expectedWithoutStep)
+					expectedValue = interpreter.BoolValue(tc.expectedWithoutStep)
 				}
 
 				AssertValuesEqual(

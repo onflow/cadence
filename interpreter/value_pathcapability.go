@@ -26,6 +26,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // TODO: remove once migrated
@@ -228,7 +229,7 @@ func (v *PathCapabilityValue) Storable(
 	address atree.Address,
 	maxInlineSize uint64,
 ) (atree.Storable, error) {
-	return maybeLargeImmutableStorable(
+	return values.MaybeLargeImmutableStorable(
 		v,
 		storage,
 		address,
@@ -322,7 +323,7 @@ func (v *PathCapabilityValue) Encode(e *atree.Encoder) error {
 	// Encode tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagPathCapabilityValue,
+		0xd8, values.CBORTagPathCapabilityValue, //nolint:staticcheck
 		// array, 3 items follow
 		0x83,
 	})

@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // Word128Value
@@ -310,7 +311,7 @@ func (v Word128Value) Less(context ValueComparisonContext, other ComparableValue
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp == -1)
+	return cmp == -1
 }
 
 func (v Word128Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -325,7 +326,7 @@ func (v Word128Value) LessEqual(context ValueComparisonContext, other Comparable
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp <= 0)
+	return cmp <= 0
 }
 
 func (v Word128Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -340,7 +341,7 @@ func (v Word128Value) Greater(context ValueComparisonContext, other ComparableVa
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp == 1)
+	return cmp == 1
 }
 
 func (v Word128Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -355,7 +356,7 @@ func (v Word128Value) GreaterEqual(context ValueComparisonContext, other Compara
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp >= 0)
+	return cmp >= 0
 }
 
 func (v Word128Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
@@ -371,7 +372,7 @@ func (v Word128Value) Equal(_ ValueComparisonContext, _ LocationRange, other Val
 // - HashInputTypeWord128 (1 byte)
 // - big int encoded in big endian (n bytes)
 func (v Word128Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
-	b := UnsignedBigIntToBigEndianBytes(v.BigInt)
+	b := values.UnsignedBigIntToBigEndianBytes(v.BigInt)
 
 	length := 1 + len(b)
 	var buffer []byte
@@ -554,7 +555,7 @@ func (Word128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value
 }
 
 func (v Word128Value) ToBigEndianBytes() []byte {
-	return UnsignedBigIntToBigEndianBytes(v.BigInt)
+	return values.UnsignedBigIntToBigEndianBytes(v.BigInt)
 }
 
 func (v Word128Value) ConformsToStaticType(
@@ -605,7 +606,7 @@ func (Word128Value) DeepRemove(_ *Interpreter, _ bool) {
 }
 
 func (v Word128Value) ByteSize() uint32 {
-	return cborTagSize + getBigIntCBORSize(v.BigInt)
+	return values.CBORTagSize + values.GetBigIntCBORSize(v.BigInt)
 }
 
 func (v Word128Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {

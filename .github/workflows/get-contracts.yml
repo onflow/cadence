@@ -1,7 +1,7 @@
 name: Get contracts
 
 on:
-  workflow_call:
+  workflow_dispatch:
     inputs:
       chain:
         required: true
