@@ -39,7 +39,7 @@ func (f placeholderValue) RecursiveString(_ SeenReferences) string {
 	return ""
 }
 
-func (f placeholderValue) MeteredString(_ *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (f placeholderValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	return ""
 }
 
@@ -75,7 +75,7 @@ func (placeholderValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (placeholderValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (placeholderValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 

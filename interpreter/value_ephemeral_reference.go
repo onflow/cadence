@@ -95,19 +95,19 @@ func (v *EphemeralReferenceValue) String() string {
 }
 
 func (v *EphemeralReferenceValue) RecursiveString(seenReferences SeenReferences) string {
-	return v.MeteredString(nil, seenReferences, EmptyLocationRange)
+	return v.MeteredString(NoOpStringContext{}, seenReferences, EmptyLocationRange)
 }
 
-func (v *EphemeralReferenceValue) MeteredString(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
+func (v *EphemeralReferenceValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
 	if _, ok := seenReferences[v]; ok {
-		common.UseMemory(interpreter, common.SeenReferenceStringMemoryUsage)
+		common.UseMemory(context, common.SeenReferenceStringMemoryUsage)
 		return "..."
 	}
 
 	seenReferences[v] = struct{}{}
 	defer delete(seenReferences, v)
 
-	return v.Value.MeteredString(interpreter, seenReferences, locationRange)
+	return v.Value.MeteredString(context, seenReferences, locationRange)
 }
 
 func (v *EphemeralReferenceValue) StaticType(context ValueStaticTypeContext) StaticType {

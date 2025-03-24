@@ -84,11 +84,11 @@ func (v Word8Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Word8Value) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v Word8Value) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
-		interpreter,
+		context,
 		common.NewRawStringMemoryUsage(
-			OverEstimateNumberStringLength(interpreter, v),
+			OverEstimateNumberStringLength(context, v),
 		),
 	)
 	return v.String()
@@ -430,7 +430,7 @@ func (Word8Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Word8Value) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (Word8Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 

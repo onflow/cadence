@@ -139,17 +139,13 @@ func (v *StorageCapabilityControllerValue) RecursiveString(seenReferences SeenRe
 	)
 }
 
-func (v *StorageCapabilityControllerValue) MeteredString(
-	interpreter *Interpreter,
-	seenReferences SeenReferences,
-	locationRange LocationRange,
-) string {
-	common.UseMemory(interpreter, common.StorageCapabilityControllerValueStringMemoryUsage)
+func (v *StorageCapabilityControllerValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+	common.UseMemory(context, common.StorageCapabilityControllerValueStringMemoryUsage)
 
 	return format.StorageCapabilityController(
-		v.BorrowType.MeteredString(interpreter),
-		v.CapabilityID.MeteredString(interpreter, seenReferences, locationRange),
-		v.TargetPath.MeteredString(interpreter, seenReferences, locationRange),
+		v.BorrowType.MeteredString(context),
+		v.CapabilityID.MeteredString(context, seenReferences, locationRange),
+		v.TargetPath.MeteredString(context, seenReferences, locationRange),
 	)
 }
 
@@ -191,7 +187,7 @@ func (*StorageCapabilityControllerValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*StorageCapabilityControllerValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (*StorageCapabilityControllerValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 

@@ -103,10 +103,10 @@ func (v PathValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v PathValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v PathValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	// len(domain) + len(identifier) + '/' x2
 	strLen := len(v.Domain.Identifier()) + len(v.Identifier) + 2
-	common.UseMemory(interpreter, common.NewRawStringMemoryUsage(strLen))
+	common.UseMemory(context, common.NewRawStringMemoryUsage(strLen))
 	return v.String()
 }
 
@@ -226,7 +226,7 @@ func (PathValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (PathValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (PathValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 

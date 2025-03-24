@@ -63,8 +63,8 @@ func (v VoidValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v VoidValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
-	common.UseMemory(interpreter, common.VoidStringMemoryUsage)
+func (v VoidValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+	common.UseMemory(context, common.VoidStringMemoryUsage)
 	return v.String()
 }
 
@@ -89,7 +89,7 @@ func (VoidValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (VoidValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (VoidValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
