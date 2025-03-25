@@ -47,7 +47,7 @@ func (v NilValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRa
 	visitor.VisitNilValue(interpreter, v)
 }
 
-func (NilValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (NilValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -74,7 +74,7 @@ func (NilValue) IsDestroyed() bool {
 	return false
 }
 
-func (v NilValue) Destroy(_ *Interpreter, _ LocationRange) {}
+func (v NilValue) Destroy(context ResourceDestructionContext, locationRange LocationRange) {}
 
 func (NilValue) String() string {
 	return format.Nil

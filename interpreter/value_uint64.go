@@ -71,7 +71,7 @@ func (v UInt64Value) Accept(interpreter *Interpreter, visitor Visitor, _ Locatio
 	visitor.VisitUInt64Value(interpreter, v)
 }
 
-func (UInt64Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (UInt64Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 

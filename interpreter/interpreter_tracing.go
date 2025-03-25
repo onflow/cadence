@@ -54,17 +54,20 @@ type Tracer interface {
 	ReportArrayValueDeepRemoveTrace(typeInfo string, count int, duration time.Duration)
 	ReportArrayValueTransferTrace(info string, count int, since time.Duration)
 	ReportArrayValueConstructTrace(typeInfo string, count int, duration time.Duration)
+	ReportArrayValueDestroyTrace(info string, count int, since time.Duration)
 
 	ReportDictionaryValueTransferTrace(info string, count int, since time.Duration)
 	ReportDictionaryValueDeepRemoveTrace(info string, count int, since time.Duration)
 	ReportDictionaryValueGetMemberTrace(info string, count int, name string, since time.Duration)
 	ReportDictionaryValueConstructTrace(info string, count int, since time.Duration)
+	ReportDictionaryValueDestroyTrace(info string, count int, since time.Duration)
 
 	ReportCompositeValueDeepRemoveTrace(owner string, id string, kind string, since time.Duration)
 	ReportCompositeValueTransferTrace(owner string, id string, kind string, since time.Duration)
 	ReportCompositeValueSetMemberTrace(owner string, id string, kind string, name string, since time.Duration)
 	ReportCompositeValueGetMemberTrace(owner string, typeID string, kind string, name string, duration time.Duration)
 	ReportCompositeValueConstructTrace(owner string, id string, kind string, since time.Duration)
+	ReportCompositeValueDestroyTrace(owner string, id string, kind string, since time.Duration)
 
 	ReportDomainStorageMapDeepRemoveTrace(info string, i int, since time.Duration)
 }
@@ -114,7 +117,7 @@ func (interpreter *Interpreter) ReportArrayValueDeepRemoveTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportArrayValueDestroyTrace(
+func (interpreter *Interpreter) ReportArrayValueDestroyTrace(
 	typeInfo string,
 	count int,
 	duration time.Duration,
@@ -198,7 +201,7 @@ func (interpreter *Interpreter) ReportDomainStorageMapDeepRemoveTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportDictionaryValueDestroyTrace(
+func (interpreter *Interpreter) ReportDictionaryValueDestroyTrace(
 	typeInfo string,
 	count int,
 	duration time.Duration,
@@ -293,7 +296,7 @@ func (interpreter *Interpreter) ReportCompositeValueDeepRemoveTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportCompositeValueDestroyTrace(
+func (interpreter *Interpreter) ReportCompositeValueDestroyTrace(
 	owner string,
 	typeID string,
 	kind string,

@@ -431,9 +431,9 @@ func (v *DictionaryValue) Iterator() DictionaryKeyIterator {
 	}
 }
 
-func (v *DictionaryValue) Walk(interpreter *Interpreter, walkChild func(Value), locationRange LocationRange) {
+func (v *DictionaryValue) Walk(context ValueWalkContext, walkChild func(Value), locationRange LocationRange) {
 	v.Iterate(
-		interpreter,
+		context,
 		locationRange,
 		func(key, value Value) (resume bool) {
 			walkChild(key)
@@ -480,20 +480,18 @@ func (v *DictionaryValue) IsStaleResource(interpreter *Interpreter) bool {
 	return v.dictionary == nil && v.IsResourceKinded(interpreter)
 }
 
-func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
+func (v *DictionaryValue) Destroy(context ResourceDestructionContext, locationRange LocationRange) {
 
-	interpreter.ReportComputation(common.ComputationKindDestroyDictionaryValue, 1)
+	context.ReportComputation(common.ComputationKindDestroyDictionaryValue, 1)
 
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
 		count := v.Count()
 
 		defer func() {
-			interpreter.reportDictionaryValueDestroyTrace(
+			context.ReportDictionaryValueDestroyTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -503,17 +501,17 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 
 	valueID := v.ValueID()
 
-	interpreter.withResourceDestruction(
+	context.WithResourceDestruction(
 		valueID,
 		locationRange,
 		func() {
 			v.Iterate(
-				interpreter,
+				context,
 				locationRange,
 				func(key, value Value) (resume bool) {
 					// Resources cannot be keys at the moment, so should theoretically not be needed
-					maybeDestroy(interpreter, locationRange, key)
-					maybeDestroy(interpreter, locationRange, value)
+					maybeDestroy(context, locationRange, key)
+					maybeDestroy(context, locationRange, value)
 
 					return true
 				},
@@ -523,7 +521,7 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 
 	v.isDestroyed = true
 
-	InvalidateReferencedResources(interpreter, v, locationRange)
+	InvalidateReferencedResources(context, v, locationRange)
 
 	v.dictionary = nil
 }
