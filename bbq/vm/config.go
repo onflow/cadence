@@ -154,19 +154,9 @@ func (c *Config) WriteStored(
 	)
 }
 
-func (c *Config) ConvertStaticToSemaType(staticType interpreter.StaticType) (sema.Type, error) {
-	inter := c.Interpreter()
-	return interpreter.ConvertStaticToSemaType(inter, staticType)
-}
-
 func (c *Config) IsSubType(subType interpreter.StaticType, superType interpreter.StaticType) bool {
 	inter := c.Interpreter()
 	return interpreter.IsSubType(inter, subType, superType)
-}
-
-func (c *Config) IsSubTypeOfSemaType(staticSubType interpreter.StaticType, superType sema.Type) bool {
-	inter := c.Interpreter()
-	return interpreter.IsSubTypeOfSemaType(inter, staticSubType, superType)
 }
 
 func (c *Config) GetInterfaceType(
@@ -229,22 +219,22 @@ func (c *Config) GetEntitlementMapType(typeID interpreter.TypeID) (*sema.Entitle
 
 func (c *Config) MaybeValidateAtreeValue(v atree.Value) {
 	//TODO
-	panic(errors.NewUnreachableError())
+	// NO-OP: no validation happens for now
 }
 
 func (c *Config) MaybeValidateAtreeStorage() {
 	//TODO
-	panic(errors.NewUnreachableError())
+	// NO-OP: no validation happens for now
 }
 
 func (c *Config) RecordStorageMutation() {
-	//TODO
-	panic(errors.NewUnreachableError())
+	// TODO
+	// NO-OP
 }
 
 func (c *Config) IsRecovered(location common.Location) bool {
 	//TODO
-	panic(errors.NewUnreachableError())
+	return false
 }
 
 type ContractValueHandler func(conf *Config, location common.Location) *CompositeValue

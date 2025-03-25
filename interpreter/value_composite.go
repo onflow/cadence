@@ -472,7 +472,6 @@ func (v *CompositeValue) GetMember(context MemberAccessibleContext, locationRang
 		}
 	}
 
-	// TODO:
 	context = context.GetMemberAccessContextForLocation(v.Location)
 
 	// Dynamically link in the computed fields, injected fields, and functions
