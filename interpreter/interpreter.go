@@ -5831,3 +5831,11 @@ func (interpreter *Interpreter) MaybeSetMutationDuringCapConIteration(addressPat
 		interpreter.SharedState.MutationDuringCapabilityControllerIteration = true
 	}
 }
+
+func (interpreter *Interpreter) GetMemberAccessContextForLocation(location common.Location) MemberAccessibleContext {
+	if location == nil || interpreter.Location == location {
+		return interpreter
+	}
+
+	return interpreter.EnsureLoaded(location)
+}
