@@ -119,7 +119,7 @@ func (v PathValue) GetMember(context MemberAccessibleContext, locationRange Loca
 			v,
 			sema.ToStringFunctionType,
 			func(v PathValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
+				interpreter := invocation.InvocationContext
 
 				domainLength := len(v.Domain.Identifier())
 				identifierLength := len(v.Identifier)

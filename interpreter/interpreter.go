@@ -1251,7 +1251,7 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 			declarationInterpreter,
 			initializerType,
 			func(invocation Invocation) Value {
-				invocationInterpreter := invocation.Interpreter
+				invocationInterpreter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 				self := *invocation.Self
 
@@ -1402,7 +1402,7 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 			constructorType,
 			func(invocation Invocation) Value {
 
-				interpreter := invocation.Interpreter
+				interpreter := invocation.InvocationContext
 
 				// Check that the resource is constructed
 				// in the same location as it was declared
@@ -1682,7 +1682,7 @@ func EnumConstructorFunction(
 				return Nil
 			}
 
-			return NewSomeValueNonCopying(invocation.Interpreter, caseValue)
+			return NewSomeValueNonCopying(invocation.InvocationContext, caseValue)
 		},
 	)
 
@@ -2753,7 +2753,7 @@ type fromStringFunctionValue struct {
 }
 
 // a function that attempts to create a Cadence value from a string, e.g. parsing a number from a string
-type stringValueParser func(*Interpreter, string) OptionalValue
+type stringValueParser func(common.MemoryGauge, string) OptionalValue
 
 func newFromStringFunction(ty sema.Type, parser stringValueParser) fromStringFunctionValue {
 	functionType := sema.FromStringFunctionType(ty)
@@ -2766,7 +2766,7 @@ func newFromStringFunction(ty sema.Type, parser stringValueParser) fromStringFun
 				// expect typechecker to catch a mismatch here
 				panic(errors.NewUnreachableError())
 			}
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 			return parser(inter, argument.Str)
 		},
 	)
@@ -2784,16 +2784,16 @@ func unsignedIntValueParser[ValueType Value, IntType any](
 	toValue func(common.MemoryGauge, func() IntType) ValueType,
 	fromUInt64 func(uint64) IntType,
 ) stringValueParser {
-	return func(interpreter *Interpreter, input string) OptionalValue {
+	return func(memoryGauge common.MemoryGauge, input string) OptionalValue {
 		val, err := strconv.ParseUint(input, 10, bitSize)
 		if err != nil {
 			return NilOptionalValue
 		}
 
-		converted := toValue(interpreter, func() IntType {
+		converted := toValue(memoryGauge, func() IntType {
 			return fromUInt64(val)
 		})
-		return NewSomeValueNonCopying(interpreter, converted)
+		return NewSomeValueNonCopying(memoryGauge, converted)
 	}
 }
 
@@ -2806,26 +2806,26 @@ func signedIntValueParser[ValueType Value, IntType any](
 	fromInt64 func(int64) IntType,
 ) stringValueParser {
 
-	return func(interpreter *Interpreter, input string) OptionalValue {
+	return func(memoryGauge common.MemoryGauge, input string) OptionalValue {
 		val, err := strconv.ParseInt(input, 10, bitSize)
 		if err != nil {
 			return NilOptionalValue
 		}
 
-		converted := toValue(interpreter, func() IntType {
+		converted := toValue(memoryGauge, func() IntType {
 			return fromInt64(val)
 		})
-		return NewSomeValueNonCopying(interpreter, converted)
+		return NewSomeValueNonCopying(memoryGauge, converted)
 	}
 }
 
 // No need to use metered constructors for values represented by big.Ints,
 // since estimation is more granular than fixed-size types.
 func bigIntValueParser(convert func(*big.Int) (Value, bool)) stringValueParser {
-	return func(interpreter *Interpreter, input string) OptionalValue {
+	return func(memoryGauge common.MemoryGauge, input string) OptionalValue {
 		literalKind := common.IntegerLiteralKindDecimal
 		estimatedSize := common.OverEstimateBigIntFromString(input, literalKind)
-		common.UseMemory(interpreter, common.NewBigIntMemoryUsage(estimatedSize))
+		common.UseMemory(memoryGauge, common.NewBigIntMemoryUsage(estimatedSize))
 
 		val, ok := new(big.Int).SetString(input, literalKind.Base())
 		if !ok {
@@ -2837,7 +2837,7 @@ func bigIntValueParser(convert func(*big.Int) (Value, bool)) stringValueParser {
 		if !ok {
 			return NilOptionalValue
 		}
-		return NewSomeValueNonCopying(interpreter, converted)
+		return NewSomeValueNonCopying(memoryGauge, converted)
 	}
 }
 
@@ -2922,23 +2922,23 @@ var fromStringFunctionValues = func() map[string]fromStringFunctionValue {
 		})),
 
 		// fixed-points
-		newFromStringFunction(sema.Fix64Type, func(inter *Interpreter, input string) OptionalValue {
+		newFromStringFunction(sema.Fix64Type, func(memoryGauge common.MemoryGauge, input string) OptionalValue {
 			n, err := fixedpoint.ParseFix64(input)
 			if err != nil {
 				return NilOptionalValue
 			}
 
-			val := NewFix64Value(inter, n.Int64)
-			return NewSomeValueNonCopying(inter, val)
+			val := NewFix64Value(memoryGauge, n.Int64)
+			return NewSomeValueNonCopying(memoryGauge, val)
 
 		}),
-		newFromStringFunction(sema.UFix64Type, func(inter *Interpreter, input string) OptionalValue {
+		newFromStringFunction(sema.UFix64Type, func(memoryGauge common.MemoryGauge, input string) OptionalValue {
 			n, err := fixedpoint.ParseUFix64(input)
 			if err != nil {
 				return NilOptionalValue
 			}
-			val := NewUFix64Value(inter, n.Uint64)
-			return NewSomeValueNonCopying(inter, val)
+			val := NewUFix64Value(memoryGauge, n.Uint64)
+			return NewSomeValueNonCopying(memoryGauge, val)
 		}),
 	}
 
@@ -2984,12 +2984,13 @@ func padWithZeroes(b []byte, expectedLen int) []byte {
 }
 
 // a function that attempts to create a Number from a big-endian bytes.
-type bigEndianBytesConverter func(*Interpreter, []byte) Value
+type bigEndianBytesConverter func(common.MemoryGauge, []byte) Value
 
 func newFromBigEndianBytesFunction(
 	ty sema.Type,
 	byteLength int,
-	converter bigEndianBytesConverter) fromBigEndianBytesFunctionValue {
+	converter bigEndianBytesConverter,
+) fromBigEndianBytesFunctionValue {
 	functionType := sema.FromBigEndianBytesFunctionType(ty)
 
 	// Converter functions are static functions.
@@ -3001,8 +3002,8 @@ func newFromBigEndianBytesFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			inter := invocation.Interpreter
-			bytes, err := ByteArrayValueToByteSlice(inter, argument, invocation.LocationRange)
+			context := invocation.InvocationContext
+			bytes, err := ByteArrayValueToByteSlice(context, argument, invocation.LocationRange)
 			if err != nil {
 				return Nil
 			}
@@ -3012,7 +3013,7 @@ func newFromBigEndianBytesFunction(
 				return Nil
 			}
 
-			return NewSomeValueNonCopying(inter, converter(inter, bytes))
+			return NewSomeValueNonCopying(context, converter(context, bytes))
 		},
 	)
 	return fromBigEndianBytesFunctionValue{
@@ -3024,142 +3025,142 @@ func newFromBigEndianBytesFunction(
 var fromBigEndianBytesFunctionValues = func() map[string]fromBigEndianBytesFunctionValue {
 	declarations := []fromBigEndianBytesFunctionValue{
 		// signed int values
-		newFromBigEndianBytesFunction(sema.Int8Type, 1, func(i *Interpreter, b []byte) Value {
-			return NewInt8Value(i, func() int8 {
+		newFromBigEndianBytesFunction(sema.Int8Type, 1, func(gauge common.MemoryGauge, b []byte) Value {
+			return NewInt8Value(gauge, func() int8 {
 				bytes := padWithZeroes(b, 1)
 				return int8(bytes[0])
 			})
 		}),
-		newFromBigEndianBytesFunction(sema.Int16Type, 2, func(i *Interpreter, b []byte) Value {
-			return NewInt16Value(i, func() int16 {
+		newFromBigEndianBytesFunction(sema.Int16Type, 2, func(gauge common.MemoryGauge, b []byte) Value {
+			return NewInt16Value(gauge, func() int16 {
 				bytes := padWithZeroes(b, 2)
 				val := binary.BigEndian.Uint16(bytes)
 				return int16(val)
 			})
 		}),
-		newFromBigEndianBytesFunction(sema.Int32Type, 4, func(i *Interpreter, b []byte) Value {
-			return NewInt32Value(i, func() int32 {
+		newFromBigEndianBytesFunction(sema.Int32Type, 4, func(gauge common.MemoryGauge, b []byte) Value {
+			return NewInt32Value(gauge, func() int32 {
 				bytes := padWithZeroes(b, 4)
 				val := binary.BigEndian.Uint32(bytes)
 				return int32(val)
 			})
 		}),
-		newFromBigEndianBytesFunction(sema.Int64Type, 8, func(i *Interpreter, b []byte) Value {
-			return NewInt64Value(i, func() int64 {
+		newFromBigEndianBytesFunction(sema.Int64Type, 8, func(gauge common.MemoryGauge, b []byte) Value {
+			return NewInt64Value(gauge, func() int64 {
 				bytes := padWithZeroes(b, 8)
 				val := binary.BigEndian.Uint64(bytes)
 				return int64(val)
 			})
 		}),
-		newFromBigEndianBytesFunction(sema.Int128Type, 16, func(i *Interpreter, b []byte) Value {
-			return NewInt128ValueFromBigInt(i, func() *big.Int {
+		newFromBigEndianBytesFunction(sema.Int128Type, 16, func(gauge common.MemoryGauge, b []byte) Value {
+			return NewInt128ValueFromBigInt(gauge, func() *big.Int {
 				bi := values.BigEndianBytesToSignedBigInt(b)
 				return bi
 			})
 		}),
-		newFromBigEndianBytesFunction(sema.Int256Type, 32, func(i *Interpreter, b []byte) Value {
-			return NewInt256ValueFromBigInt(i, func() *big.Int {
+		newFromBigEndianBytesFunction(sema.Int256Type, 32, func(gauge common.MemoryGauge, b []byte) Value {
+			return NewInt256ValueFromBigInt(gauge, func() *big.Int {
 				bi := values.BigEndianBytesToSignedBigInt(b)
 				return bi
 			})
 		}),
-		newFromBigEndianBytesFunction(sema.IntType, 0, func(i *Interpreter, b []byte) Value {
+		newFromBigEndianBytesFunction(sema.IntType, 0, func(gauge common.MemoryGauge, b []byte) Value {
 			bi := values.BigEndianBytesToSignedBigInt(b)
 			memoryUsage := common.NewBigIntMemoryUsage(
 				common.BigIntByteLength(bi),
 			)
-			return NewIntValueFromBigInt(i, memoryUsage, func() *big.Int { return bi })
+			return NewIntValueFromBigInt(gauge, memoryUsage, func() *big.Int { return bi })
 		}),
 
 		// unsigned int values
-		newFromBigEndianBytesFunction(sema.UInt8Type, 1, func(i *Interpreter, b []byte) Value {
-			return NewUInt8Value(i, func() uint8 { return b[0] })
+		newFromBigEndianBytesFunction(sema.UInt8Type, 1, func(gauge common.MemoryGauge, b []byte) Value {
+			return NewUInt8Value(gauge, func() uint8 { return b[0] })
 		}),
-		newFromBigEndianBytesFunction(sema.UInt16Type, 2, func(i *Interpreter, b []byte) Value {
-			return NewUInt16Value(i, func() uint16 {
+		newFromBigEndianBytesFunction(sema.UInt16Type, 2, func(gauge common.MemoryGauge, b []byte) Value {
+			return NewUInt16Value(gauge, func() uint16 {
 				bytes := padWithZeroes(b, 2)
 				val := binary.BigEndian.Uint16(bytes)
 				return val
 			})
 		}),
-		newFromBigEndianBytesFunction(sema.UInt32Type, 4, func(i *Interpreter, b []byte) Value {
-			return NewUInt32Value(i, func() uint32 {
+		newFromBigEndianBytesFunction(sema.UInt32Type, 4, func(gauge common.MemoryGauge, b []byte) Value {
+			return NewUInt32Value(gauge, func() uint32 {
 				bytes := padWithZeroes(b, 4)
 				val := binary.BigEndian.Uint32(bytes)
 				return val
 			})
 		}),
-		newFromBigEndianBytesFunction(sema.UInt64Type, 8, func(i *Interpreter, b []byte) Value {
-			return NewUInt64Value(i, func() uint64 {
+		newFromBigEndianBytesFunction(sema.UInt64Type, 8, func(gauge common.MemoryGauge, b []byte) Value {
+			return NewUInt64Value(gauge, func() uint64 {
 				bytes := padWithZeroes(b, 8)
 				val := binary.BigEndian.Uint64(bytes)
 				return val
 			})
 		}),
-		newFromBigEndianBytesFunction(sema.UInt128Type, 16, func(i *Interpreter, b []byte) Value {
-			return NewUInt128ValueFromBigInt(i, func() *big.Int {
+		newFromBigEndianBytesFunction(sema.UInt128Type, 16, func(gauge common.MemoryGauge, b []byte) Value {
+			return NewUInt128ValueFromBigInt(gauge, func() *big.Int {
 				return values.BigEndianBytesToUnsignedBigInt(b)
 			})
 		}),
-		newFromBigEndianBytesFunction(sema.UInt256Type, 32, func(i *Interpreter, b []byte) Value {
-			return NewUInt256ValueFromBigInt(i, func() *big.Int {
+		newFromBigEndianBytesFunction(sema.UInt256Type, 32, func(gauge common.MemoryGauge, b []byte) Value {
+			return NewUInt256ValueFromBigInt(gauge, func() *big.Int {
 				return values.BigEndianBytesToUnsignedBigInt(b)
 			})
 		}),
-		newFromBigEndianBytesFunction(sema.UIntType, 0, func(i *Interpreter, b []byte) Value {
+		newFromBigEndianBytesFunction(sema.UIntType, 0, func(gauge common.MemoryGauge, b []byte) Value {
 			bi := values.BigEndianBytesToUnsignedBigInt(b)
 			memoryUsage := common.NewBigIntMemoryUsage(
 				common.BigIntByteLength(bi),
 			)
-			return NewUIntValueFromBigInt(i, memoryUsage, func() *big.Int { return bi })
+			return NewUIntValueFromBigInt(gauge, memoryUsage, func() *big.Int { return bi })
 		}),
 
 		// machine-sized word types
-		newFromBigEndianBytesFunction(sema.Word8Type, 1, func(i *Interpreter, b []byte) Value {
-			return NewWord8Value(i, func() uint8 { return b[0] })
+		newFromBigEndianBytesFunction(sema.Word8Type, 1, func(gauge common.MemoryGauge, b []byte) Value {
+			return NewWord8Value(gauge, func() uint8 { return b[0] })
 		}),
-		newFromBigEndianBytesFunction(sema.Word16Type, 2, func(i *Interpreter, b []byte) Value {
-			return NewWord16Value(i, func() uint16 {
+		newFromBigEndianBytesFunction(sema.Word16Type, 2, func(gauge common.MemoryGauge, b []byte) Value {
+			return NewWord16Value(gauge, func() uint16 {
 				bytes := padWithZeroes(b, 2)
 				val := binary.BigEndian.Uint16(bytes)
 				return val
 			})
 		}),
-		newFromBigEndianBytesFunction(sema.Word32Type, 4, func(i *Interpreter, b []byte) Value {
-			return NewWord32Value(i, func() uint32 {
+		newFromBigEndianBytesFunction(sema.Word32Type, 4, func(gauge common.MemoryGauge, b []byte) Value {
+			return NewWord32Value(gauge, func() uint32 {
 				bytes := padWithZeroes(b, 4)
 				val := binary.BigEndian.Uint32(bytes)
 				return val
 			})
 		}),
-		newFromBigEndianBytesFunction(sema.Word64Type, 8, func(i *Interpreter, b []byte) Value {
-			return NewWord64Value(i, func() uint64 {
+		newFromBigEndianBytesFunction(sema.Word64Type, 8, func(gauge common.MemoryGauge, b []byte) Value {
+			return NewWord64Value(gauge, func() uint64 {
 				bytes := padWithZeroes(b, 8)
 				val := binary.BigEndian.Uint64(bytes)
 				return val
 			})
 		}),
-		newFromBigEndianBytesFunction(sema.Word128Type, 16, func(i *Interpreter, b []byte) Value {
-			return NewWord128ValueFromBigInt(i, func() *big.Int {
+		newFromBigEndianBytesFunction(sema.Word128Type, 16, func(gauge common.MemoryGauge, b []byte) Value {
+			return NewWord128ValueFromBigInt(gauge, func() *big.Int {
 				return values.BigEndianBytesToUnsignedBigInt(b)
 			})
 		}),
-		newFromBigEndianBytesFunction(sema.Word256Type, 32, func(i *Interpreter, b []byte) Value {
-			return NewWord256ValueFromBigInt(i, func() *big.Int {
+		newFromBigEndianBytesFunction(sema.Word256Type, 32, func(gauge common.MemoryGauge, b []byte) Value {
+			return NewWord256ValueFromBigInt(gauge, func() *big.Int {
 				return values.BigEndianBytesToUnsignedBigInt(b)
 			})
 		}),
 
 		// fixed-points
-		newFromBigEndianBytesFunction(sema.Fix64Type, 8, func(i *Interpreter, b []byte) Value {
-			return NewFix64Value(i, func() int64 {
+		newFromBigEndianBytesFunction(sema.Fix64Type, 8, func(gauge common.MemoryGauge, b []byte) Value {
+			return NewFix64Value(gauge, func() int64 {
 				bytes := padWithZeroes(b, 8)
 				val := binary.BigEndian.Uint64(bytes)
 				return int64(val)
 			})
 		}),
-		newFromBigEndianBytesFunction(sema.UFix64Type, 8, func(i *Interpreter, b []byte) Value {
-			return NewUFix64Value(i, func() uint64 {
+		newFromBigEndianBytesFunction(sema.UFix64Type, 8, func(gauge common.MemoryGauge, b []byte) Value {
+			return NewUFix64Value(gauge, func() uint64 {
 				bytes := padWithZeroes(b, 8)
 				val := binary.BigEndian.Uint64(bytes)
 				return val
@@ -3565,7 +3566,7 @@ func init() {
 }
 
 func dictionaryTypeFunction(invocation Invocation) Value {
-	inter := invocation.Interpreter
+	inter := invocation.InvocationContext
 
 	keyTypeValue, ok := invocation.Arguments[0].(TypeValue)
 	if !ok {
@@ -3619,11 +3620,11 @@ func referenceTypeFunction(invocation Invocation) Value {
 
 	if entitlementsCount > 0 {
 		authorization = NewEntitlementSetAuthorization(
-			invocation.Interpreter,
+			invocation.InvocationContext,
 			func() []common.TypeID {
 				entitlements := make([]common.TypeID, 0, entitlementsCount)
 				entitlementValues.Iterate(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					func(element Value) (resume bool) {
 						entitlementString, isString := element.(*StringValue)
 						if !isString {
@@ -3631,7 +3632,7 @@ func referenceTypeFunction(invocation Invocation) Value {
 							return false
 						}
 
-						_, err := lookupEntitlement(invocation.Interpreter, entitlementString.Str)
+						_, err := lookupEntitlement(invocation.InvocationContext, entitlementString.Str)
 						if err != nil {
 							errInIteration = true
 							return false
@@ -3655,11 +3656,11 @@ func referenceTypeFunction(invocation Invocation) Value {
 	}
 
 	return NewSomeValueNonCopying(
-		invocation.Interpreter,
+		invocation.InvocationContext,
 		NewTypeValue(
-			invocation.Interpreter,
+			invocation.InvocationContext,
 			NewReferenceStaticType(
-				invocation.Interpreter,
+				invocation.InvocationContext,
 				authorization,
 				typeValue.Type,
 			),
@@ -3674,22 +3675,22 @@ func compositeTypeFunction(invocation Invocation) Value {
 	}
 	typeID := typeIDValue.Str
 
-	composite, err := lookupComposite(invocation.Interpreter, typeID)
+	composite, err := lookupComposite(invocation.InvocationContext, typeID)
 	if err != nil {
 		return Nil
 	}
 
 	return NewSomeValueNonCopying(
-		invocation.Interpreter,
+		invocation.InvocationContext,
 		NewTypeValue(
-			invocation.Interpreter,
-			ConvertSemaToStaticType(invocation.Interpreter, composite),
+			invocation.InvocationContext,
+			ConvertSemaToStaticType(invocation.InvocationContext, composite),
 		),
 	)
 }
 
 func functionTypeFunction(invocation Invocation) Value {
-	interpreter := invocation.Interpreter
+	interpreter := invocation.InvocationContext
 
 	parameters, ok := invocation.Arguments[0].(*ArrayValue)
 	if !ok {
@@ -3752,14 +3753,14 @@ func intersectionTypeFunction(invocation Invocation) Value {
 
 		var invalidIntersectionID bool
 		intersectionIDs.Iterate(
-			invocation.Interpreter,
+			invocation.InvocationContext,
 			func(typeID Value) bool {
 				typeIDValue, ok := typeID.(*StringValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
-				intersectedInterface, err := lookupInterface(invocation.Interpreter, typeIDValue.Str)
+				intersectedInterface, err := lookupInterface(invocation.InvocationContext, typeIDValue.Str)
 				if err != nil {
 					invalidIntersectionID = true
 					return true
@@ -3767,7 +3768,7 @@ func intersectionTypeFunction(invocation Invocation) Value {
 
 				staticIntersections = append(
 					staticIntersections,
-					ConvertSemaToStaticType(invocation.Interpreter, intersectedInterface).(*InterfaceStaticType),
+					ConvertSemaToStaticType(invocation.InvocationContext, intersectedInterface).(*InterfaceStaticType),
 				)
 				semaIntersections = append(semaIntersections, intersectedInterface)
 
@@ -3787,7 +3788,7 @@ func intersectionTypeFunction(invocation Invocation) Value {
 
 	var invalidIntersectionType bool
 	sema.CheckIntersectionType(
-		invocation.Interpreter,
+		invocation.InvocationContext,
 		semaIntersections,
 		func(_ func(*ast.IntersectionType) error) {
 			invalidIntersectionType = true
@@ -3801,11 +3802,11 @@ func intersectionTypeFunction(invocation Invocation) Value {
 	}
 
 	return NewSomeValueNonCopying(
-		invocation.Interpreter,
+		invocation.InvocationContext,
 		NewTypeValue(
-			invocation.Interpreter,
+			invocation.InvocationContext,
 			NewIntersectionStaticType(
-				invocation.Interpreter,
+				invocation.InvocationContext,
 				staticIntersections,
 			),
 		),
@@ -3835,7 +3836,7 @@ var converterFunctionValues = func() []converterFunction {
 		converterFunctionValue := NewUnmeteredStaticHostFunctionValue(
 			declaration.functionType,
 			func(invocation Invocation) Value {
-				return convert(invocation.Interpreter, invocation.Arguments[0], invocation.LocationRange)
+				return convert(invocation.InvocationContext, invocation.Arguments[0], invocation.LocationRange)
 			},
 		)
 
@@ -3904,9 +3905,9 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 				}
 
 				return NewTypeValue(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					NewOptionalStaticType(
-						invocation.Interpreter,
+						invocation.InvocationContext,
 						typeValue.Type,
 					),
 				)
@@ -3924,10 +3925,10 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 				}
 
 				return NewTypeValue(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					//nolint:gosimple
 					NewVariableSizedStaticType(
-						invocation.Interpreter,
+						invocation.InvocationContext,
 						typeValue.Type,
 					),
 				)
@@ -3950,9 +3951,9 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 				}
 
 				return NewTypeValue(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					NewConstantSizedStaticType(
-						invocation.Interpreter,
+						invocation.InvocationContext,
 						typeValue.Type,
 						int64(sizeValue.ToInt(invocation.LocationRange)),
 					),
@@ -3978,11 +3979,11 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 				}
 
 				return NewSomeValueNonCopying(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					NewTypeValue(
-						invocation.Interpreter,
+						invocation.InvocationContext,
 						NewCapabilityStaticType(
-							invocation.Interpreter,
+							invocation.InvocationContext,
 							ty,
 						),
 					),
@@ -4000,7 +4001,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 					panic(errors.NewUnreachableError())
 				}
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 
 				ty := typeValue.Type
 				// InclusiveRanges must hold integers
@@ -4042,8 +4043,8 @@ var typeFunction = NewUnmeteredStaticHostFunctionValue(
 
 		ty := typeParameterPair.Value
 
-		staticType := ConvertSemaToStaticType(invocation.Interpreter, ty)
-		return NewTypeValue(invocation.Interpreter, staticType)
+		staticType := ConvertSemaToStaticType(invocation.InvocationContext, ty)
+		return NewTypeValue(invocation.InvocationContext, staticType)
 	},
 )
 
@@ -4196,7 +4197,7 @@ func newStorageIterationFunction(
 		storageValue,
 		functionType,
 		func(_ *SimpleCompositeValue, invocation Invocation) Value {
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 			config := inter.SharedState.Config
 
 			locationRange := invocation.LocationRange
@@ -4365,7 +4366,7 @@ func authAccountSaveFunction(
 		storageValue,
 		sema.Account_StorageTypeSaveFunctionType,
 		func(_ *SimpleCompositeValue, invocation Invocation) Value {
-			interpreter := invocation.Interpreter
+			interpreter := invocation.InvocationContext
 
 			value := invocation.Arguments[0]
 
@@ -4431,7 +4432,7 @@ func authAccountTypeFunction(
 		storageValue,
 		sema.Account_StorageTypeTypeFunctionType,
 		func(_ *SimpleCompositeValue, invocation Invocation) Value {
-			interpreter := invocation.Interpreter
+			interpreter := invocation.InvocationContext
 
 			path, ok := invocation.Arguments[0].(PathValue)
 			if !ok {
@@ -4492,7 +4493,7 @@ func authAccountReadFunction(
 		// same as sema.Account_StorageTypeCopyFunctionType
 		sema.Account_StorageTypeLoadFunctionType,
 		func(_ *SimpleCompositeValue, invocation Invocation) Value {
-			interpreter := invocation.Interpreter
+			interpreter := invocation.InvocationContext
 
 			path, ok := invocation.Arguments[0].(PathValue)
 			if !ok {
@@ -4558,7 +4559,7 @@ func authAccountReadFunction(
 				)
 			}
 
-			return NewSomeValueNonCopying(invocation.Interpreter, transferredValue)
+			return NewSomeValueNonCopying(invocation.InvocationContext, transferredValue)
 		},
 	)
 }
@@ -4577,7 +4578,7 @@ func authAccountBorrowFunction(
 		storageValue,
 		sema.Account_StorageTypeBorrowFunctionType,
 		func(_ *SimpleCompositeValue, invocation Invocation) Value {
-			interpreter := invocation.Interpreter
+			interpreter := invocation.InvocationContext
 
 			path, ok := invocation.Arguments[0].(PathValue)
 			if !ok {
@@ -4635,7 +4636,7 @@ func authAccountCheckFunction(
 		storageValue,
 		sema.Account_StorageTypeCheckFunctionType,
 		func(_ *SimpleCompositeValue, invocation Invocation) Value {
-			interpreter := invocation.Interpreter
+			interpreter := invocation.InvocationContext
 
 			path, ok := invocation.Arguments[0].(PathValue)
 			if !ok {
@@ -5155,7 +5156,7 @@ func isInstanceFunction(context FunctionCreationContext, self Value) FunctionVal
 		self,
 		sema.IsInstanceFunctionType,
 		func(self Value, invocation Invocation) Value {
-			interpreter := invocation.Interpreter
+			interpreter := invocation.InvocationContext
 
 			firstArgument := invocation.Arguments[0]
 			typeValue, ok := firstArgument.(TypeValue)
@@ -5186,7 +5187,7 @@ func getTypeFunction(context FunctionCreationContext, self Value) FunctionValue 
 		self,
 		sema.GetTypeFunctionType,
 		func(self Value, invocation Invocation) Value {
-			interpreter := invocation.Interpreter
+			interpreter := invocation.InvocationContext
 			staticType := self.StaticType(interpreter)
 			return NewTypeValue(interpreter, staticType)
 		},
@@ -5642,7 +5643,7 @@ func capabilityBorrowFunction(
 		sema.CapabilityTypeBorrowFunctionType(capabilityBorrowType),
 		func(_ CapabilityValue, invocation Invocation) Value {
 
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
 			if capabilityID == InvalidCapabilityID {
@@ -5694,7 +5695,7 @@ func capabilityCheckFunction(
 				return FalseValue
 			}
 
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
 			// NOTE: if a type argument is provided for the function,

@@ -85,7 +85,7 @@ func NewGetBlockFunction(provider BlockAtHeightProvider) StandardLibraryValue {
 				panic(errors.NewUnreachableError())
 			}
 
-			memoryGauge := invocation.Interpreter
+			memoryGauge := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
 			block, exists := getBlockAtHeight(
@@ -215,7 +215,7 @@ func NewGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibraryVa
 				panic(errors.NewUnexpectedError("cannot get current block"))
 			}
 
-			memoryGauge := invocation.Interpreter
+			memoryGauge := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
 			return NewBlockValue(memoryGauge, locationRange, block)

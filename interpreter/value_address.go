@@ -165,7 +165,7 @@ func (v AddressValue) GetMember(context MemberAccessibleContext, locationRange L
 			v,
 			sema.ToStringFunctionType,
 			func(v AddressValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
+				interpreter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				memoryUsage := common.NewStringMemoryUsage(
@@ -188,7 +188,7 @@ func (v AddressValue) GetMember(context MemberAccessibleContext, locationRange L
 			v,
 			sema.AddressTypeToBytesFunctionType,
 			func(v AddressValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
+				interpreter := invocation.InvocationContext
 				address := common.Address(v)
 				return ByteSliceToByteArrayValue(interpreter, address[:])
 			},
@@ -273,14 +273,14 @@ func AddressFromBytes(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	inter := invocation.Interpreter
+	inter := invocation.InvocationContext
 
 	bytes, err := ByteArrayValueToByteSlice(inter, argument, invocation.LocationRange)
 	if err != nil {
 		panic(err)
 	}
 
-	return NewAddressValue(invocation.Interpreter, common.MustBytesToAddress(bytes))
+	return NewAddressValue(invocation.InvocationContext, common.MustBytesToAddress(bytes))
 }
 
 func AddressFromString(invocation Invocation) Value {
@@ -294,6 +294,6 @@ func AddressFromString(invocation Invocation) Value {
 		return Nil
 	}
 
-	inter := invocation.Interpreter
+	inter := invocation.InvocationContext
 	return NewSomeValueNonCopying(inter, NewAddressValue(inter, addr))
 }

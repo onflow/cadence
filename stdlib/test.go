@@ -382,7 +382,7 @@ func newMatcherWithAnyStructTestFunction(
 	testFunc interpreter.FunctionValue,
 ) interpreter.Value {
 
-	inter := invocation.Interpreter
+	inter := invocation.InvocationContext
 
 	matcherConstructor := getNestedTypeConstructorValue(
 		inter,
@@ -434,7 +434,7 @@ func newMatcherWithGenericTestFunction(
 	matcherTestFunction := interpreter.NewUnmeteredStaticHostFunctionValue(
 		matcherTestFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 
 			for _, argument := range invocation.Arguments {
 				argumentStaticType := argument.StaticType(inter)

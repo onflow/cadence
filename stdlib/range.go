@@ -126,7 +126,7 @@ var InclusiveRangeConstructorFunction = NewStandardLibraryStaticFunction(
 			panic(errors.NewUnreachableError())
 		}
 
-		inter := invocation.Interpreter
+		inter := invocation.InvocationContext
 		locationRange := invocation.LocationRange
 
 		startStaticType := start.StaticType(inter)
@@ -142,8 +142,8 @@ var InclusiveRangeConstructorFunction = NewStandardLibraryStaticFunction(
 			})
 		}
 
-		rangeStaticType := interpreter.NewInclusiveRangeStaticType(invocation.Interpreter, startStaticType)
-		rangeSemaType := sema.NewInclusiveRangeType(invocation.Interpreter, invocation.ArgumentTypes[0])
+		rangeStaticType := interpreter.NewInclusiveRangeStaticType(invocation.InvocationContext, startStaticType)
+		rangeSemaType := sema.NewInclusiveRangeType(invocation.InvocationContext, invocation.ArgumentTypes[0])
 
 		if len(invocation.Arguments) > 2 {
 			step, ok := invocation.Arguments[2].(interpreter.IntegerValue)

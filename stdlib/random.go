@@ -115,7 +115,7 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 		revertibleRandomFunctionType,
 		revertibleRandomFunctionDocString,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 
 			returnIntegerType := invocation.TypeParameterTypes.Oldest().Value
 

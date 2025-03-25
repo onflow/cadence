@@ -136,7 +136,7 @@ func (v TypeValue) GetMember(context MemberAccessibleContext, _ LocationRange, n
 			v,
 			sema.MetaTypeIsSubtypeFunctionType,
 			func(v TypeValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
+				interpreter := invocation.InvocationContext
 
 				staticType := v.Type
 				otherTypeValue, ok := invocation.Arguments[0].(TypeValue)
