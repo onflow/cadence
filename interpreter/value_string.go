@@ -369,7 +369,7 @@ func (v *StringValue) GetMember(context MemberAccessibleContext, locationRange L
 			v,
 			sema.StringTypeConcatFunctionType,
 			func(v *StringValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
+				interpreter := invocation.InvocationContext
 				otherArray, ok := invocation.Arguments[0].(*StringValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -409,7 +409,7 @@ func (v *StringValue) GetMember(context MemberAccessibleContext, locationRange L
 					panic(errors.NewUnreachableError())
 				}
 
-				return v.Contains(invocation.Interpreter, other)
+				return v.Contains(invocation.InvocationContext, other)
 			},
 		)
 
@@ -424,7 +424,7 @@ func (v *StringValue) GetMember(context MemberAccessibleContext, locationRange L
 					panic(errors.NewUnreachableError())
 				}
 
-				return v.IndexOf(invocation.Interpreter, other)
+				return v.IndexOf(invocation.InvocationContext, other)
 			},
 		)
 
@@ -440,7 +440,7 @@ func (v *StringValue) GetMember(context MemberAccessibleContext, locationRange L
 				}
 
 				return v.Count(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 					other,
 				)
@@ -454,7 +454,7 @@ func (v *StringValue) GetMember(context MemberAccessibleContext, locationRange L
 			sema.StringTypeDecodeHexFunctionType,
 			func(v *StringValue, invocation Invocation) Value {
 				return v.DecodeHex(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 				)
 			},
@@ -466,7 +466,7 @@ func (v *StringValue) GetMember(context MemberAccessibleContext, locationRange L
 			v,
 			sema.StringTypeToLowerFunctionType,
 			func(v *StringValue, invocation Invocation) Value {
-				return v.ToLower(invocation.Interpreter)
+				return v.ToLower(invocation.InvocationContext)
 			},
 		)
 
@@ -482,7 +482,7 @@ func (v *StringValue) GetMember(context MemberAccessibleContext, locationRange L
 				}
 
 				return v.Split(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 					separator,
 				)
@@ -506,7 +506,7 @@ func (v *StringValue) GetMember(context MemberAccessibleContext, locationRange L
 				}
 
 				return v.ReplaceAll(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 					original,
 					replacement,
@@ -1088,7 +1088,7 @@ func stringFunctionEncodeHex(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	inter := invocation.Interpreter
+	inter := invocation.InvocationContext
 	memoryUsage := common.NewStringMemoryUsage(
 		safeMul(argument.Count(), 2, invocation.LocationRange),
 	)
@@ -1108,7 +1108,7 @@ func stringFunctionFromUtf8(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	inter := invocation.Interpreter
+	inter := invocation.InvocationContext
 	// naively read the entire byte array before validating
 	buf, err := ByteArrayValueToByteSlice(inter, argument, invocation.LocationRange)
 
@@ -1136,7 +1136,7 @@ func stringFunctionFromCharacters(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	inter := invocation.Interpreter
+	inter := invocation.InvocationContext
 
 	// NewStringMemoryUsage already accounts for empty string.
 	common.UseMemory(inter, common.NewStringMemoryUsage(0))
@@ -1171,7 +1171,7 @@ func stringFunctionJoin(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	inter := invocation.Interpreter
+	inter := invocation.InvocationContext
 
 	switch stringArray.Count() {
 	case 0:

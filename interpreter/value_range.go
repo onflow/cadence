@@ -176,7 +176,7 @@ func createInclusiveRange(
 				return rangeContains(
 					rangeValue,
 					rangeType,
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 					needleInteger,
 				)

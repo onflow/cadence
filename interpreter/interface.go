@@ -251,6 +251,16 @@ type EventContext interface {
 
 var _ EventContext = &Interpreter{}
 
+// InvocationContext is a composite of all contexts, since function invocations
+// can perform various operations, and hence need to provide all possible contexts to it.
+type InvocationContext interface {
+	StorageContext
+	ValueStringContext
+	MemberAccessibleContext
+}
+
+var _ InvocationContext = &Interpreter{}
+
 // NoOpStringContext is the ValueStringContext implementation used in Value.RecursiveString method.
 // Since Value.RecursiveString is a non-mutating operation, it should only need the no-op memory metering
 // and a WithMutationPrevention implementation.

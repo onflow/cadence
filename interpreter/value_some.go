@@ -160,7 +160,7 @@ func (v *SomeValue) GetMember(context MemberAccessibleContext, locationRange Loc
 				innerValueType,
 			),
 			func(v *SomeValue, invocation Invocation) Value {
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				transformFunction, ok := invocation.Arguments[0].(FunctionValue)

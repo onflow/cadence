@@ -94,7 +94,7 @@ func NewPublicKeyConstructor(
 				panic(errors.NewUnreachableError())
 			}
 
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
 			return NewPublicKeyFromFields(
@@ -240,7 +240,7 @@ func newPublicKeyVerifySignatureFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 
 			locationRange := invocation.LocationRange
 
@@ -311,7 +311,7 @@ func newPublicKeyVerifyPoPFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 
 			locationRange := invocation.LocationRange
 

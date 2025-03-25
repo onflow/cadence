@@ -53,11 +53,11 @@ var rlpDecodeStringFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
 			panic(errors.NewUnreachableError())
 		}
 
-		invocation.Interpreter.ReportComputation(common.ComputationKindSTDLIBRLPDecodeString, uint(input.Count()))
+		invocation.InvocationContext.ReportComputation(common.ComputationKindSTDLIBRLPDecodeString, uint(input.Count()))
 
 		locationRange := invocation.LocationRange
 
-		convertedInput, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, input, locationRange)
+		convertedInput, err := interpreter.ByteArrayValueToByteSlice(invocation.InvocationContext, input, locationRange)
 		if err != nil {
 			panic(RLPDecodeStringError{
 				Msg:           err.Error(),
@@ -77,7 +77,7 @@ var rlpDecodeStringFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
 				LocationRange: locationRange,
 			})
 		}
-		return interpreter.ByteSliceToByteArrayValue(invocation.Interpreter, output)
+		return interpreter.ByteSliceToByteArrayValue(invocation.InvocationContext, output)
 	},
 )
 
@@ -103,11 +103,11 @@ var rlpDecodeListFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
 			panic(errors.NewUnreachableError())
 		}
 
-		invocation.Interpreter.ReportComputation(common.ComputationKindSTDLIBRLPDecodeList, uint(input.Count()))
+		invocation.InvocationContext.ReportComputation(common.ComputationKindSTDLIBRLPDecodeList, uint(input.Count()))
 
 		locationRange := invocation.LocationRange
 
-		convertedInput, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, input, locationRange)
+		convertedInput, err := interpreter.ByteArrayValueToByteSlice(invocation.InvocationContext, input, locationRange)
 		if err != nil {
 			panic(RLPDecodeListError{
 				Msg:           err.Error(),
@@ -133,14 +133,14 @@ var rlpDecodeListFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
 
 		values := make([]interpreter.Value, len(output))
 		for i, b := range output {
-			values[i] = interpreter.ByteSliceToByteArrayValue(invocation.Interpreter, b)
+			values[i] = interpreter.ByteSliceToByteArrayValue(invocation.InvocationContext, b)
 		}
 
 		return interpreter.NewArrayValue(
-			invocation.Interpreter,
+			invocation.InvocationContext,
 			locationRange,
 			interpreter.NewVariableSizedStaticType(
-				invocation.Interpreter,
+				invocation.InvocationContext,
 				interpreter.ByteArrayStaticType,
 			),
 			common.ZeroAddress,

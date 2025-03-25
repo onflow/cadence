@@ -54,7 +54,7 @@ func NewLogFunction(logger Logger) StandardLibraryValue {
 			value := invocation.Arguments[0]
 			locationRange := invocation.LocationRange
 
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 			message := value.MeteredString(inter, interpreter.SeenReferences{}, locationRange)
 
 			var err error

@@ -351,7 +351,7 @@ func (v *AccountCapabilityControllerValue) newDeleteFunction(
 		context,
 		sema.AccountCapabilityControllerTypeDeleteFunctionType,
 		func(invocation Invocation) Value {
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
 			v.Delete(inter, locationRange)
@@ -370,7 +370,7 @@ func (v *AccountCapabilityControllerValue) newSetTagFunction(
 		context,
 		sema.AccountCapabilityControllerTypeSetTagFunctionType,
 		func(invocation Invocation) Value {
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 
 			newTagValue, ok := invocation.Arguments[0].(*StringValue)
 			if !ok {
