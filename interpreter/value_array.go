@@ -290,12 +290,12 @@ func (v *ArrayValue) Iterator(_ ValueStaticTypeContext, _ LocationRange) ValueIt
 }
 
 func (v *ArrayValue) Walk(
-	interpreter *Interpreter,
+	context ValueWalkContext,
 	walkChild func(Value),
 	locationRange LocationRange,
 ) {
 	v.Iterate(
-		interpreter,
+		context,
 		func(element Value) (resume bool) {
 			walkChild(element)
 			return true
@@ -339,20 +339,18 @@ func (v *ArrayValue) IsStaleResource(interpreter *Interpreter) bool {
 	return v.array == nil && v.IsResourceKinded(interpreter)
 }
 
-func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
+func (v *ArrayValue) Destroy(context ResourceDestructionContext, locationRange LocationRange) {
 
-	interpreter.ReportComputation(common.ComputationKindDestroyArrayValue, 1)
+	context.ReportComputation(common.ComputationKindDestroyArrayValue, 1)
 
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
 		count := v.Count()
 
 		defer func() {
-			interpreter.reportArrayValueDestroyTrace(
+			context.ReportArrayValueDestroyTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -362,14 +360,14 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 
 	valueID := v.ValueID()
 
-	interpreter.withResourceDestruction(
+	context.WithResourceDestruction(
 		valueID,
 		locationRange,
 		func() {
 			v.Walk(
-				interpreter,
+				context,
 				func(element Value) {
-					maybeDestroy(interpreter, locationRange, element)
+					maybeDestroy(context, locationRange, element)
 				},
 				locationRange,
 			)
@@ -378,7 +376,7 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 
 	v.isDestroyed = true
 
-	InvalidateReferencedResources(interpreter, v, locationRange)
+	InvalidateReferencedResources(context, v, locationRange)
 
 	v.array = nil
 }

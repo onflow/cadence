@@ -168,10 +168,16 @@ var _ MemberAccessibleContext = &Interpreter{}
 
 type FunctionCreationContext interface {
 	StaticTypeAndReferenceContext
-	GetCompositeValueFunctions(v *CompositeValue, locationRange LocationRange) *FunctionOrderedMap
+	CompositeFunctionContext
 }
 
 var _ FunctionCreationContext = &Interpreter{}
+
+type CompositeFunctionContext interface {
+	GetCompositeValueFunctions(v *CompositeValue, locationRange LocationRange) *FunctionOrderedMap
+}
+
+var _ CompositeFunctionContext = &Interpreter{}
 
 type StaticTypeAndReferenceContext interface {
 	common.MemoryGauge
@@ -204,6 +210,12 @@ type ResourceDestructionHandler interface {
 		valueID atree.ValueID,
 		locationRange LocationRange,
 	)
+
+	WithResourceDestruction(
+		valueID atree.ValueID,
+		locationRange LocationRange,
+		f func(),
+	)
 }
 
 var _ ResourceDestructionHandler = &Interpreter{}
@@ -215,6 +227,29 @@ type CapConReferenceValueContext interface {
 }
 
 var _ CapConReferenceValueContext = &Interpreter{}
+
+type ResourceDestructionContext interface {
+	ValueWalkContext
+	ResourceDestructionHandler
+	CompositeFunctionContext
+	EventContext
+
+	GetResourceDestructionContextForLocation(location common.Location) ResourceDestructionContext
+}
+
+var _ ResourceDestructionContext = &Interpreter{}
+
+type ValueWalkContext interface {
+	ContainerMutationContext
+}
+
+var _ ValueWalkContext = &Interpreter{}
+
+type EventContext interface {
+	EmitEvent(event *CompositeValue, eventType *sema.CompositeType, locationRange LocationRange)
+}
+
+var _ EventContext = &Interpreter{}
 
 // NoOpStringContext is the ValueStringContext implementation used in Value.RecursiveString method.
 // Since Value.RecursiveString is a non-mutating operation, it should only need the no-op memory metering
@@ -308,11 +343,19 @@ func (ctx NoOpStringContext) ReportArrayValueTransferTrace(_ string, _ int, _ ti
 	panic(errors.NewUnreachableError())
 }
 
+func (ctx NoOpStringContext) ReportArrayValueDestroyTrace(_ string, _ int, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
 func (ctx NoOpStringContext) ReportArrayValueConstructTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
 func (ctx NoOpStringContext) ReportDictionaryValueTransferTrace(_ string, _ int, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (ctx NoOpStringContext) ReportDictionaryValueDestroyTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -337,6 +380,10 @@ func (ctx NoOpStringContext) ReportCompositeValueTransferTrace(_ string, _ strin
 }
 
 func (ctx NoOpStringContext) ReportCompositeValueSetMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (ctx NoOpStringContext) ReportCompositeValueDestroyTrace(_ string, _ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 

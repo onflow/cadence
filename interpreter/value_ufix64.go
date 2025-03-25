@@ -169,7 +169,7 @@ func (v UFix64Value) Accept(interpreter *Interpreter, visitor Visitor, _ Locatio
 	visitor.VisitUFix64Value(interpreter, v)
 }
 
-func (UFix64Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (UFix64Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
