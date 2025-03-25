@@ -433,7 +433,7 @@ func (f BoundFunctionValue) invoke(invocation Invocation) Value {
 	invocation.BoundAuthorization = f.BoundAuthorization
 
 	locationRange := invocation.LocationRange
-	inter := invocation.Interpreter
+	inter := invocation.InvocationContext
 
 	// If the `self` is already a reference to begin with (e.g: attachments),
 	// then pass the reference as-is to the invocation.

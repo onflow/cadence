@@ -81,7 +81,7 @@ func newPublicTypesFunctionValue(
 		sema.DeployedContractTypePublicTypesFunctionType,
 		func(_ MemberAccessibleValue, inv Invocation) Value {
 			if publicTypes == nil {
-				innerInter := inv.Interpreter
+				innerInter := inv.InvocationContext
 				contractLocation := common.NewAddressLocation(innerInter, address, name.Str)
 				// we're only looking at the contract as a whole, so no need to construct a nested path
 				qualifiedIdent := name.Str

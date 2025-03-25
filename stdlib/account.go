@@ -122,7 +122,7 @@ func NewAccountConstructor(creator AccountCreator) StandardLibraryValue {
 				panic(errors.NewUnreachableError())
 			}
 
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
 			interpreter.ExpectType(
@@ -230,7 +230,7 @@ func NewGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
 				panic(errors.NewUnreachableError())
 			}
 
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
@@ -616,7 +616,7 @@ func newAccountKeysAddFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				publicKey, err := NewPublicKeyFromValue(inter, locationRange, publicKeyValue)
@@ -724,7 +724,7 @@ func newAccountKeysGetFunction(
 					return interpreter.Nil
 				}
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 
 				return interpreter.NewSomeValueNonCopying(
 					inter,
@@ -768,7 +768,7 @@ func newAccountKeysForEachFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				liftKeyToValue := func(key *AccountKey) interpreter.Value {
@@ -913,7 +913,7 @@ func newAccountKeysRevokeFunction(
 					return interpreter.Nil
 				}
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 
 				handler.EmitEvent(
 					inter,
@@ -966,7 +966,7 @@ func newAccountInboxPublishFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				handler.EmitEvent(
@@ -1023,7 +1023,7 @@ func newAccountInboxUnpublishFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
@@ -1043,7 +1043,7 @@ func newAccountInboxUnpublishFunction(
 				}
 
 				ty := sema.NewCapabilityType(inter, typeParameterPair.Value)
-				publishedType := publishedValue.Value.StaticType(invocation.Interpreter)
+				publishedType := publishedValue.Value.StaticType(invocation.InvocationContext)
 				if !interpreter.IsSubTypeOfSemaType(inter, publishedType, ty) {
 					panic(interpreter.ForceCastTypeMismatchError{
 						ExpectedType:  ty,
@@ -1106,7 +1106,7 @@ func newAccountInboxClaimFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				providerAddress := providerValue.ToAddress()
@@ -1133,7 +1133,7 @@ func newAccountInboxClaimFunction(
 				}
 
 				ty := sema.NewCapabilityType(inter, typeParameterPair.Value)
-				publishedType := publishedValue.Value.StaticType(invocation.Interpreter)
+				publishedType := publishedValue.Value.StaticType(invocation.InvocationContext)
 				if !interpreter.IsSubTypeOfSemaType(inter, publishedType, ty) {
 					panic(interpreter.ForceCastTypeMismatchError{
 						ExpectedType:  ty,
@@ -1275,7 +1275,7 @@ func newAccountContractsGetFunction(
 					panic(errors.NewUnreachableError())
 				}
 				name := nameValue.Str
-				location := common.NewAddressLocation(invocation.Interpreter, address, name)
+				location := common.NewAddressLocation(invocation.InvocationContext, address, name)
 
 				var code []byte
 				var err error
@@ -1288,13 +1288,13 @@ func newAccountContractsGetFunction(
 
 				if len(code) > 0 {
 					return interpreter.NewSomeValueNonCopying(
-						invocation.Interpreter,
+						invocation.InvocationContext,
 						interpreter.NewDeployedContractValue(
-							invocation.Interpreter,
+							invocation.InvocationContext,
 							addressValue,
 							nameValue,
 							interpreter.ByteSliceToByteArrayValue(
-								invocation.Interpreter,
+								invocation.InvocationContext,
 								code,
 							),
 						),
@@ -1324,7 +1324,7 @@ func newAccountContractsBorrowFunction(
 			functionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
@@ -1332,7 +1332,7 @@ func newAccountContractsBorrowFunction(
 					panic(errors.NewUnreachableError())
 				}
 				name := nameValue.Str
-				location := common.NewAddressLocation(invocation.Interpreter, address, name)
+				location := common.NewAddressLocation(invocation.InvocationContext, address, name)
 
 				typeParameterPair := invocation.TypeParameterTypes.Oldest()
 				if typeParameterPair == nil {
@@ -1514,7 +1514,7 @@ func changeAccountContracts(
 	constructorArguments := invocation.Arguments[requiredArgumentCount:]
 	constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
 
-	newCode, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, newCodeValue, locationRange)
+	newCode, err := interpreter.ByteArrayValueToByteSlice(invocation.InvocationContext, newCodeValue, locationRange)
 	if err != nil {
 		panic(errors.NewDefaultUserError("add requires the second argument to be an array"))
 	}
@@ -1531,7 +1531,7 @@ func changeAccountContracts(
 	}
 
 	address := addressValue.ToAddress()
-	location := common.NewAddressLocation(invocation.Interpreter, address, contractName)
+	location := common.NewAddressLocation(invocation.InvocationContext, address, contractName)
 
 	existingCode, err := handler.GetAccountContractCode(location)
 	if err != nil {
@@ -1669,14 +1669,14 @@ func changeAccountContracts(
 
 	// Validate the contract update
 
-	inter := invocation.Interpreter
+	inter := invocation.InvocationContext
 
 	if isUpdate {
 		oldCode, err := handler.GetAccountContractCode(location)
 		handleContractUpdateError(err, newCode)
 
-		memoryGauge := invocation.Interpreter.SharedState.Config.MemoryGauge
-		legacyUpgradeEnabled := invocation.Interpreter.SharedState.Config.LegacyContractUpgradeEnabled
+		memoryGauge := invocation.InvocationContext.SharedState.Config.MemoryGauge
+		legacyUpgradeEnabled := invocation.InvocationContext.SharedState.Config.LegacyContractUpgradeEnabled
 
 		var oldProgram *ast.Program
 
@@ -1820,7 +1820,7 @@ func newAccountContractsTryUpdateFunction(
 					if deployedContract == nil {
 						optionalDeployedContract = interpreter.NilOptionalValue
 					} else {
-						optionalDeployedContract = interpreter.NewSomeValueNonCopying(invocation.Interpreter, deployedContract)
+						optionalDeployedContract = interpreter.NewSomeValueNonCopying(invocation.InvocationContext, deployedContract)
 					}
 
 					deploymentResult = interpreter.NewDeploymentResultValue(context, optionalDeployedContract)
@@ -2100,13 +2100,13 @@ func newAccountContractsRemoveFunction(
 			sema.Account_ContractsTypeRemoveFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 				nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 				name := nameValue.Str
-				location := common.NewAddressLocation(invocation.Interpreter, address, name)
+				location := common.NewAddressLocation(invocation.InvocationContext, address, name)
 
 				// Get the current code
 
@@ -2222,7 +2222,7 @@ func NewGetAccountFunction(handler AccountHandler) StandardLibraryValue {
 		getAccountFunctionDocString,
 		func(invocation interpreter.Invocation) interpreter.Value {
 
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
 			accountAddress, ok := invocation.Arguments[0].(interpreter.AddressValue)
@@ -2377,7 +2377,7 @@ func newAccountStorageCapabilitiesGetControllerFunction(
 			sema.Account_StorageCapabilitiesTypeGetControllerFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				// Get capability ID argument
@@ -2426,7 +2426,7 @@ func newAccountStorageCapabilitiesGetControllersFunction(
 			sema.Account_StorageCapabilitiesTypeGetControllersFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				// Get path argument
@@ -2501,7 +2501,7 @@ func newAccountStorageCapabilitiesForEachControllerFunction(
 			sema.Account_StorageCapabilitiesTypeForEachControllerFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				// Get path argument
@@ -2616,7 +2616,7 @@ func newAccountStorageCapabilitiesIssueFunction(
 			sema.Account_StorageCapabilitiesTypeIssueFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				// Get path argument
@@ -2659,7 +2659,7 @@ func newAccountStorageCapabilitiesIssueWithTypeFunction(
 			sema.Account_StorageCapabilitiesTypeIssueFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				// Get path argument
@@ -2813,7 +2813,7 @@ func newAccountAccountCapabilitiesIssueFunction(
 			sema.Account_AccountCapabilitiesTypeIssueFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				// Get borrow type type argument
@@ -2848,7 +2848,7 @@ func newAccountAccountCapabilitiesIssueWithTypeFunction(
 			sema.Account_AccountCapabilitiesTypeIssueFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				// Get type argument
@@ -3496,7 +3496,7 @@ func newAccountCapabilitiesPublishFunction(
 			accountCapabilities,
 			sema.Account_CapabilitiesTypePublishFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				// Get capability argument
@@ -3632,7 +3632,7 @@ func newAccountCapabilitiesUnpublishFunction(
 			sema.Account_CapabilitiesTypeUnpublishFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				// Get path argument
@@ -3906,7 +3906,7 @@ func newAccountCapabilitiesGetFunction(
 			funcType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				// Get path argument
@@ -4092,7 +4092,7 @@ func newAccountCapabilitiesExistsFunction(
 			sema.Account_CapabilitiesTypeExistsFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 
 				// Get path argument
 
@@ -4161,7 +4161,7 @@ func newAccountAccountCapabilitiesGetControllerFunction(
 			sema.Account_AccountCapabilitiesTypeGetControllerFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				// Get capability ID argument
@@ -4210,7 +4210,7 @@ func newAccountAccountCapabilitiesGetControllersFunction(
 			sema.Account_AccountCapabilitiesTypeGetControllersFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				// Get capability controllers iterator
@@ -4291,7 +4291,7 @@ func newAccountAccountCapabilitiesForEachControllerFunction(
 			sema.Account_AccountCapabilitiesTypeForEachControllerFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				// Get function argument

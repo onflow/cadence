@@ -227,7 +227,7 @@ func (v CharacterValue) GetMember(context MemberAccessibleContext, locationRange
 			v,
 			sema.ToStringFunctionType,
 			func(v CharacterValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
+				interpreter := invocation.InvocationContext
 
 				memoryUsage := common.NewStringMemoryUsage(len(v.Str))
 

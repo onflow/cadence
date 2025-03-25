@@ -81,7 +81,7 @@ func newHashAlgorithmHashFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 
 			locationRange := invocation.LocationRange
 
@@ -117,7 +117,7 @@ func newHashAlgorithmHashWithTagFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 
 			locationRange := invocation.LocationRange
 
