@@ -48,8 +48,6 @@ func MustSemaTypeOfValue(value Value, context ValueStaticTypeContext) sema.Type 
 	return MustConvertStaticToSemaType(staticType, context)
 }
 
-//var _ SubTypeChecker = &Interpreter{}
-
 type StorageReader interface {
 	ReadStored(
 		storageAddress common.Address,
@@ -57,6 +55,8 @@ type StorageReader interface {
 		identifier StorageMapKey,
 	) Value
 }
+
+var _ StorageReader = &Interpreter{}
 
 type StorageWriter interface {
 	WriteStored(
@@ -67,7 +67,7 @@ type StorageWriter interface {
 	) (existed bool)
 }
 
-var _ StorageReader = &Interpreter{}
+var _ StorageWriter = &Interpreter{}
 
 type ValueStaticTypeContext interface {
 	common.MemoryGauge
@@ -90,11 +90,15 @@ type StorageContext interface {
 	MaybeValidateAtreeStorage()
 }
 
+var _ StorageContext = &Interpreter{}
+
 type ReferenceTracker interface {
 	InvalidateReferencedResources(v Value, locationRange LocationRange)
 	CheckInvalidatedResourceOrResourceReference(value Value, locationRange LocationRange)
 	MaybeTrackReferencedResourceKindedValue(ref *EphemeralReferenceValue)
 }
+
+var _ ReferenceTracker = &Interpreter{}
 
 type ValueTransferContext interface {
 	StorageContext
@@ -113,23 +117,33 @@ var _ ValueTransferContext = &Interpreter{}
 
 type ValueRemoveContext = ValueTransferContext
 
+var _ ValueRemoveContext = &Interpreter{}
+
 type ComputationReporter interface {
 	ReportComputation(compKind common.ComputationKind, intensity uint)
 }
+
+var _ ComputationReporter = &Interpreter{}
 
 type ValueIterationContext interface {
 	ValueTransferContext
 	WithMutationPrevention(valueID atree.ValueID, f func())
 }
 
+var _ ValueIterationContext = &Interpreter{}
+
 type ValueStringContext interface {
 	ValueIterationContext
 }
+
+var _ ValueStringContext = &Interpreter{}
 
 type ReferenceCreationContext interface {
 	common.MemoryGauge
 	ReferenceTracker
 }
+
+var _ ReferenceCreationContext = &Interpreter{}
 
 type MemberAccessibleContext interface {
 	FunctionCreationContext
@@ -141,16 +155,22 @@ type MemberAccessibleContext interface {
 	GetMemberAccessContextForLocation(location common.Location) MemberAccessibleContext
 }
 
+var _ MemberAccessibleContext = &Interpreter{}
+
 type FunctionCreationContext interface {
 	StaticTypeAndReferenceContext
 	GetCompositeValueFunctions(v *CompositeValue, locationRange LocationRange) *FunctionOrderedMap
 }
+
+var _ FunctionCreationContext = &Interpreter{}
 
 type StaticTypeAndReferenceContext interface {
 	common.MemoryGauge
 	ValueStaticTypeContext
 	ReferenceTracker
 }
+
+var _ StaticTypeAndReferenceContext = &Interpreter{}
 
 type ArrayCreationContext interface {
 	common.MemoryGauge
@@ -162,9 +182,13 @@ type ArrayCreationContext interface {
 	ValueTransferContext
 }
 
+var _ ArrayCreationContext = &Interpreter{}
+
 type StorageMutationTracker interface {
 	RecordStorageMutation()
 }
+
+var _ StorageMutationTracker = &Interpreter{}
 
 type ResourceDestructionHandler interface {
 	EnforceNotResourceDestruction(
@@ -172,6 +196,8 @@ type ResourceDestructionHandler interface {
 		locationRange LocationRange,
 	)
 }
+
+var _ ResourceDestructionHandler = &Interpreter{}
 
 // NoOpStringContext is the ValueStringContext implementation used in Value.RecursiveString method.
 // Since Value.RecursiveString is a non-mutating operation, it should only need the no-op memory metering
