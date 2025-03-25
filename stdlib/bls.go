@@ -49,7 +49,7 @@ func newBLSAggregatePublicKeysFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
 			interpreter.ExpectType(
@@ -127,7 +127,7 @@ func newBLSAggregateSignaturesFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
 			interpreter.ExpectType(

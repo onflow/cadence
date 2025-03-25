@@ -375,7 +375,7 @@ func (v *StorageCapabilityControllerValue) newDeleteFunction(
 		context,
 		sema.StorageCapabilityControllerTypeDeleteFunctionType,
 		func(invocation Invocation) Value {
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
 			v.Delete(inter, locationRange)
@@ -406,7 +406,7 @@ func (v *StorageCapabilityControllerValue) newRetargetFunction(
 		context,
 		sema.StorageCapabilityControllerTypeRetargetFunctionType,
 		func(invocation Invocation) Value {
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
 			// Get path argument
@@ -431,7 +431,7 @@ func (v *StorageCapabilityControllerValue) newSetTagFunction(
 		context,
 		sema.StorageCapabilityControllerTypeSetTagFunctionType,
 		func(invocation Invocation) Value {
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 
 			newTagValue, ok := invocation.Arguments[0].(*StringValue)
 			if !ok {

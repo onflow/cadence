@@ -58,7 +58,7 @@ func getNumberValueMember(context MemberAccessibleContext, v NumberValue, name s
 			v,
 			sema.ToStringFunctionType,
 			func(v NumberValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
+				interpreter := invocation.InvocationContext
 
 				memoryUsage := common.NewStringMemoryUsage(
 					OverEstimateNumberStringLength(interpreter, v),
@@ -80,7 +80,7 @@ func getNumberValueMember(context MemberAccessibleContext, v NumberValue, name s
 			sema.ToBigEndianBytesFunctionType,
 			func(v NumberValue, invocation Invocation) Value {
 				return ByteSliceToByteArrayValue(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					v.ToBigEndianBytes(),
 				)
 			},
@@ -98,7 +98,7 @@ func getNumberValueMember(context MemberAccessibleContext, v NumberValue, name s
 				}
 
 				return v.SaturatingPlus(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					other,
 					locationRange,
 				)
@@ -117,7 +117,7 @@ func getNumberValueMember(context MemberAccessibleContext, v NumberValue, name s
 				}
 
 				return v.SaturatingMinus(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					other,
 					locationRange,
 				)
@@ -136,7 +136,7 @@ func getNumberValueMember(context MemberAccessibleContext, v NumberValue, name s
 				}
 
 				return v.SaturatingMul(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					other,
 					locationRange,
 				)
@@ -155,7 +155,7 @@ func getNumberValueMember(context MemberAccessibleContext, v NumberValue, name s
 				}
 
 				return v.SaturatingDiv(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					other,
 					locationRange,
 				)

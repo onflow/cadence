@@ -1680,7 +1680,7 @@ func (v *CompositeValue) forEachAttachmentFunction(context FunctionCreationConte
 			compositeType.GetCompositeKind(),
 		),
 		func(v *CompositeValue, invocation Invocation) Value {
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 
 			functionValue, ok := invocation.Arguments[0].(FunctionValue)
 			if !ok {

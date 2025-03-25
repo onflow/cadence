@@ -815,7 +815,7 @@ func (v *DictionaryValue) GetMember(context MemberAccessibleContext, locationRan
 				keyValue := invocation.Arguments[0]
 
 				return v.Remove(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 					keyValue,
 				)
@@ -834,7 +834,7 @@ func (v *DictionaryValue) GetMember(context MemberAccessibleContext, locationRan
 				newValue := invocation.Arguments[1]
 
 				return v.Insert(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 					keyValue,
 					newValue,
@@ -851,7 +851,7 @@ func (v *DictionaryValue) GetMember(context MemberAccessibleContext, locationRan
 			),
 			func(v *DictionaryValue, invocation Invocation) Value {
 				return v.ContainsKey(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 					invocation.Arguments[0],
 				)
@@ -865,7 +865,7 @@ func (v *DictionaryValue) GetMember(context MemberAccessibleContext, locationRan
 				v.SemaType(context),
 			),
 			func(v *DictionaryValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
+				interpreter := invocation.InvocationContext
 
 				funcArgument, ok := invocation.Arguments[0].(FunctionValue)
 				if !ok {

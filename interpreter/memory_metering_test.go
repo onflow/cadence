@@ -8659,7 +8659,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 				meter.meter = make(map[common.MemoryKind]uint64)
 
 				loggedString = invocation.Arguments[0].MeteredString(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					interpreter.SeenReferences{},
 					invocation.LocationRange,
 				)
@@ -9003,7 +9003,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 				meter.meter = make(map[common.MemoryKind]uint64)
 
 				loggedString = invocation.Arguments[0].MeteredString(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					interpreter.SeenReferences{},
 					invocation.LocationRange,
 				)

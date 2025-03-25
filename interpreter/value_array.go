@@ -833,7 +833,7 @@ func (v *ArrayValue) GetMember(context MemberAccessibleContext, _ LocationRange,
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
 				v.Append(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 					invocation.Arguments[0],
 				)
@@ -854,7 +854,7 @@ func (v *ArrayValue) GetMember(context MemberAccessibleContext, _ LocationRange,
 					panic(errors.NewUnreachableError())
 				}
 				v.AppendAll(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 					otherArray,
 				)
@@ -875,7 +875,7 @@ func (v *ArrayValue) GetMember(context MemberAccessibleContext, _ LocationRange,
 					panic(errors.NewUnreachableError())
 				}
 				return v.Concat(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 					otherArray,
 				)
@@ -890,7 +890,7 @@ func (v *ArrayValue) GetMember(context MemberAccessibleContext, _ LocationRange,
 				v.SemaType(context).ElementType(false),
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				indexValue, ok := invocation.Arguments[0].(NumberValue)
@@ -919,7 +919,7 @@ func (v *ArrayValue) GetMember(context MemberAccessibleContext, _ LocationRange,
 				v.SemaType(context).ElementType(false),
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				indexValue, ok := invocation.Arguments[0].(NumberValue)
@@ -945,7 +945,7 @@ func (v *ArrayValue) GetMember(context MemberAccessibleContext, _ LocationRange,
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
 				return v.RemoveFirst(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 				)
 			},
@@ -960,7 +960,7 @@ func (v *ArrayValue) GetMember(context MemberAccessibleContext, _ LocationRange,
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
 				return v.RemoveLast(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 				)
 			},
@@ -975,7 +975,7 @@ func (v *ArrayValue) GetMember(context MemberAccessibleContext, _ LocationRange,
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
 				return v.FirstIndex(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 					invocation.Arguments[0],
 				)
@@ -991,7 +991,7 @@ func (v *ArrayValue) GetMember(context MemberAccessibleContext, _ LocationRange,
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
 				return v.Contains(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 					invocation.Arguments[0],
 				)
@@ -1017,7 +1017,7 @@ func (v *ArrayValue) GetMember(context MemberAccessibleContext, _ LocationRange,
 				}
 
 				return v.Slice(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					from,
 					to,
 					invocation.LocationRange,
@@ -1034,7 +1034,7 @@ func (v *ArrayValue) GetMember(context MemberAccessibleContext, _ LocationRange,
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
 				return v.Reverse(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 				)
 			},
@@ -1049,7 +1049,7 @@ func (v *ArrayValue) GetMember(context MemberAccessibleContext, _ LocationRange,
 				v.SemaType(context).ElementType(false),
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
+				interpreter := invocation.InvocationContext
 
 				funcArgument, ok := invocation.Arguments[0].(FunctionValue)
 				if !ok {
@@ -1073,7 +1073,7 @@ func (v *ArrayValue) GetMember(context MemberAccessibleContext, _ LocationRange,
 				v.SemaType(context),
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
+				interpreter := invocation.InvocationContext
 
 				funcArgument, ok := invocation.Arguments[0].(FunctionValue)
 				if !ok {
@@ -1096,7 +1096,7 @@ func (v *ArrayValue) GetMember(context MemberAccessibleContext, _ LocationRange,
 				v.SemaType(context).ElementType(false),
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
+				interpreter := invocation.InvocationContext
 
 				return v.ToVariableSized(
 					interpreter,
@@ -1113,7 +1113,7 @@ func (v *ArrayValue) GetMember(context MemberAccessibleContext, _ LocationRange,
 				v.SemaType(context).ElementType(false),
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
+				interpreter := invocation.InvocationContext
 
 				typeParameterPair := invocation.TypeParameterTypes.Oldest()
 				if typeParameterPair == nil {

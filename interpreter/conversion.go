@@ -25,7 +25,7 @@ import (
 	"github.com/onflow/cadence/errors"
 )
 
-func ByteArrayValueToByteSlice(interpreter *Interpreter, value Value, locationRange LocationRange) ([]byte, error) {
+func ByteArrayValueToByteSlice(context ContainerMutationContext, value Value, locationRange LocationRange) ([]byte, error) {
 	array, ok := value.(*ArrayValue)
 	if !ok {
 		return nil, errors.NewDefaultUserError("value is not an array")
@@ -39,10 +39,10 @@ func ByteArrayValueToByteSlice(interpreter *Interpreter, value Value, locationRa
 
 		var err error
 		array.Iterate(
-			interpreter,
+			context,
 			func(element Value) (resume bool) {
 				var b byte
-				b, err = ByteValueToByte(interpreter, element, locationRange)
+				b, err = ByteValueToByte(context, element, locationRange)
 				if err != nil {
 					return false
 				}

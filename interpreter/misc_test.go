@@ -112,7 +112,7 @@ func parseCheckAndInterpretWithLogs(
 		``,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			message := invocation.Arguments[0].MeteredString(
-				invocation.Interpreter,
+				invocation.InvocationContext,
 				interpreter.SeenReferences{},
 				invocation.LocationRange,
 			)
@@ -2155,7 +2155,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 
 			require.Len(t, invocation.Arguments, 3)
 
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 
 			AssertValuesEqual(
 				t,
@@ -2263,7 +2263,7 @@ func TestInterpretHostFunctionWithOptionalArguments(t *testing.T) {
 
 			require.Len(t, invocation.Arguments, 3)
 
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 
 			AssertValuesEqual(
 				t,
@@ -5308,7 +5308,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 				var auth = interpreter.UnauthorizedAccess
 				if authorized {
 					auth = interpreter.ConvertSemaAccessToStaticAuthorization(
-						invocation.Interpreter,
+						invocation.InvocationContext,
 						sema.NewEntitlementSetAccess(
 							[]*sema.EntitlementType{getType("E").(*sema.EntitlementType)},
 							sema.Conjunction,

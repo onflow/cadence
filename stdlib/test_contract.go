@@ -163,7 +163,7 @@ func testTypeAssertEqualFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 
 			expectedType := expected.StaticType(inter)
 			actualType := actual.StaticType(inter)
@@ -302,7 +302,7 @@ func newTestTypeExpectFunction(functionType *sema.FunctionType) testContractBoun
 					panic(errors.NewUnreachableError())
 				}
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				result := invokeMatcherTest(
@@ -547,7 +547,7 @@ func newTestTypeEqualFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 
 				// This is a static function.
 				equalTestFunc := interpreter.NewStaticHostFunctionValue(
@@ -740,7 +740,7 @@ func newTestTypeContainFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 
 				// This is a static function.
 				containTestFunc := interpreter.NewStaticHostFunctionValue(
@@ -816,7 +816,7 @@ func newTestTypeBeGreaterThanFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 
 				// This is a static function.
 				beGreaterThanTestFunc := interpreter.NewStaticHostFunctionValue(
@@ -909,7 +909,7 @@ func newTestTypeExpectFailureFunction(
 			testContractValue,
 			testExpectFailureFunctionType,
 			func(invocation interpreter.Invocation) interpreter.Value {
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 				functionValue, ok := invocation.Arguments[0].(interpreter.FunctionValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -965,7 +965,7 @@ func newTestTypeBeLessThanFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				inter := invocation.Interpreter
+				inter := invocation.InvocationContext
 
 				// This is a static function.
 				beLessThanTestFunc := interpreter.NewStaticHostFunctionValue(
