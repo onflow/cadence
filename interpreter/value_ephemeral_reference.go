@@ -327,3 +327,8 @@ func (v *EphemeralReferenceValue) ForEach(
 func (v *EphemeralReferenceValue) BorrowType() sema.Type {
 	return v.BorrowedType
 }
+
+func (v *EphemeralReferenceValue) Iterator(context ValueStaticTypeContext, locationRange LocationRange) ValueIterator {
+	//TODO implement me
+	panic("implement me")
+}

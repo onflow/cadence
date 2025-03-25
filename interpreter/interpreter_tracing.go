@@ -51,20 +51,22 @@ const (
 type Tracer interface {
 	TracingEnabled() bool
 
-	reportArrayValueDeepRemoveTrace(typeInfo string, count int, duration time.Duration)
-	reportArrayValueTransferTrace(info string, count int, since time.Duration)
-	reportArrayValueConstructTrace(typeInfo string, count int, duration time.Duration)
+	ReportArrayValueDeepRemoveTrace(typeInfo string, count int, duration time.Duration)
+	ReportArrayValueTransferTrace(info string, count int, since time.Duration)
+	ReportArrayValueConstructTrace(typeInfo string, count int, duration time.Duration)
 
-	reportDictionaryValueTransferTrace(info string, count int, since time.Duration)
-	reportDictionaryValueDeepRemoveTrace(info string, count int, since time.Duration)
-	reportDictionaryValueGetMemberTrace(info string, count int, name string, since time.Duration)
+	ReportDictionaryValueTransferTrace(info string, count int, since time.Duration)
+	ReportDictionaryValueDeepRemoveTrace(info string, count int, since time.Duration)
+	ReportDictionaryValueGetMemberTrace(info string, count int, name string, since time.Duration)
+	ReportDictionaryValueConstructTrace(info string, count int, since time.Duration)
 
-	reportCompositeValueDeepRemoveTrace(owner string, id string, kind string, since time.Duration)
-	reportCompositeValueTransferTrace(owner string, id string, kind string, since time.Duration)
-	reportCompositeValueSetMemberTrace(owner string, id string, kind string, name string, since time.Duration)
-	reportCompositeValueGetMemberTrace(owner string, typeID string, kind string, name string, duration time.Duration)
+	ReportCompositeValueDeepRemoveTrace(owner string, id string, kind string, since time.Duration)
+	ReportCompositeValueTransferTrace(owner string, id string, kind string, since time.Duration)
+	ReportCompositeValueSetMemberTrace(owner string, id string, kind string, name string, since time.Duration)
+	ReportCompositeValueGetMemberTrace(owner string, typeID string, kind string, name string, duration time.Duration)
+	ReportCompositeValueConstructTrace(owner string, id string, kind string, since time.Duration)
 
-	reportDomainStorageMapDeepRemoveTrace(info string, i int, since time.Duration)
+	ReportDomainStorageMapDeepRemoveTrace(info string, i int, since time.Duration)
 }
 
 func (interpreter *Interpreter) reportFunctionTrace(functionName string, duration time.Duration) {
@@ -84,7 +86,7 @@ func prepareArrayAndMapValueTraceAttrs(typeInfo string, count int) []attribute.K
 	}
 }
 
-func (interpreter *Interpreter) reportArrayValueConstructTrace(
+func (interpreter *Interpreter) ReportArrayValueConstructTrace(
 	typeInfo string,
 	count int,
 	duration time.Duration,
@@ -98,7 +100,7 @@ func (interpreter *Interpreter) reportArrayValueConstructTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportArrayValueDeepRemoveTrace(
+func (interpreter *Interpreter) ReportArrayValueDeepRemoveTrace(
 	typeInfo string,
 	count int,
 	duration time.Duration,
@@ -126,7 +128,7 @@ func (interpreter *Interpreter) reportArrayValueDestroyTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportArrayValueTransferTrace(
+func (interpreter *Interpreter) ReportArrayValueTransferTrace(
 	typeInfo string,
 	count int,
 	duration time.Duration,
@@ -154,7 +156,7 @@ func (interpreter *Interpreter) reportArrayValueConformsToStaticTypeTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportDictionaryValueConstructTrace(
+func (interpreter *Interpreter) ReportDictionaryValueConstructTrace(
 	typeInfo string,
 	count int,
 	duration time.Duration,
@@ -168,7 +170,7 @@ func (interpreter *Interpreter) reportDictionaryValueConstructTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportDictionaryValueDeepRemoveTrace(
+func (interpreter *Interpreter) ReportDictionaryValueDeepRemoveTrace(
 	typeInfo string,
 	count int,
 	duration time.Duration,
@@ -182,7 +184,7 @@ func (interpreter *Interpreter) reportDictionaryValueDeepRemoveTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportDomainStorageMapDeepRemoveTrace(
+func (interpreter *Interpreter) ReportDomainStorageMapDeepRemoveTrace(
 	typeInfo string,
 	count int,
 	duration time.Duration,
@@ -210,7 +212,7 @@ func (interpreter *Interpreter) reportDictionaryValueDestroyTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportDictionaryValueTransferTrace(
+func (interpreter *Interpreter) ReportDictionaryValueTransferTrace(
 	typeInfo string,
 	count int,
 	duration time.Duration,
@@ -238,7 +240,7 @@ func (interpreter *Interpreter) reportDictionaryValueConformsToStaticTypeTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportDictionaryValueGetMemberTrace(
+func (interpreter *Interpreter) ReportDictionaryValueGetMemberTrace(
 	typeInfo string,
 	count int,
 	name string,
@@ -261,7 +263,7 @@ func prepareCompositeValueTraceAttrs(owner, typeID, kind string) []attribute.Key
 	}
 }
 
-func (interpreter *Interpreter) reportCompositeValueConstructTrace(
+func (interpreter *Interpreter) ReportCompositeValueConstructTrace(
 	owner string,
 	typeID string,
 	kind string,
@@ -276,7 +278,7 @@ func (interpreter *Interpreter) reportCompositeValueConstructTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportCompositeValueDeepRemoveTrace(
+func (interpreter *Interpreter) ReportCompositeValueDeepRemoveTrace(
 	owner string,
 	typeID string,
 	kind string,
@@ -306,7 +308,7 @@ func (interpreter *Interpreter) reportCompositeValueDestroyTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportCompositeValueTransferTrace(
+func (interpreter *Interpreter) ReportCompositeValueTransferTrace(
 	owner string,
 	typeID string,
 	kind string,
@@ -336,7 +338,7 @@ func (interpreter *Interpreter) reportCompositeValueConformsToStaticTypeTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportCompositeValueGetMemberTrace(
+func (interpreter *Interpreter) ReportCompositeValueGetMemberTrace(
 	owner string,
 	typeID string,
 	kind string,
@@ -352,7 +354,7 @@ func (interpreter *Interpreter) reportCompositeValueGetMemberTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportCompositeValueSetMemberTrace(
+func (interpreter *Interpreter) ReportCompositeValueSetMemberTrace(
 	owner string,
 	typeID string,
 	kind string,

@@ -91,7 +91,7 @@ type Value interface {
 	// Stringer provides `func String() string`
 	// NOTE: important, error messages rely on values to implement String
 	fmt.Stringer
-	isValue()
+	//isValue()
 	Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange)
 	Walk(interpreter *Interpreter, walkChild func(Value), locationRange LocationRange)
 	StaticType(context ValueStaticTypeContext) StaticType
@@ -238,6 +238,7 @@ type IterableValue interface {
 		transferElements bool,
 		locationRange LocationRange,
 	)
+	Iterator(context ValueStaticTypeContext, locationRange LocationRange) ValueIterator
 }
 
 // OwnedValue is a value which has an owner
@@ -254,6 +255,7 @@ type ValueIteratorContext interface {
 // ValueIterator is an iterator which returns values.
 // When Next returns nil, it signals the end of the iterator.
 type ValueIterator interface {
+	HasNext() bool
 	Next(context ValueIteratorContext, locationRange LocationRange) Value
 }
 

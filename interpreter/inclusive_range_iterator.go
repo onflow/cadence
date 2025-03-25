@@ -83,3 +83,8 @@ func (i *InclusiveRangeIterator) Next(context ValueIteratorContext, locationRang
 	i.next = nextValueToReturn
 	return valueToReturn
 }
+
+func (i *InclusiveRangeIterator) HasNext() bool {
+	// TODO: Not implemented yet
+	panic(errors.NewUnreachableError())
+}
