@@ -20,6 +20,7 @@ package vm
 
 import (
 	"fmt"
+	"github.com/onflow/cadence/interpreter"
 
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/errors"
@@ -40,7 +41,7 @@ func (l LinkerError) Error() string {
 }
 
 type MissingMemberValueError struct {
-	Parent MemberAccessibleValue
+	Parent interpreter.MemberAccessibleValue
 	Name   string
 }
 

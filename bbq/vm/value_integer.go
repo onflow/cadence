@@ -18,11 +18,12 @@
 
 package vm
 
-type IntegerValue interface {
-	NumberValue
-	BitwiseOr(other IntegerValue) IntegerValue
-	BitwiseXor(other IntegerValue) IntegerValue
-	BitwiseAnd(other IntegerValue) IntegerValue
-	BitwiseLeftShift(other IntegerValue) IntegerValue
-	BitwiseRightShift(other IntegerValue) IntegerValue
-}
+//
+//type IntegerValue interface {
+//	NumberValue
+//	BitwiseOr(other IntegerValue) IntegerValue
+//	BitwiseXor(other IntegerValue) IntegerValue
+//	BitwiseAnd(other IntegerValue) IntegerValue
+//	BitwiseLeftShift(other IntegerValue) IntegerValue
+//	BitwiseRightShift(other IntegerValue) IntegerValue
+//}

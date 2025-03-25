@@ -18,10 +18,10 @@
 
 package vm
 
-type ComparableValue interface {
-	EquatableValue
-	Less(other ComparableValue) BoolValue
-	LessEqual(other ComparableValue) BoolValue
-	Greater(other ComparableValue) BoolValue
-	GreaterEqual(other ComparableValue) BoolValue
-}
+//type ComparableValue interface {
+//	EquatableValue
+//	Less(other ComparableValue) BoolValue
+//	LessEqual(other ComparableValue) BoolValue
+//	Greater(other ComparableValue) BoolValue
+//	GreaterEqual(other ComparableValue) BoolValue
+//}

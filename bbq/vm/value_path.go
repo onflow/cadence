@@ -18,47 +18,48 @@
 
 package vm
 
-import (
-	"github.com/onflow/atree"
-
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/format"
-	"github.com/onflow/cadence/interpreter"
-)
-
-type PathValue struct {
-	Domain     common.PathDomain
-	Identifier string
-}
-
-var EmptyPathValue = PathValue{}
-
-var _ Value = PathValue{}
-
-func (PathValue) isValue() {}
-
-func (v PathValue) StaticType(StaticTypeContext) bbq.StaticType {
-	switch v.Domain {
-	case common.PathDomainStorage:
-		return interpreter.PrimitiveStaticTypeStoragePath
-	case common.PathDomainPublic:
-		return interpreter.PrimitiveStaticTypePublicPath
-	case common.PathDomainPrivate:
-		return interpreter.PrimitiveStaticTypePrivatePath
-	default:
-		panic(errors.NewUnreachableError())
-	}
-}
-
-func (v PathValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
-	return v
-}
-
-func (v PathValue) String() string {
-	return format.Path(
-		v.Domain.Identifier(),
-		v.Identifier,
-	)
-}
+//
+//import (
+//	"github.com/onflow/atree"
+//
+//	"github.com/onflow/cadence/bbq"
+//	"github.com/onflow/cadence/common"
+//	"github.com/onflow/cadence/errors"
+//	"github.com/onflow/cadence/format"
+//	"github.com/onflow/cadence/interpreter"
+//)
+//
+//type PathValue struct {
+//	Domain     common.PathDomain
+//	Identifier string
+//}
+//
+//var EmptyPathValue = PathValue{}
+//
+//var _ Value = PathValue{}
+//
+//func (PathValue) isValue() {}
+//
+//func (v PathValue) StaticType(StaticTypeContext) bbq.StaticType {
+//	switch v.Domain {
+//	case common.PathDomainStorage:
+//		return interpreter.PrimitiveStaticTypeStoragePath
+//	case common.PathDomainPublic:
+//		return interpreter.PrimitiveStaticTypePublicPath
+//	case common.PathDomainPrivate:
+//		return interpreter.PrimitiveStaticTypePrivatePath
+//	default:
+//		panic(errors.NewUnreachableError())
+//	}
+//}
+//
+//func (v PathValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
+//	return v
+//}
+//
+//func (v PathValue) String() string {
+//	return format.Path(
+//		v.Domain.Identifier(),
+//		v.Identifier,
+//	)
+//}

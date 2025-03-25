@@ -20,6 +20,7 @@ package vm
 
 import (
 	"fmt"
+	"github.com/onflow/cadence/interpreter"
 
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
@@ -62,7 +63,7 @@ func init() {
 		Function: func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
 			// TODO: Properly implement
 			fmt.Println(arguments[0].String())
-			return VoidValue{}
+			return interpreter.Void
 		},
 	})
 
@@ -70,13 +71,13 @@ func init() {
 		ParameterCount: len(stdlib.PanicFunctionType.Parameters),
 		Function: func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
 			// TODO: Properly implement
-			messageValue, ok := arguments[0].(StringValue)
+			messageValue, ok := arguments[0].(*interpreter.StringValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
 			panic(stdlib.PanicError{
-				Message: string(messageValue.Str),
+				Message: messageValue.Str,
 				// TODO: pass location
 			})
 		},
@@ -85,8 +86,13 @@ func init() {
 	RegisterFunction(commons.GetAccountFunctionName, NativeFunctionValue{
 		ParameterCount: len(stdlib.PanicFunctionType.Parameters),
 		Function: func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
-			address := arguments[0].(AddressValue)
-			return NewAccountReferenceValue(config, common.Address(address))
+			address := arguments[0].(interpreter.AddressValue)
+
+			return NewAccountReferenceValue(
+				config,
+				config.GetAccountHandler(),
+				common.Address(address),
+			)
 		},
 	})
 }

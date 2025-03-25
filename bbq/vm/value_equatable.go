@@ -18,7 +18,8 @@
 
 package vm
 
-type EquatableValue interface {
-	Value
-	Equal(other Value) BoolValue
-}
+//
+//type EquatableValue interface {
+//	Value
+//	Equal(other Value) BoolValue
+//}

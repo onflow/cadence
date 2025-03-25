@@ -18,40 +18,41 @@
 
 package vm
 
-import (
-	"github.com/onflow/atree"
-
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/format"
-	"github.com/onflow/cadence/interpreter"
-)
-
-var TrueValue Value = BoolValue(true)
-var FalseValue Value = BoolValue(false)
-
-type BoolValue bool
-
-var _ Value = BoolValue(true)
-var _ EquatableValue = BoolValue(true)
-
-func (BoolValue) isValue() {}
-
-func (BoolValue) StaticType(StaticTypeContext) bbq.StaticType {
-	return interpreter.PrimitiveStaticTypeBool
-}
-
-func (v BoolValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
-	return v
-}
-
-func (v BoolValue) String() string {
-	return format.Bool(bool(v))
-}
-
-func (v BoolValue) Equal(other Value) BoolValue {
-	otherBool, ok := other.(BoolValue)
-	if !ok {
-		return false
-	}
-	return v == otherBool
-}
+//
+//import (
+//	"github.com/onflow/atree"
+//
+//	"github.com/onflow/cadence/bbq"
+//	"github.com/onflow/cadence/format"
+//	"github.com/onflow/cadence/interpreter"
+//)
+//
+//var TrueValue Value = BoolValue(true)
+//var FalseValue Value = BoolValue(false)
+//
+//type BoolValue bool
+//
+//var _ Value = BoolValue(true)
+//var _ EquatableValue = BoolValue(true)
+//
+//func (BoolValue) isValue() {}
+//
+//func (BoolValue) StaticType(StaticTypeContext) bbq.StaticType {
+//	return interpreter.PrimitiveStaticTypeBool
+//}
+//
+//func (v BoolValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
+//	return v
+//}
+//
+//func (v BoolValue) String() string {
+//	return format.Bool(bool(v))
+//}
+//
+//func (v BoolValue) Equal(other Value) BoolValue {
+//	otherBool, ok := other.(BoolValue)
+//	if !ok {
+//		return false
+//	}
+//	return v == otherBool
+//}

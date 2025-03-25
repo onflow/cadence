@@ -5421,12 +5421,13 @@ func (interpreter *Interpreter) trackReferencedResourceKindedValue(
 }
 
 // TODO: Remove the `destroyed` flag
-func (interpreter *Interpreter) InvalidateReferencedResources(
+func InvalidateReferencedResources(
+	context ContainerMutationContext,
 	value Value,
 	locationRange LocationRange,
 ) {
 	// skip non-resource typed values
-	if !value.IsResourceKinded(interpreter) {
+	if !value.IsResourceKinded(context) {
 		return
 	}
 
@@ -5435,9 +5436,9 @@ func (interpreter *Interpreter) InvalidateReferencedResources(
 	switch value := value.(type) {
 	case *CompositeValue:
 		value.ForEachReadOnlyLoadedField(
-			interpreter,
+			context,
 			func(_ string, fieldValue Value) (resume bool) {
-				interpreter.InvalidateReferencedResources(fieldValue, locationRange)
+				InvalidateReferencedResources(context, fieldValue, locationRange)
 				// continue iteration
 				return true
 			},
@@ -5447,10 +5448,10 @@ func (interpreter *Interpreter) InvalidateReferencedResources(
 
 	case *DictionaryValue:
 		value.IterateReadOnlyLoaded(
-			interpreter,
+			context,
 			locationRange,
 			func(_, value Value) (resume bool) {
-				interpreter.InvalidateReferencedResources(value, locationRange)
+				InvalidateReferencedResources(context, value, locationRange)
 				return true
 			},
 		)
@@ -5458,9 +5459,9 @@ func (interpreter *Interpreter) InvalidateReferencedResources(
 
 	case *ArrayValue:
 		value.IterateReadOnlyLoaded(
-			interpreter,
+			context,
 			func(element Value) (resume bool) {
-				interpreter.InvalidateReferencedResources(element, locationRange)
+				InvalidateReferencedResources(context, element, locationRange)
 				return true
 			},
 			locationRange,
@@ -5468,7 +5469,7 @@ func (interpreter *Interpreter) InvalidateReferencedResources(
 		valueID = value.ValueID()
 
 	case *SomeValue:
-		interpreter.InvalidateReferencedResources(value.value, locationRange)
+		InvalidateReferencedResources(context, value.value, locationRange)
 		return
 
 	default:
@@ -5476,7 +5477,7 @@ func (interpreter *Interpreter) InvalidateReferencedResources(
 		return
 	}
 
-	values := interpreter.SharedState.referencedResourceKindedValues[valueID]
+	values := context.ReferencedResourceKindedValues(valueID)
 	if values == nil {
 		return
 	}
@@ -5489,7 +5490,15 @@ func (interpreter *Interpreter) InvalidateReferencedResources(
 	// So no need to track those stale resources anymore. We will not need to update/clear them again.
 	// Therefore, remove them from the mapping.
 	// This is only to allow GC. No impact to the behavior.
+	context.ClearReferencedResourceKindedValues(valueID)
+}
+
+func (interpreter *Interpreter) ClearReferencedResourceKindedValues(valueID atree.ValueID) {
 	delete(interpreter.SharedState.referencedResourceKindedValues, valueID)
+}
+
+func (interpreter *Interpreter) ReferencedResourceKindedValues(valueID atree.ValueID) map[*EphemeralReferenceValue]struct{} {
+	return interpreter.SharedState.referencedResourceKindedValues[valueID]
 }
 
 // startResourceTracking starts tracking the life-span of a resource.

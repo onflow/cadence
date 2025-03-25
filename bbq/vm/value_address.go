@@ -18,29 +18,30 @@
 
 package vm
 
-import (
-	"github.com/onflow/atree"
-
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/format"
-	"github.com/onflow/cadence/interpreter"
-)
-
-type AddressValue common.Address
-
-var _ Value = AddressValue{}
-
-func (AddressValue) isValue() {}
-
-func (AddressValue) StaticType(StaticTypeContext) bbq.StaticType {
-	return interpreter.PrimitiveStaticTypeAddress
-}
-
-func (v AddressValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
-	return v
-}
-
-func (v AddressValue) String() string {
-	return format.Address(common.Address(v))
-}
+//
+//import (
+//	"github.com/onflow/atree"
+//
+//	"github.com/onflow/cadence/bbq"
+//	"github.com/onflow/cadence/common"
+//	"github.com/onflow/cadence/format"
+//	"github.com/onflow/cadence/interpreter"
+//)
+//
+//type AddressValue common.Address
+//
+//var _ Value = AddressValue{}
+//
+//func (AddressValue) isValue() {}
+//
+//func (AddressValue) StaticType(StaticTypeContext) bbq.StaticType {
+//	return interpreter.PrimitiveStaticTypeAddress
+//}
+//
+//func (v AddressValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
+//	return v
+//}
+//
+//func (v AddressValue) String() string {
+//	return format.Address(common.Address(v))
+//}

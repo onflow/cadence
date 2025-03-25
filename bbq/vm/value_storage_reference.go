@@ -18,130 +18,131 @@
 
 package vm
 
-import (
-	"fmt"
-
-	"github.com/onflow/atree"
-
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/format"
-	"github.com/onflow/cadence/interpreter"
-)
-
-type StorageReferenceValue struct {
-	Authorization        interpreter.Authorization
-	TargetStorageAddress common.Address
-	TargetPath           PathValue
-	BorrowedType         interpreter.StaticType
-}
-
-var _ Value = &StorageReferenceValue{}
-var _ MemberAccessibleValue = &StorageReferenceValue{}
-var _ ReferenceValue = &StorageReferenceValue{}
-
-func NewStorageReferenceValue(
-	authorization interpreter.Authorization,
-	targetStorageAddress common.Address,
-	targetPath PathValue,
-	borrowedType interpreter.StaticType,
-) *StorageReferenceValue {
-	return &StorageReferenceValue{
-		Authorization:        authorization,
-		TargetStorageAddress: targetStorageAddress,
-		TargetPath:           targetPath,
-		BorrowedType:         borrowedType,
-	}
-}
-
-func (*StorageReferenceValue) isValue() {}
-
-func (v *StorageReferenceValue) isReference() {}
-
-func (v *StorageReferenceValue) ReferencedValue(config *Config, errorOnFailedDereference bool) *Value {
-	referenced, err := v.dereference(config)
-	if err != nil && errorOnFailedDereference {
-		panic(err)
-	}
-
-	return referenced
-}
-
-func (v *StorageReferenceValue) BorrowType() interpreter.StaticType {
-	return v.BorrowedType
-}
-
-func (v *StorageReferenceValue) StaticType(context StaticTypeContext) bbq.StaticType {
-	referencedValue, err := v.dereference(context)
-	if err != nil {
-		panic(err)
-	}
-
-	return interpreter.NewReferenceStaticType(
-		context,
-		v.Authorization,
-		(*referencedValue).StaticType(context),
-	)
-}
-
-func (v *StorageReferenceValue) dereference(context StaticTypeContext) (*Value, error) {
-	address := v.TargetStorageAddress
-	domain := v.TargetPath.Domain.Identifier()
-	identifier := v.TargetPath.Identifier
-
-	vmReferencedValue := ReadStored(context, address, domain, identifier)
-	if vmReferencedValue == nil {
-		return nil, nil
-	}
-
-	if _, isReference := vmReferencedValue.(ReferenceValue); isReference {
-		panic(interpreter.NestedReferenceError{})
-	}
-
-	if v.BorrowedType != nil {
-		staticType := vmReferencedValue.StaticType(context)
-
-		if !interpreter.IsSubType(context, staticType, v.BorrowedType) {
-			panic(fmt.Errorf("type mismatch: expected %s, found %s", v.BorrowedType, staticType))
-
-			// TODO:
-			//semaType := interpreter.MustConvertStaticToSemaType(staticType)
-			//
-			//return nil, ForceCastTypeMismatchError{
-			//	ExpectedType:  v.BorrowedType,
-			//	ActualType:    semaType,
-			//	LocationRange: locationRange,
-			//}
-		}
-	}
-
-	return &vmReferencedValue, nil
-}
-
-func (v *StorageReferenceValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
-	return v
-}
-
-func (v *StorageReferenceValue) String() string {
-	return format.StorageReference
-}
-
-func (v *StorageReferenceValue) GetMember(config *Config, name string) Value {
-	referencedValue, err := v.dereference(config)
-	if err != nil {
-		panic(err)
-	}
-
-	memberAccessibleValue := (*referencedValue).(MemberAccessibleValue)
-	return memberAccessibleValue.GetMember(config, name)
-}
-
-func (v *StorageReferenceValue) SetMember(config *Config, name string, value Value) {
-	referencedValue, err := v.dereference(config)
-	if err != nil {
-		panic(err)
-	}
-
-	memberAccessibleValue := (*referencedValue).(MemberAccessibleValue)
-	memberAccessibleValue.SetMember(config, name, value)
-}
+//
+//import (
+//	"fmt"
+//
+//	"github.com/onflow/atree"
+//
+//	"github.com/onflow/cadence/bbq"
+//	"github.com/onflow/cadence/common"
+//	"github.com/onflow/cadence/format"
+//	"github.com/onflow/cadence/interpreter"
+//)
+//
+//type StorageReferenceValue struct {
+//	Authorization        interpreter.Authorization
+//	TargetStorageAddress common.Address
+//	TargetPath           PathValue
+//	BorrowedType         interpreter.StaticType
+//}
+//
+//var _ Value = &StorageReferenceValue{}
+//var _ MemberAccessibleValue = &StorageReferenceValue{}
+//var _ ReferenceValue = &StorageReferenceValue{}
+//
+//func NewStorageReferenceValue(
+//	authorization interpreter.Authorization,
+//	targetStorageAddress common.Address,
+//	targetPath PathValue,
+//	borrowedType interpreter.StaticType,
+//) *StorageReferenceValue {
+//	return &StorageReferenceValue{
+//		Authorization:        authorization,
+//		TargetStorageAddress: targetStorageAddress,
+//		TargetPath:           targetPath,
+//		BorrowedType:         borrowedType,
+//	}
+//}
+//
+//func (*StorageReferenceValue) isValue() {}
+//
+//func (v *StorageReferenceValue) isReference() {}
+//
+//func (v *StorageReferenceValue) ReferencedValue(config *Config, errorOnFailedDereference bool) *Value {
+//	referenced, err := v.dereference(config)
+//	if err != nil && errorOnFailedDereference {
+//		panic(err)
+//	}
+//
+//	return referenced
+//}
+//
+//func (v *StorageReferenceValue) BorrowType() interpreter.StaticType {
+//	return v.BorrowedType
+//}
+//
+//func (v *StorageReferenceValue) StaticType(context StaticTypeContext) bbq.StaticType {
+//	referencedValue, err := v.dereference(context)
+//	if err != nil {
+//		panic(err)
+//	}
+//
+//	return interpreter.NewReferenceStaticType(
+//		context,
+//		v.Authorization,
+//		(*referencedValue).StaticType(context),
+//	)
+//}
+//
+//func (v *StorageReferenceValue) dereference(context StaticTypeContext) (*Value, error) {
+//	address := v.TargetStorageAddress
+//	domain := v.TargetPath.Domain.Identifier()
+//	identifier := v.TargetPath.Identifier
+//
+//	vmReferencedValue := ReadStored(context, address, domain, identifier)
+//	if vmReferencedValue == nil {
+//		return nil, nil
+//	}
+//
+//	if _, isReference := vmReferencedValue.(ReferenceValue); isReference {
+//		panic(interpreter.NestedReferenceError{})
+//	}
+//
+//	if v.BorrowedType != nil {
+//		staticType := vmReferencedValue.StaticType(context)
+//
+//		if !interpreter.IsSubType(context, staticType, v.BorrowedType) {
+//			panic(fmt.Errorf("type mismatch: expected %s, found %s", v.BorrowedType, staticType))
+//
+//			// TODO:
+//			//semaType := interpreter.MustConvertStaticToSemaType(staticType)
+//			//
+//			//return nil, ForceCastTypeMismatchError{
+//			//	ExpectedType:  v.BorrowedType,
+//			//	ActualType:    semaType,
+//			//	LocationRange: locationRange,
+//			//}
+//		}
+//	}
+//
+//	return &vmReferencedValue, nil
+//}
+//
+//func (v *StorageReferenceValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
+//	return v
+//}
+//
+//func (v *StorageReferenceValue) String() string {
+//	return format.StorageReference
+//}
+//
+//func (v *StorageReferenceValue) GetMember(config *Config, name string) Value {
+//	referencedValue, err := v.dereference(config)
+//	if err != nil {
+//		panic(err)
+//	}
+//
+//	memberAccessibleValue := (*referencedValue).(MemberAccessibleValue)
+//	return memberAccessibleValue.GetMember(config, name)
+//}
+//
+//func (v *StorageReferenceValue) SetMember(config *Config, name string, value Value) {
+//	referencedValue, err := v.dereference(config)
+//	if err != nil {
+//		panic(err)
+//	}
+//
+//	memberAccessibleValue := (*referencedValue).(MemberAccessibleValue)
+//	memberAccessibleValue.SetMember(config, name, value)
+//}

@@ -159,9 +159,11 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 	fooLocation := common.NewAddressLocation(nil, contractsAddress, "Foo")
 	program := parseCheckAndCompile(t, fooContract, fooLocation, programs)
 
+	accountHandler := &testAccountHandler{}
+
 	vmConfig := vm.NewConfig(storage)
 	vmConfig.ImportHandler = importHandler
-	vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *vm.CompositeValue {
+	vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
 		switch location {
 		case barLocation:
 			return barContractValue
@@ -175,7 +177,7 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 
 	txVM := vm.NewVM(txLocation(), program, vmConfig)
 
-	authorizer := vm.NewAuthAccountReferenceValue(vmConfig, authorizerAddress)
+	authorizer := vm.NewAuthAccountReferenceValue(vmConfig, accountHandler, authorizerAddress)
 	err = txVM.ExecuteTransaction(nil, authorizer)
 	require.NoError(t, err)
 	require.Equal(t, 0, txVM.StackSize())

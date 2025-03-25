@@ -18,73 +18,67 @@
 
 package vm
 
-import (
-	"github.com/onflow/atree"
-
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/interpreter"
-)
-
-type SomeValue struct {
-	value Value
-}
-
-var _ Value = &SomeValue{}
-var _ MemberAccessibleValue = &SomeValue{}
-var _ ResourceKindedValue = &SomeValue{}
-var _ EquatableValue = &SomeValue{}
-
-func NewSomeValueNonCopying(value Value) *SomeValue {
-	return &SomeValue{
-		value: value,
-	}
-}
-
-func (*SomeValue) isValue() {}
-
-func (v *SomeValue) StaticType(staticTypeContext StaticTypeContext) bbq.StaticType {
-	innerType := v.value.StaticType(staticTypeContext)
-	if innerType == nil {
-		return nil
-	}
-	return interpreter.NewOptionalStaticType(
-		staticTypeContext,
-		innerType,
-	)
-}
-
-func (v *SomeValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
-	return v
-}
-
-func (v *SomeValue) String() string {
-	return v.value.String()
-}
-func (v *SomeValue) GetMember(config *Config, name string) Value {
-	memberAccessibleValue := (v.value).(MemberAccessibleValue)
-	return memberAccessibleValue.GetMember(config, name)
-}
-
-func (v *SomeValue) SetMember(config *Config, name string, value Value) {
-	memberAccessibleValue := (v.value).(MemberAccessibleValue)
-	memberAccessibleValue.SetMember(config, name, value)
-}
-
-func (v *SomeValue) IsResourceKinded() bool {
-	resourceKinded, ok := v.value.(ResourceKindedValue)
-	return ok && resourceKinded.IsResourceKinded()
-}
-
-func (v *SomeValue) Equal(other Value) BoolValue {
-	otherSome, ok := other.(*SomeValue)
-	if !ok {
-		return false
-	}
-
-	equatableValue, ok := v.value.(EquatableValue)
-	if !ok {
-		return false
-	}
-
-	return equatableValue.Equal(otherSome.value)
-}
+//
+//type SomeValue struct {
+//	value Value
+//}
+//
+//var _ Value = &SomeValue{}
+//var _ MemberAccessibleValue = &SomeValue{}
+//var _ ResourceKindedValue = &SomeValue{}
+//var _ EquatableValue = &SomeValue{}
+//
+//func NewSomeValueNonCopying(value Value) *SomeValue {
+//	return &SomeValue{
+//		value: value,
+//	}
+//}
+//
+//func (*SomeValue) isValue() {}
+//
+//func (v *SomeValue) StaticType(staticTypeContext StaticTypeContext) bbq.StaticType {
+//	innerType := v.value.StaticType(staticTypeContext)
+//	if innerType == nil {
+//		return nil
+//	}
+//	return interpreter.NewOptionalStaticType(
+//		staticTypeContext,
+//		innerType,
+//	)
+//}
+//
+//func (v *SomeValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
+//	return v
+//}
+//
+//func (v *SomeValue) String() string {
+//	return v.value.String()
+//}
+//func (v *SomeValue) GetMember(config *Config, name string) Value {
+//	memberAccessibleValue := (v.value).(MemberAccessibleValue)
+//	return memberAccessibleValue.GetMember(config, name)
+//}
+//
+//func (v *SomeValue) SetMember(config *Config, name string, value Value) {
+//	memberAccessibleValue := (v.value).(MemberAccessibleValue)
+//	memberAccessibleValue.SetMember(config, name, value)
+//}
+//
+//func (v *SomeValue) IsResourceKinded() bool {
+//	resourceKinded, ok := v.value.(ResourceKindedValue)
+//	return ok && resourceKinded.IsResourceKinded()
+//}
+//
+//func (v *SomeValue) Equal(other Value) BoolValue {
+//	otherSome, ok := other.(*SomeValue)
+//	if !ok {
+//		return false
+//	}
+//
+//	equatableValue, ok := v.value.(EquatableValue)
+//	if !ok {
+//		return false
+//	}
+//
+//	return equatableValue.Equal(otherSome.value)
+//}

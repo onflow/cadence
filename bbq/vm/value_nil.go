@@ -18,39 +18,40 @@
 
 package vm
 
-import (
-	"github.com/onflow/atree"
-
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/format"
-	"github.com/onflow/cadence/interpreter"
-)
-
-type NilValue struct{}
-
-var _ Value = NilValue{}
-var _ EquatableValue = NilValue{}
-
-var Nil Value = NilValue{}
-
-func (NilValue) isValue() {}
-
-func (NilValue) StaticType(staticTypeContext StaticTypeContext) bbq.StaticType {
-	return interpreter.NewOptionalStaticType(
-		staticTypeContext,
-		interpreter.PrimitiveStaticTypeNever,
-	)
-}
-
-func (v NilValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
-	return v
-}
-
-func (v NilValue) String() string {
-	return format.Nil
-}
-
-func (v NilValue) Equal(other Value) BoolValue {
-	_, ok := other.(NilValue)
-	return BoolValue(ok)
-}
+//
+//import (
+//	"github.com/onflow/atree"
+//
+//	"github.com/onflow/cadence/bbq"
+//	"github.com/onflow/cadence/format"
+//	"github.com/onflow/cadence/interpreter"
+//)
+//
+//type NilValue struct{}
+//
+//var _ Value = NilValue{}
+//var _ EquatableValue = NilValue{}
+//
+//var Nil Value = NilValue{}
+//
+//func (NilValue) isValue() {}
+//
+//func (NilValue) StaticType(staticTypeContext StaticTypeContext) bbq.StaticType {
+//	return interpreter.NewOptionalStaticType(
+//		staticTypeContext,
+//		interpreter.PrimitiveStaticTypeNever,
+//	)
+//}
+//
+//func (v NilValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
+//	return v
+//}
+//
+//func (v NilValue) String() string {
+//	return format.Nil
+//}
+//
+//func (v NilValue) Equal(other Value) BoolValue {
+//	_, ok := other.(NilValue)
+//	return BoolValue(ok)
+//}

@@ -18,488 +18,489 @@
 
 package vm
 
-import (
-	goerrors "errors"
-
-	"github.com/onflow/atree"
-
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/interpreter"
-)
-
-type ArrayValue struct {
-	Type             interpreter.ArrayStaticType
-	array            *atree.Array
-	isResourceKinded bool
-	elementSize      uint
-	isDestroyed      bool
-}
-
-var _ Value = &ArrayValue{}
-var _ ReferenceTrackedResourceKindedValue = &ArrayValue{}
-var _ IterableValue = &ArrayValue{}
-
-func NewArrayValue(
-	config *Config,
-	arrayType interpreter.ArrayStaticType,
-	isResourceKinded bool,
-	values ...Value,
-) *ArrayValue {
-
-	address := common.ZeroAddress
-
-	var index int
-	count := len(values)
-
-	return NewArrayValueWithIterator(
-		config,
-		arrayType,
-		isResourceKinded,
-		address,
-		func() Value {
-			if index >= count {
-				return nil
-			}
-
-			value := values[index]
-
-			index++
-
-			value = value.Transfer(
-				config,
-				atree.Address(address),
-				true,
-				nil,
-			)
-
-			return value
-		},
-	)
-}
-
-func NewArrayValueWithIterator(
-	config *Config,
-	arrayType interpreter.ArrayStaticType,
-	isResourceKinded bool,
-	address common.Address,
-	values func() Value,
-) *ArrayValue {
-	constructor := func() *atree.Array {
-		array, err := atree.NewArrayFromBatchData(
-			config.Storage(),
-			atree.Address(address),
-			arrayType,
-			func() (atree.Value, error) {
-				vmValue := values()
-				value := VMValueToInterpreterValue(config, vmValue)
-				return value, nil
-			},
-		)
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
-		return array
-	}
-
-	return newArrayValueFromConstructor(arrayType, isResourceKinded, constructor)
-}
-
-func newArrayValueFromConstructor(
-	staticType interpreter.ArrayStaticType,
-	isResourceKinded bool,
-	constructor func() *atree.Array,
-) *ArrayValue {
-
-	elementSize := interpreter.ArrayElementSize(staticType)
-
-	return newArrayValueFromAtreeArray(
-		staticType,
-		isResourceKinded,
-		elementSize,
-		constructor(),
-	)
-}
-
-func newArrayValueFromAtreeArray(
-	staticType interpreter.ArrayStaticType,
-	isResourceKinded bool,
-	elementSize uint,
-	atreeArray *atree.Array,
-) *ArrayValue {
-	return &ArrayValue{
-		Type:             staticType,
-		array:            atreeArray,
-		elementSize:      elementSize,
-		isResourceKinded: isResourceKinded,
-	}
-}
-
-func (v *ArrayValue) isValue() {
-	panic("implement me")
-}
-
-func (v *ArrayValue) StaticType(StaticTypeContext) bbq.StaticType {
-	return v.Type
-}
-
-func (v *ArrayValue) Transfer(
-	transferContext TransferContext,
-	address atree.Address,
-	remove bool,
-	storable atree.Storable,
-) Value {
-
-	storage := transferContext.Storage()
-
-	array := v.array
-
-	//currentValueID := v.ValueID()
-
-	//if preventTransfer == nil {
-	//	preventTransfer = map[atree.ValueID]struct{}{}
-	//} else if _, ok := preventTransfer[currentValueID]; ok {
-	//	panic(RecursiveTransferError{
-	//		LocationRange: locationRange,
-	//	})
-	//}
-	//preventTransfer[currentValueID] = struct{}{}
-	//defer delete(preventTransfer, currentValueID)
-
-	needsStoreTo := v.NeedsStoreTo(address)
-	isResourceKinded := v.IsResourceKinded()
-
-	if needsStoreTo || !isResourceKinded {
-
-		// Use non-readonly iterator here because iterated
-		// value can be removed if remove parameter is true.
-		iterator, err := v.array.Iterator()
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
-
-		array, err = atree.NewArrayFromBatchData(
-			storage,
-			address,
-			v.array.Type(),
-			func() (atree.Value, error) {
-				value, err := iterator.Next()
-				if err != nil {
-					return nil, err
-				}
-				if value == nil {
-					return nil, nil
-				}
-
-				element := interpreter.MustConvertStoredValue(transferContext, value)
-
-				// TODO: Transfer before returning.
-				return element, nil
-			},
-		)
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
-
-		if remove {
-			err = v.array.PopIterate(func(valueStorable atree.Storable) {
-				RemoveReferencedSlab(storage, valueStorable)
-			})
-			if err != nil {
-				panic(errors.NewExternalError(err))
-			}
-
-			//interpreter.maybeValidateAtreeValue(v.array)
-			//if hasNoParentContainer {
-			//	interpreter.maybeValidateAtreeStorage()
-			//}
-
-			RemoveReferencedSlab(storage, storable)
-		}
-	}
-
-	if isResourceKinded {
-		// Update the resource in-place,
-		// and also update all values that are referencing the same value
-		// (but currently point to an outdated Go instance of the value)
-
-		// If checking of transfers of invalidated resource is enabled,
-		// then mark the resource array as invalidated, by unsetting the backing array.
-		// This allows raising an error when the resource array is attempted
-		// to be transferred/moved again (see beginning of this function)
-
-		transferContext.InvalidateReferencedResources(v)
-
-		v.array = nil
-	}
-
-	res := newArrayValueFromAtreeArray(
-		v.Type,
-		isResourceKinded,
-		v.elementSize,
-		array,
-	)
-
-	res.isResourceKinded = v.isResourceKinded
-	res.isDestroyed = v.isDestroyed
-
-	return res
-}
-
-func (v *ArrayValue) String() string {
-	panic("implement me")
-}
-
-func (v *ArrayValue) ValueID() atree.ValueID {
-	return v.array.ValueID()
-}
-
-func (v *ArrayValue) SlabID() atree.SlabID {
-	return v.array.SlabID()
-}
-
-func (v *ArrayValue) StorageAddress() atree.Address {
-	return v.array.Address()
-}
-
-func (v *ArrayValue) NeedsStoreTo(address atree.Address) bool {
-	return address != v.StorageAddress()
-}
-
-func (v *ArrayValue) IsResourceKinded() bool {
-	return v.isResourceKinded
-}
-
-func (v *ArrayValue) IsReferenceTrackedResourceKindedValue() {}
-
-func (v *ArrayValue) IsStaleResource() bool {
-	return v.array == nil && v.IsResourceKinded()
-}
-
-func (v *ArrayValue) Count() int {
-	return int(v.array.Count())
-}
-
-func (v *ArrayValue) Get(config *Config, index int) Value {
-
-	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
-	// atree's Array.Get function will check the upper bound and report an atree.IndexOutOfBoundsError
-
-	if index < 0 {
-		panic(interpreter.ArrayIndexOutOfBoundsError{
-			Index: index,
-			Size:  v.Count(),
-		})
-	}
-
-	storedValue, err := v.array.Get(uint64(index))
-	if err != nil {
-		v.handleIndexOutOfBoundsError(err, index)
-		panic(errors.NewExternalError(err))
-	}
-
-	return MustConvertStoredValue(
-		config.MemoryGauge,
-		storedValue,
-	)
-}
-
-func (v *ArrayValue) handleIndexOutOfBoundsError(err error, index int) {
-	var indexOutOfBoundsError *atree.IndexOutOfBoundsError
-	if goerrors.As(err, &indexOutOfBoundsError) {
-		panic(interpreter.ArrayIndexOutOfBoundsError{
-			Index: index,
-			Size:  v.Count(),
-		})
-	}
-}
-
-func (v *ArrayValue) Set(config *Config, index int, element Value) {
-
-	// TODO:
-	//interpreter.validateMutation(v.ValueID(), locationRange)
-
-	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
-	// atree's Array.Set function will check the upper bound and report an atree.IndexOutOfBoundsError
-
-	if index < 0 {
-		panic(interpreter.ArrayIndexOutOfBoundsError{
-			Index: index,
-			Size:  v.Count(),
-		})
-	}
-
-	// TODO:
-	//interpreter.checkContainerMutation(v.Type.ElementType(), element, locationRange)
-
-	element = element.Transfer(
-		config,
-		v.array.Address(),
-		true,
-		nil,
-	)
-
-	storableElement := VMValueToInterpreterValue(config, element)
-
-	existingStorable, err := v.array.Set(uint64(index), storableElement)
-	if err != nil {
-		v.handleIndexOutOfBoundsError(err, index)
-
-		panic(errors.NewExternalError(err))
-	}
-
-	//interpreter.maybeValidateAtreeValue(v.array)
-	//interpreter.maybeValidateAtreeStorage()
-
-	storage := config.Storage()
-
-	existingValue := StoredValue(config.MemoryGauge, existingStorable, storage)
-	_ = existingValue
-
-	//interpreter.checkResourceLoss(existingValue, locationRange)
-
-	//existingValue.DeepRemove(interpreter, true) // existingValue is standalone because it was overwritten in parent container.
-
-	RemoveReferencedSlab(storage, existingStorable)
-}
-
-func (v *ArrayValue) Iterate(
-	context TransferContext,
-	f func(element Value) (resume bool),
-	transferElements bool,
-) {
-	v.iterate(
-		context,
-		v.array.Iterate,
-		f,
-		transferElements,
-	)
-}
-
-// IterateReadOnlyLoaded iterates over all LOADED elements of the array.
-// DO NOT perform storage mutations in the callback!
-func (v *ArrayValue) IterateReadOnlyLoaded(
-	context TransferContext,
-	f func(element Value) (resume bool),
-) {
-	const transferElements = false
-
-	v.iterate(
-		context,
-		v.array.IterateReadOnlyLoadedValues,
-		f,
-		transferElements,
-	)
-}
-
-func (v *ArrayValue) iterate(
-	context TransferContext,
-	atreeIterate func(fn atree.ArrayIterationFunc) error,
-	f func(element Value) (resume bool),
-	transferElements bool,
-) {
-	iterate := func() {
-		err := atreeIterate(func(element atree.Value) (resume bool, err error) {
-			// atree.Array iteration provides low-level atree.Value,
-			// convert to high-level interpreter.Value
-			elementValue := MustConvertStoredValue(context, element)
-			context.CheckInvalidatedResourceOrResourceReference(elementValue)
-
-			if transferElements {
-				// Each element must be transferred before passing onto the function.
-				elementValue = elementValue.Transfer(
-					context,
-					atree.Address{},
-					false,
-					nil,
-				)
-			}
-
-			resume = f(elementValue)
-
-			return resume, nil
-		})
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
-	}
-
-	iterate()
-	//interpreter.withMutationPrevention(v.ValueID(), iterate)
-}
-
-func (v *ArrayValue) Iterator() ValueIterator {
-	arrayIterator, err := v.array.Iterator()
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
-	return &ArrayIterator{
-		atreeIterator: arrayIterator,
-	}
-}
-
-// Array iterator
-
-type ArrayIterator struct {
-	atreeIterator atree.ArrayIterator
-	next          atree.Value
-}
-
-var _ ValueIterator = &ArrayIterator{}
-
-func (i *ArrayIterator) isValue() {}
-
-func (i *ArrayIterator) StaticType(_ StaticTypeContext) bbq.StaticType {
-	// Iterator is an internal-only value.
-	// Hence, this should never be called.
-	panic(errors.NewUnreachableError())
-}
-
-func (i *ArrayIterator) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
-	return i
-}
-
-func (i *ArrayIterator) String() string {
-	panic(errors.NewUnreachableError())
-}
-
-func (i *ArrayIterator) HasNext() bool {
-	if i.next != nil {
-		return true
-	}
-
-	var err error
-	i.next, err = i.atreeIterator.Next()
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
-
-	return i.next != nil
-}
-
-func (i *ArrayIterator) Next(config *Config) Value {
-	var atreeValue atree.Value
-	if i.next != nil {
-		// If there's already a `next` (i.e: `hasNext()` was called before this)
-		// then use that.
-		atreeValue = i.next
-
-		// Clear the cached `next`.
-		i.next = nil
-	} else {
-		var err error
-		atreeValue, err = i.atreeIterator.Next()
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
-	}
-
-	if atreeValue == nil {
-		return nil
-	}
-
-	// atree.Array iterator returns low-level atree.Value,
-	// convert to high-level interpreter.Value
-	return MustConvertStoredValue(config.MemoryGauge, atreeValue)
-}
+//
+//import (
+//	goerrors "errors"
+//
+//	"github.com/onflow/atree"
+//
+//	"github.com/onflow/cadence/bbq"
+//	"github.com/onflow/cadence/common"
+//	"github.com/onflow/cadence/errors"
+//	"github.com/onflow/cadence/interpreter"
+//)
+//
+//type ArrayValue struct {
+//	Type             interpreter.ArrayStaticType
+//	array            *atree.Array
+//	isResourceKinded bool
+//	elementSize      uint
+//	isDestroyed      bool
+//}
+//
+//var _ Value = &ArrayValue{}
+//var _ ReferenceTrackedResourceKindedValue = &ArrayValue{}
+//var _ IterableValue = &ArrayValue{}
+//
+//func NewArrayValue(
+//	config *Config,
+//	arrayType interpreter.ArrayStaticType,
+//	isResourceKinded bool,
+//	values ...Value,
+//) *ArrayValue {
+//
+//	address := common.ZeroAddress
+//
+//	var index int
+//	count := len(values)
+//
+//	return NewArrayValueWithIterator(
+//		config,
+//		arrayType,
+//		isResourceKinded,
+//		address,
+//		func() Value {
+//			if index >= count {
+//				return nil
+//			}
+//
+//			value := values[index]
+//
+//			index++
+//
+//			value = value.Transfer(
+//				config,
+//				atree.Address(address),
+//				true,
+//				nil,
+//			)
+//
+//			return value
+//		},
+//	)
+//}
+//
+//func NewArrayValueWithIterator(
+//	config *Config,
+//	arrayType interpreter.ArrayStaticType,
+//	isResourceKinded bool,
+//	address common.Address,
+//	values func() Value,
+//) *ArrayValue {
+//	constructor := func() *atree.Array {
+//		array, err := atree.NewArrayFromBatchData(
+//			config.Storage(),
+//			atree.Address(address),
+//			arrayType,
+//			func() (atree.Value, error) {
+//				vmValue := values()
+//				value := VMValueToInterpreterValue(config, vmValue)
+//				return value, nil
+//			},
+//		)
+//		if err != nil {
+//			panic(errors.NewExternalError(err))
+//		}
+//		return array
+//	}
+//
+//	return newArrayValueFromConstructor(arrayType, isResourceKinded, constructor)
+//}
+//
+//func newArrayValueFromConstructor(
+//	staticType interpreter.ArrayStaticType,
+//	isResourceKinded bool,
+//	constructor func() *atree.Array,
+//) *ArrayValue {
+//
+//	elementSize := interpreter.ArrayElementSize(staticType)
+//
+//	return newArrayValueFromAtreeArray(
+//		staticType,
+//		isResourceKinded,
+//		elementSize,
+//		constructor(),
+//	)
+//}
+//
+//func newArrayValueFromAtreeArray(
+//	staticType interpreter.ArrayStaticType,
+//	isResourceKinded bool,
+//	elementSize uint,
+//	atreeArray *atree.Array,
+//) *ArrayValue {
+//	return &ArrayValue{
+//		Type:             staticType,
+//		array:            atreeArray,
+//		elementSize:      elementSize,
+//		isResourceKinded: isResourceKinded,
+//	}
+//}
+//
+//func (v *ArrayValue) isValue() {
+//	panic("implement me")
+//}
+//
+//func (v *ArrayValue) StaticType(StaticTypeContext) bbq.StaticType {
+//	return v.Type
+//}
+//
+//func (v *ArrayValue) Transfer(
+//	transferContext TransferContext,
+//	address atree.Address,
+//	remove bool,
+//	storable atree.Storable,
+//) Value {
+//
+//	storage := transferContext.Storage()
+//
+//	array := v.array
+//
+//	//currentValueID := v.ValueID()
+//
+//	//if preventTransfer == nil {
+//	//	preventTransfer = map[atree.ValueID]struct{}{}
+//	//} else if _, ok := preventTransfer[currentValueID]; ok {
+//	//	panic(RecursiveTransferError{
+//	//		LocationRange: locationRange,
+//	//	})
+//	//}
+//	//preventTransfer[currentValueID] = struct{}{}
+//	//defer delete(preventTransfer, currentValueID)
+//
+//	needsStoreTo := v.NeedsStoreTo(address)
+//	isResourceKinded := v.IsResourceKinded()
+//
+//	if needsStoreTo || !isResourceKinded {
+//
+//		// Use non-readonly iterator here because iterated
+//		// value can be removed if remove parameter is true.
+//		iterator, err := v.array.Iterator()
+//		if err != nil {
+//			panic(errors.NewExternalError(err))
+//		}
+//
+//		array, err = atree.NewArrayFromBatchData(
+//			storage,
+//			address,
+//			v.array.Type(),
+//			func() (atree.Value, error) {
+//				value, err := iterator.Next()
+//				if err != nil {
+//					return nil, err
+//				}
+//				if value == nil {
+//					return nil, nil
+//				}
+//
+//				element := interpreter.MustConvertStoredValue(transferContext, value)
+//
+//				// TODO: Transfer before returning.
+//				return element, nil
+//			},
+//		)
+//		if err != nil {
+//			panic(errors.NewExternalError(err))
+//		}
+//
+//		if remove {
+//			err = v.array.PopIterate(func(valueStorable atree.Storable) {
+//				RemoveReferencedSlab(storage, valueStorable)
+//			})
+//			if err != nil {
+//				panic(errors.NewExternalError(err))
+//			}
+//
+//			//interpreter.maybeValidateAtreeValue(v.array)
+//			//if hasNoParentContainer {
+//			//	interpreter.maybeValidateAtreeStorage()
+//			//}
+//
+//			RemoveReferencedSlab(storage, storable)
+//		}
+//	}
+//
+//	if isResourceKinded {
+//		// Update the resource in-place,
+//		// and also update all values that are referencing the same value
+//		// (but currently point to an outdated Go instance of the value)
+//
+//		// If checking of transfers of invalidated resource is enabled,
+//		// then mark the resource array as invalidated, by unsetting the backing array.
+//		// This allows raising an error when the resource array is attempted
+//		// to be transferred/moved again (see beginning of this function)
+//
+//		transferContext.InvalidateReferencedResources(v)
+//
+//		v.array = nil
+//	}
+//
+//	res := newArrayValueFromAtreeArray(
+//		v.Type,
+//		isResourceKinded,
+//		v.elementSize,
+//		array,
+//	)
+//
+//	res.isResourceKinded = v.isResourceKinded
+//	res.isDestroyed = v.isDestroyed
+//
+//	return res
+//}
+//
+//func (v *ArrayValue) String() string {
+//	panic("implement me")
+//}
+//
+//func (v *ArrayValue) ValueID() atree.ValueID {
+//	return v.array.ValueID()
+//}
+//
+//func (v *ArrayValue) SlabID() atree.SlabID {
+//	return v.array.SlabID()
+//}
+//
+//func (v *ArrayValue) StorageAddress() atree.Address {
+//	return v.array.Address()
+//}
+//
+//func (v *ArrayValue) NeedsStoreTo(address atree.Address) bool {
+//	return address != v.StorageAddress()
+//}
+//
+//func (v *ArrayValue) IsResourceKinded() bool {
+//	return v.isResourceKinded
+//}
+//
+//func (v *ArrayValue) IsReferenceTrackedResourceKindedValue() {}
+//
+//func (v *ArrayValue) IsStaleResource() bool {
+//	return v.array == nil && v.IsResourceKinded()
+//}
+//
+//func (v *ArrayValue) Count() int {
+//	return int(v.array.Count())
+//}
+//
+//func (v *ArrayValue) Get(config *Config, index int) Value {
+//
+//	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
+//	// atree's Array.Get function will check the upper bound and report an atree.IndexOutOfBoundsError
+//
+//	if index < 0 {
+//		panic(interpreter.ArrayIndexOutOfBoundsError{
+//			Index: index,
+//			Size:  v.Count(),
+//		})
+//	}
+//
+//	storedValue, err := v.array.Get(uint64(index))
+//	if err != nil {
+//		v.handleIndexOutOfBoundsError(err, index)
+//		panic(errors.NewExternalError(err))
+//	}
+//
+//	return MustConvertStoredValue(
+//		config.MemoryGauge,
+//		storedValue,
+//	)
+//}
+//
+//func (v *ArrayValue) handleIndexOutOfBoundsError(err error, index int) {
+//	var indexOutOfBoundsError *atree.IndexOutOfBoundsError
+//	if goerrors.As(err, &indexOutOfBoundsError) {
+//		panic(interpreter.ArrayIndexOutOfBoundsError{
+//			Index: index,
+//			Size:  v.Count(),
+//		})
+//	}
+//}
+//
+//func (v *ArrayValue) Set(config *Config, index int, element Value) {
+//
+//	// TODO:
+//	//interpreter.validateMutation(v.ValueID(), locationRange)
+//
+//	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
+//	// atree's Array.Set function will check the upper bound and report an atree.IndexOutOfBoundsError
+//
+//	if index < 0 {
+//		panic(interpreter.ArrayIndexOutOfBoundsError{
+//			Index: index,
+//			Size:  v.Count(),
+//		})
+//	}
+//
+//	// TODO:
+//	//interpreter.checkContainerMutation(v.Type.ElementType(), element, locationRange)
+//
+//	element = element.Transfer(
+//		config,
+//		v.array.Address(),
+//		true,
+//		nil,
+//	)
+//
+//	storableElement := VMValueToInterpreterValue(config, element)
+//
+//	existingStorable, err := v.array.Set(uint64(index), storableElement)
+//	if err != nil {
+//		v.handleIndexOutOfBoundsError(err, index)
+//
+//		panic(errors.NewExternalError(err))
+//	}
+//
+//	//interpreter.maybeValidateAtreeValue(v.array)
+//	//interpreter.maybeValidateAtreeStorage()
+//
+//	storage := config.Storage()
+//
+//	existingValue := StoredValue(config.MemoryGauge, existingStorable, storage)
+//	_ = existingValue
+//
+//	//interpreter.checkResourceLoss(existingValue, locationRange)
+//
+//	//existingValue.DeepRemove(interpreter, true) // existingValue is standalone because it was overwritten in parent container.
+//
+//	RemoveReferencedSlab(storage, existingStorable)
+//}
+//
+//func (v *ArrayValue) Iterate(
+//	context TransferContext,
+//	f func(element Value) (resume bool),
+//	transferElements bool,
+//) {
+//	v.iterate(
+//		context,
+//		v.array.Iterate,
+//		f,
+//		transferElements,
+//	)
+//}
+//
+//// IterateReadOnlyLoaded iterates over all LOADED elements of the array.
+//// DO NOT perform storage mutations in the callback!
+//func (v *ArrayValue) IterateReadOnlyLoaded(
+//	context TransferContext,
+//	f func(element Value) (resume bool),
+//) {
+//	const transferElements = false
+//
+//	v.iterate(
+//		context,
+//		v.array.IterateReadOnlyLoadedValues,
+//		f,
+//		transferElements,
+//	)
+//}
+//
+//func (v *ArrayValue) iterate(
+//	context TransferContext,
+//	atreeIterate func(fn atree.ArrayIterationFunc) error,
+//	f func(element Value) (resume bool),
+//	transferElements bool,
+//) {
+//	iterate := func() {
+//		err := atreeIterate(func(element atree.Value) (resume bool, err error) {
+//			// atree.Array iteration provides low-level atree.Value,
+//			// convert to high-level interpreter.Value
+//			elementValue := MustConvertStoredValue(context, element)
+//			context.CheckInvalidatedResourceOrResourceReference(elementValue)
+//
+//			if transferElements {
+//				// Each element must be transferred before passing onto the function.
+//				elementValue = elementValue.Transfer(
+//					context,
+//					atree.Address{},
+//					false,
+//					nil,
+//				)
+//			}
+//
+//			resume = f(elementValue)
+//
+//			return resume, nil
+//		})
+//		if err != nil {
+//			panic(errors.NewExternalError(err))
+//		}
+//	}
+//
+//	iterate()
+//	//interpreter.withMutationPrevention(v.ValueID(), iterate)
+//}
+//
+//func (v *ArrayValue) Iterator() ValueIterator {
+//	arrayIterator, err := v.array.Iterator()
+//	if err != nil {
+//		panic(errors.NewExternalError(err))
+//	}
+//	return &ArrayIterator{
+//		atreeIterator: arrayIterator,
+//	}
+//}
+//
+//// Array iterator
+//
+//type ArrayIterator struct {
+//	atreeIterator atree.ArrayIterator
+//	next          atree.Value
+//}
+//
+//var _ ValueIterator = &ArrayIterator{}
+//
+//func (i *ArrayIterator) isValue() {}
+//
+//func (i *ArrayIterator) StaticType(_ StaticTypeContext) bbq.StaticType {
+//	// Iterator is an internal-only value.
+//	// Hence, this should never be called.
+//	panic(errors.NewUnreachableError())
+//}
+//
+//func (i *ArrayIterator) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
+//	return i
+//}
+//
+//func (i *ArrayIterator) String() string {
+//	panic(errors.NewUnreachableError())
+//}
+//
+//func (i *ArrayIterator) HasNext() bool {
+//	if i.next != nil {
+//		return true
+//	}
+//
+//	var err error
+//	i.next, err = i.atreeIterator.Next()
+//	if err != nil {
+//		panic(errors.NewExternalError(err))
+//	}
+//
+//	return i.next != nil
+//}
+//
+//func (i *ArrayIterator) Next(config *Config) Value {
+//	var atreeValue atree.Value
+//	if i.next != nil {
+//		// If there's already a `next` (i.e: `hasNext()` was called before this)
+//		// then use that.
+//		atreeValue = i.next
+//
+//		// Clear the cached `next`.
+//		i.next = nil
+//	} else {
+//		var err error
+//		atreeValue, err = i.atreeIterator.Next()
+//		if err != nil {
+//			panic(errors.NewExternalError(err))
+//		}
+//	}
+//
+//	if atreeValue == nil {
+//		return nil
+//	}
+//
+//	// atree.Array iterator returns low-level atree.Value,
+//	// convert to high-level interpreter.Value
+//	return MustConvertStoredValue(config.MemoryGauge, atreeValue)
+//}

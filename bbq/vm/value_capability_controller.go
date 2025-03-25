@@ -18,199 +18,200 @@
 
 package vm
 
-import (
-	"github.com/onflow/atree"
-
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/format"
-	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/sema"
-)
-
-type CapabilityControllerValue interface {
-	Value
-	isCapabilityControllerValue()
-	ReferenceValue(
-		capabilityAddress common.Address,
-		resultBorrowType *interpreter.ReferenceStaticType,
-	) ReferenceValue
-	ControllerCapabilityID() IntValue // TODO: UInt64Value
-	CapabilityControllerBorrowType() *interpreter.ReferenceStaticType
-}
-
-// StorageCapabilityControllerValue
-
-type StorageCapabilityControllerValue struct {
-	BorrowType   *interpreter.ReferenceStaticType
-	CapabilityID IntValue
-	TargetPath   PathValue
-
-	// deleted indicates if the controller got deleted. Not stored
-	deleted bool
-
-	// Injected functions.
-	// Tags are not stored directly inside the controller
-	// to avoid unnecessary storage reads
-	// when the controller is loaded for borrowing/checking
-	GetCapability func(config *Config) *CapabilityValue
-	GetTag        func(config *Config) *StringValue
-	SetTag        func(config *Config, tag *StringValue)
-	Delete        func(config *Config, locationRange interpreter.LocationRange)
-	SetTarget     func(config *Config, locationRange interpreter.LocationRange, target PathValue)
-}
-
-func NewUnmeteredStorageCapabilityControllerValue(
-	borrowType *interpreter.ReferenceStaticType,
-	capabilityID IntValue,
-	targetPath PathValue,
-) *StorageCapabilityControllerValue {
-	return &StorageCapabilityControllerValue{
-		BorrowType:   borrowType,
-		TargetPath:   targetPath,
-		CapabilityID: capabilityID,
-	}
-}
-
-func NewStorageCapabilityControllerValue(
-	borrowType *interpreter.ReferenceStaticType,
-	capabilityID IntValue,
-	targetPath PathValue,
-) *StorageCapabilityControllerValue {
-	return NewUnmeteredStorageCapabilityControllerValue(
-		borrowType,
-		capabilityID,
-		targetPath,
-	)
-}
-
-var _ Value = &StorageCapabilityControllerValue{}
-var _ CapabilityControllerValue = &StorageCapabilityControllerValue{}
-var _ MemberAccessibleValue = &StorageCapabilityControllerValue{}
-
-func (*StorageCapabilityControllerValue) isValue() {}
-
-func (*StorageCapabilityControllerValue) isCapabilityControllerValue() {}
-
-func (v *StorageCapabilityControllerValue) CapabilityControllerBorrowType() *interpreter.ReferenceStaticType {
-	return v.BorrowType
-}
-
-func (v *StorageCapabilityControllerValue) StaticType(StaticTypeContext) bbq.StaticType {
-	return interpreter.PrimitiveStaticTypeStorageCapabilityController
-}
-
-func (v *StorageCapabilityControllerValue) String() string {
-	// TODO: call recursive string
-	return format.StorageCapabilityController(
-		v.BorrowType.String(),
-		v.CapabilityID.String(),
-		v.TargetPath.String(),
-	)
-}
-
-func (v *StorageCapabilityControllerValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
-	//if remove {
-	//	RemoveReferencedSlab(context, storable)
-	//}
-	return v
-}
-
-func (v *StorageCapabilityControllerValue) GetMember(config *Config, name string) (result Value) {
-	//defer func() {
-	//	switch typedResult := result.(type) {
-	//	case deletionCheckedFunctionValue:
-	//		result = typedResult.FunctionValue
-	//	case FunctionValue:
-	//		panic(errors.NewUnexpectedError("functions need to check deletion. Use newHostFunctionValue"))
-	//	}
-	//}()
-
-	// NOTE: check if controller is already deleted
-	v.checkDeleted()
-
-	switch name {
-	case sema.StorageCapabilityControllerTypeTagFieldName:
-		return v.GetTag(config)
-
-	case sema.StorageCapabilityControllerTypeCapabilityIDFieldName:
-		return v.CapabilityID
-
-	case sema.StorageCapabilityControllerTypeBorrowTypeFieldName:
-		panic(errors.NewUnreachableError())
-		// TODO:
-		//return NewTypeValue(inter, v.BorrowType)
-
-	case sema.StorageCapabilityControllerTypeCapabilityFieldName:
-		return v.GetCapability(config)
-
-	}
-
-	return nil
-}
-
-func init() {
-	typeName := sema.StorageCapabilityControllerType.QualifiedName
-
-	// Capability.borrow
-	RegisterTypeBoundFunction(
-		typeName,
-		sema.StorageCapabilityControllerTypeSetTagFunctionName,
-		NativeFunctionValue{
-			ParameterCount: 0,
-			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
-				capabilityValue := args[0].(*StorageCapabilityControllerValue)
-
-				//stdlib.SetCapabilityControllerTag(config.interpreter())
-
-				capabilityValue.checkDeleted()
-
-				return Nil
-			},
-		})
-}
-
-func (v *StorageCapabilityControllerValue) SetMember(
-	conf *Config,
-	name string,
-	value Value,
-) {
-	// NOTE: check if controller is already deleted
-	v.checkDeleted()
-
-	switch name {
-	case sema.StorageCapabilityControllerTypeTagFieldName:
-		stringValue, ok := value.(*StringValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-		v.SetTag(conf, stringValue)
-	}
-
-	panic(errors.NewUnreachableError())
-}
-
-func (v *StorageCapabilityControllerValue) ControllerCapabilityID() IntValue {
-	return v.CapabilityID
-}
-
-func (v *StorageCapabilityControllerValue) ReferenceValue(
-	capabilityAddress common.Address,
-	resultBorrowType *interpreter.ReferenceStaticType,
-) ReferenceValue {
-	return NewStorageReferenceValue(
-		resultBorrowType.Authorization,
-		capabilityAddress,
-		v.TargetPath,
-		resultBorrowType.ReferencedType,
-	)
-}
-
-// checkDeleted checks if the controller is deleted,
-// and panics if it is.
-func (v *StorageCapabilityControllerValue) checkDeleted() {
-	if v.deleted {
-		panic(errors.NewDefaultUserError("controller is deleted"))
-	}
-}
+//
+//import (
+//	"github.com/onflow/atree"
+//
+//	"github.com/onflow/cadence/bbq"
+//	"github.com/onflow/cadence/common"
+//	"github.com/onflow/cadence/errors"
+//	"github.com/onflow/cadence/format"
+//	"github.com/onflow/cadence/interpreter"
+//	"github.com/onflow/cadence/sema"
+//)
+//
+//type CapabilityControllerValue interface {
+//	Value
+//	isCapabilityControllerValue()
+//	ReferenceValue(
+//		capabilityAddress common.Address,
+//		resultBorrowType *interpreter.ReferenceStaticType,
+//	) ReferenceValue
+//	ControllerCapabilityID() IntValue // TODO: UInt64Value
+//	CapabilityControllerBorrowType() *interpreter.ReferenceStaticType
+//}
+//
+//// StorageCapabilityControllerValue
+//
+//type StorageCapabilityControllerValue struct {
+//	BorrowType   *interpreter.ReferenceStaticType
+//	CapabilityID IntValue
+//	TargetPath   PathValue
+//
+//	// deleted indicates if the controller got deleted. Not stored
+//	deleted bool
+//
+//	// Injected functions.
+//	// Tags are not stored directly inside the controller
+//	// to avoid unnecessary storage reads
+//	// when the controller is loaded for borrowing/checking
+//	GetCapability func(config *Config) *CapabilityValue
+//	GetTag        func(config *Config) *StringValue
+//	SetTag        func(config *Config, tag *StringValue)
+//	Delete        func(config *Config, locationRange interpreter.LocationRange)
+//	SetTarget     func(config *Config, locationRange interpreter.LocationRange, target PathValue)
+//}
+//
+//func NewUnmeteredStorageCapabilityControllerValue(
+//	borrowType *interpreter.ReferenceStaticType,
+//	capabilityID IntValue,
+//	targetPath PathValue,
+//) *StorageCapabilityControllerValue {
+//	return &StorageCapabilityControllerValue{
+//		BorrowType:   borrowType,
+//		TargetPath:   targetPath,
+//		CapabilityID: capabilityID,
+//	}
+//}
+//
+//func NewStorageCapabilityControllerValue(
+//	borrowType *interpreter.ReferenceStaticType,
+//	capabilityID IntValue,
+//	targetPath PathValue,
+//) *StorageCapabilityControllerValue {
+//	return NewUnmeteredStorageCapabilityControllerValue(
+//		borrowType,
+//		capabilityID,
+//		targetPath,
+//	)
+//}
+//
+//var _ Value = &StorageCapabilityControllerValue{}
+//var _ CapabilityControllerValue = &StorageCapabilityControllerValue{}
+//var _ MemberAccessibleValue = &StorageCapabilityControllerValue{}
+//
+//func (*StorageCapabilityControllerValue) isValue() {}
+//
+//func (*StorageCapabilityControllerValue) isCapabilityControllerValue() {}
+//
+//func (v *StorageCapabilityControllerValue) CapabilityControllerBorrowType() *interpreter.ReferenceStaticType {
+//	return v.BorrowType
+//}
+//
+//func (v *StorageCapabilityControllerValue) StaticType(StaticTypeContext) bbq.StaticType {
+//	return interpreter.PrimitiveStaticTypeStorageCapabilityController
+//}
+//
+//func (v *StorageCapabilityControllerValue) String() string {
+//	// TODO: call recursive string
+//	return format.StorageCapabilityController(
+//		v.BorrowType.String(),
+//		v.CapabilityID.String(),
+//		v.TargetPath.String(),
+//	)
+//}
+//
+//func (v *StorageCapabilityControllerValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
+//	//if remove {
+//	//	RemoveReferencedSlab(context, storable)
+//	//}
+//	return v
+//}
+//
+//func (v *StorageCapabilityControllerValue) GetMember(config *Config, name string) (result Value) {
+//	//defer func() {
+//	//	switch typedResult := result.(type) {
+//	//	case deletionCheckedFunctionValue:
+//	//		result = typedResult.FunctionValue
+//	//	case FunctionValue:
+//	//		panic(errors.NewUnexpectedError("functions need to check deletion. Use newHostFunctionValue"))
+//	//	}
+//	//}()
+//
+//	// NOTE: check if controller is already deleted
+//	v.checkDeleted()
+//
+//	switch name {
+//	case sema.StorageCapabilityControllerTypeTagFieldName:
+//		return v.GetTag(config)
+//
+//	case sema.StorageCapabilityControllerTypeCapabilityIDFieldName:
+//		return v.CapabilityID
+//
+//	case sema.StorageCapabilityControllerTypeBorrowTypeFieldName:
+//		panic(errors.NewUnreachableError())
+//		// TODO:
+//		//return NewTypeValue(inter, v.BorrowType)
+//
+//	case sema.StorageCapabilityControllerTypeCapabilityFieldName:
+//		return v.GetCapability(config)
+//
+//	}
+//
+//	return nil
+//}
+//
+//func init() {
+//	typeName := sema.StorageCapabilityControllerType.QualifiedName
+//
+//	// Capability.borrow
+//	RegisterTypeBoundFunction(
+//		typeName,
+//		sema.StorageCapabilityControllerTypeSetTagFunctionName,
+//		NativeFunctionValue{
+//			ParameterCount: 0,
+//			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+//				capabilityValue := args[0].(*StorageCapabilityControllerValue)
+//
+//				//stdlib.SetCapabilityControllerTag(config.interpreter())
+//
+//				capabilityValue.checkDeleted()
+//
+//				return Nil
+//			},
+//		})
+//}
+//
+//func (v *StorageCapabilityControllerValue) SetMember(
+//	conf *Config,
+//	name string,
+//	value Value,
+//) {
+//	// NOTE: check if controller is already deleted
+//	v.checkDeleted()
+//
+//	switch name {
+//	case sema.StorageCapabilityControllerTypeTagFieldName:
+//		stringValue, ok := value.(*StringValue)
+//		if !ok {
+//			panic(errors.NewUnreachableError())
+//		}
+//		v.SetTag(conf, stringValue)
+//	}
+//
+//	panic(errors.NewUnreachableError())
+//}
+//
+//func (v *StorageCapabilityControllerValue) ControllerCapabilityID() IntValue {
+//	return v.CapabilityID
+//}
+//
+//func (v *StorageCapabilityControllerValue) ReferenceValue(
+//	capabilityAddress common.Address,
+//	resultBorrowType *interpreter.ReferenceStaticType,
+//) ReferenceValue {
+//	return NewStorageReferenceValue(
+//		resultBorrowType.Authorization,
+//		capabilityAddress,
+//		v.TargetPath,
+//		resultBorrowType.ReferencedType,
+//	)
+//}
+//
+//// checkDeleted checks if the controller is deleted,
+//// and panics if it is.
+//func (v *StorageCapabilityControllerValue) checkDeleted() {
+//	if v.deleted {
+//		panic(errors.NewDefaultUserError("controller is deleted"))
+//	}
+//}

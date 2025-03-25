@@ -18,84 +18,85 @@
 
 package vm
 
-import (
-	"github.com/onflow/atree"
-
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/format"
-	"github.com/onflow/cadence/interpreter"
-)
-
-type ReferenceValue interface {
-	Value
-	//AuthorizedValue
-	isReference()
-	ReferencedValue(config *Config, errorOnFailedDereference bool) *Value
-	BorrowType() interpreter.StaticType
-}
-
-type EphemeralReferenceValue struct {
-	Value Value
-	// BorrowedType is the T in &T
-	BorrowedType  interpreter.StaticType
-	Authorization interpreter.Authorization
-}
-
-var _ Value = &EphemeralReferenceValue{}
-var _ MemberAccessibleValue = &EphemeralReferenceValue{}
-var _ ReferenceValue = &EphemeralReferenceValue{}
-
-func NewEphemeralReferenceValue(
-	referenceTracker ReferenceTracker,
-	value Value,
-	authorization interpreter.Authorization,
-	borrowedType interpreter.StaticType,
-) *EphemeralReferenceValue {
-	ref := &EphemeralReferenceValue{
-		Value:         value,
-		Authorization: authorization,
-		BorrowedType:  borrowedType,
-	}
-
-	referenceTracker.MaybeTrackReferencedResourceKindedValue(ref)
-
-	return ref
-}
-
-func (*EphemeralReferenceValue) isValue() {}
-
-func (v *EphemeralReferenceValue) isReference() {}
-
-func (v *EphemeralReferenceValue) ReferencedValue(*Config, bool) *Value {
-	return &v.Value
-}
-
-func (v *EphemeralReferenceValue) BorrowType() interpreter.StaticType {
-	return v.BorrowedType
-}
-
-func (v *EphemeralReferenceValue) StaticType(staticTypeContext StaticTypeContext) bbq.StaticType {
-	return interpreter.NewReferenceStaticType(
-		staticTypeContext,
-		v.Authorization,
-		v.Value.StaticType(staticTypeContext),
-	)
-}
-
-func (v *EphemeralReferenceValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
-	return v
-}
-
-func (v *EphemeralReferenceValue) String() string {
-	return format.StorageReference
-}
-
-func (v *EphemeralReferenceValue) GetMember(config *Config, name string) Value {
-	memberAccessibleValue := v.Value.(MemberAccessibleValue)
-	return memberAccessibleValue.GetMember(config, name)
-}
-
-func (v *EphemeralReferenceValue) SetMember(config *Config, name string, value Value) {
-	memberAccessibleValue := v.Value.(MemberAccessibleValue)
-	memberAccessibleValue.SetMember(config, name, value)
-}
+//
+//import (
+//	"github.com/onflow/atree"
+//
+//	"github.com/onflow/cadence/bbq"
+//	"github.com/onflow/cadence/format"
+//	"github.com/onflow/cadence/interpreter"
+//)
+//
+//type ReferenceValue interface {
+//	Value
+//	//AuthorizedValue
+//	isReference()
+//	ReferencedValue(config *Config, errorOnFailedDereference bool) *Value
+//	BorrowType() interpreter.StaticType
+//}
+//
+//type EphemeralReferenceValue struct {
+//	Value Value
+//	// BorrowedType is the T in &T
+//	BorrowedType  interpreter.StaticType
+//	Authorization interpreter.Authorization
+//}
+//
+//var _ Value = &EphemeralReferenceValue{}
+//var _ MemberAccessibleValue = &EphemeralReferenceValue{}
+//var _ ReferenceValue = &EphemeralReferenceValue{}
+//
+//func NewEphemeralReferenceValue(
+//	referenceTracker ReferenceTracker,
+//	value Value,
+//	authorization interpreter.Authorization,
+//	borrowedType interpreter.StaticType,
+//) *EphemeralReferenceValue {
+//	ref := &EphemeralReferenceValue{
+//		Value:         value,
+//		Authorization: authorization,
+//		BorrowedType:  borrowedType,
+//	}
+//
+//	referenceTracker.MaybeTrackReferencedResourceKindedValue(ref)
+//
+//	return ref
+//}
+//
+//func (*EphemeralReferenceValue) isValue() {}
+//
+//func (v *EphemeralReferenceValue) isReference() {}
+//
+//func (v *EphemeralReferenceValue) ReferencedValue(*Config, bool) *Value {
+//	return &v.Value
+//}
+//
+//func (v *EphemeralReferenceValue) BorrowType() interpreter.StaticType {
+//	return v.BorrowedType
+//}
+//
+//func (v *EphemeralReferenceValue) StaticType(staticTypeContext StaticTypeContext) bbq.StaticType {
+//	return interpreter.NewReferenceStaticType(
+//		staticTypeContext,
+//		v.Authorization,
+//		v.Value.StaticType(staticTypeContext),
+//	)
+//}
+//
+//func (v *EphemeralReferenceValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
+//	return v
+//}
+//
+//func (v *EphemeralReferenceValue) String() string {
+//	return format.StorageReference
+//}
+//
+//func (v *EphemeralReferenceValue) GetMember(config *Config, name string) Value {
+//	memberAccessibleValue := v.Value.(MemberAccessibleValue)
+//	return memberAccessibleValue.GetMember(config, name)
+//}
+//
+//func (v *EphemeralReferenceValue) SetMember(config *Config, name string, value Value) {
+//	memberAccessibleValue := v.Value.(MemberAccessibleValue)
+//	memberAccessibleValue.SetMember(config, name, value)
+//}

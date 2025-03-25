@@ -18,85 +18,77 @@
 
 package vm
 
-import (
-	"github.com/onflow/atree"
-
-	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/interpreter"
-)
-
 //	type Storage interface {
 //		atree.SlabStorage
 //		GetStorageMap(address common.Address, domain string, createIfNotExists bool) *StorageMap
 //		CheckHealth() error
 //	}
-
-func StoredValue(gauge common.MemoryGauge, storable atree.Storable, storage interpreter.Storage) Value {
-	value := interpreter.StoredValue(gauge, storable, storage)
-	return InterpreterValueToVMValue(value)
-}
-
-func MustConvertStoredValue(gauge common.MemoryGauge, storedValue atree.Value) Value {
-	value := interpreter.MustConvertStoredValue(gauge, storedValue)
-	return InterpreterValueToVMValue(value)
-}
-
-func ReadStored(
-	storageReader interpreter.StorageReader,
-	address common.Address,
-	domain string,
-	identifier string,
-) Value {
-	storageDomain, _ := common.StorageDomainFromIdentifier(domain)
-	referenced := storageReader.ReadStored(address, storageDomain, interpreter.StringStorageMapKey(identifier))
-	return InterpreterValueToVMValue(referenced)
-}
-
-func WriteStored(
-	storageContext StorageContext,
-	storageAddress common.Address,
-	domain common.StorageDomain,
-	key interpreter.StorageMapKey,
-	value Value,
-) (existed bool) {
-
-	interValue := VMValueToInterpreterValue(storageContext, value)
-
-	return storageContext.WriteStored(storageAddress, domain, key, interValue)
-	//interpreter.recordStorageMutation()
-}
-
-func RemoveReferencedSlab(storage interpreter.Storage, storable atree.Storable) {
-	slabIDStorable, ok := storable.(atree.SlabIDStorable)
-	if !ok {
-		return
-	}
-
-	slabID := atree.SlabID(slabIDStorable)
-	err := storage.Remove(slabID)
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
-}
-
-func StoredValueExists(
-	config *Config,
-	storageAddress common.Address,
-	domain common.StorageDomain,
-	identifier interpreter.StorageMapKey,
-) bool {
-	accountStorage := config.storage.GetDomainStorageMap(
-		config.Interpreter(),
-		storageAddress,
-		domain,
-		false,
-	)
-	if accountStorage == nil {
-		return false
-	}
-	return accountStorage.ValueExists(identifier)
-}
+//
+//func StoredValue(gauge common.MemoryGauge, storable atree.Storable, storage interpreter.Storage) Value {
+//	value := interpreter.StoredValue(gauge, storable, storage)
+//	return InterpreterValueToVMValue(value)
+//}
+//
+//func MustConvertStoredValue(gauge common.MemoryGauge, storedValue atree.Value) Value {
+//	value := interpreter.MustConvertStoredValue(gauge, storedValue)
+//	return InterpreterValueToVMValue(value)
+//}
+//
+//func ReadStored(
+//	storageReader interpreter.StorageReader,
+//	address common.Address,
+//	domain string,
+//	identifier string,
+//) Value {
+//	storageDomain, _ := common.StorageDomainFromIdentifier(domain)
+//	referenced := storageReader.ReadStored(address, storageDomain, interpreter.StringStorageMapKey(identifier))
+//	return InterpreterValueToVMValue(referenced)
+//}
+//
+//func WriteStored(
+//	storageContext StorageContext,
+//	storageAddress common.Address,
+//	domain common.StorageDomain,
+//	key interpreter.StorageMapKey,
+//	value Value,
+//) (existed bool) {
+//
+//	interValue := VMValueToInterpreterValue(storageContext, value)
+//
+//	return storageContext.WriteStored(storageAddress, domain, key, interValue)
+//	//interpreter.recordStorageMutation()
+//}
+//
+//func RemoveReferencedSlab(storage interpreter.Storage, storable atree.Storable) {
+//	slabIDStorable, ok := storable.(atree.SlabIDStorable)
+//	if !ok {
+//		return
+//	}
+//
+//	slabID := atree.SlabID(slabIDStorable)
+//	err := storage.Remove(slabID)
+//	if err != nil {
+//		panic(errors.NewExternalError(err))
+//	}
+//}
+//
+//func StoredValueExists(
+//	config *Config,
+//	storageAddress common.Address,
+//	domain common.StorageDomain,
+//	identifier interpreter.StorageMapKey,
+//) bool {
+//	accountStorage := config.storage.GetDomainStorageMap(
+//		config.Interpreter(),
+//		storageAddress,
+//		domain,
+//		false,
+//	)
+//	if accountStorage == nil {
+//		return false
+//	}
+//	return accountStorage.ValueExists(identifier)
+//}
 
 //
 //// InMemoryStorage

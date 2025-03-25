@@ -18,27 +18,28 @@
 
 package vm
 
-import "github.com/onflow/cadence/interpreter"
-
-const goIntSize = 32 << (^uint(0) >> 63) // 32 or 64
-const goMaxInt = 1<<(goIntSize-1) - 1
-const goMinInt = -1 << (goIntSize - 1)
-
-func safeAdd(a, b int) int {
-	// INT32-C
-	if (b > 0) && (a > (goMaxInt - b)) {
-		panic(interpreter.OverflowError{})
-	} else if (b < 0) && (a < (goMinInt - b)) {
-		panic(interpreter.UnderflowError{})
-	}
-	return a + b
-}
-
-func safeAddUint64(a, b uint64) uint64 {
-	sum := a + b
-	// INT30-C
-	if sum < a {
-		panic(interpreter.OverflowError{})
-	}
-	return sum
-}
+//
+//import "github.com/onflow/cadence/interpreter"
+//
+//const goIntSize = 32 << (^uint(0) >> 63) // 32 or 64
+//const goMaxInt = 1<<(goIntSize-1) - 1
+//const goMinInt = -1 << (goIntSize - 1)
+//
+//func safeAdd(a, b int) int {
+//	// INT32-C
+//	if (b > 0) && (a > (goMaxInt - b)) {
+//		panic(interpreter.OverflowError{})
+//	} else if (b < 0) && (a < (goMinInt - b)) {
+//		panic(interpreter.UnderflowError{})
+//	}
+//	return a + b
+//}
+//
+//func safeAddUint64(a, b uint64) uint64 {
+//	sum := a + b
+//	// INT30-C
+//	if sum < a {
+//		panic(interpreter.OverflowError{})
+//	}
+//	return sum
+//}
