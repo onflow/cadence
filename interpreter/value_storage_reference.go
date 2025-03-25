@@ -467,3 +467,8 @@ func forEachReference(
 func (v *StorageReferenceValue) BorrowType() sema.Type {
 	return v.BorrowedType
 }
+
+func (v *StorageReferenceValue) Iterator(context ValueStaticTypeContext, locationRange LocationRange) ValueIterator {
+	//TODO implement me
+	panic("implement me")
+}
