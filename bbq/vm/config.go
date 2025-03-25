@@ -169,30 +169,60 @@ func (c *Config) IsSubTypeOfSemaType(staticSubType interpreter.StaticType, super
 	return interpreter.IsSubTypeOfSemaType(inter, staticSubType, superType)
 }
 
+func (c *Config) GetInterfaceType(
+	location common.Location,
+	_ string,
+	typeID interpreter.TypeID,
+) (*sema.InterfaceType, error) {
+
+	// TODO: Lookup in built-in types
+
+	compositeKindedType := c.TypeLoader(location, typeID)
+	if compositeKindedType != nil {
+
+		inter, ok := compositeKindedType.(*sema.InterfaceType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		return inter, nil
+	}
+
+	return nil, interpreter.TypeLoadingError{
+		TypeID: typeID,
+	}
+}
+
+func (c *Config) GetCompositeType(
+	location common.Location,
+	_ string,
+	typeID interpreter.TypeID,
+) (*sema.CompositeType, error) {
+
+	// TODO: Lookup in built-in types
+
+	compositeKindedType := c.TypeLoader(location, typeID)
+	if compositeKindedType != nil {
+
+		compositeType, ok := compositeKindedType.(*sema.CompositeType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		return compositeType, nil
+	}
+
+	return nil, interpreter.TypeLoadingError{
+		TypeID: typeID,
+	}
+}
+
 func (c *Config) GetEntitlementType(typeID interpreter.TypeID) (*sema.EntitlementType, error) {
 	//TODO
 	panic(errors.NewUnreachableError())
 }
 
 func (c *Config) GetEntitlementMapType(typeID interpreter.TypeID) (*sema.EntitlementMapType, error) {
-	//TODO
-	panic(errors.NewUnreachableError())
-}
-
-func (c *Config) GetInterfaceType(
-	location common.Location,
-	qualifiedIdentifier string,
-	typeID interpreter.TypeID,
-) (*sema.InterfaceType, error) {
-	//TODO
-	panic(errors.NewUnreachableError())
-}
-
-func (c *Config) GetCompositeType(
-	location common.Location,
-	qualifiedIdentifier string,
-	typeID interpreter.TypeID,
-) (*sema.CompositeType, error) {
 	//TODO
 	panic(errors.NewUnreachableError())
 }
