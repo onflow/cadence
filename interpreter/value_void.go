@@ -43,7 +43,7 @@ func (v VoidValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationR
 	visitor.VisitVoidValue(interpreter, v)
 }
 
-func (VoidValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (VoidValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 

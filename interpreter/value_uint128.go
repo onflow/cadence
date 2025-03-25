@@ -80,7 +80,7 @@ func (v UInt128Value) Accept(interpreter *Interpreter, visitor Visitor, _ Locati
 	visitor.VisitUInt128Value(interpreter, v)
 }
 
-func (UInt128Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (UInt128Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 

@@ -62,7 +62,7 @@ func (v TypeValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationR
 	visitor.VisitTypeValue(interpreter, v)
 }
 
-func (TypeValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (TypeValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 

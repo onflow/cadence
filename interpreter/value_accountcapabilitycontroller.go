@@ -93,7 +93,7 @@ func (v *AccountCapabilityControllerValue) Accept(interpreter *Interpreter, visi
 	visitor.VisitAccountCapabilityControllerValue(interpreter, v)
 }
 
-func (v *AccountCapabilityControllerValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
+func (v *AccountCapabilityControllerValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {
 	walkChild(v.CapabilityID)
 }
 

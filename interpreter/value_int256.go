@@ -80,7 +80,7 @@ func (v Int256Value) Accept(interpreter *Interpreter, visitor Visitor, _ Locatio
 	visitor.VisitInt256Value(interpreter, v)
 }
 
-func (Int256Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (Int256Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 

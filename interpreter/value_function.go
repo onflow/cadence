@@ -99,7 +99,7 @@ func (f *InterpretedFunctionValue) Accept(interpreter *Interpreter, visitor Visi
 	visitor.VisitInterpretedFunctionValue(interpreter, f)
 }
 
-func (f *InterpretedFunctionValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (f *InterpretedFunctionValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -233,7 +233,7 @@ func (f *HostFunctionValue) Accept(interpreter *Interpreter, visitor Visitor, _ 
 	visitor.VisitHostFunctionValue(interpreter, f)
 }
 
-func (f *HostFunctionValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (f *HostFunctionValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -409,7 +409,7 @@ func (f BoundFunctionValue) Accept(interpreter *Interpreter, visitor Visitor, _ 
 	visitor.VisitBoundFunctionValue(interpreter, f)
 }
 
-func (f BoundFunctionValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (f BoundFunctionValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 

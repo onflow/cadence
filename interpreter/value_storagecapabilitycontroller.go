@@ -114,7 +114,7 @@ func (v *StorageCapabilityControllerValue) Accept(interpreter *Interpreter, visi
 	visitor.VisitStorageCapabilityControllerValue(interpreter, v)
 }
 
-func (v *StorageCapabilityControllerValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
+func (v *StorageCapabilityControllerValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {
 	walkChild(v.TargetPath)
 	walkChild(v.CapabilityID)
 }

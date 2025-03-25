@@ -86,7 +86,7 @@ func (v *PublishedValue) MeteredString(context ValueStringContext, seenReference
 	)
 }
 
-func (v *PublishedValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
+func (v *PublishedValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {
 	walkChild(v.Recipient)
 	walkChild(v.Value)
 }

@@ -80,7 +80,7 @@ func (v *StorageReferenceValue) Accept(interpreter *Interpreter, visitor Visitor
 	visitor.VisitStorageReferenceValue(interpreter, v)
 }
 
-func (*StorageReferenceValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (*StorageReferenceValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 	// NOTE: *not* walking referenced value!
 }

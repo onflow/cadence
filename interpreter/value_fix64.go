@@ -90,7 +90,7 @@ func (v Fix64Value) Accept(interpreter *Interpreter, visitor Visitor, _ Location
 	visitor.VisitFix64Value(interpreter, v)
 }
 
-func (Fix64Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (Fix64Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 

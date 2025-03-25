@@ -83,7 +83,7 @@ func (v CharacterValue) Accept(interpreter *Interpreter, visitor Visitor, _ Loca
 	visitor.VisitCharacterValue(interpreter, v)
 }
 
-func (CharacterValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (CharacterValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 

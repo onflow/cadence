@@ -64,7 +64,7 @@ func (v Int8Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationR
 	visitor.VisitInt8Value(interpreter, v)
 }
 
-func (Int8Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (Int8Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 

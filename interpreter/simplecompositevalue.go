@@ -94,7 +94,7 @@ func (v *SimpleCompositeValue) ForEachField(
 
 // Walk iterates over all field values of the composite value.
 // It does NOT walk the computed fields and functions!
-func (v *SimpleCompositeValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
+func (v *SimpleCompositeValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {
 	v.ForEachField(func(_ string, fieldValue Value) (resume bool) {
 		walkChild(fieldValue)
 

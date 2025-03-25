@@ -98,7 +98,7 @@ func (v AddressValue) Accept(interpreter *Interpreter, visitor Visitor, _ Locati
 	visitor.VisitAddressValue(interpreter, v)
 }
 
-func (AddressValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (AddressValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 

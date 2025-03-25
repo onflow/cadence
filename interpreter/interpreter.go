@@ -5753,7 +5753,7 @@ func (interpreter *Interpreter) EnforceNotResourceDestruction(
 	}
 }
 
-func (interpreter *Interpreter) withResourceDestruction(
+func (interpreter *Interpreter) WithResourceDestruction(
 	valueID atree.ValueID,
 	locationRange LocationRange,
 	f func(),
@@ -5834,6 +5834,14 @@ func (interpreter *Interpreter) MaybeSetMutationDuringCapConIteration(addressPat
 }
 
 func (interpreter *Interpreter) GetMemberAccessContextForLocation(location common.Location) MemberAccessibleContext {
+	return interpreter.ensureLoaded(location)
+}
+
+func (interpreter *Interpreter) GetResourceDestructionContextForLocation(location common.Location) ResourceDestructionContext {
+	return interpreter.ensureLoaded(location)
+}
+
+func (interpreter *Interpreter) ensureLoaded(location common.Location) MemberAccessibleContext {
 	if location == nil || interpreter.Location == location {
 		return interpreter
 	}

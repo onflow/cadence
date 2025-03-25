@@ -64,7 +64,7 @@ func (v Word8Value) Accept(interpreter *Interpreter, visitor Visitor, _ Location
 	visitor.VisitWord8Value(interpreter, v)
 }
 
-func (Word8Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (Word8Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 

@@ -62,7 +62,7 @@ func (v PathValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationR
 	visitor.VisitPathValue(interpreter, v)
 }
 
-func (PathValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (PathValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 

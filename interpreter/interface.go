@@ -160,10 +160,16 @@ var _ MemberAccessibleContext = &Interpreter{}
 
 type FunctionCreationContext interface {
 	StaticTypeAndReferenceContext
-	GetCompositeValueFunctions(v *CompositeValue, locationRange LocationRange) *FunctionOrderedMap
+	CompositeFunctionContext
 }
 
 var _ FunctionCreationContext = &Interpreter{}
+
+type CompositeFunctionContext interface {
+	GetCompositeValueFunctions(v *CompositeValue, locationRange LocationRange) *FunctionOrderedMap
+}
+
+var _ CompositeFunctionContext = &Interpreter{}
 
 type StaticTypeAndReferenceContext interface {
 	common.MemoryGauge
@@ -196,9 +202,38 @@ type ResourceDestructionHandler interface {
 		valueID atree.ValueID,
 		locationRange LocationRange,
 	)
+
+	WithResourceDestruction(
+		valueID atree.ValueID,
+		locationRange LocationRange,
+		f func(),
+	)
 }
 
 var _ ResourceDestructionHandler = &Interpreter{}
+
+type ResourceDestructionContext interface {
+	ValueWalkContext
+	ResourceDestructionHandler
+	CompositeFunctionContext
+	EventContext
+
+	GetResourceDestructionContextForLocation(location common.Location) ResourceDestructionContext
+}
+
+var _ ResourceDestructionContext = &Interpreter{}
+
+type ValueWalkContext interface {
+	ContainerMutationContext
+}
+
+var _ ValueWalkContext = &Interpreter{}
+
+type EventContext interface {
+	emitEvent(event *CompositeValue, eventType *sema.CompositeType, locationRange LocationRange)
+}
+
+var _ EventContext = &Interpreter{}
 
 // NoOpStringContext is the ValueStringContext implementation used in Value.RecursiveString method.
 // Since Value.RecursiveString is a non-mutating operation, it should only need the no-op memory metering
@@ -288,11 +323,19 @@ func (n NoOpStringContext) reportArrayValueConstructTrace(_ string, _ int, _ tim
 	panic(errors.NewUnreachableError())
 }
 
+func (n NoOpStringContext) reportArrayValueDestroyTrace(_ string, _ int, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
 func (n NoOpStringContext) reportDictionaryValueTransferTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
 func (n NoOpStringContext) reportDictionaryValueDeepRemoveTrace(_ string, _ int, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (n NoOpStringContext) reportDictionaryValueDestroyTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -308,7 +351,7 @@ func (n NoOpStringContext) reportCompositeValueTransferTrace(_ string, _ string,
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) reportCompositeValueSetMemberTrace(_ string, id string, _ string, _ string, _ time.Duration) {
+func (n NoOpStringContext) reportCompositeValueSetMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -317,6 +360,10 @@ func (c NoOpStringContext) reportCompositeValueGetMemberTrace(_ string, _ string
 }
 
 func (n NoOpStringContext) reportDomainStorageMapDeepRemoveTrace(_ string, _ int, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (n NoOpStringContext) reportCompositeValueDestroyTrace(_ string, _ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -344,6 +391,6 @@ func (n NoOpStringContext) GetCompositeType(_ common.Location, _ string, _ TypeI
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) IsRecovered(location common.Location) bool {
+func (n NoOpStringContext) IsRecovered(_ common.Location) bool {
 	panic(errors.NewUnreachableError())
 }
