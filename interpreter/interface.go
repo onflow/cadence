@@ -138,6 +138,7 @@ type MemberAccessibleContext interface {
 
 	AccountHandler() AccountHandlerFunc
 	InjectedCompositeFieldsHandler() InjectedCompositeFieldsHandlerFunc
+	GetMemberAccessContextForLocation(location common.Location) MemberAccessibleContext
 }
 
 type FunctionCreationContext interface {
