@@ -1165,7 +1165,7 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 
 	case constantkind.UFix64:
 		smallInt, _, _ := leb128.ReadUint64(constant.Data)
-		value = interpreter.NewUnmeteredFix64Value(int64(smallInt))
+		value = interpreter.NewUnmeteredUFix64Value(smallInt)
 
 	default:
 		// TODO:

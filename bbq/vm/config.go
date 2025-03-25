@@ -92,8 +92,12 @@ func (c *Config) Interpreter() *interpreter.Interpreter {
 			nil,
 			common_utils.TestLocation,
 			&interpreter.Config{
-				Storage:               c.storage,
-				ImportLocationHandler: nil,
+				Storage: c.storage,
+				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+					return interpreter.InterpreterImport{
+						Interpreter: inter,
+					}
+				},
 				CompositeTypeHandler: func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 					return c.TypeLoader(location, typeID).(*sema.CompositeType)
 				},

@@ -20,6 +20,7 @@ package test
 
 import (
 	"fmt"
+	"github.com/onflow/cadence/test_utils/interpreter_utils"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -1587,7 +1588,7 @@ func TestTransaction(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		assert.Equal(t, []string{"2", "10"}, logs)
+		assert.Equal(t, []string{"\"2\"", "\"10\""}, logs)
 	})
 
 	t.Run("conditions without execute", func(t *testing.T) {
@@ -1674,7 +1675,7 @@ func TestTransaction(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		assert.Equal(t, []string{"2", "2"}, logs)
+		assert.Equal(t, []string{"\"2\"", "\"2\""}, logs)
 	})
 
 	t.Run("pre condition failed", func(t *testing.T) {
@@ -1766,7 +1767,7 @@ func TestTransaction(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "pre/post condition failed")
 
-		assert.Equal(t, []string{"2"}, logs)
+		assert.Equal(t, []string{"\"2\""}, logs)
 	})
 
 	t.Run("post condition failed", func(t *testing.T) {
@@ -1858,7 +1859,7 @@ func TestTransaction(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "pre/post condition failed")
 
-		assert.Equal(t, []string{"2", "10"}, logs)
+		assert.Equal(t, []string{"\"2\"", "\"10\""}, logs)
 	})
 }
 
@@ -2437,7 +2438,7 @@ func TestReference(t *testing.T) {
 	t.Run("method call", func(t *testing.T) {
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
+		code := `
             struct Foo {
                 var id : String
 
@@ -2455,19 +2456,10 @@ func TestReference(t *testing.T) {
                 var ref = &foo as &Foo
                 return ref.sayHello(1)
             }
-        `)
+        `
+
+		result, err := compileAndInvoke(t, code, "test")
 		require.NoError(t, err)
-
-		comp := compiler.NewInstructionCompiler(checker)
-		program := comp.Compile()
-
-		vmConfig := vm.NewConfig(nil)
-
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-
-		result, err := vmInstance.Invoke("test")
-		require.NoError(t, err)
-		require.Equal(t, 0, vmInstance.StackSize())
 
 		require.Equal(t, interpreter.NewUnmeteredStringValue("Hello from Foo!"), result)
 	})
@@ -4724,7 +4716,7 @@ func TestFixedPoint(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t,
-				interpreter.NewUnmeteredFix64Value(10*sema.Fix64Factor),
+				interpreter.NewUnmeteredUFix64Value(10*sema.Fix64Factor),
 				result,
 			)
 		})
@@ -5178,7 +5170,7 @@ func TestBinary(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			assert.Equal(t, expected, actual)
+			interpreter_utils.ValuesAreEqual(nil, expected, actual)
 		})
 	}
 
