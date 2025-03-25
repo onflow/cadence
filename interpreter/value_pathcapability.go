@@ -65,7 +65,7 @@ func (v *PathCapabilityValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange)
 	panic(errors.NewUnreachableError())
 }
 
-func (v *PathCapabilityValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
+func (v *PathCapabilityValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {
 	walkChild(v.address)
 	walkChild(v.Path)
 }

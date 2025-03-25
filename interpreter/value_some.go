@@ -88,7 +88,7 @@ func (v *SomeValue) Accept(interpreter *Interpreter, visitor Visitor, locationRa
 	v.value.Accept(interpreter, visitor, locationRange)
 }
 
-func (v *SomeValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
+func (v *SomeValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {
 	walkChild(v.value)
 }
 
@@ -126,9 +126,9 @@ func (v *SomeValue) IsDestroyed() bool {
 	return v.isDestroyed
 }
 
-func (v *SomeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
+func (v *SomeValue) Destroy(context ResourceDestructionContext, locationRange LocationRange) {
 	innerValue := v.InnerValue()
-	maybeDestroy(interpreter, locationRange, innerValue)
+	maybeDestroy(context, locationRange, innerValue)
 
 	v.isDestroyed = true
 	v.value = nil

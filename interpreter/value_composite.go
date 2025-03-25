@@ -258,7 +258,7 @@ func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor, locat
 
 // Walk iterates over all field values of the composite value.
 // It does NOT walk the computed field or functions!
-func (v *CompositeValue) Walk(interpreter *Interpreter, walkChild func(Value), locationRange LocationRange) {
+func (v *CompositeValue) Walk(interpreter ValueWalkContext, walkChild func(Value), locationRange LocationRange) {
 	v.ForEachField(interpreter, func(_ string, value Value) (resume bool) {
 		walkChild(value)
 
@@ -329,13 +329,11 @@ func (v *CompositeValue) defaultDestroyEventConstructors() (constructors []Funct
 	return
 }
 
-func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
+func (v *CompositeValue) Destroy(context ResourceDestructionContext, locationRange LocationRange) {
 
-	interpreter.ReportComputation(common.ComputationKindDestroyCompositeValue, 1)
+	context.ReportComputation(common.ComputationKindDestroyCompositeValue, 1)
 
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		owner := v.GetOwner().String()
@@ -344,7 +342,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 		defer func() {
 
-			interpreter.reportCompositeValueDestroyTrace(
+			context.ReportCompositeValueDestroyTrace(
 				owner,
 				typeID,
 				kind,
@@ -362,14 +360,14 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 	// so that we can leverage existing atree encoding and decoding. However, we need to make sure functions are initialized
 	// if the composite was recently loaded from storage
 	if v.Functions == nil {
-		v.Functions = interpreter.SharedState.typeCodes.CompositeCodes[v.TypeID()].CompositeFunctions
+		v.Functions = context.GetCompositeValueFunctions(v, locationRange)
 	}
 	for _, constructor := range v.defaultDestroyEventConstructors() {
 
 		// pass the container value to the creation of the default event as an implicit argument, so that
 		// its fields are accessible in the body of the event constructor
 		eventConstructorInvocation := NewInvocation(
-			interpreter,
+			context,
 			nil,
 			nil,
 			nil,
@@ -380,26 +378,26 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 		)
 
 		event := constructor.invoke(eventConstructorInvocation).(*CompositeValue)
-		eventType := MustSemaTypeOfValue(event, interpreter).(*sema.CompositeType)
+		eventType := MustSemaTypeOfValue(event, context).(*sema.CompositeType)
 
 		// emit the event once destruction is complete
-		defer interpreter.emitEvent(event, eventType, locationRange)
+		defer context.EmitEvent(event, eventType, locationRange)
 	}
 
 	valueID := v.ValueID()
 
-	interpreter.withResourceDestruction(
+	context.WithResourceDestruction(
 		valueID,
 		locationRange,
 		func() {
-			interpreter = v.getInterpreter(interpreter)
+			contextForLocation := context.GetResourceDestructionContextForLocation(v.Location)
 
 			// destroy every nested resource in this composite; note that this iteration includes attachments
-			v.ForEachField(interpreter, func(_ string, fieldValue Value) bool {
+			v.ForEachField(contextForLocation, func(_ string, fieldValue Value) bool {
 				if compositeFieldValue, ok := fieldValue.(*CompositeValue); ok && compositeFieldValue.Kind == common.CompositeKindAttachment {
 					compositeFieldValue.setBaseValue(v)
 				}
-				maybeDestroy(interpreter, locationRange, fieldValue)
+				maybeDestroy(contextForLocation, locationRange, fieldValue)
 				return true
 			}, locationRange)
 		},
@@ -407,7 +405,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 	v.isDestroyed = true
 
-	InvalidateReferencedResources(interpreter, v, locationRange)
+	InvalidateReferencedResources(context, v, locationRange)
 
 	v.dictionary = nil
 }
@@ -504,20 +502,6 @@ func (v *CompositeValue) isInvalidatedResource(context ValueStaticTypeContext) b
 
 func (v *CompositeValue) IsStaleResource(inter *Interpreter) bool {
 	return v.dictionary == nil && v.IsResourceKinded(inter)
-}
-
-func (v *CompositeValue) getInterpreter(interpreter *Interpreter) *Interpreter {
-
-	// Get the correct interpreter. The program code might need to be loaded.
-	// NOTE: standard library values have no location
-
-	location := v.Location
-
-	if location == nil || interpreter.Location == location {
-		return interpreter
-	}
-
-	return interpreter.EnsureLoaded(v.Location)
 }
 
 func (v *CompositeValue) GetComputedFields() map[string]ComputedField {

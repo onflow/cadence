@@ -65,7 +65,7 @@ func (v Word32Value) Accept(interpreter *Interpreter, visitor Visitor, _ Locatio
 	visitor.VisitWord32Value(interpreter, v)
 }
 
-func (Word32Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (Word32Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 

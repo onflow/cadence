@@ -93,7 +93,7 @@ type Value interface {
 	fmt.Stringer
 	//isValue()
 	Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange)
-	Walk(interpreter *Interpreter, walkChild func(Value), locationRange LocationRange)
+	Walk(interpreter ValueWalkContext, walkChild func(Value), locationRange LocationRange)
 	StaticType(context ValueStaticTypeContext) StaticType
 	// ConformsToStaticType returns true if the value (i.e. its dynamic type)
 	// conforms to its own static type.
@@ -196,18 +196,18 @@ type ComparableValue interface {
 
 type ResourceKindedValue interface {
 	Value
-	Destroy(interpreter *Interpreter, locationRange LocationRange)
+	Destroy(context ResourceDestructionContext, locationRange LocationRange)
 	IsDestroyed() bool
 	isInvalidatedResource(context ValueStaticTypeContext) bool
 }
 
-func maybeDestroy(interpreter *Interpreter, locationRange LocationRange, value Value) {
+func maybeDestroy(context ResourceDestructionContext, locationRange LocationRange, value Value) {
 	resourceKindedValue, ok := value.(ResourceKindedValue)
 	if !ok {
 		return
 	}
 
-	resourceKindedValue.Destroy(interpreter, locationRange)
+	resourceKindedValue.Destroy(context, locationRange)
 }
 
 // ReferenceTrackedResourceKindedValue is a resource-kinded value
