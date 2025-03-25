@@ -154,42 +154,24 @@ func (v *EphemeralReferenceValue) SetMember(context MemberAccessibleContext, loc
 	return setMember(context, v.Value, locationRange, name, value)
 }
 
-func (v *EphemeralReferenceValue) GetKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	key Value,
-) Value {
+func (v *EphemeralReferenceValue) GetKey(context ValueComparisonContext, locationRange LocationRange, key Value) Value {
 	return v.Value.(ValueIndexableValue).
-		GetKey(interpreter, locationRange, key)
+		GetKey(context, locationRange, key)
 }
 
-func (v *EphemeralReferenceValue) SetKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	key Value,
-	value Value,
-) {
+func (v *EphemeralReferenceValue) SetKey(context ContainerMutationContext, locationRange LocationRange, key Value, value Value) {
 	v.Value.(ValueIndexableValue).
-		SetKey(interpreter, locationRange, key, value)
+		SetKey(context, locationRange, key, value)
 }
 
-func (v *EphemeralReferenceValue) InsertKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	key Value,
-	value Value,
-) {
+func (v *EphemeralReferenceValue) InsertKey(context ContainerMutationContext, locationRange LocationRange, key Value, value Value) {
 	v.Value.(ValueIndexableValue).
-		InsertKey(interpreter, locationRange, key, value)
+		InsertKey(context, locationRange, key, value)
 }
 
-func (v *EphemeralReferenceValue) RemoveKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	key Value,
-) Value {
+func (v *EphemeralReferenceValue) RemoveKey(context ContainerMutationContext, locationRange LocationRange, key Value) Value {
 	return v.Value.(ValueIndexableValue).
-		RemoveKey(interpreter, locationRange, key)
+		RemoveKey(context, locationRange, key)
 }
 
 func (v *EphemeralReferenceValue) GetTypeKey(

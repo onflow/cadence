@@ -5221,17 +5221,18 @@ func ExpectType(
 	}
 }
 
-func (interpreter *Interpreter) checkContainerMutation(
+func checkContainerMutation(
+	context ValueStaticTypeContext,
 	elementType StaticType,
 	element Value,
 	locationRange LocationRange,
 ) {
-	actualElementType := element.StaticType(interpreter)
+	actualElementType := element.StaticType(context)
 
-	if !IsSubType(interpreter, actualElementType, elementType) {
+	if !IsSubType(context, actualElementType, elementType) {
 		panic(ContainerMutationError{
-			ExpectedType:  MustConvertStaticToSemaType(elementType, interpreter),
-			ActualType:    MustSemaTypeOfValue(element, interpreter),
+			ExpectedType:  MustConvertStaticToSemaType(elementType, context),
+			ActualType:    MustSemaTypeOfValue(element, context),
 			LocationRange: locationRange,
 		})
 	}
@@ -5712,7 +5713,7 @@ func capabilityCheckFunction(
 	)
 }
 
-func (interpreter *Interpreter) validateMutation(valueID atree.ValueID, locationRange LocationRange) {
+func (interpreter *Interpreter) ValidateMutation(valueID atree.ValueID, locationRange LocationRange) {
 	_, present := interpreter.SharedState.containerValueIteration[valueID]
 	if !present {
 		return

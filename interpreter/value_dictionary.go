@@ -327,7 +327,7 @@ func (v *DictionaryValue) IterateReadOnly(
 }
 
 func (v *DictionaryValue) Iterate(
-	context ValueIterationContext,
+	context ContainerMutationContext,
 	locationRange LocationRange,
 	f func(key, value Value) (resume bool),
 ) {
@@ -359,7 +359,7 @@ func (v *DictionaryValue) IterateReadOnlyLoaded(
 }
 
 func (v *DictionaryValue) iterate(
-	context ValueIterationContext,
+	context ContainerMutationContext,
 	atreeIterate func(fn atree.MapEntryIterationFunc) error,
 	f func(key Value, value Value) (resume bool),
 	locationRange LocationRange,
@@ -621,25 +621,21 @@ func (v *DictionaryValue) Get(
 	return MustConvertStoredValue(context, storedValue), true
 }
 
-func (v *DictionaryValue) GetKey(interpreter *Interpreter, locationRange LocationRange, keyValue Value) Value {
-	value, ok := v.Get(interpreter, locationRange, keyValue)
+func (v *DictionaryValue) GetKey(context ValueComparisonContext, locationRange LocationRange, keyValue Value) Value {
+	value, ok := v.Get(context, locationRange, keyValue)
 	if ok {
-		return NewSomeValueNonCopying(interpreter, value)
+		return NewSomeValueNonCopying(context, value)
 	}
 
 	return Nil
 }
 
-func (v *DictionaryValue) SetKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	keyValue Value,
-	value Value,
-) {
-	interpreter.validateMutation(v.ValueID(), locationRange)
+func (v *DictionaryValue) SetKey(context ContainerMutationContext, locationRange LocationRange, keyValue Value, value Value) {
+	context.ValidateMutation(v.ValueID(), locationRange)
 
-	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, locationRange)
-	interpreter.checkContainerMutation(
+	checkContainerMutation(context, v.Type.KeyType, keyValue, locationRange)
+	checkContainerMutation(
+		context,
 		&OptionalStaticType{ // intentionally unmetered
 			Type: v.Type.ValueType,
 		},
@@ -651,10 +647,10 @@ func (v *DictionaryValue) SetKey(
 	switch value := value.(type) {
 	case *SomeValue:
 		innerValue := value.InnerValue()
-		existingValue = v.Insert(interpreter, locationRange, keyValue, innerValue)
+		existingValue = v.Insert(context, locationRange, keyValue, innerValue)
 
 	case NilValue:
-		existingValue = v.Remove(interpreter, locationRange, keyValue)
+		existingValue = v.Remove(context, locationRange, keyValue)
 
 	case placeholderValue:
 		// NO-OP
@@ -664,7 +660,7 @@ func (v *DictionaryValue) SetKey(
 	}
 
 	if existingValue != nil {
-		checkResourceLoss(interpreter, existingValue, locationRange)
+		checkResourceLoss(context, existingValue, locationRange)
 	}
 }
 
@@ -906,16 +902,12 @@ func (v *DictionaryValue) Count() int {
 	return int(v.dictionary.Count())
 }
 
-func (v *DictionaryValue) RemoveKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	key Value,
-) Value {
-	return v.Remove(interpreter, locationRange, key)
+func (v *DictionaryValue) RemoveKey(context ContainerMutationContext, locationRange LocationRange, key Value) Value {
+	return v.Remove(context, locationRange, key)
 }
 
 func (v *DictionaryValue) RemoveWithoutTransfer(
-	interpreter *Interpreter,
+	context ContainerMutationContext,
 	locationRange LocationRange,
 	keyValue atree.Value,
 ) (
@@ -923,10 +915,10 @@ func (v *DictionaryValue) RemoveWithoutTransfer(
 	existingValueStorable atree.Storable,
 ) {
 
-	interpreter.validateMutation(v.ValueID(), locationRange)
+	context.ValidateMutation(v.ValueID(), locationRange)
 
-	valueComparator := newValueComparator(interpreter, locationRange)
-	hashInputProvider := newHashInputProvider(interpreter, locationRange)
+	valueComparator := newValueComparator(context, locationRange)
+	hashInputProvider := newHashInputProvider(context, locationRange)
 
 	// No need to clean up storable for passed-in key value,
 	// as atree never calls Storable()
@@ -944,37 +936,37 @@ func (v *DictionaryValue) RemoveWithoutTransfer(
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.MaybeValidateAtreeValue(v.dictionary)
-	interpreter.MaybeValidateAtreeStorage()
+	context.MaybeValidateAtreeValue(v.dictionary)
+	context.MaybeValidateAtreeStorage()
 
 	return existingKeyStorable, existingValueStorable
 }
 
 func (v *DictionaryValue) Remove(
-	interpreter *Interpreter,
+	context ContainerMutationContext,
 	locationRange LocationRange,
 	keyValue Value,
 ) OptionalValue {
 
-	existingKeyStorable, existingValueStorable := v.RemoveWithoutTransfer(interpreter, locationRange, keyValue)
+	existingKeyStorable, existingValueStorable := v.RemoveWithoutTransfer(context, locationRange, keyValue)
 
 	if existingKeyStorable == nil {
 		return NilOptionalValue
 	}
 
-	storage := interpreter.Storage()
+	storage := context.Storage()
 
 	// Key
 
-	existingKeyValue := StoredValue(interpreter, existingKeyStorable, storage)
-	existingKeyValue.DeepRemove(interpreter, true) // existingValue is standalone because it was removed from parent container.
-	RemoveReferencedSlab(interpreter, existingKeyStorable)
+	existingKeyValue := StoredValue(context, existingKeyStorable, storage)
+	existingKeyValue.DeepRemove(context, true) // existingValue is standalone because it was removed from parent container.
+	RemoveReferencedSlab(context, existingKeyStorable)
 
 	// Value
 
-	existingValue := StoredValue(interpreter, existingValueStorable, storage).
+	existingValue := StoredValue(context, existingValueStorable, storage).
 		Transfer(
-			interpreter,
+			context,
 			locationRange,
 			atree.Address{},
 			true,
@@ -983,33 +975,29 @@ func (v *DictionaryValue) Remove(
 			true, // value is standalone because it was removed from parent container.
 		)
 
-	return NewSomeValueNonCopying(interpreter, existingValue)
+	return NewSomeValueNonCopying(context, existingValue)
 }
 
-func (v *DictionaryValue) InsertKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	key, value Value,
-) {
-	v.SetKey(interpreter, locationRange, key, value)
+func (v *DictionaryValue) InsertKey(context ContainerMutationContext, locationRange LocationRange, key Value, value Value) {
+	v.SetKey(context, locationRange, key, value)
 }
 
 func (v *DictionaryValue) InsertWithoutTransfer(
-	interpreter *Interpreter,
+	context ContainerMutationContext,
 	locationRange LocationRange,
 	keyValue, value atree.Value,
 ) (existingValueStorable atree.Storable) {
 
-	interpreter.validateMutation(v.ValueID(), locationRange)
+	context.ValidateMutation(v.ValueID(), locationRange)
 
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(v.dictionary.Count(), v.elementSize, false)
-	common.UseMemory(interpreter, common.AtreeMapElementOverhead)
-	common.UseMemory(interpreter, dataSlabs)
-	common.UseMemory(interpreter, metaDataSlabs)
+	common.UseMemory(context, common.AtreeMapElementOverhead)
+	common.UseMemory(context, dataSlabs)
+	common.UseMemory(context, metaDataSlabs)
 
-	valueComparator := newValueComparator(interpreter, locationRange)
-	hashInputProvider := newHashInputProvider(interpreter, locationRange)
+	valueComparator := newValueComparator(context, locationRange)
+	hashInputProvider := newHashInputProvider(context, locationRange)
 
 	// atree only calls Storable() on keyValue if needed,
 	// i.e., if the key is a new key
@@ -1024,14 +1012,14 @@ func (v *DictionaryValue) InsertWithoutTransfer(
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.MaybeValidateAtreeValue(v.dictionary)
-	interpreter.MaybeValidateAtreeStorage()
+	context.MaybeValidateAtreeValue(v.dictionary)
+	context.MaybeValidateAtreeStorage()
 
 	return existingValueStorable
 }
 
 func (v *DictionaryValue) Insert(
-	interpreter *Interpreter,
+	context ContainerMutationContext,
 	locationRange LocationRange,
 	keyValue, value Value,
 ) OptionalValue {
@@ -1043,7 +1031,7 @@ func (v *DictionaryValue) Insert(
 	}
 
 	keyValue = keyValue.Transfer(
-		interpreter,
+		context,
 		locationRange,
 		address,
 		true,
@@ -1053,7 +1041,7 @@ func (v *DictionaryValue) Insert(
 	)
 
 	value = value.Transfer(
-		interpreter,
+		context,
 		locationRange,
 		address,
 		true,
@@ -1062,10 +1050,10 @@ func (v *DictionaryValue) Insert(
 		true, // value is standalone before it is inserted into parent container.
 	)
 
-	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, locationRange)
-	interpreter.checkContainerMutation(v.Type.ValueType, value, locationRange)
+	checkContainerMutation(context, v.Type.KeyType, keyValue, locationRange)
+	checkContainerMutation(context, v.Type.ValueType, value, locationRange)
 
-	existingValueStorable := v.InsertWithoutTransfer(interpreter, locationRange, keyValue, value)
+	existingValueStorable := v.InsertWithoutTransfer(context, locationRange, keyValue, value)
 
 	if existingValueStorable == nil {
 		return NilOptionalValue
@@ -1083,7 +1071,7 @@ func (v *DictionaryValue) Insert(
 	// referenced from dictionary.
 
 	// Remove content of transferred keyValue.
-	keyValue.DeepRemove(interpreter, true)
+	keyValue.DeepRemove(context, true)
 
 	// Remove slab containing transferred keyValue from storage if needed.
 	// Currently, we only need to handle enum composite type because it is the only type that:
@@ -1101,17 +1089,17 @@ func (v *DictionaryValue) Insert(
 		}
 
 		// Remove slab containing transferred enum value from storage.
-		RemoveReferencedSlab(interpreter, atree.SlabIDStorable(keyCompositeSlabID))
+		RemoveReferencedSlab(context, atree.SlabIDStorable(keyCompositeSlabID))
 	}
 
-	storage := interpreter.Storage()
+	storage := context.Storage()
 
 	existingValue := StoredValue(
-		interpreter,
+		context,
 		existingValueStorable,
 		storage,
 	).Transfer(
-		interpreter,
+		context,
 		locationRange,
 		atree.Address{},
 		true,
@@ -1120,7 +1108,7 @@ func (v *DictionaryValue) Insert(
 		true, // existingValueStorable is standalone after it is overwritten in parent container.
 	)
 
-	return NewSomeValueNonCopying(interpreter, existingValue)
+	return NewSomeValueNonCopying(context, existingValue)
 }
 
 type DictionaryEntryValues struct {
