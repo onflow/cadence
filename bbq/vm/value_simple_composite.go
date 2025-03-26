@@ -18,27 +18,27 @@
 
 package vm
 
+import (
+	"github.com/onflow/cadence/interpreter"
+)
+
+// import (
 //
-//import (
 //	"github.com/onflow/atree"
 //
 //	"github.com/onflow/cadence/bbq"
 //	"github.com/onflow/cadence/common"
-//)
 //
-//type SimpleCompositeValue struct {
-//	typeID     common.TypeID
-//	staticType bbq.StaticType
-//	Kind       common.CompositeKind
-//
-//	fields       map[string]Value
-//	computeField func(name string) Value
-//
-//	// metadata is a property bag to carry internal data
-//	// that are not visible to cadence users.
-//	// TODO: any better way to pass down information?
-//	metadata map[string]any
-//}
+// )
+type SimpleCompositeValue struct {
+	interpreter.SimpleCompositeValue
+
+	// metadata is a property bag to carry internal data
+	// that are not visible to cadence users.
+	// TODO: any better way to pass down information?
+	metadata map[string]any
+}
+
 //
 //var _ Value = &CompositeValue{}
 //

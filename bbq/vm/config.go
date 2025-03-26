@@ -93,6 +93,9 @@ func (c *Config) Interpreter() *interpreter.Interpreter {
 			common_utils.TestLocation,
 			&interpreter.Config{
 				Storage: c.storage,
+
+				// Interpreters are needed only to access interpreter-bound functions.
+				// Hence, just return the same interpreter as-is, for now.
 				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 					return interpreter.InterpreterImport{
 						Interpreter: inter,

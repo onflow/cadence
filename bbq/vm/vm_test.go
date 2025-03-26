@@ -19,6 +19,7 @@
 package vm
 
 import (
+	"github.com/onflow/cadence/interpreter"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -33,25 +34,25 @@ func TestVM_pop(t *testing.T) {
 	program := &bbq.InstructionProgram{}
 	vm := NewVM(nil, program, nil)
 
-	vm.push(NewIntValue(1))
-	vm.push(NewIntValue(2))
+	vm.push(interpreter.NewUnmeteredIntValueFromInt64(1))
+	vm.push(interpreter.NewUnmeteredIntValueFromInt64(2))
 
 	require.Equal(t,
 		vm.stack,
 		[]Value{
-			NewIntValue(1),
-			NewIntValue(2),
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
 		},
 	)
 
 	a := vm.pop()
 
-	assert.Equal(t, NewIntValue(2), a)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), a)
 
 	assert.Equal(t,
 		vm.stack,
 		[]Value{
-			NewIntValue(1),
+			interpreter.NewUnmeteredIntValueFromInt64(1),
 		},
 	)
 }
@@ -62,29 +63,29 @@ func TestVM_peekPop(t *testing.T) {
 	program := &bbq.InstructionProgram{}
 	vm := NewVM(nil, program, nil)
 
-	vm.push(NewIntValue(1))
-	vm.push(NewIntValue(2))
-	vm.push(NewIntValue(3))
+	vm.push(interpreter.NewUnmeteredIntValueFromInt64(1))
+	vm.push(interpreter.NewUnmeteredIntValueFromInt64(2))
+	vm.push(interpreter.NewUnmeteredIntValueFromInt64(3))
 
 	require.Equal(t,
 		vm.stack,
 		[]Value{
-			NewIntValue(1),
-			NewIntValue(2),
-			NewIntValue(3),
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(3),
 		},
 	)
 
 	a, b := vm.peekPop()
 
-	assert.Equal(t, NewIntValue(2), a)
-	assert.Equal(t, NewIntValue(3), b)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), a)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), b)
 
 	assert.Equal(t,
 		vm.stack,
 		[]Value{
-			NewIntValue(1),
-			NewIntValue(2),
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
 		},
 	)
 }
@@ -95,24 +96,24 @@ func TestVM_replaceTop(t *testing.T) {
 	program := &bbq.InstructionProgram{}
 	vm := NewVM(nil, program, nil)
 
-	vm.push(NewIntValue(1))
-	vm.push(NewIntValue(2))
+	vm.push(interpreter.NewUnmeteredIntValueFromInt64(1))
+	vm.push(interpreter.NewUnmeteredIntValueFromInt64(2))
 
 	require.Equal(t,
 		vm.stack,
 		[]Value{
-			NewIntValue(1),
-			NewIntValue(2),
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
 		},
 	)
 
-	vm.replaceTop(NewIntValue(3))
+	vm.replaceTop(interpreter.NewUnmeteredIntValueFromInt64(3))
 
 	assert.Equal(t,
 		vm.stack,
 		[]Value{
-			NewIntValue(1),
-			NewIntValue(3),
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+			interpreter.NewUnmeteredIntValueFromInt64(3),
 		},
 	)
 }
@@ -123,19 +124,19 @@ func TestVM_pop2(t *testing.T) {
 	program := &bbq.InstructionProgram{}
 	vm := NewVM(nil, program, nil)
 
-	vm.push(NewIntValue(1))
-	vm.push(NewIntValue(2))
-	vm.push(NewIntValue(3))
+	vm.push(interpreter.NewUnmeteredIntValueFromInt64(1))
+	vm.push(interpreter.NewUnmeteredIntValueFromInt64(2))
+	vm.push(interpreter.NewUnmeteredIntValueFromInt64(3))
 
 	a, b := vm.pop2()
 
-	assert.Equal(t, NewIntValue(2), a)
-	assert.Equal(t, NewIntValue(3), b)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), a)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), b)
 
 	assert.Equal(t,
 		vm.stack,
 		[]Value{
-			NewIntValue(1),
+			interpreter.NewUnmeteredIntValueFromInt64(1),
 		},
 	)
 }
@@ -146,31 +147,31 @@ func TestVM_pop3(t *testing.T) {
 	program := &bbq.InstructionProgram{}
 	vm := NewVM(nil, program, nil)
 
-	vm.push(NewIntValue(1))
-	vm.push(NewIntValue(2))
-	vm.push(NewIntValue(3))
-	vm.push(NewIntValue(4))
+	vm.push(interpreter.NewUnmeteredIntValueFromInt64(1))
+	vm.push(interpreter.NewUnmeteredIntValueFromInt64(2))
+	vm.push(interpreter.NewUnmeteredIntValueFromInt64(3))
+	vm.push(interpreter.NewUnmeteredIntValueFromInt64(4))
 
 	require.Equal(t,
 		vm.stack,
 		[]Value{
-			NewIntValue(1),
-			NewIntValue(2),
-			NewIntValue(3),
-			NewIntValue(4),
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			interpreter.NewUnmeteredIntValueFromInt64(4),
 		},
 	)
 
 	a, b, c := vm.pop3()
 
-	assert.Equal(t, NewIntValue(2), a)
-	assert.Equal(t, NewIntValue(3), b)
-	assert.Equal(t, NewIntValue(4), c)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), a)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), b)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(4), c)
 
 	assert.Equal(t,
 		vm.stack,
 		[]Value{
-			NewIntValue(1),
+			interpreter.NewUnmeteredIntValueFromInt64(1),
 		},
 	)
 }
@@ -181,29 +182,29 @@ func TestVM_peek(t *testing.T) {
 	program := &bbq.InstructionProgram{}
 	vm := NewVM(nil, program, nil)
 
-	vm.push(NewIntValue(1))
-	vm.push(NewIntValue(2))
-	vm.push(NewIntValue(3))
+	vm.push(interpreter.NewUnmeteredIntValueFromInt64(1))
+	vm.push(interpreter.NewUnmeteredIntValueFromInt64(2))
+	vm.push(interpreter.NewUnmeteredIntValueFromInt64(3))
 
 	require.Equal(t,
 		vm.stack,
 		[]Value{
-			NewIntValue(1),
-			NewIntValue(2),
-			NewIntValue(3),
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(3),
 		},
 	)
 
 	a := vm.peek()
 
-	assert.Equal(t, NewIntValue(3), a)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), a)
 
 	assert.Equal(t,
 		vm.stack,
 		[]Value{
-			NewIntValue(1),
-			NewIntValue(2),
-			NewIntValue(3),
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(3),
 		},
 	)
 }
@@ -214,30 +215,30 @@ func TestVM_peekN(t *testing.T) {
 	program := &bbq.InstructionProgram{}
 	vm := NewVM(nil, program, nil)
 
-	vm.push(NewIntValue(1))
-	vm.push(NewIntValue(2))
-	vm.push(NewIntValue(3))
+	vm.push(interpreter.NewUnmeteredIntValueFromInt64(1))
+	vm.push(interpreter.NewUnmeteredIntValueFromInt64(2))
+	vm.push(interpreter.NewUnmeteredIntValueFromInt64(3))
 
 	require.Equal(t,
 		vm.stack,
 		[]Value{
-			NewIntValue(1),
-			NewIntValue(2),
-			NewIntValue(3),
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(3),
 		},
 	)
 
 	values := vm.peekN(2)
 
-	assert.Equal(t, NewIntValue(2), values[0])
-	assert.Equal(t, NewIntValue(3), values[1])
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), values[0])
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), values[1])
 
 	assert.Equal(t,
 		vm.stack,
 		[]Value{
-			NewIntValue(1),
-			NewIntValue(2),
-			NewIntValue(3),
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(3),
 		},
 	)
 }
@@ -248,16 +249,16 @@ func TestVM_dropN(t *testing.T) {
 	program := &bbq.InstructionProgram{}
 	vm := NewVM(nil, program, nil)
 
-	vm.push(NewIntValue(1))
-	vm.push(NewIntValue(2))
-	vm.push(NewIntValue(3))
+	vm.push(interpreter.NewUnmeteredIntValueFromInt64(1))
+	vm.push(interpreter.NewUnmeteredIntValueFromInt64(2))
+	vm.push(interpreter.NewUnmeteredIntValueFromInt64(3))
 
 	vm.dropN(2)
 
 	assert.Equal(t,
 		vm.stack,
 		[]Value{
-			NewIntValue(1),
+			interpreter.NewUnmeteredIntValueFromInt64(1),
 		},
 	)
 }

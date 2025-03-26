@@ -18,6 +18,14 @@
 
 package vm
 
+import (
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
+)
+
 //
 //import (
 //	"github.com/onflow/cadence/bbq"
@@ -41,43 +49,43 @@ package vm
 //	}
 //}
 //
-//// members
-//
-//func init() {
-//	accountStorageCapabilitiesTypeName := sema.Account_StorageCapabilitiesType.QualifiedIdentifier()
-//
-//	// Account.StorageCapabilities.issue
-//	RegisterTypeBoundFunction(
-//		accountStorageCapabilitiesTypeName,
-//		sema.Account_StorageCapabilitiesTypeIssueFunctionName,
-//		NativeFunctionValue{
-//			ParameterCount: len(sema.Account_StorageCapabilitiesTypeIssueFunctionType.Parameters),
-//			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
-//				// Get address field from the receiver (Account.StorageCapabilities)
-//				accountAddress := getAddressMetaInfoFromValue(args[0])
-//
-//				// Path argument
-//				targetPathValue, ok := args[1].(PathValue)
-//				if !ok {
-//					panic(errors.NewUnreachableError())
-//				}
-//
-//				if !ok || targetPathValue.Domain != common.PathDomainStorage {
-//					panic(errors.NewUnreachableError())
-//				}
-//
-//				// Get borrow type type-argument
-//				ty := typeArguments[0]
-//
-//				// Issue capability controller and return capability
-//
-//				return checkAndIssueStorageCapabilityControllerWithType(
-//					config,
-//					config.AccountHandler,
-//					accountAddress,
-//					targetPathValue,
-//					ty,
-//				)
-//			},
-//		})
-//}
+// members
+
+func init() {
+	accountStorageCapabilitiesTypeName := sema.Account_StorageCapabilitiesType.QualifiedIdentifier()
+
+	// Account.StorageCapabilities.issue
+	RegisterTypeBoundFunction(
+		accountStorageCapabilitiesTypeName,
+		sema.Account_StorageCapabilitiesTypeIssueFunctionName,
+		NativeFunctionValue{
+			ParameterCount: len(sema.Account_StorageCapabilitiesTypeIssueFunctionType.Parameters),
+			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+				// Get address field from the receiver (Account.StorageCapabilities)
+				accountAddress := getAddressMetaInfoFromValue(args[0])
+
+				// Path argument
+				targetPathValue, ok := args[1].(interpreter.PathValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				if !ok || targetPathValue.Domain != common.PathDomainStorage {
+					panic(errors.NewUnreachableError())
+				}
+
+				// Get borrow type type-argument
+				ty := typeArguments[0]
+
+				// Issue capability controller and return capability
+
+				return checkAndIssueStorageCapabilityControllerWithType(
+					config,
+					config.GetAccountHandler(),
+					accountAddress,
+					targetPathValue,
+					ty,
+				)
+			},
+		})
+}

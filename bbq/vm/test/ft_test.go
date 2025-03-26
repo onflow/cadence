@@ -71,9 +71,8 @@ func TestFTTransfer(t *testing.T) {
 
 	flowTokenProgram := parseCheckAndCompile(t, realFlowContract, flowTokenLocation, programs)
 
-	config := vm.NewConfig(storage)
-
 	accountHandler := &testAccountHandler{}
+	config := vm.NewConfig(storage).WithAccountHandler(accountHandler)
 
 	config.TypeLoader = typeLoader
 	config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
@@ -95,7 +94,7 @@ func TestFTTransfer(t *testing.T) {
 	require.NoError(t, err)
 
 	// ----- Run setup account transaction -----
-	vmConfig := vm.NewConfig(storage)
+	vmConfig := vm.NewConfig(storage).WithAccountHandler(accountHandler)
 
 	vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 		imported, ok := programs[location]
@@ -229,7 +228,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	accountHandler := &testAccountHandler{}
 
-	config := vm.NewConfig(storage)
+	config := vm.NewConfig(storage).WithAccountHandler(accountHandler)
 	config.TypeLoader = typeLoader
 
 	flowTokenVM := vm.NewVM(
@@ -245,7 +244,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	// ----- Run setup account transaction -----
 
-	vmConfig := vm.NewConfig(storage)
+	vmConfig := vm.NewConfig(storage).WithAccountHandler(accountHandler)
 
 	vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 		imported, ok := programs[location]
