@@ -25,7 +25,8 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-func (interpreter *Interpreter) InvokeFunctionValue(
+func InvokeFunctionValue(
+	context InvocationContext,
 	function FunctionValue,
 	arguments []Value,
 	argumentTypes []sema.Type,
@@ -38,12 +39,12 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 ) {
 
 	// recover internal panics and return them as an error
-	defer interpreter.RecoverErrors(func(internalErr error) {
+	defer context.RecoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
 	return invokeFunctionValue(
-		interpreter,
+		context,
 		function,
 		arguments,
 		nil,
