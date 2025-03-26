@@ -527,11 +527,11 @@ func (v *DictionaryValue) Destroy(context ResourceDestructionContext, locationRa
 }
 
 func (v *DictionaryValue) ForEachKey(
-	interpreter *Interpreter,
+	context InvocationContext,
 	locationRange LocationRange,
 	procedure FunctionValue,
 ) {
-	keyType := v.SemaType(interpreter).KeyType
+	keyType := v.SemaType(context).KeyType
 
 	argumentTypes := []sema.Type{keyType}
 
@@ -542,9 +542,10 @@ func (v *DictionaryValue) ForEachKey(
 	iterate := func() {
 		err := v.dictionary.IterateReadOnlyKeys(
 			func(item atree.Value) (bool, error) {
-				key := MustConvertStoredValue(interpreter, item)
+				key := MustConvertStoredValue(context, item)
 
-				result := interpreter.invokeFunctionValue(
+				result := invokeFunctionValue(
+					context,
 					procedure,
 					[]Value{key},
 					nil,
@@ -569,17 +570,17 @@ func (v *DictionaryValue) ForEachKey(
 		}
 	}
 
-	interpreter.WithMutationPrevention(v.ValueID(), iterate)
+	context.WithMutationPrevention(v.ValueID(), iterate)
 }
 
 func (v *DictionaryValue) ContainsKey(
-	interpreter *Interpreter,
+	context ValueComparisonContext,
 	locationRange LocationRange,
 	keyValue Value,
 ) BoolValue {
 
-	valueComparator := newValueComparator(interpreter, locationRange)
-	hashInputProvider := newHashInputProvider(interpreter, locationRange)
+	valueComparator := newValueComparator(context, locationRange)
+	hashInputProvider := newHashInputProvider(context, locationRange)
 
 	exists, err := v.dictionary.Has(
 		valueComparator,
@@ -863,7 +864,7 @@ func (v *DictionaryValue) GetMember(context MemberAccessibleContext, locationRan
 				v.SemaType(context),
 			),
 			func(v *DictionaryValue, invocation Invocation) Value {
-				interpreter := invocation.InvocationContext
+				invocationContext := invocation.InvocationContext
 
 				funcArgument, ok := invocation.Arguments[0].(FunctionValue)
 				if !ok {
@@ -871,7 +872,7 @@ func (v *DictionaryValue) GetMember(context MemberAccessibleContext, locationRan
 				}
 
 				v.ForEachKey(
-					interpreter,
+					invocationContext,
 					invocation.LocationRange,
 					funcArgument,
 				)

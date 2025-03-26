@@ -46,7 +46,7 @@ func (v exportableValue) Interpreter() *interpreter.Interpreter {
 
 type exportableEvent struct {
 	Type   sema.Type
-	Fields []exportableValue
+	Fields []interpreter.Value
 }
 
 type Address = common.Address

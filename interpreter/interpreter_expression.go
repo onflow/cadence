@@ -1237,7 +1237,8 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 
 	interpreter.reportFunctionInvocation()
 
-	resultValue := interpreter.invokeFunctionValue(
+	resultValue := invokeFunctionValue(
+		interpreter,
 		function,
 		arguments,
 		argumentExpressions,

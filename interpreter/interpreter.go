@@ -4197,8 +4197,7 @@ func newStorageIterationFunction(
 		storageValue,
 		functionType,
 		func(_ *SimpleCompositeValue, invocation Invocation) Value {
-			inter := invocation.InvocationContext
-			config := inter.SharedState.Config
+			invocationContext := invocation.InvocationContext
 
 			locationRange := invocation.LocationRange
 
@@ -4211,28 +4210,30 @@ func newStorageIterationFunction(
 			parameterTypes := fnType.ParameterTypes()
 			returnType := fnType.ReturnTypeAnnotation.Type
 
-			storageMap := config.Storage.GetDomainStorageMap(inter, address, domain.StorageDomain(), false)
+			storage := invocationContext.Storage()
+			storageMap := storage.GetDomainStorageMap(invocationContext, address, domain.StorageDomain(), false)
 			if storageMap == nil {
 				// if nothing is stored, no iteration is required
 				return Void
 			}
-			storageIterator := storageMap.Iterator(inter)
+			storageIterator := storageMap.Iterator(invocationContext)
 
 			invocationArgumentTypes := []sema.Type{pathType, sema.MetaType}
 
-			inIteration := inter.SharedState.inStorageIteration
-			inter.SharedState.inStorageIteration = true
+			inIteration := invocationContext.SharedState.inStorageIteration
+			invocationContext.SharedState.inStorageIteration = true
 			defer func() {
-				inter.SharedState.inStorageIteration = inIteration
+				invocationContext.SharedState.inStorageIteration = inIteration
 			}()
 
 			for key, value := storageIterator.Next(); key != nil && value != nil; key, value = storageIterator.Next() {
 
-				staticType := value.StaticType(inter)
+				staticType := value.StaticType(invocationContext)
 
 				// Perform a forced value de-referencing to see if the associated type is not broken.
 				// If broken, skip this value from the iteration.
-				valueError := inter.checkValue(
+				valueError := checkValue(
+					invocationContext,
 					value,
 					staticType,
 					invocation.LocationRange,
@@ -4244,10 +4245,11 @@ func newStorageIterationFunction(
 
 				// TODO: unfortunately, the iterator only returns an atree.Value, not a StorageMapKey
 				identifier := string(key.(StringAtreeValue))
-				pathValue := NewPathValue(inter, domain, identifier)
-				runtimeType := NewTypeValue(inter, staticType)
+				pathValue := NewPathValue(invocationContext, domain, identifier)
+				runtimeType := NewTypeValue(invocationContext, staticType)
 
-				result := inter.invokeFunctionValue(
+				result := invokeFunctionValue(
+					invocationContext,
 					fn,
 					[]Value{pathValue, runtimeType},
 					nil,
@@ -4275,7 +4277,7 @@ func newStorageIterationFunction(
 				//
 				// In order to be safe, we perform this check here to effectively enforce
 				// that users return `false` from their callback in all cases where storage is mutated.
-				if inter.SharedState.storageMutatedDuringIteration {
+				if invocationContext.SharedState.storageMutatedDuringIteration {
 					panic(StorageMutatedDuringIterationError{
 						LocationRange: locationRange,
 					})
@@ -4288,7 +4290,8 @@ func newStorageIterationFunction(
 	)
 }
 
-func (interpreter *Interpreter) checkValue(
+func checkValue(
+	context StoreValueCheckContext,
 	value Value,
 	staticType StaticType,
 	locationRange LocationRange,
@@ -4324,7 +4327,7 @@ func (interpreter *Interpreter) checkValue(
 		borrowType := staticType.(*CapabilityStaticType).BorrowType
 
 		var borrowSemaType sema.Type
-		borrowSemaType, valueError = ConvertStaticToSemaType(interpreter, borrowType)
+		borrowSemaType, valueError = ConvertStaticToSemaType(context, borrowType)
 		if valueError != nil {
 			return valueError
 		}
@@ -4334,8 +4337,10 @@ func (interpreter *Interpreter) checkValue(
 			panic(errors.NewUnreachableError())
 		}
 
-		_ = interpreter.SharedState.Config.CapabilityCheckHandler(
-			interpreter,
+		capabilityCheckHandler := context.GetCapabilityCheckHandler()
+
+		_ = capabilityCheckHandler(
+			context,
 			locationRange,
 			capability.address,
 			capability.ID,
@@ -4346,7 +4351,7 @@ func (interpreter *Interpreter) checkValue(
 	} else {
 		// For all other values, trying to load the type is sufficient.
 		// Here it is only interested in whether the type can be properly loaded.
-		_, valueError = ConvertStaticToSemaType(interpreter, staticType)
+		_, valueError = ConvertStaticToSemaType(context, staticType)
 	}
 
 	return
@@ -5858,4 +5863,18 @@ func (interpreter *Interpreter) ensureLoaded(location common.Location) *Interpre
 	}
 
 	return interpreter.EnsureLoaded(location)
+}
+
+func (interpreter *Interpreter) GetLocation() common.Location {
+	return interpreter.Location
+}
+
+func (interpreter *Interpreter) SetAttachmentIteration(base *CompositeValue, state bool) (oldState bool) {
+	oldSharedState := interpreter.SharedState.inAttachmentIteration(base)
+	interpreter.SharedState.setAttachmentIteration(base, state)
+	return oldSharedState
+}
+
+func (interpreter *Interpreter) GetCapabilityCheckHandler() CapabilityCheckHandlerFunc {
+	return interpreter.SharedState.Config.CapabilityCheckHandler
 }

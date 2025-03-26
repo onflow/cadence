@@ -67,14 +67,9 @@ func EmitEventFields(
 		))
 	}
 
-	exportableEventFields := make([]exportableValue, len(eventFields))
-	for i, field := range eventFields {
-		exportableEventFields[i] = newExportableValue(field, inter)
-	}
-
 	eventValue := exportableEvent{
 		Type:   eventType,
-		Fields: exportableEventFields,
+		Fields: eventFields,
 	}
 
 	exportedEvent, err := exportEvent(
