@@ -287,29 +287,28 @@ func (v *AccountCapabilityControllerValue) ControllerCapabilityID() UInt64Value 
 }
 
 func (v *AccountCapabilityControllerValue) ReferenceValue(
-	interpreter *Interpreter,
+	context CapConReferenceValueContext,
 	capabilityAddress common.Address,
 	resultBorrowType *sema.ReferenceType,
 	locationRange LocationRange,
 ) ReferenceValue {
-	config := interpreter.SharedState.Config
 
-	account := config.AccountHandler(interpreter, AddressValue(capabilityAddress))
+	account := context.AccountHandler()(context, AddressValue(capabilityAddress))
 
 	// Account must be of `Account` type.
 	ExpectType(
-		interpreter,
+		context,
 		account,
 		sema.AccountType,
 		EmptyLocationRange,
 	)
 
 	authorization := ConvertSemaAccessToStaticAuthorization(
-		interpreter,
+		context,
 		resultBorrowType.Authorization,
 	)
 	return NewEphemeralReferenceValue(
-		interpreter,
+		context,
 		authorization,
 		account,
 		resultBorrowType.Type,
