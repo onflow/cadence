@@ -290,11 +290,11 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	mintTxVM := vm.NewVM(txLocation(), program, vmConfig)
 
-	total := int64(1000000)
+	total := uint64(1000000) * sema.Fix64Factor
 
 	mintTxArgs := []vm.Value{
 		interpreter.AddressValue(senderAddress),
-		interpreter.NewUnmeteredIntValueFromInt64(total),
+		interpreter.NewUnmeteredUFix64Value(total),
 	}
 
 	mintTxAuthorizer := vm.NewAuthAccountReferenceValue(vmConfig, accountHandler, contractsAddress)
@@ -304,10 +304,10 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	// ----- Run token transfer transaction -----
 
-	transferAmount := int64(1)
+	transferAmount := uint64(1) * sema.Fix64Factor
 
 	tokenTransferTxArgs := []vm.Value{
-		interpreter.NewUnmeteredIntValueFromInt64(transferAmount),
+		interpreter.NewUnmeteredUFix64Value(transferAmount),
 		interpreter.AddressValue(receiverAddress),
 	}
 
@@ -327,9 +327,6 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	// Run validation scripts
 
-	// actual transfer amount = (transfer amount in one tx) * (number of time the tx/benchmark runs)
-	actualTransferAmount := transferAmount * int64(b.N)
-
 	for _, address := range []common.Address{
 		senderAddress,
 		receiverAddress,
@@ -344,9 +341,9 @@ func BenchmarkFTTransfer(b *testing.B) {
 		require.Equal(b, 0, validationScriptVM.StackSize())
 
 		if address == senderAddress {
-			assert.Equal(b, interpreter.NewUnmeteredIntValueFromInt64(total-actualTransferAmount), result)
+			assert.Equal(b, interpreter.NewUnmeteredUFix64Value(total-transferAmount), result)
 		} else {
-			assert.Equal(b, interpreter.NewUnmeteredIntValueFromInt64(actualTransferAmount), result)
+			assert.Equal(b, interpreter.NewUnmeteredUFix64Value(transferAmount), result)
 		}
 	}
 }

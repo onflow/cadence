@@ -662,6 +662,14 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 				accountHandler,
 			)
 		},
+		OnEventEmitted: func(
+			_ *interpreter.Interpreter,
+			_ interpreter.LocationRange,
+			_ *interpreter.CompositeValue,
+			_ *sema.CompositeType,
+		) error {
+			return nil
+		},
 	}
 
 	accountHandler.parseAndCheckProgram =
@@ -740,10 +748,8 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 
 	authorization := sema.NewEntitlementSetAccess(
 		[]*sema.EntitlementType{
-			sema.BorrowValueType,
-			sema.IssueStorageCapabilityControllerType,
-			sema.PublishCapabilityType,
-			sema.SaveValueType,
+			sema.CapabilitiesType,
+			sema.StorageType,
 		},
 		sema.Conjunction,
 	)
@@ -777,7 +783,7 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 
 	// Mint FLOW to sender
 
-	total := int64(1000000)
+	total := uint64(1000000) * sema.Fix64Factor
 
 	inter, err = parseCheckAndInterpretWithOptions(
 		b,
@@ -790,6 +796,13 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 	)
 	require.NoError(b, err)
 
+	authorization = sema.NewEntitlementSetAccess(
+		[]*sema.EntitlementType{
+			sema.BorrowValueType,
+		},
+		sema.Conjunction,
+	)
+
 	signer = stdlib.NewAccountReferenceValue(
 		inter,
 		accountHandler,
@@ -801,7 +814,7 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 	err = inter.InvokeTransaction(
 		0,
 		interpreter.AddressValue(senderAddress),
-		interpreter.NewUnmeteredIntValueFromInt64(total),
+		interpreter.NewUnmeteredUFix64Value(total),
 		signer,
 	)
 	require.NoError(b, err)
@@ -816,9 +829,9 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 		interpreter.EmptyLocationRange,
 	)
 
-	transferAmount := int64(1)
+	transferAmount := uint64(1) * sema.Fix64Factor
 
-	amount := interpreter.NewUnmeteredIntValueFromInt64(transferAmount)
+	amount := interpreter.NewUnmeteredUFix64Value(transferAmount)
 	receiver := interpreter.AddressValue(receiverAddress)
 
 	b.ReportAllocs()
