@@ -233,6 +233,7 @@ type ResourceDestructionContext interface {
 	ResourceDestructionHandler
 	CompositeFunctionContext
 	EventContext
+	InvocationContext
 
 	GetResourceDestructionContextForLocation(location common.Location) ResourceDestructionContext
 }
@@ -251,15 +252,46 @@ type EventContext interface {
 
 var _ EventContext = &Interpreter{}
 
+type AttachmentContext interface {
+	ValueStaticTypeContext
+	ReferenceCreationContext
+	SetAttachmentIteration(composite *CompositeValue, state bool) bool
+}
+
+var _ AttachmentContext = &Interpreter{}
+
+type StoreValueCheckContext interface {
+	TypeConverter
+	GetCapabilityCheckHandler() CapabilityCheckHandlerFunc
+}
+
+var _ StoreValueCheckContext = &Interpreter{}
+
 // InvocationContext is a composite of all contexts, since function invocations
 // can perform various operations, and hence need to provide all possible contexts to it.
 type InvocationContext interface {
 	StorageContext
 	ValueStringContext
 	MemberAccessibleContext
+	AttachmentContext
+	GetLocation() common.Location
 }
 
 var _ InvocationContext = &Interpreter{}
+
+type ValueExportContext interface {
+	ContainerMutationContext // needed for container iteration
+	CompositeValueExportContext
+}
+
+var _ ValueExportContext = &Interpreter{}
+
+type CompositeValueExportContext interface {
+	MemberAccessibleContext
+	AttachmentContext
+}
+
+var _ ValueExportContext = &Interpreter{}
 
 // NoOpStringContext is the ValueStringContext implementation used in Value.RecursiveString method.
 // Since Value.RecursiveString is a non-mutating operation, it should only need the no-op memory metering
