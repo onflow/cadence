@@ -33,7 +33,7 @@ type CapabilityControllerValue interface {
 	isCapabilityControllerValue()
 	CapabilityControllerBorrowType() *ReferenceStaticType
 	ReferenceValue(
-		context CapConReferenceValueContext,
+		context ValueCapabilityControllerReferenceValueContext,
 		capabilityAddress common.Address,
 		resultBorrowType *sema.ReferenceType,
 		locationRange LocationRange,
@@ -322,7 +322,7 @@ func (v *StorageCapabilityControllerValue) ControllerCapabilityID() UInt64Value 
 }
 
 func (v *StorageCapabilityControllerValue) ReferenceValue(
-	context CapConReferenceValueContext,
+	context ValueCapabilityControllerReferenceValueContext,
 	capabilityAddress common.Address,
 	resultBorrowType *sema.ReferenceType,
 	_ LocationRange,
