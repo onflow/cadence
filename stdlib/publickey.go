@@ -56,11 +56,11 @@ type PublicKeyValidator interface {
 
 func newPublicKeyValidationHandler(validator PublicKeyValidator) interpreter.PublicKeyValidationHandlerFunc {
 	return func(
-		inter *interpreter.Interpreter,
+		context interpreter.PublicKeyValidationContext,
 		locationRange interpreter.LocationRange,
 		publicKeyValue *interpreter.CompositeValue,
 	) error {
-		publicKey, err := NewPublicKeyFromValue(inter, locationRange, publicKeyValue)
+		publicKey, err := NewPublicKeyFromValue(context, locationRange, publicKeyValue)
 		if err != nil {
 			return err
 		}
@@ -124,20 +124,20 @@ func NewPublicKeyFromFields(
 	)
 }
 
-func assumePublicKeyIsValid(_ *interpreter.Interpreter, _ interpreter.LocationRange, _ *interpreter.CompositeValue) error {
+func assumePublicKeyIsValid(_ interpreter.PublicKeyValidationContext, _ interpreter.LocationRange, _ *interpreter.CompositeValue) error {
 	return nil
 }
 
 func NewPublicKeyValue(
-	inter *interpreter.Interpreter,
+	context interpreter.PublicKeyCreationContext,
 	locationRange interpreter.LocationRange,
 	publicKey *PublicKey,
 ) *interpreter.CompositeValue {
 	return interpreter.NewPublicKeyValue(
-		inter,
+		context,
 		locationRange,
 		interpreter.ByteSliceToByteArrayValue(
-			inter,
+			context,
 			publicKey.PublicKey,
 		),
 		NewSignatureAlgorithmCase(
@@ -149,7 +149,7 @@ func NewPublicKeyValue(
 }
 
 func NewPublicKeyFromValue(
-	inter *interpreter.Interpreter,
+	context interpreter.PublicKeyCreationContext,
 	locationRange interpreter.LocationRange,
 	publicKey interpreter.MemberAccessibleValue,
 ) (
@@ -157,15 +157,15 @@ func NewPublicKeyFromValue(
 	error,
 ) {
 	// publicKey field
-	key := publicKey.GetMember(inter, locationRange, sema.PublicKeyTypePublicKeyFieldName)
+	key := publicKey.GetMember(context, locationRange, sema.PublicKeyTypePublicKeyFieldName)
 
-	byteArray, err := interpreter.ByteArrayValueToByteSlice(inter, key, locationRange)
+	byteArray, err := interpreter.ByteArrayValueToByteSlice(context, key, locationRange)
 	if err != nil {
 		return nil, errors.NewUnexpectedError("public key needs to be a byte array. %w", err)
 	}
 
 	// sign algo field
-	signAlgoField := publicKey.GetMember(inter, locationRange, sema.PublicKeyTypeSignAlgoFieldName)
+	signAlgoField := publicKey.GetMember(context, locationRange, sema.PublicKeyTypeSignAlgoFieldName)
 	if signAlgoField == nil {
 		return nil, errors.NewUnexpectedError("sign algorithm is not set")
 	}
@@ -178,7 +178,7 @@ func NewPublicKeyFromValue(
 		)
 	}
 
-	rawValue := signAlgoValue.GetMember(inter, locationRange, sema.EnumRawValueFieldName)
+	rawValue := signAlgoValue.GetMember(context, locationRange, sema.EnumRawValueFieldName)
 	if rawValue == nil {
 		return nil, errors.NewDefaultUserError("sign algorithm raw value is not set")
 	}

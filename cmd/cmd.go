@@ -317,7 +317,7 @@ func (*StandardLibraryHandler) GetAccountContractCode(_ common.AddressLocation) 
 }
 
 func (*StandardLibraryHandler) EmitEvent(
-	_ *interpreter.Interpreter,
+	_ interpreter.ValueExportContext,
 	_ interpreter.LocationRange,
 	_ *sema.CompositeType,
 	_ []interpreter.Value,

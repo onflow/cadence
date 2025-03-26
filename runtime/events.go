@@ -49,7 +49,7 @@ func emitEventValue(
 }
 
 func EmitEventFields(
-	inter *interpreter.Interpreter,
+	context interpreter.ValueExportContext,
 	locationRange interpreter.LocationRange,
 	eventType *sema.CompositeType,
 	eventFields []interpreter.Value,
@@ -73,7 +73,7 @@ func EmitEventFields(
 	}
 
 	exportedEvent, err := exportEvent(
-		inter,
+		context,
 		eventValue,
 		locationRange,
 		seenReferences{},

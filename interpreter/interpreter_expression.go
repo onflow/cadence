@@ -1366,7 +1366,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 	}
 
 	castingExpressionTypes := interpreter.Program.Elaboration.CastingExpressionTypes(expression)
-	expectedType := interpreter.SubstituteMappedEntitlements(castingExpressionTypes.TargetType)
+	expectedType := SubstituteMappedEntitlements(interpreter, castingExpressionTypes.TargetType)
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
@@ -1386,7 +1386,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			// otherwise dynamic cast now always unboxes optionals
 			value = interpreter.Unbox(value)
 		}
-		valueSemaType := interpreter.SubstituteMappedEntitlements(MustSemaTypeOfValue(value, interpreter))
+		valueSemaType := SubstituteMappedEntitlements(interpreter, MustSemaTypeOfValue(value, interpreter))
 		valueStaticType := ConvertSemaToStaticType(interpreter, valueSemaType)
 		isSubType := IsSubTypeOfSemaType(interpreter, valueStaticType, expectedType)
 

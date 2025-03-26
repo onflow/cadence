@@ -147,7 +147,7 @@ type Interface interface {
 	GenerateAccountID(address common.Address) (uint64, error)
 	RecoverProgram(program *ast.Program, location common.Location) ([]byte, error)
 	ValidateAccountCapabilitiesGet(
-		inter *interpreter.Interpreter,
+		context interpreter.AccountCapabilityValidationContext,
 		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		path interpreter.PathValue,

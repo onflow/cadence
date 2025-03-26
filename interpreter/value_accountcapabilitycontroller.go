@@ -287,7 +287,7 @@ func (v *AccountCapabilityControllerValue) ControllerCapabilityID() UInt64Value 
 }
 
 func (v *AccountCapabilityControllerValue) ReferenceValue(
-	context CapConReferenceValueContext,
+	context ValueCapabilityControllerReferenceValueContext,
 	capabilityAddress common.Address,
 	resultBorrowType *sema.ReferenceType,
 	locationRange LocationRange,

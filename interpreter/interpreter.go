@@ -119,7 +119,7 @@ type CapabilityBorrowHandlerFunc func(
 
 // CapabilityCheckHandlerFunc is a function that is used to check ID capabilities.
 type CapabilityCheckHandlerFunc func(
-	inter *Interpreter,
+	context CheckCapabilityControllerContext,
 	locationRange LocationRange,
 	address AddressValue,
 	capabilityID UInt64Value,
@@ -129,7 +129,7 @@ type CapabilityCheckHandlerFunc func(
 
 // InjectedCompositeFieldsHandlerFunc is a function that handles storage reads.
 type InjectedCompositeFieldsHandlerFunc func(
-	context FunctionCreationContext,
+	context AccountCreationContext,
 	location common.Location,
 	qualifiedIdentifier string,
 	compositeKind common.CompositeKind,
@@ -152,13 +152,13 @@ type ImportLocationHandlerFunc func(
 // AccountHandlerFunc is a function that handles retrieving an auth account at a given address.
 // The account returned must be of type `Account`.
 type AccountHandlerFunc func(
-	context FunctionCreationContext,
+	context AccountCreationContext,
 	address AddressValue,
 ) Value
 
 // ValidateAccountCapabilitiesGetHandlerFunc is a function that is used to handle when a capability of an account is got.
 type ValidateAccountCapabilitiesGetHandlerFunc func(
-	inter *Interpreter,
+	context AccountCapabilityValidationContext,
 	locationRange LocationRange,
 	address AddressValue,
 	path PathValue,
@@ -1869,20 +1869,20 @@ func (interpreter *Interpreter) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclarat
 	panic(errors.NewUnreachableError())
 }
 
-func (interpreter *Interpreter) SubstituteMappedEntitlements(ty sema.Type) sema.Type {
-	if interpreter.SharedState.currentEntitlementMappedValue == nil {
+func SubstituteMappedEntitlements(handler EntitlementMappingsSubstitutionHandler, ty sema.Type) sema.Type {
+	if handler.CurrentEntitlementMappedValue() == nil {
 		return ty
 	}
 
-	return ty.Map(interpreter, make(map[*sema.TypeParameter]*sema.TypeParameter), func(t sema.Type) sema.Type {
+	return ty.Map(handler, make(map[*sema.TypeParameter]*sema.TypeParameter), func(t sema.Type) sema.Type {
 		switch refType := t.(type) {
 		case *sema.ReferenceType:
 			if _, isMappedAuth := refType.Authorization.(*sema.EntitlementMapAccess); isMappedAuth {
 				authorization := MustConvertStaticAuthorizationToSemaAccess(
-					interpreter,
-					interpreter.SharedState.currentEntitlementMappedValue,
+					handler,
+					handler.CurrentEntitlementMappedValue(),
 				)
-				return sema.NewReferenceType(interpreter, authorization, refType.Type)
+				return sema.NewReferenceType(handler, authorization, refType.Type)
 			}
 		}
 		return t
@@ -1909,7 +1909,7 @@ func (interpreter *Interpreter) transferAndConvert(
 		true, // value is standalone.
 	)
 
-	targetType = interpreter.SubstituteMappedEntitlements(targetType)
+	targetType = SubstituteMappedEntitlements(interpreter, targetType)
 
 	result := interpreter.ConvertAndBox(
 		locationRange,
@@ -4799,6 +4799,11 @@ func (interpreter *Interpreter) AllElaborations() (elaborations map[common.Locat
 	return
 }
 
+func (interpreter *Interpreter) GetContractValue(contractLocation common.AddressLocation) (*CompositeValue, error) {
+	inter := interpreter.EnsureLoaded(contractLocation)
+	return inter.GetContractComposite(contractLocation)
+}
+
 // GetContractComposite gets the composite value of the contract at the address location.
 func (interpreter *Interpreter) GetContractComposite(contractLocation common.AddressLocation) (*CompositeValue, error) {
 	contractGlobal := interpreter.Globals.Get(contractLocation.Name)
@@ -5877,4 +5882,24 @@ func (interpreter *Interpreter) SetAttachmentIteration(base *CompositeValue, sta
 
 func (interpreter *Interpreter) GetCapabilityCheckHandler() CapabilityCheckHandlerFunc {
 	return interpreter.SharedState.Config.CapabilityCheckHandler
+}
+
+func (interpreter *Interpreter) GetCapabilityControllerIterations() map[AddressPath]int {
+	return interpreter.SharedState.CapabilityControllerIterations
+}
+
+func (interpreter *Interpreter) SetMutationDuringCapabilityControllerIteration() {
+	interpreter.SharedState.MutationDuringCapabilityControllerIteration = true
+}
+
+func (interpreter *Interpreter) MutationDuringCapabilityControllerIteration() bool {
+	return interpreter.SharedState.MutationDuringCapabilityControllerIteration
+}
+
+func (interpreter *Interpreter) CurrentEntitlementMappedValue() Authorization {
+	return interpreter.SharedState.currentEntitlementMappedValue
+}
+
+func (interpreter *Interpreter) ValidateAccountCapabilitiesGetHandler() ValidateAccountCapabilitiesGetHandlerFunc {
+	return interpreter.SharedState.Config.ValidateAccountCapabilitiesGetHandler
 }

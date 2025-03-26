@@ -220,13 +220,82 @@ type ResourceDestructionHandler interface {
 
 var _ ResourceDestructionHandler = &Interpreter{}
 
-type CapConReferenceValueContext interface {
+type AccountCapabilityCreationContext interface {
+	StorageCapabilityCreationContext
+}
+
+var _ AccountCapabilityCreationContext = &Interpreter{}
+
+type ValueCapabilityControllerReferenceValueContext interface {
 	FunctionCreationContext
 	ValueStaticTypeContext
 	AccountHandlerContextContext
 }
 
-var _ CapConReferenceValueContext = &Interpreter{}
+var _ ValueCapabilityControllerReferenceValueContext = &Interpreter{}
+
+type StorageCapabilityCreationContext interface {
+	FunctionCreationContext
+	CapabilityControllerContext
+}
+
+var _ StorageCapabilityCreationContext = &Interpreter{}
+
+type CapabilityControllerReferenceContext interface {
+	StorageReader
+	ReferenceCreationContext
+}
+
+var _ CapabilityControllerReferenceContext = &Interpreter{}
+
+type CapabilityControllerContext interface {
+	StorageContext
+	DictionaryCreationContext
+	ValueExportContext
+	GetCapabilityControllerIterations() map[AddressPath]int
+	SetMutationDuringCapabilityControllerIteration()
+	MutationDuringCapabilityControllerIteration() bool
+}
+
+var _ CapabilityControllerContext = &Interpreter{}
+
+type GetCapabilityControllerContext interface {
+	TypeConverter
+	EntitlementMappingsSubstitutionHandler
+	StorageReader
+}
+
+var _ GetCapabilityControllerContext = &Interpreter{}
+
+type GetCapabilityControllerReferenceContext interface {
+	GetCapabilityControllerContext
+	ValueCapabilityControllerReferenceValueContext
+}
+
+var _ GetCapabilityControllerReferenceContext = &Interpreter{}
+
+
+type CheckCapabilityControllerContext interface {
+	GetCapabilityControllerReferenceContext
+}
+
+var _ CheckCapabilityControllerContext = &Interpreter{}
+
+
+type BorrowCapabilityControllerContext interface {
+	GetCapabilityControllerReferenceContext
+	ValidateAccountCapabilitiesGetHandler() ValidateAccountCapabilitiesGetHandlerFunc
+}
+
+var _ BorrowCapabilityControllerContext = &Interpreter{}
+
+// TODO: This is used by the FVM.
+//   Check and the functionalities needed.
+type AccountCapabilityValidationContext interface {
+}
+
+var _ AccountCapabilityValidationContext = &Interpreter{}
+
 
 type ResourceDestructionContext interface {
 	ValueWalkContext
@@ -274,6 +343,11 @@ type InvocationContext interface {
 	ValueStringContext
 	MemberAccessibleContext
 	AttachmentContext
+	ErrorHandler
+	ArrayCreationContext
+	AccountCreationContext
+	BorrowCapabilityControllerContext
+	AccountCapabilityValidationContext
 	GetLocation() common.Location
 }
 
@@ -291,7 +365,52 @@ type CompositeValueExportContext interface {
 	AttachmentContext
 }
 
-var _ ValueExportContext = &Interpreter{}
+var _ CompositeValueExportContext = &Interpreter{}
+
+type PublicKeyCreationContext interface {
+	MemberAccessibleContext
+}
+
+var _ PublicKeyCreationContext = &Interpreter{}
+
+type PublicKeyValidationContext interface {
+	PublicKeyCreationContext
+}
+
+var _ PublicKeyValidationContext = &Interpreter{}
+
+type AccountKeyCreationContext interface {
+	PublicKeyCreationContext
+	AccountCapabilityCreationContext
+}
+
+var _ AccountKeyCreationContext = &Interpreter{}
+
+type AccountCreationContext interface {
+	AccountKeyCreationContext
+	AccountContractCreationContext
+}
+
+var _ AccountCreationContext = &Interpreter{}
+
+type AccountContractCreationContext interface {
+	AccountContractBorrowContext
+}
+
+var _ AccountContractCreationContext = &Interpreter{}
+
+type AccountContractBorrowContext interface {
+	FunctionCreationContext
+	GetContractValue(contractLocation common.AddressLocation) (*CompositeValue, error)
+}
+
+var _ AccountContractBorrowContext = &Interpreter{}
+
+type ErrorHandler interface {
+	RecoverErrors(onError func(error))
+}
+
+var _ ErrorHandler = &Interpreter{}
 
 // NoOpStringContext is the ValueStringContext implementation used in Value.RecursiveString method.
 // Since Value.RecursiveString is a non-mutating operation, it should only need the no-op memory metering

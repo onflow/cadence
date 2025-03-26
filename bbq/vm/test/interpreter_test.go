@@ -204,7 +204,7 @@ func TestInterpreterFTTransfer(t *testing.T) {
 		temporarilyRecordCode: func(location common.AddressLocation, code []byte) {
 			// do nothing
 		},
-		emitEvent: func(*interpreter.Interpreter, interpreter.LocationRange, *sema.CompositeType, []interpreter.Value) {
+		emitEvent: func(interpreter.ValueExportContext, interpreter.LocationRange, *sema.CompositeType, []interpreter.Value) {
 			// do nothing
 		},
 		recordContractUpdate: func(location common.AddressLocation, value *interpreter.CompositeValue) {
@@ -574,7 +574,7 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 		temporarilyRecordCode: func(location common.AddressLocation, code []byte) {
 			// do nothing
 		},
-		emitEvent: func(*interpreter.Interpreter, interpreter.LocationRange, *sema.CompositeType, []interpreter.Value) {
+		emitEvent: func(interpreter.ValueExportContext, interpreter.LocationRange, *sema.CompositeType, []interpreter.Value) {
 			// do nothing
 		},
 		recordContractUpdate: func(location common.AddressLocation, value *interpreter.CompositeValue) {
