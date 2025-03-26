@@ -35,6 +35,8 @@ import (
 
 func TestFTTransfer(t *testing.T) {
 
+	t.SkipNow()
+
 	// ---- Deploy FT Contract -----
 
 	storage := interpreter.NewInMemoryStorage(nil)

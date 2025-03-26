@@ -57,18 +57,7 @@ type VMInvokable struct {
 var _ Invokable = &VMInvokable{}
 
 func (v *VMInvokable) Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error) {
-	//vmArguments := make([]vm.Value, 0, len(arguments))
-	//for _, argument := range arguments {
-	//	vmArguments = append(
-	//		vmArguments,
-	//		vm.InterpreterValueToVMValue(argument),
-	//	)
-	//}
-
 	return v.vmInstance.Invoke(functionName, arguments...)
-
-	//interpreterValue := vm.VMValueToInterpreterValue(v.config, result)
-	//return interpreterValue, err
 }
 
 func ParseCheckAndPrepare(t testing.TB, code string, compile bool) Invokable {

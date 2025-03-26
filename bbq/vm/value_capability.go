@@ -26,70 +26,7 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-//
-//import (
-//	"github.com/onflow/atree"
-//
-//	"github.com/onflow/cadence/bbq"
-//	"github.com/onflow/cadence/common"
-//	"github.com/onflow/cadence/errors"
-//	"github.com/onflow/cadence/format"
-//	"github.com/onflow/cadence/interpreter"
-//	"github.com/onflow/cadence/sema"
-//)
-//
-//// members
-//
-//type CapabilityValue struct {
-//	Address    AddressValue
-//	BorrowType bbq.StaticType
-//	ID         IntValue // TODO: UInt64Value
-//}
-//
-//var _ Value = CapabilityValue{}
-//
-//func NewCapabilityValue(address AddressValue, id IntValue, borrowType bbq.StaticType) CapabilityValue {
-//	return CapabilityValue{
-//		Address:    address,
-//		BorrowType: borrowType,
-//		ID:         id,
-//	}
-//}
-//
-//func NewInvalidCapabilityValue(
-//	address common.Address,
-//	borrowType bbq.StaticType,
-//) CapabilityValue {
-//	return CapabilityValue{
-//		ID:         InvalidCapabilityID,
-//		Address:    AddressValue(address),
-//		BorrowType: borrowType,
-//	}
-//}
-//
-//func (CapabilityValue) isValue() {}
-//
-//func (v CapabilityValue) StaticType(context StaticTypeContext) bbq.StaticType {
-//	return interpreter.NewCapabilityStaticType(context, v.BorrowType)
-//}
-//
-//func (v CapabilityValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
-//	return v
-//}
-//
-//func (v CapabilityValue) String() string {
-//	var borrowType string
-//	if v.BorrowType != nil {
-//		borrowType = v.BorrowType.String()
-//	}
-//	return format.Capability(
-//		borrowType,
-//		v.Address.String(),
-//		v.ID.String(),
-//	)
-//}
-//
-//var InvalidCapabilityID = IntValue{}
+// Members
 
 func init() {
 	typeName := interpreter.PrimitiveStaticTypeCapability.String()

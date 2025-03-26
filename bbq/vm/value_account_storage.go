@@ -27,31 +27,6 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-//
-//import (
-//	"github.com/onflow/atree"
-//
-//	"github.com/onflow/cadence/bbq"
-//	"github.com/onflow/cadence/common"
-//	"github.com/onflow/cadence/errors"
-//	"github.com/onflow/cadence/interpreter"
-//	"github.com/onflow/cadence/sema"
-//)
-//
-//func NewAccountStorageValue(accountAddress common.Address) *SimpleCompositeValue {
-//	return &SimpleCompositeValue{
-//		typeID:     sema.Account_StorageType.ID(),
-//		staticType: interpreter.PrimitiveStaticTypeAccount_Storage,
-//		Kind:       common.CompositeKindStructure,
-//		fields:     map[string]Value{
-//			// TODO: add the remaining fields
-//		},
-//		metadata: map[string]any{
-//			sema.AccountTypeAddressFieldName: accountAddress,
-//		},
-//	}
-//}
-//
 // members
 
 func init() {

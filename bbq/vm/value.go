@@ -19,9 +19,8 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/common"
-
 	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 )
 

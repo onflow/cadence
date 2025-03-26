@@ -20,52 +20,13 @@ package vm
 
 import (
 	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
-
-//
-//import (
-//	"github.com/onflow/atree"
-//
-//	"github.com/onflow/cadence/bbq"
-//	"github.com/onflow/cadence/common"
-//	"github.com/onflow/cadence/errors"
-//	"github.com/onflow/cadence/interpreter"
-//	"github.com/onflow/cadence/sema"
-//)
-//
-//func NewAccountCapabilitiesValue(accountAddress common.Address) *SimpleCompositeValue {
-//	value := &SimpleCompositeValue{
-//		typeID:     sema.Account_StorageType.ID(),
-//		staticType: interpreter.PrimitiveStaticTypeAccount_Capabilities,
-//		Kind:       common.CompositeKindStructure,
-//		fields:     map[string]Value{
-//			// TODO: add the remaining fields
-//		},
-//		metadata: map[string]any{
-//			sema.AccountTypeAddressFieldName: accountAddress,
-//		},
-//	}
-//
-//	value.computeField = func(name string) Value {
-//		var field Value
-//		switch name {
-//		case sema.Account_CapabilitiesTypeStorageFieldName:
-//			field = NewAccountStorageCapabilitiesValue(accountAddress)
-//		default:
-//			return nil
-//		}
-//
-//		value.fields[name] = field
-//		return field
-//	}
-//
-//	return value
-//}
 
 // members
 

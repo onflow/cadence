@@ -22,14 +22,6 @@ import (
 	"github.com/onflow/cadence/interpreter"
 )
 
-// import (
-//
-//	"github.com/onflow/atree"
-//
-//	"github.com/onflow/cadence/bbq"
-//	"github.com/onflow/cadence/common"
-//
-// )
 type SimpleCompositeValue struct {
 	interpreter.SimpleCompositeValue
 
@@ -38,53 +30,3 @@ type SimpleCompositeValue struct {
 	// TODO: any better way to pass down information?
 	metadata map[string]any
 }
-
-//
-//var _ Value = &CompositeValue{}
-//
-//func NewSimpleCompositeValue(
-//	kind common.CompositeKind,
-//	typeID common.TypeID,
-//	fields map[string]Value,
-//) *SimpleCompositeValue {
-//
-//	return &SimpleCompositeValue{
-//		Kind:   kind,
-//		typeID: typeID,
-//		fields: fields,
-//	}
-//}
-//
-//func (*SimpleCompositeValue) isValue() {}
-//
-//func (v *SimpleCompositeValue) StaticType(StaticTypeContext) bbq.StaticType {
-//	return v.staticType
-//}
-//
-//func (v *SimpleCompositeValue) GetMember(_ *Config, name string) Value {
-//	value, ok := v.fields[name]
-//	if ok {
-//		return value
-//	}
-//
-//	return v.computeField(name)
-//}
-//
-//func (v *SimpleCompositeValue) SetMember(_ *Config, name string, value Value) {
-//	v.fields[name] = value
-//}
-//
-//func (v *SimpleCompositeValue) IsResourceKinded() bool {
-//	return v.Kind == common.CompositeKindResource
-//}
-//
-//func (v *SimpleCompositeValue) String() string {
-//	//TODO implement me
-//	panic("implement me")
-//}
-//
-//func (v *SimpleCompositeValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
-//	return v
-//}
-//
-//func (v *SimpleCompositeValue) Destroy(*Config) {}

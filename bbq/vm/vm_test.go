@@ -19,13 +19,13 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/interpreter"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/interpreter"
 )
 
 func TestVM_pop(t *testing.T) {

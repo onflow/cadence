@@ -26,39 +26,6 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-//
-//type StringValue struct {
-//	Str []byte
-//}
-//
-//var _ Value = StringValue{}
-//
-//func NewStringValue(str string) StringValue {
-//	return StringValue{
-//		Str: []byte(str),
-//	}
-//}
-//
-//func NewStringValueFromBytes(bytes []byte) StringValue {
-//	return StringValue{
-//		Str: bytes,
-//	}
-//}
-//
-//func (StringValue) isValue() {}
-//
-//func (StringValue) StaticType(StaticTypeContext) bbq.StaticType {
-//	return interpreter.PrimitiveStaticTypeString
-//}
-//
-//func (v StringValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
-//	return v
-//}
-//
-//func (v StringValue) String() string {
-//	return string(v.Str)
-//}
-
 // members
 
 func init() {

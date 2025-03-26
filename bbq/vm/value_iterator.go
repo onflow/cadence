@@ -20,6 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 )
@@ -96,7 +97,15 @@ func (v IteratorWrapperValue) NeedsStoreTo(address atree.Address) bool {
 	panic(errors.NewUnreachableError())
 }
 
-func (v IteratorWrapperValue) Transfer(transferContext interpreter.ValueTransferContext, locationRange interpreter.LocationRange, address atree.Address, remove bool, storable atree.Storable, preventTransfer map[atree.ValueID]struct{}, hasNoParentContainer bool) interpreter.Value {
+func (v IteratorWrapperValue) Transfer(
+	_ interpreter.ValueTransferContext,
+	_ interpreter.LocationRange,
+	_ atree.Address,
+	_ bool,
+	_ atree.Storable,
+	_ map[atree.ValueID]struct{},
+	_ bool,
+) interpreter.Value {
 	return v
 }
 

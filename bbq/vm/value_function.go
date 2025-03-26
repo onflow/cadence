@@ -20,11 +20,11 @@ package vm
 
 import (
 	"github.com/onflow/atree"
-	"github.com/onflow/cadence/interpreter"
 
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
 )
 
 type FunctionValue struct {
@@ -52,8 +52,8 @@ func (v FunctionValue) Transfer(_ interpreter.ValueTransferContext,
 }
 
 func (v FunctionValue) String() string {
-	//TODO implement me
-	panic("implement me")
+	//TODO
+	panic(errors.NewUnreachableError())
 }
 
 func (v FunctionValue) Storable(storage atree.SlabStorage, address atree.Address, u uint64) (atree.Storable, error) {
@@ -154,8 +154,8 @@ func (v NativeFunctionValue) Accept(interpreter *interpreter.Interpreter, visito
 }
 
 func (v NativeFunctionValue) Walk(interpreter *interpreter.Interpreter, walkChild func(interpreter.Value), locationRange interpreter.LocationRange) {
-	//TODO implement me
-	panic("implement me")
+	//TODO
+	panic(errors.NewUnreachableError())
 }
 
 func (v NativeFunctionValue) ConformsToStaticType(interpreter *interpreter.Interpreter, locationRange interpreter.LocationRange, results interpreter.TypeConformanceResults) bool {
@@ -174,8 +174,8 @@ func (v NativeFunctionValue) MeteredString(context interpreter.ValueStringContex
 }
 
 func (v NativeFunctionValue) IsResourceKinded(context interpreter.ValueStaticTypeContext) bool {
-	//TODO implement me
-	panic("implement me")
+	//TODO
+	panic(errors.NewUnreachableError())
 }
 
 func (v NativeFunctionValue) NeedsStoreTo(address atree.Address) bool {
