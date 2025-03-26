@@ -42,7 +42,8 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 		err = internalErr
 	})
 
-	return interpreter.invokeFunctionValue(
+	return invokeFunctionValue(
+		interpreter,
 		function,
 		arguments,
 		nil,
@@ -54,7 +55,8 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 	), nil
 }
 
-func (interpreter *Interpreter) invokeFunctionValue(
+func invokeFunctionValue(
+	context InvocationContext,
 	function FunctionValue,
 	arguments []Value,
 	expressions []ast.Expression,
@@ -68,6 +70,8 @@ func (interpreter *Interpreter) invokeFunctionValue(
 	parameterTypeCount := len(parameterTypes)
 
 	var transferredArguments []Value
+
+	location := context.GetLocation()
 
 	argumentCount := len(arguments)
 	if argumentCount > 0 {
@@ -84,7 +88,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 			}
 
 			locationRange := LocationRange{
-				Location:    interpreter.Location,
+				Location:    location,
 				HasPosition: locationPos,
 			}
 
@@ -98,7 +102,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 				)
 			} else {
 				transferredArguments[i] = argument.Transfer(
-					interpreter,
+					context,
 					locationRange,
 					atree.Address{},
 					false,
@@ -111,12 +115,12 @@ func (interpreter *Interpreter) invokeFunctionValue(
 	}
 
 	locationRange := LocationRange{
-		Location:    interpreter.Location,
+		Location:    location,
 		HasPosition: invocationPosition,
 	}
 
 	invocation := NewInvocation(
-		interpreter,
+		context,
 		nil,
 		nil,
 		nil,

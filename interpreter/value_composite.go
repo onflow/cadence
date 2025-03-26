@@ -1661,9 +1661,9 @@ func (v *CompositeValue) getAttachmentValue(interpreter *Interpreter, locationRa
 	return nil
 }
 
-func (v *CompositeValue) GetAttachments(interpreter *Interpreter, locationRange LocationRange) []*CompositeValue {
+func (v *CompositeValue) GetAttachments(context AttachmentContext, locationRange LocationRange) []*CompositeValue {
 	var attachments []*CompositeValue
-	v.forEachAttachment(interpreter, locationRange, func(attachment *CompositeValue) {
+	v.forEachAttachment(context, locationRange, func(attachment *CompositeValue) {
 		attachments = append(attachments, attachment)
 	})
 	return attachments
@@ -1678,7 +1678,7 @@ func (v *CompositeValue) forEachAttachmentFunction(context FunctionCreationConte
 			compositeType.GetCompositeKind(),
 		),
 		func(v *CompositeValue, invocation Invocation) Value {
-			inter := invocation.InvocationContext
+			invocationContext := invocation.InvocationContext
 
 			functionValue, ok := invocation.Arguments[0].(FunctionValue)
 			if !ok {
@@ -1691,10 +1691,10 @@ func (v *CompositeValue) forEachAttachmentFunction(context FunctionCreationConte
 
 			fn := func(attachment *CompositeValue) {
 
-				attachmentType := MustSemaTypeOfValue(attachment, inter).(*sema.CompositeType)
+				attachmentType := MustSemaTypeOfValue(attachment, invocationContext).(*sema.CompositeType)
 
 				attachmentReference := NewEphemeralReferenceValue(
-					inter,
+					invocationContext,
 					// attachments are unauthorized during iteration
 					UnauthorizedAccess,
 					attachment,
@@ -1703,13 +1703,14 @@ func (v *CompositeValue) forEachAttachmentFunction(context FunctionCreationConte
 				)
 
 				referenceType := sema.NewReferenceType(
-					inter,
+					invocationContext,
 					// attachments are unauthorized during iteration
 					sema.UnauthorizedAccess,
 					attachmentType,
 				)
 
-				inter.invokeFunctionValue(
+				invokeFunctionValue(
+					invocationContext,
 					functionValue,
 					[]Value{attachmentReference},
 					nil,
@@ -1721,7 +1722,7 @@ func (v *CompositeValue) forEachAttachmentFunction(context FunctionCreationConte
 				)
 			}
 
-			v.forEachAttachment(inter, locationRange, fn)
+			v.forEachAttachment(invocationContext, locationRange, fn)
 			return Void
 		},
 	)
@@ -1749,20 +1750,20 @@ func attachmentBaseAndSelfValues(
 }
 
 func (v *CompositeValue) forEachAttachment(
-	interpreter *Interpreter,
+	context AttachmentContext,
 	locationRange LocationRange,
 	f func(*CompositeValue),
 ) {
 	// The attachment iteration creates an implicit reference to the composite, and holds onto that referenced-value.
 	// But the reference could get invalidated during the iteration, making that referenced-value invalid.
 	// We create a reference here for the purposes of tracking it during iteration.
-	vType := MustSemaTypeOfValue(v, interpreter)
-	compositeReference := NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, v, vType, locationRange)
-	forEachAttachment(interpreter, compositeReference, locationRange, f)
+	vType := MustSemaTypeOfValue(v, context)
+	compositeReference := NewEphemeralReferenceValue(context, UnauthorizedAccess, v, vType, locationRange)
+	forEachAttachment(context, compositeReference, locationRange, f)
 }
 
 func forEachAttachment(
-	interpreter *Interpreter,
+	context AttachmentContext,
 	compositeReference *EphemeralReferenceValue,
 	locationRange LocationRange,
 	f func(*CompositeValue),
@@ -1780,15 +1781,14 @@ func forEachAttachment(
 		panic(errors.NewExternalError(err))
 	}
 
-	oldSharedState := interpreter.SharedState.inAttachmentIteration(composite)
-	interpreter.SharedState.setAttachmentIteration(composite, true)
+	oldSharedState := context.SetAttachmentIteration(composite, true)
 	defer func() {
-		interpreter.SharedState.setAttachmentIteration(composite, oldSharedState)
+		context.SetAttachmentIteration(composite, oldSharedState)
 	}()
 
 	for {
 		// Check that the implicit composite reference was not invalidated during iteration
-		checkInvalidatedResourceOrResourceReference(compositeReference, locationRange, interpreter)
+		checkInvalidatedResourceOrResourceReference(compositeReference, locationRange, context)
 		key, value, err := iterator.Next()
 		if err != nil {
 			panic(errors.NewExternalError(err))
@@ -1797,7 +1797,7 @@ func forEachAttachment(
 			break
 		}
 		if strings.HasPrefix(string(key.(StringAtreeValue)), unrepresentableNamePrefix) {
-			attachment, ok := MustConvertStoredValue(interpreter, value).(*CompositeValue)
+			attachment, ok := MustConvertStoredValue(context, value).(*CompositeValue)
 			if !ok {
 				panic(errors.NewExternalError(err))
 			}
