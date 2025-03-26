@@ -3566,7 +3566,8 @@ func newAccountCapabilitiesPublishFunction(
 
 				storageMapKey := interpreter.StringStorageMapKey(identifier)
 
-				if inter.StoredValueExists(
+				if interpreter.StoredValueExists(
+					inter,
 					accountAddress,
 					domain,
 					storageMapKey,
@@ -4108,7 +4109,7 @@ func newAccountCapabilitiesExistsFunction(
 				storageMapKey := interpreter.StringStorageMapKey(identifier)
 
 				return interpreter.BoolValue(
-					inter.StoredValueExists(address, domain, storageMapKey),
+					interpreter.StoredValueExists(inter, address, domain, storageMapKey),
 				)
 			},
 		)

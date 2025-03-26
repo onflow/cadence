@@ -2712,12 +2712,13 @@ func (interpreter *Interpreter) NewSubInterpreter(
 	)
 }
 
-func (interpreter *Interpreter) StoredValueExists(
+func StoredValueExists(
+	context StorageContext,
 	storageAddress common.Address,
 	domain common.StorageDomain,
 	identifier StorageMapKey,
 ) bool {
-	accountStorage := interpreter.Storage().GetDomainStorageMap(interpreter, storageAddress, domain, false)
+	accountStorage := context.Storage().GetDomainStorageMap(context, storageAddress, domain, false)
 	if accountStorage == nil {
 		return false
 	}
@@ -4382,7 +4383,7 @@ func authAccountSaveFunction(
 
 			storageMapKey := StringStorageMapKey(identifier)
 
-			if interpreter.StoredValueExists(address, domain, storageMapKey) {
+			if StoredValueExists(interpreter, address, domain, storageMapKey) {
 				panic(
 					OverwriteError{
 						Address:       addressValue,

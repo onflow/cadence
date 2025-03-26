@@ -148,12 +148,18 @@ type ReferenceCreationContext interface {
 
 var _ ReferenceCreationContext = &Interpreter{}
 
+type AccountHandlerContextContext interface {
+	AccountHandler() AccountHandlerFunc
+}
+
+var _ AccountHandlerContextContext = &Interpreter{}
+
 type MemberAccessibleContext interface {
 	FunctionCreationContext
 	ArrayCreationContext
 	ResourceDestructionHandler
+	AccountHandlerContextContext
 
-	AccountHandler() AccountHandlerFunc
 	InjectedCompositeFieldsHandler() InjectedCompositeFieldsHandlerFunc
 	GetMemberAccessContextForLocation(location common.Location) MemberAccessibleContext
 }
@@ -201,6 +207,14 @@ type ResourceDestructionHandler interface {
 }
 
 var _ ResourceDestructionHandler = &Interpreter{}
+
+type CapConReferenceValueContext interface {
+	FunctionCreationContext
+	ValueStaticTypeContext
+	AccountHandlerContextContext
+}
+
+var _ CapConReferenceValueContext = &Interpreter{}
 
 // NoOpStringContext is the ValueStringContext implementation used in Value.RecursiveString method.
 // Since Value.RecursiveString is a non-mutating operation, it should only need the no-op memory metering
