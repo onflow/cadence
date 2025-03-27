@@ -255,7 +255,8 @@ func TestInterpreterFTTransfer(t *testing.T) {
 
 			constructor := constructorGenerator(common.ZeroAddress)
 
-			value, err := inter.InvokeFunctionValue(
+			value, err := interpreter.InvokeFunctionValue(
+				inter,
 				constructor,
 				[]interpreter.Value{signer},
 				[]sema.Type{
@@ -275,7 +276,7 @@ func TestInterpreterFTTransfer(t *testing.T) {
 			return flowTokenContractValue
 		},
 		CapabilityBorrowHandler: func(
-			inter *interpreter.Interpreter,
+			context interpreter.BorrowCapabilityControllerContext,
 			locationRange interpreter.LocationRange,
 			address interpreter.AddressValue,
 			capabilityID interpreter.UInt64Value,
@@ -283,7 +284,7 @@ func TestInterpreterFTTransfer(t *testing.T) {
 			capabilityBorrowType *sema.ReferenceType,
 		) interpreter.ReferenceValue {
 			return stdlib.BorrowCapabilityController(
-				inter,
+				context,
 				locationRange,
 				address,
 				capabilityID,
@@ -625,7 +626,8 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 
 			constructor := constructorGenerator(common.ZeroAddress)
 
-			value, err := inter.InvokeFunctionValue(
+			value, err := interpreter.InvokeFunctionValue(
+				inter,
 				constructor,
 				[]interpreter.Value{signer},
 				[]sema.Type{
@@ -645,7 +647,7 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 			return flowTokenContractValue
 		},
 		CapabilityBorrowHandler: func(
-			inter *interpreter.Interpreter,
+			context interpreter.BorrowCapabilityControllerContext,
 			locationRange interpreter.LocationRange,
 			address interpreter.AddressValue,
 			capabilityID interpreter.UInt64Value,
@@ -653,7 +655,7 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 			capabilityBorrowType *sema.ReferenceType,
 		) interpreter.ReferenceValue {
 			return stdlib.BorrowCapabilityController(
-				inter,
+				context,
 				locationRange,
 				address,
 				capabilityID,
