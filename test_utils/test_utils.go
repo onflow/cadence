@@ -49,9 +49,8 @@ type Invokable interface {
 }
 
 type VMInvokable struct {
-	*interpreter.Interpreter
 	vmInstance *vm.VM
-	config     *vm.Config
+	*vm.Config
 }
 
 var _ Invokable = &VMInvokable{}
@@ -78,8 +77,7 @@ func ParseCheckAndPrepare(t testing.TB, code string, compile bool) Invokable {
 
 	return &VMInvokable{
 		vmInstance:  vmInstance,
-		config:      vmConfig,
-		Interpreter: vmConfig.Interpreter(),
+		Config:      vmConfig,
 	}
 
 }
