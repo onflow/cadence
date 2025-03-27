@@ -66,7 +66,7 @@ func (v FunctionValue) Accept(interpreter *interpreter.Interpreter, visitor inte
 	panic(errors.NewUnreachableError())
 }
 
-func (v FunctionValue) Walk(interpreter *interpreter.Interpreter, walkChild func(interpreter.Value), locationRange interpreter.LocationRange) {
+func (v FunctionValue) Walk(interpreter interpreter.ValueWalkContext, walkChild func(interpreter.Value), locationRange interpreter.LocationRange) {
 	//TODO
 	panic(errors.NewUnreachableError())
 }
@@ -153,7 +153,7 @@ func (v NativeFunctionValue) Accept(interpreter *interpreter.Interpreter, visito
 	panic(errors.NewUnreachableError())
 }
 
-func (v NativeFunctionValue) Walk(interpreter *interpreter.Interpreter, walkChild func(interpreter.Value), locationRange interpreter.LocationRange) {
+func (v NativeFunctionValue) Walk(interpreter interpreter.ValueWalkContext, walkChild func(interpreter.Value), locationRange interpreter.LocationRange) {
 	//TODO
 	panic(errors.NewUnreachableError())
 }

@@ -20,7 +20,6 @@ package vm
 
 import (
 	"github.com/onflow/atree"
-
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -48,8 +47,8 @@ type Config struct {
 
 	// TODO: Move these to a 'shared state'?
 	storage                                     interpreter.Storage
-	CapabilityControllerIterations              map[AddressPath]int
-	MutationDuringCapabilityControllerIteration bool
+	CapabilityControllerIterations              map[interpreter.AddressPath]int
+	mutationDuringCapabilityControllerIteration bool
 	referencedResourceKindedValues              ReferencedResourceKindedValues
 
 	// OnEventEmitted is triggered when an event is emitted by the program
@@ -75,8 +74,8 @@ func NewConfig(storage interpreter.Storage) *Config {
 		ContractValueHandler: nil,
 		accountHandler:       nil,
 
-		CapabilityControllerIterations:              make(map[AddressPath]int),
-		MutationDuringCapabilityControllerIteration: false,
+		CapabilityControllerIterations:              make(map[interpreter.AddressPath]int),
+		mutationDuringCapabilityControllerIteration: false,
 		referencedResourceKindedValues:              ReferencedResourceKindedValues{},
 	}
 }
@@ -290,9 +289,44 @@ func (c *Config) GetAccountHandler() stdlib.AccountHandler {
 	return c.accountHandler
 }
 
-type ContractValueHandler func(conf *Config, location common.Location) *interpreter.CompositeValue
-
-type AddressPath struct {
-	Address common.Address
-	Path    interpreter.PathValue
+func (c *Config) StorageMutatedDuringIteration() bool {
+	//TODO
+	return false
 }
+
+func (c *Config) InStorageIteration() bool {
+	//TODO
+	return false
+}
+
+func (c *Config) SetInStorageIteration(b bool) {
+	//TODO
+}
+
+func (c *Config) WithResourceDestruction(valueID atree.ValueID, locationRange interpreter.LocationRange, f func()) {
+	//TODO
+}
+
+func (c *Config) GetCapabilityControllerIterations() map[interpreter.AddressPath]int {
+	return c.CapabilityControllerIterations
+}
+
+func (c *Config) SetMutationDuringCapabilityControllerIteration() {
+	c.mutationDuringCapabilityControllerIteration = true
+}
+
+func (c *Config) MutationDuringCapabilityControllerIteration() bool {
+	return c.mutationDuringCapabilityControllerIteration
+}
+
+func (c *Config) GetContractValue(contractLocation common.AddressLocation) (*interpreter.CompositeValue, error) {
+	//TODO
+	return nil, nil
+}
+
+func (c *Config) SetAttachmentIteration(composite *interpreter.CompositeValue, state bool) bool {
+	//TODO
+	return false
+}
+
+type ContractValueHandler func(conf *Config, location common.Location) *interpreter.CompositeValue

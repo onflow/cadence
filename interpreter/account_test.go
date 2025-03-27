@@ -20,9 +20,8 @@ package interpreter_test
 
 import (
 	"fmt"
-	"testing"
-
 	"github.com/onflow/atree"
+	"testing"
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/errors"
@@ -415,39 +414,28 @@ func (n NoOpReferenceCreationContext) MeterMemory(usage common.MemoryUsage) erro
 
 type NoOpFunctionCreationContext struct {
 	NoOpReferenceCreationContext
+	//Just to make the compiler happy
+	interpreter.ResourceDestructionContext
 }
 
-func (n NoOpFunctionCreationContext) ReadStored(storageAddress common.Address, domain common.StorageDomain, identifier interpreter.StorageMapKey) interpreter.Value {
+func (n NoOpFunctionCreationContext) ClearReferencedResourceKindedValues(valueID atree.ValueID) {
+	// NO-OP
+}
+
+func (n NoOpFunctionCreationContext) ReferencedResourceKindedValues(valueID atree.ValueID) map[*interpreter.EphemeralReferenceValue]struct{} {
 	// NO-OP
 	return nil
 }
 
-func (n NoOpFunctionCreationContext) GetEntitlementType(typeID interpreter.TypeID) (*sema.EntitlementType, error) {
+func (n NoOpFunctionCreationContext) CheckInvalidatedResourceOrResourceReference(value interpreter.Value, locationRange interpreter.LocationRange) {
 	// NO-OP
-	return nil, nil
 }
 
-func (n NoOpFunctionCreationContext) GetEntitlementMapType(typeID interpreter.TypeID) (*sema.EntitlementMapType, error) {
+func (n NoOpFunctionCreationContext) MaybeTrackReferencedResourceKindedValue(ref *interpreter.EphemeralReferenceValue) {
 	// NO-OP
-	return nil, nil
 }
 
-func (n NoOpFunctionCreationContext) GetInterfaceType(location common.Location, qualifiedIdentifier string, typeID interpreter.TypeID) (*sema.InterfaceType, error) {
-	// NO-OP
-	return nil, nil
-}
-
-func (n NoOpFunctionCreationContext) GetCompositeType(location common.Location, qualifiedIdentifier string, typeID interpreter.TypeID) (*sema.CompositeType, error) {
-	// NO-OP
-	return nil, nil
-}
-
-func (n NoOpFunctionCreationContext) IsRecovered(location common.Location) bool {
-	// NO-OP
-	return false
-}
-
-func (n NoOpFunctionCreationContext) GetCompositeValueFunctions(v *interpreter.CompositeValue, locationRange interpreter.LocationRange) *interpreter.FunctionOrderedMap {
+func (n NoOpFunctionCreationContext) MeterMemory(usage common.MemoryUsage) error {
 	// NO-OP
 	return nil
 }
@@ -538,7 +526,7 @@ func testAccountWithErrorHandler(
 					return baseActivation
 				},
 				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
-				AccountHandler: func(context interpreter.FunctionCreationContext, address interpreter.AddressValue) interpreter.Value {
+				AccountHandler: func(context interpreter.AccountCreationContext, address interpreter.AddressValue) interpreter.Value {
 					return stdlib.NewAccountValue(context, nil, address)
 				},
 			},
