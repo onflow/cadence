@@ -191,7 +191,7 @@ func (PathValue) IsStorable() bool {
 	return true
 }
 
-func newPathFromStringValue(interpreter *Interpreter, domain common.PathDomain, value Value) Value {
+func newPathFromStringValue(gauge common.MemoryGauge, domain common.PathDomain, value Value) Value {
 	stringValue, ok := value.(*StringValue)
 	if !ok {
 		return Nil
@@ -200,9 +200,9 @@ func newPathFromStringValue(interpreter *Interpreter, domain common.PathDomain, 
 	// NOTE: any identifier is allowed, it does not have to match the syntax for path literals
 
 	return NewSomeValueNonCopying(
-		interpreter,
+		gauge,
 		NewPathValue(
-			interpreter,
+			gauge,
 			domain,
 			stringValue.Str,
 		),
