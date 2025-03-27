@@ -49,7 +49,7 @@ type AccountCapabilityControllerValue struct {
 	GetCapability func(common.MemoryGauge) *IDCapabilityValue
 	GetTag        func(StorageReader) *StringValue
 	SetTag        func(storageWriter StorageWriter, tag *StringValue)
-	Delete        func(inter *Interpreter, locationRange LocationRange)
+	Delete        func(context CapabilityControllerContext, locationRange LocationRange)
 }
 
 func NewUnmeteredAccountCapabilityControllerValue(
@@ -293,7 +293,8 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 	locationRange LocationRange,
 ) ReferenceValue {
 
-	account := context.AccountHandler()(context, AddressValue(capabilityAddress))
+	accountHandler := context.AccountHandler()
+	account := accountHandler(context, AddressValue(capabilityAddress))
 
 	// Account must be of `Account` type.
 	ExpectType(
@@ -351,10 +352,10 @@ func (v *AccountCapabilityControllerValue) newDeleteFunction(
 		context,
 		sema.AccountCapabilityControllerTypeDeleteFunctionType,
 		func(invocation Invocation) Value {
-			inter := invocation.InvocationContext
+			invocationContext := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
-			v.Delete(inter, locationRange)
+			v.Delete(invocationContext, locationRange)
 
 			v.deleted = true
 

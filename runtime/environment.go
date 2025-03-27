@@ -1329,7 +1329,7 @@ func (e *interpreterEnvironment) getBaseActivation(
 func (e *interpreterEnvironment) newCapabilityBorrowHandler() interpreter.CapabilityBorrowHandlerFunc {
 
 	return func(
-		inter *interpreter.Interpreter,
+		context interpreter.BorrowCapabilityControllerContext,
 		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		capabilityID interpreter.UInt64Value,
@@ -1338,7 +1338,7 @@ func (e *interpreterEnvironment) newCapabilityBorrowHandler() interpreter.Capabi
 	) interpreter.ReferenceValue {
 
 		return stdlib.BorrowCapabilityController(
-			inter,
+			context,
 			locationRange,
 			address,
 			capabilityID,
@@ -1373,7 +1373,7 @@ func (e *interpreterEnvironment) newCapabilityCheckHandler() interpreter.Capabil
 
 func (e *interpreterEnvironment) newValidateAccountCapabilitiesGetHandler() interpreter.ValidateAccountCapabilitiesGetHandlerFunc {
 	return func(
-		context interpreter.AccountCapabilityValidationContext,
+		context interpreter.AccountCapabilityGetValidationContext,
 		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		path interpreter.PathValue,
@@ -1403,7 +1403,7 @@ func (e *interpreterEnvironment) newValidateAccountCapabilitiesGetHandler() inte
 
 func (e *interpreterEnvironment) newValidateAccountCapabilitiesPublishHandler() interpreter.ValidateAccountCapabilitiesPublishHandlerFunc {
 	return func(
-		inter *interpreter.Interpreter,
+		context interpreter.AccountCapabilityPublishValidationContext,
 		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		path interpreter.PathValue,
@@ -1415,7 +1415,7 @@ func (e *interpreterEnvironment) newValidateAccountCapabilitiesPublishHandler() 
 		)
 		errors.WrapPanic(func() {
 			ok, err = e.runtimeInterface.ValidateAccountCapabilitiesPublish(
-				inter,
+				context,
 				locationRange,
 				address,
 				path,

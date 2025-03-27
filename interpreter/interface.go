@@ -82,6 +82,7 @@ type StorageContext interface {
 	ValueStaticTypeContext
 	common.MemoryGauge
 	StorageMutationTracker
+	StorageIterationTracker
 	StorageReader
 	StorageWriter
 
@@ -148,17 +149,20 @@ type ReferenceCreationContext interface {
 
 var _ ReferenceCreationContext = &Interpreter{}
 
-type AccountHandlerContextContext interface {
+type AccountHandlerContext interface {
 	AccountHandler() AccountHandlerFunc
 }
 
-var _ AccountHandlerContextContext = &Interpreter{}
+var _ AccountHandlerContext = &Interpreter{}
 
 type MemberAccessibleContext interface {
 	FunctionCreationContext
 	ArrayCreationContext
 	ResourceDestructionHandler
-	AccountHandlerContextContext
+	AccountHandlerContext
+	CapabilityControllerIterationContext
+	AccountContractBorrowContext
+	AttachmentContext
 
 	InjectedCompositeFieldsHandler() InjectedCompositeFieldsHandlerFunc
 	GetMemberAccessContextForLocation(location common.Location) MemberAccessibleContext
@@ -201,9 +205,17 @@ var _ DictionaryCreationContext = &Interpreter{}
 
 type StorageMutationTracker interface {
 	RecordStorageMutation()
+	StorageMutatedDuringIteration() bool
 }
 
 var _ StorageMutationTracker = &Interpreter{}
+
+type StorageIterationTracker interface {
+	InStorageIteration() bool
+	SetInStorageIteration(bool)
+}
+
+var _ StorageIterationTracker = &Interpreter{}
 
 type ResourceDestructionHandler interface {
 	EnforceNotResourceDestruction(
@@ -229,7 +241,8 @@ var _ AccountCapabilityCreationContext = &Interpreter{}
 type ValueCapabilityControllerReferenceValueContext interface {
 	FunctionCreationContext
 	ValueStaticTypeContext
-	AccountHandlerContextContext
+	AccountHandlerContext
+	AccountCreationContext
 }
 
 var _ ValueCapabilityControllerReferenceValueContext = &Interpreter{}
@@ -252,6 +265,12 @@ type CapabilityControllerContext interface {
 	StorageContext
 	DictionaryCreationContext
 	ValueExportContext
+	CapabilityControllerIterationContext
+}
+
+var _ CapabilityControllerContext = &Interpreter{}
+
+type CapabilityControllerIterationContext interface {
 	GetCapabilityControllerIterations() map[AddressPath]int
 	SetMutationDuringCapabilityControllerIteration()
 	MutationDuringCapabilityControllerIteration() bool
@@ -274,28 +293,41 @@ type GetCapabilityControllerReferenceContext interface {
 
 var _ GetCapabilityControllerReferenceContext = &Interpreter{}
 
-
 type CheckCapabilityControllerContext interface {
 	GetCapabilityControllerReferenceContext
 }
 
 var _ CheckCapabilityControllerContext = &Interpreter{}
 
-
 type BorrowCapabilityControllerContext interface {
 	GetCapabilityControllerReferenceContext
-	ValidateAccountCapabilitiesGetHandler() ValidateAccountCapabilitiesGetHandlerFunc
 }
 
 var _ BorrowCapabilityControllerContext = &Interpreter{}
 
-// TODO: This is used by the FVM.
-//   Check and the functionalities needed.
-type AccountCapabilityValidationContext interface {
+type CapabilityHandlers interface {
+	ValidateAccountCapabilitiesGetHandler() ValidateAccountCapabilitiesGetHandlerFunc
+	ValidateAccountCapabilitiesPublishHandler() ValidateAccountCapabilitiesPublishHandlerFunc
+	CapabilityBorrowHandler() CapabilityBorrowHandlerFunc
 }
 
-var _ AccountCapabilityValidationContext = &Interpreter{}
+var _ CapabilityHandlers = &Interpreter{}
 
+// TODO: This is used by the FVM.
+//
+//	Check and the functionalities needed.
+type AccountCapabilityGetValidationContext interface {
+}
+
+var _ AccountCapabilityGetValidationContext = &Interpreter{}
+
+// TODO: This is used by the FVM.
+//
+//	Check and the functionalities needed.
+type AccountCapabilityPublishValidationContext interface {
+}
+
+var _ AccountCapabilityPublishValidationContext = &Interpreter{}
 
 type ResourceDestructionContext interface {
 	ValueWalkContext
@@ -329,12 +361,13 @@ type AttachmentContext interface {
 
 var _ AttachmentContext = &Interpreter{}
 
-type StoreValueCheckContext interface {
+type StoredValueCheckContext interface {
 	TypeConverter
+	CheckCapabilityControllerContext
 	GetCapabilityCheckHandler() CapabilityCheckHandlerFunc
 }
 
-var _ StoreValueCheckContext = &Interpreter{}
+var _ StoredValueCheckContext = &Interpreter{}
 
 // InvocationContext is a composite of all contexts, since function invocations
 // can perform various operations, and hence need to provide all possible contexts to it.
@@ -347,7 +380,9 @@ type InvocationContext interface {
 	ArrayCreationContext
 	AccountCreationContext
 	BorrowCapabilityControllerContext
-	AccountCapabilityValidationContext
+	AccountCapabilityGetValidationContext
+	CapabilityHandlers
+	StoredValueCheckContext
 	GetLocation() common.Location
 }
 
@@ -565,6 +600,18 @@ func (ctx NoOpStringContext) OnResourceOwnerChange(_ *CompositeValue, _ common.A
 }
 
 func (ctx NoOpStringContext) RecordStorageMutation() {
+	panic(errors.NewUnreachableError())
+}
+
+func (ctx NoOpStringContext) StorageMutatedDuringIteration() bool {
+	panic(errors.NewUnreachableError())
+}
+
+func (ctx NoOpStringContext) InStorageIteration() bool {
+	panic(errors.NewUnreachableError())
+}
+
+func (ctx NoOpStringContext) SetInStorageIteration(b bool) {
 	panic(errors.NewUnreachableError())
 }
 
