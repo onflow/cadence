@@ -26,7 +26,6 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/test_utils/common_utils"
 )
 
 // OnEventEmittedFunc is a function that is triggered when an event is emitted by the program.
@@ -55,8 +54,6 @@ type Config struct {
 	// OnEventEmitted is triggered when an event is emitted by the program
 	OnEventEmitted OnEventEmittedFunc
 
-	// TODO: These are temporary. Remove once storing/reading is supported for VM values.
-	inter      *interpreter.Interpreter
 	TypeLoader func(location common.Location, typeID interpreter.TypeID) sema.ContainedType
 }
 
@@ -89,41 +86,6 @@ func (c *Config) WithAccountHandler(handler stdlib.AccountHandler) *Config {
 func (c *Config) WithInterpreterConfig(config *interpreter.Config) *Config {
 	c.interpreterConfig = config
 	return c
-}
-
-// TODO: This is temporary. Remove once storing/reading is supported for VM values.
-func (c *Config) Interpreter() *interpreter.Interpreter {
-	if c.inter == nil {
-		inter, err := interpreter.NewInterpreter(
-			nil,
-			common_utils.TestLocation,
-			&interpreter.Config{
-				Storage: c.storage,
-
-				// Interpreters are needed only to access interpreter-bound functions.
-				// Hence, just return the same interpreter as-is, for now.
-				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-					return interpreter.InterpreterImport{
-						Interpreter: inter,
-					}
-				},
-				CompositeTypeHandler: func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
-					return c.TypeLoader(location, typeID).(*sema.CompositeType)
-				},
-				InterfaceTypeHandler: func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
-					return c.TypeLoader(location, typeID).(*sema.InterfaceType)
-				},
-			},
-		)
-
-		if err != nil {
-			panic(err)
-		}
-
-		c.inter = inter
-	}
-
-	return c.inter
 }
 
 func (c *Config) MeterMemory(usage common.MemoryUsage) error {
