@@ -405,7 +405,9 @@ type InvocationContext interface {
 	CapabilityHandlers
 	StoredValueCheckContext
 	VariableResolver
+
 	GetLocation() common.Location
+	CallStack() []Invocation
 }
 
 var _ InvocationContext = &Interpreter{}

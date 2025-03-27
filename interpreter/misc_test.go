@@ -369,7 +369,8 @@ func makeContractValueHandler(
 
 		constructor := constructorGenerator(common.ZeroAddress)
 
-		value, err := inter.InvokeFunctionValue(
+		value, err := interpreter.InvokeFunctionValue(
+			inter,
 			constructor,
 			arguments,
 			argumentTypes,
@@ -5506,7 +5507,8 @@ func TestInterpretStructureFunctionBindingInside(t *testing.T) {
 	functionValue, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	value, err := inter.InvokeFunctionValue(
+	value, err := interpreter.InvokeFunctionValue(
+		inter,
 		functionValue.(interpreter.FunctionValue),
 		nil,
 		nil,
@@ -8805,7 +8807,7 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 				Config: &interpreter.Config{
 					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 					InjectedCompositeFieldsHandler: func(
-						context interpreter.FunctionCreationContext,
+						context interpreter.AccountCreationContext,
 						_ common.Location,
 						_ string,
 						_ common.CompositeKind,
@@ -9398,7 +9400,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 					return baseActivation
 				},
-				AccountHandler: func(context interpreter.FunctionCreationContext, address interpreter.AddressValue) interpreter.Value {
+				AccountHandler: func(context interpreter.AccountCreationContext, address interpreter.AddressValue) interpreter.Value {
 					return stdlib.NewAccountValue(context, nil, address)
 				},
 			},

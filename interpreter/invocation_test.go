@@ -163,7 +163,8 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 		interpreter.EmptyLocationRange,
 	)
 
-	_, err := inter.InvokeFunction(
+	_, err := interpreter.InvokeFunction(
+		inter,
 		test,
 		invocation,
 	)
