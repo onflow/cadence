@@ -65,8 +65,8 @@ type StorageCapabilityControllerValue struct {
 	GetCapability func(common.MemoryGauge) *IDCapabilityValue
 	GetTag        func(storageReader StorageReader) *StringValue
 	SetTag        func(storageWriter StorageWriter, tag *StringValue)
-	Delete        func(inter *Interpreter, locationRange LocationRange)
-	SetTarget     func(inter *Interpreter, locationRange LocationRange, target PathValue)
+	Delete        func(context CapabilityControllerContext, locationRange LocationRange)
+	SetTarget     func(context CapabilityControllerContext, locationRange LocationRange, target PathValue)
 }
 
 func NewUnmeteredStorageCapabilityControllerValue(

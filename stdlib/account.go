@@ -3136,9 +3136,9 @@ func newStorageCapabilityControllerSetTargetFunction(
 	address common.Address,
 	controller *interpreter.StorageCapabilityControllerValue,
 	handler CapabilityControllerHandler,
-) func(*interpreter.Interpreter, interpreter.LocationRange, interpreter.PathValue) {
+) func(interpreter.CapabilityControllerContext, interpreter.LocationRange, interpreter.PathValue) {
 	return func(
-		inter *interpreter.Interpreter,
+		context interpreter.CapabilityControllerContext,
 		locationRange interpreter.LocationRange,
 		newTargetPathValue interpreter.PathValue,
 	) {
@@ -3146,14 +3146,14 @@ func newStorageCapabilityControllerSetTargetFunction(
 		capabilityID := controller.CapabilityID
 
 		unrecordStorageCapabilityController(
-			inter,
+			context,
 			locationRange,
 			address,
 			oldTargetPathValue,
 			capabilityID,
 		)
 		recordStorageCapabilityController(
-			inter,
+			context,
 			locationRange,
 			address,
 			newTargetPathValue,
@@ -3163,7 +3163,7 @@ func newStorageCapabilityControllerSetTargetFunction(
 		addressValue := interpreter.AddressValue(address)
 
 		handler.EmitEvent(
-			inter,
+			context,
 			locationRange,
 			StorageCapabilityControllerTargetChangedEventType,
 			[]interpreter.Value{
@@ -3179,23 +3179,23 @@ func newStorageCapabilityControllerDeleteFunction(
 	address common.Address,
 	controller *interpreter.StorageCapabilityControllerValue,
 	handler CapabilityControllerHandler,
-) func(*interpreter.Interpreter, interpreter.LocationRange) {
+) func(interpreter.CapabilityControllerContext, interpreter.LocationRange) {
 	return func(
-		inter *interpreter.Interpreter,
+		context interpreter.CapabilityControllerContext,
 		locationRange interpreter.LocationRange,
 	) {
 		targetPathValue := controller.TargetPath
 		capabilityID := controller.CapabilityID
 
 		unrecordStorageCapabilityController(
-			inter,
+			context,
 			locationRange,
 			address,
 			targetPathValue,
 			capabilityID,
 		)
 		removeCapabilityController(
-			inter,
+			context,
 			address,
 			capabilityID,
 		)
@@ -3203,7 +3203,7 @@ func newStorageCapabilityControllerDeleteFunction(
 		addressValue := interpreter.AddressValue(address)
 
 		handler.EmitEvent(
-			inter,
+			context,
 			locationRange,
 			StorageCapabilityControllerDeletedEventType,
 			[]interpreter.Value{
@@ -3311,7 +3311,7 @@ func getPathCapabilityIDSet(
 }
 
 func unrecordStorageCapabilityController(
-	inter *interpreter.Interpreter,
+	context interpreter.CapabilityControllerContext,
 	locationRange interpreter.LocationRange,
 	address common.Address,
 	targetPathValue interpreter.PathValue,
@@ -3321,16 +3321,18 @@ func unrecordStorageCapabilityController(
 		Address: address,
 		Path:    targetPathValue,
 	}
-	if inter.SharedState.CapabilityControllerIterations[addressPath] > 0 {
-		inter.SharedState.MutationDuringCapabilityControllerIteration = true
+
+	iterations := context.GetCapabilityControllerIterations()
+	if iterations[addressPath] > 0 {
+		context.SetMutationDuringCapabilityControllerIteration()
 	}
 
-	capabilityIDSet := getPathCapabilityIDSet(inter, targetPathValue, address)
+	capabilityIDSet := getPathCapabilityIDSet(context, targetPathValue, address)
 	if capabilityIDSet == nil {
 		panic(errors.NewUnreachableError())
 	}
 
-	existing := capabilityIDSet.Remove(inter, locationRange, capabilityIDValue)
+	existing := capabilityIDSet.Remove(context, locationRange, capabilityIDValue)
 	if existing == interpreter.Nil {
 		panic(errors.NewUnreachableError())
 	}
@@ -3338,8 +3340,8 @@ func unrecordStorageCapabilityController(
 	// Remove capability set if empty
 
 	if capabilityIDSet.Count() == 0 {
-		storageMap := inter.Storage().GetDomainStorageMap(
-			inter,
+		storageMap := context.Storage().GetDomainStorageMap(
+			context,
 			address,
 			common.StorageDomainPathCapability,
 			true,
@@ -3352,7 +3354,7 @@ func unrecordStorageCapabilityController(
 
 		storageMapKey := interpreter.StringStorageMapKey(identifier)
 
-		if !storageMap.RemoveValue(inter, storageMapKey) {
+		if !storageMap.RemoveValue(context, storageMapKey) {
 			panic(errors.NewUnreachableError())
 		}
 	}
@@ -3423,7 +3425,7 @@ func recordAccountCapabilityController(
 }
 
 func unrecordAccountCapabilityController(
-	inter *interpreter.Interpreter,
+	context interpreter.CapabilityControllerContext,
 	address common.Address,
 	capabilityIDValue interpreter.UInt64Value,
 ) {
@@ -3431,18 +3433,18 @@ func unrecordAccountCapabilityController(
 		Address: address,
 	}
 
-	inter.MaybeSetMutationDuringCapConIteration(addressPath)
+	interpreter.MaybeSetMutationDuringCapConIteration(context, addressPath)
 
 	storageMapKey := interpreter.Uint64StorageMapKey(capabilityIDValue)
 
-	storageMap := inter.Storage().GetDomainStorageMap(
-		inter,
+	storageMap := context.Storage().GetDomainStorageMap(
+		context,
 		address,
 		common.StorageDomainAccountCapability,
 		true,
 	)
 
-	existed := storageMap.RemoveValue(inter, storageMapKey)
+	existed := storageMap.RemoveValue(context, storageMapKey)
 	if !existed {
 		panic(errors.NewUnreachableError())
 	}
@@ -3499,7 +3501,7 @@ func newAccountCapabilitiesPublishFunction(
 			accountCapabilities,
 			sema.Account_CapabilitiesTypePublishFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-				inter := invocation.InvocationContext
+				invocationContext := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				// Get capability argument
@@ -3528,7 +3530,7 @@ func newAccountCapabilitiesPublishFunction(
 				domain := pathValue.Domain.StorageDomain()
 				identifier := pathValue.Identifier
 
-				capabilityType, ok := capabilityValue.StaticType(inter).(*interpreter.CapabilityStaticType)
+				capabilityType, ok := capabilityValue.StaticType(invocationContext).(*interpreter.CapabilityStaticType)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -3543,10 +3545,10 @@ func newAccountCapabilitiesPublishFunction(
 						panic(errors.NewUnreachableError())
 					}
 
-					publishHandler := inter.SharedState.Config.ValidateAccountCapabilitiesPublishHandler
+					publishHandler := invocationContext.ValidateAccountCapabilitiesPublishHandler()
 					if publishHandler != nil {
 						valid, err := publishHandler(
-							inter,
+							invocationContext,
 							locationRange,
 							capabilityAddressValue,
 							pathValue,
@@ -3570,7 +3572,7 @@ func newAccountCapabilitiesPublishFunction(
 				storageMapKey := interpreter.StringStorageMapKey(identifier)
 
 				if interpreter.StoredValueExists(
-					inter,
+					invocationContext,
 					accountAddress,
 					domain,
 					storageMapKey,
@@ -3583,7 +3585,7 @@ func newAccountCapabilitiesPublishFunction(
 				}
 
 				capabilityValue, ok = capabilityValue.Transfer(
-					inter,
+					invocationContext,
 					locationRange,
 					atree.Address(accountAddress),
 					true,
@@ -3597,7 +3599,7 @@ func newAccountCapabilitiesPublishFunction(
 
 				// Write new value
 
-				inter.WriteStored(
+				invocationContext.WriteStored(
 					accountAddress,
 					domain,
 					storageMapKey,
@@ -3605,7 +3607,7 @@ func newAccountCapabilitiesPublishFunction(
 				)
 
 				handler.EmitEvent(
-					inter,
+					invocationContext,
 					locationRange,
 					CapabilityPublishedEventType,
 					[]interpreter.Value{
@@ -4393,17 +4395,17 @@ func newAccountCapabilityControllerDeleteFunction(
 	address common.Address,
 	controller *interpreter.AccountCapabilityControllerValue,
 	handler CapabilityControllerHandler,
-) func(*interpreter.Interpreter, interpreter.LocationRange) {
-	return func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange) {
+) func(interpreter.CapabilityControllerContext, interpreter.LocationRange) {
+	return func(context interpreter.CapabilityControllerContext, locationRange interpreter.LocationRange) {
 		capabilityID := controller.CapabilityID
 
 		unrecordAccountCapabilityController(
-			inter,
+			context,
 			address,
 			capabilityID,
 		)
 		removeCapabilityController(
-			inter,
+			context,
 			address,
 			capabilityID,
 		)
@@ -4411,7 +4413,7 @@ func newAccountCapabilityControllerDeleteFunction(
 		addressValue := interpreter.AddressValue(address)
 
 		handler.EmitEvent(
-			inter,
+			context,
 			locationRange,
 			AccountCapabilityControllerDeletedEventType,
 			[]interpreter.Value{
