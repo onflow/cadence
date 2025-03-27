@@ -112,14 +112,14 @@ var blockIDMemoryUsage = common.NewNumberMemoryUsage(
 )
 
 func NewBlockValue(
-	inter *interpreter.Interpreter,
+	context interpreter.ArrayCreationContext,
 	locationRange interpreter.LocationRange,
 	block Block,
 ) interpreter.Value {
 
 	// height
 	heightValue := interpreter.NewUInt64Value(
-		inter,
+		context,
 		func() uint64 {
 			return block.Height
 		},
@@ -127,21 +127,21 @@ func NewBlockValue(
 
 	// view
 	viewValue := interpreter.NewUInt64Value(
-		inter,
+		context,
 		func() uint64 {
 			return block.View
 		},
 	)
 
 	// ID
-	common.UseMemory(inter, blockIDMemoryUsage)
+	common.UseMemory(context, blockIDMemoryUsage)
 	var values = make([]interpreter.Value, sema.BlockTypeIdFieldType.Size)
 	for i, b := range block.Hash {
 		values[i] = interpreter.NewUnmeteredUInt8Value(b)
 	}
 
 	idValue := interpreter.NewArrayValue(
-		inter,
+		context,
 		locationRange,
 		BlockIDStaticType,
 		common.ZeroAddress,
@@ -151,7 +151,7 @@ func NewBlockValue(
 	// timestamp
 	// TODO: verify
 	timestampValue := interpreter.NewUFix64ValueWithInteger(
-		inter,
+		context,
 		func() uint64 {
 			return uint64(time.Unix(0, block.Timestamp).Unix())
 		},
@@ -159,7 +159,7 @@ func NewBlockValue(
 	)
 
 	return interpreter.NewBlockValue(
-		inter,
+		context,
 		heightValue,
 		viewValue,
 		idValue,

@@ -34,10 +34,10 @@ var blockFieldNames = []string{
 	sema.BlockTypeIdFieldName,
 	sema.BlockTypeTimestampFieldName,
 }
-var blockFieldFormatters = func(inter *Interpreter) map[string]func(common.MemoryGauge, Value, SeenReferences) string {
+var blockFieldFormatters = func(context ContainerMutationContext) map[string]func(common.MemoryGauge, Value, SeenReferences) string {
 	return map[string]func(common.MemoryGauge, Value, SeenReferences) string{
 		sema.BlockTypeIdFieldName: func(memoryGauge common.MemoryGauge, value Value, references SeenReferences) string {
-			bytes, err := ByteArrayValueToByteSlice(inter, value, EmptyLocationRange)
+			bytes, err := ByteArrayValueToByteSlice(context, value, EmptyLocationRange)
 			if err != nil {
 				panic(err)
 			}
@@ -49,14 +49,14 @@ var blockFieldFormatters = func(inter *Interpreter) map[string]func(common.Memor
 }
 
 func NewBlockValue(
-	inter *Interpreter,
+	context ContainerMutationContext,
 	height UInt64Value,
 	view UInt64Value,
 	id *ArrayValue,
 	timestamp UFix64Value,
 ) *SimpleCompositeValue {
 	return NewSimpleCompositeValue(
-		inter,
+		context,
 		sema.BlockType.TypeID,
 		blockStaticType,
 		blockFieldNames,
@@ -67,7 +67,7 @@ func NewBlockValue(
 			sema.BlockTypeTimestampFieldName: timestamp,
 		},
 		nil,
-		blockFieldFormatters(inter),
+		blockFieldFormatters(context),
 		nil,
 	)
 }

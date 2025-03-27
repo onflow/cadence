@@ -94,7 +94,7 @@ func NewUnmeteredCompositeField(name string, value Value) CompositeField {
 // for a type which isn't CompositeType.
 // For e.g. InclusiveRangeType
 func NewCompositeValueWithStaticType(
-	interpreter *Interpreter,
+	context MemberAccessibleContext,
 	locationRange LocationRange,
 	location common.Location,
 	qualifiedIdentifier string,
@@ -104,7 +104,7 @@ func NewCompositeValueWithStaticType(
 	staticType StaticType,
 ) *CompositeValue {
 	value := NewCompositeValue(
-		interpreter,
+		context,
 		locationRange,
 		location,
 		qualifiedIdentifier,

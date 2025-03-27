@@ -30,7 +30,7 @@ import (
 // NewInclusiveRangeValue constructs an InclusiveRange value with the provided start, end with default value of step.
 // NOTE: Assumes that the values start and end are of the same static type.
 func NewInclusiveRangeValue(
-	interpreter *Interpreter,
+	context MemberAccessibleContext,
 	locationRange LocationRange,
 	start IntegerValue,
 	end IntegerValue,
@@ -44,8 +44,8 @@ func NewInclusiveRangeValue(
 	}
 
 	step := GetSmallIntegerValue(1, rangeStaticType.ElementType)
-	if startComparable.Greater(interpreter, endComparable, locationRange) {
-		elemSemaTy := MustConvertStaticToSemaType(rangeStaticType.ElementType, interpreter)
+	if startComparable.Greater(context, endComparable, locationRange) {
+		elemSemaTy := MustConvertStaticToSemaType(rangeStaticType.ElementType, context)
 		if elemSemaTy.Tag().BelongsTo(sema.UnsignedIntegerTypeTag) {
 			panic(InclusiveRangeConstructionError{
 				LocationRange: locationRange,
@@ -56,7 +56,7 @@ func NewInclusiveRangeValue(
 			})
 		}
 
-		negatedStep, ok := step.Negate(interpreter, locationRange).(IntegerValue)
+		negatedStep, ok := step.Negate(context, locationRange).(IntegerValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
@@ -65,7 +65,7 @@ func NewInclusiveRangeValue(
 	}
 
 	return createInclusiveRange(
-		interpreter,
+		context,
 		locationRange,
 		start,
 		end,
@@ -78,7 +78,7 @@ func NewInclusiveRangeValue(
 // NewInclusiveRangeValue constructs an InclusiveRange value with the provided start, end & step.
 // NOTE: Assumes that the values start, end and step are of the same static type.
 func NewInclusiveRangeValueWithStep(
-	interpreter *Interpreter,
+	context MemberAccessibleContext,
 	locationRange LocationRange,
 	start IntegerValue,
 	end IntegerValue,
@@ -87,10 +87,10 @@ func NewInclusiveRangeValueWithStep(
 	rangeSemaType *sema.InclusiveRangeType,
 ) *CompositeValue {
 
-	zeroValue := GetSmallIntegerValue(0, start.StaticType(interpreter))
+	zeroValue := GetSmallIntegerValue(0, start.StaticType(context))
 
 	// Validate that the step is non-zero.
-	if step.Equal(interpreter, locationRange, zeroValue) {
+	if step.Equal(context, locationRange, zeroValue) {
 		panic(InclusiveRangeConstructionError{
 			LocationRange: locationRange,
 			Message:       "step value cannot be zero",
@@ -101,7 +101,7 @@ func NewInclusiveRangeValueWithStep(
 	// If start < end, step must be > 0
 	// If start > end, step must be < 0
 	// If start == end, step doesn't matter.
-	if isSequenceMovingAwayFromEnd(interpreter, locationRange, start, end, step, zeroValue) {
+	if isSequenceMovingAwayFromEnd(context, locationRange, start, end, step, zeroValue) {
 
 		panic(InclusiveRangeConstructionError{
 			LocationRange: locationRange,
@@ -115,7 +115,7 @@ func NewInclusiveRangeValueWithStep(
 	}
 
 	return createInclusiveRange(
-		interpreter,
+		context,
 		locationRange,
 		start,
 		end,
@@ -126,7 +126,7 @@ func NewInclusiveRangeValueWithStep(
 }
 
 func createInclusiveRange(
-	interpreter *Interpreter,
+	context MemberAccessibleContext,
 	locationRange LocationRange,
 	start IntegerValue,
 	end IntegerValue,
@@ -150,7 +150,7 @@ func createInclusiveRange(
 	}
 
 	rangeValue := NewCompositeValueWithStaticType(
-		interpreter,
+		context,
 		locationRange,
 		nil,
 		rangeSemaType.QualifiedString(),
@@ -165,7 +165,7 @@ func createInclusiveRange(
 	rangeValue.Functions.Set(
 		sema.InclusiveRangeTypeContainsFunctionName,
 		NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			rangeValue,
 			sema.InclusiveRangeContainsFunctionType(
 				rangeSemaType.MemberType,
@@ -245,15 +245,15 @@ func isNeedleBetweenStartEndExclusive(
 }
 
 func isSequenceMovingAwayFromEnd(
-	interpreter *Interpreter,
+	comparisonContext ValueComparisonContext,
 	locationRange LocationRange,
 	start IntegerValue,
 	end IntegerValue,
 	step IntegerValue,
 	zeroValue IntegerValue,
 ) BoolValue {
-	return (start.Less(interpreter, end, locationRange) && step.Less(interpreter, zeroValue, locationRange)) ||
-		(start.Greater(interpreter, end, locationRange) && step.Greater(interpreter, zeroValue, locationRange))
+	return (start.Less(comparisonContext, end, locationRange) && step.Less(comparisonContext, zeroValue, locationRange)) ||
+		(start.Greater(comparisonContext, end, locationRange) && step.Greater(comparisonContext, zeroValue, locationRange))
 }
 
 func convertAndAssertIntegerValue(value Value) IntegerValue {

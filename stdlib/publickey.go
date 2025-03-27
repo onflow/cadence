@@ -94,11 +94,11 @@ func NewPublicKeyConstructor(
 				panic(errors.NewUnreachableError())
 			}
 
-			inter := invocation.InvocationContext
+			context := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
 			return NewPublicKeyFromFields(
-				inter,
+				context,
 				locationRange,
 				publicKey,
 				signAlgo,
@@ -109,14 +109,14 @@ func NewPublicKeyConstructor(
 }
 
 func NewPublicKeyFromFields(
-	inter *interpreter.Interpreter,
+	context interpreter.PublicKeyCreationContext,
 	locationRange interpreter.LocationRange,
 	publicKey *interpreter.ArrayValue,
 	signAlgo *interpreter.SimpleCompositeValue,
 	publicKeyValidator PublicKeyValidator,
 ) *interpreter.CompositeValue {
 	return interpreter.NewPublicKeyValue(
-		inter,
+		context,
 		locationRange,
 		publicKey,
 		signAlgo,

@@ -263,7 +263,7 @@ func (t *testEmulatorBackendType) newExecuteScriptFunction(
 		emulatorBackend,
 		t.executeScriptFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.InvocationContext
+			invocationContext := invocation.InvocationContext
 
 			script, ok := invocation.Arguments[0].(*interpreter.StringValue)
 			if !ok {
@@ -271,7 +271,7 @@ func (t *testEmulatorBackendType) newExecuteScriptFunction(
 			}
 
 			args, err := arrayValueToSlice(
-				inter,
+				invocationContext,
 				invocation.Arguments[1],
 				invocation.LocationRange,
 			)
@@ -279,9 +279,9 @@ func (t *testEmulatorBackendType) newExecuteScriptFunction(
 				panic(errors.NewUnexpectedErrorFromCause(err))
 			}
 
-			result := blockchain.RunScript(inter, script.Str, args)
+			result := blockchain.RunScript(invocationContext, script.Str, args)
 
-			return newScriptResult(inter, result.Value, result)
+			return newScriptResult(invocationContext, result.Value, result)
 		},
 	)
 }
@@ -324,7 +324,7 @@ func (t *testEmulatorBackendType) newCreateAccountFunction(
 }
 
 func newTestAccountValue(
-	inter *interpreter.Interpreter,
+	context interpreter.InvocationContext,
 	locationRange interpreter.LocationRange,
 	account *Account,
 ) interpreter.Value {
@@ -333,14 +333,15 @@ func newTestAccountValue(
 	address := interpreter.NewAddressValue(nil, account.Address)
 
 	publicKey := NewPublicKeyValue(
-		inter,
+		context,
 		locationRange,
 		account.PublicKey,
 	)
 
 	// Create an 'Account' by calling its constructor.
-	accountConstructor := getConstructor(inter, testAccountTypeName)
-	accountValue, err := inter.InvokeExternally(
+	accountConstructor := getConstructor(context, testAccountTypeName)
+	accountValue, err := interpreter.InvokeExternally(
+		context,
 		accountConstructor,
 		accountConstructor.Type,
 		[]interpreter.Value{

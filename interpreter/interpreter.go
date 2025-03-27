@@ -326,6 +326,11 @@ func (interpreter *Interpreter) FindVariable(name string) Variable {
 	return interpreter.activations.Find(name)
 }
 
+func (interpreter *Interpreter) GetValueOfVariable(name string) Value {
+	variable := interpreter.activations.Find(name)
+	return variable.GetValue(interpreter)
+}
+
 func (interpreter *Interpreter) findOrDeclareVariable(name string) Variable {
 	variable := interpreter.FindVariable(name)
 	if variable == nil {
@@ -417,10 +422,11 @@ func (interpreter *Interpreter) invokeVariable(
 		}
 	}
 
-	return interpreter.InvokeExternally(functionValue, functionType, arguments)
+	return InvokeExternally(interpreter, functionValue, functionType, arguments)
 }
 
-func (interpreter *Interpreter) InvokeExternally(
+func InvokeExternally(
+	context InvocationContext,
 	functionValue FunctionValue,
 	functionType *sema.FunctionType,
 	arguments []Value,
@@ -462,7 +468,7 @@ func (interpreter *Interpreter) InvokeExternally(
 			parameterType := parameters[i].TypeAnnotation.Type
 
 			// converts the argument into the parameter type declared by the function
-			preparedArguments[i] = ConvertAndBox(interpreter, locationRange, argument, nil, parameterType)
+			preparedArguments[i] = ConvertAndBox(context, locationRange, argument, nil, parameterType)
 		}
 	}
 
@@ -471,7 +477,7 @@ func (interpreter *Interpreter) InvokeExternally(
 	var boundAuth Authorization
 	if boundFunc, ok := functionValue.(BoundFunctionValue); ok {
 		self = boundFunc.SelfReference.ReferencedValue(
-			interpreter,
+			context,
 			EmptyLocationRange,
 			true,
 		)
@@ -481,7 +487,7 @@ func (interpreter *Interpreter) InvokeExternally(
 
 	// NOTE: can't fill argument types, as they are unknown
 	invocation := NewInvocation(
-		interpreter,
+		context,
 		self,
 		base,
 		boundAuth,
@@ -506,10 +512,10 @@ func (interpreter *Interpreter) Invoke(functionName string, arguments ...Value) 
 }
 
 // InvokeFunction invokes a function value with the given invocation
-func (interpreter *Interpreter) InvokeFunction(function FunctionValue, invocation Invocation) (value Value, err error) {
+func InvokeFunction(errorHandler ErrorHandler, function FunctionValue, invocation Invocation) (value Value, err error) {
 
 	// recover internal panics and return them as an error
-	defer interpreter.RecoverErrors(func(internalErr error) {
+	defer errorHandler.RecoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
@@ -533,7 +539,7 @@ func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value)
 	transactionType := interpreter.Program.Elaboration.TransactionTypes[index]
 	functionType := transactionType.EntryPointFunctionType()
 
-	_, err = interpreter.InvokeExternally(functionValue, functionType, arguments)
+	_, err = InvokeExternally(interpreter, functionValue, functionType, arguments)
 	return err
 }
 
@@ -5732,7 +5738,7 @@ func capabilityCheckFunction(
 				return FalseValue
 			}
 
-			inter := invocation.InvocationContext
+			invocationContext := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
 			// NOTE: if a type argument is provided for the function,
@@ -5749,8 +5755,10 @@ func capabilityCheckFunction(
 				}
 			}
 
-			return inter.SharedState.Config.CapabilityCheckHandler(
-				inter,
+			capabilityCheckHandler := invocationContext.GetCapabilityCheckHandler()
+
+			return capabilityCheckHandler(
+				invocationContext,
 				locationRange,
 				addressValue,
 				capabilityID,
