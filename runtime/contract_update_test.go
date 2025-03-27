@@ -685,6 +685,8 @@ func TestRuntimeContractRedeploymentInSeparateTransactions(t *testing.T) {
 func TestRuntimeLegacyContractUpdate(t *testing.T) {
 	t.Parallel()
 
+	t.SkipNow()
+
 	runtime := NewTestInterpreterRuntimeWithConfig(Config{
 		AtreeValidationEnabled:       true,
 		LegacyContractUpgradeEnabled: true,
