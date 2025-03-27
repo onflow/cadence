@@ -328,6 +328,13 @@ type CapabilityHandlers interface {
 
 var _ CapabilityHandlers = &Interpreter{}
 
+type StringValueFunctionContext interface {
+	common.MemoryGauge
+	ComputationReporter
+}
+
+var _ StringValueFunctionContext = &Interpreter{}
+
 // TODO: This is used by the FVM.
 //
 //	Check and the functionalities needed.

@@ -66,7 +66,7 @@ func (NilValue) isOptionalValue() {}
 
 func (NilValue) forEach(_ func(Value)) {}
 
-func (v NilValue) fmap(_ *Interpreter, _ func(Value) Value) OptionalValue {
+func (v NilValue) fmap(_ common.MemoryGauge, _ func(Value) Value) OptionalValue {
 	return v
 }
 
