@@ -146,7 +146,7 @@ func (v *SomeValue) MeteredString(context ValueStringContext, seenReferences See
 	return v.value.MeteredString(context, seenReferences, locationRange)
 }
 
-func (v *SomeValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+func (v *SomeValue) GetMember(context MemberAccessibleContext, _ LocationRange, name string) Value {
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
 		innerValueType := MustConvertStaticToSemaType(
@@ -160,7 +160,7 @@ func (v *SomeValue) GetMember(context MemberAccessibleContext, locationRange Loc
 				innerValueType,
 			),
 			func(v *SomeValue, invocation Invocation) Value {
-				inter := invocation.InvocationContext
+				invocationContext := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				transformFunction, ok := invocation.Arguments[0].(FunctionValue)
@@ -173,9 +173,10 @@ func (v *SomeValue) GetMember(context MemberAccessibleContext, locationRange Loc
 				returnType := transformFunctionType.ReturnTypeAnnotation.Type
 
 				return v.fmap(
-					inter,
+					invocationContext,
 					func(v Value) Value {
-						return inter.invokeFunctionValue(
+						return invokeFunctionValue(
+							invocationContext,
 							transformFunction,
 							[]Value{v},
 							nil,

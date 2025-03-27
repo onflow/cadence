@@ -126,11 +126,11 @@ var InclusiveRangeConstructorFunction = NewStandardLibraryStaticFunction(
 			panic(errors.NewUnreachableError())
 		}
 
-		inter := invocation.InvocationContext
+		invocationContext := invocation.InvocationContext
 		locationRange := invocation.LocationRange
 
-		startStaticType := start.StaticType(inter)
-		endStaticType := end.StaticType(inter)
+		startStaticType := start.StaticType(invocationContext)
+		endStaticType := end.StaticType(invocationContext)
 		if !startStaticType.Equal(endStaticType) {
 			panic(interpreter.InclusiveRangeConstructionError{
 				LocationRange: locationRange,
@@ -151,7 +151,7 @@ var InclusiveRangeConstructorFunction = NewStandardLibraryStaticFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			stepStaticType := step.StaticType(inter)
+			stepStaticType := step.StaticType(invocationContext)
 			if stepStaticType != startStaticType {
 				panic(interpreter.InclusiveRangeConstructionError{
 					LocationRange: locationRange,
@@ -164,7 +164,7 @@ var InclusiveRangeConstructorFunction = NewStandardLibraryStaticFunction(
 			}
 
 			return interpreter.NewInclusiveRangeValueWithStep(
-				inter,
+				invocationContext,
 				locationRange,
 				start,
 				end,
@@ -175,7 +175,7 @@ var InclusiveRangeConstructorFunction = NewStandardLibraryStaticFunction(
 		}
 
 		return interpreter.NewInclusiveRangeValue(
-			inter,
+			invocationContext,
 			locationRange,
 			start,
 			end,

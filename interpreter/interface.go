@@ -120,7 +120,6 @@ type ValueTransferContext interface {
 
 var _ ValueTransferContext = &Interpreter{}
 
-
 type ValueConversionContext interface {
 	ValueTransferContext
 	EntitlementMappingsSubstitutionHandler
@@ -405,6 +404,7 @@ type InvocationContext interface {
 	AccountCapabilityGetValidationContext
 	CapabilityHandlers
 	StoredValueCheckContext
+	VariableResolver
 	GetLocation() common.Location
 }
 
@@ -468,6 +468,12 @@ type ErrorHandler interface {
 }
 
 var _ ErrorHandler = &Interpreter{}
+
+type VariableResolver interface {
+	GetValueOfVariable(name string) Value
+}
+
+var _ VariableResolver = &Interpreter{}
 
 // NoOpStringContext is the ValueStringContext implementation used in Value.RecursiveString method.
 // Since Value.RecursiveString is a non-mutating operation, it should only need the no-op memory metering

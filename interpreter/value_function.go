@@ -542,7 +542,7 @@ func NewBoundHostFunctionValue[T Value](
 
 // NewUnmeteredBoundHostFunctionValue creates a bound-function value for a host-function.
 func NewUnmeteredBoundHostFunctionValue(
-	interpreter *Interpreter,
+	context FunctionCreationContext,
 	self Value,
 	funcType *sema.FunctionType,
 	function HostFunction,
@@ -551,7 +551,7 @@ func NewUnmeteredBoundHostFunctionValue(
 	hostFunc := NewUnmeteredStaticHostFunctionValue(funcType, function)
 
 	return NewBoundFunctionValue(
-		interpreter,
+		context,
 		hostFunc,
 		&self,
 		nil,
