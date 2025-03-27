@@ -72,7 +72,8 @@ func TestRandomBasicUniformityWithModulo(t *testing.T) {
 			// make sure modulo fits in 8 bits
 			require.Less(t, modulo, 1<<8)
 
-			moduloValue := inter.ConvertAndBox(
+			moduloValue := interpreter.ConvertAndBox(
+				inter,
 				interpreter.EmptyLocationRange,
 				interpreter.NewUnmeteredUIntValueFromUint64(uint64(modulo)),
 				sema.UIntType,

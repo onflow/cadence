@@ -45,7 +45,8 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	t.Run("Bool to Bool?", func(t *testing.T) {
 		inter := newTestInterpreter(t)
 
-		value := inter.BoxOptional(
+		value := BoxOptional(
+			inter,
 			TrueValue,
 			&sema.OptionalType{Type: sema.BoolType},
 		)
@@ -58,7 +59,8 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	t.Run("Bool? to Bool?", func(t *testing.T) {
 		inter := newTestInterpreter(t)
 
-		value := inter.BoxOptional(
+		value := BoxOptional(
+			inter,
 			NewUnmeteredSomeValueNonCopying(TrueValue),
 			&sema.OptionalType{Type: sema.BoolType},
 		)
@@ -71,7 +73,8 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	t.Run("Bool? to Bool??", func(t *testing.T) {
 		inter := newTestInterpreter(t)
 
-		value := inter.BoxOptional(
+		value := BoxOptional(
+			inter,
 			NewUnmeteredSomeValueNonCopying(TrueValue),
 			&sema.OptionalType{
 				Type: &sema.OptionalType{
@@ -91,7 +94,8 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		// NOTE:
-		value := inter.BoxOptional(
+		value := BoxOptional(
+			inter,
 			Nil,
 			&sema.OptionalType{
 				Type: &sema.OptionalType{
@@ -109,7 +113,8 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		// NOTE:
-		value := inter.BoxOptional(
+		value := BoxOptional(
+			inter,
 			NewUnmeteredSomeValueNonCopying(Nil),
 			&sema.OptionalType{
 				Type: &sema.OptionalType{
@@ -142,7 +147,8 @@ func TestInterpreterBoxing(t *testing.T) {
 					NewUnmeteredSomeValueNonCopying(
 						TrueValue,
 					),
-					inter.ConvertAndBox(
+					ConvertAndBox(
+						inter,
 						EmptyLocationRange,
 						TrueValue,
 						sema.BoolType,
@@ -159,7 +165,8 @@ func TestInterpreterBoxing(t *testing.T) {
 					NewUnmeteredSomeValueNonCopying(
 						TrueValue,
 					),
-					inter.ConvertAndBox(
+					ConvertAndBox(
+						inter,
 						EmptyLocationRange,
 						NewUnmeteredSomeValueNonCopying(TrueValue),
 						&sema.OptionalType{Type: sema.BoolType},
