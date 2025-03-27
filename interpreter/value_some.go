@@ -117,9 +117,9 @@ func (v *SomeValue) forEach(f func(Value)) {
 	f(v.value)
 }
 
-func (v *SomeValue) fmap(inter *Interpreter, f func(Value) Value) OptionalValue {
+func (v *SomeValue) fmap(memoryGauge common.MemoryGauge, f func(Value) Value) OptionalValue {
 	newValue := f(v.value)
-	return NewSomeValueNonCopying(inter, newValue)
+	return NewSomeValueNonCopying(memoryGauge, newValue)
 }
 
 func (v *SomeValue) IsDestroyed() bool {

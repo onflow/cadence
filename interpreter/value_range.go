@@ -190,35 +190,35 @@ func createInclusiveRange(
 func rangeContains(
 	rangeValue *CompositeValue,
 	rangeType InclusiveRangeStaticType,
-	interpreter *Interpreter,
+	context ValueComparisonContext,
 	locationRange LocationRange,
 	needleValue IntegerValue,
 ) BoolValue {
-	start := getFieldAsIntegerValue(interpreter, rangeValue, sema.InclusiveRangeTypeStartFieldName)
-	end := getFieldAsIntegerValue(interpreter, rangeValue, sema.InclusiveRangeTypeEndFieldName)
-	step := getFieldAsIntegerValue(interpreter, rangeValue, sema.InclusiveRangeTypeStepFieldName)
+	start := getFieldAsIntegerValue(context, rangeValue, sema.InclusiveRangeTypeStartFieldName)
+	end := getFieldAsIntegerValue(context, rangeValue, sema.InclusiveRangeTypeEndFieldName)
+	step := getFieldAsIntegerValue(context, rangeValue, sema.InclusiveRangeTypeStepFieldName)
 
-	result := start.Equal(interpreter, locationRange, needleValue) ||
-		end.Equal(interpreter, locationRange, needleValue)
+	result := start.Equal(context, locationRange, needleValue) ||
+		end.Equal(context, locationRange, needleValue)
 
 	if result {
 		return TrueValue
 	}
 
 	// Exclusive check since we already checked for boundaries above.
-	if !isNeedleBetweenStartEndExclusive(interpreter, locationRange, needleValue, start, end) {
+	if !isNeedleBetweenStartEndExclusive(context, locationRange, needleValue, start, end) {
 		result = false
 	} else {
 		// needle is in between start and end.
 		// start + k * step should be equal to needle i.e. (needle - start) mod step == 0.
-		diff, ok := needleValue.Minus(interpreter, start, locationRange).(IntegerValue)
+		diff, ok := needleValue.Minus(context, start, locationRange).(IntegerValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
 
 		zeroValue := GetSmallIntegerValue(0, rangeType.ElementType)
-		mod := diff.Mod(interpreter, step, locationRange)
-		result = mod.Equal(interpreter, locationRange, zeroValue)
+		mod := diff.Mod(context, step, locationRange)
+		result = mod.Equal(context, locationRange, zeroValue)
 	}
 
 	return BoolValue(result)
@@ -231,14 +231,14 @@ func getFieldAsIntegerValue(memoryGauge common.MemoryGauge, rangeValue *Composit
 }
 
 func isNeedleBetweenStartEndExclusive(
-	interpreter *Interpreter,
+	context ValueComparisonContext,
 	locationRange LocationRange,
 	needleValue IntegerValue,
 	start IntegerValue,
 	end IntegerValue,
 ) bool {
-	greaterThanStart := needleValue.Greater(interpreter, start, locationRange)
-	greaterThanEnd := needleValue.Greater(interpreter, end, locationRange)
+	greaterThanStart := needleValue.Greater(context, start, locationRange)
+	greaterThanEnd := needleValue.Greater(context, end, locationRange)
 
 	// needle is in between start and end values if is greater than one and smaller than the other.
 	return bool(greaterThanStart) != bool(greaterThanEnd)
