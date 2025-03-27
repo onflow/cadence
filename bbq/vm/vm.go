@@ -843,7 +843,7 @@ func castValueAndValueType(config *Config, targetType bbq.StaticType, value Valu
 	if !(unboxedExpectedType == interpreter.PrimitiveStaticTypeAnyStruct ||
 		unboxedExpectedType == interpreter.PrimitiveStaticTypeAnyResource) {
 		// otherwise dynamic cast now always unboxes optionals
-		value = Unbox(value)
+		value = interpreter.Unbox(value)
 	}
 
 	return value, valueType

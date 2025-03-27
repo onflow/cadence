@@ -2402,7 +2402,7 @@ func BoxOptional(gauge common.MemoryGauge, value Value, targetType sema.Type) Va
 	return value
 }
 
-func (interpreter *Interpreter) Unbox(value Value) Value {
+func Unbox(value Value) Value {
 	for {
 		some, ok := value.(*SomeValue)
 		if !ok {
