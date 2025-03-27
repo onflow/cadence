@@ -95,7 +95,8 @@ func invokeFunctionValue(
 
 			if i < parameterTypeCount {
 				parameterType := parameterTypes[i]
-				transferredArguments[i] = interpreter.transferAndConvert(
+				transferredArguments[i] = transferAndConvert(
+					context,
 					argument,
 					argumentType,
 					parameterType,
@@ -154,7 +155,8 @@ func invokeFunctionValue(
 	//
 	// Here runtime function's return type is `T`, but invocation's return type is `T?`.
 
-	return interpreter.ConvertAndBox(
+	return ConvertAndBox(
+		context,
 		locationRange,
 		resultValue,
 		functionReturnType,

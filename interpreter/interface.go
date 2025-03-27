@@ -120,6 +120,21 @@ type ValueTransferContext interface {
 
 var _ ValueTransferContext = &Interpreter{}
 
+
+type ValueConversionContext interface {
+	ValueTransferContext
+	EntitlementMappingsSubstitutionHandler
+}
+
+var _ ValueTransferContext = &Interpreter{}
+
+type ValueCreationContext interface {
+	ArrayCreationContext
+	DictionaryCreationContext
+}
+
+var _ ValueCreationContext = &Interpreter{}
+
 type ValueRemoveContext = ValueTransferContext
 
 var _ ValueRemoveContext = &Interpreter{}

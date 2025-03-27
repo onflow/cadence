@@ -139,7 +139,7 @@ func DictionaryElementSize(staticType *DictionaryStaticType) uint {
 }
 
 func newDictionaryValueWithIterator(
-	interpreter *Interpreter,
+	context DictionaryCreationContext,
 	locationRange LocationRange,
 	staticType *DictionaryStaticType,
 	count uint64,
@@ -147,13 +147,11 @@ func newDictionaryValueWithIterator(
 	address common.Address,
 	values func() (Value, Value),
 ) *DictionaryValue {
-	interpreter.ReportComputation(common.ComputationKindCreateDictionaryValue, 1)
+	context.ReportComputation(common.ComputationKindCreateDictionaryValue, 1)
 
 	var v *DictionaryValue
 
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		defer func() {
@@ -166,7 +164,7 @@ func newDictionaryValueWithIterator(
 			typeInfo := v.Type.String()
 			count := v.Count()
 
-			interpreter.ReportDictionaryValueConstructTrace(
+			context.ReportDictionaryValueConstructTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -176,12 +174,12 @@ func newDictionaryValueWithIterator(
 
 	constructor := func() *atree.OrderedMap {
 		orderedMap, err := atree.NewMapFromBatchData(
-			config.Storage,
+			context.Storage(),
 			atree.Address(address),
 			atree.NewDefaultDigesterBuilder(),
 			staticType,
-			newValueComparator(interpreter, locationRange),
-			newHashInputProvider(interpreter, locationRange),
+			newValueComparator(context, locationRange),
+			newHashInputProvider(context, locationRange),
 			seed,
 			func() (atree.Value, atree.Value, error) {
 				key, value := values()
@@ -195,7 +193,7 @@ func newDictionaryValueWithIterator(
 	}
 
 	// values are added to the dictionary after creation, not here
-	v = newDictionaryValueFromConstructor(interpreter, staticType, count, constructor)
+	v = newDictionaryValueFromConstructor(context, staticType, count, constructor)
 
 	return v
 }

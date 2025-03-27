@@ -153,7 +153,8 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 	indexedType := indexExpressionTypes.IndexedType
 	indexingType := indexExpressionTypes.IndexingType
 
-	transferredIndexingValue := interpreter.transferAndConvert(
+	transferredIndexingValue := transferAndConvert(
+		interpreter,
 		interpreter.evalExpression(indexExpression.IndexingExpression),
 		indexingType,
 		indexedType.IndexingType(),
@@ -653,7 +654,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		resultType := binaryExpressionTypes.ResultType
 
 		// NOTE: important to convert both any and optional
-		return interpreter.ConvertAndBox(locationRange, value, rightType, resultType)
+		return ConvertAndBox(interpreter, locationRange, value, rightType, resultType)
 	}
 
 	panic(&unsupportedOperation{
@@ -1002,7 +1003,7 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 				Location:    interpreter.Location,
 				HasPosition: argumentExpression,
 			}
-			copies[i] = interpreter.transferAndConvert(argument, argumentType, elementType, locationRange)
+			copies[i] = transferAndConvert(interpreter, argument, argumentType, elementType, locationRange)
 		}
 	}
 
@@ -1036,7 +1037,8 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 		entryType := entryTypes[i]
 		entry := expression.Entries[i]
 
-		key := interpreter.transferAndConvert(
+		key := transferAndConvert(
+			interpreter,
 			dictionaryEntryValues.Key,
 			entryType.KeyType,
 			dictionaryType.KeyType,
@@ -1046,7 +1048,8 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 			},
 		)
 
-		value := interpreter.transferAndConvert(
+		value := transferAndConvert(
+			interpreter,
 			dictionaryEntryValues.Value,
 			entryType.ValueType,
 			dictionaryType.ValueType,
@@ -1415,7 +1418,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		}
 
 		// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-		value = interpreter.ConvertAndBox(locationRange, value, valueSemaType, expectedType)
+		value = ConvertAndBox(interpreter, locationRange, value, valueSemaType, expectedType)
 
 		if expression.Operation == ast.OperationFailableCast {
 			// Failable casting is a resource invalidation
@@ -1429,7 +1432,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 	case ast.OperationCast:
 		staticValueType := castingExpressionTypes.StaticValueType
 		// The cast may upcast to an optional type, e.g. `1 as Int?`, so box
-		return interpreter.ConvertAndBox(locationRange, value, staticValueType, expectedType)
+		return ConvertAndBox(interpreter, locationRange, value, staticValueType, expectedType)
 
 	default:
 		panic(errors.NewUnreachableError())
