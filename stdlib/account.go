@@ -2617,32 +2617,51 @@ func newAccountStorageCapabilitiesIssueFunction(
 
 				invocationContext := invocation.InvocationContext
 				locationRange := invocation.LocationRange
-
-				// Get path argument
-
-				targetPathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
-				if !ok || targetPathValue.Domain != common.PathDomainStorage {
-					panic(errors.NewUnreachableError())
-				}
+				arguments := invocation.Arguments
 
 				// Get borrow-type type-argument
-
 				typeParameterPair := invocation.TypeParameterTypes.Oldest()
-				ty := typeParameterPair.Value
+				typeParameter := typeParameterPair.Value
 
-				// Issue capability controller and return capability
-
-				return checkAndIssueStorageCapabilityControllerWithType(
+				return IssueCapability(
+					arguments,
 					invocationContext,
 					locationRange,
 					handler,
 					address,
-					targetPathValue,
-					ty,
+					typeParameter,
 				)
 			},
 		)
 	}
+}
+
+func IssueCapability(
+	arguments []interpreter.Value,
+	invocationContext interpreter.InvocationContext,
+	locationRange interpreter.LocationRange,
+	handler CapabilityControllerIssueHandler,
+	address common.Address,
+	typeParameter sema.Type,
+) interpreter.Value {
+
+	// Get path argument
+
+	targetPathValue, ok := arguments[0].(interpreter.PathValue)
+	if !ok || targetPathValue.Domain != common.PathDomainStorage {
+		panic(errors.NewUnreachableError())
+	}
+
+	// Issue capability controller and return capability
+
+	return checkAndIssueStorageCapabilityControllerWithType(
+		invocationContext,
+		locationRange,
+		handler,
+		address,
+		targetPathValue,
+		typeParameter,
+	)
 }
 
 func newAccountStorageCapabilitiesIssueWithTypeFunction(
@@ -3495,7 +3514,6 @@ func newAccountCapabilitiesPublishFunction(
 ) interpreter.BoundFunctionGenerator {
 
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-		accountAddress := accountAddressValue.ToAddress()
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountCapabilities,
@@ -3503,124 +3521,143 @@ func newAccountCapabilitiesPublishFunction(
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 				invocationContext := invocation.InvocationContext
 				locationRange := invocation.LocationRange
+				arguments := invocation.Arguments
 
-				// Get capability argument
-
-				capabilityValue, ok := invocation.Arguments[0].(interpreter.CapabilityValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				capabilityAddressValue := capabilityValue.Address()
-				if capabilityAddressValue != accountAddressValue {
-					panic(interpreter.CapabilityAddressPublishingError{
-						LocationRange:     locationRange,
-						CapabilityAddress: capabilityAddressValue,
-						AccountAddress:    accountAddressValue,
-					})
-				}
-
-				// Get path argument
-
-				pathValue, ok := invocation.Arguments[1].(interpreter.PathValue)
-				if !ok || pathValue.Domain != common.PathDomainPublic {
-					panic(errors.NewUnreachableError())
-				}
-
-				domain := pathValue.Domain.StorageDomain()
-				identifier := pathValue.Identifier
-
-				capabilityType, ok := capabilityValue.StaticType(invocationContext).(*interpreter.CapabilityStaticType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				borrowType := capabilityType.BorrowType
-
-				// It is possible to have legacy capabilities without borrow type.
-				// So perform the validation only if the borrow type is present.
-				if borrowType != nil {
-					capabilityBorrowType, ok := borrowType.(*interpreter.ReferenceStaticType)
-					if !ok {
-						panic(errors.NewUnreachableError())
-					}
-
-					publishHandler := invocationContext.ValidateAccountCapabilitiesPublishHandler()
-					if publishHandler != nil {
-						valid, err := publishHandler(
-							invocationContext,
-							locationRange,
-							capabilityAddressValue,
-							pathValue,
-							capabilityBorrowType,
-						)
-						if err != nil {
-							panic(err)
-						}
-						if !valid {
-							panic(interpreter.EntitledCapabilityPublishingError{
-								LocationRange: locationRange,
-								BorrowType:    capabilityBorrowType,
-								Path:          pathValue,
-							})
-						}
-					}
-				}
-
-				// Prevent an overwrite
-
-				storageMapKey := interpreter.StringStorageMapKey(identifier)
-
-				if interpreter.StoredValueExists(
+				return PublishCapability(
 					invocationContext,
-					accountAddress,
-					domain,
-					storageMapKey,
-				) {
-					panic(interpreter.OverwriteError{
-						Address:       accountAddressValue,
-						Path:          pathValue,
-						LocationRange: locationRange,
-					})
-				}
-
-				capabilityValue, ok = capabilityValue.Transfer(
-					invocationContext,
+					handler,
+					arguments,
+					accountAddressValue,
 					locationRange,
-					atree.Address(accountAddress),
-					true,
-					nil,
-					nil,
-					true, // capabilityValue is standalone because it is from invocation.Arguments[0].
-				).(interpreter.CapabilityValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				// Write new value
-
-				invocationContext.WriteStored(
-					accountAddress,
-					domain,
-					storageMapKey,
-					capabilityValue,
 				)
-
-				handler.EmitEvent(
-					invocationContext,
-					locationRange,
-					CapabilityPublishedEventType,
-					[]interpreter.Value{
-						accountAddressValue,
-						pathValue,
-						capabilityValue,
-					},
-				)
-
-				return interpreter.Void
 			},
 		)
 	}
+}
+
+func PublishCapability(
+	invocationContext interpreter.InvocationContext,
+	handler CapabilityControllerHandler,
+	arguments []interpreter.Value,
+	accountAddressValue interpreter.AddressValue,
+	locationRange interpreter.LocationRange,
+) interpreter.Value {
+
+	accountAddress := accountAddressValue.ToAddress()
+
+	// Get capability argument
+	capabilityValue, ok := arguments[0].(interpreter.CapabilityValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	capabilityAddressValue := capabilityValue.Address()
+	if capabilityAddressValue != accountAddressValue {
+		panic(interpreter.CapabilityAddressPublishingError{
+			LocationRange:     locationRange,
+			CapabilityAddress: capabilityAddressValue,
+			AccountAddress:    accountAddressValue,
+		})
+	}
+
+	// Get path argument
+
+	pathValue, ok := arguments[1].(interpreter.PathValue)
+	if !ok || pathValue.Domain != common.PathDomainPublic {
+		panic(errors.NewUnreachableError())
+	}
+
+	domain := pathValue.Domain.StorageDomain()
+	identifier := pathValue.Identifier
+
+	capabilityType, ok := capabilityValue.StaticType(invocationContext).(*interpreter.CapabilityStaticType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	borrowType := capabilityType.BorrowType
+
+	// It is possible to have legacy capabilities without borrow type.
+	// So perform the validation only if the borrow type is present.
+	if borrowType != nil {
+		capabilityBorrowType, ok := borrowType.(*interpreter.ReferenceStaticType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		publishHandler := invocationContext.ValidateAccountCapabilitiesPublishHandler()
+		if publishHandler != nil {
+			valid, err := publishHandler(
+				invocationContext,
+				locationRange,
+				capabilityAddressValue,
+				pathValue,
+				capabilityBorrowType,
+			)
+			if err != nil {
+				panic(err)
+			}
+			if !valid {
+				panic(interpreter.EntitledCapabilityPublishingError{
+					LocationRange: locationRange,
+					BorrowType:    capabilityBorrowType,
+					Path:          pathValue,
+				})
+			}
+		}
+	}
+
+	// Prevent an overwrite
+
+	storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+	if interpreter.StoredValueExists(
+		invocationContext,
+		accountAddress,
+		domain,
+		storageMapKey,
+	) {
+		panic(interpreter.OverwriteError{
+			Address:       accountAddressValue,
+			Path:          pathValue,
+			LocationRange: locationRange,
+		})
+	}
+
+	capabilityValue, ok = capabilityValue.Transfer(
+		invocationContext,
+		locationRange,
+		atree.Address(accountAddress),
+		true,
+		nil,
+		nil,
+		true, // capabilityValue is standalone because it is from invocation.Arguments[0].
+	).(interpreter.CapabilityValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// Write new value
+
+	invocationContext.WriteStored(
+		accountAddress,
+		domain,
+		storageMapKey,
+		capabilityValue,
+	)
+
+	handler.EmitEvent(
+		invocationContext,
+		locationRange,
+		CapabilityPublishedEventType,
+		[]interpreter.Value{
+			accountAddressValue,
+			pathValue,
+			capabilityValue,
+		},
+	)
+
+	return interpreter.Void
 }
 
 func newAccountCapabilitiesUnpublishFunction(
@@ -3895,8 +3932,6 @@ func newAccountCapabilitiesGetFunction(
 	borrow bool,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-		address := addressValue.ToAddress()
-
 		var funcType *sema.FunctionType
 
 		if borrow {
@@ -3913,175 +3948,190 @@ func newAccountCapabilitiesGetFunction(
 
 				invocationContext := invocation.InvocationContext
 				locationRange := invocation.LocationRange
+				arguments := invocation.Arguments
+				typeParameter := invocation.TypeParameterTypes.Oldest().Value
 
-				// Get path argument
-
-				pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
-				if !ok || pathValue.Domain != common.PathDomainPublic {
-					panic(errors.NewUnreachableError())
-				}
-
-				domain := pathValue.Domain.StorageDomain()
-				identifier := pathValue.Identifier
-
-				// Get borrow type type argument
-
-				typeParameterPairValue := invocation.TypeParameterTypes.Oldest().Value
-				// `Never` is never a supertype of any stored value
-				if typeParameterPairValue.Equal(sema.NeverType) {
-					if borrow {
-						return interpreter.Nil
-					} else {
-						return interpreter.NewInvalidCapabilityValue(
-							invocationContext,
-							addressValue,
-							interpreter.PrimitiveStaticTypeNever,
-						)
-					}
-				}
-
-				wantedBorrowType, ok := typeParameterPairValue.(*sema.ReferenceType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				var failValue interpreter.Value
-				if borrow {
-					failValue = interpreter.Nil
-				} else {
-					failValue =
-						interpreter.NewInvalidCapabilityValue(
-							invocationContext,
-							addressValue,
-							interpreter.ConvertSemaToStaticType(invocationContext, wantedBorrowType),
-						)
-				}
-
-				// Read stored capability, if any
-
-				storageMapKey := interpreter.StringStorageMapKey(identifier)
-
-				readValue := invocationContext.ReadStored(address, domain, storageMapKey)
-				if readValue == nil {
-					return failValue
-				}
-
-				var (
-					capabilityID               interpreter.UInt64Value
-					capabilityAddress          interpreter.AddressValue
-					capabilityStaticBorrowType interpreter.StaticType
-				)
-				switch readValue := readValue.(type) {
-				case *interpreter.IDCapabilityValue:
-					capabilityID = readValue.ID
-					capabilityAddress = readValue.Address()
-					capabilityStaticBorrowType = readValue.BorrowType
-
-				case *interpreter.PathCapabilityValue: //nolint:staticcheck
-					capabilityID = interpreter.InvalidCapabilityID
-					capabilityAddress = readValue.Address()
-					capabilityStaticBorrowType = readValue.BorrowType
-					if capabilityStaticBorrowType == nil {
-						capabilityStaticBorrowType = &interpreter.ReferenceStaticType{
-							Authorization:  interpreter.UnauthorizedAccess,
-							ReferencedType: interpreter.PrimitiveStaticTypeNever,
-						}
-					}
-
-				case interpreter.PathLinkValue: //nolint:staticcheck
-					// If the stored value is a path link,
-					// it failed to be migrated during the Cadence 1.0 migration.
-					capabilityID = interpreter.InvalidCapabilityID
-					capabilityAddress = addressValue
-					capabilityStaticBorrowType = readValue.Type
-
-				default:
-					panic(errors.NewUnreachableError())
-				}
-
-				capabilityBorrowType, ok :=
-					interpreter.MustConvertStaticToSemaType(capabilityStaticBorrowType, invocationContext).(*sema.ReferenceType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				getHandler := invocationContext.ValidateAccountCapabilitiesGetHandler()
-				if getHandler != nil {
-					valid, err := getHandler(
-						invocationContext,
-						locationRange,
-						addressValue,
-						pathValue,
-						wantedBorrowType,
-						capabilityBorrowType,
-					)
-					if err != nil {
-						panic(err)
-					}
-					if !valid {
-						return failValue
-					}
-				}
-
-				var resultValue interpreter.Value
-				if borrow {
-					// When borrowing,
-					// check the controller and types,
-					// and return a checked reference
-
-					resultValue = BorrowCapabilityController(
-						invocationContext,
-						locationRange,
-						capabilityAddress,
-						capabilityID,
-						wantedBorrowType,
-						capabilityBorrowType,
-						controllerHandler,
-					)
-				} else {
-					// When not borrowing,
-					// check the controller and types,
-					// and return a capability
-
-					controller, resultBorrowType := getCheckedCapabilityController(
-						invocationContext,
-						capabilityAddress,
-						capabilityID,
-						wantedBorrowType,
-						capabilityBorrowType,
-						controllerHandler,
-					)
-					if controller != nil {
-						resultBorrowStaticType :=
-							interpreter.ConvertSemaReferenceTypeToStaticReferenceType(invocationContext, resultBorrowType)
-						if !ok {
-							panic(errors.NewUnreachableError())
-						}
-
-						resultValue = interpreter.NewCapabilityValue(
-							invocationContext,
-							capabilityID,
-							capabilityAddress,
-							resultBorrowStaticType,
-						)
-					}
-				}
-
-				if resultValue == nil {
-					return failValue
-				}
-
-				if borrow {
-					resultValue = interpreter.NewSomeValueNonCopying(
-						invocationContext,
-						resultValue,
-					)
-				}
-
-				return resultValue
+				return GetCapability(arguments, typeParameter, borrow, invocationContext, addressValue, locationRange, controllerHandler)
 			},
 		)
 	}
+}
+
+func GetCapability(
+	arguments []interpreter.Value,
+	typeParameter sema.Type,
+	borrow bool,
+	invocationContext interpreter.InvocationContext,
+	addressValue interpreter.AddressValue,
+	locationRange interpreter.LocationRange,
+	controllerHandler CapabilityControllerHandler,
+) interpreter.Value {
+	// Get path argument
+
+	pathValue, ok := arguments[0].(interpreter.PathValue)
+	if !ok || pathValue.Domain != common.PathDomainPublic {
+		panic(errors.NewUnreachableError())
+	}
+
+	domain := pathValue.Domain.StorageDomain()
+	identifier := pathValue.Identifier
+
+	// Get borrow type type argument
+
+	// `Never` is never a supertype of any stored value
+	if typeParameter.Equal(sema.NeverType) {
+		if borrow {
+			return interpreter.Nil
+		} else {
+			return interpreter.NewInvalidCapabilityValue(
+				invocationContext,
+				addressValue,
+				interpreter.PrimitiveStaticTypeNever,
+			)
+		}
+	}
+
+	wantedBorrowType, ok := typeParameter.(*sema.ReferenceType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	var failValue interpreter.Value
+	if borrow {
+		failValue = interpreter.Nil
+	} else {
+		failValue =
+			interpreter.NewInvalidCapabilityValue(
+				invocationContext,
+				addressValue,
+				interpreter.ConvertSemaToStaticType(invocationContext, wantedBorrowType),
+			)
+	}
+
+	// Read stored capability, if any
+
+	storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+	address := addressValue.ToAddress()
+
+	readValue := invocationContext.ReadStored(address, domain, storageMapKey)
+	if readValue == nil {
+		return failValue
+	}
+
+	var (
+		capabilityID               interpreter.UInt64Value
+		capabilityAddress          interpreter.AddressValue
+		capabilityStaticBorrowType interpreter.StaticType
+	)
+	switch readValue := readValue.(type) {
+	case *interpreter.IDCapabilityValue:
+		capabilityID = readValue.ID
+		capabilityAddress = readValue.Address()
+		capabilityStaticBorrowType = readValue.BorrowType
+
+	case *interpreter.PathCapabilityValue: //nolint:staticcheck
+		capabilityID = interpreter.InvalidCapabilityID
+		capabilityAddress = readValue.Address()
+		capabilityStaticBorrowType = readValue.BorrowType
+		if capabilityStaticBorrowType == nil {
+			capabilityStaticBorrowType = &interpreter.ReferenceStaticType{
+				Authorization:  interpreter.UnauthorizedAccess,
+				ReferencedType: interpreter.PrimitiveStaticTypeNever,
+			}
+		}
+
+	case interpreter.PathLinkValue: //nolint:staticcheck
+		// If the stored value is a path link,
+		// it failed to be migrated during the Cadence 1.0 migration.
+		capabilityID = interpreter.InvalidCapabilityID
+		capabilityAddress = addressValue
+		capabilityStaticBorrowType = readValue.Type
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	capabilityBorrowType, ok :=
+		interpreter.MustConvertStaticToSemaType(capabilityStaticBorrowType, invocationContext).(*sema.ReferenceType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	getHandler := invocationContext.ValidateAccountCapabilitiesGetHandler()
+	if getHandler != nil {
+		valid, err := getHandler(
+			invocationContext,
+			locationRange,
+			addressValue,
+			pathValue,
+			wantedBorrowType,
+			capabilityBorrowType,
+		)
+		if err != nil {
+			panic(err)
+		}
+		if !valid {
+			return failValue
+		}
+	}
+
+	var resultValue interpreter.Value
+	if borrow {
+		// When borrowing,
+		// check the controller and types,
+		// and return a checked reference
+
+		resultValue = BorrowCapabilityController(
+			invocationContext,
+			locationRange,
+			capabilityAddress,
+			capabilityID,
+			wantedBorrowType,
+			capabilityBorrowType,
+			controllerHandler,
+		)
+	} else {
+		// When not borrowing,
+		// check the controller and types,
+		// and return a capability
+
+		controller, resultBorrowType := getCheckedCapabilityController(
+			invocationContext,
+			capabilityAddress,
+			capabilityID,
+			wantedBorrowType,
+			capabilityBorrowType,
+			controllerHandler,
+		)
+		if controller != nil {
+			resultBorrowStaticType :=
+				interpreter.ConvertSemaReferenceTypeToStaticReferenceType(invocationContext, resultBorrowType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			resultValue = interpreter.NewCapabilityValue(
+				invocationContext,
+				capabilityID,
+				capabilityAddress,
+				resultBorrowStaticType,
+			)
+		}
+	}
+
+	if resultValue == nil {
+		return failValue
+	}
+
+	if borrow {
+		resultValue = interpreter.NewSomeValueNonCopying(
+			invocationContext,
+			resultValue,
+		)
+	}
+
+	return resultValue
 }
 
 func newAccountCapabilitiesExistsFunction(

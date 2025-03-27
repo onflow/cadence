@@ -590,7 +590,7 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 		vmConfig = vm.NewConfig(storage).
 			WithAccountHandler(&testAccountHandler{})
 
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
+		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
 			program, ok := programs[location]
 			require.True(t, ok, "cannot find elaboration for %s", location)
 

@@ -381,7 +381,7 @@ func (v *CompositeValue) Destroy(context ResourceDestructionContext, locationRan
 		eventType := MustSemaTypeOfValue(event, context).(*sema.CompositeType)
 
 		// emit the event once destruction is complete
-		defer context.EmitEvent(event, eventType, locationRange)
+		defer context.EmitEventValue(event, eventType, locationRange)
 	}
 
 	valueID := v.ValueID()

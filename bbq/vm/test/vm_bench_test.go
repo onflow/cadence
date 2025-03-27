@@ -383,7 +383,7 @@ func BenchmarkMethodCall(b *testing.B) {
 			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
-			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
+			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
 				elaboration := importedChecker.Elaboration
 				compositeType := elaboration.CompositeType(typeID)
 				if compositeType != nil {

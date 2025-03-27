@@ -19,10 +19,7 @@
 package vm
 
 import (
-	"github.com/onflow/atree"
-
 	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -42,52 +39,15 @@ func init() {
 			Function: func(config *Config, typeArs []bbq.StaticType, args ...Value) Value {
 				address := getAddressMetaInfoFromValue(args[0])
 
-				value := args[1]
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				arguments := args[1:]
 
-				path, ok := args[2].(interpreter.PathValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				domain := path.Domain.StorageDomain()
-				identifier := path.Identifier
-
-				locationRange := EmptyLocationRange
-
-				// Prevent an overwrite
-
-				storageMapKey := interpreter.StringStorageMapKey(identifier)
-
-				if interpreter.StoredValueExists(config, address, domain, storageMapKey) {
-					panic(
-						interpreter.OverwriteError{
-							Address:       interpreter.AddressValue(address),
-							Path:          path,
-							LocationRange: locationRange,
-						},
-					)
-				}
-
-				value = value.Transfer(
+				return interpreter.StorageSave(
 					config,
-					locationRange,
-					atree.Address(address),
-					true,
-					nil,
-					nil,
-					true, // value is standalone because it is from invocation.Arguments[0].
-				)
-
-				// Write new value
-
-				config.WriteStored(
+					arguments,
 					address,
-					domain,
-					storageMapKey,
-					value,
+					EmptyLocationRange,
 				)
-
-				return interpreter.Void
 			},
 		})
 
@@ -98,38 +58,21 @@ func init() {
 		NativeFunctionValue{
 			ParameterCount: len(sema.Account_StorageTypeBorrowFunctionType.Parameters),
 			Function: func(config *Config, typeArgs []bbq.StaticType, args ...Value) Value {
-				address := getAddressMetaInfoFromValue(args[0])
+				address := getAddressMetaInfoFromValue(args[0]).ToAddress()
 
-				path, ok := args[1].(interpreter.PathValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				arguments := args[1:]
 
-				referenceType, ok := typeArgs[0].(*interpreter.ReferenceStaticType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
+				borrowType := typeArgs[0]
+				semaBorrowType := interpreter.MustConvertStaticToSemaType(borrowType, config)
 
-				semaType := interpreter.MustConvertStaticToSemaType(referenceType.ReferencedType, config)
-
-				reference := interpreter.NewStorageReferenceValue(
+				return interpreter.StorageBorrow(
 					config,
-					referenceType.Authorization,
+					arguments,
+					semaBorrowType,
 					address,
-					path,
-					semaType,
+					EmptyLocationRange,
 				)
-
-				// Attempt to dereference,
-				// which reads the stored value
-				// and performs a dynamic type check
-
-				value := reference.ReferencedValue(config, EmptyLocationRange, true)
-				if value == nil {
-					return interpreter.Nil
-				}
-
-				return interpreter.NewSomeValueNonCopying(config, reference)
 			},
 		})
 }

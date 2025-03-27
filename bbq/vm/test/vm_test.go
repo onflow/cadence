@@ -1961,7 +1961,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
-			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
+			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
 				elaboration := importedChecker.Elaboration
 				compositeType := elaboration.CompositeType(typeID)
 				if compositeType != nil {
@@ -2863,7 +2863,16 @@ func TestDefaultFunctions(t *testing.T) {
 		contractValues := map[common.Location]*interpreter.CompositeValue{}
 
 		vmConfig := vm.NewConfig(storage).
-			WithAccountHandler(&testAccountHandler{})
+			WithAccountHandler(&testAccountHandler{
+				emitEvent: func(
+					_ interpreter.ValueExportContext,
+					_ interpreter.LocationRange,
+					_ *sema.CompositeType,
+					_ []interpreter.Value,
+				) {
+					// ignore
+				},
+			})
 
 		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 			program, ok := programs[location]
