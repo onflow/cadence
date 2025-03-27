@@ -462,7 +462,7 @@ func (interpreter *Interpreter) InvokeExternally(
 			parameterType := parameters[i].TypeAnnotation.Type
 
 			// converts the argument into the parameter type declared by the function
-			preparedArguments[i] = interpreter.ConvertAndBox(locationRange, argument, nil, parameterType)
+			preparedArguments[i] = ConvertAndBox(interpreter, locationRange, argument, nil, parameterType)
 		}
 	}
 
@@ -1021,7 +1021,7 @@ func (interpreter *Interpreter) visitAssignment(
 
 	value := interpreter.evalExpression(valueExpression)
 
-	transferredValue := interpreter.transferAndConvert(value, valueType, targetType, locationRange)
+	transferredValue := transferAndConvert(interpreter, value, valueType, targetType, locationRange)
 
 	targetGetterSetter.set(transferredValue)
 }
@@ -1592,7 +1592,8 @@ func (interpreter *Interpreter) declareEnumConstructor(
 	for i, enumCase := range enumCases {
 
 		// TODO: replace, avoid conversion
-		rawValue := interpreter.convert(
+		rawValue := convert(
+			interpreter,
 			NewIntValueFromInt64(interpreter, int64(i)),
 			intType,
 			compositeType.EnumRawType,
@@ -1893,14 +1894,15 @@ func (interpreter *Interpreter) ValueIsSubtypeOfSemaType(value Value, targetType
 	return IsSubTypeOfSemaType(interpreter, value.StaticType(interpreter), targetType)
 }
 
-func (interpreter *Interpreter) transferAndConvert(
+func transferAndConvert(
+	context ValueConversionContext,
 	value Value,
 	valueType, targetType sema.Type,
 	locationRange LocationRange,
 ) Value {
 
 	transferredValue := value.Transfer(
-		interpreter,
+		context,
 		locationRange,
 		atree.Address{},
 		false,
@@ -1909,9 +1911,10 @@ func (interpreter *Interpreter) transferAndConvert(
 		true, // value is standalone.
 	)
 
-	targetType = SubstituteMappedEntitlements(interpreter, targetType)
+	targetType = SubstituteMappedEntitlements(context, targetType)
 
-	result := interpreter.ConvertAndBox(
+	result := ConvertAndBox(
+		context,
 		locationRange,
 		transferredValue,
 		valueType,
@@ -1919,12 +1922,12 @@ func (interpreter *Interpreter) transferAndConvert(
 	)
 
 	// Defensively check the value's type matches the target type
-	resultStaticType := result.StaticType(interpreter)
+	resultStaticType := result.StaticType(context)
 
 	if targetType != nil &&
-		!IsSubTypeOfSemaType(interpreter, resultStaticType, targetType) {
+		!IsSubTypeOfSemaType(context, resultStaticType, targetType) {
 
-		resultSemaType := MustConvertStaticToSemaType(resultStaticType, interpreter)
+		resultSemaType := MustConvertStaticToSemaType(resultStaticType, context)
 
 		panic(ValueTransferTypeError{
 			ExpectedType:  targetType,
@@ -1937,20 +1940,22 @@ func (interpreter *Interpreter) transferAndConvert(
 }
 
 // ConvertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
-func (interpreter *Interpreter) ConvertAndBox(
+func ConvertAndBox(
+	context ValueCreationContext,
 	locationRange LocationRange,
 	value Value,
 	valueType, targetType sema.Type,
 ) Value {
-	value = interpreter.convert(value, valueType, targetType, locationRange)
-	return interpreter.BoxOptional(value, targetType)
+	value = convert(context, value, valueType, targetType, locationRange)
+	return BoxOptional(context, value, targetType)
 }
 
 // Produces the `valueStaticType` argument into a new static type that conforms
 // to the specification of the `targetSemaType`. At the moment, this means that the
 // authorization of any reference types in `valueStaticType` are changed to match the
 // authorization of any equivalently-positioned reference types in `targetSemaType`.
-func (interpreter *Interpreter) convertStaticType(
+func convertStaticType(
+	gauge common.MemoryGauge,
 	valueStaticType StaticType,
 	targetSemaType sema.Type,
 ) StaticType {
@@ -1958,8 +1963,8 @@ func (interpreter *Interpreter) convertStaticType(
 	case *ReferenceStaticType:
 		if targetReferenceType, isReferenceType := targetSemaType.(*sema.ReferenceType); isReferenceType {
 			return NewReferenceStaticType(
-				interpreter,
-				ConvertSemaAccessToStaticAuthorization(interpreter, targetReferenceType.Authorization),
+				gauge,
+				ConvertSemaAccessToStaticAuthorization(gauge, targetReferenceType.Authorization),
 				valueStaticType.ReferencedType,
 			)
 		}
@@ -1967,8 +1972,9 @@ func (interpreter *Interpreter) convertStaticType(
 	case *OptionalStaticType:
 		if targetOptionalType, isOptionalType := targetSemaType.(*sema.OptionalType); isOptionalType {
 			return NewOptionalStaticType(
-				interpreter,
-				interpreter.convertStaticType(
+				gauge,
+				convertStaticType(
+					gauge,
 					valueStaticType.Type,
 					targetOptionalType.Type,
 				),
@@ -1978,12 +1984,14 @@ func (interpreter *Interpreter) convertStaticType(
 	case *DictionaryStaticType:
 		if targetDictionaryType, isDictionaryType := targetSemaType.(*sema.DictionaryType); isDictionaryType {
 			return NewDictionaryStaticType(
-				interpreter,
-				interpreter.convertStaticType(
+				gauge,
+				convertStaticType(
+					gauge,
 					valueStaticType.KeyType,
 					targetDictionaryType.KeyType,
 				),
-				interpreter.convertStaticType(
+				convertStaticType(
+					gauge,
 					valueStaticType.ValueType,
 					targetDictionaryType.ValueType,
 				),
@@ -1993,8 +2001,9 @@ func (interpreter *Interpreter) convertStaticType(
 	case *VariableSizedStaticType:
 		if targetArrayType, isArrayType := targetSemaType.(*sema.VariableSizedType); isArrayType {
 			return NewVariableSizedStaticType(
-				interpreter,
-				interpreter.convertStaticType(
+				gauge,
+				convertStaticType(
+					gauge,
 					valueStaticType.Type,
 					targetArrayType.Type,
 				),
@@ -2004,8 +2013,9 @@ func (interpreter *Interpreter) convertStaticType(
 	case *ConstantSizedStaticType:
 		if targetArrayType, isArrayType := targetSemaType.(*sema.ConstantSizedType); isArrayType {
 			return NewConstantSizedStaticType(
-				interpreter,
-				interpreter.convertStaticType(
+				gauge,
+				convertStaticType(
+					gauge,
 					valueStaticType.Type,
 					targetArrayType.Type,
 				),
@@ -2016,8 +2026,9 @@ func (interpreter *Interpreter) convertStaticType(
 	case *CapabilityStaticType:
 		if targetCapabilityType, isCapabilityType := targetSemaType.(*sema.CapabilityType); isCapabilityType {
 			return NewCapabilityStaticType(
-				interpreter,
-				interpreter.convertStaticType(
+				gauge,
+				convertStaticType(
+					gauge,
 					valueStaticType.BorrowType,
 					targetCapabilityType.BorrowType,
 				),
@@ -2027,7 +2038,13 @@ func (interpreter *Interpreter) convertStaticType(
 	return valueStaticType
 }
 
-func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.Type, locationRange LocationRange) Value {
+func convert(
+	context ValueCreationContext,
+	value Value,
+	valueType,
+	targetType sema.Type,
+	locationRange LocationRange,
+) Value {
 	if valueType == nil {
 		return value
 	}
@@ -2042,8 +2059,14 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 		case *SomeValue:
 			if !optionalValueType.Type.Equal(unwrappedTargetType) {
-				innerValue := interpreter.convert(value.value, optionalValueType.Type, unwrappedTargetType, locationRange)
-				return NewSomeValueNonCopying(interpreter, innerValue)
+				innerValue := convert(
+					context,
+					value.value,
+					optionalValueType.Type,
+					unwrappedTargetType,
+					locationRange,
+				)
+				return NewSomeValueNonCopying(context, innerValue)
 			}
 			return value
 		}
@@ -2052,137 +2075,137 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 	switch unwrappedTargetType {
 	case sema.IntType:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt(interpreter, value, locationRange)
+			return ConvertInt(context, value, locationRange)
 		}
 
 	case sema.UIntType:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt(interpreter, value, locationRange)
+			return ConvertUInt(context, value, locationRange)
 		}
 
 	// Int*
 	case sema.Int8Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt8(interpreter, value, locationRange)
+			return ConvertInt8(context, value, locationRange)
 		}
 
 	case sema.Int16Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt16(interpreter, value, locationRange)
+			return ConvertInt16(context, value, locationRange)
 		}
 
 	case sema.Int32Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt32(interpreter, value, locationRange)
+			return ConvertInt32(context, value, locationRange)
 		}
 
 	case sema.Int64Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt64(interpreter, value, locationRange)
+			return ConvertInt64(context, value, locationRange)
 		}
 
 	case sema.Int128Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt128(interpreter, value, locationRange)
+			return ConvertInt128(context, value, locationRange)
 		}
 
 	case sema.Int256Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt256(interpreter, value, locationRange)
+			return ConvertInt256(context, value, locationRange)
 		}
 
 	// UInt*
 	case sema.UInt8Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt8(interpreter, value, locationRange)
+			return ConvertUInt8(context, value, locationRange)
 		}
 
 	case sema.UInt16Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt16(interpreter, value, locationRange)
+			return ConvertUInt16(context, value, locationRange)
 		}
 
 	case sema.UInt32Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt32(interpreter, value, locationRange)
+			return ConvertUInt32(context, value, locationRange)
 		}
 
 	case sema.UInt64Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt64(interpreter, value, locationRange)
+			return ConvertUInt64(context, value, locationRange)
 		}
 
 	case sema.UInt128Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt128(interpreter, value, locationRange)
+			return ConvertUInt128(context, value, locationRange)
 		}
 
 	case sema.UInt256Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt256(interpreter, value, locationRange)
+			return ConvertUInt256(context, value, locationRange)
 		}
 
 	// Word*
 	case sema.Word8Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertWord8(interpreter, value, locationRange)
+			return ConvertWord8(context, value, locationRange)
 		}
 
 	case sema.Word16Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertWord16(interpreter, value, locationRange)
+			return ConvertWord16(context, value, locationRange)
 		}
 
 	case sema.Word32Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertWord32(interpreter, value, locationRange)
+			return ConvertWord32(context, value, locationRange)
 		}
 
 	case sema.Word64Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertWord64(interpreter, value, locationRange)
+			return ConvertWord64(context, value, locationRange)
 		}
 
 	case sema.Word128Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertWord128(interpreter, value, locationRange)
+			return ConvertWord128(context, value, locationRange)
 		}
 
 	case sema.Word256Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertWord256(interpreter, value, locationRange)
+			return ConvertWord256(context, value, locationRange)
 		}
 
 	// Fix*
 
 	case sema.Fix64Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertFix64(interpreter, value, locationRange)
+			return ConvertFix64(context, value, locationRange)
 		}
 
 	case sema.UFix64Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUFix64(interpreter, value, locationRange)
+			return ConvertUFix64(context, value, locationRange)
 		}
 	}
 
 	switch unwrappedTargetType := unwrappedTargetType.(type) {
 	case *sema.AddressType:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertAddress(interpreter, value, locationRange)
+			return ConvertAddress(context, value, locationRange)
 		}
 
 	case sema.ArrayType:
 		if arrayValue, isArray := value.(*ArrayValue); isArray && !valueType.Equal(unwrappedTargetType) {
 
-			oldArrayStaticType := arrayValue.StaticType(interpreter)
-			arrayStaticType := interpreter.convertStaticType(oldArrayStaticType, unwrappedTargetType).(ArrayStaticType)
+			oldArrayStaticType := arrayValue.StaticType(context)
+			arrayStaticType := convertStaticType(context, oldArrayStaticType, unwrappedTargetType).(ArrayStaticType)
 
 			if oldArrayStaticType.Equal(arrayStaticType) {
 				return value
 			}
 
-			targetElementType := MustConvertStaticToSemaType(arrayStaticType.ElementType(), interpreter)
+			targetElementType := MustConvertStaticToSemaType(arrayStaticType.ElementType(), context)
 
 			array := arrayValue.array
 
@@ -2192,7 +2215,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			}
 
 			return NewArrayValueWithIterator(
-				interpreter,
+				context,
 				arrayStaticType,
 				arrayValue.GetOwner(),
 				array.Count(),
@@ -2205,9 +2228,9 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 						return nil
 					}
 
-					value := MustConvertStoredValue(interpreter, element)
-					valueType := MustConvertStaticToSemaType(value.StaticType(interpreter), interpreter)
-					return interpreter.convert(value, valueType, targetElementType, locationRange)
+					value := MustConvertStoredValue(context, element)
+					valueType := MustConvertStaticToSemaType(value.StaticType(context), context)
+					return convert(context, value, valueType, targetElementType, locationRange)
 				},
 			)
 		}
@@ -2215,15 +2238,15 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 	case *sema.DictionaryType:
 		if dictValue, isDict := value.(*DictionaryValue); isDict && !valueType.Equal(unwrappedTargetType) {
 
-			oldDictStaticType := dictValue.StaticType(interpreter)
-			dictStaticType := interpreter.convertStaticType(oldDictStaticType, unwrappedTargetType).(*DictionaryStaticType)
+			oldDictStaticType := dictValue.StaticType(context)
+			dictStaticType := convertStaticType(context, oldDictStaticType, unwrappedTargetType).(*DictionaryStaticType)
 
 			if oldDictStaticType.Equal(dictStaticType) {
 				return value
 			}
 
-			targetKeyType := MustConvertStaticToSemaType(dictStaticType.KeyType, interpreter)
-			targetValueType := MustConvertStaticToSemaType(dictStaticType.ValueType, interpreter)
+			targetKeyType := MustConvertStaticToSemaType(dictStaticType.KeyType, context)
+			targetValueType := MustConvertStaticToSemaType(dictStaticType.ValueType, context)
 
 			dictionary := dictValue.dictionary
 
@@ -2233,7 +2256,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			}
 
 			return newDictionaryValueWithIterator(
-				interpreter,
+				context,
 				locationRange,
 				dictStaticType,
 				dictionary.Count(),
@@ -2249,14 +2272,14 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 						return nil, nil
 					}
 
-					key := MustConvertStoredValue(interpreter, k)
-					value := MustConvertStoredValue(interpreter, v)
+					key := MustConvertStoredValue(context, k)
+					value := MustConvertStoredValue(context, v)
 
-					keyType := MustConvertStaticToSemaType(key.StaticType(interpreter), interpreter)
-					valueType := MustConvertStaticToSemaType(value.StaticType(interpreter), interpreter)
+					keyType := MustConvertStaticToSemaType(key.StaticType(context), context)
+					valueType := MustConvertStaticToSemaType(value.StaticType(context), context)
 
-					convertedKey := interpreter.convert(key, keyType, targetKeyType, locationRange)
-					convertedValue := interpreter.convert(value, valueType, targetValueType, locationRange)
+					convertedKey := convert(context, key, keyType, targetKeyType, locationRange)
+					convertedValue := convert(context, value, valueType, targetValueType, locationRange)
 
 					return convertedKey, convertedValue
 				},
@@ -2270,12 +2293,12 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			switch capability := value.(type) {
 			case *IDCapabilityValue:
 				valueBorrowType := capability.BorrowType.(*ReferenceStaticType)
-				borrowType := interpreter.convertStaticType(valueBorrowType, targetBorrowType)
+				borrowType := convertStaticType(context, valueBorrowType, targetBorrowType)
 				if capability.isInvalid() {
-					return NewInvalidCapabilityValue(interpreter, capability.address, borrowType)
+					return NewInvalidCapabilityValue(context, capability.address, borrowType)
 				}
 				return NewCapabilityValue(
-					interpreter,
+					context,
 					capability.ID,
 					capability.address,
 					borrowType,
@@ -2287,13 +2310,13 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 		}
 
 	case *sema.ReferenceType:
-		targetAuthorization := ConvertSemaAccessToStaticAuthorization(interpreter, unwrappedTargetType.Authorization)
+		targetAuthorization := ConvertSemaAccessToStaticAuthorization(context, unwrappedTargetType.Authorization)
 		switch ref := value.(type) {
 		case *EphemeralReferenceValue:
-			if interpreter.shouldConvertReference(ref, valueType, unwrappedTargetType, targetAuthorization) {
+			if shouldConvertReference(ref, valueType, unwrappedTargetType, targetAuthorization) {
 				checkMappedEntitlements(unwrappedTargetType, locationRange)
 				return NewEphemeralReferenceValue(
-					interpreter,
+					context,
 					targetAuthorization,
 					ref.Value,
 					unwrappedTargetType.Type,
@@ -2302,10 +2325,10 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			}
 
 		case *StorageReferenceValue:
-			if interpreter.shouldConvertReference(ref, valueType, unwrappedTargetType, targetAuthorization) {
+			if shouldConvertReference(ref, valueType, unwrappedTargetType, targetAuthorization) {
 				checkMappedEntitlements(unwrappedTargetType, locationRange)
 				return NewStorageReferenceValue(
-					interpreter,
+					context,
 					targetAuthorization,
 					ref.TargetStorageAddress,
 					ref.TargetPath,
@@ -2321,7 +2344,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 	return value
 }
 
-func (interpreter *Interpreter) shouldConvertReference(
+func shouldConvertReference(
 	ref ReferenceValue,
 	valueType sema.Type,
 	unwrappedTargetType *sema.ReferenceType,
@@ -2346,7 +2369,7 @@ func checkMappedEntitlements(unwrappedTargetType *sema.ReferenceType, locationRa
 }
 
 // BoxOptional boxes a value in optionals, if necessary
-func (interpreter *Interpreter) BoxOptional(value Value, targetType sema.Type) Value {
+func BoxOptional(gauge common.MemoryGauge, value Value, targetType sema.Type) Value {
 
 	inner := value
 
@@ -2365,7 +2388,7 @@ func (interpreter *Interpreter) BoxOptional(value Value, targetType sema.Type) V
 			return inner
 
 		default:
-			value = NewSomeValueNonCopying(interpreter, value)
+			value = NewSomeValueNonCopying(gauge, value)
 		}
 
 		targetType = optionalType.Type
