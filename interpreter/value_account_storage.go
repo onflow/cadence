@@ -66,22 +66,22 @@ func NewAccountStorageValue(
 			)
 
 		case sema.Account_StorageTypeTypeFunctionName:
-			return authAccountTypeFunction(context, storageValue, address)
+			return authAccountStorageTypeFunction(context, storageValue, address)
 
 		case sema.Account_StorageTypeLoadFunctionName:
-			return authAccountLoadFunction(context, storageValue, address)
+			return authAccountStorageLoadFunction(context, storageValue, address)
 
 		case sema.Account_StorageTypeCopyFunctionName:
-			return authAccountCopyFunction(context, storageValue, address)
+			return authAccountStorageCopyFunction(context, storageValue, address)
 
 		case sema.Account_StorageTypeSaveFunctionName:
-			return authAccountSaveFunction(context, storageValue, address)
+			return authAccountStorageSaveFunction(context, storageValue, address)
 
 		case sema.Account_StorageTypeBorrowFunctionName:
-			return authAccountBorrowFunction(context, storageValue, address)
+			return authAccountStorageBorrowFunction(context, storageValue, address)
 
 		case sema.Account_StorageTypeCheckFunctionName:
-			return authAccountCheckFunction(context, storageValue, address)
+			return authAccountStorageCheckFunction(context, storageValue, address)
 		}
 
 		return nil

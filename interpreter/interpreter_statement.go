@@ -362,7 +362,7 @@ func (interpreter *Interpreter) visitForStatementBody(
 	return nil, false
 }
 
-func (interpreter *Interpreter) EmitEvent(event *CompositeValue, eventType *sema.CompositeType, locationRange LocationRange) {
+func (interpreter *Interpreter) EmitEventValue(event *CompositeValue, eventType *sema.CompositeType, locationRange LocationRange) {
 
 	config := interpreter.SharedState.Config
 
@@ -393,7 +393,7 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 		HasPosition: statement,
 	}
 
-	interpreter.EmitEvent(event, eventType, locationRange)
+	interpreter.EmitEventValue(event, eventType, locationRange)
 
 	return nil
 }
