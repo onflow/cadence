@@ -53,19 +53,33 @@ func NewLogFunction(logger Logger) StandardLibraryValue {
 		func(invocation interpreter.Invocation) interpreter.Value {
 			value := invocation.Arguments[0]
 			locationRange := invocation.LocationRange
+			invocationContext := invocation.InvocationContext
 
-			inter := invocation.InvocationContext
-			message := value.MeteredString(inter, interpreter.SeenReferences{}, locationRange)
-
-			var err error
-			errors.WrapPanic(func() {
-				err = logger.ProgramLog(message, locationRange)
-			})
-			if err != nil {
-				panic(interpreter.WrappedExternalError(err))
-			}
-
-			return interpreter.Void
+			return Log(
+				invocationContext,
+				logger,
+				value,
+				locationRange,
+			)
 		},
 	)
+}
+
+func Log(
+	context interpreter.ValueStringContext,
+	logger Logger,
+	value interpreter.Value,
+	locationRange interpreter.LocationRange,
+) interpreter.Value {
+	message := value.MeteredString(context, interpreter.SeenReferences{}, locationRange)
+
+	var err error
+	errors.WrapPanic(func() {
+		err = logger.ProgramLog(message, locationRange)
+	})
+	if err != nil {
+		panic(interpreter.WrappedExternalError(err))
+	}
+
+	return interpreter.Void
 }

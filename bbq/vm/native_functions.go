@@ -19,15 +19,17 @@
 package vm
 
 import (
-	"fmt"
-
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
+)
+
+const (
+	receiverIndex = 0
+	typeBoundFunctionArgumentOffset = 1
 )
 
 var nativeFunctions = map[string]Value{}
@@ -62,33 +64,29 @@ func init() {
 	RegisterFunction(commons.LogFunctionName, NativeFunctionValue{
 		ParameterCount: len(stdlib.LogFunctionType.Parameters),
 		Function: func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
-			// TODO: Properly implement
-			fmt.Println(arguments[0].String())
-			return interpreter.Void
+			return stdlib.Log(
+				config,
+				config,
+				arguments[0],
+				EmptyLocationRange,
+			)
 		},
 	})
 
 	RegisterFunction(commons.PanicFunctionName, NativeFunctionValue{
 		ParameterCount: len(stdlib.PanicFunctionType.Parameters),
 		Function: func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
-			// TODO: Properly implement
-			messageValue, ok := arguments[0].(*interpreter.StringValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			panic(stdlib.PanicError{
-				Message: messageValue.Str,
-				// TODO: pass location
-			})
+			return stdlib.PanicWithError(
+				arguments[0],
+				EmptyLocationRange,
+			)
 		},
 	})
 
 	RegisterFunction(commons.GetAccountFunctionName, NativeFunctionValue{
-		ParameterCount: len(stdlib.PanicFunctionType.Parameters),
+		ParameterCount: len(stdlib.GetAccountFunctionType.Parameters),
 		Function: func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
 			address := arguments[0].(interpreter.AddressValue)
-
 			return NewAccountReferenceValue(
 				config,
 				config.GetAccountHandler(),

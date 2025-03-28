@@ -37,10 +37,10 @@ func init() {
 		NativeFunctionValue{
 			ParameterCount: len(sema.Account_StorageTypeSaveFunctionType.Parameters),
 			Function: func(config *Config, typeArs []bbq.StaticType, args ...Value) Value {
-				address := getAddressMetaInfoFromValue(args[0])
+				address := getAddressMetaInfoFromValue(args[receiverIndex])
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				arguments := args[1:]
+				arguments := args[typeBoundFunctionArgumentOffset:]
 
 				return interpreter.StorageSave(
 					config,
@@ -58,10 +58,10 @@ func init() {
 		NativeFunctionValue{
 			ParameterCount: len(sema.Account_StorageTypeBorrowFunctionType.Parameters),
 			Function: func(config *Config, typeArgs []bbq.StaticType, args ...Value) Value {
-				address := getAddressMetaInfoFromValue(args[0]).ToAddress()
+				address := getAddressMetaInfoFromValue(args[receiverIndex]).ToAddress()
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				arguments := args[1:]
+				arguments := args[typeBoundFunctionArgumentOffset:]
 
 				borrowType := typeArgs[0]
 				semaBorrowType := interpreter.MustConvertStaticToSemaType(borrowType, config)
