@@ -25,6 +25,8 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
+const accountAddressMetadataKey = "address"
+
 // Account
 
 var accountTypeID = sema.AccountType.ID()

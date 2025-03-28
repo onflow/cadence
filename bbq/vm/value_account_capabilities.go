@@ -48,13 +48,13 @@ func init() {
 				semaBorrowType := interpreter.MustConvertStaticToSemaType(borrowType, config)
 
 				return stdlib.GetCapability(
+					config,
+					config.GetAccountHandler(),
 					arguments,
 					semaBorrowType,
 					false,
-					config,
 					address,
 					EmptyLocationRange,
-					config,
 				)
 			},
 		})

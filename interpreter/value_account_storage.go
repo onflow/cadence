@@ -128,7 +128,7 @@ func NewAccountStorageValue(
 		computeField,
 		nil,
 		stringer,
-	)
+	).WithMetadata(accountAddressMetadataKey, address)
 
 	return storageValue
 }
