@@ -3951,20 +3951,28 @@ func newAccountCapabilitiesGetFunction(
 				arguments := invocation.Arguments
 				typeParameter := invocation.TypeParameterTypes.Oldest().Value
 
-				return GetCapability(arguments, typeParameter, borrow, invocationContext, addressValue, locationRange, controllerHandler)
+				return GetCapability(
+					invocationContext,
+					controllerHandler,
+					arguments,
+					typeParameter,
+					borrow,
+					addressValue,
+					locationRange,
+				)
 			},
 		)
 	}
 }
 
 func GetCapability(
+	invocationContext interpreter.InvocationContext,
+	controllerHandler CapabilityControllerHandler,
 	arguments []interpreter.Value,
 	typeParameter sema.Type,
 	borrow bool,
-	invocationContext interpreter.InvocationContext,
 	addressValue interpreter.AddressValue,
 	locationRange interpreter.LocationRange,
-	controllerHandler CapabilityControllerHandler,
 ) interpreter.Value {
 	// Get path argument
 

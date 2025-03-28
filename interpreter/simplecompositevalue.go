@@ -43,6 +43,11 @@ type SimpleCompositeValue struct {
 	// This is used for distinguishing between transaction values and other composite values.
 	// TODO: maybe cleanup if there is an alternative/better way.
 	isTransaction bool
+
+	// Metadata is a property bag to carry internal data
+	// that are not visible to cadence users.
+	// TODO: any better way to pass down information?
+	metadata map[string]Value
 }
 
 var _ Value = &SimpleCompositeValue{}
@@ -301,4 +306,20 @@ func (v *SimpleCompositeValue) Clone(interpreter *Interpreter) Value {
 
 func (v *SimpleCompositeValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
+}
+
+func (v *SimpleCompositeValue) WithMetadata(key string, value Value) *SimpleCompositeValue {
+	if v.metadata == nil {
+		v.metadata = make(map[string]Value)
+	}
+
+	v.metadata[key] = value
+	return v
+}
+
+func (v *SimpleCompositeValue) Metadata(key string) Value {
+	if v.metadata == nil {
+		return nil
+	}
+	return v.metadata[key]
 }

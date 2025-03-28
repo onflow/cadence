@@ -89,7 +89,7 @@ func NewAccountStorageCapabilitiesValue(
 		computeField,
 		nil,
 		stringer,
-	)
+	).WithMetadata(accountAddressMetadataKey, address)
 
 	return storageCapabilities
 }
