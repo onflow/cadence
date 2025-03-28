@@ -53,6 +53,9 @@ var stdlibFunctions = []string{
 	commons.LogFunctionName,
 	commons.PanicFunctionName,
 	commons.GetAccountFunctionName,
+
+	// TODO: Remove after https://github.com/onflow/cadence-internal/pull/320
+	sema.MetaTypeName,
 }
 
 func init() {
@@ -66,6 +69,10 @@ func init() {
 
 	for _, funcName := range stdlibFunctions {
 		addNativeFunction(funcName)
+	}
+
+	for _, typeConstructor := range sema.RuntimeTypeConstructors {
+		addNativeFunction(typeConstructor.Name)
 	}
 }
 

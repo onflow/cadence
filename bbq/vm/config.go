@@ -63,6 +63,7 @@ var _ interpreter.ValueTransferContext = &Config{}
 var _ interpreter.StorageContext = &Config{}
 var _ interpreter.StaticTypeConversionHandler = &Config{}
 var _ interpreter.ValueComparisonContext = &Config{}
+var _ interpreter.InvocationContext = &Config{}
 
 func NewConfig(storage interpreter.Storage) *Config {
 	return &Config{

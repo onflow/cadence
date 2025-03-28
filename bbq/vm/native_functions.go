@@ -20,12 +20,13 @@ package vm
 
 import (
 	"fmt"
-	"github.com/onflow/cadence/interpreter"
 
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 )
 
@@ -92,6 +93,19 @@ func init() {
 				config,
 				config.GetAccountHandler(),
 				common.Address(address),
+			)
+		},
+	})
+
+	// Type constructors
+	// TODO: add the remaining type constructor functions
+
+	RegisterFunction(sema.MetaTypeName, NativeFunctionValue{
+		ParameterCount: len(sema.MetaTypeFunctionType.Parameters),
+		Function: func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			return interpreter.NewTypeValue(
+				config.MemoryGauge,
+				typeArguments[0],
 			)
 		},
 	})
