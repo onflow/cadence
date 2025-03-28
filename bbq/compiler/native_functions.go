@@ -19,6 +19,7 @@
 package compiler
 
 import (
+	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 
 	"github.com/onflow/cadence/bbq/commons"
@@ -71,8 +72,14 @@ func init() {
 		addNativeFunction(funcName)
 	}
 
+	// Type constructors
 	for _, typeConstructor := range sema.RuntimeTypeConstructors {
 		addNativeFunction(typeConstructor.Name)
+	}
+
+	// Value conversion functions
+	for _, declaration := range interpreter.ConverterDeclarations {
+		addNativeFunction(declaration.Name)
 	}
 }
 

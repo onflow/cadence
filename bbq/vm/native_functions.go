@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	receiverIndex = 0
+	receiverIndex                   = 0
 	typeBoundFunctionArgumentOffset = 1
 )
 
@@ -107,4 +107,21 @@ func init() {
 			)
 		},
 	})
+
+	// Value conversion functions
+	for _, declaration := range interpreter.ConverterDeclarations {
+		// NOTE: declare in loop, as captured in closure below
+		convert := declaration.Convert
+
+		RegisterFunction(declaration.Name, NativeFunctionValue{
+			ParameterCount: len(declaration.FunctionType.Parameters),
+			Function: func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+				return convert(
+					config.MemoryGauge,
+					arguments[0],
+					EmptyLocationRange,
+				)
+			},
+		})
+	}
 }

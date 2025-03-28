@@ -5317,7 +5317,7 @@ func TestCompileForce(t *testing.T) {
 
 }
 
-func TestTypeConstructorTest(t *testing.T) {
+func TestTypeConstructor(t *testing.T) {
 	t.Parallel()
 
 	t.Run("simple type", func(t *testing.T) {
@@ -5362,6 +5362,32 @@ func TestTypeConstructorTest(t *testing.T) {
 					"Foo",
 				),
 			),
+			actual,
+		)
+	})
+}
+
+
+func TestTypeConversions(t *testing.T) {
+	t.Parallel()
+
+	t.Run("address", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err := compileAndInvoke(t,
+			`
+                fun test(): Address {
+                    return Address(0x2)
+                }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			interpreter.AddressValue{
+				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
+			},
 			actual,
 		)
 	})
