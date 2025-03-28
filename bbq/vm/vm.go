@@ -1160,6 +1160,14 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 		// TODO:
 		smallInt, _, _ := leb128.ReadInt64(constant.Data)
 		value = interpreter.NewIntValueFromInt64(vm.config.MemoryGauge, smallInt)
+	case constantkind.Int64:
+		smallInt, _, _ := leb128.ReadInt64(constant.Data)
+		value = interpreter.NewInt64Value(
+			vm.config.MemoryGauge,
+			func() int64 {
+				return smallInt
+			},
+		)
 	case constantkind.String:
 		value = interpreter.NewUnmeteredStringValue(string(constant.Data))
 

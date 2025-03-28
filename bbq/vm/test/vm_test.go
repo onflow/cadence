@@ -5391,4 +5391,24 @@ func TestTypeConversions(t *testing.T) {
 			actual,
 		)
 	})
+
+	t.Run("Int", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err := compileAndInvoke(t,
+			`
+                fun test(): Int {
+                    var v: Int64 = 5
+                    return Int(v)
+                }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(5),
+			actual,
+		)
+	})
 }
