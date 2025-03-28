@@ -60,15 +60,19 @@ var PanicFunction = NewStandardLibraryStaticFunction(
 	PanicFunctionType,
 	panicFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
-		messageValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-		message := messageValue.Str
-
-		panic(PanicError{
-			Message:       message,
-			LocationRange: invocation.LocationRange,
-		})
+		locationRange:= invocation.LocationRange
+		arguments := invocation.Arguments
+		return PanicWithError(arguments[0], locationRange)
 	},
 )
+
+func PanicWithError(message interpreter.Value, locationRange interpreter.LocationRange) interpreter.Value {
+	messageValue, ok := message.(*interpreter.StringValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	panic(PanicError{
+		Message:       messageValue.Str,
+		LocationRange: locationRange,
+	})
+}

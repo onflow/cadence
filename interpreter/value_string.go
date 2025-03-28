@@ -370,11 +370,13 @@ func (v *StringValue) GetMember(context MemberAccessibleContext, locationRange L
 			sema.StringTypeConcatFunctionType,
 			func(v *StringValue, invocation Invocation) Value {
 				invocationContext := invocation.InvocationContext
-				otherArray, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				return v.Concat(invocationContext, otherArray, locationRange)
+				other := invocation.Arguments[0]
+				return StringConcat(
+					invocationContext,
+					v,
+					other,
+					locationRange,
+				)
 			},
 		)
 
@@ -516,6 +518,19 @@ func (v *StringValue) GetMember(context MemberAccessibleContext, locationRange L
 	}
 
 	return nil
+}
+
+func StringConcat(
+	context StringValueFunctionContext,
+	this *StringValue,
+	other Value,
+	locationRange LocationRange,
+) Value {
+	otherArray, ok := other.(*StringValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	return this.Concat(context, otherArray, locationRange)
 }
 
 func (*StringValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
