@@ -29,19 +29,19 @@ import (
 	"github.com/onflow/cadence/interpreter"
 )
 
-func RequireValuesEqual(t testing.TB, inter *interpreter.Interpreter, expected, actual interpreter.Value) {
-	if !AssertValuesEqual(t, inter, expected, actual) {
+func RequireValuesEqual(t testing.TB, context interpreter.ValueComparisonContext, expected, actual interpreter.Value) {
+	if !AssertValuesEqual(t, context, expected, actual) {
 		t.FailNow()
 	}
 }
 
-func AssertValueSlicesEqual(t testing.TB, inter *interpreter.Interpreter, expected, actual []interpreter.Value) bool {
+func AssertValueSlicesEqual(t testing.TB, context interpreter.ValueComparisonContext, expected, actual []interpreter.Value) bool {
 	if !assert.Equal(t, len(expected), len(actual)) {
 		return false
 	}
 
 	for i, value := range expected {
-		if !AssertValuesEqual(t, inter, value, actual[i]) {
+		if !AssertValuesEqual(t, context, value, actual[i]) {
 			return false
 		}
 	}
