@@ -377,7 +377,7 @@ func (v *CompositeValue) Destroy(context ResourceDestructionContext, locationRan
 			locationRange,
 		)
 
-		event := constructor.invoke(eventConstructorInvocation).(*CompositeValue)
+		event := constructor.Invoke(eventConstructorInvocation).(*CompositeValue)
 		eventType := MustSemaTypeOfValue(event, context).(*sema.CompositeType)
 
 		// emit the event once destruction is complete
