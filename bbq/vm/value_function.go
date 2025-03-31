@@ -20,12 +20,12 @@ package vm
 
 import (
 	"github.com/onflow/atree"
-	"github.com/onflow/cadence/sema"
 
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
 )
 
 type FunctionValue struct {
@@ -217,16 +217,16 @@ func (v NativeFunctionValue) IsImportable(interpreter *interpreter.Interpreter, 
 }
 
 func (v NativeFunctionValue) IsFunctionValue() {
-	//TODO implement me
-	panic("implement me")
+	//TODO
+	panic(errors.NewUnreachableError())
 }
 
 func (v NativeFunctionValue) FunctionType() *sema.FunctionType {
-	//TODO implement me
-	panic("implement me")
+	//TODO
+	panic(errors.NewUnreachableError())
 }
 
 func (v NativeFunctionValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
-	//TODO implement me
-	panic("implement me")
+	//TODO
+	panic(errors.NewUnreachableError())
 }

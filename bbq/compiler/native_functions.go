@@ -25,15 +25,15 @@ import (
 	"github.com/onflow/cadence/bbq/commons"
 )
 
-var nativeFunctions []*global
+var nativeFunctions []*Global
 
-func NativeFunctions() map[string]*global {
-	funcs := make(map[string]*global, len(nativeFunctions))
+func NativeFunctions() map[string]*Global {
+	funcs := make(map[string]*Global, len(nativeFunctions))
 	for _, nativeFunction := range nativeFunctions {
 
 		// Always return a copy.
 		// Because the indexes are modified my the imported program.
-		funcs[nativeFunction.Name] = &global{
+		funcs[nativeFunction.Name] = &Global{
 			Name:     nativeFunction.Name,
 			Location: nativeFunction.Location,
 			Index:    nativeFunction.Index,
@@ -98,7 +98,7 @@ func registerBoundFunctions(typ sema.Type) {
 }
 
 func addNativeFunction(name string) {
-	global := &global{
+	global := &Global{
 		Name: name,
 	}
 	nativeFunctions = append(nativeFunctions, global)

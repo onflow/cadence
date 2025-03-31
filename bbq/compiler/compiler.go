@@ -47,9 +47,9 @@ type Compiler[E, T any] struct {
 
 	functions           []*function[E]
 	constants           []*constant
-	Globals             map[string]*global
-	importedGlobals     map[string]*global
-	usedImportedGlobals []*global
+	Globals             map[string]*Global
+	importedGlobals     map[string]*Global
+	usedImportedGlobals []*Global
 	controlFlows        []controlFlow
 	currentControlFlow  *controlFlow
 	staticTypes         []T
@@ -76,9 +76,11 @@ var _ ast.ExpressionVisitor[struct{}] = &Compiler[any, any]{}
 
 func NewBytecodeCompiler(
 	checker *sema.Checker,
+	config *Config,
 ) *Compiler[byte, []byte] {
 	return newCompiler(
 		checker,
+		config,
 		&ByteCodeGen{},
 		&EncodedTypeGen{},
 	)
@@ -87,8 +89,16 @@ func NewBytecodeCompiler(
 func NewInstructionCompiler(
 	checker *sema.Checker,
 ) *Compiler[opcode.Instruction, bbq.StaticType] {
+	return NewInstructionCompilerWithConfig(checker, &Config{})
+}
+
+func NewInstructionCompilerWithConfig(
+	checker *sema.Checker,
+	config *Config,
+) *Compiler[opcode.Instruction, bbq.StaticType] {
 	return newCompiler(
 		checker,
+		config,
 		&InstructionCodeGen{},
 		&DecodedTypeGen{},
 	)
@@ -96,16 +106,25 @@ func NewInstructionCompiler(
 
 func newCompiler[E, T any](
 	checker *sema.Checker,
+	config *Config,
 	codeGen CodeGen[E],
 	typeGen TypeGen[T],
 ) *Compiler[E, T] {
+
+	var globals map[string]*Global
+	if config.BuiltinGlobalsProvider != nil {
+		globals = config.BuiltinGlobalsProvider()
+	} else {
+		globals = NativeFunctions()
+	}
+
 	return &Compiler[E, T]{
 		Program:             checker.Program,
 		ExtendedElaboration: NewExtendedElaboration(checker.Elaboration),
-		Config:              &Config{},
+		Config:              config,
 		checker:             checker,
-		Globals:             make(map[string]*global),
-		importedGlobals:     NativeFunctions(),
+		Globals:             make(map[string]*Global),
+		importedGlobals:     globals,
 		typesInPool:         make(map[sema.TypeID]uint16),
 		constantsInPool:     make(map[constantsCacheKey]*constant),
 		compositeTypeStack: &Stack[sema.CompositeKindedType]{
@@ -116,12 +135,7 @@ func newCompiler[E, T any](
 	}
 }
 
-func (c *Compiler[E, T]) WithConfig(config *Config) *Compiler[E, T] {
-	c.Config = config
-	return c
-}
-
-func (c *Compiler[_, _]) findGlobal(name string) *global {
+func (c *Compiler[_, _]) findGlobal(name string) *Global {
 	global, ok := c.Globals[name]
 	if ok {
 		return global
@@ -170,21 +184,21 @@ func (c *Compiler[_, _]) findGlobal(name string) *global {
 	return importedGlobal
 }
 
-func (c *Compiler[_, _]) addGlobal(name string) *global {
+func (c *Compiler[_, _]) addGlobal(name string) *Global {
 	count := len(c.Globals)
 	if count >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid global declaration"))
 	}
-	global := &global{
+	global := &Global{
 		Index: uint16(count),
 	}
 	c.Globals[name] = global
 	return global
 }
 
-func (c *Compiler[_, _]) addImportedGlobal(location common.Location, name string) *global {
+func (c *Compiler[_, _]) addImportedGlobal(location common.Location, name string) *Global {
 	// Index is not set here. It is set only if this imported global is used.
-	global := &global{
+	global := &Global{
 		Location: location,
 		Name:     name,
 	}

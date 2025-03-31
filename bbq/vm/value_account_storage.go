@@ -199,7 +199,7 @@ func init() {
 					arguments,
 					semaBorrowType,
 					address,
-					true,
+					false,
 					EmptyLocationRange,
 				)
 			},

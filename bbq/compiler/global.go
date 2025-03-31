@@ -20,7 +20,7 @@ package compiler
 
 import "github.com/onflow/cadence/common"
 
-type global struct {
+type Global struct {
 	Name     string
 	Location common.Location
 	Index    uint16

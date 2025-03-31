@@ -748,10 +748,7 @@ func opTransfer(vm *VM, ins opcode.InstructionTransfer) {
 }
 
 func opDestroy(vm *VM) {
-	value := vm.pop().(*interpreter.CompositeValue)
-
-	// TODO: once Destroy method is decoupled from the interpreter,
-	// Pass the 'config', instead of getting the interpreter here.
+	value := vm.pop().(interpreter.ResourceKindedValue)
 	value.Destroy(vm.config, EmptyLocationRange)
 }
 
@@ -813,9 +810,12 @@ func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 
 	var result Value
 	if !isSubType {
-		panic(ForceCastTypeMismatchError{
-			ExpectedType: targetType,
-			ActualType:   valueType,
+		targetSemaType := interpreter.MustConvertStaticToSemaType(targetType, vm.config)
+		valueSemaType := interpreter.MustConvertStaticToSemaType(valueType, vm.config)
+
+		panic(interpreter.ForceCastTypeMismatchError{
+			ExpectedType: targetSemaType,
+			ActualType:   valueSemaType,
 		})
 	}
 
@@ -1231,6 +1231,13 @@ func (vm *VM) lookupFunction(location common.Location, name string) FunctionValu
 
 func (vm *VM) StackSize() int {
 	return len(vm.stack)
+}
+
+func (vm *VM) Reset() {
+	vm.stack = nil
+	vm.locals = nil
+	vm.callstack = nil
+	vm.ipStack = nil
 }
 
 func getReceiver[T any](config *Config, receiver Value) T {

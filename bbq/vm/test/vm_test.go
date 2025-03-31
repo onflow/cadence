@@ -1208,12 +1208,14 @@ func TestContractField(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker).
-			WithConfig(&compiler.Config{
+		comp := compiler.NewInstructionCompilerWithConfig(
+			checker,
+			&compiler.Config{
 				ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 					return importedProgram
 				},
-			})
+			},
+		)
 
 		program := comp.Compile()
 
@@ -4540,9 +4542,9 @@ func TestCasting(t *testing.T) {
 		assert.ErrorIs(
 			t,
 			err,
-			vm.ForceCastTypeMismatchError{
-				ExpectedType: interpreter.PrimitiveStaticTypeInt,
-				ActualType:   interpreter.PrimitiveStaticTypeBool,
+			interpreter.ForceCastTypeMismatchError{
+				ExpectedType: sema.IntType,
+				ActualType:   sema.BoolType,
 			},
 		)
 	})
@@ -5366,7 +5368,6 @@ func TestTypeConstructor(t *testing.T) {
 		)
 	})
 }
-
 
 func TestTypeConversions(t *testing.T) {
 	t.Parallel()
