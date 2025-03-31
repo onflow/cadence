@@ -83,6 +83,9 @@ func NewVM(
 		config:             conf,
 	}
 
+	// Delegate the function invocations to the vm.
+	conf.invokeFunction = vm.invoke
+
 	// Link global variables and functions.
 	linkedGlobals := LinkGlobals(
 		location,

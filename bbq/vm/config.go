@@ -47,6 +47,8 @@ type Config struct {
 	NativeFunctionsProvider
 	interpreterConfig *interpreter.Config
 
+	invokeFunction func(function Value, arguments []Value) (Value, error)
+
 	// TODO: Move these to a 'shared state'?
 	storage                                     interpreter.Storage
 	CapabilityControllerIterations              map[interpreter.AddressPath]int
@@ -398,6 +400,20 @@ func (c *Config) ProgramLog(message string, locationRange interpreter.LocationRa
 	//TODO implement properly
 	fmt.Println(message)
 	return nil
+}
+
+func (c *Config) InvokeFunction(
+	fn interpreter.FunctionValue,
+	arguments []interpreter.Value,
+	_ []sema.Type,
+	_ interpreter.LocationRange,
+) interpreter.Value {
+	result, err := c.invokeFunction(fn, arguments)
+	if err != nil {
+		panic(err)
+	}
+
+	return result
 }
 
 type ContractValueHandler func(conf *Config, location common.Location) *interpreter.CompositeValue

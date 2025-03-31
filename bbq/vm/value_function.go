@@ -20,6 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/atree"
+	"github.com/onflow/cadence/sema"
 
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/opcode"
@@ -33,6 +34,7 @@ type FunctionValue struct {
 }
 
 var _ Value = FunctionValue{}
+var _ interpreter.FunctionValue = FunctionValue{}
 
 func (FunctionValue) isValue() {}
 
@@ -111,6 +113,21 @@ func (v FunctionValue) IsImportable(interpreter *interpreter.Interpreter, locati
 	panic(errors.NewUnreachableError())
 }
 
+func (v FunctionValue) IsFunctionValue() {
+	//TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (v FunctionValue) FunctionType() *sema.FunctionType {
+	//TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (v FunctionValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
+	//TODO
+	panic(errors.NewUnreachableError())
+}
+
 type NativeFunction func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value
 
 type NativeFunctionValue struct {
@@ -120,6 +137,7 @@ type NativeFunctionValue struct {
 }
 
 var _ Value = NativeFunctionValue{}
+var _ interpreter.FunctionValue = NativeFunctionValue{}
 
 func (NativeFunctionValue) isValue() {}
 
@@ -196,4 +214,19 @@ func (v NativeFunctionValue) Clone(interpreter *interpreter.Interpreter) interpr
 func (v NativeFunctionValue) IsImportable(interpreter *interpreter.Interpreter, locationRange interpreter.LocationRange) bool {
 	//TODO
 	panic(errors.NewUnreachableError())
+}
+
+func (v NativeFunctionValue) IsFunctionValue() {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (v NativeFunctionValue) FunctionType() *sema.FunctionType {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (v NativeFunctionValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
+	//TODO implement me
+	panic("implement me")
 }

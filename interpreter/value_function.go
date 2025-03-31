@@ -30,12 +30,12 @@ import (
 // FunctionValue
 type FunctionValue interface {
 	Value
-	isFunctionValue()
+	IsFunctionValue()
 	FunctionType() *sema.FunctionType
 	// invoke evaluates the function.
 	// Only used internally by the interpreter.
 	// Use Interpreter.InvokeFunctionValue if you want to invoke the function externally
-	invoke(Invocation) Value
+	Invoke(Invocation) Value
 }
 
 // InterpretedFunctionValue
@@ -111,13 +111,13 @@ func (*InterpretedFunctionValue) IsImportable(_ *Interpreter, _ LocationRange) b
 	return false
 }
 
-func (*InterpretedFunctionValue) isFunctionValue() {}
+func (*InterpretedFunctionValue) IsFunctionValue() {}
 
 func (f *InterpretedFunctionValue) FunctionType() *sema.FunctionType {
 	return f.Type
 }
 
-func (f *InterpretedFunctionValue) invoke(invocation Invocation) Value {
+func (f *InterpretedFunctionValue) Invoke(invocation Invocation) Value {
 
 	// The check that arguments' dynamic types match the parameter types
 	// was already performed by the interpreter's checkValueTransferTargetType function
@@ -245,13 +245,13 @@ func (*HostFunctionValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 
-func (*HostFunctionValue) isFunctionValue() {}
+func (*HostFunctionValue) IsFunctionValue() {}
 
 func (f *HostFunctionValue) FunctionType() *sema.FunctionType {
 	return f.Type
 }
 
-func (f *HostFunctionValue) invoke(invocation Invocation) Value {
+func (f *HostFunctionValue) Invoke(invocation Invocation) Value {
 
 	// The check that arguments' dynamic types match the parameter types
 	// was already performed by the interpreter's checkValueTransferTargetType function
@@ -421,13 +421,13 @@ func (BoundFunctionValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 
-func (BoundFunctionValue) isFunctionValue() {}
+func (BoundFunctionValue) IsFunctionValue() {}
 
 func (f BoundFunctionValue) FunctionType() *sema.FunctionType {
 	return f.Function.FunctionType()
 }
 
-func (f BoundFunctionValue) invoke(invocation Invocation) Value {
+func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 
 	invocation.Base = f.Base
 	invocation.BoundAuthorization = f.BoundAuthorization
@@ -462,7 +462,7 @@ func (f BoundFunctionValue) invoke(invocation Invocation) Value {
 		checkInvalidatedResourceOrResourceReference(f.SelfReference, locationRange, inter)
 	}
 
-	return f.Function.invoke(invocation)
+	return f.Function.Invoke(invocation)
 }
 
 func (f BoundFunctionValue) ConformsToStaticType(
