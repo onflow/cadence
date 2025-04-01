@@ -445,7 +445,7 @@ func validateArgumentParams(
 		}
 
 		// Check that decoded value is a subtype of static parameter type
-		if !inter.IsSubTypeOfSemaType(argType, parameterType) {
+		if !interpreter.IsSubTypeOfSemaType(inter, argType, parameterType) {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: parameterIndex,
 				Err: &InvalidValueTypeError{

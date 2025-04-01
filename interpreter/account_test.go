@@ -71,7 +71,7 @@ type testAccountHandler struct {
 	generateAccountID          func(address common.Address) (uint64, error)
 	getAccountBalance          func(address common.Address) (uint64, error)
 	getAccountAvailableBalance func(address common.Address) (uint64, error)
-	commitStorageTemporarily   func(inter *interpreter.Interpreter) error
+	commitStorageTemporarily   func(context interpreter.ValueTransferContext) error
 	getStorageUsed             func(address common.Address) (uint64, error)
 	getStorageCapacity         func(address common.Address) (uint64, error)
 	validatePublicKey          func(key *stdlib.PublicKey) error
@@ -160,11 +160,11 @@ func (t *testAccountHandler) GetAccountAvailableBalance(address common.Address) 
 	return t.getAccountAvailableBalance(address)
 }
 
-func (t *testAccountHandler) CommitStorageTemporarily(inter *interpreter.Interpreter) error {
+func (t *testAccountHandler) CommitStorageTemporarily(context interpreter.ValueTransferContext) error {
 	if t.commitStorageTemporarily == nil {
 		panic(errors.NewUnexpectedError("unexpected call to CommitStorageTemporarily"))
 	}
-	return t.commitStorageTemporarily(inter)
+	return t.commitStorageTemporarily(context)
 }
 
 func (t *testAccountHandler) GetStorageUsed(address common.Address) (uint64, error) {
@@ -387,6 +387,68 @@ func (t *testAccountHandler) IsContractBeingAdded(common.AddressLocation) bool {
 	return false
 }
 
+type NoOpReferenceCreationContext struct{}
+
+var _ interpreter.ReferenceCreationContext = NoOpReferenceCreationContext{}
+
+func (n NoOpReferenceCreationContext) InvalidateReferencedResources(v interpreter.Value, locationRange interpreter.LocationRange) {
+	// NO-OP
+}
+
+func (n NoOpReferenceCreationContext) CheckInvalidatedResourceOrResourceReference(value interpreter.Value, locationRange interpreter.LocationRange) {
+	// NO-OP
+}
+
+func (n NoOpReferenceCreationContext) MaybeTrackReferencedResourceKindedValue(ref *interpreter.EphemeralReferenceValue) {
+	// NO-OP
+}
+
+func (n NoOpReferenceCreationContext) MeterMemory(usage common.MemoryUsage) error {
+	// NO-OP
+	return nil
+}
+
+type NoOpFunctionCreationContext struct {
+	NoOpReferenceCreationContext
+}
+
+func (n NoOpFunctionCreationContext) ReadStored(storageAddress common.Address, domain common.StorageDomain, identifier interpreter.StorageMapKey) interpreter.Value {
+	// NO-OP
+	return nil
+}
+
+func (n NoOpFunctionCreationContext) GetEntitlementType(typeID interpreter.TypeID) (*sema.EntitlementType, error) {
+	// NO-OP
+	return nil, nil
+}
+
+func (n NoOpFunctionCreationContext) GetEntitlementMapType(typeID interpreter.TypeID) (*sema.EntitlementMapType, error) {
+	// NO-OP
+	return nil, nil
+}
+
+func (n NoOpFunctionCreationContext) GetInterfaceType(location common.Location, qualifiedIdentifier string, typeID interpreter.TypeID) (*sema.InterfaceType, error) {
+	// NO-OP
+	return nil, nil
+}
+
+func (n NoOpFunctionCreationContext) GetCompositeType(location common.Location, qualifiedIdentifier string, typeID interpreter.TypeID) (*sema.CompositeType, error) {
+	// NO-OP
+	return nil, nil
+}
+
+func (n NoOpFunctionCreationContext) IsTypeInfoRecovered(location common.Location) bool {
+	// NO-OP
+	return false
+}
+
+func (n NoOpFunctionCreationContext) GetCompositeValueFunctions(v *interpreter.CompositeValue, locationRange interpreter.LocationRange) *interpreter.FunctionOrderedMap {
+	// NO-OP
+	return nil
+}
+
+var _ interpreter.FunctionCreationContext = NoOpFunctionCreationContext{}
+
 func testAccountWithErrorHandler(
 	t *testing.T,
 	address interpreter.AddressValue,
@@ -407,7 +469,7 @@ func testAccountWithErrorHandler(
 		Name: "authAccount",
 		Type: sema.FullyEntitledAccountReferenceType,
 		Value: interpreter.NewEphemeralReferenceValue(
-			nil,
+			NoOpReferenceCreationContext{},
 			interpreter.FullyEntitledAccountAccess,
 			account,
 			sema.AccountType,
@@ -423,7 +485,7 @@ func testAccountWithErrorHandler(
 		Name: "pubAccount",
 		Type: sema.AccountReferenceType,
 		Value: interpreter.NewEphemeralReferenceValue(
-			nil,
+			NoOpReferenceCreationContext{},
 			interpreter.UnauthorizedAccess,
 			account,
 			sema.AccountType,
@@ -471,8 +533,8 @@ func testAccountWithErrorHandler(
 					return baseActivation
 				},
 				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
-				AccountHandler: func(inter *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
-					return stdlib.NewAccountValue(inter, nil, address)
+				AccountHandler: func(context interpreter.FunctionCreationContext, address interpreter.AddressValue) interpreter.Value {
+					return stdlib.NewAccountValue(context, nil, address)
 				},
 			},
 			HandleCheckerError: checkerErrorHandler,
@@ -1333,7 +1395,7 @@ func TestInterpretAccountStorageFields(t *testing.T) {
 	const storageCapacity = 43
 
 	handler := &testAccountHandler{
-		commitStorageTemporarily: func(_ *interpreter.Interpreter) error {
+		commitStorageTemporarily: func(_ interpreter.ValueTransferContext) error {
 			return nil
 		},
 		getStorageUsed: func(_ common.Address) (uint64, error) {

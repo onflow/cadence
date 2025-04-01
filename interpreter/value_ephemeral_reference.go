@@ -44,7 +44,7 @@ var _ ReferenceValue = &EphemeralReferenceValue{}
 var _ IterableValue = &EphemeralReferenceValue{}
 
 func NewUnmeteredEphemeralReferenceValue(
-	interpreter *Interpreter,
+	referenceTracker ReferenceTracker,
 	authorization Authorization,
 	value Value,
 	borrowedType sema.Type,
@@ -63,20 +63,20 @@ func NewUnmeteredEphemeralReferenceValue(
 		BorrowedType:  borrowedType,
 	}
 
-	interpreter.MaybeTrackReferencedResourceKindedValue(ref)
+	referenceTracker.MaybeTrackReferencedResourceKindedValue(ref)
 
 	return ref
 }
 
 func NewEphemeralReferenceValue(
-	interpreter *Interpreter,
+	context ReferenceCreationContext,
 	authorization Authorization,
 	value Value,
 	borrowedType sema.Type,
 	locationRange LocationRange,
 ) *EphemeralReferenceValue {
-	common.UseMemory(interpreter, common.EphemeralReferenceValueMemoryUsage)
-	return NewUnmeteredEphemeralReferenceValue(interpreter, authorization, value, borrowedType, locationRange)
+	common.UseMemory(context, common.EphemeralReferenceValueMemoryUsage)
+	return NewUnmeteredEphemeralReferenceValue(context, authorization, value, borrowedType, locationRange)
 }
 
 func (*EphemeralReferenceValue) isValue() {}
@@ -127,19 +127,15 @@ func (*EphemeralReferenceValue) IsImportable(_ *Interpreter, _ LocationRange) bo
 }
 
 func (v *EphemeralReferenceValue) ReferencedValue(
-	_ *Interpreter,
+	_ ValueStaticTypeContext,
 	_ LocationRange,
 	_ bool,
 ) *Value {
 	return &v.Value
 }
 
-func (v *EphemeralReferenceValue) GetMember(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	name string,
-) Value {
-	return interpreter.getMember(v.Value, locationRange, name)
+func (v *EphemeralReferenceValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	return getMember(context, v.Value, locationRange, name)
 }
 
 func (v *EphemeralReferenceValue) RemoveMember(
@@ -154,13 +150,8 @@ func (v *EphemeralReferenceValue) RemoveMember(
 	return nil
 }
 
-func (v *EphemeralReferenceValue) SetMember(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	name string,
-	value Value,
-) bool {
-	return interpreter.setMember(v.Value, locationRange, name, value)
+func (v *EphemeralReferenceValue) SetMember(context MemberAccessibleContext, locationRange LocationRange, name string, value Value) bool {
+	return setMember(context, v.Value, locationRange, name, value)
 }
 
 func (v *EphemeralReferenceValue) GetKey(
@@ -213,7 +204,7 @@ func (v *EphemeralReferenceValue) GetTypeKey(
 			interpreter,
 			locationRange,
 			key,
-			interpreter.MustConvertStaticAuthorizationToSemaAccess(v.Authorization),
+			MustConvertStaticAuthorizationToSemaAccess(interpreter, v.Authorization),
 		)
 	}
 
@@ -265,7 +256,7 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 
 	staticType := v.Value.StaticType(interpreter)
 
-	if !interpreter.IsSubTypeOfSemaType(staticType, v.BorrowedType) {
+	if !IsSubTypeOfSemaType(interpreter, staticType, v.BorrowedType) {
 		return false
 	}
 
@@ -319,7 +310,7 @@ func (v *EphemeralReferenceValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		context.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }

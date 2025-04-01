@@ -173,7 +173,7 @@ func VMValueToInterpreterValue(typeConverter interpreter.TypeConverter, value Va
 			nil,
 		)
 	case *StorageReferenceValue:
-		semaBorrowType, err := typeConverter.ConvertStaticToSemaType(value.BorrowedType)
+		semaBorrowType, err := interpreter.ConvertStaticToSemaType(typeConverter, value.BorrowedType)
 		if err != nil {
 			panic(err)
 		}

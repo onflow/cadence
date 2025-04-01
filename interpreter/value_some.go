@@ -146,15 +146,15 @@ func (v *SomeValue) MeteredString(context ValueStringContext, seenReferences See
 	return v.value.MeteredString(context, seenReferences, locationRange)
 }
 
-func (v *SomeValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v *SomeValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
 		innerValueType := MustConvertStaticToSemaType(
-			v.value.StaticType(interpreter),
-			interpreter,
+			v.value.StaticType(context),
+			context,
 		)
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.OptionalTypeMapFunctionType(
 				innerValueType,
@@ -198,7 +198,7 @@ func (v *SomeValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Valu
 	panic(errors.NewUnreachableError())
 }
 
-func (v *SomeValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (v *SomeValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	panic(errors.NewUnreachableError())
 }
 
@@ -360,8 +360,8 @@ func (v *SomeValue) Transfer(
 		)
 
 		if remove {
-			context.RemoveReferencedSlab(v.valueStorable)
-			context.RemoveReferencedSlab(storable)
+			RemoveReferencedSlab(context, v.valueStorable)
+			RemoveReferencedSlab(context, storable)
 		}
 	}
 
@@ -398,7 +398,7 @@ func (v *SomeValue) Clone(interpreter *Interpreter) Value {
 func (v *SomeValue) DeepRemove(context ValueRemoveContext, hasNoParentContainer bool) {
 	v.value.DeepRemove(context, hasNoParentContainer)
 	if v.valueStorable != nil {
-		context.RemoveReferencedSlab(v.valueStorable)
+		RemoveReferencedSlab(context, v.valueStorable)
 	}
 }
 

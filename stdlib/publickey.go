@@ -244,7 +244,8 @@ func newPublicKeyVerifySignatureFunction(
 
 			locationRange := invocation.LocationRange
 
-			inter.ExpectType(
+			interpreter.ExpectType(
+				inter,
 				publicKeyValue,
 				sema.PublicKeyType,
 				locationRange,
@@ -314,7 +315,8 @@ func newPublicKeyVerifyPoPFunction(
 
 			locationRange := invocation.LocationRange
 
-			inter.ExpectType(
+			interpreter.ExpectType(
+				inter,
 				publicKeyValue,
 				sema.PublicKeyType,
 				locationRange,

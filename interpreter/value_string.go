@@ -354,18 +354,18 @@ func (*StringValue) RemoveKey(_ *Interpreter, _ LocationRange, _ Value) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (v *StringValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v *StringValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
 	switch name {
 	case sema.StringTypeLengthFieldName:
 		length := v.Length()
-		return NewIntValueFromInt64(interpreter, int64(length))
+		return NewIntValueFromInt64(context, int64(length))
 
 	case sema.StringTypeUtf8FieldName:
-		return ByteSliceToByteArrayValue(interpreter, []byte(v.Str))
+		return ByteSliceToByteArrayValue(context, []byte(v.Str))
 
 	case sema.StringTypeConcatFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.StringTypeConcatFunctionType,
 			func(v *StringValue, invocation Invocation) Value {
@@ -380,7 +380,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 
 	case sema.StringTypeSliceFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.StringTypeSliceFunctionType,
 			func(v *StringValue, invocation Invocation) Value {
@@ -400,7 +400,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 
 	case sema.StringTypeContainsFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.StringTypeContainsFunctionType,
 			func(v *StringValue, invocation Invocation) Value {
@@ -415,7 +415,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 
 	case sema.StringTypeIndexFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.StringTypeIndexFunctionType,
 			func(v *StringValue, invocation Invocation) Value {
@@ -430,7 +430,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 
 	case sema.StringTypeCountFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.StringTypeIndexFunctionType,
 			func(v *StringValue, invocation Invocation) Value {
@@ -449,7 +449,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 
 	case sema.StringTypeDecodeHexFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.StringTypeDecodeHexFunctionType,
 			func(v *StringValue, invocation Invocation) Value {
@@ -462,7 +462,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 
 	case sema.StringTypeToLowerFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.StringTypeToLowerFunctionType,
 			func(v *StringValue, invocation Invocation) Value {
@@ -472,7 +472,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 
 	case sema.StringTypeSplitFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.StringTypeSplitFunctionType,
 			func(v *StringValue, invocation Invocation) Value {
@@ -491,7 +491,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 
 	case sema.StringTypeReplaceAllFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.StringTypeReplaceAllFunctionType,
 			func(v *StringValue, invocation Invocation) Value {
@@ -523,7 +523,7 @@ func (*StringValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Valu
 	panic(errors.NewUnreachableError())
 }
 
-func (*StringValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (*StringValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Strings have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -750,7 +750,7 @@ func (v *StringValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		context.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }

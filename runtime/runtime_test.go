@@ -9220,7 +9220,7 @@ func TestRuntimeTypesAndConversions(t *testing.T) {
 					inter, err := interpreter.NewInterpreter(nil, nil, &interpreter.Config{})
 					require.NoError(t, err)
 
-					convertedSemaType, err := inter.ConvertStaticToSemaType(staticType)
+					convertedSemaType, err := interpreter.ConvertStaticToSemaType(inter, staticType)
 					require.NoError(t, err)
 					require.True(t, semaType.Equal(convertedSemaType))
 				})

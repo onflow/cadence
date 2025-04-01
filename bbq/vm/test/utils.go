@@ -44,7 +44,7 @@ type testAccountHandler struct {
 	generateAccountID          func(address common.Address) (uint64, error)
 	getAccountBalance          func(address common.Address) (uint64, error)
 	getAccountAvailableBalance func(address common.Address) (uint64, error)
-	commitStorageTemporarily   func(inter *interpreter.Interpreter) error
+	commitStorageTemporarily   func(context interpreter.ValueTransferContext) error
 	getStorageUsed             func(address common.Address) (uint64, error)
 	getStorageCapacity         func(address common.Address) (uint64, error)
 	validatePublicKey          func(key *stdlib.PublicKey) error
@@ -133,11 +133,11 @@ func (t *testAccountHandler) GetAccountAvailableBalance(address common.Address) 
 	return t.getAccountAvailableBalance(address)
 }
 
-func (t *testAccountHandler) CommitStorageTemporarily(inter *interpreter.Interpreter) error {
+func (t *testAccountHandler) CommitStorageTemporarily(context interpreter.ValueTransferContext) error {
 	if t.commitStorageTemporarily == nil {
 		panic(errors.NewUnexpectedError("unexpected call to CommitStorageTemporarily"))
 	}
-	return t.commitStorageTemporarily(inter)
+	return t.commitStorageTemporarily(context)
 }
 
 func (t *testAccountHandler) GetStorageUsed(address common.Address) (uint64, error) {

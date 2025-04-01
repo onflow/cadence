@@ -146,19 +146,19 @@ func (s *DomainStorageMap) ReadValue(gauge common.MemoryGauge, key StorageMapKey
 // If the given value is nil, the key is removed.
 // If the given value is non-nil, the key is added/updated.
 // Returns true if a value previously existed at the given key.
-func (s *DomainStorageMap) WriteValue(interpreter *Interpreter, key StorageMapKey, value atree.Value) (existed bool) {
+func (s *DomainStorageMap) WriteValue(context ValueTransferContext, key StorageMapKey, value atree.Value) (existed bool) {
 	if value == nil {
-		return s.RemoveValue(interpreter, key)
+		return s.RemoveValue(context, key)
 	} else {
-		return s.SetValue(interpreter, key, value)
+		return s.SetValue(context, key, value)
 	}
 }
 
 // SetValue sets a value in the storage map.
 // If the given key already stores a value, it is overwritten.
 // Returns true if given key already exists and existing value is overwritten.
-func (s *DomainStorageMap) SetValue(interpreter *Interpreter, key StorageMapKey, value atree.Value) (existed bool) {
-	interpreter.recordStorageMutation()
+func (s *DomainStorageMap) SetValue(context ValueTransferContext, key StorageMapKey, value atree.Value) (existed bool) {
+	context.RecordStorageMutation()
 
 	existingStorable, err := s.orderedMap.Set(
 		key.AtreeValueCompare,
@@ -172,20 +172,20 @@ func (s *DomainStorageMap) SetValue(interpreter *Interpreter, key StorageMapKey,
 
 	existed = existingStorable != nil
 	if existed {
-		existingValue := StoredValue(interpreter, existingStorable, interpreter.Storage())
-		existingValue.DeepRemove(interpreter, true) // existingValue is standalone because it was overwritten in parent container.
-		interpreter.RemoveReferencedSlab(existingStorable)
+		existingValue := StoredValue(context, existingStorable, context.Storage())
+		existingValue.DeepRemove(context, true) // existingValue is standalone because it was overwritten in parent container.
+		RemoveReferencedSlab(context, existingStorable)
 	}
 
-	interpreter.MaybeValidateAtreeValue(s.orderedMap)
-	interpreter.MaybeValidateAtreeStorage()
+	context.MaybeValidateAtreeValue(s.orderedMap)
+	context.MaybeValidateAtreeStorage()
 
 	return
 }
 
 // RemoveValue removes a value in the storage map, if it exists.
-func (s *DomainStorageMap) RemoveValue(interpreter *Interpreter, key StorageMapKey) (existed bool) {
-	interpreter.recordStorageMutation()
+func (s *DomainStorageMap) RemoveValue(context ValueRemoveContext, key StorageMapKey) (existed bool) {
+	context.RecordStorageMutation()
 
 	existingKeyStorable, existingValueStorable, err := s.orderedMap.Remove(
 		key.AtreeValueCompare,
@@ -204,19 +204,19 @@ func (s *DomainStorageMap) RemoveValue(interpreter *Interpreter, key StorageMapK
 
 	// NOTE: Key is just an atree.Value, not an interpreter.Value,
 	// so do not need (can) convert and not need to deep remove
-	interpreter.RemoveReferencedSlab(existingKeyStorable)
+	RemoveReferencedSlab(context, existingKeyStorable)
 
 	// Value
 
 	existed = existingValueStorable != nil
 	if existed {
-		existingValue := StoredValue(interpreter, existingValueStorable, interpreter.Storage())
-		existingValue.DeepRemove(interpreter, true) // existingValue is standalone because it was removed from parent container.
-		interpreter.RemoveReferencedSlab(existingValueStorable)
+		existingValue := StoredValue(context, existingValueStorable, context.Storage())
+		existingValue.DeepRemove(context, true) // existingValue is standalone because it was removed from parent container.
+		RemoveReferencedSlab(context, existingValueStorable)
 	}
 
-	interpreter.MaybeValidateAtreeValue(s.orderedMap)
-	interpreter.MaybeValidateAtreeStorage()
+	context.MaybeValidateAtreeValue(s.orderedMap)
+	context.MaybeValidateAtreeStorage()
 
 	return
 }
@@ -250,13 +250,13 @@ func (s *DomainStorageMap) DeepRemove(context ValueRemoveContext, hasNoParentCon
 
 		// NOTE: Key is just an atree.Value, not an interpreter.Value,
 		// so do not need (can) convert and not need to deep remove
-		context.RemoveReferencedSlab(keyStorable)
+		RemoveReferencedSlab(context, keyStorable)
 
 		// Value
 
 		value := StoredValue(context, valueStorable, storage)
 		value.DeepRemove(context, false) // value is an element of v.dictionary because it is from PopIterate() callback.
-		context.RemoveReferencedSlab(valueStorable)
+		RemoveReferencedSlab(context, valueStorable)
 	})
 	if err != nil {
 		panic(errors.NewExternalError(err))

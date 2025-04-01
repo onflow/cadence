@@ -31,7 +31,7 @@ import (
 type SimpleCompositeValue struct {
 	staticType      StaticType
 	Fields          map[string]Value
-	ComputeField    func(name string, interpreter *Interpreter, locationRange LocationRange) Value
+	ComputeField    func(name string, context MemberAccessibleContext, locationRange LocationRange) Value
 	fieldFormatters map[string]func(common.MemoryGauge, Value, SeenReferences) string
 	// stringer is an optional function that is used to produce the string representation of the value.
 	// If nil, the FieldNames are used.
@@ -54,7 +54,7 @@ func NewSimpleCompositeValue(
 	staticType StaticType,
 	fieldNames []string,
 	fields map[string]Value,
-	computeField func(name string, interpreter *Interpreter, locationRange LocationRange) Value,
+	computeField func(name string, context MemberAccessibleContext, locationRange LocationRange) Value,
 	fieldFormatters map[string]func(common.MemoryGauge, Value, SeenReferences) string,
 	stringer func(ValueStringContext, SeenReferences, LocationRange) string,
 ) *SimpleCompositeValue {
@@ -131,11 +131,7 @@ func (v *SimpleCompositeValue) IsImportable(inter *Interpreter, locationRange Lo
 	return importable
 }
 
-func (v *SimpleCompositeValue) GetMember(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	name string,
-) Value {
+func (v *SimpleCompositeValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
 
 	value, ok := v.Fields[name]
 	if ok {
@@ -144,7 +140,7 @@ func (v *SimpleCompositeValue) GetMember(
 
 	computeField := v.ComputeField
 	if computeField != nil {
-		return computeField(name, interpreter, locationRange)
+		return computeField(name, context, locationRange)
 	}
 
 	return nil
@@ -156,7 +152,7 @@ func (v *SimpleCompositeValue) RemoveMember(_ *Interpreter, _ LocationRange, nam
 	return value
 }
 
-func (v *SimpleCompositeValue) SetMember(_ *Interpreter, _ LocationRange, name string, value Value) bool {
+func (v *SimpleCompositeValue) SetMember(_ MemberAccessibleContext, _ LocationRange, name string, value Value) bool {
 	_, hasField := v.Fields[name]
 	v.Fields[name] = value
 	return hasField
@@ -270,7 +266,7 @@ func (v *SimpleCompositeValue) Transfer(
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
-		transferContext.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(transferContext, storable)
 	}
 
 	if v.isTransaction {

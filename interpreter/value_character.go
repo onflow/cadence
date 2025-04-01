@@ -194,7 +194,7 @@ func (v CharacterValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		context.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
@@ -219,11 +219,11 @@ func (CharacterValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (v CharacterValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v CharacterValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
 	switch name {
 	case sema.ToStringFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ToStringFunctionType,
 			func(v CharacterValue, invocation Invocation) Value {
@@ -242,8 +242,8 @@ func (v CharacterValue) GetMember(interpreter *Interpreter, _ LocationRange, nam
 		)
 
 	case sema.CharacterTypeUtf8FieldName:
-		common.UseMemory(interpreter, common.NewBytesMemoryUsage(len(v.Str)))
-		return ByteSliceToByteArrayValue(interpreter, []byte(v.Str))
+		common.UseMemory(context, common.NewBytesMemoryUsage(len(v.Str)))
+		return ByteSliceToByteArrayValue(context, []byte(v.Str))
 	}
 	return nil
 }
@@ -253,7 +253,7 @@ func (CharacterValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Va
 	panic(errors.NewUnreachableError())
 }
 
-func (CharacterValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (CharacterValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Characters have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

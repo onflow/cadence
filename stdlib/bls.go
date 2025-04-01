@@ -52,7 +52,8 @@ func newBLSAggregatePublicKeysFunction(
 			inter := invocation.Interpreter
 			locationRange := invocation.LocationRange
 
-			inter.ExpectType(
+			interpreter.ExpectType(
+				inter,
 				publicKeysValue,
 				sema.PublicKeyArrayType,
 				locationRange,
@@ -129,7 +130,8 @@ func newBLSAggregateSignaturesFunction(
 			inter := invocation.Interpreter
 			locationRange := invocation.LocationRange
 
-			inter.ExpectType(
+			interpreter.ExpectType(
+				inter,
 				signaturesValue,
 				sema.ByteArrayArrayType,
 				locationRange,
