@@ -437,7 +437,7 @@ func (n NoOpFunctionCreationContext) GetCompositeType(location common.Location, 
 	return nil, nil
 }
 
-func (n NoOpFunctionCreationContext) IsRecovered(location common.Location) bool {
+func (n NoOpFunctionCreationContext) IsTypeInfoRecovered(location common.Location) bool {
 	// NO-OP
 	return false
 }

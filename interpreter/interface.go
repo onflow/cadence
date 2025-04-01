@@ -73,7 +73,7 @@ type ValueStaticTypeContext interface {
 	common.MemoryGauge
 	StorageReader
 	TypeConverter
-	IsRecovered(location common.Location) bool
+	IsTypeInfoRecovered(location common.Location) bool
 }
 
 var _ ValueStaticTypeContext = &Interpreter{}
@@ -217,7 +217,6 @@ func (n NoOpStringContext) MeterMemory(_ common.MemoryUsage) error {
 
 func (n NoOpStringContext) WithMutationPrevention(_ atree.ValueID, f func()) {
 	f()
-	return
 }
 
 func (n NoOpStringContext) ValidateMutation(_ atree.ValueID, _ LocationRange) {
@@ -344,6 +343,6 @@ func (n NoOpStringContext) GetCompositeType(_ common.Location, _ string, _ TypeI
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) IsRecovered(location common.Location) bool {
+func (n NoOpStringContext) IsTypeInfoRecovered(location common.Location) bool {
 	panic(errors.NewUnreachableError())
 }
