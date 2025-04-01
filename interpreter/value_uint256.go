@@ -74,7 +74,7 @@ var _ ComparableValue = UInt256Value{}
 var _ HashableValue = UInt256Value{}
 var _ MemberAccessibleValue = UInt256Value{}
 
-func (UInt256Value) isValue() {}
+func (UInt256Value) IsValue() {}
 
 func (v UInt256Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitUInt256Value(interpreter, v)

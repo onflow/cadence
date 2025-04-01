@@ -29,7 +29,7 @@ var placeholder Value = placeholderValue{}
 
 var _ Value = placeholderValue{}
 
-func (placeholderValue) isValue() {}
+func (placeholderValue) IsValue() {}
 
 func (f placeholderValue) String() string {
 	return f.RecursiveString(SeenReferences{})

@@ -79,7 +79,7 @@ func NewEphemeralReferenceValue(
 	return NewUnmeteredEphemeralReferenceValue(context, authorization, value, borrowedType, locationRange)
 }
 
-func (*EphemeralReferenceValue) isValue() {}
+func (*EphemeralReferenceValue) IsValue() {}
 
 func (v *EphemeralReferenceValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitEphemeralReferenceValue(interpreter, v)

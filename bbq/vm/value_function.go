@@ -34,7 +34,7 @@ type FunctionValue struct {
 
 var _ Value = FunctionValue{}
 
-func (FunctionValue) isValue() {}
+func (FunctionValue) IsValue() {}
 
 func (FunctionValue) StaticType(interpreter.ValueStaticTypeContext) bbq.StaticType {
 	panic(errors.NewUnreachableError())
@@ -121,7 +121,7 @@ type NativeFunctionValue struct {
 
 var _ Value = NativeFunctionValue{}
 
-func (NativeFunctionValue) isValue() {}
+func (NativeFunctionValue) IsValue() {}
 
 func (NativeFunctionValue) StaticType(interpreter.ValueStaticTypeContext) bbq.StaticType {
 	panic(errors.NewUnreachableError())

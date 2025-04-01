@@ -91,7 +91,7 @@ type Value interface {
 	// Stringer provides `func String() string`
 	// NOTE: important, error messages rely on values to implement String
 	fmt.Stringer
-	//isValue()
+	IsValue()
 	Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange)
 	Walk(interpreter *Interpreter, walkChild func(Value), locationRange LocationRange)
 	StaticType(context ValueStaticTypeContext) StaticType

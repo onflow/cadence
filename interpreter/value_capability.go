@@ -92,7 +92,7 @@ var _ EquatableValue = &IDCapabilityValue{}
 var _ MemberAccessibleValue = &IDCapabilityValue{}
 var _ CapabilityValue = &IDCapabilityValue{}
 
-func (*IDCapabilityValue) isValue() {}
+func (*IDCapabilityValue) IsValue() {}
 
 func (*IDCapabilityValue) isCapabilityValue() {}
 

@@ -74,7 +74,7 @@ func NewStorageReferenceValue(
 	)
 }
 
-func (*StorageReferenceValue) isValue() {}
+func (*StorageReferenceValue) IsValue() {}
 
 func (v *StorageReferenceValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitStorageReferenceValue(interpreter, v)

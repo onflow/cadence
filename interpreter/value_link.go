@@ -48,7 +48,7 @@ var _ atree.Value = PathLinkValue{}
 var _ EquatableValue = PathLinkValue{}
 var _ LinkValue = PathLinkValue{}
 
-func (PathLinkValue) isValue() {}
+func (PathLinkValue) IsValue() {}
 
 func (PathLinkValue) isLinkValue() {}
 
@@ -173,7 +173,7 @@ var _ atree.Value = AccountLinkValue{}
 var _ EquatableValue = AccountLinkValue{}
 var _ LinkValue = AccountLinkValue{}
 
-func (AccountLinkValue) isValue() {}
+func (AccountLinkValue) IsValue() {}
 
 func (AccountLinkValue) isLinkValue() {}
 
