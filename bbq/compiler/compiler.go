@@ -56,8 +56,12 @@ type Compiler[E, T any] struct {
 	currentReturn       *returns
 	staticTypes         []T
 
+	// postConditionsIndices keeps track of where the post conditions start (i.e: index of the statement in the block),
+	// for each function. This is used by the compiler to patch the jumps for return statements.
 	postConditionsIndices map[ast.Declaration]int
-	postConditionsIndex   int
+
+	// postConditionsIndex is the statement-index of the post-conditions for the current function.
+	postConditionsIndex int
 
 	// Cache alike for staticTypes and constants in the pool.
 	typesInPool     map[sema.TypeID]uint16
