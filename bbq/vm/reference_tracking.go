@@ -24,30 +24,40 @@ import (
 	"github.com/onflow/cadence/interpreter"
 )
 
+type ReferenceTracker interface {
+	InvalidateReferencedResources(v Value)
+	CheckInvalidatedResourceOrResourceReference(value Value)
+	MaybeTrackReferencedResourceKindedValue(ref Value)
+}
+
 type ReferencedResourceKindedValues map[atree.ValueID]map[*EphemeralReferenceValue]struct{}
 
-func maybeTrackReferencedResourceKindedValue(referenceTracker ReferenceTracker, value Value) {
+func (c *Config) MaybeTrackReferencedResourceKindedValue(value Value) {
 	referenceValue, ok := value.(*EphemeralReferenceValue)
 	if !ok {
 		return
 	}
 
-	referenceTRackedValue, ok := referenceValue.Value.(ReferenceTrackedResourceKindedValue)
+	referenceTrackedValue, ok := referenceValue.Value.(ReferenceTrackedResourceKindedValue)
 	if !ok {
 		return
 	}
 
-	referenceTracker.TrackReferencedResourceKindedValue(
-		referenceTRackedValue.ValueID(),
-		referenceValue,
-	)
+	id := referenceTrackedValue.ValueID()
+
+	values := c.referencedResourceKindedValues[id]
+	if values == nil {
+		values = map[*EphemeralReferenceValue]struct{}{}
+		c.referencedResourceKindedValues[id] = values
+	}
+	values[referenceValue] = struct{}{}
 }
 
-func checkInvalidatedResourceOrResourceReference(value Value) {
+func (c *Config) CheckInvalidatedResourceOrResourceReference(value Value) {
 
 	switch value := value.(type) {
 	case *SomeValue:
-		checkInvalidatedResourceOrResourceReference(value.value)
+		c.CheckInvalidatedResourceOrResourceReference(value.value)
 
 	// TODO:
 	//case ResourceKindedValue:
@@ -72,13 +82,12 @@ func checkInvalidatedResourceOrResourceReference(value Value) {
 			// This step is not really needed, since reference tracking is supposed to clear the
 			// `value.Value` if the referenced-value was moved/deleted.
 			// However, have this as a second layer of defensive.
-			checkInvalidatedResourceOrResourceReference(value.Value)
+			c.CheckInvalidatedResourceOrResourceReference(value.Value)
 		}
 	}
 }
 
-func invalidateReferencedResources(
-	context TransferContext,
+func (c *Config) InvalidateReferencedResources(
 	value Value,
 ) {
 	// skip non-resource typed values
@@ -92,9 +101,9 @@ func invalidateReferencedResources(
 	switch value := resourceKinded.(type) {
 	case *CompositeValue:
 		value.ForEachReadOnlyLoadedField(
-			context,
+			c,
 			func(_ string, fieldValue Value) (resume bool) {
-				invalidateReferencedResources(context, fieldValue)
+				c.InvalidateReferencedResources(fieldValue)
 				// continue iteration
 				return true
 			},
@@ -103,9 +112,9 @@ func invalidateReferencedResources(
 
 	case *DictionaryValue:
 		value.IterateReadOnlyLoaded(
-			context,
+			c,
 			func(_, value Value) (resume bool) {
-				invalidateReferencedResources(context, value)
+				c.InvalidateReferencedResources(value)
 				return true
 			},
 		)
@@ -113,16 +122,16 @@ func invalidateReferencedResources(
 
 	case *ArrayValue:
 		value.IterateReadOnlyLoaded(
-			context,
+			c,
 			func(element Value) (resume bool) {
-				invalidateReferencedResources(context, element)
+				c.InvalidateReferencedResources(element)
 				return true
 			},
 		)
 		valueID = value.ValueID()
 
 	case *SomeValue:
-		invalidateReferencedResources(context, value.value)
+		c.InvalidateReferencedResources(value.value)
 		return
 
 	default:
@@ -130,7 +139,7 @@ func invalidateReferencedResources(
 		return
 	}
 
-	values := context.ReferencedResourceKindedValues(valueID)
+	values := c.referencedResourceKindedValues[valueID]
 	if values == nil {
 		return
 	}
@@ -143,5 +152,5 @@ func invalidateReferencedResources(
 	// So no need to track those stale resources anymore. We will not need to update/clear them again.
 	// Therefore, remove them from the mapping.
 	// This is only to allow GC. No impact to the behavior.
-	context.ClearReferenceTracking(valueID)
+	delete(c.referencedResourceKindedValues, valueID)
 }

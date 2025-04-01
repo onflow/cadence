@@ -48,6 +48,21 @@ const (
 	tracingRemoveMemberPrefix = "removeMember."
 )
 
+type Tracer interface {
+	TracingEnabled() bool
+
+	reportArrayValueDeepRemoveTrace(typeInfo string, count int, duration time.Duration)
+	reportArrayValueTransferTrace(info string, count int, since time.Duration)
+
+	reportDictionaryValueTransferTrace(info string, count int, since time.Duration)
+	reportDictionaryValueDeepRemoveTrace(info string, count int, since time.Duration)
+
+	reportCompositeValueDeepRemoveTrace(owner string, id string, kind string, since time.Duration)
+	reportCompositeValueTransferTrace(owner string, id string, kind string, since time.Duration)
+
+	reportDomainStorageMapDeepRemoveTrace(info string, i int, since time.Duration)
+}
+
 func (interpreter *Interpreter) reportFunctionTrace(functionName string, duration time.Duration) {
 	config := interpreter.SharedState.Config
 	config.OnRecordTrace(interpreter, tracingFunctionPrefix+functionName, duration, nil)

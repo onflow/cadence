@@ -2637,23 +2637,21 @@ func TestDefaultFunctions(t *testing.T) {
 		programs := map[common.Location]*compiledProgram{}
 		contractValues := map[common.Location]*vm.CompositeValue{}
 
-		vmConfig := &vm.Config{
-			Storage:        storage,
-			AccountHandler: &testAccountHandler{},
-			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
-				program, ok := programs[location]
-				if !ok {
-					assert.FailNow(t, "invalid location")
-				}
-				return program.Program
-			},
-			ContractValueHandler: func(_ *vm.Config, location common.Location) *vm.CompositeValue {
-				contractValue, ok := contractValues[location]
-				if !ok {
-					assert.FailNow(t, "invalid location")
-				}
-				return contractValue
-			},
+		vmConfig := vm.NewConfig(storage)
+		vmConfig.AccountHandler = &testAccountHandler{}
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			program, ok := programs[location]
+			if !ok {
+				assert.FailNow(t, "invalid location")
+			}
+			return program.Program
+		}
+		vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *vm.CompositeValue {
+			contractValue, ok := contractValues[location]
+			if !ok {
+				assert.FailNow(t, "invalid location")
+			}
+			return contractValue
 		}
 
 		contractsAddress := common.MustBytesToAddress([]byte{0x1})
@@ -2750,23 +2748,21 @@ func TestDefaultFunctions(t *testing.T) {
 		programs := map[common.Location]*compiledProgram{}
 		contractValues := map[common.Location]*vm.CompositeValue{}
 
-		vmConfig := &vm.Config{
-			Storage:        storage,
-			AccountHandler: &testAccountHandler{},
-			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
-				program, ok := programs[location]
-				if !ok {
-					assert.FailNow(t, "invalid location")
-				}
-				return program.Program
-			},
-			ContractValueHandler: func(_ *vm.Config, location common.Location) *vm.CompositeValue {
-				contractValue, ok := contractValues[location]
-				if !ok {
-					assert.FailNow(t, "invalid location")
-				}
-				return contractValue
-			},
+		vmConfig := vm.NewConfig(storage)
+		vmConfig.AccountHandler = &testAccountHandler{}
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			program, ok := programs[location]
+			if !ok {
+				assert.FailNow(t, "invalid location")
+			}
+			return program.Program
+		}
+		vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *vm.CompositeValue {
+			contractValue, ok := contractValues[location]
+			if !ok {
+				assert.FailNow(t, "invalid location")
+			}
+			return contractValue
 		}
 
 		contractsAddress := common.MustBytesToAddress([]byte{0x1})
@@ -2854,23 +2850,21 @@ func TestDefaultFunctions(t *testing.T) {
 		programs := map[common.Location]*compiledProgram{}
 		contractValues := map[common.Location]*vm.CompositeValue{}
 
-		vmConfig := &vm.Config{
-			Storage:        storage,
-			AccountHandler: &testAccountHandler{},
-			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
-				program, ok := programs[location]
-				if !ok {
-					assert.FailNow(t, "invalid location")
-				}
-				return program.Program
-			},
-			ContractValueHandler: func(_ *vm.Config, location common.Location) *vm.CompositeValue {
-				contractValue, ok := contractValues[location]
-				if !ok {
-					assert.FailNow(t, "invalid location")
-				}
-				return contractValue
-			},
+		vmConfig := vm.NewConfig(storage)
+		vmConfig.AccountHandler = &testAccountHandler{}
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			program, ok := programs[location]
+			if !ok {
+				assert.FailNow(t, "invalid location")
+			}
+			return program.Program
+		}
+		vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *vm.CompositeValue {
+			contractValue, ok := contractValues[location]
+			if !ok {
+				assert.FailNow(t, "invalid location")
+			}
+			return contractValue
 		}
 
 		contractsAddress := common.MustBytesToAddress([]byte{0x1})
@@ -3183,36 +3177,34 @@ func TestFunctionPreConditions(t *testing.T) {
 		contractValues := map[common.Location]*vm.CompositeValue{}
 		var logs []string
 
-		vmConfig := &vm.Config{
-			Storage:        storage,
-			AccountHandler: &testAccountHandler{},
-			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
-				program, ok := programs[location]
-				if !ok {
-					assert.FailNow(t, "invalid location")
-				}
-				return program.Program
-			},
-			ContractValueHandler: func(_ *vm.Config, location common.Location) *vm.CompositeValue {
-				contractValue, ok := contractValues[location]
-				if !ok {
-					assert.FailNow(t, "invalid location")
-				}
-				return contractValue
-			},
+		vmConfig := vm.NewConfig(storage)
+		vmConfig.AccountHandler = &testAccountHandler{}
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			program, ok := programs[location]
+			if !ok {
+				assert.FailNow(t, "invalid location")
+			}
+			return program.Program
+		}
+		vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *vm.CompositeValue {
+			contractValue, ok := contractValues[location]
+			if !ok {
+				assert.FailNow(t, "invalid location")
+			}
+			return contractValue
+		}
 
-			NativeFunctionsProvider: func() map[string]vm.Value {
-				funcs := vm.NativeFunctions()
-				funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-					ParameterCount: len(stdlib.LogFunctionType.Parameters),
-					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-						logs = append(logs, arguments[0].String())
-						return vm.VoidValue{}
-					},
-				}
+		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
+			funcs := vm.NativeFunctions()
+			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+				ParameterCount: len(stdlib.LogFunctionType.Parameters),
+				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+					logs = append(logs, arguments[0].String())
+					return vm.VoidValue{}
+				},
+			}
 
-				return funcs
-			},
+			return funcs
 		}
 
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -3929,21 +3921,20 @@ func TestDefaultFunctionsWithConditions(t *testing.T) {
 		))
 
 		var logs []string
-		vmConfig := &vm.Config{
-			Storage:        storage,
-			AccountHandler: &testAccountHandler{},
-			NativeFunctionsProvider: func() map[string]vm.Value {
-				funcs := vm.NativeFunctions()
-				funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-					ParameterCount: len(stdlib.LogFunctionType.Parameters),
-					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-						logs = append(logs, arguments[0].String())
-						return vm.VoidValue{}
-					},
-				}
 
-				return funcs
-			},
+		vmConfig := vm.NewConfig(storage)
+		vmConfig.AccountHandler = &testAccountHandler{}
+		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
+			funcs := vm.NativeFunctions()
+			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+				ParameterCount: len(stdlib.LogFunctionType.Parameters),
+				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+					logs = append(logs, arguments[0].String())
+					return vm.VoidValue{}
+				},
+			}
+
+			return funcs
 		}
 
 		_, err := compileAndInvokeWithOptions(t, `
@@ -4026,21 +4017,19 @@ func TestDefaultFunctionsWithConditions(t *testing.T) {
 		))
 
 		var logs []string
-		vmConfig := &vm.Config{
-			Storage:        storage,
-			AccountHandler: &testAccountHandler{},
-			NativeFunctionsProvider: func() map[string]vm.Value {
-				funcs := vm.NativeFunctions()
-				funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-					ParameterCount: len(stdlib.LogFunctionType.Parameters),
-					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-						logs = append(logs, arguments[0].String())
-						return vm.VoidValue{}
-					},
-				}
+		vmConfig := vm.NewConfig(storage)
+		vmConfig.AccountHandler = &testAccountHandler{}
+		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
+			funcs := vm.NativeFunctions()
+			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+				ParameterCount: len(stdlib.LogFunctionType.Parameters),
+				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+					logs = append(logs, arguments[0].String())
+					return vm.VoidValue{}
+				},
+			}
 
-				return funcs
-			},
+			return funcs
 		}
 
 		_, err := compileAndInvokeWithOptions(t, `
@@ -4137,21 +4126,19 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 		))
 
 		var logs []string
-		vmConfig := &vm.Config{
-			Storage:        storage,
-			AccountHandler: &testAccountHandler{},
-			NativeFunctionsProvider: func() map[string]vm.Value {
-				funcs := vm.NativeFunctions()
-				funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-					ParameterCount: len(stdlib.LogFunctionType.Parameters),
-					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-						logs = append(logs, arguments[0].String())
-						return vm.VoidValue{}
-					},
-				}
+		vmConfig := vm.NewConfig(storage)
+		vmConfig.AccountHandler = &testAccountHandler{}
+		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
+			funcs := vm.NativeFunctions()
+			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+				ParameterCount: len(stdlib.LogFunctionType.Parameters),
+				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+					logs = append(logs, arguments[0].String())
+					return vm.VoidValue{}
+				},
+			}
 
-				return funcs
-			},
+			return funcs
 		}
 
 		_, err := compileAndInvokeWithOptions(t, `
@@ -4229,21 +4216,19 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 		))
 
 		var logs []string
-		vmConfig := &vm.Config{
-			Storage:        storage,
-			AccountHandler: &testAccountHandler{},
-			NativeFunctionsProvider: func() map[string]vm.Value {
-				funcs := vm.NativeFunctions()
-				funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-					ParameterCount: len(stdlib.LogFunctionType.Parameters),
-					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-						logs = append(logs, arguments[0].String())
-						return vm.VoidValue{}
-					},
-				}
+		vmConfig := vm.NewConfig(storage)
+		vmConfig.AccountHandler = &testAccountHandler{}
+		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
+			funcs := vm.NativeFunctions()
+			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+				ParameterCount: len(stdlib.LogFunctionType.Parameters),
+				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+					logs = append(logs, arguments[0].String())
+					return vm.VoidValue{}
+				},
+			}
 
-				return funcs
-			},
+			return funcs
 		}
 
 		_, err := compileAndInvokeWithOptions(t, `
@@ -4325,21 +4310,19 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 		))
 
 		var logs []string
-		vmConfig := &vm.Config{
-			Storage:        storage,
-			AccountHandler: &testAccountHandler{},
-			NativeFunctionsProvider: func() map[string]vm.Value {
-				funcs := vm.NativeFunctions()
-				funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-					ParameterCount: len(stdlib.LogFunctionType.Parameters),
-					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-						logs = append(logs, arguments[0].String())
-						return vm.VoidValue{}
-					},
-				}
+		vmConfig := vm.NewConfig(storage)
+		vmConfig.AccountHandler = &testAccountHandler{}
+		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
+			funcs := vm.NativeFunctions()
+			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+				ParameterCount: len(stdlib.LogFunctionType.Parameters),
+				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+					logs = append(logs, arguments[0].String())
+					return vm.VoidValue{}
+				},
+			}
 
-				return funcs
-			},
+			return funcs
 		}
 
 		_, err := compileAndInvokeWithOptions(t, `

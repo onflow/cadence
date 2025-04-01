@@ -205,7 +205,7 @@ func (s *AccountStorageMap) setDomain(
 		interpreter.RemoveReferencedSlab(existingValueStorable)
 	}
 
-	interpreter.maybeValidateAtreeValue(s.orderedMap)
+	interpreter.MaybeValidateAtreeValue(s.orderedMap)
 
 	// NOTE: Don't call maybeValidateAtreeStorage() here because it is possible
 	// that domain storage map is in the process of being migrated to account
@@ -254,8 +254,8 @@ func (s *AccountStorageMap) removeDomain(interpreter *Interpreter, domain common
 		interpreter.RemoveReferencedSlab(existingValueStorable)
 	}
 
-	interpreter.maybeValidateAtreeValue(s.orderedMap)
-	interpreter.maybeValidateAtreeStorage()
+	interpreter.MaybeValidateAtreeValue(s.orderedMap)
+	interpreter.MaybeValidateAtreeStorage()
 
 	return
 }

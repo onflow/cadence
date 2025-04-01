@@ -174,9 +174,7 @@ func BenchmarkNewResource(b *testing.B) {
 func BenchmarkNewStructRaw(b *testing.B) {
 
 	storage := interpreter.NewInMemoryStorage(nil)
-	vmConfig := &vm.Config{
-		Storage: storage,
-	}
+	vmConfig := vm.NewConfig(storage)
 
 	fieldValue := vm.NewIntValue(7)
 

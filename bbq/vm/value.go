@@ -22,7 +22,6 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 )
 
@@ -40,26 +39,12 @@ type Value interface {
 
 type StaticTypeContext = interpreter.ValueStaticTypeContext
 
-type StorageContext interface {
-	StaticTypeContext
-	common.MemoryGauge
-	interpreter.Storage
-	interpreter.StorageWriter
-}
+type StorageContext = interpreter.StorageContext
 
+// TODO: Eventually use/switch-to `interpreter.ValueTransferContext`
 type TransferContext interface {
 	StorageContext
 	ReferenceTracker
-}
-
-type ReferenceTracker interface {
-	TrackReferencedResourceKindedValue(id atree.ValueID, value *EphemeralReferenceValue)
-	ReferencedResourceKindedValues(atree.ValueID) map[*EphemeralReferenceValue]struct{}
-	ClearReferenceTracking(atree.ValueID)
-}
-
-type TypeConverterContext interface {
-	Interpreter() *interpreter.Interpreter
 }
 
 type MemberAccessibleValue interface {

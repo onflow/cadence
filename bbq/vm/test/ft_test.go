@@ -71,17 +71,16 @@ func TestFTTransfer(t *testing.T) {
 
 	flowTokenProgram := parseCheckAndCompile(t, realFlowContract, flowTokenLocation, programs)
 
-	config := &vm.Config{
-		Storage:        storage,
-		AccountHandler: &testAccountHandler{},
-		TypeLoader:     typeLoader,
-		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
-			imported, ok := programs[location]
-			if !ok {
-				return nil
-			}
-			return imported.Program
-		},
+	config := vm.NewConfig(storage)
+
+	config.AccountHandler = &testAccountHandler{}
+	config.TypeLoader = typeLoader
+	config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+		imported, ok := programs[location]
+		if !ok {
+			return nil
+		}
+		return imported.Program
 	}
 
 	flowTokenVM := vm.NewVM(
@@ -95,33 +94,31 @@ func TestFTTransfer(t *testing.T) {
 	require.NoError(t, err)
 
 	// ----- Run setup account transaction -----
+	vmConfig := vm.NewConfig(storage)
 
-	vmConfig := &vm.Config{
-		Storage: storage,
-		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
-			imported, ok := programs[location]
-			if !ok {
-				return nil
-			}
-			return imported.Program
-		},
-		ContractValueHandler: func(_ *vm.Config, location common.Location) *vm.CompositeValue {
-			switch location {
-			case ftLocation:
-				// interface
-				return nil
-			case flowTokenLocation:
-				return flowTokenContractValue
-			default:
-				assert.FailNow(t, "invalid location")
-				return nil
-			}
-		},
-
-		AccountHandler: &testAccountHandler{},
-
-		TypeLoader: typeLoader,
+	vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+		imported, ok := programs[location]
+		if !ok {
+			return nil
+		}
+		return imported.Program
 	}
+	vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *vm.CompositeValue {
+		switch location {
+		case ftLocation:
+			// interface
+			return nil
+		case flowTokenLocation:
+			return flowTokenContractValue
+		default:
+			assert.FailNow(t, "invalid location")
+			return nil
+		}
+	}
+
+	vmConfig.AccountHandler = &testAccountHandler{}
+
+	vmConfig.TypeLoader = typeLoader
 
 	for _, address := range []common.Address{
 		senderAddress,
@@ -231,11 +228,9 @@ func BenchmarkFTTransfer(b *testing.B) {
 	flowTokenLocation := common.NewAddressLocation(nil, contractsAddress, "FlowToken")
 	flowTokenProgram := parseCheckAndCompile(b, realFlowContract, flowTokenLocation, programs)
 
-	config := &vm.Config{
-		Storage:        storage,
-		AccountHandler: &testAccountHandler{},
-		TypeLoader:     typeLoader,
-	}
+	config := vm.NewConfig(storage)
+	config.AccountHandler = &testAccountHandler{}
+	config.TypeLoader = typeLoader
 
 	flowTokenVM := vm.NewVM(
 		flowTokenLocation,
@@ -250,32 +245,30 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	// ----- Run setup account transaction -----
 
-	vmConfig := &vm.Config{
-		Storage: storage,
-		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
-			imported, ok := programs[location]
-			if !ok {
-				return nil
-			}
-			return imported.Program
-		},
-		ContractValueHandler: func(_ *vm.Config, location common.Location) *vm.CompositeValue {
-			switch location {
-			case ftLocation:
-				// interface
-				return nil
-			case flowTokenLocation:
-				return flowTokenContractValue
-			default:
-				assert.FailNow(b, "invalid location")
-				return nil
-			}
-		},
+	vmConfig := vm.NewConfig(storage)
 
-		AccountHandler: &testAccountHandler{},
-
-		TypeLoader: typeLoader,
+	vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+		imported, ok := programs[location]
+		if !ok {
+			return nil
+		}
+		return imported.Program
 	}
+	vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *vm.CompositeValue {
+		switch location {
+		case ftLocation:
+			// interface
+			return nil
+		case flowTokenLocation:
+			return flowTokenContractValue
+		default:
+			assert.FailNow(b, "invalid location")
+			return nil
+		}
+	}
+
+	vmConfig.AccountHandler = &testAccountHandler{}
+	vmConfig.TypeLoader = typeLoader
 
 	for _, address := range []common.Address{
 		senderAddress,

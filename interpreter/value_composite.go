@@ -399,7 +399,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 			// destroy every nested resource in this composite; note that this iteration includes attachments
 			v.ForEachField(interpreter, func(_ string, fieldValue Value) bool {
 				if compositeFieldValue, ok := fieldValue.(*CompositeValue); ok && compositeFieldValue.Kind == common.CompositeKindAttachment {
-					compositeFieldValue.setBaseValue(interpreter, v)
+					compositeFieldValue.setBaseValue(v)
 				}
 				maybeDestroy(interpreter, locationRange, fieldValue)
 				return true
@@ -409,7 +409,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 	v.isDestroyed = true
 
-	interpreter.invalidateReferencedResources(v, locationRange)
+	interpreter.InvalidateReferencedResources(v, locationRange)
 
 	v.dictionary = nil
 }
@@ -669,8 +669,8 @@ func (v *CompositeValue) RemoveMember(
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.maybeValidateAtreeValue(v.dictionary)
-	interpreter.maybeValidateAtreeStorage()
+	interpreter.MaybeValidateAtreeValue(v.dictionary)
+	interpreter.MaybeValidateAtreeStorage()
 
 	// Key
 	interpreter.RemoveReferencedSlab(existingKeyStorable)
@@ -732,8 +732,8 @@ func (v *CompositeValue) SetMemberWithoutTransfer(
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.maybeValidateAtreeValue(v.dictionary)
-	interpreter.maybeValidateAtreeStorage()
+	interpreter.MaybeValidateAtreeValue(v.dictionary)
+	interpreter.MaybeValidateAtreeStorage()
 
 	if existingStorable != nil {
 		existingValue := StoredValue(interpreter, existingStorable, config.Storage)
@@ -1169,20 +1169,19 @@ func (v *CompositeValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 func (v *CompositeValue) IsReferenceTrackedResourceKindedValue() {}
 
 func (v *CompositeValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
-	preventTransfer map[atree.ValueID]struct{},
+	preventTransfer map[atree.ValueID]struct {
+	},
 	hasNoParentContainer bool,
 ) Value {
 
-	config := interpreter.SharedState.Config
+	context.ReportComputation(common.ComputationKindTransferCompositeValue, 1)
 
-	interpreter.ReportComputation(common.ComputationKindTransferCompositeValue, 1)
-
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		owner := v.GetOwner().String()
@@ -1190,7 +1189,7 @@ func (v *CompositeValue) Transfer(
 		kind := v.Kind.String()
 
 		defer func() {
-			interpreter.reportCompositeValueTransferTrace(
+			context.reportCompositeValueTransferTrace(
 				owner,
 				typeID,
 				kind,
@@ -1215,7 +1214,7 @@ func (v *CompositeValue) Transfer(
 	dictionary := v.dictionary
 
 	needsStoreTo := v.NeedsStoreTo(address)
-	isResourceKinded := v.IsResourceKinded(interpreter)
+	isResourceKinded := v.IsResourceKinded(context)
 
 	if needsStoreTo && v.Kind == common.CompositeKindContract {
 		panic(NonTransferableValueError{
@@ -1237,15 +1236,15 @@ func (v *CompositeValue) Transfer(
 		elementCount := v.dictionary.Count()
 
 		elementOverhead, dataUse, metaDataUse := common.NewAtreeMapMemoryUsages(elementCount, 0)
-		common.UseMemory(interpreter, elementOverhead)
-		common.UseMemory(interpreter, dataUse)
-		common.UseMemory(interpreter, metaDataUse)
+		common.UseMemory(context, elementOverhead)
+		common.UseMemory(context, dataUse)
+		common.UseMemory(context, metaDataUse)
 
 		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(elementCount, 0)
-		common.UseMemory(config.MemoryGauge, elementMemoryUse)
+		common.UseMemory(context, elementMemoryUse)
 
 		dictionary, err = atree.NewMapFromBatchData(
-			config.Storage,
+			context.Storage(),
 			address,
 			atree.NewDefaultDigesterBuilder(),
 			v.dictionary.Type(),
@@ -1265,17 +1264,17 @@ func (v *CompositeValue) Transfer(
 				// NOTE: key is stringAtreeValue
 				// and does not need to be converted or copied
 
-				value := MustConvertStoredValue(interpreter, atreeValue)
+				value := MustConvertStoredValue(context, atreeValue)
 				// the base of an attachment is not stored in the atree, so in order to make the
 				// transfer happen properly, we set the base value here if this field is an attachment
 				if compositeValue, ok := value.(*CompositeValue); ok &&
 					compositeValue.Kind == common.CompositeKindAttachment {
 
-					compositeValue.setBaseValue(interpreter, v)
+					compositeValue.setBaseValue(v)
 				}
 
 				value = value.Transfer(
-					interpreter,
+					context,
 					locationRange,
 					address,
 					remove,
@@ -1293,19 +1292,19 @@ func (v *CompositeValue) Transfer(
 
 		if remove {
 			err = v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
-				interpreter.RemoveReferencedSlab(nameStorable)
-				interpreter.RemoveReferencedSlab(valueStorable)
+				context.RemoveReferencedSlab(nameStorable)
+				context.RemoveReferencedSlab(valueStorable)
 			})
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
 
-			interpreter.maybeValidateAtreeValue(v.dictionary)
+			context.MaybeValidateAtreeValue(v.dictionary)
 			if hasNoParentContainer {
-				interpreter.maybeValidateAtreeStorage()
+				context.MaybeValidateAtreeStorage()
 			}
 
-			interpreter.RemoveReferencedSlab(storable)
+			context.RemoveReferencedSlab(storable)
 		}
 	}
 
@@ -1319,20 +1318,20 @@ func (v *CompositeValue) Transfer(
 		// This allows raising an error when the resource is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		interpreter.invalidateReferencedResources(v, locationRange)
+		context.InvalidateReferencedResources(v, locationRange)
 
 		v.dictionary = nil
 	}
 
 	info := NewCompositeTypeInfo(
-		interpreter,
+		context,
 		v.Location,
 		v.QualifiedIdentifier,
 		v.Kind,
 	)
 
 	res := NewCompositeValueFromAtreeMap(
-		interpreter,
+		context,
 		info,
 		dictionary,
 	)
@@ -1347,14 +1346,10 @@ func (v *CompositeValue) Transfer(
 	res.staticType = v.staticType
 	res.base = v.base
 
-	onResourceOwnerChange := config.OnResourceOwnerChange
-
 	if needsStoreTo &&
-		res.Kind == common.CompositeKindResource &&
-		onResourceOwnerChange != nil {
+		res.Kind == common.CompositeKindResource {
 
-		onResourceOwnerChange(
-			interpreter,
+		context.OnResourceOwnerChange(
 			res,
 			common.Address(currentAddress),
 			common.Address(address),
@@ -1430,10 +1425,8 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 	}
 }
 
-func (v *CompositeValue) DeepRemove(interpreter *Interpreter, hasNoParentContainer bool) {
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+func (v *CompositeValue) DeepRemove(context ValueRemoveContext, hasNoParentContainer bool) {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		owner := v.GetOwner().String()
@@ -1441,7 +1434,7 @@ func (v *CompositeValue) DeepRemove(interpreter *Interpreter, hasNoParentContain
 		kind := v.Kind.String()
 
 		defer func() {
-			interpreter.reportCompositeValueDeepRemoveTrace(
+			context.reportCompositeValueDeepRemoveTrace(
 				owner,
 				typeID,
 				kind,
@@ -1457,19 +1450,19 @@ func (v *CompositeValue) DeepRemove(interpreter *Interpreter, hasNoParentContain
 	err := v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
 		// NOTE: key / field name is stringAtreeValue,
 		// and not a Value, so no need to deep remove
-		interpreter.RemoveReferencedSlab(nameStorable)
+		context.RemoveReferencedSlab(nameStorable)
 
-		value := StoredValue(interpreter, valueStorable, storage)
-		value.DeepRemove(interpreter, false) // value is an element of v.dictionary because it is from PopIterate() callback.
-		interpreter.RemoveReferencedSlab(valueStorable)
+		value := StoredValue(context, valueStorable, storage)
+		value.DeepRemove(context, false) // value is an element of v.dictionary because it is from PopIterate() callback.
+		context.RemoveReferencedSlab(valueStorable)
 	})
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.maybeValidateAtreeValue(v.dictionary)
+	context.MaybeValidateAtreeValue(v.dictionary)
 	if hasNoParentContainer {
-		interpreter.maybeValidateAtreeStorage()
+		context.MaybeValidateAtreeStorage()
 	}
 }
 
@@ -1601,8 +1594,8 @@ func (v *CompositeValue) RemoveField(
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.maybeValidateAtreeValue(v.dictionary)
-	interpreter.maybeValidateAtreeStorage()
+	interpreter.MaybeValidateAtreeValue(v.dictionary)
+	interpreter.MaybeValidateAtreeStorage()
 
 	// Key
 
@@ -1672,7 +1665,7 @@ func (v *CompositeValue) getBaseValue(
 	return NewEphemeralReferenceValue(interpreter, functionAuthorization, v.base, baseType, locationRange)
 }
 
-func (v *CompositeValue) setBaseValue(_ *Interpreter, base *CompositeValue) {
+func (v *CompositeValue) setBaseValue(base *CompositeValue) {
 	v.base = base
 }
 
@@ -1836,7 +1829,7 @@ func forEachAttachment(
 			// attachments is added that takes a `fun (&Attachment): Void` callback, the `f` provided here
 			// should convert the provided attachment value into a reference before passing it to the user
 			// callback
-			attachment.setBaseValue(interpreter, composite)
+			attachment.setBaseValue(composite)
 			f(attachment)
 		}
 	}
@@ -1854,7 +1847,7 @@ func (v *CompositeValue) getTypeKey(
 	}
 	attachmentType := keyType.(*sema.CompositeType)
 	// dynamically set the attachment's base to this composite
-	attachment.setBaseValue(interpreter, v)
+	attachment.setBaseValue(v)
 
 	// The attachment reference has the same entitlements as the base access
 	attachmentRef := NewEphemeralReferenceValue(

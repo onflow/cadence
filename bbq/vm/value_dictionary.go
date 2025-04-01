@@ -54,7 +54,7 @@ func NewDictionaryValue(
 
 	constructor := func() *atree.OrderedMap {
 		dictionary, err := atree.NewMap(
-			config.Storage,
+			config.Storage(),
 			atree.Address(address),
 			atree.NewDefaultDigesterBuilder(),
 			dictionaryType,
@@ -195,7 +195,7 @@ func (v *DictionaryValue) Insert(
 	existingValue := StoredValue(
 		conf,
 		existingValueStorable,
-		conf.Storage,
+		conf.Storage(),
 	).Transfer(
 		conf,
 		atree.Address{},
@@ -254,7 +254,7 @@ func (v *DictionaryValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 ) Value {
-	storage := transferContext
+	storage := transferContext.Storage()
 
 	dictionary := v.dictionary
 
@@ -325,7 +325,7 @@ func (v *DictionaryValue) Transfer(
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		invalidateReferencedResources(transferContext, v)
+		transferContext.InvalidateReferencedResources(v)
 
 		v.dictionary = nil
 	}
@@ -388,18 +388,18 @@ func (v *DictionaryValue) Iterate(
 // IterateReadOnlyLoaded iterates over all LOADED key-valye pairs of the array.
 // DO NOT perform storage mutations in the callback!
 func (v *DictionaryValue) IterateReadOnlyLoaded(
-	memoryGauge common.MemoryGauge,
+	config *Config,
 	f func(key, value Value) (resume bool),
 ) {
 	v.iterate(
-		memoryGauge,
+		config,
 		v.dictionary.IterateReadOnlyLoadedValues,
 		f,
 	)
 }
 
 func (v *DictionaryValue) iterate(
-	memoryGauge common.MemoryGauge,
+	config *Config,
 	atreeIterate func(fn atree.MapEntryIterationFunc) error,
 	f func(key Value, value Value) (resume bool),
 ) {
@@ -408,11 +408,11 @@ func (v *DictionaryValue) iterate(
 			// atree.OrderedMap iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value
 
-			keyValue := MustConvertStoredValue(memoryGauge, key)
-			valueValue := MustConvertStoredValue(memoryGauge, value)
+			keyValue := MustConvertStoredValue(config.MemoryGauge, key)
+			valueValue := MustConvertStoredValue(config.MemoryGauge, value)
 
-			checkInvalidatedResourceOrResourceReference(keyValue)
-			checkInvalidatedResourceOrResourceReference(valueValue)
+			config.CheckInvalidatedResourceOrResourceReference(keyValue)
+			config.CheckInvalidatedResourceOrResourceReference(valueValue)
 
 			resume = f(
 				keyValue,

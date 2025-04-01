@@ -375,7 +375,7 @@ func recordStorageCapabilityController(
 
 	storageMapKey := interpreter.StringStorageMapKey(identifier)
 
-	accountStorage := config.Storage.GetDomainStorageMap(
+	accountStorage := config.storage.GetDomainStorageMap(
 		config.Interpreter(),
 		address,
 		common.StorageDomainPathCapability,

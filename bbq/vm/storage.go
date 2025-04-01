@@ -86,7 +86,7 @@ func StoredValueExists(
 	domain common.StorageDomain,
 	identifier interpreter.StorageMapKey,
 ) bool {
-	accountStorage := config.Storage.GetDomainStorageMap(
+	accountStorage := config.storage.GetDomainStorageMap(
 		config.Interpreter(),
 		storageAddress,
 		domain,

@@ -466,7 +466,7 @@ func (Word64Value) IsResourceKinded(context ValueStaticTypeContext) bool {
 }
 
 func (v Word64Value) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -475,7 +475,7 @@ func (v Word64Value) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		context.RemoveReferencedSlab(storable)
 	}
 	return v
 }
@@ -488,7 +488,7 @@ func (v Word64Value) ByteSize() uint32 {
 	return values.CBORTagSize + values.GetUintCBORSize(uint64(v))
 }
 
-func (Word64Value) DeepRemove(_ *Interpreter, _ bool) {
+func (Word64Value) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

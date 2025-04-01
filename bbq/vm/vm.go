@@ -56,8 +56,8 @@ func NewVM(
 	if conf == nil {
 		conf = &Config{}
 	}
-	if conf.Storage == nil {
-		conf.Storage = interpreter.NewInMemoryStorage(nil)
+	if conf.storage == nil {
+		conf.storage = interpreter.NewInMemoryStorage(nil)
 	}
 
 	if conf.NativeFunctionsProvider == nil {
@@ -106,7 +106,7 @@ func (vm *VM) pop() Value {
 	vm.stack[lastIndex] = nil
 	vm.stack = vm.stack[:lastIndex]
 
-	checkInvalidatedResourceOrResourceReference(value)
+	vm.config.CheckInvalidatedResourceOrResourceReference(value)
 
 	return value
 }
@@ -120,8 +120,8 @@ func (vm *VM) pop2() (Value, Value) {
 	vm.stack[lastIndex-1], vm.stack[lastIndex] = nil, nil
 	vm.stack = vm.stack[:lastIndex-1]
 
-	checkInvalidatedResourceOrResourceReference(value1)
-	checkInvalidatedResourceOrResourceReference(value2)
+	vm.config.CheckInvalidatedResourceOrResourceReference(value1)
+	vm.config.CheckInvalidatedResourceOrResourceReference(value2)
 
 	return value1, value2
 }
@@ -135,9 +135,9 @@ func (vm *VM) pop3() (Value, Value, Value) {
 	vm.stack[lastIndex-2], vm.stack[lastIndex-1], vm.stack[lastIndex] = nil, nil, nil
 	vm.stack = vm.stack[:lastIndex-2]
 
-	checkInvalidatedResourceOrResourceReference(value1)
-	checkInvalidatedResourceOrResourceReference(value2)
-	checkInvalidatedResourceOrResourceReference(value3)
+	vm.config.CheckInvalidatedResourceOrResourceReference(value1)
+	vm.config.CheckInvalidatedResourceOrResourceReference(value2)
+	vm.config.CheckInvalidatedResourceOrResourceReference(value3)
 
 	return value1, value2, value3
 }
@@ -157,7 +157,7 @@ func (vm *VM) dropN(count int) {
 	stackHeight := len(vm.stack)
 	startIndex := stackHeight - count
 	for _, value := range vm.stack[startIndex:] {
-		checkInvalidatedResourceOrResourceReference(value)
+		vm.config.CheckInvalidatedResourceOrResourceReference(value)
 	}
 	clear(vm.stack[startIndex:])
 	vm.stack = vm.stack[:startIndex]
@@ -615,7 +615,7 @@ func opNew(vm *VM, ins opcode.InstructionNew) {
 	value := NewCompositeValue(
 		compositeKind,
 		compositeStaticType,
-		vm.config.Storage,
+		vm.config.Storage(),
 	)
 	vm.push(value)
 }

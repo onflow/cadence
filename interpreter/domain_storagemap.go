@@ -177,8 +177,8 @@ func (s *DomainStorageMap) SetValue(interpreter *Interpreter, key StorageMapKey,
 		interpreter.RemoveReferencedSlab(existingStorable)
 	}
 
-	interpreter.maybeValidateAtreeValue(s.orderedMap)
-	interpreter.maybeValidateAtreeStorage()
+	interpreter.MaybeValidateAtreeValue(s.orderedMap)
+	interpreter.MaybeValidateAtreeStorage()
 
 	return
 }
@@ -215,25 +215,23 @@ func (s *DomainStorageMap) RemoveValue(interpreter *Interpreter, key StorageMapK
 		interpreter.RemoveReferencedSlab(existingValueStorable)
 	}
 
-	interpreter.maybeValidateAtreeValue(s.orderedMap)
-	interpreter.maybeValidateAtreeStorage()
+	interpreter.MaybeValidateAtreeValue(s.orderedMap)
+	interpreter.MaybeValidateAtreeStorage()
 
 	return
 }
 
 // DeepRemove removes all elements (and their slabs) of domain storage map.
-func (s *DomainStorageMap) DeepRemove(interpreter *Interpreter, hasNoParentContainer bool) {
+func (s *DomainStorageMap) DeepRemove(context ValueRemoveContext, hasNoParentContainer bool) {
 
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		typeInfo := "DomainStorageMap"
 		count := s.Count()
 
 		defer func() {
-			interpreter.reportDomainStorageMapDeepRemoveTrace(
+			context.reportDomainStorageMapDeepRemoveTrace(
 				typeInfo,
 				int(count),
 				time.Since(startTime),
@@ -252,21 +250,21 @@ func (s *DomainStorageMap) DeepRemove(interpreter *Interpreter, hasNoParentConta
 
 		// NOTE: Key is just an atree.Value, not an interpreter.Value,
 		// so do not need (can) convert and not need to deep remove
-		interpreter.RemoveReferencedSlab(keyStorable)
+		context.RemoveReferencedSlab(keyStorable)
 
 		// Value
 
-		value := StoredValue(interpreter, valueStorable, storage)
-		value.DeepRemove(interpreter, false) // value is an element of v.dictionary because it is from PopIterate() callback.
-		interpreter.RemoveReferencedSlab(valueStorable)
+		value := StoredValue(context, valueStorable, storage)
+		value.DeepRemove(context, false) // value is an element of v.dictionary because it is from PopIterate() callback.
+		context.RemoveReferencedSlab(valueStorable)
 	})
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.maybeValidateAtreeValue(s.orderedMap)
+	context.MaybeValidateAtreeValue(s.orderedMap)
 	if hasNoParentContainer {
-		interpreter.maybeValidateAtreeStorage()
+		context.MaybeValidateAtreeStorage()
 	}
 }
 
