@@ -1857,13 +1857,15 @@ func TestBlockValue(t *testing.T) {
 			ByteArrayStaticType,
 			common.ZeroAddress,
 		),
-		5.0,
+		NewUnmeteredUFix64ValueWithInteger(5, EmptyLocationRange),
 	)
 
 	// static type test
-	var actualTs = block.Fields[sema.BlockTypeTimestampFieldName]
-	const expectedTs UFix64Value = 5.0
-	assert.Equal(t, expectedTs, actualTs)
+
+	assert.Equal(t,
+		NewUnmeteredUFix64ValueWithInteger(5, EmptyLocationRange),
+		block.Fields[sema.BlockTypeTimestampFieldName],
+	)
 }
 
 func TestEphemeralReferenceTypeConformance(t *testing.T) {
@@ -3482,7 +3484,7 @@ func TestHashable(t *testing.T) {
 	pkgs, err := packages.Load(
 		&packages.Config{
 			// https://github.com/golang/go/issues/45218
-			Mode: packages.NeedImports | packages.NeedTypes,
+			Mode: packages.NeedImports | packages.NeedDeps | packages.NeedTypes,
 		},
 		"github.com/onflow/cadence/interpreter",
 	)

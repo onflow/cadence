@@ -204,7 +204,7 @@ func exportValueWithInterpreter(
 	case interpreter.Fix64Value:
 		return cadence.Fix64(v), nil
 	case interpreter.UFix64Value:
-		return cadence.UFix64(v), nil
+		return cadence.UFix64(v.UFix64Value), nil
 	case *interpreter.CompositeValue:
 		return exportCompositeValue(
 			v,
@@ -833,7 +833,7 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 	case cadence.Optional:
 		return i.importOptionalValue(v, expectedType)
 	case cadence.Bool:
-		return interpreter.AsBoolValue(bool(v)), nil
+		return interpreter.BoolValue(v), nil
 	case cadence.String:
 		return i.importString(v), nil
 	case cadence.Character:

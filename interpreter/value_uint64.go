@@ -31,6 +31,7 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // UInt64Value
@@ -128,17 +129,6 @@ func (v UInt64Value) Negate(NumberValueArithmeticContext, LocationRange) NumberV
 	panic(errors.NewUnreachableError())
 }
 
-func safeAddUint64(a, b uint64, locationRange LocationRange) uint64 {
-	sum := a + b
-	// INT30-C
-	if sum < a {
-		panic(OverflowError{
-			LocationRange: locationRange,
-		})
-	}
-	return sum
-}
-
 func (v UInt64Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
@@ -153,7 +143,16 @@ func (v UInt64Value) Plus(context NumberValueArithmeticContext, other NumberValu
 	return NewUInt64Value(
 		context,
 		func() uint64 {
-			return safeAddUint64(uint64(v), uint64(o), locationRange)
+			result, err := values.SafeAddUint64(uint64(v), uint64(o))
+			if err != nil {
+				if _, ok := err.(values.OverflowError); ok {
+					panic(OverflowError{
+						LocationRange: locationRange,
+					})
+				}
+				panic(err)
+			}
+			return result
 		},
 	)
 }
@@ -354,7 +353,7 @@ func (v UInt64Value) Less(context ValueComparisonContext, other ComparableValue,
 		})
 	}
 
-	return AsBoolValue(v < o)
+	return v < o
 }
 
 func (v UInt64Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -368,7 +367,7 @@ func (v UInt64Value) LessEqual(context ValueComparisonContext, other ComparableV
 		})
 	}
 
-	return AsBoolValue(v <= o)
+	return v <= o
 }
 
 func (v UInt64Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -382,7 +381,7 @@ func (v UInt64Value) Greater(context ValueComparisonContext, other ComparableVal
 		})
 	}
 
-	return AsBoolValue(v > o)
+	return v > o
 }
 
 func (v UInt64Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -396,7 +395,7 @@ func (v UInt64Value) GreaterEqual(context ValueComparisonContext, other Comparab
 		})
 	}
 
-	return AsBoolValue(v >= o)
+	return v >= o
 }
 
 func (v UInt64Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
@@ -594,7 +593,7 @@ func (UInt64Value) DeepRemove(_ *Interpreter, _ bool) {
 }
 
 func (v UInt64Value) ByteSize() uint32 {
-	return cborTagSize + getUintCBORSize(uint64(v))
+	return values.CBORTagSize + values.GetUintCBORSize(uint64(v))
 }
 
 func (v UInt64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {

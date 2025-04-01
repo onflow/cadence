@@ -673,7 +673,7 @@ func (interpreter *Interpreter) testEqual(left, right Value, expression *ast.Bin
 		return FalseValue
 	}
 
-	return AsBoolValue(
+	return BoolValue(
 		leftEquatable.Equal(
 			interpreter,
 			LocationRange{
@@ -811,7 +811,7 @@ func (interpreter *Interpreter) VisitVoidExpression(_ *ast.VoidExpression) Value
 }
 
 func (interpreter *Interpreter) VisitBoolExpression(expression *ast.BoolExpression) Value {
-	return AsBoolValue(expression.Value)
+	return BoolValue(expression.Value)
 }
 
 func (interpreter *Interpreter) VisitNilExpression(_ *ast.NilExpression) Value {
