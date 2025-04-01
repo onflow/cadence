@@ -78,7 +78,7 @@ func (v *SomeValue) UnwrapAtreeValue() (atree.Value, uint64) {
 	}
 }
 
-func (*SomeValue) isValue() {}
+func (*SomeValue) IsValue() {}
 
 func (v *SomeValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
 	descend := visitor.VisitSomeValue(interpreter, v)

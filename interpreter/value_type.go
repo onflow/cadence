@@ -56,7 +56,7 @@ func NewTypeValue(
 	return NewUnmeteredTypeValue(staticType)
 }
 
-func (TypeValue) isValue() {}
+func (TypeValue) IsValue() {}
 
 func (v TypeValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitTypeValue(interpreter, v)
