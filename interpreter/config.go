@@ -70,8 +70,6 @@ type Config struct {
 	CapabilityCheckHandler CapabilityCheckHandlerFunc
 	// CapabilityBorrowHandler is used to borrow ID capabilities
 	CapabilityBorrowHandler CapabilityBorrowHandlerFunc
-	// LegacyContractUpgradeEnabled specifies whether to fall back to the old parser when attempting a contract upgrade
-	LegacyContractUpgradeEnabled bool
 	// ValidateAccountCapabilitiesGetHandler is used to handle when a capability of an account is got.
 	ValidateAccountCapabilitiesGetHandler ValidateAccountCapabilitiesGetHandlerFunc
 	// ValidateAccountCapabilitiesPublishHandler is used to handle when a capability of an account is got.
