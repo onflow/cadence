@@ -84,7 +84,7 @@ var _ ComparableValue = Fix64Value(0)
 var _ HashableValue = Fix64Value(0)
 var _ MemberAccessibleValue = Fix64Value(0)
 
-func (Fix64Value) isValue() {}
+func (Fix64Value) IsValue() {}
 
 func (v Fix64Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitFix64Value(interpreter, v)

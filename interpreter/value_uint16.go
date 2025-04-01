@@ -58,7 +58,7 @@ func NewUnmeteredUInt16Value(value uint16) UInt16Value {
 	return UInt16Value(value)
 }
 
-func (UInt16Value) isValue() {}
+func (UInt16Value) IsValue() {}
 
 func (v UInt16Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitUInt16Value(interpreter, v)

@@ -28,5 +28,5 @@ type SimpleCompositeValue struct {
 	// metadata is a property bag to carry internal data
 	// that are not visible to cadence users.
 	// TODO: any better way to pass down information?
-	metadata map[string]any
+	metadata map[string]any // nolint:unused
 }

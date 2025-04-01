@@ -58,7 +58,7 @@ var _ ComparableValue = UInt32Value(0)
 var _ HashableValue = UInt32Value(0)
 var _ MemberAccessibleValue = UInt32Value(0)
 
-func (UInt32Value) isValue() {}
+func (UInt32Value) IsValue() {}
 
 func (v UInt32Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitUInt32Value(interpreter, v)

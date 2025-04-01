@@ -42,15 +42,6 @@ func (c *Config) MaybeTrackReferencedResourceKindedValue(referenceValue *interpr
 	values[referenceValue] = struct{}{}
 }
 
-func (c *Config) maybeTrackReferencedResourceKindedValue(value Value) {
-	referenceValue, ok := value.(*interpreter.EphemeralReferenceValue)
-	if !ok {
-		return
-	}
-
-	c.MaybeTrackReferencedResourceKindedValue(referenceValue)
-}
-
 func (c *Config) CheckInvalidatedResourceOrResourceReference(
 	value Value,
 	locationRange interpreter.LocationRange,

@@ -75,7 +75,7 @@ var _ NumberValue[UFix64Value] = UFix64Value(0)
 var _ FixedPointValue[UFix64Value, uint64] = UFix64Value(0)
 var _ atree.Storable = UFix64Value(0)
 
-func (UFix64Value) isValue() {}
+func (UFix64Value) IsValue() {}
 
 func (v UFix64Value) String() string {
 	return format.UFix64(uint64(v))

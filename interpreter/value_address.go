@@ -92,7 +92,7 @@ var _ EquatableValue = AddressValue{}
 var _ HashableValue = AddressValue{}
 var _ MemberAccessibleValue = AddressValue{}
 
-func (AddressValue) isValue() {}
+func (AddressValue) IsValue() {}
 
 func (v AddressValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitAddressValue(interpreter, v)
