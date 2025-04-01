@@ -3451,6 +3451,14 @@ func (p TypeParameter) checkTypeBound(ty Type, memoryGauge common.MemoryGauge, t
 	return nil
 }
 
+func (p TypeParameter) TypeBoundEquals(ty Type) bool {
+	if p.TypeBound == nil {
+		return ty == nil
+	}
+
+	return p.TypeBound.Equal(ty)
+}
+
 // Function types
 
 func formatFunctionType(
@@ -7673,11 +7681,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 		for i, subParameter := range typedSubType.TypeParameters {
 			superParameter := typedSuperType.TypeParameters[i]
-			if subParameter.TypeBound == nil {
-				return superParameter.TypeBound == nil
-			}
-
-			if !subParameter.TypeBound.Equal(superParameter.TypeBound) {
+			if !subParameter.TypeBoundEquals(superParameter.TypeBound) {
 				return false
 			}
 		}

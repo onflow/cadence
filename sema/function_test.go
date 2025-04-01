@@ -858,4 +858,75 @@ func TestCheckGenericFunctionSubtyping(t *testing.T) {
 
 		require.ErrorAs(t, errors[1], &typeMismatchError)
 	})
+
+	t.Run("no bound types, equal param and return types", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := parseAndCheck(t, `
+            fun test() {
+                var func = foo  // fun<T>(): Void
+                func = bar      // fun<T>(): Void
+            }`,
+			nil,
+			nil,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("no bound types, different return types", func(t *testing.T) {
+		typeParameter1 := &sema.TypeParameter{
+			Name: "T",
+		}
+
+		function1 := stdlib.NewStandardLibraryStaticFunction(
+			"foo",
+			&sema.FunctionType{
+				TypeParameters: []*sema.TypeParameter{
+					typeParameter1,
+				},
+				ReturnTypeAnnotation: sema.IntTypeAnnotation,
+			},
+			"",
+			nil,
+		)
+
+		typeParameter2 := &sema.TypeParameter{
+			Name: "T",
+		}
+
+		function2 := stdlib.NewStandardLibraryStaticFunction(
+			"bar",
+			&sema.FunctionType{
+				TypeParameters: []*sema.TypeParameter{
+					typeParameter2,
+				},
+				ReturnTypeAnnotation: sema.PathTypeAnnotation,
+			},
+			"",
+			nil,
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(function1)
+		baseValueActivation.DeclareValue(function2)
+
+		_, err := ParseAndCheckWithOptions(t,
+			`fun test() {
+                var func = foo  // fun<T>(): Int
+                func = bar      // fun<T>(): Path
+		    }`,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errors[0], &typeMismatchError)
+	})
 }
