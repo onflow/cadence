@@ -3523,7 +3523,7 @@ func newAccountCapabilitiesPublishFunction(
 				locationRange := invocation.LocationRange
 				arguments := invocation.Arguments
 
-				return PublishCapability(
+				return AccountCapabilitiesPublish(
 					invocationContext,
 					handler,
 					arguments,
@@ -3535,7 +3535,7 @@ func newAccountCapabilitiesPublishFunction(
 	}
 }
 
-func PublishCapability(
+func AccountCapabilitiesPublish(
 	invocationContext interpreter.InvocationContext,
 	handler CapabilityControllerHandler,
 	arguments []interpreter.Value,
@@ -3667,7 +3667,6 @@ func newAccountCapabilitiesUnpublishFunction(
 ) interpreter.BoundFunctionGenerator {
 
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-		address := addressValue.ToAddress()
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountCapabilities,
@@ -3676,80 +3675,99 @@ func newAccountCapabilitiesUnpublishFunction(
 
 				invocationContext := invocation.InvocationContext
 				locationRange := invocation.LocationRange
+				arguments := invocation.Arguments
 
-				// Get path argument
-
-				pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
-				if !ok || pathValue.Domain != common.PathDomainPublic {
-					panic(errors.NewUnreachableError())
-				}
-
-				domain := pathValue.Domain.StorageDomain()
-				identifier := pathValue.Identifier
-
-				// Read/remove capability
-
-				storageMapKey := interpreter.StringStorageMapKey(identifier)
-
-				readValue := invocationContext.ReadStored(address, domain, storageMapKey)
-				if readValue == nil {
-					return interpreter.Nil
-				}
-
-				var capabilityValue interpreter.CapabilityValue
-				switch readValue := readValue.(type) {
-				case interpreter.CapabilityValue:
-					capabilityValue = readValue
-
-				case interpreter.PathLinkValue: //nolint:staticcheck
-					// If the stored value is a path link,
-					// it failed to be migrated during the Cadence 1.0 migration.
-					// Use an invalid capability value instead
-
-					capabilityValue = interpreter.NewInvalidCapabilityValue(
-						invocationContext,
-						addressValue,
-						readValue.Type,
-					)
-
-				default:
-					panic(errors.NewUnreachableError())
-				}
-
-				capabilityValue, ok = capabilityValue.Transfer(
+				return AccountCapabilitiesUnpublish(
 					invocationContext,
+					handler,
+					arguments,
+					addressValue,
 					locationRange,
-					atree.Address{},
-					true,
-					nil,
-					nil,
-					false, // capabilityValue is an element of storage map.
-				).(interpreter.CapabilityValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				invocationContext.WriteStored(
-					address,
-					domain,
-					storageMapKey,
-					nil,
 				)
-
-				handler.EmitEvent(
-					invocationContext,
-					locationRange,
-					CapabilityUnpublishedEventType,
-					[]interpreter.Value{
-						addressValue,
-						pathValue,
-					},
-				)
-
-				return interpreter.NewSomeValueNonCopying(invocationContext, capabilityValue)
 			},
 		)
 	}
+}
+
+func AccountCapabilitiesUnpublish(
+	invocationContext interpreter.InvocationContext,
+	handler CapabilityControllerHandler,
+	arguments []interpreter.Value,
+	addressValue interpreter.AddressValue,
+	locationRange interpreter.LocationRange,
+) interpreter.Value {
+
+	// Get path argument
+	pathValue, ok := arguments[0].(interpreter.PathValue)
+	if !ok || pathValue.Domain != common.PathDomainPublic {
+		panic(errors.NewUnreachableError())
+	}
+
+	domain := pathValue.Domain.StorageDomain()
+	identifier := pathValue.Identifier
+
+	// Read/remove capability
+
+	storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+	address := addressValue.ToAddress()
+
+	readValue := invocationContext.ReadStored(address, domain, storageMapKey)
+	if readValue == nil {
+		return interpreter.Nil
+	}
+
+	var capabilityValue interpreter.CapabilityValue
+	switch readValue := readValue.(type) {
+	case interpreter.CapabilityValue:
+		capabilityValue = readValue
+
+	case interpreter.PathLinkValue: //nolint:staticcheck
+		// If the stored value is a path link,
+		// it failed to be migrated during the Cadence 1.0 migration.
+		// Use an invalid capability value instead
+
+		capabilityValue = interpreter.NewInvalidCapabilityValue(
+			invocationContext,
+			addressValue,
+			readValue.Type,
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	capabilityValue, ok = capabilityValue.Transfer(
+		invocationContext,
+		locationRange,
+		atree.Address{},
+		true,
+		nil,
+		nil,
+		false, // capabilityValue is an element of storage map.
+	).(interpreter.CapabilityValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	invocationContext.WriteStored(
+		address,
+		domain,
+		storageMapKey,
+		nil,
+	)
+
+	handler.EmitEvent(
+		invocationContext,
+		locationRange,
+		CapabilityUnpublishedEventType,
+		[]interpreter.Value{
+			addressValue,
+			pathValue,
+		},
+	)
+
+	return interpreter.NewSomeValueNonCopying(invocationContext, capabilityValue)
 }
 
 func canBorrow(
@@ -3951,7 +3969,7 @@ func newAccountCapabilitiesGetFunction(
 				arguments := invocation.Arguments
 				typeParameter := invocation.TypeParameterTypes.Oldest().Value
 
-				return GetCapability(
+				return AccountCapabilitiesGet(
 					invocationContext,
 					controllerHandler,
 					arguments,
@@ -3965,7 +3983,7 @@ func newAccountCapabilitiesGetFunction(
 	}
 }
 
-func GetCapability(
+func AccountCapabilitiesGet(
 	invocationContext interpreter.InvocationContext,
 	controllerHandler CapabilityControllerHandler,
 	arguments []interpreter.Value,
@@ -4154,29 +4172,40 @@ func newAccountCapabilitiesExistsFunction(
 			accountCapabilities,
 			sema.Account_CapabilitiesTypeExistsFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-
 				invocationContext := invocation.InvocationContext
+				arguments := invocation.Arguments
 
-				// Get path argument
-
-				pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
-				if !ok || pathValue.Domain != common.PathDomainPublic {
-					panic(errors.NewUnreachableError())
-				}
-
-				domain := pathValue.Domain.StorageDomain()
-				identifier := pathValue.Identifier
-
-				// Read stored capability, if any
-
-				storageMapKey := interpreter.StringStorageMapKey(identifier)
-
-				return interpreter.BoolValue(
-					interpreter.StoredValueExists(invocationContext, address, domain, storageMapKey),
+				return AccountCapabilitieExist(
+					invocationContext,
+					arguments,
+					address,
 				)
 			},
 		)
 	}
+}
+
+func AccountCapabilitieExist(
+	invocationContext interpreter.InvocationContext,
+	arguments []interpreter.Value,
+	address common.Address,
+) interpreter.Value {
+	// Get path argument
+	pathValue, ok := arguments[0].(interpreter.PathValue)
+	if !ok || pathValue.Domain != common.PathDomainPublic {
+		panic(errors.NewUnreachableError())
+	}
+
+	domain := pathValue.Domain.StorageDomain()
+	identifier := pathValue.Identifier
+
+	// Read stored capability, if any
+
+	storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+	return interpreter.BoolValue(
+		interpreter.StoredValueExists(invocationContext, address, domain, storageMapKey),
+	)
 }
 
 func getAccountCapabilityControllerReference(
