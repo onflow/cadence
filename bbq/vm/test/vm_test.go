@@ -5246,6 +5246,17 @@ func TestReturnStatements(t *testing.T) {
                 if a {
                     return 1
                 }
+
+                if a {
+                    // some statements, just to increase the number
+                    // of statements inside the nested block
+                    var b = 1
+                    var c = 2
+                    var d = 3
+                    printMessage("second condition reached 1")
+                    printMessage("second condition reached 2")
+                }
+
                 return 2
             }
 

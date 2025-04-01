@@ -606,22 +606,20 @@ func (c *Compiler[_, _]) compileBlock(block *ast.Block, enclosingDeclKind common
 	locals.PushNewWithCurrent()
 	defer locals.Pop()
 
-	// Functions (regular functions and initializers) can have post conditions.
-	switch enclosingDeclKind {
-	case common.DeclarationKindFunction, common.DeclarationKindInitializer:
-		if c.hasPostConditions() {
-			c.pushReturns()
+	if c.shouldPatchReturns(enclosingDeclKind) {
+		c.pushReturns()
+		for index, statement := range block.Statements {
+			// Once the post conditions are reached, patch all the previous return statements
+			// to jump to the current index (i.e: update them to jump to the post conditions).
+			if index == c.postConditionsIndex {
+				c.patchJumps(c.currentReturn.returns)
+			}
+			c.compileStatement(statement)
 		}
-	}
-
-	for index, statement := range block.Statements {
-		// Once the post conditions are reached, patch all the previous return statements
-		// to jump to the current index (i.e: update them to jump to the post conditions).
-		if index == c.postConditionsIndex {
-			c.patchJumps(c.currentReturn.returns)
+	} else {
+		for _, statement := range block.Statements {
+			c.compileStatement(statement)
 		}
-
-		c.compileStatement(statement)
 	}
 
 	switch enclosingDeclKind {
@@ -665,6 +663,19 @@ func needsSyntheticReturn(statements []ast.Statement) bool {
 	lastStatement := statements[length-1]
 	_, isReturn := lastStatement.(*ast.ReturnStatement)
 	return !isReturn
+}
+
+// shouldPatchReturns determines whether to patch the return-statements emitted so far.
+// Return statements should only be patched at the function-block level,
+// but not inside nested blocks.
+func (c *Compiler[_, _]) shouldPatchReturns(enclosingDeclKind common.DeclarationKind) bool {
+	// Functions (regular functions and initializers) can have post conditions.
+	switch enclosingDeclKind {
+	case common.DeclarationKindFunction, common.DeclarationKindInitializer:
+		return c.hasPostConditions()
+	default:
+		return false
+	}
 }
 
 func (c *Compiler[_, _]) compileFunctionBlock(declaration *ast.FunctionDeclaration, functionDeclKind common.DeclarationKind) {
