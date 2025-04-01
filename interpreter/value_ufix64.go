@@ -163,7 +163,7 @@ var _ ComparableValue = UFix64Value{}
 var _ HashableValue = UFix64Value{}
 var _ MemberAccessibleValue = UFix64Value{}
 
-func (UFix64Value) isValue() {}
+func (UFix64Value) IsValue() {}
 
 func (v UFix64Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitUFix64Value(interpreter, v)

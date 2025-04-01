@@ -78,7 +78,7 @@ func NewInterpretedFunctionValue(
 var _ Value = &InterpretedFunctionValue{}
 var _ FunctionValue = &InterpretedFunctionValue{}
 
-func (*InterpretedFunctionValue) isValue() {}
+func (*InterpretedFunctionValue) IsValue() {}
 
 func (f *InterpretedFunctionValue) String() string {
 	return f.Type.String()
@@ -227,7 +227,7 @@ var _ FunctionValue = &HostFunctionValue{}
 var _ MemberAccessibleValue = &HostFunctionValue{}
 var _ ContractValue = &HostFunctionValue{}
 
-func (*HostFunctionValue) isValue() {}
+func (*HostFunctionValue) IsValue() {}
 
 func (f *HostFunctionValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitHostFunctionValue(interpreter, f)
@@ -391,7 +391,7 @@ func NewBoundFunctionValueFromSelfReference(
 	}
 }
 
-func (BoundFunctionValue) isValue() {}
+func (BoundFunctionValue) IsValue() {}
 
 func (f BoundFunctionValue) String() string {
 	return f.RecursiveString(SeenReferences{})

@@ -112,7 +112,7 @@ func (v *StringValue) prepareGraphemes() {
 	}
 }
 
-func (*StringValue) isValue() {}
+func (*StringValue) IsValue() {}
 
 func (v *StringValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitStringValue(interpreter, v)

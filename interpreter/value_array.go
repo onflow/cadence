@@ -188,7 +188,7 @@ var _ ReferenceTrackedResourceKindedValue = &ArrayValue{}
 var _ IterableValue = &ArrayValue{}
 var _ atreeContainerBackedValue = &ArrayValue{}
 
-func (*ArrayValue) isValue() {}
+func (*ArrayValue) IsValue() {}
 
 func (*ArrayValue) isAtreeContainerBackedValue() {}
 

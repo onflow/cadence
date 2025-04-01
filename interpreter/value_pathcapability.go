@@ -57,7 +57,7 @@ func NewUnmeteredPathCapabilityValue(
 	}
 }
 
-func (*PathCapabilityValue) isValue() {}
+func (*PathCapabilityValue) IsValue() {}
 
 func (*PathCapabilityValue) isCapabilityValue() {}
 
