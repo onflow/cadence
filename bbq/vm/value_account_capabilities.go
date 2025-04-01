@@ -19,11 +19,10 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/stdlib"
-
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 )
 
 // members
@@ -47,7 +46,7 @@ func init() {
 				borrowType := typeArguments[0]
 				semaBorrowType := interpreter.MustConvertStaticToSemaType(borrowType, config)
 
-				return stdlib.GetCapability(
+				return stdlib.AccountCapabilitiesGet(
 					config,
 					config.GetAccountHandler(),
 					arguments,
@@ -57,7 +56,37 @@ func init() {
 					EmptyLocationRange,
 				)
 			},
-		})
+		},
+	)
+
+	// Account.Capabilities.borrow
+	RegisterTypeBoundFunction(
+		accountCapabilitiesTypeName,
+		sema.Account_CapabilitiesTypeBorrowFunctionName,
+		NativeFunctionValue{
+			ParameterCount: len(sema.Account_CapabilitiesTypeBorrowFunctionType.Parameters),
+			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+				// Get address field from the receiver (Account.Capabilities)
+				address := getAddressMetaInfoFromValue(args[0])
+
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				arguments := args[typeBoundFunctionArgumentOffset:]
+
+				borrowType := typeArguments[0]
+				semaBorrowType := interpreter.MustConvertStaticToSemaType(borrowType, config)
+
+				return stdlib.AccountCapabilitiesGet(
+					config,
+					config.GetAccountHandler(),
+					arguments,
+					semaBorrowType,
+					true,
+					address,
+					EmptyLocationRange,
+				)
+			},
+		},
+	)
 
 	// Account.Capabilities.publish
 	RegisterTypeBoundFunction(
@@ -72,7 +101,7 @@ func init() {
 				// arg[0] is the receiver. Actual arguments starts from 1.
 				arguments := args[typeBoundFunctionArgumentOffset:]
 
-				return stdlib.PublishCapability(
+				return stdlib.AccountCapabilitiesPublish(
 					config,
 					config,
 					arguments,
@@ -80,5 +109,52 @@ func init() {
 					EmptyLocationRange,
 				)
 			},
-		})
+		},
+	)
+
+	// Account.Capabilities.unpublish
+	RegisterTypeBoundFunction(
+		accountCapabilitiesTypeName,
+		sema.Account_CapabilitiesTypeUnpublishFunctionName,
+		NativeFunctionValue{
+			ParameterCount: len(sema.Account_CapabilitiesTypeUnpublishFunctionType.Parameters),
+			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+				// Get address field from the receiver (Account.Capabilities)
+				accountAddress := getAddressMetaInfoFromValue(args[receiverIndex])
+
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				arguments := args[typeBoundFunctionArgumentOffset:]
+
+				return stdlib.AccountCapabilitiesUnpublish(
+					config,
+					config,
+					arguments,
+					accountAddress,
+					EmptyLocationRange,
+				)
+			},
+		},
+	)
+
+	// Account.Capabilities.exist
+	RegisterTypeBoundFunction(
+		accountCapabilitiesTypeName,
+		sema.Account_CapabilitiesTypeExistsFunctionName,
+		NativeFunctionValue{
+			ParameterCount: len(sema.Account_CapabilitiesTypeExistsFunctionType.Parameters),
+			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+				// Get address field from the receiver (Account.Capabilities)
+				accountAddress := getAddressMetaInfoFromValue(args[receiverIndex])
+
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				arguments := args[typeBoundFunctionArgumentOffset:]
+
+				return stdlib.AccountCapabilitieExist(
+					config,
+					arguments,
+					accountAddress.ToAddress(),
+				)
+			},
+		},
+	)
 }
