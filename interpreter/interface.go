@@ -148,7 +148,6 @@ func (n NoOpStringContext) MeterMemory(_ common.MemoryUsage) error {
 
 func (n NoOpStringContext) WithMutationPrevention(_ atree.ValueID, f func()) {
 	f()
-	return
 }
 
 func (n NoOpStringContext) ReadStored(_ common.Address, _ common.StorageDomain, _ StorageMapKey) Value {
