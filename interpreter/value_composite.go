@@ -782,15 +782,15 @@ func (v *CompositeValue) String() string {
 }
 
 func (v *CompositeValue) RecursiveString(seenReferences SeenReferences) string {
-	return v.MeteredString(nil, seenReferences, EmptyLocationRange)
+	return v.MeteredString(NoOpStringContext{}, seenReferences, EmptyLocationRange)
 }
 
 var emptyCompositeStringLen = len(format.Composite("", nil))
 
-func (v *CompositeValue) MeteredString(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
+func (v *CompositeValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
 
 	if v.Stringer != nil {
-		return v.Stringer(interpreter, v, seenReferences)
+		return v.Stringer(context, v, seenReferences)
 	}
 
 	strLen := emptyCompositeStringLen
@@ -798,10 +798,10 @@ func (v *CompositeValue) MeteredString(interpreter *Interpreter, seenReferences 
 	var fields []CompositeField
 
 	v.ForEachField(
-		interpreter,
+		context,
 		func(fieldName string, fieldValue Value) (resume bool) {
 			field := NewCompositeField(
-				interpreter,
+				context,
 				fieldName,
 				fieldValue,
 			)
@@ -826,13 +826,13 @@ func (v *CompositeValue) MeteredString(interpreter *Interpreter, seenReferences 
 	//
 	strLen = strLen + len(typeId) + len(fields)*4
 
-	common.UseMemory(interpreter, common.NewRawStringMemoryUsage(strLen))
+	common.UseMemory(context, common.NewRawStringMemoryUsage(strLen))
 
-	return formatComposite(interpreter, typeId, fields, seenReferences, locationRange)
+	return formatComposite(context, typeId, fields, seenReferences, locationRange)
 }
 
 func formatComposite(
-	interpreter *Interpreter,
+	context ValueStringContext,
 	typeId string,
 	fields []CompositeField,
 	seenReferences SeenReferences,
@@ -855,7 +855,7 @@ func formatComposite(
 				Value string
 			}{
 				Name:  field.Name,
-				Value: field.Value.MeteredString(interpreter, seenReferences, locationRange),
+				Value: field.Value.MeteredString(context, seenReferences, locationRange),
 			},
 		)
 	}
@@ -1506,7 +1506,7 @@ func (v *CompositeValue) forEachFieldName(
 // ForEachField iterates over all field-name field-value pairs of the composite value.
 // It does NOT iterate over computed fields and functions!
 func (v *CompositeValue) ForEachField(
-	interpreter *Interpreter,
+	context ValueIterationContext,
 	f func(fieldName string, fieldValue Value) (resume bool),
 	locationRange LocationRange,
 ) {
@@ -1518,7 +1518,7 @@ func (v *CompositeValue) ForEachField(
 		)
 	}
 	v.forEachField(
-		interpreter,
+		context,
 		iterate,
 		f,
 		locationRange,
@@ -1529,12 +1529,12 @@ func (v *CompositeValue) ForEachField(
 // It does NOT iterate over computed fields and functions!
 // DO NOT perform storage mutations in the callback!
 func (v *CompositeValue) ForEachReadOnlyLoadedField(
-	interpreter *Interpreter,
+	context ValueIterationContext,
 	f func(fieldName string, fieldValue Value) (resume bool),
 	locationRange LocationRange,
 ) {
 	v.forEachField(
-		interpreter,
+		context,
 		v.dictionary.IterateReadOnlyLoadedValues,
 		f,
 		locationRange,
@@ -1542,14 +1542,14 @@ func (v *CompositeValue) ForEachReadOnlyLoadedField(
 }
 
 func (v *CompositeValue) forEachField(
-	interpreter *Interpreter,
+	context ValueIterationContext,
 	atreeIterate func(fn atree.MapEntryIterationFunc) error,
 	f func(fieldName string, fieldValue Value) (resume bool),
 	locationRange LocationRange,
 ) {
 	err := atreeIterate(func(key atree.Value, atreeValue atree.Value) (resume bool, err error) {
-		value := MustConvertStoredValue(interpreter, atreeValue)
-		checkInvalidatedResourceOrResourceReference(value, locationRange, interpreter)
+		value := MustConvertStoredValue(context, atreeValue)
+		checkInvalidatedResourceOrResourceReference(value, locationRange, context)
 
 		resume = f(
 			string(key.(StringAtreeValue)),

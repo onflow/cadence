@@ -87,7 +87,7 @@ func (v PathLinkValue) RecursiveString(seenReferences SeenReferences) string {
 	)
 }
 
-func (v PathLinkValue) MeteredString(_ *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v PathLinkValue) MeteredString(_ ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	panic(errors.NewUnreachableError())
 }
 
@@ -215,7 +215,7 @@ func (v AccountLinkValue) RecursiveString(_ SeenReferences) string {
 	panic(errors.NewUnreachableError())
 }
 
-func (v AccountLinkValue) MeteredString(_ *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v AccountLinkValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
 	panic(errors.NewUnreachableError())
 }
 

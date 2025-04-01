@@ -76,13 +76,13 @@ func (v *PublishedValue) RecursiveString(seenReferences SeenReferences) string {
 	)
 }
 
-func (v *PublishedValue) MeteredString(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
-	common.UseMemory(interpreter, common.PublishedValueStringMemoryUsage)
+func (v *PublishedValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+	common.UseMemory(context, common.PublishedValueStringMemoryUsage)
 
 	return fmt.Sprintf(
 		"PublishedValue<%s>(%s)",
-		v.Recipient.MeteredString(interpreter, seenReferences, locationRange),
-		v.Value.MeteredString(interpreter, seenReferences, locationRange),
+		v.Recipient.MeteredString(context, seenReferences, locationRange),
+		v.Value.MeteredString(context, seenReferences, locationRange),
 	)
 }
 
@@ -121,7 +121,7 @@ func (v *PublishedValue) NeedsStoreTo(address atree.Address) bool {
 	return v.Value.NeedsStoreTo(address)
 }
 
-func (*PublishedValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (*PublishedValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 

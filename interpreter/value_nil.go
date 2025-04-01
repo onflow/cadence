@@ -84,8 +84,8 @@ func (v NilValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v NilValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
-	common.UseMemory(interpreter, common.NilValueStringMemoryUsage)
+func (v NilValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+	common.UseMemory(context, common.NilValueStringMemoryUsage)
 	return v.String()
 }
 

@@ -91,11 +91,11 @@ func (v UInt64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v UInt64Value) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v UInt64Value) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
-		interpreter,
+		context,
 		common.NewRawStringMemoryUsage(
-			OverEstimateNumberStringLength(interpreter, v),
+			OverEstimateNumberStringLength(context, v),
 		),
 	)
 	return v.String()
@@ -565,7 +565,7 @@ func (UInt64Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (UInt64Value) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (UInt64Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 

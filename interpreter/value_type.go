@@ -88,12 +88,12 @@ func (v TypeValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v TypeValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
-	common.UseMemory(interpreter, common.TypeValueStringMemoryUsage)
+func (v TypeValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+	common.UseMemory(context, common.TypeValueStringMemoryUsage)
 
 	var typeString string
 	if v.Type != nil {
-		typeString = v.Type.MeteredString(interpreter)
+		typeString = v.Type.MeteredString(context)
 	}
 
 	return format.TypeValue(typeString)
@@ -295,7 +295,7 @@ func (TypeValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (TypeValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (TypeValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
