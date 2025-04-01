@@ -322,7 +322,7 @@ func (v *StringValue) checkBounds(index int, locationRange LocationRange) {
 	}
 }
 
-func (v *StringValue) GetKey(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
+func (v *StringValue) GetKey(context ValueComparisonContext, locationRange LocationRange, key Value) Value {
 	index := key.(NumberValue).ToInt(locationRange)
 	v.checkBounds(index, locationRange)
 
@@ -334,7 +334,7 @@ func (v *StringValue) GetKey(interpreter *Interpreter, locationRange LocationRan
 
 	char := v.graphemes.Str()
 	return NewCharacterValue(
-		interpreter,
+		context,
 		common.NewCharacterMemoryUsage(len(char)),
 		func() string {
 			return char
@@ -342,15 +342,15 @@ func (v *StringValue) GetKey(interpreter *Interpreter, locationRange LocationRan
 	)
 }
 
-func (*StringValue) SetKey(_ *Interpreter, _ LocationRange, _ Value, _ Value) {
+func (*StringValue) SetKey(_ ContainerMutationContext, _ LocationRange, _ Value, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
-func (*StringValue) InsertKey(_ *Interpreter, _ LocationRange, _ Value, _ Value) {
+func (*StringValue) InsertKey(_ ContainerMutationContext, _ LocationRange, _ Value, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
-func (*StringValue) RemoveKey(_ *Interpreter, _ LocationRange, _ Value) Value {
+func (*StringValue) RemoveKey(_ ContainerMutationContext, _ LocationRange, _ Value) Value {
 	panic(errors.NewUnreachableError())
 }
 

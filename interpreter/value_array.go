@@ -208,7 +208,7 @@ func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor, locationR
 }
 
 func (v *ArrayValue) Iterate(
-	context ValueIterationContext,
+	context ContainerMutationContext,
 	f func(element Value) (resume bool),
 	transferElements bool,
 	locationRange LocationRange,
@@ -225,7 +225,7 @@ func (v *ArrayValue) Iterate(
 // IterateReadOnlyLoaded iterates over all LOADED elements of the array.
 // DO NOT perform storage mutations in the callback!
 func (v *ArrayValue) IterateReadOnlyLoaded(
-	context ValueIterationContext,
+	context ContainerMutationContext,
 	f func(element Value) (resume bool),
 	locationRange LocationRange,
 ) {
@@ -241,7 +241,7 @@ func (v *ArrayValue) IterateReadOnlyLoaded(
 }
 
 func (v *ArrayValue) iterate(
-	context ValueIterationContext,
+	context ContainerMutationContext,
 	atreeIterate func(fn atree.ArrayIterationFunc) error,
 	f func(element Value) (resume bool),
 	transferElements bool,
@@ -429,7 +429,7 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, locationRange LocationRang
 				if atreeValue != nil {
 					value = MustConvertStoredValue(interpreter, atreeValue)
 
-					interpreter.checkContainerMutation(elementType, value, locationRange)
+					checkContainerMutation(interpreter, elementType, value, locationRange)
 				}
 			}
 
@@ -450,9 +450,9 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, locationRange LocationRang
 	)
 }
 
-func (v *ArrayValue) GetKey(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
+func (v *ArrayValue) GetKey(context ValueComparisonContext, locationRange LocationRange, key Value) Value {
 	index := key.(NumberValue).ToInt(locationRange)
-	return v.Get(interpreter, locationRange, index)
+	return v.Get(context, locationRange, index)
 }
 
 func (v *ArrayValue) handleIndexOutOfBoundsError(err error, index int, locationRange LocationRange) {
@@ -489,14 +489,14 @@ func (v *ArrayValue) Get(gauge common.MemoryGauge, locationRange LocationRange, 
 	return MustConvertStoredValue(gauge, storedValue)
 }
 
-func (v *ArrayValue) SetKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
+func (v *ArrayValue) SetKey(context ContainerMutationContext, locationRange LocationRange, key Value, value Value) {
 	index := key.(NumberValue).ToInt(locationRange)
-	v.Set(interpreter, locationRange, index, value)
+	v.Set(context, locationRange, index, value)
 }
 
-func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, index int, element Value) {
+func (v *ArrayValue) Set(context ContainerMutationContext, locationRange LocationRange, index int, element Value) {
 
-	interpreter.validateMutation(v.ValueID(), locationRange)
+	context.ValidateMutation(v.ValueID(), locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Set function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -509,12 +509,12 @@ func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, 
 		})
 	}
 
-	interpreter.checkContainerMutation(v.Type.ElementType(), element, locationRange)
+	checkContainerMutation(context, v.Type.ElementType(), element, locationRange)
 
-	common.UseMemory(interpreter, common.AtreeArrayElementOverhead)
+	common.UseMemory(context, common.AtreeArrayElementOverhead)
 
 	element = element.Transfer(
-		interpreter,
+		context,
 		locationRange,
 		v.array.Address(),
 		true,
@@ -532,14 +532,14 @@ func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, 
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.MaybeValidateAtreeValue(v.array)
-	interpreter.MaybeValidateAtreeStorage()
+	context.MaybeValidateAtreeValue(v.array)
+	context.MaybeValidateAtreeStorage()
 
-	existingValue := StoredValue(interpreter, existingStorable, interpreter.Storage())
-	checkResourceLoss(interpreter, existingValue, locationRange)
-	existingValue.DeepRemove(interpreter, true) // existingValue is standalone because it was overwritten in parent container.
+	existingValue := StoredValue(context, existingStorable, context.Storage())
+	checkResourceLoss(context, existingValue, locationRange)
+	existingValue.DeepRemove(context, true) // existingValue is standalone because it was overwritten in parent container.
 
-	RemoveReferencedSlab(interpreter, existingStorable)
+	RemoveReferencedSlab(context, existingStorable)
 }
 
 func (v *ArrayValue) String() string {
@@ -581,7 +581,7 @@ func (v *ArrayValue) MeteredString(context ValueStringContext, seenReferences Se
 
 func (v *ArrayValue) Append(interpreter *Interpreter, locationRange LocationRange, element Value) {
 
-	interpreter.validateMutation(v.ValueID(), locationRange)
+	interpreter.ValidateMutation(v.ValueID(), locationRange)
 
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
@@ -593,7 +593,7 @@ func (v *ArrayValue) Append(interpreter *Interpreter, locationRange LocationRang
 	common.UseMemory(interpreter, metaDataSlabs)
 	common.UseMemory(interpreter, common.AtreeArrayElementOverhead)
 
-	interpreter.checkContainerMutation(v.Type.ElementType(), element, locationRange)
+	checkContainerMutation(interpreter, v.Type.ElementType(), element, locationRange)
 
 	element = element.Transfer(
 		interpreter,
@@ -626,18 +626,18 @@ func (v *ArrayValue) AppendAll(interpreter *Interpreter, locationRange LocationR
 	)
 }
 
-func (v *ArrayValue) InsertKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
+func (v *ArrayValue) InsertKey(context ContainerMutationContext, locationRange LocationRange, key Value, value Value) {
 	index := key.(NumberValue).ToInt(locationRange)
-	v.Insert(interpreter, locationRange, index, value)
+	v.Insert(context, locationRange, index, value)
 }
 
 func (v *ArrayValue) InsertWithoutTransfer(
-	interpreter *Interpreter,
+	context ContainerMutationContext,
 	locationRange LocationRange,
 	index int,
 	element Value,
 ) {
-	interpreter.validateMutation(v.ValueID(), locationRange)
+	context.ValidateMutation(v.ValueID(), locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Insert function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -656,9 +656,9 @@ func (v *ArrayValue) InsertWithoutTransfer(
 		v.elementSize,
 		true,
 	)
-	common.UseMemory(interpreter, dataSlabs)
-	common.UseMemory(interpreter, metaDataSlabs)
-	common.UseMemory(interpreter, common.AtreeArrayElementOverhead)
+	common.UseMemory(context, dataSlabs)
+	common.UseMemory(context, metaDataSlabs)
+	common.UseMemory(context, common.AtreeArrayElementOverhead)
 
 	err := v.array.Insert(uint64(index), element)
 	if err != nil {
@@ -666,11 +666,11 @@ func (v *ArrayValue) InsertWithoutTransfer(
 
 		panic(errors.NewExternalError(err))
 	}
-	interpreter.MaybeValidateAtreeValue(v.array)
-	interpreter.MaybeValidateAtreeStorage()
+	context.MaybeValidateAtreeValue(v.array)
+	context.MaybeValidateAtreeStorage()
 }
 
-func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRange, index int, element Value) {
+func (v *ArrayValue) Insert(context ContainerMutationContext, locationRange LocationRange, index int, element Value) {
 
 	address := v.array.Address()
 
@@ -679,7 +679,7 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRang
 	}
 
 	element = element.Transfer(
-		interpreter,
+		context,
 		locationRange,
 		address,
 		true,
@@ -688,28 +688,28 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRang
 		true, // standalone element doesn't have a parent container yet.
 	)
 
-	interpreter.checkContainerMutation(v.Type.ElementType(), element, locationRange)
+	checkContainerMutation(context, v.Type.ElementType(), element, locationRange)
 
 	v.InsertWithoutTransfer(
-		interpreter,
+		context,
 		locationRange,
 		index,
 		element,
 	)
 }
 
-func (v *ArrayValue) RemoveKey(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
+func (v *ArrayValue) RemoveKey(context ContainerMutationContext, locationRange LocationRange, key Value) Value {
 	index := key.(NumberValue).ToInt(locationRange)
-	return v.Remove(interpreter, locationRange, index)
+	return v.Remove(context, locationRange, index)
 }
 
 func (v *ArrayValue) RemoveWithoutTransfer(
-	interpreter *Interpreter,
+	context ContainerMutationContext,
 	locationRange LocationRange,
 	index int,
 ) atree.Storable {
 
-	interpreter.validateMutation(v.ValueID(), locationRange)
+	context.ValidateMutation(v.ValueID(), locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Remove function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -729,19 +729,19 @@ func (v *ArrayValue) RemoveWithoutTransfer(
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.MaybeValidateAtreeValue(v.array)
-	interpreter.MaybeValidateAtreeStorage()
+	context.MaybeValidateAtreeValue(v.array)
+	context.MaybeValidateAtreeStorage()
 
 	return storable
 }
 
-func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRange, index int) Value {
-	storable := v.RemoveWithoutTransfer(interpreter, locationRange, index)
+func (v *ArrayValue) Remove(context ContainerMutationContext, locationRange LocationRange, index int) Value {
+	storable := v.RemoveWithoutTransfer(context, locationRange, index)
 
-	value := StoredValue(interpreter, storable, interpreter.Storage())
+	value := StoredValue(context, storable, context.Storage())
 
 	return value.Transfer(
-		interpreter,
+		context,
 		locationRange,
 		atree.Address{},
 		true,
@@ -751,15 +751,15 @@ func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRang
 	)
 }
 
-func (v *ArrayValue) RemoveFirst(interpreter *Interpreter, locationRange LocationRange) Value {
-	return v.Remove(interpreter, locationRange, 0)
+func (v *ArrayValue) RemoveFirst(context ContainerMutationContext, locationRange LocationRange) Value {
+	return v.Remove(context, locationRange, 0)
 }
 
-func (v *ArrayValue) RemoveLast(interpreter *Interpreter, locationRange LocationRange) Value {
-	return v.Remove(interpreter, locationRange, v.Count()-1)
+func (v *ArrayValue) RemoveLast(context ContainerMutationContext, locationRange LocationRange) Value {
+	return v.Remove(context, locationRange, v.Count()-1)
 }
 
-func (v *ArrayValue) FirstIndex(interpreter *Interpreter, locationRange LocationRange, needleValue Value) OptionalValue {
+func (v *ArrayValue) FirstIndex(interpreter ContainerMutationContext, locationRange LocationRange, needleValue Value) OptionalValue {
 
 	needleEquatable, ok := needleValue.(EquatableValue)
 	if !ok {
@@ -821,7 +821,7 @@ func (v *ArrayValue) Contains(
 	return BoolValue(result)
 }
 
-func (v *ArrayValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+func (v *ArrayValue) GetMember(context MemberAccessibleContext, _ LocationRange, name string) Value {
 	switch name {
 	case "length":
 		return NewIntValueFromInt64(context, int64(v.Count()))

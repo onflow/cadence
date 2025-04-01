@@ -241,50 +241,32 @@ func (v *StorageReferenceValue) SetMember(context MemberAccessibleContext, locat
 	)
 }
 
-func (v *StorageReferenceValue) GetKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	key Value,
-) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+func (v *StorageReferenceValue) GetKey(context ValueComparisonContext, locationRange LocationRange, key Value) Value {
+	self := v.mustReferencedValue(context, locationRange)
 
 	return self.(ValueIndexableValue).
-		GetKey(interpreter, locationRange, key)
+		GetKey(context, locationRange, key)
 }
 
-func (v *StorageReferenceValue) SetKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	key Value,
-	value Value,
-) {
-	self := v.mustReferencedValue(interpreter, locationRange)
+func (v *StorageReferenceValue) SetKey(context ContainerMutationContext, locationRange LocationRange, key Value, value Value) {
+	self := v.mustReferencedValue(context, locationRange)
 
 	self.(ValueIndexableValue).
-		SetKey(interpreter, locationRange, key, value)
+		SetKey(context, locationRange, key, value)
 }
 
-func (v *StorageReferenceValue) InsertKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	key Value,
-	value Value,
-) {
-	self := v.mustReferencedValue(interpreter, locationRange)
+func (v *StorageReferenceValue) InsertKey(context ContainerMutationContext, locationRange LocationRange, key Value, value Value) {
+	self := v.mustReferencedValue(context, locationRange)
 
 	self.(ValueIndexableValue).
-		InsertKey(interpreter, locationRange, key, value)
+		InsertKey(context, locationRange, key, value)
 }
 
-func (v *StorageReferenceValue) RemoveKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	key Value,
-) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+func (v *StorageReferenceValue) RemoveKey(context ContainerMutationContext, locationRange LocationRange, key Value) Value {
+	self := v.mustReferencedValue(context, locationRange)
 
 	return self.(ValueIndexableValue).
-		RemoveKey(interpreter, locationRange, key)
+		RemoveKey(context, locationRange, key)
 }
 
 func (v *StorageReferenceValue) GetTypeKey(

@@ -136,10 +136,10 @@ type Value interface {
 
 type ValueIndexableValue interface {
 	Value
-	GetKey(interpreter *Interpreter, locationRange LocationRange, key Value) Value
-	SetKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value)
-	RemoveKey(interpreter *Interpreter, locationRange LocationRange, key Value) Value
-	InsertKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value)
+	GetKey(context ValueComparisonContext, locationRange LocationRange, key Value) Value
+	SetKey(context ContainerMutationContext, locationRange LocationRange, key Value, value Value)
+	RemoveKey(context ContainerMutationContext, locationRange LocationRange, key Value) Value
+	InsertKey(context ContainerMutationContext, locationRange LocationRange, key Value, value Value)
 }
 
 type TypeIndexableValue interface {

@@ -1500,7 +1500,7 @@ func (v *CompositeValue) forEachFieldName(
 // ForEachField iterates over all field-name field-value pairs of the composite value.
 // It does NOT iterate over computed fields and functions!
 func (v *CompositeValue) ForEachField(
-	context ValueIterationContext,
+	context ContainerMutationContext,
 	f func(fieldName string, fieldValue Value) (resume bool),
 	locationRange LocationRange,
 ) {
@@ -1523,7 +1523,7 @@ func (v *CompositeValue) ForEachField(
 // It does NOT iterate over computed fields and functions!
 // DO NOT perform storage mutations in the callback!
 func (v *CompositeValue) ForEachReadOnlyLoadedField(
-	context ValueIterationContext,
+	context ContainerMutationContext,
 	f func(fieldName string, fieldValue Value) (resume bool),
 	locationRange LocationRange,
 ) {
@@ -1536,7 +1536,7 @@ func (v *CompositeValue) ForEachReadOnlyLoadedField(
 }
 
 func (v *CompositeValue) forEachField(
-	context ValueIterationContext,
+	context ContainerMutationContext,
 	atreeIterate func(fn atree.MapEntryIterationFunc) error,
 	f func(fieldName string, fieldValue Value) (resume bool),
 	locationRange LocationRange,

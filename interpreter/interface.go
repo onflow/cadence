@@ -125,15 +125,16 @@ type ComputationReporter interface {
 
 var _ ComputationReporter = &Interpreter{}
 
-type ValueIterationContext interface {
+type ContainerMutationContext interface {
 	ValueTransferContext
 	WithMutationPrevention(valueID atree.ValueID, f func())
+	ValidateMutation(valueID atree.ValueID, locationRange LocationRange)
 }
 
-var _ ValueIterationContext = &Interpreter{}
+var _ ContainerMutationContext = &Interpreter{}
 
 type ValueStringContext interface {
-	ValueIterationContext
+	ContainerMutationContext
 }
 
 var _ ValueStringContext = &Interpreter{}
@@ -216,6 +217,10 @@ func (n NoOpStringContext) MeterMemory(_ common.MemoryUsage) error {
 
 func (n NoOpStringContext) WithMutationPrevention(_ atree.ValueID, f func()) {
 	f()
+}
+
+func (n NoOpStringContext) ValidateMutation(_ atree.ValueID, _ LocationRange) {
+	panic(errors.NewUnreachableError())
 }
 
 func (n NoOpStringContext) ReadStored(_ common.Address, _ common.StorageDomain, _ StorageMapKey) Value {
