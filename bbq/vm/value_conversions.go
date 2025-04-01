@@ -38,7 +38,7 @@ func InterpreterValueToVMValue(value interpreter.Value) Value {
 	case interpreter.IntValue:
 		return NewIntValue(value.BigInt.Int64())
 	case interpreter.UFix64Value:
-		return UFix64Value(value)
+		return UFix64Value(value.UFix64Value)
 	case *interpreter.StringValue:
 		return NewStringValue(value.Str)
 	case *interpreter.CompositeValue:
