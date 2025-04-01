@@ -501,7 +501,6 @@ func (ctx NoOpStringContext) MeterMemory(_ common.MemoryUsage) error {
 
 func (ctx NoOpStringContext) WithMutationPrevention(_ atree.ValueID, f func()) {
 	f()
-	return
 }
 
 func (ctx NoOpStringContext) ValidateMutation(_ atree.ValueID, _ LocationRange) {
