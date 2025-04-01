@@ -19,7 +19,7 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0 // indirect
 	github.com/ethereum/go-ethereum v1.13.10 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
-	github.com/fxamacker/cbor/v2 v2.7.1-0.20250321215404-00478930d2f8 // indirect
+	github.com/fxamacker/cbor/v2 v2.8.1-0.20250401165920-8bb2c1a19ccd // indirect
 	github.com/fxamacker/circlehash v0.3.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
@@ -43,7 +43,7 @@ require (
 	github.com/multiformats/go-multibase v0.2.0 // indirect
 	github.com/multiformats/go-multihash v0.2.3 // indirect
 	github.com/multiformats/go-varint v0.0.7 // indirect
-	github.com/onflow/atree v0.9.1-0.20250321215926-c39a2a27790a // indirect
+	github.com/onflow/atree v0.9.1-0.20250401190124-9ad64231c8a3 // indirect
 	github.com/onflow/crypto v0.25.2 // indirect
 	github.com/onflow/flow-core-contracts/lib/go/templates v1.3.3-0.20241017220455-79fdc6c8ba53 // indirect
 	github.com/onflow/flow-ft/lib/go/contracts v1.0.1 // indirect
