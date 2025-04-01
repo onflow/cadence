@@ -27,7 +27,7 @@ import (
 // Utility methods to convert between old and new values.
 // These are temporary until all parts of the interpreter are migrated to the vm.
 
-func InterpreterValueToVMValue(storage interpreter.Storage, value interpreter.Value) Value {
+func InterpreterValueToVMValue(value interpreter.Value) Value {
 	switch value := value.(type) {
 	case nil:
 		return nil
@@ -62,7 +62,7 @@ func InterpreterValueToVMValue(storage interpreter.Storage, value interpreter.Va
 	case *interpreter.SimpleCompositeValue:
 		fields := make(map[string]Value)
 		for name, field := range value.Fields { //nolint:maprange
-			fields[name] = InterpreterValueToVMValue(storage, field)
+			fields[name] = InterpreterValueToVMValue(field)
 		}
 		return NewSimpleCompositeValue(
 			common.CompositeKindStructure,
@@ -85,13 +85,13 @@ func InterpreterValueToVMValue(storage interpreter.Storage, value interpreter.Va
 		return NewStorageCapabilityControllerValue(
 			value.BorrowType,
 			NewIntValue(int64(value.CapabilityID.ToInt(interpreter.EmptyLocationRange))),
-			InterpreterValueToVMValue(storage, value.TargetPath).(PathValue),
+			InterpreterValueToVMValue(value.TargetPath).(PathValue),
 		)
 	case *interpreter.StorageReferenceValue:
 		return NewStorageReferenceValue(
 			value.Authorization,
 			value.TargetStorageAddress,
-			InterpreterValueToVMValue(storage, value.TargetPath).(PathValue),
+			InterpreterValueToVMValue(value.TargetPath).(PathValue),
 			interpreter.ConvertSemaToStaticType(nil, value.BorrowedType),
 		)
 	default:
@@ -99,7 +99,7 @@ func InterpreterValueToVMValue(storage interpreter.Storage, value interpreter.Va
 	}
 }
 
-func VMValueToInterpreterValue(config *Config, value Value) interpreter.Value {
+func VMValueToInterpreterValue(typeConverter interpreter.TypeConverter, value Value) interpreter.Value {
 	switch value := value.(type) {
 	case nil:
 		return nil
@@ -137,7 +137,7 @@ func VMValueToInterpreterValue(config *Config, value Value) interpreter.Value {
 		return interpreter.NewCapabilityValue(
 			nil,
 			interpreter.NewUnmeteredUInt64Value(uint64(value.ID.SmallInt)), // TODO: properly convert
-			VMValueToInterpreterValue(config, value.Address).(interpreter.AddressValue),
+			VMValueToInterpreterValue(typeConverter, value.Address).(interpreter.AddressValue),
 			value.BorrowType,
 		)
 	//case LinkValue:
@@ -158,7 +158,7 @@ func VMValueToInterpreterValue(config *Config, value Value) interpreter.Value {
 
 		// TODO: Fields names order matters. However, this is temporary. So ignore for now.
 		for name, field := range value.fields { //nolint:maprange
-			fields[name] = VMValueToInterpreterValue(config, field)
+			fields[name] = VMValueToInterpreterValue(typeConverter, field)
 			fieldNames = append(fieldNames, name)
 		}
 
@@ -173,8 +173,7 @@ func VMValueToInterpreterValue(config *Config, value Value) interpreter.Value {
 			nil,
 		)
 	case *StorageReferenceValue:
-		inter := config.Interpreter()
-		semaBorrowType, err := inter.ConvertStaticToSemaType(value.BorrowedType)
+		semaBorrowType, err := typeConverter.ConvertStaticToSemaType(value.BorrowedType)
 		if err != nil {
 			panic(err)
 		}
@@ -182,7 +181,7 @@ func VMValueToInterpreterValue(config *Config, value Value) interpreter.Value {
 			nil,
 			value.Authorization,
 			value.TargetStorageAddress,
-			VMValueToInterpreterValue(config, value.TargetPath).(interpreter.PathValue),
+			VMValueToInterpreterValue(typeConverter, value.TargetPath).(interpreter.PathValue),
 			semaBorrowType,
 		)
 	case *StorageCapabilityControllerValue:
@@ -190,7 +189,7 @@ func VMValueToInterpreterValue(config *Config, value Value) interpreter.Value {
 			nil,
 			value.BorrowType,
 			interpreter.NewUnmeteredUInt64Value(uint64(value.CapabilityID.SmallInt)),
-			VMValueToInterpreterValue(config, value.TargetPath).(interpreter.PathValue),
+			VMValueToInterpreterValue(typeConverter, value.TargetPath).(interpreter.PathValue),
 		)
 	default:
 		panic(errors.NewUnreachableError())

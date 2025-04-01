@@ -36,11 +36,11 @@ var _ EquatableValue = BoolValue(true)
 
 func (BoolValue) isValue() {}
 
-func (BoolValue) StaticType(*Config) bbq.StaticType {
+func (BoolValue) StaticType(StaticTypeContext) bbq.StaticType {
 	return interpreter.PrimitiveStaticTypeBool
 }
 
-func (v BoolValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
+func (v BoolValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
 	return v
 }
 

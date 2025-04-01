@@ -22,14 +22,15 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 )
 
 type Value interface {
 	isValue()
-	StaticType(*Config) bbq.StaticType
+	StaticType(StaticTypeContext) bbq.StaticType
 	Transfer(
-		config *Config,
+		transferContext TransferContext,
 		address atree.Address,
 		remove bool,
 		storable atree.Storable,
@@ -37,13 +38,42 @@ type Value interface {
 	String() string
 }
 
+type StaticTypeContext = interpreter.ValueStaticTypeContext
+
+type StorageContext interface {
+	StaticTypeContext
+	common.MemoryGauge
+	interpreter.Storage
+	interpreter.StorageWriter
+}
+
+type TransferContext interface {
+	StorageContext
+	ReferenceTracker
+}
+
+type ReferenceTracker interface {
+	TrackReferencedResourceKindedValue(id atree.ValueID, value *EphemeralReferenceValue)
+	ReferencedResourceKindedValues(atree.ValueID) map[*EphemeralReferenceValue]struct{}
+	ClearReferenceTracking(atree.ValueID)
+}
+
+type TypeConverterContext interface {
+	Interpreter() *interpreter.Interpreter
+}
+
 type MemberAccessibleValue interface {
+	// TODO: See whether `Config` parameter can be removed from the below functions.
+	// Currently it's unknown because `AccountCapabilityControllerValue` members
+	// are not yet implemented.
+
 	GetMember(config *Config, name string) Value
-	SetMember(conf *Config, name string, value Value)
+	SetMember(config *Config, name string, value Value)
 }
 
 type ResourceKindedValue interface {
 	Value
+	// TODO:
 	//Destroy(interpreter *Interpreter, locationRange LocationRange)
 	//IsDestroyed() bool
 	//isInvalidatedResource(*Interpreter) bool

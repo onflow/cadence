@@ -34,56 +34,36 @@ import (
 
 func StoredValue(gauge common.MemoryGauge, storable atree.Storable, storage interpreter.Storage) Value {
 	value := interpreter.StoredValue(gauge, storable, storage)
-	return InterpreterValueToVMValue(storage, value)
+	return InterpreterValueToVMValue(value)
 }
 
-func MustConvertStoredValue(gauge common.MemoryGauge, storage interpreter.Storage, storedValue atree.Value) Value {
+func MustConvertStoredValue(gauge common.MemoryGauge, storedValue atree.Value) Value {
 	value := interpreter.MustConvertStoredValue(gauge, storedValue)
-	return InterpreterValueToVMValue(storage, value)
+	return InterpreterValueToVMValue(value)
 }
 
 func ReadStored(
-	config *Config,
+	storageReader interpreter.StorageReader,
 	address common.Address,
 	domain string,
 	identifier string,
 ) Value {
-	storage := config.Storage
-
 	storageDomain, _ := common.StorageDomainFromIdentifier(domain)
-
-	accountStorage := storage.GetDomainStorageMap(
-		config.Interpreter(),
-		address,
-		storageDomain,
-		false,
-	)
-	if accountStorage == nil {
-		return nil
-	}
-
-	referenced := accountStorage.ReadValue(config.MemoryGauge, interpreter.StringStorageMapKey(identifier))
-	return InterpreterValueToVMValue(storage, referenced)
+	referenced := storageReader.ReadStored(address, storageDomain, interpreter.StringStorageMapKey(identifier))
+	return InterpreterValueToVMValue(referenced)
 }
 
 func WriteStored(
-	config *Config,
+	storageContext StorageContext,
 	storageAddress common.Address,
 	domain common.StorageDomain,
 	key interpreter.StorageMapKey,
 	value Value,
 ) (existed bool) {
 
-	inter := config.Interpreter()
+	interValue := VMValueToInterpreterValue(storageContext, value)
 
-	accountStorage := config.Storage.GetDomainStorageMap(inter, storageAddress, domain, true)
-	interValue := VMValueToInterpreterValue(config, value)
-
-	return accountStorage.WriteValue(
-		inter,
-		key,
-		interValue,
-	)
+	return storageContext.WriteStored(storageAddress, domain, key, interValue)
 	//interpreter.recordStorageMutation()
 }
 

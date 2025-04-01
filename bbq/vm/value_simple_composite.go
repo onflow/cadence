@@ -56,7 +56,7 @@ func NewSimpleCompositeValue(
 
 func (*SimpleCompositeValue) isValue() {}
 
-func (v *SimpleCompositeValue) StaticType(*Config) bbq.StaticType {
+func (v *SimpleCompositeValue) StaticType(StaticTypeContext) bbq.StaticType {
 	return v.staticType
 }
 
@@ -82,12 +82,7 @@ func (v *SimpleCompositeValue) String() string {
 	panic("implement me")
 }
 
-func (v *SimpleCompositeValue) Transfer(
-	conf *Config,
-	address atree.Address,
-	remove bool,
-	storable atree.Storable,
-) Value {
+func (v *SimpleCompositeValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
 	return v
 }
 

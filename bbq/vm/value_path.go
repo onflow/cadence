@@ -39,7 +39,7 @@ var _ Value = PathValue{}
 
 func (PathValue) isValue() {}
 
-func (v PathValue) StaticType(*Config) bbq.StaticType {
+func (v PathValue) StaticType(StaticTypeContext) bbq.StaticType {
 	switch v.Domain {
 	case common.PathDomainStorage:
 		return interpreter.PrimitiveStaticTypeStoragePath
@@ -52,7 +52,7 @@ func (v PathValue) StaticType(*Config) bbq.StaticType {
 	}
 }
 
-func (v PathValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
+func (v PathValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
 	return v
 }
 

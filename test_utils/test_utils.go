@@ -61,7 +61,7 @@ func (v *VMInvokable) Invoke(functionName string, arguments ...interpreter.Value
 	for _, argument := range arguments {
 		vmArguments = append(
 			vmArguments,
-			vm.InterpreterValueToVMValue(v.config.Storage, argument),
+			vm.InterpreterValueToVMValue(argument),
 		)
 	}
 

@@ -42,18 +42,18 @@ func NewSomeValueNonCopying(value Value) *SomeValue {
 
 func (*SomeValue) isValue() {}
 
-func (v *SomeValue) StaticType(config *Config) bbq.StaticType {
-	innerType := v.value.StaticType(config)
+func (v *SomeValue) StaticType(staticTypeContext StaticTypeContext) bbq.StaticType {
+	innerType := v.value.StaticType(staticTypeContext)
 	if innerType == nil {
 		return nil
 	}
 	return interpreter.NewOptionalStaticType(
-		config.MemoryGauge,
+		staticTypeContext,
 		innerType,
 	)
 }
 
-func (v *SomeValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
+func (v *SomeValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
 	return v
 }
 

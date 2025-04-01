@@ -46,7 +46,7 @@ var _ MemberAccessibleValue = &EphemeralReferenceValue{}
 var _ ReferenceValue = &EphemeralReferenceValue{}
 
 func NewEphemeralReferenceValue(
-	conf *Config,
+	referenceTracker ReferenceTracker,
 	value Value,
 	authorization interpreter.Authorization,
 	borrowedType interpreter.StaticType,
@@ -57,7 +57,7 @@ func NewEphemeralReferenceValue(
 		BorrowedType:  borrowedType,
 	}
 
-	maybeTrackReferencedResourceKindedValue(conf, ref)
+	maybeTrackReferencedResourceKindedValue(referenceTracker, ref)
 
 	return ref
 }
@@ -74,15 +74,15 @@ func (v *EphemeralReferenceValue) BorrowType() interpreter.StaticType {
 	return v.BorrowedType
 }
 
-func (v *EphemeralReferenceValue) StaticType(config *Config) bbq.StaticType {
+func (v *EphemeralReferenceValue) StaticType(staticTypeContext StaticTypeContext) bbq.StaticType {
 	return interpreter.NewReferenceStaticType(
-		config.MemoryGauge,
+		staticTypeContext,
 		v.Authorization,
-		v.Value.StaticType(config),
+		v.Value.StaticType(staticTypeContext),
 	)
 }
 
-func (v *EphemeralReferenceValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
+func (v *EphemeralReferenceValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
 	return v
 }
 

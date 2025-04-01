@@ -383,7 +383,7 @@ func recordStorageCapabilityController(
 	)
 
 	referenced := accountStorage.ReadValue(config.MemoryGauge, interpreter.StringStorageMapKey(identifier))
-	readValue := InterpreterValueToVMValue(config.Storage, referenced)
+	readValue := InterpreterValueToVMValue(referenced)
 
 	setKey := capabilityIDValue
 	setValue := Nil
