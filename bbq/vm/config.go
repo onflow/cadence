@@ -241,7 +241,7 @@ func (c *Config) RecordStorageMutation() {
 	// NO-OP
 }
 
-func (c *Config) IsRecovered(location common.Location) bool {
+func (c *Config) IsTypeInfoRecovered(location common.Location) bool {
 	//TODO
 	return false
 }

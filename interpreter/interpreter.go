@@ -5820,7 +5820,7 @@ func (interpreter *Interpreter) CheckInvalidatedResourceOrResourceReference(valu
 	checkInvalidatedResourceOrResourceReference(value, locationRange, interpreter)
 }
 
-func (interpreter *Interpreter) IsRecovered(location common.Location) bool {
+func (interpreter *Interpreter) IsTypeInfoRecovered(location common.Location) bool {
 	elaboration := interpreter.getElaboration(location)
 	if elaboration == nil {
 		return false
