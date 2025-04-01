@@ -73,7 +73,7 @@ type ValueStaticTypeContext interface {
 	common.MemoryGauge
 	StorageReader
 	TypeConverter
-	IsRecovered(location common.Location) bool
+	IsTypeInfoRecovered(location common.Location) bool
 }
 
 var _ ValueStaticTypeContext = &Interpreter{}
@@ -667,6 +667,6 @@ func (ctx NoOpStringContext) GetCompositeType(_ common.Location, _ string, _ Typ
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) IsRecovered(_ common.Location) bool {
+func (ctx NoOpStringContext) IsTypeInfoRecovered(_ common.Location) bool {
 	panic(errors.NewUnreachableError())
 }
