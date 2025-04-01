@@ -469,7 +469,22 @@ func (n NoOpFunctionCreationContext) MaybeTrackReferencedResourceKindedValue(_ *
 	// NO-OP
 }
 
-func (n NoOpFunctionCreationContext) MeterMemory(usage common.MemoryUsage) error {
+func (n NoOpFunctionCreationContext) GetInterfaceType(location common.Location, qualifiedIdentifier string, typeID interpreter.TypeID) (*sema.InterfaceType, error) {
+	// NO-OP
+	return nil, nil
+}
+
+func (n NoOpFunctionCreationContext) GetCompositeType(location common.Location, qualifiedIdentifier string, typeID interpreter.TypeID) (*sema.CompositeType, error) {
+	// NO-OP
+	return nil, nil
+}
+
+func (n NoOpFunctionCreationContext) IsTypeInfoRecovered(location common.Location) bool {
+	// NO-OP
+	return false
+}
+
+func (n NoOpFunctionCreationContext) GetCompositeValueFunctions(v *interpreter.CompositeValue, locationRange interpreter.LocationRange) *interpreter.FunctionOrderedMap {
 	// NO-OP
 	return nil
 }

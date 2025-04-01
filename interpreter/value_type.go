@@ -169,7 +169,7 @@ func (v TypeValue) GetMember(context MemberAccessibleContext, _ LocationRange, n
 			return FalseValue
 		}
 
-		return BoolValue(context.IsRecovered(location))
+		return BoolValue(context.IsTypeInfoRecovered(location))
 
 	case sema.MetaTypeAddressFieldName:
 		staticType := v.Type
