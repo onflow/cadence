@@ -217,7 +217,7 @@ func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Valu
 		return nil, newError(err, location, codesAndPrograms)
 	}
 
-	value, err := inter.InvokeFunction(contractFunction, invocation)
+	value, err := interpreter.InvokeFunction(inter, contractFunction, invocation)
 	if err != nil {
 		return nil, newError(err, location, codesAndPrograms)
 	}

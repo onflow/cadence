@@ -16,14 +16,12 @@
  * limitations under the License.
  */
 
-package vm
+package values
 
-type NumberValue interface {
-	ComparableValue
-	Negate() NumberValue
-	Add(other NumberValue) NumberValue
-	Subtract(other NumberValue) NumberValue
-	Multiply(other NumberValue) NumberValue
-	Divide(other NumberValue) NumberValue
-	Mod(other NumberValue) NumberValue
+type ComparableValue[T Value] interface {
+	EquatableValue
+	Less(other T) bool
+	LessEqual(other T) bool
+	Greater(other T) bool
+	GreaterEqual(other T) bool
 }

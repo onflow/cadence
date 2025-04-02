@@ -24,6 +24,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // SomeValue
@@ -77,7 +78,7 @@ func (v *SomeValue) UnwrapAtreeValue() (atree.Value, uint64) {
 	}
 }
 
-func (*SomeValue) isValue() {}
+func (*SomeValue) IsValue() {}
 
 func (v *SomeValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
 	descend := visitor.VisitSomeValue(interpreter, v)
@@ -87,7 +88,7 @@ func (v *SomeValue) Accept(interpreter *Interpreter, visitor Visitor, locationRa
 	v.value.Accept(interpreter, visitor, locationRange)
 }
 
-func (v *SomeValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
+func (v *SomeValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {
 	walkChild(v.value)
 }
 
@@ -116,18 +117,18 @@ func (v *SomeValue) forEach(f func(Value)) {
 	f(v.value)
 }
 
-func (v *SomeValue) fmap(inter *Interpreter, f func(Value) Value) OptionalValue {
+func (v *SomeValue) fmap(memoryGauge common.MemoryGauge, f func(Value) Value) OptionalValue {
 	newValue := f(v.value)
-	return NewSomeValueNonCopying(inter, newValue)
+	return NewSomeValueNonCopying(memoryGauge, newValue)
 }
 
 func (v *SomeValue) IsDestroyed() bool {
 	return v.isDestroyed
 }
 
-func (v *SomeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
+func (v *SomeValue) Destroy(context ResourceDestructionContext, locationRange LocationRange) {
 	innerValue := v.InnerValue()
-	maybeDestroy(interpreter, locationRange, innerValue)
+	maybeDestroy(context, locationRange, innerValue)
 
 	v.isDestroyed = true
 	v.value = nil
@@ -141,25 +142,25 @@ func (v *SomeValue) RecursiveString(seenReferences SeenReferences) string {
 	return v.value.RecursiveString(seenReferences)
 }
 
-func (v *SomeValue) MeteredString(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
-	return v.value.MeteredString(interpreter, seenReferences, locationRange)
+func (v *SomeValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+	return v.value.MeteredString(context, seenReferences, locationRange)
 }
 
-func (v *SomeValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v *SomeValue) GetMember(context MemberAccessibleContext, _ LocationRange, name string) Value {
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
 		innerValueType := MustConvertStaticToSemaType(
-			v.value.StaticType(interpreter),
-			interpreter,
+			v.value.StaticType(context),
+			context,
 		)
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.OptionalTypeMapFunctionType(
 				innerValueType,
 			),
 			func(v *SomeValue, invocation Invocation) Value {
-				inter := invocation.Interpreter
+				invocationContext := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				transformFunction, ok := invocation.Arguments[0].(FunctionValue)
@@ -172,9 +173,10 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, _ LocationRange, name st
 				returnType := transformFunctionType.ReturnTypeAnnotation.Type
 
 				return v.fmap(
-					inter,
+					invocationContext,
 					func(v Value) Value {
-						return inter.invokeFunctionValue(
+						return invokeFunctionValue(
+							invocationContext,
 							transformFunction,
 							[]Value{v},
 							nil,
@@ -197,7 +199,7 @@ func (v *SomeValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Valu
 	panic(errors.NewUnreachableError())
 }
 
-func (v *SomeValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (v *SomeValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	panic(errors.NewUnreachableError())
 }
 
@@ -332,23 +334,24 @@ func (v *SomeValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 }
 
 func (v *SomeValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
-	preventTransfer map[atree.ValueID]struct{},
+	preventTransfer map[atree.ValueID]struct {
+	},
 	hasNoParentContainer bool,
 ) Value {
 	innerValue := v.value
 
 	needsStoreTo := v.NeedsStoreTo(address)
-	isResourceKinded := v.IsResourceKinded(interpreter)
+	isResourceKinded := v.IsResourceKinded(context)
 
 	if needsStoreTo || !isResourceKinded {
 
 		innerValue = v.value.Transfer(
-			interpreter,
+			context,
 			locationRange,
 			address,
 			remove,
@@ -358,8 +361,8 @@ func (v *SomeValue) Transfer(
 		)
 
 		if remove {
-			interpreter.RemoveReferencedSlab(v.valueStorable)
-			interpreter.RemoveReferencedSlab(storable)
+			RemoveReferencedSlab(context, v.valueStorable)
+			RemoveReferencedSlab(context, storable)
 		}
 	}
 
@@ -376,12 +379,12 @@ func (v *SomeValue) Transfer(
 		// we don't need to invalidate referenced resources if this resource was moved
 		// to storage, as the earlier transfer will have done this already
 		if !needsStoreTo {
-			interpreter.invalidateReferencedResources(v.value, locationRange)
+			InvalidateReferencedResources(context, v.value, locationRange)
 		}
 		v.value = nil
 	}
 
-	res := NewSomeValueNonCopying(interpreter, innerValue)
+	res := NewSomeValueNonCopying(context, innerValue)
 	res.valueStorable = nil
 	res.isDestroyed = v.isDestroyed
 
@@ -393,10 +396,10 @@ func (v *SomeValue) Clone(interpreter *Interpreter) Value {
 	return NewUnmeteredSomeValueNonCopying(innerValue)
 }
 
-func (v *SomeValue) DeepRemove(interpreter *Interpreter, hasNoParentContainer bool) {
-	v.value.DeepRemove(interpreter, hasNoParentContainer)
+func (v *SomeValue) DeepRemove(context ValueRemoveContext, hasNoParentContainer bool) {
+	v.value.DeepRemove(context, hasNoParentContainer)
 	if v.valueStorable != nil {
-		interpreter.RemoveReferencedSlab(v.valueStorable)
+		RemoveReferencedSlab(context, v.valueStorable)
 	}
 }
 
@@ -404,7 +407,7 @@ func (v *SomeValue) InnerValue() Value {
 	return v.value
 }
 
-func (v *SomeValue) isInvalidatedResource(context ValueStaticTypeContext) bool {
+func (v *SomeValue) isInvalidatedResource(_ ValueStaticTypeContext) bool {
 	return v.value == nil || v.IsDestroyed()
 }
 
@@ -451,9 +454,11 @@ func (s SomeStorable) HasPointer() bool {
 
 func getSomeStorableEncodedPrefixSize(nestedLevels uint64) uint32 {
 	if nestedLevels == 1 {
-		return cborTagSize
+		return values.CBORTagSize
 	}
-	return cborTagSize + someStorableWithMultipleNestedlevelsArraySize + getUintCBORSize(nestedLevels)
+	return values.CBORTagSize +
+		someStorableWithMultipleNestedlevelsArraySize +
+		values.GetUintCBORSize(nestedLevels)
 }
 
 func (s SomeStorable) ByteSize() uint32 {

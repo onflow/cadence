@@ -24,6 +24,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/values"
 )
 
 // TODO: remove once migrated
@@ -47,7 +48,7 @@ var _ atree.Value = PathLinkValue{}
 var _ EquatableValue = PathLinkValue{}
 var _ LinkValue = PathLinkValue{}
 
-func (PathLinkValue) isValue() {}
+func (PathLinkValue) IsValue() {}
 
 func (PathLinkValue) isLinkValue() {}
 
@@ -55,7 +56,7 @@ func (v PathLinkValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
-func (v PathLinkValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (v PathLinkValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -86,7 +87,7 @@ func (v PathLinkValue) RecursiveString(seenReferences SeenReferences) string {
 	)
 }
 
-func (v PathLinkValue) MeteredString(_ *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v PathLinkValue) MeteredString(_ ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	panic(errors.NewUnreachableError())
 }
 
@@ -113,7 +114,7 @@ func (PathLinkValue) IsStorable() bool {
 }
 
 func (v PathLinkValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
-	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
+	return values.MaybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
 func (PathLinkValue) NeedsStoreTo(_ atree.Address) bool {
@@ -125,7 +126,7 @@ func (PathLinkValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 }
 
 func (v PathLinkValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -134,7 +135,7 @@ func (v PathLinkValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
@@ -146,7 +147,7 @@ func (v PathLinkValue) Clone(inter *Interpreter) Value {
 	}
 }
 
-func (PathLinkValue) DeepRemove(_ *Interpreter, _ bool) {
+func (PathLinkValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
@@ -172,7 +173,7 @@ var _ atree.Value = AccountLinkValue{}
 var _ EquatableValue = AccountLinkValue{}
 var _ LinkValue = AccountLinkValue{}
 
-func (AccountLinkValue) isValue() {}
+func (AccountLinkValue) IsValue() {}
 
 func (AccountLinkValue) isLinkValue() {}
 
@@ -180,7 +181,7 @@ func (v AccountLinkValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
-func (AccountLinkValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (AccountLinkValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -214,7 +215,7 @@ func (v AccountLinkValue) RecursiveString(_ SeenReferences) string {
 	panic(errors.NewUnreachableError())
 }
 
-func (v AccountLinkValue) MeteredString(_ *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v AccountLinkValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
 	panic(errors.NewUnreachableError())
 }
 
@@ -236,7 +237,7 @@ func (AccountLinkValue) IsStorable() bool {
 }
 
 func (v AccountLinkValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
-	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
+	return values.MaybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
 func (AccountLinkValue) NeedsStoreTo(_ atree.Address) bool {
@@ -248,7 +249,7 @@ func (AccountLinkValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 }
 
 func (v AccountLinkValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -257,7 +258,7 @@ func (v AccountLinkValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
@@ -266,7 +267,7 @@ func (AccountLinkValue) Clone(_ *Interpreter) Value {
 	return AccountLinkValue{}
 }
 
-func (AccountLinkValue) DeepRemove(_ *Interpreter, _ bool) {
+func (AccountLinkValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
@@ -307,7 +308,7 @@ func (v PathLinkValue) Encode(e *atree.Encoder) error {
 	// Encode tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagPathLinkValue,
+		0xd8, values.CBORTagPathLinkValue, //nolint:staticcheck
 		// array, 2 items follow
 		0x82,
 	})
@@ -331,7 +332,7 @@ func (v PathLinkValue) Encode(e *atree.Encoder) error {
 //	}
 var cborAccountLinkValue = []byte{
 	// tag
-	0xd8, CBORTagAccountLinkValue,
+	0xd8, values.CBORTagAccountLinkValue, //nolint:staticcheck
 	// null
 	0xf6,
 }

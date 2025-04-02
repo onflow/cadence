@@ -26,16 +26,17 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/ast"
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	"github.com/onflow/cadence/test_utils/common_utils"
+	"github.com/onflow/cadence/test_utils/interpreter_utils"
 	"github.com/onflow/cadence/test_utils/runtime_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/compiler"
 	"github.com/onflow/cadence/bbq/vm"
@@ -70,10 +71,10 @@ func TestRecursionFib(t *testing.T) {
 
 	result, err := vmInstance.Invoke(
 		"fib",
-		vm.NewIntValue(23),
+		interpreter.NewUnmeteredIntValueFromInt64(23),
 	)
 	require.NoError(t, err)
-	require.Equal(t, vm.NewIntValue(28657), result)
+	require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(28657), result)
 	require.Equal(t, 0, vmInstance.StackSize())
 }
 
@@ -108,10 +109,10 @@ func TestImperativeFib(t *testing.T) {
 
 	result, err := vmInstance.Invoke(
 		"fib",
-		vm.NewIntValue(7),
+		interpreter.NewUnmeteredIntValueFromInt64(7),
 	)
 	require.NoError(t, err)
-	require.Equal(t, vm.NewIntValue(13), result)
+	require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(13), result)
 	require.Equal(t, 0, vmInstance.StackSize())
 }
 
@@ -135,7 +136,7 @@ func TestWhileBreak(t *testing.T) {
 		"test",
 	)
 	require.NoError(t, err)
-	require.Equal(t, vm.NewIntValue(4), result)
+	require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(4), result)
 }
 
 func TestSwitchBreak(t *testing.T) {
@@ -156,7 +157,7 @@ func TestSwitchBreak(t *testing.T) {
               }
             `,
 			"test",
-			vm.NewIntValue(value),
+			interpreter.NewUnmeteredIntValueFromInt64(value),
 		)
 		require.NoError(t, err)
 		return result
@@ -166,21 +167,21 @@ func TestSwitchBreak(t *testing.T) {
 		t.Parallel()
 
 		result := test(t, 1)
-		require.Equal(t, vm.NewIntValue(1), result)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), result)
 	})
 
 	t.Run("2", func(t *testing.T) {
 		t.Parallel()
 
 		result := test(t, 2)
-		require.Equal(t, vm.NewIntValue(3), result)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), result)
 	})
 
 	t.Run("3", func(t *testing.T) {
 		t.Parallel()
 
 		result := test(t, 3)
-		require.Equal(t, vm.NewIntValue(3), result)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), result)
 	})
 }
 
@@ -205,7 +206,7 @@ func TestWhileSwitchBreak(t *testing.T) {
               }
             `,
 			"test",
-			vm.NewIntValue(value),
+			interpreter.NewUnmeteredIntValueFromInt64(value),
 		)
 		require.NoError(t, err)
 		return result
@@ -215,21 +216,21 @@ func TestWhileSwitchBreak(t *testing.T) {
 		t.Parallel()
 
 		result := test(t, 1)
-		require.Equal(t, vm.NewIntValue(1), result)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), result)
 	})
 
 	t.Run("2", func(t *testing.T) {
 		t.Parallel()
 
 		result := test(t, 2)
-		require.Equal(t, vm.NewIntValue(3), result)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), result)
 	})
 
 	t.Run("3", func(t *testing.T) {
 		t.Parallel()
 
 		result := test(t, 3)
-		require.Equal(t, vm.NewIntValue(3), result)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), result)
 	})
 }
 
@@ -255,7 +256,7 @@ func TestContinue(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	require.Equal(t, vm.NewIntValue(3), result)
+	require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), result)
 }
 
 func TestNilCoalesce(t *testing.T) {
@@ -280,15 +281,17 @@ func TestNilCoalesce(t *testing.T) {
 	t.Run("non-nil", func(t *testing.T) {
 		t.Parallel()
 
-		actual := test(t, vm.NewSomeValueNonCopying(vm.NewIntValue(2)))
-		require.Equal(t, vm.NewIntValue(2), actual)
+		actual := test(t, interpreter.NewUnmeteredSomeValueNonCopying(
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+		))
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), actual)
 	})
 
 	t.Run("nil", func(t *testing.T) {
 		t.Parallel()
 
-		actual := test(t, vm.Nil)
-		require.Equal(t, vm.NewIntValue(3), actual)
+		actual := test(t, interpreter.Nil)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), actual)
 	})
 }
 
@@ -323,19 +326,19 @@ func TestNewStruct(t *testing.T) {
 		},
 	)
 
-	result, err := vmInstance.Invoke("test", vm.NewIntValue(10))
+	result, err := vmInstance.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(10))
 	require.NoError(t, err)
 	require.Equal(t, 0, vmInstance.StackSize())
 
-	require.IsType(t, &vm.CompositeValue{}, result)
-	structValue := result.(*vm.CompositeValue)
-	compositeType := structValue.CompositeType
+	require.IsType(t, &interpreter.CompositeValue{}, result)
+	structValue := result.(*interpreter.CompositeValue)
+	compositeType := structValue.StaticType(vmConfig).(*interpreter.CompositeStaticType)
 
 	require.Equal(t, "Foo", compositeType.QualifiedIdentifier)
 	require.Equal(
 		t,
-		vm.NewIntValue(12),
-		structValue.GetMember(vmConfig, "id"),
+		interpreter.NewUnmeteredIntValueFromInt64(12),
+		structValue.GetMember(vmConfig, vm.EmptyLocationRange, "id"),
 	)
 }
 
@@ -373,7 +376,7 @@ func TestStructMethodCall(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, vmInstance.StackSize())
 
-	require.Equal(t, vm.NewStringValue("Hello from Foo!"), result)
+	require.Equal(t, interpreter.NewUnmeteredStringValue("Hello from Foo!"), result)
 }
 
 func TestImport(t *testing.T) {
@@ -448,7 +451,7 @@ func TestImport(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, vmInstance.StackSize())
 
-	require.Equal(t, vm.NewStringValue("global function of the imported program"), result)
+	require.Equal(t, interpreter.NewUnmeteredStringValue("global function of the imported program"), result)
 }
 
 func TestContractImport(t *testing.T) {
@@ -527,7 +530,7 @@ func TestContractImport(t *testing.T) {
 			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 				return importedProgram
 			},
-			ContractValueHandler: func(*vm.Config, common.Location) *vm.CompositeValue {
+			ContractValueHandler: func(*vm.Config, common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
 		}
@@ -538,7 +541,7 @@ func TestContractImport(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.Equal(t, vm.NewStringValue("global function of the imported program"), result)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("global function of the imported program"), result)
 	})
 
 	t.Run("contract function", func(t *testing.T) {
@@ -602,7 +605,7 @@ func TestContractImport(t *testing.T) {
 			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 				return importedProgram
 			},
-			ContractValueHandler: func(*vm.Config, common.Location) *vm.CompositeValue {
+			ContractValueHandler: func(*vm.Config, common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
 		}
@@ -613,7 +616,7 @@ func TestContractImport(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.Equal(t, vm.NewStringValue("contract function of the imported program"), result)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("contract function of the imported program"), result)
 	})
 
 	t.Run("nested imports", func(t *testing.T) {
@@ -696,7 +699,7 @@ func TestContractImport(t *testing.T) {
 				require.Equal(t, fooLocation, location)
 				return fooProgram
 			},
-			ContractValueHandler: func(_ *vm.Config, location common.Location) *vm.CompositeValue {
+			ContractValueHandler: func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
 				require.Equal(t, fooLocation, location)
 				return fooContractValue
 			},
@@ -767,7 +770,7 @@ func TestContractImport(t *testing.T) {
 					return nil
 				}
 			},
-			ContractValueHandler: func(_ *vm.Config, location common.Location) *vm.CompositeValue {
+			ContractValueHandler: func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
 				switch location {
 				case fooLocation:
 					return fooContractValue
@@ -786,7 +789,7 @@ func TestContractImport(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.Equal(t, vm.NewStringValue("Hello from Foo!"), result)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("Hello from Foo!"), result)
 	})
 
 	t.Run("contract interface", func(t *testing.T) {
@@ -941,7 +944,7 @@ func TestContractImport(t *testing.T) {
 					return nil
 				}
 			},
-			ContractValueHandler: func(_ *vm.Config, location common.Location) *vm.CompositeValue {
+			ContractValueHandler: func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
 				switch location {
 				//case fooLocation:
 				//	return fooContractValue
@@ -960,7 +963,7 @@ func TestContractImport(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.Equal(t, vm.NewStringValue("Successfully withdrew"), result)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("Successfully withdrew"), result)
 	})
 }
 
@@ -989,8 +992,8 @@ func TestInitializeContract(t *testing.T) {
 	contractValue, err := vmInstance.InitializeContract()
 	require.NoError(t, err)
 
-	fieldValue := contractValue.GetMember(vmConfig, "status")
-	assert.Equal(t, vm.NewStringValue("PENDING"), fieldValue)
+	fieldValue := contractValue.GetMember(vmConfig, vm.EmptyLocationRange, "status")
+	assert.Equal(t, interpreter.NewUnmeteredStringValue("PENDING"), fieldValue)
 }
 
 func TestContractAccessDuringInit(t *testing.T) {
@@ -1026,8 +1029,8 @@ func TestContractAccessDuringInit(t *testing.T) {
 		contractValue, err := vmInstance.InitializeContract()
 		require.NoError(t, err)
 
-		fieldValue := contractValue.GetMember(vmConfig, "status")
-		assert.Equal(t, vm.NewStringValue("PENDING"), fieldValue)
+		fieldValue := contractValue.GetMember(vmConfig, vm.EmptyLocationRange, "status")
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("PENDING"), fieldValue)
 	})
 
 	t.Run("using self", func(t *testing.T) {
@@ -1059,8 +1062,8 @@ func TestContractAccessDuringInit(t *testing.T) {
 		contractValue, err := vmInstance.InitializeContract()
 		require.NoError(t, err)
 
-		fieldValue := contractValue.GetMember(vmConfig, "status")
-		assert.Equal(t, vm.NewStringValue("PENDING"), fieldValue)
+		fieldValue := contractValue.GetMember(vmConfig, vm.EmptyLocationRange, "status")
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("PENDING"), fieldValue)
 	})
 }
 
@@ -1095,7 +1098,7 @@ func TestFunctionOrder(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.Equal(t, vm.NewIntValue(5), result)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(5), result)
 	})
 
 	t.Run("nested", func(t *testing.T) {
@@ -1151,7 +1154,7 @@ func TestFunctionOrder(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.IsType(t, &vm.CompositeValue{}, result)
+		require.IsType(t, &interpreter.CompositeValue{}, result)
 	})
 }
 
@@ -1204,12 +1207,14 @@ func TestContractField(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker).
-			WithConfig(&compiler.Config{
+		comp := compiler.NewInstructionCompilerWithConfig(
+			checker,
+			&compiler.Config{
 				ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 					return importedProgram
 				},
-			})
+			},
+		)
 
 		program := comp.Compile()
 
@@ -1217,7 +1222,7 @@ func TestContractField(t *testing.T) {
 			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 				return importedProgram
 			},
-			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *vm.CompositeValue {
+			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
 		}
@@ -1227,7 +1232,7 @@ func TestContractField(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.Equal(t, vm.NewStringValue("PENDING"), result)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("PENDING"), result)
 	})
 
 	t.Run("set", func(t *testing.T) {
@@ -1287,7 +1292,7 @@ func TestContractField(t *testing.T) {
 			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 				return importedProgram
 			},
-			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *vm.CompositeValue {
+			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
 		}
@@ -1298,10 +1303,10 @@ func TestContractField(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.Equal(t, vm.NewStringValue("UPDATED"), result)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("UPDATED"), result)
 
-		fieldValue := importedContractValue.GetMember(vmConfig, "status")
-		assert.Equal(t, vm.NewStringValue("UPDATED"), fieldValue)
+		fieldValue := importedContractValue.GetMember(vmConfig, vm.EmptyLocationRange, "status")
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("UPDATED"), fieldValue)
 	})
 }
 
@@ -1375,7 +1380,7 @@ func TestNativeFunctions(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.Equal(t, vm.NewStringValue("Hello, World!"), result)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("Hello, World!"), result)
 	})
 }
 
@@ -1414,11 +1419,11 @@ func TestTransaction(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.IsType(t, &vm.CompositeValue{}, transaction)
-		compositeValue := transaction.(*vm.CompositeValue)
+		require.IsType(t, &interpreter.CompositeValue{}, transaction)
+		compositeValue := transaction.(*interpreter.CompositeValue)
 
 		// At the beginning, 'a' is uninitialized
-		assert.Nil(t, compositeValue.GetMember(vmConfig, "a"))
+		assert.Nil(t, compositeValue.GetMember(vmConfig, vm.EmptyLocationRange, "a"))
 
 		// Invoke 'prepare'
 		_, err = vmInstance.Invoke(commons.TransactionPrepareFunctionName, transaction)
@@ -1426,7 +1431,7 @@ func TestTransaction(t *testing.T) {
 		require.Equal(t, 0, vmInstance.StackSize())
 
 		// Once 'prepare' is called, 'a' is initialized to "Hello!"
-		assert.Equal(t, vm.NewStringValue("Hello!"), compositeValue.GetMember(vmConfig, "a"))
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("Hello!"), compositeValue.GetMember(vmConfig, vm.EmptyLocationRange, "a"))
 
 		// Invoke 'execute'
 		_, err = vmInstance.Invoke(commons.TransactionExecuteFunctionName, transaction)
@@ -1434,7 +1439,7 @@ func TestTransaction(t *testing.T) {
 		require.Equal(t, 0, vmInstance.StackSize())
 
 		// Once 'execute' is called, 'a' is initialized to "Hello, again!"
-		assert.Equal(t, vm.NewStringValue("Hello again!"), compositeValue.GetMember(vmConfig, "a"))
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("Hello again!"), compositeValue.GetMember(vmConfig, vm.EmptyLocationRange, "a"))
 	})
 
 	t.Run("with params", func(t *testing.T) {
@@ -1459,8 +1464,8 @@ func TestTransaction(t *testing.T) {
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		args := []vm.Value{
-			vm.NewStringValue("Hello!"),
-			vm.NewStringValue("Hello again!"),
+			interpreter.NewUnmeteredStringValue("Hello!"),
+			interpreter.NewUnmeteredStringValue("Hello again!"),
 		}
 
 		err = vmInstance.ExecuteTransaction(args)
@@ -1473,11 +1478,11 @@ func TestTransaction(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.IsType(t, &vm.CompositeValue{}, transaction)
-		compositeValue := transaction.(*vm.CompositeValue)
+		require.IsType(t, &interpreter.CompositeValue{}, transaction)
+		compositeValue := transaction.(*interpreter.CompositeValue)
 
 		// At the beginning, 'a' is uninitialized
-		assert.Nil(t, compositeValue.GetMember(vmConfig, "a"))
+		assert.Nil(t, compositeValue.GetMember(vmConfig, vm.EmptyLocationRange, "a"))
 
 		// Invoke 'prepare'
 		_, err = vmInstance.Invoke(commons.TransactionPrepareFunctionName, transaction)
@@ -1485,7 +1490,7 @@ func TestTransaction(t *testing.T) {
 		require.Equal(t, 0, vmInstance.StackSize())
 
 		// Once 'prepare' is called, 'a' is initialized to "Hello!"
-		assert.Equal(t, vm.NewStringValue("Hello!"), compositeValue.GetMember(vmConfig, "a"))
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("Hello!"), compositeValue.GetMember(vmConfig, vm.EmptyLocationRange, "a"))
 
 		// Invoke 'execute'
 		_, err = vmInstance.Invoke(commons.TransactionExecuteFunctionName, transaction)
@@ -1493,7 +1498,7 @@ func TestTransaction(t *testing.T) {
 		require.Equal(t, 0, vmInstance.StackSize())
 
 		// Once 'execute' is called, 'a' is initialized to "Hello, again!"
-		assert.Equal(t, vm.NewStringValue("Hello again!"), compositeValue.GetMember(vmConfig, "a"))
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("Hello again!"), compositeValue.GetMember(vmConfig, vm.EmptyLocationRange, "a"))
 	})
 
 	t.Run("conditions with execute", func(t *testing.T) {
@@ -1571,7 +1576,7 @@ func TestTransaction(t *testing.T) {
 				ParameterCount: len(stdlib.LogFunctionType.Parameters),
 				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
-					return vm.VoidValue{}
+					return interpreter.Void
 				},
 			}
 
@@ -1584,7 +1589,7 @@ func TestTransaction(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		assert.Equal(t, []string{"2", "10"}, logs)
+		assert.Equal(t, []string{"\"2\"", "\"10\""}, logs)
 	})
 
 	t.Run("conditions without execute", func(t *testing.T) {
@@ -1658,7 +1663,7 @@ func TestTransaction(t *testing.T) {
 				ParameterCount: len(stdlib.LogFunctionType.Parameters),
 				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
-					return vm.VoidValue{}
+					return interpreter.Void
 				},
 			}
 
@@ -1671,7 +1676,7 @@ func TestTransaction(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		assert.Equal(t, []string{"2", "2"}, logs)
+		assert.Equal(t, []string{"\"2\"", "\"2\""}, logs)
 	})
 
 	t.Run("pre condition failed", func(t *testing.T) {
@@ -1750,7 +1755,7 @@ func TestTransaction(t *testing.T) {
 				ParameterCount: len(stdlib.LogFunctionType.Parameters),
 				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
-					return vm.VoidValue{}
+					return interpreter.Void
 				},
 			}
 
@@ -1763,7 +1768,7 @@ func TestTransaction(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "pre/post condition failed")
 
-		assert.Equal(t, []string{"2"}, logs)
+		assert.Equal(t, []string{"\"2\""}, logs)
 	})
 
 	t.Run("post condition failed", func(t *testing.T) {
@@ -1842,7 +1847,7 @@ func TestTransaction(t *testing.T) {
 				ParameterCount: len(stdlib.LogFunctionType.Parameters),
 				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
-					return vm.VoidValue{}
+					return interpreter.Void
 				},
 			}
 
@@ -1855,7 +1860,7 @@ func TestTransaction(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "pre/post condition failed")
 
-		assert.Equal(t, []string{"2", "10"}, logs)
+		assert.Equal(t, []string{"\"2\"", "\"10\""}, logs)
 	})
 }
 
@@ -1954,10 +1959,10 @@ func TestInterfaceMethodCall(t *testing.T) {
 			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 				return importedProgram
 			},
-			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *vm.CompositeValue {
+			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
-			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
+			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
 				elaboration := importedChecker.Elaboration
 				compositeType := elaboration.CompositeType(typeID)
 				if compositeType != nil {
@@ -1973,7 +1978,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.Equal(t, vm.NewStringValue("Hello from Foo!"), result)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("Hello from Foo!"), result)
 	})
 
 	t.Run("impl in different program", func(t *testing.T) {
@@ -2112,7 +2117,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 
 		implProgramVMConfig := &vm.Config{
 			ImportHandler: bazImportHandler,
-			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *vm.CompositeValue {
+			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *interpreter.CompositeValue {
 				switch location {
 				case fooLocation:
 					return fooContractValue
@@ -2177,7 +2182,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 
 		vmConfig := &vm.Config{
 			ImportHandler: scriptImportHandler,
-			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *vm.CompositeValue {
+			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *interpreter.CompositeValue {
 				switch location {
 				case barLocation:
 					return barContractValue
@@ -2194,8 +2199,8 @@ func TestInterfaceMethodCall(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, scriptVM.StackSize())
 
-		require.IsType(t, &vm.CompositeValue{}, implValue)
-		compositeValue := implValue.(*vm.CompositeValue)
+		require.IsType(t, &interpreter.CompositeValue{}, implValue)
+		compositeValue := implValue.(*interpreter.CompositeValue)
 		require.Equal(
 			t,
 			common.TypeID("A.0000000000000003.Baz.GreetingImpl"),
@@ -2260,7 +2265,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 
 		vmConfig = &vm.Config{
 			ImportHandler: scriptImportHandler,
-			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *vm.CompositeValue {
+			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *interpreter.CompositeValue {
 				switch location {
 				case fooLocation:
 					return fooContractValue
@@ -2280,7 +2285,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, scriptVM.StackSize())
 
-		require.Equal(t, vm.NewStringValue("Hello from Bar!"), result)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("Hello from Bar!"), result)
 	})
 }
 
@@ -2308,11 +2313,19 @@ func TestArrayLiteral(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.IsType(t, &vm.ArrayValue{}, result)
-		array := result.(*vm.ArrayValue)
+		require.IsType(t, &interpreter.ArrayValue{}, result)
+		array := result.(*interpreter.ArrayValue)
 		assert.Equal(t, 2, array.Count())
-		assert.Equal(t, vm.NewIntValue(2), array.Get(vmConfig, 0))
-		assert.Equal(t, vm.NewIntValue(5), array.Get(vmConfig, 1))
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+			array.Get(vmConfig, vm.EmptyLocationRange, 0),
+		)
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(5),
+			array.Get(vmConfig, vm.EmptyLocationRange, 1),
+		)
 	})
 
 	t.Run("array get", func(t *testing.T) {
@@ -2335,7 +2348,7 @@ func TestArrayLiteral(t *testing.T) {
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
-		assert.Equal(t, vm.NewIntValue(5), result)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(5), result)
 	})
 
 	t.Run("array set", func(t *testing.T) {
@@ -2360,12 +2373,12 @@ func TestArrayLiteral(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.IsType(t, &vm.ArrayValue{}, result)
-		array := result.(*vm.ArrayValue)
+		require.IsType(t, &interpreter.ArrayValue{}, result)
+		array := result.(*interpreter.ArrayValue)
 		assert.Equal(t, 3, array.Count())
-		assert.Equal(t, vm.NewIntValue(2), array.Get(vmConfig, 0))
-		assert.Equal(t, vm.NewIntValue(5), array.Get(vmConfig, 1))
-		assert.Equal(t, vm.NewIntValue(8), array.Get(vmConfig, 2))
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), array.Get(vmConfig, vm.EmptyLocationRange, 0))
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(5), array.Get(vmConfig, vm.EmptyLocationRange, 1))
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(8), array.Get(vmConfig, vm.EmptyLocationRange, 2))
 	})
 }
 
@@ -2393,16 +2406,28 @@ func TestDictionaryLiteral(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.IsType(t, &vm.DictionaryValue{}, result)
-		dictionary := result.(*vm.DictionaryValue)
+		require.IsType(t, &interpreter.DictionaryValue{}, result)
+		dictionary := result.(*interpreter.DictionaryValue)
 		assert.Equal(t, 2, dictionary.Count())
 		assert.Equal(t,
-			vm.NewSomeValueNonCopying(vm.NewIntValue(2)),
-			dictionary.GetKey(vmConfig, vm.NewStringValue("b")),
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+			),
+			dictionary.GetKey(
+				vmConfig,
+				vm.EmptyLocationRange,
+				interpreter.NewUnmeteredStringValue("b"),
+			),
 		)
 		assert.Equal(t,
-			vm.NewSomeValueNonCopying(vm.NewIntValue(5)),
-			dictionary.GetKey(vmConfig, vm.NewStringValue("e")),
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(5),
+			),
+			dictionary.GetKey(
+				vmConfig,
+				vm.EmptyLocationRange,
+				interpreter.NewUnmeteredStringValue("e"),
+			),
 		)
 	})
 }
@@ -2414,7 +2439,7 @@ func TestReference(t *testing.T) {
 	t.Run("method call", func(t *testing.T) {
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
+		code := `
             struct Foo {
                 var id : String
 
@@ -2432,21 +2457,12 @@ func TestReference(t *testing.T) {
                 var ref = &foo as &Foo
                 return ref.sayHello(1)
             }
-        `)
+        `
+
+		result, err := compileAndInvoke(t, code, "test")
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
-		program := comp.Compile()
-
-		vmConfig := vm.NewConfig(nil)
-
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-
-		result, err := vmInstance.Invoke("test")
-		require.NoError(t, err)
-		require.Equal(t, 0, vmInstance.StackSize())
-
-		require.Equal(t, vm.NewStringValue("Hello from Foo!"), result)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("Hello from Foo!"), result)
 	})
 }
 
@@ -2484,15 +2500,15 @@ func TestResource(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.IsType(t, &vm.CompositeValue{}, result)
-		structValue := result.(*vm.CompositeValue)
-		compositeType := structValue.CompositeType
+		require.IsType(t, &interpreter.CompositeValue{}, result)
+		structValue := result.(*interpreter.CompositeValue)
+		compositeType := structValue.StaticType(vmConfig).(*interpreter.CompositeStaticType)
 
 		require.Equal(t, "Foo", compositeType.QualifiedIdentifier)
 		require.Equal(
 			t,
-			vm.NewIntValue(5),
-			structValue.GetMember(vmConfig, "id"),
+			interpreter.NewUnmeteredIntValueFromInt64(5),
+			structValue.GetMember(vmConfig, vm.EmptyLocationRange, "id"),
 		)
 	})
 
@@ -2568,7 +2584,7 @@ func TestDefaultFunctions(t *testing.T) {
 		)
 
 		require.NoError(t, err)
-		require.Equal(t, vm.NewIntValue(42), result)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(42), result)
 	})
 
 	t.Run("overridden", func(t *testing.T) {
@@ -2595,7 +2611,7 @@ func TestDefaultFunctions(t *testing.T) {
 		)
 
 		require.NoError(t, err)
-		require.Equal(t, vm.NewIntValue(42), result)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(42), result)
 	})
 
 	t.Run("default method via different paths", func(t *testing.T) {
@@ -2624,7 +2640,7 @@ func TestDefaultFunctions(t *testing.T) {
 		)
 
 		require.NoError(t, err)
-		assert.Equal(t, vm.NewIntValue(3), result)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), result)
 	})
 
 	t.Run("in different contract", func(t *testing.T) {
@@ -2634,25 +2650,22 @@ func TestDefaultFunctions(t *testing.T) {
 		storage := interpreter.NewInMemoryStorage(nil)
 
 		programs := map[common.Location]*compiledProgram{}
-		contractValues := map[common.Location]*vm.CompositeValue{}
+		contractValues := map[common.Location]*interpreter.CompositeValue{}
 
-		vmConfig := &vm.Config{
-			Storage:        storage,
-			AccountHandler: &testAccountHandler{},
-			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
-				program, ok := programs[location]
-				if !ok {
-					assert.FailNow(t, "invalid location")
-				}
-				return program.Program
-			},
-			ContractValueHandler: func(_ *vm.Config, location common.Location) *vm.CompositeValue {
-				contractValue, ok := contractValues[location]
-				if !ok {
-					assert.FailNow(t, "invalid location")
-				}
-				return contractValue
-			},
+		vmConfig := vm.NewConfig(storage)
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			program, ok := programs[location]
+			if !ok {
+				assert.FailNow(t, "invalid location")
+			}
+			return program.Program
+		}
+		vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+			contractValue, ok := contractValues[location]
+			if !ok {
+				assert.FailNow(t, "invalid location")
+			}
+			return contractValue
 		}
 
 		contractsAddress := common.MustBytesToAddress([]byte{0x1})
@@ -2737,7 +2750,7 @@ func TestDefaultFunctions(t *testing.T) {
 		result, err := txVM.Invoke("main")
 		require.NoError(t, err)
 		require.Equal(t, 0, txVM.StackSize())
-		require.Equal(t, vm.NewIntValue(7), result)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(7), result)
 	})
 
 	t.Run("in different contract with nested call", func(t *testing.T) {
@@ -2747,25 +2760,22 @@ func TestDefaultFunctions(t *testing.T) {
 		storage := interpreter.NewInMemoryStorage(nil)
 
 		programs := map[common.Location]*compiledProgram{}
-		contractValues := map[common.Location]*vm.CompositeValue{}
+		contractValues := map[common.Location]*interpreter.CompositeValue{}
 
-		vmConfig := &vm.Config{
-			Storage:        storage,
-			AccountHandler: &testAccountHandler{},
-			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
-				program, ok := programs[location]
-				if !ok {
-					assert.FailNow(t, "invalid location")
-				}
-				return program.Program
-			},
-			ContractValueHandler: func(_ *vm.Config, location common.Location) *vm.CompositeValue {
-				contractValue, ok := contractValues[location]
-				if !ok {
-					assert.FailNow(t, "invalid location")
-				}
-				return contractValue
-			},
+		vmConfig := vm.NewConfig(storage)
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			program, ok := programs[location]
+			if !ok {
+				assert.FailNow(t, "invalid location")
+			}
+			return program.Program
+		}
+		vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+			contractValue, ok := contractValues[location]
+			if !ok {
+				assert.FailNow(t, "invalid location")
+			}
+			return contractValue
 		}
 
 		contractsAddress := common.MustBytesToAddress([]byte{0x1})
@@ -2841,7 +2851,7 @@ func TestDefaultFunctions(t *testing.T) {
 		result, err := txVM.Invoke("main")
 		require.NoError(t, err)
 		require.Equal(t, 0, txVM.StackSize())
-		require.Equal(t, vm.NewStringValue("Hello from HelloInterface"), result)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("Hello from HelloInterface"), result)
 	})
 
 	t.Run("in different contract nested call overridden", func(t *testing.T) {
@@ -2851,25 +2861,33 @@ func TestDefaultFunctions(t *testing.T) {
 		storage := interpreter.NewInMemoryStorage(nil)
 
 		programs := map[common.Location]*compiledProgram{}
-		contractValues := map[common.Location]*vm.CompositeValue{}
+		contractValues := map[common.Location]*interpreter.CompositeValue{}
 
-		vmConfig := &vm.Config{
-			Storage:        storage,
-			AccountHandler: &testAccountHandler{},
-			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
-				program, ok := programs[location]
-				if !ok {
-					assert.FailNow(t, "invalid location")
-				}
-				return program.Program
-			},
-			ContractValueHandler: func(_ *vm.Config, location common.Location) *vm.CompositeValue {
-				contractValue, ok := contractValues[location]
-				if !ok {
-					assert.FailNow(t, "invalid location")
-				}
-				return contractValue
-			},
+		vmConfig := vm.NewConfig(storage).
+			WithAccountHandler(&testAccountHandler{
+				emitEvent: func(
+					_ interpreter.ValueExportContext,
+					_ interpreter.LocationRange,
+					_ *sema.CompositeType,
+					_ []interpreter.Value,
+				) {
+					// ignore
+				},
+			})
+
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			program, ok := programs[location]
+			if !ok {
+				assert.FailNow(t, "invalid location")
+			}
+			return program.Program
+		}
+		vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+			contractValue, ok := contractValues[location]
+			if !ok {
+				assert.FailNow(t, "invalid location")
+			}
+			return contractValue
 		}
 
 		contractsAddress := common.MustBytesToAddress([]byte{0x1})
@@ -2951,7 +2969,7 @@ func TestDefaultFunctions(t *testing.T) {
 		result, err := txVM.Invoke("main")
 		require.NoError(t, err)
 		require.Equal(t, 0, txVM.StackSize())
-		require.Equal(t, vm.NewStringValue("Hello from Hello"), result)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("Hello from Hello"), result)
 	})
 }
 
@@ -2971,7 +2989,7 @@ func TestFunctionPreConditions(t *testing.T) {
                 return x
             }`,
 			"main",
-			vm.NewIntValue(3),
+			interpreter.NewUnmeteredIntValueFromInt64(3),
 		)
 
 		require.Error(t, err)
@@ -2990,7 +3008,7 @@ func TestFunctionPreConditions(t *testing.T) {
                 return x
             }`,
 			"main",
-			vm.NewIntValue(3),
+			interpreter.NewUnmeteredIntValueFromInt64(3),
 		)
 
 		require.Error(t, err)
@@ -3009,11 +3027,11 @@ func TestFunctionPreConditions(t *testing.T) {
                 return x
             }`,
 			"main",
-			vm.NewIntValue(3),
+			interpreter.NewUnmeteredIntValueFromInt64(3),
 		)
 
 		require.NoError(t, err)
-		assert.Equal(t, vm.NewIntValue(3), result)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), result)
 	})
 
 	t.Run("inherited", func(t *testing.T) {
@@ -3042,7 +3060,7 @@ func TestFunctionPreConditions(t *testing.T) {
                 return c.test(a)
             }`,
 			"main",
-			vm.NewIntValue(4),
+			interpreter.NewUnmeteredIntValueFromInt64(4),
 		)
 
 		require.Error(t, err)
@@ -3129,19 +3147,19 @@ func TestFunctionPreConditions(t *testing.T) {
 					ParameterCount: len(stdlib.LogFunctionType.Parameters),
 					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 						logs = append(logs, arguments[0].String())
-						return vm.VoidValue{}
+						return interpreter.Void
 					},
 				},
 				commons.PanicFunctionName: vm.NativeFunctionValue{
 					ParameterCount: len(stdlib.PanicFunctionType.Parameters),
 					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-						messageValue, ok := arguments[0].(vm.StringValue)
+						messageValue, ok := arguments[0].(*interpreter.StringValue)
 						if !ok {
 							panic(errors.NewUnreachableError())
 						}
 
 						panic(stdlib.PanicError{
-							Message: string(messageValue.Str),
+							Message: messageValue.Str,
 						})
 					},
 				},
@@ -3169,7 +3187,7 @@ func TestFunctionPreConditions(t *testing.T) {
 
 		// The pre-conditions of the interfaces are executed first, with depth-first pre-order traversal.
 		// The pre-condition of the concrete type is executed at the end, after the interfaces.
-		assert.Equal(t, []string{"B", "C", "E", "F", "D", "A"}, logs)
+		assert.Equal(t, []string{"\"B\"", "\"C\"", "\"E\"", "\"F\"", "\"D\"", "\"A\""}, logs)
 	})
 
 	t.Run("in different contract with nested call", func(t *testing.T) {
@@ -3179,39 +3197,36 @@ func TestFunctionPreConditions(t *testing.T) {
 		storage := interpreter.NewInMemoryStorage(nil)
 
 		programs := map[common.Location]*compiledProgram{}
-		contractValues := map[common.Location]*vm.CompositeValue{}
+		contractValues := map[common.Location]*interpreter.CompositeValue{}
 		var logs []string
 
-		vmConfig := &vm.Config{
-			Storage:        storage,
-			AccountHandler: &testAccountHandler{},
-			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
-				program, ok := programs[location]
-				if !ok {
-					assert.FailNow(t, "invalid location")
-				}
-				return program.Program
-			},
-			ContractValueHandler: func(_ *vm.Config, location common.Location) *vm.CompositeValue {
-				contractValue, ok := contractValues[location]
-				if !ok {
-					assert.FailNow(t, "invalid location")
-				}
-				return contractValue
-			},
+		vmConfig := vm.NewConfig(storage)
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			program, ok := programs[location]
+			if !ok {
+				assert.FailNow(t, "invalid location")
+			}
+			return program.Program
+		}
+		vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+			contractValue, ok := contractValues[location]
+			if !ok {
+				assert.FailNow(t, "invalid location")
+			}
+			return contractValue
+		}
 
-			NativeFunctionsProvider: func() map[string]vm.Value {
-				funcs := vm.NativeFunctions()
-				funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-					ParameterCount: len(stdlib.LogFunctionType.Parameters),
-					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-						logs = append(logs, arguments[0].String())
-						return vm.VoidValue{}
-					},
-				}
+		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
+			funcs := vm.NativeFunctions()
+			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+				ParameterCount: len(stdlib.LogFunctionType.Parameters),
+				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+					logs = append(logs, arguments[0].String())
+					return interpreter.Void
+				},
+			}
 
-				return funcs
-			},
+			return funcs
 		}
 
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -3387,7 +3402,7 @@ func TestFunctionPreConditions(t *testing.T) {
 			programs,
 		)
 		require.NoError(t, err)
-		assert.Equal(t, []string{"Foo.B", "Foo.C", "Bar.E", "Bar.F", "Foo.D", "A"}, logs)
+		assert.Equal(t, []string{"\"Foo.B\"", "\"Foo.C\"", "\"Bar.E\"", "\"Bar.F\"", "\"Foo.D\"", "\"A\""}, logs)
 	})
 }
 
@@ -3407,7 +3422,7 @@ func TestFunctionPostConditions(t *testing.T) {
                 return x
             }`,
 			"main",
-			vm.NewIntValue(3),
+			interpreter.NewUnmeteredIntValueFromInt64(3),
 		)
 
 		require.Error(t, err)
@@ -3426,7 +3441,7 @@ func TestFunctionPostConditions(t *testing.T) {
                 return x
             }`,
 			"main",
-			vm.NewIntValue(3),
+			interpreter.NewUnmeteredIntValueFromInt64(3),
 		)
 
 		require.Error(t, err)
@@ -3445,11 +3460,11 @@ func TestFunctionPostConditions(t *testing.T) {
                 return x
             }`,
 			"main",
-			vm.NewIntValue(3),
+			interpreter.NewUnmeteredIntValueFromInt64(3),
 		)
 
 		require.NoError(t, err)
-		assert.Equal(t, vm.NewIntValue(3), result)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), result)
 	})
 
 	t.Run("test on local var", func(t *testing.T) {
@@ -3465,11 +3480,11 @@ func TestFunctionPostConditions(t *testing.T) {
                 return y
             }`,
 			"main",
-			vm.NewIntValue(3),
+			interpreter.NewUnmeteredIntValueFromInt64(3),
 		)
 
 		require.NoError(t, err)
-		assert.Equal(t, vm.NewIntValue(5), result)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(5), result)
 	})
 
 	t.Run("test on local var failed with message", func(t *testing.T) {
@@ -3485,7 +3500,7 @@ func TestFunctionPostConditions(t *testing.T) {
                 return y
             }`,
 			"main",
-			vm.NewIntValue(4),
+			interpreter.NewUnmeteredIntValueFromInt64(4),
 		)
 
 		require.Error(t, err)
@@ -3573,7 +3588,7 @@ func TestFunctionPostConditions(t *testing.T) {
 				ParameterCount: len(stdlib.LogFunctionType.Parameters),
 				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
-					return vm.VoidValue{}
+					return interpreter.Void
 				},
 			}
 
@@ -3601,7 +3616,7 @@ func TestFunctionPostConditions(t *testing.T) {
 
 		// The post-condition of the concrete type is executed first, before the interfaces.
 		// The post-conditions of the interfaces are executed after that, with the reversed depth-first pre-order.
-		assert.Equal(t, []string{"A", "D", "F", "E", "C", "B"}, logs)
+		assert.Equal(t, []string{"\"A\"", "\"D\"", "\"F\"", "\"E\"", "\"C\"", "\"B\""}, logs)
 	})
 
 	t.Run("result var failed", func(t *testing.T) {
@@ -3616,7 +3631,7 @@ func TestFunctionPostConditions(t *testing.T) {
                 return x
             }`,
 			"main",
-			vm.NewIntValue(3),
+			interpreter.NewUnmeteredIntValueFromInt64(3),
 		)
 
 		require.Error(t, err)
@@ -3635,11 +3650,11 @@ func TestFunctionPostConditions(t *testing.T) {
                 return x
             }`,
 			"main",
-			vm.NewIntValue(3),
+			interpreter.NewUnmeteredIntValueFromInt64(3),
 		)
 
 		require.NoError(t, err)
-		assert.Equal(t, vm.NewIntValue(3), result)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), result)
 	})
 
 	t.Run("result var in inherited condition", func(t *testing.T) {
@@ -3668,7 +3683,7 @@ func TestFunctionPostConditions(t *testing.T) {
                 return c.test(a)
             }`,
 			"main",
-			vm.NewIntValue(4),
+			interpreter.NewUnmeteredIntValueFromInt64(4),
 		)
 
 		require.Error(t, err)
@@ -3699,7 +3714,7 @@ func TestFunctionPostConditions(t *testing.T) {
 		)
 
 		require.NoError(t, err)
-		assert.IsType(t, &vm.CompositeValue{}, result)
+		assert.IsType(t, &interpreter.CompositeValue{}, result)
 	})
 
 	t.Run("resource typed result var failed", func(t *testing.T) {
@@ -3757,19 +3772,19 @@ func TestIfLet(t *testing.T) {
 		t.Parallel()
 
 		actual := test(t,
-			vm.NewSomeValueNonCopying(
-				vm.NewIntValue(1),
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(1),
 			),
 		)
-		assert.Equal(t, vm.NewIntValue(1), actual)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), actual)
 	})
 
 	t.Run("nil", func(t *testing.T) {
 
 		t.Parallel()
 
-		actual := test(t, vm.NilValue{})
-		assert.Equal(t, vm.NewIntValue(2), actual)
+		actual := test(t, interpreter.NilValue{})
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), actual)
 	})
 }
 
@@ -3803,19 +3818,19 @@ func TestIfLetScope(t *testing.T) {
 		t.Parallel()
 
 		actual := test(t,
-			vm.NewSomeValueNonCopying(
-				vm.NewIntValue(10),
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(10),
 			),
 		)
-		assert.Equal(t, vm.NewIntValue(11), actual)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(11), actual)
 	})
 
 	t.Run("nil", func(t *testing.T) {
 
 		t.Parallel()
 
-		actual := test(t, vm.NilValue{})
-		assert.Equal(t, vm.NewIntValue(2), actual)
+		actual := test(t, interpreter.NilValue{})
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), actual)
 	})
 }
 
@@ -3842,10 +3857,10 @@ func TestSwitch(t *testing.T) {
               }
             `,
 			"test",
-			vm.NewIntValue(1),
+			interpreter.NewUnmeteredIntValueFromInt64(1),
 		)
 		require.NoError(t, err)
-		assert.Equal(t, vm.NewIntValue(1), result)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), result)
 	})
 
 	t.Run("2", func(t *testing.T) {
@@ -3867,10 +3882,10 @@ func TestSwitch(t *testing.T) {
               }
             `,
 			"test",
-			vm.NewIntValue(2),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
 		)
 		require.NoError(t, err)
-		assert.Equal(t, vm.NewIntValue(2), result)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), result)
 	})
 
 	t.Run("4", func(t *testing.T) {
@@ -3892,10 +3907,10 @@ func TestSwitch(t *testing.T) {
               }
             `,
 			"test",
-			vm.NewIntValue(4),
+			interpreter.NewUnmeteredIntValueFromInt64(4),
 		)
 		require.NoError(t, err)
-		assert.Equal(t, vm.NewIntValue(3), result)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), result)
 	})
 }
 
@@ -3943,9 +3958,9 @@ func TestDefaultFunctionsWithConditions(t *testing.T) {
 		require.Equal(
 			t,
 			[]string{
-				"invoked Bar.test() pre-condition",
-				"invoked Foo.test()",
-				"invoked Bar.test() post-condition",
+				"\"invoked Bar.test() pre-condition\"",
+				"\"invoked Foo.test()\"",
+				"\"invoked Bar.test() post-condition\"",
 			}, logs,
 		)
 	})
@@ -3996,11 +4011,11 @@ func TestDefaultFunctionsWithConditions(t *testing.T) {
 		require.Equal(
 			t,
 			[]string{
-				"invoked Bar.test() pre-condition",
-				"invoked Foo.test() pre-condition",
-				"invoked Foo.test()",
-				"invoked Foo.test() post-condition",
-				"invoked Bar.test() post-condition",
+				"\"invoked Bar.test() pre-condition\"",
+				"\"invoked Foo.test() pre-condition\"",
+				"\"invoked Foo.test()\"",
+				"\"invoked Foo.test() post-condition\"",
+				"\"invoked Bar.test() post-condition\"",
 			}, logs,
 		)
 	})
@@ -4036,21 +4051,19 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 		))
 
 		var logs []string
-		vmConfig := &vm.Config{
-			Storage:        storage,
-			AccountHandler: &testAccountHandler{},
-			NativeFunctionsProvider: func() map[string]vm.Value {
-				funcs := vm.NativeFunctions()
-				funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-					ParameterCount: len(stdlib.LogFunctionType.Parameters),
-					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-						logs = append(logs, arguments[0].String())
-						return vm.VoidValue{}
-					},
-				}
+		vmConfig := vm.NewConfig(storage)
 
-				return funcs
-			},
+		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
+			funcs := vm.NativeFunctions()
+			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+				ParameterCount: len(stdlib.LogFunctionType.Parameters),
+				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+					logs = append(logs, arguments[0].String())
+					return interpreter.Void
+				},
+			}
+
+			return funcs
 		}
 
 		_, err := compileAndInvokeWithOptions(t, `
@@ -4097,8 +4110,8 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 		require.Equal(
 			t,
 			[]string{
-				"2",
-				"5",
+				"\"2\"",
+				"\"5\"",
 			}, logs,
 		)
 	})
@@ -4128,21 +4141,19 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 		))
 
 		var logs []string
-		vmConfig := &vm.Config{
-			Storage:        storage,
-			AccountHandler: &testAccountHandler{},
-			NativeFunctionsProvider: func() map[string]vm.Value {
-				funcs := vm.NativeFunctions()
-				funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-					ParameterCount: len(stdlib.LogFunctionType.Parameters),
-					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-						logs = append(logs, arguments[0].String())
-						return vm.VoidValue{}
-					},
-				}
+		vmConfig := vm.NewConfig(storage)
 
-				return funcs
-			},
+		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
+			funcs := vm.NativeFunctions()
+			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+				ParameterCount: len(stdlib.LogFunctionType.Parameters),
+				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+					logs = append(logs, arguments[0].String())
+					return interpreter.Void
+				},
+			}
+
+			return funcs
 		}
 
 		_, err := compileAndInvokeWithOptions(t, `
@@ -4193,8 +4204,8 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 		require.Equal(
 			t,
 			[]string{
-				"2",
-				"5",
+				"\"2\"",
+				"\"5\"",
 			}, logs,
 		)
 	})
@@ -4224,21 +4235,19 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 		))
 
 		var logs []string
-		vmConfig := &vm.Config{
-			Storage:        storage,
-			AccountHandler: &testAccountHandler{},
-			NativeFunctionsProvider: func() map[string]vm.Value {
-				funcs := vm.NativeFunctions()
-				funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-					ParameterCount: len(stdlib.LogFunctionType.Parameters),
-					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-						logs = append(logs, arguments[0].String())
-						return vm.VoidValue{}
-					},
-				}
+		vmConfig := vm.NewConfig(storage)
 
-				return funcs
-			},
+		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
+			funcs := vm.NativeFunctions()
+			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+				ParameterCount: len(stdlib.LogFunctionType.Parameters),
+				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+					logs = append(logs, arguments[0].String())
+					return interpreter.Void
+				},
+			}
+
+			return funcs
 		}
 
 		_, err := compileAndInvokeWithOptions(t, `
@@ -4300,7 +4309,7 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(
 			t,
-			[]string{"2", "3", "8", "5"},
+			[]string{"\"2\"", "\"3\"", "\"8\"", "\"5\""},
 			logs,
 		)
 	})
@@ -4353,7 +4362,7 @@ func TestEmit(t *testing.T) {
 	var eventEmitted bool
 
 	vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
-	vmConfig.OnEventEmitted = func(event *vm.CompositeValue, eventType *interpreter.CompositeStaticType) error {
+	vmConfig.OnEventEmitted = func(event *interpreter.CompositeValue, eventType *interpreter.CompositeStaticType) error {
 		require.False(t, eventEmitted)
 		eventEmitted = true
 
@@ -4377,7 +4386,7 @@ func TestEmit(t *testing.T) {
 		CompilerAndVMOptions{
 			VMConfig: vmConfig,
 		},
-		vm.NewIntValue(1),
+		interpreter.NewUnmeteredIntValueFromInt64(1),
 	)
 	require.NoError(t, err)
 
@@ -4398,10 +4407,10 @@ func TestCasting(t *testing.T) {
               }
             `,
 			"test",
-			vm.NewIntValue(2),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
 		)
 		require.NoError(t, err)
-		assert.Equal(t, vm.NewSomeValueNonCopying(vm.NewIntValue(2)), result)
+		assert.Equal(t, interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewUnmeteredIntValueFromInt64(2)), result)
 	})
 
 	t.Run("force cast success", func(t *testing.T) {
@@ -4414,10 +4423,10 @@ func TestCasting(t *testing.T) {
               }
             `,
 			"test",
-			vm.NewIntValue(2),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
 		)
 		require.NoError(t, err)
-		assert.Equal(t, vm.NewIntValue(2), result)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), result)
 	})
 
 	t.Run("force cast fail", func(t *testing.T) {
@@ -4430,15 +4439,15 @@ func TestCasting(t *testing.T) {
               }
             `,
 			"test",
-			vm.BoolValue(true),
+			interpreter.TrueValue,
 		)
 		require.Error(t, err)
 		assert.ErrorIs(
 			t,
 			err,
-			vm.ForceCastTypeMismatchError{
-				ExpectedType: interpreter.PrimitiveStaticTypeInt,
-				ActualType:   interpreter.PrimitiveStaticTypeBool,
+			interpreter.ForceCastTypeMismatchError{
+				ExpectedType: sema.IntType,
+				ActualType:   sema.BoolType,
 			},
 		)
 	})
@@ -4453,10 +4462,10 @@ func TestCasting(t *testing.T) {
               }
             `,
 			"test",
-			vm.NewIntValue(2),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
 		)
 		require.NoError(t, err)
-		assert.Equal(t, vm.NewSomeValueNonCopying(vm.NewIntValue(2)), result)
+		assert.Equal(t, interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewUnmeteredIntValueFromInt64(2)), result)
 	})
 
 	t.Run("failable cast fail", func(t *testing.T) {
@@ -4469,10 +4478,10 @@ func TestCasting(t *testing.T) {
               }
             `,
 			"test",
-			vm.BoolValue(true),
+			interpreter.TrueValue,
 		)
 		require.NoError(t, err)
-		assert.Equal(t, vm.Nil, result)
+		assert.Equal(t, interpreter.Nil, result)
 	})
 }
 
@@ -4504,15 +4513,15 @@ func TestBlockScope(t *testing.T) {
 	t.Run("true", func(t *testing.T) {
 		t.Parallel()
 
-		actual := test(t, vm.BoolValue(true))
-		require.Equal(t, vm.NewIntValue(1), actual)
+		actual := test(t, interpreter.TrueValue)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), actual)
 	})
 
 	t.Run("false", func(t *testing.T) {
 		t.Parallel()
 
-		actual := test(t, vm.BoolValue(false))
-		require.Equal(t, vm.NewIntValue(1), actual)
+		actual := test(t, interpreter.FalseValue)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), actual)
 	})
 }
 
@@ -4549,15 +4558,15 @@ func TestBlockScope2(t *testing.T) {
 	t.Run("true", func(t *testing.T) {
 		t.Parallel()
 
-		actual := test(t, vm.BoolValue(true))
-		require.Equal(t, vm.NewIntValue(3), actual)
+		actual := test(t, interpreter.TrueValue)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), actual)
 	})
 
 	t.Run("false", func(t *testing.T) {
 		t.Parallel()
 
-		actual := test(t, vm.BoolValue(false))
-		require.Equal(t, vm.NewIntValue(4), actual)
+		actual := test(t, interpreter.FalseValue)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(4), actual)
 	})
 }
 
@@ -4583,7 +4592,7 @@ func TestIntegers(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			assert.Equal(t, vm.NewIntValue(5), result)
+			assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(5), result)
 		})
 	}
 
@@ -4621,7 +4630,7 @@ func TestFixedPoint(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t,
-				vm.NewUFix64Value(10*sema.Fix64Factor),
+				interpreter.NewUnmeteredUFix64Value(10*sema.Fix64Factor),
 				result,
 			)
 		})
@@ -4659,7 +4668,7 @@ func TestForLoop(t *testing.T) {
 			"test",
 		)
 		require.NoError(t, err)
-		assert.Equal(t, vm.NewIntValue(26), result)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(26), result)
 	})
 
 	t.Run("array with index", func(t *testing.T) {
@@ -4682,7 +4691,7 @@ func TestForLoop(t *testing.T) {
 			"test",
 		)
 		require.NoError(t, err)
-		assert.Equal(t, vm.NewStringValue("0123_5678"), result)
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("0123_5678"), result)
 	})
 
 	t.Run("array loop scoping", func(t *testing.T) {
@@ -4708,7 +4717,7 @@ func TestForLoop(t *testing.T) {
 			"test",
 		)
 		require.NoError(t, err)
-		assert.Equal(t, vm.NewStringValue("6789"), result)
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("6789"), result)
 	})
 }
 
@@ -4739,15 +4748,15 @@ func TestCompileIf(t *testing.T) {
 	t.Run("true", func(t *testing.T) {
 		t.Parallel()
 
-		actual := test(t, vm.BoolValue(true))
-		require.Equal(t, vm.NewIntValue(1), actual)
+		actual := test(t, interpreter.TrueValue)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), actual)
 	})
 
 	t.Run("false", func(t *testing.T) {
 		t.Parallel()
 
-		actual := test(t, vm.BoolValue(false))
-		require.Equal(t, vm.NewIntValue(2), actual)
+		actual := test(t, interpreter.FalseValue)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), actual)
 	})
 }
 
@@ -4772,15 +4781,15 @@ func TestCompileConditional(t *testing.T) {
 	t.Run("true", func(t *testing.T) {
 		t.Parallel()
 
-		actual := test(t, vm.BoolValue(true))
-		require.Equal(t, vm.NewIntValue(1), actual)
+		actual := test(t, interpreter.TrueValue)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), actual)
 	})
 
 	t.Run("false", func(t *testing.T) {
 		t.Parallel()
 
-		actual := test(t, vm.BoolValue(false))
-		require.Equal(t, vm.NewIntValue(2), actual)
+		actual := test(t, interpreter.FalseValue)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), actual)
 	})
 }
 
@@ -4836,29 +4845,29 @@ func TestCompileOr(t *testing.T) {
 	t.Run("true, true", func(t *testing.T) {
 		t.Parallel()
 
-		actual := test(t, vm.BoolValue(true), vm.BoolValue(true))
-		require.Equal(t, vm.NewIntValue(11), actual)
+		actual := test(t, interpreter.TrueValue, interpreter.TrueValue)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(11), actual)
 	})
 
 	t.Run("true, false", func(t *testing.T) {
 		t.Parallel()
 
-		actual := test(t, vm.BoolValue(true), vm.BoolValue(false))
-		require.Equal(t, vm.NewIntValue(11), actual)
+		actual := test(t, interpreter.TrueValue, interpreter.FalseValue)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(11), actual)
 	})
 
 	t.Run("false, true", func(t *testing.T) {
 		t.Parallel()
 
-		actual := test(t, vm.BoolValue(false), vm.BoolValue(true))
-		require.Equal(t, vm.NewIntValue(12), actual)
+		actual := test(t, interpreter.FalseValue, interpreter.TrueValue)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(12), actual)
 	})
 
 	t.Run("false, false", func(t *testing.T) {
 		t.Parallel()
 
-		actual := test(t, vm.BoolValue(false), vm.BoolValue(false))
-		require.Equal(t, vm.NewIntValue(22), actual)
+		actual := test(t, interpreter.FalseValue, interpreter.FalseValue)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(22), actual)
 	})
 }
 
@@ -4914,29 +4923,29 @@ func TestCompileAnd(t *testing.T) {
 	t.Run("true, true", func(t *testing.T) {
 		t.Parallel()
 
-		actual := test(t, vm.BoolValue(true), vm.BoolValue(true))
-		require.Equal(t, vm.NewIntValue(12), actual)
+		actual := test(t, interpreter.TrueValue, interpreter.TrueValue)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(12), actual)
 	})
 
 	t.Run("true, false", func(t *testing.T) {
 		t.Parallel()
 
-		actual := test(t, vm.BoolValue(true), vm.BoolValue(false))
-		require.Equal(t, vm.NewIntValue(22), actual)
+		actual := test(t, interpreter.TrueValue, interpreter.FalseValue)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(22), actual)
 	})
 
 	t.Run("false, true", func(t *testing.T) {
 		t.Parallel()
 
-		actual := test(t, vm.BoolValue(false), vm.BoolValue(true))
-		require.Equal(t, vm.NewIntValue(21), actual)
+		actual := test(t, interpreter.FalseValue, interpreter.TrueValue)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(21), actual)
 	})
 
 	t.Run("false, false", func(t *testing.T) {
 		t.Parallel()
 
-		actual := test(t, vm.BoolValue(false), vm.BoolValue(false))
-		require.Equal(t, vm.NewIntValue(21), actual)
+		actual := test(t, interpreter.FalseValue, interpreter.FalseValue)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(21), actual)
 	})
 }
 
@@ -4963,15 +4972,15 @@ func TestCompileUnaryNot(t *testing.T) {
 	t.Run("true", func(t *testing.T) {
 		t.Parallel()
 
-		actual := test(t, vm.BoolValue(true))
-		require.Equal(t, vm.BoolValue(false), actual)
+		actual := test(t, interpreter.TrueValue)
+		require.Equal(t, interpreter.FalseValue, actual)
 	})
 
 	t.Run("false", func(t *testing.T) {
 		t.Parallel()
 
-		actual := test(t, vm.BoolValue(false))
-		require.Equal(t, vm.BoolValue(true), actual)
+		actual := test(t, interpreter.FalseValue)
+		require.Equal(t, interpreter.TrueValue, actual)
 	})
 }
 
@@ -4986,11 +4995,11 @@ func TestCompileUnaryNegate(t *testing.T) {
             }
         `,
 		"test",
-		vm.NewIntValue(42),
+		interpreter.NewUnmeteredIntValueFromInt64(42),
 	)
 	require.NoError(t, err)
 
-	assert.Equal(t, vm.NewIntValue(-42), actual)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(-42), actual)
 }
 
 func TestCompileUnaryDeref(t *testing.T) {
@@ -5009,7 +5018,7 @@ func TestCompileUnaryDeref(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Equal(t, vm.NewIntValue(42), actual)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(42), actual)
 }
 
 func TestCompileUnaryDerefSome(t *testing.T) {
@@ -5030,7 +5039,7 @@ func TestCompileUnaryDerefSome(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		vm.NewSomeValueNonCopying(vm.NewIntValue(42)),
+		interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewUnmeteredIntValueFromInt64(42)),
 		actual,
 	)
 }
@@ -5050,7 +5059,7 @@ func TestCompileUnaryDerefNil(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Equal(t, vm.Nil, actual)
+	assert.Equal(t, interpreter.Nil, actual)
 }
 
 func TestBinary(t *testing.T) {
@@ -5075,30 +5084,30 @@ func TestBinary(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			assert.Equal(t, expected, actual)
+			interpreter_utils.ValuesAreEqual(nil, expected, actual)
 		})
 	}
 
 	tests := map[string]vm.Value{
-		"+": vm.NewIntValue(10),
-		"-": vm.NewIntValue(2),
-		"*": vm.NewIntValue(24),
-		"/": vm.NewIntValue(1),
-		"%": vm.NewIntValue(2),
+		"+": interpreter.NewUnmeteredIntValueFromInt64(10),
+		"-": interpreter.NewUnmeteredIntValueFromInt64(2),
+		"*": interpreter.NewUnmeteredIntValueFromInt64(24),
+		"/": interpreter.NewUnmeteredIntValueFromInt64(1),
+		"%": interpreter.NewUnmeteredIntValueFromInt64(2),
 
-		"<":  vm.BoolValue(false),
-		"<=": vm.BoolValue(false),
-		">":  vm.BoolValue(true),
-		">=": vm.BoolValue(true),
+		"<":  interpreter.FalseValue,
+		"<=": interpreter.FalseValue,
+		">":  interpreter.TrueValue,
+		">=": interpreter.TrueValue,
 
-		"==": vm.BoolValue(false),
-		"!=": vm.BoolValue(true),
+		"==": interpreter.FalseValue,
+		"!=": interpreter.TrueValue,
 
-		"&":  vm.NewIntValue(4),
-		"|":  vm.NewIntValue(6),
-		"^":  vm.NewIntValue(2),
-		"<<": vm.NewIntValue(96),
-		">>": vm.NewIntValue(0),
+		"&":  interpreter.NewUnmeteredIntValueFromInt64(4),
+		"|":  interpreter.NewUnmeteredIntValueFromInt64(6),
+		"^":  interpreter.NewUnmeteredIntValueFromInt64(2),
+		"<<": interpreter.NewUnmeteredIntValueFromInt64(96),
+		">>": interpreter.NewUnmeteredIntValueFromInt64(0),
 	}
 
 	for op, value := range tests {
@@ -5120,11 +5129,11 @@ func TestCompileForce(t *testing.T) {
                 }
             `,
 			"test",
-			vm.NewSomeValueNonCopying(vm.NewIntValue(42)),
+			interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewUnmeteredIntValueFromInt64(42)),
 		)
 
 		require.NoError(t, err)
-		assert.Equal(t, vm.NewIntValue(42), actual)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(42), actual)
 	})
 
 	t.Run("non-nil, AnyStruct", func(t *testing.T) {
@@ -5138,11 +5147,11 @@ func TestCompileForce(t *testing.T) {
                 }
             `,
 			"test",
-			vm.NewSomeValueNonCopying(vm.NewIntValue(42)),
+			interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewUnmeteredIntValueFromInt64(42)),
 		)
 
 		require.NoError(t, err)
-		assert.Equal(t, vm.NewIntValue(42), actual)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(42), actual)
 	})
 
 	t.Run("nil", func(t *testing.T) {
@@ -5155,7 +5164,7 @@ func TestCompileForce(t *testing.T) {
                 }
             `,
 			"test",
-			vm.Nil,
+			interpreter.Nil,
 		)
 		require.Error(t, err)
 		assert.ErrorIs(t, err, vm.ForceNilError{})
@@ -5172,7 +5181,7 @@ func TestCompileForce(t *testing.T) {
                 }
             `,
 			"test",
-			vm.Nil,
+			interpreter.Nil,
 		)
 		require.Error(t, err)
 		assert.ErrorIs(t, err, vm.ForceNilError{})
@@ -5188,10 +5197,10 @@ func TestCompileForce(t *testing.T) {
                 }
             `,
 			"test",
-			vm.NewIntValue(42),
+			interpreter.NewUnmeteredIntValueFromInt64(42),
 		)
 		require.NoError(t, err)
-		assert.Equal(t, vm.NewIntValue(42), actual)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(42), actual)
 	})
 
 	t.Run("non-optional, AnyStruct", func(t *testing.T) {
@@ -5205,10 +5214,106 @@ func TestCompileForce(t *testing.T) {
                 }
             `,
 			"test",
-			vm.NewIntValue(42),
+			interpreter.NewUnmeteredIntValueFromInt64(42),
 		)
 		require.NoError(t, err)
-		assert.Equal(t, vm.NewIntValue(42), actual)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(42), actual)
+	})
+
+}
+
+func TestTypeConstructor(t *testing.T) {
+	t.Parallel()
+
+	t.Run("simple type", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err := compileAndInvoke(t,
+			`
+                fun test(): Type {
+                    return Type<Int>()
+                }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			interpreter.NewTypeValue(nil, interpreter.PrimitiveStaticTypeInt),
+			actual,
+		)
+	})
+
+	t.Run("user defined type", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err := compileAndInvoke(t,
+			`
+                struct Foo{}
+                fun test(): Type {
+                    return Type<Foo>()
+                }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			interpreter.NewTypeValue(
+				nil,
+				interpreter.NewCompositeStaticTypeComputeTypeID(
+					nil,
+					common.ScriptLocation{0x1},
+					"Foo",
+				),
+			),
+			actual,
+		)
+	})
+}
+
+func TestTypeConversions(t *testing.T) {
+	t.Parallel()
+
+	t.Run("address", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err := compileAndInvoke(t,
+			`
+                fun test(): Address {
+                    return Address(0x2)
+                }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			interpreter.AddressValue{
+				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
+			},
+			actual,
+		)
+	})
+
+	t.Run("Int", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err := compileAndInvoke(t,
+			`
+                fun test(): Int {
+                    var v: Int64 = 5
+                    return Int(v)
+                }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(5),
+			actual,
+		)
 	})
 }
 
@@ -5227,11 +5332,11 @@ func TestReturnStatements(t *testing.T) {
                 return 2
             }`,
 			"test",
-			vm.BoolValue(true),
+			interpreter.TrueValue,
 		)
 
 		require.NoError(t, err)
-		assert.Equal(t, vm.NewIntValue(1), actual)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), actual)
 	})
 
 	t.Run("conditional return with post condition", func(t *testing.T) {
@@ -5265,16 +5370,16 @@ func TestReturnStatements(t *testing.T) {
                 return true
             }`,
 			"test",
-			vm.BoolValue(true),
+			interpreter.TrueValue,
 		)
 
 		require.NoError(t, err)
-		assert.Equal(t, vm.NewIntValue(1), actual)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), actual)
 
 		require.Equal(
 			t,
 			[]string{
-				"post condition executed",
+				"\"post condition executed\"",
 			}, logs,
 		)
 	})
@@ -5308,16 +5413,16 @@ func TestReturnStatements(t *testing.T) {
                 return true
             }`,
 			"test",
-			vm.BoolValue(true),
+			interpreter.TrueValue,
 		)
 
 		require.NoError(t, err)
-		assert.Equal(t, vm.NewIntValue(5), actual)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(5), actual)
 
 		require.Equal(
 			t,
 			[]string{
-				"post condition executed",
+				"\"post condition executed\"",
 			}, logs,
 		)
 	})

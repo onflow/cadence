@@ -21,8 +21,8 @@ package vm
 import (
 	"fmt"
 
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
 )
 
 type LinkerError struct {
@@ -40,7 +40,7 @@ func (l LinkerError) Error() string {
 }
 
 type MissingMemberValueError struct {
-	Parent MemberAccessibleValue
+	Parent interpreter.MemberAccessibleValue
 	Name   string
 }
 
@@ -53,24 +53,6 @@ func (l MissingMemberValueError) IsInternalError() {
 func (l MissingMemberValueError) Error() string {
 	return fmt.Sprintf("cannot find member: `%s` in `%T`", l.Name, l.Parent)
 
-}
-
-// ForceCastTypeMismatchError
-type ForceCastTypeMismatchError struct {
-	ExpectedType bbq.StaticType
-	ActualType   bbq.StaticType
-}
-
-var _ errors.UserError = ForceCastTypeMismatchError{}
-
-func (ForceCastTypeMismatchError) IsUserError() {}
-
-func (e ForceCastTypeMismatchError) Error() string {
-	return fmt.Sprintf(
-		"failed to force-cast value: expected type `%s`, got `%s`",
-		e.ExpectedType.ID(),
-		e.ActualType.ID(),
-	)
 }
 
 // ForceNilError

@@ -9220,7 +9220,7 @@ func TestRuntimeTypesAndConversions(t *testing.T) {
 					inter, err := interpreter.NewInterpreter(nil, nil, &interpreter.Config{})
 					require.NoError(t, err)
 
-					convertedSemaType, err := inter.ConvertStaticToSemaType(staticType)
+					convertedSemaType, err := interpreter.ConvertStaticToSemaType(inter, staticType)
 					require.NoError(t, err)
 					require.True(t, semaType.Equal(convertedSemaType))
 				})
@@ -11181,12 +11181,12 @@ func TestRuntimeForbidPublicEntitlementBorrow(t *testing.T) {
 			return nil
 		},
 		OnValidateAccountCapabilitiesGet: func(
-			inter *interpreter.Interpreter,
-			locationRange interpreter.LocationRange,
-			address interpreter.AddressValue,
+			_ interpreter.AccountCapabilityGetValidationContext,
+			_ interpreter.LocationRange,
+			_ interpreter.AddressValue,
 			path interpreter.PathValue,
 			wantedBorrowType *sema.ReferenceType,
-			capabilityBorrowType *sema.ReferenceType,
+			_ *sema.ReferenceType,
 		) (bool, error) {
 
 			validatedPaths = append(validatedPaths, path)
@@ -11270,12 +11270,12 @@ func TestRuntimeForbidPublicEntitlementGet(t *testing.T) {
 			return nil
 		},
 		OnValidateAccountCapabilitiesGet: func(
-			inter *interpreter.Interpreter,
-			locationRange interpreter.LocationRange,
-			address interpreter.AddressValue,
+			_ interpreter.AccountCapabilityGetValidationContext,
+			_ interpreter.LocationRange,
+			_ interpreter.AddressValue,
 			path interpreter.PathValue,
 			wantedBorrowType *sema.ReferenceType,
-			capabilityBorrowType *sema.ReferenceType,
+			_ *sema.ReferenceType,
 		) (bool, error) {
 
 			validatedPaths = append(validatedPaths, path)
@@ -11355,9 +11355,9 @@ func TestRuntimeForbidPublicEntitlementPublish(t *testing.T) {
 				return nil
 			},
 			OnValidateAccountCapabilitiesPublish: func(
-				inter *interpreter.Interpreter,
-				locationRange interpreter.LocationRange,
-				address interpreter.AddressValue,
+				_ interpreter.AccountCapabilityPublishValidationContext,
+				_ interpreter.LocationRange,
+				_ interpreter.AddressValue,
 				path interpreter.PathValue,
 				capabilityBorrowType *interpreter.ReferenceStaticType,
 			) (bool, error) {
@@ -11412,9 +11412,9 @@ func TestRuntimeForbidPublicEntitlementPublish(t *testing.T) {
 				return nil
 			},
 			OnValidateAccountCapabilitiesPublish: func(
-				inter *interpreter.Interpreter,
-				locationRange interpreter.LocationRange,
-				address interpreter.AddressValue,
+				_ interpreter.AccountCapabilityPublishValidationContext,
+				_ interpreter.LocationRange,
+				_ interpreter.AddressValue,
 				path interpreter.PathValue,
 				capabilityBorrowType *interpreter.ReferenceStaticType,
 			) (bool, error) {
@@ -11469,9 +11469,9 @@ func TestRuntimeForbidPublicEntitlementPublish(t *testing.T) {
 				return nil
 			},
 			OnValidateAccountCapabilitiesPublish: func(
-				inter *interpreter.Interpreter,
-				locationRange interpreter.LocationRange,
-				address interpreter.AddressValue,
+				_ interpreter.AccountCapabilityPublishValidationContext,
+				_ interpreter.LocationRange,
+				_ interpreter.AddressValue,
 				path interpreter.PathValue,
 				capabilityBorrowType *interpreter.ReferenceStaticType,
 			) (bool, error) {

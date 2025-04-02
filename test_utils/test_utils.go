@@ -49,26 +49,27 @@ type Invokable interface {
 }
 
 type VMInvokable struct {
-	*interpreter.Interpreter
 	vmInstance *vm.VM
-	config     *vm.Config
+	*vm.Config
 }
 
 var _ Invokable = &VMInvokable{}
 
-func (v *VMInvokable) Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error) {
-	vmArguments := make([]vm.Value, 0, len(arguments))
-	for _, argument := range arguments {
-		vmArguments = append(
-			vmArguments,
-			vm.InterpreterValueToVMValue(v.config.Storage, argument),
-		)
+func NewVMInvokable(vmInstance *vm.VM, vmConfig *vm.Config) *VMInvokable {
+	return &VMInvokable{
+		vmInstance: vmInstance,
+		Config:     vmConfig,
 	}
+}
 
-	result, err := v.vmInstance.Invoke(functionName, vmArguments...)
+func (v *VMInvokable) Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error) {
+	value, err = v.vmInstance.Invoke(functionName, arguments...)
 
-	interpreterValue := vm.VMValueToInterpreterValue(v.config, result)
-	return interpreterValue, err
+	// Reset the VM after a function invocation,
+	// so the same vm can be re-used for subsequent invocation.
+	v.vmInstance.Reset()
+
+	return
 }
 
 func ParseCheckAndPrepare(t testing.TB, code string, compile bool) Invokable {
@@ -88,9 +89,8 @@ func ParseCheckAndPrepare(t testing.TB, code string, compile bool) Invokable {
 	)
 
 	return &VMInvokable{
-		vmInstance:  vmInstance,
-		config:      vmConfig,
-		Interpreter: vmConfig.Interpreter(),
+		vmInstance: vmInstance,
+		Config:     vmConfig,
 	}
 
 }
@@ -160,7 +160,7 @@ func parseCheckAndInterpretWithLogs( // nolint:unused
 		``,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			message := invocation.Arguments[0].MeteredString(
-				invocation.Interpreter,
+				invocation.InvocationContext,
 				interpreter.SeenReferences{},
 				invocation.LocationRange,
 			)

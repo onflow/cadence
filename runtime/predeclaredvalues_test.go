@@ -658,7 +658,7 @@ func TestRuntimePredeclaredTypeWithInjectedFunctions(t *testing.T) {
 			xConstructorType,
 			func(invocation interpreter.Invocation) interpreter.Value {
 				return interpreter.NewCompositeValue(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 					xType.Location,
 					xType.QualifiedIdentifier(),

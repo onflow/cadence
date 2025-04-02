@@ -21,35 +21,26 @@ package interpreter
 import (
 	"math"
 	"math/big"
-	"unsafe"
 
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // Int
 
 type IntValue struct {
-	BigInt *big.Int
+	values.IntValue
 }
 
-const int64Size = int(unsafe.Sizeof(int64(0)))
-
-var int64BigIntMemoryUsage = common.NewBigIntMemoryUsage(int64Size)
-
 func NewIntValueFromInt64(memoryGauge common.MemoryGauge, value int64) IntValue {
-	return NewIntValueFromBigInt(
-		memoryGauge,
-		int64BigIntMemoryUsage,
-		func() *big.Int {
-			return big.NewInt(value)
-		},
-	)
+	return IntValue{
+		IntValue: values.NewIntValueFromInt64(memoryGauge, value),
+	}
 }
 
 func NewUnmeteredIntValueFromInt64(value int64) IntValue {
@@ -61,14 +52,18 @@ func NewIntValueFromBigInt(
 	memoryUsage common.MemoryUsage,
 	bigIntConstructor func() *big.Int,
 ) IntValue {
-	common.UseMemory(memoryGauge, memoryUsage)
-	value := bigIntConstructor()
-	return NewUnmeteredIntValueFromBigInt(value)
+	return IntValue{
+		IntValue: values.NewIntValueFromBigInt(
+			memoryGauge,
+			memoryUsage,
+			bigIntConstructor,
+		),
+	}
 }
 
 func NewUnmeteredIntValueFromBigInt(value *big.Int) IntValue {
 	return IntValue{
-		BigInt: value,
+		IntValue: values.NewUnmeteredIntValueFromBigInt(value),
 	}
 }
 
@@ -99,13 +94,13 @@ var _ ComparableValue = IntValue{}
 var _ HashableValue = IntValue{}
 var _ MemberAccessibleValue = IntValue{}
 
-func (IntValue) isValue() {}
+func (IntValue) IsValue() {}
 
 func (v IntValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitIntValue(interpreter, v)
 }
 
-func (IntValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (IntValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -118,12 +113,13 @@ func (IntValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 }
 
 func (v IntValue) ToInt(locationRange LocationRange) int {
-	if !v.BigInt.IsInt64() {
+	result, err := v.IntValue.ToInt()
+	if _, ok := err.(values.OverflowError); ok {
 		panic(OverflowError{
 			LocationRange: locationRange,
 		})
 	}
-	return int(v.BigInt.Int64())
+	return result
 }
 
 func (v IntValue) ToUint32(locationRange LocationRange) uint32 {
@@ -153,32 +149,24 @@ func (v IntValue) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
 
-func (v IntValue) String() string {
-	return format.BigInt(v.BigInt)
-}
-
 func (v IntValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v IntValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v IntValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
-		interpreter,
+		context,
 		common.NewRawStringMemoryUsage(
-			OverEstimateNumberStringLength(interpreter, v),
+			OverEstimateNumberStringLength(context, v),
 		),
 	)
 	return v.String()
 }
 
 func (v IntValue) Negate(context NumberValueArithmeticContext, _ LocationRange) NumberValue {
-	return NewIntValueFromBigInt(
-		context,
-		common.NewNegateBigIntMemoryUsage(v.BigInt),
-		func() *big.Int {
-			return new(big.Int).Neg(v.BigInt)
-		},
-	)
+	return IntValue{
+		IntValue: v.IntValue.Negate(context),
+	}
 }
 
 func (v IntValue) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
@@ -191,15 +179,11 @@ func (v IntValue) Plus(context NumberValueArithmeticContext, other NumberValue, 
 			LocationRange: locationRange,
 		})
 	}
-
-	return NewIntValueFromBigInt(
-		context,
-		common.NewPlusBigIntMemoryUsage(v.BigInt, o.BigInt),
-		func() *big.Int {
-			res := new(big.Int)
-			return res.Add(v.BigInt, o.BigInt)
-		},
-	)
+	result, err := v.IntValue.Plus(context, o.IntValue)
+	if err != nil {
+		panic(err)
+	}
+	return IntValue{IntValue: result}
 }
 
 func (v IntValue) SaturatingPlus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
@@ -229,14 +213,13 @@ func (v IntValue) Minus(context NumberValueArithmeticContext, other NumberValue,
 		})
 	}
 
-	return NewIntValueFromBigInt(
-		context,
-		common.NewMinusBigIntMemoryUsage(v.BigInt, o.BigInt),
-		func() *big.Int {
-			res := new(big.Int)
-			return res.Sub(v.BigInt, o.BigInt)
-		},
-	)
+	result, err := v.IntValue.Minus(context, o.IntValue)
+	if err != nil {
+		panic(err)
+	}
+	return IntValue{
+		IntValue: result,
+	}
 }
 
 func (v IntValue) SaturatingMinus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
@@ -266,20 +249,14 @@ func (v IntValue) Mod(context NumberValueArithmeticContext, other NumberValue, l
 		})
 	}
 
-	return NewIntValueFromBigInt(
-		context,
-		common.NewModBigIntMemoryUsage(v.BigInt, o.BigInt),
-		func() *big.Int {
-			res := new(big.Int)
-			// INT33-C
-			if o.BigInt.Cmp(res) == 0 {
-				panic(DivisionByZeroError{
-					LocationRange: locationRange,
-				})
-			}
-			return res.Rem(v.BigInt, o.BigInt)
-		},
-	)
+	result, err := v.IntValue.Mod(context, o.IntValue)
+	if err != nil {
+		panic(err)
+	}
+
+	return IntValue{
+		IntValue: result,
+	}
 }
 
 func (v IntValue) Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
@@ -293,14 +270,13 @@ func (v IntValue) Mul(context NumberValueArithmeticContext, other NumberValue, l
 		})
 	}
 
-	return NewIntValueFromBigInt(
-		context,
-		common.NewMulBigIntMemoryUsage(v.BigInt, o.BigInt),
-		func() *big.Int {
-			res := new(big.Int)
-			return res.Mul(v.BigInt, o.BigInt)
-		},
-	)
+	result, err := v.IntValue.Mul(context, o.IntValue)
+	if err != nil {
+		panic(err)
+	}
+	return IntValue{
+		IntValue: result,
+	}
 }
 
 func (v IntValue) SaturatingMul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
@@ -330,20 +306,14 @@ func (v IntValue) Div(context NumberValueArithmeticContext, other NumberValue, l
 		})
 	}
 
-	return NewIntValueFromBigInt(
-		context,
-		common.NewDivBigIntMemoryUsage(v.BigInt, o.BigInt),
-		func() *big.Int {
-			res := new(big.Int)
-			// INT33-C
-			if o.BigInt.Cmp(res) == 0 {
-				panic(DivisionByZeroError{
-					LocationRange: locationRange,
-				})
-			}
-			return res.Div(v.BigInt, o.BigInt)
-		},
-	)
+	result, err := v.IntValue.Div(context, o.IntValue)
+	if err != nil {
+		panic(err)
+	}
+
+	return IntValue{
+		IntValue: result,
+	}
 }
 
 func (v IntValue) SaturatingDiv(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
@@ -373,8 +343,7 @@ func (v IntValue) Less(context ValueComparisonContext, other ComparableValue, lo
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp == -1)
+	return BoolValue(v.IntValue.Less(o.IntValue))
 }
 
 func (v IntValue) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -388,8 +357,7 @@ func (v IntValue) LessEqual(context ValueComparisonContext, other ComparableValu
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp <= 0)
+	return BoolValue(v.IntValue.LessEqual(o.IntValue))
 }
 
 func (v IntValue) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -403,9 +371,7 @@ func (v IntValue) Greater(context ValueComparisonContext, other ComparableValue,
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp == 1)
-
+	return BoolValue(v.IntValue.Greater(o.IntValue))
 }
 
 func (v IntValue) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -419,8 +385,7 @@ func (v IntValue) GreaterEqual(context ValueComparisonContext, other ComparableV
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp >= 0)
+	return BoolValue(v.IntValue.GreaterEqual(o.IntValue))
 }
 
 func (v IntValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
@@ -428,15 +393,15 @@ func (v IntValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) 
 	if !ok {
 		return false
 	}
-	cmp := v.BigInt.Cmp(otherInt.BigInt)
-	return cmp == 0
+
+	return v.IntValue.Equal(otherInt.IntValue)
 }
 
 // HashInput returns a byte slice containing:
 // - HashInputTypeInt (1 byte)
 // - big int encoded in big-endian (n bytes)
 func (v IntValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
-	b := SignedBigIntToBigEndianBytes(v.BigInt)
+	b := values.SignedBigIntToBigEndianBytes(v.BigInt)
 
 	length := 1 + len(b)
 	var buffer []byte
@@ -462,14 +427,14 @@ func (v IntValue) BitwiseOr(context ValueStaticTypeContext, other IntegerValue, 
 		})
 	}
 
-	return NewIntValueFromBigInt(
-		context,
-		common.NewBitwiseOrBigIntMemoryUsage(v.BigInt, o.BigInt),
-		func() *big.Int {
-			res := new(big.Int)
-			return res.Or(v.BigInt, o.BigInt)
-		},
-	)
+	result, err := v.IntValue.BitwiseOr(context, o.IntValue)
+	if err != nil {
+		panic(err)
+	}
+
+	return IntValue{
+		IntValue: result,
+	}
 }
 
 func (v IntValue) BitwiseXor(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
@@ -483,14 +448,14 @@ func (v IntValue) BitwiseXor(context ValueStaticTypeContext, other IntegerValue,
 		})
 	}
 
-	return NewIntValueFromBigInt(
-		context,
-		common.NewBitwiseXorBigIntMemoryUsage(v.BigInt, o.BigInt),
-		func() *big.Int {
-			res := new(big.Int)
-			return res.Xor(v.BigInt, o.BigInt)
-		},
-	)
+	result, err := v.IntValue.BitwiseXor(context, o.IntValue)
+	if err != nil {
+		panic(err)
+	}
+
+	return IntValue{
+		IntValue: result,
+	}
 }
 
 func (v IntValue) BitwiseAnd(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
@@ -504,14 +469,14 @@ func (v IntValue) BitwiseAnd(context ValueStaticTypeContext, other IntegerValue,
 		})
 	}
 
-	return NewIntValueFromBigInt(
-		context,
-		common.NewBitwiseAndBigIntMemoryUsage(v.BigInt, o.BigInt),
-		func() *big.Int {
-			res := new(big.Int)
-			return res.And(v.BigInt, o.BigInt)
-		},
-	)
+	result, err := v.IntValue.BitwiseAnd(context, o.IntValue)
+	if err != nil {
+		panic(err)
+	}
+
+	return IntValue{
+		IntValue: result,
+	}
 }
 
 func (v IntValue) BitwiseLeftShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
@@ -525,26 +490,14 @@ func (v IntValue) BitwiseLeftShift(context ValueStaticTypeContext, other Integer
 		})
 	}
 
-	if o.BigInt.Sign() < 0 {
-		panic(NegativeShiftError{
-			LocationRange: locationRange,
-		})
+	result, err := v.IntValue.BitwiseLeftShift(context, o.IntValue)
+	if err != nil {
+		panic(err)
 	}
 
-	if !o.BigInt.IsUint64() {
-		panic(OverflowError{
-			LocationRange: locationRange,
-		})
+	return IntValue{
+		IntValue: result,
 	}
-
-	return NewIntValueFromBigInt(
-		context,
-		common.NewBitwiseLeftShiftBigIntMemoryUsage(v.BigInt, o.BigInt),
-		func() *big.Int {
-			res := new(big.Int)
-			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-		},
-	)
 }
 
 func (v IntValue) BitwiseRightShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
@@ -558,30 +511,18 @@ func (v IntValue) BitwiseRightShift(context ValueStaticTypeContext, other Intege
 		})
 	}
 
-	if o.BigInt.Sign() < 0 {
-		panic(NegativeShiftError{
-			LocationRange: locationRange,
-		})
+	result, err := v.IntValue.BitwiseRightShift(context, o.IntValue)
+	if err != nil {
+		panic(err)
 	}
 
-	if !o.BigInt.IsUint64() {
-		panic(OverflowError{
-			LocationRange: locationRange,
-		})
+	return IntValue{
+		IntValue: result,
 	}
-
-	return NewIntValueFromBigInt(
-		context,
-		common.NewBitwiseRightShiftBigIntMemoryUsage(v.BigInt, o.BigInt),
-		func() *big.Int {
-			res := new(big.Int)
-			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
-		},
-	)
 }
 
-func (v IntValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	return getNumberValueMember(interpreter, v, name, sema.IntType, locationRange)
+func (v IntValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	return getNumberValueMember(context, v, name, sema.IntType, locationRange)
 }
 
 func (IntValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
@@ -589,13 +530,9 @@ func (IntValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (IntValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (IntValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
-}
-
-func (v IntValue) ToBigEndianBytes() []byte {
-	return SignedBigIntToBigEndianBytes(v.BigInt)
 }
 
 func (v IntValue) ConformsToStaticType(
@@ -606,20 +543,16 @@ func (v IntValue) ConformsToStaticType(
 	return true
 }
 
-func (v IntValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
-	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
-}
-
 func (IntValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (IntValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (IntValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v IntValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -628,7 +561,7 @@ func (v IntValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
@@ -637,18 +570,6 @@ func (v IntValue) Clone(_ *Interpreter) Value {
 	return NewUnmeteredIntValueFromBigInt(v.BigInt)
 }
 
-func (IntValue) DeepRemove(_ *Interpreter, _ bool) {
+func (IntValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
-}
-
-func (v IntValue) ByteSize() uint32 {
-	return cborTagSize + getBigIntCBORSize(v.BigInt)
-}
-
-func (v IntValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
-	return v, nil
-}
-
-func (IntValue) ChildStorables() []atree.Storable {
-	return nil
 }

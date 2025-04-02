@@ -62,7 +62,7 @@ func TestInterpretSelfDeclaration(t *testing.T) {
 			func(invocation interpreter.Invocation) interpreter.Value {
 				// Check that the *caller's* self
 
-				callStack := invocation.Interpreter.CallStack()
+				callStack := invocation.InvocationContext.CallStack()
 				parentInvocation := callStack[len(callStack)-1]
 
 				if expectSelf {
@@ -163,7 +163,8 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 		interpreter.EmptyLocationRange,
 	)
 
-	_, err := inter.InvokeFunction(
+	_, err := interpreter.InvokeFunction(
+		inter,
 		test,
 		invocation,
 	)

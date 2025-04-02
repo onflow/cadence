@@ -19,68 +19,12 @@
 package vm
 
 import (
-	"github.com/onflow/atree"
-
 	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
 
-// members
-
-type CapabilityValue struct {
-	Address    AddressValue
-	BorrowType bbq.StaticType
-	ID         IntValue // TODO: UInt64Value
-}
-
-var _ Value = CapabilityValue{}
-
-func NewCapabilityValue(address AddressValue, id IntValue, borrowType bbq.StaticType) CapabilityValue {
-	return CapabilityValue{
-		Address:    address,
-		BorrowType: borrowType,
-		ID:         id,
-	}
-}
-
-func NewInvalidCapabilityValue(
-	address common.Address,
-	borrowType bbq.StaticType,
-) CapabilityValue {
-	return CapabilityValue{
-		ID:         InvalidCapabilityID,
-		Address:    AddressValue(address),
-		BorrowType: borrowType,
-	}
-}
-
-func (CapabilityValue) isValue() {}
-
-func (v CapabilityValue) StaticType(config *Config) bbq.StaticType {
-	return interpreter.NewCapabilityStaticType(config.MemoryGauge, v.BorrowType)
-}
-
-func (v CapabilityValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
-	return v
-}
-
-func (v CapabilityValue) String() string {
-	var borrowType string
-	if v.BorrowType != nil {
-		borrowType = v.BorrowType.String()
-	}
-	return format.Capability(
-		borrowType,
-		v.Address.String(),
-		v.ID.String(),
-	)
-}
-
-var InvalidCapabilityID = IntValue{}
+// Members
 
 func init() {
 	typeName := interpreter.PrimitiveStaticTypeCapability.String()
@@ -92,169 +36,30 @@ func init() {
 		NativeFunctionValue{
 			ParameterCount: 0,
 			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
-				capabilityValue := getReceiver[CapabilityValue](config, args[0])
+				capabilityValue := getReceiver[*interpreter.IDCapabilityValue](config, args[receiverIndex])
 				capabilityID := capabilityValue.ID
 
-				if capabilityID == InvalidCapabilityID {
-					return Nil
+				if capabilityID == interpreter.InvalidCapabilityID {
+					return interpreter.Nil
 				}
 
-				capabilityBorrowType := capabilityValue.BorrowType.(*interpreter.ReferenceStaticType)
+				capabilityBorrowType := interpreter.MustConvertStaticToSemaType(capabilityValue.BorrowType, config).(*sema.ReferenceType)
 
-				var wantedBorrowType *interpreter.ReferenceStaticType
+				var typeParameter sema.Type
 				if len(typeArguments) > 0 {
-					wantedBorrowType = typeArguments[0].(*interpreter.ReferenceStaticType)
+					typeParameter = interpreter.MustConvertStaticToSemaType(typeArguments[0], config)
 				}
 
-				address := capabilityValue.Address
+				address := capabilityValue.Address()
 
-				referenceValue := GetCheckedCapabilityControllerReference(
+				return interpreter.CapabilityBorrow(
 					config,
+					typeParameter,
 					address,
 					capabilityID,
-					wantedBorrowType,
 					capabilityBorrowType,
+					EmptyLocationRange,
 				)
-				if referenceValue == nil {
-					return nil
-				}
-
-				// TODO: Is this needed?
-				// Attempt to dereference,
-				// which reads the stored value
-				// and performs a dynamic type check
-
-				//value, err := referenceValue.dereference(config.MemoryGauge)
-				//if err != nil {
-				//	panic(err)
-				//}
-
-				if referenceValue == nil {
-					return Nil
-				}
-
-				return NewSomeValueNonCopying(referenceValue)
 			},
 		})
-}
-
-func GetCheckedCapabilityControllerReference(
-	config *Config,
-	capabilityAddressValue AddressValue,
-	capabilityIDValue IntValue,
-	wantedBorrowType *interpreter.ReferenceStaticType,
-	capabilityBorrowType *interpreter.ReferenceStaticType,
-) ReferenceValue {
-	controller, resultBorrowType := getCheckedCapabilityController(
-		config,
-		capabilityAddressValue,
-		capabilityIDValue,
-		wantedBorrowType,
-		capabilityBorrowType,
-	)
-	if controller == nil {
-		return nil
-	}
-
-	capabilityAddress := common.Address(capabilityAddressValue)
-
-	return controller.ReferenceValue(
-		capabilityAddress,
-		resultBorrowType,
-	)
-}
-
-func getCheckedCapabilityController(
-	config *Config,
-	capabilityAddressValue AddressValue,
-	capabilityIDValue IntValue,
-	wantedBorrowType *interpreter.ReferenceStaticType,
-	capabilityBorrowType *interpreter.ReferenceStaticType,
-) (
-	CapabilityControllerValue,
-	*interpreter.ReferenceStaticType,
-) {
-	if wantedBorrowType == nil {
-		wantedBorrowType = capabilityBorrowType
-	} else { //nolint:gocritic
-		// TODO:
-		//   wantedBorrowType = inter.SubstituteMappedEntitlements(wantedBorrowType).(*sema.ReferenceType)
-
-		if !canBorrow(config, wantedBorrowType, capabilityBorrowType) {
-			return nil, nil
-		}
-	}
-
-	capabilityAddress := common.Address(capabilityAddressValue)
-	capabilityID := uint64(capabilityIDValue.SmallInt)
-
-	controller := getCapabilityController(config, capabilityAddress, capabilityID)
-	if controller == nil {
-		return nil, nil
-	}
-
-	controllerBorrowType := controller.CapabilityControllerBorrowType()
-	if !canBorrow(config, wantedBorrowType, controllerBorrowType) {
-		return nil, nil
-	}
-
-	return controller, wantedBorrowType
-}
-
-// getCapabilityController gets the capability controller for the given capability ID
-func getCapabilityController(
-	config *Config,
-	address common.Address,
-	capabilityID uint64,
-) CapabilityControllerValue {
-
-	storageMapKey := interpreter.Uint64StorageMapKey(capabilityID)
-
-	accountStorage := config.Storage.GetDomainStorageMap(
-		config.Interpreter(),
-		address,
-		common.StorageDomainCapabilityController,
-		false,
-	)
-	if accountStorage == nil {
-		return nil
-	}
-
-	referenced := accountStorage.ReadValue(config.MemoryGauge, storageMapKey)
-	vmReferencedValue := InterpreterValueToVMValue(config.Storage, referenced)
-
-	controller, ok := vmReferencedValue.(CapabilityControllerValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	return controller
-}
-
-func canBorrow(
-	config *Config,
-	wantedBorrowType *interpreter.ReferenceStaticType,
-	capabilityBorrowType *interpreter.ReferenceStaticType,
-) bool {
-
-	// Ensure the wanted borrow type is not more permissive than the capability borrow type
-	// TODO:
-	//if !wantedBorrowType.Authorization.
-	//	PermitsAccess(capabilityBorrowType.Authorization) {
-	//
-	//	return false
-	//}
-
-	// Ensure the wanted borrow type is a subtype or supertype of the capability borrow type
-
-	return IsSubType(
-		config,
-		wantedBorrowType.ReferencedType,
-		capabilityBorrowType.ReferencedType,
-	) ||
-		IsSubType(
-			config,
-			capabilityBorrowType.ReferencedType,
-			wantedBorrowType.ReferencedType,
-		)
 }

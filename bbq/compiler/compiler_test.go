@@ -2485,8 +2485,9 @@ func TestCompileDefaultFunction(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker).
-		WithConfig(&compiler.Config{
+	comp := compiler.NewInstructionCompilerWithConfig(
+		checker,
+		&compiler.Config{
 			ElaborationResolver: func(location common.Location) (*sema.Elaboration, error) {
 				if location == checker.Location {
 					return checker.Elaboration, nil
@@ -2494,7 +2495,8 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 				return nil, fmt.Errorf("cannot find elaboration for: %s", location)
 			},
-		})
+		},
+	)
 
 	program := comp.Compile()
 
@@ -2799,8 +2801,9 @@ func TestCompileFunctionConditions(t *testing.T) {
         `)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker).
-			WithConfig(&compiler.Config{
+		comp := compiler.NewInstructionCompilerWithConfig(
+			checker,
+			&compiler.Config{
 				ElaborationResolver: func(location common.Location) (*sema.Elaboration, error) {
 					if location == checker.Location {
 						return checker.Elaboration, nil
@@ -2808,7 +2811,8 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 					return nil, fmt.Errorf("cannot find elaboration for: %s", location)
 				},
-			})
+			},
+		)
 
 		program := comp.Compile()
 		require.Len(t, program.Functions, 2)
@@ -2951,8 +2955,9 @@ func TestCompileFunctionConditions(t *testing.T) {
         `)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker).
-			WithConfig(&compiler.Config{
+		comp := compiler.NewInstructionCompilerWithConfig(
+			checker,
+			&compiler.Config{
 				ElaborationResolver: func(location common.Location) (*sema.Elaboration, error) {
 					if location == checker.Location {
 						return checker.Elaboration, nil
@@ -2960,7 +2965,8 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 					return nil, fmt.Errorf("cannot find elaboration for: %s", location)
 				},
-			})
+			},
+		)
 
 		program := comp.Compile()
 		require.Len(t, program.Functions, 2)
@@ -3527,8 +3533,9 @@ func TestCompileTransaction(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker).
-		WithConfig(&compiler.Config{
+	comp := compiler.NewInstructionCompilerWithConfig(
+		checker,
+		&compiler.Config{
 			ElaborationResolver: func(location common.Location) (*sema.Elaboration, error) {
 				if location == checker.Location {
 					return checker.Elaboration, nil
@@ -3536,7 +3543,8 @@ func TestCompileTransaction(t *testing.T) {
 
 				return nil, fmt.Errorf("cannot find elaboration for: %s", location)
 			},
-		})
+		},
+	)
 
 	program := comp.Compile()
 	require.Len(t, program.Functions, 3)

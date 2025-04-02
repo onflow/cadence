@@ -31,6 +31,7 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // UInt64Value
@@ -64,13 +65,13 @@ func NewUnmeteredUInt64Value(value uint64) UInt64Value {
 	return UInt64Value(value)
 }
 
-func (UInt64Value) isValue() {}
+func (UInt64Value) IsValue() {}
 
 func (v UInt64Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitUInt64Value(interpreter, v)
 }
 
-func (UInt64Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (UInt64Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -90,11 +91,11 @@ func (v UInt64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v UInt64Value) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v UInt64Value) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
-		interpreter,
+		context,
 		common.NewRawStringMemoryUsage(
-			OverEstimateNumberStringLength(interpreter, v),
+			OverEstimateNumberStringLength(context, v),
 		),
 	)
 	return v.String()
@@ -128,17 +129,6 @@ func (v UInt64Value) Negate(NumberValueArithmeticContext, LocationRange) NumberV
 	panic(errors.NewUnreachableError())
 }
 
-func safeAddUint64(a, b uint64, locationRange LocationRange) uint64 {
-	sum := a + b
-	// INT30-C
-	if sum < a {
-		panic(OverflowError{
-			LocationRange: locationRange,
-		})
-	}
-	return sum
-}
-
 func (v UInt64Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
@@ -153,7 +143,16 @@ func (v UInt64Value) Plus(context NumberValueArithmeticContext, other NumberValu
 	return NewUInt64Value(
 		context,
 		func() uint64 {
-			return safeAddUint64(uint64(v), uint64(o), locationRange)
+			result, err := values.SafeAddUint64(uint64(v), uint64(o))
+			if err != nil {
+				if _, ok := err.(values.OverflowError); ok {
+					panic(OverflowError{
+						LocationRange: locationRange,
+					})
+				}
+				panic(err)
+			}
+			return result
 		},
 	)
 }
@@ -354,7 +353,7 @@ func (v UInt64Value) Less(context ValueComparisonContext, other ComparableValue,
 		})
 	}
 
-	return AsBoolValue(v < o)
+	return v < o
 }
 
 func (v UInt64Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -368,7 +367,7 @@ func (v UInt64Value) LessEqual(context ValueComparisonContext, other ComparableV
 		})
 	}
 
-	return AsBoolValue(v <= o)
+	return v <= o
 }
 
 func (v UInt64Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -382,7 +381,7 @@ func (v UInt64Value) Greater(context ValueComparisonContext, other ComparableVal
 		})
 	}
 
-	return AsBoolValue(v > o)
+	return v > o
 }
 
 func (v UInt64Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -396,7 +395,7 @@ func (v UInt64Value) GreaterEqual(context ValueComparisonContext, other Comparab
 		})
 	}
 
-	return AsBoolValue(v >= o)
+	return v >= o
 }
 
 func (v UInt64Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
@@ -526,8 +525,8 @@ func (v UInt64Value) BitwiseRightShift(context ValueStaticTypeContext, other Int
 	)
 }
 
-func (v UInt64Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	return getNumberValueMember(interpreter, v, name, sema.UInt64Type, locationRange)
+func (v UInt64Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	return getNumberValueMember(context, v, name, sema.UInt64Type, locationRange)
 }
 
 func (UInt64Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
@@ -535,7 +534,7 @@ func (UInt64Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value
 	panic(errors.NewUnreachableError())
 }
 
-func (UInt64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (UInt64Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -566,12 +565,12 @@ func (UInt64Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (UInt64Value) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (UInt64Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v UInt64Value) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -580,7 +579,7 @@ func (v UInt64Value) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
@@ -589,12 +588,12 @@ func (v UInt64Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (UInt64Value) DeepRemove(_ *Interpreter, _ bool) {
+func (UInt64Value) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
 func (v UInt64Value) ByteSize() uint32 {
-	return cborTagSize + getUintCBORSize(uint64(v))
+	return values.CBORTagSize + values.GetUintCBORSize(uint64(v))
 }
 
 func (v UInt64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {

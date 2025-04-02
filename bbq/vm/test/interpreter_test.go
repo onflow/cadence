@@ -204,7 +204,7 @@ func TestInterpreterFTTransfer(t *testing.T) {
 		temporarilyRecordCode: func(location common.AddressLocation, code []byte) {
 			// do nothing
 		},
-		emitEvent: func(*interpreter.Interpreter, interpreter.LocationRange, *sema.CompositeType, []interpreter.Value) {
+		emitEvent: func(interpreter.ValueExportContext, interpreter.LocationRange, *sema.CompositeType, []interpreter.Value) {
 			// do nothing
 		},
 		recordContractUpdate: func(location common.AddressLocation, value *interpreter.CompositeValue) {
@@ -255,7 +255,8 @@ func TestInterpreterFTTransfer(t *testing.T) {
 
 			constructor := constructorGenerator(common.ZeroAddress)
 
-			value, err := inter.InvokeFunctionValue(
+			value, err := interpreter.InvokeFunctionValue(
+				inter,
 				constructor,
 				[]interpreter.Value{signer},
 				[]sema.Type{
@@ -275,7 +276,7 @@ func TestInterpreterFTTransfer(t *testing.T) {
 			return flowTokenContractValue
 		},
 		CapabilityBorrowHandler: func(
-			inter *interpreter.Interpreter,
+			context interpreter.BorrowCapabilityControllerContext,
 			locationRange interpreter.LocationRange,
 			address interpreter.AddressValue,
 			capabilityID interpreter.UInt64Value,
@@ -283,7 +284,7 @@ func TestInterpreterFTTransfer(t *testing.T) {
 			capabilityBorrowType *sema.ReferenceType,
 		) interpreter.ReferenceValue {
 			return stdlib.BorrowCapabilityController(
-				inter,
+				context,
 				locationRange,
 				address,
 				capabilityID,
@@ -574,7 +575,7 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 		temporarilyRecordCode: func(location common.AddressLocation, code []byte) {
 			// do nothing
 		},
-		emitEvent: func(*interpreter.Interpreter, interpreter.LocationRange, *sema.CompositeType, []interpreter.Value) {
+		emitEvent: func(interpreter.ValueExportContext, interpreter.LocationRange, *sema.CompositeType, []interpreter.Value) {
 			// do nothing
 		},
 		recordContractUpdate: func(location common.AddressLocation, value *interpreter.CompositeValue) {
@@ -625,7 +626,8 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 
 			constructor := constructorGenerator(common.ZeroAddress)
 
-			value, err := inter.InvokeFunctionValue(
+			value, err := interpreter.InvokeFunctionValue(
+				inter,
 				constructor,
 				[]interpreter.Value{signer},
 				[]sema.Type{
@@ -645,7 +647,7 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 			return flowTokenContractValue
 		},
 		CapabilityBorrowHandler: func(
-			inter *interpreter.Interpreter,
+			context interpreter.BorrowCapabilityControllerContext,
 			locationRange interpreter.LocationRange,
 			address interpreter.AddressValue,
 			capabilityID interpreter.UInt64Value,
@@ -653,7 +655,7 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 			capabilityBorrowType *sema.ReferenceType,
 		) interpreter.ReferenceValue {
 			return stdlib.BorrowCapabilityController(
-				inter,
+				context,
 				locationRange,
 				address,
 				capabilityID,
@@ -661,6 +663,14 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 				capabilityBorrowType,
 				accountHandler,
 			)
+		},
+		OnEventEmitted: func(
+			_ *interpreter.Interpreter,
+			_ interpreter.LocationRange,
+			_ *interpreter.CompositeValue,
+			_ *sema.CompositeType,
+		) error {
+			return nil
 		},
 	}
 
@@ -740,10 +750,8 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 
 	authorization := sema.NewEntitlementSetAccess(
 		[]*sema.EntitlementType{
-			sema.BorrowValueType,
-			sema.IssueStorageCapabilityControllerType,
-			sema.PublishCapabilityType,
-			sema.SaveValueType,
+			sema.CapabilitiesType,
+			sema.StorageType,
 		},
 		sema.Conjunction,
 	)
@@ -777,7 +785,7 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 
 	// Mint FLOW to sender
 
-	total := int64(1000000)
+	total := uint64(1000000) * sema.Fix64Factor
 
 	inter, err = parseCheckAndInterpretWithOptions(
 		b,
@@ -790,6 +798,13 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 	)
 	require.NoError(b, err)
 
+	authorization = sema.NewEntitlementSetAccess(
+		[]*sema.EntitlementType{
+			sema.BorrowValueType,
+		},
+		sema.Conjunction,
+	)
+
 	signer = stdlib.NewAccountReferenceValue(
 		inter,
 		accountHandler,
@@ -801,7 +816,7 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 	err = inter.InvokeTransaction(
 		0,
 		interpreter.AddressValue(senderAddress),
-		interpreter.NewUnmeteredIntValueFromInt64(total),
+		interpreter.NewUnmeteredUFix64Value(total),
 		signer,
 	)
 	require.NoError(b, err)
@@ -816,9 +831,9 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 		interpreter.EmptyLocationRange,
 	)
 
-	transferAmount := int64(1)
+	transferAmount := uint64(1) * sema.Fix64Factor
 
-	amount := interpreter.NewUnmeteredIntValueFromInt64(transferAmount)
+	amount := interpreter.NewUnmeteredUFix64Value(transferAmount)
 	receiver := interpreter.AddressValue(receiverAddress)
 
 	b.ReportAllocs()

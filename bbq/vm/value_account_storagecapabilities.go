@@ -20,25 +20,10 @@ package vm
 
 import (
 	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 )
-
-func NewAccountStorageCapabilitiesValue(accountAddress common.Address) *SimpleCompositeValue {
-	return &SimpleCompositeValue{
-		typeID:     sema.Account_StorageCapabilitiesType.ID(),
-		staticType: interpreter.PrimitiveStaticTypeAccount_StorageCapabilities,
-		Kind:       common.CompositeKindStructure,
-		fields:     map[string]Value{
-			// TODO: add the remaining fields
-		},
-		metadata: map[string]any{
-			sema.AccountTypeAddressFieldName: accountAddress,
-		},
-	}
-}
 
 // members
 
@@ -53,30 +38,24 @@ func init() {
 			ParameterCount: len(sema.Account_StorageCapabilitiesTypeIssueFunctionType.Parameters),
 			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.StorageCapabilities)
-				accountAddress := getAddressMetaInfoFromValue(args[0])
+				accountAddress := getAddressMetaInfoFromValue(args[receiverIndex]).ToAddress()
 
-				// Path argument
-				targetPathValue, ok := args[1].(PathValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				if !ok || targetPathValue.Domain != common.PathDomainStorage {
-					panic(errors.NewUnreachableError())
-				}
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				arguments := args[typeBoundFunctionArgumentOffset:]
 
 				// Get borrow type type-argument
-				ty := typeArguments[0]
+				typeParameter := typeArguments[0]
+				semaType := interpreter.MustConvertStaticToSemaType(typeParameter, config)
 
-				// Issue capability controller and return capability
-
-				return checkAndIssueStorageCapabilityControllerWithType(
+				return stdlib.IssueCapability(
+					arguments,
 					config,
-					config.AccountHandler,
+					EmptyLocationRange,
+					config.GetAccountHandler(),
 					accountAddress,
-					targetPathValue,
-					ty,
+					semaType,
 				)
 			},
-		})
+		},
+	)
 }

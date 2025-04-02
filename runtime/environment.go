@@ -75,7 +75,7 @@ type Environment interface {
 		error,
 	)
 	CommitStorage(inter *interpreter.Interpreter) error
-	NewAccountValue(inter *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value
+	NewAccountValue(context interpreter.AccountCreationContext, address interpreter.AddressValue) interpreter.Value
 
 	ResolveLocation(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error)
 }
@@ -149,7 +149,7 @@ var _ stdlib.Hasher = &interpreterEnvironment{}
 var _ ArgumentDecoder = &interpreterEnvironment{}
 var _ common.MemoryGauge = &interpreterEnvironment{}
 
-func newInterpreterEnvironment(config Config) *interpreterEnvironment {
+func NewInterpreterEnvironment(config Config) *interpreterEnvironment {
 	defaultBaseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	defaultBaseTypeActivation := sema.NewVariableActivation(sema.BaseTypeActivation)
 	defaultBaseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
@@ -161,13 +161,13 @@ func newInterpreterEnvironment(config Config) *interpreterEnvironment {
 		defaultBaseActivation:      defaultBaseActivation,
 		stackDepthLimiter:          newStackDepthLimiter(config.StackDepthLimit),
 	}
-	env.InterpreterConfig = env.newInterpreterConfig()
+	env.InterpreterConfig = env.NewInterpreterConfig()
 	env.CheckerConfig = env.newCheckerConfig()
 	env.compositeValueFunctionsHandlers = stdlib.DefaultStandardLibraryCompositeValueFunctionHandlers(env)
 	return env
 }
 
-func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
+func (e *interpreterEnvironment) NewInterpreterConfig() *interpreter.Config {
 	return &interpreter.Config{
 		MemoryGauge:                    e,
 		BaseActivationHandler:          e.getBaseActivation,
@@ -195,7 +195,6 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		OnInvokedFunctionReturn:                   e.newOnInvokedFunctionReturnHandler(),
 		CapabilityBorrowHandler:                   e.newCapabilityBorrowHandler(),
 		CapabilityCheckHandler:                    e.newCapabilityCheckHandler(),
-		LegacyContractUpgradeEnabled:              e.config.LegacyContractUpgradeEnabled,
 		ValidateAccountCapabilitiesGetHandler:     e.newValidateAccountCapabilitiesGetHandler(),
 		ValidateAccountCapabilitiesPublishHandler: e.newValidateAccountCapabilitiesPublishHandler(),
 	}
@@ -214,7 +213,7 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 }
 
 func NewBaseInterpreterEnvironment(config Config) *interpreterEnvironment {
-	env := newInterpreterEnvironment(config)
+	env := NewInterpreterEnvironment(config)
 	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(env) {
 		env.DeclareValue(valueDeclaration, nil)
 	}
@@ -222,7 +221,7 @@ func NewBaseInterpreterEnvironment(config Config) *interpreterEnvironment {
 }
 
 func NewScriptInterpreterEnvironment(config Config) Environment {
-	env := newInterpreterEnvironment(config)
+	env := NewInterpreterEnvironment(config)
 	for _, valueDeclaration := range stdlib.DefaultScriptStandardLibraryValues(env) {
 		env.DeclareValue(valueDeclaration, nil)
 	}
@@ -339,9 +338,9 @@ func (e *interpreterEnvironment) GetAccountAvailableBalance(address common.Addre
 	return e.runtimeInterface.GetAccountAvailableBalance(address)
 }
 
-func (e *interpreterEnvironment) CommitStorageTemporarily(inter *interpreter.Interpreter) error {
+func (e *interpreterEnvironment) CommitStorageTemporarily(context interpreter.ValueTransferContext) error {
 	const commitContractUpdates = false
-	return e.storage.Commit(inter, commitContractUpdates)
+	return e.storage.Commit(context, commitContractUpdates)
 }
 
 func (e *interpreterEnvironment) GetStorageUsed(address common.Address) (uint64, error) {
@@ -377,13 +376,13 @@ func (e *interpreterEnvironment) GenerateAccountID(address common.Address) (uint
 }
 
 func (e *interpreterEnvironment) EmitEvent(
-	inter *interpreter.Interpreter,
+	context interpreter.ValueExportContext,
 	locationRange interpreter.LocationRange,
 	eventType *sema.CompositeType,
 	values []interpreter.Value,
 ) {
 	EmitEventFields(
-		inter,
+		context,
 		locationRange,
 		eventType,
 		values,
@@ -870,10 +869,10 @@ func (e *interpreterEnvironment) newOnRecordTraceHandler() interpreter.OnRecordT
 }
 
 func (e *interpreterEnvironment) NewAccountValue(
-	inter *interpreter.Interpreter,
+	context interpreter.AccountCreationContext,
 	address interpreter.AddressValue,
 ) interpreter.Value {
-	return stdlib.NewAccountValue(inter, e, address)
+	return stdlib.NewAccountValue(context, e, address)
 }
 
 func (e *interpreterEnvironment) ValidatePublicKey(publicKey *stdlib.PublicKey) error {
@@ -937,7 +936,8 @@ func (e *interpreterEnvironment) newContractValueHandler() interpreter.ContractV
 
 				constructor := constructorGenerator(invocation.Address)
 
-				value, err := inter.InvokeFunctionValue(
+				value, err := interpreter.InvokeFunctionValue(
+					inter,
 					constructor,
 					invocation.ConstructorArguments,
 					invocation.ArgumentTypes,
@@ -995,7 +995,7 @@ func (e *interpreterEnvironment) newOnEventEmittedHandler() interpreter.OnEventE
 
 func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter.InjectedCompositeFieldsHandlerFunc {
 	return func(
-		inter *interpreter.Interpreter,
+		context interpreter.AccountCreationContext,
 		location Location,
 		_ string,
 		compositeKind common.CompositeKind,
@@ -1013,13 +1013,13 @@ func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter
 			}
 
 			addressValue := interpreter.NewAddressValue(
-				inter,
+				context,
 				address,
 			)
 
 			return map[string]interpreter.Value{
 				sema.ContractAccountFieldName: stdlib.NewAccountReferenceValue(
-					inter,
+					context,
 					e,
 					addressValue,
 					interpreter.FullyEntitledAccountAccess,
@@ -1328,7 +1328,7 @@ func (e *interpreterEnvironment) getBaseActivation(
 func (e *interpreterEnvironment) newCapabilityBorrowHandler() interpreter.CapabilityBorrowHandlerFunc {
 
 	return func(
-		inter *interpreter.Interpreter,
+		context interpreter.BorrowCapabilityControllerContext,
 		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		capabilityID interpreter.UInt64Value,
@@ -1337,7 +1337,7 @@ func (e *interpreterEnvironment) newCapabilityBorrowHandler() interpreter.Capabi
 	) interpreter.ReferenceValue {
 
 		return stdlib.BorrowCapabilityController(
-			inter,
+			context,
 			locationRange,
 			address,
 			capabilityID,
@@ -1350,7 +1350,7 @@ func (e *interpreterEnvironment) newCapabilityBorrowHandler() interpreter.Capabi
 
 func (e *interpreterEnvironment) newCapabilityCheckHandler() interpreter.CapabilityCheckHandlerFunc {
 	return func(
-		inter *interpreter.Interpreter,
+		context interpreter.CheckCapabilityControllerContext,
 		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		capabilityID interpreter.UInt64Value,
@@ -1359,7 +1359,7 @@ func (e *interpreterEnvironment) newCapabilityCheckHandler() interpreter.Capabil
 	) interpreter.BoolValue {
 
 		return stdlib.CheckCapabilityController(
-			inter,
+			context,
 			locationRange,
 			address,
 			capabilityID,
@@ -1372,7 +1372,7 @@ func (e *interpreterEnvironment) newCapabilityCheckHandler() interpreter.Capabil
 
 func (e *interpreterEnvironment) newValidateAccountCapabilitiesGetHandler() interpreter.ValidateAccountCapabilitiesGetHandlerFunc {
 	return func(
-		inter *interpreter.Interpreter,
+		context interpreter.AccountCapabilityGetValidationContext,
 		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		path interpreter.PathValue,
@@ -1385,7 +1385,7 @@ func (e *interpreterEnvironment) newValidateAccountCapabilitiesGetHandler() inte
 		)
 		errors.WrapPanic(func() {
 			ok, err = e.runtimeInterface.ValidateAccountCapabilitiesGet(
-				inter,
+				context,
 				locationRange,
 				address,
 				path,
@@ -1402,7 +1402,7 @@ func (e *interpreterEnvironment) newValidateAccountCapabilitiesGetHandler() inte
 
 func (e *interpreterEnvironment) newValidateAccountCapabilitiesPublishHandler() interpreter.ValidateAccountCapabilitiesPublishHandlerFunc {
 	return func(
-		inter *interpreter.Interpreter,
+		context interpreter.AccountCapabilityPublishValidationContext,
 		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		path interpreter.PathValue,
@@ -1414,7 +1414,7 @@ func (e *interpreterEnvironment) newValidateAccountCapabilitiesPublishHandler() 
 		)
 		errors.WrapPanic(func() {
 			ok, err = e.runtimeInterface.ValidateAccountCapabilitiesPublish(
-				inter,
+				context,
 				locationRange,
 				address,
 				path,

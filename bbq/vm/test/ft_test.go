@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/test_utils/runtime_utils"
 )
@@ -40,7 +41,7 @@ func TestFTTransfer(t *testing.T) {
 	storage := interpreter.NewInMemoryStorage(nil)
 	programs := map[common.Location]*compiledProgram{}
 
-	typeLoader := func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
+	typeLoader := func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
 		program, ok := programs[location]
 		if !ok {
 			panic(fmt.Errorf("cannot find elaboration for: %s", location))
@@ -51,7 +52,17 @@ func TestFTTransfer(t *testing.T) {
 			return compositeType
 		}
 
-		return elaboration.InterfaceType(typeID)
+		interfaceType := elaboration.InterfaceType(typeID)
+		if interfaceType != nil {
+			return interfaceType
+		}
+
+		entitlementType := elaboration.EntitlementType(typeID)
+		if entitlementType != nil {
+			return entitlementType
+		}
+
+		return elaboration.EntitlementMapType(typeID)
 	}
 
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
@@ -71,17 +82,36 @@ func TestFTTransfer(t *testing.T) {
 
 	flowTokenProgram := parseCheckAndCompile(t, realFlowContract, flowTokenLocation, programs)
 
-	config := &vm.Config{
-		Storage:        storage,
-		AccountHandler: &testAccountHandler{},
-		TypeLoader:     typeLoader,
-		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
-			imported, ok := programs[location]
-			if !ok {
-				return nil
-			}
-			return imported.Program
+	accountHandler := &testAccountHandler{
+		emitEvent: func(
+			_ interpreter.ValueExportContext,
+			_ interpreter.LocationRange,
+			_ *sema.CompositeType,
+			_ []interpreter.Value,
+		) {
+			// ignore
 		},
+	}
+
+	interpreterEnv := runtime.NewInterpreterEnvironment(runtime.Config{})
+	interpreterEnv.Configure(
+		&runtime_utils.TestRuntimeInterface{},
+		runtime.CodesAndPrograms{},
+		nil,
+		nil,
+	)
+
+	config := vm.NewConfig(storage).
+		WithAccountHandler(accountHandler).
+		WithInterpreterConfig(interpreterEnv.NewInterpreterConfig())
+
+	config.TypeLoader = typeLoader
+	config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+		imported, ok := programs[location]
+		if !ok {
+			return nil
+		}
+		return imported.Program
 	}
 
 	flowTokenVM := vm.NewVM(
@@ -90,38 +120,36 @@ func TestFTTransfer(t *testing.T) {
 		config,
 	)
 
-	authAccount := vm.NewAuthAccountReferenceValue(config, contractsAddress)
+	authAccount := vm.NewAuthAccountReferenceValue(config, accountHandler, contractsAddress)
 	flowTokenContractValue, err := flowTokenVM.InitializeContract(authAccount)
 	require.NoError(t, err)
 
 	// ----- Run setup account transaction -----
+	vmConfig := vm.NewConfig(storage).
+		WithAccountHandler(accountHandler).
+		WithInterpreterConfig(interpreterEnv.NewInterpreterConfig())
 
-	vmConfig := &vm.Config{
-		Storage: storage,
-		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
-			imported, ok := programs[location]
-			if !ok {
-				return nil
-			}
-			return imported.Program
-		},
-		ContractValueHandler: func(_ *vm.Config, location common.Location) *vm.CompositeValue {
-			switch location {
-			case ftLocation:
-				// interface
-				return nil
-			case flowTokenLocation:
-				return flowTokenContractValue
-			default:
-				assert.FailNow(t, "invalid location")
-				return nil
-			}
-		},
-
-		AccountHandler: &testAccountHandler{},
-
-		TypeLoader: typeLoader,
+	vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+		imported, ok := programs[location]
+		if !ok {
+			return nil
+		}
+		return imported.Program
 	}
+	vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+		switch location {
+		case ftLocation:
+			// interface
+			return nil
+		case flowTokenLocation:
+			return flowTokenContractValue
+		default:
+			assert.FailNow(t, "invalid location")
+			return nil
+		}
+	}
+
+	vmConfig.TypeLoader = typeLoader
 
 	for _, address := range []common.Address{
 		senderAddress,
@@ -131,7 +159,7 @@ func TestFTTransfer(t *testing.T) {
 
 		setupTxVM := vm.NewVM(txLocation(), program, vmConfig)
 
-		authorizer := vm.NewAuthAccountReferenceValue(vmConfig, address)
+		authorizer := vm.NewAuthAccountReferenceValue(vmConfig, accountHandler, address)
 		err = setupTxVM.ExecuteTransaction(nil, authorizer)
 		require.NoError(t, err)
 		require.Equal(t, 0, setupTxVM.StackSize())
@@ -146,11 +174,11 @@ func TestFTTransfer(t *testing.T) {
 	total := uint64(1000000) * sema.Fix64Factor
 
 	mintTxArgs := []vm.Value{
-		vm.AddressValue(senderAddress),
-		vm.NewUFix64Value(total),
+		interpreter.AddressValue(senderAddress),
+		interpreter.NewUnmeteredUFix64Value(total),
 	}
 
-	mintTxAuthorizer := vm.NewAuthAccountReferenceValue(vmConfig, contractsAddress)
+	mintTxAuthorizer := vm.NewAuthAccountReferenceValue(vmConfig, accountHandler, contractsAddress)
 	err = mintTxVM.ExecuteTransaction(mintTxArgs, mintTxAuthorizer)
 	require.NoError(t, err)
 	require.Equal(t, 0, mintTxVM.StackSize())
@@ -164,11 +192,11 @@ func TestFTTransfer(t *testing.T) {
 	transferAmount := uint64(1) * sema.Fix64Factor
 
 	tokenTransferTxArgs := []vm.Value{
-		vm.NewUFix64Value(transferAmount),
-		vm.AddressValue(receiverAddress),
+		interpreter.NewUnmeteredUFix64Value(transferAmount),
+		interpreter.AddressValue(receiverAddress),
 	}
 
-	tokenTransferTxAuthorizer := vm.NewAuthAccountReferenceValue(vmConfig, senderAddress)
+	tokenTransferTxAuthorizer := vm.NewAuthAccountReferenceValue(vmConfig, accountHandler, senderAddress)
 	err = tokenTransferTxVM.ExecuteTransaction(tokenTransferTxArgs, tokenTransferTxAuthorizer)
 	require.NoError(t, err)
 	require.Equal(t, 0, tokenTransferTxVM.StackSize())
@@ -183,15 +211,15 @@ func TestFTTransfer(t *testing.T) {
 
 		validationScriptVM := vm.NewVM(scriptLocation(), program, vmConfig)
 
-		addressValue := vm.AddressValue(address)
+		addressValue := interpreter.AddressValue(address)
 		result, err := validationScriptVM.Invoke("main", addressValue)
 		require.NoError(t, err)
 		require.Equal(t, 0, validationScriptVM.StackSize())
 
 		if address == senderAddress {
-			assert.Equal(t, vm.NewUFix64Value(total-transferAmount), result)
+			assert.Equal(t, interpreter.NewUnmeteredUFix64Value(total-transferAmount), result)
 		} else {
-			assert.Equal(t, vm.NewUFix64Value(transferAmount), result)
+			assert.Equal(t, interpreter.NewUnmeteredUFix64Value(transferAmount), result)
 		}
 	}
 }
@@ -203,7 +231,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 	storage := interpreter.NewInMemoryStorage(nil)
 	programs := map[common.Location]*compiledProgram{}
 
-	typeLoader := func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
+	typeLoader := func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
 		program, ok := programs[location]
 		if !ok {
 			panic(fmt.Errorf("cannot find elaboration for: %s", location))
@@ -231,11 +259,10 @@ func BenchmarkFTTransfer(b *testing.B) {
 	flowTokenLocation := common.NewAddressLocation(nil, contractsAddress, "FlowToken")
 	flowTokenProgram := parseCheckAndCompile(b, realFlowContract, flowTokenLocation, programs)
 
-	config := &vm.Config{
-		Storage:        storage,
-		AccountHandler: &testAccountHandler{},
-		TypeLoader:     typeLoader,
-	}
+	accountHandler := &testAccountHandler{}
+
+	config := vm.NewConfig(storage).WithAccountHandler(accountHandler)
+	config.TypeLoader = typeLoader
 
 	flowTokenVM := vm.NewVM(
 		flowTokenLocation,
@@ -243,39 +270,36 @@ func BenchmarkFTTransfer(b *testing.B) {
 		config,
 	)
 
-	authAccount := vm.NewAuthAccountReferenceValue(config, contractsAddress)
+	authAccount := vm.NewAuthAccountReferenceValue(config, accountHandler, contractsAddress)
 
 	flowTokenContractValue, err := flowTokenVM.InitializeContract(authAccount)
 	require.NoError(b, err)
 
 	// ----- Run setup account transaction -----
 
-	vmConfig := &vm.Config{
-		Storage: storage,
-		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
-			imported, ok := programs[location]
-			if !ok {
-				return nil
-			}
-			return imported.Program
-		},
-		ContractValueHandler: func(_ *vm.Config, location common.Location) *vm.CompositeValue {
-			switch location {
-			case ftLocation:
-				// interface
-				return nil
-			case flowTokenLocation:
-				return flowTokenContractValue
-			default:
-				assert.FailNow(b, "invalid location")
-				return nil
-			}
-		},
+	vmConfig := vm.NewConfig(storage).WithAccountHandler(accountHandler)
 
-		AccountHandler: &testAccountHandler{},
-
-		TypeLoader: typeLoader,
+	vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+		imported, ok := programs[location]
+		if !ok {
+			return nil
+		}
+		return imported.Program
 	}
+	vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+		switch location {
+		case ftLocation:
+			// interface
+			return nil
+		case flowTokenLocation:
+			return flowTokenContractValue
+		default:
+			assert.FailNow(b, "invalid location")
+			return nil
+		}
+	}
+
+	vmConfig.TypeLoader = typeLoader
 
 	for _, address := range []common.Address{
 		senderAddress,
@@ -285,7 +309,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 		setupTxVM := vm.NewVM(txLocation(), program, vmConfig)
 
-		authorizer := vm.NewAuthAccountReferenceValue(vmConfig, address)
+		authorizer := vm.NewAuthAccountReferenceValue(vmConfig, accountHandler, address)
 		err = setupTxVM.ExecuteTransaction(nil, authorizer)
 		require.NoError(b, err)
 		require.Equal(b, 0, setupTxVM.StackSize())
@@ -297,28 +321,28 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	mintTxVM := vm.NewVM(txLocation(), program, vmConfig)
 
-	total := int64(1000000)
+	total := uint64(1000000) * sema.Fix64Factor
 
 	mintTxArgs := []vm.Value{
-		vm.AddressValue(senderAddress),
-		vm.NewIntValue(total),
+		interpreter.AddressValue(senderAddress),
+		interpreter.NewUnmeteredUFix64Value(total),
 	}
 
-	mintTxAuthorizer := vm.NewAuthAccountReferenceValue(vmConfig, contractsAddress)
+	mintTxAuthorizer := vm.NewAuthAccountReferenceValue(vmConfig, accountHandler, contractsAddress)
 	err = mintTxVM.ExecuteTransaction(mintTxArgs, mintTxAuthorizer)
 	require.NoError(b, err)
 	require.Equal(b, 0, mintTxVM.StackSize())
 
 	// ----- Run token transfer transaction -----
 
-	transferAmount := int64(1)
+	transferAmount := uint64(1) * sema.Fix64Factor
 
 	tokenTransferTxArgs := []vm.Value{
-		vm.NewIntValue(transferAmount),
-		vm.AddressValue(receiverAddress),
+		interpreter.NewUnmeteredUFix64Value(transferAmount),
+		interpreter.AddressValue(receiverAddress),
 	}
 
-	tokenTransferTxAuthorizer := vm.NewAuthAccountReferenceValue(vmConfig, senderAddress)
+	tokenTransferTxAuthorizer := vm.NewAuthAccountReferenceValue(vmConfig, accountHandler, senderAddress)
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -334,9 +358,6 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	// Run validation scripts
 
-	// actual transfer amount = (transfer amount in one tx) * (number of time the tx/benchmark runs)
-	actualTransferAmount := transferAmount * int64(b.N)
-
 	for _, address := range []common.Address{
 		senderAddress,
 		receiverAddress,
@@ -345,15 +366,15 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 		validationScriptVM := vm.NewVM(scriptLocation(), program, vmConfig)
 
-		addressValue := vm.AddressValue(address)
+		addressValue := interpreter.AddressValue(address)
 		result, err := validationScriptVM.Invoke("main", addressValue)
 		require.NoError(b, err)
 		require.Equal(b, 0, validationScriptVM.StackSize())
 
 		if address == senderAddress {
-			assert.Equal(b, vm.NewIntValue(total-actualTransferAmount), result)
+			assert.Equal(b, interpreter.NewUnmeteredUFix64Value(total-transferAmount), result)
 		} else {
-			assert.Equal(b, vm.NewIntValue(actualTransferAmount), result)
+			assert.Equal(b, interpreter.NewUnmeteredUFix64Value(transferAmount), result)
 		}
 	}
 }

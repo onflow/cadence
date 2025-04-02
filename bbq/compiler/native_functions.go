@@ -19,20 +19,21 @@
 package compiler
 
 import (
+	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 
 	"github.com/onflow/cadence/bbq/commons"
 )
 
-var nativeFunctions []*global
+var nativeFunctions []*Global
 
-func NativeFunctions() map[string]*global {
-	funcs := make(map[string]*global, len(nativeFunctions))
+func NativeFunctions() map[string]*Global {
+	funcs := make(map[string]*Global, len(nativeFunctions))
 	for _, nativeFunction := range nativeFunctions {
 
 		// Always return a copy.
 		// Because the indexes are modified my the imported program.
-		funcs[nativeFunction.Name] = &global{
+		funcs[nativeFunction.Name] = &Global{
 			Name:     nativeFunction.Name,
 			Location: nativeFunction.Location,
 			Index:    nativeFunction.Index,
@@ -53,6 +54,9 @@ var stdlibFunctions = []string{
 	commons.LogFunctionName,
 	commons.PanicFunctionName,
 	commons.GetAccountFunctionName,
+
+	// TODO: Remove after https://github.com/onflow/cadence-internal/pull/320
+	sema.MetaTypeName,
 }
 
 func init() {
@@ -66,6 +70,16 @@ func init() {
 
 	for _, funcName := range stdlibFunctions {
 		addNativeFunction(funcName)
+	}
+
+	// Type constructors
+	for _, typeConstructor := range sema.RuntimeTypeConstructors {
+		addNativeFunction(typeConstructor.Name)
+	}
+
+	// Value conversion functions
+	for _, declaration := range interpreter.ConverterDeclarations {
+		addNativeFunction(declaration.Name)
 	}
 }
 
@@ -84,7 +98,7 @@ func registerBoundFunctions(typ sema.Type) {
 }
 
 func addNativeFunction(name string) {
-	global := &global{
+	global := &Global{
 		Name: name,
 	}
 	nativeFunctions = append(nativeFunctions, global)

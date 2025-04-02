@@ -29,6 +29,7 @@ import (
 	"golang.org/x/tools/go/packages"
 
 	"github.com/onflow/atree"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -1857,13 +1858,15 @@ func TestBlockValue(t *testing.T) {
 			ByteArrayStaticType,
 			common.ZeroAddress,
 		),
-		5.0,
+		NewUnmeteredUFix64ValueWithInteger(5, EmptyLocationRange),
 	)
 
 	// static type test
-	var actualTs = block.Fields[sema.BlockTypeTimestampFieldName]
-	const expectedTs UFix64Value = 5.0
-	assert.Equal(t, expectedTs, actualTs)
+
+	assert.Equal(t,
+		NewUnmeteredUFix64ValueWithInteger(5, EmptyLocationRange),
+		block.Fields[sema.BlockTypeTimestampFieldName],
+	)
 }
 
 func TestEphemeralReferenceTypeConformance(t *testing.T) {
@@ -3412,7 +3415,7 @@ func TestPublicKeyValue(t *testing.T) {
 			EmptyLocationRange,
 			publicKey,
 			sigAlgo,
-			func(interpreter *Interpreter, locationRange LocationRange, publicKey *CompositeValue) error {
+			func(context PublicKeyValidationContext, locationRange LocationRange, publicKey *CompositeValue) error {
 				return nil
 			},
 		)
@@ -3466,7 +3469,7 @@ func TestPublicKeyValue(t *testing.T) {
 					EmptyLocationRange,
 					publicKey,
 					sigAlgo,
-					func(interpreter *Interpreter, locationRange LocationRange, publicKey *CompositeValue) error {
+					func(context PublicKeyValidationContext, locationRange LocationRange, publicKey *CompositeValue) error {
 						return fakeError
 					},
 				)
@@ -3482,7 +3485,7 @@ func TestHashable(t *testing.T) {
 	pkgs, err := packages.Load(
 		&packages.Config{
 			// https://github.com/golang/go/issues/45218
-			Mode: packages.NeedImports | packages.NeedTypes,
+			Mode: packages.NeedImports | packages.NeedDeps | packages.NeedTypes,
 		},
 		"github.com/onflow/cadence/interpreter",
 	)

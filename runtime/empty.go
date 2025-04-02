@@ -241,7 +241,7 @@ func (EmptyRuntimeInterface) RecoverProgram(_ *ast.Program, _ common.Location) (
 }
 
 func (EmptyRuntimeInterface) ValidateAccountCapabilitiesGet(
-	_ *interpreter.Interpreter,
+	_ interpreter.AccountCapabilityGetValidationContext,
 	_ interpreter.LocationRange,
 	_ interpreter.AddressValue,
 	_ interpreter.PathValue,
@@ -252,7 +252,7 @@ func (EmptyRuntimeInterface) ValidateAccountCapabilitiesGet(
 }
 
 func (EmptyRuntimeInterface) ValidateAccountCapabilitiesPublish(
-	_ *interpreter.Interpreter,
+	_ interpreter.AccountCapabilityPublishValidationContext,
 	_ interpreter.LocationRange,
 	_ interpreter.AddressValue,
 	_ interpreter.PathValue,

@@ -24,18 +24,23 @@ import (
 
 	"github.com/onflow/atree"
 
-	"github.com/onflow/cadence/activations"
-	"github.com/onflow/cadence/errors"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/bbq/compiler"
+	"github.com/onflow/cadence/bbq/vm"
+	compilerUtils "github.com/onflow/cadence/bbq/vm/test"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
+	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	"github.com/onflow/cadence/test_utils/runtime_utils"
+	"github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 type storageKey struct {
@@ -52,7 +57,7 @@ func testAccount(
 	code string,
 	checkerConfig sema.Config,
 ) (
-	*interpreter.Interpreter,
+	test_utils.Invokable,
 	func() map[storageKey]interpreter.Value,
 ) {
 	return testAccountWithErrorHandler(
@@ -66,12 +71,35 @@ func testAccount(
 	)
 }
 
+func testAccountWithCompilerEnabled(
+	t *testing.T,
+	address interpreter.AddressValue,
+	auth bool,
+	handler stdlib.AccountHandler,
+	code string,
+	checkerConfig sema.Config,
+) (
+	test_utils.Invokable,
+	func() map[storageKey]interpreter.Value,
+) {
+	return testAccountWithErrorHandlerWithCompiler(
+		t,
+		address,
+		auth,
+		handler,
+		code,
+		checkerConfig,
+		nil,
+		true,
+	)
+}
+
 type testAccountHandler struct {
 	accountIDs                 map[common.Address]uint64
 	generateAccountID          func(address common.Address) (uint64, error)
 	getAccountBalance          func(address common.Address) (uint64, error)
 	getAccountAvailableBalance func(address common.Address) (uint64, error)
-	commitStorageTemporarily   func(inter *interpreter.Interpreter) error
+	commitStorageTemporarily   func(context interpreter.ValueTransferContext) error
 	getStorageUsed             func(address common.Address) (uint64, error)
 	getStorageCapacity         func(address common.Address) (uint64, error)
 	validatePublicKey          func(key *stdlib.PublicKey) error
@@ -91,7 +119,7 @@ type testAccountHandler struct {
 	getAccountKey    func(address common.Address, index uint32) (*stdlib.AccountKey, error)
 	accountKeysCount func(address common.Address) (uint32, error)
 	emitEvent        func(
-		inter *interpreter.Interpreter,
+		context interpreter.ValueExportContext,
 		locationRange interpreter.LocationRange,
 		eventType *sema.CompositeType,
 		values []interpreter.Value,
@@ -160,11 +188,11 @@ func (t *testAccountHandler) GetAccountAvailableBalance(address common.Address) 
 	return t.getAccountAvailableBalance(address)
 }
 
-func (t *testAccountHandler) CommitStorageTemporarily(inter *interpreter.Interpreter) error {
+func (t *testAccountHandler) CommitStorageTemporarily(context interpreter.ValueTransferContext) error {
 	if t.commitStorageTemporarily == nil {
 		panic(errors.NewUnexpectedError("unexpected call to CommitStorageTemporarily"))
 	}
-	return t.commitStorageTemporarily(inter)
+	return t.commitStorageTemporarily(context)
 }
 
 func (t *testAccountHandler) GetStorageUsed(address common.Address) (uint64, error) {
@@ -241,7 +269,7 @@ func (t *testAccountHandler) AccountKeysCount(address common.Address) (uint32, e
 }
 
 func (t *testAccountHandler) EmitEvent(
-	inter *interpreter.Interpreter,
+	context interpreter.ValueExportContext,
 	locationRange interpreter.LocationRange,
 	eventType *sema.CompositeType,
 	values []interpreter.Value,
@@ -250,7 +278,7 @@ func (t *testAccountHandler) EmitEvent(
 		panic(errors.NewUnexpectedError("unexpected call to EmitEvent"))
 	}
 	t.emitEvent(
-		inter,
+		context,
 		locationRange,
 		eventType,
 		values,
@@ -387,6 +415,67 @@ func (t *testAccountHandler) IsContractBeingAdded(common.AddressLocation) bool {
 	return false
 }
 
+type NoOpReferenceCreationContext struct{}
+
+var _ interpreter.ReferenceCreationContext = NoOpReferenceCreationContext{}
+
+func (n NoOpReferenceCreationContext) ClearReferencedResourceKindedValues(valueID atree.ValueID) {
+	// NO-OP
+}
+
+func (n NoOpReferenceCreationContext) ReferencedResourceKindedValues(valueID atree.ValueID) map[*interpreter.EphemeralReferenceValue]struct{} {
+	// NO-OP
+	return nil
+}
+
+func (n NoOpReferenceCreationContext) CheckInvalidatedResourceOrResourceReference(value interpreter.Value, locationRange interpreter.LocationRange) {
+	// NO-OP
+}
+
+func (n NoOpReferenceCreationContext) MaybeTrackReferencedResourceKindedValue(ref *interpreter.EphemeralReferenceValue) {
+	// NO-OP
+}
+
+func (n NoOpReferenceCreationContext) MeterMemory(usage common.MemoryUsage) error {
+	// NO-OP
+	return nil
+}
+
+type NoOpFunctionCreationContext struct {
+	NoOpReferenceCreationContext
+	//Just to make the compiler happy
+	interpreter.ResourceDestructionContext
+}
+
+func (n NoOpFunctionCreationContext) ClearReferencedResourceKindedValues(valueID atree.ValueID) {
+	// NO-OP
+}
+
+func (n NoOpFunctionCreationContext) ReferencedResourceKindedValues(
+	_ atree.ValueID,
+) map[*interpreter.EphemeralReferenceValue]struct{} {
+	// NO-OP
+	return nil
+}
+
+func (n NoOpFunctionCreationContext) CheckInvalidatedResourceOrResourceReference(
+	_ interpreter.Value,
+	_ interpreter.LocationRange,
+) {
+	// NO-OP
+}
+
+func (n NoOpFunctionCreationContext) MaybeTrackReferencedResourceKindedValue(_ *interpreter.EphemeralReferenceValue) {
+	// NO-OP
+}
+
+func (n NoOpFunctionCreationContext) MeterMemory(usage common.MemoryUsage) error {
+	// NO-OP
+	return nil
+}
+
+var _ interpreter.FunctionCreationContext = NoOpFunctionCreationContext{}
+
 func testAccountWithErrorHandler(
 	t *testing.T,
 	address interpreter.AddressValue,
@@ -395,19 +484,38 @@ func testAccountWithErrorHandler(
 	code string,
 	checkerConfig sema.Config,
 	checkerErrorHandler func(error),
-) (*interpreter.Interpreter, func() map[storageKey]interpreter.Value) {
+) (test_utils.Invokable, func() map[storageKey]interpreter.Value) {
+	return testAccountWithErrorHandlerWithCompiler(
+		t,
+		address,
+		auth,
+		handler,
+		code,
+		checkerConfig,
+		checkerErrorHandler,
+		false,
+	)
+}
+
+func testAccountWithErrorHandlerWithCompiler(
+	t *testing.T,
+	address interpreter.AddressValue,
+	auth bool,
+	handler stdlib.AccountHandler,
+	code string,
+	checkerConfig sema.Config,
+	checkerErrorHandler func(error),
+	compilerEnabled bool,
+) (test_utils.Invokable, func() map[storageKey]interpreter.Value) {
 
 	account := stdlib.NewAccountValue(nil, handler, address)
 
-	var valueDeclarations []stdlib.StandardLibraryValue
-
 	// `authAccount`
-
 	authAccountValueDeclaration := stdlib.StandardLibraryValue{
 		Name: "authAccount",
 		Type: sema.FullyEntitledAccountReferenceType,
 		Value: interpreter.NewEphemeralReferenceValue(
-			nil,
+			NoOpReferenceCreationContext{},
 			interpreter.FullyEntitledAccountAccess,
 			account,
 			sema.AccountType,
@@ -415,15 +523,13 @@ func testAccountWithErrorHandler(
 		),
 		Kind: common.DeclarationKindConstant,
 	}
-	valueDeclarations = append(valueDeclarations, authAccountValueDeclaration)
 
 	// `pubAccount`
-
 	pubAccountValueDeclaration := stdlib.StandardLibraryValue{
 		Name: "pubAccount",
 		Type: sema.AccountReferenceType,
 		Value: interpreter.NewEphemeralReferenceValue(
-			nil,
+			NoOpReferenceCreationContext{},
 			interpreter.UnauthorizedAccess,
 			account,
 			sema.AccountType,
@@ -431,21 +537,22 @@ func testAccountWithErrorHandler(
 		),
 		Kind: common.DeclarationKindConstant,
 	}
-	valueDeclarations = append(valueDeclarations, pubAccountValueDeclaration)
 
 	// `account`
-
 	var accountValueDeclaration stdlib.StandardLibraryValue
-
 	if auth {
 		accountValueDeclaration = authAccountValueDeclaration
 	} else {
 		accountValueDeclaration = pubAccountValueDeclaration
 	}
 	accountValueDeclaration.Name = "account"
-	valueDeclarations = append(valueDeclarations, accountValueDeclaration)
 
-	valueDeclarations = append(valueDeclarations, stdlib.InclusiveRangeConstructorFunction)
+	valueDeclarations := []stdlib.StandardLibraryValue{
+		authAccountValueDeclaration,
+		pubAccountValueDeclaration,
+		accountValueDeclaration,
+		stdlib.InclusiveRangeConstructorFunction,
+	}
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	for _, valueDeclaration := range valueDeclarations {
@@ -462,29 +569,77 @@ func testAccountWithErrorHandler(
 		interpreter.Declare(baseActivation, valueDeclaration)
 	}
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
-		code,
-		ParseCheckAndInterpretOptions{
-			CheckerConfig: &checkerConfig,
-			Config: &interpreter.Config{
-				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
-					return baseActivation
+	var invokable test_utils.Invokable
+	var storage interpreter.Storage
+
+	if compilerEnabled && *compile {
+		vmConfig := &vm.Config{
+			NativeFunctionsProvider: func() map[string]interpreter.Value {
+				funcs := vm.NativeFunctions()
+				funcs[accountValueDeclaration.Name] = accountValueDeclaration.Value
+				return funcs
+			},
+		}
+
+		vmInstance := compilerUtils.CompileAndPrepareToInvoke(
+			t,
+			code,
+			compilerUtils.CompilerAndVMOptions{
+				ParseAndCheckOptions: &sema_utils.ParseAndCheckOptions{
+					Config: &sema.Config{
+						LocationHandler: runtime_utils.NewSingleIdentifierLocationResolver(t),
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+					},
 				},
-				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
-				AccountHandler: func(inter *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
-					return stdlib.NewAccountValue(inter, nil, address)
+				VMConfig: vmConfig,
+				CompilerConfig: &compiler.Config{
+					BuiltinGlobalsProvider: func() map[string]*compiler.Global {
+						builtins := compiler.NativeFunctions()
+						for _, valueDeclaration := range valueDeclarations {
+							name := valueDeclaration.Name
+							builtins[name] = &compiler.Global{
+								Name: name,
+							}
+						}
+						return builtins
+					},
 				},
 			},
-			HandleCheckerError: checkerErrorHandler,
-		},
-	)
-	require.NoError(t, err)
+		)
+
+		invokable = test_utils.NewVMInvokable(vmInstance, vmConfig)
+		storage = vmConfig.Storage()
+	} else {
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			code,
+			ParseCheckAndInterpretOptions{
+				CheckerConfig: &checkerConfig,
+				Config: &interpreter.Config{
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
+					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
+					AccountHandler: func(context interpreter.AccountCreationContext, address interpreter.AddressValue) interpreter.Value {
+						return stdlib.NewAccountValue(context, nil, address)
+					},
+				},
+				HandleCheckerError: checkerErrorHandler,
+			},
+		)
+		require.NoError(t, err)
+
+		invokable = inter
+		storage = inter.Storage()
+	}
 
 	getAccountValues := func() map[storageKey]interpreter.Value {
 		accountValues := make(map[storageKey]interpreter.Value)
 
-		for storageMapKey, accountStorage := range inter.Storage().(interpreter.InMemoryStorage).DomainStorageMaps {
-			iterator := accountStorage.Iterator(inter)
+		for storageMapKey, accountStorage := range storage.(interpreter.InMemoryStorage).DomainStorageMaps {
+			iterator := accountStorage.Iterator(invokable)
 			for {
 				key, value := iterator.Next()
 				if key == nil {
@@ -501,7 +656,7 @@ func testAccountWithErrorHandler(
 
 		return accountValues
 	}
-	return inter, getAccountValues
+	return invokable, getAccountValues
 }
 
 func TestInterpretAccountStorageSave(t *testing.T) {
@@ -514,7 +669,7 @@ func TestInterpretAccountStorageSave(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(t, address, true, nil, `
+		inter, getAccountValues := testAccountWithCompilerEnabled(t, address, true, nil, `
               resource R {}
 
               fun test() {
@@ -554,7 +709,7 @@ func TestInterpretAccountStorageSave(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(t, address, true, nil, `
+		inter, getAccountValues := testAccountWithCompilerEnabled(t, address, true, nil, `
               struct S {}
 
               fun test() {
@@ -600,7 +755,7 @@ func TestInterpretAccountStorageType(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountStorables := testAccount(t, address, true, nil, `
+		inter, getAccountStorables := testAccountWithCompilerEnabled(t, address, true, nil, `
               struct S {}
 
               resource R {}
@@ -678,7 +833,7 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(t, address, true, nil, `
+		inter, getAccountValues := testAccountWithCompilerEnabled(t, address, true, nil, `
               resource R {}
 
               resource R2 {}
@@ -755,7 +910,7 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(t, address, true, nil, `
+		inter, getAccountValues := testAccountWithCompilerEnabled(t, address, true, nil, `
               struct S {}
 
               struct S2 {}
@@ -856,7 +1011,7 @@ func TestInterpretAccountStorageCopy(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(t, address, true, nil, code, sema.Config{})
+		inter, getAccountValues := testAccountWithCompilerEnabled(t, address, true, nil, code, sema.Config{})
 
 		// save
 
@@ -891,7 +1046,7 @@ func TestInterpretAccountStorageCopy(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(t, address, true, nil, code, sema.Config{})
+		inter, getAccountValues := testAccountWithCompilerEnabled(t, address, true, nil, code, sema.Config{})
 
 		// save
 
@@ -922,7 +1077,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(t, address, true, nil, `
+		inter, getAccountValues := testAccountWithCompilerEnabled(t, address, true, nil, `
               resource R {
                   let foo: Int
 
@@ -996,7 +1151,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.AsBoolValue(true),
+				interpreter.BoolValue(true),
 				checkRes,
 			)
 
@@ -1035,7 +1190,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.AsBoolValue(true),
+				interpreter.BoolValue(true),
 				checkRes,
 			)
 
@@ -1058,7 +1213,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.AsBoolValue(false),
+				interpreter.BoolValue(false),
 				checkRes,
 			)
 
@@ -1085,7 +1240,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.AsBoolValue(false),
+				interpreter.BoolValue(false),
 				checkRes,
 			)
 		})
@@ -1097,7 +1252,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(t, address, true, nil, `
+		inter, getAccountValues := testAccountWithCompilerEnabled(t, address, true, nil, `
               struct S {
                   let foo: Int
 
@@ -1174,7 +1329,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.AsBoolValue(true),
+				interpreter.BoolValue(true),
 				checkRes,
 			)
 
@@ -1213,7 +1368,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.AsBoolValue(true),
+				interpreter.BoolValue(true),
 				checkRes,
 			)
 
@@ -1236,7 +1391,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.AsBoolValue(false),
+				interpreter.BoolValue(false),
 				checkRes,
 			)
 
@@ -1303,7 +1458,7 @@ func TestInterpretAccountBalanceFields(t *testing.T) {
                     `,
 					fieldName,
 				)
-				inter, _ := testAccount(
+				inter, _ := testAccountWithCompilerEnabled(
 					t,
 					address,
 					auth,
@@ -1333,7 +1488,7 @@ func TestInterpretAccountStorageFields(t *testing.T) {
 	const storageCapacity = 43
 
 	handler := &testAccountHandler{
-		commitStorageTemporarily: func(_ *interpreter.Interpreter) error {
+		commitStorageTemporarily: func(_ interpreter.ValueTransferContext) error {
 			return nil
 		},
 		getStorageUsed: func(_ common.Address) (uint64, error) {
@@ -1366,7 +1521,7 @@ func TestInterpretAccountStorageFields(t *testing.T) {
 
 				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1})
 
-				inter, _ := testAccount(t, address, auth, handler, code, sema.Config{})
+				inter, _ := testAccountWithCompilerEnabled(t, address, auth, handler, code, sema.Config{})
 
 				value, err := inter.Invoke("test")
 				require.NoError(t, err)

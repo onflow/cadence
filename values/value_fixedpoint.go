@@ -16,13 +16,11 @@
  * limitations under the License.
  */
 
-package vm
+package values
 
-type IntegerValue interface {
-	NumberValue
-	BitwiseOr(other IntegerValue) IntegerValue
-	BitwiseXor(other IntegerValue) IntegerValue
-	BitwiseAnd(other IntegerValue) IntegerValue
-	BitwiseLeftShift(other IntegerValue) IntegerValue
-	BitwiseRightShift(other IntegerValue) IntegerValue
+// FixedPointValue is a fixed-point number value
+type FixedPointValue[T Value, U uint64 | int64] interface {
+	NumberValue[T]
+	IntegerPart() U
+	Scale() int
 }

@@ -112,7 +112,7 @@ func parseCheckAndInterpretWithLogs(
 		``,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			message := invocation.Arguments[0].MeteredString(
-				invocation.Interpreter,
+				invocation.InvocationContext,
 				interpreter.SeenReferences{},
 				invocation.LocationRange,
 			)
@@ -369,7 +369,8 @@ func makeContractValueHandler(
 
 		constructor := constructorGenerator(common.ZeroAddress)
 
-		value, err := inter.InvokeFunctionValue(
+		value, err := interpreter.InvokeFunctionValue(
+			inter,
 			constructor,
 			arguments,
 			argumentTypes,
@@ -2155,7 +2156,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 
 			require.Len(t, invocation.Arguments, 3)
 
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 
 			AssertValuesEqual(
 				t,
@@ -2263,7 +2264,7 @@ func TestInterpretHostFunctionWithOptionalArguments(t *testing.T) {
 
 			require.Len(t, invocation.Arguments, 3)
 
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 
 			AssertValuesEqual(
 				t,
@@ -5308,7 +5309,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 				var auth = interpreter.UnauthorizedAccess
 				if authorized {
 					auth = interpreter.ConvertSemaAccessToStaticAuthorization(
-						invocation.Interpreter,
+						invocation.InvocationContext,
 						sema.NewEntitlementSetAccess(
 							[]*sema.EntitlementType{getType("E").(*sema.EntitlementType)},
 							sema.Conjunction,
@@ -5506,7 +5507,8 @@ func TestInterpretStructureFunctionBindingInside(t *testing.T) {
 	functionValue, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	value, err := inter.InvokeFunctionValue(
+	value, err := interpreter.InvokeFunctionValue(
+		inter,
 		functionValue.(interpreter.FunctionValue),
 		nil,
 		nil,
@@ -8805,14 +8807,14 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 				Config: &interpreter.Config{
 					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 					InjectedCompositeFieldsHandler: func(
-						inter *interpreter.Interpreter,
+						context interpreter.AccountCreationContext,
 						_ common.Location,
 						_ string,
 						_ common.CompositeKind,
 					) map[string]interpreter.Value {
 
 						accountRef := stdlib.NewAccountReferenceValue(
-							nil,
+							context,
 							nil,
 							addressValue,
 							interpreter.FullyEntitledAccountAccess,
@@ -9371,7 +9373,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 		Name: "account",
 		Type: sema.FullyEntitledAccountReferenceType,
 		Value: stdlib.NewAccountReferenceValue(
-			nil,
+			NoOpFunctionCreationContext{},
 			nil,
 			interpreter.AddressValue(address),
 			interpreter.FullyEntitledAccountAccess,
@@ -9398,8 +9400,8 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 					return baseActivation
 				},
-				AccountHandler: func(inter *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
-					return stdlib.NewAccountValue(inter, nil, address)
+				AccountHandler: func(context interpreter.AccountCreationContext, address interpreter.AddressValue) interpreter.Value {
+					return stdlib.NewAccountValue(context, nil, address)
 				},
 			},
 		},

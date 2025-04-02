@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/values"
 
 	"github.com/onflow/cadence/common"
 )
@@ -93,6 +94,15 @@ func ConvertStoredValue(gauge common.MemoryGauge, value atree.Value) (Value, err
 		default:
 			return nil, errors.NewUnexpectedError("invalid ordered map type info: %T", staticType)
 		}
+
+	case values.BoolValue:
+		return BoolValue(value), nil
+
+	case values.IntValue:
+		return IntValue{IntValue: value}, nil
+
+	case values.UFix64Value:
+		return UFix64Value{UFix64Value: value}, nil
 
 	case Value:
 		return value, nil
@@ -195,7 +205,7 @@ func NewInMemoryStorage(memoryGauge common.MemoryGauge) InMemoryStorage {
 }
 
 func (i InMemoryStorage) GetDomainStorageMap(
-	_ *Interpreter,
+	_ StorageMutationTracker,
 	address common.Address,
 	domain common.StorageDomain,
 	createIfNotExists bool,
@@ -259,24 +269,4 @@ func StorableSize(storable atree.Storable) (uint32, error) {
 	}
 
 	return uint32(size), nil
-}
-
-// maybeLargeImmutableStorable either returns the given immutable atree.Storable
-// if it can be stored inline inside its parent container,
-// or else stores it in a separate slab and returns an atree.SlabIDStorable.
-func maybeLargeImmutableStorable(
-	storable atree.Storable,
-	storage atree.SlabStorage,
-	address atree.Address,
-	maxInlineSize uint64,
-) (
-	atree.Storable,
-	error,
-) {
-
-	if uint64(storable.ByteSize()) < maxInlineSize {
-		return storable, nil
-	}
-
-	return atree.NewStorableSlab(storage, address, storable)
 }

@@ -16,30 +16,13 @@
  * limitations under the License.
  */
 
-package vm
+package values
 
-import (
-	"github.com/onflow/atree"
-
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/format"
-	"github.com/onflow/cadence/interpreter"
-)
-
-type VoidValue struct{}
-
-var Void Value = VoidValue{}
-
-func (VoidValue) isValue() {}
-
-func (VoidValue) StaticType(*Config) bbq.StaticType {
-	return interpreter.PrimitiveStaticTypeVoid
-}
-
-func (v VoidValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
-	return v
-}
-
-func (v VoidValue) String() string {
-	return format.Void
+func SafeAddUint64(a, b uint64) (uint64, error) {
+	sum := a + b
+	// INT30-C
+	if sum < a {
+		return 0, OverflowError{}
+	}
+	return sum, nil
 }

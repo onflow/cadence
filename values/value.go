@@ -16,31 +16,11 @@
  * limitations under the License.
  */
 
-package vm
+package values
 
-import (
-	"github.com/onflow/atree"
+import "fmt"
 
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/format"
-	"github.com/onflow/cadence/interpreter"
-)
-
-type AddressValue common.Address
-
-var _ Value = AddressValue{}
-
-func (AddressValue) isValue() {}
-
-func (AddressValue) StaticType(*Config) bbq.StaticType {
-	return interpreter.PrimitiveStaticTypeAddress
-}
-
-func (v AddressValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
-	return v
-}
-
-func (v AddressValue) String() string {
-	return format.Address(common.Address(v))
+type Value interface {
+	IsValue()
+	fmt.Stringer
 }

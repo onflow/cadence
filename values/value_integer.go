@@ -16,12 +16,15 @@
  * limitations under the License.
  */
 
-package vm
+package values
 
-type ComparableValue interface {
-	EquatableValue
-	Less(other ComparableValue) BoolValue
-	LessEqual(other ComparableValue) BoolValue
-	Greater(other ComparableValue) BoolValue
-	GreaterEqual(other ComparableValue) BoolValue
+import "github.com/onflow/cadence/common"
+
+type IntegerValue[T Value] interface {
+	NumberValue[T]
+	BitwiseOr(gauge common.MemoryGauge, other T) (T, error)
+	BitwiseXor(gauge common.MemoryGauge, other T) (T, error)
+	BitwiseAnd(gauge common.MemoryGauge, other T) (T, error)
+	BitwiseLeftShift(gauge common.MemoryGauge, other T) (T, error)
+	BitwiseRightShift(gauge common.MemoryGauge, other T) (T, error)
 }

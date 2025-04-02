@@ -44,7 +44,7 @@ type testAccountHandler struct {
 	generateAccountID          func(address common.Address) (uint64, error)
 	getAccountBalance          func(address common.Address) (uint64, error)
 	getAccountAvailableBalance func(address common.Address) (uint64, error)
-	commitStorageTemporarily   func(inter *interpreter.Interpreter) error
+	commitStorageTemporarily   func(context interpreter.ValueTransferContext) error
 	getStorageUsed             func(address common.Address) (uint64, error)
 	getStorageCapacity         func(address common.Address) (uint64, error)
 	validatePublicKey          func(key *stdlib.PublicKey) error
@@ -64,7 +64,7 @@ type testAccountHandler struct {
 	getAccountKey    func(address common.Address, index uint32) (*stdlib.AccountKey, error)
 	accountKeysCount func(address common.Address) (uint32, error)
 	emitEvent        func(
-		inter *interpreter.Interpreter,
+		context interpreter.ValueExportContext,
 		locationRange interpreter.LocationRange,
 		eventType *sema.CompositeType,
 		values []interpreter.Value,
@@ -133,11 +133,11 @@ func (t *testAccountHandler) GetAccountAvailableBalance(address common.Address) 
 	return t.getAccountAvailableBalance(address)
 }
 
-func (t *testAccountHandler) CommitStorageTemporarily(inter *interpreter.Interpreter) error {
+func (t *testAccountHandler) CommitStorageTemporarily(context interpreter.ValueTransferContext) error {
 	if t.commitStorageTemporarily == nil {
 		panic(errors.NewUnexpectedError("unexpected call to CommitStorageTemporarily"))
 	}
-	return t.commitStorageTemporarily(inter)
+	return t.commitStorageTemporarily(context)
 }
 
 func (t *testAccountHandler) GetStorageUsed(address common.Address) (uint64, error) {
@@ -214,7 +214,7 @@ func (t *testAccountHandler) AccountKeysCount(address common.Address) (uint32, e
 }
 
 func (t *testAccountHandler) EmitEvent(
-	inter *interpreter.Interpreter,
+	context interpreter.ValueExportContext,
 	locationRange interpreter.LocationRange,
 	eventType *sema.CompositeType,
 	values []interpreter.Value,
@@ -223,7 +223,7 @@ func (t *testAccountHandler) EmitEvent(
 		panic(errors.NewUnexpectedError("unexpected call to EmitEvent"))
 	}
 	t.emitEvent(
-		inter,
+		context,
 		locationRange,
 		eventType,
 		values,
@@ -532,8 +532,7 @@ func compile(
 			},
 		}
 	}
-	comp := compiler.NewInstructionCompiler(checker).
-		WithConfig(config)
+	comp := compiler.NewInstructionCompilerWithConfig(checker, config)
 
 	program := comp.Compile()
 	return program
@@ -581,21 +580,20 @@ func compileAndInvokeWithLogs(
 		nil,
 	))
 
-	vmConfig := &vm.Config{
-		Storage:        storage,
-		AccountHandler: &testAccountHandler{},
-		NativeFunctionsProvider: func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return vm.VoidValue{}
-				},
-			}
+	vmConfig := vm.NewConfig(storage).
+		WithAccountHandler(&testAccountHandler{})
 
-			return funcs
-		},
+	vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
+		funcs := vm.NativeFunctions()
+		funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+			ParameterCount: len(stdlib.LogFunctionType.Parameters),
+			Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+				logs = append(logs, arguments[0].String())
+				return interpreter.Void
+			},
+		}
+
+		return funcs
 	}
 
 	result, err = compileAndInvokeWithOptions(
@@ -657,7 +655,7 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 	}
 
 	if vmConfig.TypeLoader == nil {
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
+		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
 			program, ok := programs[location]
 			require.True(t, ok, "cannot find elaboration for %s", location)
 

@@ -87,13 +87,12 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 
 	barProgram := parseCheckAndCompile(t, contractCode, barLocation, programs)
 
+	config := vm.NewConfig(storage)
+
 	barVM := vm.NewVM(
 		barLocation,
 		barProgram,
-		&vm.Config{
-			Storage:        storage,
-			AccountHandler: &testAccountHandler{},
-		},
+		config,
 	)
 
 	barContractValue, err := barVM.InitializeContract()
@@ -160,25 +159,25 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 	fooLocation := common.NewAddressLocation(nil, contractsAddress, "Foo")
 	program := parseCheckAndCompile(t, fooContract, fooLocation, programs)
 
-	vmConfig := &vm.Config{
-		Storage:       storage,
-		ImportHandler: importHandler,
-		ContractValueHandler: func(_ *vm.Config, location common.Location) *vm.CompositeValue {
-			switch location {
-			case barLocation:
-				return barContractValue
-			default:
-				assert.FailNow(t, "invalid location")
-				return nil
-			}
-		},
+	accountHandler := &testAccountHandler{}
+
+	vmConfig := vm.NewConfig(storage)
+	vmConfig.ImportHandler = importHandler
+	vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+		switch location {
+		case barLocation:
+			return barContractValue
+		default:
+			assert.FailNow(t, "invalid location")
+			return nil
+		}
 	}
 
 	txLocation := runtime_utils.NewTransactionLocationGenerator()
 
 	txVM := vm.NewVM(txLocation(), program, vmConfig)
 
-	authorizer := vm.NewAuthAccountReferenceValue(vmConfig, authorizerAddress)
+	authorizer := vm.NewAuthAccountReferenceValue(vmConfig, accountHandler, authorizerAddress)
 	err = txVM.ExecuteTransaction(nil, authorizer)
 	require.NoError(t, err)
 	require.Equal(t, 0, txVM.StackSize())

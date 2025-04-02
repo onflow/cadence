@@ -50,7 +50,7 @@ func BenchmarkRecursionFib(b *testing.B) {
 	vmConfig := &vm.Config{}
 	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
-	expected := vm.NewIntValue(377)
+	expected := interpreter.NewUnmeteredIntValueFromInt64(377)
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -59,7 +59,7 @@ func BenchmarkRecursionFib(b *testing.B) {
 
 		result, err := vmInstance.Invoke(
 			"fib",
-			vm.NewIntValue(14),
+			interpreter.NewUnmeteredIntValueFromInt64(14),
 		)
 		require.NoError(b, err)
 		require.Equal(b, expected, result)
@@ -82,7 +82,7 @@ func BenchmarkImperativeFib(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	var value vm.Value = vm.NewIntValue(14)
+	var value vm.Value = interpreter.NewUnmeteredIntValueFromInt64(14)
 
 	for i := 0; i < b.N; i++ {
 		_, err := vmInstance.Invoke("fib", value)
@@ -113,7 +113,7 @@ func BenchmarkNewStruct(b *testing.B) {
   `)
 	require.NoError(b, err)
 
-	value := vm.NewIntValue(10)
+	value := interpreter.NewUnmeteredIntValueFromInt64(10)
 
 	comp := compiler.NewInstructionCompiler(checker)
 	program := comp.Compile()
@@ -156,7 +156,7 @@ func BenchmarkNewResource(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	value := vm.NewIntValue(9)
+	value := interpreter.NewUnmeteredIntValueFromInt64(9)
 
 	scriptLocation := runtime_utils.NewScriptLocationGenerator()
 
@@ -174,27 +174,33 @@ func BenchmarkNewResource(b *testing.B) {
 func BenchmarkNewStructRaw(b *testing.B) {
 
 	storage := interpreter.NewInMemoryStorage(nil)
-	vmConfig := &vm.Config{
-		Storage: storage,
-	}
+	vmConfig := vm.NewConfig(storage)
 
-	fieldValue := vm.NewIntValue(7)
+	fieldValue := interpreter.NewUnmeteredIntValueFromInt64(7)
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for j := 0; j < 1; j++ {
-			structValue := vm.NewCompositeValue(
+			structValue := interpreter.NewCompositeValue(
+				vmConfig,
+				vm.EmptyLocationRange,
+				nil,
+				"Foo",
 				common.CompositeKindStructure,
-				interpreter.NewCompositeStaticTypeComputeTypeID(
-					nil,
-					common.NewAddressLocation(nil, common.ZeroAddress, "Foo"),
-					"Foo",
-				),
-				storage.BasicSlabStorage,
+				nil,
+				common.ZeroAddress,
 			)
-			structValue.SetMember(vmConfig, "id", fieldValue)
-			structValue.Transfer(vmConfig, atree.Address{}, false, nil)
+			structValue.SetMember(vmConfig, vm.EmptyLocationRange, "id", fieldValue)
+			structValue.Transfer(
+				vmConfig,
+				vm.EmptyLocationRange,
+				atree.Address{},
+				false,
+				nil,
+				nil,
+				true,
+			)
 		}
 	}
 }
@@ -247,7 +253,7 @@ func BenchmarkContractImport(b *testing.B) {
 		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
 		},
-		ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *vm.CompositeValue {
+		ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		},
 	}
@@ -255,7 +261,7 @@ func BenchmarkContractImport(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 
-	value := vm.NewIntValue(7)
+	value := interpreter.NewUnmeteredIntValueFromInt64(7)
 
 	for i := 0; i < b.N; i++ {
 		checker, err := ParseAndCheckWithOptions(b, `
@@ -374,10 +380,10 @@ func BenchmarkMethodCall(b *testing.B) {
 			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 				return importedProgram
 			},
-			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *vm.CompositeValue {
+			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
-			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
+			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
 				elaboration := importedChecker.Elaboration
 				compositeType := elaboration.CompositeType(typeID)
 				if compositeType != nil {
@@ -390,7 +396,7 @@ func BenchmarkMethodCall(b *testing.B) {
 
 		scriptLocation := runtime_utils.NewScriptLocationGenerator()
 
-		value := vm.NewIntValue(10)
+		value := interpreter.NewUnmeteredIntValueFromInt64(10)
 
 		b.ResetTimer()
 		b.ReportAllocs()
@@ -476,7 +482,7 @@ func BenchmarkMethodCall(b *testing.B) {
 			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 				return importedProgram
 			},
-			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *vm.CompositeValue {
+			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
 		}
@@ -485,7 +491,7 @@ func BenchmarkMethodCall(b *testing.B) {
 
 		vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
 
-		value := vm.NewIntValue(10)
+		value := interpreter.NewUnmeteredIntValueFromInt64(10)
 
 		b.ResetTimer()
 		b.ReportAllocs()

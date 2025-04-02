@@ -56,8 +56,8 @@ func NewVM(
 	if conf == nil {
 		conf = &Config{}
 	}
-	if conf.Storage == nil {
-		conf.Storage = interpreter.NewInMemoryStorage(nil)
+	if conf.storage == nil {
+		conf.storage = interpreter.NewInMemoryStorage(nil)
 	}
 
 	if conf.NativeFunctionsProvider == nil {
@@ -83,6 +83,9 @@ func NewVM(
 		config:             conf,
 	}
 
+	// Delegate the function invocations to the vm.
+	conf.invokeFunction = vm.invoke
+
 	// Link global variables and functions.
 	linkedGlobals := LinkGlobals(
 		location,
@@ -96,6 +99,8 @@ func NewVM(
 	return vm
 }
 
+var EmptyLocationRange = interpreter.EmptyLocationRange
+
 func (vm *VM) push(value Value) {
 	vm.stack = append(vm.stack, value)
 }
@@ -106,7 +111,7 @@ func (vm *VM) pop() Value {
 	vm.stack[lastIndex] = nil
 	vm.stack = vm.stack[:lastIndex]
 
-	checkInvalidatedResourceOrResourceReference(value)
+	vm.config.CheckInvalidatedResourceOrResourceReference(value, EmptyLocationRange)
 
 	return value
 }
@@ -120,8 +125,8 @@ func (vm *VM) pop2() (Value, Value) {
 	vm.stack[lastIndex-1], vm.stack[lastIndex] = nil, nil
 	vm.stack = vm.stack[:lastIndex-1]
 
-	checkInvalidatedResourceOrResourceReference(value1)
-	checkInvalidatedResourceOrResourceReference(value2)
+	vm.config.CheckInvalidatedResourceOrResourceReference(value1, EmptyLocationRange)
+	vm.config.CheckInvalidatedResourceOrResourceReference(value2, EmptyLocationRange)
 
 	return value1, value2
 }
@@ -135,9 +140,9 @@ func (vm *VM) pop3() (Value, Value, Value) {
 	vm.stack[lastIndex-2], vm.stack[lastIndex-1], vm.stack[lastIndex] = nil, nil, nil
 	vm.stack = vm.stack[:lastIndex-2]
 
-	checkInvalidatedResourceOrResourceReference(value1)
-	checkInvalidatedResourceOrResourceReference(value2)
-	checkInvalidatedResourceOrResourceReference(value3)
+	vm.config.CheckInvalidatedResourceOrResourceReference(value1, EmptyLocationRange)
+	vm.config.CheckInvalidatedResourceOrResourceReference(value2, EmptyLocationRange)
+	vm.config.CheckInvalidatedResourceOrResourceReference(value3, EmptyLocationRange)
 
 	return value1, value2, value3
 }
@@ -157,7 +162,7 @@ func (vm *VM) dropN(count int) {
 	stackHeight := len(vm.stack)
 	startIndex := stackHeight - count
 	for _, value := range vm.stack[startIndex:] {
-		checkInvalidatedResourceOrResourceReference(value)
+		vm.config.CheckInvalidatedResourceOrResourceReference(value, EmptyLocationRange)
 	}
 	clear(vm.stack[startIndex:])
 	vm.stack = vm.stack[:startIndex]
@@ -272,13 +277,13 @@ func (vm *VM) invoke(function Value, arguments []Value) (Value, error) {
 	return vm.pop(), nil
 }
 
-func (vm *VM) InitializeContract(arguments ...Value) (*CompositeValue, error) {
+func (vm *VM) InitializeContract(arguments ...Value) (*interpreter.CompositeValue, error) {
 	value, err := vm.Invoke(commons.InitFunctionName, arguments...)
 	if err != nil {
 		return nil, err
 	}
 
-	contractValue, ok := value.(*CompositeValue)
+	contractValue, ok := value.(*interpreter.CompositeValue)
 	if !ok {
 		return nil, errors.NewUnexpectedError("invalid contract value")
 	}
@@ -341,11 +346,9 @@ func opReturnValue(vm *VM) {
 	vm.push(value)
 }
 
-var voidValue = VoidValue{}
-
 func opReturn(vm *VM) {
 	vm.popCallFrame()
-	vm.push(voidValue)
+	vm.push(interpreter.Void)
 }
 
 func opJump(vm *VM, ins opcode.InstructionJump) {
@@ -353,21 +356,21 @@ func opJump(vm *VM, ins opcode.InstructionJump) {
 }
 
 func opJumpIfFalse(vm *VM, ins opcode.InstructionJumpIfFalse) {
-	value := vm.pop().(BoolValue)
+	value := vm.pop().(interpreter.BoolValue)
 	if !value {
 		vm.ip = ins.Target
 	}
 }
 
 func opJumpIfTrue(vm *VM, ins opcode.InstructionJumpIfTrue) {
-	value := vm.pop().(BoolValue)
+	value := vm.pop().(interpreter.BoolValue)
 	if value {
 		vm.ip = ins.Target
 	}
 }
 
 func opJumpIfNil(vm *VM, ins opcode.InstructionJumpIfNil) {
-	_, ok := vm.pop().(NilValue)
+	_, ok := vm.pop().(interpreter.NilValue)
 	if ok {
 		vm.ip = ins.Target
 	}
@@ -375,113 +378,156 @@ func opJumpIfNil(vm *VM, ins opcode.InstructionJumpIfNil) {
 
 func opAdd(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(NumberValue)
-	rightNumber := right.(NumberValue)
-	vm.replaceTop(leftNumber.Add(rightNumber))
+	leftNumber := left.(interpreter.NumberValue)
+	rightNumber := right.(interpreter.NumberValue)
+	vm.replaceTop(leftNumber.Plus(
+		vm.config,
+		rightNumber,
+		EmptyLocationRange,
+	))
 }
 
 func opSubtract(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(NumberValue)
-	rightNumber := right.(NumberValue)
-	vm.replaceTop(leftNumber.Subtract(rightNumber))
+	leftNumber := left.(interpreter.NumberValue)
+	rightNumber := right.(interpreter.NumberValue)
+	vm.replaceTop(leftNumber.Minus(
+		vm.config,
+		rightNumber,
+		EmptyLocationRange,
+	))
 }
 
 func opMultiply(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(NumberValue)
-	rightNumber := right.(NumberValue)
-	vm.replaceTop(leftNumber.Multiply(rightNumber))
+	leftNumber := left.(interpreter.NumberValue)
+	rightNumber := right.(interpreter.NumberValue)
+	vm.replaceTop(leftNumber.Mul(
+		vm.config,
+		rightNumber,
+		EmptyLocationRange,
+	))
 }
 
 func opDivide(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(NumberValue)
-	rightNumber := right.(NumberValue)
-	vm.replaceTop(leftNumber.Divide(rightNumber))
+	leftNumber := left.(interpreter.NumberValue)
+	rightNumber := right.(interpreter.NumberValue)
+	vm.replaceTop(leftNumber.Div(
+		vm.config,
+		rightNumber,
+		EmptyLocationRange,
+	))
 }
 
 func opMod(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(NumberValue)
-	rightNumber := right.(NumberValue)
-	vm.replaceTop(leftNumber.Mod(rightNumber))
+	leftNumber := left.(interpreter.NumberValue)
+	rightNumber := right.(interpreter.NumberValue)
+	vm.replaceTop(leftNumber.Mod(
+		vm.config,
+		rightNumber,
+		EmptyLocationRange,
+	))
 }
 
 func opNegate(vm *VM) {
-	value := vm.pop().(NumberValue)
-	vm.push(value.Negate())
+	value := vm.pop().(interpreter.NumberValue)
+	vm.push(value.Negate(
+		vm.config,
+		EmptyLocationRange,
+	))
 }
 
 func opBitwiseOr(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(IntegerValue)
-	rightNumber := right.(IntegerValue)
-	vm.replaceTop(leftNumber.BitwiseOr(rightNumber))
+	leftNumber := left.(interpreter.IntegerValue)
+	rightNumber := right.(interpreter.IntegerValue)
+	vm.replaceTop(leftNumber.BitwiseOr(
+		vm.config,
+		rightNumber,
+		EmptyLocationRange,
+	))
 }
 
 func opBitwiseXor(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(IntegerValue)
-	rightNumber := right.(IntegerValue)
-	vm.replaceTop(leftNumber.BitwiseXor(rightNumber))
+	leftNumber := left.(interpreter.IntegerValue)
+	rightNumber := right.(interpreter.IntegerValue)
+	vm.replaceTop(leftNumber.BitwiseXor(
+		vm.config,
+		rightNumber,
+		EmptyLocationRange,
+	))
 }
 
 func opBitwiseAnd(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(IntegerValue)
-	rightNumber := right.(IntegerValue)
-	vm.replaceTop(leftNumber.BitwiseAnd(rightNumber))
+	leftNumber := left.(interpreter.IntegerValue)
+	rightNumber := right.(interpreter.IntegerValue)
+	vm.replaceTop(leftNumber.BitwiseAnd(
+		vm.config,
+		rightNumber,
+		EmptyLocationRange,
+	))
 }
 
 func opBitwiseLeftShift(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(IntegerValue)
-	rightNumber := right.(IntegerValue)
-	vm.replaceTop(leftNumber.BitwiseLeftShift(rightNumber))
+	leftNumber := left.(interpreter.IntegerValue)
+	rightNumber := right.(interpreter.IntegerValue)
+	vm.replaceTop(leftNumber.BitwiseLeftShift(
+		vm.config,
+		rightNumber,
+		EmptyLocationRange,
+	))
 }
 
 func opBitwiseRightShift(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(IntegerValue)
-	rightNumber := right.(IntegerValue)
-	vm.replaceTop(leftNumber.BitwiseRightShift(rightNumber))
+	leftNumber := left.(interpreter.IntegerValue)
+	rightNumber := right.(interpreter.IntegerValue)
+	vm.replaceTop(leftNumber.BitwiseRightShift(
+		vm.config,
+		rightNumber,
+		EmptyLocationRange,
+	))
 }
 
 func opLess(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(NumberValue)
-	rightNumber := right.(NumberValue)
-	vm.replaceTop(leftNumber.Less(rightNumber))
+	leftNumber := left.(interpreter.NumberValue)
+	rightNumber := right.(interpreter.NumberValue)
+	vm.replaceTop(leftNumber.Less(vm.config, rightNumber, EmptyLocationRange))
 }
 
 func opLessOrEqual(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(NumberValue)
-	rightNumber := right.(NumberValue)
-	vm.replaceTop(leftNumber.LessEqual(rightNumber))
+	leftNumber := left.(interpreter.NumberValue)
+	rightNumber := right.(interpreter.NumberValue)
+	vm.replaceTop(leftNumber.LessEqual(vm.config, rightNumber, EmptyLocationRange))
 }
 
 func opGreater(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(NumberValue)
-	rightNumber := right.(NumberValue)
-	vm.replaceTop(leftNumber.Greater(rightNumber))
+	leftNumber := left.(interpreter.NumberValue)
+	rightNumber := right.(interpreter.NumberValue)
+	vm.replaceTop(leftNumber.Greater(vm.config, rightNumber, EmptyLocationRange))
 }
 
 func opGreaterOrEqual(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(NumberValue)
-	rightNumber := right.(NumberValue)
-	vm.replaceTop(leftNumber.GreaterEqual(rightNumber))
+	leftNumber := left.(interpreter.NumberValue)
+	rightNumber := right.(interpreter.NumberValue)
+	vm.replaceTop(leftNumber.GreaterEqual(vm.config, rightNumber, EmptyLocationRange))
 }
 
 func opTrue(vm *VM) {
-	vm.push(TrueValue)
+	vm.push(interpreter.TrueValue)
 }
 
 func opFalse(vm *VM) {
-	vm.push(FalseValue)
+	vm.push(interpreter.FalseValue)
 }
 
 func opGetConstant(vm *VM, ins opcode.InstructionGetConstant) {
@@ -514,16 +560,25 @@ func opSetGlobal(vm *VM, ins opcode.InstructionSetGlobal) {
 
 func opSetIndex(vm *VM) {
 	array, index, element := vm.pop3()
-	arrayValue := array.(*ArrayValue)
-	indexValue := index.(IntValue)
-	arrayValue.Set(vm.config, int(indexValue.SmallInt), element)
+	arrayValue := array.(*interpreter.ArrayValue)
+	indexValue := index.(interpreter.IntValue)
+	arrayValue.SetKey(
+		vm.config,
+		EmptyLocationRange,
+		indexValue,
+		element,
+	)
 }
 
 func opGetIndex(vm *VM) {
 	array, index := vm.pop2()
-	arrayValue := array.(*ArrayValue)
-	indexValue := index.(IntValue)
-	element := arrayValue.Get(vm.config, int(indexValue.SmallInt))
+	arrayValue := array.(*interpreter.ArrayValue)
+	indexValue := index.(interpreter.IntValue)
+	element := arrayValue.GetKey(
+		vm.config,
+		EmptyLocationRange,
+		indexValue,
+	)
 	vm.push(element)
 }
 
@@ -570,16 +625,20 @@ func opInvokeDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
 	_ = typeArguments
 
 	switch typedReceiver := receiver.(type) {
-	case ReferenceValue:
-		referenced := typedReceiver.ReferencedValue(vm.config, true)
+	case interpreter.ReferenceValue:
+		referenced := typedReceiver.ReferencedValue(vm.config, EmptyLocationRange, true)
 		receiver = *referenced
 
 		// TODO:
 		//case ReferenceValue
 	}
 
-	compositeValue := receiver.(*CompositeValue)
-	compositeType := compositeValue.CompositeType
+	compositeValue := receiver.(*interpreter.CompositeValue)
+
+	staticType := compositeValue.StaticType(vm.config)
+
+	// TODO: for inclusive range, this is different.
+	compositeType := staticType.(*interpreter.CompositeStaticType)
 
 	funcName := getStringConstant(vm, ins.NameIndex)
 
@@ -612,10 +671,16 @@ func opNew(vm *VM, ins opcode.InstructionNew) {
 	// TODO: Support inclusive-range type
 	compositeStaticType := staticType.(*interpreter.CompositeStaticType)
 
-	value := NewCompositeValue(
+	value := interpreter.NewCompositeValue(
+		vm.config,
+		EmptyLocationRange,
+		compositeStaticType.Location,
+		compositeStaticType.QualifiedIdentifier,
 		compositeKind,
-		compositeStaticType,
-		vm.config.Storage,
+		nil,
+		// Newly created values are always on stack.
+		// Need to 'Transfer' if needed to be stored in an account.
+		common.ZeroAddress,
 	)
 	vm.push(value)
 }
@@ -626,17 +691,17 @@ func opSetField(vm *VM, ins opcode.InstructionSetField) {
 	// VM assumes the field name is always a string.
 	fieldName := getStringConstant(vm, ins.FieldNameIndex)
 
-	target.(MemberAccessibleValue).
-		SetMember(vm.config, fieldName, fieldValue)
+	target.(interpreter.MemberAccessibleValue).
+		SetMember(vm.config, EmptyLocationRange, fieldName, fieldValue)
 }
 
 func opGetField(vm *VM, ins opcode.InstructionGetField) {
-	memberAccessibleValue := vm.pop().(MemberAccessibleValue)
+	memberAccessibleValue := vm.pop().(interpreter.MemberAccessibleValue)
 
 	// VM assumes the field name is always a string.
 	fieldName := getStringConstant(vm, ins.FieldNameIndex)
 
-	fieldValue := memberAccessibleValue.GetMember(vm.config, fieldName)
+	fieldValue := memberAccessibleValue.GetMember(vm.config, EmptyLocationRange, fieldName)
 	if fieldValue == nil {
 		panic(MissingMemberValueError{
 			Parent: memberAccessibleValue,
@@ -660,12 +725,18 @@ func opTransfer(vm *VM, ins opcode.InstructionTransfer) {
 
 	transferredValue := value.Transfer(
 		config,
+		EmptyLocationRange,
 		atree.Address{},
-		false, nil,
+		false,
+		nil,
+		nil,
+
+		// TODO: Pass the correct flag here
+		false,
 	)
 
 	valueType := transferredValue.StaticType(config)
-	if !IsSubType(config, valueType, targetType) {
+	if !vm.config.IsSubType(valueType, targetType) {
 		panic(errors.NewUnexpectedError(
 			"invalid transfer: expected '%s', found '%s'",
 			targetType,
@@ -677,16 +748,17 @@ func opTransfer(vm *VM, ins opcode.InstructionTransfer) {
 }
 
 func opDestroy(vm *VM) {
-	value := vm.pop().(*CompositeValue)
-	value.Destroy(vm.config)
+	value := vm.pop().(interpreter.ResourceKindedValue)
+	value.Destroy(vm.config, EmptyLocationRange)
 }
 
 func opPath(vm *VM, ins opcode.InstructionPath) {
 	identifier := getStringConstant(vm, ins.IdentifierIndex)
-	value := PathValue{
-		Domain:     ins.Domain,
-		Identifier: identifier,
-	}
+	value := interpreter.NewPathValue(
+		vm.config.MemoryGauge,
+		ins.Domain,
+		identifier,
+	)
 	vm.push(value)
 }
 
@@ -697,7 +769,7 @@ func opSimpleCast(vm *VM, ins opcode.InstructionSimpleCast) {
 	valueType := value.StaticType(vm.config)
 
 	// The cast may upcast to an optional type, e.g. `1 as Int?`, so box
-	result := ConvertAndBox(value, valueType, targetType)
+	result := ConvertAndBox(vm.config, value, valueType, targetType)
 
 	vm.push(result)
 }
@@ -707,20 +779,23 @@ func opFailableCast(vm *VM, ins opcode.InstructionFailableCast) {
 
 	targetType := vm.loadType(ins.TypeIndex)
 	value, valueType := castValueAndValueType(vm.config, targetType, value)
-	isSubType := IsSubType(vm.config, valueType, targetType)
+	isSubType := vm.config.IsSubType(valueType, targetType)
 
 	var result Value
 	if isSubType {
 		// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-		result = ConvertAndBox(value, valueType, targetType)
+		result = ConvertAndBox(vm.config, value, valueType, targetType)
 
 		// TODO:
 		// Failable casting is a resource invalidation
 		//interpreter.invalidateResource(value)
 
-		result = NewSomeValueNonCopying(result)
+		result = interpreter.NewSomeValueNonCopying(
+			vm.config.MemoryGauge,
+			result,
+		)
 	} else {
-		result = Nil
+		result = interpreter.Nil
 	}
 
 	vm.push(result)
@@ -731,18 +806,21 @@ func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 
 	targetType := vm.loadType(ins.TypeIndex)
 	value, valueType := castValueAndValueType(vm.config, targetType, value)
-	isSubType := IsSubType(vm.config, valueType, targetType)
+	isSubType := vm.config.IsSubType(valueType, targetType)
 
 	var result Value
 	if !isSubType {
-		panic(ForceCastTypeMismatchError{
-			ExpectedType: targetType,
-			ActualType:   valueType,
+		targetSemaType := interpreter.MustConvertStaticToSemaType(targetType, vm.config)
+		valueSemaType := interpreter.MustConvertStaticToSemaType(valueType, vm.config)
+
+		panic(interpreter.ForceCastTypeMismatchError{
+			ExpectedType: targetSemaType,
+			ActualType:   valueSemaType,
 		})
 	}
 
 	// The force cast may upcast to an optional type, e.g. `1 as! Int?`, so box
-	result = ConvertAndBox(value, valueType, targetType)
+	result = ConvertAndBox(vm.config, value, valueType, targetType)
 	vm.push(result)
 }
 
@@ -768,39 +846,47 @@ func castValueAndValueType(config *Config, targetType bbq.StaticType, value Valu
 	if !(unboxedExpectedType == interpreter.PrimitiveStaticTypeAnyStruct ||
 		unboxedExpectedType == interpreter.PrimitiveStaticTypeAnyResource) {
 		// otherwise dynamic cast now always unboxes optionals
-		value = Unbox(value)
+		value = interpreter.Unbox(value)
 	}
 
 	return value, valueType
 }
 
 func opNil(vm *VM) {
-	vm.push(NilValue{})
+	vm.push(interpreter.Nil)
 }
 
 func opEqual(vm *VM) {
 	left, right := vm.peekPop()
-	result := left.(EquatableValue).Equal(right)
-	vm.replaceTop(result)
+	result := left.(interpreter.EquatableValue).Equal(
+		vm.config,
+		EmptyLocationRange,
+		right,
+	)
+	vm.replaceTop(interpreter.BoolValue(result))
 }
 
 func opNotEqual(vm *VM) {
 	left, right := vm.peekPop()
-	result := !left.(EquatableValue).Equal(right)
-	vm.replaceTop(result)
+	result := !left.(interpreter.EquatableValue).Equal(
+		vm.config,
+		EmptyLocationRange,
+		right,
+	)
+	vm.replaceTop(interpreter.BoolValue(result))
 }
 
 func opNot(vm *VM) {
-	value := vm.peek().(BoolValue)
+	value := vm.peek().(interpreter.BoolValue)
 	vm.replaceTop(!value)
 }
 
 func opUnwrap(vm *VM) {
 	value := vm.peek()
 	switch value := value.(type) {
-	case *SomeValue:
-		vm.replaceTop(value.value)
-	case NilValue:
+	case *interpreter.SomeValue:
+		vm.replaceTop(value.InnerValue())
+	case interpreter.NilValue:
 		panic(ForceNilError{})
 	default:
 		// Non-optional. Leave as is.
@@ -811,7 +897,18 @@ func opNewArray(vm *VM, ins opcode.InstructionNewArray) {
 	typ := vm.loadType(ins.TypeIndex).(interpreter.ArrayStaticType)
 
 	elements := vm.peekN(int(ins.Size))
-	array := NewArrayValue(vm.config, typ, ins.IsResource, elements...)
+	array := interpreter.NewArrayValue(
+		vm.config,
+		EmptyLocationRange,
+		typ,
+
+		// Newly created values are always on stack.
+		// Need to 'Transfer' if needed to be stored in an account.
+		common.ZeroAddress,
+
+		elements...,
+	)
+
 	vm.dropN(len(elements))
 
 	vm.push(array)
@@ -821,7 +918,12 @@ func opNewDictionary(vm *VM, ins opcode.InstructionNewDictionary) {
 	typ := vm.loadType(ins.TypeIndex).(*interpreter.DictionaryStaticType)
 
 	entries := vm.peekN(int(ins.Size * 2))
-	dictionary := NewDictionaryValue(vm.config, typ, entries...)
+	dictionary := interpreter.NewDictionaryValue(
+		vm.config,
+		EmptyLocationRange,
+		typ,
+		entries...,
+	)
 	vm.dropN(len(entries))
 
 	vm.push(dictionary)
@@ -831,55 +933,67 @@ func opNewRef(vm *VM, ins opcode.InstructionNewRef) {
 	borrowedType := vm.loadType(ins.TypeIndex).(*interpreter.ReferenceStaticType)
 	value := vm.pop()
 
-	ref := NewEphemeralReferenceValue(
+	semaBorrowedType := interpreter.MustConvertStaticToSemaType(borrowedType.ReferencedType, vm.config)
+
+	ref := interpreter.NewEphemeralReferenceValue(
 		vm.config,
-		value,
 		borrowedType.Authorization,
-		borrowedType.ReferencedType,
+		value,
+		semaBorrowedType,
+		EmptyLocationRange,
 	)
 	vm.push(ref)
 }
 
 func opIterator(vm *VM) {
 	value := vm.pop()
-	iterable := value.(IterableValue)
-	vm.push(iterable.Iterator())
+	iterable := value.(interpreter.IterableValue)
+	iterator := iterable.Iterator(vm.config, EmptyLocationRange)
+	vm.push(NewIteratorWrapperValue(iterator))
 }
 
 func opIteratorHasNext(vm *VM) {
 	value := vm.pop()
-	iterator := value.(ValueIterator)
-	vm.push(BoolValue(iterator.HasNext()))
+	iterator := value.(*IteratorWrapperValue)
+	vm.push(interpreter.BoolValue(iterator.HasNext()))
 }
 
 func opIteratorNext(vm *VM) {
 	value := vm.pop()
-	iterator := value.(ValueIterator)
-	element := iterator.Next(vm.config)
+	iterator := value.(*IteratorWrapperValue)
+	element := iterator.Next(vm.config, EmptyLocationRange)
 	vm.push(element)
 }
 
 func deref(vm *VM, value Value) Value {
-	if _, ok := value.(NilValue); ok {
-		return Nil
+	if _, ok := value.(interpreter.NilValue); ok {
+		return interpreter.Nil
 	}
 
 	var isOptional bool
 
-	if someValue, ok := value.(*SomeValue); ok {
+	if someValue, ok := value.(*interpreter.SomeValue); ok {
 		isOptional = true
-		value = someValue.value
+		value = someValue.InnerValue()
 	}
 
-	referenceValue, ok := value.(ReferenceValue)
+	referenceValue, ok := value.(interpreter.ReferenceValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
 	// TODO: port and use interpreter.DereferenceValue
-	dereferencedValue := *referenceValue.ReferencedValue(vm.config, true)
+	dereferencedValue := *referenceValue.ReferencedValue(
+		vm.config,
+		EmptyLocationRange,
+		true,
+	)
+
 	if isOptional {
-		return NewSomeValueNonCopying(dereferencedValue)
+		return interpreter.NewSomeValueNonCopying(
+			vm.config.MemoryGauge,
+			dereferencedValue,
+		)
 	} else {
 		return dereferencedValue
 	}
@@ -1025,7 +1139,7 @@ func (vm *VM) run() {
 }
 
 func onEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
-	eventValue := vm.pop().(*CompositeValue)
+	eventValue := vm.pop().(*interpreter.CompositeValue)
 
 	onEventEmitted := vm.config.OnEventEmitted
 	if onEventEmitted == nil {
@@ -1048,13 +1162,21 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 	case constantkind.Int:
 		// TODO:
 		smallInt, _, _ := leb128.ReadInt64(constant.Data)
-		value = NewIntValue(smallInt)
+		value = interpreter.NewIntValueFromInt64(vm.config.MemoryGauge, smallInt)
+	case constantkind.Int64:
+		smallInt, _, _ := leb128.ReadInt64(constant.Data)
+		value = interpreter.NewInt64Value(
+			vm.config.MemoryGauge,
+			func() int64 {
+				return smallInt
+			},
+		)
 	case constantkind.String:
-		value = NewStringValueFromBytes(constant.Data)
+		value = interpreter.NewUnmeteredStringValue(string(constant.Data))
 
 	case constantkind.UFix64:
 		smallInt, _, _ := leb128.ReadUint64(constant.Data)
-		value = NewUFix64Value(smallInt)
+		value = interpreter.NewUnmeteredUFix64Value(smallInt)
 
 	default:
 		// TODO:
@@ -1111,17 +1233,25 @@ func (vm *VM) StackSize() int {
 	return len(vm.stack)
 }
 
+func (vm *VM) Reset() {
+	vm.stack = vm.stack[:0]
+	vm.locals = vm.locals[:0]
+	vm.callstack = vm.callstack[:0]
+	vm.ipStack = vm.ipStack[:0]
+}
+
 func getReceiver[T any](config *Config, receiver Value) T {
 	switch receiver := receiver.(type) {
-	case *SomeValue:
-		return getReceiver[T](config, receiver.value)
-	case *EphemeralReferenceValue:
+	case *interpreter.SomeValue:
+		return getReceiver[T](config, receiver.InnerValue())
+	case *interpreter.EphemeralReferenceValue:
 		return getReceiver[T](config, receiver.Value)
-	case *StorageReferenceValue:
-		referencedValue, err := receiver.dereference(config)
-		if err != nil {
-			panic(err)
-		}
+	case *interpreter.StorageReferenceValue:
+		referencedValue := receiver.ReferencedValue(
+			config,
+			EmptyLocationRange,
+			true,
+		)
 		return getReceiver[T](config, *referencedValue)
 	default:
 		return receiver.(T)

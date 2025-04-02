@@ -49,16 +49,16 @@ type NumberValue interface {
 	ToBigEndianBytes() []byte
 }
 
-func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, typ sema.Type, locationRange LocationRange) Value {
+func getNumberValueMember(context MemberAccessibleContext, v NumberValue, name string, typ sema.Type, locationRange LocationRange) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ToStringFunctionType,
 			func(v NumberValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
+				interpreter := invocation.InvocationContext
 
 				memoryUsage := common.NewStringMemoryUsage(
 					OverEstimateNumberStringLength(interpreter, v),
@@ -75,12 +75,12 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ToBigEndianBytesFunctionType,
 			func(v NumberValue, invocation Invocation) Value {
 				return ByteSliceToByteArrayValue(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					v.ToBigEndianBytes(),
 				)
 			},
@@ -88,7 +88,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 
 	case sema.NumericTypeSaturatingAddFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			func(v NumberValue, invocation Invocation) Value {
@@ -98,7 +98,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 				}
 
 				return v.SaturatingPlus(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					other,
 					locationRange,
 				)
@@ -107,7 +107,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 
 	case sema.NumericTypeSaturatingSubtractFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			func(v NumberValue, invocation Invocation) Value {
@@ -117,7 +117,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 				}
 
 				return v.SaturatingMinus(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					other,
 					locationRange,
 				)
@@ -126,7 +126,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 
 	case sema.NumericTypeSaturatingMultiplyFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			func(v NumberValue, invocation Invocation) Value {
@@ -136,7 +136,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 				}
 
 				return v.SaturatingMul(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					other,
 					locationRange,
 				)
@@ -145,7 +145,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 
 	case sema.NumericTypeSaturatingDivideFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			func(v NumberValue, invocation Invocation) Value {
@@ -155,7 +155,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 				}
 
 				return v.SaturatingDiv(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					other,
 					locationRange,
 				)

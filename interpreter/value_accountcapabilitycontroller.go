@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // AccountCapabilityControllerValue
@@ -45,10 +46,10 @@ type AccountCapabilityControllerValue struct {
 	// Tags are not stored directly inside the controller
 	// to avoid unnecessary storage reads
 	// when the controller is loaded for borrowing/checking
-	GetCapability func(inter *Interpreter) *IDCapabilityValue
-	GetTag        func(inter *Interpreter) *StringValue
-	SetTag        func(inter *Interpreter, tag *StringValue)
-	Delete        func(inter *Interpreter, locationRange LocationRange)
+	GetCapability func(common.MemoryGauge) *IDCapabilityValue
+	GetTag        func(StorageReader) *StringValue
+	SetTag        func(storageWriter StorageWriter, tag *StringValue)
+	Delete        func(context CapabilityControllerContext, locationRange LocationRange)
 }
 
 func NewUnmeteredAccountCapabilityControllerValue(
@@ -80,7 +81,7 @@ var _ EquatableValue = &AccountCapabilityControllerValue{}
 var _ CapabilityControllerValue = &AccountCapabilityControllerValue{}
 var _ MemberAccessibleValue = &AccountCapabilityControllerValue{}
 
-func (*AccountCapabilityControllerValue) isValue() {}
+func (*AccountCapabilityControllerValue) IsValue() {}
 
 func (*AccountCapabilityControllerValue) isCapabilityControllerValue() {}
 
@@ -92,7 +93,7 @@ func (v *AccountCapabilityControllerValue) Accept(interpreter *Interpreter, visi
 	visitor.VisitAccountCapabilityControllerValue(interpreter, v)
 }
 
-func (v *AccountCapabilityControllerValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
+func (v *AccountCapabilityControllerValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {
 	walkChild(v.CapabilityID)
 }
 
@@ -115,16 +116,12 @@ func (v *AccountCapabilityControllerValue) RecursiveString(seenReferences SeenRe
 	)
 }
 
-func (v *AccountCapabilityControllerValue) MeteredString(
-	interpreter *Interpreter,
-	seenReferences SeenReferences,
-	locationRange LocationRange,
-) string {
-	common.UseMemory(interpreter, common.AccountCapabilityControllerValueStringMemoryUsage)
+func (v *AccountCapabilityControllerValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+	common.UseMemory(context, common.AccountCapabilityControllerValueStringMemoryUsage)
 
 	return format.AccountCapabilityController(
-		v.BorrowType.MeteredString(interpreter),
-		v.CapabilityID.MeteredString(interpreter, seenReferences, locationRange),
+		v.BorrowType.MeteredString(context),
+		v.CapabilityID.MeteredString(context, seenReferences, locationRange),
 	)
 }
 
@@ -158,7 +155,7 @@ func (v *AccountCapabilityControllerValue) Storable(
 	atree.Storable,
 	error,
 ) {
-	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
+	return values.MaybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
 func (*AccountCapabilityControllerValue) NeedsStoreTo(_ atree.Address) bool {
@@ -170,7 +167,7 @@ func (*AccountCapabilityControllerValue) IsResourceKinded(context ValueStaticTyp
 }
 
 func (v *AccountCapabilityControllerValue) Transfer(
-	interpreter *Interpreter,
+	transferContext ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -179,7 +176,7 @@ func (v *AccountCapabilityControllerValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(transferContext, storable)
 	}
 	return v
 }
@@ -191,7 +188,7 @@ func (v *AccountCapabilityControllerValue) Clone(_ *Interpreter) Value {
 	}
 }
 
-func (v *AccountCapabilityControllerValue) DeepRemove(_ *Interpreter, _ bool) {
+func (v *AccountCapabilityControllerValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
@@ -213,7 +210,7 @@ type deletionCheckedFunctionValue struct {
 	FunctionValue
 }
 
-func (v *AccountCapabilityControllerValue) GetMember(inter *Interpreter, _ LocationRange, name string) (result Value) {
+func (v *AccountCapabilityControllerValue) GetMember(context MemberAccessibleContext, _ LocationRange, name string) (result Value) {
 	defer func() {
 		switch typedResult := result.(type) {
 		case deletionCheckedFunctionValue:
@@ -228,11 +225,11 @@ func (v *AccountCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 
 	switch name {
 	case sema.AccountCapabilityControllerTypeTagFieldName:
-		return v.GetTag(inter)
+		return v.GetTag(context)
 
 	case sema.AccountCapabilityControllerTypeSetTagFunctionName:
 		if v.setTagFunction == nil {
-			v.setTagFunction = v.newSetTagFunction(inter)
+			v.setTagFunction = v.newSetTagFunction(context)
 		}
 		return v.setTagFunction
 
@@ -240,14 +237,14 @@ func (v *AccountCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 		return v.CapabilityID
 
 	case sema.AccountCapabilityControllerTypeBorrowTypeFieldName:
-		return NewTypeValue(inter, v.BorrowType)
+		return NewTypeValue(context, v.BorrowType)
 
 	case sema.AccountCapabilityControllerTypeCapabilityFieldName:
-		return v.GetCapability(inter)
+		return v.GetCapability(context)
 
 	case sema.AccountCapabilityControllerTypeDeleteFunctionName:
 		if v.deleteFunction == nil {
-			v.deleteFunction = v.newDeleteFunction(inter)
+			v.deleteFunction = v.newDeleteFunction(context)
 		}
 		return v.deleteFunction
 
@@ -264,7 +261,7 @@ func (*AccountCapabilityControllerValue) RemoveMember(_ *Interpreter, _ Location
 }
 
 func (v *AccountCapabilityControllerValue) SetMember(
-	inter *Interpreter,
+	context MemberAccessibleContext,
 	_ LocationRange,
 	identifier string,
 	value Value,
@@ -278,7 +275,7 @@ func (v *AccountCapabilityControllerValue) SetMember(
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
-		v.SetTag(inter, stringValue)
+		v.SetTag(context, stringValue)
 		return true
 	}
 
@@ -290,28 +287,29 @@ func (v *AccountCapabilityControllerValue) ControllerCapabilityID() UInt64Value 
 }
 
 func (v *AccountCapabilityControllerValue) ReferenceValue(
-	interpreter *Interpreter,
+	context ValueCapabilityControllerReferenceValueContext,
 	capabilityAddress common.Address,
 	resultBorrowType *sema.ReferenceType,
 	locationRange LocationRange,
 ) ReferenceValue {
-	config := interpreter.SharedState.Config
 
-	account := config.AccountHandler(interpreter, AddressValue(capabilityAddress))
+	accountHandler := context.AccountHandler()
+	account := accountHandler(context, AddressValue(capabilityAddress))
 
 	// Account must be of `Account` type.
-	interpreter.ExpectType(
+	ExpectType(
+		context,
 		account,
 		sema.AccountType,
 		EmptyLocationRange,
 	)
 
 	authorization := ConvertSemaAccessToStaticAuthorization(
-		interpreter,
+		context,
 		resultBorrowType.Authorization,
 	)
 	return NewEphemeralReferenceValue(
-		interpreter,
+		context,
 		authorization,
 		account,
 		resultBorrowType.Type,
@@ -328,13 +326,13 @@ func (v *AccountCapabilityControllerValue) checkDeleted() {
 }
 
 func (v *AccountCapabilityControllerValue) newHostFunctionValue(
-	inter *Interpreter,
+	context FunctionCreationContext,
 	funcType *sema.FunctionType,
 	f func(invocation Invocation) Value,
 ) FunctionValue {
 	return deletionCheckedFunctionValue{
 		FunctionValue: NewBoundHostFunctionValue(
-			inter,
+			context,
 			v,
 			funcType,
 			func(v *AccountCapabilityControllerValue, invocation Invocation) Value {
@@ -348,16 +346,16 @@ func (v *AccountCapabilityControllerValue) newHostFunctionValue(
 }
 
 func (v *AccountCapabilityControllerValue) newDeleteFunction(
-	inter *Interpreter,
+	context FunctionCreationContext,
 ) FunctionValue {
 	return v.newHostFunctionValue(
-		inter,
+		context,
 		sema.AccountCapabilityControllerTypeDeleteFunctionType,
 		func(invocation Invocation) Value {
-			inter := invocation.Interpreter
+			invocationContext := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
-			v.Delete(inter, locationRange)
+			v.Delete(invocationContext, locationRange)
 
 			v.deleted = true
 
@@ -367,13 +365,13 @@ func (v *AccountCapabilityControllerValue) newDeleteFunction(
 }
 
 func (v *AccountCapabilityControllerValue) newSetTagFunction(
-	inter *Interpreter,
+	context FunctionCreationContext,
 ) FunctionValue {
 	return v.newHostFunctionValue(
-		inter,
+		context,
 		sema.AccountCapabilityControllerTypeSetTagFunctionType,
 		func(invocation Invocation) Value {
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 
 			newTagValue, ok := invocation.Arguments[0].(*StringValue)
 			if !ok {

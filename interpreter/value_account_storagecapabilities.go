@@ -62,7 +62,7 @@ func NewAccountStorageCapabilitiesValue(
 		return nil
 	}
 
-	computeField := func(name string, _ *Interpreter, _ LocationRange) Value {
+	computeField := func(name string, _ MemberAccessibleContext, _ LocationRange) Value {
 		field := computeLazyStoredField(name)
 		if field != nil {
 			fields[name] = field
@@ -71,10 +71,10 @@ func NewAccountStorageCapabilitiesValue(
 	}
 
 	var str string
-	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
+	stringer := func(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
 		if str == "" {
-			common.UseMemory(interpreter, common.AccountStorageCapabilitiesStringMemoryUsage)
-			addressStr := address.MeteredString(interpreter, seenReferences, locationRange)
+			common.UseMemory(context, common.AccountStorageCapabilitiesStringMemoryUsage)
+			addressStr := address.MeteredString(context, seenReferences, locationRange)
 			str = fmt.Sprintf("Account.StorageCapabilities(%s)", addressStr)
 		}
 		return str
@@ -89,7 +89,7 @@ func NewAccountStorageCapabilitiesValue(
 		computeField,
 		nil,
 		stringer,
-	)
+	).WithPrivateField(accountAddressMetadataKey, address)
 
 	return storageCapabilities
 }

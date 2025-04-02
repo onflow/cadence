@@ -19,43 +19,11 @@
 package vm
 
 import (
-	"github.com/onflow/atree"
-
 	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 )
-
-func NewAccountCapabilitiesValue(accountAddress common.Address) *SimpleCompositeValue {
-	value := &SimpleCompositeValue{
-		typeID:     sema.Account_StorageType.ID(),
-		staticType: interpreter.PrimitiveStaticTypeAccount_Capabilities,
-		Kind:       common.CompositeKindStructure,
-		fields:     map[string]Value{
-			// TODO: add the remaining fields
-		},
-		metadata: map[string]any{
-			sema.AccountTypeAddressFieldName: accountAddress,
-		},
-	}
-
-	value.computeField = func(name string) Value {
-		var field Value
-		switch name {
-		case sema.Account_CapabilitiesTypeStorageFieldName:
-			field = NewAccountStorageCapabilitiesValue(accountAddress)
-		default:
-			return nil
-		}
-
-		value.fields[name] = field
-		return field
-	}
-
-	return value
-}
 
 // members
 
@@ -72,33 +40,20 @@ func init() {
 				// Get address field from the receiver (Account.Capabilities)
 				address := getAddressMetaInfoFromValue(args[0])
 
-				// Path argument
-				path, ok := args[1].(PathValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				arguments := args[typeBoundFunctionArgumentOffset:]
 
-				//pathStaticType := path.StaticType(config.MemoryGauge)
-				//
-				//if !IsSubType(pathStaticType, pathType) {
-				//	panic(fmt.Errorf("type mismatch"))
-				//}
+				borrowType := typeArguments[0]
+				semaBorrowType := interpreter.MustConvertStaticToSemaType(borrowType, config)
 
-				// NOTE: the type parameter is optional, for backwards compatibility
-
-				var borrowType *interpreter.ReferenceStaticType
-				if len(typeArguments) > 0 {
-					ty := typeArguments[0]
-					// we handle the nil case for this below
-					borrowType, _ = ty.(*interpreter.ReferenceStaticType)
-				}
-
-				return getCapability(
+				return stdlib.GetCapability(
 					config,
-					address,
-					path,
-					borrowType,
+					config.GetAccountHandler(),
+					arguments,
+					semaBorrowType,
 					false,
+					address,
+					EmptyLocationRange,
 				)
 			},
 		})
@@ -111,78 +66,18 @@ func init() {
 			ParameterCount: len(sema.Account_CapabilitiesTypePublishFunctionType.Parameters),
 			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.Capabilities)
-				accountAddress := getAddressMetaInfoFromValue(args[0])
+				accountAddress := getAddressMetaInfoFromValue(args[receiverIndex])
 
-				// Get capability argument
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				arguments := args[typeBoundFunctionArgumentOffset:]
 
-				var capabilityValue CapabilityValue
-				switch firstValue := args[1].(type) {
-				case CapabilityValue:
-					capabilityValue = firstValue
-				default:
-					panic(errors.NewUnreachableError())
-				}
-
-				capabilityAddressValue := common.Address(capabilityValue.Address)
-				if capabilityAddressValue != accountAddress {
-					panic(interpreter.CapabilityAddressPublishingError{
-						CapabilityAddress: interpreter.AddressValue(capabilityAddressValue),
-						AccountAddress:    interpreter.AddressValue(accountAddress),
-					})
-				}
-
-				// Get path argument
-
-				path, ok := args[2].(PathValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				if !ok || path.Domain != common.PathDomainPublic {
-					panic(errors.NewUnreachableError())
-				}
-
-				domain := path.Domain.Identifier()
-				storageDomain, _ := common.StorageDomainFromIdentifier(domain)
-
-				identifier := path.Identifier
-
-				// Prevent an overwrite
-
-				storageMapKey := interpreter.StringStorageMapKey(identifier)
-				if StoredValueExists(
+				return stdlib.PublishCapability(
 					config,
+					config,
+					arguments,
 					accountAddress,
-					storageDomain,
-					storageMapKey,
-				) {
-					panic(interpreter.OverwriteError{
-						Address: interpreter.AddressValue(accountAddress),
-						Path:    VMValueToInterpreterValue(config, path).(interpreter.PathValue),
-					})
-				}
-
-				capabilityValue, ok = capabilityValue.Transfer(
-					config,
-					atree.Address(accountAddress),
-					true,
-					nil,
-				).(CapabilityValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				// Write new value
-
-				WriteStored(
-					config,
-					accountAddress,
-					storageDomain,
-					storageMapKey,
-					capabilityValue,
+					EmptyLocationRange,
 				)
-
-				return Void
 			},
 		})
 }

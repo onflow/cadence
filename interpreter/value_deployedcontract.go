@@ -34,13 +34,13 @@ var deployedContractFieldNames = []string{
 }
 
 func NewDeployedContractValue(
-	inter *Interpreter,
+	context FunctionCreationContext,
 	address AddressValue,
 	name *StringValue,
 	code *ArrayValue,
 ) *SimpleCompositeValue {
 	deployedContract := NewSimpleCompositeValue(
-		inter,
+		context,
 		sema.DeployedContractType.TypeID,
 		deployedContractStaticType,
 		deployedContractFieldNames,
@@ -55,7 +55,7 @@ func NewDeployedContractValue(
 	)
 
 	publicTypesFuncValue := newPublicTypesFunctionValue(
-		inter,
+		context,
 		deployedContract,
 		address,
 		name,
@@ -66,7 +66,7 @@ func NewDeployedContractValue(
 }
 
 func newPublicTypesFunctionValue(
-	inter *Interpreter,
+	context FunctionCreationContext,
 	self MemberAccessibleValue,
 	addressValue AddressValue,
 	name *StringValue,
@@ -76,12 +76,12 @@ func newPublicTypesFunctionValue(
 
 	address := addressValue.ToAddress()
 	return NewBoundHostFunctionValue(
-		inter,
+		context,
 		self,
 		sema.DeployedContractTypePublicTypesFunctionType,
 		func(_ MemberAccessibleValue, inv Invocation) Value {
 			if publicTypes == nil {
-				innerInter := inv.Interpreter
+				innerInter := inv.InvocationContext
 				contractLocation := common.NewAddressLocation(innerInter, address, name.Str)
 				// we're only looking at the contract as a whole, so no need to construct a nested path
 				qualifiedIdent := name.Str
