@@ -27,14 +27,12 @@ import (
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/pretty"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	"github.com/onflow/cadence/test_utils/sema_utils"
-
-	"github.com/onflow/cadence/bbq/vm"
-	compilerUtils "github.com/onflow/cadence/bbq/vm/test"
 )
 
 type ParseCheckAndInterpretOptions struct {
@@ -48,29 +46,29 @@ type Invokable interface {
 	Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error)
 }
 
-type VMInvokable struct {
-	vmInstance *vm.VM
-	*vm.Config
-}
-
-var _ Invokable = &VMInvokable{}
-
-func NewVMInvokable(vmInstance *vm.VM, vmConfig *vm.Config) *VMInvokable {
-	return &VMInvokable{
-		vmInstance: vmInstance,
-		Config:     vmConfig,
-	}
-}
-
-func (v *VMInvokable) Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error) {
-	value, err = v.vmInstance.Invoke(functionName, arguments...)
-
-	// Reset the VM after a function invocation,
-	// so the same vm can be re-used for subsequent invocation.
-	v.vmInstance.Reset()
-
-	return
-}
+//type VMInvokable struct {
+//	vmInstance *vm.VM
+//	*vm.Config
+//}
+//
+//var _ Invokable = &VMInvokable{}
+//
+//func NewVMInvokable(vmInstance *vm.VM, vmConfig *vm.Config) *VMInvokable {
+//	return &VMInvokable{
+//		vmInstance: vmInstance,
+//		Config:     vmConfig,
+//	}
+//}
+//
+//func (v *VMInvokable) Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error) {
+//	value, err = v.vmInstance.Invoke(functionName, arguments...)
+//
+//	// Reset the VM after a function invocation,
+//	// so the same vm can be re-used for subsequent invocation.
+//	v.vmInstance.Reset()
+//
+//	return
+//}
 
 func ParseCheckAndPrepare(t testing.TB, code string, compile bool) Invokable {
 	t.Helper()
@@ -79,19 +77,22 @@ func ParseCheckAndPrepare(t testing.TB, code string, compile bool) Invokable {
 		return parseCheckAndInterpret(t, code)
 	}
 
-	vmConfig := &vm.Config{}
-	vmInstance := compilerUtils.CompileAndPrepareToInvoke(
-		t,
-		code,
-		compilerUtils.CompilerAndVMOptions{
-			VMConfig: vmConfig,
-		},
-	)
+	//vmConfig := &vm.Config{}
+	//vmInstance := compilerUtils.CompileAndPrepareToInvoke(
+	//	t,
+	//	code,
+	//	compilerUtils.CompilerAndVMOptions{
+	//		VMConfig: vmConfig,
+	//	},
+	//)
+	//
+	//return &VMInvokable{
+	//	vmInstance: vmInstance,
+	//	Config:     vmConfig,
+	//}
 
-	return &VMInvokable{
-		vmInstance: vmInstance,
-		Config:     vmConfig,
-	}
+	// Not supported for now
+	panic(errors.NewUnreachableError())
 
 }
 

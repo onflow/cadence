@@ -23,7 +23,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/interpreter"
 )
 
 const imperativeFib = `
