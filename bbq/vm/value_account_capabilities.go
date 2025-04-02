@@ -20,6 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
@@ -40,8 +41,10 @@ func init() {
 				// Get address field from the receiver (Account.Capabilities)
 				address := getAddressMetaInfoFromValue(args[0])
 
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				arguments := args[typeBoundFunctionArgumentOffset:]
+				pathValue, ok := args[typeBoundFunctionArgumentOffset].(interpreter.PathValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 
 				borrowType := typeArguments[0]
 				semaBorrowType := interpreter.MustConvertStaticToSemaType(borrowType, config)
@@ -49,7 +52,7 @@ func init() {
 				return stdlib.AccountCapabilitiesGet(
 					config,
 					config.GetAccountHandler(),
-					arguments,
+					pathValue,
 					semaBorrowType,
 					false,
 					address,
@@ -69,8 +72,11 @@ func init() {
 				// Get address field from the receiver (Account.Capabilities)
 				address := getAddressMetaInfoFromValue(args[0])
 
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				arguments := args[typeBoundFunctionArgumentOffset:]
+				// Get path argument
+				pathValue, ok := args[typeBoundFunctionArgumentOffset].(interpreter.PathValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 
 				borrowType := typeArguments[0]
 				semaBorrowType := interpreter.MustConvertStaticToSemaType(borrowType, config)
@@ -78,7 +84,7 @@ func init() {
 				return stdlib.AccountCapabilitiesGet(
 					config,
 					config.GetAccountHandler(),
-					arguments,
+					pathValue,
 					semaBorrowType,
 					true,
 					address,
@@ -101,10 +107,23 @@ func init() {
 				// arg[0] is the receiver. Actual arguments starts from 1.
 				arguments := args[typeBoundFunctionArgumentOffset:]
 
+				// Get capability argument
+				capabilityValue, ok := arguments[0].(interpreter.CapabilityValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				// Get path argument
+				pathValue, ok := arguments[1].(interpreter.PathValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
 				return stdlib.AccountCapabilitiesPublish(
 					config,
 					config,
-					arguments,
+					capabilityValue,
+					pathValue,
 					accountAddress,
 					EmptyLocationRange,
 				)
@@ -122,13 +141,16 @@ func init() {
 				// Get address field from the receiver (Account.Capabilities)
 				accountAddress := getAddressMetaInfoFromValue(args[receiverIndex])
 
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				arguments := args[typeBoundFunctionArgumentOffset:]
+				// Get path argument
+				pathValue, ok := args[typeBoundFunctionArgumentOffset].(interpreter.PathValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 
 				return stdlib.AccountCapabilitiesUnpublish(
 					config,
 					config,
-					arguments,
+					pathValue,
 					accountAddress,
 					EmptyLocationRange,
 				)
@@ -147,11 +169,14 @@ func init() {
 				accountAddress := getAddressMetaInfoFromValue(args[receiverIndex])
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				arguments := args[typeBoundFunctionArgumentOffset:]
+				pathValue, ok := args[typeBoundFunctionArgumentOffset].(interpreter.PathValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 
 				return stdlib.AccountCapabilitieExist(
 					config,
-					arguments,
+					pathValue,
 					accountAddress.ToAddress(),
 				)
 			},

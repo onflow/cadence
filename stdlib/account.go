@@ -3523,10 +3523,23 @@ func newAccountCapabilitiesPublishFunction(
 				locationRange := invocation.LocationRange
 				arguments := invocation.Arguments
 
+				// Get capability argument
+				capabilityValue, ok := arguments[0].(interpreter.CapabilityValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				// Get path argument
+				pathValue, ok := invocation.Arguments[1].(interpreter.PathValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
 				return AccountCapabilitiesPublish(
 					invocationContext,
 					handler,
-					arguments,
+					capabilityValue,
+					pathValue,
 					accountAddressValue,
 					locationRange,
 				)
@@ -3538,18 +3551,17 @@ func newAccountCapabilitiesPublishFunction(
 func AccountCapabilitiesPublish(
 	invocationContext interpreter.InvocationContext,
 	handler CapabilityControllerHandler,
-	arguments []interpreter.Value,
+	capabilityValue interpreter.CapabilityValue,
+	pathValue interpreter.PathValue,
 	accountAddressValue interpreter.AddressValue,
 	locationRange interpreter.LocationRange,
 ) interpreter.Value {
 
-	accountAddress := accountAddressValue.ToAddress()
-
-	// Get capability argument
-	capabilityValue, ok := arguments[0].(interpreter.CapabilityValue)
-	if !ok {
+	if pathValue.Domain != common.PathDomainPublic {
 		panic(errors.NewUnreachableError())
 	}
+
+	accountAddress := accountAddressValue.ToAddress()
 
 	capabilityAddressValue := capabilityValue.Address()
 	if capabilityAddressValue != accountAddressValue {
@@ -3558,13 +3570,6 @@ func AccountCapabilitiesPublish(
 			CapabilityAddress: capabilityAddressValue,
 			AccountAddress:    accountAddressValue,
 		})
-	}
-
-	// Get path argument
-
-	pathValue, ok := arguments[1].(interpreter.PathValue)
-	if !ok || pathValue.Domain != common.PathDomainPublic {
-		panic(errors.NewUnreachableError())
 	}
 
 	domain := pathValue.Domain.StorageDomain()
@@ -3675,12 +3680,17 @@ func newAccountCapabilitiesUnpublishFunction(
 
 				invocationContext := invocation.InvocationContext
 				locationRange := invocation.LocationRange
-				arguments := invocation.Arguments
+
+				// Get path argument
+				pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 
 				return AccountCapabilitiesUnpublish(
 					invocationContext,
 					handler,
-					arguments,
+					pathValue,
 					addressValue,
 					locationRange,
 				)
@@ -3692,14 +3702,12 @@ func newAccountCapabilitiesUnpublishFunction(
 func AccountCapabilitiesUnpublish(
 	invocationContext interpreter.InvocationContext,
 	handler CapabilityControllerHandler,
-	arguments []interpreter.Value,
+	pathValue interpreter.PathValue,
 	addressValue interpreter.AddressValue,
 	locationRange interpreter.LocationRange,
 ) interpreter.Value {
 
-	// Get path argument
-	pathValue, ok := arguments[0].(interpreter.PathValue)
-	if !ok || pathValue.Domain != common.PathDomainPublic {
+	if pathValue.Domain != common.PathDomainPublic {
 		panic(errors.NewUnreachableError())
 	}
 
@@ -3737,7 +3745,7 @@ func AccountCapabilitiesUnpublish(
 		panic(errors.NewUnreachableError())
 	}
 
-	capabilityValue, ok = capabilityValue.Transfer(
+	capabilityValue, ok := capabilityValue.Transfer(
 		invocationContext,
 		locationRange,
 		atree.Address{},
@@ -3966,13 +3974,18 @@ func newAccountCapabilitiesGetFunction(
 
 				invocationContext := invocation.InvocationContext
 				locationRange := invocation.LocationRange
-				arguments := invocation.Arguments
 				typeParameter := invocation.TypeParameterTypes.Oldest().Value
+
+				// Get path argument
+				pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 
 				return AccountCapabilitiesGet(
 					invocationContext,
 					controllerHandler,
-					arguments,
+					pathValue,
 					typeParameter,
 					borrow,
 					addressValue,
@@ -3986,16 +3999,13 @@ func newAccountCapabilitiesGetFunction(
 func AccountCapabilitiesGet(
 	invocationContext interpreter.InvocationContext,
 	controllerHandler CapabilityControllerHandler,
-	arguments []interpreter.Value,
+	pathValue interpreter.PathValue,
 	typeParameter sema.Type,
 	borrow bool,
 	addressValue interpreter.AddressValue,
 	locationRange interpreter.LocationRange,
 ) interpreter.Value {
-	// Get path argument
-
-	pathValue, ok := arguments[0].(interpreter.PathValue)
-	if !ok || pathValue.Domain != common.PathDomainPublic {
+	if pathValue.Domain != common.PathDomainPublic {
 		panic(errors.NewUnreachableError())
 	}
 
@@ -4173,11 +4183,14 @@ func newAccountCapabilitiesExistsFunction(
 			sema.Account_CapabilitiesTypeExistsFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 				invocationContext := invocation.InvocationContext
-				arguments := invocation.Arguments
+				pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 
 				return AccountCapabilitieExist(
 					invocationContext,
-					arguments,
+					pathValue,
 					address,
 				)
 			},
@@ -4187,12 +4200,11 @@ func newAccountCapabilitiesExistsFunction(
 
 func AccountCapabilitieExist(
 	invocationContext interpreter.InvocationContext,
-	arguments []interpreter.Value,
+	pathValue interpreter.PathValue,
 	address common.Address,
 ) interpreter.Value {
 	// Get path argument
-	pathValue, ok := arguments[0].(interpreter.PathValue)
-	if !ok || pathValue.Domain != common.PathDomainPublic {
+	if pathValue.Domain != common.PathDomainPublic {
 		panic(errors.NewUnreachableError())
 	}
 

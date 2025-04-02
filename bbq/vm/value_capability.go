@@ -34,7 +34,7 @@ func init() {
 		typeName,
 		sema.CapabilityTypeBorrowFunctionName,
 		NativeFunctionValue{
-			ParameterCount: 0,
+			ParameterCount: len(sema.CapabilityTypeBorrowFunctionType(nil).Parameters),
 			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
 				capabilityValue := getReceiver[*interpreter.IDCapabilityValue](config, args[receiverIndex])
 				capabilityID := capabilityValue.ID
