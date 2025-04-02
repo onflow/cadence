@@ -43,6 +43,11 @@ type SimpleCompositeValue struct {
 	// This is used for distinguishing between transaction values and other composite values.
 	// TODO: maybe cleanup if there is an alternative/better way.
 	isTransaction bool
+
+	// privateFields is a property bag to carry internal data
+	// that are not visible to cadence users.
+	// TODO: any better way to pass down information?
+	privateFields map[string]Value
 }
 
 var _ Value = &SimpleCompositeValue{}
@@ -301,4 +306,20 @@ func (v *SimpleCompositeValue) Clone(interpreter *Interpreter) Value {
 
 func (v *SimpleCompositeValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
+}
+
+func (v *SimpleCompositeValue) WithPrivateField(key string, value Value) *SimpleCompositeValue {
+	if v.privateFields == nil {
+		v.privateFields = make(map[string]Value)
+	}
+
+	v.privateFields[key] = value
+	return v
+}
+
+func (v *SimpleCompositeValue) PrivateField(key string) Value {
+	if v.privateFields == nil {
+		return nil
+	}
+	return v.privateFields[key]
 }

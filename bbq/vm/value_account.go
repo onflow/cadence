@@ -20,7 +20,9 @@ package vm
 
 import (
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 )
 
@@ -64,20 +66,16 @@ func init() {
 }
 
 func getAddressMetaInfoFromValue(value Value) interpreter.AddressValue {
-	// TODO: How to get the address?
+	simpleCompositeValue, ok := value.(*interpreter.SimpleCompositeValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 
-	//simpleCompositeValue, ok := value.(*interpreter.SimpleCompositeValue)
-	//if !ok {
-	//	panic(errors.NewUnreachableError())
-	//}
+	addressMetaInfo := simpleCompositeValue.PrivateField(sema.AccountTypeAddressFieldName)
+	address, ok := addressMetaInfo.(interpreter.AddressValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 
-	//addressMetaInfo := simpleCompositeValue.metadata[sema.AccountTypeAddressFieldName]
-	//address, ok := addressMetaInfo.(common.Address)
-	//if !ok {
-	//	panic(errors.NewUnreachableError())
-	//}
-	//
-	//return address
-
-	return interpreter.AddressValue{42}
+	return address
 }

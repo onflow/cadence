@@ -37,6 +37,7 @@ func init() {
 		NativeFunctionValue{
 			ParameterCount: len(sema.Account_StorageTypeSaveFunctionType.Parameters),
 			Function: func(config *Config, typeArs []bbq.StaticType, args ...Value) Value {
+
 				address := getAddressMetaInfoFromValue(args[receiverIndex])
 
 				// arg[0] is the receiver. Actual arguments starts from 1.

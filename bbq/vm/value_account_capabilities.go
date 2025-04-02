@@ -19,11 +19,10 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/stdlib"
-
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 )
 
 // members
@@ -48,13 +47,13 @@ func init() {
 				semaBorrowType := interpreter.MustConvertStaticToSemaType(borrowType, config)
 
 				return stdlib.GetCapability(
+					config,
+					config.GetAccountHandler(),
 					arguments,
 					semaBorrowType,
 					false,
-					config,
 					address,
 					EmptyLocationRange,
-					config,
 				)
 			},
 		})
