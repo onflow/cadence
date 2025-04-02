@@ -76,7 +76,7 @@ func NewDesugar(
 	}
 }
 
-func (d *Desugar) Run() (*ast.Program, map[ast.Declaration]int) {
+func (d *Desugar) Run() (program *ast.Program, postConditionIndices map[ast.Declaration]int) {
 	declarations := d.program.Declarations()
 	for _, declaration := range declarations {
 		modifiedDeclaration := d.desugarDeclaration(declaration)
@@ -87,7 +87,7 @@ func (d *Desugar) Run() (*ast.Program, map[ast.Declaration]int) {
 
 	d.modifiedDeclarations = append(d.newImports, d.modifiedDeclarations...)
 
-	program := ast.NewProgram(d.memoryGauge, d.modifiedDeclarations)
+	program = ast.NewProgram(d.memoryGauge, d.modifiedDeclarations)
 
 	//fmt.Println(ast.Prettier(program))
 

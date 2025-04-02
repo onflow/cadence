@@ -629,6 +629,8 @@ func (c *Compiler[_, _]) compileBlock(block *ast.Block, enclosingDeclKind common
 
 	if c.shouldPatchReturns(enclosingDeclKind) {
 		c.pushReturns()
+		defer c.popReturns()
+
 		for index, statement := range block.Statements {
 			// Once the post conditions are reached, patch all the previous return statements
 			// to jump to the current index (i.e: update them to jump to the post conditions).
@@ -643,11 +645,14 @@ func (c *Compiler[_, _]) compileBlock(block *ast.Block, enclosingDeclKind common
 		}
 	}
 
+	// Add returns for functions.
+	// Initializers don't return anything explicitly. So do not add a return for initializers.
+	// However, initializer has an implicit return for the constructed value.
+	// For that, the `compileInitializer` function is adding a return (with `self` value).
+
 	switch enclosingDeclKind {
 	case common.DeclarationKindFunction:
 		if c.hasPostConditions() {
-			c.popReturns()
-
 			// If there are post-conditions, then the compilation of `return` statements
 			// doesn't emit return instructions (they just jump to the post conditions).
 			// So a return MUST be emitted here.
@@ -664,13 +669,6 @@ func (c *Compiler[_, _]) compileBlock(block *ast.Block, enclosingDeclKind common
 			// and if there is no return statement at the end,
 			// then emit an empty return.
 			c.codeGen.Emit(opcode.InstructionReturn{})
-		}
-	case common.DeclarationKindInitializer:
-		// Initializers don't return anything explicitly. So do not add a return here.
-		// However, initializer has an implicit return for the constructed value.
-		// For that, the `compileInitializer` function is adding a return (with `self` value).
-		if c.hasPostConditions() {
-			c.popReturns()
 		}
 	}
 }
