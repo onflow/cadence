@@ -108,7 +108,7 @@ func init() {
 	// Account.Storage.forEachStored
 	RegisterTypeBoundFunction(
 		accountStorageTypeName,
-		sema.Account_StorageTypeForEachPublicFunctionName,
+		sema.Account_StorageTypeForEachStoredFunctionName,
 		NativeFunctionValue{
 			ParameterCount: len(sema.Account_StorageTypeForEachPublicFunctionType.Parameters),
 			Function: func(config *Config, typeArs []bbq.StaticType, args ...Value) Value {

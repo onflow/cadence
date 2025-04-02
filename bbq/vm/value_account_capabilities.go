@@ -174,7 +174,7 @@ func init() {
 					panic(errors.NewUnreachableError())
 				}
 
-				return stdlib.AccountCapabilitieExist(
+				return stdlib.AccountCapabilitiesExists(
 					config,
 					pathValue,
 					accountAddress.ToAddress(),
