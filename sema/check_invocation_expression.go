@@ -140,7 +140,6 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 				InvocationExpressionTypes{
 					ArgumentTypes: argumentTypes,
 					ReturnType:    checker.expectedType,
-					ParamCount:    len(functionType.Parameters),
 				},
 			)
 		}
@@ -543,7 +542,6 @@ func (checker *Checker) checkInvocation(
 			TypeParameterTypes: parameterTypes,
 			ReturnType:         returnType,
 			ArgumentTypes:      argumentTypes,
-			ParamCount:         parameterCount,
 		},
 	)
 

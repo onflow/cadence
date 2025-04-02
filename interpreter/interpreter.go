@@ -5420,7 +5420,7 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 			return info.Equal(other.(StaticType))
 		case *DictionaryStaticType:
 			return info.Equal(other.(StaticType))
-		case compositeTypeInfo:
+		case CompositeTypeInfo:
 			return info.Equal(other)
 		case EmptyTypeInfo:
 			_, ok := other.(EmptyTypeInfo)

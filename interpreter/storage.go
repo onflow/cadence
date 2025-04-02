@@ -77,7 +77,7 @@ func ConvertStoredValue(gauge common.MemoryGauge, value atree.Value) (Value, err
 		typeInfo := value.Type()
 		switch staticType := typeInfo.(type) {
 		case *DictionaryStaticType:
-			return NewDictionaryValueFromAtreeMap(
+			return newDictionaryValueFromAtreeMap(
 				gauge,
 				staticType,
 				DictionaryElementSize(staticType),

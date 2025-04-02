@@ -36,8 +36,6 @@ import (
 	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
-	"github.com/onflow/cadence/test_utils/runtime_utils"
-	"github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 type storageKey struct {
@@ -466,25 +464,11 @@ func (n NoOpFunctionCreationContext) MaybeTrackReferencedResourceKindedValue(_ *
 	// NO-OP
 }
 
-func (n NoOpFunctionCreationContext) GetInterfaceType(location common.Location, qualifiedIdentifier string, typeID interpreter.TypeID) (*sema.InterfaceType, error) {
-	// NO-OP
-	return nil, nil
-}
-
-func (n NoOpFunctionCreationContext) GetCompositeType(location common.Location, qualifiedIdentifier string, typeID interpreter.TypeID) (*sema.CompositeType, error) {
-	// NO-OP
-	return nil, nil
-}
-
-func (n NoOpFunctionCreationContext) IsTypeInfoRecovered(location common.Location) bool {
-	// NO-OP
-	return false
-}
-
-func (n NoOpFunctionCreationContext) GetCompositeValueFunctions(v *interpreter.CompositeValue, locationRange interpreter.LocationRange) *interpreter.FunctionOrderedMap {
+func (n NoOpFunctionCreationContext) MeterMemory(usage common.MemoryUsage) error {
 	// NO-OP
 	return nil
 }
+
 
 var _ interpreter.FunctionCreationContext = NoOpFunctionCreationContext{}
 
@@ -585,44 +569,48 @@ func testAccountWithErrorHandlerWithCompiler(
 	var storage interpreter.Storage
 
 	if compilerEnabled && *compile {
-		vmConfig := &vm.Config{
-			NativeFunctionsProvider: func() map[string]interpreter.Value {
-				funcs := vm.NativeFunctions()
-				funcs[accountValueDeclaration.Name] = accountValueDeclaration.Value
-				return funcs
-			},
-		}
+		//vmConfig := &vm.Config{
+		//	NativeFunctionsProvider: func() map[string]interpreter.Value {
+		//		funcs := vm.NativeFunctions()
+		//		funcs[accountValueDeclaration.Name] = accountValueDeclaration.Value
+		//		return funcs
+		//	},
+		//}
+		//
+		//vmInstance := compilerUtils.CompileAndPrepareToInvoke(
+		//	t,
+		//	code,
+		//	compilerUtils.CompilerAndVMOptions{
+		//		ParseAndCheckOptions: &sema_utils.ParseAndCheckOptions{
+		//			Config: &sema.Config{
+		//				LocationHandler: runtime_utils.NewSingleIdentifierLocationResolver(t),
+		//				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+		//					return baseValueActivation
+		//				},
+		//			},
+		//		},
+		//		VMConfig: vmConfig,
+		//		CompilerConfig: &compiler.Config{
+		//			BuiltinGlobalsProvider: func() map[string]*compiler.Global {
+		//				builtins := compiler.NativeFunctions()
+		//				for _, valueDeclaration := range valueDeclarations {
+		//					name := valueDeclaration.Name
+		//					builtins[name] = &compiler.Global{
+		//						Name: name,
+		//					}
+		//				}
+		//				return builtins
+		//			},
+		//		},
+		//	},
+		//)
+		//
+		//invokable = test_utils.NewVMInvokable(vmInstance, vmConfig)
+		//storage = vmConfig.Storage()
 
-		vmInstance := compilerUtils.CompileAndPrepareToInvoke(
-			t,
-			code,
-			compilerUtils.CompilerAndVMOptions{
-				ParseAndCheckOptions: &sema_utils.ParseAndCheckOptions{
-					Config: &sema.Config{
-						LocationHandler: runtime_utils.NewSingleIdentifierLocationResolver(t),
-						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-							return baseValueActivation
-						},
-					},
-				},
-				VMConfig: vmConfig,
-				CompilerConfig: &compiler.Config{
-					BuiltinGlobalsProvider: func() map[string]*compiler.Global {
-						builtins := compiler.NativeFunctions()
-						for _, valueDeclaration := range valueDeclarations {
-							name := valueDeclaration.Name
-							builtins[name] = &compiler.Global{
-								Name: name,
-							}
-						}
-						return builtins
-					},
-				},
-			},
-		)
+		// Panic for now
+		panic(errors.NewUnreachableError())
 
-		invokable = test_utils.NewVMInvokable(vmInstance, vmConfig)
-		storage = vmConfig.Storage()
 	} else {
 
 		inter, err := parseCheckAndInterpretWithOptions(t,

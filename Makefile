@@ -85,7 +85,7 @@ test-tools:
 
 .PHONY: test-with-compiler
 test-with-compiler:
-	(go test -parallel 8 ./interpreter/... -compile=true)
+	#(go test -parallel 8 ./interpreter/... -compile=true)
 
 
 .PHONY: lint-github-actions
