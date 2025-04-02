@@ -5367,7 +5367,6 @@ func TestTypeConstructor(t *testing.T) {
 	})
 }
 
-
 func TestTypeConversions(t *testing.T) {
 	t.Parallel()
 
