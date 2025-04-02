@@ -299,7 +299,9 @@ func TestNewStruct(t *testing.T) {
 
 	t.Parallel()
 
-	checker, err := ParseAndCheck(t, `
+	vmConfig := &vm.Config{}
+
+	vmInstance := CompileAndPrepareToInvoke(t, `
       struct Foo {
           var id : Int
 
@@ -318,14 +320,11 @@ func TestNewStruct(t *testing.T) {
           }
           return r
       }
-  `)
-	require.NoError(t, err)
-
-	comp := compiler.NewInstructionCompiler(checker)
-	program := comp.Compile()
-
-	vmConfig := &vm.Config{}
-	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+  `,
+		CompilerAndVMOptions{
+			VMConfig: vmConfig,
+		},
+	)
 
 	result, err := vmInstance.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(10))
 	require.NoError(t, err)
@@ -3922,44 +3921,7 @@ func TestDefaultFunctionsWithConditions(t *testing.T) {
 	t.Run("default in parent, conditions in child", func(t *testing.T) {
 		t.Parallel()
 
-		storage := interpreter.NewInMemoryStorage(nil)
-
-		activation := sema.NewVariableActivation(sema.BaseValueActivation)
-		activation.DeclareValue(stdlib.PanicFunction)
-		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-			"log",
-			sema.NewSimpleFunctionType(
-				sema.FunctionPurityView,
-				[]sema.Parameter{
-					{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: sema.AnyStructTypeAnnotation,
-					},
-				},
-				sema.VoidTypeAnnotation,
-			),
-			"",
-			nil,
-		))
-
-		var logs []string
-
-		vmConfig := vm.NewConfig(storage)
-		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return interpreter.Void
-				},
-			}
-
-			return funcs
-		}
-
-		_, err := compileAndInvokeWithOptions(t, `
+		_, err, logs := compileAndInvokeWithLogs(t, `
             struct interface Foo {
                 fun test(_ a: Int) {
                     printMessage("invoked Foo.test()")
@@ -3990,17 +3952,6 @@ func TestDefaultFunctionsWithConditions(t *testing.T) {
             }
         `,
 			"main",
-			CompilerAndVMOptions{
-				VMConfig: vmConfig,
-				ParseAndCheckOptions: &ParseAndCheckOptions{
-					Config: &sema.Config{
-						LocationHandler: singleIdentifierLocationResolver(t),
-						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
-							return activation
-						},
-					},
-				},
-			},
 		)
 
 		require.NoError(t, err)
@@ -4017,44 +3968,7 @@ func TestDefaultFunctionsWithConditions(t *testing.T) {
 	t.Run("default and conditions in parent, more conditions in child", func(t *testing.T) {
 		t.Parallel()
 
-		storage := interpreter.NewInMemoryStorage(nil)
-
-		activation := sema.NewVariableActivation(sema.BaseValueActivation)
-		activation.DeclareValue(stdlib.PanicFunction)
-		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-			"log",
-			sema.NewSimpleFunctionType(
-				sema.FunctionPurityView,
-				[]sema.Parameter{
-					{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: sema.AnyStructTypeAnnotation,
-					},
-				},
-				sema.VoidTypeAnnotation,
-			),
-			"",
-			nil,
-		))
-
-		var logs []string
-		vmConfig := vm.NewConfig(storage)
-
-		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return interpreter.Void
-				},
-			}
-
-			return funcs
-		}
-
-		_, err := compileAndInvokeWithOptions(t, `
+		_, err, logs := compileAndInvokeWithLogs(t, `
             struct interface Foo {
                 fun test(_ a: Int) {
                     pre {
@@ -4091,17 +4005,6 @@ func TestDefaultFunctionsWithConditions(t *testing.T) {
             }
         `,
 			"main",
-			CompilerAndVMOptions{
-				VMConfig: vmConfig,
-				ParseAndCheckOptions: &ParseAndCheckOptions{
-					Config: &sema.Config{
-						LocationHandler: singleIdentifierLocationResolver(t),
-						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
-							return activation
-						},
-					},
-				},
-			},
 		)
 
 		require.NoError(t, err)
@@ -5410,6 +5313,117 @@ func TestTypeConversions(t *testing.T) {
 			t,
 			interpreter.NewUnmeteredIntValueFromInt64(5),
 			actual,
+		)
+	})
+}
+
+func TestReturnStatements(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("conditional return", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err := compileAndInvoke(t, `
+            fun test(a: Bool): Int {
+                if a {
+                    return 1
+                }
+                return 2
+            }`,
+			"test",
+			interpreter.TrueValue,
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), actual)
+	})
+
+	t.Run("conditional return with post condition", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err, logs := compileAndInvokeWithLogs(t, `
+            fun test(a: Bool): Int {
+                post {
+                    printMessage("post condition executed")
+                }
+
+                if a {
+                    return 1
+                }
+
+                if a {
+                    // some statements, just to increase the number
+                    // of statements inside the nested block
+                    var b = 1
+                    var c = 2
+                    var d = 3
+                    printMessage("second condition reached 1")
+                    printMessage("second condition reached 2")
+                }
+
+                return 2
+            }
+
+            access(all) view fun printMessage(_ msg: String): Bool {
+                log(msg)
+                return true
+            }`,
+			"test",
+			interpreter.TrueValue,
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), actual)
+
+		require.Equal(
+			t,
+			[]string{
+				"\"post condition executed\"",
+			}, logs,
+		)
+	})
+
+	t.Run("conditional return with post condition in initializer", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err, logs := compileAndInvokeWithLogs(t, `
+            struct Foo {
+                var i: Int
+                init(_ a: Bool) {
+                    post {
+                        printMessage("post condition executed")
+                    }
+                    if a {
+                        self.i = 5
+                        return
+                    } else {
+                        self.i = 8
+                    }
+                }
+            }
+
+            fun test(a: Bool): Int {
+                var foo = Foo(a)
+                return foo.i
+            }
+
+            access(all) view fun printMessage(_ msg: String): Bool {
+                log(msg)
+                return true
+            }`,
+			"test",
+			interpreter.TrueValue,
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(5), actual)
+
+		require.Equal(
+			t,
+			[]string{
+				"\"post condition executed\"",
+			}, logs,
 		)
 	})
 }

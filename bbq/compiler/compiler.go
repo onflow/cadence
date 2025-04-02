@@ -52,7 +52,19 @@ type Compiler[E, T any] struct {
 	usedImportedGlobals []*Global
 	controlFlows        []controlFlow
 	currentControlFlow  *controlFlow
+	returns             []returns
+	currentReturn       *returns
 	staticTypes         []T
+
+	// postConditionsIndices keeps track of where the post conditions start (i.e: index of the statement in the block),
+	// for each function.
+	// This mapping is populated by/during the desugar/rewrite: When the post conditions gets added
+	// to the end of the function block, it keeps track of the index where it was added to.
+	// Then the compiler uses these indices to patch the jumps for return statements.
+	postConditionsIndices map[ast.Declaration]int
+
+	// postConditionsIndex is the statement-index of the post-conditions for the current function.
+	postConditionsIndex int
 
 	// Cache alike for staticTypes and constants in the pool.
 	typesInPool     map[sema.TypeID]uint16
@@ -130,8 +142,9 @@ func newCompiler[E, T any](
 		compositeTypeStack: &Stack[sema.CompositeKindedType]{
 			elements: make([]sema.CompositeKindedType, 0),
 		},
-		codeGen: codeGen,
-		typeGen: typeGen,
+		codeGen:             codeGen,
+		typeGen:             typeGen,
+		postConditionsIndex: -1,
 	}
 }
 
@@ -331,6 +344,24 @@ func (c *Compiler[_, _]) popControlFlow() {
 	c.currentControlFlow = previousControlFlow
 }
 
+func (c *Compiler[_, _]) pushReturns() {
+	index := len(c.returns)
+	c.returns = append(c.returns, returns{})
+	c.currentReturn = &c.returns[index]
+}
+
+func (c *Compiler[_, _]) popReturns() {
+	lastIndex := len(c.returns) - 1
+	c.returns[lastIndex] = returns{}
+	c.returns = c.returns[:lastIndex]
+
+	var previousReturns *returns
+	if lastIndex > 0 {
+		previousReturns = &c.returns[lastIndex-1]
+	}
+	c.currentReturn = previousReturns
+}
+
 func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 
 	// Desugar the program before compiling.
@@ -341,7 +372,7 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 		c.ExtendedElaboration,
 		c.checker,
 	)
-	c.Program = desugar.Run()
+	c.Program, c.postConditionsIndices = desugar.Run()
 
 	for _, declaration := range c.Program.ImportDeclarations() {
 		c.compileDeclaration(declaration)
@@ -591,17 +622,84 @@ func (c *Compiler[_, _]) compileDeclaration(declaration ast.Declaration) {
 	ast.AcceptDeclaration[struct{}](declaration, c)
 }
 
-func (c *Compiler[_, _]) compileBlock(block *ast.Block) {
+func (c *Compiler[_, _]) compileBlock(block *ast.Block, enclosingDeclKind common.DeclarationKind) {
 	locals := c.currentFunction.locals
 	locals.PushNewWithCurrent()
 	defer locals.Pop()
 
-	for _, statement := range block.Statements {
-		c.compileStatement(statement)
+	if c.shouldPatchReturns(enclosingDeclKind) {
+		c.pushReturns()
+		defer c.popReturns()
+
+		for index, statement := range block.Statements {
+			// Once the post conditions are reached, patch all the previous return statements
+			// to jump to the current index (i.e: update them to jump to the post conditions).
+			if index == c.postConditionsIndex {
+				c.patchJumps(c.currentReturn.returns)
+			}
+			c.compileStatement(statement)
+		}
+	} else {
+		for _, statement := range block.Statements {
+			c.compileStatement(statement)
+		}
+	}
+
+	// Add returns for functions.
+	// Initializers don't return anything explicitly. So do not add a return for initializers.
+	// However, initializer has an implicit return for the constructed value.
+	// For that, the `compileInitializer` function is adding a return (with `self` value).
+
+	switch enclosingDeclKind {
+	case common.DeclarationKindFunction:
+		if c.hasPostConditions() {
+			// If there are post-conditions, then the compilation of `return` statements
+			// doesn't emit return instructions (they just jump to the post conditions).
+			// So a return MUST be emitted here.
+
+			local := c.currentFunction.findLocal(tempResultVariableName)
+			if local == nil {
+				c.codeGen.Emit(opcode.InstructionReturn{})
+			} else {
+				c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: local.index})
+				c.codeGen.Emit(opcode.InstructionReturnValue{})
+			}
+		} else if needsSyntheticReturn(block.Statements) {
+			// If there are no post conditions,
+			// and if there is no return statement at the end,
+			// then emit an empty return.
+			c.codeGen.Emit(opcode.InstructionReturn{})
+		}
 	}
 }
 
-func (c *Compiler[_, _]) compileFunctionBlock(functionBlock *ast.FunctionBlock) {
+func needsSyntheticReturn(statements []ast.Statement) bool {
+	length := len(statements)
+	if length == 0 {
+		return true
+	}
+
+	lastStatement := statements[length-1]
+	_, isReturn := lastStatement.(*ast.ReturnStatement)
+	return !isReturn
+}
+
+// shouldPatchReturns determines whether to patch the return-statements emitted so far.
+// Return statements should only be patched at the function-block level,
+// but not inside nested blocks.
+func (c *Compiler[_, _]) shouldPatchReturns(enclosingDeclKind common.DeclarationKind) bool {
+	// Functions (regular functions and initializers) can have post conditions.
+	switch enclosingDeclKind {
+	case common.DeclarationKindFunction, common.DeclarationKindInitializer:
+		return c.hasPostConditions()
+	default:
+		return false
+	}
+}
+
+func (c *Compiler[_, _]) compileFunctionBlock(declaration *ast.FunctionDeclaration, functionDeclKind common.DeclarationKind) {
+	functionBlock := declaration.FunctionBlock
+
 	if functionBlock == nil {
 		return
 	}
@@ -613,7 +711,18 @@ func (c *Compiler[_, _]) compileFunctionBlock(functionBlock *ast.FunctionBlock) 
 		panic(errors.NewUnreachableError())
 	}
 
-	c.compileBlock(functionBlock.Block)
+	prevPostConditionIndex := c.postConditionsIndex
+	index, ok := c.postConditionsIndices[declaration]
+	if ok {
+		c.postConditionsIndex = index
+	} else {
+		c.postConditionsIndex = -1
+	}
+	defer func() {
+		c.postConditionsIndex = prevPostConditionIndex
+	}()
+
+	c.compileBlock(functionBlock.Block, functionDeclKind)
 }
 
 func (c *Compiler[_, _]) compileStatement(statement ast.Statement) {
@@ -626,14 +735,65 @@ func (c *Compiler[_, _]) compileExpression(expression ast.Expression) {
 
 func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_ struct{}) {
 	expression := statement.Expression
+
+	// There can be five different variations of return values:
+	//  (1) Return with a value
+	//	    (1.a) With post conditions
+	//	        (1.a.i) Return value is non-empty -> Store the value in temp-var and jump to post conditions
+	//	        (1.a.ii) Return value is void -> Drop and jump to post conditions
+	//	    (1.b) No post conditions -> Return in-place
+	//	(2) Empty return
+	//	    (2.a) With post conditions -> Jump to post conditions
+	//	    (2.b) No post conditions -> Return in-place
+	//
+	// In summary, if there are post conditions,this will jump to the post conditions.
+	// Then, the `compileBlock` function is responsible for adding the actual return,
+	// after compiling the rest of the statements (post conditions).
+
 	if expression != nil {
 		// TODO: copy
 		c.compileExpression(expression)
-		c.codeGen.Emit(opcode.InstructionReturnValue{})
+
+		if c.hasPostConditions() {
+			tempResultVar := c.currentFunction.findLocal(tempResultVariableName)
+
+			if tempResultVar != nil {
+				// (1.a.i)
+				// Assign the return value to the temp-result variable.
+				c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: tempResultVar.index})
+			} else {
+				// (1.a.ii)
+				// If there is no temp-result variable, that means the return type is void.
+				// So just drop the void-value.
+				c.codeGen.Emit(opcode.InstructionDrop{})
+			}
+
+			// And jump to the start of the post conditions.
+			offset := c.emitUndefinedJump()
+			c.currentReturn.appendReturn(offset)
+		} else {
+			// (1.b)
+			// If there are no post conditions, return then-and-there.
+			c.codeGen.Emit(opcode.InstructionReturnValue{})
+		}
 	} else {
-		c.codeGen.Emit(opcode.InstructionReturn{})
+		if c.hasPostConditions() {
+			// (2.a)
+			// If there are post conditions, jump to the start of the post conditions.
+			offset := c.emitUndefinedJump()
+			c.currentReturn.appendReturn(offset)
+		} else {
+			// (2.b)
+			// If there are no post conditions, return then-and-there.
+			c.codeGen.Emit(opcode.InstructionReturn{})
+		}
 	}
+
 	return
+}
+
+func (c *Compiler[_, _]) hasPostConditions() bool {
+	return c.postConditionsIndex >= 0
 }
 
 func (c *Compiler[_, _]) VisitBreakStatement(_ *ast.BreakStatement) (_ struct{}) {
@@ -696,7 +856,7 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 			panic(errors.NewUnreachableError())
 		}
 
-		c.compileBlock(statement.Then)
+		c.compileBlock(statement.Then, common.DeclarationKindUnknown)
 
 		if additionalThenScope {
 			c.currentFunction.locals.Pop()
@@ -706,7 +866,7 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 		if elseBlock != nil {
 			thenJump := c.emitUndefinedJump()
 			c.patchJump(elseJump)
-			c.compileBlock(elseBlock)
+			c.compileBlock(elseBlock, common.DeclarationKindUnknown)
 			c.patchJump(thenJump)
 		} else {
 			c.patchJump(elseJump)
@@ -725,7 +885,7 @@ func (c *Compiler[_, _]) VisitWhileStatement(statement *ast.WhileStatement) (_ s
 	endJump := c.emitUndefinedJumpIfFalse()
 
 	// Compile the body
-	c.compileBlock(statement.Block)
+	c.compileBlock(statement.Block, common.DeclarationKindUnknown)
 	// Repeat, jump back to the test
 	c.emitJump(testOffset)
 
@@ -805,7 +965,7 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 	})
 
 	// Compile the for-loop body.
-	c.compileBlock(statement.Block)
+	c.compileBlock(statement.Block, common.DeclarationKindUnknown)
 
 	// Jump back to the loop test. i.e: `hasNext()`
 	c.emitJump(testOffset)
@@ -1597,7 +1757,10 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: self.index})
 
 	// emit for the statements in `init()` body.
-	c.compileFunctionBlock(declaration.FunctionDeclaration.FunctionBlock)
+	c.compileFunctionBlock(
+		declaration.FunctionDeclaration,
+		declaration.Kind,
+	)
 
 	// Constructor should return the created the struct. i.e: return `self`
 	c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: self.index})
@@ -1609,7 +1772,8 @@ func (c *Compiler[_, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 	function := c.declareFunction(declaration, declareReceiver)
 
 	c.declareParameters(function, declaration.ParameterList, declareReceiver)
-	c.compileFunctionBlock(declaration.FunctionBlock)
+
+	c.compileFunctionBlock(declaration, declaration.DeclarationKind())
 
 	return
 }

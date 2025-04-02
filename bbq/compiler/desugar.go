@@ -42,6 +42,7 @@ type Desugar struct {
 
 	modifiedDeclarations         []ast.Declaration
 	inheritedFuncsWithConditions map[string][]*inheritedFunction
+	postConditionIndices         map[ast.Declaration]int
 
 	importsSet map[common.Location]struct{}
 	newImports []ast.Declaration
@@ -71,10 +72,11 @@ func NewDesugar(
 		checker:                      checker,
 		importsSet:                   map[common.Location]struct{}{},
 		inheritedFuncsWithConditions: map[string][]*inheritedFunction{},
+		postConditionIndices:         map[ast.Declaration]int{},
 	}
 }
 
-func (d *Desugar) Run() *ast.Program {
+func (d *Desugar) Run() (program *ast.Program, postConditionIndices map[ast.Declaration]int) {
 	declarations := d.program.Declarations()
 	for _, declaration := range declarations {
 		modifiedDeclaration := d.desugarDeclaration(declaration)
@@ -85,11 +87,11 @@ func (d *Desugar) Run() *ast.Program {
 
 	d.modifiedDeclarations = append(d.newImports, d.modifiedDeclarations...)
 
-	program := ast.NewProgram(d.memoryGauge, d.modifiedDeclarations)
+	program = ast.NewProgram(d.memoryGauge, d.modifiedDeclarations)
 
 	//fmt.Println(ast.Prettier(program))
 
-	return program
+	return program, d.postConditionIndices
 }
 
 func (d *Desugar) desugarDeclaration(declaration ast.Declaration) ast.Declaration {
@@ -100,7 +102,7 @@ func (d *Desugar) VisitVariableDeclaration(declaration *ast.VariableDeclaration)
 	return declaration
 }
 
-func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration, _ bool) ast.Declaration {
+func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration, _ bool) (modifiedDecl ast.Declaration) {
 	funcBlock := declaration.FunctionBlock
 	funcName := declaration.Identifier.Identifier
 
@@ -118,14 +120,27 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration,
 
 	modifiedStatements = append(modifiedStatements, beforeStatements...)
 
+	functionType := d.elaboration.FunctionDeclarationFunctionType(declaration)
+	returnType := functionType.ReturnTypeAnnotation.Type
+
 	if funcBlock.HasStatements() {
 		pos := funcBlock.Block.StartPos
 
-		// Always define a temporary `$_result` variable.
-		// This is because there can be conditional-returns in the middle of the function.
-		// So always assign to the temp-result variable upon a return,
-		// and do the actual return at the end of the function.
-		modifiedStatements = d.declareTempResultVariable(declaration, pos, modifiedStatements)
+		if len(postConditions) > 0 &&
+			returnType != sema.VoidType {
+
+			// If there are post conditions, and a return value, then define a temporary `$_result` variable.
+			// This is because there can be conditional-returns in the middle of the function.
+			// Thus, if there are post conditions, the return value would get assigned to this temp-result variable,
+			// and would be jumped to the post-condition(s). The actual return would be at the end of the function.
+			// This is done at the compiler.
+			modifiedStatements = d.declareTempResultVariable(
+				declaration,
+				returnType,
+				pos,
+				modifiedStatements,
+			)
+		}
 
 		// Add the remaining statements that are defined in this function.
 		statements := funcBlock.Block.Statements
@@ -137,48 +152,20 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration,
 		return nil
 	}
 
-	// Before the post conditions are appended, we need to move the
-	// return statement to the end of the function.
-	// For that, replace the return-stmt with a temporary result assignment,
-	// and once the post conditions are added, then add a new return-stmt
-	// which would return the temp result.
-
-	// TODO: Handle returns from multiple places
-
-	var originalReturnStmt *ast.ReturnStatement
-	hasReturn := false
-
-	if len(modifiedStatements) > 0 {
-		lastStmt := modifiedStatements[len(modifiedStatements)-1]
-		originalReturnStmt, hasReturn = lastStmt.(*ast.ReturnStatement)
-	}
-
-	var returnType sema.Type = sema.VoidType
-
-	if hasReturn {
-		// Remove the return statement from here
-		modifiedStatements = modifiedStatements[:len(modifiedStatements)-1]
-
-		if originalReturnStmt.Expression != nil {
-			// Instead, append a temp-result assignment.i.e:
-			// `let $_result = <expression>`
-			returnStmtTypes := d.elaboration.ReturnStatementTypes(originalReturnStmt)
-			returnType = returnStmtTypes.ReturnType
-
-			tempResultAssignmentStmt := d.tempResultAssignment(originalReturnStmt, returnStmtTypes)
-			modifiedStatements = append(modifiedStatements, tempResultAssignmentStmt)
-		}
-	}
-
-	// Once the return statement is removed, then append the post conditions.
 	if len(postConditions) > 0 {
+		// Keep track of where the post conditions start, for each function.
+		// This is used by the compiler to patch the jumps for return statements.
+		// Note: always use the "modifiedDecl" for tracking.
+		postConditionIndex := len(modifiedStatements)
+		defer func() {
+			d.postConditionIndices[modifiedDecl] = postConditionIndex
+		}()
+
+		// TODO: Declare the `result` variable only if it is used in the post conditions
 		modifiedStatements = d.declareResultVariable(funcBlock, modifiedStatements, returnType)
+
 		modifiedStatements = append(modifiedStatements, postConditions...)
 	}
-
-	// Insert a return statement at the end, after post conditions.
-	tempResultReturn := d.tempResultReturnStatement(hasReturn, originalReturnStmt, returnType)
-	modifiedStatements = append(modifiedStatements, tempResultReturn)
 
 	modifiedFuncBlock := ast.NewFunctionBlock(
 		d.memoryGauge,
@@ -208,80 +195,10 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration,
 	)
 }
 
-// Assign the return value to the temporary `$_result` synthetic variable.
-func (d *Desugar) tempResultAssignment(
-	originalReturnStmt *ast.ReturnStatement,
-	returnStmtTypes sema.ReturnStatementTypes,
-) *ast.AssignmentStatement {
-
-	transfer := ast.TransferOperationCopy
-	if returnStmtTypes.ReturnType.IsResourceType() {
-		transfer = ast.TransferOperationMove
-	}
-
-	tempResultAssignmentStmt := ast.NewAssignmentStatement(
-		d.memoryGauge,
-		d.tempResultIdentifierExpr(originalReturnStmt.StartPos),
-		ast.NewTransfer(
-			d.memoryGauge,
-			transfer,
-			originalReturnStmt.StartPos,
-		),
-		originalReturnStmt.Expression,
-	)
-
-	d.elaboration.SetAssignmentStatementTypes(
-		tempResultAssignmentStmt,
-		sema.AssignmentStatementTypes{
-			ValueType:  returnStmtTypes.ValueType,
-			TargetType: returnStmtTypes.ReturnType,
-		},
-	)
-	return tempResultAssignmentStmt
-}
-
-// Return the value that was temporary stored in `$_result` synthetic variable.
-func (d *Desugar) tempResultReturnStatement(
-	hasReturn bool,
-	originalReturnStmt *ast.ReturnStatement,
-	returnType sema.Type,
-) *ast.ReturnStatement {
-
-	var returnExpr ast.Expression
-	var astRange ast.Range
-
-	if hasReturn {
-		if originalReturnStmt.Expression != nil {
-			// `return $_result`
-			returnExpr = d.tempResultIdentifierExpr(originalReturnStmt.StartPos)
-
-			// If the return type is resource, then wrap it with a move.
-			if returnType.IsResourceType() {
-				// i.e: `return <- $_result`
-				returnExpr = ast.NewUnaryExpression(
-					d.memoryGauge,
-					ast.OperationMove,
-					returnExpr,
-					originalReturnStmt.StartPos,
-				)
-			}
-
-		}
-		astRange = originalReturnStmt.Range
-	} else {
-		astRange = ast.EmptyRange
-	}
-
-	return ast.NewReturnStatement(
-		d.memoryGauge,
-		returnExpr,
-		astRange,
-	)
-}
-
 // Declare a `$_result` synthetic variable, to temporarily hold return values.
 func (d *Desugar) declareTempResultVariable(
 	declaration *ast.FunctionDeclaration,
+	returnType sema.Type,
 	pos ast.Position,
 	modifiedStatements []ast.Statement,
 ) []ast.Statement {
@@ -296,8 +213,7 @@ func (d *Desugar) declareTempResultVariable(
 		),
 		declaration.ReturnTypeAnnotation,
 
-		// TODO: What should be the value?
-		//  We just need the variable to be defined. Value is assigned later.
+		// We just need the variable to be defined. Value is assigned later.
 		nil,
 
 		ast.NewTransfer(
@@ -311,8 +227,6 @@ func (d *Desugar) declareTempResultVariable(
 		"",
 	)
 
-	functionType := d.elaboration.FunctionDeclarationFunctionType(declaration)
-	returnType := functionType.ReturnTypeAnnotation.Type
 	d.elaboration.SetVariableDeclarationTypes(
 		tempResultVarDecl,
 		sema.VariableDeclarationTypes{
@@ -621,7 +535,16 @@ func (d *Desugar) desugarCondition(condition ast.Condition) ast.Statement {
 }
 
 func (d *Desugar) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) ast.Declaration {
-	return declaration
+	desugaredDecl := d.desugarDeclaration(declaration.FunctionDeclaration).(*ast.FunctionDeclaration)
+	if desugaredDecl == declaration.FunctionDeclaration {
+		return declaration
+	}
+
+	return ast.NewSpecialFunctionDeclaration(
+		d.memoryGauge,
+		declaration.Kind,
+		desugaredDecl,
+	)
 }
 
 func (d *Desugar) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) ast.Declaration {
@@ -633,10 +556,15 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 
 	// Recursively de-sugar nested declarations (functions, types, etc.)
 
-	prevInheritedFuncs := d.inheritedFuncsWithConditions
+	prevInheritedFuncsWithConditions := d.inheritedFuncsWithConditions
+	prevEnclosingInterfaceType := d.enclosingInterfaceType
+
 	d.inheritedFuncsWithConditions = d.inheritedFunctionsWithConditions(compositeType)
+	d.enclosingInterfaceType = nil
+
 	defer func() {
-		d.inheritedFuncsWithConditions = prevInheritedFuncs
+		d.inheritedFuncsWithConditions = prevInheritedFuncsWithConditions
+		d.enclosingInterfaceType = prevEnclosingInterfaceType
 	}()
 
 	var desugaredMembers []ast.Declaration
@@ -1014,18 +942,15 @@ func (d *Desugar) interfaceDelegationMethodCall(
 func (d *Desugar) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) ast.Declaration {
 	interfaceType := d.elaboration.InterfaceDeclarationType(declaration)
 
-	prevModifiedDecls := d.modifiedDeclarations
 	prevEnclosingInterfaceType := d.enclosingInterfaceType
-
-	d.modifiedDeclarations = nil
 	d.enclosingInterfaceType = interfaceType
-
 	defer func() {
-		d.modifiedDeclarations = prevModifiedDecls
 		d.enclosingInterfaceType = prevEnclosingInterfaceType
 	}()
 
 	// Recursively de-sugar nested declarations (functions, types, etc.)
+
+	var desugaredMembers []ast.Declaration
 
 	existingMembers := declaration.Members.Declarations()
 	for _, member := range existingMembers {
@@ -1033,7 +958,7 @@ func (d *Desugar) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaratio
 		if desugaredMember == nil {
 			continue
 		}
-		d.modifiedDeclarations = append(d.modifiedDeclarations, desugaredMember)
+		desugaredMembers = append(desugaredMembers, desugaredMember)
 	}
 
 	// TODO: Optimize: If none of the existing members got updated or,
@@ -1045,7 +970,7 @@ func (d *Desugar) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaratio
 		declaration.CompositeKind,
 		declaration.Identifier,
 		declaration.Conformances,
-		ast.NewMembers(d.memoryGauge, d.modifiedDeclarations),
+		ast.NewMembers(d.memoryGauge, desugaredMembers),
 		declaration.DocString,
 		declaration.Range,
 	)

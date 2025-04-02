@@ -553,6 +553,70 @@ func compileAndInvoke(
 	)
 }
 
+func compileAndInvokeWithLogs(
+	t testing.TB,
+	code string,
+	funcName string,
+	arguments ...vm.Value,
+) (result vm.Value, err error, logs []string) {
+	storage := interpreter.NewInMemoryStorage(nil)
+
+	activation := sema.NewVariableActivation(sema.BaseValueActivation)
+	activation.DeclareValue(stdlib.PanicFunction)
+	activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
+		"log",
+		sema.NewSimpleFunctionType(
+			sema.FunctionPurityView,
+			[]sema.Parameter{
+				{
+					Label:          sema.ArgumentLabelNotRequired,
+					Identifier:     "value",
+					TypeAnnotation: sema.AnyStructTypeAnnotation,
+				},
+			},
+			sema.VoidTypeAnnotation,
+		),
+		"",
+		nil,
+	))
+
+	vmConfig := vm.NewConfig(storage).
+		WithAccountHandler(&testAccountHandler{})
+
+	vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
+		funcs := vm.NativeFunctions()
+		funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+			ParameterCount: len(stdlib.LogFunctionType.Parameters),
+			Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+				logs = append(logs, arguments[0].String())
+				return interpreter.Void
+			},
+		}
+
+		return funcs
+	}
+
+	result, err = compileAndInvokeWithOptions(
+		t,
+		code,
+		funcName,
+		CompilerAndVMOptions{
+			VMConfig: vmConfig,
+			ParseAndCheckOptions: &sema_utils.ParseAndCheckOptions{
+				Config: &sema.Config{
+					LocationHandler: singleIdentifierLocationResolver(t),
+					BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+						return activation
+					},
+				},
+			},
+		},
+		arguments...,
+	)
+
+	return
+}
+
 func compileAndInvokeWithOptions(
 	t testing.TB,
 	code string,
