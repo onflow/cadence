@@ -224,9 +224,13 @@ func (c *Compiler[E, T]) addFunction(name string, parameterCount uint16) *functi
 
 	function := newFunction[E](name, parameterCount, isCompositeFunction)
 	c.functions = append(c.functions, function)
+
+	return function
+}
+
+func (c *Compiler[E, T]) targetFunction(function *function[E]) {
 	c.currentFunction = function
 	c.codeGen.SetTarget(&function.code)
-	return function
 }
 
 func (c *Compiler[_, _]) addConstant(kind constantkind.ConstantKind, data []byte) *constant {
@@ -1587,9 +1591,35 @@ func (c *Compiler[_, _]) VisitBinaryExpression(expression *ast.BinaryExpression)
 	return
 }
 
-func (c *Compiler[_, _]) VisitFunctionExpression(_ *ast.FunctionExpression) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler[_, _]) VisitFunctionExpression(expression *ast.FunctionExpression) (_ struct{}) {
+	// TODO: desugar function expressions
+
+	functionIndex := len(c.functions)
+
+	if functionIndex >= math.MaxUint16 {
+		panic(errors.NewDefaultUserError("invalid function index"))
+	}
+
+	c.codeGen.Emit(opcode.InstructionNewClosure{
+		FunctionIndex: uint16(functionIndex),
+	})
+
+	parameterList := expression.ParameterList
+	parameterCount := uint16(len(parameterList.Parameters))
+
+	function := c.addFunction("", parameterCount)
+
+	previousFunction := c.currentFunction
+	c.targetFunction(function)
+	defer c.targetFunction(previousFunction)
+
+	c.declareParameters(function, parameterList, false)
+	c.compileFunctionBlock(
+		expression.FunctionBlock,
+		common.DeclarationKindUnknown,
+	)
+
+	return
 }
 
 func (c *Compiler[_, _]) VisitStringExpression(expression *ast.StringExpression) (_ struct{}) {
@@ -1715,6 +1745,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	}
 
 	function := c.addFunction(functionName, uint16(parameterCount))
+	c.targetFunction(function)
 	c.declareParameters(function, parameterList, false)
 
 	// Declare `self`
@@ -1768,7 +1799,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 func (c *Compiler[_, _]) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration, _ bool) (_ struct{}) {
 	declareReceiver := !c.compositeTypeStack.isEmpty()
 	function := c.declareFunction(declaration, declareReceiver)
-
+	c.targetFunction(function)
 	c.declareParameters(function, declaration.ParameterList, declareReceiver)
 
 	c.compileFunctionBlock(

@@ -39,7 +39,8 @@ var _ interpreter.FunctionValue = FunctionValue{}
 func (FunctionValue) IsValue() {}
 
 func (FunctionValue) StaticType(interpreter.ValueStaticTypeContext) bbq.StaticType {
-	panic(errors.NewUnreachableError())
+	// TODO:
+	return nil
 }
 
 func (v FunctionValue) Transfer(_ interpreter.ValueTransferContext,

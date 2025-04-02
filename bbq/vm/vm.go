@@ -736,7 +736,8 @@ func opTransfer(vm *VM, ins opcode.InstructionTransfer) {
 	)
 
 	valueType := transferredValue.StaticType(config)
-	if !vm.config.IsSubType(valueType, targetType) {
+	// TODO: remove nil check after ensuring all implementations of Value.StaticType are implemented
+	if valueType != nil && !vm.config.IsSubType(valueType, targetType) {
 		panic(errors.NewUnexpectedError(
 			"invalid transfer: expected '%s', found '%s'",
 			targetType,
@@ -1132,6 +1133,8 @@ func (vm *VM) run() {
 			opIteratorNext(vm)
 		case opcode.InstructionDeref:
 			opDeref(vm)
+		case opcode.InstructionNewClosure:
+			opNewClosure(vm, ins)
 		default:
 			panic(errors.NewUnexpectedError("cannot execute instruction of type %T", ins))
 		}
@@ -1152,6 +1155,17 @@ func onEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func opNewClosure(vm *VM, ins opcode.InstructionNewClosure) {
+
+	executable := vm.callFrame.executable
+	function := &executable.Program.Functions[ins.FunctionIndex]
+
+	vm.push(FunctionValue{
+		Function:   function,
+		Executable: executable,
+	})
 }
 
 func (vm *VM) initializeConstant(index uint16) (value Value) {

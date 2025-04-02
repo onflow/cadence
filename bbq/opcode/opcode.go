@@ -101,7 +101,7 @@ const (
 	NewArray
 	NewDictionary
 	NewRef
-	_
+	NewClosure
 	_
 	_
 	_
