@@ -19,8 +19,6 @@
 package vm
 
 import (
-	"strings"
-
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -33,15 +31,15 @@ func init() {
 
 	RegisterTypeBoundFunction(typeName, sema.StringTypeConcatFunctionName, NativeFunctionValue{
 		ParameterCount: len(sema.StringTypeConcatFunctionType.Parameters),
-		Function: func(config *Config, typeArguments []bbq.StaticType, value ...Value) Value {
-			first := value[0].(*interpreter.StringValue)
-			second := value[1].(*interpreter.StringValue)
+		Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+			first := args[receiverIndex].(*interpreter.StringValue)
 
-			// TODO: Use `StringValue.Concat()`
-			var sb strings.Builder
-			sb.WriteString(first.Str)
-			sb.WriteString(second.Str)
-			return interpreter.NewUnmeteredStringValue(sb.String())
+			return interpreter.StringConcat(
+				config,
+				first,
+				args[typeBoundFunctionArgumentOffset],
+				EmptyLocationRange,
+			)
 		},
 	})
 }

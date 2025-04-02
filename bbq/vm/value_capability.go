@@ -36,7 +36,7 @@ func init() {
 		NativeFunctionValue{
 			ParameterCount: 0,
 			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
-				capabilityValue := getReceiver[*interpreter.IDCapabilityValue](config, args[0])
+				capabilityValue := getReceiver[*interpreter.IDCapabilityValue](config, args[receiverIndex])
 				capabilityID := capabilityValue.ID
 
 				if capabilityID == interpreter.InvalidCapabilityID {

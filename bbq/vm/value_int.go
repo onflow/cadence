@@ -32,8 +32,8 @@ func init() {
 
 	RegisterTypeBoundFunction(typeName, sema.ToStringFunctionName, NativeFunctionValue{
 		ParameterCount: len(sema.ToStringFunctionType.Parameters),
-		Function: func(config *Config, typeArguments []bbq.StaticType, value ...Value) Value {
-			number := value[0].(interpreter.IntValue)
+		Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+			number := args[receiverIndex].(interpreter.IntValue)
 
 			// TODO: Refactor and re-use the logic from interpreter.
 			memoryUsage := common.NewStringMemoryUsage(

@@ -3209,210 +3209,210 @@ var fromBigEndianBytesFunctionValues = func() map[string]fromBigEndianBytesFunct
 type ValueConverterDeclaration struct {
 	min             Value
 	max             Value
-	convert         func(common.MemoryGauge, Value, LocationRange) Value
-	functionType    *sema.FunctionType
+	Convert         func(common.MemoryGauge, Value, LocationRange) Value
+	FunctionType    *sema.FunctionType
 	nestedVariables []struct {
 		Name  string
 		Value Value
 	}
-	name string
+	Name string
 }
 
 // It would be nice if return types in Go's function types would be covariant
 var ConverterDeclarations = []ValueConverterDeclaration{
 	{
-		name:         sema.IntTypeName,
-		functionType: sema.NumberConversionFunctionType(sema.IntType),
-		convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+		Name:         sema.IntTypeName,
+		FunctionType: sema.NumberConversionFunctionType(sema.IntType),
+		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
 			return ConvertInt(gauge, value, locationRange)
 		},
 	},
 	{
-		name:         sema.UIntTypeName,
-		functionType: sema.NumberConversionFunctionType(sema.UIntType),
-		convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+		Name:         sema.UIntTypeName,
+		FunctionType: sema.NumberConversionFunctionType(sema.UIntType),
+		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
 			return ConvertUInt(gauge, value, locationRange)
 		},
 		min: NewUnmeteredUIntValueFromBigInt(sema.UIntTypeMin),
 	},
 	{
-		name:         sema.Int8TypeName,
-		functionType: sema.NumberConversionFunctionType(sema.Int8Type),
-		convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+		Name:         sema.Int8TypeName,
+		FunctionType: sema.NumberConversionFunctionType(sema.Int8Type),
+		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
 			return ConvertInt8(gauge, value, locationRange)
 		},
 		min: NewUnmeteredInt8Value(math.MinInt8),
 		max: NewUnmeteredInt8Value(math.MaxInt8),
 	},
 	{
-		name:         sema.Int16TypeName,
-		functionType: sema.NumberConversionFunctionType(sema.Int16Type),
-		convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+		Name:         sema.Int16TypeName,
+		FunctionType: sema.NumberConversionFunctionType(sema.Int16Type),
+		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
 			return ConvertInt16(gauge, value, locationRange)
 		},
 		min: NewUnmeteredInt16Value(math.MinInt16),
 		max: NewUnmeteredInt16Value(math.MaxInt16),
 	},
 	{
-		name:         sema.Int32TypeName,
-		functionType: sema.NumberConversionFunctionType(sema.Int32Type),
-		convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+		Name:         sema.Int32TypeName,
+		FunctionType: sema.NumberConversionFunctionType(sema.Int32Type),
+		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
 			return ConvertInt32(gauge, value, locationRange)
 		},
 		min: NewUnmeteredInt32Value(math.MinInt32),
 		max: NewUnmeteredInt32Value(math.MaxInt32),
 	},
 	{
-		name:         sema.Int64TypeName,
-		functionType: sema.NumberConversionFunctionType(sema.Int64Type),
-		convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+		Name:         sema.Int64TypeName,
+		FunctionType: sema.NumberConversionFunctionType(sema.Int64Type),
+		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
 			return ConvertInt64(gauge, value, locationRange)
 		},
 		min: NewUnmeteredInt64Value(math.MinInt64),
 		max: NewUnmeteredInt64Value(math.MaxInt64),
 	},
 	{
-		name:         sema.Int128TypeName,
-		functionType: sema.NumberConversionFunctionType(sema.Int128Type),
-		convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+		Name:         sema.Int128TypeName,
+		FunctionType: sema.NumberConversionFunctionType(sema.Int128Type),
+		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
 			return ConvertInt128(gauge, value, locationRange)
 		},
 		min: NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
 		max: NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
 	},
 	{
-		name:         sema.Int256TypeName,
-		functionType: sema.NumberConversionFunctionType(sema.Int256Type),
-		convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+		Name:         sema.Int256TypeName,
+		FunctionType: sema.NumberConversionFunctionType(sema.Int256Type),
+		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
 			return ConvertInt256(gauge, value, locationRange)
 		},
 		min: NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
 		max: NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
 	},
 	{
-		name:         sema.UInt8TypeName,
-		functionType: sema.NumberConversionFunctionType(sema.UInt8Type),
-		convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+		Name:         sema.UInt8TypeName,
+		FunctionType: sema.NumberConversionFunctionType(sema.UInt8Type),
+		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
 			return ConvertUInt8(gauge, value, locationRange)
 		},
 		min: NewUnmeteredUInt8Value(0),
 		max: NewUnmeteredUInt8Value(math.MaxUint8),
 	},
 	{
-		name:         sema.UInt16TypeName,
-		functionType: sema.NumberConversionFunctionType(sema.UInt16Type),
-		convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+		Name:         sema.UInt16TypeName,
+		FunctionType: sema.NumberConversionFunctionType(sema.UInt16Type),
+		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
 			return ConvertUInt16(gauge, value, locationRange)
 		},
 		min: NewUnmeteredUInt16Value(0),
 		max: NewUnmeteredUInt16Value(math.MaxUint16),
 	},
 	{
-		name:         sema.UInt32TypeName,
-		functionType: sema.NumberConversionFunctionType(sema.UInt32Type),
-		convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+		Name:         sema.UInt32TypeName,
+		FunctionType: sema.NumberConversionFunctionType(sema.UInt32Type),
+		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
 			return ConvertUInt32(gauge, value, locationRange)
 		},
 		min: NewUnmeteredUInt32Value(0),
 		max: NewUnmeteredUInt32Value(math.MaxUint32),
 	},
 	{
-		name:         sema.UInt64TypeName,
-		functionType: sema.NumberConversionFunctionType(sema.UInt64Type),
-		convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+		Name:         sema.UInt64TypeName,
+		FunctionType: sema.NumberConversionFunctionType(sema.UInt64Type),
+		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
 			return ConvertUInt64(gauge, value, locationRange)
 		},
 		min: NewUnmeteredUInt64Value(0),
 		max: NewUnmeteredUInt64Value(math.MaxUint64),
 	},
 	{
-		name:         sema.UInt128TypeName,
-		functionType: sema.NumberConversionFunctionType(sema.UInt128Type),
-		convert:      ConvertUInt128,
+		Name:         sema.UInt128TypeName,
+		FunctionType: sema.NumberConversionFunctionType(sema.UInt128Type),
+		Convert:      ConvertUInt128,
 		min:          NewUnmeteredUInt128ValueFromUint64(0),
 		max:          NewUnmeteredUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
 	},
 	{
-		name:         sema.UInt256TypeName,
-		functionType: sema.NumberConversionFunctionType(sema.UInt256Type),
-		convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+		Name:         sema.UInt256TypeName,
+		FunctionType: sema.NumberConversionFunctionType(sema.UInt256Type),
+		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
 			return ConvertUInt256(gauge, value, locationRange)
 		},
 		min: NewUnmeteredUInt256ValueFromUint64(0),
 		max: NewUnmeteredUInt256ValueFromBigInt(sema.UInt256TypeMaxIntBig),
 	},
 	{
-		name:         sema.Word8TypeName,
-		functionType: sema.NumberConversionFunctionType(sema.Word8Type),
-		convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+		Name:         sema.Word8TypeName,
+		FunctionType: sema.NumberConversionFunctionType(sema.Word8Type),
+		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
 			return ConvertWord8(gauge, value, locationRange)
 		},
 		min: NewUnmeteredWord8Value(0),
 		max: NewUnmeteredWord8Value(math.MaxUint8),
 	},
 	{
-		name:         sema.Word16TypeName,
-		functionType: sema.NumberConversionFunctionType(sema.Word16Type),
-		convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+		Name:         sema.Word16TypeName,
+		FunctionType: sema.NumberConversionFunctionType(sema.Word16Type),
+		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
 			return ConvertWord16(gauge, value, locationRange)
 		},
 		min: NewUnmeteredWord16Value(0),
 		max: NewUnmeteredWord16Value(math.MaxUint16),
 	},
 	{
-		name:         sema.Word32TypeName,
-		functionType: sema.NumberConversionFunctionType(sema.Word32Type),
-		convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+		Name:         sema.Word32TypeName,
+		FunctionType: sema.NumberConversionFunctionType(sema.Word32Type),
+		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
 			return ConvertWord32(gauge, value, locationRange)
 		},
 		min: NewUnmeteredWord32Value(0),
 		max: NewUnmeteredWord32Value(math.MaxUint32),
 	},
 	{
-		name:         sema.Word64TypeName,
-		functionType: sema.NumberConversionFunctionType(sema.Word64Type),
-		convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+		Name:         sema.Word64TypeName,
+		FunctionType: sema.NumberConversionFunctionType(sema.Word64Type),
+		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
 			return ConvertWord64(gauge, value, locationRange)
 		},
 		min: NewUnmeteredWord64Value(0),
 		max: NewUnmeteredWord64Value(math.MaxUint64),
 	},
 	{
-		name:         sema.Word128TypeName,
-		functionType: sema.NumberConversionFunctionType(sema.Word128Type),
-		convert:      ConvertWord128,
+		Name:         sema.Word128TypeName,
+		FunctionType: sema.NumberConversionFunctionType(sema.Word128Type),
+		Convert:      ConvertWord128,
 		min:          NewUnmeteredWord128ValueFromUint64(0),
 		max:          NewUnmeteredWord128ValueFromBigInt(sema.Word128TypeMaxIntBig),
 	},
 	{
-		name:         sema.Word256TypeName,
-		functionType: sema.NumberConversionFunctionType(sema.Word256Type),
-		convert:      ConvertWord256,
+		Name:         sema.Word256TypeName,
+		FunctionType: sema.NumberConversionFunctionType(sema.Word256Type),
+		Convert:      ConvertWord256,
 		min:          NewUnmeteredWord256ValueFromUint64(0),
 		max:          NewUnmeteredWord256ValueFromBigInt(sema.Word256TypeMaxIntBig),
 	},
 	{
-		name:         sema.Fix64TypeName,
-		functionType: sema.NumberConversionFunctionType(sema.Fix64Type),
-		convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+		Name:         sema.Fix64TypeName,
+		FunctionType: sema.NumberConversionFunctionType(sema.Fix64Type),
+		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
 			return ConvertFix64(gauge, value, locationRange)
 		},
 		min: NewUnmeteredFix64Value(math.MinInt64),
 		max: NewUnmeteredFix64Value(math.MaxInt64),
 	},
 	{
-		name:         sema.UFix64TypeName,
-		functionType: sema.NumberConversionFunctionType(sema.UFix64Type),
-		convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+		Name:         sema.UFix64TypeName,
+		FunctionType: sema.NumberConversionFunctionType(sema.UFix64Type),
+		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
 			return ConvertUFix64(gauge, value, locationRange)
 		},
 		min: NewUnmeteredUFix64Value(0),
 		max: NewUnmeteredUFix64Value(math.MaxUint64),
 	},
 	{
-		name:         sema.AddressTypeName,
-		functionType: sema.AddressConversionFunctionType,
-		convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+		Name:         sema.AddressTypeName,
+		FunctionType: sema.AddressConversionFunctionType,
+		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
 			return ConvertAddress(gauge, value, locationRange)
 		},
 		nestedVariables: []struct {
@@ -3437,23 +3437,23 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		},
 	},
 	{
-		name:         sema.PublicPathType.Name,
-		functionType: sema.PublicPathConversionFunctionType,
-		convert: func(gauge common.MemoryGauge, value Value, _ LocationRange) Value {
+		Name:         sema.PublicPathType.Name,
+		FunctionType: sema.PublicPathConversionFunctionType,
+		Convert: func(gauge common.MemoryGauge, value Value, _ LocationRange) Value {
 			return newPathFromStringValue(gauge, common.PathDomainPublic, value)
 		},
 	},
 	{
-		name:         sema.PrivatePathType.Name,
-		functionType: sema.PrivatePathConversionFunctionType,
-		convert: func(gauge common.MemoryGauge, value Value, _ LocationRange) Value {
+		Name:         sema.PrivatePathType.Name,
+		FunctionType: sema.PrivatePathConversionFunctionType,
+		Convert: func(gauge common.MemoryGauge, value Value, _ LocationRange) Value {
 			return newPathFromStringValue(gauge, common.PathDomainPrivate, value)
 		},
 	},
 	{
-		name:         sema.StoragePathType.Name,
-		functionType: sema.StoragePathConversionFunctionType,
-		convert: func(gauge common.MemoryGauge, value Value, _ LocationRange) Value {
+		Name:         sema.StoragePathType.Name,
+		FunctionType: sema.StoragePathConversionFunctionType,
+		Convert: func(gauge common.MemoryGauge, value Value, _ LocationRange) Value {
 			return newPathFromStringValue(gauge, common.PathDomainStorage, value)
 		},
 	},
@@ -3509,7 +3509,7 @@ func init() {
 	converterNames := make(map[string]struct{}, len(ConverterDeclarations))
 
 	for _, converterDeclaration := range ConverterDeclarations {
-		converterNames[converterDeclaration.name] = struct{}{}
+		converterNames[converterDeclaration.Name] = struct{}{}
 	}
 
 	for _, numberType := range sema.AllNumberTypes {
@@ -3857,9 +3857,9 @@ var converterFunctionValues = func() []converterFunction {
 
 	for index, declaration := range ConverterDeclarations {
 		// NOTE: declare in loop, as captured in closure below
-		convert := declaration.convert
+		convert := declaration.Convert
 		converterFunctionValue := NewUnmeteredStaticHostFunctionValue(
-			declaration.functionType,
+			declaration.FunctionType,
 			func(invocation Invocation) Value {
 				return convert(invocation.InvocationContext, invocation.Arguments[0], invocation.LocationRange)
 			},
@@ -3882,11 +3882,11 @@ var converterFunctionValues = func() []converterFunction {
 			addMember(sema.NumberTypeMaxFieldName, declaration.max)
 		}
 
-		fromStringVal := fromStringFunctionValues[declaration.name]
+		fromStringVal := fromStringFunctionValues[declaration.Name]
 
 		addMember(sema.FromStringFunctionName, fromStringVal.hostFunction)
 
-		fromBigEndianBytesVal := fromBigEndianBytesFunctionValues[declaration.name]
+		fromBigEndianBytesVal := fromBigEndianBytesFunctionValues[declaration.Name]
 
 		addMember(sema.FromBigEndianBytesFunctionName, fromBigEndianBytesVal.hostFunction)
 
@@ -3897,7 +3897,7 @@ var converterFunctionValues = func() []converterFunction {
 		}
 
 		converterFuncValues[index] = converterFunction{
-			name:      declaration.name,
+			name:      declaration.Name,
 			converter: converterFunctionValue,
 		}
 	}

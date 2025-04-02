@@ -42,7 +42,7 @@ func init() {
 				address := getAddressMetaInfoFromValue(args[0])
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				arguments := args[1:]
+				arguments := args[typeBoundFunctionArgumentOffset:]
 
 				borrowType := typeArguments[0]
 				semaBorrowType := interpreter.MustConvertStaticToSemaType(borrowType, config)
@@ -67,10 +67,10 @@ func init() {
 			ParameterCount: len(sema.Account_CapabilitiesTypePublishFunctionType.Parameters),
 			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.Capabilities)
-				accountAddress := getAddressMetaInfoFromValue(args[0])
+				accountAddress := getAddressMetaInfoFromValue(args[receiverIndex])
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				arguments := args[1:]
+				arguments := args[typeBoundFunctionArgumentOffset:]
 
 				return stdlib.PublishCapability(
 					config,

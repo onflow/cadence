@@ -5316,3 +5316,98 @@ func TestCompileForce(t *testing.T) {
 	})
 
 }
+
+func TestTypeConstructor(t *testing.T) {
+	t.Parallel()
+
+	t.Run("simple type", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err := compileAndInvoke(t,
+			`
+                fun test(): Type {
+                    return Type<Int>()
+                }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			interpreter.NewTypeValue(nil, interpreter.PrimitiveStaticTypeInt),
+			actual,
+		)
+	})
+
+	t.Run("user defined type", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err := compileAndInvoke(t,
+			`
+                struct Foo{}
+                fun test(): Type {
+                    return Type<Foo>()
+                }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			interpreter.NewTypeValue(
+				nil,
+				interpreter.NewCompositeStaticTypeComputeTypeID(
+					nil,
+					common.ScriptLocation{0x1},
+					"Foo",
+				),
+			),
+			actual,
+		)
+	})
+}
+
+func TestTypeConversions(t *testing.T) {
+	t.Parallel()
+
+	t.Run("address", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err := compileAndInvoke(t,
+			`
+                fun test(): Address {
+                    return Address(0x2)
+                }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			interpreter.AddressValue{
+				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
+			},
+			actual,
+		)
+	})
+
+	t.Run("Int", func(t *testing.T) {
+		t.Parallel()
+
+		actual, err := compileAndInvoke(t,
+			`
+                fun test(): Int {
+                    var v: Int64 = 5
+                    return Int(v)
+                }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(5),
+			actual,
+		)
+	})
+}

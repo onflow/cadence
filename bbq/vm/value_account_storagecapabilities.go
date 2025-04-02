@@ -38,10 +38,10 @@ func init() {
 			ParameterCount: len(sema.Account_StorageCapabilitiesTypeIssueFunctionType.Parameters),
 			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.StorageCapabilities)
-				accountAddress := getAddressMetaInfoFromValue(args[0]).ToAddress()
+				accountAddress := getAddressMetaInfoFromValue(args[receiverIndex]).ToAddress()
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				arguments := args[1:]
+				arguments := args[typeBoundFunctionArgumentOffset:]
 
 				// Get borrow type type-argument
 				typeParameter := typeArguments[0]

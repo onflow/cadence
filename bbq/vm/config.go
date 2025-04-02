@@ -19,6 +19,8 @@
 package vm
 
 import (
+	"fmt"
+
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/bbq/commons"
@@ -64,6 +66,8 @@ var _ interpreter.ValueTransferContext = &Config{}
 var _ interpreter.StorageContext = &Config{}
 var _ interpreter.StaticTypeConversionHandler = &Config{}
 var _ interpreter.ValueComparisonContext = &Config{}
+var _ interpreter.InvocationContext = &Config{}
+var _ stdlib.Logger = &Config{}
 
 func NewConfig(storage interpreter.Storage) *Config {
 	return &Config{
@@ -389,6 +393,12 @@ func (c *Config) EmitEvent(
 	values []interpreter.Value,
 ) {
 	//TODO
+}
+
+func (c *Config) ProgramLog(message string, locationRange interpreter.LocationRange) error {
+	//TODO implement properly
+	fmt.Println(message)
+	return nil
 }
 
 type ContractValueHandler func(conf *Config, location common.Location) *interpreter.CompositeValue
