@@ -1234,10 +1234,10 @@ func (vm *VM) StackSize() int {
 }
 
 func (vm *VM) Reset() {
-	vm.stack = nil
-	vm.locals = nil
-	vm.callstack = nil
-	vm.ipStack = nil
+	vm.stack = vm.stack[:0]
+	vm.locals = vm.locals[:0]
+	vm.callstack = vm.callstack[:0]
+	vm.ipStack = vm.ipStack[:0]
 }
 
 func getReceiver[T any](config *Config, receiver Value) T {
