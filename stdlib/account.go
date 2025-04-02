@@ -21,6 +21,7 @@ package stdlib
 import (
 	goerrors "errors"
 	"fmt"
+
 	"golang.org/x/crypto/sha3"
 	"golang.org/x/xerrors"
 
@@ -1673,20 +1674,6 @@ func changeAccountContracts(
 		handleContractUpdateError(err, newCode)
 
 		memoryGauge := invocation.InvocationContext
-		//legacyUpgradeEnabled := invocation.InvocationContext.SharedState.Config.LegacyContractUpgradeEnabled
-
-		//var oldProgram *ast.Program
-
-		// It is not always possible to determine whether the old code is pre-1.0 or not,
-		// only based on the parser errors. Therefore, always rely on the flag only.
-		// If the legacy contract upgrades are enabled, then use the old parser.
-		//if legacyUpgradeEnabled {
-		//	oldProgram, err = old_parser.ParseProgram(
-		//		memoryGauge,
-		//		oldCode,
-		//		old_parser.Config{},
-		//	)
-		//} else {
 		oldProgram, err := parser.ParseProgram(
 			memoryGauge,
 			oldCode,
@@ -1694,7 +1681,6 @@ func changeAccountContracts(
 				IgnoreLeadingIdentifierEnabled: true,
 			},
 		)
-		//}
 
 		if err != nil && !ignoreUpdatedProgramParserError(err) {
 			// NOTE: Errors are usually in the new program / new code,
@@ -1706,17 +1692,6 @@ func changeAccountContracts(
 			handleContractUpdateError(err, oldCode)
 		}
 
-		//var validator UpdateValidator
-		//if legacyUpgradeEnabled {
-		//	validator = NewCadenceV042ToV1ContractUpdateValidator(
-		//		location,
-		//		contractName,
-		//		handler,
-		//		oldProgram,
-		//		program,
-		//		inter.AllElaborations(),
-		//	)
-		//} else {
 		validator := NewContractUpdateValidator(
 			location,
 			contractName,
@@ -1724,7 +1699,6 @@ func changeAccountContracts(
 			oldProgram,
 			program.Program,
 		)
-		//}
 
 		err = validator.Validate()
 		handleContractUpdateError(err, newCode)

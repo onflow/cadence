@@ -60,7 +60,7 @@ var _ ComparableValue = Int32Value(0)
 var _ HashableValue = Int32Value(0)
 var _ MemberAccessibleValue = Int32Value(0)
 
-func (Int32Value) isValue() {}
+func (Int32Value) IsValue() {}
 
 func (v Int32Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitInt32Value(interpreter, v)

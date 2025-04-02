@@ -76,8 +76,8 @@ func ParseCheckAndPrepare(t testing.TB, code string, compile bool) Invokable {
 	)
 
 	return &VMInvokable{
-		vmInstance:  vmInstance,
-		Config:      vmConfig,
+		vmInstance: vmInstance,
+		Config:     vmConfig,
 	}
 
 }

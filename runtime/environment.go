@@ -195,7 +195,6 @@ func (e *interpreterEnvironment) NewInterpreterConfig() *interpreter.Config {
 		OnInvokedFunctionReturn:                   e.newOnInvokedFunctionReturnHandler(),
 		CapabilityBorrowHandler:                   e.newCapabilityBorrowHandler(),
 		CapabilityCheckHandler:                    e.newCapabilityCheckHandler(),
-		LegacyContractUpgradeEnabled:              e.config.LegacyContractUpgradeEnabled,
 		ValidateAccountCapabilitiesGetHandler:     e.newValidateAccountCapabilitiesGetHandler(),
 		ValidateAccountCapabilitiesPublishHandler: e.newValidateAccountCapabilitiesPublishHandler(),
 	}

@@ -48,7 +48,7 @@ var _ Value = &PublishedValue{}
 var _ atree.Value = &PublishedValue{}
 var _ EquatableValue = &PublishedValue{}
 
-func (*PublishedValue) isValue() {}
+func (*PublishedValue) IsValue() {}
 
 func (v *PublishedValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitPublishedValue(interpreter, v)
