@@ -213,7 +213,7 @@ func newDictionaryValueFromConstructor(
 	common.UseMemory(gauge, dataSlabs)
 	common.UseMemory(gauge, metaDataSlabs)
 
-	return NewDictionaryValueFromAtreeMap(
+	return newDictionaryValueFromAtreeMap(
 		gauge,
 		staticType,
 		elementSize,
@@ -221,7 +221,7 @@ func newDictionaryValueFromConstructor(
 	)
 }
 
-func NewDictionaryValueFromAtreeMap(
+func newDictionaryValueFromAtreeMap(
 	gauge common.MemoryGauge,
 	staticType *DictionaryStaticType,
 	elementSize uint,
@@ -1417,7 +1417,7 @@ func (v *DictionaryValue) Transfer(
 		v.dictionary = nil
 	}
 
-	res := NewDictionaryValueFromAtreeMap(
+	res := newDictionaryValueFromAtreeMap(
 		context,
 		v.Type,
 		v.elementSize,
@@ -1473,7 +1473,7 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 		panic(errors.NewExternalError(err))
 	}
 
-	dictionary := NewDictionaryValueFromAtreeMap(
+	dictionary := newDictionaryValueFromAtreeMap(
 		interpreter,
 		v.Type,
 		v.elementSize,
