@@ -45,6 +45,7 @@ type Config struct {
 	accountHandler stdlib.AccountHandler
 
 	NativeFunctionsProvider
+	interpreterConfig *interpreter.Config
 
 	// TODO: Move these to a 'shared state'?
 	storage                                     interpreter.Storage
@@ -57,7 +58,7 @@ type Config struct {
 
 	// TODO: These are temporary. Remove once storing/reading is supported for VM values.
 	inter      *interpreter.Interpreter
-	TypeLoader func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType
+	TypeLoader func(location common.Location, typeID interpreter.TypeID) sema.ContainedType
 }
 
 var _ interpreter.ReferenceTracker = &Config{}
@@ -83,6 +84,11 @@ func NewConfig(storage interpreter.Storage) *Config {
 
 func (c *Config) WithAccountHandler(handler stdlib.AccountHandler) *Config {
 	c.accountHandler = handler
+	return c
+}
+
+func (c *Config) WithInterpreterConfig(config *interpreter.Config) *Config {
+	c.interpreterConfig = config
 	return c
 }
 
@@ -135,7 +141,7 @@ func (c *Config) Storage() interpreter.Storage {
 
 func (c *Config) ReadStored(storageAddress common.Address, domain common.StorageDomain, identifier interpreter.StorageMapKey) interpreter.Value {
 	accountStorage := c.storage.GetDomainStorageMap(
-		c.Interpreter(),
+		c,
 		storageAddress,
 		domain,
 		false,
@@ -153,19 +159,17 @@ func (c *Config) WriteStored(
 	key interpreter.StorageMapKey,
 	value interpreter.Value,
 ) (existed bool) {
-	inter := c.Interpreter()
-	accountStorage := c.storage.GetDomainStorageMap(inter, storageAddress, domain, true)
+	accountStorage := c.storage.GetDomainStorageMap(c, storageAddress, domain, true)
 
 	return accountStorage.WriteValue(
-		inter,
+		c,
 		key,
 		value,
 	)
 }
 
 func (c *Config) IsSubType(subType interpreter.StaticType, superType interpreter.StaticType) bool {
-	inter := c.Interpreter()
-	return interpreter.IsSubType(inter, subType, superType)
+	return interpreter.IsSubType(c, subType, superType)
 }
 
 func (c *Config) GetInterfaceType(
@@ -217,13 +221,51 @@ func (c *Config) GetCompositeType(
 }
 
 func (c *Config) GetEntitlementType(typeID interpreter.TypeID) (*sema.EntitlementType, error) {
-	//TODO
-	panic(errors.NewUnreachableError())
+	location, _, err := common.DecodeTypeID(c, string(typeID))
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: Lookup in built-in types
+
+	typ := c.TypeLoader(location, typeID)
+	if typ != nil {
+
+		entitlementType, ok := typ.(*sema.EntitlementType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		return entitlementType, nil
+	}
+
+	return nil, interpreter.TypeLoadingError{
+		TypeID: typeID,
+	}
 }
 
 func (c *Config) GetEntitlementMapType(typeID interpreter.TypeID) (*sema.EntitlementMapType, error) {
-	//TODO
-	panic(errors.NewUnreachableError())
+	location, _, err := common.DecodeTypeID(c, string(typeID))
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: Lookup in built-in types
+
+	typ := c.TypeLoader(location, typeID)
+	if typ != nil {
+
+		entitlementMapType, ok := typ.(*sema.EntitlementMapType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		return entitlementMapType, nil
+	}
+
+	return nil, interpreter.TypeLoadingError{
+		TypeID: typeID,
+	}
 }
 
 func (c *Config) MaybeValidateAtreeValue(v atree.Value) {
@@ -328,6 +370,63 @@ func (c *Config) GetContractValue(contractLocation common.AddressLocation) (*int
 func (c *Config) SetAttachmentIteration(composite *interpreter.CompositeValue, state bool) bool {
 	//TODO
 	return false
+}
+
+func (c *Config) RecoverErrors(onError func(error)) {
+	//TODO
+}
+
+func (c *Config) CurrentEntitlementMappedValue() interpreter.Authorization {
+	//TODO
+	return nil
+}
+
+func (c *Config) ValidateAccountCapabilitiesGetHandler() interpreter.ValidateAccountCapabilitiesGetHandlerFunc {
+	return c.interpreterConfig.ValidateAccountCapabilitiesGetHandler
+}
+
+func (c *Config) ValidateAccountCapabilitiesPublishHandler() interpreter.ValidateAccountCapabilitiesPublishHandlerFunc {
+	return c.interpreterConfig.ValidateAccountCapabilitiesPublishHandler
+}
+
+func (c *Config) CapabilityBorrowHandler() interpreter.CapabilityBorrowHandlerFunc {
+	return c.interpreterConfig.CapabilityBorrowHandler
+}
+
+func (c *Config) GetCapabilityCheckHandler() interpreter.CapabilityCheckHandlerFunc {
+	return c.interpreterConfig.CapabilityCheckHandler
+}
+
+func (c *Config) GetValueOfVariable(name string) interpreter.Value {
+	//TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (c *Config) GetLocation() common.Location {
+	//TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (c *Config) CallStack() []interpreter.Invocation {
+	//TODO
+	return nil
+}
+
+func (c *Config) EmitEventValue(event *interpreter.CompositeValue, eventType *sema.CompositeType, locationRange interpreter.LocationRange) {
+	//TODO
+}
+
+func (c *Config) GetResourceDestructionContextForLocation(location common.Location) interpreter.ResourceDestructionContext {
+	return c
+}
+
+func (c *Config) EmitEvent(
+	context interpreter.ValueExportContext,
+	locationRange interpreter.LocationRange,
+	eventType *sema.CompositeType,
+	values []interpreter.Value,
+) {
+	//TODO
 }
 
 type ContractValueHandler func(conf *Config, location common.Location) *interpreter.CompositeValue

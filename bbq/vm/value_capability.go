@@ -20,8 +20,6 @@ package vm
 
 import (
 	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -45,160 +43,23 @@ func init() {
 					return interpreter.Nil
 				}
 
-				capabilityBorrowType := capabilityValue.BorrowType.(*interpreter.ReferenceStaticType)
+				capabilityBorrowType := interpreter.MustConvertStaticToSemaType(capabilityValue.BorrowType, config).(*sema.ReferenceType)
 
-				var wantedBorrowType *interpreter.ReferenceStaticType
+				var typeParameter sema.Type
 				if len(typeArguments) > 0 {
-					wantedBorrowType = typeArguments[0].(*interpreter.ReferenceStaticType)
+					typeParameter = interpreter.MustConvertStaticToSemaType(typeArguments[0], config)
 				}
 
 				address := capabilityValue.Address()
 
-				referenceValue := GetCheckedCapabilityControllerReference(
+				return interpreter.CapabilityBorrow(
 					config,
+					typeParameter,
 					address,
 					capabilityID,
-					wantedBorrowType,
 					capabilityBorrowType,
+					EmptyLocationRange,
 				)
-				if referenceValue == nil {
-					return nil
-				}
-
-				// TODO: Is this needed?
-				// Attempt to dereference,
-				// which reads the stored value
-				// and performs a dynamic type check
-
-				//value, err := referenceValue.dereference(config.MemoryGauge)
-				//if err != nil {
-				//	panic(err)
-				//}
-
-				if referenceValue == nil {
-					return interpreter.Nil
-				}
-
-				return interpreter.NewSomeValueNonCopying(config.MemoryGauge, referenceValue)
 			},
 		})
-}
-
-func GetCheckedCapabilityControllerReference(
-	context interpreter.ValueCapabilityControllerReferenceValueContext,
-	capabilityAddressValue interpreter.AddressValue,
-	capabilityIDValue interpreter.UInt64Value,
-	wantedBorrowType *interpreter.ReferenceStaticType,
-	capabilityBorrowType *interpreter.ReferenceStaticType,
-) interpreter.ReferenceValue {
-	controller, resultBorrowType := getCheckedCapabilityController(
-		context,
-		capabilityAddressValue,
-		capabilityIDValue,
-		wantedBorrowType,
-		capabilityBorrowType,
-	)
-	if controller == nil {
-		return nil
-	}
-
-	capabilityAddress := common.Address(capabilityAddressValue)
-
-	semaBorrowType := interpreter.MustConvertStaticToSemaType(resultBorrowType, context)
-	referenceType := semaBorrowType.(*sema.ReferenceType)
-
-	return controller.ReferenceValue(
-		context,
-		capabilityAddress,
-		referenceType,
-		EmptyLocationRange,
-	)
-}
-
-func getCheckedCapabilityController(
-	context interpreter.ValueStaticTypeContext,
-	capabilityAddressValue interpreter.AddressValue,
-	capabilityIDValue interpreter.UInt64Value,
-	wantedBorrowType *interpreter.ReferenceStaticType,
-	capabilityBorrowType *interpreter.ReferenceStaticType,
-) (
-	interpreter.CapabilityControllerValue,
-	*interpreter.ReferenceStaticType,
-) {
-	if wantedBorrowType == nil {
-		wantedBorrowType = capabilityBorrowType
-	} else { //nolint:gocritic
-		// TODO:
-		//   wantedBorrowType = inter.SubstituteMappedEntitlements(wantedBorrowType).(*sema.ReferenceType)
-
-		if !canBorrow(context, wantedBorrowType, capabilityBorrowType) {
-			return nil, nil
-		}
-	}
-
-	capabilityAddress := common.Address(capabilityAddressValue)
-	capabilityID := uint64(capabilityIDValue.ToInt(EmptyLocationRange))
-
-	controller := getCapabilityController(context, capabilityAddress, capabilityID)
-	if controller == nil {
-		return nil, nil
-	}
-
-	controllerBorrowType := controller.CapabilityControllerBorrowType()
-	if !canBorrow(context, wantedBorrowType, controllerBorrowType) {
-		return nil, nil
-	}
-
-	return controller, wantedBorrowType
-}
-
-// getCapabilityController gets the capability controller for the given capability ID
-func getCapabilityController(
-	storageContext interpreter.StorageReader,
-	address common.Address,
-	capabilityID uint64,
-) interpreter.CapabilityControllerValue {
-
-	storageMapKey := interpreter.Uint64StorageMapKey(capabilityID)
-
-	referenced := storageContext.ReadStored(
-		address,
-		common.StorageDomainCapabilityController,
-		storageMapKey,
-	)
-
-	controller, ok := referenced.(interpreter.CapabilityControllerValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	return controller
-}
-
-func canBorrow(
-	context interpreter.ValueStaticTypeContext,
-	wantedBorrowType *interpreter.ReferenceStaticType,
-	capabilityBorrowType *interpreter.ReferenceStaticType,
-) bool {
-
-	// Ensure the wanted borrow type is not more permissive than the capability borrow type
-	// TODO:
-	//if !wantedBorrowType.Authorization.
-	//	PermitsAccess(capabilityBorrowType.Authorization) {
-	//
-	//	return false
-	//}
-
-	// Ensure the wanted borrow type is a subtype or supertype of the capability borrow type
-
-	return interpreter.IsSubType(
-		context,
-		wantedBorrowType.ReferencedType,
-		capabilityBorrowType.ReferencedType,
-	) ||
-		interpreter.IsSubType(
-			context,
-			capabilityBorrowType.ReferencedType,
-			wantedBorrowType.ReferencedType,
-		)
 }

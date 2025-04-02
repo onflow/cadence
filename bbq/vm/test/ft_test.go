@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/test_utils/runtime_utils"
 )
@@ -42,7 +43,7 @@ func TestFTTransfer(t *testing.T) {
 	storage := interpreter.NewInMemoryStorage(nil)
 	programs := map[common.Location]*compiledProgram{}
 
-	typeLoader := func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
+	typeLoader := func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
 		program, ok := programs[location]
 		if !ok {
 			panic(fmt.Errorf("cannot find elaboration for: %s", location))
@@ -53,7 +54,17 @@ func TestFTTransfer(t *testing.T) {
 			return compositeType
 		}
 
-		return elaboration.InterfaceType(typeID)
+		interfaceType := elaboration.InterfaceType(typeID)
+		if interfaceType != nil {
+			return interfaceType
+		}
+
+		entitlementType := elaboration.EntitlementType(typeID)
+		if entitlementType != nil {
+			return entitlementType
+		}
+
+		return elaboration.EntitlementMapType(typeID)
 	}
 
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
@@ -73,8 +84,28 @@ func TestFTTransfer(t *testing.T) {
 
 	flowTokenProgram := parseCheckAndCompile(t, realFlowContract, flowTokenLocation, programs)
 
-	accountHandler := &testAccountHandler{}
-	config := vm.NewConfig(storage).WithAccountHandler(accountHandler)
+	accountHandler := &testAccountHandler{
+		emitEvent: func(
+			_ interpreter.ValueExportContext,
+			_ interpreter.LocationRange,
+			_ *sema.CompositeType,
+			_ []interpreter.Value,
+		) {
+			// ignore
+		},
+	}
+
+	interpreterEnv := runtime.NewInterpreterEnvironment(runtime.Config{})
+	interpreterEnv.Configure(
+		&runtime_utils.TestRuntimeInterface{},
+		runtime.CodesAndPrograms{},
+		nil,
+		nil,
+	)
+
+	config := vm.NewConfig(storage).
+		WithAccountHandler(accountHandler).
+		WithInterpreterConfig(interpreterEnv.NewInterpreterConfig())
 
 	config.TypeLoader = typeLoader
 	config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
@@ -96,7 +127,9 @@ func TestFTTransfer(t *testing.T) {
 	require.NoError(t, err)
 
 	// ----- Run setup account transaction -----
-	vmConfig := vm.NewConfig(storage).WithAccountHandler(accountHandler)
+	vmConfig := vm.NewConfig(storage).
+		WithAccountHandler(accountHandler).
+		WithInterpreterConfig(interpreterEnv.NewInterpreterConfig())
 
 	vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 		imported, ok := programs[location]
@@ -200,7 +233,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 	storage := interpreter.NewInMemoryStorage(nil)
 	programs := map[common.Location]*compiledProgram{}
 
-	typeLoader := func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
+	typeLoader := func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
 		program, ok := programs[location]
 		if !ok {
 			panic(fmt.Errorf("cannot find elaboration for: %s", location))

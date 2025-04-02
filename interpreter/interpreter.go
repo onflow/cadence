@@ -4382,14 +4382,11 @@ func checkValue(
 	return
 }
 
-func authAccountSaveFunction(
+func authAccountStorageSaveFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
 
 	return NewBoundHostFunctionValue(
 		context,
@@ -4397,58 +4394,74 @@ func authAccountSaveFunction(
 		sema.Account_StorageTypeSaveFunctionType,
 		func(_ *SimpleCompositeValue, invocation Invocation) Value {
 			interpreter := invocation.InvocationContext
-
-			value := invocation.Arguments[0]
-
-			path, ok := invocation.Arguments[1].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			domain := path.Domain.StorageDomain()
-			identifier := path.Identifier
-
-			// Prevent an overwrite
-
+			arguments := invocation.Arguments
 			locationRange := invocation.LocationRange
 
-			storageMapKey := StringStorageMapKey(identifier)
-
-			if StoredValueExists(interpreter, address, domain, storageMapKey) {
-				panic(
-					OverwriteError{
-						Address:       addressValue,
-						Path:          path,
-						LocationRange: locationRange,
-					},
-				)
-			}
-
-			value = value.Transfer(
+			return StorageSave(
 				interpreter,
+				arguments,
+				addressValue,
 				locationRange,
-				atree.Address(address),
-				true,
-				nil,
-				nil,
-				true, // value is standalone because it is from invocation.Arguments[0].
 			)
-
-			// Write new value
-
-			interpreter.WriteStored(
-				address,
-				domain,
-				storageMapKey,
-				value,
-			)
-
-			return Void
 		},
 	)
 }
 
-func authAccountTypeFunction(
+func StorageSave(
+	context InvocationContext,
+	arguments []Value,
+	addressValue AddressValue,
+	locationRange LocationRange,
+) Value {
+	value := arguments[0]
+
+	path, ok := arguments[1].(PathValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	domain := path.Domain.StorageDomain()
+	identifier := path.Identifier
+
+	// Prevent an overwrite
+
+	storageMapKey := StringStorageMapKey(identifier)
+
+	address := addressValue.ToAddress()
+
+	if StoredValueExists(context, address, domain, storageMapKey) {
+		panic(
+			OverwriteError{
+				Address:       addressValue,
+				Path:          path,
+				LocationRange: locationRange,
+			},
+		)
+	}
+
+	value = value.Transfer(
+		context,
+		locationRange,
+		atree.Address(address),
+		true,
+		nil,
+		nil,
+		true, // value is standalone because it is from invocation.Arguments[0].
+	)
+
+	// Write new value
+
+	context.WriteStored(
+		address,
+		domain,
+		storageMapKey,
+		value,
+	)
+
+	return Void
+}
+
+func authAccountStorageTypeFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
@@ -4491,7 +4504,7 @@ func authAccountTypeFunction(
 	)
 }
 
-func authAccountLoadFunction(
+func authAccountStorageLoadFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
@@ -4499,7 +4512,7 @@ func authAccountLoadFunction(
 	return authAccountReadFunction(context, storageValue, addressValue, true)
 }
 
-func authAccountCopyFunction(
+func authAccountStorageCopyFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
@@ -4594,7 +4607,7 @@ func authAccountReadFunction(
 	)
 }
 
-func authAccountBorrowFunction(
+func authAccountStorageBorrowFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
@@ -4608,51 +4621,63 @@ func authAccountBorrowFunction(
 		storageValue,
 		sema.Account_StorageTypeBorrowFunctionType,
 		func(_ *SimpleCompositeValue, invocation Invocation) Value {
-			interpreter := invocation.InvocationContext
+			invocationContext := invocation.InvocationContext
+			arguments := invocation.Arguments
+			typeParameterPair := invocation.TypeParameterTypes.Oldest().Value
+			locationRange := invocation.LocationRange
 
-			path, ok := invocation.Arguments[0].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			if typeParameterPair == nil {
-				panic(errors.NewUnreachableError())
-			}
-
-			ty := typeParameterPair.Value
-
-			referenceType, ok := ty.(*sema.ReferenceType)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			reference := NewStorageReferenceValue(
-				interpreter,
-				ConvertSemaAccessToStaticAuthorization(interpreter, referenceType.Authorization),
+			return StorageBorrow(
+				invocationContext,
+				arguments,
+				typeParameterPair,
 				address,
-				path,
-				referenceType.Type,
+				locationRange,
 			)
-
-			// Attempt to dereference,
-			// which reads the stored value
-			// and performs a dynamic type check
-
-			value, err := reference.dereference(interpreter, invocation.LocationRange)
-			if err != nil {
-				panic(err)
-			}
-			if value == nil {
-				return Nil
-			}
-
-			return NewSomeValueNonCopying(interpreter, reference)
 		},
 	)
 }
 
-func authAccountCheckFunction(
+func StorageBorrow(
+	invocationContext InvocationContext,
+	arguments []Value,
+	typeParameter sema.Type,
+	address common.Address,
+	locationRange LocationRange,
+) Value {
+	path, ok := arguments[0].(PathValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	referenceType, ok := typeParameter.(*sema.ReferenceType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	reference := NewStorageReferenceValue(
+		invocationContext,
+		ConvertSemaAccessToStaticAuthorization(invocationContext, referenceType.Authorization),
+		address,
+		path,
+		referenceType.Type,
+	)
+
+	// Attempt to dereference,
+	// which reads the stored value
+	// and performs a dynamic type check
+
+	value, err := reference.dereference(invocationContext, locationRange)
+	if err != nil {
+		panic(err)
+	}
+	if value == nil {
+		return Nil
+	}
+
+	return NewSomeValueNonCopying(invocationContext, reference)
+}
+
+func authAccountStorageCheckFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
@@ -5677,41 +5702,62 @@ func capabilityBorrowFunction(
 		capabilityValue,
 		sema.CapabilityTypeBorrowFunctionType(capabilityBorrowType),
 		func(_ CapabilityValue, invocation Invocation) Value {
-
 			invocationContext := invocation.InvocationContext
 			locationRange := invocation.LocationRange
-
-			if capabilityID == InvalidCapabilityID {
-				return Nil
-			}
-
-			var wantedBorrowType *sema.ReferenceType
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+
+			var typeParameter sema.Type
 			if typeParameterPair != nil {
-				ty := typeParameterPair.Value
-				var ok bool
-				wantedBorrowType, ok = ty.(*sema.ReferenceType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
+				typeParameter = typeParameterPair.Value
 			}
 
-			borrowHandler := invocationContext.CapabilityBorrowHandler()
-
-			referenceValue := borrowHandler(
+			return CapabilityBorrow(
 				invocationContext,
-				locationRange,
+				typeParameter,
 				addressValue,
 				capabilityID,
-				wantedBorrowType,
 				capabilityBorrowType,
+				locationRange,
 			)
-			if referenceValue == nil {
-				return Nil
-			}
-			return NewSomeValueNonCopying(invocationContext, referenceValue)
 		},
 	)
+}
+
+func CapabilityBorrow(
+	invocationContext InvocationContext,
+	typeParameter sema.Type,
+	addressValue AddressValue,
+	capabilityID UInt64Value,
+	capabilityBorrowType *sema.ReferenceType,
+	locationRange LocationRange,
+) Value {
+	if capabilityID == InvalidCapabilityID {
+		return Nil
+	}
+
+	var wantedBorrowType *sema.ReferenceType
+	if typeParameter != nil {
+		var ok bool
+		wantedBorrowType, ok = typeParameter.(*sema.ReferenceType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+	}
+
+	borrowHandler := invocationContext.CapabilityBorrowHandler()
+
+	referenceValue := borrowHandler(
+		invocationContext,
+		locationRange,
+		addressValue,
+		capabilityID,
+		wantedBorrowType,
+		capabilityBorrowType,
+	)
+	if referenceValue == nil {
+		return Nil
+	}
+	return NewSomeValueNonCopying(invocationContext, referenceValue)
 }
 
 func capabilityCheckFunction(

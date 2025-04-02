@@ -19,11 +19,9 @@
 package vm
 
 import (
-	"github.com/onflow/atree"
+	"github.com/onflow/cadence/stdlib"
 
 	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -43,33 +41,20 @@ func init() {
 				// Get address field from the receiver (Account.Capabilities)
 				address := getAddressMetaInfoFromValue(args[0])
 
-				// Path argument
-				path, ok := args[1].(interpreter.PathValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				arguments := args[1:]
 
-				//pathStaticType := path.StaticType(config.MemoryGauge)
-				//
-				//if !IsSubType(pathStaticType, pathType) {
-				//	panic(fmt.Errorf("type mismatch"))
-				//}
+				borrowType := typeArguments[0]
+				semaBorrowType := interpreter.MustConvertStaticToSemaType(borrowType, config)
 
-				// NOTE: the type parameter is optional, for backwards compatibility
-
-				var borrowType *interpreter.ReferenceStaticType
-				if len(typeArguments) > 0 {
-					ty := typeArguments[0]
-					// we handle the nil case for this below
-					borrowType, _ = ty.(*interpreter.ReferenceStaticType)
-				}
-
-				return getCapability(
+				return stdlib.GetCapability(
+					arguments,
+					semaBorrowType,
+					false,
 					config,
 					address,
-					path,
-					borrowType,
-					false,
+					EmptyLocationRange,
+					config,
 				)
 			},
 		})
@@ -84,78 +69,16 @@ func init() {
 				// Get address field from the receiver (Account.Capabilities)
 				accountAddress := getAddressMetaInfoFromValue(args[0])
 
-				// Get capability argument
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				arguments := args[1:]
 
-				var capabilityValue *interpreter.IDCapabilityValue
-				switch firstValue := args[1].(type) {
-				case *interpreter.IDCapabilityValue:
-					capabilityValue = firstValue
-				default:
-					panic(errors.NewUnreachableError())
-				}
-
-				capabilityAddressValue := common.Address(capabilityValue.Address())
-				if capabilityAddressValue != accountAddress {
-					panic(interpreter.CapabilityAddressPublishingError{
-						CapabilityAddress: interpreter.AddressValue(capabilityAddressValue),
-						AccountAddress:    interpreter.AddressValue(accountAddress),
-					})
-				}
-
-				// Get path argument
-
-				path, ok := args[2].(interpreter.PathValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				if !ok || path.Domain != common.PathDomainPublic {
-					panic(errors.NewUnreachableError())
-				}
-
-				domain := path.Domain.Identifier()
-				storageDomain, _ := common.StorageDomainFromIdentifier(domain)
-
-				identifier := path.Identifier
-
-				// Prevent an overwrite
-
-				storageMapKey := interpreter.StringStorageMapKey(identifier)
-				if interpreter.StoredValueExists(
+				return stdlib.PublishCapability(
 					config,
+					config,
+					arguments,
 					accountAddress,
-					storageDomain,
-					storageMapKey,
-				) {
-					panic(interpreter.OverwriteError{
-						Address: interpreter.AddressValue(accountAddress),
-						Path:    path,
-					})
-				}
-
-				capabilityValue, ok = capabilityValue.Transfer(
-					config,
 					EmptyLocationRange,
-					atree.Address(accountAddress),
-					true,
-					nil,
-					nil,
-					true,
-				).(*interpreter.IDCapabilityValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				// Write new value
-
-				config.WriteStored(
-					accountAddress,
-					storageDomain,
-					storageMapKey,
-					capabilityValue,
 				)
-
-				return interpreter.Void
 			},
 		})
 }

@@ -749,7 +749,7 @@ func opDestroy(vm *VM) {
 
 	// TODO: once Destroy method is decoupled from the interpreter,
 	// Pass the 'config', instead of getting the interpreter here.
-	value.Destroy(vm.config.Interpreter(), EmptyLocationRange)
+	value.Destroy(vm.config, EmptyLocationRange)
 }
 
 func opPath(vm *VM, ins opcode.InstructionPath) {

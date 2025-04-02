@@ -149,7 +149,7 @@ var _ stdlib.Hasher = &interpreterEnvironment{}
 var _ ArgumentDecoder = &interpreterEnvironment{}
 var _ common.MemoryGauge = &interpreterEnvironment{}
 
-func newInterpreterEnvironment(config Config) *interpreterEnvironment {
+func NewInterpreterEnvironment(config Config) *interpreterEnvironment {
 	defaultBaseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	defaultBaseTypeActivation := sema.NewVariableActivation(sema.BaseTypeActivation)
 	defaultBaseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
@@ -161,13 +161,13 @@ func newInterpreterEnvironment(config Config) *interpreterEnvironment {
 		defaultBaseActivation:      defaultBaseActivation,
 		stackDepthLimiter:          newStackDepthLimiter(config.StackDepthLimit),
 	}
-	env.InterpreterConfig = env.newInterpreterConfig()
+	env.InterpreterConfig = env.NewInterpreterConfig()
 	env.CheckerConfig = env.newCheckerConfig()
 	env.compositeValueFunctionsHandlers = stdlib.DefaultStandardLibraryCompositeValueFunctionHandlers(env)
 	return env
 }
 
-func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
+func (e *interpreterEnvironment) NewInterpreterConfig() *interpreter.Config {
 	return &interpreter.Config{
 		MemoryGauge:                    e,
 		BaseActivationHandler:          e.getBaseActivation,
@@ -213,7 +213,7 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 }
 
 func NewBaseInterpreterEnvironment(config Config) *interpreterEnvironment {
-	env := newInterpreterEnvironment(config)
+	env := NewInterpreterEnvironment(config)
 	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(env) {
 		env.DeclareValue(valueDeclaration, nil)
 	}
@@ -221,7 +221,7 @@ func NewBaseInterpreterEnvironment(config Config) *interpreterEnvironment {
 }
 
 func NewScriptInterpreterEnvironment(config Config) Environment {
-	env := newInterpreterEnvironment(config)
+	env := NewInterpreterEnvironment(config)
 	for _, valueDeclaration := range stdlib.DefaultScriptStandardLibraryValues(env) {
 		env.DeclareValue(valueDeclaration, nil)
 	}
