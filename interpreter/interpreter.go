@@ -3328,11 +3328,9 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		Name:         sema.UInt128TypeName,
 		FunctionType: sema.NumberConversionFunctionType(sema.UInt128Type),
-		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
-			return ConvertUInt128(gauge, value, locationRange)
-		},
-		min: NewUnmeteredUInt128ValueFromUint64(0),
-		max: NewUnmeteredUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
+		Convert:      ConvertUInt128,
+		min:          NewUnmeteredUInt128ValueFromUint64(0),
+		max:          NewUnmeteredUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
 	},
 	{
 		Name:         sema.UInt256TypeName,
@@ -3382,20 +3380,16 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		Name:         sema.Word128TypeName,
 		FunctionType: sema.NumberConversionFunctionType(sema.Word128Type),
-		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
-			return ConvertWord128(gauge, value, locationRange)
-		},
-		min: NewUnmeteredWord128ValueFromUint64(0),
-		max: NewUnmeteredWord128ValueFromBigInt(sema.Word128TypeMaxIntBig),
+		Convert:      ConvertWord128,
+		min:          NewUnmeteredWord128ValueFromUint64(0),
+		max:          NewUnmeteredWord128ValueFromBigInt(sema.Word128TypeMaxIntBig),
 	},
 	{
 		Name:         sema.Word256TypeName,
 		FunctionType: sema.NumberConversionFunctionType(sema.Word256Type),
-		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
-			return ConvertWord256(gauge, value, locationRange)
-		},
-		min: NewUnmeteredWord256ValueFromUint64(0),
-		max: NewUnmeteredWord256ValueFromBigInt(sema.Word256TypeMaxIntBig),
+		Convert:      ConvertWord256,
+		min:          NewUnmeteredWord256ValueFromUint64(0),
+		max:          NewUnmeteredWord256ValueFromBigInt(sema.Word256TypeMaxIntBig),
 	},
 	{
 		Name:         sema.Fix64TypeName,

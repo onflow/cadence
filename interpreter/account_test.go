@@ -28,9 +28,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/activations"
-	"github.com/onflow/cadence/bbq/compiler"
-	"github.com/onflow/cadence/bbq/vm"
-	compilerUtils "github.com/onflow/cadence/bbq/vm/test"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"

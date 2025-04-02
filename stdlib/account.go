@@ -21,6 +21,7 @@ package stdlib
 import (
 	goerrors "errors"
 	"fmt"
+
 	"golang.org/x/crypto/sha3"
 	"golang.org/x/xerrors"
 
