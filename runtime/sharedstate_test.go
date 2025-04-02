@@ -19,7 +19,6 @@
 package runtime_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -38,222 +37,181 @@ func TestRuntimeSharedState(t *testing.T) {
 
 	signerAddress := common.MustBytesToAddress([]byte{0x1})
 
-	test := func(
-		storageFormatV2Enabled bool,
-		expectedReads []ownerKeyPair,
-	) {
+	config := DefaultTestInterpreterConfig
+	config.AtreeValidationEnabled = false
+	runtime := NewTestInterpreterRuntimeWithConfig(config)
 
-		name := fmt.Sprintf(
-			"storage format V2 enabled: %v",
-			storageFormatV2Enabled,
-		)
+	deploy1 := DeploymentTransaction("C1", []byte(`
+        access(all) contract C1 {
+            access(all) fun hello() {
+                log("Hello from C1!")
+            }
+        }
+    `))
 
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+	deploy2 := DeploymentTransaction("C2", []byte(`
+        access(all) contract C2 {
+            access(all) fun hello() {
+                log("Hello from C2!")
+            }
+        }
+    `))
 
-			config := DefaultTestInterpreterConfig
-			config.StorageFormatV2Enabled = storageFormatV2Enabled
-			config.AtreeValidationEnabled = false
-			runtime := NewTestInterpreterRuntimeWithConfig(config)
+	accountCodes := map[common.Location][]byte{}
 
-			deploy1 := DeploymentTransaction("C1", []byte(`
-                access(all) contract C1 {
-                    access(all) fun hello() {
-                        log("Hello from C1!")
-                    }
-                }
-            `))
+	var events []cadence.Event
+	var loggedMessages []string
 
-			deploy2 := DeploymentTransaction("C2", []byte(`
-                access(all) contract C2 {
-                    access(all) fun hello() {
-                        log("Hello from C2!")
-                    }
-                }
-            `))
+	var interpreterState *interpreter.SharedState
 
-			accountCodes := map[common.Location][]byte{}
+	var ledgerReads []ownerKeyPair
 
-			var events []cadence.Event
-			var loggedMessages []string
-
-			var interpreterState *interpreter.SharedState
-
-			var ledgerReads []ownerKeyPair
-
-			ledger := NewTestLedger(
-				func(owner, key, value []byte) {
-					ledgerReads = append(
-						ledgerReads,
-						ownerKeyPair{
-							owner: owner,
-							key:   key,
-						},
-					)
-				},
-				nil,
-			)
-
-			runtimeInterface := &TestRuntimeInterface{
-				Storage: ledger,
-				OnGetSigningAccounts: func() ([]Address, error) {
-					return []Address{signerAddress}, nil
-				},
-				OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
-					accountCodes[location] = code
-					return nil
-				},
-				OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-					code = accountCodes[location]
-					return code, nil
-				},
-				OnRemoveAccountContractCode: func(location common.AddressLocation) error {
-					delete(accountCodes, location)
-					return nil
-				},
-				OnResolveLocation: MultipleIdentifierLocationResolver,
-				OnProgramLog: func(message string) {
-					loggedMessages = append(loggedMessages, message)
-				},
-				OnEmitEvent: func(event cadence.Event) error {
-					events = append(events, event)
-					return nil
-				},
-				OnSetInterpreterSharedState: func(state *interpreter.SharedState) {
-					interpreterState = state
-				},
-				OnGetInterpreterSharedState: func() *interpreter.SharedState {
-					return interpreterState
-				},
-			}
-
-			environment := NewBaseInterpreterEnvironment(config)
-
-			nextTransactionLocation := NewTransactionLocationGenerator()
-
-			// Deploy contracts
-
-			for _, source := range [][]byte{
-				deploy1,
-				deploy2,
-			} {
-				err := runtime.ExecuteTransaction(
-					Script{
-						Source: source,
-					},
-					Context{
-						Interface:   runtimeInterface,
-						Location:    nextTransactionLocation(),
-						Environment: environment,
-					},
-				)
-				require.NoError(t, err)
-			}
-
-			assert.NotEmpty(t, accountCodes)
-
-			// Call C1.hello using transaction
-
-			loggedMessages = nil
-
-			err := runtime.ExecuteTransaction(
-				Script{
-					Source: []byte(`
-                        import C1 from 0x1
-
-                        transaction {
-                            prepare(signer: &Account) {
-                                C1.hello()
-                            }
-                        }
-                    `),
-					Arguments: nil,
-				},
-				Context{
-					Interface:   runtimeInterface,
-					Location:    nextTransactionLocation(),
-					Environment: environment,
-				},
-			)
-			require.NoError(t, err)
-
-			assert.Equal(t, []string{`"Hello from C1!"`}, loggedMessages)
-
-			// Call C1.hello manually
-
-			loggedMessages = nil
-
-			_, err = runtime.InvokeContractFunction(
-				common.AddressLocation{
-					Address: signerAddress,
-					Name:    "C1",
-				},
-				"hello",
-				nil,
-				nil,
-				Context{
-					Interface:   runtimeInterface,
-					Location:    nextTransactionLocation(),
-					Environment: environment,
-				},
-			)
-			require.NoError(t, err)
-
-			assert.Equal(t, []string{`"Hello from C1!"`}, loggedMessages)
-
-			// Call C2.hello manually
-
-			loggedMessages = nil
-
-			_, err = runtime.InvokeContractFunction(
-				common.AddressLocation{
-					Address: signerAddress,
-					Name:    "C2",
-				},
-				"hello",
-				nil,
-				nil,
-				Context{
-					Interface:   runtimeInterface,
-					Location:    nextTransactionLocation(),
-					Environment: environment,
-				},
-			)
-			require.NoError(t, err)
-
-			assert.Equal(t, []string{`"Hello from C2!"`}, loggedMessages)
-
-			// Assert shared state was used,
-			// i.e. data was not re-read
-
-			require.Equal(t,
-				expectedReads,
+	ledger := NewTestLedger(
+		func(owner, key, value []byte) {
+			ledgerReads = append(
 				ledgerReads,
+				ownerKeyPair{
+					owner: owner,
+					key:   key,
+				},
 			)
-		})
-	}
-
-	test(
-		false,
-
-		[]ownerKeyPair{
-			{
-				owner: signerAddress[:],
-				key:   []byte(common.StorageDomainContract.Identifier()),
-			},
-			{
-				owner: signerAddress[:],
-				key:   []byte(common.StorageDomainContract.Identifier()),
-			},
-			{
-				owner: signerAddress[:],
-				key:   []byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
-			},
 		},
+		nil,
 	)
 
-	test(
-		true,
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: ledger,
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAddress}, nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+		OnRemoveAccountContractCode: func(location common.AddressLocation) error {
+			delete(accountCodes, location)
+			return nil
+		},
+		OnResolveLocation: MultipleIdentifierLocationResolver,
+		OnProgramLog: func(message string) {
+			loggedMessages = append(loggedMessages, message)
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		OnSetInterpreterSharedState: func(state *interpreter.SharedState) {
+			interpreterState = state
+		},
+		OnGetInterpreterSharedState: func() *interpreter.SharedState {
+			return interpreterState
+		},
+	}
+
+	environment := NewBaseInterpreterEnvironment(config)
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	// Deploy contracts
+
+	for _, source := range [][]byte{
+		deploy1,
+		deploy2,
+	} {
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: source,
+			},
+			Context{
+				Interface:   runtimeInterface,
+				Location:    nextTransactionLocation(),
+				Environment: environment,
+			},
+		)
+		require.NoError(t, err)
+	}
+
+	assert.NotEmpty(t, accountCodes)
+
+	// Call C1.hello using transaction
+
+	loggedMessages = nil
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(`
+                import C1 from 0x1
+
+                transaction {
+                    prepare(signer: &Account) {
+                        C1.hello()
+                    }
+                }
+            `),
+			Arguments: nil,
+		},
+		Context{
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{`"Hello from C1!"`}, loggedMessages)
+
+	// Call C1.hello manually
+
+	loggedMessages = nil
+
+	_, err = runtime.InvokeContractFunction(
+		common.AddressLocation{
+			Address: signerAddress,
+			Name:    "C1",
+		},
+		"hello",
+		nil,
+		nil,
+		Context{
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{`"Hello from C1!"`}, loggedMessages)
+
+	// Call C2.hello manually
+
+	loggedMessages = nil
+
+	_, err = runtime.InvokeContractFunction(
+		common.AddressLocation{
+			Address: signerAddress,
+			Name:    "C2",
+		},
+		"hello",
+		nil,
+		nil,
+		Context{
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{`"Hello from C2!"`}, loggedMessages)
+
+	// Assert shared state was used,
+	// i.e. data was not re-read
+
+	require.Equal(t,
 		[]ownerKeyPair{
 			// Read account register to check if it is a migrated account
 			// Read returns no value.
@@ -322,5 +280,6 @@ func TestRuntimeSharedState(t *testing.T) {
 				key:   []byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
 			},
 		},
+		ledgerReads,
 	)
 }

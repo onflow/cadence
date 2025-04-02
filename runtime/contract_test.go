@@ -44,19 +44,15 @@ func TestRuntimeContract(t *testing.T) {
 	t.Parallel()
 
 	type testCase struct {
-		name                   string // the name of the contract used in add/update calls
-		code                   string // the code we use to add the contract
-		code2                  string // the code we use to update the contract
-		valid                  bool
-		isInterface            bool
-		storageFormatV2Enabled bool
+		name        string // the name of the contract used in add/update calls
+		code        string // the code we use to add the contract
+		code2       string // the code we use to update the contract
+		valid       bool
+		isInterface bool
 	}
 
 	runTest := func(t *testing.T, tc testCase) {
-		t.Parallel()
-
 		config := DefaultTestInterpreterConfig
-		config.StorageFormatV2Enabled = tc.storageFormatV2Enabled
 
 		runtime := NewTestInterpreterRuntimeWithConfig(config)
 
@@ -228,9 +224,7 @@ func TestRuntimeContract(t *testing.T) {
 			storageMap := NewStorage(
 				storage,
 				nil,
-				StorageConfig{
-					StorageFormatV2Enabled: tc.storageFormatV2Enabled,
-				},
+				StorageConfig{},
 			).GetDomainStorageMap(
 				inter,
 				signerAddress,
@@ -527,20 +521,10 @@ func TestRuntimeContract(t *testing.T) {
 
 	}
 
-	test := func(t *testing.T, tc testCase) {
-		t.Run("storage format V2 disabled", func(t *testing.T) {
-			tc.storageFormatV2Enabled = false
-			runTest(t, tc)
-		})
-
-		t.Run("storage format V2 enabled", func(t *testing.T) {
-			tc.storageFormatV2Enabled = true
-			runTest(t, tc)
-		})
-	}
-
 	t.Run("valid contract, correct name", func(t *testing.T) {
-		test(t, testCase{
+		t.Parallel()
+
+		runTest(t, testCase{
 			name:        "Test",
 			code:        `access(all) contract Test {}`,
 			code2:       `access(all) contract Test { access(all) fun test() {} }`,
@@ -550,7 +534,9 @@ func TestRuntimeContract(t *testing.T) {
 	})
 
 	t.Run("valid contract interface, correct name", func(t *testing.T) {
-		test(t, testCase{
+		t.Parallel()
+
+		runTest(t, testCase{
 			name:        "Test",
 			code:        `access(all) contract interface Test {}`,
 			code2:       `access(all) contract interface Test { access(all) fun test() }`,
@@ -560,7 +546,9 @@ func TestRuntimeContract(t *testing.T) {
 	})
 
 	t.Run("valid contract, wrong name", func(t *testing.T) {
-		test(t, testCase{
+		t.Parallel()
+
+		runTest(t, testCase{
 			name:        "XYZ",
 			code:        `access(all) contract Test {}`,
 			valid:       false,
@@ -569,7 +557,9 @@ func TestRuntimeContract(t *testing.T) {
 	})
 
 	t.Run("valid contract interface, wrong name", func(t *testing.T) {
-		test(t, testCase{
+		t.Parallel()
+
+		runTest(t, testCase{
 			name:        "XYZ",
 			code:        `access(all) contract interface Test {}`,
 			valid:       false,
@@ -578,7 +568,9 @@ func TestRuntimeContract(t *testing.T) {
 	})
 
 	t.Run("invalid code", func(t *testing.T) {
-		test(t, testCase{
+		t.Parallel()
+
+		runTest(t, testCase{
 			name:        "Test",
 			code:        `foo`,
 			valid:       false,
@@ -587,7 +579,9 @@ func TestRuntimeContract(t *testing.T) {
 	})
 
 	t.Run("missing contract or contract interface", func(t *testing.T) {
-		test(t, testCase{
+		t.Parallel()
+
+		runTest(t, testCase{
 			name:        "Test",
 			code:        ``,
 			valid:       false,
@@ -596,7 +590,9 @@ func TestRuntimeContract(t *testing.T) {
 	})
 
 	t.Run("two contracts", func(t *testing.T) {
-		test(t, testCase{
+		t.Parallel()
+
+		runTest(t, testCase{
 			name: "Test",
 			code: `
               access(all) contract Test {}
@@ -609,7 +605,9 @@ func TestRuntimeContract(t *testing.T) {
 	})
 
 	t.Run("two contract interfaces", func(t *testing.T) {
-		test(t, testCase{
+		t.Parallel()
+
+		runTest(t, testCase{
 			name: "Test",
 			code: `
               access(all) contract interface Test {}
@@ -622,7 +620,9 @@ func TestRuntimeContract(t *testing.T) {
 	})
 
 	t.Run("contract and contract interface", func(t *testing.T) {
-		test(t, testCase{
+		t.Parallel()
+
+		runTest(t, testCase{
 			name: "Test",
 			code: `
               access(all) contract Test {}
