@@ -2655,7 +2655,7 @@ func newAccountStorageCapabilitiesIssueWithTypeFunction(
 		return interpreter.NewBoundHostFunctionValue(
 			inter,
 			storageCapabilities,
-			sema.Account_StorageCapabilitiesTypeIssueFunctionType,
+			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
 				inter := invocation.Interpreter
