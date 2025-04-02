@@ -42,9 +42,7 @@ func init() {
 			return interpreter.NewStringValue(
 				config.MemoryGauge,
 				memoryUsage,
-				func() string {
-					return number.String()
-				},
+				number.String,
 			)
 		},
 	})

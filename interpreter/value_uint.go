@@ -115,7 +115,7 @@ var _ ComparableValue = UIntValue{}
 var _ HashableValue = UIntValue{}
 var _ MemberAccessibleValue = UIntValue{}
 
-func (UIntValue) isValue() {}
+func (UIntValue) IsValue() {}
 
 func (v UIntValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitUIntValue(interpreter, v)

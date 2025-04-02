@@ -60,7 +60,7 @@ var _ ComparableValue = Int16Value(0)
 var _ HashableValue = Int16Value(0)
 var _ MemberAccessibleValue = Int16Value(0)
 
-func (Int16Value) isValue() {}
+func (Int16Value) IsValue() {}
 
 func (v Int16Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitInt16Value(interpreter, v)

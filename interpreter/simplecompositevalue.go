@@ -44,10 +44,10 @@ type SimpleCompositeValue struct {
 	// TODO: maybe cleanup if there is an alternative/better way.
 	isTransaction bool
 
-	// Metadata is a property bag to carry internal data
+	// privateFields is a property bag to carry internal data
 	// that are not visible to cadence users.
 	// TODO: any better way to pass down information?
-	metadata map[string]Value
+	privateFields map[string]Value
 }
 
 var _ Value = &SimpleCompositeValue{}
@@ -78,7 +78,7 @@ func NewSimpleCompositeValue(
 	}
 }
 
-func (*SimpleCompositeValue) isValue() {}
+func (*SimpleCompositeValue) IsValue() {}
 
 func (v *SimpleCompositeValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitSimpleCompositeValue(interpreter, v)
@@ -308,18 +308,18 @@ func (v *SimpleCompositeValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
-func (v *SimpleCompositeValue) WithMetadata(key string, value Value) *SimpleCompositeValue {
-	if v.metadata == nil {
-		v.metadata = make(map[string]Value)
+func (v *SimpleCompositeValue) WithPrivateField(key string, value Value) *SimpleCompositeValue {
+	if v.privateFields == nil {
+		v.privateFields = make(map[string]Value)
 	}
 
-	v.metadata[key] = value
+	v.privateFields[key] = value
 	return v
 }
 
-func (v *SimpleCompositeValue) Metadata(key string) Value {
-	if v.metadata == nil {
+func (v *SimpleCompositeValue) PrivateField(key string) Value {
+	if v.privateFields == nil {
 		return nil
 	}
-	return v.metadata[key]
+	return v.privateFields[key]
 }

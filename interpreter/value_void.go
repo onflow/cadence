@@ -37,7 +37,7 @@ var _ Value = VoidValue{}
 var _ atree.Storable = VoidValue{}
 var _ EquatableValue = VoidValue{}
 
-func (VoidValue) isValue() {}
+func (VoidValue) IsValue() {}
 
 func (v VoidValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitVoidValue(interpreter, v)

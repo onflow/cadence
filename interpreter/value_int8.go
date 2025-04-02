@@ -58,7 +58,7 @@ var _ EquatableValue = Int8Value(0)
 var _ ComparableValue = Int8Value(0)
 var _ HashableValue = Int8Value(0)
 
-func (Int8Value) isValue() {}
+func (Int8Value) IsValue() {}
 
 func (v Int8Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitInt8Value(interpreter, v)

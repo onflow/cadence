@@ -60,7 +60,7 @@ var PanicFunction = NewStandardLibraryStaticFunction(
 	PanicFunctionType,
 	panicFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
-		locationRange:= invocation.LocationRange
+		locationRange := invocation.LocationRange
 		arguments := invocation.Arguments
 		return PanicWithError(arguments[0], locationRange)
 	},

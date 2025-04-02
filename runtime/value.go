@@ -24,26 +24,6 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-// An exportableValue is a Cadence value emitted by the runtime.
-//
-// Runtime values can be exported to a simplified representation then further
-// encoded for transport or use in other environments.
-type exportableValue struct {
-	interpreter.Value
-	inter *interpreter.Interpreter
-}
-
-func newExportableValue(v interpreter.Value, inter *interpreter.Interpreter) exportableValue {
-	return exportableValue{
-		Value: v,
-		inter: inter,
-	}
-}
-
-func (v exportableValue) Interpreter() *interpreter.Interpreter {
-	return v.inter
-}
-
 type exportableEvent struct {
 	Type   sema.Type
 	Fields []interpreter.Value
