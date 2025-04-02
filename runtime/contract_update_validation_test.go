@@ -168,22 +168,11 @@ func testDeployAndRemove(t *testing.T, name string, code string, config Config) 
 }
 
 func testWithValidators(t *testing.T, name string, testFunc func(t *testing.T, config Config)) {
-	for _, withC1Upgrade := range []bool{true, false} {
-		withC1Upgrade := withC1Upgrade
-		name := name
-
-		if withC1Upgrade {
-			name = fmt.Sprintf("%s (with C1 validator)", name)
-		}
-
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			config := DefaultTestInterpreterConfig
-			config.LegacyContractUpgradeEnabled = withC1Upgrade
-			testFunc(t, config)
-		})
-	}
+	t.Run(name, func(t *testing.T) {
+		t.Parallel()
+		config := DefaultTestInterpreterConfig
+		testFunc(t, config)
+	})
 }
 
 func testWithValidatorsAndTypeRemovalEnabled(
@@ -191,19 +180,11 @@ func testWithValidatorsAndTypeRemovalEnabled(
 	name string,
 	testFunc func(t *testing.T, config Config),
 ) {
-	for _, withC1Upgrade := range []bool{true, false} {
-		withC1Upgrade := withC1Upgrade
-		name := name
-
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			config := DefaultTestInterpreterConfig
-			config.LegacyContractUpgradeEnabled = withC1Upgrade
-
-			testFunc(t, config)
-		})
-	}
+	t.Run(name, func(t *testing.T) {
+		t.Parallel()
+		config := DefaultTestInterpreterConfig
+		testFunc(t, config)
+	})
 }
 
 func TestRuntimeContractUpdateValidation(t *testing.T) {
@@ -2063,7 +2044,6 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		config := DefaultTestInterpreterConfig
-		config.LegacyContractUpgradeEnabled = true
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		require.NoError(t, err)
 	})
