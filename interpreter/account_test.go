@@ -391,8 +391,13 @@ type NoOpReferenceCreationContext struct{}
 
 var _ interpreter.ReferenceCreationContext = NoOpReferenceCreationContext{}
 
-func (n NoOpReferenceCreationContext) InvalidateReferencedResources(v interpreter.Value, locationRange interpreter.LocationRange) {
+func (n NoOpReferenceCreationContext) ClearReferencedResourceKindedValues(valueID atree.ValueID) {
 	// NO-OP
+}
+
+func (n NoOpReferenceCreationContext) ReferencedResourceKindedValues(valueID atree.ValueID) map[*interpreter.EphemeralReferenceValue]struct{} {
+	// NO-OP
+	return nil
 }
 
 func (n NoOpReferenceCreationContext) CheckInvalidatedResourceOrResourceReference(value interpreter.Value, locationRange interpreter.LocationRange) {

@@ -231,7 +231,7 @@ func (s *DomainStorageMap) DeepRemove(context ValueRemoveContext, hasNoParentCon
 		count := s.Count()
 
 		defer func() {
-			context.reportDomainStorageMapDeepRemoveTrace(
+			context.ReportDomainStorageMapDeepRemoveTrace(
 				typeInfo,
 				int(count),
 				time.Since(startTime),

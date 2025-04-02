@@ -38,7 +38,7 @@ var _ HashableValue = BoolValue(false)
 const TrueValue = BoolValue(true)
 const FalseValue = BoolValue(false)
 
-func (BoolValue) isValue() {}
+func (BoolValue) IsValue() {}
 
 func (v BoolValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitBoolValue(interpreter, v)

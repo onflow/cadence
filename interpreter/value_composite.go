@@ -117,7 +117,7 @@ func NewCompositeValueWithStaticType(
 }
 
 func NewCompositeValue(
-	interpreter *Interpreter,
+	ctx MemberAccessibleContext,
 	locationRange LocationRange,
 	location common.Location,
 	qualifiedIdentifier string,
@@ -126,13 +126,11 @@ func NewCompositeValue(
 	address common.Address,
 ) *CompositeValue {
 
-	interpreter.ReportComputation(common.ComputationKindCreateCompositeValue, 1)
-
-	config := interpreter.SharedState.Config
+	ctx.ReportComputation(common.ComputationKindCreateCompositeValue, 1)
 
 	var v *CompositeValue
 
-	if config.TracingEnabled {
+	if ctx.TracingEnabled() {
 		startTime := time.Now()
 
 		defer func() {
@@ -146,7 +144,7 @@ func NewCompositeValue(
 			typeID := string(v.TypeID())
 			kind := v.Kind.String()
 
-			interpreter.reportCompositeValueConstructTrace(
+			ctx.ReportCompositeValueConstructTrace(
 				owner,
 				typeID,
 				kind,
@@ -157,11 +155,11 @@ func NewCompositeValue(
 
 	constructor := func() *atree.OrderedMap {
 		dictionary, err := atree.NewMap(
-			config.Storage,
+			ctx.Storage(),
 			atree.Address(address),
 			atree.NewDefaultDigesterBuilder(),
 			NewCompositeTypeInfo(
-				interpreter,
+				ctx,
 				location,
 				qualifiedIdentifier,
 				kind,
@@ -174,17 +172,17 @@ func NewCompositeValue(
 	}
 
 	typeInfo := NewCompositeTypeInfo(
-		interpreter,
+		ctx,
 		location,
 		qualifiedIdentifier,
 		kind,
 	)
 
-	v = newCompositeValueFromConstructor(interpreter, uint64(len(fields)), typeInfo, constructor)
+	v = newCompositeValueFromConstructor(ctx, uint64(len(fields)), typeInfo, constructor)
 
 	for _, field := range fields {
 		v.SetMember(
-			interpreter,
+			ctx,
 			locationRange,
 			field.Name,
 			field.Value,
@@ -240,7 +238,7 @@ var _ atree.Value = &CompositeValue{}
 var _ atree.WrapperValue = &CompositeValue{}
 var _ atreeContainerBackedValue = &CompositeValue{}
 
-func (*CompositeValue) isValue() {}
+func (*CompositeValue) IsValue() {}
 
 func (*CompositeValue) isAtreeContainerBackedValue() {}
 
@@ -409,7 +407,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 	v.isDestroyed = true
 
-	interpreter.InvalidateReferencedResources(v, locationRange)
+	InvalidateReferencedResources(interpreter, v, locationRange)
 
 	v.dictionary = nil
 }
@@ -440,7 +438,7 @@ func (v *CompositeValue) GetMember(context MemberAccessibleContext, locationRang
 		kind := v.Kind.String()
 
 		defer func() {
-			context.reportCompositeValueGetMemberTrace(
+			context.ReportCompositeValueGetMemberTrace(
 				owner,
 				typeID,
 				kind,
@@ -711,7 +709,7 @@ func (v *CompositeValue) SetMemberWithoutTransfer(
 		kind := v.Kind.String()
 
 		defer func() {
-			context.reportCompositeValueSetMemberTrace(
+			context.ReportCompositeValueSetMemberTrace(
 				owner,
 				typeID,
 				kind,
@@ -1183,7 +1181,7 @@ func (v *CompositeValue) Transfer(
 		kind := v.Kind.String()
 
 		defer func() {
-			context.reportCompositeValueTransferTrace(
+			context.ReportCompositeValueTransferTrace(
 				owner,
 				typeID,
 				kind,
@@ -1312,7 +1310,7 @@ func (v *CompositeValue) Transfer(
 		// This allows raising an error when the resource is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		context.InvalidateReferencedResources(v, locationRange)
+		InvalidateReferencedResources(context, v, locationRange)
 
 		v.dictionary = nil
 	}
@@ -1428,7 +1426,7 @@ func (v *CompositeValue) DeepRemove(context ValueRemoveContext, hasNoParentConta
 		kind := v.Kind.String()
 
 		defer func() {
-			context.reportCompositeValueDeepRemoveTrace(
+			context.ReportCompositeValueDeepRemoveTrace(
 				owner,
 				typeID,
 				kind,
@@ -1893,12 +1891,12 @@ func (v *CompositeValue) RemoveTypeKey(
 	return v.RemoveMember(interpreter, locationRange, memberName)
 }
 
-func (v *CompositeValue) Iterator(interpreter *Interpreter, locationRange LocationRange) ValueIterator {
-	staticType := v.StaticType(interpreter)
+func (v *CompositeValue) Iterator(context ValueStaticTypeContext, locationRange LocationRange) ValueIterator {
+	staticType := v.StaticType(context)
 
 	switch typ := staticType.(type) {
 	case InclusiveRangeStaticType:
-		return NewInclusiveRangeIterator(interpreter, locationRange, v, typ)
+		return NewInclusiveRangeIterator(context, locationRange, v, typ)
 
 	default:
 		// Must be caught in the checker.

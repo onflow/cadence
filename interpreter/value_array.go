@@ -105,7 +105,7 @@ func NewArrayValueWithIterator(
 			typeInfo := v.Type.String()
 			count := v.Count()
 
-			context.reportArrayValueConstructTrace(
+			context.ReportArrayValueConstructTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -188,7 +188,7 @@ var _ ReferenceTrackedResourceKindedValue = &ArrayValue{}
 var _ IterableValue = &ArrayValue{}
 var _ atreeContainerBackedValue = &ArrayValue{}
 
-func (*ArrayValue) isValue() {}
+func (*ArrayValue) IsValue() {}
 
 func (*ArrayValue) isAtreeContainerBackedValue() {}
 
@@ -277,6 +277,16 @@ func (v *ArrayValue) iterate(
 	}
 
 	context.WithMutationPrevention(v.ValueID(), iterate)
+}
+
+func (v *ArrayValue) Iterator(_ ValueStaticTypeContext, _ LocationRange) ValueIterator {
+	arrayIterator, err := v.array.Iterator()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+	return &ArrayIterator{
+		atreeIterator: arrayIterator,
+	}
 }
 
 func (v *ArrayValue) Walk(
@@ -368,7 +378,7 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 
 	v.isDestroyed = true
 
-	interpreter.InvalidateReferencedResources(v, locationRange)
+	InvalidateReferencedResources(interpreter, v, locationRange)
 
 	v.array = nil
 }
@@ -1298,7 +1308,7 @@ func (v *ArrayValue) Transfer(
 		count := v.Count()
 
 		defer func() {
-			context.reportArrayValueTransferTrace(
+			context.ReportArrayValueTransferTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -1398,7 +1408,7 @@ func (v *ArrayValue) Transfer(
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		context.InvalidateReferencedResources(v, locationRange)
+		InvalidateReferencedResources(context, v, locationRange)
 
 		v.array = nil
 	}
@@ -1472,7 +1482,7 @@ func (v *ArrayValue) DeepRemove(context ValueRemoveContext, hasNoParentContainer
 		count := v.Count()
 
 		defer func() {
-			context.reportArrayValueDeepRemoveTrace(
+			context.ReportArrayValueDeepRemoveTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -1974,4 +1984,53 @@ func (v *ArrayValue) SetType(staticType ArrayStaticType) {
 
 func (v *ArrayValue) Inlined() bool {
 	return v.array.Inlined()
+}
+
+// Array iterator
+
+type ArrayIterator struct {
+	atreeIterator atree.ArrayIterator
+	next          atree.Value
+}
+
+var _ ValueIterator = &ArrayIterator{}
+
+func (i *ArrayIterator) HasNext() bool {
+	if i.next != nil {
+		return true
+	}
+
+	var err error
+	i.next, err = i.atreeIterator.Next()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+
+	return i.next != nil
+}
+
+func (i *ArrayIterator) Next(context ValueIteratorContext, _ LocationRange) Value {
+	var atreeValue atree.Value
+	if i.next != nil {
+		// If there's already a `next` (i.e: `hasNext()` was called before this)
+		// then use that.
+		atreeValue = i.next
+
+		// Clear the cached `next`.
+		i.next = nil
+	} else {
+		var err error
+		atreeValue, err = i.atreeIterator.Next()
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+	}
+
+	if atreeValue == nil {
+		return nil
+	}
+
+	// atree.Array iterator returns low-level atree.Value,
+	// convert to high-level interpreter.Value
+	return MustConvertStoredValue(context, atreeValue)
 }

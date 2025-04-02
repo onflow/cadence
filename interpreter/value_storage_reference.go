@@ -74,7 +74,7 @@ func NewStorageReferenceValue(
 	)
 }
 
-func (*StorageReferenceValue) isValue() {}
+func (*StorageReferenceValue) IsValue() {}
 
 func (v *StorageReferenceValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitStorageReferenceValue(interpreter, v)
@@ -466,4 +466,9 @@ func forEachReference(
 
 func (v *StorageReferenceValue) BorrowType() sema.Type {
 	return v.BorrowedType
+}
+
+func (v *StorageReferenceValue) Iterator(context ValueStaticTypeContext, locationRange LocationRange) ValueIterator {
+	//TODO implement me
+	panic("implement me")
 }

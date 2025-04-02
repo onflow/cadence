@@ -74,7 +74,7 @@ var _ IntegerValue[IntValue] = IntValue{}
 var _ atree.Storable = IntValue{}
 var _ atree.Value = IntValue{}
 
-func (IntValue) isValue() {}
+func (IntValue) IsValue() {}
 
 func (v IntValue) String() string {
 	return format.BigInt(v.BigInt)

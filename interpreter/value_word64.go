@@ -67,7 +67,7 @@ func NewUnmeteredWord64Value(value uint64) Word64Value {
 // call ToBigInt instead of ToInt.
 var _ BigNumberValue = Word64Value(0)
 
-func (Word64Value) isValue() {}
+func (Word64Value) IsValue() {}
 
 func (v Word64Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitWord64Value(interpreter, v)

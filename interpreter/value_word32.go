@@ -59,7 +59,7 @@ func NewUnmeteredWord32Value(value uint32) Word32Value {
 	return Word32Value(value)
 }
 
-func (Word32Value) isValue() {}
+func (Word32Value) IsValue() {}
 
 func (v Word32Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitWord32Value(interpreter, v)

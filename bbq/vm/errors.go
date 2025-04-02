@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
 )
 
 type LinkerError struct {
@@ -40,7 +41,7 @@ func (l LinkerError) Error() string {
 }
 
 type MissingMemberValueError struct {
-	Parent MemberAccessibleValue
+	Parent interpreter.MemberAccessibleValue
 	Name   string
 }
 

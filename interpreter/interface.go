@@ -93,7 +93,8 @@ type StorageContext interface {
 var _ StorageContext = &Interpreter{}
 
 type ReferenceTracker interface {
-	InvalidateReferencedResources(v Value, locationRange LocationRange)
+	ClearReferencedResourceKindedValues(valueID atree.ValueID)
+	ReferencedResourceKindedValues(valueID atree.ValueID) map[*EphemeralReferenceValue]struct{}
 	CheckInvalidatedResourceOrResourceReference(value Value, locationRange LocationRange)
 	MaybeTrackReferencedResourceKindedValue(ref *EphemeralReferenceValue)
 }
@@ -111,6 +112,9 @@ type ValueTransferContext interface {
 		oldOwner common.Address,
 		newOwner common.Address,
 	)
+
+	WithMutationPrevention(valueID atree.ValueID, f func())
+	ValidateMutation(valueID atree.ValueID, locationRange LocationRange)
 }
 
 var _ ValueTransferContext = &Interpreter{}
@@ -127,14 +131,12 @@ var _ ComputationReporter = &Interpreter{}
 
 type ContainerMutationContext interface {
 	ValueTransferContext
-	WithMutationPrevention(valueID atree.ValueID, f func())
-	ValidateMutation(valueID atree.ValueID, locationRange LocationRange)
 }
 
 var _ ContainerMutationContext = &Interpreter{}
 
 type ValueStringContext interface {
-	ContainerMutationContext
+	ValueTransferContext
 }
 
 var _ ValueStringContext = &Interpreter{}
@@ -146,12 +148,18 @@ type ReferenceCreationContext interface {
 
 var _ ReferenceCreationContext = &Interpreter{}
 
+type AccountHandlerContextContext interface {
+	AccountHandler() AccountHandlerFunc
+}
+
+var _ AccountHandlerContextContext = &Interpreter{}
+
 type MemberAccessibleContext interface {
 	FunctionCreationContext
 	ArrayCreationContext
 	ResourceDestructionHandler
+	AccountHandlerContextContext
 
-	AccountHandler() AccountHandlerFunc
 	InjectedCompositeFieldsHandler() InjectedCompositeFieldsHandlerFunc
 	GetMemberAccessContextForLocation(location common.Location) MemberAccessibleContext
 }
@@ -174,16 +182,16 @@ type StaticTypeAndReferenceContext interface {
 var _ StaticTypeAndReferenceContext = &Interpreter{}
 
 type ArrayCreationContext interface {
-	common.MemoryGauge
-	ValueStaticTypeContext
-	ReferenceTracker
-	ComputationReporter
-	Tracer
-	StorageContext
 	ValueTransferContext
 }
 
 var _ ArrayCreationContext = &Interpreter{}
+
+type DictionaryCreationContext interface {
+	ContainerMutationContext
+}
+
+var _ DictionaryCreationContext = &Interpreter{}
 
 type StorageMutationTracker interface {
 	RecordStorageMutation()
@@ -200,6 +208,14 @@ type ResourceDestructionHandler interface {
 
 var _ ResourceDestructionHandler = &Interpreter{}
 
+type CapConReferenceValueContext interface {
+	FunctionCreationContext
+	ValueStaticTypeContext
+	AccountHandlerContextContext
+}
+
+var _ CapConReferenceValueContext = &Interpreter{}
+
 // NoOpStringContext is the ValueStringContext implementation used in Value.RecursiveString method.
 // Since Value.RecursiveString is a non-mutating operation, it should only need the no-op memory metering
 // and a WithMutationPrevention implementation.
@@ -211,138 +227,154 @@ type NoOpStringContext struct{}
 
 var _ ValueStringContext = NoOpStringContext{}
 
-func (n NoOpStringContext) MeterMemory(_ common.MemoryUsage) error {
+func (ctx NoOpStringContext) MeterMemory(_ common.MemoryUsage) error {
 	return nil
 }
 
-func (n NoOpStringContext) WithMutationPrevention(_ atree.ValueID, f func()) {
+func (ctx NoOpStringContext) WithMutationPrevention(_ atree.ValueID, f func()) {
 	f()
 }
 
-func (n NoOpStringContext) ValidateMutation(_ atree.ValueID, _ LocationRange) {
+func (ctx NoOpStringContext) ValidateMutation(_ atree.ValueID, _ LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) ReadStored(_ common.Address, _ common.StorageDomain, _ StorageMapKey) Value {
+func (ctx NoOpStringContext) ReadStored(_ common.Address, _ common.StorageDomain, _ StorageMapKey) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) ConvertStaticToSemaType(_ StaticType) (sema.Type, error) {
+func (ctx NoOpStringContext) ConvertStaticToSemaType(_ StaticType) (sema.Type, error) {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) IsSubType(_ StaticType, _ StaticType) bool {
+func (ctx NoOpStringContext) IsSubType(_ StaticType, _ StaticType) bool {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) IsSubTypeOfSemaType(_ StaticType, _ sema.Type) bool {
+func (ctx NoOpStringContext) IsSubTypeOfSemaType(_ StaticType, _ sema.Type) bool {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) WriteStored(_ common.Address, _ common.StorageDomain, _ StorageMapKey, _ Value) (existed bool) {
+func (ctx NoOpStringContext) WriteStored(_ common.Address, _ common.StorageDomain, _ StorageMapKey, _ Value) (existed bool) {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) Storage() Storage {
+func (ctx NoOpStringContext) Storage() Storage {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) MaybeValidateAtreeValue(_ atree.Value) {
+func (ctx NoOpStringContext) MaybeValidateAtreeValue(_ atree.Value) {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) MaybeValidateAtreeStorage() {
+func (ctx NoOpStringContext) MaybeValidateAtreeStorage() {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) InvalidateReferencedResources(_ Value, _ LocationRange) {
+func (ctx NoOpStringContext) InvalidateReferencedResources(_ Value, _ LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) CheckInvalidatedResourceOrResourceReference(_ Value, _ LocationRange) {
+func (ctx NoOpStringContext) CheckInvalidatedResourceOrResourceReference(_ Value, _ LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) MaybeTrackReferencedResourceKindedValue(_ *EphemeralReferenceValue) {
+func (ctx NoOpStringContext) MaybeTrackReferencedResourceKindedValue(_ *EphemeralReferenceValue) {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) ReportComputation(_ common.ComputationKind, _ uint) {
+func (ctx NoOpStringContext) ClearReferencedResourceKindedValues(valueID atree.ValueID) {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) TracingEnabled() bool {
+func (ctx NoOpStringContext) ReferencedResourceKindedValues(valueID atree.ValueID) map[*EphemeralReferenceValue]struct{} {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) reportArrayValueDeepRemoveTrace(_ string, _ int, _ time.Duration) {
+func (ctx NoOpStringContext) ReportComputation(_ common.ComputationKind, _ uint) {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) reportArrayValueTransferTrace(_ string, _ int, _ time.Duration) {
+func (ctx NoOpStringContext) TracingEnabled() bool {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) reportArrayValueConstructTrace(_ string, _ int, _ time.Duration) {
+func (ctx NoOpStringContext) ReportArrayValueDeepRemoveTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) reportDictionaryValueTransferTrace(_ string, _ int, _ time.Duration) {
+func (ctx NoOpStringContext) ReportArrayValueTransferTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) reportDictionaryValueDeepRemoveTrace(_ string, _ int, _ time.Duration) {
+func (ctx NoOpStringContext) ReportArrayValueConstructTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) reportCompositeValueDeepRemoveTrace(_ string, _ string, _ string, _ time.Duration) {
+func (ctx NoOpStringContext) ReportDictionaryValueTransferTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) reportDictionaryValueGetMemberTrace(_ string, _ int, _ string, _ time.Duration) {
+func (ctx NoOpStringContext) ReportDictionaryValueDeepRemoveTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) reportCompositeValueTransferTrace(_ string, _ string, _ string, _ time.Duration) {
+func (ctx NoOpStringContext) ReportCompositeValueDeepRemoveTrace(_ string, _ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) reportCompositeValueSetMemberTrace(_ string, id string, _ string, _ string, _ time.Duration) {
+func (ctx NoOpStringContext) ReportDictionaryValueGetMemberTrace(_ string, _ int, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (c NoOpStringContext) reportCompositeValueGetMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
+func (ctx NoOpStringContext) ReportDictionaryValueConstructTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) reportDomainStorageMapDeepRemoveTrace(_ string, _ int, _ time.Duration) {
+func (ctx NoOpStringContext) ReportCompositeValueTransferTrace(_ string, _ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) OnResourceOwnerChange(_ *CompositeValue, _ common.Address, _ common.Address) {
+func (ctx NoOpStringContext) ReportCompositeValueSetMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) RecordStorageMutation() {
+func (ctx NoOpStringContext) ReportCompositeValueGetMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) GetEntitlementType(_ TypeID) (*sema.EntitlementType, error) {
+func (ctx NoOpStringContext) ReportCompositeValueConstructTrace(_ string, _ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) GetEntitlementMapType(_ TypeID) (*sema.EntitlementMapType, error) {
+func (ctx NoOpStringContext) ReportDomainStorageMapDeepRemoveTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) GetInterfaceType(_ common.Location, _ string, _ TypeID) (*sema.InterfaceType, error) {
+func (ctx NoOpStringContext) OnResourceOwnerChange(_ *CompositeValue, _ common.Address, _ common.Address) {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) GetCompositeType(_ common.Location, _ string, _ TypeID) (*sema.CompositeType, error) {
+func (ctx NoOpStringContext) RecordStorageMutation() {
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) IsTypeInfoRecovered(location common.Location) bool {
+func (ctx NoOpStringContext) GetEntitlementType(_ TypeID) (*sema.EntitlementType, error) {
+	panic(errors.NewUnreachableError())
+}
+
+func (ctx NoOpStringContext) GetEntitlementMapType(_ TypeID) (*sema.EntitlementMapType, error) {
+	panic(errors.NewUnreachableError())
+}
+
+func (ctx NoOpStringContext) GetInterfaceType(_ common.Location, _ string, _ TypeID) (*sema.InterfaceType, error) {
+	panic(errors.NewUnreachableError())
+}
+
+func (ctx NoOpStringContext) GetCompositeType(_ common.Location, _ string, _ TypeID) (*sema.CompositeType, error) {
+	panic(errors.NewUnreachableError())
+}
+
+func (n NoOpStringContext) IsTypeInfoRecovered(_ common.Location) bool {
 	panic(errors.NewUnreachableError())
 }

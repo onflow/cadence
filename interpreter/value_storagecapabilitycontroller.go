@@ -33,7 +33,7 @@ type CapabilityControllerValue interface {
 	isCapabilityControllerValue()
 	CapabilityControllerBorrowType() *ReferenceStaticType
 	ReferenceValue(
-		interpreter *Interpreter,
+		context CapConReferenceValueContext,
 		capabilityAddress common.Address,
 		resultBorrowType *sema.ReferenceType,
 		locationRange LocationRange,
@@ -102,7 +102,7 @@ var _ EquatableValue = &StorageCapabilityControllerValue{}
 var _ CapabilityControllerValue = &StorageCapabilityControllerValue{}
 var _ MemberAccessibleValue = &StorageCapabilityControllerValue{}
 
-func (*StorageCapabilityControllerValue) isValue() {}
+func (*StorageCapabilityControllerValue) IsValue() {}
 
 func (*StorageCapabilityControllerValue) isCapabilityControllerValue() {}
 
@@ -322,17 +322,17 @@ func (v *StorageCapabilityControllerValue) ControllerCapabilityID() UInt64Value 
 }
 
 func (v *StorageCapabilityControllerValue) ReferenceValue(
-	interpreter *Interpreter,
+	context CapConReferenceValueContext,
 	capabilityAddress common.Address,
 	resultBorrowType *sema.ReferenceType,
 	_ LocationRange,
 ) ReferenceValue {
 	authorization := ConvertSemaAccessToStaticAuthorization(
-		interpreter,
+		context,
 		resultBorrowType.Authorization,
 	)
 	return NewStorageReferenceValue(
-		interpreter,
+		context,
 		authorization,
 		capabilityAddress,
 		v.TargetPath,

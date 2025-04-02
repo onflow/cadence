@@ -42,13 +42,13 @@ type DictionaryValue struct {
 }
 
 func NewDictionaryValue(
-	interpreter *Interpreter,
+	context DictionaryCreationContext,
 	locationRange LocationRange,
 	dictionaryType *DictionaryStaticType,
 	keysAndValues ...Value,
 ) *DictionaryValue {
 	return NewDictionaryValueWithAddress(
-		interpreter,
+		context,
 		locationRange,
 		dictionaryType,
 		common.ZeroAddress,
@@ -57,20 +57,18 @@ func NewDictionaryValue(
 }
 
 func NewDictionaryValueWithAddress(
-	interpreter *Interpreter,
+	context DictionaryCreationContext,
 	locationRange LocationRange,
 	dictionaryType *DictionaryStaticType,
 	address common.Address,
 	keysAndValues ...Value,
 ) *DictionaryValue {
 
-	interpreter.ReportComputation(common.ComputationKindCreateDictionaryValue, 1)
+	context.ReportComputation(common.ComputationKindCreateDictionaryValue, 1)
 
 	var v *DictionaryValue
 
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		defer func() {
@@ -83,7 +81,7 @@ func NewDictionaryValueWithAddress(
 			typeInfo := v.Type.String()
 			count := v.Count()
 
-			interpreter.reportDictionaryValueConstructTrace(
+			context.ReportDictionaryValueConstructTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -98,7 +96,7 @@ func NewDictionaryValueWithAddress(
 
 	constructor := func() *atree.OrderedMap {
 		dictionary, err := atree.NewMap(
-			config.Storage,
+			context.Storage(),
 			atree.Address(address),
 			atree.NewDefaultDigesterBuilder(),
 			dictionaryType,
@@ -110,17 +108,17 @@ func NewDictionaryValueWithAddress(
 	}
 
 	// values are added to the dictionary after creation, not here
-	v = newDictionaryValueFromConstructor(interpreter, dictionaryType, 0, constructor)
+	v = newDictionaryValueFromConstructor(context, dictionaryType, 0, constructor)
 
 	for i := 0; i < keysAndValuesCount; i += 2 {
 		key := keysAndValues[i]
 		value := keysAndValues[i+1]
-		existingValue := v.Insert(interpreter, locationRange, key, value)
+		existingValue := v.Insert(context, locationRange, key, value)
 		// If the dictionary already contained a value for the key,
 		// and the dictionary is resource-typed,
 		// then we need to prevent a resource loss
 		if _, ok := existingValue.(*SomeValue); ok {
-			if v.IsResourceKinded(interpreter) {
+			if v.IsResourceKinded(context) {
 				panic(DuplicateKeyInResourceDictionaryError{
 					LocationRange: locationRange,
 				})
@@ -168,7 +166,7 @@ func newDictionaryValueWithIterator(
 			typeInfo := v.Type.String()
 			count := v.Count()
 
-			interpreter.reportDictionaryValueConstructTrace(
+			interpreter.ReportDictionaryValueConstructTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -250,7 +248,7 @@ var _ MemberAccessibleValue = &DictionaryValue{}
 var _ ReferenceTrackedResourceKindedValue = &DictionaryValue{}
 var _ atreeContainerBackedValue = &DictionaryValue{}
 
-func (*DictionaryValue) isValue() {}
+func (*DictionaryValue) IsValue() {}
 
 func (*DictionaryValue) isAtreeContainerBackedValue() {}
 
@@ -346,12 +344,12 @@ func (v *DictionaryValue) Iterate(
 // IterateReadOnlyLoaded iterates over all LOADED key-value pairs of the array.
 // DO NOT perform storage mutations in the callback!
 func (v *DictionaryValue) IterateReadOnlyLoaded(
-	interpreter *Interpreter,
+	context ContainerMutationContext,
 	locationRange LocationRange,
 	f func(key, value Value) (resume bool),
 ) {
 	v.iterate(
-		interpreter,
+		context,
 		v.dictionary.IterateReadOnlyLoadedValues,
 		f,
 		locationRange,
@@ -525,7 +523,7 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 
 	v.isDestroyed = true
 
-	interpreter.InvalidateReferencedResources(v, locationRange)
+	InvalidateReferencedResources(interpreter, v, locationRange)
 
 	v.dictionary = nil
 }
@@ -723,7 +721,7 @@ func (v *DictionaryValue) GetMember(context MemberAccessibleContext, locationRan
 		count := v.Count()
 
 		defer func() {
-			context.reportDictionaryValueGetMemberTrace(
+			context.ReportDictionaryValueGetMemberTrace(
 				typeInfo,
 				count,
 				name,
@@ -1289,7 +1287,7 @@ func (v *DictionaryValue) Transfer(
 		count := v.Count()
 
 		defer func() {
-			context.reportDictionaryValueTransferTrace(
+			context.ReportDictionaryValueTransferTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -1417,7 +1415,7 @@ func (v *DictionaryValue) Transfer(
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		context.InvalidateReferencedResources(v, locationRange)
+		InvalidateReferencedResources(context, v, locationRange)
 
 		v.dictionary = nil
 	}
@@ -1501,7 +1499,7 @@ func (v *DictionaryValue) DeepRemove(context ValueRemoveContext, hasNoParentCont
 		count := v.Count()
 
 		defer func() {
-			context.reportDictionaryValueDeepRemoveTrace(
+			context.ReportDictionaryValueDeepRemoveTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),

@@ -78,7 +78,7 @@ func (v *SomeValue) UnwrapAtreeValue() (atree.Value, uint64) {
 	}
 }
 
-func (*SomeValue) isValue() {}
+func (*SomeValue) IsValue() {}
 
 func (v *SomeValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
 	descend := visitor.VisitSomeValue(interpreter, v)
@@ -378,7 +378,7 @@ func (v *SomeValue) Transfer(
 		// we don't need to invalidate referenced resources if this resource was moved
 		// to storage, as the earlier transfer will have done this already
 		if !needsStoreTo {
-			context.InvalidateReferencedResources(v.value, locationRange)
+			InvalidateReferencedResources(context, v.value, locationRange)
 		}
 		v.value = nil
 	}

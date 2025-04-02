@@ -32,7 +32,7 @@ import (
 
 // OnEventEmittedFunc is a function that is triggered when an event is emitted by the program.
 type OnEventEmittedFunc func(
-	event *CompositeValue,
+	event *interpreter.CompositeValue,
 	eventType *interpreter.CompositeStaticType,
 ) error
 
@@ -40,7 +40,9 @@ type Config struct {
 	common.MemoryGauge
 	commons.ImportHandler
 	ContractValueHandler
-	stdlib.AccountHandler
+	Tracer
+
+	accountHandler stdlib.AccountHandler
 
 	NativeFunctionsProvider
 
@@ -58,10 +60,10 @@ type Config struct {
 	TypeLoader func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType
 }
 
-var _ ReferenceTracker = &Config{}
-var _ StaticTypeContext = &Config{}
-var _ TransferContext = &Config{}
-var _ StorageContext = &Config{}
+var _ interpreter.ReferenceTracker = &Config{}
+var _ interpreter.ValueStaticTypeContext = &Config{}
+var _ interpreter.ValueTransferContext = &Config{}
+var _ interpreter.StorageContext = &Config{}
 var _ interpreter.StaticTypeConversionHandler = &Config{}
 var _ interpreter.ValueComparisonContext = &Config{}
 
@@ -71,7 +73,7 @@ func NewConfig(storage interpreter.Storage) *Config {
 		MemoryGauge:          nil,
 		ImportHandler:        nil,
 		ContractValueHandler: nil,
-		AccountHandler:       nil,
+		accountHandler:       nil,
 
 		CapabilityControllerIterations:              make(map[AddressPath]int),
 		MutationDuringCapabilityControllerIteration: false,
@@ -80,7 +82,7 @@ func NewConfig(storage interpreter.Storage) *Config {
 }
 
 func (c *Config) WithAccountHandler(handler stdlib.AccountHandler) *Config {
-	c.AccountHandler = handler
+	c.accountHandler = handler
 	return c
 }
 
@@ -91,8 +93,15 @@ func (c *Config) Interpreter() *interpreter.Interpreter {
 			nil,
 			common_utils.TestLocation,
 			&interpreter.Config{
-				Storage:               c.storage,
-				ImportLocationHandler: nil,
+				Storage: c.storage,
+
+				// Interpreters are needed only to access interpreter-bound functions.
+				// Hence, just return the same interpreter as-is, for now.
+				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+					return interpreter.InterpreterImport{
+						Interpreter: inter,
+					}
+				},
 				CompositeTypeHandler: func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 					return c.TypeLoader(location, typeID).(*sema.CompositeType)
 				},
@@ -237,9 +246,53 @@ func (c *Config) IsTypeInfoRecovered(location common.Location) bool {
 	return false
 }
 
-type ContractValueHandler func(conf *Config, location common.Location) *CompositeValue
+func (c *Config) ReportComputation(compKind common.ComputationKind, intensity uint) {
+	//TODO
+}
+
+func (c *Config) OnResourceOwnerChange(resource *interpreter.CompositeValue, oldOwner common.Address, newOwner common.Address) {
+	//TODO
+}
+
+func (c *Config) WithMutationPrevention(valueID atree.ValueID, f func()) {
+	//TODO
+}
+
+func (c *Config) ValidateMutation(valueID atree.ValueID, locationRange interpreter.LocationRange) {
+	//TODO
+}
+
+func (c *Config) GetCompositeValueFunctions(v *interpreter.CompositeValue, locationRange interpreter.LocationRange) *interpreter.FunctionOrderedMap {
+	//TODO
+	return nil
+}
+
+func (c *Config) EnforceNotResourceDestruction(valueID atree.ValueID, locationRange interpreter.LocationRange) {
+	//TODO
+}
+
+func (c *Config) InjectedCompositeFieldsHandler() interpreter.InjectedCompositeFieldsHandlerFunc {
+	//TODO
+	return nil
+}
+
+func (c *Config) GetMemberAccessContextForLocation(_ common.Location) interpreter.MemberAccessibleContext {
+	//TODO
+	return c
+}
+
+func (c *Config) AccountHandler() interpreter.AccountHandlerFunc {
+	// TODO:
+	return nil
+}
+
+func (c *Config) GetAccountHandler() stdlib.AccountHandler {
+	return c.accountHandler
+}
+
+type ContractValueHandler func(conf *Config, location common.Location) *interpreter.CompositeValue
 
 type AddressPath struct {
 	Address common.Address
-	Path    PathValue
+	Path    interpreter.PathValue
 }

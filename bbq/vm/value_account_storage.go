@@ -22,25 +22,10 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
-
-func NewAccountStorageValue(accountAddress common.Address) *SimpleCompositeValue {
-	return &SimpleCompositeValue{
-		typeID:     sema.Account_StorageType.ID(),
-		staticType: interpreter.PrimitiveStaticTypeAccount_Storage,
-		Kind:       common.CompositeKindStructure,
-		fields:     map[string]Value{
-			// TODO: add the remaining fields
-		},
-		metadata: map[string]any{
-			sema.AccountTypeAddressFieldName: accountAddress,
-		},
-	}
-}
 
 // members
 
@@ -59,43 +44,50 @@ func init() {
 
 				value := args[1]
 
-				path, ok := args[2].(PathValue)
+				path, ok := args[2].(interpreter.PathValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
-				domain := path.Domain.Identifier()
+				domain := path.Domain.StorageDomain()
 				identifier := path.Identifier
+
+				locationRange := EmptyLocationRange
 
 				// Prevent an overwrite
 
-				//if interpreter.storedValueExists(
-				//	address,
-				//	domain,
-				//	identifier,
-				//) {
-				//	panic("overwrite error")
-				//}
+				storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+				if interpreter.StoredValueExists(config, address, domain, storageMapKey) {
+					panic(
+						interpreter.OverwriteError{
+							Address:       interpreter.AddressValue(address),
+							Path:          path,
+							LocationRange: locationRange,
+						},
+					)
+				}
 
 				value = value.Transfer(
 					config,
+					locationRange,
 					atree.Address(address),
 					true,
 					nil,
+					nil,
+					true, // value is standalone because it is from invocation.Arguments[0].
 				)
 
 				// Write new value
 
-				storageDomain, _ := common.StorageDomainFromIdentifier(domain)
-				WriteStored(
-					config,
+				config.WriteStored(
 					address,
-					storageDomain,
-					interpreter.StringStorageMapKey(identifier),
+					domain,
+					storageMapKey,
 					value,
 				)
 
-				return VoidValue{}
+				return interpreter.Void
 			},
 		})
 
@@ -108,7 +100,7 @@ func init() {
 			Function: func(config *Config, typeArgs []bbq.StaticType, args ...Value) Value {
 				address := getAddressMetaInfoFromValue(args[0])
 
-				path, ok := args[1].(PathValue)
+				path, ok := args[1].(interpreter.PathValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -118,26 +110,26 @@ func init() {
 					panic(errors.NewUnreachableError())
 				}
 
-				reference := NewStorageReferenceValue(
+				semaType := interpreter.MustConvertStaticToSemaType(referenceType.ReferencedType, config)
+
+				reference := interpreter.NewStorageReferenceValue(
+					config,
 					referenceType.Authorization,
 					address,
 					path,
-					referenceType.ReferencedType,
+					semaType,
 				)
 
 				// Attempt to dereference,
 				// which reads the stored value
 				// and performs a dynamic type check
 
-				referenced, err := reference.dereference(config)
-				if err != nil {
-					panic(err)
-				}
-				if referenced == nil {
-					return NilValue{}
+				value := reference.ReferencedValue(config, EmptyLocationRange, true)
+				if value == nil {
+					return interpreter.Nil
 				}
 
-				return NewSomeValueNonCopying(reference)
+				return interpreter.NewSomeValueNonCopying(config, reference)
 			},
 		})
 }

@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 )
 
 type AccountIDGenerator interface {
@@ -33,69 +33,30 @@ type AccountIDGenerator interface {
 
 func NewAuthAccountReferenceValue(
 	conf *Config,
+	handler stdlib.AccountHandler,
 	address common.Address,
-) *EphemeralReferenceValue {
-	return newAccountReferenceValue(
+) interpreter.Value {
+	return stdlib.NewAccountReferenceValue(
 		conf,
-		address,
+		handler,
+		interpreter.AddressValue(address),
 		interpreter.FullyEntitledAccountAccess,
+		EmptyLocationRange,
 	)
 }
 
 func NewAccountReferenceValue(
 	conf *Config,
+	handler stdlib.AccountHandler,
 	address common.Address,
-) *EphemeralReferenceValue {
-	return newAccountReferenceValue(
+) interpreter.Value {
+	return stdlib.NewAccountReferenceValue(
 		conf,
-		address,
+		handler,
+		interpreter.AddressValue(address),
 		interpreter.UnauthorizedAccess,
+		EmptyLocationRange,
 	)
-}
-
-func newAccountReferenceValue(
-	conf *Config,
-	address common.Address,
-	authorization interpreter.Authorization,
-) *EphemeralReferenceValue {
-	return NewEphemeralReferenceValue(
-		conf,
-		newAccountValue(address),
-		authorization,
-		interpreter.PrimitiveStaticTypeAccount,
-	)
-}
-
-func newAccountValue(
-	address common.Address,
-) *SimpleCompositeValue {
-	value := &SimpleCompositeValue{
-		typeID:     sema.AccountType.ID(),
-		staticType: interpreter.PrimitiveStaticTypeAccount,
-		Kind:       common.CompositeKindStructure,
-		fields: map[string]Value{
-			sema.AccountTypeAddressFieldName: AddressValue(address),
-		},
-	}
-
-	value.computeField = func(name string) Value {
-		var field Value
-		switch name {
-		case sema.AccountTypeStorageFieldName:
-			field = NewAccountStorageValue(address)
-		case sema.AccountTypeCapabilitiesFieldName:
-			field = NewAccountCapabilitiesValue(address)
-		default:
-			return nil
-		}
-
-		value.fields[name] = field
-		return field
-	}
-
-	// TODO: add the remaining fields
-
-	return value
 }
 
 // members
@@ -105,56 +66,60 @@ func init() {
 }
 
 func getAddressMetaInfoFromValue(value Value) common.Address {
-	simpleCompositeValue, ok := value.(*SimpleCompositeValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
+	// TODO: How to get the address?
 
-	addressMetaInfo := simpleCompositeValue.metadata[sema.AccountTypeAddressFieldName]
-	address, ok := addressMetaInfo.(common.Address)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
+	//simpleCompositeValue, ok := value.(*interpreter.SimpleCompositeValue)
+	//if !ok {
+	//	panic(errors.NewUnreachableError())
+	//}
 
-	return address
+	//addressMetaInfo := simpleCompositeValue.metadata[sema.AccountTypeAddressFieldName]
+	//address, ok := addressMetaInfo.(common.Address)
+	//if !ok {
+	//	panic(errors.NewUnreachableError())
+	//}
+	//
+	//return address
+
+	return common.Address{42}
 }
 
 func getCapability(
 	config *Config,
 	address common.Address,
-	path PathValue,
+	path interpreter.PathValue,
 	wantedBorrowType *interpreter.ReferenceStaticType,
 	borrow bool,
 ) Value {
 	var failValue Value
 	if borrow {
-		failValue = Nil
+		failValue = interpreter.Nil
 	} else {
 		failValue =
-			NewInvalidCapabilityValue(
-				address,
+			interpreter.NewInvalidCapabilityValue(
+				config.MemoryGauge,
+				interpreter.AddressValue(address),
 				wantedBorrowType,
 			)
 	}
 
-	domain := path.Domain.Identifier()
+	domain := path.Domain.StorageDomain()
 	identifier := path.Identifier
 
 	// Read stored capability, if any
 
-	readValue := ReadStored(
-		config,
+	readValue := config.ReadStored(
 		address,
 		domain,
-		identifier,
+		interpreter.StringStorageMapKey(identifier),
 	)
 	if readValue == nil {
 		return failValue
 	}
 
-	var readCapabilityValue CapabilityValue
+	var readCapabilityValue *interpreter.IDCapabilityValue
 	switch readValue := readValue.(type) {
-	case CapabilityValue:
+	case *interpreter.IDCapabilityValue:
 		readCapabilityValue = readValue
 	default:
 		panic(errors.NewUnreachableError())
@@ -166,7 +131,7 @@ func getCapability(
 	}
 
 	capabilityID := readCapabilityValue.ID
-	capabilityAddress := readCapabilityValue.Address
+	capabilityAddress := readCapabilityValue.Address()
 
 	var resultValue Value
 	if borrow {
@@ -194,9 +159,10 @@ func getCapability(
 			capabilityBorrowType,
 		)
 		if controller != nil {
-			resultValue = NewCapabilityValue(
-				capabilityAddress,
+			resultValue = interpreter.NewCapabilityValue(
+				config.MemoryGauge,
 				capabilityID,
+				capabilityAddress,
 				resultBorrowType,
 			)
 		}
@@ -207,7 +173,8 @@ func getCapability(
 	}
 
 	if borrow {
-		resultValue = NewSomeValueNonCopying(
+		resultValue = interpreter.NewSomeValueNonCopying(
+			config.MemoryGauge,
 			resultValue,
 		)
 	}
@@ -217,11 +184,11 @@ func getCapability(
 
 func BorrowCapabilityController(
 	config *Config,
-	capabilityAddress AddressValue,
-	capabilityID IntValue,
+	capabilityAddress interpreter.AddressValue,
+	capabilityID interpreter.UInt64Value,
 	wantedBorrowType *interpreter.ReferenceStaticType,
 	capabilityBorrowType *interpreter.ReferenceStaticType,
-) ReferenceValue {
+) interpreter.ReferenceValue {
 	referenceValue := GetCheckedCapabilityControllerReference(
 		config,
 		capabilityAddress,
@@ -239,6 +206,7 @@ func BorrowCapabilityController(
 
 	referencedValue := referenceValue.ReferencedValue(
 		config,
+		EmptyLocationRange,
 		false,
 	)
 	if referencedValue == nil {
@@ -252,9 +220,9 @@ func checkAndIssueStorageCapabilityControllerWithType(
 	config *Config,
 	idGenerator AccountIDGenerator,
 	address common.Address,
-	targetPathValue PathValue,
+	targetPathValue interpreter.PathValue,
 	ty bbq.StaticType,
-) CapabilityValue {
+) interpreter.CapabilityValue {
 
 	borrowType, ok := ty.(*interpreter.ReferenceStaticType)
 	if !ok {
@@ -279,15 +247,16 @@ func checkAndIssueStorageCapabilityControllerWithType(
 		targetPathValue,
 	)
 
-	if capabilityIDValue == InvalidCapabilityID {
+	if capabilityIDValue == interpreter.InvalidCapabilityID {
 		panic(interpreter.InvalidCapabilityIDError{})
 	}
 
 	// Return controller's capability
 
-	return NewCapabilityValue(
-		AddressValue(address),
+	return interpreter.NewCapabilityValue(
+		config.MemoryGauge,
 		capabilityIDValue,
+		interpreter.AddressValue(address),
 		borrowType,
 	)
 }
@@ -297,8 +266,8 @@ func IssueStorageCapabilityController(
 	idGenerator AccountIDGenerator,
 	address common.Address,
 	borrowType *interpreter.ReferenceStaticType,
-	targetPathValue PathValue,
-) IntValue {
+	targetPathValue interpreter.PathValue,
+) interpreter.UInt64Value {
 	// Create and write StorageCapabilityController
 
 	var capabilityID uint64
@@ -313,9 +282,12 @@ func IssueStorageCapabilityController(
 		panic(errors.NewUnexpectedError("invalid zero account ID"))
 	}
 
-	capabilityIDValue := NewIntValue(int64(capabilityID))
+	capabilityIDValue := interpreter.NewUnmeteredUInt64Value(
+		capabilityID,
+	)
 
-	controller := NewStorageCapabilityControllerValue(
+	controller := interpreter.NewStorageCapabilityControllerValue(
+		config.MemoryGauge,
 		borrowType,
 		capabilityIDValue,
 		targetPathValue,
@@ -330,13 +302,12 @@ func IssueStorageCapabilityController(
 func storeCapabilityController(
 	config *Config,
 	address common.Address,
-	capabilityIDValue IntValue,
-	controller CapabilityControllerValue,
+	capabilityIDValue interpreter.UInt64Value,
+	controller interpreter.CapabilityControllerValue,
 ) {
-	storageMapKey := interpreter.Uint64StorageMapKey(capabilityIDValue.SmallInt)
+	storageMapKey := interpreter.Uint64StorageMapKey(capabilityIDValue.ToInt(EmptyLocationRange))
 
-	existed := WriteStored(
-		config,
+	existed := config.WriteStored(
 		address,
 		common.StorageDomainCapabilityController,
 		storageMapKey,
@@ -356,8 +327,8 @@ var capabilityIDSetStaticType = &interpreter.DictionaryStaticType{
 func recordStorageCapabilityController(
 	config *Config,
 	address common.Address,
-	targetPathValue PathValue,
-	capabilityIDValue IntValue,
+	targetPathValue interpreter.PathValue,
+	capabilityIDValue interpreter.UInt64Value,
 ) {
 	if targetPathValue.Domain != common.PathDomainStorage {
 		panic(errors.NewUnreachableError())
@@ -382,25 +353,24 @@ func recordStorageCapabilityController(
 		true,
 	)
 
-	referenced := accountStorage.ReadValue(config.MemoryGauge, interpreter.StringStorageMapKey(identifier))
-	readValue := InterpreterValueToVMValue(referenced)
+	readValue := accountStorage.ReadValue(config.MemoryGauge, interpreter.StringStorageMapKey(identifier))
 
 	setKey := capabilityIDValue
-	setValue := Nil
+	setValue := interpreter.Nil
 
 	if readValue == nil {
-		capabilityIDSet := NewDictionaryValue(
+		capabilityIDSet := interpreter.NewDictionaryValue(
 			config,
+			EmptyLocationRange,
 			capabilityIDSetStaticType,
 			setKey,
 			setValue,
 		)
-		capabilityIDSetInterValue := VMValueToInterpreterValue(config, capabilityIDSet)
-		accountStorage.SetValue(config.Interpreter(), storageMapKey, capabilityIDSetInterValue)
+		accountStorage.SetValue(config.Interpreter(), storageMapKey, capabilityIDSet)
 	} else {
-		capabilityIDSet := readValue.(*DictionaryValue)
-		existing := capabilityIDSet.Insert(config, setKey, setValue)
-		if existing != Nil {
+		capabilityIDSet := readValue.(*interpreter.DictionaryValue)
+		existing := capabilityIDSet.Insert(config, EmptyLocationRange, setKey, setValue)
+		if existing != interpreter.Nil {
 			panic(errors.NewUnreachableError())
 		}
 	}

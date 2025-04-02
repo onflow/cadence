@@ -60,7 +60,7 @@ var _ ComparableValue = Int64Value(0)
 var _ HashableValue = Int64Value(0)
 var _ MemberAccessibleValue = Int64Value(0)
 
-func (Int64Value) isValue() {}
+func (Int64Value) IsValue() {}
 
 func (v Int64Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitInt64Value(interpreter, v)

@@ -28,35 +28,6 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-func NewAccountCapabilitiesValue(accountAddress common.Address) *SimpleCompositeValue {
-	value := &SimpleCompositeValue{
-		typeID:     sema.Account_StorageType.ID(),
-		staticType: interpreter.PrimitiveStaticTypeAccount_Capabilities,
-		Kind:       common.CompositeKindStructure,
-		fields:     map[string]Value{
-			// TODO: add the remaining fields
-		},
-		metadata: map[string]any{
-			sema.AccountTypeAddressFieldName: accountAddress,
-		},
-	}
-
-	value.computeField = func(name string) Value {
-		var field Value
-		switch name {
-		case sema.Account_CapabilitiesTypeStorageFieldName:
-			field = NewAccountStorageCapabilitiesValue(accountAddress)
-		default:
-			return nil
-		}
-
-		value.fields[name] = field
-		return field
-	}
-
-	return value
-}
-
 // members
 
 func init() {
@@ -73,7 +44,7 @@ func init() {
 				address := getAddressMetaInfoFromValue(args[0])
 
 				// Path argument
-				path, ok := args[1].(PathValue)
+				path, ok := args[1].(interpreter.PathValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -115,15 +86,15 @@ func init() {
 
 				// Get capability argument
 
-				var capabilityValue CapabilityValue
+				var capabilityValue *interpreter.IDCapabilityValue
 				switch firstValue := args[1].(type) {
-				case CapabilityValue:
+				case *interpreter.IDCapabilityValue:
 					capabilityValue = firstValue
 				default:
 					panic(errors.NewUnreachableError())
 				}
 
-				capabilityAddressValue := common.Address(capabilityValue.Address)
+				capabilityAddressValue := common.Address(capabilityValue.Address())
 				if capabilityAddressValue != accountAddress {
 					panic(interpreter.CapabilityAddressPublishingError{
 						CapabilityAddress: interpreter.AddressValue(capabilityAddressValue),
@@ -133,7 +104,7 @@ func init() {
 
 				// Get path argument
 
-				path, ok := args[2].(PathValue)
+				path, ok := args[2].(interpreter.PathValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -150,7 +121,7 @@ func init() {
 				// Prevent an overwrite
 
 				storageMapKey := interpreter.StringStorageMapKey(identifier)
-				if StoredValueExists(
+				if interpreter.StoredValueExists(
 					config,
 					accountAddress,
 					storageDomain,
@@ -158,31 +129,33 @@ func init() {
 				) {
 					panic(interpreter.OverwriteError{
 						Address: interpreter.AddressValue(accountAddress),
-						Path:    VMValueToInterpreterValue(config, path).(interpreter.PathValue),
+						Path:    path,
 					})
 				}
 
 				capabilityValue, ok = capabilityValue.Transfer(
 					config,
+					EmptyLocationRange,
 					atree.Address(accountAddress),
 					true,
 					nil,
-				).(CapabilityValue)
+					nil,
+					true,
+				).(*interpreter.IDCapabilityValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
 				// Write new value
 
-				WriteStored(
-					config,
+				config.WriteStored(
 					accountAddress,
 					storageDomain,
 					storageMapKey,
 					capabilityValue,
 				)
 
-				return Void
+				return interpreter.Void
 			},
 		})
 }

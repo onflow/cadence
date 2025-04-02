@@ -26,20 +26,6 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-func NewAccountStorageCapabilitiesValue(accountAddress common.Address) *SimpleCompositeValue {
-	return &SimpleCompositeValue{
-		typeID:     sema.Account_StorageCapabilitiesType.ID(),
-		staticType: interpreter.PrimitiveStaticTypeAccount_StorageCapabilities,
-		Kind:       common.CompositeKindStructure,
-		fields:     map[string]Value{
-			// TODO: add the remaining fields
-		},
-		metadata: map[string]any{
-			sema.AccountTypeAddressFieldName: accountAddress,
-		},
-	}
-}
-
 // members
 
 func init() {
@@ -56,7 +42,7 @@ func init() {
 				accountAddress := getAddressMetaInfoFromValue(args[0])
 
 				// Path argument
-				targetPathValue, ok := args[1].(PathValue)
+				targetPathValue, ok := args[1].(interpreter.PathValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -72,11 +58,12 @@ func init() {
 
 				return checkAndIssueStorageCapabilityControllerWithType(
 					config,
-					config.AccountHandler,
+					config.GetAccountHandler(),
 					accountAddress,
 					targetPathValue,
 					ty,
 				)
 			},
-		})
+		},
+	)
 }

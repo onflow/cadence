@@ -94,7 +94,7 @@ var _ ComparableValue = IntValue{}
 var _ HashableValue = IntValue{}
 var _ MemberAccessibleValue = IntValue{}
 
-func (IntValue) isValue() {}
+func (IntValue) IsValue() {}
 
 func (v IntValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitIntValue(interpreter, v)

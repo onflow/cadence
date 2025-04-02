@@ -21,63 +21,27 @@ package vm
 import (
 	"strings"
 
-	"github.com/onflow/atree"
-
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
 
-type StringValue struct {
-	Str []byte
-}
-
-var _ Value = StringValue{}
-
-func NewStringValue(str string) StringValue {
-	return StringValue{
-		Str: []byte(str),
-	}
-}
-
-func NewStringValueFromBytes(bytes []byte) StringValue {
-	return StringValue{
-		Str: bytes,
-	}
-}
-
-func (StringValue) isValue() {}
-
-func (StringValue) StaticType(StaticTypeContext) bbq.StaticType {
-	return interpreter.PrimitiveStaticTypeString
-}
-
-func (v StringValue) Transfer(TransferContext, atree.Address, bool, atree.Storable) Value {
-	return v
-}
-
-func (v StringValue) String() string {
-	return string(v.Str)
-}
-
 // members
-
-const (
-	StringConcatFunctionName = "concat"
-)
 
 func init() {
 	typeName := interpreter.PrimitiveStaticTypeString.String()
 
-	RegisterTypeBoundFunction(typeName, StringConcatFunctionName, NativeFunctionValue{
+	RegisterTypeBoundFunction(typeName, sema.StringTypeConcatFunctionName, NativeFunctionValue{
 		ParameterCount: len(sema.StringTypeConcatFunctionType.Parameters),
 		Function: func(config *Config, typeArguments []bbq.StaticType, value ...Value) Value {
-			first := value[0].(StringValue)
-			second := value[1].(StringValue)
+			first := value[0].(*interpreter.StringValue)
+			second := value[1].(*interpreter.StringValue)
+
+			// TODO: Use `StringValue.Concat()`
 			var sb strings.Builder
-			sb.Write(first.Str)
-			sb.Write(second.Str)
-			return NewStringValue(sb.String())
+			sb.WriteString(first.Str)
+			sb.WriteString(second.Str)
+			return interpreter.NewUnmeteredStringValue(sb.String())
 		},
 	})
 }

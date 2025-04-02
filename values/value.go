@@ -21,6 +21,6 @@ package values
 import "fmt"
 
 type Value interface {
-	isValue()
+	IsValue()
 	fmt.Stringer
 }
