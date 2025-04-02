@@ -408,6 +408,13 @@ type InvocationContext interface {
 
 	GetLocation() common.Location
 	CallStack() []Invocation
+
+	InvokeFunction(
+		fn FunctionValue,
+		arguments []Value,
+		invocationArgumentTypes []sema.Type,
+		locationRange LocationRange,
+	) Value
 }
 
 var _ InvocationContext = &Interpreter{}

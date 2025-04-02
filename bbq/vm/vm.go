@@ -83,6 +83,9 @@ func NewVM(
 		config:             conf,
 	}
 
+	// Delegate the function invocations to the vm.
+	conf.invokeFunction = vm.invoke
+
 	// Link global variables and functions.
 	linkedGlobals := LinkGlobals(
 		location,
@@ -745,10 +748,7 @@ func opTransfer(vm *VM, ins opcode.InstructionTransfer) {
 }
 
 func opDestroy(vm *VM) {
-	value := vm.pop().(*interpreter.CompositeValue)
-
-	// TODO: once Destroy method is decoupled from the interpreter,
-	// Pass the 'config', instead of getting the interpreter here.
+	value := vm.pop().(interpreter.ResourceKindedValue)
 	value.Destroy(vm.config, EmptyLocationRange)
 }
 
@@ -810,9 +810,12 @@ func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 
 	var result Value
 	if !isSubType {
-		panic(ForceCastTypeMismatchError{
-			ExpectedType: targetType,
-			ActualType:   valueType,
+		targetSemaType := interpreter.MustConvertStaticToSemaType(targetType, vm.config)
+		valueSemaType := interpreter.MustConvertStaticToSemaType(valueType, vm.config)
+
+		panic(interpreter.ForceCastTypeMismatchError{
+			ExpectedType: targetSemaType,
+			ActualType:   valueSemaType,
 		})
 	}
 
@@ -1228,6 +1231,13 @@ func (vm *VM) lookupFunction(location common.Location, name string) FunctionValu
 
 func (vm *VM) StackSize() int {
 	return len(vm.stack)
+}
+
+func (vm *VM) Reset() {
+	vm.stack = vm.stack[:0]
+	vm.locals = vm.locals[:0]
+	vm.callstack = vm.callstack[:0]
+	vm.ipStack = vm.ipStack[:0]
 }
 
 func getReceiver[T any](config *Config, receiver Value) T {

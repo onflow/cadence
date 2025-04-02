@@ -132,7 +132,7 @@ func invokeFunctionValue(
 		locationRange,
 	)
 
-	resultValue := function.invoke(invocation)
+	resultValue := function.Invoke(invocation)
 
 	functionReturnType := function.FunctionType().ReturnTypeAnnotation.Type
 

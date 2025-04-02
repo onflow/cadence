@@ -497,7 +497,7 @@ func InvokeExternally(
 		locationRange,
 	)
 
-	return functionValue.invoke(invocation), nil
+	return functionValue.Invoke(invocation), nil
 }
 
 // Invoke invokes a global function with the given arguments
@@ -519,7 +519,7 @@ func InvokeFunction(errorHandler ErrorHandler, function FunctionValue, invocatio
 		err = internalErr
 	})
 
-	value = function.invoke(invocation)
+	value = function.Invoke(invocation)
 	return
 }
 
@@ -1525,7 +1525,7 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 				if initializerFunction != nil {
 					// NOTE: arguments are already properly boxed by invocation expression
 
-					_ = initializerFunction.invoke(invocation)
+					_ = initializerFunction.Invoke(invocation)
 				}
 				return value
 			},
@@ -2620,7 +2620,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 					// NOTE: It is important to actually return the value returned
 					//   from the inner function, otherwise it is lost
 
-					returnValue := inner.invoke(invocation)
+					returnValue := inner.Invoke(invocation)
 
 					// Restore the resources which were temporarily invalidated
 					// before execution of the inner function
@@ -4223,96 +4223,130 @@ func newStorageIterationFunction(
 		functionType,
 		func(_ *SimpleCompositeValue, invocation Invocation) Value {
 			invocationContext := invocation.InvocationContext
-
 			locationRange := invocation.LocationRange
+			arguments := invocation.Arguments
 
-			fn, ok := invocation.Arguments[0].(FunctionValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			fnType := fn.FunctionType()
-			parameterTypes := fnType.ParameterTypes()
-			returnType := fnType.ReturnTypeAnnotation.Type
-
-			storage := invocationContext.Storage()
-			storageMap := storage.GetDomainStorageMap(invocationContext, address, domain.StorageDomain(), false)
-			if storageMap == nil {
-				// if nothing is stored, no iteration is required
-				return Void
-			}
-			storageIterator := storageMap.Iterator(invocationContext)
-
-			invocationArgumentTypes := []sema.Type{pathType, sema.MetaType}
-
-			inIteration := invocationContext.InStorageIteration()
-			invocationContext.SetInStorageIteration(true)
-			defer func() {
-				invocationContext.SetInStorageIteration(inIteration)
-			}()
-
-			for key, value := storageIterator.Next(); key != nil && value != nil; key, value = storageIterator.Next() {
-
-				staticType := value.StaticType(invocationContext)
-
-				// Perform a forced value de-referencing to see if the associated type is not broken.
-				// If broken, skip this value from the iteration.
-				valueError := checkValue(
-					invocationContext,
-					value,
-					staticType,
-					invocation.LocationRange,
-				)
-
-				if valueError != nil {
-					continue
-				}
-
-				// TODO: unfortunately, the iterator only returns an atree.Value, not a StorageMapKey
-				identifier := string(key.(StringAtreeValue))
-				pathValue := NewPathValue(invocationContext, domain, identifier)
-				runtimeType := NewTypeValue(invocationContext, staticType)
-
-				result := invokeFunctionValue(
-					invocationContext,
-					fn,
-					[]Value{pathValue, runtimeType},
-					nil,
-					invocationArgumentTypes,
-					parameterTypes,
-					returnType,
-					nil,
-					locationRange,
-				)
-
-				shouldContinue, ok := result.(BoolValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				if !shouldContinue {
-					break
-				}
-
-				// It is not safe to check this at the beginning of the loop
-				// (i.e. on the next invocation of the callback),
-				// because if the mutation performed in the callback reorganized storage
-				// such that the iteration pointer is now at the end,
-				// we will not invoke the callback again but will still silently skip elements of storage.
-				//
-				// In order to be safe, we perform this check here to effectively enforce
-				// that users return `false` from their callback in all cases where storage is mutated.
-				if invocationContext.StorageMutatedDuringIteration() {
-					panic(StorageMutatedDuringIterationError{
-						LocationRange: locationRange,
-					})
-				}
-
-			}
-
-			return Void
+			return AccountStorageIterate(
+				invocationContext,
+				arguments,
+				address,
+				domain,
+				pathType,
+				locationRange,
+			)
 		},
 	)
+}
+
+func AccountStorageIterate(
+	invocationContext InvocationContext,
+	arguments []Value,
+	address common.Address,
+	domain common.PathDomain,
+	pathType sema.Type,
+	locationRange LocationRange,
+) Value {
+	fn, ok := arguments[0].(FunctionValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	storage := invocationContext.Storage()
+	storageMap := storage.GetDomainStorageMap(invocationContext, address, domain.StorageDomain(), false)
+	if storageMap == nil {
+		// if nothing is stored, no iteration is required
+		return Void
+	}
+	storageIterator := storageMap.Iterator(invocationContext)
+
+	inIteration := invocationContext.InStorageIteration()
+	invocationContext.SetInStorageIteration(true)
+	defer func() {
+		invocationContext.SetInStorageIteration(inIteration)
+	}()
+
+	for key, value := storageIterator.Next(); key != nil && value != nil; key, value = storageIterator.Next() {
+
+		staticType := value.StaticType(invocationContext)
+
+		// Perform a forced value de-referencing to see if the associated type is not broken.
+		// If broken, skip this value from the iteration.
+		valueError := checkValue(
+			invocationContext,
+			value,
+			staticType,
+			locationRange,
+		)
+
+		if valueError != nil {
+			continue
+		}
+
+		// TODO: unfortunately, the iterator only returns an atree.Value, not a StorageMapKey
+		identifier := string(key.(StringAtreeValue))
+		pathValue := NewPathValue(invocationContext, domain, identifier)
+		runtimeType := NewTypeValue(invocationContext, staticType)
+
+		arguments := []Value{pathValue, runtimeType}
+		invocationArgumentTypes := []sema.Type{pathType, sema.MetaType}
+
+		result := invocationContext.InvokeFunction(
+			fn,
+			arguments,
+			invocationArgumentTypes,
+			locationRange,
+		)
+
+		shouldContinue, ok := result.(BoolValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		if !shouldContinue {
+			break
+		}
+
+		// It is not safe to check this at the beginning of the loop
+		// (i.e. on the next invocation of the callback),
+		// because if the mutation performed in the callback reorganized storage
+		// such that the iteration pointer is now at the end,
+		// we will not invoke the callback again but will still silently skip elements of storage.
+		//
+		// In order to be safe, we perform this check here to effectively enforce
+		// that users return `false` from their callback in all cases where storage is mutated.
+		if invocationContext.StorageMutatedDuringIteration() {
+			panic(StorageMutatedDuringIterationError{
+				LocationRange: locationRange,
+			})
+		}
+
+	}
+
+	return Void
+}
+
+func (interpreter *Interpreter) InvokeFunction(
+	fn FunctionValue,
+	arguments []Value,
+	invocationArgumentTypes []sema.Type,
+	locationRange LocationRange,
+) Value {
+	fnType := fn.FunctionType()
+	parameterTypes := fnType.ParameterTypes()
+	returnType := fnType.ReturnTypeAnnotation.Type
+
+	result := invokeFunctionValue(
+		interpreter,
+		fn,
+		arguments,
+		nil,
+		invocationArgumentTypes,
+		parameterTypes,
+		returnType,
+		nil,
+		locationRange,
+	)
+	return result
 }
 
 func checkValue(
@@ -4397,7 +4431,7 @@ func authAccountStorageSaveFunction(
 			arguments := invocation.Arguments
 			locationRange := invocation.LocationRange
 
-			return StorageSave(
+			return AccountStorageSave(
 				interpreter,
 				arguments,
 				addressValue,
@@ -4407,7 +4441,7 @@ func authAccountStorageSaveFunction(
 	)
 }
 
-func StorageSave(
+func AccountStorageSave(
 	context InvocationContext,
 	arguments []Value,
 	addressValue AddressValue,
@@ -4476,31 +4510,44 @@ func authAccountStorageTypeFunction(
 		sema.Account_StorageTypeTypeFunctionType,
 		func(_ *SimpleCompositeValue, invocation Invocation) Value {
 			interpreter := invocation.InvocationContext
+			arguments := invocation.Arguments
 
-			path, ok := invocation.Arguments[0].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			domain := path.Domain.StorageDomain()
-			identifier := path.Identifier
-
-			storageMapKey := StringStorageMapKey(identifier)
-
-			value := interpreter.ReadStored(address, domain, storageMapKey)
-
-			if value == nil {
-				return Nil
-			}
-
-			return NewSomeValueNonCopying(
+			return AccountStorageType(
 				interpreter,
-				NewTypeValue(
-					interpreter,
-					value.StaticType(interpreter),
-				),
+				arguments,
+				address,
 			)
 		},
+	)
+}
+
+func AccountStorageType(
+	interpreter InvocationContext,
+	arguments []Value,
+	address common.Address,
+) Value {
+	path, ok := arguments[0].(PathValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	domain := path.Domain.StorageDomain()
+	identifier := path.Identifier
+
+	storageMapKey := StringStorageMapKey(identifier)
+
+	value := interpreter.ReadStored(address, domain, storageMapKey)
+
+	if value == nil {
+		return Nil
+	}
+
+	return NewSomeValueNonCopying(
+		interpreter,
+		NewTypeValue(
+			interpreter,
+			value.StaticType(interpreter),
+		),
 	)
 }
 
@@ -4536,75 +4583,93 @@ func authAccountReadFunction(
 		// same as sema.Account_StorageTypeCopyFunctionType
 		sema.Account_StorageTypeLoadFunctionType,
 		func(_ *SimpleCompositeValue, invocation Invocation) Value {
-			interpreter := invocation.InvocationContext
-
-			path, ok := invocation.Arguments[0].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			domain := path.Domain.StorageDomain()
-			identifier := path.Identifier
-
-			storageMapKey := StringStorageMapKey(identifier)
-
-			value := interpreter.ReadStored(address, domain, storageMapKey)
-
-			if value == nil {
-				return Nil
-			}
-
-			// If there is value stored for the given path,
-			// check that it satisfies the type given as the type argument.
+			invocationContext := invocation.InvocationContext
+			arguments := invocation.Arguments
+			locationRange := invocation.LocationRange
 
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
 			if typeParameterPair == nil {
 				panic(errors.NewUnreachableError())
 			}
 
-			ty := typeParameterPair.Value
+			typeParameter := typeParameterPair.Value
 
-			valueStaticType := value.StaticType(interpreter)
-
-			if !IsSubTypeOfSemaType(interpreter, valueStaticType, ty) {
-				valueSemaType := MustConvertStaticToSemaType(valueStaticType, interpreter)
-
-				panic(ForceCastTypeMismatchError{
-					ExpectedType:  ty,
-					ActualType:    valueSemaType,
-					LocationRange: invocation.LocationRange,
-				})
-			}
-
-			locationRange := invocation.LocationRange
-
-			// We could also pass remove=true and the storable stored in storage,
-			// but passing remove=false here and writing nil below has the same effect
-			// TODO: potentially refactor and get storable in storage, pass it and remove=true
-			transferredValue := value.Transfer(
-				interpreter,
+			return AccountStorageRead(
+				invocationContext,
+				arguments,
+				typeParameter,
+				address,
+				clear,
 				locationRange,
-				atree.Address{},
-				false,
-				nil,
-				nil,
-				false, // value is an element in storage map because it is from "ReadStored".
 			)
-
-			// Remove the value from storage,
-			// but only if the type check succeeded.
-			if clear {
-				interpreter.WriteStored(
-					address,
-					domain,
-					storageMapKey,
-					nil,
-				)
-			}
-
-			return NewSomeValueNonCopying(invocation.InvocationContext, transferredValue)
 		},
 	)
+}
+
+func AccountStorageRead(
+	invocationContext InvocationContext,
+	arguments []Value,
+	typeParameter sema.Type,
+	address common.Address,
+	clear bool,
+	locationRange LocationRange,
+) Value {
+	path, ok := arguments[0].(PathValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	domain := path.Domain.StorageDomain()
+	identifier := path.Identifier
+
+	storageMapKey := StringStorageMapKey(identifier)
+
+	value := invocationContext.ReadStored(address, domain, storageMapKey)
+
+	if value == nil {
+		return Nil
+	}
+
+	// If there is value stored for the given path,
+	// check that it satisfies the type given as the type argument.
+
+	valueStaticType := value.StaticType(invocationContext)
+
+	if !IsSubTypeOfSemaType(invocationContext, valueStaticType, typeParameter) {
+		valueSemaType := MustConvertStaticToSemaType(valueStaticType, invocationContext)
+
+		panic(ForceCastTypeMismatchError{
+			ExpectedType:  typeParameter,
+			ActualType:    valueSemaType,
+			LocationRange: locationRange,
+		})
+	}
+
+	// We could also pass remove=true and the storable stored in storage,
+	// but passing remove=false here and writing nil below has the same effect
+	// TODO: potentially refactor and get storable in storage, pass it and remove=true
+	transferredValue := value.Transfer(
+		invocationContext,
+		locationRange,
+		atree.Address{},
+		false,
+		nil,
+		nil,
+		false, // value is an element in storage map because it is from "ReadStored".
+	)
+
+	// Remove the value from storage,
+	// but only if the type check succeeded.
+	if clear {
+		invocationContext.WriteStored(
+			address,
+			domain,
+			storageMapKey,
+			nil,
+		)
+	}
+
+	return NewSomeValueNonCopying(invocationContext, transferredValue)
 }
 
 func authAccountStorageBorrowFunction(
@@ -4626,7 +4691,7 @@ func authAccountStorageBorrowFunction(
 			typeParameterPair := invocation.TypeParameterTypes.Oldest().Value
 			locationRange := invocation.LocationRange
 
-			return StorageBorrow(
+			return AccountStorageBorrow(
 				invocationContext,
 				arguments,
 				typeParameterPair,
@@ -4637,7 +4702,7 @@ func authAccountStorageBorrowFunction(
 	)
 }
 
-func StorageBorrow(
+func AccountStorageBorrow(
 	invocationContext InvocationContext,
 	arguments []Value,
 	typeParameter sema.Type,
@@ -4691,39 +4756,53 @@ func authAccountStorageCheckFunction(
 		storageValue,
 		sema.Account_StorageTypeCheckFunctionType,
 		func(_ *SimpleCompositeValue, invocation Invocation) Value {
-			interpreter := invocation.InvocationContext
-
-			path, ok := invocation.Arguments[0].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			domain := path.Domain.StorageDomain()
-			identifier := path.Identifier
-
-			storageMapKey := StringStorageMapKey(identifier)
-
-			value := interpreter.ReadStored(address, domain, storageMapKey)
-
-			if value == nil {
-				return FalseValue
-			}
-
-			// If there is value stored for the given path,
-			// check that it satisfies the type given as the type argument.
+			invocationContext := invocation.InvocationContext
+			arguments := invocation.Arguments
 
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
 			if typeParameterPair == nil {
 				panic(errors.NewUnreachableError())
 			}
+			typeParameter := typeParameterPair.Value
 
-			ty := typeParameterPair.Value
-
-			valueStaticType := value.StaticType(interpreter)
-
-			return BoolValue(IsSubTypeOfSemaType(interpreter, valueStaticType, ty))
+			return AccountStorageCheck(
+				invocationContext,
+				address,
+				arguments,
+				typeParameter,
+			)
 		},
 	)
+}
+
+func AccountStorageCheck(
+	invocationContext InvocationContext,
+	address common.Address,
+	arguments []Value,
+	typeParameter sema.Type,
+) Value {
+	path, ok := arguments[0].(PathValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	domain := path.Domain.StorageDomain()
+	identifier := path.Identifier
+
+	storageMapKey := StringStorageMapKey(identifier)
+
+	value := invocationContext.ReadStored(address, domain, storageMapKey)
+
+	if value == nil {
+		return FalseValue
+	}
+
+	// If there is value stored for the given path,
+	// check that it satisfies the type given as the type argument.
+
+	valueStaticType := value.StaticType(invocationContext)
+
+	return BoolValue(IsSubTypeOfSemaType(invocationContext, valueStaticType, typeParameter))
 }
 
 func (interpreter *Interpreter) GetEntitlementType(typeID common.TypeID) (*sema.EntitlementType, error) {

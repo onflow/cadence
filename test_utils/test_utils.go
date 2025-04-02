@@ -55,8 +55,21 @@ type VMInvokable struct {
 
 var _ Invokable = &VMInvokable{}
 
+func NewVMInvokable(vmInstance *vm.VM, vmConfig *vm.Config) *VMInvokable {
+	return &VMInvokable{
+		vmInstance: vmInstance,
+		Config:     vmConfig,
+	}
+}
+
 func (v *VMInvokable) Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error) {
-	return v.vmInstance.Invoke(functionName, arguments...)
+	value, err = v.vmInstance.Invoke(functionName, arguments...)
+
+	// Reset the VM after a function invocation,
+	// so the same vm can be re-used for subsequent invocation.
+	v.vmInstance.Reset()
+
+	return
 }
 
 func ParseCheckAndPrepare(t testing.TB, code string, compile bool) Invokable {

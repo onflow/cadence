@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
 )
 
 type FunctionValue struct {
@@ -33,6 +34,7 @@ type FunctionValue struct {
 }
 
 var _ Value = FunctionValue{}
+var _ interpreter.FunctionValue = FunctionValue{}
 
 func (FunctionValue) IsValue() {}
 
@@ -111,6 +113,21 @@ func (v FunctionValue) IsImportable(interpreter *interpreter.Interpreter, locati
 	panic(errors.NewUnreachableError())
 }
 
+func (v FunctionValue) IsFunctionValue() {
+	//TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (v FunctionValue) FunctionType() *sema.FunctionType {
+	//TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (v FunctionValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
+	//TODO
+	panic(errors.NewUnreachableError())
+}
+
 type NativeFunction func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value
 
 type NativeFunctionValue struct {
@@ -120,6 +137,7 @@ type NativeFunctionValue struct {
 }
 
 var _ Value = NativeFunctionValue{}
+var _ interpreter.FunctionValue = NativeFunctionValue{}
 
 func (NativeFunctionValue) IsValue() {}
 
@@ -194,6 +212,21 @@ func (v NativeFunctionValue) Clone(interpreter *interpreter.Interpreter) interpr
 }
 
 func (v NativeFunctionValue) IsImportable(interpreter *interpreter.Interpreter, locationRange interpreter.LocationRange) bool {
+	//TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (v NativeFunctionValue) IsFunctionValue() {
+	//TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (v NativeFunctionValue) FunctionType() *sema.FunctionType {
+	//TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (v NativeFunctionValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
 	//TODO
 	panic(errors.NewUnreachableError())
 }
