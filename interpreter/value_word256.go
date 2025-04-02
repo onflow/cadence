@@ -74,7 +74,7 @@ var _ ComparableValue = Word256Value{}
 var _ HashableValue = Word256Value{}
 var _ MemberAccessibleValue = Word256Value{}
 
-func (Word256Value) isValue() {}
+func (Word256Value) IsValue() {}
 
 func (v Word256Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitWord256Value(interpreter, v)

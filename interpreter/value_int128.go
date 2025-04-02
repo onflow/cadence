@@ -105,7 +105,7 @@ var _ ComparableValue = Int128Value{}
 var _ HashableValue = Int128Value{}
 var _ MemberAccessibleValue = Int128Value{}
 
-func (Int128Value) isValue() {}
+func (Int128Value) IsValue() {}
 
 func (v Int128Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitInt128Value(interpreter, v)

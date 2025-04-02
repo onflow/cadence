@@ -37,7 +37,7 @@ var _ atree.Storable = BoolValue(false)
 const TrueValue = BoolValue(true)
 const FalseValue = BoolValue(false)
 
-func (BoolValue) isValue() {}
+func (BoolValue) IsValue() {}
 
 func (v BoolValue) String() string {
 	return format.Bool(bool(v))

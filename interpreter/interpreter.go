@@ -3328,11 +3328,9 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.UInt128TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UInt128Type),
-		convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
-			return ConvertUInt128(gauge, value, locationRange)
-		},
-		min: NewUnmeteredUInt128ValueFromUint64(0),
-		max: NewUnmeteredUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
+		convert:      ConvertUInt128,
+		min:          NewUnmeteredUInt128ValueFromUint64(0),
+		max:          NewUnmeteredUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
 	},
 	{
 		name:         sema.UInt256TypeName,
@@ -3382,20 +3380,16 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Word128TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Word128Type),
-		convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
-			return ConvertWord128(gauge, value, locationRange)
-		},
-		min: NewUnmeteredWord128ValueFromUint64(0),
-		max: NewUnmeteredWord128ValueFromBigInt(sema.Word128TypeMaxIntBig),
+		convert:      ConvertWord128,
+		min:          NewUnmeteredWord128ValueFromUint64(0),
+		max:          NewUnmeteredWord128ValueFromBigInt(sema.Word128TypeMaxIntBig),
 	},
 	{
 		name:         sema.Word256TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Word256Type),
-		convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
-			return ConvertWord256(gauge, value, locationRange)
-		},
-		min: NewUnmeteredWord256ValueFromUint64(0),
-		max: NewUnmeteredWord256ValueFromBigInt(sema.Word256TypeMaxIntBig),
+		convert:      ConvertWord256,
+		min:          NewUnmeteredWord256ValueFromUint64(0),
+		max:          NewUnmeteredWord256ValueFromBigInt(sema.Word256TypeMaxIntBig),
 	},
 	{
 		name:         sema.Fix64TypeName,
@@ -5912,7 +5906,7 @@ func (interpreter *Interpreter) CheckInvalidatedResourceOrResourceReference(valu
 	checkInvalidatedResourceOrResourceReference(value, locationRange, interpreter)
 }
 
-func (interpreter *Interpreter) IsRecovered(location common.Location) bool {
+func (interpreter *Interpreter) IsTypeInfoRecovered(location common.Location) bool {
 	elaboration := interpreter.getElaboration(location)
 	if elaboration == nil {
 		return false
