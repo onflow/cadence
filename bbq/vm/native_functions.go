@@ -22,6 +22,7 @@ import (
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
@@ -50,6 +51,12 @@ func NativeFunctions() map[string]Value {
 
 func RegisterFunction(functionName string, functionValue NativeFunctionValue) {
 	functionValue.Name = functionName
+
+	_, ok := nativeFunctions[functionName]
+	if ok {
+		panic(errors.NewUnexpectedError("function already exists: %s", functionName))
+	}
+
 	nativeFunctions[functionName] = functionValue
 }
 

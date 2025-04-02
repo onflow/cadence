@@ -2358,23 +2358,39 @@ func newAccountStorageCapabilitiesGetControllerFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				capabilityID := uint64(capabilityIDValue)
-
-				referenceValue := getStorageCapabilityControllerReference(
+				return AccountStorageCapabilitiesGetController(
 					invocationContext,
-					locationRange,
-					address,
-					capabilityID,
 					handler,
+					capabilityIDValue,
+					address,
+					locationRange,
 				)
-				if referenceValue == nil {
-					return interpreter.Nil
-				}
-
-				return interpreter.NewSomeValueNonCopying(invocationContext, referenceValue)
 			},
 		)
 	}
+}
+
+func AccountStorageCapabilitiesGetController(
+	invocationContext interpreter.InvocationContext,
+	handler CapabilityControllerHandler,
+	capabilityIDValue interpreter.UInt64Value,
+	address common.Address,
+	locationRange interpreter.LocationRange,
+) interpreter.Value {
+	capabilityID := uint64(capabilityIDValue)
+
+	referenceValue := getStorageCapabilityControllerReference(
+		invocationContext,
+		locationRange,
+		address,
+		capabilityID,
+		handler,
+	)
+	if referenceValue == nil {
+		return interpreter.Nil
+	}
+
+	return interpreter.NewSomeValueNonCopying(invocationContext, referenceValue)
 }
 
 var storageCapabilityControllerReferencesArrayStaticType = &interpreter.VariableSizedStaticType{
@@ -2403,50 +2419,71 @@ func newAccountStorageCapabilitiesGetControllersFunction(
 				// Get path argument
 
 				targetPathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
-				if !ok || targetPathValue.Domain != common.PathDomainStorage {
+				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
-				// Get capability controllers iterator
-
-				nextCapabilityID, count :=
-					getStorageCapabilityControllerIDsIterator(invocationContext, address, targetPathValue)
-
-				var capabilityControllerIndex uint64 = 0
-
-				return interpreter.NewArrayValueWithIterator(
+				return AccountStorageCapabilitiesGetControllers(
 					invocationContext,
-					storageCapabilityControllerReferencesArrayStaticType,
-					common.Address{},
-					count,
-					func() interpreter.Value {
-						if capabilityControllerIndex >= count {
-							return nil
-						}
-						capabilityControllerIndex++
-
-						capabilityID, ok := nextCapabilityID()
-						if !ok {
-							return nil
-						}
-
-						referenceValue := getStorageCapabilityControllerReference(
-							invocationContext,
-							locationRange,
-							address,
-							capabilityID,
-							handler,
-						)
-						if referenceValue == nil {
-							panic(errors.NewUnreachableError())
-						}
-
-						return referenceValue
-					},
+					handler,
+					targetPathValue,
+					address,
+					locationRange,
 				)
 			},
 		)
 	}
+}
+
+func AccountStorageCapabilitiesGetControllers(
+	invocationContext interpreter.InvocationContext,
+	handler CapabilityControllerHandler,
+	targetPathValue interpreter.PathValue,
+	address common.Address,
+	locationRange interpreter.LocationRange,
+) interpreter.Value {
+
+	if targetPathValue.Domain != common.PathDomainStorage {
+		panic(errors.NewUnreachableError())
+	}
+
+	// Get capability controllers iterator
+
+	nextCapabilityID, count :=
+		getStorageCapabilityControllerIDsIterator(invocationContext, address, targetPathValue)
+
+	var capabilityControllerIndex uint64 = 0
+
+	return interpreter.NewArrayValueWithIterator(
+		invocationContext,
+		storageCapabilityControllerReferencesArrayStaticType,
+		common.Address{},
+		count,
+		func() interpreter.Value {
+			if capabilityControllerIndex >= count {
+				return nil
+			}
+			capabilityControllerIndex++
+
+			capabilityID, ok := nextCapabilityID()
+			if !ok {
+				return nil
+			}
+
+			referenceValue := getStorageCapabilityControllerReference(
+				invocationContext,
+				locationRange,
+				address,
+				capabilityID,
+				handler,
+			)
+			if referenceValue == nil {
+				panic(errors.NewUnreachableError())
+			}
+
+			return referenceValue
+		},
+	)
 }
 
 // `(&StorageCapabilityController)` in
@@ -2476,104 +2513,124 @@ func newAccountStorageCapabilitiesForEachControllerFunction(
 				locationRange := invocation.LocationRange
 
 				// Get path argument
-
 				targetPathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
-				if !ok || targetPathValue.Domain != common.PathDomainStorage {
+				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
 				// Get function argument
-
 				functionValue, ok := invocation.Arguments[1].(interpreter.FunctionValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
-				functionValueType := functionValue.FunctionType()
-				parameterTypes := functionValueType.ParameterTypes()
-				returnType := functionValueType.ReturnTypeAnnotation.Type
-
-				// Prevent mutations (record/unrecord) to storage capability controllers
-				// for this address/path during iteration
-
-				addressPath := interpreter.AddressPath{
-					Address: address,
-					Path:    targetPathValue,
-				}
-
-				iterations := invocationContext.GetCapabilityControllerIterations()
-				iterations[addressPath]++
-				defer func() {
-					iterations[addressPath]--
-					if iterations[addressPath] <= 0 {
-						delete(iterations, addressPath)
-					}
-				}()
-
-				// Get capability controllers iterator
-
-				nextCapabilityID, _ :=
-					getStorageCapabilityControllerIDsIterator(invocationContext, address, targetPathValue)
-
-				for {
-					capabilityID, ok := nextCapabilityID()
-					if !ok {
-						break
-					}
-
-					referenceValue := getStorageCapabilityControllerReference(
-						invocationContext,
-						locationRange,
-						address,
-						capabilityID,
-						handler,
-					)
-					if referenceValue == nil {
-						panic(errors.NewUnreachableError())
-					}
-
-					res, err := interpreter.InvokeFunctionValue(
-						invocationContext,
-						functionValue,
-						[]interpreter.Value{referenceValue},
-						accountStorageCapabilitiesForEachControllerCallbackTypeParams,
-						parameterTypes,
-						returnType,
-						locationRange,
-					)
-					if err != nil {
-						// interpreter panicked while invoking the inner function value
-						panic(err)
-					}
-
-					shouldContinue, ok := res.(interpreter.BoolValue)
-					if !ok {
-						panic(errors.NewUnreachableError())
-					}
-
-					if !shouldContinue {
-						break
-					}
-
-					// It is not safe to check this at the beginning of the loop
-					// (i.e. on the next invocation of the callback),
-					// because if the mutation performed in the callback reorganized storage
-					// such that the iteration pointer is now at the end,
-					// we will not invoke the callback again but will still silently skip elements of storage.
-					//
-					// In order to be safe, we perform this check here to effectively enforce
-					// that users return `false` from their callback in all cases where storage is mutated.
-					if invocationContext.MutationDuringCapabilityControllerIteration() {
-						panic(CapabilityControllersMutatedDuringIterationError{
-							LocationRange: locationRange,
-						})
-					}
-				}
-
-				return interpreter.Void
+				return AccountStorageCapabilitiesForeachController(
+					invocationContext,
+					handler,
+					functionValue,
+					address,
+					targetPathValue,
+					locationRange,
+				)
 			},
 		)
 	}
+}
+
+func AccountStorageCapabilitiesForeachController(
+	invocationContext interpreter.InvocationContext,
+	handler CapabilityControllerHandler,
+	functionValue interpreter.FunctionValue,
+	address common.Address,
+	targetPathValue interpreter.PathValue,
+	locationRange interpreter.LocationRange,
+) interpreter.Value {
+	if targetPathValue.Domain != common.PathDomainStorage {
+		panic(errors.NewUnreachableError())
+	}
+
+	functionValueType := functionValue.FunctionType()
+	parameterTypes := functionValueType.ParameterTypes()
+	returnType := functionValueType.ReturnTypeAnnotation.Type
+
+	// Prevent mutations (record/unrecord) to storage capability controllers
+	// for this address/path during iteration
+
+	addressPath := interpreter.AddressPath{
+		Address: address,
+		Path:    targetPathValue,
+	}
+
+	iterations := invocationContext.GetCapabilityControllerIterations()
+	iterations[addressPath]++
+	defer func() {
+		iterations[addressPath]--
+		if iterations[addressPath] <= 0 {
+			delete(iterations, addressPath)
+		}
+	}()
+
+	// Get capability controllers iterator
+
+	nextCapabilityID, _ :=
+		getStorageCapabilityControllerIDsIterator(invocationContext, address, targetPathValue)
+
+	for {
+		capabilityID, ok := nextCapabilityID()
+		if !ok {
+			break
+		}
+
+		referenceValue := getStorageCapabilityControllerReference(
+			invocationContext,
+			locationRange,
+			address,
+			capabilityID,
+			handler,
+		)
+		if referenceValue == nil {
+			panic(errors.NewUnreachableError())
+		}
+
+		res, err := interpreter.InvokeFunctionValue(
+			invocationContext,
+			functionValue,
+			[]interpreter.Value{referenceValue},
+			accountStorageCapabilitiesForEachControllerCallbackTypeParams,
+			parameterTypes,
+			returnType,
+			locationRange,
+		)
+		if err != nil {
+			// interpreter panicked while invoking the inner function value
+			panic(err)
+		}
+
+		shouldContinue, ok := res.(interpreter.BoolValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		if !shouldContinue {
+			break
+		}
+
+		// It is not safe to check this at the beginning of the loop
+		// (i.e. on the next invocation of the callback),
+		// because if the mutation performed in the callback reorganized storage
+		// such that the iteration pointer is now at the end,
+		// we will not invoke the callback again but will still silently skip elements of storage.
+		//
+		// In order to be safe, we perform this check here to effectively enforce
+		// that users return `false` from their callback in all cases where storage is mutated.
+		if invocationContext.MutationDuringCapabilityControllerIteration() {
+			panic(CapabilityControllersMutatedDuringIterationError{
+				LocationRange: locationRange,
+			})
+		}
+	}
+
+	return interpreter.Void
 }
 
 func newAccountStorageCapabilitiesIssueFunction(
@@ -2597,7 +2654,7 @@ func newAccountStorageCapabilitiesIssueFunction(
 				typeParameterPair := invocation.TypeParameterTypes.Oldest()
 				typeParameter := typeParameterPair.Value
 
-				return IssueCapability(
+				return AccountStorageCapabilitiesIssue(
 					arguments,
 					invocationContext,
 					locationRange,
@@ -2610,7 +2667,7 @@ func newAccountStorageCapabilitiesIssueFunction(
 	}
 }
 
-func IssueCapability(
+func AccountStorageCapabilitiesIssue(
 	arguments []interpreter.Value,
 	invocationContext interpreter.InvocationContext,
 	locationRange interpreter.LocationRange,
@@ -2648,16 +2705,16 @@ func newAccountStorageCapabilitiesIssueWithTypeFunction(
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			storageCapabilities,
-			sema.Account_StorageCapabilitiesTypeIssueFunctionType,
+			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
-				inter := invocation.InvocationContext
+				invocationContext := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				// Get path argument
 
 				targetPathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
-				if !ok || targetPathValue.Domain != common.PathDomainStorage {
+				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
@@ -2668,24 +2725,46 @@ func newAccountStorageCapabilitiesIssueWithTypeFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				ty, err := interpreter.ConvertStaticToSemaType(inter, typeValue.Type)
-				if err != nil {
-					panic(errors.NewUnexpectedErrorFromCause(err))
-				}
-
-				// Issue capability controller and return capability
-
-				return checkAndIssueStorageCapabilityControllerWithType(
-					inter,
-					locationRange,
+				return AccountStorageCapabilitiesIssueWithType(
+					invocationContext,
 					handler,
+					typeValue,
 					address,
 					targetPathValue,
-					ty,
+					locationRange,
 				)
 			},
 		)
 	}
+}
+
+func AccountStorageCapabilitiesIssueWithType(
+	invocationContext interpreter.InvocationContext,
+	handler CapabilityControllerIssueHandler,
+	typeValue interpreter.TypeValue,
+	address common.Address,
+	targetPathValue interpreter.PathValue,
+	locationRange interpreter.LocationRange,
+) interpreter.Value {
+	if targetPathValue.Domain != common.PathDomainStorage {
+		panic(errors.NewUnreachableError())
+	}
+
+	ty, err := interpreter.ConvertStaticToSemaType(invocationContext, typeValue.Type)
+	if err != nil {
+		panic(errors.NewUnexpectedErrorFromCause(err))
+	}
+
+	// Issue capability controller and return capability
+
+	return checkAndIssueStorageCapabilityControllerWithType(
+		invocationContext,
+		locationRange,
+		handler,
+		address,
+		targetPathValue,
+		ty,
+	)
 }
 
 func checkAndIssueStorageCapabilityControllerWithType(
@@ -3497,10 +3576,23 @@ func newAccountCapabilitiesPublishFunction(
 				locationRange := invocation.LocationRange
 				arguments := invocation.Arguments
 
-				return PublishCapability(
+				// Get capability argument
+				capabilityValue, ok := arguments[0].(interpreter.CapabilityValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				// Get path argument
+				pathValue, ok := invocation.Arguments[1].(interpreter.PathValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return AccountCapabilitiesPublish(
 					invocationContext,
 					handler,
-					arguments,
+					capabilityValue,
+					pathValue,
 					accountAddressValue,
 					locationRange,
 				)
@@ -3509,21 +3601,20 @@ func newAccountCapabilitiesPublishFunction(
 	}
 }
 
-func PublishCapability(
+func AccountCapabilitiesPublish(
 	invocationContext interpreter.InvocationContext,
 	handler CapabilityControllerHandler,
-	arguments []interpreter.Value,
+	capabilityValue interpreter.CapabilityValue,
+	pathValue interpreter.PathValue,
 	accountAddressValue interpreter.AddressValue,
 	locationRange interpreter.LocationRange,
 ) interpreter.Value {
 
-	accountAddress := accountAddressValue.ToAddress()
-
-	// Get capability argument
-	capabilityValue, ok := arguments[0].(interpreter.CapabilityValue)
-	if !ok {
+	if pathValue.Domain != common.PathDomainPublic {
 		panic(errors.NewUnreachableError())
 	}
+
+	accountAddress := accountAddressValue.ToAddress()
 
 	capabilityAddressValue := capabilityValue.Address()
 	if capabilityAddressValue != accountAddressValue {
@@ -3532,13 +3623,6 @@ func PublishCapability(
 			CapabilityAddress: capabilityAddressValue,
 			AccountAddress:    accountAddressValue,
 		})
-	}
-
-	// Get path argument
-
-	pathValue, ok := arguments[1].(interpreter.PathValue)
-	if !ok || pathValue.Domain != common.PathDomainPublic {
-		panic(errors.NewUnreachableError())
 	}
 
 	domain := pathValue.Domain.StorageDomain()
@@ -3641,7 +3725,6 @@ func newAccountCapabilitiesUnpublishFunction(
 ) interpreter.BoundFunctionGenerator {
 
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-		address := addressValue.ToAddress()
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountCapabilities,
@@ -3652,78 +3735,100 @@ func newAccountCapabilitiesUnpublishFunction(
 				locationRange := invocation.LocationRange
 
 				// Get path argument
-
 				pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
-				if !ok || pathValue.Domain != common.PathDomainPublic {
-					panic(errors.NewUnreachableError())
-				}
-
-				domain := pathValue.Domain.StorageDomain()
-				identifier := pathValue.Identifier
-
-				// Read/remove capability
-
-				storageMapKey := interpreter.StringStorageMapKey(identifier)
-
-				readValue := invocationContext.ReadStored(address, domain, storageMapKey)
-				if readValue == nil {
-					return interpreter.Nil
-				}
-
-				var capabilityValue interpreter.CapabilityValue
-				switch readValue := readValue.(type) {
-				case interpreter.CapabilityValue:
-					capabilityValue = readValue
-
-				case interpreter.PathLinkValue: //nolint:staticcheck
-					// If the stored value is a path link,
-					// it failed to be migrated during the Cadence 1.0 migration.
-					// Use an invalid capability value instead
-
-					capabilityValue = interpreter.NewInvalidCapabilityValue(
-						invocationContext,
-						addressValue,
-						readValue.Type,
-					)
-
-				default:
-					panic(errors.NewUnreachableError())
-				}
-
-				capabilityValue, ok = capabilityValue.Transfer(
-					invocationContext,
-					locationRange,
-					atree.Address{},
-					true,
-					nil,
-					nil,
-					false, // capabilityValue is an element of storage map.
-				).(interpreter.CapabilityValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
-				invocationContext.WriteStored(
-					address,
-					domain,
-					storageMapKey,
-					nil,
-				)
-
-				handler.EmitEvent(
+				return AccountCapabilitiesUnpublish(
 					invocationContext,
+					handler,
+					pathValue,
+					addressValue,
 					locationRange,
-					CapabilityUnpublishedEventType,
-					[]interpreter.Value{
-						addressValue,
-						pathValue,
-					},
 				)
-
-				return interpreter.NewSomeValueNonCopying(invocationContext, capabilityValue)
 			},
 		)
 	}
+}
+
+func AccountCapabilitiesUnpublish(
+	invocationContext interpreter.InvocationContext,
+	handler CapabilityControllerHandler,
+	pathValue interpreter.PathValue,
+	addressValue interpreter.AddressValue,
+	locationRange interpreter.LocationRange,
+) interpreter.Value {
+
+	if pathValue.Domain != common.PathDomainPublic {
+		panic(errors.NewUnreachableError())
+	}
+
+	domain := pathValue.Domain.StorageDomain()
+	identifier := pathValue.Identifier
+
+	// Read/remove capability
+
+	storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+	address := addressValue.ToAddress()
+
+	readValue := invocationContext.ReadStored(address, domain, storageMapKey)
+	if readValue == nil {
+		return interpreter.Nil
+	}
+
+	var capabilityValue interpreter.CapabilityValue
+	switch readValue := readValue.(type) {
+	case interpreter.CapabilityValue:
+		capabilityValue = readValue
+
+	case interpreter.PathLinkValue: //nolint:staticcheck
+		// If the stored value is a path link,
+		// it failed to be migrated during the Cadence 1.0 migration.
+		// Use an invalid capability value instead
+
+		capabilityValue = interpreter.NewInvalidCapabilityValue(
+			invocationContext,
+			addressValue,
+			readValue.Type,
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	capabilityValue, ok := capabilityValue.Transfer(
+		invocationContext,
+		locationRange,
+		atree.Address{},
+		true,
+		nil,
+		nil,
+		false, // capabilityValue is an element of storage map.
+	).(interpreter.CapabilityValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	invocationContext.WriteStored(
+		address,
+		domain,
+		storageMapKey,
+		nil,
+	)
+
+	handler.EmitEvent(
+		invocationContext,
+		locationRange,
+		CapabilityUnpublishedEventType,
+		[]interpreter.Value{
+			addressValue,
+			pathValue,
+		},
+	)
+
+	return interpreter.NewSomeValueNonCopying(invocationContext, capabilityValue)
 }
 
 func canBorrow(
@@ -3922,13 +4027,18 @@ func newAccountCapabilitiesGetFunction(
 
 				invocationContext := invocation.InvocationContext
 				locationRange := invocation.LocationRange
-				arguments := invocation.Arguments
 				typeParameter := invocation.TypeParameterTypes.Oldest().Value
 
-				return GetCapability(
+				// Get path argument
+				pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return AccountCapabilitiesGet(
 					invocationContext,
 					controllerHandler,
-					arguments,
+					pathValue,
 					typeParameter,
 					borrow,
 					addressValue,
@@ -3939,19 +4049,16 @@ func newAccountCapabilitiesGetFunction(
 	}
 }
 
-func GetCapability(
+func AccountCapabilitiesGet(
 	invocationContext interpreter.InvocationContext,
 	controllerHandler CapabilityControllerHandler,
-	arguments []interpreter.Value,
+	pathValue interpreter.PathValue,
 	typeParameter sema.Type,
 	borrow bool,
 	addressValue interpreter.AddressValue,
 	locationRange interpreter.LocationRange,
 ) interpreter.Value {
-	// Get path argument
-
-	pathValue, ok := arguments[0].(interpreter.PathValue)
-	if !ok || pathValue.Domain != common.PathDomainPublic {
+	if pathValue.Domain != common.PathDomainPublic {
 		panic(errors.NewUnreachableError())
 	}
 
@@ -4128,29 +4235,42 @@ func newAccountCapabilitiesExistsFunction(
 			accountCapabilities,
 			sema.Account_CapabilitiesTypeExistsFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-
 				invocationContext := invocation.InvocationContext
-
-				// Get path argument
-
 				pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
-				if !ok || pathValue.Domain != common.PathDomainPublic {
+				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
-				domain := pathValue.Domain.StorageDomain()
-				identifier := pathValue.Identifier
-
-				// Read stored capability, if any
-
-				storageMapKey := interpreter.StringStorageMapKey(identifier)
-
-				return interpreter.BoolValue(
-					interpreter.StoredValueExists(invocationContext, address, domain, storageMapKey),
+				return AccountCapabilitiesExists(
+					invocationContext,
+					pathValue,
+					address,
 				)
 			},
 		)
 	}
+}
+
+func AccountCapabilitiesExists(
+	invocationContext interpreter.InvocationContext,
+	pathValue interpreter.PathValue,
+	address common.Address,
+) interpreter.Value {
+	// Get path argument
+	if pathValue.Domain != common.PathDomainPublic {
+		panic(errors.NewUnreachableError())
+	}
+
+	domain := pathValue.Domain.StorageDomain()
+	identifier := pathValue.Identifier
+
+	// Read stored capability, if any
+
+	storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+	return interpreter.BoolValue(
+		interpreter.StoredValueExists(invocationContext, address, domain, storageMapKey),
+	)
 }
 
 func getAccountCapabilityControllerReference(
