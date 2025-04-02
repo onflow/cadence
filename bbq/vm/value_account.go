@@ -66,14 +66,12 @@ func init() {
 }
 
 func getAddressMetaInfoFromValue(value Value) interpreter.AddressValue {
-	// TODO: How to get the address?
-
 	simpleCompositeValue, ok := value.(*interpreter.SimpleCompositeValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	addressMetaInfo := simpleCompositeValue.Metadata(sema.AccountTypeAddressFieldName)
+	addressMetaInfo := simpleCompositeValue.PrivateField(sema.AccountTypeAddressFieldName)
 	address, ok := addressMetaInfo.(interpreter.AddressValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
