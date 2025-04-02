@@ -139,7 +139,7 @@ func DictionaryElementSize(staticType *DictionaryStaticType) uint {
 }
 
 func newDictionaryValueWithIterator(
-	interpreter *Interpreter,
+	context DictionaryCreationContext,
 	locationRange LocationRange,
 	staticType *DictionaryStaticType,
 	count uint64,
@@ -147,13 +147,11 @@ func newDictionaryValueWithIterator(
 	address common.Address,
 	values func() (Value, Value),
 ) *DictionaryValue {
-	interpreter.ReportComputation(common.ComputationKindCreateDictionaryValue, 1)
+	context.ReportComputation(common.ComputationKindCreateDictionaryValue, 1)
 
 	var v *DictionaryValue
 
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		defer func() {
@@ -166,7 +164,7 @@ func newDictionaryValueWithIterator(
 			typeInfo := v.Type.String()
 			count := v.Count()
 
-			interpreter.ReportDictionaryValueConstructTrace(
+			context.ReportDictionaryValueConstructTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -176,12 +174,12 @@ func newDictionaryValueWithIterator(
 
 	constructor := func() *atree.OrderedMap {
 		orderedMap, err := atree.NewMapFromBatchData(
-			config.Storage,
+			context.Storage(),
 			atree.Address(address),
 			atree.NewDefaultDigesterBuilder(),
 			staticType,
-			newValueComparator(interpreter, locationRange),
-			newHashInputProvider(interpreter, locationRange),
+			newValueComparator(context, locationRange),
+			newHashInputProvider(context, locationRange),
 			seed,
 			func() (atree.Value, atree.Value, error) {
 				key, value := values()
@@ -195,7 +193,7 @@ func newDictionaryValueWithIterator(
 	}
 
 	// values are added to the dictionary after creation, not here
-	v = newDictionaryValueFromConstructor(interpreter, staticType, count, constructor)
+	v = newDictionaryValueFromConstructor(context, staticType, count, constructor)
 
 	return v
 }
@@ -431,9 +429,9 @@ func (v *DictionaryValue) Iterator() DictionaryKeyIterator {
 	}
 }
 
-func (v *DictionaryValue) Walk(interpreter *Interpreter, walkChild func(Value), locationRange LocationRange) {
+func (v *DictionaryValue) Walk(context ValueWalkContext, walkChild func(Value), locationRange LocationRange) {
 	v.Iterate(
-		interpreter,
+		context,
 		locationRange,
 		func(key, value Value) (resume bool) {
 			walkChild(key)
@@ -480,20 +478,18 @@ func (v *DictionaryValue) IsStaleResource(interpreter *Interpreter) bool {
 	return v.dictionary == nil && v.IsResourceKinded(interpreter)
 }
 
-func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
+func (v *DictionaryValue) Destroy(context ResourceDestructionContext, locationRange LocationRange) {
 
-	interpreter.ReportComputation(common.ComputationKindDestroyDictionaryValue, 1)
+	context.ReportComputation(common.ComputationKindDestroyDictionaryValue, 1)
 
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
 		count := v.Count()
 
 		defer func() {
-			interpreter.reportDictionaryValueDestroyTrace(
+			context.ReportDictionaryValueDestroyTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -503,17 +499,17 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 
 	valueID := v.ValueID()
 
-	interpreter.withResourceDestruction(
+	context.WithResourceDestruction(
 		valueID,
 		locationRange,
 		func() {
 			v.Iterate(
-				interpreter,
+				context,
 				locationRange,
 				func(key, value Value) (resume bool) {
 					// Resources cannot be keys at the moment, so should theoretically not be needed
-					maybeDestroy(interpreter, locationRange, key)
-					maybeDestroy(interpreter, locationRange, value)
+					maybeDestroy(context, locationRange, key)
+					maybeDestroy(context, locationRange, value)
 
 					return true
 				},
@@ -523,17 +519,17 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 
 	v.isDestroyed = true
 
-	InvalidateReferencedResources(interpreter, v, locationRange)
+	InvalidateReferencedResources(context, v, locationRange)
 
 	v.dictionary = nil
 }
 
 func (v *DictionaryValue) ForEachKey(
-	interpreter *Interpreter,
+	context InvocationContext,
 	locationRange LocationRange,
 	procedure FunctionValue,
 ) {
-	keyType := v.SemaType(interpreter).KeyType
+	keyType := v.SemaType(context).KeyType
 
 	argumentTypes := []sema.Type{keyType}
 
@@ -544,9 +540,10 @@ func (v *DictionaryValue) ForEachKey(
 	iterate := func() {
 		err := v.dictionary.IterateReadOnlyKeys(
 			func(item atree.Value) (bool, error) {
-				key := MustConvertStoredValue(interpreter, item)
+				key := MustConvertStoredValue(context, item)
 
-				result := interpreter.invokeFunctionValue(
+				result := invokeFunctionValue(
+					context,
 					procedure,
 					[]Value{key},
 					nil,
@@ -571,17 +568,17 @@ func (v *DictionaryValue) ForEachKey(
 		}
 	}
 
-	interpreter.WithMutationPrevention(v.ValueID(), iterate)
+	context.WithMutationPrevention(v.ValueID(), iterate)
 }
 
 func (v *DictionaryValue) ContainsKey(
-	interpreter *Interpreter,
+	context ValueComparisonContext,
 	locationRange LocationRange,
 	keyValue Value,
 ) BoolValue {
 
-	valueComparator := newValueComparator(interpreter, locationRange)
-	hashInputProvider := newHashInputProvider(interpreter, locationRange)
+	valueComparator := newValueComparator(context, locationRange)
+	hashInputProvider := newHashInputProvider(context, locationRange)
 
 	exists, err := v.dictionary.Has(
 		valueComparator,
@@ -815,7 +812,7 @@ func (v *DictionaryValue) GetMember(context MemberAccessibleContext, locationRan
 				keyValue := invocation.Arguments[0]
 
 				return v.Remove(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 					keyValue,
 				)
@@ -834,7 +831,7 @@ func (v *DictionaryValue) GetMember(context MemberAccessibleContext, locationRan
 				newValue := invocation.Arguments[1]
 
 				return v.Insert(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 					keyValue,
 					newValue,
@@ -851,7 +848,7 @@ func (v *DictionaryValue) GetMember(context MemberAccessibleContext, locationRan
 			),
 			func(v *DictionaryValue, invocation Invocation) Value {
 				return v.ContainsKey(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 					invocation.Arguments[0],
 				)
@@ -865,7 +862,7 @@ func (v *DictionaryValue) GetMember(context MemberAccessibleContext, locationRan
 				v.SemaType(context),
 			),
 			func(v *DictionaryValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
+				invocationContext := invocation.InvocationContext
 
 				funcArgument, ok := invocation.Arguments[0].(FunctionValue)
 				if !ok {
@@ -873,7 +870,7 @@ func (v *DictionaryValue) GetMember(context MemberAccessibleContext, locationRan
 				}
 
 				v.ForEachKey(
-					interpreter,
+					invocationContext,
 					invocation.LocationRange,
 					funcArgument,
 				)

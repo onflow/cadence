@@ -104,7 +104,7 @@ func (v *IDCapabilityValue) Accept(interpreter *Interpreter, visitor Visitor, _ 
 	visitor.VisitCapabilityValue(interpreter, v)
 }
 
-func (v *IDCapabilityValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
+func (v *IDCapabilityValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {
 	walkChild(v.ID)
 	walkChild(v.address)
 }

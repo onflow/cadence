@@ -33,7 +33,7 @@ type CapabilityControllerValue interface {
 	isCapabilityControllerValue()
 	CapabilityControllerBorrowType() *ReferenceStaticType
 	ReferenceValue(
-		context CapConReferenceValueContext,
+		context ValueCapabilityControllerReferenceValueContext,
 		capabilityAddress common.Address,
 		resultBorrowType *sema.ReferenceType,
 		locationRange LocationRange,
@@ -65,8 +65,8 @@ type StorageCapabilityControllerValue struct {
 	GetCapability func(common.MemoryGauge) *IDCapabilityValue
 	GetTag        func(storageReader StorageReader) *StringValue
 	SetTag        func(storageWriter StorageWriter, tag *StringValue)
-	Delete        func(inter *Interpreter, locationRange LocationRange)
-	SetTarget     func(inter *Interpreter, locationRange LocationRange, target PathValue)
+	Delete        func(context CapabilityControllerContext, locationRange LocationRange)
+	SetTarget     func(context CapabilityControllerContext, locationRange LocationRange, target PathValue)
 }
 
 func NewUnmeteredStorageCapabilityControllerValue(
@@ -114,7 +114,7 @@ func (v *StorageCapabilityControllerValue) Accept(interpreter *Interpreter, visi
 	visitor.VisitStorageCapabilityControllerValue(interpreter, v)
 }
 
-func (v *StorageCapabilityControllerValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
+func (v *StorageCapabilityControllerValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {
 	walkChild(v.TargetPath)
 	walkChild(v.CapabilityID)
 }
@@ -322,7 +322,7 @@ func (v *StorageCapabilityControllerValue) ControllerCapabilityID() UInt64Value 
 }
 
 func (v *StorageCapabilityControllerValue) ReferenceValue(
-	context CapConReferenceValueContext,
+	context ValueCapabilityControllerReferenceValueContext,
 	capabilityAddress common.Address,
 	resultBorrowType *sema.ReferenceType,
 	_ LocationRange,
@@ -375,7 +375,7 @@ func (v *StorageCapabilityControllerValue) newDeleteFunction(
 		context,
 		sema.StorageCapabilityControllerTypeDeleteFunctionType,
 		func(invocation Invocation) Value {
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
 			v.Delete(inter, locationRange)
@@ -406,7 +406,7 @@ func (v *StorageCapabilityControllerValue) newRetargetFunction(
 		context,
 		sema.StorageCapabilityControllerTypeRetargetFunctionType,
 		func(invocation Invocation) Value {
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
 			// Get path argument
@@ -431,7 +431,7 @@ func (v *StorageCapabilityControllerValue) newSetTagFunction(
 		context,
 		sema.StorageCapabilityControllerTypeSetTagFunctionType,
 		func(invocation Invocation) Value {
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 
 			newTagValue, ok := invocation.Arguments[0].(*StringValue)
 			if !ok {

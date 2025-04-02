@@ -94,7 +94,7 @@ func NewUnmeteredCompositeField(name string, value Value) CompositeField {
 // for a type which isn't CompositeType.
 // For e.g. InclusiveRangeType
 func NewCompositeValueWithStaticType(
-	interpreter *Interpreter,
+	context MemberAccessibleContext,
 	locationRange LocationRange,
 	location common.Location,
 	qualifiedIdentifier string,
@@ -104,7 +104,7 @@ func NewCompositeValueWithStaticType(
 	staticType StaticType,
 ) *CompositeValue {
 	value := NewCompositeValue(
-		interpreter,
+		context,
 		locationRange,
 		location,
 		qualifiedIdentifier,
@@ -258,7 +258,7 @@ func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor, locat
 
 // Walk iterates over all field values of the composite value.
 // It does NOT walk the computed field or functions!
-func (v *CompositeValue) Walk(interpreter *Interpreter, walkChild func(Value), locationRange LocationRange) {
+func (v *CompositeValue) Walk(interpreter ValueWalkContext, walkChild func(Value), locationRange LocationRange) {
 	v.ForEachField(interpreter, func(_ string, value Value) (resume bool) {
 		walkChild(value)
 
@@ -329,13 +329,11 @@ func (v *CompositeValue) defaultDestroyEventConstructors() (constructors []Funct
 	return
 }
 
-func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
+func (v *CompositeValue) Destroy(context ResourceDestructionContext, locationRange LocationRange) {
 
-	interpreter.ReportComputation(common.ComputationKindDestroyCompositeValue, 1)
+	context.ReportComputation(common.ComputationKindDestroyCompositeValue, 1)
 
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		owner := v.GetOwner().String()
@@ -344,7 +342,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 		defer func() {
 
-			interpreter.reportCompositeValueDestroyTrace(
+			context.ReportCompositeValueDestroyTrace(
 				owner,
 				typeID,
 				kind,
@@ -362,14 +360,14 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 	// so that we can leverage existing atree encoding and decoding. However, we need to make sure functions are initialized
 	// if the composite was recently loaded from storage
 	if v.Functions == nil {
-		v.Functions = interpreter.SharedState.typeCodes.CompositeCodes[v.TypeID()].CompositeFunctions
+		v.Functions = context.GetCompositeValueFunctions(v, locationRange)
 	}
 	for _, constructor := range v.defaultDestroyEventConstructors() {
 
 		// pass the container value to the creation of the default event as an implicit argument, so that
 		// its fields are accessible in the body of the event constructor
 		eventConstructorInvocation := NewInvocation(
-			interpreter,
+			context,
 			nil,
 			nil,
 			nil,
@@ -380,26 +378,26 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 		)
 
 		event := constructor.invoke(eventConstructorInvocation).(*CompositeValue)
-		eventType := MustSemaTypeOfValue(event, interpreter).(*sema.CompositeType)
+		eventType := MustSemaTypeOfValue(event, context).(*sema.CompositeType)
 
 		// emit the event once destruction is complete
-		defer interpreter.emitEvent(event, eventType, locationRange)
+		defer context.EmitEvent(event, eventType, locationRange)
 	}
 
 	valueID := v.ValueID()
 
-	interpreter.withResourceDestruction(
+	context.WithResourceDestruction(
 		valueID,
 		locationRange,
 		func() {
-			interpreter = v.getInterpreter(interpreter)
+			contextForLocation := context.GetResourceDestructionContextForLocation(v.Location)
 
 			// destroy every nested resource in this composite; note that this iteration includes attachments
-			v.ForEachField(interpreter, func(_ string, fieldValue Value) bool {
+			v.ForEachField(contextForLocation, func(_ string, fieldValue Value) bool {
 				if compositeFieldValue, ok := fieldValue.(*CompositeValue); ok && compositeFieldValue.Kind == common.CompositeKindAttachment {
 					compositeFieldValue.setBaseValue(v)
 				}
-				maybeDestroy(interpreter, locationRange, fieldValue)
+				maybeDestroy(contextForLocation, locationRange, fieldValue)
 				return true
 			}, locationRange)
 		},
@@ -407,7 +405,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 	v.isDestroyed = true
 
-	InvalidateReferencedResources(interpreter, v, locationRange)
+	InvalidateReferencedResources(context, v, locationRange)
 
 	v.dictionary = nil
 }
@@ -504,20 +502,6 @@ func (v *CompositeValue) isInvalidatedResource(context ValueStaticTypeContext) b
 
 func (v *CompositeValue) IsStaleResource(inter *Interpreter) bool {
 	return v.dictionary == nil && v.IsResourceKinded(inter)
-}
-
-func (v *CompositeValue) getInterpreter(interpreter *Interpreter) *Interpreter {
-
-	// Get the correct interpreter. The program code might need to be loaded.
-	// NOTE: standard library values have no location
-
-	location := v.Location
-
-	if location == nil || interpreter.Location == location {
-		return interpreter
-	}
-
-	return interpreter.EnsureLoaded(v.Location)
 }
 
 func (v *CompositeValue) GetComputedFields() map[string]ComputedField {
@@ -1677,9 +1661,9 @@ func (v *CompositeValue) getAttachmentValue(interpreter *Interpreter, locationRa
 	return nil
 }
 
-func (v *CompositeValue) GetAttachments(interpreter *Interpreter, locationRange LocationRange) []*CompositeValue {
+func (v *CompositeValue) GetAttachments(context AttachmentContext, locationRange LocationRange) []*CompositeValue {
 	var attachments []*CompositeValue
-	v.forEachAttachment(interpreter, locationRange, func(attachment *CompositeValue) {
+	v.forEachAttachment(context, locationRange, func(attachment *CompositeValue) {
 		attachments = append(attachments, attachment)
 	})
 	return attachments
@@ -1694,7 +1678,7 @@ func (v *CompositeValue) forEachAttachmentFunction(context FunctionCreationConte
 			compositeType.GetCompositeKind(),
 		),
 		func(v *CompositeValue, invocation Invocation) Value {
-			inter := invocation.Interpreter
+			invocationContext := invocation.InvocationContext
 
 			functionValue, ok := invocation.Arguments[0].(FunctionValue)
 			if !ok {
@@ -1707,10 +1691,10 @@ func (v *CompositeValue) forEachAttachmentFunction(context FunctionCreationConte
 
 			fn := func(attachment *CompositeValue) {
 
-				attachmentType := MustSemaTypeOfValue(attachment, inter).(*sema.CompositeType)
+				attachmentType := MustSemaTypeOfValue(attachment, invocationContext).(*sema.CompositeType)
 
 				attachmentReference := NewEphemeralReferenceValue(
-					inter,
+					invocationContext,
 					// attachments are unauthorized during iteration
 					UnauthorizedAccess,
 					attachment,
@@ -1719,13 +1703,14 @@ func (v *CompositeValue) forEachAttachmentFunction(context FunctionCreationConte
 				)
 
 				referenceType := sema.NewReferenceType(
-					inter,
+					invocationContext,
 					// attachments are unauthorized during iteration
 					sema.UnauthorizedAccess,
 					attachmentType,
 				)
 
-				inter.invokeFunctionValue(
+				invokeFunctionValue(
+					invocationContext,
 					functionValue,
 					[]Value{attachmentReference},
 					nil,
@@ -1737,7 +1722,7 @@ func (v *CompositeValue) forEachAttachmentFunction(context FunctionCreationConte
 				)
 			}
 
-			v.forEachAttachment(inter, locationRange, fn)
+			v.forEachAttachment(invocationContext, locationRange, fn)
 			return Void
 		},
 	)
@@ -1765,20 +1750,20 @@ func attachmentBaseAndSelfValues(
 }
 
 func (v *CompositeValue) forEachAttachment(
-	interpreter *Interpreter,
+	context AttachmentContext,
 	locationRange LocationRange,
 	f func(*CompositeValue),
 ) {
 	// The attachment iteration creates an implicit reference to the composite, and holds onto that referenced-value.
 	// But the reference could get invalidated during the iteration, making that referenced-value invalid.
 	// We create a reference here for the purposes of tracking it during iteration.
-	vType := MustSemaTypeOfValue(v, interpreter)
-	compositeReference := NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, v, vType, locationRange)
-	forEachAttachment(interpreter, compositeReference, locationRange, f)
+	vType := MustSemaTypeOfValue(v, context)
+	compositeReference := NewEphemeralReferenceValue(context, UnauthorizedAccess, v, vType, locationRange)
+	forEachAttachment(context, compositeReference, locationRange, f)
 }
 
 func forEachAttachment(
-	interpreter *Interpreter,
+	context AttachmentContext,
 	compositeReference *EphemeralReferenceValue,
 	locationRange LocationRange,
 	f func(*CompositeValue),
@@ -1796,15 +1781,14 @@ func forEachAttachment(
 		panic(errors.NewExternalError(err))
 	}
 
-	oldSharedState := interpreter.SharedState.inAttachmentIteration(composite)
-	interpreter.SharedState.setAttachmentIteration(composite, true)
+	oldSharedState := context.SetAttachmentIteration(composite, true)
 	defer func() {
-		interpreter.SharedState.setAttachmentIteration(composite, oldSharedState)
+		context.SetAttachmentIteration(composite, oldSharedState)
 	}()
 
 	for {
 		// Check that the implicit composite reference was not invalidated during iteration
-		checkInvalidatedResourceOrResourceReference(compositeReference, locationRange, interpreter)
+		checkInvalidatedResourceOrResourceReference(compositeReference, locationRange, context)
 		key, value, err := iterator.Next()
 		if err != nil {
 			panic(errors.NewExternalError(err))
@@ -1813,7 +1797,7 @@ func forEachAttachment(
 			break
 		}
 		if strings.HasPrefix(string(key.(StringAtreeValue)), unrepresentableNamePrefix) {
-			attachment, ok := MustConvertStoredValue(interpreter, value).(*CompositeValue)
+			attachment, ok := MustConvertStoredValue(context, value).(*CompositeValue)
 			if !ok {
 				panic(errors.NewExternalError(err))
 			}

@@ -64,7 +64,7 @@ type testAccountHandler struct {
 	getAccountKey    func(address common.Address, index uint32) (*stdlib.AccountKey, error)
 	accountKeysCount func(address common.Address) (uint32, error)
 	emitEvent        func(
-		inter *interpreter.Interpreter,
+		context interpreter.ValueExportContext,
 		locationRange interpreter.LocationRange,
 		eventType *sema.CompositeType,
 		values []interpreter.Value,
@@ -214,7 +214,7 @@ func (t *testAccountHandler) AccountKeysCount(address common.Address) (uint32, e
 }
 
 func (t *testAccountHandler) EmitEvent(
-	inter *interpreter.Interpreter,
+	context interpreter.ValueExportContext,
 	locationRange interpreter.LocationRange,
 	eventType *sema.CompositeType,
 	values []interpreter.Value,
@@ -223,7 +223,7 @@ func (t *testAccountHandler) EmitEvent(
 		panic(errors.NewUnexpectedError("unexpected call to EmitEvent"))
 	}
 	t.emitEvent(
-		inter,
+		context,
 		locationRange,
 		eventType,
 		values,

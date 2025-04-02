@@ -99,7 +99,7 @@ func (f *InterpretedFunctionValue) Accept(interpreter *Interpreter, visitor Visi
 	visitor.VisitInterpretedFunctionValue(interpreter, f)
 }
 
-func (f *InterpretedFunctionValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (f *InterpretedFunctionValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -233,7 +233,7 @@ func (f *HostFunctionValue) Accept(interpreter *Interpreter, visitor Visitor, _ 
 	visitor.VisitHostFunctionValue(interpreter, f)
 }
 
-func (f *HostFunctionValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (f *HostFunctionValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -409,7 +409,7 @@ func (f BoundFunctionValue) Accept(interpreter *Interpreter, visitor Visitor, _ 
 	visitor.VisitBoundFunctionValue(interpreter, f)
 }
 
-func (f BoundFunctionValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (f BoundFunctionValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -433,7 +433,7 @@ func (f BoundFunctionValue) invoke(invocation Invocation) Value {
 	invocation.BoundAuthorization = f.BoundAuthorization
 
 	locationRange := invocation.LocationRange
-	inter := invocation.Interpreter
+	inter := invocation.InvocationContext
 
 	// If the `self` is already a reference to begin with (e.g: attachments),
 	// then pass the reference as-is to the invocation.
@@ -542,7 +542,7 @@ func NewBoundHostFunctionValue[T Value](
 
 // NewUnmeteredBoundHostFunctionValue creates a bound-function value for a host-function.
 func NewUnmeteredBoundHostFunctionValue(
-	interpreter *Interpreter,
+	context FunctionCreationContext,
 	self Value,
 	funcType *sema.FunctionType,
 	function HostFunction,
@@ -551,7 +551,7 @@ func NewUnmeteredBoundHostFunctionValue(
 	hostFunc := NewUnmeteredStaticHostFunctionValue(funcType, function)
 
 	return NewBoundFunctionValue(
-		interpreter,
+		context,
 		hostFunc,
 		&self,
 		nil,

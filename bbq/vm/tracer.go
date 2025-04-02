@@ -44,6 +44,10 @@ func (ctx Tracer) ReportArrayValueConstructTrace(_ string, _ int, _ time.Duratio
 	panic(errors.NewUnreachableError())
 }
 
+func (c *Config) ReportArrayValueDestroyTrace(info string, count int, since time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
 func (ctx Tracer) ReportDictionaryValueTransferTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
@@ -64,6 +68,9 @@ func (c *Config) ReportDictionaryValueConstructTrace(_ string, _ int, _ time.Dur
 	panic(errors.NewUnreachableError())
 }
 
+func (c *Config) ReportDictionaryValueDestroyTrace(info string, count int, since time.Duration) {
+	panic(errors.NewUnreachableError())
+}
 func (ctx Tracer) ReportCompositeValueTransferTrace(_ string, _ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
@@ -77,6 +84,10 @@ func (ctx Tracer) ReportCompositeValueGetMemberTrace(_ string, _ string, _ strin
 }
 
 func (ctx Tracer) ReportCompositeValueConstructTrace(_ string, _ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (c *Config) ReportCompositeValueDestroyTrace(owner string, id string, kind string, since time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 

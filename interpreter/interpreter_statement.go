@@ -87,7 +87,7 @@ func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatem
 		}
 
 		// NOTE: copy on return
-		value = interpreter.transferAndConvert(value, valueType, returnType, locationRange)
+		value = transferAndConvert(interpreter, value, valueType, returnType, locationRange)
 	}
 
 	return ReturnResult{Value: value}
@@ -362,7 +362,7 @@ func (interpreter *Interpreter) visitForStatementBody(
 	return nil, false
 }
 
-func (interpreter *Interpreter) emitEvent(event *CompositeValue, eventType *sema.CompositeType, locationRange LocationRange) {
+func (interpreter *Interpreter) EmitEvent(event *CompositeValue, eventType *sema.CompositeType, locationRange LocationRange) {
 
 	config := interpreter.SharedState.Config
 
@@ -393,7 +393,7 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 		HasPosition: statement,
 	}
 
-	interpreter.emitEvent(event, eventType, locationRange)
+	interpreter.EmitEvent(event, eventType, locationRange)
 
 	return nil
 }
@@ -509,7 +509,8 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 		}
 	}
 
-	transferredValue := interpreter.transferAndConvert(
+	transferredValue := transferAndConvert(
+		interpreter,
 		result,
 		valueType,
 		targetType,
@@ -598,10 +599,10 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) Stat
 	// and left value to right target
 
 	checkInvalidatedResourceOrResourceReference(rightValue, rightLocationRange, interpreter)
-	transferredRightValue := interpreter.transferAndConvert(rightValue, rightType, leftType, rightLocationRange)
+	transferredRightValue := transferAndConvert(interpreter, rightValue, rightType, leftType, rightLocationRange)
 
 	checkInvalidatedResourceOrResourceReference(leftValue, leftLocationRange, interpreter)
-	transferredLeftValue := interpreter.transferAndConvert(leftValue, leftType, rightType, leftLocationRange)
+	transferredLeftValue := transferAndConvert(interpreter, leftValue, leftType, rightType, leftLocationRange)
 
 	leftGetterSetter.set(transferredRightValue)
 	rightGetterSetter.set(transferredLeftValue)

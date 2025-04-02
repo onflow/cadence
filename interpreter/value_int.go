@@ -100,7 +100,7 @@ func (v IntValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRa
 	visitor.VisitIntValue(interpreter, v)
 }
 
-func (IntValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (IntValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 

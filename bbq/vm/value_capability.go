@@ -85,7 +85,7 @@ func init() {
 }
 
 func GetCheckedCapabilityControllerReference(
-	context interpreter.CapConReferenceValueContext,
+	context interpreter.ValueCapabilityControllerReferenceValueContext,
 	capabilityAddressValue interpreter.AddressValue,
 	capabilityIDValue interpreter.UInt64Value,
 	wantedBorrowType *interpreter.ReferenceStaticType,

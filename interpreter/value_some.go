@@ -88,7 +88,7 @@ func (v *SomeValue) Accept(interpreter *Interpreter, visitor Visitor, locationRa
 	v.value.Accept(interpreter, visitor, locationRange)
 }
 
-func (v *SomeValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
+func (v *SomeValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {
 	walkChild(v.value)
 }
 
@@ -117,18 +117,18 @@ func (v *SomeValue) forEach(f func(Value)) {
 	f(v.value)
 }
 
-func (v *SomeValue) fmap(inter *Interpreter, f func(Value) Value) OptionalValue {
+func (v *SomeValue) fmap(memoryGauge common.MemoryGauge, f func(Value) Value) OptionalValue {
 	newValue := f(v.value)
-	return NewSomeValueNonCopying(inter, newValue)
+	return NewSomeValueNonCopying(memoryGauge, newValue)
 }
 
 func (v *SomeValue) IsDestroyed() bool {
 	return v.isDestroyed
 }
 
-func (v *SomeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
+func (v *SomeValue) Destroy(context ResourceDestructionContext, locationRange LocationRange) {
 	innerValue := v.InnerValue()
-	maybeDestroy(interpreter, locationRange, innerValue)
+	maybeDestroy(context, locationRange, innerValue)
 
 	v.isDestroyed = true
 	v.value = nil
@@ -146,7 +146,7 @@ func (v *SomeValue) MeteredString(context ValueStringContext, seenReferences See
 	return v.value.MeteredString(context, seenReferences, locationRange)
 }
 
-func (v *SomeValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+func (v *SomeValue) GetMember(context MemberAccessibleContext, _ LocationRange, name string) Value {
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
 		innerValueType := MustConvertStaticToSemaType(
@@ -160,7 +160,7 @@ func (v *SomeValue) GetMember(context MemberAccessibleContext, locationRange Loc
 				innerValueType,
 			),
 			func(v *SomeValue, invocation Invocation) Value {
-				inter := invocation.Interpreter
+				invocationContext := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				transformFunction, ok := invocation.Arguments[0].(FunctionValue)
@@ -173,9 +173,10 @@ func (v *SomeValue) GetMember(context MemberAccessibleContext, locationRange Loc
 				returnType := transformFunctionType.ReturnTypeAnnotation.Type
 
 				return v.fmap(
-					inter,
+					invocationContext,
 					func(v Value) Value {
-						return inter.invokeFunctionValue(
+						return invokeFunctionValue(
+							invocationContext,
 							transformFunction,
 							[]Value{v},
 							nil,

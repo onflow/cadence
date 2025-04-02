@@ -47,7 +47,7 @@ func (f placeholderValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange) {
 	// NO-OP
 }
 
-func (f placeholderValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (f placeholderValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 

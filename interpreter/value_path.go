@@ -62,7 +62,7 @@ func (v PathValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationR
 	visitor.VisitPathValue(interpreter, v)
 }
 
-func (PathValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (PathValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -119,7 +119,7 @@ func (v PathValue) GetMember(context MemberAccessibleContext, locationRange Loca
 			v,
 			sema.ToStringFunctionType,
 			func(v PathValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
+				interpreter := invocation.InvocationContext
 
 				domainLength := len(v.Domain.Identifier())
 				identifierLength := len(v.Identifier)
@@ -191,7 +191,7 @@ func (PathValue) IsStorable() bool {
 	return true
 }
 
-func newPathFromStringValue(interpreter *Interpreter, domain common.PathDomain, value Value) Value {
+func newPathFromStringValue(gauge common.MemoryGauge, domain common.PathDomain, value Value) Value {
 	stringValue, ok := value.(*StringValue)
 	if !ok {
 		return Nil
@@ -200,9 +200,9 @@ func newPathFromStringValue(interpreter *Interpreter, domain common.PathDomain, 
 	// NOTE: any identifier is allowed, it does not have to match the syntax for path literals
 
 	return NewSomeValueNonCopying(
-		interpreter,
+		gauge,
 		NewPathValue(
-			interpreter,
+			gauge,
 			domain,
 			stringValue.Str,
 		),

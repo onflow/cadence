@@ -57,7 +57,7 @@ func (v IteratorWrapperValue) Accept(interpreter *interpreter.Interpreter, visit
 	panic(errors.NewUnreachableError())
 }
 
-func (v IteratorWrapperValue) Walk(interpreter *interpreter.Interpreter, walkChild func(interpreter.Value), locationRange interpreter.LocationRange) {
+func (v IteratorWrapperValue) Walk(interpreter interpreter.ValueWalkContext, walkChild func(interpreter.Value), locationRange interpreter.LocationRange) {
 	// Iterator is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())

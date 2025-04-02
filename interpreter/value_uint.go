@@ -121,7 +121,7 @@ func (v UIntValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationR
 	visitor.VisitUIntValue(interpreter, v)
 }
 
-func (UIntValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (UIntValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 

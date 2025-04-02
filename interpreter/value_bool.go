@@ -44,7 +44,7 @@ func (v BoolValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationR
 	visitor.VisitBoolValue(interpreter, v)
 }
 
-func (BoolValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (BoolValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 

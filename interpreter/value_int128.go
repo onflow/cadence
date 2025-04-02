@@ -111,7 +111,7 @@ func (v Int128Value) Accept(interpreter *Interpreter, visitor Visitor, _ Locatio
 	visitor.VisitInt128Value(interpreter, v)
 }
 
-func (Int128Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (Int128Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 

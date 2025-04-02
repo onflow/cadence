@@ -62,7 +62,7 @@ func (v TypeValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationR
 	visitor.VisitTypeValue(interpreter, v)
 }
 
-func (TypeValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (TypeValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -136,7 +136,7 @@ func (v TypeValue) GetMember(context MemberAccessibleContext, _ LocationRange, n
 			v,
 			sema.MetaTypeIsSubtypeFunctionType,
 			func(v TypeValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
+				interpreter := invocation.InvocationContext
 
 				staticType := v.Type
 				otherTypeValue, ok := invocation.Arguments[0].(TypeValue)

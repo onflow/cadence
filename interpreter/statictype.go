@@ -1208,6 +1208,12 @@ type StaticAuthorizationConversionHandler interface {
 	GetEntitlementMapType(typeID TypeID) (*sema.EntitlementMapType, error)
 }
 
+type EntitlementMappingsSubstitutionHandler interface {
+	common.MemoryGauge
+	StaticAuthorizationConversionHandler
+	CurrentEntitlementMappedValue() Authorization
+}
+
 type StaticTypeConversionHandler interface {
 	StaticAuthorizationConversionHandler
 	GetInterfaceType(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.InterfaceType, error)

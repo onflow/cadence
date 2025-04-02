@@ -334,12 +334,12 @@ func recordStorageCapabilityController(
 		panic(errors.NewUnreachableError())
 	}
 
-	addressPath := AddressPath{
+	addressPath := interpreter.AddressPath{
 		Address: address,
 		Path:    targetPathValue,
 	}
 	if config.CapabilityControllerIterations[addressPath] > 0 {
-		config.MutationDuringCapabilityControllerIteration = true
+		config.mutationDuringCapabilityControllerIteration = true
 	}
 
 	identifier := targetPathValue.Identifier

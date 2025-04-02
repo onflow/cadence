@@ -83,7 +83,7 @@ func (v CharacterValue) Accept(interpreter *Interpreter, visitor Visitor, _ Loca
 	visitor.VisitCharacterValue(interpreter, v)
 }
 
-func (CharacterValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (CharacterValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -227,7 +227,7 @@ func (v CharacterValue) GetMember(context MemberAccessibleContext, locationRange
 			v,
 			sema.ToStringFunctionType,
 			func(v CharacterValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
+				interpreter := invocation.InvocationContext
 
 				memoryUsage := common.NewStringMemoryUsage(len(v.Str))
 

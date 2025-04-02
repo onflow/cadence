@@ -49,7 +49,7 @@ type AccountCapabilityControllerValue struct {
 	GetCapability func(common.MemoryGauge) *IDCapabilityValue
 	GetTag        func(StorageReader) *StringValue
 	SetTag        func(storageWriter StorageWriter, tag *StringValue)
-	Delete        func(inter *Interpreter, locationRange LocationRange)
+	Delete        func(context CapabilityControllerContext, locationRange LocationRange)
 }
 
 func NewUnmeteredAccountCapabilityControllerValue(
@@ -93,7 +93,7 @@ func (v *AccountCapabilityControllerValue) Accept(interpreter *Interpreter, visi
 	visitor.VisitAccountCapabilityControllerValue(interpreter, v)
 }
 
-func (v *AccountCapabilityControllerValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
+func (v *AccountCapabilityControllerValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {
 	walkChild(v.CapabilityID)
 }
 
@@ -287,13 +287,14 @@ func (v *AccountCapabilityControllerValue) ControllerCapabilityID() UInt64Value 
 }
 
 func (v *AccountCapabilityControllerValue) ReferenceValue(
-	context CapConReferenceValueContext,
+	context ValueCapabilityControllerReferenceValueContext,
 	capabilityAddress common.Address,
 	resultBorrowType *sema.ReferenceType,
 	locationRange LocationRange,
 ) ReferenceValue {
 
-	account := context.AccountHandler()(context, AddressValue(capabilityAddress))
+	accountHandler := context.AccountHandler()
+	account := accountHandler(context, AddressValue(capabilityAddress))
 
 	// Account must be of `Account` type.
 	ExpectType(
@@ -351,10 +352,10 @@ func (v *AccountCapabilityControllerValue) newDeleteFunction(
 		context,
 		sema.AccountCapabilityControllerTypeDeleteFunctionType,
 		func(invocation Invocation) Value {
-			inter := invocation.Interpreter
+			invocationContext := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
-			v.Delete(inter, locationRange)
+			v.Delete(invocationContext, locationRange)
 
 			v.deleted = true
 
@@ -370,7 +371,7 @@ func (v *AccountCapabilityControllerValue) newSetTagFunction(
 		context,
 		sema.AccountCapabilityControllerTypeSetTagFunctionType,
 		func(invocation Invocation) Value {
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 
 			newTagValue, ok := invocation.Arguments[0].(*StringValue)
 			if !ok {

@@ -19,6 +19,7 @@
 package interpreter
 
 import (
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/sema"
 )
 
@@ -34,7 +35,7 @@ var accountKeyFieldNames = []string{
 
 // NewAccountKeyValue constructs an AccountKey value.
 func NewAccountKeyValue(
-	inter *Interpreter,
+	gauge common.MemoryGauge,
 	keyIndex IntValue,
 	publicKey *CompositeValue,
 	hashAlgo Value,
@@ -50,7 +51,7 @@ func NewAccountKeyValue(
 	}
 
 	return NewSimpleCompositeValue(
-		inter,
+		gauge,
 		accountKeyTypeID,
 		AccountKeyStaticType,
 		accountKeyFieldNames,
