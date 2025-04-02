@@ -57,7 +57,10 @@ type Compiler[E, T any] struct {
 	staticTypes         []T
 
 	// postConditionsIndices keeps track of where the post conditions start (i.e: index of the statement in the block),
-	// for each function. This is used by the compiler to patch the jumps for return statements.
+	// for each function.
+	// This mapping is populated by/during the desugar/rewrite: When the post conditions gets added
+	// to the end of the function block, it keeps track of the index where it was added to.
+	// Then the compiler uses these indices to patch the jumps for return statements.
 	postConditionsIndices map[ast.Declaration]int
 
 	// postConditionsIndex is the statement-index of the post-conditions for the current function.
