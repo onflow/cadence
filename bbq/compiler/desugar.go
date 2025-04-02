@@ -42,7 +42,7 @@ type Desugar struct {
 
 	modifiedDeclarations         []ast.Declaration
 	inheritedFuncsWithConditions map[string][]*inheritedFunction
-	postConditionIndices         map[ast.Declaration]int
+	postConditionIndices         map[*ast.FunctionBlock]int
 
 	importsSet map[common.Location]struct{}
 	newImports []ast.Declaration
@@ -72,11 +72,11 @@ func NewDesugar(
 		checker:                      checker,
 		importsSet:                   map[common.Location]struct{}{},
 		inheritedFuncsWithConditions: map[string][]*inheritedFunction{},
-		postConditionIndices:         map[ast.Declaration]int{},
+		postConditionIndices:         map[*ast.FunctionBlock]int{},
 	}
 }
 
-func (d *Desugar) Run() (program *ast.Program, postConditionIndices map[ast.Declaration]int) {
+func (d *Desugar) Run() (program *ast.Program, postConditionIndices map[*ast.FunctionBlock]int) {
 	declarations := d.program.Declarations()
 	for _, declaration := range declarations {
 		modifiedDeclaration := d.desugarDeclaration(declaration)
@@ -152,13 +152,14 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration,
 		return nil
 	}
 
+	var modifiedFuncBlock *ast.FunctionBlock
 	if len(postConditions) > 0 {
 		// Keep track of where the post conditions start, for each function.
 		// This is used by the compiler to patch the jumps for return statements.
 		// Note: always use the "modifiedDecl" for tracking.
 		postConditionIndex := len(modifiedStatements)
 		defer func() {
-			d.postConditionIndices[modifiedDecl] = postConditionIndex
+			d.postConditionIndices[modifiedFuncBlock] = postConditionIndex
 		}()
 
 		// TODO: Declare the `result` variable only if it is used in the post conditions
@@ -167,7 +168,7 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration,
 		modifiedStatements = append(modifiedStatements, postConditions...)
 	}
 
-	modifiedFuncBlock := ast.NewFunctionBlock(
+	modifiedFuncBlock = ast.NewFunctionBlock(
 		d.memoryGauge,
 		ast.NewBlock(
 			d.memoryGauge,

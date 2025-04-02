@@ -61,7 +61,7 @@ type Compiler[E, T any] struct {
 	// This mapping is populated by/during the desugar/rewrite: When the post conditions gets added
 	// to the end of the function block, it keeps track of the index where it was added to.
 	// Then the compiler uses these indices to patch the jumps for return statements.
-	postConditionsIndices map[ast.Declaration]int
+	postConditionsIndices map[*ast.FunctionBlock]int
 
 	// postConditionsIndex is the statement-index of the post-conditions for the current function.
 	postConditionsIndex int
@@ -697,9 +697,7 @@ func (c *Compiler[_, _]) shouldPatchReturns(enclosingDeclKind common.Declaration
 	}
 }
 
-func (c *Compiler[_, _]) compileFunctionBlock(declaration *ast.FunctionDeclaration, functionDeclKind common.DeclarationKind) {
-	functionBlock := declaration.FunctionBlock
-
+func (c *Compiler[_, _]) compileFunctionBlock(functionBlock *ast.FunctionBlock, functionDeclKind common.DeclarationKind) {
 	if functionBlock == nil {
 		return
 	}
@@ -712,7 +710,7 @@ func (c *Compiler[_, _]) compileFunctionBlock(declaration *ast.FunctionDeclarati
 	}
 
 	prevPostConditionIndex := c.postConditionsIndex
-	index, ok := c.postConditionsIndices[declaration]
+	index, ok := c.postConditionsIndices[functionBlock]
 	if ok {
 		c.postConditionsIndex = index
 	} else {
@@ -1758,7 +1756,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 
 	// emit for the statements in `init()` body.
 	c.compileFunctionBlock(
-		declaration.FunctionDeclaration,
+		declaration.FunctionDeclaration.FunctionBlock,
 		declaration.Kind,
 	)
 
@@ -1773,7 +1771,10 @@ func (c *Compiler[_, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 
 	c.declareParameters(function, declaration.ParameterList, declareReceiver)
 
-	c.compileFunctionBlock(declaration, declaration.DeclarationKind())
+	c.compileFunctionBlock(
+		declaration.FunctionBlock,
+		declaration.DeclarationKind(),
+	)
 
 	return
 }
