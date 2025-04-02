@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -248,7 +249,7 @@ func (c *Config) RecordStorageMutation() {
 	// NO-OP
 }
 
-func (c *Config) IsRecovered(location common.Location) bool {
+func (c *Config) IsTypeInfoRecovered(location common.Location) bool {
 	//TODO
 	return false
 }

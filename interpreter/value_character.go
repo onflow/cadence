@@ -77,7 +77,7 @@ var _ ComparableValue = CharacterValue{}
 var _ HashableValue = CharacterValue{}
 var _ MemberAccessibleValue = CharacterValue{}
 
-func (CharacterValue) isValue() {}
+func (CharacterValue) IsValue() {}
 
 func (v CharacterValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitCharacterValue(interpreter, v)

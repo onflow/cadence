@@ -56,7 +56,7 @@ var _ EquatableValue = PathValue{}
 var _ HashableValue = PathValue{}
 var _ MemberAccessibleValue = PathValue{}
 
-func (PathValue) isValue() {}
+func (PathValue) IsValue() {}
 
 func (v PathValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitPathValue(interpreter, v)

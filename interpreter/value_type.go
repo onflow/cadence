@@ -56,7 +56,7 @@ func NewTypeValue(
 	return NewUnmeteredTypeValue(staticType)
 }
 
-func (TypeValue) isValue() {}
+func (TypeValue) IsValue() {}
 
 func (v TypeValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitTypeValue(interpreter, v)
@@ -169,7 +169,7 @@ func (v TypeValue) GetMember(context MemberAccessibleContext, _ LocationRange, n
 			return FalseValue
 		}
 
-		return BoolValue(context.IsRecovered(location))
+		return BoolValue(context.IsTypeInfoRecovered(location))
 
 	case sema.MetaTypeAddressFieldName:
 		staticType := v.Type

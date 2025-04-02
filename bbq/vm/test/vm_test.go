@@ -20,23 +20,23 @@ package test
 
 import (
 	"fmt"
-	"github.com/onflow/cadence/test_utils/interpreter_utils"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/ast"
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	"github.com/onflow/cadence/test_utils/common_utils"
+	"github.com/onflow/cadence/test_utils/interpreter_utils"
 	"github.com/onflow/cadence/test_utils/runtime_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/compiler"
 	"github.com/onflow/cadence/bbq/vm"
@@ -3158,7 +3158,7 @@ func TestFunctionPreConditions(t *testing.T) {
 						}
 
 						panic(stdlib.PanicError{
-							Message: string(messageValue.Str),
+							Message: messageValue.Str,
 						})
 					},
 				},
@@ -5366,7 +5366,6 @@ func TestTypeConstructor(t *testing.T) {
 		)
 	})
 }
-
 
 func TestTypeConversions(t *testing.T) {
 	t.Parallel()

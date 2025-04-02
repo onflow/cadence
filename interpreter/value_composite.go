@@ -238,7 +238,7 @@ var _ atree.Value = &CompositeValue{}
 var _ atree.WrapperValue = &CompositeValue{}
 var _ atreeContainerBackedValue = &CompositeValue{}
 
-func (*CompositeValue) isValue() {}
+func (*CompositeValue) IsValue() {}
 
 func (*CompositeValue) isAtreeContainerBackedValue() {}
 
