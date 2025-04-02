@@ -89,7 +89,7 @@ func NewAccountAccountCapabilitiesValue(
 		computeField,
 		nil,
 		stringer,
-	).WithMetadata(accountAddressMetadataKey, address)
+	).WithPrivateField(accountAddressMetadataKey, address)
 
 	return accountCapabilities
 }
