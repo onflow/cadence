@@ -230,7 +230,12 @@ func (c *Compiler[E, T]) addFunction(name string, parameterCount uint16) *functi
 
 func (c *Compiler[E, T]) targetFunction(function *function[E]) {
 	c.currentFunction = function
-	c.codeGen.SetTarget(&function.code)
+
+	var code *[]E
+	if function != nil {
+		code = &function.code
+	}
+	c.codeGen.SetTarget(code)
 }
 
 func (c *Compiler[_, _]) addConstant(kind constantkind.ConstantKind, data []byte) *constant {
@@ -1752,7 +1757,11 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	}
 
 	function := c.addFunction(functionName, uint16(parameterCount))
+
+	previousFunction := c.currentFunction
 	c.targetFunction(function)
+	defer c.targetFunction(previousFunction)
+
 	c.declareParameters(function, parameterList, false)
 
 	// Declare `self`
@@ -1803,10 +1812,64 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	c.codeGen.Emit(opcode.InstructionReturnValue{})
 }
 
-func (c *Compiler[_, _]) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration, _ bool) (_ struct{}) {
-	declareReceiver := !c.compositeTypeStack.isEmpty()
-	function := c.declareFunction(declaration, declareReceiver)
+func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration, _ bool) (_ struct{}) {
+	previousFunction := c.currentFunction
+
+	var (
+		parameterCount  int
+		declareReceiver bool
+		functionName    string
+	)
+
+	paramList := declaration.ParameterList
+	if paramList != nil {
+		parameterCount = len(paramList.Parameters)
+	}
+
+	identifier := declaration.Identifier.Identifier
+
+	if previousFunction == nil {
+		// Global function or method
+
+		declareReceiver = !c.compositeTypeStack.isEmpty()
+
+		functionName = commons.TypeQualifiedName(
+			c.enclosingCompositeTypeFullyQualifiedName(),
+			identifier,
+		)
+
+		if declareReceiver {
+			parameterCount++
+		}
+
+	} else {
+		// Inner function
+
+		functionIndex := len(c.functions)
+
+		if functionIndex >= math.MaxUint16 {
+			panic(errors.NewDefaultUserError("invalid function index"))
+		}
+
+		c.codeGen.Emit(opcode.InstructionNewClosure{
+			FunctionIndex: uint16(functionIndex),
+		})
+
+		local := c.currentFunction.declareLocal(identifier)
+		c.codeGen.Emit(opcode.InstructionSetLocal{
+			LocalIndex: local.index,
+		})
+	}
+
+	if parameterCount >= math.MaxUint16 {
+		panic(errors.NewDefaultUserError("invalid parameter count"))
+	}
+
+	function := c.addFunction(functionName, uint16(parameterCount))
+
 	c.targetFunction(function)
+	defer c.targetFunction(previousFunction)
+
 	c.declareParameters(function, declaration.ParameterList, declareReceiver)
 
 	c.compileFunctionBlock(
@@ -1815,28 +1878,6 @@ func (c *Compiler[_, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 	)
 
 	return
-}
-
-func (c *Compiler[E, T]) declareFunction(declaration *ast.FunctionDeclaration, declareReceiver bool) *function[E] {
-	enclosingCompositeTypeName := c.enclosingCompositeTypeFullyQualifiedName()
-	functionName := commons.TypeQualifiedName(enclosingCompositeTypeName, declaration.Identifier.Identifier)
-
-	parameterCount := 0
-
-	paramList := declaration.ParameterList
-	if paramList != nil {
-		parameterCount = len(paramList.Parameters)
-	}
-
-	if parameterCount >= math.MaxUint16 {
-		panic(errors.NewDefaultUserError("invalid parameter count"))
-	}
-
-	if declareReceiver {
-		parameterCount++
-	}
-
-	return c.addFunction(functionName, uint16(parameterCount))
 }
 
 func (c *Compiler[_, _]) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) (_ struct{}) {

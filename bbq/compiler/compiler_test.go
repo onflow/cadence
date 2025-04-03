@@ -4041,3 +4041,84 @@ func TestCompileFunctionExpression(t *testing.T) {
 		program.Constants,
 	)
 }
+
+func TestCompileInnerFunction(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun test(): Int {
+          fun addOne(_ x: Int): Int {
+              return x + 1
+          }
+          let x = 2
+          return x + addOne(3)
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
+
+	require.Len(t, program.Functions, 2)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
+
+	const (
+		addOneIndex = iota
+		xIndex
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// fun addOne(...
+			opcode.InstructionNewClosure{FunctionIndex: 1},
+			opcode.InstructionSetLocal{LocalIndex: addOneIndex},
+
+			// let x = 2
+			opcode.InstructionGetConstant{ConstantIndex: 1},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: xIndex},
+
+			// return x + addOne(3)
+			opcode.InstructionGetLocal{LocalIndex: xIndex},
+			opcode.InstructionGetConstant{ConstantIndex: 2},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionGetLocal{LocalIndex: addOneIndex},
+			opcode.InstructionInvoke{},
+			opcode.InstructionAdd{},
+			opcode.InstructionReturnValue{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// return x + 1
+			opcode.InstructionGetLocal{LocalIndex: 0},
+			opcode.InstructionGetConstant{ConstantIndex: 0},
+			opcode.InstructionAdd{},
+			opcode.InstructionReturnValue{},
+		},
+		functions[1].Code,
+	)
+
+	assert.Equal(t,
+		[]bbq.Constant{
+			{
+				Data: []byte{0x1},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{0x2},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{0x3},
+				Kind: constantkind.Int,
+			},
+		},
+		program.Constants,
+	)
+}
