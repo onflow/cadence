@@ -147,7 +147,7 @@ type Interface interface {
 	GenerateAccountID(address common.Address) (uint64, error)
 	RecoverProgram(program *ast.Program, location common.Location) ([]byte, error)
 	ValidateAccountCapabilitiesGet(
-		inter *interpreter.Interpreter,
+		context interpreter.AccountCapabilityGetValidationContext,
 		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		path interpreter.PathValue,
@@ -155,7 +155,7 @@ type Interface interface {
 		capabilityBorrowType *sema.ReferenceType,
 	) (bool, error)
 	ValidateAccountCapabilitiesPublish(
-		inter *interpreter.Interpreter,
+		context interpreter.AccountCapabilityPublishValidationContext,
 		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		path interpreter.PathValue,

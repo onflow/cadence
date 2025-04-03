@@ -95,7 +95,7 @@ func (s *AccountStorageMap) DomainExists(domain common.StorageDomain) bool {
 // is created and inserted into account storage map with given domain as key.
 func (s *AccountStorageMap) GetDomain(
 	gauge common.MemoryGauge,
-	interpreter *Interpreter,
+	storageMutationTracker StorageMutationTracker,
 	domain common.StorageDomain,
 	createIfNotExists bool,
 ) *DomainStorageMap {
@@ -112,7 +112,7 @@ func (s *AccountStorageMap) GetDomain(
 			// Create domain storage map if needed.
 
 			if createIfNotExists {
-				return s.NewDomain(gauge, interpreter, domain)
+				return s.NewDomain(gauge, storageMutationTracker, domain)
 			}
 
 			return nil
@@ -128,10 +128,10 @@ func (s *AccountStorageMap) GetDomain(
 // NewDomain creates new domain storage map and inserts it to AccountStorageMap with given domain as key.
 func (s *AccountStorageMap) NewDomain(
 	gauge common.MemoryGauge,
-	interpreter *Interpreter,
+	storageMutationTracker StorageMutationTracker,
 	domain common.StorageDomain,
 ) *DomainStorageMap {
-	interpreter.recordStorageMutation()
+	storageMutationTracker.RecordStorageMutation()
 
 	domainStorageMap := NewDomainStorageMap(gauge, s.orderedMap.Storage, s.orderedMap.Address())
 
@@ -162,24 +162,24 @@ func (s *AccountStorageMap) NewDomain(
 // If the given storage map is non-nil, domain is added/updated.
 // Returns true if domain storage map previously existed at the given domain.
 func (s *AccountStorageMap) WriteDomain(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	domain common.StorageDomain,
 	domainStorageMap *DomainStorageMap,
 ) (existed bool) {
 	if domainStorageMap == nil {
-		return s.removeDomain(interpreter, domain)
+		return s.removeDomain(context, domain)
 	}
-	return s.setDomain(interpreter, domain, domainStorageMap)
+	return s.setDomain(context, domain, domainStorageMap)
 }
 
 // setDomain sets domain storage map in the account storage map and returns true if domain previously existed.
 // If the given domain already stores a domain storage map, it is overwritten.
 func (s *AccountStorageMap) setDomain(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	domain common.StorageDomain,
 	newDomainStorageMap *DomainStorageMap,
 ) (existed bool) {
-	interpreter.recordStorageMutation()
+	context.RecordStorageMutation()
 
 	key := Uint64StorageMapKey(domain)
 
@@ -199,13 +199,13 @@ func (s *AccountStorageMap) setDomain(
 		existingDomainStorageMap := newDomainStorageMapWithAtreeStorable(s.orderedMap.Storage, existingValueStorable)
 
 		// Deep remove elements in domain storage map
-		existingDomainStorageMap.DeepRemove(interpreter, true)
+		existingDomainStorageMap.DeepRemove(context, true)
 
 		// Remove domain storage map slab
-		interpreter.RemoveReferencedSlab(existingValueStorable)
+		RemoveReferencedSlab(context, existingValueStorable)
 	}
 
-	interpreter.maybeValidateAtreeValue(s.orderedMap)
+	context.MaybeValidateAtreeValue(s.orderedMap)
 
 	// NOTE: Don't call maybeValidateAtreeStorage() here because it is possible
 	// that domain storage map is in the process of being migrated to account
@@ -215,8 +215,8 @@ func (s *AccountStorageMap) setDomain(
 }
 
 // removeDomain removes domain storage map with given domain in account storage map, if it exists.
-func (s *AccountStorageMap) removeDomain(interpreter *Interpreter, domain common.StorageDomain) (existed bool) {
-	interpreter.recordStorageMutation()
+func (s *AccountStorageMap) removeDomain(context ValueTransferContext, domain common.StorageDomain) (existed bool) {
+	context.RecordStorageMutation()
 
 	key := Uint64StorageMapKey(domain)
 
@@ -238,7 +238,7 @@ func (s *AccountStorageMap) removeDomain(interpreter *Interpreter, domain common
 
 	// NOTE: Key is just an atree.Value (Uint64AtreeValue), not an interpreter.Value,
 	// so do not need (can) convert and not need to deep remove
-	interpreter.RemoveReferencedSlab(existingKeyStorable)
+	RemoveReferencedSlab(context, existingKeyStorable)
 
 	// Value
 
@@ -248,14 +248,14 @@ func (s *AccountStorageMap) removeDomain(interpreter *Interpreter, domain common
 		domainStorageMap := newDomainStorageMapWithAtreeStorable(s.orderedMap.Storage, existingValueStorable)
 
 		// Deep remove elements in domain storage map
-		domainStorageMap.DeepRemove(interpreter, true)
+		domainStorageMap.DeepRemove(context, true)
 
 		// Remove domain storage map slab
-		interpreter.RemoveReferencedSlab(existingValueStorable)
+		RemoveReferencedSlab(context, existingValueStorable)
 	}
 
-	interpreter.maybeValidateAtreeValue(s.orderedMap)
-	interpreter.maybeValidateAtreeStorage()
+	context.MaybeValidateAtreeValue(s.orderedMap)
+	context.MaybeValidateAtreeStorage()
 
 	return
 }

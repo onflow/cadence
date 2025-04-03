@@ -197,7 +197,7 @@ var InclusiveRangeTypeFunctionType = NewSimpleFunctionType(
 	OptionalMetaTypeAnnotation,
 )
 
-var runtimeTypeConstructors = []*RuntimeTypeConstructor{
+var RuntimeTypeConstructors = []*RuntimeTypeConstructor{
 	{
 		Name:      OptionalTypeFunctionName,
 		Value:     OptionalTypeFunctionType,

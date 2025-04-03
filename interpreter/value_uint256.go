@@ -74,13 +74,13 @@ var _ ComparableValue = UInt256Value{}
 var _ HashableValue = UInt256Value{}
 var _ MemberAccessibleValue = UInt256Value{}
 
-func (UInt256Value) isValue() {}
+func (UInt256Value) IsValue() {}
 
 func (v UInt256Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitUInt256Value(interpreter, v)
 }
 
-func (UInt256Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (UInt256Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -119,11 +119,11 @@ func (v UInt256Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v UInt256Value) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v UInt256Value) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
-		interpreter,
+		context,
 		common.NewRawStringMemoryUsage(
-			OverEstimateNumberStringLength(interpreter, v),
+			OverEstimateNumberStringLength(context, v),
 		),
 	)
 	return v.String()
@@ -635,8 +635,8 @@ func (v UInt256Value) BitwiseRightShift(context ValueStaticTypeContext, other In
 	)
 }
 
-func (v UInt256Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	return getNumberValueMember(interpreter, v, name, sema.UInt256Type, locationRange)
+func (v UInt256Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	return getNumberValueMember(context, v, name, sema.UInt256Type, locationRange)
 }
 
 func (UInt256Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
@@ -644,7 +644,7 @@ func (UInt256Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Valu
 	panic(errors.NewUnreachableError())
 }
 
-func (UInt256Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (UInt256Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -673,11 +673,11 @@ func (UInt256Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (UInt256Value) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (UInt256Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 func (v UInt256Value) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -686,7 +686,7 @@ func (v UInt256Value) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
@@ -695,7 +695,7 @@ func (v UInt256Value) Clone(_ *Interpreter) Value {
 	return NewUnmeteredUInt256ValueFromBigInt(v.BigInt)
 }
 
-func (UInt256Value) DeepRemove(_ *Interpreter, _ bool) {
+func (UInt256Value) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

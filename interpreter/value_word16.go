@@ -59,13 +59,13 @@ func NewUnmeteredWord16Value(value uint16) Word16Value {
 	return Word16Value(value)
 }
 
-func (Word16Value) isValue() {}
+func (Word16Value) IsValue() {}
 
 func (v Word16Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitWord16Value(interpreter, v)
 }
 
-func (Word16Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (Word16Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -85,11 +85,11 @@ func (v Word16Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Word16Value) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v Word16Value) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
-		interpreter,
+		context,
 		common.NewRawStringMemoryUsage(
-			OverEstimateNumberStringLength(interpreter, v),
+			OverEstimateNumberStringLength(context, v),
 		),
 	)
 	return v.String()
@@ -392,8 +392,8 @@ func (v Word16Value) BitwiseRightShift(context ValueStaticTypeContext, other Int
 	return NewWord16Value(context, valueGetter)
 }
 
-func (v Word16Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	return getNumberValueMember(interpreter, v, name, sema.Word16Type, locationRange)
+func (v Word16Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	return getNumberValueMember(context, v, name, sema.Word16Type, locationRange)
 }
 
 func (Word16Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
@@ -401,7 +401,7 @@ func (Word16Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value
 	panic(errors.NewUnreachableError())
 }
 
-func (Word16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (Word16Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -432,12 +432,12 @@ func (Word16Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Word16Value) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (Word16Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v Word16Value) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -446,7 +446,7 @@ func (v Word16Value) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
@@ -455,7 +455,7 @@ func (v Word16Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (Word16Value) DeepRemove(_ *Interpreter, _ bool) {
+func (Word16Value) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

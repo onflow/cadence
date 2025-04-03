@@ -202,9 +202,9 @@ func (executor *interpreterScriptExecutor) execute() (val cadence.Value, err err
 
 	// Export before committing storage
 
-	exportableValue := newExportableValue(value, inter)
-	result, err := exportValue(
-		exportableValue,
+	result, err := ExportValue(
+		value,
+		inter,
 		interpreter.EmptyLocationRange,
 	)
 	if err != nil {

@@ -666,7 +666,7 @@ const (
 	encodedAddressLocationLength = 2
 )
 
-func encodeLocation(e *cbor.StreamEncoder, l common.Location) error {
+func EncodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 	if l == nil {
 		return e.EncodeNil()
 	}
@@ -1033,7 +1033,7 @@ func (t *CompositeStaticType) Encode(e *cbor.StreamEncoder) error {
 	}
 
 	// Encode location at array index encodedCompositeStaticTypeLocationFieldKey
-	err = encodeLocation(e, t.Location)
+	err = EncodeLocation(e, t.Location)
 	if err != nil {
 		return err
 	}
@@ -1076,7 +1076,7 @@ func (t *InterfaceStaticType) Encode(e *cbor.StreamEncoder) error {
 	}
 
 	// Encode location at array index encodedInterfaceStaticTypeLocationFieldKey
-	err = encodeLocation(e, t.Location)
+	err = EncodeLocation(e, t.Location)
 	if err != nil {
 		return err
 	}
@@ -1404,11 +1404,11 @@ func (t FunctionStaticType) Encode(_ *cbor.StreamEncoder) error {
 	}
 }
 
-// compositeTypeInfo
-type compositeTypeInfo struct {
-	location            common.Location
-	qualifiedIdentifier string
-	kind                common.CompositeKind
+// CompositeTypeInfo
+type CompositeTypeInfo struct {
+	Location            common.Location
+	QualifiedIdentifier string
+	Kind                common.CompositeKind
 }
 
 func NewCompositeTypeInfo(
@@ -1416,30 +1416,30 @@ func NewCompositeTypeInfo(
 	location common.Location,
 	qualifiedIdentifier string,
 	kind common.CompositeKind,
-) compositeTypeInfo {
+) CompositeTypeInfo {
 	common.UseMemory(memoryGauge, common.CompositeTypeInfoMemoryUsage)
 
-	return compositeTypeInfo{
-		location:            location,
-		qualifiedIdentifier: qualifiedIdentifier,
-		kind:                kind,
+	return CompositeTypeInfo{
+		Location:            location,
+		QualifiedIdentifier: qualifiedIdentifier,
+		Kind:                kind,
 	}
 }
 
-var _ atree.TypeInfo = compositeTypeInfo{}
+var _ atree.TypeInfo = CompositeTypeInfo{}
 
 const encodedCompositeTypeInfoLength = 3
 
-func (c compositeTypeInfo) IsComposite() bool {
+func (c CompositeTypeInfo) IsComposite() bool {
 	return true
 }
 
-func (c compositeTypeInfo) Copy() atree.TypeInfo {
+func (c CompositeTypeInfo) Copy() atree.TypeInfo {
 	// Return c as is because c is a value type.
 	return c
 }
 
-func (c compositeTypeInfo) Encode(e *cbor.StreamEncoder) error {
+func (c CompositeTypeInfo) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, values.CBORTagCompositeValue,
@@ -1450,17 +1450,17 @@ func (c compositeTypeInfo) Encode(e *cbor.StreamEncoder) error {
 		return err
 	}
 
-	err = encodeLocation(e, c.location)
+	err = EncodeLocation(e, c.Location)
 	if err != nil {
 		return err
 	}
 
-	err = e.EncodeString(c.qualifiedIdentifier)
+	err = e.EncodeString(c.QualifiedIdentifier)
 	if err != nil {
 		return err
 	}
 
-	err = e.EncodeUint64(uint64(c.kind))
+	err = e.EncodeUint64(uint64(c.Kind))
 	if err != nil {
 		return err
 	}
@@ -1468,12 +1468,12 @@ func (c compositeTypeInfo) Encode(e *cbor.StreamEncoder) error {
 	return nil
 }
 
-func (c compositeTypeInfo) Equal(o atree.TypeInfo) bool {
-	other, ok := o.(compositeTypeInfo)
+func (c CompositeTypeInfo) Equal(o atree.TypeInfo) bool {
+	other, ok := o.(CompositeTypeInfo)
 	return ok &&
-		c.location == other.location &&
-		c.qualifiedIdentifier == other.qualifiedIdentifier &&
-		c.kind == other.kind
+		c.Location == other.Location &&
+		c.QualifiedIdentifier == other.QualifiedIdentifier &&
+		c.Kind == other.Kind
 }
 
 // EmptyTypeInfo

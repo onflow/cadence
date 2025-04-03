@@ -84,7 +84,7 @@ func ConvertStoredValue(gauge common.MemoryGauge, value atree.Value) (Value, err
 				value,
 			), nil
 
-		case compositeTypeInfo:
+		case CompositeTypeInfo:
 			return newCompositeValueFromAtreeMap(
 				gauge,
 				staticType,
@@ -205,7 +205,7 @@ func NewInMemoryStorage(memoryGauge common.MemoryGauge) InMemoryStorage {
 }
 
 func (i InMemoryStorage) GetDomainStorageMap(
-	_ *Interpreter,
+	_ StorageMutationTracker,
 	address common.Address,
 	domain common.StorageDomain,
 	createIfNotExists bool,

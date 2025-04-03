@@ -37,7 +37,7 @@ type TestFramework interface {
 
 type Blockchain interface {
 	RunScript(
-		inter *interpreter.Interpreter,
+		context TestFrameworkScriptExecutionContext,
 		code string, arguments []interpreter.Value,
 	) *ScriptResult
 
@@ -46,7 +46,7 @@ type Blockchain interface {
 	GetAccount(interpreter.AddressValue) (*Account, error)
 
 	AddTransaction(
-		inter *interpreter.Interpreter,
+		context TestFrameworkAddTransactionContext,
 		code string,
 		authorizers []common.Address,
 		signers []*Account,
@@ -58,7 +58,7 @@ type Blockchain interface {
 	CommitBlock() error
 
 	DeployContract(
-		inter *interpreter.Interpreter,
+		context TestFrameworkContractDeploymentContext,
 		name string,
 		path string,
 		arguments []interpreter.Value,
@@ -69,7 +69,7 @@ type Blockchain interface {
 	ServiceAccount() (*Account, error)
 
 	Events(
-		inter *interpreter.Interpreter,
+		context TestFrameworkEventsContext,
 		eventType interpreter.StaticType,
 	) interpreter.Value
 
@@ -95,3 +95,36 @@ type Account struct {
 	PublicKey *PublicKey
 	Address   common.Address
 }
+
+// TODO: This is used by the test-framework.
+//
+//	Check and the functionalities needed.
+type TestFrameworkScriptExecutionContext interface {
+}
+
+var _ TestFrameworkScriptExecutionContext = &interpreter.Interpreter{}
+
+// TODO: This is used by the test-framework.
+//
+//	Check and the functionalities needed.
+type TestFrameworkAddTransactionContext interface {
+}
+
+var _ TestFrameworkAddTransactionContext = &interpreter.Interpreter{}
+
+// TODO: This is used by the test-framework.
+//
+//	Check and the functionalities needed.
+type TestFrameworkContractDeploymentContext interface {
+}
+
+var _ TestFrameworkContractDeploymentContext = &interpreter.Interpreter{}
+
+// TODO: This is used by the test-framework.
+//
+//	Check and the functionalities needed.
+type TestFrameworkEventsContext interface {
+	interpreter.ArrayCreationContext
+}
+
+var _ TestFrameworkEventsContext = &interpreter.Interpreter{}

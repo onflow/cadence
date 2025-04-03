@@ -151,7 +151,16 @@ func (d *VariableDeclaration) Doc() prettier.Doc {
 		)
 	}
 
-	valueDoc := d.Value.Doc()
+	// Desugared `result` variable is uninitialized at first,
+	// hence would not have a value or transfer.
+	var valueDoc, transferDoc prettier.Doc
+	if d.Value != nil {
+		valueDoc = d.Value.Doc()
+		transferDoc = d.Transfer.Doc()
+	} else {
+		valueDoc = prettier.Line{}
+		transferDoc = prettier.Line{}
+	}
 
 	var valuesDoc prettier.Doc
 
@@ -163,7 +172,7 @@ func (d *VariableDeclaration) Doc() prettier.Doc {
 				Doc: identifierTypeDoc,
 			},
 			prettier.Space,
-			d.Transfer.Doc(),
+			transferDoc,
 			prettier.Group{
 				Doc: prettier.Indent{
 					Doc: prettier.Concat{

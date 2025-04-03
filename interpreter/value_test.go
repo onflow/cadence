@@ -29,6 +29,7 @@ import (
 	"golang.org/x/tools/go/packages"
 
 	"github.com/onflow/atree"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -3414,7 +3415,7 @@ func TestPublicKeyValue(t *testing.T) {
 			EmptyLocationRange,
 			publicKey,
 			sigAlgo,
-			func(interpreter *Interpreter, locationRange LocationRange, publicKey *CompositeValue) error {
+			func(context PublicKeyValidationContext, locationRange LocationRange, publicKey *CompositeValue) error {
 				return nil
 			},
 		)
@@ -3468,7 +3469,7 @@ func TestPublicKeyValue(t *testing.T) {
 					EmptyLocationRange,
 					publicKey,
 					sigAlgo,
-					func(interpreter *Interpreter, locationRange LocationRange, publicKey *CompositeValue) error {
+					func(context PublicKeyValidationContext, locationRange LocationRange, publicKey *CompositeValue) error {
 						return fakeError
 					},
 				)

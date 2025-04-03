@@ -60,13 +60,13 @@ var _ ComparableValue = Int64Value(0)
 var _ HashableValue = Int64Value(0)
 var _ MemberAccessibleValue = Int64Value(0)
 
-func (Int64Value) isValue() {}
+func (Int64Value) IsValue() {}
 
 func (v Int64Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitInt64Value(interpreter, v)
 }
 
-func (Int64Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (Int64Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -86,11 +86,11 @@ func (v Int64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Int64Value) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v Int64Value) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
-		interpreter,
+		context,
 		common.NewRawStringMemoryUsage(
-			OverEstimateNumberStringLength(interpreter, v),
+			OverEstimateNumberStringLength(context, v),
 		),
 	)
 	return v.String()
@@ -607,8 +607,8 @@ func (v Int64Value) BitwiseRightShift(context ValueStaticTypeContext, other Inte
 	return NewInt64Value(context, valueGetter)
 }
 
-func (v Int64Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	return getNumberValueMember(interpreter, v, name, sema.Int64Type, locationRange)
+func (v Int64Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	return getNumberValueMember(context, v, name, sema.Int64Type, locationRange)
 }
 
 func (Int64Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
@@ -616,7 +616,7 @@ func (Int64Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value 
 	panic(errors.NewUnreachableError())
 }
 
-func (Int64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (Int64Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -648,7 +648,7 @@ func (Int64Value) IsResourceKinded(context ValueStaticTypeContext) bool {
 }
 
 func (v Int64Value) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -657,7 +657,7 @@ func (v Int64Value) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
@@ -666,7 +666,7 @@ func (v Int64Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (Int64Value) DeepRemove(_ *Interpreter, _ bool) {
+func (Int64Value) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

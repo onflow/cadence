@@ -31,7 +31,7 @@ var account_ContractsTypeID = sema.Account_ContractsType.ID()
 var account_ContractsStaticType StaticType = PrimitiveStaticTypeAccount_Contracts // unmetered
 var account_ContractsFieldNames []string = nil
 
-type ContractNamesGetter func(interpreter *Interpreter, locationRange LocationRange) *ArrayValue
+type ContractNamesGetter func(context MemberAccessibleContext, locationRange LocationRange) *ArrayValue
 
 func NewAccountContractsValue(
 	gauge common.MemoryGauge,
@@ -68,10 +68,10 @@ func NewAccountContractsValue(
 		return nil
 	}
 
-	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
+	computeField := func(name string, context MemberAccessibleContext, locationRange LocationRange) Value {
 		switch name {
 		case sema.Account_ContractsTypeNamesFieldName:
-			return namesGetter(inter, locationRange)
+			return namesGetter(context, locationRange)
 		}
 
 		field := computeLazyStoredField(name)
@@ -82,10 +82,10 @@ func NewAccountContractsValue(
 	}
 
 	var str string
-	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
+	stringer := func(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
 		if str == "" {
-			common.UseMemory(interpreter, common.AccountContractsStringMemoryUsage)
-			addressStr := address.MeteredString(interpreter, seenReferences, locationRange)
+			common.UseMemory(context, common.AccountContractsStringMemoryUsage)
+			addressStr := address.MeteredString(context, seenReferences, locationRange)
 			str = fmt.Sprintf("Account.Contracts(%s)", addressStr)
 		}
 		return str

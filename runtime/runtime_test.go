@@ -9220,7 +9220,7 @@ func TestRuntimeTypesAndConversions(t *testing.T) {
 					inter, err := interpreter.NewInterpreter(nil, nil, &interpreter.Config{})
 					require.NoError(t, err)
 
-					convertedSemaType, err := inter.ConvertStaticToSemaType(staticType)
+					convertedSemaType, err := interpreter.ConvertStaticToSemaType(inter, staticType)
 					require.NoError(t, err)
 					require.True(t, semaType.Equal(convertedSemaType))
 				})
@@ -11181,12 +11181,12 @@ func TestRuntimeForbidPublicEntitlementBorrow(t *testing.T) {
 			return nil
 		},
 		OnValidateAccountCapabilitiesGet: func(
-			inter *interpreter.Interpreter,
-			locationRange interpreter.LocationRange,
-			address interpreter.AddressValue,
+			_ interpreter.AccountCapabilityGetValidationContext,
+			_ interpreter.LocationRange,
+			_ interpreter.AddressValue,
 			path interpreter.PathValue,
 			wantedBorrowType *sema.ReferenceType,
-			capabilityBorrowType *sema.ReferenceType,
+			_ *sema.ReferenceType,
 		) (bool, error) {
 
 			validatedPaths = append(validatedPaths, path)
@@ -11270,12 +11270,12 @@ func TestRuntimeForbidPublicEntitlementGet(t *testing.T) {
 			return nil
 		},
 		OnValidateAccountCapabilitiesGet: func(
-			inter *interpreter.Interpreter,
-			locationRange interpreter.LocationRange,
-			address interpreter.AddressValue,
+			_ interpreter.AccountCapabilityGetValidationContext,
+			_ interpreter.LocationRange,
+			_ interpreter.AddressValue,
 			path interpreter.PathValue,
 			wantedBorrowType *sema.ReferenceType,
-			capabilityBorrowType *sema.ReferenceType,
+			_ *sema.ReferenceType,
 		) (bool, error) {
 
 			validatedPaths = append(validatedPaths, path)
@@ -11355,9 +11355,9 @@ func TestRuntimeForbidPublicEntitlementPublish(t *testing.T) {
 				return nil
 			},
 			OnValidateAccountCapabilitiesPublish: func(
-				inter *interpreter.Interpreter,
-				locationRange interpreter.LocationRange,
-				address interpreter.AddressValue,
+				_ interpreter.AccountCapabilityPublishValidationContext,
+				_ interpreter.LocationRange,
+				_ interpreter.AddressValue,
 				path interpreter.PathValue,
 				capabilityBorrowType *interpreter.ReferenceStaticType,
 			) (bool, error) {
@@ -11412,9 +11412,9 @@ func TestRuntimeForbidPublicEntitlementPublish(t *testing.T) {
 				return nil
 			},
 			OnValidateAccountCapabilitiesPublish: func(
-				inter *interpreter.Interpreter,
-				locationRange interpreter.LocationRange,
-				address interpreter.AddressValue,
+				_ interpreter.AccountCapabilityPublishValidationContext,
+				_ interpreter.LocationRange,
+				_ interpreter.AddressValue,
 				path interpreter.PathValue,
 				capabilityBorrowType *interpreter.ReferenceStaticType,
 			) (bool, error) {
@@ -11469,9 +11469,9 @@ func TestRuntimeForbidPublicEntitlementPublish(t *testing.T) {
 				return nil
 			},
 			OnValidateAccountCapabilitiesPublish: func(
-				inter *interpreter.Interpreter,
-				locationRange interpreter.LocationRange,
-				address interpreter.AddressValue,
+				_ interpreter.AccountCapabilityPublishValidationContext,
+				_ interpreter.LocationRange,
+				_ interpreter.AddressValue,
 				path interpreter.PathValue,
 				capabilityBorrowType *interpreter.ReferenceStaticType,
 			) (bool, error) {
@@ -12402,4 +12402,111 @@ func TestRuntimeInterfaceConditionDeduplication(t *testing.T) {
 		},
 		events,
 	)
+}
+
+func BenchmarkContractFunctionInvocation(b *testing.B) {
+
+	runtime := NewTestInterpreterRuntime()
+
+	addressValue := cadence.BytesToAddress([]byte{0x1})
+
+	contract := []byte(`
+      pub contract Test {
+          pub fun helloText(): String {
+              return "global function of the imported program"
+          }
+
+          init() {}
+
+          pub struct Foo {
+              pub var id : String
+
+              init(_ id: String) {
+                  self.id = id
+              }
+
+              pub fun sayHello(_ id: Int): String {
+                  // return self.id
+                  return Test.helloText()
+              }
+          }
+      }
+    `)
+
+	deploy := DeploymentTransaction("Test", contract)
+
+	var accountCode []byte
+	var events []cadence.Event
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{Address(addressValue)}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(b),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+			return accountCode, nil
+		},
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+			accountCode = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+			return json.Decode(nil, b)
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(b, err)
+	assert.NotNil(b, accountCode)
+
+	script := `      
+      import Test from 0x01
+
+      pub fun main(count: Int): String {
+          var i = 0
+          var r = Test.Foo("Hello from Foo!")
+          while i < count {
+              i = i + 1
+              r = Test.Foo("Hello from Foo!")
+              r.sayHello(1)
+          }
+          return r.sayHello(1)
+      }`
+
+	args := encodeArgs([]cadence.Value{cadence.NewInt(7)})
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source:    []byte(script),
+				Arguments: args,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(b, err)
+	}
 }

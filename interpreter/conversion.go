@@ -25,7 +25,7 @@ import (
 	"github.com/onflow/cadence/errors"
 )
 
-func ByteArrayValueToByteSlice(interpreter *Interpreter, value Value, locationRange LocationRange) ([]byte, error) {
+func ByteArrayValueToByteSlice(context ContainerMutationContext, value Value, locationRange LocationRange) ([]byte, error) {
 	array, ok := value.(*ArrayValue)
 	if !ok {
 		return nil, errors.NewDefaultUserError("value is not an array")
@@ -39,10 +39,10 @@ func ByteArrayValueToByteSlice(interpreter *Interpreter, value Value, locationRa
 
 		var err error
 		array.Iterate(
-			interpreter,
+			context,
 			func(element Value) (resume bool) {
 				var b byte
-				b, err = ByteValueToByte(interpreter, element, locationRange)
+				b, err = ByteValueToByte(context, element, locationRange)
 				if err != nil {
 					return false
 				}
@@ -95,9 +95,9 @@ func ByteValueToByte(memoryGauge common.MemoryGauge, element Value, locationRang
 	return b, nil
 }
 
-func ByteSliceToByteArrayValue(interpreter *Interpreter, buf []byte) *ArrayValue {
+func ByteSliceToByteArrayValue(context ArrayCreationContext, buf []byte) *ArrayValue {
 
-	common.UseMemory(interpreter, common.NewBytesMemoryUsage(len(buf)))
+	common.UseMemory(context, common.NewBytesMemoryUsage(len(buf)))
 
 	var values []Value
 
@@ -110,7 +110,7 @@ func ByteSliceToByteArrayValue(interpreter *Interpreter, buf []byte) *ArrayValue
 	}
 
 	return NewArrayValue(
-		interpreter,
+		context,
 		EmptyLocationRange,
 		ByteArrayStaticType,
 		common.ZeroAddress,
@@ -118,9 +118,9 @@ func ByteSliceToByteArrayValue(interpreter *Interpreter, buf []byte) *ArrayValue
 	)
 }
 
-func ByteSliceToConstantSizedByteArrayValue(interpreter *Interpreter, buf []byte) *ArrayValue {
+func ByteSliceToConstantSizedByteArrayValue(context ArrayCreationContext, buf []byte) *ArrayValue {
 
-	common.UseMemory(interpreter, common.NewBytesMemoryUsage(len(buf)))
+	common.UseMemory(context, common.NewBytesMemoryUsage(len(buf)))
 
 	var values []Value
 
@@ -133,13 +133,13 @@ func ByteSliceToConstantSizedByteArrayValue(interpreter *Interpreter, buf []byte
 	}
 
 	constantSizedByteArrayStaticType := NewConstantSizedStaticType(
-		interpreter,
+		context,
 		PrimitiveStaticTypeUInt8,
 		int64(len(buf)),
 	)
 
 	return NewArrayValue(
-		interpreter,
+		context,
 		EmptyLocationRange,
 		constantSizedByteArrayStaticType,
 		common.ZeroAddress,

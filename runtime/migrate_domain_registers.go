@@ -40,7 +40,7 @@ type GetDomainStorageMapFunc func(
 type DomainRegisterMigration struct {
 	ledger              atree.Ledger
 	storage             atree.SlabStorage
-	inter               *interpreter.Interpreter
+	context             interpreter.ValueTransferContext
 	memoryGauge         common.MemoryGauge
 	getDomainStorageMap GetDomainStorageMapFunc
 }
@@ -48,7 +48,7 @@ type DomainRegisterMigration struct {
 func NewDomainRegisterMigration(
 	ledger atree.Ledger,
 	storage atree.SlabStorage,
-	inter *interpreter.Interpreter,
+	context interpreter.ValueTransferContext,
 	memoryGauge common.MemoryGauge,
 	getDomainStorageMap GetDomainStorageMapFunc,
 ) *DomainRegisterMigration {
@@ -58,7 +58,7 @@ func NewDomainRegisterMigration(
 	return &DomainRegisterMigration{
 		ledger:              ledger,
 		storage:             storage,
-		inter:               inter,
+		context:             context,
 		memoryGauge:         memoryGauge,
 		getDomainStorageMap: getDomainStorageMap,
 	}
@@ -144,7 +144,7 @@ func (m *DomainRegisterMigration) migrateDomainRegisters(
 		}
 
 		// Migrate (insert) existing domain storage map to account storage map
-		existed := accountStorageMap.WriteDomain(m.inter, domain, domainStorageMap)
+		existed := accountStorageMap.WriteDomain(m.context, domain, domainStorageMap)
 		if existed {
 			// This shouldn't happen because we are inserting domain storage map into empty account storage map.
 			return nil, errors.NewUnexpectedError(

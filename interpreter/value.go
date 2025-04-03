@@ -91,9 +91,9 @@ type Value interface {
 	// Stringer provides `func String() string`
 	// NOTE: important, error messages rely on values to implement String
 	fmt.Stringer
-	isValue()
+	IsValue()
 	Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange)
-	Walk(interpreter *Interpreter, walkChild func(Value), locationRange LocationRange)
+	Walk(interpreter ValueWalkContext, walkChild func(Value), locationRange LocationRange)
 	StaticType(context ValueStaticTypeContext) StaticType
 	// ConformsToStaticType returns true if the value (i.e. its dynamic type)
 	// conforms to its own static type.
@@ -109,11 +109,11 @@ type Value interface {
 		results TypeConformanceResults,
 	) bool
 	RecursiveString(seenReferences SeenReferences) string
-	MeteredString(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string
+	MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string
 	IsResourceKinded(context ValueStaticTypeContext) bool
 	NeedsStoreTo(address atree.Address) bool
 	Transfer(
-		interpreter *Interpreter,
+		transferContext ValueTransferContext,
 		locationRange LocationRange,
 		address atree.Address,
 		remove bool,
@@ -122,7 +122,7 @@ type Value interface {
 		hasNoParentContainer bool, // hasNoParentContainer is true when transferred value isn't an element of another container.
 	) Value
 	DeepRemove(
-		interpreter *Interpreter,
+		removeContext ValueRemoveContext,
 		hasNoParentContainer bool, // hasNoParentContainer is true when transferred value isn't an element of another container.
 	)
 	// Clone returns a new value that is equal to this value.
@@ -136,10 +136,10 @@ type Value interface {
 
 type ValueIndexableValue interface {
 	Value
-	GetKey(interpreter *Interpreter, locationRange LocationRange, key Value) Value
-	SetKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value)
-	RemoveKey(interpreter *Interpreter, locationRange LocationRange, key Value) Value
-	InsertKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value)
+	GetKey(context ValueComparisonContext, locationRange LocationRange, key Value) Value
+	SetKey(context ContainerMutationContext, locationRange LocationRange, key Value, value Value)
+	RemoveKey(context ContainerMutationContext, locationRange LocationRange, key Value) Value
+	InsertKey(context ContainerMutationContext, locationRange LocationRange, key Value, value Value)
 }
 
 type TypeIndexableValue interface {
@@ -153,10 +153,10 @@ type TypeIndexableValue interface {
 
 type MemberAccessibleValue interface {
 	Value
-	GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value
+	GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value
 	RemoveMember(interpreter *Interpreter, locationRange LocationRange, name string) Value
 	// returns whether a value previously existed with this name
-	SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value) bool
+	SetMember(context MemberAccessibleContext, locationRange LocationRange, name string, value Value) bool
 }
 
 type ValueComparisonContext interface {
@@ -196,18 +196,18 @@ type ComparableValue interface {
 
 type ResourceKindedValue interface {
 	Value
-	Destroy(interpreter *Interpreter, locationRange LocationRange)
+	Destroy(context ResourceDestructionContext, locationRange LocationRange)
 	IsDestroyed() bool
 	isInvalidatedResource(context ValueStaticTypeContext) bool
 }
 
-func maybeDestroy(interpreter *Interpreter, locationRange LocationRange, value Value) {
+func maybeDestroy(context ResourceDestructionContext, locationRange LocationRange, value Value) {
 	resourceKindedValue, ok := value.(ResourceKindedValue)
 	if !ok {
 		return
 	}
 
-	resourceKindedValue.Destroy(interpreter, locationRange)
+	resourceKindedValue.Destroy(context, locationRange)
 }
 
 // ReferenceTrackedResourceKindedValue is a resource-kinded value
@@ -238,6 +238,7 @@ type IterableValue interface {
 		transferElements bool,
 		locationRange LocationRange,
 	)
+	Iterator(context ValueStaticTypeContext, locationRange LocationRange) ValueIterator
 }
 
 // OwnedValue is a value which has an owner
@@ -254,6 +255,7 @@ type ValueIteratorContext interface {
 // ValueIterator is an iterator which returns values.
 // When Next returns nil, it signals the end of the iterator.
 type ValueIterator interface {
+	HasNext() bool
 	Next(context ValueIteratorContext, locationRange LocationRange) Value
 }
 
