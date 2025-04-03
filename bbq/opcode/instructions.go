@@ -513,6 +513,36 @@ func DecodeGetConstant(ip *uint16, code []byte) (i InstructionGetConstant) {
 	return i
 }
 
+// InstructionNewClosure
+//
+// Creates a new closure with the function at the given index and pushes it onto the stack.
+type InstructionNewClosure struct {
+	FunctionIndex uint16
+}
+
+var _ Instruction = InstructionNewClosure{}
+
+func (InstructionNewClosure) Opcode() Opcode {
+	return NewClosure
+}
+
+func (i InstructionNewClosure) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	printfArgument(&sb, "functionIndex", i.FunctionIndex)
+	return sb.String()
+}
+
+func (i InstructionNewClosure) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.FunctionIndex)
+}
+
+func DecodeNewClosure(ip *uint16, code []byte) (i InstructionNewClosure) {
+	i.FunctionIndex = decodeUint16(ip, code)
+	return i
+}
+
 // InstructionInvoke
 //
 // Pops the function and arguments off the stack, invokes the function with the arguments, and then pushes the result back on to the stack.
@@ -1449,6 +1479,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return DecodeNewRef(ip, code)
 	case GetConstant:
 		return DecodeGetConstant(ip, code)
+	case NewClosure:
+		return DecodeNewClosure(ip, code)
 	case Invoke:
 		return DecodeInvoke(ip, code)
 	case InvokeDynamic:

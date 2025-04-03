@@ -5427,3 +5427,26 @@ func TestReturnStatements(t *testing.T) {
 		)
 	})
 }
+
+func TestFunctionExpression(t *testing.T) {
+
+	t.Parallel()
+
+	actual, err := compileAndInvoke(t,
+		`
+          fun test(): Int {
+              let addOne = fun(_ x: Int): Int {
+                  return x + 1
+              }
+              let x = 2
+              return x + addOne(3)
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(6), actual)
+
+}

@@ -61,7 +61,7 @@ type Compiler[E, T any] struct {
 	// This mapping is populated by/during the desugar/rewrite: When the post conditions gets added
 	// to the end of the function block, it keeps track of the index where it was added to.
 	// Then the compiler uses these indices to patch the jumps for return statements.
-	postConditionsIndices map[ast.Declaration]int
+	postConditionsIndices map[*ast.FunctionBlock]int
 
 	// postConditionsIndex is the statement-index of the post-conditions for the current function.
 	postConditionsIndex int
@@ -224,9 +224,13 @@ func (c *Compiler[E, T]) addFunction(name string, parameterCount uint16) *functi
 
 	function := newFunction[E](name, parameterCount, isCompositeFunction)
 	c.functions = append(c.functions, function)
+
+	return function
+}
+
+func (c *Compiler[E, T]) targetFunction(function *function[E]) {
 	c.currentFunction = function
 	c.codeGen.SetTarget(&function.code)
-	return function
 }
 
 func (c *Compiler[_, _]) addConstant(kind constantkind.ConstantKind, data []byte) *constant {
@@ -697,9 +701,7 @@ func (c *Compiler[_, _]) shouldPatchReturns(enclosingDeclKind common.Declaration
 	}
 }
 
-func (c *Compiler[_, _]) compileFunctionBlock(declaration *ast.FunctionDeclaration, functionDeclKind common.DeclarationKind) {
-	functionBlock := declaration.FunctionBlock
-
+func (c *Compiler[_, _]) compileFunctionBlock(functionBlock *ast.FunctionBlock, functionDeclKind common.DeclarationKind) {
 	if functionBlock == nil {
 		return
 	}
@@ -712,7 +714,7 @@ func (c *Compiler[_, _]) compileFunctionBlock(declaration *ast.FunctionDeclarati
 	}
 
 	prevPostConditionIndex := c.postConditionsIndex
-	index, ok := c.postConditionsIndices[declaration]
+	index, ok := c.postConditionsIndices[functionBlock]
 	if ok {
 		c.postConditionsIndex = index
 	} else {
@@ -1589,9 +1591,42 @@ func (c *Compiler[_, _]) VisitBinaryExpression(expression *ast.BinaryExpression)
 	return
 }
 
-func (c *Compiler[_, _]) VisitFunctionExpression(_ *ast.FunctionExpression) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler[_, _]) VisitFunctionExpression(expression *ast.FunctionExpression) (_ struct{}) {
+	// TODO: desugar function expressions
+
+	functionIndex := len(c.functions)
+
+	if functionIndex >= math.MaxUint16 {
+		panic(errors.NewDefaultUserError("invalid function index"))
+	}
+
+	c.codeGen.Emit(opcode.InstructionNewClosure{
+		FunctionIndex: uint16(functionIndex),
+	})
+
+	parameterCount := 0
+	parameterList := expression.ParameterList
+	if parameterList != nil {
+		parameterCount = len(parameterList.Parameters)
+	}
+
+	if parameterCount > math.MaxUint16 {
+		panic(errors.NewDefaultUserError("invalid parameter count"))
+	}
+
+	function := c.addFunction("", uint16(parameterCount))
+
+	previousFunction := c.currentFunction
+	c.targetFunction(function)
+	defer c.targetFunction(previousFunction)
+
+	c.declareParameters(function, parameterList, false)
+	c.compileFunctionBlock(
+		expression.FunctionBlock,
+		common.DeclarationKindUnknown,
+	)
+
+	return
 }
 
 func (c *Compiler[_, _]) VisitStringExpression(expression *ast.StringExpression) (_ struct{}) {
@@ -1717,6 +1752,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	}
 
 	function := c.addFunction(functionName, uint16(parameterCount))
+	c.targetFunction(function)
 	c.declareParameters(function, parameterList, false)
 
 	// Declare `self`
@@ -1758,7 +1794,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 
 	// emit for the statements in `init()` body.
 	c.compileFunctionBlock(
-		declaration.FunctionDeclaration,
+		declaration.FunctionDeclaration.FunctionBlock,
 		declaration.Kind,
 	)
 
@@ -1770,10 +1806,13 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 func (c *Compiler[_, _]) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration, _ bool) (_ struct{}) {
 	declareReceiver := !c.compositeTypeStack.isEmpty()
 	function := c.declareFunction(declaration, declareReceiver)
-
+	c.targetFunction(function)
 	c.declareParameters(function, declaration.ParameterList, declareReceiver)
 
-	c.compileFunctionBlock(declaration, declaration.DeclarationKind())
+	c.compileFunctionBlock(
+		declaration.FunctionBlock,
+		declaration.DeclarationKind(),
+	)
 
 	return
 }

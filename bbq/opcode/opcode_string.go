@@ -48,6 +48,7 @@ func _() {
 	_ = x[NewArray-54]
 	_ = x[NewDictionary-55]
 	_ = x[NewRef-56]
+	_ = x[NewClosure-57]
 	_ = x[GetConstant-69]
 	_ = x[GetLocal-70]
 	_ = x[SetLocal-71]
@@ -74,7 +75,7 @@ const (
 	_Opcode_name_2 = "BitwiseOrBitwiseAndBitwiseXorBitwiseLeftShiftBitwiseRightShift"
 	_Opcode_name_3 = "LessGreaterLessOrEqualGreaterOrEqualEqualNotEqualNot"
 	_Opcode_name_4 = "UnwrapDestroyTransferSimpleCastFailableCastForceCastDeref"
-	_Opcode_name_5 = "TrueFalseNewPathNilNewArrayNewDictionaryNewRef"
+	_Opcode_name_5 = "TrueFalseNewPathNilNewArrayNewDictionaryNewRefNewClosure"
 	_Opcode_name_6 = "GetConstantGetLocalSetLocalGetGlobalSetGlobalGetFieldSetFieldSetIndexGetIndex"
 	_Opcode_name_7 = "InvokeInvokeDynamic"
 	_Opcode_name_8 = "DropDup"
@@ -87,7 +88,7 @@ var (
 	_Opcode_index_2 = [...]uint8{0, 9, 19, 29, 45, 62}
 	_Opcode_index_3 = [...]uint8{0, 4, 11, 22, 36, 41, 49, 52}
 	_Opcode_index_4 = [...]uint8{0, 6, 13, 21, 31, 43, 52, 57}
-	_Opcode_index_5 = [...]uint8{0, 4, 9, 12, 16, 19, 27, 40, 46}
+	_Opcode_index_5 = [...]uint8{0, 4, 9, 12, 16, 19, 27, 40, 46, 56}
 	_Opcode_index_6 = [...]uint8{0, 11, 19, 27, 36, 45, 53, 61, 69, 77}
 	_Opcode_index_7 = [...]uint8{0, 6, 19}
 	_Opcode_index_8 = [...]uint8{0, 4, 7}
@@ -110,7 +111,7 @@ func (i Opcode) String() string {
 	case 36 <= i && i <= 42:
 		i -= 36
 		return _Opcode_name_4[_Opcode_index_4[i]:_Opcode_index_4[i+1]]
-	case 49 <= i && i <= 56:
+	case 49 <= i && i <= 57:
 		i -= 49
 		return _Opcode_name_5[_Opcode_index_5[i]:_Opcode_index_5[i+1]]
 	case 69 <= i && i <= 77:

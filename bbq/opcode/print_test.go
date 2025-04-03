@@ -125,6 +125,8 @@ func TestPrintInstruction(t *testing.T) {
 		"NewArray typeIndex:258 size:772 isResource:true":      {byte(NewArray), 1, 2, 3, 4, 1},
 		"NewDictionary typeIndex:258 size:772 isResource:true": {byte(NewDictionary), 1, 2, 3, 4, 1},
 
+		"NewClosure functionIndex:258": {byte(NewClosure), 1, 2},
+
 		"Unknown":     {byte(Unknown)},
 		"Return":      {byte(Return)},
 		"ReturnValue": {byte(ReturnValue)},

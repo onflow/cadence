@@ -227,6 +227,16 @@
       - name: "value"
         type: "value"
 
+- name: "newClosure"
+  description: Creates a new closure with the function at the given index and pushes it onto the stack.
+  operands:
+    - name: "functionIndex"
+      type: "index"
+  valueEffects:
+    push:
+      - name: "value"
+        type: "value"
+
 # Invocation instructions
 
 - name: "invoke"
