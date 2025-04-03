@@ -4461,19 +4461,32 @@ func (interpreter *Interpreter) authAccountLoadFunction(
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
-	return interpreter.authAccountReadFunction(storageValue, addressValue, true)
+	const clear = true
+	return interpreter.authAccountReadFunction(
+		storageValue,
+		addressValue,
+		sema.Account_StorageTypeLoadFunctionType,
+		clear,
+	)
 }
 
 func (interpreter *Interpreter) authAccountCopyFunction(
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
-	return interpreter.authAccountReadFunction(storageValue, addressValue, false)
+	const clear = false
+	return interpreter.authAccountReadFunction(
+		storageValue,
+		addressValue,
+		sema.Account_StorageTypeCopyFunctionType,
+		clear,
+	)
 }
 
 func (interpreter *Interpreter) authAccountReadFunction(
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
+	functionType *sema.FunctionType,
 	clear bool,
 ) BoundFunctionValue {
 
@@ -4483,8 +4496,7 @@ func (interpreter *Interpreter) authAccountReadFunction(
 	return NewBoundHostFunctionValue(
 		interpreter,
 		storageValue,
-		// same as sema.Account_StorageTypeCopyFunctionType
-		sema.Account_StorageTypeLoadFunctionType,
+		functionType,
 		func(_ *SimpleCompositeValue, invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 

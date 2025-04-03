@@ -1381,3 +1381,48 @@ func TestInterpretAccountStorageFields(t *testing.T) {
 		}
 	}
 }
+
+func TestInterpretAccountStorageReadFunctionTypes(t *testing.T) {
+
+	t.Parallel()
+
+	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+	inter, _ := testAccount(t, address, true, nil, `
+          fun getLoadType(): Type {
+              return account.storage.load.getType()
+          }
+
+          fun getCopyType(): Type {
+              return account.storage.copy.getType()
+          }
+
+          fun areEqual(): Bool {
+              return getLoadType() == getCopyType()
+          }
+        `, sema.Config{})
+
+	loadType, err := inter.Invoke("getLoadType")
+	require.NoError(t, err)
+	require.IsType(t, interpreter.TypeValue{}, loadType)
+	assert.Equal(t,
+		interpreter.FunctionStaticType{
+			Type: sema.Account_StorageTypeLoadFunctionType,
+		},
+		loadType.(interpreter.TypeValue).Type,
+	)
+
+	copyType, err := inter.Invoke("getCopyType")
+	require.NoError(t, err)
+	require.IsType(t, interpreter.TypeValue{}, copyType)
+	assert.Equal(t,
+		interpreter.FunctionStaticType{
+			Type: sema.Account_StorageTypeCopyFunctionType,
+		},
+		copyType.(interpreter.TypeValue).Type,
+	)
+
+	areEqual, err := inter.Invoke("areEqual")
+	require.NoError(t, err)
+	require.Equal(t, interpreter.FalseValue, areEqual)
+}
