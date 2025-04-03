@@ -225,9 +225,13 @@ func (c *Compiler[_, _]) addImportedGlobal(location common.Location, name string
 }
 
 func (c *Compiler[E, T]) addFunction(name string, parameterCount uint16) *function[E] {
-	isCompositeFunction := !c.compositeTypeStack.isEmpty()
+	localsDepth := c.locals.Depth()
 
-	function := newFunction[E](name, parameterCount, isCompositeFunction)
+	function := newFunction[E](
+		name,
+		parameterCount,
+		localsDepth,
+	)
 	c.functions = append(c.functions, function)
 
 	return function
@@ -562,11 +566,10 @@ func (c *Compiler[E, T]) ExportFunctions() []bbq.Function[E] {
 			functions = append(
 				functions,
 				bbq.Function[E]{
-					Name:                function.name,
-					Code:                function.code,
-					LocalCount:          function.localCount,
-					ParameterCount:      function.parameterCount,
-					IsCompositeFunction: function.isCompositeFunction,
+					Name:           function.name,
+					Code:           function.code,
+					LocalCount:     function.localCount,
+					ParameterCount: function.parameterCount,
 				},
 			)
 		}
@@ -2110,7 +2113,10 @@ func (c *Compiler[_, _]) withConditionExtendedElaboration(statement ast.Statemen
 func (c *Compiler[_, _]) declareLocal(name string) *local {
 	f := c.currentFunction
 	index := f.generateLocalIndex()
-	local := &local{index: index}
+	local := &local{
+		index: index,
+		depth: c.locals.Depth(),
+	}
 	c.locals.Set(name, local)
 	return local
 }

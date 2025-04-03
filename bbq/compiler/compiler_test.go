@@ -4131,7 +4131,8 @@ func TestCompileFunctionExpressionOuterVariableUse(t *testing.T) {
         fun test() {
             let x = 1
             let inner = fun(): Int {
-                return x
+                let y = 2
+                return x + y
             }
         }
     `)
@@ -4145,10 +4146,8 @@ func TestCompileFunctionExpressionOuterVariableUse(t *testing.T) {
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(program.Functions), len(functions))
 
-	const (
-		// xIndex is the index of the local variable `x`, which is the first local variable
-		xIndex = iota
-	)
+	// xIndex is the index of the local variable `x`, which is the first local variable
+	const xIndex = 0
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -4167,10 +4166,20 @@ func TestCompileFunctionExpressionOuterVariableUse(t *testing.T) {
 		functions[0].Code,
 	)
 
+	// yIndex is the index of the local variable `y`, which is the first local variable
+	const yIndex = 0
+
 	assert.Equal(t,
 		[]opcode.Instruction{
-			// return x
+			// let y = 2
+			opcode.InstructionGetConstant{ConstantIndex: 1},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: yIndex},
+
+			// return x + y
 			opcode.InstructionGetLocal{LocalIndex: xIndex},
+			opcode.InstructionGetLocal{LocalIndex: yIndex},
+			opcode.InstructionAdd{},
 			opcode.InstructionReturnValue{},
 		},
 		functions[1].Code,
@@ -4185,7 +4194,8 @@ func TestCompileInnerFunctionOuterVariableUse(t *testing.T) {
         fun test() {
             let x = 1
             fun inner(): Int {
-                return x
+                let y = 2
+                return x + y
             }
         }
     `)
@@ -4199,10 +4209,8 @@ func TestCompileInnerFunctionOuterVariableUse(t *testing.T) {
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(program.Functions), len(functions))
 
-	const (
-		// xIndex is the index of the local variable `x`, which is the first local variable
-		xIndex = iota
-	)
+	// xIndex is the index of the local variable `x`, which is the first local variable
+	const xIndex = 0
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -4220,12 +4228,36 @@ func TestCompileInnerFunctionOuterVariableUse(t *testing.T) {
 		functions[0].Code,
 	)
 
+	// yIndex is the index of the local variable `y`, which is the first local variable
+	const yIndex = 0
+
 	assert.Equal(t,
 		[]opcode.Instruction{
-			// return x
+			// let y = 2
+			opcode.InstructionGetConstant{ConstantIndex: 1},
+			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionSetLocal{LocalIndex: yIndex},
+
+			// return x + y
 			opcode.InstructionGetLocal{LocalIndex: xIndex},
+			opcode.InstructionGetLocal{LocalIndex: yIndex},
+			opcode.InstructionAdd{},
 			opcode.InstructionReturnValue{},
 		},
 		functions[1].Code,
+	)
+
+	assert.Equal(t,
+		[]bbq.Constant{
+			{
+				Data: []byte{0x1},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{0x2},
+				Kind: constantkind.Int,
+			},
+		},
+		program.Constants,
 	)
 }

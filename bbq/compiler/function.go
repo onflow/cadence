@@ -25,18 +25,22 @@ import (
 )
 
 type function[E any] struct {
-	name                string
-	code                []E
-	localCount          uint16
-	parameterCount      uint16
-	isCompositeFunction bool
+	name           string
+	code           []E
+	localCount     uint16
+	parameterCount uint16
+	localsDepth    int
 }
 
-func newFunction[E any](name string, parameterCount uint16, isCompositeFunction bool) *function[E] {
+func newFunction[E any](
+	name string,
+	parameterCount uint16,
+	localsDepth int,
+) *function[E] {
 	return &function[E]{
-		name:                name,
-		parameterCount:      parameterCount,
-		isCompositeFunction: isCompositeFunction,
+		name:           name,
+		parameterCount: parameterCount,
+		localsDepth:    localsDepth,
 	}
 }
 
