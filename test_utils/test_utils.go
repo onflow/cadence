@@ -77,6 +77,7 @@ func ParseCheckAndPrepare(t testing.TB, code string, compile bool) Invokable {
 		return parseCheckAndInterpret(t, code)
 	}
 
+	// TODO: Uncomment once the compiler branch is merged to master.
 	//vmConfig := &vm.Config{}
 	//vmInstance := compilerUtils.CompileAndPrepareToInvoke(
 	//	t,
