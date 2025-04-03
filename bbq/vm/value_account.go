@@ -22,7 +22,6 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 )
 
@@ -71,7 +70,7 @@ func getAddressMetaInfoFromValue(value Value) interpreter.AddressValue {
 		panic(errors.NewUnreachableError())
 	}
 
-	addressMetaInfo := simpleCompositeValue.PrivateField(sema.AccountTypeAddressFieldName)
+	addressMetaInfo := simpleCompositeValue.PrivateField(interpreter.AccountTypePrivateAddressFieldName)
 	address, ok := addressMetaInfo.(interpreter.AddressValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
