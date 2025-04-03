@@ -3421,6 +3421,16 @@ func (p TypeParameter) TypeBoundEquals(ty Type) bool {
 	return p.TypeBound.Equal(ty)
 }
 
+func (p TypeParameter) IDPart() string {
+	var b strings.Builder
+	b.WriteString(p.Name)
+	if p.TypeBound != nil {
+		b.WriteByte(':')
+		b.WriteString(string(p.TypeBound.ID()))
+	}
+	return b.String()
+}
+
 // Function types
 
 func formatFunctionType(
@@ -3648,7 +3658,7 @@ func (t *FunctionType) ID() TypeID {
 	if typeParameterCount > 0 {
 		typeParameters = make([]string, typeParameterCount)
 		for i, typeParameter := range t.TypeParameters {
-			typeParameters[i] = typeParameter.Name
+			typeParameters[i] = typeParameter.IDPart()
 		}
 	}
 
