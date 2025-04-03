@@ -667,6 +667,6 @@ func (ctx NoOpStringContext) GetCompositeType(_ common.Location, _ string, _ Typ
 	panic(errors.NewUnreachableError())
 }
 
-func (n NoOpStringContext) IsTypeInfoRecovered(_ common.Location) bool {
+func (ctx NoOpStringContext) IsTypeInfoRecovered(_ common.Location) bool {
 	panic(errors.NewUnreachableError())
 }

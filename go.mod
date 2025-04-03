@@ -30,11 +30,10 @@ require (
 
 require (
 	github.com/SaveTheRbtz/mph v0.1.1-0.20240117162131-4166ec7869bc
-	github.com/goccy/go-yaml v1.15.9
+	github.com/goccy/go-yaml v1.17.1
 	github.com/k0kubun/pp v3.0.1+incompatible
 	github.com/kodova/html-to-markdown v1.0.1
 	github.com/onflow/crypto v0.25.0
-	golang.org/x/exp v0.0.0-20240103183307-be819d1f06fc
 )
 
 require (
@@ -56,6 +55,7 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/zeebo/assert v1.3.0 // indirect
 	github.com/zeebo/blake3 v0.2.4 // indirect
+	golang.org/x/exp v0.0.0-20240103183307-be819d1f06fc // indirect
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.26.0 // indirect
