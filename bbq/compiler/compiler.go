@@ -1604,10 +1604,17 @@ func (c *Compiler[_, _]) VisitFunctionExpression(expression *ast.FunctionExpress
 		FunctionIndex: uint16(functionIndex),
 	})
 
+	parameterCount := 0
 	parameterList := expression.ParameterList
-	parameterCount := uint16(len(parameterList.Parameters))
+	if parameterList != nil {
+		parameterCount = len(parameterList.Parameters)
+	}
 
-	function := c.addFunction("", parameterCount)
+	if parameterCount > math.MaxUint16 {
+		panic(errors.NewDefaultUserError("invalid parameter count"))
+	}
+
+	function := c.addFunction("", uint16(parameterCount))
 
 	previousFunction := c.currentFunction
 	c.targetFunction(function)
