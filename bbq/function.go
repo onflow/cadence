@@ -24,6 +24,4 @@ type Function[E any] struct {
 	ParameterCount     uint16
 	TypeParameterCount uint16
 	LocalCount         uint16
-
-	IsCompositeFunction bool
 }
