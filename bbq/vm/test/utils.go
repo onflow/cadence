@@ -638,7 +638,15 @@ func compileAndInvokeWithOptions(
 func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMOptions) *vm.VM {
 	programs := map[common.Location]*compiledProgram{}
 
-	location := common.ScriptLocation{0x1}
+	var location common.Location
+	parseAndCheckOptions := options.ParseAndCheckOptions
+	if parseAndCheckOptions != nil {
+		location = parseAndCheckOptions.Location
+	}
+	if location == nil {
+		location = common.ScriptLocation{0x1}
+	}
+
 	program := parseCheckAndCompileCodeWithOptions(
 		t,
 		code,
@@ -669,10 +677,8 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 		}
 	}
 
-	scriptLocation := runtime_utils.NewScriptLocationGenerator()
-
 	programVM := vm.NewVM(
-		scriptLocation(),
+		location,
 		program,
 		vmConfig,
 	)
