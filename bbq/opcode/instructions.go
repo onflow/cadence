@@ -89,6 +89,66 @@ func DecodeSetLocal(ip *uint16, code []byte) (i InstructionSetLocal) {
 	return i
 }
 
+// InstructionGetCell
+//
+// Pushes the value of the cell at the given index onto the stack.
+type InstructionGetCell struct {
+	CellIndex uint16
+}
+
+var _ Instruction = InstructionGetCell{}
+
+func (InstructionGetCell) Opcode() Opcode {
+	return GetCell
+}
+
+func (i InstructionGetCell) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	printfArgument(&sb, "cellIndex", i.CellIndex)
+	return sb.String()
+}
+
+func (i InstructionGetCell) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.CellIndex)
+}
+
+func DecodeGetCell(ip *uint16, code []byte) (i InstructionGetCell) {
+	i.CellIndex = decodeUint16(ip, code)
+	return i
+}
+
+// InstructionSetCell
+//
+// Pops a value off the stack and then sets the cell at the given index to that value.
+type InstructionSetCell struct {
+	CellIndex uint16
+}
+
+var _ Instruction = InstructionSetCell{}
+
+func (InstructionSetCell) Opcode() Opcode {
+	return SetCell
+}
+
+func (i InstructionSetCell) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	printfArgument(&sb, "cellIndex", i.CellIndex)
+	return sb.String()
+}
+
+func (i InstructionSetCell) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.CellIndex)
+}
+
+func DecodeSetCell(ip *uint16, code []byte) (i InstructionSetCell) {
+	i.CellIndex = decodeUint16(ip, code)
+	return i
+}
+
 // InstructionGetGlobal
 //
 // Pushes the value of the global at the given index onto the stack.
@@ -1449,6 +1509,10 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return DecodeGetLocal(ip, code)
 	case SetLocal:
 		return DecodeSetLocal(ip, code)
+	case GetCell:
+		return DecodeGetCell(ip, code)
+	case SetCell:
+		return DecodeSetCell(ip, code)
 	case GetGlobal:
 		return DecodeGetGlobal(ip, code)
 	case SetGlobal:

@@ -27,6 +27,30 @@
       - name: "value"
         type: "value"
 
+# Cell instructions
+
+- name: "getCell"
+  description:
+    Pushes the value of the cell at the given index onto the stack.
+  operands:
+    - name: "cellIndex"
+      type: "index"
+  valueEffects:
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "setCell"
+  description:
+    Pops a value off the stack and then sets the cell at the given index to that value.
+  operands:
+    - name: "cellIndex"
+      type: "index"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+
 # Global instructions
 
 - name: "getGlobal"
