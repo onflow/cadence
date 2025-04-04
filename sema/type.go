@@ -3413,7 +3413,7 @@ func (p TypeParameter) checkTypeBound(ty Type, memoryGauge common.MemoryGauge, t
 	return nil
 }
 
-func (p TypeParameter) TypeBoundEquals(ty Type) bool {
+func (p TypeParameter) TypeBoundEqual(ty Type) bool {
 	if p.TypeBound == nil {
 		return ty == nil
 	}
@@ -3507,6 +3507,14 @@ func (arity *Arity) MaxCount(parameterCount int) *int {
 	}
 
 	return &maxCount
+}
+
+func (arity *Arity) Equal(other *Arity) bool {
+	if other == nil {
+		return false
+	}
+	return arity.Min == other.Min &&
+		arity.Max == other.Max
 }
 
 type FunctionPurity int
@@ -3710,6 +3718,10 @@ func (t *FunctionType) Equal(other Type) bool {
 	// parameters
 
 	if len(t.Parameters) != len(otherFunction.Parameters) {
+		return false
+	}
+
+	if !t.ArityEqual(otherFunction.Arity) {
 		return false
 	}
 
@@ -4071,6 +4083,13 @@ func (t *FunctionType) ParameterTypes() []Type {
 		}
 	}
 	return types
+}
+
+func (t *FunctionType) ArityEqual(other *Arity) bool {
+	if t.Arity == nil {
+		return other == nil
+	}
+	return t.Arity.Equal(other)
 }
 
 type ArgumentExpressionsCheck func(
@@ -7564,19 +7583,23 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			return false
 		}
 
-		for i, subParameter := range typedSubType.TypeParameters {
-			superParameter := typedSuperType.TypeParameters[i]
-			if !subParameter.TypeBoundEquals(superParameter.TypeBound) {
+		for i, subTypeParameter := range typedSubType.TypeParameters {
+			superTypeParameter := typedSuperType.TypeParameters[i]
+			if !subTypeParameter.TypeBoundEqual(superTypeParameter.TypeBound) {
 				return false
 			}
 		}
 
-		// Functions are contravariant in their parameter types
-
+		// Parameter arity must be equivalent.
 		if len(typedSubType.Parameters) != len(typedSuperType.Parameters) {
 			return false
 		}
 
+		if !typedSubType.ArityEqual(typedSuperType.Arity) {
+			return false
+		}
+
+		// Functions are contravariant in their parameter types
 		for i, subParameter := range typedSubType.Parameters {
 			superParameter := typedSuperType.Parameters[i]
 			if !IsSubType(
@@ -7588,7 +7611,6 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		}
 
 		// Functions are covariant in their return type
-
 		if typedSubType.ReturnTypeAnnotation.Type != nil {
 			if typedSuperType.ReturnTypeAnnotation.Type == nil {
 				return false
@@ -7603,10 +7625,6 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		} else if typedSuperType.ReturnTypeAnnotation.Type != nil {
 			return false
 		}
-
-		// Receiver type wouldn't matter for sub-typing.
-		// i.e: In a bound function pointer `x.foo`, `x` is a closure,
-		// and is not part of the function pointer's inputs/outputs.
 
 		// Constructors?
 

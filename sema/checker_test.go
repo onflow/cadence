@@ -174,7 +174,479 @@ func TestFunctionSubtyping(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("fun(Int): Void <: fun(AnyStruct): Void", func(t *testing.T) {
+	t.Run("different type", func(t *testing.T) {
+		assert.False(t,
+			IsSubType(
+				VoidType,
+				&FunctionType{
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+			),
+		)
+	})
+
+	t.Run("both impure", func(t *testing.T) {
+		assert.True(t,
+			IsSubType(
+				&FunctionType{
+					Purity:               FunctionPurityImpure,
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+				&FunctionType{
+					Purity:               FunctionPurityImpure,
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+			),
+		)
+	})
+
+	t.Run("both view", func(t *testing.T) {
+		assert.True(t,
+			IsSubType(
+				&FunctionType{
+					Purity:               FunctionPurityView,
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+				&FunctionType{
+					Purity:               FunctionPurityView,
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+			),
+		)
+	})
+
+	t.Run("view, impure", func(t *testing.T) {
+		assert.True(t,
+			IsSubType(
+				&FunctionType{
+					Purity:               FunctionPurityView,
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+				&FunctionType{
+					Purity:               FunctionPurityImpure,
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+			),
+		)
+	})
+
+	t.Run("impure, view", func(t *testing.T) {
+		assert.False(t,
+			IsSubType(
+				&FunctionType{
+					Purity:               FunctionPurityImpure,
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+				&FunctionType{
+					Purity:               FunctionPurityView,
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+			),
+		)
+	})
+
+	t.Run("unequal type parameter count: more in subtype", func(t *testing.T) {
+		assert.False(t,
+			IsSubType(
+				&FunctionType{
+					TypeParameters: []*TypeParameter{
+						{
+							Name: "T",
+						},
+						{
+							Name: "U",
+						},
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+				&FunctionType{
+					TypeParameters: []*TypeParameter{
+						{
+							Name: "T",
+						},
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+			),
+		)
+	})
+
+	t.Run("same type parameter bound: none", func(t *testing.T) {
+		assert.True(t,
+			IsSubType(
+				&FunctionType{
+					TypeParameters: []*TypeParameter{
+						{
+							Name: "T",
+						},
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+				&FunctionType{
+					TypeParameters: []*TypeParameter{
+						{
+							Name: "T",
+						},
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+			),
+		)
+	})
+
+	t.Run("same type parameter bound: some", func(t *testing.T) {
+		assert.True(t,
+			IsSubType(
+				&FunctionType{
+					TypeParameters: []*TypeParameter{
+						{
+							Name:      "T",
+							TypeBound: AnyStructType,
+						},
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+				&FunctionType{
+					TypeParameters: []*TypeParameter{
+						{
+							Name:      "T",
+							TypeBound: AnyStructType,
+						},
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+			),
+		)
+	})
+
+	t.Run("different type parameter bound: some, none", func(t *testing.T) {
+		assert.False(t,
+			IsSubType(
+				&FunctionType{
+					TypeParameters: []*TypeParameter{
+						{
+							Name:      "T",
+							TypeBound: AnyStructType,
+						},
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+				&FunctionType{
+					TypeParameters: []*TypeParameter{
+						{
+							Name: "T",
+						},
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+			),
+		)
+	})
+
+	t.Run("different type parameter bound: none, some", func(t *testing.T) {
+		assert.False(t,
+			IsSubType(
+				&FunctionType{
+					TypeParameters: []*TypeParameter{
+						{
+							Name: "T",
+						},
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+				&FunctionType{
+					TypeParameters: []*TypeParameter{
+						{
+							Name:      "T",
+							TypeBound: AnyStructType,
+						},
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+			),
+		)
+	})
+
+	t.Run("different type parameter bound", func(t *testing.T) {
+		assert.False(t,
+			IsSubType(
+				&FunctionType{
+					TypeParameters: []*TypeParameter{
+						{
+							Name:      "T",
+							TypeBound: IntType,
+						},
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+				&FunctionType{
+					TypeParameters: []*TypeParameter{
+						{
+							Name:      "T",
+							TypeBound: AnyStructType,
+						},
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+			),
+		)
+	})
+
+	t.Run("unequal parameter count: more in supertype", func(t *testing.T) {
+		assert.False(t,
+			IsSubType(
+				&FunctionType{
+					TypeParameters: []*TypeParameter{
+						{
+							Name: "T",
+						},
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+				&FunctionType{
+					TypeParameters: []*TypeParameter{
+						{
+							Name: "T",
+						},
+						{
+							Name: "U",
+						},
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+			),
+		)
+	})
+
+	t.Run("unequal parameter count: more in subtype", func(t *testing.T) {
+		assert.False(t,
+			IsSubType(
+				&FunctionType{
+					Parameters: []Parameter{
+						{
+							TypeAnnotation: IntTypeAnnotation,
+						},
+						{
+							TypeAnnotation: StringTypeAnnotation,
+						},
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+				&FunctionType{
+					Parameters: []Parameter{
+						{
+							TypeAnnotation: IntTypeAnnotation,
+						},
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+			),
+		)
+	})
+
+	t.Run("unequal parameter count: more in supertype", func(t *testing.T) {
+		assert.False(t,
+			IsSubType(
+				&FunctionType{
+					Parameters: []Parameter{
+						{
+							TypeAnnotation: IntTypeAnnotation,
+						},
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+				&FunctionType{
+					Parameters: []Parameter{
+						{
+							TypeAnnotation: IntTypeAnnotation,
+						},
+						{
+							TypeAnnotation: StringTypeAnnotation,
+						},
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+			),
+		)
+	})
+
+	t.Run("equal parameter count, no arity", func(t *testing.T) {
+		assert.True(t,
+			IsSubType(
+				&FunctionType{
+					Parameters: []Parameter{
+						{
+							TypeAnnotation: IntTypeAnnotation,
+						},
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+				&FunctionType{
+					Parameters: []Parameter{
+						{
+							TypeAnnotation: IntTypeAnnotation,
+						},
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+			),
+		)
+	})
+
+	t.Run("equal parameter count, arity only in subtype", func(t *testing.T) {
+		assert.False(t,
+			IsSubType(
+				&FunctionType{
+					Parameters: []Parameter{
+						{
+							TypeAnnotation: IntTypeAnnotation,
+						},
+					},
+					Arity: &Arity{
+						Min: 0,
+						Max: 1,
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+				&FunctionType{
+					Parameters: []Parameter{
+						{
+							TypeAnnotation: IntTypeAnnotation,
+						},
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+			),
+		)
+	})
+
+	t.Run("equal parameter count, arity only in supertype", func(t *testing.T) {
+		assert.False(t,
+			IsSubType(
+				&FunctionType{
+					Parameters: []Parameter{
+						{
+							TypeAnnotation: IntTypeAnnotation,
+						},
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+				&FunctionType{
+					Parameters: []Parameter{
+						{
+							TypeAnnotation: IntTypeAnnotation,
+						},
+					},
+					Arity: &Arity{
+						Min: 0,
+						Max: 1,
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+			),
+		)
+	})
+
+	t.Run("equal parameter count, equal arity", func(t *testing.T) {
+		assert.True(t,
+			IsSubType(
+				&FunctionType{
+					Parameters: []Parameter{
+						{
+							TypeAnnotation: IntTypeAnnotation,
+						},
+					},
+					Arity: &Arity{
+						Min: 0,
+						Max: 1,
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+				&FunctionType{
+					Parameters: []Parameter{
+						{
+							TypeAnnotation: IntTypeAnnotation,
+						},
+					},
+					Arity: &Arity{
+						Min: 0,
+						Max: 1,
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+			),
+		)
+	})
+
+	t.Run("equal parameter count, different arity min", func(t *testing.T) {
+		assert.False(t,
+			IsSubType(
+				&FunctionType{
+					Parameters: []Parameter{
+						{
+							TypeAnnotation: IntTypeAnnotation,
+						},
+					},
+					Arity: &Arity{
+						Min: 1,
+						Max: 1,
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+				&FunctionType{
+					Parameters: []Parameter{
+						{
+							TypeAnnotation: IntTypeAnnotation,
+						},
+					},
+					Arity: &Arity{
+						Min: 0,
+						Max: 1,
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+			),
+		)
+	})
+
+	t.Run("equal parameter count, different arity max", func(t *testing.T) {
+		assert.False(t,
+			IsSubType(
+				&FunctionType{
+					Parameters: []Parameter{
+						{
+							TypeAnnotation: IntTypeAnnotation,
+						},
+						{
+							TypeAnnotation: IntTypeAnnotation,
+						},
+					},
+					Arity: &Arity{
+						Min: 0,
+						Max: 2,
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+				&FunctionType{
+					Parameters: []Parameter{
+						{
+							TypeAnnotation: IntTypeAnnotation,
+						},
+						{
+							TypeAnnotation: IntTypeAnnotation,
+						},
+					},
+					Arity: &Arity{
+						Min: 0,
+						Max: 1,
+					},
+					ReturnTypeAnnotation: VoidTypeAnnotation,
+				},
+			),
+		)
+	})
+
+	t.Run("parameter type: not supertype", func(t *testing.T) {
 		assert.False(t,
 			IsSubType(
 				&FunctionType{
@@ -197,7 +669,7 @@ func TestFunctionSubtyping(t *testing.T) {
 		)
 	})
 
-	t.Run("fun(AnyStruct): Void <: fun(Int): Void", func(t *testing.T) {
+	t.Run("parameter type: supertype", func(t *testing.T) {
 		assert.True(t,
 			IsSubType(
 				&FunctionType{
@@ -220,7 +692,7 @@ func TestFunctionSubtyping(t *testing.T) {
 		)
 	})
 
-	t.Run("fun(): Int <: fun(): AnyStruct", func(t *testing.T) {
+	t.Run("return type: subtype", func(t *testing.T) {
 		assert.True(t,
 			IsSubType(
 				&FunctionType{
@@ -233,7 +705,7 @@ func TestFunctionSubtyping(t *testing.T) {
 		)
 	})
 
-	t.Run("fun(): Any <: fun(): Int", func(t *testing.T) {
+	t.Run("return type: not subtype", func(t *testing.T) {
 		assert.False(t,
 			IsSubType(
 				&FunctionType{
@@ -255,20 +727,6 @@ func TestFunctionSubtyping(t *testing.T) {
 				},
 				&FunctionType{
 					IsConstructor:        true,
-					ReturnTypeAnnotation: VoidTypeAnnotation,
-				},
-			),
-		)
-	})
-
-	t.Run("different receiver types", func(t *testing.T) {
-		// Receiver shouldn't matter
-		assert.True(t,
-			IsSubType(
-				&FunctionType{
-					ReturnTypeAnnotation: VoidTypeAnnotation,
-				},
-				&FunctionType{
 					ReturnTypeAnnotation: VoidTypeAnnotation,
 				},
 			),
