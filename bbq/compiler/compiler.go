@@ -23,7 +23,6 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
@@ -44,8 +43,6 @@ type Compiler[E, T any] struct {
 	checker             *sema.Checker
 
 	currentFunction *function[E]
-
-	locals *activations.Activations[*local]
 
 	compositeTypeStack *Stack[sema.CompositeKindedType]
 
@@ -149,7 +146,6 @@ func newCompiler[E, T any](
 		codeGen:             codeGen,
 		typeGen:             typeGen,
 		postConditionsIndex: -1,
-		locals:              activations.NewActivations[*local](nil),
 	}
 }
 
@@ -225,12 +221,10 @@ func (c *Compiler[_, _]) addImportedGlobal(location common.Location, name string
 }
 
 func (c *Compiler[E, T]) addFunction(name string, parameterCount uint16) *function[E] {
-	localsDepth := c.locals.Depth()
-
 	function := newFunction[E](
+		c.currentFunction,
 		name,
 		parameterCount,
-		localsDepth,
 	)
 	c.functions = append(c.functions, function)
 
@@ -480,6 +474,7 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 		// will be used for the contract value.
 		// Hence, reserve a separate global var for contract inits.
 		if declaration.CompositeKind == common.CompositeKindContract {
+			// TODO: handle name clash?!
 			c.addGlobal(commons.InitFunctionName)
 		}
 
@@ -640,8 +635,9 @@ func (c *Compiler[_, _]) compileDeclaration(declaration ast.Declaration) {
 }
 
 func (c *Compiler[_, _]) compileBlock(block *ast.Block, enclosingDeclKind common.DeclarationKind) {
-	c.locals.PushNewWithCurrent()
-	defer c.locals.Pop()
+	locals := c.currentFunction.locals
+	locals.PushNewWithCurrent()
+	defer locals.Pop()
 
 	if c.shouldPatchReturns(enclosingDeclKind) {
 		c.pushReturns()
@@ -673,11 +669,13 @@ func (c *Compiler[_, _]) compileBlock(block *ast.Block, enclosingDeclKind common
 			// doesn't emit return instructions (they just jump to the post conditions).
 			// So a return MUST be emitted here.
 
-			local := c.findLocal(tempResultVariableName)
+			local := c.currentFunction.findLocal(tempResultVariableName)
 			if local == nil {
 				c.codeGen.Emit(opcode.InstructionReturn{})
 			} else {
-				c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: local.index})
+				c.codeGen.Emit(opcode.InstructionGetLocal{
+					LocalIndex: local.index,
+				})
 				c.codeGen.Emit(opcode.InstructionReturnValue{})
 			}
 		} else if needsSyntheticReturn(block.Statements) {
@@ -769,12 +767,14 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 		c.compileExpression(expression)
 
 		if c.hasPostConditions() {
-			tempResultVar := c.findLocal(tempResultVariableName)
+			tempResultVar := c.currentFunction.findLocal(tempResultVariableName)
 
 			if tempResultVar != nil {
 				// (1.a.i)
 				// Assign the return value to the temp-result variable.
-				c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: tempResultVar.index})
+				c.codeGen.Emit(opcode.InstructionSetLocal{
+					LocalIndex: tempResultVar.index,
+				})
 			} else {
 				// (1.a.ii)
 				// If there is no temp-result variable, that means the return type is void.
@@ -861,7 +861,7 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 
 			// Declare the variable *after* unwrapping the optional,
 			// in a new scope
-			c.locals.PushNewWithCurrent()
+			c.currentFunction.locals.PushNewWithCurrent()
 			additionalThenScope = true
 			name := test.Identifier.Identifier
 			c.emitDeclareLocal(name)
@@ -873,7 +873,7 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 		c.compileBlock(statement.Then, common.DeclarationKindUnknown)
 
 		if additionalThenScope {
-			c.locals.Pop()
+			c.currentFunction.locals.Pop()
 		}
 
 		elseBlock := statement.Else
@@ -1047,7 +1047,7 @@ func (c *Compiler[_, _]) VisitVariableDeclaration(declaration *ast.VariableDecla
 		// TODO: This can be nil only for synthetic-result variable
 		//   Any better way to handle this?
 		if declaration.Value == nil {
-			c.declareLocal(name)
+			c.currentFunction.declareLocal(name)
 		} else {
 			// Compile the value expression *before* declaring the variable
 			c.compileExpression(declaration.Value)
@@ -1064,7 +1064,7 @@ func (c *Compiler[_, _]) VisitVariableDeclaration(declaration *ast.VariableDecla
 }
 
 func (c *Compiler[_, _]) emitDeclareLocal(name string) *local {
-	local := c.declareLocal(name)
+	local := c.currentFunction.declareLocal(name)
 	c.codeGen.Emit(opcode.InstructionSetLocal{
 		LocalIndex: local.index,
 	})
@@ -1261,10 +1261,18 @@ func (c *Compiler[_, _]) VisitIdentifierExpression(expression *ast.IdentifierExp
 }
 
 func (c *Compiler[_, _]) emitVariableLoad(name string) {
-	local := c.findLocal(name)
+	local := c.currentFunction.findLocal(name)
 	if local != nil {
 		c.codeGen.Emit(opcode.InstructionGetLocal{
 			LocalIndex: local.index,
+		})
+		return
+	}
+
+	upvalueIndex, ok := c.currentFunction.findOrAddUpvalue(name)
+	if ok {
+		c.codeGen.Emit(opcode.InstructionGetUpvalue{
+			UpvalueIndex: upvalueIndex,
 		})
 		return
 	}
@@ -1276,10 +1284,18 @@ func (c *Compiler[_, _]) emitVariableLoad(name string) {
 }
 
 func (c *Compiler[_, _]) emitVariableStore(name string) {
-	local := c.findLocal(name)
+	local := c.currentFunction.findLocal(name)
 	if local != nil {
 		c.codeGen.Emit(opcode.InstructionSetLocal{
 			LocalIndex: local.index,
+		})
+		return
+	}
+
+	upvalueIndex, ok := c.currentFunction.findOrAddUpvalue(name)
+	if ok {
+		c.codeGen.Emit(opcode.InstructionSetUpvalue{
+			UpvalueIndex: upvalueIndex,
 		})
 		return
 	}
@@ -1780,7 +1796,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	c.declareParameters(parameterList, false)
 
 	// Declare `self`
-	self := c.declareLocal(sema.SelfIdentifier)
+	self := c.currentFunction.declareLocal(sema.SelfIdentifier)
 
 	// Initialize an empty struct and assign to `self`.
 	// i.e: `self = New()`
@@ -1814,7 +1830,9 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		c.codeGen.Emit(opcode.InstructionSetGlobal{GlobalIndex: global.Index})
 	}
 
-	c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: self.index})
+	c.codeGen.Emit(opcode.InstructionSetLocal{
+		LocalIndex: self.index,
+	})
 
 	// emit for the statements in `init()` body.
 	c.compileFunctionBlock(
@@ -1823,7 +1841,9 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	)
 
 	// Constructor should return the created the struct. i.e: return `self`
-	c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: self.index})
+	c.codeGen.Emit(opcode.InstructionGetLocal{
+		LocalIndex: self.index,
+	})
 	c.codeGen.Emit(opcode.InstructionReturnValue{})
 }
 
@@ -1870,7 +1890,7 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 			FunctionIndex: uint16(functionIndex),
 		})
 
-		local := c.declareLocal(identifier)
+		local := c.currentFunction.declareLocal(identifier)
 		c.codeGen.Emit(opcode.InstructionSetLocal{
 			LocalIndex: local.index,
 		})
@@ -2084,13 +2104,13 @@ func (c *Compiler[E, T]) declareParameters(paramList *ast.ParameterList, declare
 	if declareReceiver {
 		// Declare receiver as `self`.
 		// Receiver is always at the zero-th index of params.
-		c.declareLocal(sema.SelfIdentifier)
+		c.currentFunction.declareLocal(sema.SelfIdentifier)
 	}
 
 	if paramList != nil {
 		for _, parameter := range paramList.Parameters {
 			parameterName := parameter.Identifier.Identifier
-			c.declareLocal(parameterName)
+			c.currentFunction.declareLocal(parameterName)
 		}
 	}
 }
@@ -2109,18 +2129,4 @@ func (c *Compiler[_, _]) withConditionExtendedElaboration(statement ast.Statemen
 		}()
 	}
 	f()
-}
-
-func (c *Compiler[_, _]) declareLocal(name string) *local {
-	f := c.currentFunction
-	local := &local{
-		index: f.generateLocalIndex(),
-		depth: c.locals.Depth(),
-	}
-	c.locals.Set(name, local)
-	return local
-}
-
-func (c *Compiler[_, _]) findLocal(name string) *local {
-	return c.locals.Find(name)
 }
