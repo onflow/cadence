@@ -21,44 +21,34 @@ package compiler
 import (
 	"math"
 
-	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/errors"
 )
 
 type function[E any] struct {
-	name                string
-	code                []E
-	localCount          uint16
-	locals              *activations.Activations[*local]
-	parameterCount      uint16
-	isCompositeFunction bool
+	name           string
+	code           []E
+	localCount     uint16
+	parameterCount uint16
+	localsDepth    int
 }
 
-func newFunction[E any](name string, parameterCount uint16, isCompositeFunction bool) *function[E] {
+func newFunction[E any](
+	name string,
+	parameterCount uint16,
+	localsDepth int,
+) *function[E] {
 	return &function[E]{
-		name:                name,
-		parameterCount:      parameterCount,
-		locals:              activations.NewActivations[*local](nil),
-		isCompositeFunction: isCompositeFunction,
+		name:           name,
+		parameterCount: parameterCount,
+		localsDepth:    localsDepth,
 	}
 }
 
 func (f *function[E]) generateLocalIndex() uint16 {
-	index := f.localCount
-	f.localCount++
-	return index
-}
-
-func (f *function[E]) declareLocal(name string) *local {
 	if f.localCount == math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid local declaration"))
 	}
-	index := f.generateLocalIndex()
-	local := &local{index: index}
-	f.locals.Set(name, local)
-	return local
-}
-
-func (f *function[E]) findLocal(name string) *local {
-	return f.locals.Find(name)
+	index := f.localCount
+	f.localCount++
+	return index
 }

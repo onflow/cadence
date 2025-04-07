@@ -20,4 +20,5 @@ package compiler
 
 type local struct {
 	index uint16
+	depth int
 }
