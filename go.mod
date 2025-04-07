@@ -6,13 +6,13 @@ require (
 	github.com/bits-and-blooms/bitset v1.5.0
 	github.com/c-bata/go-prompt v0.2.6
 	github.com/dave/dst v0.27.2
-	github.com/fxamacker/cbor/v2 v2.4.1-0.20230228173756-c0c9f774e40c
+	github.com/fxamacker/cbor/v2 v2.8.1-0.20250402194037-6f932b086829
 	github.com/itchyny/gojq v0.12.14
 	github.com/k0kubun/pp/v3 v3.2.0
 	github.com/kr/pretty v0.3.1
 	github.com/leanovate/gopter v0.2.9
 	github.com/logrusorgru/aurora/v4 v4.0.0
-	github.com/onflow/atree v0.9.0
+	github.com/onflow/atree v0.10.0
 	github.com/rivo/uniseg v0.4.4
 	github.com/schollz/progressbar/v3 v3.13.1
 	github.com/stretchr/testify v1.10.0
