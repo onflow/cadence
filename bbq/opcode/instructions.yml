@@ -27,6 +27,30 @@
       - name: "value"
         type: "value"
 
+# Upvalue instructions
+
+- name: "getUpvalue"
+  description:
+    Pushes the value of the upvalue at the given index onto the stack.
+  operands:
+    - name: "upvalueIndex"
+      type: "index"
+  valueEffects:
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "setUpvalue"
+  description:
+    Pops a value off the stack and then sets the upvalue at the given index to that value.
+  operands:
+    - name: "upvalueIndex"
+      type: "index"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+
 # Global instructions
 
 - name: "getGlobal"

@@ -93,6 +93,8 @@ func TestPrintInstruction(t *testing.T) {
 		"GetConstant constantIndex:258": {byte(GetConstant), 1, 2},
 		"GetLocal localIndex:258":       {byte(GetLocal), 1, 2},
 		"SetLocal localIndex:258":       {byte(SetLocal), 1, 2},
+		"GetUpvalue upvalueIndex:258":   {byte(GetUpvalue), 1, 2},
+		"SetUpvalue upvalueIndex:258":   {byte(SetUpvalue), 1, 2},
 		"GetGlobal globalIndex:258":     {byte(GetGlobal), 1, 2},
 		"SetGlobal globalIndex:258":     {byte(SetGlobal), 1, 2},
 

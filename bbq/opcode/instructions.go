@@ -89,6 +89,66 @@ func DecodeSetLocal(ip *uint16, code []byte) (i InstructionSetLocal) {
 	return i
 }
 
+// InstructionGetUpvalue
+//
+// Pushes the value of the upvalue at the given index onto the stack.
+type InstructionGetUpvalue struct {
+	UpvalueIndex uint16
+}
+
+var _ Instruction = InstructionGetUpvalue{}
+
+func (InstructionGetUpvalue) Opcode() Opcode {
+	return GetUpvalue
+}
+
+func (i InstructionGetUpvalue) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	printfArgument(&sb, "upvalueIndex", i.UpvalueIndex)
+	return sb.String()
+}
+
+func (i InstructionGetUpvalue) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.UpvalueIndex)
+}
+
+func DecodeGetUpvalue(ip *uint16, code []byte) (i InstructionGetUpvalue) {
+	i.UpvalueIndex = decodeUint16(ip, code)
+	return i
+}
+
+// InstructionSetUpvalue
+//
+// Pops a value off the stack and then sets the upvalue at the given index to that value.
+type InstructionSetUpvalue struct {
+	UpvalueIndex uint16
+}
+
+var _ Instruction = InstructionSetUpvalue{}
+
+func (InstructionSetUpvalue) Opcode() Opcode {
+	return SetUpvalue
+}
+
+func (i InstructionSetUpvalue) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	printfArgument(&sb, "upvalueIndex", i.UpvalueIndex)
+	return sb.String()
+}
+
+func (i InstructionSetUpvalue) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.UpvalueIndex)
+}
+
+func DecodeSetUpvalue(ip *uint16, code []byte) (i InstructionSetUpvalue) {
+	i.UpvalueIndex = decodeUint16(ip, code)
+	return i
+}
+
 // InstructionGetGlobal
 //
 // Pushes the value of the global at the given index onto the stack.
@@ -1449,6 +1509,10 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return DecodeGetLocal(ip, code)
 	case SetLocal:
 		return DecodeSetLocal(ip, code)
+	case GetUpvalue:
+		return DecodeGetUpvalue(ip, code)
+	case SetUpvalue:
+		return DecodeSetUpvalue(ip, code)
 	case GetGlobal:
 		return DecodeGetGlobal(ip, code)
 	case SetGlobal:
