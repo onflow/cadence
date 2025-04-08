@@ -18,14 +18,8 @@
 
 package vm
 
-import (
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/opcode"
-)
-
 type callFrame struct {
-	executable   *ExecutableProgram
 	localsOffset uint16
 	localsCount  uint16
-	function     *bbq.Function[opcode.Instruction]
+	function     FunctionValue
 }
