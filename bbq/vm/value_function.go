@@ -31,6 +31,7 @@ import (
 type FunctionValue struct {
 	Function   *bbq.Function[opcode.Instruction]
 	Executable *ExecutableProgram
+	Upvalues   []*Upvalue
 }
 
 var _ Value = FunctionValue{}

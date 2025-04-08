@@ -1162,15 +1162,35 @@ func opNewClosure(vm *VM, ins opcode.InstructionNewClosure) {
 	executable := vm.callFrame.function.Executable
 	function := &executable.Program.Functions[ins.FunctionIndex]
 
-	// TODO: implement upvalues
-	if len(ins.Upvalues) > 0 {
-		panic(errors.NewUnreachableError())
+	var upvalues []*Upvalue
+	upvalueCount := len(ins.Upvalues)
+	if upvalueCount > 0 {
+		upvalues = make([]*Upvalue, upvalueCount)
+	}
+
+	for upvalueIndex, upvalueDescriptor := range ins.Upvalues {
+		targetIndex := upvalueDescriptor.TargetIndex
+		var upvalue *Upvalue
+		if upvalueDescriptor.IsLocal {
+			absoluteLocalIndex := vm.callFrame.localsOffset + targetIndex
+			upvalue = vm.captureUpvalue(absoluteLocalIndex)
+		} else {
+			upvalue = vm.callFrame.function.Upvalues[targetIndex]
+		}
+		upvalues[upvalueIndex] = upvalue
 	}
 
 	vm.push(FunctionValue{
 		Function:   function,
 		Executable: executable,
+		Upvalues:   upvalues,
 	})
+}
+
+func (vm *VM) captureUpvalue(absoluteLocalIndex uint16) *Upvalue {
+	return &Upvalue{
+		absoluteLocalIndex: absoluteLocalIndex,
+	}
 }
 
 func (vm *VM) initializeConstant(index uint16) (value Value) {
