@@ -196,7 +196,7 @@ func printfUInt16ArrayArgument(sb *strings.Builder, argName string, values []uin
 		_, _ = fmt.Fprintf(sb, "%d", value)
 	}
 
-	sb.WriteString("]")
+	sb.WriteByte(']')
 }
 
 func printfUpvalueArrayArgument(sb *strings.Builder, argName string, upvalues []Upvalue) {
@@ -208,7 +208,7 @@ func printfUpvalueArrayArgument(sb *strings.Builder, argName string, upvalues []
 		_, _ = fmt.Fprintf(sb, "targetIndex:%d isLocal:%v", upvalue.TargetIndex, upvalue.IsLocal)
 	}
 
-	sb.WriteString("]")
+	sb.WriteByte(']')
 }
 
 func printfArgument(sb *strings.Builder, fieldName string, v any) {

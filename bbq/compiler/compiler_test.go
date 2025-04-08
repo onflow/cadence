@@ -4484,7 +4484,7 @@ func TestCompileFunctionExpressionOuterOuterVariableUse(t *testing.T) {
               }
           }
       }
-  `)
+    `)
 	require.NoError(t, err)
 
 	comp := compiler.NewInstructionCompiler(checker)
