@@ -171,10 +171,10 @@ func (v *PublishedValue) Transfer(
 
 }
 
-func (v *PublishedValue) Clone(interpreter *Interpreter) Value {
+func (v *PublishedValue) Clone(context ValueCloneContext) Value {
 	return &PublishedValue{
 		Recipient: v.Recipient,
-		Value:     v.Value.Clone(interpreter).(*IDCapabilityValue),
+		Value:     v.Value.Clone(context).(*IDCapabilityValue),
 	}
 }
 

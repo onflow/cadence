@@ -385,7 +385,7 @@ func (v *StorageReferenceValue) Transfer(
 	return v
 }
 
-func (v *StorageReferenceValue) Clone(_ *Interpreter) Value {
+func (v *StorageReferenceValue) Clone(_ ValueCloneContext) Value {
 	return NewUnmeteredStorageReferenceValue(
 		v.Authorization,
 		v.TargetStorageAddress,

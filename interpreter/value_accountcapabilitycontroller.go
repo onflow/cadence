@@ -162,7 +162,7 @@ func (*AccountCapabilityControllerValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*AccountCapabilityControllerValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (*AccountCapabilityControllerValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -181,7 +181,7 @@ func (v *AccountCapabilityControllerValue) Transfer(
 	return v
 }
 
-func (v *AccountCapabilityControllerValue) Clone(_ *Interpreter) Value {
+func (v *AccountCapabilityControllerValue) Clone(_ ValueCloneContext) Value {
 	return &AccountCapabilityControllerValue{
 		BorrowType:   v.BorrowType,
 		CapabilityID: v.CapabilityID,

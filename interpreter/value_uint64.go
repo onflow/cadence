@@ -584,7 +584,7 @@ func (v UInt64Value) Transfer(
 	return v
 }
 
-func (v UInt64Value) Clone(_ *Interpreter) Value {
+func (v UInt64Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

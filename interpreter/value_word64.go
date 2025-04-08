@@ -480,7 +480,7 @@ func (v Word64Value) Transfer(
 	return v
 }
 
-func (v Word64Value) Clone(_ *Interpreter) Value {
+func (v Word64Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

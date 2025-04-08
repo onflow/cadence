@@ -206,9 +206,9 @@ func (v *StorageCapabilityControllerValue) Transfer(
 	return v
 }
 
-func (v *StorageCapabilityControllerValue) Clone(interpreter *Interpreter) Value {
+func (v *StorageCapabilityControllerValue) Clone(context ValueCloneContext) Value {
 	return &StorageCapabilityControllerValue{
-		TargetPath:   v.TargetPath.Clone(interpreter).(PathValue),
+		TargetPath:   v.TargetPath.Clone(context).(PathValue),
 		BorrowType:   v.BorrowType,
 		CapabilityID: v.CapabilityID,
 	}

@@ -1423,11 +1423,9 @@ func (v *ArrayValue) Transfer(
 	return res
 }
 
-func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
-	config := interpreter.SharedState.Config
-
+func (v *ArrayValue) Clone(context ValueCloneContext) Value {
 	array := newArrayValueFromConstructor(
-		interpreter,
+		context,
 		v.Type,
 		v.array.Count(),
 		func() *atree.Array {
@@ -1437,7 +1435,7 @@ func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 			}
 
 			array, err := atree.NewArrayFromBatchData(
-				config.Storage,
+				context.Storage(),
 				v.StorageAddress(),
 				v.array.Type(),
 				func() (atree.Value, error) {
@@ -1449,8 +1447,8 @@ func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 						return nil, nil
 					}
 
-					element := MustConvertStoredValue(interpreter, value).
-						Clone(interpreter)
+					element := MustConvertStoredValue(context, value).
+						Clone(context)
 
 					return element, nil
 				},

@@ -309,7 +309,7 @@ func (v TypeValue) Transfer(
 	return v
 }
 
-func (v TypeValue) Clone(_ *Interpreter) Value {
+func (v TypeValue) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

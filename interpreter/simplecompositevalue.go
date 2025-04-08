@@ -256,7 +256,7 @@ func (*SimpleCompositeValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v *SimpleCompositeValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (v *SimpleCompositeValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -283,14 +283,14 @@ func (v *SimpleCompositeValue) Transfer(
 	return v
 }
 
-func (v *SimpleCompositeValue) Clone(interpreter *Interpreter) Value {
+func (v *SimpleCompositeValue) Clone(context ValueCloneContext) Value {
 
 	clonedFields := make(map[string]Value, len(v.Fields))
 
 	for _, fieldName := range v.FieldNames {
 		fieldValue := v.Fields[fieldName]
 
-		clonedFields[fieldName] = fieldValue.Clone(interpreter)
+		clonedFields[fieldName] = fieldValue.Clone(context)
 	}
 
 	return &SimpleCompositeValue{

@@ -485,7 +485,7 @@ func (v UFix64Value) Transfer(
 	return v
 }
 
-func (v UFix64Value) Clone(_ *Interpreter) Value {
+func (v UFix64Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

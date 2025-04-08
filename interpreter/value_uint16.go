@@ -555,7 +555,7 @@ func (v UInt16Value) Transfer(
 	return v
 }
 
-func (v UInt16Value) Clone(_ *Interpreter) Value {
+func (v UInt16Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

@@ -566,7 +566,7 @@ func (v IntValue) Transfer(
 	return v
 }
 
-func (v IntValue) Clone(_ *Interpreter) Value {
+func (v IntValue) Clone(_ ValueCloneContext) Value {
 	return NewUnmeteredIntValueFromBigInt(v.BigInt)
 }
 

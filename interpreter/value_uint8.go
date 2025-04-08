@@ -600,7 +600,7 @@ func (v UInt8Value) Transfer(
 	return v
 }
 
-func (v UInt8Value) Clone(_ *Interpreter) Value {
+func (v UInt8Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

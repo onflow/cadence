@@ -1342,17 +1342,15 @@ func (v *CompositeValue) ResourceUUID(interpreter *Interpreter) *UInt64Value {
 	return &uuid
 }
 
-func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
+func (v *CompositeValue) Clone(context ValueCloneContext) Value {
 
 	iterator, err := v.dictionary.ReadOnlyIterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
 
-	config := interpreter.SharedState.Config
-
 	dictionary, err := atree.NewMapFromBatchData(
-		config.Storage,
+		context.Storage(),
 		v.StorageAddress(),
 		atree.NewDefaultDigesterBuilder(),
 		v.dictionary.Type(),
@@ -1373,7 +1371,7 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 			// an "atree-level string", not an interpreter.Value.
 			// Thus, we do not, and cannot, convert.
 			key := atreeKey
-			value := MustConvertStoredValue(interpreter, atreeValue).Clone(interpreter)
+			value := MustConvertStoredValue(context, atreeValue).Clone(context)
 
 			return key, value, nil
 		},

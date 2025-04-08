@@ -245,7 +245,7 @@ func (v PathValue) Transfer(
 	return v
 }
 
-func (v PathValue) Clone(_ *Interpreter) Value {
+func (v PathValue) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

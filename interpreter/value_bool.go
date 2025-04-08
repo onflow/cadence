@@ -183,7 +183,7 @@ func (v BoolValue) Transfer(
 	return v
 }
 
-func (v BoolValue) Clone(_ *Interpreter) Value {
+func (v BoolValue) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

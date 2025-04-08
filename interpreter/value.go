@@ -128,7 +128,7 @@ type Value interface {
 	// Clone returns a new value that is equal to this value.
 	// NOTE: not used by interpreter, but used externally (e.g. state migration)
 	// NOTE: memory metering is unnecessary for Clone methods
-	Clone(interpreter *Interpreter) Value
+	Clone(context ValueCloneContext) Value
 	IsImportable(interpreter *Interpreter, locationRange LocationRange) bool
 }
 

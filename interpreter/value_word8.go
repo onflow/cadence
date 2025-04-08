@@ -449,7 +449,7 @@ func (v Word8Value) Transfer(
 	return v
 }
 
-func (v Word8Value) Clone(_ *Interpreter) Value {
+func (v Word8Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

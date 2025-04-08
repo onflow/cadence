@@ -643,7 +643,7 @@ func (Int64Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Int64Value) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (Int64Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -662,7 +662,7 @@ func (v Int64Value) Transfer(
 	return v
 }
 
-func (v Int64Value) Clone(_ *Interpreter) Value {
+func (v Int64Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

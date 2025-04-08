@@ -391,8 +391,8 @@ func (v *SomeValue) Transfer(
 	return res
 }
 
-func (v *SomeValue) Clone(interpreter *Interpreter) Value {
-	innerValue := v.value.Clone(interpreter)
+func (v *SomeValue) Clone(context ValueCloneContext) Value {
+	innerValue := v.value.Clone(context)
 	return NewUnmeteredSomeValueNonCopying(innerValue)
 }
 

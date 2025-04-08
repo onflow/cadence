@@ -180,7 +180,7 @@ func (CharacterValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (CharacterValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (CharacterValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -199,7 +199,7 @@ func (v CharacterValue) Transfer(
 	return v
 }
 
-func (v CharacterValue) Clone(_ *Interpreter) Value {
+func (v CharacterValue) Clone(_ ValueCloneContext) Value {
 	return v
 }
 
@@ -219,7 +219,7 @@ func (CharacterValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (v CharacterValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+func (v CharacterValue) GetMember(context MemberAccessibleContext, _ LocationRange, name string) Value {
 	switch name {
 	case sema.ToStringFunctionName:
 		return NewBoundHostFunctionValue(

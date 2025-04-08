@@ -141,7 +141,7 @@ func (*InterpretedFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*InterpretedFunctionValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (*InterpretedFunctionValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -161,7 +161,7 @@ func (f *InterpretedFunctionValue) Transfer(
 	return f
 }
 
-func (f *InterpretedFunctionValue) Clone(_ *Interpreter) Value {
+func (f *InterpretedFunctionValue) Clone(_ ValueCloneContext) Value {
 	return f
 }
 
@@ -294,7 +294,7 @@ func (*HostFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*HostFunctionValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (*HostFunctionValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -314,7 +314,7 @@ func (f *HostFunctionValue) Transfer(
 	return f
 }
 
-func (f *HostFunctionValue) Clone(_ *Interpreter) Value {
+func (f *HostFunctionValue) Clone(_ ValueCloneContext) Value {
 	return f
 }
 
@@ -485,7 +485,7 @@ func (BoundFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (BoundFunctionValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (BoundFunctionValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -505,7 +505,7 @@ func (f BoundFunctionValue) Transfer(
 	return f
 }
 
-func (f BoundFunctionValue) Clone(_ *Interpreter) Value {
+func (f BoundFunctionValue) Clone(_ ValueCloneContext) Value {
 	return f
 }
 

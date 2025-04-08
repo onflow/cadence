@@ -274,7 +274,7 @@ func (*EphemeralReferenceValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*EphemeralReferenceValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (*EphemeralReferenceValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -293,8 +293,8 @@ func (v *EphemeralReferenceValue) Transfer(
 	return v
 }
 
-func (v *EphemeralReferenceValue) Clone(inter *Interpreter) Value {
-	return NewUnmeteredEphemeralReferenceValue(inter, v.Authorization, v.Value, v.BorrowedType, EmptyLocationRange)
+func (v *EphemeralReferenceValue) Clone(context ValueCloneContext) Value {
+	return NewUnmeteredEphemeralReferenceValue(context, v.Authorization, v.Value, v.BorrowedType, EmptyLocationRange)
 }
 
 func (*EphemeralReferenceValue) DeepRemove(_ ValueRemoveContext, _ bool) {

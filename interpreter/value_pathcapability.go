@@ -237,7 +237,7 @@ func (*PathCapabilityValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*PathCapabilityValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (*PathCapabilityValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -257,11 +257,11 @@ func (v *PathCapabilityValue) Transfer(
 	return v
 }
 
-func (v *PathCapabilityValue) Clone(interpreter *Interpreter) Value {
+func (v *PathCapabilityValue) Clone(context ValueCloneContext) Value {
 	return &PathCapabilityValue{
 		BorrowType: v.BorrowType,
-		Path:       v.Path.Clone(interpreter).(PathValue),
-		address:    v.address.Clone(interpreter).(AddressValue),
+		Path:       v.Path.Clone(context).(PathValue),
+		address:    v.address.Clone(context).(AddressValue),
 	}
 }
 

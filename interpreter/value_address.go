@@ -156,7 +156,7 @@ func (v AddressValue) ToAddress() common.Address {
 	return common.Address(v)
 }
 
-func (v AddressValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+func (v AddressValue) GetMember(context MemberAccessibleContext, _ LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -228,7 +228,7 @@ func (AddressValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (AddressValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (AddressValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -247,7 +247,7 @@ func (v AddressValue) Transfer(
 	return v
 }
 
-func (v AddressValue) Clone(_ *Interpreter) Value {
+func (v AddressValue) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

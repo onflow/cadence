@@ -692,7 +692,7 @@ func (v UInt128Value) Transfer(
 	return v
 }
 
-func (v UInt128Value) Clone(_ *Interpreter) Value {
+func (v UInt128Value) Clone(_ ValueCloneContext) Value {
 	return NewUnmeteredUInt128ValueFromBigInt(v.BigInt)
 }
 

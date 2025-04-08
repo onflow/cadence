@@ -452,7 +452,7 @@ func (v Word32Value) Transfer(
 	return v
 }
 
-func (v Word32Value) Clone(_ *Interpreter) Value {
+func (v Word32Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

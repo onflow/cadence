@@ -1429,11 +1429,9 @@ func (v *DictionaryValue) Transfer(
 	return res
 }
 
-func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
-	config := interpreter.SharedState.Config
-
-	valueComparator := newValueComparator(interpreter, EmptyLocationRange)
-	hashInputProvider := newHashInputProvider(interpreter, EmptyLocationRange)
+func (v *DictionaryValue) Clone(context ValueCloneContext) Value {
+	valueComparator := newValueComparator(context, EmptyLocationRange)
+	hashInputProvider := newHashInputProvider(context, EmptyLocationRange)
 
 	iterator, err := v.dictionary.ReadOnlyIterator()
 	if err != nil {
@@ -1441,7 +1439,7 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 	}
 
 	orderedMap, err := atree.NewMapFromBatchData(
-		config.Storage,
+		context.Storage(),
 		v.StorageAddress(),
 		atree.NewDefaultDigesterBuilder(),
 		v.dictionary.Type(),
@@ -1458,11 +1456,11 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 				return nil, nil, nil
 			}
 
-			key := MustConvertStoredValue(interpreter, atreeKey).
-				Clone(interpreter)
+			key := MustConvertStoredValue(context, atreeKey).
+				Clone(context)
 
-			value := MustConvertStoredValue(interpreter, atreeValue).
-				Clone(interpreter)
+			value := MustConvertStoredValue(context, atreeValue).
+				Clone(context)
 
 			return key, value, nil
 		},
@@ -1472,7 +1470,7 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 	}
 
 	dictionary := newDictionaryValueFromAtreeMap(
-		interpreter,
+		context,
 		v.Type,
 		v.elementSize,
 		orderedMap,

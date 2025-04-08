@@ -649,7 +649,7 @@ func (Int16Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Int16Value) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (Int16Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -668,7 +668,7 @@ func (v Int16Value) Transfer(
 	return v
 }
 
-func (v Int16Value) Clone(_ *Interpreter) Value {
+func (v Int16Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

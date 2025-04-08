@@ -140,10 +140,10 @@ func (v PathLinkValue) Transfer(
 	return v
 }
 
-func (v PathLinkValue) Clone(inter *Interpreter) Value {
+func (v PathLinkValue) Clone(context ValueCloneContext) Value {
 	return PathLinkValue{
 		Type:       v.Type,
-		TargetPath: v.TargetPath.Clone(inter).(PathValue),
+		TargetPath: v.TargetPath.Clone(context).(PathValue),
 	}
 }
 
@@ -263,7 +263,7 @@ func (v AccountLinkValue) Transfer(
 	return v
 }
 
-func (AccountLinkValue) Clone(_ *Interpreter) Value {
+func (AccountLinkValue) Clone(_ ValueCloneContext) Value {
 	return AccountLinkValue{}
 }
 

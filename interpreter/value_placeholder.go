@@ -95,7 +95,7 @@ func (f placeholderValue) Transfer(
 	return f
 }
 
-func (f placeholderValue) Clone(_ *Interpreter) Value {
+func (f placeholderValue) Clone(_ ValueCloneContext) Value {
 	return f
 }
 

@@ -218,7 +218,7 @@ func (*IDCapabilityValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*IDCapabilityValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (*IDCapabilityValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -238,10 +238,10 @@ func (v *IDCapabilityValue) Transfer(
 	return v
 }
 
-func (v *IDCapabilityValue) Clone(interpreter *Interpreter) Value {
+func (v *IDCapabilityValue) Clone(context ValueCloneContext) Value {
 	return NewUnmeteredCapabilityValue(
 		v.ID,
-		v.address.Clone(interpreter).(AddressValue),
+		v.address.Clone(context).(AddressValue),
 		v.BorrowType,
 	)
 }

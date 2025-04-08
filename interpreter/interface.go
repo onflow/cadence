@@ -163,6 +163,13 @@ type ValueStringContext interface {
 
 var _ ValueStringContext = &Interpreter{}
 
+type ValueCloneContext interface {
+	StorageContext
+	ReferenceTracker
+}
+
+var _ ValueCloneContext = &Interpreter{}
+
 type ReferenceCreationContext interface {
 	common.MemoryGauge
 	ReferenceTracker

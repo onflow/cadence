@@ -598,7 +598,7 @@ func (v Word256Value) Transfer(
 	return v
 }
 
-func (v Word256Value) Clone(_ *Interpreter) Value {
+func (v Word256Value) Clone(_ ValueCloneContext) Value {
 	return NewUnmeteredWord256ValueFromBigInt(v.BigInt)
 }
 

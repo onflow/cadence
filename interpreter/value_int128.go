@@ -772,7 +772,7 @@ func (Int128Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Int128Value) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (Int128Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -791,7 +791,7 @@ func (v Int128Value) Transfer(
 	return v
 }
 
-func (v Int128Value) Clone(_ *Interpreter) Value {
+func (v Int128Value) Clone(_ ValueCloneContext) Value {
 	return NewUnmeteredInt128ValueFromBigInt(v.BigInt)
 }
 

@@ -750,7 +750,7 @@ func (*StringValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*StringValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (*StringValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -770,7 +770,7 @@ func (v *StringValue) Transfer(
 	return v
 }
 
-func (v *StringValue) Clone(_ *Interpreter) Value {
+func (v *StringValue) Clone(_ ValueCloneContext) Value {
 	return NewUnmeteredStringValue(v.Str)
 }
 

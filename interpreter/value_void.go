@@ -108,7 +108,7 @@ func (v VoidValue) Transfer(
 	return v
 }
 
-func (v VoidValue) Clone(_ *Interpreter) Value {
+func (v VoidValue) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

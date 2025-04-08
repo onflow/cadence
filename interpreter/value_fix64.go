@@ -567,7 +567,7 @@ func (Fix64Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Fix64Value) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (Fix64Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -586,7 +586,7 @@ func (v Fix64Value) Transfer(
 	return v
 }
 
-func (v Fix64Value) Clone(_ *Interpreter) Value {
+func (v Fix64Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

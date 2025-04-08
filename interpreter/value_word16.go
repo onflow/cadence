@@ -451,7 +451,7 @@ func (v Word16Value) Transfer(
 	return v
 }
 
-func (v Word16Value) Clone(_ *Interpreter) Value {
+func (v Word16Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

@@ -642,7 +642,7 @@ func (v UIntValue) Transfer(
 	return v
 }
 
-func (v UIntValue) Clone(_ *Interpreter) Value {
+func (v UIntValue) Clone(_ ValueCloneContext) Value {
 	return NewUnmeteredUIntValueFromBigInt(v.BigInt)
 }
 

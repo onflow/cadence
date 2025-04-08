@@ -142,7 +142,7 @@ func (NilValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (NilValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (NilValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -161,7 +161,7 @@ func (v NilValue) Transfer(
 	return v
 }
 
-func (v NilValue) Clone(_ *Interpreter) Value {
+func (v NilValue) Clone(_ ValueCloneContext) Value {
 	return v
 }
 
