@@ -550,12 +550,12 @@ func opSetLocal(vm *VM, ins opcode.InstructionSetLocal) {
 
 func opGetUpvalue(vm *VM, ins opcode.InstructionGetUpvalue) {
 	upvalue := vm.callFrame.function.Upvalues[ins.UpvalueIndex]
-	vm.push(vm.locals[upvalue.absoluteLocalIndex])
+	vm.push(vm.locals[upvalue.stackOffset])
 }
 
 func opSetUpvalue(vm *VM, ins opcode.InstructionSetUpvalue) {
 	upvalue := vm.callFrame.function.Upvalues[ins.UpvalueIndex]
-	vm.locals[upvalue.absoluteLocalIndex] = vm.pop()
+	vm.locals[upvalue.stackOffset] = vm.pop()
 }
 
 func opGetGlobal(vm *VM, ins opcode.InstructionGetGlobal) {
@@ -1186,8 +1186,8 @@ func opNewClosure(vm *VM, ins opcode.InstructionNewClosure) {
 		targetIndex := upvalueDescriptor.TargetIndex
 		var upvalue *Upvalue
 		if upvalueDescriptor.IsLocal {
-			absoluteLocalIndex := vm.callFrame.localsOffset + targetIndex
-			upvalue = vm.captureUpvalue(absoluteLocalIndex)
+			stackOffset := int(vm.callFrame.localsOffset) + int(targetIndex)
+			upvalue = vm.captureUpvalue(stackOffset)
 		} else {
 			upvalue = vm.callFrame.function.Upvalues[targetIndex]
 		}
@@ -1201,9 +1201,9 @@ func opNewClosure(vm *VM, ins opcode.InstructionNewClosure) {
 	})
 }
 
-func (vm *VM) captureUpvalue(absoluteLocalIndex uint16) *Upvalue {
+func (vm *VM) captureUpvalue(stackOffset int) *Upvalue {
 	return &Upvalue{
-		absoluteLocalIndex: absoluteLocalIndex,
+		stackOffset: stackOffset,
 	}
 }
 

@@ -19,5 +19,5 @@
 package vm
 
 type Upvalue struct {
-	absoluteLocalIndex uint16
+	stackOffset int
 }
