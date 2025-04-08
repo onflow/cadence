@@ -37,7 +37,6 @@ const (
 	operandTypeIndex         = "index"
 	operandTypeIndices       = "indices"
 	operandTypeSize          = "size"
-	operandTypeString        = "string"
 	operandTypeCastKind      = "castKind"
 	operandTypePathDomain    = "pathDomain"
 	operandTypeCompositeKind = "compositeKind"
@@ -298,9 +297,6 @@ func instructionOperandsFields(ins instruction) *dst.FieldList {
 			typeExpr = &dst.ArrayType{
 				Elt: dst.NewIdent("uint16"),
 			}
-
-		case operandTypeString:
-			typeExpr = dst.NewIdent("string")
 
 		case operandTypeCastKind:
 			typeExpr = &dst.Ident{
@@ -599,9 +595,6 @@ func instructionEncodeFuncDecl(ins instruction) *dst.FuncDecl {
 		case operandTypeSize:
 			funcName = "emitUint16"
 
-		case operandTypeString:
-			funcName = "emitString"
-
 		case operandTypeCastKind:
 			funcName = "emitCastKind"
 
@@ -694,9 +687,6 @@ func instructionDecodeFuncDecl(ins instruction) *dst.FuncDecl {
 
 		case operandTypeSize:
 			funcName = "decodeUint16"
-
-		case operandTypeString:
-			funcName = "decodeString"
 
 		case operandTypeCastKind:
 			funcName = "decodeCastKind"
