@@ -70,7 +70,7 @@ func (TypeValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeMetaType)
 }
 
-func (TypeValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (TypeValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return sema.MetaType.Importable
 }
 

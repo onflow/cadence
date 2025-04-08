@@ -79,7 +79,7 @@ func (v PathValue) StaticType(context ValueStaticTypeContext) StaticType {
 	}
 }
 
-func (v PathValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (v PathValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	switch v.Domain {
 	case common.PathDomainStorage:
 		return sema.StoragePathType.Importable

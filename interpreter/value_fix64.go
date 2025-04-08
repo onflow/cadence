@@ -98,7 +98,7 @@ func (Fix64Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeFix64)
 }
 
-func (Fix64Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (Fix64Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 

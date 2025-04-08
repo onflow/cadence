@@ -91,7 +91,7 @@ func (CharacterValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeCharacter)
 }
 
-func (CharacterValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (CharacterValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return sema.CharacterType.Importable
 }
 

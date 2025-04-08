@@ -310,12 +310,12 @@ func (v *ArrayValue) StaticType(_ ValueStaticTypeContext) StaticType {
 	return v.Type
 }
 
-func (v *ArrayValue) IsImportable(inter *Interpreter, locationRange LocationRange) bool {
+func (v *ArrayValue) IsImportable(context ValueImportableContext, locationRange LocationRange) bool {
 	importable := true
 	v.Iterate(
-		inter,
+		context,
 		func(element Value) (resume bool) {
-			if !element.IsImportable(inter, locationRange) {
+			if !element.IsImportable(context, locationRange) {
 				importable = false
 				// stop iteration
 				return false

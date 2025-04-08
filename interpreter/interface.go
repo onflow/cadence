@@ -170,6 +170,12 @@ type ValueCloneContext interface {
 
 var _ ValueCloneContext = &Interpreter{}
 
+type ValueImportableContext interface {
+	ContainerMutationContext
+}
+
+var _ ValueImportableContext = &Interpreter{}
+
 type ReferenceCreationContext interface {
 	common.MemoryGauge
 	ReferenceTracker

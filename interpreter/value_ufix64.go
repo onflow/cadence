@@ -177,7 +177,7 @@ func (UFix64Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeUFix64)
 }
 
-func (UFix64Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (UFix64Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 

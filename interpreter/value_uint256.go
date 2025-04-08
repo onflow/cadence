@@ -88,7 +88,7 @@ func (UInt256Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeUInt256)
 }
 
-func (UInt256Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (UInt256Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 

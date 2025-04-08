@@ -88,7 +88,7 @@ func (Word256Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeWord256)
 }
 
-func (Word256Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (Word256Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 

@@ -101,7 +101,7 @@ func (v *AccountCapabilityControllerValue) StaticType(_ ValueStaticTypeContext) 
 	return PrimitiveStaticTypeAccountCapabilityController
 }
 
-func (*AccountCapabilityControllerValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (*AccountCapabilityControllerValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return false
 }
 

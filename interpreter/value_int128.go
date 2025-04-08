@@ -119,7 +119,7 @@ func (Int128Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeInt128)
 }
 
-func (Int128Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (Int128Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 

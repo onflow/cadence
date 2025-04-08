@@ -73,7 +73,7 @@ func (Word16Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeWord16)
 }
 
-func (Word16Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (Word16Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 

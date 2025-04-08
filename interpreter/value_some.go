@@ -107,8 +107,8 @@ func (v *SomeValue) StaticType(context ValueStaticTypeContext) StaticType {
 	)
 }
 
-func (v *SomeValue) IsImportable(inter *Interpreter, locationRange LocationRange) bool {
-	return v.value.IsImportable(inter, locationRange)
+func (v *SomeValue) IsImportable(context ValueImportableContext, locationRange LocationRange) bool {
+	return v.value.IsImportable(context, locationRange)
 }
 
 func (*SomeValue) isOptionalValue() {}

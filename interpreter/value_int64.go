@@ -74,7 +74,7 @@ func (Int64Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeInt64)
 }
 
-func (Int64Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (Int64Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 

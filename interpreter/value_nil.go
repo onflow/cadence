@@ -58,7 +58,7 @@ func (NilValue) StaticType(context ValueStaticTypeContext) StaticType {
 	)
 }
 
-func (NilValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (NilValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 

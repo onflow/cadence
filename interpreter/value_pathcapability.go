@@ -77,7 +77,7 @@ func (v *PathCapabilityValue) StaticType(context ValueStaticTypeContext) StaticT
 	)
 }
 
-func (v *PathCapabilityValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (v *PathCapabilityValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return false
 }
 func (v *PathCapabilityValue) String() string {

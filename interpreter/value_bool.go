@@ -52,7 +52,7 @@ func (BoolValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeBool)
 }
 
-func (BoolValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (BoolValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return sema.BoolType.Importable
 }
 

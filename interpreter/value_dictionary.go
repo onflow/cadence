@@ -446,13 +446,13 @@ func (v *DictionaryValue) StaticType(_ ValueStaticTypeContext) StaticType {
 	return v.Type
 }
 
-func (v *DictionaryValue) IsImportable(inter *Interpreter, locationRange LocationRange) bool {
+func (v *DictionaryValue) IsImportable(context ValueImportableContext, locationRange LocationRange) bool {
 	importable := true
 	v.Iterate(
-		inter,
+		context,
 		locationRange,
 		func(key, value Value) (resume bool) {
-			if !key.IsImportable(inter, locationRange) || !value.IsImportable(inter, locationRange) {
+			if !key.IsImportable(context, locationRange) || !value.IsImportable(context, locationRange) {
 				importable = false
 				// stop iteration
 				return false

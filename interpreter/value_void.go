@@ -51,7 +51,7 @@ func (VoidValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeVoid)
 }
 
-func (VoidValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (VoidValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return sema.VoidType.Importable
 }
 

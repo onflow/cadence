@@ -72,7 +72,7 @@ func (UInt8Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeUInt8)
 }
 
-func (UInt8Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (UInt8Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 

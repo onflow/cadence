@@ -126,7 +126,7 @@ func (*StringValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeString)
 }
 
-func (*StringValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (*StringValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return sema.StringType.Importable
 }
 

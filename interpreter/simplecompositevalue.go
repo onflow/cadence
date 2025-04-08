@@ -112,10 +112,10 @@ func (v *SimpleCompositeValue) StaticType(_ ValueStaticTypeContext) StaticType {
 	return v.staticType
 }
 
-func (v *SimpleCompositeValue) IsImportable(inter *Interpreter, locationRange LocationRange) bool {
+func (v *SimpleCompositeValue) IsImportable(context ValueImportableContext, locationRange LocationRange) bool {
 	// Check type is importable
-	staticType := v.StaticType(inter)
-	semaType := MustConvertStaticToSemaType(staticType, inter)
+	staticType := v.StaticType(context)
+	semaType := MustConvertStaticToSemaType(staticType, context)
 	if !semaType.IsImportable(map[*sema.Member]bool{}) {
 		return false
 	}
@@ -123,7 +123,7 @@ func (v *SimpleCompositeValue) IsImportable(inter *Interpreter, locationRange Lo
 	// Check all field values are importable
 	importable := true
 	v.ForEachField(func(_ string, value Value) (resume bool) {
-		if !value.IsImportable(inter, locationRange) {
+		if !value.IsImportable(context, locationRange) {
 			importable = false
 			// stop iteration
 			return false

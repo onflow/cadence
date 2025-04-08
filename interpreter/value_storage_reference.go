@@ -117,7 +117,7 @@ func (v *StorageReferenceValue) GetAuthorization() Authorization {
 	return v.Authorization
 }
 
-func (*StorageReferenceValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (*StorageReferenceValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return false
 }
 

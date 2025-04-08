@@ -122,7 +122,7 @@ func (v *EphemeralReferenceValue) GetAuthorization() Authorization {
 	return v.Authorization
 }
 
-func (*EphemeralReferenceValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (*EphemeralReferenceValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return false
 }
 

@@ -129,7 +129,7 @@ func (UIntValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeUInt)
 }
 
-func (v UIntValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (v UIntValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 

@@ -71,7 +71,7 @@ func (v PathLinkValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewCapabilityStaticType(context, v.Type)
 }
 
-func (PathLinkValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (PathLinkValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	panic(errors.NewUnreachableError())
 }
 
@@ -203,7 +203,7 @@ func (v AccountLinkValue) StaticType(context ValueStaticTypeContext) StaticType 
 	)
 }
 
-func (AccountLinkValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (AccountLinkValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	panic(errors.NewUnreachableError())
 }
 

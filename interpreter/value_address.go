@@ -106,7 +106,7 @@ func (AddressValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeAddress)
 }
 
-func (AddressValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (AddressValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 

@@ -60,7 +60,7 @@ func (v *PublishedValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return v.Value.StaticType(context)
 }
 
-func (*PublishedValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (*PublishedValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return false
 }
 
