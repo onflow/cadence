@@ -578,6 +578,7 @@ func DecodeGetConstant(ip *uint16, code []byte) (i InstructionGetConstant) {
 // Creates a new closure with the function at the given index and pushes it onto the stack.
 type InstructionNewClosure struct {
 	FunctionIndex uint16
+	Upvalues      []Upvalue
 }
 
 var _ Instruction = InstructionNewClosure{}
@@ -590,16 +591,19 @@ func (i InstructionNewClosure) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
 	printfArgument(&sb, "functionIndex", i.FunctionIndex)
+	printfUpvalueArrayArgument(&sb, "upvalues", i.Upvalues)
 	return sb.String()
 }
 
 func (i InstructionNewClosure) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 	emitUint16(code, i.FunctionIndex)
+	emitUpvalueArray(code, i.Upvalues)
 }
 
 func DecodeNewClosure(ip *uint16, code []byte) (i InstructionNewClosure) {
 	i.FunctionIndex = decodeUint16(ip, code)
+	i.Upvalues = decodeUpvalueArray(ip, code)
 	return i
 }
 

@@ -256,6 +256,8 @@
   operands:
     - name: "functionIndex"
       type: "index"
+    - name: "upvalues"
+      type: "upvalues"
   valueEffects:
     push:
       - name: "value"
