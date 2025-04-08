@@ -30,7 +30,8 @@
             "size",
             "castKind",
             "pathDomain",
-            "compositeKind"
+            "compositeKind",
+            "upvalues"
           ]
         },
         "description": { "type": "string" }

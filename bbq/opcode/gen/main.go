@@ -40,6 +40,7 @@ const (
 	operandTypeCastKind      = "castKind"
 	operandTypePathDomain    = "pathDomain"
 	operandTypeCompositeKind = "compositeKind"
+	operandTypeUpvalues      = "upvalues"
 )
 
 type instruction struct {
@@ -316,6 +317,14 @@ func instructionOperandsFields(ins instruction) *dst.FieldList {
 				Path: commonPackagePath,
 			}
 
+		case operandTypeUpvalues:
+			typeExpr = &dst.ArrayType{
+				Elt: &dst.Ident{
+					Name: "Upvalue",
+					Path: opcodePackagePath,
+				},
+			}
+
 		default:
 			panic(fmt.Sprintf("unsupported operand type: %s", operand.Type))
 		}
@@ -473,6 +482,8 @@ func instructionStringFuncDecl(ins instruction) *dst.FuncDecl {
 			switch operand.Type {
 			case operandTypeIndices:
 				funcName = "printfUInt16ArrayArgument"
+			case operandTypeUpvalues:
+				funcName = "printfUpvalueArrayArgument"
 			default:
 				funcName = "printfArgument"
 			}
@@ -604,6 +615,9 @@ func instructionEncodeFuncDecl(ins instruction) *dst.FuncDecl {
 		case operandTypeCompositeKind:
 			funcName = "emitCompositeKind"
 
+		case operandTypeUpvalues:
+			funcName = "emitUpvalueArray"
+
 		default:
 			panic(fmt.Sprintf("unsupported operand type: %s", operand.Type))
 		}
@@ -696,6 +710,9 @@ func instructionDecodeFuncDecl(ins instruction) *dst.FuncDecl {
 
 		case operandTypeCompositeKind:
 			funcName = "decodeCompositeKind"
+
+		case operandTypeUpvalues:
+			funcName = "decodeUpvalueArray"
 
 		default:
 			panic(fmt.Sprintf("unsupported operand type: %s", operand.Type))
