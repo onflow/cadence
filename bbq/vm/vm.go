@@ -548,6 +548,16 @@ func opSetLocal(vm *VM, ins opcode.InstructionSetLocal) {
 	vm.locals[absoluteIndex] = vm.pop()
 }
 
+func opGetUpvalue(vm *VM, ins opcode.InstructionGetUpvalue) {
+	upvalue := vm.callFrame.function.Upvalues[ins.UpvalueIndex]
+	vm.push(vm.locals[upvalue.absoluteLocalIndex])
+}
+
+func opSetUpvalue(vm *VM, ins opcode.InstructionSetUpvalue) {
+	upvalue := vm.callFrame.function.Upvalues[ins.UpvalueIndex]
+	vm.locals[upvalue.absoluteLocalIndex] = vm.pop()
+}
+
 func opGetGlobal(vm *VM, ins opcode.InstructionGetGlobal) {
 	value := vm.callFrame.function.Executable.Globals[ins.GlobalIndex]
 	vm.push(value)
@@ -1073,6 +1083,10 @@ func (vm *VM) run() {
 			opGetLocal(vm, ins)
 		case opcode.InstructionSetLocal:
 			opSetLocal(vm, ins)
+		case opcode.InstructionGetUpvalue:
+			opGetUpvalue(vm, ins)
+		case opcode.InstructionSetUpvalue:
+			opSetUpvalue(vm, ins)
 		case opcode.InstructionGetGlobal:
 			opGetGlobal(vm, ins)
 		case opcode.InstructionSetGlobal:

@@ -5470,3 +5470,96 @@ func TestInnerFunction(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(6), actual)
 }
+
+func TestUnclosedUpvalue(t *testing.T) {
+
+	t.Parallel()
+
+	actual, err := compileAndInvoke(t,
+		`
+          fun test(): Int {
+              let x = 1
+              fun addToX(_ y: Int): Int {
+                  return x + y
+              }
+              return addToX(2)
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), actual)
+}
+
+func TestUnclosedUpvalueNested(t *testing.T) {
+
+	t.Parallel()
+
+	actual, err := compileAndInvoke(t,
+		`
+          fun test(): Int {
+              let x = 1
+              fun middle(): Int {
+                  fun inner(): Int {
+                      let y = 2
+                      return x + y
+                  }
+                  return inner()
+              }
+              return middle()
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), actual)
+}
+
+func TestUnclosedUpvalueDeeplyNested(t *testing.T) {
+
+	t.Parallel()
+
+	actual, err := compileAndInvoke(t,
+		`
+          fun test(): Int {
+              let a = 1
+              let b = 2
+              fun middle(): Int {
+                  let c = 3
+                  let d = 4
+                  fun inner(): Int {
+                      let e = 5
+                      let f = 6
+                      return f + e + d + b + c + a
+                  }
+                  return inner()
+              }
+              return middle()
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(21), actual)
+}
+
+func TestUnclosedUpvalueAssignment(t *testing.T) {
+
+	t.Parallel()
+
+	actual, err := compileAndInvoke(t,
+		`
+          fun test(): Int {
+              var x = 1
+              fun addToX(_ y: Int) {
+                  x = x + y
+              }
+              addToX(2)
+              return x
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), actual)
+}
