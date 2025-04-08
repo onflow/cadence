@@ -229,7 +229,11 @@ func (v *EphemeralReferenceValue) Equal(_ ValueComparisonContext, _ LocationRang
 	}
 }
 
-func (v *EphemeralReferenceValue) ConformsToStaticType(context ValueStaticTypeConformanceContext, locationRange LocationRange, results TypeConformanceResults, ) bool {
+func (v *EphemeralReferenceValue) ConformsToStaticType(
+	context ValueStaticTypeConformanceContext,
+	locationRange LocationRange,
+	results TypeConformanceResults,
+) bool {
 	self := v.Value
 
 	staticType := v.Value.StaticType(context)
