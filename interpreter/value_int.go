@@ -536,7 +536,7 @@ func (IntValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, 
 }
 
 func (v IntValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {

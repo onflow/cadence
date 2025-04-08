@@ -150,7 +150,7 @@ func (v *StorageCapabilityControllerValue) MeteredString(context ValueStringCont
 }
 
 func (v *StorageCapabilityControllerValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {

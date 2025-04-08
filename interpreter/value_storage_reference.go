@@ -330,25 +330,25 @@ func (v *StorageReferenceValue) Equal(_ ValueComparisonContext, _ LocationRange,
 }
 
 func (v *StorageReferenceValue) ConformsToStaticType(
-	interpreter *Interpreter,
+	context ValueStaticTypeConformanceContext,
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
-	referencedValue, err := v.dereference(interpreter, locationRange)
+	referencedValue, err := v.dereference(context, locationRange)
 	if referencedValue == nil || err != nil {
 		return false
 	}
 
 	self := *referencedValue
 
-	staticType := self.StaticType(interpreter)
+	staticType := self.StaticType(context)
 
-	if !IsSubTypeOfSemaType(interpreter, staticType, v.BorrowedType) {
+	if !IsSubTypeOfSemaType(context, staticType, v.BorrowedType) {
 		return false
 	}
 
 	return self.ConformsToStaticType(
-		interpreter,
+		context,
 		locationRange,
 		results,
 	)

@@ -60,7 +60,7 @@ func (placeholderValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 }
 
 func (f placeholderValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {

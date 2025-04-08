@@ -455,7 +455,7 @@ func (UFix64Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ strin
 }
 
 func (v UFix64Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {

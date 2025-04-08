@@ -69,7 +69,7 @@ func (v VoidValue) MeteredString(context ValueStringContext, _ SeenReferences, _
 }
 
 func (v VoidValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {

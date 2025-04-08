@@ -126,7 +126,7 @@ func (v *AccountCapabilityControllerValue) MeteredString(context ValueStringCont
 }
 
 func (v *AccountCapabilityControllerValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {

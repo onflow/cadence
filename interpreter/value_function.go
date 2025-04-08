@@ -126,7 +126,7 @@ func (f *InterpretedFunctionValue) Invoke(invocation Invocation) Value {
 }
 
 func (f *InterpretedFunctionValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -279,7 +279,7 @@ func (*HostFunctionValue) SetMember(_ MemberAccessibleContext, _ LocationRange, 
 }
 
 func (f *HostFunctionValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -466,12 +466,12 @@ func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 }
 
 func (f BoundFunctionValue) ConformsToStaticType(
-	interpreter *Interpreter,
+	context ValueStaticTypeConformanceContext,
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
 	return f.Function.ConformsToStaticType(
-		interpreter,
+		context,
 		locationRange,
 		results,
 	)

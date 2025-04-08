@@ -840,7 +840,7 @@ func (v *StringValue) DecodeHex(context ArrayCreationContext, locationRange Loca
 }
 
 func (v *StringValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {

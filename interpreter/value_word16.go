@@ -413,7 +413,7 @@ func (v Word16Value) ToBigEndianBytes() []byte {
 }
 
 func (v Word16Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {

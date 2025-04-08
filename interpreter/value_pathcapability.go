@@ -189,7 +189,7 @@ func (*PathCapabilityValue) SetMember(_ MemberAccessibleContext, _ LocationRange
 }
 
 func (v *PathCapabilityValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {

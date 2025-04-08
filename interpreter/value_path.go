@@ -151,7 +151,7 @@ func (PathValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string,
 }
 
 func (v PathValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {

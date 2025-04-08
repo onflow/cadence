@@ -165,7 +165,7 @@ func (v CharacterValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch
 }
 
 func (v CharacterValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {

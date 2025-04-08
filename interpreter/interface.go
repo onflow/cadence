@@ -78,6 +78,13 @@ type ValueStaticTypeContext interface {
 
 var _ ValueStaticTypeContext = &Interpreter{}
 
+type ValueStaticTypeConformanceContext interface {
+	ValueStaticTypeContext
+	ContainerMutationContext
+}
+
+var _ ValueStaticTypeConformanceContext = &Interpreter{}
+
 type StorageContext interface {
 	ValueStaticTypeContext
 	common.MemoryGauge
@@ -551,11 +558,11 @@ func (ctx NoOpStringContext) MaybeTrackReferencedResourceKindedValue(_ *Ephemera
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) ClearReferencedResourceKindedValues(valueID atree.ValueID) {
+func (ctx NoOpStringContext) ClearReferencedResourceKindedValues(_ atree.ValueID) {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) ReferencedResourceKindedValues(valueID atree.ValueID) map[*EphemeralReferenceValue]struct{} {
+func (ctx NoOpStringContext) ReferencedResourceKindedValues(_ atree.ValueID) map[*EphemeralReferenceValue]struct{} {
 	panic(errors.NewUnreachableError())
 }
 
@@ -587,6 +594,10 @@ func (ctx NoOpStringContext) ReportDictionaryValueTransferTrace(_ string, _ int,
 	panic(errors.NewUnreachableError())
 }
 
+func (ctx NoOpStringContext) ReportArrayValueConformsToStaticTypeTrace(_ string, _ int, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
 func (ctx NoOpStringContext) ReportDictionaryValueDestroyTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
@@ -604,6 +615,10 @@ func (ctx NoOpStringContext) ReportDictionaryValueGetMemberTrace(_ string, _ int
 }
 
 func (ctx NoOpStringContext) ReportDictionaryValueConstructTrace(_ string, _ int, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (ctx NoOpStringContext) ReportDictionaryValueConformsToStaticTypeTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -627,6 +642,10 @@ func (ctx NoOpStringContext) ReportCompositeValueConstructTrace(_ string, _ stri
 	panic(errors.NewUnreachableError())
 }
 
+func (ctx NoOpStringContext) ReportCompositeValueConformsToStaticTypeTrace(_ string, _ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
 func (ctx NoOpStringContext) ReportDomainStorageMapDeepRemoveTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
@@ -647,7 +666,7 @@ func (ctx NoOpStringContext) InStorageIteration() bool {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) SetInStorageIteration(b bool) {
+func (ctx NoOpStringContext) SetInStorageIteration(_ bool) {
 	panic(errors.NewUnreachableError())
 }
 

@@ -92,7 +92,7 @@ func (v *PublishedValue) Walk(_ ValueWalkContext, walkChild func(Value), _ Locat
 }
 
 func (v *PublishedValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {

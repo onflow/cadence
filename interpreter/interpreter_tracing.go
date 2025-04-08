@@ -55,12 +55,14 @@ type Tracer interface {
 	ReportArrayValueTransferTrace(info string, count int, since time.Duration)
 	ReportArrayValueConstructTrace(typeInfo string, count int, duration time.Duration)
 	ReportArrayValueDestroyTrace(info string, count int, since time.Duration)
+	ReportArrayValueConformsToStaticTypeTrace(info string, count int, since time.Duration)
 
 	ReportDictionaryValueTransferTrace(info string, count int, since time.Duration)
 	ReportDictionaryValueDeepRemoveTrace(info string, count int, since time.Duration)
 	ReportDictionaryValueGetMemberTrace(info string, count int, name string, since time.Duration)
 	ReportDictionaryValueConstructTrace(info string, count int, since time.Duration)
 	ReportDictionaryValueDestroyTrace(info string, count int, since time.Duration)
+	ReportDictionaryValueConformsToStaticTypeTrace(info string, count int, since time.Duration)
 
 	ReportCompositeValueDeepRemoveTrace(owner string, id string, kind string, since time.Duration)
 	ReportCompositeValueTransferTrace(owner string, id string, kind string, since time.Duration)
@@ -68,6 +70,7 @@ type Tracer interface {
 	ReportCompositeValueGetMemberTrace(owner string, typeID string, kind string, name string, duration time.Duration)
 	ReportCompositeValueConstructTrace(owner string, id string, kind string, since time.Duration)
 	ReportCompositeValueDestroyTrace(owner string, id string, kind string, since time.Duration)
+	ReportCompositeValueConformsToStaticTypeTrace(owner string, id string, kind string, since time.Duration)
 
 	ReportDomainStorageMapDeepRemoveTrace(info string, i int, since time.Duration)
 }
@@ -145,7 +148,7 @@ func (interpreter *Interpreter) ReportArrayValueTransferTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportArrayValueConformsToStaticTypeTrace(
+func (interpreter *Interpreter) ReportArrayValueConformsToStaticTypeTrace(
 	typeInfo string,
 	count int,
 	duration time.Duration,
@@ -229,7 +232,7 @@ func (interpreter *Interpreter) ReportDictionaryValueTransferTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportDictionaryValueConformsToStaticTypeTrace(
+func (interpreter *Interpreter) ReportDictionaryValueConformsToStaticTypeTrace(
 	typeInfo string,
 	count int,
 	duration time.Duration,
@@ -326,7 +329,7 @@ func (interpreter *Interpreter) ReportCompositeValueTransferTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportCompositeValueConformsToStaticTypeTrace(
+func (interpreter *Interpreter) ReportCompositeValueConformsToStaticTypeTrace(
 	owner string,
 	typeID string,
 	kind string,

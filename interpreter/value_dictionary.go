@@ -1112,22 +1112,20 @@ type DictionaryEntryValues struct {
 }
 
 func (v *DictionaryValue) ConformsToStaticType(
-	interpreter *Interpreter,
+	context ValueStaticTypeConformanceContext,
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
 
 	count := v.Count()
 
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
 
 		defer func() {
-			interpreter.reportDictionaryValueConformsToStaticTypeTrace(
+			context.ReportDictionaryValueConformsToStaticTypeTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -1135,7 +1133,7 @@ func (v *DictionaryValue) ConformsToStaticType(
 		}()
 	}
 
-	staticType, ok := v.StaticType(interpreter).(*DictionaryStaticType)
+	staticType, ok := v.StaticType(context).(*DictionaryStaticType)
 	if !ok {
 		return false
 	}
@@ -1161,14 +1159,14 @@ func (v *DictionaryValue) ConformsToStaticType(
 
 		// atree.OrderedMap iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
-		entryKey := MustConvertStoredValue(interpreter, key)
+		entryKey := MustConvertStoredValue(context, key)
 
-		if !IsSubType(interpreter, entryKey.StaticType(interpreter), keyType) {
+		if !IsSubType(context, entryKey.StaticType(context), keyType) {
 			return false
 		}
 
 		if !entryKey.ConformsToStaticType(
-			interpreter,
+			context,
 			locationRange,
 			results,
 		) {
@@ -1179,14 +1177,14 @@ func (v *DictionaryValue) ConformsToStaticType(
 
 		// atree.OrderedMap iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
-		entryValue := MustConvertStoredValue(interpreter, value)
+		entryValue := MustConvertStoredValue(context, value)
 
-		if !IsSubType(interpreter, entryValue.StaticType(interpreter), valueType) {
+		if !IsSubType(context, entryValue.StaticType(context), valueType) {
 			return false
 		}
 
 		if !entryValue.ConformsToStaticType(
-			interpreter,
+			context,
 			locationRange,
 			results,
 		) {

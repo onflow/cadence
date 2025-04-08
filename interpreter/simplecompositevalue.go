@@ -226,7 +226,7 @@ func (v *SimpleCompositeValue) MeteredString(context ValueStringContext, seenRef
 }
 
 func (v *SimpleCompositeValue) ConformsToStaticType(
-	interpreter *Interpreter,
+	context ValueStaticTypeConformanceContext,
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
@@ -237,7 +237,7 @@ func (v *SimpleCompositeValue) ConformsToStaticType(
 			continue
 		}
 		if !value.ConformsToStaticType(
-			interpreter,
+			context,
 			locationRange,
 			results,
 		) {

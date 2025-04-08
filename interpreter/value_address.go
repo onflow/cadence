@@ -209,7 +209,7 @@ func (AddressValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ stri
 }
 
 func (v AddressValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {

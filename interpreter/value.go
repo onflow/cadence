@@ -104,7 +104,7 @@ type Value interface {
 	// e.g. the element type of an array, it also ensures the nested values'
 	// static types are subtypes.
 	ConformsToStaticType(
-		interpreter *Interpreter,
+		context ValueStaticTypeConformanceContext,
 		locationRange LocationRange,
 		results TypeConformanceResults,
 	) bool

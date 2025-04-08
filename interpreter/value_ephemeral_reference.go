@@ -229,16 +229,12 @@ func (v *EphemeralReferenceValue) Equal(_ ValueComparisonContext, _ LocationRang
 	}
 }
 
-func (v *EphemeralReferenceValue) ConformsToStaticType(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	results TypeConformanceResults,
-) bool {
+func (v *EphemeralReferenceValue) ConformsToStaticType(context ValueStaticTypeConformanceContext, locationRange LocationRange, results TypeConformanceResults, ) bool {
 	self := v.Value
 
-	staticType := v.Value.StaticType(interpreter)
+	staticType := v.Value.StaticType(context)
 
-	if !IsSubTypeOfSemaType(interpreter, staticType, v.BorrowedType) {
+	if !IsSubTypeOfSemaType(context, staticType, v.BorrowedType) {
 		return false
 	}
 
@@ -256,7 +252,7 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 	results[entry] = true
 
 	result := self.ConformsToStaticType(
-		interpreter,
+		context,
 		locationRange,
 		results,
 	)

@@ -175,7 +175,7 @@ func (*IDCapabilityValue) SetMember(_ MemberAccessibleContext, _ LocationRange, 
 }
 
 func (v *IDCapabilityValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {

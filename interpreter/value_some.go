@@ -204,7 +204,7 @@ func (v *SomeValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ stri
 }
 
 func (v *SomeValue) ConformsToStaticType(
-	interpreter *Interpreter,
+	context ValueStaticTypeConformanceContext,
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
@@ -216,7 +216,7 @@ func (v *SomeValue) ConformsToStaticType(
 	innerValue := v.InnerValue()
 
 	return innerValue.ConformsToStaticType(
-		interpreter,
+		context,
 		locationRange,
 		results,
 	)

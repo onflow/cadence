@@ -560,7 +560,7 @@ func (v Word256Value) ToBigEndianBytes() []byte {
 }
 
 func (v Word256Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {

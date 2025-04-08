@@ -118,7 +118,7 @@ func (NilValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, 
 }
 
 func (v NilValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {

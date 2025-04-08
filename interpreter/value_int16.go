@@ -634,7 +634,7 @@ func (v Int16Value) ToBigEndianBytes() []byte {
 }
 
 func (v Int16Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {

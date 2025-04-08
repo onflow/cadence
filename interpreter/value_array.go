@@ -1164,21 +1164,19 @@ func (v *ArrayValue) Count() int {
 }
 
 func (v *ArrayValue) ConformsToStaticType(
-	interpreter *Interpreter,
+	context ValueStaticTypeConformanceContext,
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
-	config := interpreter.SharedState.Config
-
 	count := v.Count()
 
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
 
 		defer func() {
-			interpreter.reportArrayValueConformsToStaticTypeTrace(
+			context.ReportArrayValueConformsToStaticTypeTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -1187,7 +1185,7 @@ func (v *ArrayValue) ConformsToStaticType(
 	}
 
 	var elementType StaticType
-	switch staticType := v.StaticType(interpreter).(type) {
+	switch staticType := v.StaticType(context).(type) {
 	case *ConstantSizedStaticType:
 		elementType = staticType.ElementType()
 		if v.Count() != int(staticType.Size) {
@@ -1202,17 +1200,17 @@ func (v *ArrayValue) ConformsToStaticType(
 	var elementMismatch bool
 
 	v.Iterate(
-		interpreter,
+		context,
 		func(element Value) (resume bool) {
 
-			if !IsSubType(interpreter, element.StaticType(interpreter), elementType) {
+			if !IsSubType(context, element.StaticType(context), elementType) {
 				elementMismatch = true
 				// stop iteration
 				return false
 			}
 
 			if !element.ConformsToStaticType(
-				interpreter,
+				context,
 				locationRange,
 				results,
 			) {

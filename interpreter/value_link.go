@@ -92,7 +92,7 @@ func (v PathLinkValue) MeteredString(_ ValueStringContext, _ SeenReferences, _ L
 }
 
 func (v PathLinkValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -215,12 +215,12 @@ func (v AccountLinkValue) RecursiveString(_ SeenReferences) string {
 	panic(errors.NewUnreachableError())
 }
 
-func (v AccountLinkValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+func (v AccountLinkValue) MeteredString(_ ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	panic(errors.NewUnreachableError())
 }
 
 func (v AccountLinkValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {

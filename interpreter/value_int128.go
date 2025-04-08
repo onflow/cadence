@@ -757,7 +757,7 @@ func (v Int128Value) ToBigEndianBytes() []byte {
 }
 
 func (v Int128Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
