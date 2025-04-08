@@ -1636,10 +1636,6 @@ func (c *Compiler[_, _]) VisitFunctionExpression(expression *ast.FunctionExpress
 		panic(errors.NewDefaultUserError("invalid function index"))
 	}
 
-	c.codeGen.Emit(opcode.InstructionNewClosure{
-		FunctionIndex: uint16(functionIndex),
-	})
-
 	parameterCount := 0
 	parameterList := expression.ParameterList
 	if parameterList != nil {
@@ -1652,15 +1648,19 @@ func (c *Compiler[_, _]) VisitFunctionExpression(expression *ast.FunctionExpress
 
 	function := c.addFunction("", uint16(parameterCount))
 
-	previousFunction := c.currentFunction
-	c.targetFunction(function)
-	defer c.targetFunction(previousFunction)
+	func() {
+		previousFunction := c.currentFunction
+		c.targetFunction(function)
+		defer c.targetFunction(previousFunction)
 
-	c.declareParameters(parameterList, false)
-	c.compileFunctionBlock(
-		expression.FunctionBlock,
-		common.DeclarationKindUnknown,
-	)
+		c.declareParameters(parameterList, false)
+		c.compileFunctionBlock(
+			expression.FunctionBlock,
+			common.DeclarationKindUnknown,
+		)
+	}()
+
+	c.emitNewClosure(uint16(functionIndex), function)
 
 	return
 }
@@ -1863,6 +1863,8 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 
 	identifier := declaration.Identifier.Identifier
 
+	var innerFunctionLocal *local
+
 	if previousFunction == nil {
 		// Global function or method
 
@@ -1878,39 +1880,42 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 		}
 
 	} else {
-		// Inner function
-
-		functionIndex := len(c.functions)
-
-		if functionIndex >= math.MaxUint16 {
-			panic(errors.NewDefaultUserError("invalid function index"))
-		}
-
-		c.codeGen.Emit(opcode.InstructionNewClosure{
-			FunctionIndex: uint16(functionIndex),
-		})
-
-		local := c.currentFunction.declareLocal(identifier)
-		c.codeGen.Emit(opcode.InstructionSetLocal{
-			LocalIndex: local.index,
-		})
+		innerFunctionLocal = c.currentFunction.declareLocal(identifier)
 	}
 
 	if parameterCount >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid parameter count"))
 	}
 
+	functionIndex := len(c.functions)
+
+	if functionIndex >= math.MaxUint16 {
+		panic(errors.NewDefaultUserError("invalid function index"))
+	}
+
 	function := c.addFunction(functionName, uint16(parameterCount))
 
-	c.targetFunction(function)
-	defer c.targetFunction(previousFunction)
+	func() {
+		c.targetFunction(function)
+		defer c.targetFunction(previousFunction)
 
-	c.declareParameters(declaration.ParameterList, declareReceiver)
+		c.declareParameters(declaration.ParameterList, declareReceiver)
 
-	c.compileFunctionBlock(
-		declaration.FunctionBlock,
-		declaration.DeclarationKind(),
-	)
+		c.compileFunctionBlock(
+			declaration.FunctionBlock,
+			declaration.DeclarationKind(),
+		)
+	}()
+
+	if previousFunction != nil {
+		// Inner function
+
+		c.emitNewClosure(uint16(functionIndex), function)
+
+		c.codeGen.Emit(opcode.InstructionSetLocal{
+			LocalIndex: innerFunctionLocal.index,
+		})
+	}
 
 	return
 }
@@ -2129,4 +2134,11 @@ func (c *Compiler[_, _]) withConditionExtendedElaboration(statement ast.Statemen
 		}()
 	}
 	f()
+}
+
+func (c *Compiler[E, _]) emitNewClosure(functionIndex uint16, function *function[E]) {
+	c.codeGen.Emit(opcode.InstructionNewClosure{
+		FunctionIndex: functionIndex,
+		Upvalues:      function.upvalues,
+	})
 }

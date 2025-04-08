@@ -22,6 +22,7 @@ import (
 	"math"
 
 	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/errors"
 )
 
@@ -32,7 +33,8 @@ type function[E any] struct {
 	locals         *activations.Activations[*local]
 	localCount     uint16
 	parameterCount uint16
-	upvalues       map[upvalue]uint16
+	upvalues       []opcode.Upvalue
+	upvalueIndices map[opcode.Upvalue]uint16
 }
 
 func newFunction[E any](
@@ -69,13 +71,9 @@ func (f *function[E]) findLocal(name string) *local {
 	return f.locals.Find(name)
 }
 
-func (f *function[E]) addUpvalue(targetIndex uint16, targetIsLocal bool) uint16 {
-	upval := upvalue{
-		targetIndex:   targetIndex,
-		targetIsLocal: targetIsLocal,
-	}
+func (f *function[E]) addUpvalue(upvalue opcode.Upvalue) (upvalueIndex uint16) {
 
-	if upvalueIndex, ok := f.upvalues[upval]; ok {
+	if upvalueIndex, ok := f.upvalueIndices[upvalue]; ok {
 		return upvalueIndex
 	}
 
@@ -84,11 +82,12 @@ func (f *function[E]) addUpvalue(targetIndex uint16, targetIsLocal bool) uint16 
 		panic(errors.NewDefaultUserError("invalid upvalue declaration"))
 	}
 
-	upvalueIndex := uint16(count)
-	if f.upvalues == nil {
-		f.upvalues = make(map[upvalue]uint16)
+	upvalueIndex = uint16(count)
+	f.upvalues = append(f.upvalues, upvalue)
+	if f.upvalueIndices == nil {
+		f.upvalueIndices = make(map[opcode.Upvalue]uint16)
 	}
-	f.upvalues[upval] = upvalueIndex
+	f.upvalueIndices[upvalue] = upvalueIndex
 	return upvalueIndex
 }
 
@@ -99,17 +98,20 @@ func (f *function[E]) findOrAddUpvalue(name string) (upvalueIndex uint16, ok boo
 
 	enclosingLocal := f.enclosing.findLocal(name)
 	if enclosingLocal != nil {
-		targetIndex := enclosingLocal.index
-		const targetIsLocal = true
-		return f.addUpvalue(targetIndex, targetIsLocal), true
+		upvalue := opcode.Upvalue{
+			TargetIndex: enclosingLocal.index,
+			IsLocal:     true,
+		}
+		return f.addUpvalue(upvalue), true
 	}
 
 	enclosingUpvalueIndex, ok := f.enclosing.findOrAddUpvalue(name)
 	if ok {
-		targetIndex := enclosingUpvalueIndex
-		// target is upvalue
-		const targetIsLocal = false
-		return f.addUpvalue(targetIndex, targetIsLocal), true
+		upvalue := opcode.Upvalue{
+			TargetIndex: enclosingUpvalueIndex,
+			IsLocal:     false,
+		}
+		return f.addUpvalue(upvalue), true
 	}
 
 	return 0, false

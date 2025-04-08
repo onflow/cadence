@@ -4161,7 +4161,15 @@ func TestCompileFunctionExpressionOuterVariableUse(t *testing.T) {
 			opcode.InstructionSetLocal{LocalIndex: xLocalIndex},
 
 			// let inner = fun(): Int { ...
-			opcode.InstructionNewClosure{FunctionIndex: 1},
+			opcode.InstructionNewClosure{
+				FunctionIndex: 1,
+				Upvalues: []opcode.Upvalue{
+					{
+						TargetIndex: xLocalIndex,
+						IsLocal:     true,
+					},
+				},
+			},
 			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: innerLocalIndex},
 
@@ -4231,7 +4239,15 @@ func TestCompileInnerFunctionOuterVariableUse(t *testing.T) {
 			opcode.InstructionSetLocal{LocalIndex: xLocalIndex},
 
 			// fun inner(): Int { ...
-			opcode.InstructionNewClosure{FunctionIndex: 1},
+			opcode.InstructionNewClosure{
+				FunctionIndex: 1,
+				Upvalues: []opcode.Upvalue{
+					{
+						TargetIndex: xLocalIndex,
+						IsLocal:     true,
+					},
+				},
+			},
 			opcode.InstructionSetLocal{LocalIndex: innerLocalIndex},
 
 			opcode.InstructionReturn{},
@@ -4316,7 +4332,15 @@ func TestCompileInnerFunctionOuterOuterVariableUse(t *testing.T) {
 			opcode.InstructionSetLocal{LocalIndex: xLocalIndex},
 
 			// fun middle(): Int { ...
-			opcode.InstructionNewClosure{FunctionIndex: 1},
+			opcode.InstructionNewClosure{
+				FunctionIndex: 1,
+				Upvalues: []opcode.Upvalue{
+					{
+						TargetIndex: xLocalIndex,
+						IsLocal:     true,
+					},
+				},
+			},
 			opcode.InstructionSetLocal{LocalIndex: middleLocalIndex},
 
 			opcode.InstructionReturn{},
@@ -4327,19 +4351,27 @@ func TestCompileInnerFunctionOuterOuterVariableUse(t *testing.T) {
 	// innerLocalIndex is the local index of the variable `inner`, which is the first local variable
 	const innerLocalIndex = 0
 
+	// xUpvalueIndex is the upvalue index of the variable `x`, which is the first upvalue
+	const xUpvalueIndex = 0
+
 	assert.Equal(t,
 		[]opcode.Instruction{
 			// fun inner(): Int { ...
-			opcode.InstructionNewClosure{FunctionIndex: 2},
+			opcode.InstructionNewClosure{
+				FunctionIndex: 2,
+				Upvalues: []opcode.Upvalue{
+					{
+						TargetIndex: xUpvalueIndex,
+						IsLocal:     false,
+					},
+				},
+			},
 			opcode.InstructionSetLocal{LocalIndex: innerLocalIndex},
 
 			opcode.InstructionReturn{},
 		},
 		functions[1].Code,
 	)
-
-	// xUpvalueIndex is the upvalue index of the variable `x`, which is the first upvalue
-	const xUpvalueIndex = 0
 
 	// yIndex is the index of the local variable `y`, which is the first local variable
 	const yIndex = 0
@@ -4368,6 +4400,284 @@ func TestCompileInnerFunctionOuterOuterVariableUse(t *testing.T) {
 			},
 			{
 				Data: []byte{0x2},
+				Kind: constantkind.Int,
+			},
+		},
+		program.Constants,
+	)
+}
+
+func TestCompileRecursiveInnerFunction(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        fun test() {
+            fun inner() {
+                inner()
+            }
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
+
+	require.Len(t, program.Functions, 2)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
+
+	// innerLocalIndex is the local index of the variable `inner`, which is the first local variable
+	const innerLocalIndex = 0
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// fun inner() { ...
+			opcode.InstructionNewClosure{
+				FunctionIndex: 1,
+				Upvalues: []opcode.Upvalue{
+					{
+						TargetIndex: innerLocalIndex,
+						IsLocal:     true,
+					},
+				},
+			},
+			opcode.InstructionSetLocal{LocalIndex: innerLocalIndex},
+
+			opcode.InstructionReturn{},
+		},
+		functions[0].Code,
+	)
+
+	// innerUpvalueIndex is the upvalue index of the variable `inner`, which is the first upvalue
+	const innerUpvalueIndex = 0
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionGetUpvalue{
+				UpvalueIndex: innerUpvalueIndex,
+			},
+			opcode.InstructionInvoke{},
+			opcode.InstructionDrop{},
+			opcode.InstructionReturn{},
+		},
+		functions[1].Code,
+	)
+}
+
+func TestCompileFunctionExpressionOuterOuterVariableUse(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun test() {
+          let a = 1
+          let b = 2
+          fun middle() {
+              let c = 3
+              let d = 4
+              fun inner(): Int {
+                  let e = 5
+                  let f = 6
+                  return f + e + d + b + c + a
+              }
+          }
+      }
+  `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
+
+	require.Len(t, program.Functions, 3)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
+
+	{
+		const (
+			// aLocalIndex is the local index of the variable `a`, which is the first local variable
+			aLocalIndex = iota
+			// bLocalIndex is the local index of the variable `b`, which is the second local variable
+			bLocalIndex
+			// middleLocalIndex is the local index of the variable `b`, which is the third local variable
+			middleLocalIndex
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// let a = 1
+				opcode.InstructionGetConstant{ConstantIndex: 0},
+				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionSetLocal{LocalIndex: aLocalIndex},
+
+				// let b = 2
+				opcode.InstructionGetConstant{ConstantIndex: 1},
+				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionSetLocal{LocalIndex: bLocalIndex},
+
+				// fun middle(): Int { ...
+				opcode.InstructionNewClosure{
+					FunctionIndex: 1,
+					Upvalues: []opcode.Upvalue{
+						{
+
+							TargetIndex: bLocalIndex,
+							IsLocal:     true,
+						},
+						{
+							TargetIndex: aLocalIndex,
+							IsLocal:     true,
+						},
+					},
+				},
+				opcode.InstructionSetLocal{LocalIndex: middleLocalIndex},
+
+				opcode.InstructionReturn{},
+			},
+			functions[0].Code,
+		)
+	}
+
+	{
+		const (
+			// cLocalIndex is the local index of the variable `c`, which is the first local variable
+			cLocalIndex = iota
+			// dLocalIndex is the local index of the variable `d`, which is the second local variable
+			dLocalIndex
+			// innerLocalIndex is the local index of the variable `inner`, which is the third local variable
+			innerLocalIndex
+		)
+
+		const (
+			// bUpvalueIndex is the upvalue index of the variable `b`, which is the first upvalue
+			bUpvalueIndex = iota
+			// aUpvalueIndex is the upvalue index of the variable `a`, which is the second upvalue
+			aUpvalueIndex
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// let c = 3
+				opcode.InstructionGetConstant{ConstantIndex: 2},
+				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionSetLocal{LocalIndex: cLocalIndex},
+
+				// let d = 4
+				opcode.InstructionGetConstant{ConstantIndex: 3},
+				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionSetLocal{LocalIndex: dLocalIndex},
+
+				// fun inner(): Int { ...
+				opcode.InstructionNewClosure{
+					FunctionIndex: 2,
+					Upvalues: []opcode.Upvalue{
+						// inner uses d, b, c, a
+						{
+							TargetIndex: dLocalIndex,
+							IsLocal:     true,
+						},
+						{
+							TargetIndex: bUpvalueIndex,
+							IsLocal:     false,
+						},
+						{
+							TargetIndex: cLocalIndex,
+							IsLocal:     true,
+						},
+						{
+							TargetIndex: aUpvalueIndex,
+							IsLocal:     false,
+						},
+					},
+				},
+				opcode.InstructionSetLocal{LocalIndex: innerLocalIndex},
+
+				opcode.InstructionReturn{},
+			},
+			functions[1].Code,
+		)
+	}
+
+	{
+		const (
+			// eLocalIndex is the local index of the variable `e`, which is the first local variable
+			eLocalIndex = iota
+			// fLocalIndex is the local index of the variable `f`, which is the second local variable
+			fLocalIndex
+		)
+
+		const (
+			// dUpvalueIndex is the upvalue index of the variable `d`, which is the first upvalue
+			dUpvalueIndex = iota
+			// bUpvalueIndex is the upvalue index of the variable `b`, which is the second upvalue
+			bUpvalueIndex
+			// cUpvalueIndex is the upvalue index of the variable `c`, which is the third upvalue
+			cUpvalueIndex
+			// aUpvalueIndex is the upvalue index of the variable `a`, which is the fourth upvalue
+			aUpvalueIndex
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// let e = 5
+				opcode.InstructionGetConstant{ConstantIndex: 4},
+				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionSetLocal{LocalIndex: eLocalIndex},
+
+				// let f = 6
+				opcode.InstructionGetConstant{ConstantIndex: 5},
+				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionSetLocal{LocalIndex: fLocalIndex},
+
+				// return f + e + d + b + c + a
+				opcode.InstructionGetLocal{LocalIndex: fLocalIndex},
+				opcode.InstructionGetLocal{LocalIndex: eLocalIndex},
+				opcode.InstructionAdd{},
+
+				opcode.InstructionGetUpvalue{UpvalueIndex: dUpvalueIndex},
+				opcode.InstructionAdd{},
+
+				opcode.InstructionGetUpvalue{UpvalueIndex: bUpvalueIndex},
+				opcode.InstructionAdd{},
+
+				opcode.InstructionGetUpvalue{UpvalueIndex: cUpvalueIndex},
+				opcode.InstructionAdd{},
+
+				opcode.InstructionGetUpvalue{UpvalueIndex: aUpvalueIndex},
+				opcode.InstructionAdd{},
+
+				opcode.InstructionReturnValue{},
+			},
+			functions[2].Code,
+		)
+	}
+
+	assert.Equal(t,
+		[]bbq.Constant{
+			{
+				Data: []byte{0x1},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{0x2},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{0x3},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{0x4},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{0x5},
+				Kind: constantkind.Int,
+			},
+			{
+				Data: []byte{0x6},
 				Kind: constantkind.Int,
 			},
 		},
