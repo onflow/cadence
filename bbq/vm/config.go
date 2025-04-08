@@ -282,8 +282,10 @@ func (c *Config) EnforceNotResourceDestruction(valueID atree.ValueID, locationRa
 }
 
 func (c *Config) InjectedCompositeFieldsHandler() interpreter.InjectedCompositeFieldsHandlerFunc {
-	//TODO
-	return nil
+	if c.interpreterConfig == nil {
+		return nil
+	}
+	return c.interpreterConfig.InjectedCompositeFieldsHandler
 }
 
 func (c *Config) GetMemberAccessContextForLocation(_ common.Location) interpreter.MemberAccessibleContext {
@@ -292,8 +294,7 @@ func (c *Config) GetMemberAccessContextForLocation(_ common.Location) interprete
 }
 
 func (c *Config) AccountHandler() interpreter.AccountHandlerFunc {
-	// TODO:
-	return nil
+	return c.interpreterConfig.AccountHandler
 }
 
 func (c *Config) GetAccountHandler() stdlib.AccountHandler {
