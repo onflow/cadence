@@ -242,14 +242,14 @@ func (*CompositeValue) IsValue() {}
 
 func (*CompositeValue) isAtreeContainerBackedValue() {}
 
-func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
-	descend := visitor.VisitCompositeValue(interpreter, v)
+func (v *CompositeValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
+	descend := visitor.VisitCompositeValue(context, v)
 	if !descend {
 		return
 	}
 
-	v.ForEachField(interpreter, func(_ string, value Value) (resume bool) {
-		value.Accept(interpreter, visitor, locationRange)
+	v.ForEachField(context, func(_ string, value Value) (resume bool) {
+		value.Accept(context, visitor, locationRange)
 
 		// continue iteration
 		return true

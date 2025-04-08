@@ -176,6 +176,12 @@ type ValueImportableContext interface {
 
 var _ ValueImportableContext = &Interpreter{}
 
+type ValueVisitContext interface {
+	ValueWalkContext
+}
+
+var _ ValueVisitContext = &Interpreter{}
+
 type ReferenceCreationContext interface {
 	common.MemoryGauge
 	ReferenceTracker

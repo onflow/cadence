@@ -61,7 +61,7 @@ func (*PathCapabilityValue) IsValue() {}
 
 func (*PathCapabilityValue) isCapabilityValue() {}
 
-func (v *PathCapabilityValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange) {
+func (v *PathCapabilityValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 

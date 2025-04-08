@@ -250,16 +250,16 @@ func (*DictionaryValue) IsValue() {}
 
 func (*DictionaryValue) isAtreeContainerBackedValue() {}
 
-func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
-	descend := visitor.VisitDictionaryValue(interpreter, v)
+func (v *DictionaryValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
+	descend := visitor.VisitDictionaryValue(context, v)
 	if !descend {
 		return
 	}
 
 	v.Walk(
-		interpreter,
+		context,
 		func(value Value) {
-			value.Accept(interpreter, visitor, locationRange)
+			value.Accept(context, visitor, locationRange)
 		},
 		locationRange,
 	)

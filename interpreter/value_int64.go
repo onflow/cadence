@@ -62,8 +62,8 @@ var _ MemberAccessibleValue = Int64Value(0)
 
 func (Int64Value) IsValue() {}
 
-func (v Int64Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitInt64Value(interpreter, v)
+func (v Int64Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitInt64Value(context, v)
 }
 
 func (Int64Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {

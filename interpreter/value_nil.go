@@ -43,8 +43,8 @@ var _ OptionalValue = NilValue{}
 
 func (NilValue) IsValue() {}
 
-func (v NilValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitNilValue(interpreter, v)
+func (v NilValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitNilValue(context, v)
 }
 
 func (NilValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {

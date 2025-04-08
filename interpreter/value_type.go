@@ -58,8 +58,8 @@ func NewTypeValue(
 
 func (TypeValue) IsValue() {}
 
-func (v TypeValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitTypeValue(interpreter, v)
+func (v TypeValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitTypeValue(context, v)
 }
 
 func (TypeValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {

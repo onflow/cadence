@@ -92,7 +92,7 @@ type Value interface {
 	// NOTE: important, error messages rely on values to implement String
 	fmt.Stringer
 	IsValue()
-	Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange)
+	Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange)
 	Walk(walkContext ValueWalkContext, walkChild func(Value), locationRange LocationRange)
 	StaticType(context ValueStaticTypeContext) StaticType
 	// ConformsToStaticType returns true if the value (i.e. its dynamic type)

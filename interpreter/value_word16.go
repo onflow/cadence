@@ -61,8 +61,8 @@ func NewUnmeteredWord16Value(value uint16) Word16Value {
 
 func (Word16Value) IsValue() {}
 
-func (v Word16Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitWord16Value(interpreter, v)
+func (v Word16Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitWord16Value(context, v)
 }
 
 func (Word16Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {

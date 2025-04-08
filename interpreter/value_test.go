@@ -1370,10 +1370,10 @@ func TestVisitor(t *testing.T) {
 	var intVisits, stringVisits int
 
 	visitor := EmptyVisitor{
-		IntValueVisitor: func(interpreter *Interpreter, value IntValue) {
+		IntValueVisitor: func(_ ValueVisitContext, _ IntValue) {
 			intVisits++
 		},
-		StringValueVisitor: func(interpreter *Interpreter, value *StringValue) {
+		StringValueVisitor: func(_ ValueVisitContext, _ *StringValue) {
 			stringVisits++
 		},
 	}

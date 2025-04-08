@@ -81,8 +81,8 @@ func NewEphemeralReferenceValue(
 
 func (*EphemeralReferenceValue) IsValue() {}
 
-func (v *EphemeralReferenceValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitEphemeralReferenceValue(interpreter, v)
+func (v *EphemeralReferenceValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitEphemeralReferenceValue(context, v)
 }
 
 func (*EphemeralReferenceValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {

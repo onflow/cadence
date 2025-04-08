@@ -100,8 +100,8 @@ func (v *IDCapabilityValue) isInvalid() bool {
 	return v.ID == InvalidCapabilityID
 }
 
-func (v *IDCapabilityValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitCapabilityValue(interpreter, v)
+func (v *IDCapabilityValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitCapabilityValue(context, v)
 }
 
 func (v *IDCapabilityValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {

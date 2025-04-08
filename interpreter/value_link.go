@@ -52,7 +52,7 @@ func (PathLinkValue) IsValue() {}
 
 func (PathLinkValue) isLinkValue() {}
 
-func (v PathLinkValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange) {
+func (v PathLinkValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -177,7 +177,7 @@ func (AccountLinkValue) IsValue() {}
 
 func (AccountLinkValue) isLinkValue() {}
 
-func (v AccountLinkValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange) {
+func (v AccountLinkValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 

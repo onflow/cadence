@@ -80,8 +80,8 @@ func NewSimpleCompositeValue(
 
 func (*SimpleCompositeValue) IsValue() {}
 
-func (v *SimpleCompositeValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitSimpleCompositeValue(interpreter, v)
+func (v *SimpleCompositeValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitSimpleCompositeValue(context, v)
 }
 
 // ForEachField iterates over all field-name field-value pairs of the composite value.

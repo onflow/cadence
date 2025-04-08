@@ -76,8 +76,8 @@ func NewStorageReferenceValue(
 
 func (*StorageReferenceValue) IsValue() {}
 
-func (v *StorageReferenceValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitStorageReferenceValue(interpreter, v)
+func (v *StorageReferenceValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitStorageReferenceValue(context, v)
 }
 
 func (*StorageReferenceValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {

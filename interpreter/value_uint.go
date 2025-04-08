@@ -117,8 +117,8 @@ var _ MemberAccessibleValue = UIntValue{}
 
 func (UIntValue) IsValue() {}
 
-func (v UIntValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitUIntValue(interpreter, v)
+func (v UIntValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitUIntValue(context, v)
 }
 
 func (UIntValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {

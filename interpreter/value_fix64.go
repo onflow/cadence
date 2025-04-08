@@ -86,8 +86,8 @@ var _ MemberAccessibleValue = Fix64Value(0)
 
 func (Fix64Value) IsValue() {}
 
-func (v Fix64Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitFix64Value(interpreter, v)
+func (v Fix64Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitFix64Value(context, v)
 }
 
 func (Fix64Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {

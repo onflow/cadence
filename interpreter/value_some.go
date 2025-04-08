@@ -80,12 +80,12 @@ func (v *SomeValue) UnwrapAtreeValue() (atree.Value, uint64) {
 
 func (*SomeValue) IsValue() {}
 
-func (v *SomeValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
-	descend := visitor.VisitSomeValue(interpreter, v)
+func (v *SomeValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
+	descend := visitor.VisitSomeValue(context, v)
 	if !descend {
 		return
 	}
-	v.value.Accept(interpreter, visitor, locationRange)
+	v.value.Accept(context, visitor, locationRange)
 }
 
 func (v *SomeValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {

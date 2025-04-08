@@ -95,8 +95,8 @@ func (f *InterpretedFunctionValue) MeteredString(context ValueStringContext, _ S
 	return f.String()
 }
 
-func (f *InterpretedFunctionValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitInterpretedFunctionValue(interpreter, f)
+func (f *InterpretedFunctionValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitInterpretedFunctionValue(context, f)
 }
 
 func (f *InterpretedFunctionValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -229,8 +229,8 @@ var _ ContractValue = &HostFunctionValue{}
 
 func (*HostFunctionValue) IsValue() {}
 
-func (f *HostFunctionValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitHostFunctionValue(interpreter, f)
+func (f *HostFunctionValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitHostFunctionValue(context, f)
 }
 
 func (f *HostFunctionValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -405,8 +405,8 @@ func (f BoundFunctionValue) MeteredString(context ValueStringContext, seenRefere
 	return f.Function.MeteredString(context, seenReferences, locationRange)
 }
 
-func (f BoundFunctionValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitBoundFunctionValue(interpreter, f)
+func (f BoundFunctionValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitBoundFunctionValue(context, f)
 }
 
 func (f BoundFunctionValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {

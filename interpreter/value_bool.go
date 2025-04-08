@@ -40,8 +40,8 @@ const FalseValue = BoolValue(false)
 
 func (BoolValue) IsValue() {}
 
-func (v BoolValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitBoolValue(interpreter, v)
+func (v BoolValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitBoolValue(context, v)
 }
 
 func (BoolValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {

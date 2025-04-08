@@ -60,8 +60,8 @@ func NewUnmeteredWord8Value(value uint8) Word8Value {
 
 func (Word8Value) IsValue() {}
 
-func (v Word8Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitWord8Value(interpreter, v)
+func (v Word8Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitWord8Value(context, v)
 }
 
 func (Word8Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {

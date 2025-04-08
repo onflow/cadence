@@ -67,8 +67,8 @@ func NewUnmeteredUInt64Value(value uint64) UInt64Value {
 
 func (UInt64Value) IsValue() {}
 
-func (v UInt64Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitUInt64Value(interpreter, v)
+func (v UInt64Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitUInt64Value(context, v)
 }
 
 func (UInt64Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {

@@ -69,8 +69,8 @@ var _ BigNumberValue = Word64Value(0)
 
 func (Word64Value) IsValue() {}
 
-func (v Word64Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitWord64Value(interpreter, v)
+func (v Word64Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitWord64Value(context, v)
 }
 
 func (Word64Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {

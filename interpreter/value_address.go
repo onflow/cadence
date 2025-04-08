@@ -94,8 +94,8 @@ var _ MemberAccessibleValue = AddressValue{}
 
 func (AddressValue) IsValue() {}
 
-func (v AddressValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitAddressValue(interpreter, v)
+func (v AddressValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitAddressValue(context, v)
 }
 
 func (AddressValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {

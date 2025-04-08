@@ -60,8 +60,8 @@ var _ HashableValue = Int8Value(0)
 
 func (Int8Value) IsValue() {}
 
-func (v Int8Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitInt8Value(interpreter, v)
+func (v Int8Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitInt8Value(context, v)
 }
 
 func (Int8Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {

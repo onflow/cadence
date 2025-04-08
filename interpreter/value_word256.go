@@ -76,8 +76,8 @@ var _ MemberAccessibleValue = Word256Value{}
 
 func (Word256Value) IsValue() {}
 
-func (v Word256Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitWord256Value(interpreter, v)
+func (v Word256Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitWord256Value(context, v)
 }
 
 func (Word256Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {

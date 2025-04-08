@@ -192,16 +192,16 @@ func (*ArrayValue) IsValue() {}
 
 func (*ArrayValue) isAtreeContainerBackedValue() {}
 
-func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
-	descend := visitor.VisitArrayValue(interpreter, v)
+func (v *ArrayValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
+	descend := visitor.VisitArrayValue(context, v)
 	if !descend {
 		return
 	}
 
 	v.Walk(
-		interpreter,
+		context,
 		func(element Value) {
-			element.Accept(interpreter, visitor, locationRange)
+			element.Accept(context, visitor, locationRange)
 		},
 		locationRange,
 	)

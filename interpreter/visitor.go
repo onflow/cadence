@@ -19,405 +19,405 @@
 package interpreter
 
 type Visitor interface {
-	VisitSimpleCompositeValue(interpreter *Interpreter, value *SimpleCompositeValue)
-	VisitTypeValue(interpreter *Interpreter, value TypeValue)
-	VisitVoidValue(interpreter *Interpreter, value VoidValue)
-	VisitBoolValue(interpreter *Interpreter, value BoolValue)
-	VisitStringValue(interpreter *Interpreter, value *StringValue)
-	VisitCharacterValue(interpreter *Interpreter, value CharacterValue)
-	VisitArrayValue(interpreter *Interpreter, value *ArrayValue) bool
-	VisitIntValue(interpreter *Interpreter, value IntValue)
-	VisitInt8Value(interpreter *Interpreter, value Int8Value)
-	VisitInt16Value(interpreter *Interpreter, value Int16Value)
-	VisitInt32Value(interpreter *Interpreter, value Int32Value)
-	VisitInt64Value(interpreter *Interpreter, value Int64Value)
-	VisitInt128Value(interpreter *Interpreter, value Int128Value)
-	VisitInt256Value(interpreter *Interpreter, value Int256Value)
-	VisitUIntValue(interpreter *Interpreter, value UIntValue)
-	VisitUInt8Value(interpreter *Interpreter, value UInt8Value)
-	VisitUInt16Value(interpreter *Interpreter, value UInt16Value)
-	VisitUInt32Value(interpreter *Interpreter, value UInt32Value)
-	VisitUInt64Value(interpreter *Interpreter, value UInt64Value)
-	VisitUInt128Value(interpreter *Interpreter, value UInt128Value)
-	VisitUInt256Value(interpreter *Interpreter, value UInt256Value)
-	VisitWord8Value(interpreter *Interpreter, value Word8Value)
-	VisitWord16Value(interpreter *Interpreter, value Word16Value)
-	VisitWord32Value(interpreter *Interpreter, value Word32Value)
-	VisitWord64Value(interpreter *Interpreter, value Word64Value)
-	VisitWord128Value(interpreter *Interpreter, value Word128Value)
-	VisitWord256Value(interpreter *Interpreter, value Word256Value)
-	VisitFix64Value(interpreter *Interpreter, value Fix64Value)
-	VisitUFix64Value(interpreter *Interpreter, value UFix64Value)
-	VisitCompositeValue(interpreter *Interpreter, value *CompositeValue) bool
-	VisitDictionaryValue(interpreter *Interpreter, value *DictionaryValue) bool
-	VisitNilValue(interpreter *Interpreter, value NilValue)
-	VisitSomeValue(interpreter *Interpreter, value *SomeValue) bool
-	VisitStorageReferenceValue(interpreter *Interpreter, value *StorageReferenceValue)
-	VisitEphemeralReferenceValue(interpreter *Interpreter, value *EphemeralReferenceValue)
-	VisitAddressValue(interpreter *Interpreter, value AddressValue)
-	VisitPathValue(interpreter *Interpreter, value PathValue)
-	VisitCapabilityValue(interpreter *Interpreter, value *IDCapabilityValue)
-	VisitPublishedValue(interpreter *Interpreter, value *PublishedValue)
-	VisitInterpretedFunctionValue(interpreter *Interpreter, value *InterpretedFunctionValue)
-	VisitHostFunctionValue(interpreter *Interpreter, value *HostFunctionValue)
-	VisitBoundFunctionValue(interpreter *Interpreter, value BoundFunctionValue)
-	VisitStorageCapabilityControllerValue(interpreter *Interpreter, v *StorageCapabilityControllerValue)
-	VisitAccountCapabilityControllerValue(interpreter *Interpreter, v *AccountCapabilityControllerValue)
+	VisitSimpleCompositeValue(context ValueVisitContext, value *SimpleCompositeValue)
+	VisitTypeValue(context ValueVisitContext, value TypeValue)
+	VisitVoidValue(context ValueVisitContext, value VoidValue)
+	VisitBoolValue(context ValueVisitContext, value BoolValue)
+	VisitStringValue(context ValueVisitContext, value *StringValue)
+	VisitCharacterValue(context ValueVisitContext, value CharacterValue)
+	VisitArrayValue(context ValueVisitContext, value *ArrayValue) bool
+	VisitIntValue(context ValueVisitContext, value IntValue)
+	VisitInt8Value(context ValueVisitContext, value Int8Value)
+	VisitInt16Value(context ValueVisitContext, value Int16Value)
+	VisitInt32Value(context ValueVisitContext, value Int32Value)
+	VisitInt64Value(context ValueVisitContext, value Int64Value)
+	VisitInt128Value(context ValueVisitContext, value Int128Value)
+	VisitInt256Value(context ValueVisitContext, value Int256Value)
+	VisitUIntValue(context ValueVisitContext, value UIntValue)
+	VisitUInt8Value(context ValueVisitContext, value UInt8Value)
+	VisitUInt16Value(context ValueVisitContext, value UInt16Value)
+	VisitUInt32Value(context ValueVisitContext, value UInt32Value)
+	VisitUInt64Value(context ValueVisitContext, value UInt64Value)
+	VisitUInt128Value(context ValueVisitContext, value UInt128Value)
+	VisitUInt256Value(context ValueVisitContext, value UInt256Value)
+	VisitWord8Value(context ValueVisitContext, value Word8Value)
+	VisitWord16Value(context ValueVisitContext, value Word16Value)
+	VisitWord32Value(context ValueVisitContext, value Word32Value)
+	VisitWord64Value(context ValueVisitContext, value Word64Value)
+	VisitWord128Value(context ValueVisitContext, value Word128Value)
+	VisitWord256Value(context ValueVisitContext, value Word256Value)
+	VisitFix64Value(context ValueVisitContext, value Fix64Value)
+	VisitUFix64Value(context ValueVisitContext, value UFix64Value)
+	VisitCompositeValue(context ValueVisitContext, value *CompositeValue) bool
+	VisitDictionaryValue(context ValueVisitContext, value *DictionaryValue) bool
+	VisitNilValue(context ValueVisitContext, value NilValue)
+	VisitSomeValue(context ValueVisitContext, value *SomeValue) bool
+	VisitStorageReferenceValue(context ValueVisitContext, value *StorageReferenceValue)
+	VisitEphemeralReferenceValue(context ValueVisitContext, value *EphemeralReferenceValue)
+	VisitAddressValue(context ValueVisitContext, value AddressValue)
+	VisitPathValue(context ValueVisitContext, value PathValue)
+	VisitCapabilityValue(context ValueVisitContext, value *IDCapabilityValue)
+	VisitPublishedValue(context ValueVisitContext, value *PublishedValue)
+	VisitInterpretedFunctionValue(context ValueVisitContext, value *InterpretedFunctionValue)
+	VisitHostFunctionValue(context ValueVisitContext, value *HostFunctionValue)
+	VisitBoundFunctionValue(context ValueVisitContext, value BoundFunctionValue)
+	VisitStorageCapabilityControllerValue(context ValueVisitContext, v *StorageCapabilityControllerValue)
+	VisitAccountCapabilityControllerValue(context ValueVisitContext, v *AccountCapabilityControllerValue)
 }
 
 type EmptyVisitor struct {
-	SimpleCompositeValueVisitor             func(interpreter *Interpreter, value *SimpleCompositeValue)
-	TypeValueVisitor                        func(interpreter *Interpreter, value TypeValue)
-	VoidValueVisitor                        func(interpreter *Interpreter, value VoidValue)
-	BoolValueVisitor                        func(interpreter *Interpreter, value BoolValue)
-	CharacterValueVisitor                   func(interpreter *Interpreter, value CharacterValue)
-	StringValueVisitor                      func(interpreter *Interpreter, value *StringValue)
-	ArrayValueVisitor                       func(interpreter *Interpreter, value *ArrayValue) bool
-	IntValueVisitor                         func(interpreter *Interpreter, value IntValue)
-	Int8ValueVisitor                        func(interpreter *Interpreter, value Int8Value)
-	Int16ValueVisitor                       func(interpreter *Interpreter, value Int16Value)
-	Int32ValueVisitor                       func(interpreter *Interpreter, value Int32Value)
-	Int64ValueVisitor                       func(interpreter *Interpreter, value Int64Value)
-	Int128ValueVisitor                      func(interpreter *Interpreter, value Int128Value)
-	Int256ValueVisitor                      func(interpreter *Interpreter, value Int256Value)
-	UIntValueVisitor                        func(interpreter *Interpreter, value UIntValue)
-	UInt8ValueVisitor                       func(interpreter *Interpreter, value UInt8Value)
-	UInt16ValueVisitor                      func(interpreter *Interpreter, value UInt16Value)
-	UInt32ValueVisitor                      func(interpreter *Interpreter, value UInt32Value)
-	UInt64ValueVisitor                      func(interpreter *Interpreter, value UInt64Value)
-	UInt128ValueVisitor                     func(interpreter *Interpreter, value UInt128Value)
-	UInt256ValueVisitor                     func(interpreter *Interpreter, value UInt256Value)
-	Word8ValueVisitor                       func(interpreter *Interpreter, value Word8Value)
-	Word16ValueVisitor                      func(interpreter *Interpreter, value Word16Value)
-	Word32ValueVisitor                      func(interpreter *Interpreter, value Word32Value)
-	Word64ValueVisitor                      func(interpreter *Interpreter, value Word64Value)
-	Word128ValueVisitor                     func(interpreter *Interpreter, value Word128Value)
-	Word256ValueVisitor                     func(interpreter *Interpreter, value Word256Value)
-	Fix64ValueVisitor                       func(interpreter *Interpreter, value Fix64Value)
-	UFix64ValueVisitor                      func(interpreter *Interpreter, value UFix64Value)
-	CompositeValueVisitor                   func(interpreter *Interpreter, value *CompositeValue) bool
-	DictionaryValueVisitor                  func(interpreter *Interpreter, value *DictionaryValue) bool
-	NilValueVisitor                         func(interpreter *Interpreter, value NilValue)
-	SomeValueVisitor                        func(interpreter *Interpreter, value *SomeValue) bool
-	StorageReferenceValueVisitor            func(interpreter *Interpreter, value *StorageReferenceValue)
-	EphemeralReferenceValueVisitor          func(interpreter *Interpreter, value *EphemeralReferenceValue)
-	AddressValueVisitor                     func(interpreter *Interpreter, value AddressValue)
-	PathValueVisitor                        func(interpreter *Interpreter, value PathValue)
-	CapabilityValueVisitor                  func(interpreter *Interpreter, value *IDCapabilityValue)
-	PublishedValueVisitor                   func(interpreter *Interpreter, value *PublishedValue)
-	InterpretedFunctionValueVisitor         func(interpreter *Interpreter, value *InterpretedFunctionValue)
-	HostFunctionValueVisitor                func(interpreter *Interpreter, value *HostFunctionValue)
-	BoundFunctionValueVisitor               func(interpreter *Interpreter, value BoundFunctionValue)
-	StorageCapabilityControllerValueVisitor func(interpreter *Interpreter, value *StorageCapabilityControllerValue)
-	AccountCapabilityControllerValueVisitor func(interpreter *Interpreter, value *AccountCapabilityControllerValue)
+	SimpleCompositeValueVisitor             func(context ValueVisitContext, value *SimpleCompositeValue)
+	TypeValueVisitor                        func(context ValueVisitContext, value TypeValue)
+	VoidValueVisitor                        func(context ValueVisitContext, value VoidValue)
+	BoolValueVisitor                        func(context ValueVisitContext, value BoolValue)
+	CharacterValueVisitor                   func(context ValueVisitContext, value CharacterValue)
+	StringValueVisitor                      func(context ValueVisitContext, value *StringValue)
+	ArrayValueVisitor                       func(context ValueVisitContext, value *ArrayValue) bool
+	IntValueVisitor                         func(context ValueVisitContext, value IntValue)
+	Int8ValueVisitor                        func(context ValueVisitContext, value Int8Value)
+	Int16ValueVisitor                       func(context ValueVisitContext, value Int16Value)
+	Int32ValueVisitor                       func(context ValueVisitContext, value Int32Value)
+	Int64ValueVisitor                       func(context ValueVisitContext, value Int64Value)
+	Int128ValueVisitor                      func(context ValueVisitContext, value Int128Value)
+	Int256ValueVisitor                      func(context ValueVisitContext, value Int256Value)
+	UIntValueVisitor                        func(context ValueVisitContext, value UIntValue)
+	UInt8ValueVisitor                       func(context ValueVisitContext, value UInt8Value)
+	UInt16ValueVisitor                      func(context ValueVisitContext, value UInt16Value)
+	UInt32ValueVisitor                      func(context ValueVisitContext, value UInt32Value)
+	UInt64ValueVisitor                      func(context ValueVisitContext, value UInt64Value)
+	UInt128ValueVisitor                     func(context ValueVisitContext, value UInt128Value)
+	UInt256ValueVisitor                     func(context ValueVisitContext, value UInt256Value)
+	Word8ValueVisitor                       func(context ValueVisitContext, value Word8Value)
+	Word16ValueVisitor                      func(context ValueVisitContext, value Word16Value)
+	Word32ValueVisitor                      func(context ValueVisitContext, value Word32Value)
+	Word64ValueVisitor                      func(context ValueVisitContext, value Word64Value)
+	Word128ValueVisitor                     func(context ValueVisitContext, value Word128Value)
+	Word256ValueVisitor                     func(context ValueVisitContext, value Word256Value)
+	Fix64ValueVisitor                       func(context ValueVisitContext, value Fix64Value)
+	UFix64ValueVisitor                      func(context ValueVisitContext, value UFix64Value)
+	CompositeValueVisitor                   func(context ValueVisitContext, value *CompositeValue) bool
+	DictionaryValueVisitor                  func(context ValueVisitContext, value *DictionaryValue) bool
+	NilValueVisitor                         func(context ValueVisitContext, value NilValue)
+	SomeValueVisitor                        func(context ValueVisitContext, value *SomeValue) bool
+	StorageReferenceValueVisitor            func(context ValueVisitContext, value *StorageReferenceValue)
+	EphemeralReferenceValueVisitor          func(context ValueVisitContext, value *EphemeralReferenceValue)
+	AddressValueVisitor                     func(context ValueVisitContext, value AddressValue)
+	PathValueVisitor                        func(context ValueVisitContext, value PathValue)
+	CapabilityValueVisitor                  func(context ValueVisitContext, value *IDCapabilityValue)
+	PublishedValueVisitor                   func(context ValueVisitContext, value *PublishedValue)
+	InterpretedFunctionValueVisitor         func(context ValueVisitContext, value *InterpretedFunctionValue)
+	HostFunctionValueVisitor                func(context ValueVisitContext, value *HostFunctionValue)
+	BoundFunctionValueVisitor               func(context ValueVisitContext, value BoundFunctionValue)
+	StorageCapabilityControllerValueVisitor func(context ValueVisitContext, value *StorageCapabilityControllerValue)
+	AccountCapabilityControllerValueVisitor func(context ValueVisitContext, value *AccountCapabilityControllerValue)
 }
 
 var _ Visitor = &EmptyVisitor{}
 
-func (v EmptyVisitor) VisitSimpleCompositeValue(interpreter *Interpreter, value *SimpleCompositeValue) {
+func (v EmptyVisitor) VisitSimpleCompositeValue(context ValueVisitContext, value *SimpleCompositeValue) {
 	if v.SimpleCompositeValueVisitor == nil {
 		return
 	}
-	v.SimpleCompositeValueVisitor(interpreter, value)
+	v.SimpleCompositeValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitTypeValue(interpreter *Interpreter, value TypeValue) {
+func (v EmptyVisitor) VisitTypeValue(context ValueVisitContext, value TypeValue) {
 	if v.TypeValueVisitor == nil {
 		return
 	}
-	v.TypeValueVisitor(interpreter, value)
+	v.TypeValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitVoidValue(interpreter *Interpreter, value VoidValue) {
+func (v EmptyVisitor) VisitVoidValue(context ValueVisitContext, value VoidValue) {
 	if v.VoidValueVisitor == nil {
 		return
 	}
-	v.VoidValueVisitor(interpreter, value)
+	v.VoidValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitBoolValue(interpreter *Interpreter, value BoolValue) {
+func (v EmptyVisitor) VisitBoolValue(context ValueVisitContext, value BoolValue) {
 	if v.BoolValueVisitor == nil {
 		return
 	}
-	v.BoolValueVisitor(interpreter, value)
+	v.BoolValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitStringValue(interpreter *Interpreter, value *StringValue) {
+func (v EmptyVisitor) VisitStringValue(context ValueVisitContext, value *StringValue) {
 	if v.StringValueVisitor == nil {
 		return
 	}
-	v.StringValueVisitor(interpreter, value)
+	v.StringValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitCharacterValue(interpreter *Interpreter, value CharacterValue) {
+func (v EmptyVisitor) VisitCharacterValue(context ValueVisitContext, value CharacterValue) {
 	if v.StringValueVisitor == nil {
 		return
 	}
-	v.CharacterValueVisitor(interpreter, value)
+	v.CharacterValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitArrayValue(interpreter *Interpreter, value *ArrayValue) bool {
+func (v EmptyVisitor) VisitArrayValue(context ValueVisitContext, value *ArrayValue) bool {
 	if v.ArrayValueVisitor == nil {
 		return true
 	}
-	return v.ArrayValueVisitor(interpreter, value)
+	return v.ArrayValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitIntValue(interpreter *Interpreter, value IntValue) {
+func (v EmptyVisitor) VisitIntValue(context ValueVisitContext, value IntValue) {
 	if v.IntValueVisitor == nil {
 		return
 	}
-	v.IntValueVisitor(interpreter, value)
+	v.IntValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitInt8Value(interpreter *Interpreter, value Int8Value) {
+func (v EmptyVisitor) VisitInt8Value(context ValueVisitContext, value Int8Value) {
 	if v.Int8ValueVisitor == nil {
 		return
 	}
-	v.Int8ValueVisitor(interpreter, value)
+	v.Int8ValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitInt16Value(interpreter *Interpreter, value Int16Value) {
+func (v EmptyVisitor) VisitInt16Value(context ValueVisitContext, value Int16Value) {
 	if v.Int16ValueVisitor == nil {
 		return
 	}
-	v.Int16ValueVisitor(interpreter, value)
+	v.Int16ValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitInt32Value(interpreter *Interpreter, value Int32Value) {
+func (v EmptyVisitor) VisitInt32Value(context ValueVisitContext, value Int32Value) {
 	if v.Int32ValueVisitor == nil {
 		return
 	}
-	v.Int32ValueVisitor(interpreter, value)
+	v.Int32ValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitInt64Value(interpreter *Interpreter, value Int64Value) {
+func (v EmptyVisitor) VisitInt64Value(context ValueVisitContext, value Int64Value) {
 	if v.Int64ValueVisitor == nil {
 		return
 	}
-	v.Int64ValueVisitor(interpreter, value)
+	v.Int64ValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitInt128Value(interpreter *Interpreter, value Int128Value) {
+func (v EmptyVisitor) VisitInt128Value(context ValueVisitContext, value Int128Value) {
 	if v.Int128ValueVisitor == nil {
 		return
 	}
-	v.Int128ValueVisitor(interpreter, value)
+	v.Int128ValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitInt256Value(interpreter *Interpreter, value Int256Value) {
+func (v EmptyVisitor) VisitInt256Value(context ValueVisitContext, value Int256Value) {
 	if v.Int256ValueVisitor == nil {
 		return
 	}
-	v.Int256ValueVisitor(interpreter, value)
+	v.Int256ValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitUIntValue(interpreter *Interpreter, value UIntValue) {
+func (v EmptyVisitor) VisitUIntValue(context ValueVisitContext, value UIntValue) {
 	if v.UIntValueVisitor == nil {
 		return
 	}
-	v.UIntValueVisitor(interpreter, value)
+	v.UIntValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitUInt8Value(interpreter *Interpreter, value UInt8Value) {
+func (v EmptyVisitor) VisitUInt8Value(context ValueVisitContext, value UInt8Value) {
 	if v.UInt8ValueVisitor == nil {
 		return
 	}
-	v.UInt8ValueVisitor(interpreter, value)
+	v.UInt8ValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitUInt16Value(interpreter *Interpreter, value UInt16Value) {
+func (v EmptyVisitor) VisitUInt16Value(context ValueVisitContext, value UInt16Value) {
 	if v.UInt16ValueVisitor == nil {
 		return
 	}
-	v.UInt16ValueVisitor(interpreter, value)
+	v.UInt16ValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitUInt32Value(interpreter *Interpreter, value UInt32Value) {
+func (v EmptyVisitor) VisitUInt32Value(context ValueVisitContext, value UInt32Value) {
 	if v.UInt32ValueVisitor == nil {
 		return
 	}
-	v.UInt32ValueVisitor(interpreter, value)
+	v.UInt32ValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitUInt64Value(interpreter *Interpreter, value UInt64Value) {
+func (v EmptyVisitor) VisitUInt64Value(context ValueVisitContext, value UInt64Value) {
 	if v.UInt64ValueVisitor == nil {
 		return
 	}
-	v.UInt64ValueVisitor(interpreter, value)
+	v.UInt64ValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitUInt128Value(interpreter *Interpreter, value UInt128Value) {
+func (v EmptyVisitor) VisitUInt128Value(context ValueVisitContext, value UInt128Value) {
 	if v.UInt128ValueVisitor == nil {
 		return
 	}
-	v.UInt128ValueVisitor(interpreter, value)
+	v.UInt128ValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitUInt256Value(interpreter *Interpreter, value UInt256Value) {
+func (v EmptyVisitor) VisitUInt256Value(context ValueVisitContext, value UInt256Value) {
 	if v.UInt256ValueVisitor == nil {
 		return
 	}
-	v.UInt256ValueVisitor(interpreter, value)
+	v.UInt256ValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitWord8Value(interpreter *Interpreter, value Word8Value) {
+func (v EmptyVisitor) VisitWord8Value(context ValueVisitContext, value Word8Value) {
 	if v.Word8ValueVisitor == nil {
 		return
 	}
-	v.Word8ValueVisitor(interpreter, value)
+	v.Word8ValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitWord16Value(interpreter *Interpreter, value Word16Value) {
+func (v EmptyVisitor) VisitWord16Value(context ValueVisitContext, value Word16Value) {
 	if v.Word16ValueVisitor == nil {
 		return
 	}
-	v.Word16ValueVisitor(interpreter, value)
+	v.Word16ValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitWord32Value(interpreter *Interpreter, value Word32Value) {
+func (v EmptyVisitor) VisitWord32Value(context ValueVisitContext, value Word32Value) {
 	if v.Word32ValueVisitor == nil {
 		return
 	}
-	v.Word32ValueVisitor(interpreter, value)
+	v.Word32ValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitWord64Value(interpreter *Interpreter, value Word64Value) {
+func (v EmptyVisitor) VisitWord64Value(context ValueVisitContext, value Word64Value) {
 	if v.Word64ValueVisitor == nil {
 		return
 	}
-	v.Word64ValueVisitor(interpreter, value)
+	v.Word64ValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitWord128Value(interpreter *Interpreter, value Word128Value) {
+func (v EmptyVisitor) VisitWord128Value(context ValueVisitContext, value Word128Value) {
 	if v.Word128ValueVisitor == nil {
 		return
 	}
-	v.Word128ValueVisitor(interpreter, value)
+	v.Word128ValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitWord256Value(interpreter *Interpreter, value Word256Value) {
+func (v EmptyVisitor) VisitWord256Value(context ValueVisitContext, value Word256Value) {
 	if v.Word256ValueVisitor == nil {
 		return
 	}
-	v.Word256ValueVisitor(interpreter, value)
+	v.Word256ValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitFix64Value(interpreter *Interpreter, value Fix64Value) {
+func (v EmptyVisitor) VisitFix64Value(context ValueVisitContext, value Fix64Value) {
 	if v.Fix64ValueVisitor == nil {
 		return
 	}
-	v.Fix64ValueVisitor(interpreter, value)
+	v.Fix64ValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitUFix64Value(interpreter *Interpreter, value UFix64Value) {
+func (v EmptyVisitor) VisitUFix64Value(context ValueVisitContext, value UFix64Value) {
 	if v.UFix64ValueVisitor == nil {
 		return
 	}
-	v.UFix64ValueVisitor(interpreter, value)
+	v.UFix64ValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitCompositeValue(interpreter *Interpreter, value *CompositeValue) bool {
+func (v EmptyVisitor) VisitCompositeValue(context ValueVisitContext, value *CompositeValue) bool {
 	if v.CompositeValueVisitor == nil {
 		return true
 	}
-	return v.CompositeValueVisitor(interpreter, value)
+	return v.CompositeValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitDictionaryValue(interpreter *Interpreter, value *DictionaryValue) bool {
+func (v EmptyVisitor) VisitDictionaryValue(context ValueVisitContext, value *DictionaryValue) bool {
 	if v.DictionaryValueVisitor == nil {
 		return true
 	}
-	return v.DictionaryValueVisitor(interpreter, value)
+	return v.DictionaryValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitNilValue(interpreter *Interpreter, value NilValue) {
+func (v EmptyVisitor) VisitNilValue(context ValueVisitContext, value NilValue) {
 	if v.NilValueVisitor == nil {
 		return
 	}
-	v.NilValueVisitor(interpreter, value)
+	v.NilValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitSomeValue(interpreter *Interpreter, value *SomeValue) bool {
+func (v EmptyVisitor) VisitSomeValue(context ValueVisitContext, value *SomeValue) bool {
 	if v.SomeValueVisitor == nil {
 		return true
 	}
-	return v.SomeValueVisitor(interpreter, value)
+	return v.SomeValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitStorageReferenceValue(interpreter *Interpreter, value *StorageReferenceValue) {
+func (v EmptyVisitor) VisitStorageReferenceValue(context ValueVisitContext, value *StorageReferenceValue) {
 	if v.StorageReferenceValueVisitor == nil {
 		return
 	}
-	v.StorageReferenceValueVisitor(interpreter, value)
+	v.StorageReferenceValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitEphemeralReferenceValue(interpreter *Interpreter, value *EphemeralReferenceValue) {
+func (v EmptyVisitor) VisitEphemeralReferenceValue(context ValueVisitContext, value *EphemeralReferenceValue) {
 	if v.EphemeralReferenceValueVisitor == nil {
 		return
 	}
-	v.EphemeralReferenceValueVisitor(interpreter, value)
+	v.EphemeralReferenceValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitAddressValue(interpreter *Interpreter, value AddressValue) {
+func (v EmptyVisitor) VisitAddressValue(context ValueVisitContext, value AddressValue) {
 	if v.AddressValueVisitor == nil {
 		return
 	}
-	v.AddressValueVisitor(interpreter, value)
+	v.AddressValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitPathValue(interpreter *Interpreter, value PathValue) {
+func (v EmptyVisitor) VisitPathValue(context ValueVisitContext, value PathValue) {
 	if v.PathValueVisitor == nil {
 		return
 	}
-	v.PathValueVisitor(interpreter, value)
+	v.PathValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitCapabilityValue(interpreter *Interpreter, value *IDCapabilityValue) {
+func (v EmptyVisitor) VisitCapabilityValue(context ValueVisitContext, value *IDCapabilityValue) {
 	if v.CapabilityValueVisitor == nil {
 		return
 	}
-	v.CapabilityValueVisitor(interpreter, value)
+	v.CapabilityValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitPublishedValue(interpreter *Interpreter, value *PublishedValue) {
+func (v EmptyVisitor) VisitPublishedValue(context ValueVisitContext, value *PublishedValue) {
 	if v.PublishedValueVisitor == nil {
 		return
 	}
-	v.PublishedValueVisitor(interpreter, value)
+	v.PublishedValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitInterpretedFunctionValue(interpreter *Interpreter, value *InterpretedFunctionValue) {
+func (v EmptyVisitor) VisitInterpretedFunctionValue(context ValueVisitContext, value *InterpretedFunctionValue) {
 	if v.InterpretedFunctionValueVisitor == nil {
 		return
 	}
-	v.InterpretedFunctionValueVisitor(interpreter, value)
+	v.InterpretedFunctionValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitHostFunctionValue(interpreter *Interpreter, value *HostFunctionValue) {
+func (v EmptyVisitor) VisitHostFunctionValue(context ValueVisitContext, value *HostFunctionValue) {
 	if v.HostFunctionValueVisitor == nil {
 		return
 	}
-	v.HostFunctionValueVisitor(interpreter, value)
+	v.HostFunctionValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitBoundFunctionValue(interpreter *Interpreter, value BoundFunctionValue) {
+func (v EmptyVisitor) VisitBoundFunctionValue(context ValueVisitContext, value BoundFunctionValue) {
 	if v.BoundFunctionValueVisitor == nil {
 		return
 	}
-	v.BoundFunctionValueVisitor(interpreter, value)
+	v.BoundFunctionValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitStorageCapabilityControllerValue(interpreter *Interpreter, value *StorageCapabilityControllerValue) {
+func (v EmptyVisitor) VisitStorageCapabilityControllerValue(context ValueVisitContext, value *StorageCapabilityControllerValue) {
 	if v.StorageCapabilityControllerValueVisitor == nil {
 		return
 	}
-	v.StorageCapabilityControllerValueVisitor(interpreter, value)
+	v.StorageCapabilityControllerValueVisitor(context, value)
 }
 
-func (v EmptyVisitor) VisitAccountCapabilityControllerValue(interpreter *Interpreter, value *AccountCapabilityControllerValue) {
+func (v EmptyVisitor) VisitAccountCapabilityControllerValue(context ValueVisitContext, value *AccountCapabilityControllerValue) {
 	if v.AccountCapabilityControllerValueVisitor == nil {
 		return
 	}
-	v.AccountCapabilityControllerValueVisitor(interpreter, value)
+	v.AccountCapabilityControllerValueVisitor(context, value)
 }

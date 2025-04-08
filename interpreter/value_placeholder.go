@@ -43,7 +43,7 @@ func (f placeholderValue) MeteredString(context ValueStringContext, _ SeenRefere
 	return ""
 }
 
-func (f placeholderValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange) {
+func (f placeholderValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
 	// NO-OP
 }
 

@@ -61,8 +61,8 @@ func NewUnmeteredWord32Value(value uint32) Word32Value {
 
 func (Word32Value) IsValue() {}
 
-func (v Word32Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitWord32Value(interpreter, v)
+func (v Word32Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitWord32Value(context, v)
 }
 
 func (Word32Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {

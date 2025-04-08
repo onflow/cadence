@@ -89,8 +89,8 @@ func (v *AccountCapabilityControllerValue) CapabilityControllerBorrowType() *Ref
 	return v.BorrowType
 }
 
-func (v *AccountCapabilityControllerValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitAccountCapabilityControllerValue(interpreter, v)
+func (v *AccountCapabilityControllerValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitAccountCapabilityControllerValue(context, v)
 }
 
 func (v *AccountCapabilityControllerValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {

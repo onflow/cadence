@@ -39,8 +39,8 @@ var _ EquatableValue = VoidValue{}
 
 func (VoidValue) IsValue() {}
 
-func (v VoidValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitVoidValue(interpreter, v)
+func (v VoidValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitVoidValue(context, v)
 }
 
 func (VoidValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {

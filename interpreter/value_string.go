@@ -114,8 +114,8 @@ func (v *StringValue) prepareGraphemes() {
 
 func (*StringValue) IsValue() {}
 
-func (v *StringValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitStringValue(interpreter, v)
+func (v *StringValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitStringValue(context, v)
 }
 
 func (*StringValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {

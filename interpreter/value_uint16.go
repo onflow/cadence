@@ -60,8 +60,8 @@ func NewUnmeteredUInt16Value(value uint16) UInt16Value {
 
 func (UInt16Value) IsValue() {}
 
-func (v UInt16Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitUInt16Value(interpreter, v)
+func (v UInt16Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitUInt16Value(context, v)
 }
 
 func (UInt16Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {

@@ -50,8 +50,8 @@ var _ EquatableValue = &PublishedValue{}
 
 func (*PublishedValue) IsValue() {}
 
-func (v *PublishedValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitPublishedValue(interpreter, v)
+func (v *PublishedValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitPublishedValue(context, v)
 }
 
 func (v *PublishedValue) StaticType(context ValueStaticTypeContext) StaticType {

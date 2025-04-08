@@ -76,8 +76,8 @@ var _ MemberAccessibleValue = UInt256Value{}
 
 func (UInt256Value) IsValue() {}
 
-func (v UInt256Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitUInt256Value(interpreter, v)
+func (v UInt256Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitUInt256Value(context, v)
 }
 
 func (UInt256Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
