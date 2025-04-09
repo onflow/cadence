@@ -80,12 +80,12 @@ func (v *SomeValue) UnwrapAtreeValue() (atree.Value, uint64) {
 
 func (*SomeValue) IsValue() {}
 
-func (v *SomeValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
-	descend := visitor.VisitSomeValue(interpreter, v)
+func (v *SomeValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
+	descend := visitor.VisitSomeValue(context, v)
 	if !descend {
 		return
 	}
-	v.value.Accept(interpreter, visitor, locationRange)
+	v.value.Accept(context, visitor, locationRange)
 }
 
 func (v *SomeValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {
@@ -107,8 +107,8 @@ func (v *SomeValue) StaticType(context ValueStaticTypeContext) StaticType {
 	)
 }
 
-func (v *SomeValue) IsImportable(inter *Interpreter, locationRange LocationRange) bool {
-	return v.value.IsImportable(inter, locationRange)
+func (v *SomeValue) IsImportable(context ValueImportableContext, locationRange LocationRange) bool {
+	return v.value.IsImportable(context, locationRange)
 }
 
 func (*SomeValue) isOptionalValue() {}
@@ -195,16 +195,16 @@ func (v *SomeValue) GetMember(context MemberAccessibleContext, _ LocationRange, 
 	return nil
 }
 
-func (v *SomeValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (v *SomeValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (v *SomeValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (v *SomeValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	panic(errors.NewUnreachableError())
 }
 
 func (v *SomeValue) ConformsToStaticType(
-	interpreter *Interpreter,
+	context ValueStaticTypeConformanceContext,
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
@@ -216,7 +216,7 @@ func (v *SomeValue) ConformsToStaticType(
 	innerValue := v.InnerValue()
 
 	return innerValue.ConformsToStaticType(
-		interpreter,
+		context,
 		locationRange,
 		results,
 	)
@@ -391,8 +391,8 @@ func (v *SomeValue) Transfer(
 	return res
 }
 
-func (v *SomeValue) Clone(interpreter *Interpreter) Value {
-	innerValue := v.value.Clone(interpreter)
+func (v *SomeValue) Clone(context ValueCloneContext) Value {
+	innerValue := v.value.Clone(context)
 	return NewUnmeteredSomeValueNonCopying(innerValue)
 }
 

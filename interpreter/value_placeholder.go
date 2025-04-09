@@ -43,7 +43,7 @@ func (f placeholderValue) MeteredString(context ValueStringContext, _ SeenRefere
 	return ""
 }
 
-func (f placeholderValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange) {
+func (f placeholderValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
 	// NO-OP
 }
 
@@ -55,12 +55,12 @@ func (f placeholderValue) StaticType(_ ValueStaticTypeContext) StaticType {
 	return PrimitiveStaticTypeNever
 }
 
-func (placeholderValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (placeholderValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return false
 }
 
 func (f placeholderValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -95,7 +95,7 @@ func (f placeholderValue) Transfer(
 	return f
 }
 
-func (f placeholderValue) Clone(_ *Interpreter) Value {
+func (f placeholderValue) Clone(_ ValueCloneContext) Value {
 	return f
 }
 

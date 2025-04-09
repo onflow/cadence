@@ -114,8 +114,8 @@ func (v *StringValue) prepareGraphemes() {
 
 func (*StringValue) IsValue() {}
 
-func (v *StringValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitStringValue(interpreter, v)
+func (v *StringValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitStringValue(context, v)
 }
 
 func (*StringValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -126,7 +126,7 @@ func (*StringValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeString)
 }
 
-func (*StringValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (*StringValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return sema.StringType.Importable
 }
 
@@ -533,12 +533,12 @@ func StringConcat(
 	return this.Concat(context, otherArray, locationRange)
 }
 
-func (*StringValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (*StringValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Strings have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (*StringValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (*StringValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Strings have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -750,7 +750,7 @@ func (*StringValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*StringValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (*StringValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -770,7 +770,7 @@ func (v *StringValue) Transfer(
 	return v
 }
 
-func (v *StringValue) Clone(_ *Interpreter) Value {
+func (v *StringValue) Clone(_ ValueCloneContext) Value {
 	return NewUnmeteredStringValue(v.Str)
 }
 
@@ -840,7 +840,7 @@ func (v *StringValue) DecodeHex(context ArrayCreationContext, locationRange Loca
 }
 
 func (v *StringValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -854,22 +854,22 @@ func (v *StringValue) Iterator(_ ValueStaticTypeContext, _ LocationRange) ValueI
 }
 
 func (v *StringValue) ForEach(
-	interpreter *Interpreter,
+	context IterableValueForeachContext,
 	_ sema.Type,
 	function func(value Value) (resume bool),
 	transferElements bool,
 	locationRange LocationRange,
 ) {
-	iterator := v.Iterator(interpreter, locationRange)
+	iterator := v.Iterator(context, locationRange)
 	for {
-		value := iterator.Next(interpreter, locationRange)
+		value := iterator.Next(context, locationRange)
 		if value == nil {
 			return
 		}
 
 		if transferElements {
 			value = value.Transfer(
-				interpreter,
+				context,
 				locationRange,
 				atree.Address{},
 				false,

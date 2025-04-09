@@ -58,8 +58,8 @@ func NewTypeValue(
 
 func (TypeValue) IsValue() {}
 
-func (v TypeValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitTypeValue(interpreter, v)
+func (v TypeValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitTypeValue(context, v)
 }
 
 func (TypeValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -70,7 +70,7 @@ func (TypeValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeMetaType)
 }
 
-func (TypeValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (TypeValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return sema.MetaType.Importable
 }
 
@@ -255,18 +255,18 @@ func (v TypeValue) GetMember(context MemberAccessibleContext, _ LocationRange, n
 	return nil
 }
 
-func (TypeValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (TypeValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Types have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (TypeValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (TypeValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Types have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v TypeValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -309,7 +309,7 @@ func (v TypeValue) Transfer(
 	return v
 }
 
-func (v TypeValue) Clone(_ *Interpreter) Value {
+func (v TypeValue) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

@@ -192,23 +192,23 @@ func (*ArrayValue) IsValue() {}
 
 func (*ArrayValue) isAtreeContainerBackedValue() {}
 
-func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
-	descend := visitor.VisitArrayValue(interpreter, v)
+func (v *ArrayValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
+	descend := visitor.VisitArrayValue(context, v)
 	if !descend {
 		return
 	}
 
 	v.Walk(
-		interpreter,
+		context,
 		func(element Value) {
-			element.Accept(interpreter, visitor, locationRange)
+			element.Accept(context, visitor, locationRange)
 		},
 		locationRange,
 	)
 }
 
 func (v *ArrayValue) Iterate(
-	context ContainerMutationContext,
+	context ValueTransferContext,
 	f func(element Value) (resume bool),
 	transferElements bool,
 	locationRange LocationRange,
@@ -225,7 +225,7 @@ func (v *ArrayValue) Iterate(
 // IterateReadOnlyLoaded iterates over all LOADED elements of the array.
 // DO NOT perform storage mutations in the callback!
 func (v *ArrayValue) IterateReadOnlyLoaded(
-	context ContainerMutationContext,
+	context ValueTransferContext,
 	f func(element Value) (resume bool),
 	locationRange LocationRange,
 ) {
@@ -241,7 +241,7 @@ func (v *ArrayValue) IterateReadOnlyLoaded(
 }
 
 func (v *ArrayValue) iterate(
-	context ContainerMutationContext,
+	context ValueTransferContext,
 	atreeIterate func(fn atree.ArrayIterationFunc) error,
 	f func(element Value) (resume bool),
 	transferElements bool,
@@ -310,12 +310,12 @@ func (v *ArrayValue) StaticType(_ ValueStaticTypeContext) StaticType {
 	return v.Type
 }
 
-func (v *ArrayValue) IsImportable(inter *Interpreter, locationRange LocationRange) bool {
+func (v *ArrayValue) IsImportable(context ValueImportableContext, locationRange LocationRange) bool {
 	importable := true
 	v.Iterate(
-		inter,
+		context,
 		func(element Value) (resume bool) {
-			if !element.IsImportable(inter, locationRange) {
+			if !element.IsImportable(context, locationRange) {
 				importable = false
 				// stop iteration
 				return false
@@ -335,8 +335,8 @@ func (v *ArrayValue) isInvalidatedResource(context ValueStaticTypeContext) bool 
 	return v.isDestroyed || (v.array == nil && v.IsResourceKinded(context))
 }
 
-func (v *ArrayValue) IsStaleResource(interpreter *Interpreter) bool {
-	return v.array == nil && v.IsResourceKinded(interpreter)
+func (v *ArrayValue) IsStaleResource(context ValueStaticTypeContext) bool {
+	return v.array == nil && v.IsResourceKinded(context)
 }
 
 func (v *ArrayValue) Destroy(context ResourceDestructionContext, locationRange LocationRange) {
@@ -1149,12 +1149,12 @@ func (v *ArrayValue) GetMember(context MemberAccessibleContext, _ LocationRange,
 	return nil
 }
 
-func (v *ArrayValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (v *ArrayValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Arrays have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (v *ArrayValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (v *ArrayValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Arrays have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -1164,21 +1164,19 @@ func (v *ArrayValue) Count() int {
 }
 
 func (v *ArrayValue) ConformsToStaticType(
-	interpreter *Interpreter,
+	context ValueStaticTypeConformanceContext,
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
-	config := interpreter.SharedState.Config
-
 	count := v.Count()
 
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
 
 		defer func() {
-			interpreter.reportArrayValueConformsToStaticTypeTrace(
+			context.ReportArrayValueConformsToStaticTypeTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -1187,7 +1185,7 @@ func (v *ArrayValue) ConformsToStaticType(
 	}
 
 	var elementType StaticType
-	switch staticType := v.StaticType(interpreter).(type) {
+	switch staticType := v.StaticType(context).(type) {
 	case *ConstantSizedStaticType:
 		elementType = staticType.ElementType()
 		if v.Count() != int(staticType.Size) {
@@ -1202,17 +1200,17 @@ func (v *ArrayValue) ConformsToStaticType(
 	var elementMismatch bool
 
 	v.Iterate(
-		interpreter,
+		context,
 		func(element Value) (resume bool) {
 
-			if !IsSubType(interpreter, element.StaticType(interpreter), elementType) {
+			if !IsSubType(context, element.StaticType(context), elementType) {
 				elementMismatch = true
 				// stop iteration
 				return false
 			}
 
 			if !element.ConformsToStaticType(
-				interpreter,
+				context,
 				locationRange,
 				results,
 			) {
@@ -1425,11 +1423,9 @@ func (v *ArrayValue) Transfer(
 	return res
 }
 
-func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
-	config := interpreter.SharedState.Config
-
+func (v *ArrayValue) Clone(context ValueCloneContext) Value {
 	array := newArrayValueFromConstructor(
-		interpreter,
+		context,
 		v.Type,
 		v.array.Count(),
 		func() *atree.Array {
@@ -1439,7 +1435,7 @@ func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 			}
 
 			array, err := atree.NewArrayFromBatchData(
-				config.Storage,
+				context.Storage(),
 				v.StorageAddress(),
 				v.array.Type(),
 				func() (atree.Value, error) {
@@ -1451,8 +1447,8 @@ func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 						return nil, nil
 					}
 
-					element := MustConvertStoredValue(interpreter, value).
-						Clone(interpreter)
+					element := MustConvertStoredValue(context, value).
+						Clone(context)
 
 					return element, nil
 				},
@@ -1833,13 +1829,13 @@ func (v *ArrayValue) Map(
 }
 
 func (v *ArrayValue) ForEach(
-	interpreter *Interpreter,
+	context IterableValueForeachContext,
 	_ sema.Type,
 	function func(value Value) (resume bool),
 	transferElements bool,
 	locationRange LocationRange,
 ) {
-	v.Iterate(interpreter, function, transferElements, locationRange)
+	v.Iterate(context, function, transferElements, locationRange)
 }
 
 func (v *ArrayValue) ToVariableSized(

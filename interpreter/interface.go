@@ -78,6 +78,13 @@ type ValueStaticTypeContext interface {
 
 var _ ValueStaticTypeContext = &Interpreter{}
 
+type ValueStaticTypeConformanceContext interface {
+	ValueStaticTypeContext
+	ContainerMutationContext
+}
+
+var _ ValueStaticTypeConformanceContext = &Interpreter{}
+
 type StorageContext interface {
 	ValueStaticTypeContext
 	common.MemoryGauge
@@ -116,6 +123,11 @@ type ValueTransferContext interface {
 
 	WithMutationPrevention(valueID atree.ValueID, f func())
 	ValidateMutation(valueID atree.ValueID, locationRange LocationRange)
+
+	EnforceNotResourceDestruction(
+		valueID atree.ValueID,
+		locationRange LocationRange,
+	)
 }
 
 var _ ValueTransferContext = &Interpreter{}
@@ -156,12 +168,46 @@ type ValueStringContext interface {
 
 var _ ValueStringContext = &Interpreter{}
 
+type ValueCloneContext interface {
+	StorageContext
+	ReferenceTracker
+}
+
+var _ ValueCloneContext = &Interpreter{}
+
+type ValueImportableContext interface {
+	ContainerMutationContext
+}
+
+var _ ValueImportableContext = &Interpreter{}
+
+type ValueVisitContext interface {
+	ValueWalkContext
+}
+
+var _ ValueVisitContext = &Interpreter{}
+
 type ReferenceCreationContext interface {
 	common.MemoryGauge
 	ReferenceTracker
 }
 
 var _ ReferenceCreationContext = &Interpreter{}
+
+type GetReferenceContext interface {
+	ReferenceCreationContext
+	ValueStaticTypeContext
+	EntitlementMappingsSubstitutionHandler
+}
+
+var _ GetReferenceContext = &Interpreter{}
+
+type IterableValueForeachContext interface {
+	ValueTransferContext
+	EntitlementMappingsSubstitutionHandler
+}
+
+var _ IterableValueForeachContext = &Interpreter{}
 
 type AccountHandlerContext interface {
 	AccountHandler() AccountHandlerFunc
@@ -232,11 +278,6 @@ type StorageIterationTracker interface {
 var _ StorageIterationTracker = &Interpreter{}
 
 type ResourceDestructionHandler interface {
-	EnforceNotResourceDestruction(
-		valueID atree.ValueID,
-		locationRange LocationRange,
-	)
-
 	WithResourceDestruction(
 		valueID atree.ValueID,
 		locationRange LocationRange,
@@ -507,6 +548,10 @@ func (ctx NoOpStringContext) ValidateMutation(_ atree.ValueID, _ LocationRange) 
 	panic(errors.NewUnreachableError())
 }
 
+func (ctx NoOpStringContext) EnforceNotResourceDestruction(_ atree.ValueID, _ LocationRange) {
+	panic(errors.NewUnreachableError())
+}
+
 func (ctx NoOpStringContext) ReadStored(_ common.Address, _ common.StorageDomain, _ StorageMapKey) Value {
 	panic(errors.NewUnreachableError())
 }
@@ -551,11 +596,11 @@ func (ctx NoOpStringContext) MaybeTrackReferencedResourceKindedValue(_ *Ephemera
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) ClearReferencedResourceKindedValues(valueID atree.ValueID) {
+func (ctx NoOpStringContext) ClearReferencedResourceKindedValues(_ atree.ValueID) {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) ReferencedResourceKindedValues(valueID atree.ValueID) map[*EphemeralReferenceValue]struct{} {
+func (ctx NoOpStringContext) ReferencedResourceKindedValues(_ atree.ValueID) map[*EphemeralReferenceValue]struct{} {
 	panic(errors.NewUnreachableError())
 }
 
@@ -587,6 +632,10 @@ func (ctx NoOpStringContext) ReportDictionaryValueTransferTrace(_ string, _ int,
 	panic(errors.NewUnreachableError())
 }
 
+func (ctx NoOpStringContext) ReportArrayValueConformsToStaticTypeTrace(_ string, _ int, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
 func (ctx NoOpStringContext) ReportDictionaryValueDestroyTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
@@ -604,6 +653,10 @@ func (ctx NoOpStringContext) ReportDictionaryValueGetMemberTrace(_ string, _ int
 }
 
 func (ctx NoOpStringContext) ReportDictionaryValueConstructTrace(_ string, _ int, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (ctx NoOpStringContext) ReportDictionaryValueConformsToStaticTypeTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -627,6 +680,14 @@ func (ctx NoOpStringContext) ReportCompositeValueConstructTrace(_ string, _ stri
 	panic(errors.NewUnreachableError())
 }
 
+func (ctx NoOpStringContext) ReportCompositeValueConformsToStaticTypeTrace(_ string, _ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (ctx NoOpStringContext) ReportCompositeValueRemoveMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
 func (ctx NoOpStringContext) ReportDomainStorageMapDeepRemoveTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
@@ -647,7 +708,7 @@ func (ctx NoOpStringContext) InStorageIteration() bool {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) SetInStorageIteration(b bool) {
+func (ctx NoOpStringContext) SetInStorageIteration(_ bool) {
 	panic(errors.NewUnreachableError())
 }
 

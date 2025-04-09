@@ -5334,7 +5334,7 @@ func getTypeFunction(context FunctionCreationContext, self Value) FunctionValue 
 }
 
 func setMember(
-	context MemberAccessibleContext,
+	context ValueTransferContext,
 	self Value,
 	locationRange LocationRange,
 	identifier string,

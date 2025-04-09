@@ -89,8 +89,8 @@ func (v *AccountCapabilityControllerValue) CapabilityControllerBorrowType() *Ref
 	return v.BorrowType
 }
 
-func (v *AccountCapabilityControllerValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitAccountCapabilityControllerValue(interpreter, v)
+func (v *AccountCapabilityControllerValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitAccountCapabilityControllerValue(context, v)
 }
 
 func (v *AccountCapabilityControllerValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {
@@ -101,7 +101,7 @@ func (v *AccountCapabilityControllerValue) StaticType(_ ValueStaticTypeContext) 
 	return PrimitiveStaticTypeAccountCapabilityController
 }
 
-func (*AccountCapabilityControllerValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (*AccountCapabilityControllerValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return false
 }
 
@@ -126,7 +126,7 @@ func (v *AccountCapabilityControllerValue) MeteredString(context ValueStringCont
 }
 
 func (v *AccountCapabilityControllerValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -162,7 +162,7 @@ func (*AccountCapabilityControllerValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*AccountCapabilityControllerValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (*AccountCapabilityControllerValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -181,7 +181,7 @@ func (v *AccountCapabilityControllerValue) Transfer(
 	return v
 }
 
-func (v *AccountCapabilityControllerValue) Clone(_ *Interpreter) Value {
+func (v *AccountCapabilityControllerValue) Clone(_ ValueCloneContext) Value {
 	return &AccountCapabilityControllerValue{
 		BorrowType:   v.BorrowType,
 		CapabilityID: v.CapabilityID,
@@ -255,13 +255,13 @@ func (v *AccountCapabilityControllerValue) GetMember(context MemberAccessibleCon
 	return nil
 }
 
-func (*AccountCapabilityControllerValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (*AccountCapabilityControllerValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Account capability controllers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v *AccountCapabilityControllerValue) SetMember(
-	context MemberAccessibleContext,
+	context ValueTransferContext,
 	_ LocationRange,
 	identifier string,
 	value Value,

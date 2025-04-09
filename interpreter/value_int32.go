@@ -62,8 +62,8 @@ var _ MemberAccessibleValue = Int32Value(0)
 
 func (Int32Value) IsValue() {}
 
-func (v Int32Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitInt32Value(interpreter, v)
+func (v Int32Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitInt32Value(context, v)
 }
 
 func (Int32Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -74,7 +74,7 @@ func (Int32Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeInt32)
 }
 
-func (Int32Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (Int32Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -617,12 +617,12 @@ func (v Int32Value) GetMember(context MemberAccessibleContext, locationRange Loc
 	return getNumberValueMember(context, v, name, sema.Int32Type, locationRange)
 }
 
-func (Int32Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (Int32Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (Int32Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (Int32Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -634,7 +634,7 @@ func (v Int32Value) ToBigEndianBytes() []byte {
 }
 
 func (v Int32Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -649,7 +649,7 @@ func (Int32Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Int32Value) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (Int32Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -668,7 +668,7 @@ func (v Int32Value) Transfer(
 	return v
 }
 
-func (v Int32Value) Clone(_ *Interpreter) Value {
+func (v Int32Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

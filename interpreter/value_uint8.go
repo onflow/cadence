@@ -60,8 +60,8 @@ func NewUnmeteredUInt8Value(value uint8) UInt8Value {
 
 func (UInt8Value) IsValue() {}
 
-func (v UInt8Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitUInt8Value(interpreter, v)
+func (v UInt8Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitUInt8Value(context, v)
 }
 
 func (UInt8Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -72,7 +72,7 @@ func (UInt8Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeUInt8)
 }
 
-func (UInt8Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (UInt8Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -551,12 +551,12 @@ func (v UInt8Value) GetMember(context MemberAccessibleContext, locationRange Loc
 	return getNumberValueMember(context, v, name, sema.UInt8Type, locationRange)
 }
 
-func (UInt8Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (UInt8Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (UInt8Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (UInt8Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -566,7 +566,7 @@ func (v UInt8Value) ToBigEndianBytes() []byte {
 }
 
 func (v UInt8Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -600,7 +600,7 @@ func (v UInt8Value) Transfer(
 	return v
 }
 
-func (v UInt8Value) Clone(_ *Interpreter) Value {
+func (v UInt8Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

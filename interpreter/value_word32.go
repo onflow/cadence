@@ -61,8 +61,8 @@ func NewUnmeteredWord32Value(value uint32) Word32Value {
 
 func (Word32Value) IsValue() {}
 
-func (v Word32Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitWord32Value(interpreter, v)
+func (v Word32Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitWord32Value(context, v)
 }
 
 func (Word32Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -73,7 +73,7 @@ func (Word32Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeWord32)
 }
 
-func (Word32Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (Word32Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -397,12 +397,12 @@ func (v Word32Value) GetMember(context MemberAccessibleContext, locationRange Lo
 	return getNumberValueMember(context, v, name, sema.Word32Type, locationRange)
 }
 
-func (Word32Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (Word32Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (Word32Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (Word32Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -414,7 +414,7 @@ func (v Word32Value) ToBigEndianBytes() []byte {
 }
 
 func (v Word32Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -452,7 +452,7 @@ func (v Word32Value) Transfer(
 	return v
 }
 
-func (v Word32Value) Clone(_ *Interpreter) Value {
+func (v Word32Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

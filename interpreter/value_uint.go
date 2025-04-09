@@ -117,8 +117,8 @@ var _ MemberAccessibleValue = UIntValue{}
 
 func (UIntValue) IsValue() {}
 
-func (v UIntValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitUIntValue(interpreter, v)
+func (v UIntValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitUIntValue(context, v)
 }
 
 func (UIntValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -129,7 +129,7 @@ func (UIntValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeUInt)
 }
 
-func (v UIntValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (v UIntValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -593,12 +593,12 @@ func (v UIntValue) GetMember(context MemberAccessibleContext, locationRange Loca
 	return getNumberValueMember(context, v, name, sema.UIntType, locationRange)
 }
 
-func (UIntValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (UIntValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (UIntValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (UIntValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -608,7 +608,7 @@ func (v UIntValue) ToBigEndianBytes() []byte {
 }
 
 func (v UIntValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -642,7 +642,7 @@ func (v UIntValue) Transfer(
 	return v
 }
 
-func (v UIntValue) Clone(_ *Interpreter) Value {
+func (v UIntValue) Clone(_ ValueCloneContext) Value {
 	return NewUnmeteredUIntValueFromBigInt(v.BigInt)
 }
 

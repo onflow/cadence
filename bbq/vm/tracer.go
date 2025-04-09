@@ -44,7 +44,11 @@ func (ctx Tracer) ReportArrayValueConstructTrace(_ string, _ int, _ time.Duratio
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Config) ReportArrayValueDestroyTrace(info string, count int, since time.Duration) {
+func (c *Config) ReportArrayValueDestroyTrace(_ string, _ int, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (c *Config) ReportArrayValueConformsToStaticTypeTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -68,14 +72,19 @@ func (c *Config) ReportDictionaryValueConstructTrace(_ string, _ int, _ time.Dur
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Config) ReportDictionaryValueDestroyTrace(info string, count int, since time.Duration) {
+func (c *Config) ReportDictionaryValueDestroyTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
+
+func (c *Config) ReportDictionaryValueConformsToStaticTypeTrace(_ string, _ int, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
 func (ctx Tracer) ReportCompositeValueTransferTrace(_ string, _ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx Tracer) ReportCompositeValueSetMemberTrace(_ string, id string, _ string, _ string, _ time.Duration) {
+func (ctx Tracer) ReportCompositeValueSetMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -87,7 +96,15 @@ func (ctx Tracer) ReportCompositeValueConstructTrace(_ string, _ string, _ strin
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Config) ReportCompositeValueDestroyTrace(owner string, id string, kind string, since time.Duration) {
+func (c *Config) ReportCompositeValueDestroyTrace(_ string, _ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (c *Config) ReportCompositeValueConformsToStaticTypeTrace(_ string, _ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (c *Config) ReportCompositeValueRemoveMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 

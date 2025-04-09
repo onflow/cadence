@@ -242,14 +242,14 @@ func (*CompositeValue) IsValue() {}
 
 func (*CompositeValue) isAtreeContainerBackedValue() {}
 
-func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
-	descend := visitor.VisitCompositeValue(interpreter, v)
+func (v *CompositeValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
+	descend := visitor.VisitCompositeValue(context, v)
 	if !descend {
 		return
 	}
 
-	v.ForEachField(interpreter, func(_ string, value Value) (resume bool) {
-		value.Accept(interpreter, visitor, locationRange)
+	v.ForEachField(context, func(_ string, value Value) (resume bool) {
+		value.Accept(context, visitor, locationRange)
 
 		// continue iteration
 		return true
@@ -281,18 +281,18 @@ func (v *CompositeValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return v.staticType
 }
 
-func (v *CompositeValue) IsImportable(inter *Interpreter, locationRange LocationRange) bool {
+func (v *CompositeValue) IsImportable(context ValueImportableContext, locationRange LocationRange) bool {
 	// Check type is importable
-	staticType := v.StaticType(inter)
-	semaType := MustConvertStaticToSemaType(staticType, inter)
+	staticType := v.StaticType(context)
+	semaType := MustConvertStaticToSemaType(staticType, context)
 	if !semaType.IsImportable(map[*sema.Member]bool{}) {
 		return false
 	}
 
 	// Check all field values are importable
 	importable := true
-	v.ForEachField(inter, func(_ string, value Value) (resume bool) {
-		if !value.IsImportable(inter, locationRange) {
+	v.ForEachField(context, func(_ string, value Value) (resume bool) {
+		if !value.IsImportable(context, locationRange) {
 			importable = false
 			// stop iteration
 			return false
@@ -496,12 +496,12 @@ func compositeMember(context FunctionCreationContext, compositeValue Value, memb
 	return memberValue
 }
 
-func (v *CompositeValue) isInvalidatedResource(context ValueStaticTypeContext) bool {
+func (v *CompositeValue) isInvalidatedResource(_ ValueStaticTypeContext) bool {
 	return v.isDestroyed || (v.dictionary == nil && v.Kind == common.CompositeKindResource)
 }
 
-func (v *CompositeValue) IsStaleResource(inter *Interpreter) bool {
-	return v.dictionary == nil && v.IsResourceKinded(inter)
+func (v *CompositeValue) IsStaleResource(context ValueStaticTypeContext) bool {
+	return v.dictionary == nil && v.IsResourceKinded(context)
 }
 
 func (v *CompositeValue) GetComputedFields() map[string]ComputedField {
@@ -611,14 +611,12 @@ func (v *CompositeValue) OwnerValue(context MemberAccessibleContext, locationRan
 }
 
 func (v *CompositeValue) RemoveMember(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	name string,
 ) Value {
 
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		owner := v.GetOwner().String()
@@ -626,7 +624,7 @@ func (v *CompositeValue) RemoveMember(
 		kind := v.Kind.String()
 
 		defer func() {
-			interpreter.reportCompositeValueRemoveMemberTrace(
+			context.ReportCompositeValueRemoveMemberTrace(
 				owner,
 				typeID,
 				kind,
@@ -651,22 +649,22 @@ func (v *CompositeValue) RemoveMember(
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.MaybeValidateAtreeValue(v.dictionary)
-	interpreter.MaybeValidateAtreeStorage()
+	context.MaybeValidateAtreeValue(v.dictionary)
+	context.MaybeValidateAtreeStorage()
 
 	// Key
-	RemoveReferencedSlab(interpreter, existingKeyStorable)
+	RemoveReferencedSlab(context, existingKeyStorable)
 
 	// Value
 
 	storedValue := StoredValue(
-		interpreter,
+		context,
 		existingValueStorable,
-		config.Storage,
+		context.Storage(),
 	)
 	return storedValue.
 		Transfer(
-			interpreter,
+			context,
 			locationRange,
 			atree.Address{},
 			true,
@@ -677,7 +675,7 @@ func (v *CompositeValue) RemoveMember(
 }
 
 func (v *CompositeValue) SetMemberWithoutTransfer(
-	context MemberAccessibleContext,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	name string,
 	value Value,
@@ -730,7 +728,7 @@ func (v *CompositeValue) SetMemberWithoutTransfer(
 	return false
 }
 
-func (v *CompositeValue) SetMember(context MemberAccessibleContext, locationRange LocationRange, name string, value Value) bool {
+func (v *CompositeValue) SetMember(context ValueTransferContext, locationRange LocationRange, name string, value Value) bool {
 	address := v.StorageAddress()
 
 	value = value.Transfer(
@@ -937,13 +935,11 @@ func (v *CompositeValue) TypeID() TypeID {
 }
 
 func (v *CompositeValue) ConformsToStaticType(
-	interpreter *Interpreter,
+	context ValueStaticTypeConformanceContext,
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		owner := v.GetOwner().String()
@@ -951,7 +947,7 @@ func (v *CompositeValue) ConformsToStaticType(
 		kind := v.Kind.String()
 
 		defer func() {
-			interpreter.reportCompositeValueConformsToStaticTypeTrace(
+			context.ReportCompositeValueConformsToStaticTypeTrace(
 				owner,
 				typeID,
 				kind,
@@ -960,17 +956,17 @@ func (v *CompositeValue) ConformsToStaticType(
 		}()
 	}
 
-	staticType := v.StaticType(interpreter)
-	semaType := MustConvertStaticToSemaType(staticType, interpreter)
+	staticType := v.StaticType(context)
+	semaType := MustConvertStaticToSemaType(staticType, context)
 
 	switch staticType.(type) {
 	case *CompositeStaticType:
-		return v.CompositeStaticTypeConformsToStaticType(interpreter, locationRange, results, semaType)
+		return v.CompositeStaticTypeConformsToStaticType(context, locationRange, results, semaType)
 
 	// CompositeValue is also used for storing types which aren't CompositeStaticType.
 	// E.g. InclusiveRange.
 	case InclusiveRangeStaticType:
-		return v.InclusiveRangeStaticTypeConformsToStaticType(interpreter, locationRange, results, semaType)
+		return v.InclusiveRangeStaticTypeConformsToStaticType(context, locationRange, results, semaType)
 
 	default:
 		return false
@@ -978,7 +974,7 @@ func (v *CompositeValue) ConformsToStaticType(
 }
 
 func (v *CompositeValue) CompositeStaticTypeConformsToStaticType(
-	interpreter *Interpreter,
+	context ValueStaticTypeConformanceContext,
 	locationRange LocationRange,
 	results TypeConformanceResults,
 	semaType sema.Type,
@@ -992,8 +988,8 @@ func (v *CompositeValue) CompositeStaticTypeConformsToStaticType(
 	}
 
 	if compositeType.Kind == common.CompositeKindAttachment {
-		base := v.getBaseValue(interpreter, UnauthorizedAccess, locationRange).Value
-		if base == nil || !base.ConformsToStaticType(interpreter, locationRange, results) {
+		base := v.getBaseValue(context, UnauthorizedAccess, locationRange).Value
+		if base == nil || !base.ConformsToStaticType(context, locationRange, results) {
 			return false
 		}
 	}
@@ -1012,7 +1008,7 @@ func (v *CompositeValue) CompositeStaticTypeConformsToStaticType(
 	}
 
 	for _, fieldName := range compositeType.Fields {
-		value := v.GetField(interpreter, fieldName)
+		value := v.GetField(context, fieldName)
 		if value == nil {
 			if computedFields == nil {
 				return false
@@ -1023,7 +1019,7 @@ func (v *CompositeValue) CompositeStaticTypeConformsToStaticType(
 				return false
 			}
 
-			value = fieldGetter(interpreter, locationRange, v)
+			value = fieldGetter(context, locationRange, v)
 		}
 
 		member, ok := compositeType.Members.Get(fieldName)
@@ -1031,14 +1027,14 @@ func (v *CompositeValue) CompositeStaticTypeConformsToStaticType(
 			return false
 		}
 
-		fieldStaticType := value.StaticType(interpreter)
+		fieldStaticType := value.StaticType(context)
 
-		if !IsSubTypeOfSemaType(interpreter, fieldStaticType, member.TypeAnnotation.Type) {
+		if !IsSubTypeOfSemaType(context, fieldStaticType, member.TypeAnnotation.Type) {
 			return false
 		}
 
 		if !value.ConformsToStaticType(
-			interpreter,
+			context,
 			locationRange,
 			results,
 		) {
@@ -1050,7 +1046,7 @@ func (v *CompositeValue) CompositeStaticTypeConformsToStaticType(
 }
 
 func (v *CompositeValue) InclusiveRangeStaticTypeConformsToStaticType(
-	interpreter *Interpreter,
+	context ValueStaticTypeConformanceContext,
 	locationRange LocationRange,
 	results TypeConformanceResults,
 	semaType sema.Type,
@@ -1060,21 +1056,21 @@ func (v *CompositeValue) InclusiveRangeStaticTypeConformsToStaticType(
 		return false
 	}
 
-	expectedMemberStaticType := ConvertSemaToStaticType(interpreter, inclusiveRangeType.MemberType)
+	expectedMemberStaticType := ConvertSemaToStaticType(context, inclusiveRangeType.MemberType)
 	for _, fieldName := range sema.InclusiveRangeTypeFieldNames {
-		value := v.GetField(interpreter, fieldName)
+		value := v.GetField(context, fieldName)
 
-		fieldStaticType := value.StaticType(interpreter)
+		fieldStaticType := value.StaticType(context)
 
 		// InclusiveRange is non-covariant.
 		// For e.g. we disallow assigning InclusiveRange<Int> to an InclusiveRange<Integer>.
-		// Hence we do an exact equality check instead of a sub-type check.
+		// Hence, we do an exact equality check instead of a subtype check.
 		if !fieldStaticType.Equal(expectedMemberStaticType) {
 			return false
 		}
 
 		if !value.ConformsToStaticType(
-			interpreter,
+			context,
 			locationRange,
 			results,
 		) {
@@ -1344,17 +1340,15 @@ func (v *CompositeValue) ResourceUUID(interpreter *Interpreter) *UInt64Value {
 	return &uuid
 }
 
-func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
+func (v *CompositeValue) Clone(context ValueCloneContext) Value {
 
 	iterator, err := v.dictionary.ReadOnlyIterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
 
-	config := interpreter.SharedState.Config
-
 	dictionary, err := atree.NewMapFromBatchData(
-		config.Storage,
+		context.Storage(),
 		v.StorageAddress(),
 		atree.NewDefaultDigesterBuilder(),
 		v.dictionary.Type(),
@@ -1375,7 +1369,7 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 			// an "atree-level string", not an interpreter.Value.
 			// Thus, we do not, and cannot, convert.
 			key := atreeKey
-			value := MustConvertStoredValue(interpreter, atreeValue).Clone(interpreter)
+			value := MustConvertStoredValue(context, atreeValue).Clone(context)
 
 			return key, value, nil
 		},
@@ -1649,9 +1643,13 @@ func AttachmentMemberName(typeID string) string {
 	return unrepresentableNamePrefix + typeID
 }
 
-func (v *CompositeValue) getAttachmentValue(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) *CompositeValue {
+func (v *CompositeValue) getAttachmentValue(
+	context MemberAccessibleContext,
+	locationRange LocationRange,
+	ty sema.Type,
+) *CompositeValue {
 	attachment := v.GetMember(
-		interpreter,
+		context,
 		locationRange,
 		AttachmentMemberName(string(ty.ID())),
 	)
@@ -1812,12 +1810,12 @@ func forEachAttachment(
 }
 
 func (v *CompositeValue) getTypeKey(
-	interpreter *Interpreter,
+	context MemberAccessibleContext,
 	locationRange LocationRange,
 	keyType sema.Type,
 	baseAccess sema.Access,
 ) Value {
-	attachment := v.getAttachmentValue(interpreter, locationRange, keyType)
+	attachment := v.getAttachmentValue(context, locationRange, keyType)
 	if attachment == nil {
 		return Nil
 	}
@@ -1827,18 +1825,18 @@ func (v *CompositeValue) getTypeKey(
 
 	// The attachment reference has the same entitlements as the base access
 	attachmentRef := NewEphemeralReferenceValue(
-		interpreter,
-		ConvertSemaAccessToStaticAuthorization(interpreter, baseAccess),
+		context,
+		ConvertSemaAccessToStaticAuthorization(context, baseAccess),
 		attachment,
 		attachmentType,
 		locationRange,
 	)
 
-	return NewSomeValueNonCopying(interpreter, attachmentRef)
+	return NewSomeValueNonCopying(context, attachmentRef)
 }
 
 func (v *CompositeValue) GetTypeKey(
-	interpreter *Interpreter,
+	context MemberAccessibleContext,
 	locationRange LocationRange,
 	ty sema.Type,
 ) Value {
@@ -1847,17 +1845,17 @@ func (v *CompositeValue) GetTypeKey(
 	if isAttachmentType {
 		access = attachmentTyp.SupportedEntitlements().Access()
 	}
-	return v.getTypeKey(interpreter, locationRange, ty, access)
+	return v.getTypeKey(context, locationRange, ty, access)
 }
 
 func (v *CompositeValue) SetTypeKey(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	attachmentType sema.Type,
 	attachment Value,
 ) {
 	memberName := AttachmentMemberName(string(attachmentType.ID()))
-	if v.SetMember(interpreter, locationRange, memberName, attachment) {
+	if v.SetMember(context, locationRange, memberName, attachment) {
 		panic(DuplicateAttachmentError{
 			AttachmentType: attachmentType,
 			Value:          v,
@@ -1867,12 +1865,12 @@ func (v *CompositeValue) SetTypeKey(
 }
 
 func (v *CompositeValue) RemoveTypeKey(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	attachmentType sema.Type,
 ) Value {
 	memberName := AttachmentMemberName(string(attachmentType.ID()))
-	return v.RemoveMember(interpreter, locationRange, memberName)
+	return v.RemoveMember(context, locationRange, memberName)
 }
 
 func (v *CompositeValue) Iterator(context ValueStaticTypeContext, locationRange LocationRange) ValueIterator {
@@ -1889,15 +1887,15 @@ func (v *CompositeValue) Iterator(context ValueStaticTypeContext, locationRange 
 }
 
 func (v *CompositeValue) ForEach(
-	interpreter *Interpreter,
+	context IterableValueForeachContext,
 	_ sema.Type,
 	function func(value Value) (resume bool),
 	transferElements bool,
 	locationRange LocationRange,
 ) {
-	iterator := v.Iterator(interpreter, locationRange)
+	iterator := v.Iterator(context, locationRange)
 	for {
-		value := iterator.Next(interpreter, locationRange)
+		value := iterator.Next(context, locationRange)
 		if value == nil {
 			return
 		}
@@ -1905,7 +1903,7 @@ func (v *CompositeValue) ForEach(
 		if transferElements {
 			// Each element must be transferred before passing onto the function.
 			value = value.Transfer(
-				interpreter,
+				context,
 				locationRange,
 				atree.Address{},
 				false,

@@ -39,8 +39,8 @@ var _ EquatableValue = VoidValue{}
 
 func (VoidValue) IsValue() {}
 
-func (v VoidValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitVoidValue(interpreter, v)
+func (v VoidValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitVoidValue(context, v)
 }
 
 func (VoidValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -51,7 +51,7 @@ func (VoidValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeVoid)
 }
 
-func (VoidValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (VoidValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return sema.VoidType.Importable
 }
 
@@ -69,7 +69,7 @@ func (v VoidValue) MeteredString(context ValueStringContext, _ SeenReferences, _
 }
 
 func (v VoidValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -108,7 +108,7 @@ func (v VoidValue) Transfer(
 	return v
 }
 
-func (v VoidValue) Clone(_ *Interpreter) Value {
+func (v VoidValue) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

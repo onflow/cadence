@@ -65,17 +65,29 @@ func (v FunctionValue) Storable(storage atree.SlabStorage, address atree.Address
 	panic(errors.NewUnreachableError())
 }
 
-func (v FunctionValue) Accept(interpreter *interpreter.Interpreter, visitor interpreter.Visitor, locationRange interpreter.LocationRange) {
+func (v FunctionValue) Accept(
+	context interpreter.ValueVisitContext,
+	visitor interpreter.Visitor,
+	locationRange interpreter.LocationRange,
+) {
 	//TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (v FunctionValue) Walk(interpreter interpreter.ValueWalkContext, walkChild func(interpreter.Value), locationRange interpreter.LocationRange) {
+func (v FunctionValue) Walk(
+	interpreter interpreter.ValueWalkContext,
+	walkChild func(interpreter.Value),
+	locationRange interpreter.LocationRange,
+) {
 	//TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (v FunctionValue) ConformsToStaticType(interpreter *interpreter.Interpreter, locationRange interpreter.LocationRange, results interpreter.TypeConformanceResults) bool {
+func (v FunctionValue) ConformsToStaticType(
+	context interpreter.ValueStaticTypeConformanceContext,
+	locationRange interpreter.LocationRange,
+	results interpreter.TypeConformanceResults,
+) bool {
 	//TODO
 	panic(errors.NewUnreachableError())
 }
@@ -85,7 +97,11 @@ func (v FunctionValue) RecursiveString(seenReferences interpreter.SeenReferences
 	panic(errors.NewUnreachableError())
 }
 
-func (v FunctionValue) MeteredString(context interpreter.ValueStringContext, seenReferences interpreter.SeenReferences, locationRange interpreter.LocationRange) string {
+func (v FunctionValue) MeteredString(
+	context interpreter.ValueStringContext,
+	seenReferences interpreter.SeenReferences,
+	locationRange interpreter.LocationRange,
+) string {
 	//TODO
 	panic(errors.NewUnreachableError())
 }
@@ -105,12 +121,12 @@ func (v FunctionValue) DeepRemove(removeContext interpreter.ValueRemoveContext, 
 	panic(errors.NewUnreachableError())
 }
 
-func (v FunctionValue) Clone(interpreter *interpreter.Interpreter) interpreter.Value {
+func (v FunctionValue) Clone(context interpreter.ValueCloneContext) interpreter.Value {
 	//TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (v FunctionValue) IsImportable(interpreter *interpreter.Interpreter, locationRange interpreter.LocationRange) bool {
+func (v FunctionValue) IsImportable(context interpreter.ValueImportableContext, locationRange interpreter.LocationRange) bool {
 	//TODO
 	panic(errors.NewUnreachableError())
 }
@@ -168,17 +184,29 @@ func (v NativeFunctionValue) Storable(storage atree.SlabStorage, address atree.A
 	panic(errors.NewUnreachableError())
 }
 
-func (v NativeFunctionValue) Accept(interpreter *interpreter.Interpreter, visitor interpreter.Visitor, locationRange interpreter.LocationRange) {
+func (v NativeFunctionValue) Accept(
+	context interpreter.ValueVisitContext,
+	visitor interpreter.Visitor,
+	locationRange interpreter.LocationRange,
+) {
 	//TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (v NativeFunctionValue) Walk(interpreter interpreter.ValueWalkContext, walkChild func(interpreter.Value), locationRange interpreter.LocationRange) {
+func (v NativeFunctionValue) Walk(
+	context interpreter.ValueWalkContext,
+	walkChild func(interpreter.Value),
+	locationRange interpreter.LocationRange,
+) {
 	//TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (v NativeFunctionValue) ConformsToStaticType(interpreter *interpreter.Interpreter, locationRange interpreter.LocationRange, results interpreter.TypeConformanceResults) bool {
+func (v NativeFunctionValue) ConformsToStaticType(
+	context interpreter.ValueStaticTypeConformanceContext,
+	locationRange interpreter.LocationRange,
+	results interpreter.TypeConformanceResults,
+) bool {
 	//TODO
 	panic(errors.NewUnreachableError())
 }
@@ -188,7 +216,11 @@ func (v NativeFunctionValue) RecursiveString(seenReferences interpreter.SeenRefe
 	panic(errors.NewUnreachableError())
 }
 
-func (v NativeFunctionValue) MeteredString(context interpreter.ValueStringContext, seenReferences interpreter.SeenReferences, locationRange interpreter.LocationRange) string {
+func (v NativeFunctionValue) MeteredString(
+	context interpreter.ValueStringContext,
+	seenReferences interpreter.SeenReferences,
+	locationRange interpreter.LocationRange,
+) string {
 	//TODO
 	panic(errors.NewUnreachableError())
 }
@@ -208,12 +240,15 @@ func (v NativeFunctionValue) DeepRemove(removeContext interpreter.ValueRemoveCon
 	panic(errors.NewUnreachableError())
 }
 
-func (v NativeFunctionValue) Clone(interpreter *interpreter.Interpreter) interpreter.Value {
+func (v NativeFunctionValue) Clone(context interpreter.ValueCloneContext) interpreter.Value {
 	//TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (v NativeFunctionValue) IsImportable(interpreter *interpreter.Interpreter, locationRange interpreter.LocationRange) bool {
+func (v NativeFunctionValue) IsImportable(
+	context interpreter.ValueImportableContext,
+	locationRange interpreter.LocationRange,
+) bool {
 	//TODO
 	panic(errors.NewUnreachableError())
 }

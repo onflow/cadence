@@ -60,8 +60,8 @@ var _ HashableValue = Int8Value(0)
 
 func (Int8Value) IsValue() {}
 
-func (v Int8Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitInt8Value(interpreter, v)
+func (v Int8Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitInt8Value(context, v)
 }
 
 func (Int8Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -72,7 +72,7 @@ func (Int8Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeInt8)
 }
 
-func (Int8Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (Int8Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -616,12 +616,12 @@ func (v Int8Value) GetMember(context MemberAccessibleContext, locationRange Loca
 	return getNumberValueMember(context, v, name, sema.Int8Type, locationRange)
 }
 
-func (Int8Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (Int8Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (Int8Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (Int8Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -631,7 +631,7 @@ func (v Int8Value) ToBigEndianBytes() []byte {
 }
 
 func (v Int8Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -646,7 +646,7 @@ func (Int8Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Int8Value) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (Int8Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -665,7 +665,7 @@ func (v Int8Value) Transfer(
 	return v
 }
 
-func (v Int8Value) Clone(_ *Interpreter) Value {
+func (v Int8Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

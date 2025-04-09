@@ -52,7 +52,7 @@ func (PathLinkValue) IsValue() {}
 
 func (PathLinkValue) isLinkValue() {}
 
-func (v PathLinkValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange) {
+func (v PathLinkValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -71,7 +71,7 @@ func (v PathLinkValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewCapabilityStaticType(context, v.Type)
 }
 
-func (PathLinkValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (PathLinkValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	panic(errors.NewUnreachableError())
 }
 
@@ -92,7 +92,7 @@ func (v PathLinkValue) MeteredString(_ ValueStringContext, _ SeenReferences, _ L
 }
 
 func (v PathLinkValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -140,10 +140,10 @@ func (v PathLinkValue) Transfer(
 	return v
 }
 
-func (v PathLinkValue) Clone(inter *Interpreter) Value {
+func (v PathLinkValue) Clone(context ValueCloneContext) Value {
 	return PathLinkValue{
 		Type:       v.Type,
-		TargetPath: v.TargetPath.Clone(inter).(PathValue),
+		TargetPath: v.TargetPath.Clone(context).(PathValue),
 	}
 }
 
@@ -177,7 +177,7 @@ func (AccountLinkValue) IsValue() {}
 
 func (AccountLinkValue) isLinkValue() {}
 
-func (v AccountLinkValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange) {
+func (v AccountLinkValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -203,7 +203,7 @@ func (v AccountLinkValue) StaticType(context ValueStaticTypeContext) StaticType 
 	)
 }
 
-func (AccountLinkValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (AccountLinkValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	panic(errors.NewUnreachableError())
 }
 
@@ -215,12 +215,12 @@ func (v AccountLinkValue) RecursiveString(_ SeenReferences) string {
 	panic(errors.NewUnreachableError())
 }
 
-func (v AccountLinkValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+func (v AccountLinkValue) MeteredString(_ ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	panic(errors.NewUnreachableError())
 }
 
 func (v AccountLinkValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -263,7 +263,7 @@ func (v AccountLinkValue) Transfer(
 	return v
 }
 
-func (AccountLinkValue) Clone(_ *Interpreter) Value {
+func (AccountLinkValue) Clone(_ ValueCloneContext) Value {
 	return AccountLinkValue{}
 }
 
