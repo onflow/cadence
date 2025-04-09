@@ -92,8 +92,8 @@ type Value interface {
 	// NOTE: important, error messages rely on values to implement String
 	fmt.Stringer
 	IsValue()
-	Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange)
-	Walk(interpreter ValueWalkContext, walkChild func(Value), locationRange LocationRange)
+	Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange)
+	Walk(walkContext ValueWalkContext, walkChild func(Value), locationRange LocationRange)
 	StaticType(context ValueStaticTypeContext) StaticType
 	// ConformsToStaticType returns true if the value (i.e. its dynamic type)
 	// conforms to its own static type.
@@ -104,7 +104,7 @@ type Value interface {
 	// e.g. the element type of an array, it also ensures the nested values'
 	// static types are subtypes.
 	ConformsToStaticType(
-		interpreter *Interpreter,
+		context ValueStaticTypeConformanceContext,
 		locationRange LocationRange,
 		results TypeConformanceResults,
 	) bool
@@ -128,8 +128,8 @@ type Value interface {
 	// Clone returns a new value that is equal to this value.
 	// NOTE: not used by interpreter, but used externally (e.g. state migration)
 	// NOTE: memory metering is unnecessary for Clone methods
-	Clone(interpreter *Interpreter) Value
-	IsImportable(interpreter *Interpreter, locationRange LocationRange) bool
+	Clone(cloneContext ValueCloneContext) Value
+	IsImportable(context ValueImportableContext, locationRange LocationRange) bool
 }
 
 // ValueIndexableValue
@@ -144,9 +144,9 @@ type ValueIndexableValue interface {
 
 type TypeIndexableValue interface {
 	Value
-	GetTypeKey(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) Value
-	SetTypeKey(interpreter *Interpreter, locationRange LocationRange, ty sema.Type, value Value)
-	RemoveTypeKey(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) Value
+	GetTypeKey(context MemberAccessibleContext, locationRange LocationRange, ty sema.Type) Value
+	SetTypeKey(context ValueTransferContext, locationRange LocationRange, ty sema.Type, value Value)
+	RemoveTypeKey(context ValueTransferContext, locationRange LocationRange, ty sema.Type) Value
 }
 
 // MemberAccessibleValue
@@ -154,9 +154,9 @@ type TypeIndexableValue interface {
 type MemberAccessibleValue interface {
 	Value
 	GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value
-	RemoveMember(interpreter *Interpreter, locationRange LocationRange, name string) Value
-	// returns whether a value previously existed with this name
-	SetMember(context MemberAccessibleContext, locationRange LocationRange, name string, value Value) bool
+	RemoveMember(context ValueTransferContext, locationRange LocationRange, name string) Value
+	// SetMember returns whether a value previously existed with this name.
+	SetMember(context ValueTransferContext, locationRange LocationRange, name string, value Value) bool
 }
 
 type ValueComparisonContext interface {
@@ -216,7 +216,7 @@ type ReferenceTrackedResourceKindedValue interface {
 	ResourceKindedValue
 	IsReferenceTrackedResourceKindedValue()
 	ValueID() atree.ValueID
-	IsStaleResource(*Interpreter) bool
+	IsStaleResource(ValueStaticTypeContext) bool
 }
 
 // ContractValue is the value of a contract.
@@ -232,7 +232,7 @@ type ContractValue interface {
 type IterableValue interface {
 	Value
 	ForEach(
-		interpreter *Interpreter,
+		context IterableValueForeachContext,
 		elementType sema.Type,
 		function func(value Value) (resume bool),
 		transferElements bool,

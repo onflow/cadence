@@ -81,8 +81,8 @@ func NewEphemeralReferenceValue(
 
 func (*EphemeralReferenceValue) IsValue() {}
 
-func (v *EphemeralReferenceValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitEphemeralReferenceValue(interpreter, v)
+func (v *EphemeralReferenceValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitEphemeralReferenceValue(context, v)
 }
 
 func (*EphemeralReferenceValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -122,7 +122,7 @@ func (v *EphemeralReferenceValue) GetAuthorization() Authorization {
 	return v.Authorization
 }
 
-func (*EphemeralReferenceValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (*EphemeralReferenceValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return false
 }
 
@@ -139,18 +139,18 @@ func (v *EphemeralReferenceValue) GetMember(context MemberAccessibleContext, loc
 }
 
 func (v *EphemeralReferenceValue) RemoveMember(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	identifier string,
 ) Value {
 	if memberAccessibleValue, ok := v.Value.(MemberAccessibleValue); ok {
-		return memberAccessibleValue.RemoveMember(interpreter, locationRange, identifier)
+		return memberAccessibleValue.RemoveMember(context, locationRange, identifier)
 	}
 
 	return nil
 }
 
-func (v *EphemeralReferenceValue) SetMember(context MemberAccessibleContext, locationRange LocationRange, name string, value Value) bool {
+func (v *EphemeralReferenceValue) SetMember(context ValueTransferContext, locationRange LocationRange, name string, value Value) bool {
 	return setMember(context, v.Value, locationRange, name, value)
 }
 
@@ -175,7 +175,7 @@ func (v *EphemeralReferenceValue) RemoveKey(context ContainerMutationContext, lo
 }
 
 func (v *EphemeralReferenceValue) GetTypeKey(
-	interpreter *Interpreter,
+	context MemberAccessibleContext,
 	locationRange LocationRange,
 	key sema.Type,
 ) Value {
@@ -183,34 +183,34 @@ func (v *EphemeralReferenceValue) GetTypeKey(
 
 	if selfComposite, isComposite := self.(*CompositeValue); isComposite {
 		return selfComposite.getTypeKey(
-			interpreter,
+			context,
 			locationRange,
 			key,
-			MustConvertStaticAuthorizationToSemaAccess(interpreter, v.Authorization),
+			MustConvertStaticAuthorizationToSemaAccess(context, v.Authorization),
 		)
 	}
 
 	return self.(TypeIndexableValue).
-		GetTypeKey(interpreter, locationRange, key)
+		GetTypeKey(context, locationRange, key)
 }
 
 func (v *EphemeralReferenceValue) SetTypeKey(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	key sema.Type,
 	value Value,
 ) {
 	v.Value.(TypeIndexableValue).
-		SetTypeKey(interpreter, locationRange, key, value)
+		SetTypeKey(context, locationRange, key, value)
 }
 
 func (v *EphemeralReferenceValue) RemoveTypeKey(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	key sema.Type,
 ) Value {
 	return v.Value.(TypeIndexableValue).
-		RemoveTypeKey(interpreter, locationRange, key)
+		RemoveTypeKey(context, locationRange, key)
 }
 
 func (v *EphemeralReferenceValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
@@ -230,15 +230,15 @@ func (v *EphemeralReferenceValue) Equal(_ ValueComparisonContext, _ LocationRang
 }
 
 func (v *EphemeralReferenceValue) ConformsToStaticType(
-	interpreter *Interpreter,
+	context ValueStaticTypeConformanceContext,
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
 	self := v.Value
 
-	staticType := v.Value.StaticType(interpreter)
+	staticType := v.Value.StaticType(context)
 
-	if !IsSubTypeOfSemaType(interpreter, staticType, v.BorrowedType) {
+	if !IsSubTypeOfSemaType(context, staticType, v.BorrowedType) {
 		return false
 	}
 
@@ -256,7 +256,7 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 	results[entry] = true
 
 	result := self.ConformsToStaticType(
-		interpreter,
+		context,
 		locationRange,
 		results,
 	)
@@ -278,7 +278,7 @@ func (*EphemeralReferenceValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*EphemeralReferenceValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (*EphemeralReferenceValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -297,8 +297,8 @@ func (v *EphemeralReferenceValue) Transfer(
 	return v
 }
 
-func (v *EphemeralReferenceValue) Clone(inter *Interpreter) Value {
-	return NewUnmeteredEphemeralReferenceValue(inter, v.Authorization, v.Value, v.BorrowedType, EmptyLocationRange)
+func (v *EphemeralReferenceValue) Clone(context ValueCloneContext) Value {
+	return NewUnmeteredEphemeralReferenceValue(context, v.Authorization, v.Value, v.BorrowedType, EmptyLocationRange)
 }
 
 func (*EphemeralReferenceValue) DeepRemove(_ ValueRemoveContext, _ bool) {
@@ -308,14 +308,14 @@ func (*EphemeralReferenceValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 func (*EphemeralReferenceValue) isReference() {}
 
 func (v *EphemeralReferenceValue) ForEach(
-	interpreter *Interpreter,
+	context IterableValueForeachContext,
 	elementType sema.Type,
 	function func(value Value) (resume bool),
 	_ bool,
 	locationRange LocationRange,
 ) {
 	forEachReference(
-		interpreter,
+		context,
 		v,
 		v.Value,
 		elementType,

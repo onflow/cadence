@@ -288,7 +288,12 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(
 			// This is pre-computed at the checker.
 			if memberAccessInfo.ReturnReference {
 				// Get a reference to the value
-				resultValue = interpreter.getReferenceValue(resultValue, memberAccessInfo.ResultingType, locationRange)
+				resultValue = getReferenceValue(
+					interpreter,
+					resultValue,
+					memberAccessInfo.ResultingType,
+					locationRange,
+				)
 			}
 
 			return resultValue
@@ -305,7 +310,12 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(
 // This has to be done recursively for nested optionals.
 // e.g.1: Given type T, this method returns &T.
 // e.g.2: Given T?, this returns (&T)?
-func (interpreter *Interpreter) getReferenceValue(value Value, resultType sema.Type, locationRange LocationRange) Value {
+func getReferenceValue(
+	context GetReferenceContext,
+	value Value,
+	resultType sema.Type,
+	locationRange LocationRange,
+) Value {
 
 	// `resultType` is always an [optional] reference.
 	// This is guaranteed by the checker.
@@ -323,34 +333,45 @@ func (interpreter *Interpreter) getReferenceValue(value Value, resultType sema.T
 		// Additionally, it is only safe to "compress" reference types like this when the desired
 		// result reference type is unauthorized
 
-		staticType := value.StaticType(interpreter)
-		if referenceType.Authorization != sema.UnauthorizedAccess || !IsSubTypeOfSemaType(interpreter, staticType, resultType) {
+		staticType := value.StaticType(context)
+		if referenceType.Authorization != sema.UnauthorizedAccess || !IsSubTypeOfSemaType(context, staticType, resultType) {
 			panic(InvalidMemberReferenceError{
 				ExpectedType:  resultType,
-				ActualType:    MustConvertStaticToSemaType(staticType, interpreter),
+				ActualType:    MustConvertStaticToSemaType(staticType, context),
 				LocationRange: locationRange,
 			})
 		}
 
 		return value
 	case *SomeValue:
-		innerValue := interpreter.getReferenceValue(value.value, resultType, locationRange)
-		return NewSomeValueNonCopying(interpreter, innerValue)
+		innerValue := getReferenceValue(
+			context,
+			value.value,
+			resultType,
+			locationRange,
+		)
+		return NewSomeValueNonCopying(context, innerValue)
 	}
 
-	auth := interpreter.getEffectiveAuthorization(referenceType)
+	auth := getEffectiveAuthorization(context, referenceType)
 
-	return NewEphemeralReferenceValue(interpreter, auth, value, referenceType.Type, locationRange)
+	return NewEphemeralReferenceValue(context, auth, value, referenceType.Type, locationRange)
 }
 
-func (interpreter *Interpreter) getEffectiveAuthorization(referenceType *sema.ReferenceType) Authorization {
+func getEffectiveAuthorization(
+	handler EntitlementMappingsSubstitutionHandler,
+	referenceType *sema.ReferenceType,
+) Authorization {
 	_, isMapped := referenceType.Authorization.(*sema.EntitlementMapAccess)
 
-	if isMapped && interpreter.SharedState.currentEntitlementMappedValue != nil {
-		return interpreter.SharedState.currentEntitlementMappedValue
+	if isMapped {
+		currentMappedValue := handler.CurrentEntitlementMappedValue()
+		if currentMappedValue != nil {
+			return currentMappedValue
+		}
 	}
 
-	return ConvertSemaAccessToStaticAuthorization(interpreter, referenceType.Authorization)
+	return ConvertSemaAccessToStaticAuthorization(handler, referenceType.Authorization)
 }
 
 func (interpreter *Interpreter) checkMemberAccess(
@@ -1139,7 +1160,12 @@ func (interpreter *Interpreter) maybeGetReference(
 		}
 
 		// Get a reference to the value
-		memberValue = interpreter.getReferenceValue(memberValue, expectedType, locationRange)
+		memberValue = getReferenceValue(
+			interpreter,
+			memberValue,
+			expectedType,
+			locationRange,
+		)
 	}
 
 	return memberValue
@@ -1533,7 +1559,7 @@ func (interpreter *Interpreter) newEphemeralReference(
 ) *EphemeralReferenceValue {
 	// If we are currently interpreting a function that was declared with mapped entitlement access, any appearances
 	// of that mapped access in the body of the function should be replaced with the computed output of the map
-	auth := interpreter.getEffectiveAuthorization(typ)
+	auth := getEffectiveAuthorization(interpreter, typ)
 
 	locationRange := LocationRange{
 		Location:    interpreter.Location,

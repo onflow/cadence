@@ -76,8 +76,8 @@ var _ MemberAccessibleValue = Word256Value{}
 
 func (Word256Value) IsValue() {}
 
-func (v Word256Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitWord256Value(interpreter, v)
+func (v Word256Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitWord256Value(context, v)
 }
 
 func (Word256Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -88,7 +88,7 @@ func (Word256Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeWord256)
 }
 
-func (Word256Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (Word256Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -545,12 +545,12 @@ func (v Word256Value) GetMember(context MemberAccessibleContext, locationRange L
 	return getNumberValueMember(context, v, name, sema.Word256Type, locationRange)
 }
 
-func (Word256Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (Word256Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (Word256Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (Word256Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -560,7 +560,7 @@ func (v Word256Value) ToBigEndianBytes() []byte {
 }
 
 func (v Word256Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -598,7 +598,7 @@ func (v Word256Value) Transfer(
 	return v
 }
 
-func (v Word256Value) Clone(_ *Interpreter) Value {
+func (v Word256Value) Clone(_ ValueCloneContext) Value {
 	return NewUnmeteredWord256ValueFromBigInt(v.BigInt)
 }
 

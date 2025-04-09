@@ -100,8 +100,8 @@ func (v *IDCapabilityValue) isInvalid() bool {
 	return v.ID == InvalidCapabilityID
 }
 
-func (v *IDCapabilityValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitCapabilityValue(interpreter, v)
+func (v *IDCapabilityValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitCapabilityValue(context, v)
 }
 
 func (v *IDCapabilityValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {
@@ -116,7 +116,7 @@ func (v *IDCapabilityValue) StaticType(context ValueStaticTypeContext) StaticTyp
 	)
 }
 
-func (v *IDCapabilityValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (v *IDCapabilityValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return false
 }
 
@@ -164,18 +164,18 @@ func (v *IDCapabilityValue) GetMember(context MemberAccessibleContext, _ Locatio
 	return nil
 }
 
-func (*IDCapabilityValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (*IDCapabilityValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Capabilities have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (*IDCapabilityValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (*IDCapabilityValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Capabilities have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v *IDCapabilityValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -218,7 +218,7 @@ func (*IDCapabilityValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*IDCapabilityValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (*IDCapabilityValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -238,10 +238,10 @@ func (v *IDCapabilityValue) Transfer(
 	return v
 }
 
-func (v *IDCapabilityValue) Clone(interpreter *Interpreter) Value {
+func (v *IDCapabilityValue) Clone(context ValueCloneContext) Value {
 	return NewUnmeteredCapabilityValue(
 		v.ID,
-		v.address.Clone(interpreter).(AddressValue),
+		v.address.Clone(context).(AddressValue),
 		v.BorrowType,
 	)
 }
