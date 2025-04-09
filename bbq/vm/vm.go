@@ -204,8 +204,7 @@ func (vm *VM) pushCallFrame(functionValue FunctionValue, arguments []Value) {
 	callFrame := callFrame{
 		localsCount:  localsCount,
 		localsOffset: offset,
-		function:     functionValue.Function,
-		executable:   functionValue.Executable,
+		function:     functionValue,
 	}
 
 	vm.ipStack = append(vm.ipStack, 0)
@@ -531,7 +530,7 @@ func opFalse(vm *VM) {
 }
 
 func opGetConstant(vm *VM, ins opcode.InstructionGetConstant) {
-	constant := vm.callFrame.executable.Constants[ins.ConstantIndex]
+	constant := vm.callFrame.function.Executable.Constants[ins.ConstantIndex]
 	if constant == nil {
 		constant = vm.initializeConstant(ins.ConstantIndex)
 	}
@@ -549,13 +548,23 @@ func opSetLocal(vm *VM, ins opcode.InstructionSetLocal) {
 	vm.locals[absoluteIndex] = vm.pop()
 }
 
+func opGetUpvalue(vm *VM, ins opcode.InstructionGetUpvalue) {
+	upvalue := vm.callFrame.function.Upvalues[ins.UpvalueIndex]
+	vm.push(vm.locals[upvalue.stackOffset])
+}
+
+func opSetUpvalue(vm *VM, ins opcode.InstructionSetUpvalue) {
+	upvalue := vm.callFrame.function.Upvalues[ins.UpvalueIndex]
+	vm.locals[upvalue.stackOffset] = vm.pop()
+}
+
 func opGetGlobal(vm *VM, ins opcode.InstructionGetGlobal) {
-	value := vm.callFrame.executable.Globals[ins.GlobalIndex]
+	value := vm.callFrame.function.Executable.Globals[ins.GlobalIndex]
 	vm.push(value)
 }
 
 func opSetGlobal(vm *VM, ins opcode.InstructionSetGlobal) {
-	vm.callFrame.executable.Globals[ins.GlobalIndex] = vm.pop()
+	vm.callFrame.function.Executable.Globals[ins.GlobalIndex] = vm.pop()
 }
 
 func opSetIndex(vm *VM) {
@@ -713,7 +722,7 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 }
 
 func getStringConstant(vm *VM, index uint16) string {
-	constant := vm.callFrame.executable.Program.Constants[index]
+	constant := vm.callFrame.function.Executable.Program.Constants[index]
 	return string(constant.Data)
 }
 
@@ -1011,13 +1020,14 @@ func (vm *VM) run() {
 
 		callFrame := vm.callFrame
 
+		code := callFrame.function.Function.Code
 		if len(vm.callstack) == 0 ||
-			int(vm.ip) >= len(callFrame.function.Code) {
+			int(vm.ip) >= len(code) {
 
 			return
 		}
 
-		ins := callFrame.function.Code[vm.ip]
+		ins := code[vm.ip]
 		vm.ip++
 
 		switch ins := ins.(type) {
@@ -1073,6 +1083,10 @@ func (vm *VM) run() {
 			opGetLocal(vm, ins)
 		case opcode.InstructionSetLocal:
 			opSetLocal(vm, ins)
+		case opcode.InstructionGetUpvalue:
+			opGetUpvalue(vm, ins)
+		case opcode.InstructionSetUpvalue:
+			opSetUpvalue(vm, ins)
 		case opcode.InstructionGetGlobal:
 			opGetGlobal(vm, ins)
 		case opcode.InstructionSetGlobal:
@@ -1159,22 +1173,42 @@ func onEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
 
 func opNewClosure(vm *VM, ins opcode.InstructionNewClosure) {
 
-	executable := vm.callFrame.executable
+	executable := vm.callFrame.function.Executable
 	function := &executable.Program.Functions[ins.FunctionIndex]
 
-	// TODO: implement upvalues
-	if len(ins.Upvalues) > 0 {
-		panic(errors.NewUnreachableError())
+	var upvalues []*Upvalue
+	upvalueCount := len(ins.Upvalues)
+	if upvalueCount > 0 {
+		upvalues = make([]*Upvalue, upvalueCount)
+	}
+
+	for upvalueIndex, upvalueDescriptor := range ins.Upvalues {
+		targetIndex := upvalueDescriptor.TargetIndex
+		var upvalue *Upvalue
+		if upvalueDescriptor.IsLocal {
+			stackOffset := int(vm.callFrame.localsOffset) + int(targetIndex)
+			upvalue = vm.captureUpvalue(stackOffset)
+		} else {
+			upvalue = vm.callFrame.function.Upvalues[targetIndex]
+		}
+		upvalues[upvalueIndex] = upvalue
 	}
 
 	vm.push(FunctionValue{
 		Function:   function,
 		Executable: executable,
+		Upvalues:   upvalues,
 	})
 }
 
+func (vm *VM) captureUpvalue(stackOffset int) *Upvalue {
+	return &Upvalue{
+		stackOffset: stackOffset,
+	}
+}
+
 func (vm *VM) initializeConstant(index uint16) (value Value) {
-	executable := vm.callFrame.executable
+	executable := vm.callFrame.function.Executable
 
 	constant := executable.Program.Constants[index]
 	switch constant.Kind {
@@ -1207,7 +1241,7 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 }
 
 func (vm *VM) loadType(index uint16) bbq.StaticType {
-	staticType := vm.callFrame.executable.StaticTypes[index]
+	staticType := vm.callFrame.function.Executable.StaticTypes[index]
 	if staticType == nil {
 		// Should never reach.
 		panic(errors.NewUnreachableError())
