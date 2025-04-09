@@ -6514,7 +6514,7 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 	})
 }
 
-func TestRuntimeStorageForMigratedAccount(t *testing.T) {
+func TestRuntimeStorage2(t *testing.T) {
 	t.Parallel()
 
 	address := common.MustBytesToAddress([]byte{0x1})
@@ -7019,365 +7019,6 @@ func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 	})
 }
 
-func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
-
-	t.Parallel()
-
-	address := common.MustBytesToAddress([]byte{0x1})
-
-	newTestLedgerWithUnmigratedAccount := func(
-		onRead LedgerOnRead,
-		onWrite LedgerOnWrite,
-		address common.Address,
-		domains []common.StorageDomain,
-		domainStorageMapCount int,
-	) (TestLedger, accountStorageMapValues) {
-		ledger := NewTestLedger(nil, nil)
-		storage := NewStorage(
-			ledger,
-			nil,
-			StorageConfig{},
-		)
-
-		inter := NewTestInterpreter(t)
-
-		accountValues := make(accountStorageMapValues)
-
-		random := rand.New(rand.NewSource(42))
-
-		for _, domain := range domains {
-			accountValues[domain] = make(domainStorageMapValues)
-
-			// Create domain storage map
-			domainStorageMap := interpreter.NewDomainStorageMap(nil, storage, atree.Address(address))
-
-			// Write domain register
-			domainStorageMapValueID := domainStorageMap.ValueID()
-			err := ledger.SetValue(address[:], []byte(domain.Identifier()), domainStorageMapValueID[8:])
-			require.NoError(t, err)
-
-			// Write elements to to domain storage map
-			for len(accountValues[domain]) < domainStorageMapCount {
-				n := random.Int()
-				key := interpreter.StringStorageMapKey(strconv.Itoa(n))
-				value := interpreter.NewUnmeteredIntValueFromInt64(int64(n))
-
-				_ = domainStorageMap.WriteValue(inter, key, value)
-
-				accountValues[domain][key] = value
-			}
-		}
-
-		// Commit changes
-		const commitContractUpdates = false
-		err := storage.Commit(inter, commitContractUpdates)
-		require.NoError(t, err)
-
-		// Create a new storage
-		newLedger := NewTestLedgerWithData(onRead, onWrite, ledger.StoredValues, ledger.StorageIndices)
-
-		return newLedger, accountValues
-	}
-
-	// This test reads non-existent domain storage map and commit changes.
-	// pre-condition: storage contains domain register and domain storage map
-	// post-condition: no change
-	// migration: none because only read ops.
-	t.Run("read non-existent domain storage map", func(t *testing.T) {
-		existingDomains := []common.StorageDomain{
-			common.PathDomainStorage.StorageDomain(),
-		}
-
-		var writeCount int
-
-		// Create storage with unmigrated accounts
-		const domainStorageMapCount = 5
-		ledger, _ := newTestLedgerWithUnmigratedAccount(
-			nil,
-			LedgerOnWriteCounter(&writeCount),
-			address,
-			existingDomains,
-			domainStorageMapCount)
-		storage := NewStorage(
-			ledger,
-			nil,
-			StorageConfig{},
-		)
-
-		inter := NewTestInterpreterWithStorage(t, storage)
-
-		// Get non-existent domain storage map
-		nonExistingDomain := common.PathDomainPublic.StorageDomain()
-		const createIfNotExists = false
-		domainStorageMap := storage.GetDomainStorageMap(inter, address, nonExistingDomain, createIfNotExists)
-		require.Nil(t, domainStorageMap)
-
-		// Commit changes
-		const commitContractUpdates = false
-		err := storage.Commit(inter, commitContractUpdates)
-		require.NoError(t, err)
-
-		// Check there are no writes to underlying storage
-		require.Equal(t, 0, writeCount)
-	})
-
-	// This test reads existing domain storage map and commit changes.
-	// pre-condition: storage contains domain register and domain storage map
-	// post-condition: no change
-	// migration: none because only read ops
-	readExistingDomainTestCases := []struct {
-		name              string
-		createIfNotExists bool
-	}{
-		{name: "(createIfNotExists is true)", createIfNotExists: true},
-		{name: "(createIfNotExists is false)", createIfNotExists: false},
-	}
-
-	for _, tc := range readExistingDomainTestCases {
-		t.Run("read existing domain storage map "+tc.name, func(t *testing.T) {
-
-			var writeCount int
-
-			existingDomains := []common.StorageDomain{common.PathDomainStorage.StorageDomain()}
-			const existingDomainStorageMapCount = 5
-
-			// Create storage with existing domain storage map
-			ledger, accountValues := newTestLedgerWithUnmigratedAccount(
-				nil,
-				LedgerOnWriteCounter(&writeCount),
-				address,
-				existingDomains,
-				existingDomainStorageMapCount,
-			)
-			storage := NewStorage(
-				ledger,
-				nil,
-				StorageConfig{},
-			)
-
-			inter := NewTestInterpreterWithStorage(t, storage)
-
-			// Read existing domain storage map
-			for domain := range accountValues {
-				require.PanicsWithValue(t,
-					AccountStorageFormatV1Error{Address: address},
-					func() {
-						storage.GetDomainStorageMap(inter, address, domain, tc.createIfNotExists)
-					},
-				)
-			}
-
-			// Commit changes
-			const commitContractUpdates = false
-			err := storage.Commit(inter, commitContractUpdates)
-			require.NoError(t, err)
-
-			// Check storage health after commit
-			err = storage.CheckHealth()
-			require.NoError(t, err)
-
-			// Check writes to underlying storage
-			require.Equal(t, 0, writeCount)
-		})
-	}
-
-	// This test creates and writes to new domain storage map and commit changes.
-	// pre-condition: storage contains
-	// - domain register
-	// - domain storage map
-	// post-condition: storage contains
-	// - account register
-	// - account storage map with existing and new domain storage map.
-	// migration: yes
-	createDomainTestCases := []struct {
-		name                          string
-		existingDomains               []common.StorageDomain
-		newDomains                    []common.StorageDomain
-		existingDomainStorageMapCount int
-		newDomainStorageMapCount      int
-		isNewDomainStorageMapInlined  bool
-	}{
-		{
-			name:                          "empty domain storage map",
-			existingDomains:               []common.StorageDomain{common.PathDomainStorage.StorageDomain()},
-			existingDomainStorageMapCount: 5,
-			newDomains:                    []common.StorageDomain{common.PathDomainPublic.StorageDomain()},
-			newDomainStorageMapCount:      0,
-			isNewDomainStorageMapInlined:  true,
-		},
-		{
-			name:                          "small domain storage map",
-			existingDomains:               []common.StorageDomain{common.PathDomainStorage.StorageDomain()},
-			existingDomainStorageMapCount: 5,
-			newDomains:                    []common.StorageDomain{common.PathDomainPublic.StorageDomain()},
-			newDomainStorageMapCount:      10,
-			isNewDomainStorageMapInlined:  true,
-		},
-		{
-			name:                          "large domain storage map",
-			existingDomains:               []common.StorageDomain{common.PathDomainStorage.StorageDomain()},
-			existingDomainStorageMapCount: 5,
-			newDomains:                    []common.StorageDomain{common.PathDomainPublic.StorageDomain()},
-			newDomainStorageMapCount:      20,
-			isNewDomainStorageMapInlined:  false,
-		},
-	}
-
-	for _, tc := range createDomainTestCases {
-		t.Run("create and write "+tc.name, func(t *testing.T) {
-
-			var writeCount int
-
-			// Create storage with existing account storage map
-			ledger, _ := newTestLedgerWithUnmigratedAccount(
-				nil,
-				LedgerOnWriteCounter(&writeCount),
-				address,
-				tc.existingDomains,
-				tc.existingDomainStorageMapCount,
-			)
-			storage := NewStorage(
-				ledger,
-				nil,
-				StorageConfig{},
-			)
-
-			inter := NewTestInterpreterWithStorage(t, storage)
-
-			// Create and write to new domain storage map
-			for _, domain := range tc.newDomains {
-				require.PanicsWithValue(t,
-					AccountStorageFormatV1Error{Address: address},
-					func() {
-						const createIfNotExists = true
-						storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
-					},
-				)
-			}
-
-			// Commit changes
-			const commitContractUpdates = false
-			err := storage.Commit(inter, commitContractUpdates)
-			require.NoError(t, err)
-
-			// Check storage health after commit
-			err = storage.CheckHealth()
-			require.NoError(t, err)
-
-			// Check there are no writes to underlying storage
-			require.Equal(t, 0, writeCount)
-		})
-	}
-
-	// This test reads and writes to existing domain storage map and commit changes.
-	// pre-condition: storage contains
-	// - domain register
-	// - domain storage map
-	// post-condition: storage contains
-	// - account register
-	// - account storage map with updated domain storage map.
-	// migration: yes
-	t.Run("read and write to existing domain storage map", func(t *testing.T) {
-
-		var writeCount int
-
-		domains := []common.StorageDomain{common.PathDomainStorage.StorageDomain()}
-		const existingDomainStorageMapCount = 5
-
-		// Create storage with existing domain storage maps
-		ledger, _ := newTestLedgerWithUnmigratedAccount(
-			nil,
-			LedgerOnWriteCounter(&writeCount),
-			address,
-			domains,
-			existingDomainStorageMapCount,
-		)
-		storage := NewStorage(
-			ledger,
-			nil,
-			StorageConfig{},
-		)
-
-		inter := NewTestInterpreterWithStorage(t, storage)
-
-		// write to existing domain storage map (createIfNotExists is false)
-		for _, domain := range domains {
-
-			require.PanicsWithValue(t,
-				AccountStorageFormatV1Error{Address: address},
-				func() {
-					const createIfNotExists = false
-					storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
-				},
-			)
-		}
-
-		// Commit changes
-		const commitContractUpdates = false
-		err := storage.Commit(inter, commitContractUpdates)
-		require.NoError(t, err)
-
-		// Check storage health after commit
-		err = storage.CheckHealth()
-		require.NoError(t, err)
-
-		// Check there are no writes to underlying storage
-		require.Equal(t, 0, writeCount)
-	})
-
-	// This test storage map operations (including account migration) with intermittent Commit()
-	// - read domain storage map and commit
-	// - write to domain storage map and commit (including account migration)
-	// - remove all elements from domain storage map and commit
-	// - read domain storage map and commit
-	t.Run("read, commit, update, commit, remove, commit", func(t *testing.T) {
-
-		var writeCount int
-
-		domains := []common.StorageDomain{common.PathDomainStorage.StorageDomain()}
-		const domainStorageMapCount = 5
-
-		// Create storage with existing account storage map
-		ledger, _ := newTestLedgerWithUnmigratedAccount(
-			nil,
-			LedgerOnWriteCounter(&writeCount),
-			address,
-			domains,
-			domainStorageMapCount,
-		)
-		storage := NewStorage(
-			ledger,
-			nil,
-			StorageConfig{},
-		)
-
-		inter := NewTestInterpreterWithStorage(t, storage)
-
-		for _, domain := range domains {
-
-			require.PanicsWithValue(t,
-				AccountStorageFormatV1Error{Address: address},
-				func() {
-					const createIfNotExists = false
-					storage.GetDomainStorageMap(inter, address, domain, createIfNotExists)
-				},
-			)
-		}
-
-		// Commit changes
-		const commitContractUpdates = false
-		err := storage.Commit(inter, commitContractUpdates)
-		require.NoError(t, err)
-
-		// Check storage health after commit
-		err = storage.CheckHealth()
-		require.NoError(t, err)
-
-		// Check there are no writes to underlying storage
-		require.Equal(t, 0, writeCount)
-	})
-}
-
 // TestRuntimeStorageDomainStorageMapInlinedState tests inlined state
 // of domain storage map when large number of elements are inserted,
 // updated, and removed from domain storage map.
@@ -7653,35 +7294,22 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 			createIfNotExists:             false,
 			expectedDomainStorageMapIsNil: true,
 			expectedReadsFor1stGetDomainStorageMapCall: []ownerKeyPair{
-				// Check if account is v2
 				{
 					owner: address[:],
 					key:   []byte(AccountStorageKey),
-				},
-				// Check domain register
-				{
-					owner: address[:],
-					key:   []byte(common.StorageDomainPathStorage.Identifier()),
 				},
 			},
 			expectedReadsFor2ndGetDomainStorageMapCall: []ownerKeyPair{
 				// Second GetDomainStorageMap() has the same register reading as the first GetDomainStorageMap()
 				// because account status can't be cached in previous call.
 
-				// Check if account is v2
 				{
 					owner: address[:],
 					key:   []byte(AccountStorageKey),
 				},
-				// Check domain register
-				{
-					owner: address[:],
-					key:   []byte(common.StorageDomainPathStorage.Identifier()),
-				},
 			},
 			expectedReadsSet: map[string]struct{}{
-				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):          {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage): {},
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)): {},
 			},
 		},
 		{
@@ -7690,53 +7318,6 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 			createIfNotExists:             true,
 			expectedDomainStorageMapIsNil: false,
 			expectedReadsFor1stGetDomainStorageMapCall: []ownerKeyPair{
-				// Check if account is v2
-				{
-					owner: address[:],
-					key:   []byte(AccountStorageKey),
-				},
-				// Check domain register
-				{
-					owner: address[:],
-					key:   []byte(common.StorageDomainPathStorage.Identifier()),
-				},
-				// Check all domain registers
-				{
-					owner: address[:],
-					key:   []byte(common.PathDomainStorage.Identifier()),
-				},
-				{
-					owner: address[:],
-					key:   []byte(common.PathDomainPrivate.Identifier()),
-				},
-				{
-					owner: address[:],
-					key:   []byte(common.PathDomainPublic.Identifier()),
-				},
-				{
-					owner: address[:],
-					key:   []byte(common.StorageDomainContract.Identifier()),
-				},
-				{
-					owner: address[:],
-					key:   []byte(common.StorageDomainInbox.Identifier()),
-				},
-				{
-					owner: address[:],
-					key:   []byte(common.StorageDomainCapabilityController.Identifier()),
-				},
-				{
-					owner: address[:],
-					key:   []byte(common.StorageDomainCapabilityControllerTag.Identifier()),
-				},
-				{
-					owner: address[:],
-					key:   []byte(common.StorageDomainPathCapability.Identifier()),
-				},
-				{
-					owner: address[:],
-					key:   []byte(common.StorageDomainAccountCapability.Identifier()),
-				},
 				// Read account register to load account storage map
 				{
 					owner: address[:],
@@ -7748,16 +7329,7 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 				// domain storage map is created and cached in the first GetDomainStorageMap().
 			},
 			expectedReadsSet: map[string]struct{}{
-				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):                      {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage):             {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainPathPrivate):             {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainPathPublic):              {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainContract):                {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainInbox):                   {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainCapabilityController):    {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainCapabilityControllerTag): {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainPathCapability):          {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainAccountCapability):       {},
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)): {},
 			},
 		},
 	}
@@ -7811,302 +7383,14 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 	}
 }
 
-func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
-
+func TestGetDomainStorageMapRegisterReads(t *testing.T) {
 	t.Parallel()
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
 	type getStorageDataFunc func() (storedValues map[string][]byte, StorageIndices map[string]uint64)
 
-	createV1AccountWithDomain := func(
-		address common.Address,
-		domain common.StorageDomain,
-	) getStorageDataFunc {
-		return func() (storedValues map[string][]byte, StorageIndices map[string]uint64) {
-			ledger := NewTestLedger(nil, nil)
-
-			persistentSlabStorage := NewPersistentSlabStorage(ledger, nil)
-
-			orderedMap, err := atree.NewMap(
-				persistentSlabStorage,
-				atree.Address(address),
-				atree.NewDefaultDigesterBuilder(),
-				interpreter.EmptyTypeInfo{},
-			)
-			require.NoError(t, err)
-
-			slabIndex := orderedMap.SlabID().Index()
-
-			for i := range 3 {
-
-				key := interpreter.StringStorageMapKey(strconv.Itoa(i))
-
-				value := interpreter.NewUnmeteredIntValueFromInt64(int64(i))
-
-				existingStorable, err := orderedMap.Set(
-					key.AtreeValueCompare,
-					key.AtreeValueHashInput,
-					key.AtreeValue(),
-					value,
-				)
-				require.NoError(t, err)
-				require.Nil(t, existingStorable)
-			}
-
-			// Commit domain storage map
-			err = persistentSlabStorage.FastCommit(runtime.NumCPU())
-			require.NoError(t, err)
-
-			// Create domain register
-			err = ledger.SetValue(address[:], []byte(domain.Identifier()), slabIndex[:])
-			require.NoError(t, err)
-
-			return ledger.StoredValues, ledger.StorageIndices
-		}
-	}
-
-	testCases := []struct {
-		name                                       string
-		getStorageData                             getStorageDataFunc
-		domain                                     common.StorageDomain
-		createIfNotExists                          bool
-		expectedDomainStorageMapIsNil              bool
-		expectedReadsFor1stGetDomainStorageMapCall []ownerKeyPair
-		expectedReadsFor2ndGetDomainStorageMapCall []ownerKeyPair
-		expectedReadsSet                           map[string]struct{}
-	}{
-		{
-			name:                          "domain storage map does not exist, createIfNotExists = false",
-			getStorageData:                createV1AccountWithDomain(address, common.StorageDomainPathPublic),
-			domain:                        common.StorageDomainPathStorage,
-			createIfNotExists:             false,
-			expectedDomainStorageMapIsNil: true,
-			expectedReadsFor1stGetDomainStorageMapCall: []ownerKeyPair{
-				// Check if account is v2
-				{
-					owner: address[:],
-					key:   []byte(AccountStorageKey),
-				},
-				// Check domain register
-				{
-					owner: address[:],
-					key:   []byte(common.StorageDomainPathStorage.Identifier()),
-				},
-			},
-			expectedReadsFor2ndGetDomainStorageMapCall: []ownerKeyPair{
-				// Check if account is v2
-				{
-					owner: address[:],
-					key:   []byte(AccountStorageKey),
-				},
-				// Check domain register
-				{
-					owner: address[:],
-					key:   []byte(common.StorageDomainPathStorage.Identifier()),
-				},
-			},
-			expectedReadsSet: map[string]struct{}{
-				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):          {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage): {},
-			},
-		},
-		{
-			name:                          "domain storage map does not exist, createIfNotExists = true",
-			getStorageData:                createV1AccountWithDomain(address, common.StorageDomainPathPublic),
-			domain:                        common.StorageDomainPathStorage,
-			createIfNotExists:             true,
-			expectedDomainStorageMapIsNil: false,
-			expectedReadsFor1stGetDomainStorageMapCall: []ownerKeyPair{
-				// Check if account is v2
-				{
-					owner: address[:],
-					key:   []byte(AccountStorageKey),
-				},
-				// Check domain register
-				{
-					owner: address[:],
-					key:   []byte(common.StorageDomainPathStorage.Identifier()),
-				},
-				// Check all domain registers until any existing domain is checked
-				{
-					owner: address[:],
-					key:   []byte(common.PathDomainStorage.Identifier()),
-				},
-				{
-					owner: address[:],
-					key:   []byte(common.PathDomainPrivate.Identifier()),
-				},
-				{
-					owner: address[:],
-					key:   []byte(common.PathDomainPublic.Identifier()),
-				},
-				// Check domain register
-				{
-					owner: address[:],
-					key:   []byte(common.StorageDomainPathStorage.Identifier()),
-				},
-			},
-			expectedReadsFor2ndGetDomainStorageMapCall: []ownerKeyPair{
-				// No register reading from second GetDomainStorageMap() because
-				// domain storage map is created and cached in the first
-				// GetDomainStorageMap().
-			},
-			expectedReadsSet: map[string]struct{}{
-				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):          {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage): {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainPathPrivate): {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainPathPublic):  {},
-			},
-		},
-		{
-			name:                          "domain storage map exists, createIfNotExists = false",
-			getStorageData:                createV1AccountWithDomain(address, common.StorageDomainPathStorage),
-			domain:                        common.StorageDomainPathStorage,
-			createIfNotExists:             false,
-			expectedDomainStorageMapIsNil: false,
-			expectedReadsFor1stGetDomainStorageMapCall: []ownerKeyPair{
-				// Check if account is v2
-				{
-					owner: address[:],
-					key:   []byte(AccountStorageKey),
-				},
-				// Check domain register
-				{
-					owner: address[:],
-					key:   []byte(common.StorageDomainPathStorage.Identifier()),
-				},
-				// Read domain register
-				{
-					owner: address[:],
-					key:   []byte(common.StorageDomainPathStorage.Identifier()),
-				},
-				// Read domain storage map register
-				{
-					owner: address[:],
-					key:   []byte{'$', 0, 0, 0, 0, 0, 0, 0, 1},
-				},
-			},
-			expectedReadsFor2ndGetDomainStorageMapCall: []ownerKeyPair{
-				// No register reading from second GetDomainStorageMap() because
-				// domain storage map is created and cached in the first
-				// GetDomainStorageMap().
-			},
-			expectedReadsSet: map[string]struct{}{
-				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):           {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage):  {},
-				concatRegisterAddressAndKey(address, []byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
-			},
-		},
-		{
-			name:                          "domain storage map exists, createIfNotExists = true",
-			getStorageData:                createV1AccountWithDomain(address, common.StorageDomainPathStorage),
-			domain:                        common.StorageDomainPathStorage,
-			createIfNotExists:             true,
-			expectedDomainStorageMapIsNil: false,
-			expectedReadsFor1stGetDomainStorageMapCall: []ownerKeyPair{
-				// Check if account is v2
-				{
-					owner: address[:],
-					key:   []byte(AccountStorageKey),
-				},
-				// Check given domain register
-				{
-					owner: address[:],
-					key:   []byte(common.StorageDomainPathStorage.Identifier()),
-				},
-				// Read given domain register
-				{
-					owner: address[:],
-					key:   []byte(common.StorageDomainPathStorage.Identifier()),
-				},
-				// Read domain storage map register
-				{
-					owner: address[:],
-					key:   []byte{'$', 0, 0, 0, 0, 0, 0, 0, 1},
-				},
-			},
-			expectedReadsFor2ndGetDomainStorageMapCall: []ownerKeyPair{
-				// No register reading from second GetDomainStorageMap() because
-				// domain storage map is created and cached in the first
-				// GetDomainStorageMap().
-			},
-			expectedReadsSet: map[string]struct{}{
-				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):           {},
-				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage):  {},
-				concatRegisterAddressAndKey(address, []byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
-			},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-
-			storedValues, storedIndices := tc.getStorageData()
-
-			var ledgerReads []ownerKeyPair
-			ledgerReadsSet := make(map[string]struct{})
-
-			ledger := NewTestLedgerWithData(
-				func(owner, key, _ []byte) {
-					ledgerReads = append(
-						ledgerReads,
-						ownerKeyPair{
-							owner: owner,
-							key:   key,
-						},
-					)
-					ledgerReadsSet[string(owner)+"|"+string(key)] = struct{}{}
-				},
-				nil,
-				storedValues,
-				storedIndices,
-			)
-
-			storage := NewStorage(
-				ledger,
-				nil,
-				StorageConfig{},
-			)
-
-			inter := NewTestInterpreterWithStorage(t, storage)
-
-			perform := func() {
-
-				domainStorageMap := storage.GetDomainStorageMap(inter, address, tc.domain, tc.createIfNotExists)
-				require.Equal(t, tc.expectedDomainStorageMapIsNil, domainStorageMap == nil)
-				require.Equal(t, tc.expectedReadsFor1stGetDomainStorageMapCall, ledgerReads)
-
-				ledgerReads = ledgerReads[:0]
-
-				domainStorageMap = storage.GetDomainStorageMap(inter, address, tc.domain, tc.createIfNotExists)
-				require.Equal(t, tc.expectedDomainStorageMapIsNil, domainStorageMap == nil)
-				require.Equal(t, tc.expectedReadsFor2ndGetDomainStorageMapCall, ledgerReads)
-
-				// Check underlying ledger reads
-				require.Equal(t, len(ledgerReadsSet), len(tc.expectedReadsSet))
-				for k := range ledgerReadsSet {
-					require.Contains(t, tc.expectedReadsSet, k)
-				}
-			}
-
-			if !tc.createIfNotExists && tc.expectedDomainStorageMapIsNil {
-				perform()
-			} else {
-				require.PanicsWithValue(t, AccountStorageFormatV1Error{Address: address}, perform)
-			}
-		})
-	}
-}
-
-func TestGetDomainStorageMapRegisterReadsForV2Account(t *testing.T) {
-	t.Parallel()
-
-	address := common.MustBytesToAddress([]byte{0x1})
-
-	type getStorageDataFunc func() (storedValues map[string][]byte, StorageIndices map[string]uint64)
-
-	createV2AccountWithDomain := func(
+	createAccountWithDomain := func(
 		address common.Address,
 		domain common.StorageDomain,
 	) getStorageDataFunc {
@@ -8184,16 +7468,11 @@ func TestGetDomainStorageMapRegisterReadsForV2Account(t *testing.T) {
 	}{
 		{
 			name:                          "domain storage map does not exist, createIfNotExists = false",
-			getStorageData:                createV2AccountWithDomain(address, common.StorageDomainPathPublic),
+			getStorageData:                createAccountWithDomain(address, common.StorageDomainPathPublic),
 			domain:                        common.StorageDomainPathStorage,
 			createIfNotExists:             false,
 			expectedDomainStorageMapIsNil: true,
 			expectedReadsFor1stGetDomainStorageMapCall: []ownerKeyPair{
-				// Check if account is v2
-				{
-					owner: address[:],
-					key:   []byte(AccountStorageKey),
-				},
 				// Read account register
 				{
 					owner: address[:],
@@ -8217,16 +7496,11 @@ func TestGetDomainStorageMapRegisterReadsForV2Account(t *testing.T) {
 		},
 		{
 			name:                          "domain storage map does not exist, createIfNotExists = true",
-			getStorageData:                createV2AccountWithDomain(address, common.StorageDomainPathPublic),
+			getStorageData:                createAccountWithDomain(address, common.StorageDomainPathPublic),
 			domain:                        common.StorageDomainPathStorage,
 			createIfNotExists:             true,
 			expectedDomainStorageMapIsNil: false,
 			expectedReadsFor1stGetDomainStorageMapCall: []ownerKeyPair{
-				// Check if account is v2
-				{
-					owner: address[:],
-					key:   []byte(AccountStorageKey),
-				},
 				// Read account register
 				{
 					owner: address[:],
@@ -8250,16 +7524,11 @@ func TestGetDomainStorageMapRegisterReadsForV2Account(t *testing.T) {
 		},
 		{
 			name:                          "domain storage map exists, createIfNotExists = false",
-			getStorageData:                createV2AccountWithDomain(address, common.StorageDomainPathStorage),
+			getStorageData:                createAccountWithDomain(address, common.StorageDomainPathStorage),
 			domain:                        common.StorageDomainPathStorage,
 			createIfNotExists:             false,
 			expectedDomainStorageMapIsNil: false,
 			expectedReadsFor1stGetDomainStorageMapCall: []ownerKeyPair{
-				// Check if account is v2
-				{
-					owner: address[:],
-					key:   []byte(AccountStorageKey),
-				},
 				// Read account register
 				{
 					owner: address[:],
@@ -8283,16 +7552,11 @@ func TestGetDomainStorageMapRegisterReadsForV2Account(t *testing.T) {
 		},
 		{
 			name:                          "domain storage map exists, createIfNotExists = true",
-			getStorageData:                createV2AccountWithDomain(address, common.StorageDomainPathStorage),
+			getStorageData:                createAccountWithDomain(address, common.StorageDomainPathStorage),
 			domain:                        common.StorageDomainPathStorage,
 			createIfNotExists:             true,
 			expectedDomainStorageMapIsNil: false,
 			expectedReadsFor1stGetDomainStorageMapCall: []ownerKeyPair{
-				// Check if account is v2
-				{
-					owner: address[:],
-					key:   []byte(AccountStorageKey),
-				},
 				// Read account register
 				{
 					owner: address[:],
