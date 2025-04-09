@@ -5471,6 +5471,219 @@ func TestInnerFunction(t *testing.T) {
 	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(6), actual)
 }
 
+func TestContractContractAccount(t *testing.T) {
+	t.Parallel()
+
+	importLocation := common.NewAddressLocation(nil, common.Address{0x1}, "C")
+
+	importedChecker, err := ParseAndCheckWithOptions(t,
+		`
+          contract C {
+              fun test(): Address {
+                  return self.account.address
+              }
+          }
+        `,
+		ParseAndCheckOptions{
+			Location: importLocation,
+		},
+	)
+	require.NoError(t, err)
+
+	importCompiler := compiler.NewInstructionCompiler(importedChecker)
+	importedProgram := importCompiler.Compile()
+
+	vmInstance := vm.NewVM(importLocation, importedProgram, nil)
+	importedContractValue, err := vmInstance.InitializeContract()
+	require.NoError(t, err)
+
+	checker, err := ParseAndCheckWithOptions(t,
+		`
+          import C from 0x1
+
+          fun test(): Address {
+              return C.test()
+          }
+        `,
+		ParseAndCheckOptions{
+			Config: &sema.Config{
+				ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker)
+	comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+		return importedProgram
+	}
+
+	program := comp.Compile()
+
+	addressValue := interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1})
+
+	vmConfig := (&vm.Config{
+		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
+			return importedProgram
+		},
+		ContractValueHandler: func(*vm.Config, common.Location) *interpreter.CompositeValue {
+			return importedContractValue
+		},
+	}).WithInterpreterConfig(&interpreter.Config{
+		InjectedCompositeFieldsHandler: func(
+			context interpreter.AccountCreationContext,
+			_ common.Location,
+			_ string,
+			_ common.CompositeKind,
+		) map[string]interpreter.Value {
+
+			accountRef := stdlib.NewAccountReferenceValue(
+				context,
+				nil,
+				addressValue,
+				interpreter.FullyEntitledAccountAccess,
+				interpreter.EmptyLocationRange,
+			)
+
+			return map[string]interpreter.Value{
+				sema.ContractAccountFieldName: accountRef,
+			}
+		},
+	})
+
+	vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
+
+	result, err := vmInstance.Invoke("test")
+	require.NoError(t, err)
+	require.Equal(t, 0, vmInstance.StackSize())
+
+	require.Equal(
+		t,
+		interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+		result,
+	)
+}
+
+func TestResourceOwner(t *testing.T) {
+	t.Parallel()
+
+	importLocation := common.NewAddressLocation(nil, common.Address{0x1}, "C")
+
+	importedChecker, err := ParseAndCheckWithOptions(t,
+		`
+          contract C {
+
+              resource R {}
+
+              fun test(): Address {
+                  let r <- create R()
+                  let path = /storage/r
+                  self.account.storage.save(<- r, to: path)
+                  let rRef = self.account.storage.borrow<&R>(from: path)!
+                  return rRef.owner!.address
+              }
+          }
+        `,
+		ParseAndCheckOptions{
+			Location: importLocation,
+		},
+	)
+	require.NoError(t, err)
+
+	importCompiler := compiler.NewInstructionCompiler(importedChecker)
+	importedProgram := importCompiler.Compile()
+
+	vmInstance := vm.NewVM(importLocation, importedProgram, nil)
+	importedContractValue, err := vmInstance.InitializeContract()
+	require.NoError(t, err)
+
+	checker, err := ParseAndCheckWithOptions(t,
+		`
+          import C from 0x1
+
+          fun test(): Address {
+              return C.test()
+          }
+        `,
+		ParseAndCheckOptions{
+			Config: &sema.Config{
+				ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker)
+	comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+		return importedProgram
+	}
+
+	program := comp.Compile()
+
+	addressValue := interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1})
+
+	vmConfig := (&vm.Config{
+		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
+			return importedProgram
+		},
+		ContractValueHandler: func(*vm.Config, common.Location) *interpreter.CompositeValue {
+			return importedContractValue
+		},
+		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+			elaboration := importedChecker.Elaboration
+			compositeType := elaboration.CompositeType(typeID)
+			if compositeType != nil {
+				return compositeType
+			}
+
+			return elaboration.InterfaceType(typeID)
+		},
+	}).WithInterpreterConfig(&interpreter.Config{
+		InjectedCompositeFieldsHandler: func(
+			context interpreter.AccountCreationContext,
+			_ common.Location,
+			_ string,
+			_ common.CompositeKind,
+		) map[string]interpreter.Value {
+
+			accountRef := stdlib.NewAccountReferenceValue(
+				context,
+				nil,
+				addressValue,
+				interpreter.FullyEntitledAccountAccess,
+				interpreter.EmptyLocationRange,
+			)
+
+			return map[string]interpreter.Value{
+				sema.ContractAccountFieldName: accountRef,
+			}
+		},
+		AccountHandler: func(context interpreter.AccountCreationContext, address interpreter.AddressValue) interpreter.Value {
+			return stdlib.NewAccountValue(context, nil, address)
+		},
+	})
+
+	vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
+
+	result, err := vmInstance.Invoke("test")
+	require.NoError(t, err)
+	require.Equal(t, 0, vmInstance.StackSize())
+
+	require.Equal(
+		t,
+		interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+		result,
+	)
+}
+
 func TestUnclosedUpvalue(t *testing.T) {
 
 	t.Parallel()
