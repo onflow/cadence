@@ -163,13 +163,13 @@ var _ ComparableValue = UFix64Value{}
 var _ HashableValue = UFix64Value{}
 var _ MemberAccessibleValue = UFix64Value{}
 
-func (UFix64Value) isValue() {}
+func (UFix64Value) IsValue() {}
 
-func (v UFix64Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitUFix64Value(interpreter, v)
+func (v UFix64Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitUFix64Value(context, v)
 }
 
-func (UFix64Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (UFix64Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -177,7 +177,7 @@ func (UFix64Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeUFix64)
 }
 
-func (UFix64Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (UFix64Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -185,11 +185,11 @@ func (v UFix64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v UFix64Value) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v UFix64Value) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
-		interpreter,
+		context,
 		common.NewRawStringMemoryUsage(
-			OverEstimateNumberStringLength(interpreter, v),
+			OverEstimateNumberStringLength(context, v),
 		),
 	)
 	return v.String()
@@ -440,8 +440,8 @@ func (v UFix64Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []
 	return scratch[:9]
 }
 
-func (v UFix64Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	return getNumberValueMember(interpreter, v, name, sema.UFix64Type, locationRange)
+func (v UFix64Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	return getNumberValueMember(context, v, name, sema.UFix64Type, locationRange)
 }
 
 func (UFix64Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
@@ -449,13 +449,13 @@ func (UFix64Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value
 	panic(errors.NewUnreachableError())
 }
 
-func (UFix64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (UFix64Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v UFix64Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -471,7 +471,7 @@ func (UFix64Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 }
 
 func (v UFix64Value) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -480,16 +480,16 @@ func (v UFix64Value) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (v UFix64Value) Clone(_ *Interpreter) Value {
+func (v UFix64Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 
-func (UFix64Value) DeepRemove(_ *Interpreter, _ bool) {
+func (UFix64Value) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

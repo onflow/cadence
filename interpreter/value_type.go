@@ -56,13 +56,13 @@ func NewTypeValue(
 	return NewUnmeteredTypeValue(staticType)
 }
 
-func (TypeValue) isValue() {}
+func (TypeValue) IsValue() {}
 
-func (v TypeValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitTypeValue(interpreter, v)
+func (v TypeValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitTypeValue(context, v)
 }
 
-func (TypeValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (TypeValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -70,7 +70,7 @@ func (TypeValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeMetaType)
 }
 
-func (TypeValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (TypeValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return sema.MetaType.Importable
 }
 
@@ -88,12 +88,12 @@ func (v TypeValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v TypeValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
-	common.UseMemory(interpreter, common.TypeValueStringMemoryUsage)
+func (v TypeValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+	common.UseMemory(context, common.TypeValueStringMemoryUsage)
 
 	var typeString string
 	if v.Type != nil {
-		typeString = v.Type.MeteredString(interpreter)
+		typeString = v.Type.MeteredString(context)
 	}
 
 	return format.TypeValue(typeString)
@@ -117,7 +117,7 @@ func (v TypeValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value)
 	return staticType.Equal(otherStaticType)
 }
 
-func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v TypeValue) GetMember(context MemberAccessibleContext, _ LocationRange, name string) Value {
 	switch name {
 	case sema.MetaTypeIdentifierFieldName:
 		var typeID string
@@ -126,17 +126,17 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 			typeID = string(staticType.ID())
 		}
 		memoryUsage := common.NewStringMemoryUsage(len(typeID))
-		return NewStringValue(interpreter, memoryUsage, func() string {
+		return NewStringValue(context, memoryUsage, func() string {
 			return typeID
 		})
 
 	case sema.MetaTypeIsSubtypeFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.MetaTypeIsSubtypeFunctionType,
 			func(v TypeValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
+				interpreter := invocation.InvocationContext
 
 				staticType := v.Type
 				otherTypeValue, ok := invocation.Arguments[0].(TypeValue)
@@ -164,17 +164,12 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 			return FalseValue
 		}
 
-		location, _, err := common.DecodeTypeID(interpreter, string(staticType.ID()))
+		location, _, err := common.DecodeTypeID(context, string(staticType.ID()))
 		if err != nil || location == nil {
 			return FalseValue
 		}
 
-		elaboration := interpreter.getElaboration(location)
-		if elaboration == nil {
-			return FalseValue
-		}
-
-		return BoolValue(elaboration.IsRecovered)
+		return BoolValue(context.IsTypeInfoRecovered(location))
 
 	case sema.MetaTypeAddressFieldName:
 		staticType := v.Type
@@ -201,11 +196,11 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 		}
 
 		addressValue := NewAddressValue(
-			interpreter,
+			context,
 			addressLocation.Address,
 		)
 		return NewSomeValueNonCopying(
-			interpreter,
+			context,
 			addressValue,
 		)
 
@@ -242,14 +237,14 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 			}
 
 			contractNameValue := NewStringValue(
-				interpreter,
+				context,
 				common.NewStringMemoryUsage(contractNameLength),
 				func() string {
 					return qualifiedIdentifier[0:contractNameLength]
 				},
 			)
 
-			return NewSomeValueNonCopying(interpreter, contractNameValue)
+			return NewSomeValueNonCopying(context, contractNameValue)
 
 		default:
 			return Nil
@@ -265,13 +260,13 @@ func (TypeValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (TypeValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (TypeValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Types have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v TypeValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -295,12 +290,12 @@ func (TypeValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (TypeValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (TypeValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v TypeValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -309,16 +304,16 @@ func (v TypeValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (v TypeValue) Clone(_ *Interpreter) Value {
+func (v TypeValue) Clone(_ ValueCloneContext) Value {
 	return v
 }
 
-func (TypeValue) DeepRemove(_ *Interpreter, _ bool) {
+func (TypeValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

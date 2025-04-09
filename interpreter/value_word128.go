@@ -74,13 +74,13 @@ var _ ComparableValue = Word128Value{}
 var _ HashableValue = Word128Value{}
 var _ MemberAccessibleValue = Word128Value{}
 
-func (Word128Value) isValue() {}
+func (Word128Value) IsValue() {}
 
-func (v Word128Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitWord128Value(interpreter, v)
+func (v Word128Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitWord128Value(context, v)
 }
 
-func (Word128Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (Word128Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -88,7 +88,7 @@ func (Word128Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeWord128)
 }
 
-func (Word128Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (Word128Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -118,11 +118,11 @@ func (v Word128Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Word128Value) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v Word128Value) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
-		interpreter,
+		context,
 		common.NewRawStringMemoryUsage(
-			OverEstimateNumberStringLength(interpreter, v),
+			OverEstimateNumberStringLength(context, v),
 		),
 	)
 	return v.String()
@@ -540,8 +540,8 @@ func (v Word128Value) BitwiseRightShift(context ValueStaticTypeContext, other In
 	)
 }
 
-func (v Word128Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	return getNumberValueMember(interpreter, v, name, sema.Word128Type, locationRange)
+func (v Word128Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	return getNumberValueMember(context, v, name, sema.Word128Type, locationRange)
 }
 
 func (Word128Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
@@ -549,7 +549,7 @@ func (Word128Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Valu
 	panic(errors.NewUnreachableError())
 }
 
-func (Word128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (Word128Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -559,7 +559,7 @@ func (v Word128Value) ToBigEndianBytes() []byte {
 }
 
 func (v Word128Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -578,12 +578,12 @@ func (Word128Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Word128Value) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (Word128Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v Word128Value) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -592,16 +592,16 @@ func (v Word128Value) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (v Word128Value) Clone(_ *Interpreter) Value {
+func (v Word128Value) Clone(_ ValueCloneContext) Value {
 	return NewUnmeteredWord128ValueFromBigInt(v.BigInt)
 }
 
-func (Word128Value) DeepRemove(_ *Interpreter, _ bool) {
+func (Word128Value) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

@@ -37,13 +37,13 @@ var _ Value = VoidValue{}
 var _ atree.Storable = VoidValue{}
 var _ EquatableValue = VoidValue{}
 
-func (VoidValue) isValue() {}
+func (VoidValue) IsValue() {}
 
-func (v VoidValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitVoidValue(interpreter, v)
+func (v VoidValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitVoidValue(context, v)
 }
 
-func (VoidValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (VoidValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -51,7 +51,7 @@ func (VoidValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeVoid)
 }
 
-func (VoidValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (VoidValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return sema.VoidType.Importable
 }
 
@@ -63,13 +63,13 @@ func (v VoidValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v VoidValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
-	common.UseMemory(interpreter, common.VoidStringMemoryUsage)
+func (v VoidValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+	common.UseMemory(context, common.VoidStringMemoryUsage)
 	return v.String()
 }
 
 func (v VoidValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -89,12 +89,12 @@ func (VoidValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (VoidValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (VoidValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v VoidValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -103,16 +103,16 @@ func (v VoidValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (v VoidValue) Clone(_ *Interpreter) Value {
+func (v VoidValue) Clone(_ ValueCloneContext) Value {
 	return v
 }
 
-func (VoidValue) DeepRemove(_ *Interpreter, _ bool) {
+func (VoidValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

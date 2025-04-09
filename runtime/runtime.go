@@ -227,11 +227,11 @@ func (r *interpreterRuntime) Recover(onError func(Error), location Location, cod
 		return
 	}
 
-	err := getWrappedError(recovered, location, codesAndPrograms)
+	err := GetWrappedError(recovered, location, codesAndPrograms)
 	onError(err)
 }
 
-func getWrappedError(recovered any, location Location, codesAndPrograms CodesAndPrograms) Error {
+func GetWrappedError(recovered any, location Location, codesAndPrograms CodesAndPrograms) Error {
 	switch recovered := recovered.(type) {
 
 	// If the error is already a `runtime.Error`, then avoid redundant wrapping.
@@ -445,7 +445,7 @@ func validateArgumentParams(
 		}
 
 		// Check that decoded value is a subtype of static parameter type
-		if !inter.IsSubTypeOfSemaType(argType, parameterType) {
+		if !interpreter.IsSubTypeOfSemaType(inter, argType, parameterType) {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: parameterIndex,
 				Err: &InvalidValueTypeError{

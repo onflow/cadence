@@ -134,7 +134,7 @@ const storageIndexLength = 8
 
 // GetDomainStorageMap returns existing or new domain storage map for the given account and domain.
 func (s *Storage) GetDomainStorageMap(
-	inter *interpreter.Interpreter,
+	storageMutationTracker interpreter.StorageMutationTracker,
 	address common.Address,
 	domain common.StorageDomain,
 	createIfNotExists bool,
@@ -168,7 +168,7 @@ func (s *Storage) GetDomainStorageMap(
 	if known {
 		return s.getDomainStorageMap(
 			cachedFormat,
-			inter,
+			storageMutationTracker,
 			address,
 			domain,
 			createIfNotExists,
@@ -179,7 +179,7 @@ func (s *Storage) GetDomainStorageMap(
 
 	if s.isV2Account(address) {
 		return s.getDomainStorageMapForV2Account(
-			inter,
+			storageMutationTracker,
 			address,
 			domain,
 			createIfNotExists,
@@ -219,7 +219,7 @@ func (s *Storage) GetDomainStorageMap(
 	// New account is treated as v2 account when feature flag is enabled.
 
 	return s.getDomainStorageMapForV2Account(
-		inter,
+		storageMutationTracker,
 		address,
 		domain,
 		createIfNotExists,
@@ -227,13 +227,13 @@ func (s *Storage) GetDomainStorageMap(
 }
 
 func (s *Storage) getDomainStorageMapForV2Account(
-	inter *interpreter.Interpreter,
+	storageMutationTracker interpreter.StorageMutationTracker,
 	address common.Address,
 	domain common.StorageDomain,
 	createIfNotExists bool,
 ) *interpreter.DomainStorageMap {
 	domainStorageMap := s.AccountStorage.GetDomainStorageMap(
-		inter,
+		storageMutationTracker,
 		address,
 		domain,
 		createIfNotExists,
@@ -246,7 +246,7 @@ func (s *Storage) getDomainStorageMapForV2Account(
 
 func (s *Storage) getDomainStorageMap(
 	format StorageFormat,
-	inter *interpreter.Interpreter,
+	storageMutationTracker interpreter.StorageMutationTracker,
 	address common.Address,
 	domain common.StorageDomain,
 	createIfNotExists bool,
@@ -258,7 +258,7 @@ func (s *Storage) getDomainStorageMap(
 
 	case StorageFormatV2:
 		return s.getDomainStorageMapForV2Account(
-			inter,
+			storageMutationTracker,
 			address,
 			domain,
 			createIfNotExists,
@@ -370,34 +370,34 @@ func SortContractUpdates(updates []ContractUpdate) {
 
 // commitContractUpdates writes the contract updates to storage.
 // The contract updates were delayed so they are not observable during execution.
-func (s *Storage) commitContractUpdates(inter *interpreter.Interpreter) {
+func (s *Storage) commitContractUpdates(context interpreter.ValueTransferContext) {
 	if s.contractUpdates == nil {
 		return
 	}
 
 	for pair := s.contractUpdates.Oldest(); pair != nil; pair = pair.Next() {
-		s.writeContractUpdate(inter, pair.Key, pair.Value)
+		s.writeContractUpdate(context, pair.Key, pair.Value)
 	}
 }
 
 func (s *Storage) writeContractUpdate(
-	inter *interpreter.Interpreter,
+	context interpreter.ValueTransferContext,
 	key interpreter.StorageKey,
 	contractValue *interpreter.CompositeValue,
 ) {
-	storageMap := s.GetDomainStorageMap(inter, key.Address, common.StorageDomainContract, true)
+	storageMap := s.GetDomainStorageMap(context, key.Address, common.StorageDomainContract, true)
 	// NOTE: pass nil instead of allocating a Value-typed  interface that points to nil
 	storageMapKey := interpreter.StringStorageMapKey(key.Key)
 	if contractValue == nil {
-		storageMap.WriteValue(inter, storageMapKey, nil)
+		storageMap.WriteValue(context, storageMapKey, nil)
 	} else {
-		storageMap.WriteValue(inter, storageMapKey, contractValue)
+		storageMap.WriteValue(context, storageMapKey, contractValue)
 	}
 }
 
 // Commit serializes/saves all values in the readCache in storage (through the runtime interface).
-func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates bool) error {
-	return s.commit(inter, commitContractUpdates, true)
+func (s *Storage) Commit(context interpreter.ValueTransferContext, commitContractUpdates bool) error {
+	return s.commit(context, commitContractUpdates, true)
 }
 
 // Deprecated: NondeterministicCommit serializes and commits all values in the deltas storage
@@ -407,10 +407,10 @@ func (s *Storage) NondeterministicCommit(inter *interpreter.Interpreter, commitC
 	return s.commit(inter, commitContractUpdates, false)
 }
 
-func (s *Storage) commit(inter *interpreter.Interpreter, commitContractUpdates bool, deterministic bool) error {
+func (s *Storage) commit(context interpreter.ValueTransferContext, commitContractUpdates bool, deterministic bool) error {
 
 	if commitContractUpdates {
-		s.commitContractUpdates(inter)
+		s.commitContractUpdates(context)
 	}
 
 	err := s.AccountStorage.commit()
@@ -424,13 +424,13 @@ func (s *Storage) commit(inter *interpreter.Interpreter, commitContractUpdates b
 
 	size := slabStorage.DeltasSizeWithoutTempAddresses()
 	if size > 0 {
-		inter.ReportComputation(common.ComputationKindEncodeValue, uint(size))
+		context.ReportComputation(common.ComputationKindEncodeValue, uint(size))
 		usage := common.NewBytesMemoryUsage(int(size))
-		common.UseMemory(inter, usage)
+		common.UseMemory(context, usage)
 	}
 
 	deltas := slabStorage.DeltasWithoutTempAddresses()
-	common.UseMemory(inter, common.NewAtreeEncodedSlabMemoryUsage(deltas))
+	common.UseMemory(context, common.NewAtreeEncodedSlabMemoryUsage(deltas))
 
 	// TODO: report encoding metric for all encoded slabs
 	if deterministic {

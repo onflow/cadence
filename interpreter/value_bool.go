@@ -38,13 +38,13 @@ var _ HashableValue = BoolValue(false)
 const TrueValue = BoolValue(true)
 const FalseValue = BoolValue(false)
 
-func (BoolValue) isValue() {}
+func (BoolValue) IsValue() {}
 
-func (v BoolValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitBoolValue(interpreter, v)
+func (v BoolValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitBoolValue(context, v)
 }
 
-func (BoolValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (BoolValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -52,7 +52,7 @@ func (BoolValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeBool)
 }
 
-func (BoolValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (BoolValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return sema.BoolType.Importable
 }
 
@@ -138,18 +138,18 @@ func (v BoolValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v BoolValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v BoolValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	if v {
-		common.UseMemory(interpreter, common.TrueStringMemoryUsage)
+		common.UseMemory(context, common.TrueStringMemoryUsage)
 	} else {
-		common.UseMemory(interpreter, common.FalseStringMemoryUsage)
+		common.UseMemory(context, common.FalseStringMemoryUsage)
 	}
 
 	return v.String()
 }
 
 func (v BoolValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -169,7 +169,7 @@ func (BoolValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 }
 
 func (v BoolValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -178,15 +178,15 @@ func (v BoolValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (v BoolValue) Clone(_ *Interpreter) Value {
+func (v BoolValue) Clone(_ ValueCloneContext) Value {
 	return v
 }
 
-func (BoolValue) DeepRemove(_ *Interpreter, _ bool) {
+func (BoolValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }

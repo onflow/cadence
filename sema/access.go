@@ -19,10 +19,9 @@
 package sema
 
 import (
+	"slices"
 	"strings"
 	"sync"
-
-	"golang.org/x/exp/slices"
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"

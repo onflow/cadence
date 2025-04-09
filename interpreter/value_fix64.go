@@ -84,13 +84,13 @@ var _ ComparableValue = Fix64Value(0)
 var _ HashableValue = Fix64Value(0)
 var _ MemberAccessibleValue = Fix64Value(0)
 
-func (Fix64Value) isValue() {}
+func (Fix64Value) IsValue() {}
 
-func (v Fix64Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitFix64Value(interpreter, v)
+func (v Fix64Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitFix64Value(context, v)
 }
 
-func (Fix64Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (Fix64Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -98,7 +98,7 @@ func (Fix64Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeFix64)
 }
 
-func (Fix64Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (Fix64Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -110,11 +110,11 @@ func (v Fix64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Fix64Value) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v Fix64Value) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
-		interpreter,
+		context,
 		common.NewRawStringMemoryUsage(
-			OverEstimateNumberStringLength(interpreter, v),
+			OverEstimateNumberStringLength(context, v),
 		),
 	)
 	return v.String()
@@ -527,8 +527,8 @@ func ConvertFix64(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 	}
 }
 
-func (v Fix64Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	return getNumberValueMember(interpreter, v, name, sema.Fix64Type, locationRange)
+func (v Fix64Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	return getNumberValueMember(context, v, name, sema.Fix64Type, locationRange)
 }
 
 func (Fix64Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
@@ -536,7 +536,7 @@ func (Fix64Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value 
 	panic(errors.NewUnreachableError())
 }
 
-func (Fix64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (Fix64Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -548,7 +548,7 @@ func (v Fix64Value) ToBigEndianBytes() []byte {
 }
 
 func (v Fix64Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -567,12 +567,12 @@ func (Fix64Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Fix64Value) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (Fix64Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v Fix64Value) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -581,16 +581,16 @@ func (v Fix64Value) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (v Fix64Value) Clone(_ *Interpreter) Value {
+func (v Fix64Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 
-func (Fix64Value) DeepRemove(_ *Interpreter, _ bool) {
+func (Fix64Value) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

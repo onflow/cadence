@@ -48,6 +48,33 @@ const (
 	tracingRemoveMemberPrefix = "removeMember."
 )
 
+type Tracer interface {
+	TracingEnabled() bool
+
+	ReportArrayValueDeepRemoveTrace(typeInfo string, count int, duration time.Duration)
+	ReportArrayValueTransferTrace(info string, count int, since time.Duration)
+	ReportArrayValueConstructTrace(typeInfo string, count int, duration time.Duration)
+	ReportArrayValueDestroyTrace(info string, count int, since time.Duration)
+	ReportArrayValueConformsToStaticTypeTrace(info string, count int, since time.Duration)
+
+	ReportDictionaryValueTransferTrace(info string, count int, since time.Duration)
+	ReportDictionaryValueDeepRemoveTrace(info string, count int, since time.Duration)
+	ReportDictionaryValueGetMemberTrace(info string, count int, name string, since time.Duration)
+	ReportDictionaryValueConstructTrace(info string, count int, since time.Duration)
+	ReportDictionaryValueDestroyTrace(info string, count int, since time.Duration)
+	ReportDictionaryValueConformsToStaticTypeTrace(info string, count int, since time.Duration)
+
+	ReportCompositeValueDeepRemoveTrace(owner string, id string, kind string, since time.Duration)
+	ReportCompositeValueTransferTrace(owner string, id string, kind string, since time.Duration)
+	ReportCompositeValueSetMemberTrace(owner string, id string, kind string, name string, since time.Duration)
+	ReportCompositeValueGetMemberTrace(owner string, typeID string, kind string, name string, duration time.Duration)
+	ReportCompositeValueConstructTrace(owner string, id string, kind string, since time.Duration)
+	ReportCompositeValueDestroyTrace(owner string, id string, kind string, since time.Duration)
+	ReportCompositeValueConformsToStaticTypeTrace(owner string, id string, kind string, since time.Duration)
+
+	ReportDomainStorageMapDeepRemoveTrace(info string, i int, since time.Duration)
+}
+
 func (interpreter *Interpreter) reportFunctionTrace(functionName string, duration time.Duration) {
 	config := interpreter.SharedState.Config
 	config.OnRecordTrace(interpreter, tracingFunctionPrefix+functionName, duration, nil)
@@ -65,7 +92,7 @@ func prepareArrayAndMapValueTraceAttrs(typeInfo string, count int) []attribute.K
 	}
 }
 
-func (interpreter *Interpreter) reportArrayValueConstructTrace(
+func (interpreter *Interpreter) ReportArrayValueConstructTrace(
 	typeInfo string,
 	count int,
 	duration time.Duration,
@@ -79,7 +106,7 @@ func (interpreter *Interpreter) reportArrayValueConstructTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportArrayValueDeepRemoveTrace(
+func (interpreter *Interpreter) ReportArrayValueDeepRemoveTrace(
 	typeInfo string,
 	count int,
 	duration time.Duration,
@@ -93,7 +120,7 @@ func (interpreter *Interpreter) reportArrayValueDeepRemoveTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportArrayValueDestroyTrace(
+func (interpreter *Interpreter) ReportArrayValueDestroyTrace(
 	typeInfo string,
 	count int,
 	duration time.Duration,
@@ -107,7 +134,7 @@ func (interpreter *Interpreter) reportArrayValueDestroyTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportArrayValueTransferTrace(
+func (interpreter *Interpreter) ReportArrayValueTransferTrace(
 	typeInfo string,
 	count int,
 	duration time.Duration,
@@ -121,7 +148,7 @@ func (interpreter *Interpreter) reportArrayValueTransferTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportArrayValueConformsToStaticTypeTrace(
+func (interpreter *Interpreter) ReportArrayValueConformsToStaticTypeTrace(
 	typeInfo string,
 	count int,
 	duration time.Duration,
@@ -135,7 +162,7 @@ func (interpreter *Interpreter) reportArrayValueConformsToStaticTypeTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportDictionaryValueConstructTrace(
+func (interpreter *Interpreter) ReportDictionaryValueConstructTrace(
 	typeInfo string,
 	count int,
 	duration time.Duration,
@@ -149,7 +176,7 @@ func (interpreter *Interpreter) reportDictionaryValueConstructTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportDictionaryValueDeepRemoveTrace(
+func (interpreter *Interpreter) ReportDictionaryValueDeepRemoveTrace(
 	typeInfo string,
 	count int,
 	duration time.Duration,
@@ -163,7 +190,7 @@ func (interpreter *Interpreter) reportDictionaryValueDeepRemoveTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportDomainStorageMapDeepRemoveTrace(
+func (interpreter *Interpreter) ReportDomainStorageMapDeepRemoveTrace(
 	typeInfo string,
 	count int,
 	duration time.Duration,
@@ -177,7 +204,7 @@ func (interpreter *Interpreter) reportDomainStorageMapDeepRemoveTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportDictionaryValueDestroyTrace(
+func (interpreter *Interpreter) ReportDictionaryValueDestroyTrace(
 	typeInfo string,
 	count int,
 	duration time.Duration,
@@ -191,7 +218,7 @@ func (interpreter *Interpreter) reportDictionaryValueDestroyTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportDictionaryValueTransferTrace(
+func (interpreter *Interpreter) ReportDictionaryValueTransferTrace(
 	typeInfo string,
 	count int,
 	duration time.Duration,
@@ -205,7 +232,7 @@ func (interpreter *Interpreter) reportDictionaryValueTransferTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportDictionaryValueConformsToStaticTypeTrace(
+func (interpreter *Interpreter) ReportDictionaryValueConformsToStaticTypeTrace(
 	typeInfo string,
 	count int,
 	duration time.Duration,
@@ -219,7 +246,7 @@ func (interpreter *Interpreter) reportDictionaryValueConformsToStaticTypeTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportDictionaryValueGetMemberTrace(
+func (interpreter *Interpreter) ReportDictionaryValueGetMemberTrace(
 	typeInfo string,
 	count int,
 	name string,
@@ -242,7 +269,7 @@ func prepareCompositeValueTraceAttrs(owner, typeID, kind string) []attribute.Key
 	}
 }
 
-func (interpreter *Interpreter) reportCompositeValueConstructTrace(
+func (interpreter *Interpreter) ReportCompositeValueConstructTrace(
 	owner string,
 	typeID string,
 	kind string,
@@ -257,7 +284,7 @@ func (interpreter *Interpreter) reportCompositeValueConstructTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportCompositeValueDeepRemoveTrace(
+func (interpreter *Interpreter) ReportCompositeValueDeepRemoveTrace(
 	owner string,
 	typeID string,
 	kind string,
@@ -272,7 +299,7 @@ func (interpreter *Interpreter) reportCompositeValueDeepRemoveTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportCompositeValueDestroyTrace(
+func (interpreter *Interpreter) ReportCompositeValueDestroyTrace(
 	owner string,
 	typeID string,
 	kind string,
@@ -287,7 +314,7 @@ func (interpreter *Interpreter) reportCompositeValueDestroyTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportCompositeValueTransferTrace(
+func (interpreter *Interpreter) ReportCompositeValueTransferTrace(
 	owner string,
 	typeID string,
 	kind string,
@@ -302,7 +329,7 @@ func (interpreter *Interpreter) reportCompositeValueTransferTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportCompositeValueConformsToStaticTypeTrace(
+func (interpreter *Interpreter) ReportCompositeValueConformsToStaticTypeTrace(
 	owner string,
 	typeID string,
 	kind string,
@@ -317,7 +344,7 @@ func (interpreter *Interpreter) reportCompositeValueConformsToStaticTypeTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportCompositeValueGetMemberTrace(
+func (interpreter *Interpreter) ReportCompositeValueGetMemberTrace(
 	owner string,
 	typeID string,
 	kind string,
@@ -333,7 +360,7 @@ func (interpreter *Interpreter) reportCompositeValueGetMemberTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportCompositeValueSetMemberTrace(
+func (interpreter *Interpreter) ReportCompositeValueSetMemberTrace(
 	owner string,
 	typeID string,
 	kind string,

@@ -29,7 +29,7 @@ var placeholder Value = placeholderValue{}
 
 var _ Value = placeholderValue{}
 
-func (placeholderValue) isValue() {}
+func (placeholderValue) IsValue() {}
 
 func (f placeholderValue) String() string {
 	return f.RecursiveString(SeenReferences{})
@@ -39,15 +39,15 @@ func (f placeholderValue) RecursiveString(_ SeenReferences) string {
 	return ""
 }
 
-func (f placeholderValue) MeteredString(_ *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (f placeholderValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	return ""
 }
 
-func (f placeholderValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange) {
+func (f placeholderValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
 	// NO-OP
 }
 
-func (f placeholderValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (f placeholderValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -55,12 +55,12 @@ func (f placeholderValue) StaticType(_ ValueStaticTypeContext) StaticType {
 	return PrimitiveStaticTypeNever
 }
 
-func (placeholderValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (placeholderValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return false
 }
 
 func (f placeholderValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -75,12 +75,12 @@ func (placeholderValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (placeholderValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (placeholderValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (f placeholderValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -90,15 +90,15 @@ func (f placeholderValue) Transfer(
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return f
 }
 
-func (f placeholderValue) Clone(_ *Interpreter) Value {
+func (f placeholderValue) Clone(_ ValueCloneContext) Value {
 	return f
 }
 
-func (placeholderValue) DeepRemove(_ *Interpreter, _ bool) {
+func (placeholderValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }

@@ -2241,13 +2241,13 @@ func TestBlockchain(t *testing.T) {
 		testFramework := &mockedTestFramework{
 			emulatorBackend: func() Blockchain {
 				return &mockedBlockchain{
-					events: func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value {
+					events: func(context TestFrameworkEventsContext, eventType interpreter.StaticType) interpreter.Value {
 						eventsInvoked = true
 						assert.Nil(t, eventType)
 						return interpreter.NewArrayValue(
-							inter,
+							context,
 							interpreter.EmptyLocationRange,
-							interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeAnyStruct),
+							interpreter.NewVariableSizedStaticType(context, interpreter.PrimitiveStaticTypeAnyStruct),
 							common.Address{},
 						)
 					},
@@ -2290,7 +2290,7 @@ func TestBlockchain(t *testing.T) {
 		testFramework := &mockedTestFramework{
 			emulatorBackend: func() Blockchain {
 				return &mockedBlockchain{
-					events: func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value {
+					events: func(context TestFrameworkEventsContext, eventType interpreter.StaticType) interpreter.Value {
 						eventsInvoked = true
 						assert.NotNil(t, eventType)
 
@@ -2299,9 +2299,9 @@ func TestBlockchain(t *testing.T) {
 						assert.Equal(t, "Foo", compositeType.QualifiedIdentifier)
 
 						return interpreter.NewArrayValue(
-							inter,
+							context,
 							interpreter.EmptyLocationRange,
-							interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeAnyStruct),
+							interpreter.NewVariableSizedStaticType(context, interpreter.PrimitiveStaticTypeAnyStruct),
 							common.Address{},
 						)
 					},
@@ -2666,7 +2666,7 @@ func TestBlockchain(t *testing.T) {
 			emulatorBackend: func() Blockchain {
 				return &mockedBlockchain{
 					deployContract: func(
-						inter *interpreter.Interpreter,
+						_ TestFrameworkContractDeploymentContext,
 						name string,
 						path string,
 						arguments []interpreter.Value,
@@ -2720,7 +2720,7 @@ func TestBlockchain(t *testing.T) {
 			emulatorBackend: func() Blockchain {
 				return &mockedBlockchain{
 					deployContract: func(
-						inter *interpreter.Interpreter,
+						inter TestFrameworkContractDeploymentContext,
 						name string,
 						path string,
 						arguments []interpreter.Value,
@@ -2892,16 +2892,16 @@ func (m mockedTestFramework) ReadFile(fileName string) (string, error) {
 
 // mockedBlockchain is the implementation of `Blockchain` for testing purposes.
 type mockedBlockchain struct {
-	runScript          func(inter *interpreter.Interpreter, code string, arguments []interpreter.Value)
+	runScript          func(context TestFrameworkScriptExecutionContext, code string, arguments []interpreter.Value)
 	createAccount      func() (*Account, error)
 	getAccount         func(interpreter.AddressValue) (*Account, error)
-	addTransaction     func(inter *interpreter.Interpreter, code string, authorizers []common.Address, signers []*Account, arguments []interpreter.Value) error
+	addTransaction     func(context TestFrameworkAddTransactionContext, code string, authorizers []common.Address, signers []*Account, arguments []interpreter.Value) error
 	executeTransaction func() *TransactionResult
 	commitBlock        func() error
-	deployContract     func(inter *interpreter.Interpreter, name string, path string, arguments []interpreter.Value) error
+	deployContract     func(context TestFrameworkContractDeploymentContext, name string, path string, arguments []interpreter.Value) error
 	logs               func() []string
 	serviceAccount     func() (*Account, error)
-	events             func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value
+	events             func(context TestFrameworkEventsContext, eventType interpreter.StaticType) interpreter.Value
 	reset              func(uint64)
 	moveTime           func(int64)
 	createSnapshot     func(string) error
@@ -2911,7 +2911,7 @@ type mockedBlockchain struct {
 var _ Blockchain = &mockedBlockchain{}
 
 func (m mockedBlockchain) RunScript(
-	inter *interpreter.Interpreter,
+	context TestFrameworkScriptExecutionContext,
 	code string,
 	arguments []interpreter.Value,
 ) *ScriptResult {
@@ -2919,7 +2919,7 @@ func (m mockedBlockchain) RunScript(
 		panic("'RunScript' is not implemented")
 	}
 
-	return m.RunScript(inter, code, arguments)
+	return m.RunScript(context, code, arguments)
 }
 
 func (m mockedBlockchain) CreateAccount() (*Account, error) {
@@ -2939,7 +2939,7 @@ func (m mockedBlockchain) GetAccount(address interpreter.AddressValue) (*Account
 }
 
 func (m mockedBlockchain) AddTransaction(
-	inter *interpreter.Interpreter,
+	context TestFrameworkAddTransactionContext,
 	code string,
 	authorizers []common.Address,
 	signers []*Account,
@@ -2949,7 +2949,7 @@ func (m mockedBlockchain) AddTransaction(
 		panic("'AddTransaction' is not implemented")
 	}
 
-	return m.addTransaction(inter, code, authorizers, signers, arguments)
+	return m.addTransaction(context, code, authorizers, signers, arguments)
 }
 
 func (m mockedBlockchain) ExecuteNextTransaction() *TransactionResult {
@@ -2969,7 +2969,7 @@ func (m mockedBlockchain) CommitBlock() error {
 }
 
 func (m mockedBlockchain) DeployContract(
-	inter *interpreter.Interpreter,
+	context TestFrameworkContractDeploymentContext,
 	name string,
 	path string,
 	arguments []interpreter.Value,
@@ -2978,7 +2978,7 @@ func (m mockedBlockchain) DeployContract(
 		panic("'DeployContract' is not implemented")
 	}
 
-	return m.deployContract(inter, name, path, arguments)
+	return m.deployContract(context, name, path, arguments)
 }
 
 func (m mockedBlockchain) Logs() []string {
@@ -2998,14 +2998,14 @@ func (m mockedBlockchain) ServiceAccount() (*Account, error) {
 }
 
 func (m mockedBlockchain) Events(
-	inter *interpreter.Interpreter,
+	context TestFrameworkEventsContext,
 	eventType interpreter.StaticType,
 ) interpreter.Value {
 	if m.events == nil {
 		panic("'Events' is not implemented")
 	}
 
-	return m.events(inter, eventType)
+	return m.events(context, eventType)
 }
 
 func (m mockedBlockchain) Reset(height uint64) {

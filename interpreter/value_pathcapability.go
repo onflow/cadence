@@ -57,15 +57,15 @@ func NewUnmeteredPathCapabilityValue(
 	}
 }
 
-func (*PathCapabilityValue) isValue() {}
+func (*PathCapabilityValue) IsValue() {}
 
 func (*PathCapabilityValue) isCapabilityValue() {}
 
-func (v *PathCapabilityValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange) {
+func (v *PathCapabilityValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
-func (v *PathCapabilityValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
+func (v *PathCapabilityValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {
 	walkChild(v.address)
 	walkChild(v.Path)
 }
@@ -77,7 +77,7 @@ func (v *PathCapabilityValue) StaticType(context ValueStaticTypeContext) StaticT
 	)
 }
 
-func (v *PathCapabilityValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (v *PathCapabilityValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return false
 }
 func (v *PathCapabilityValue) String() string {
@@ -102,36 +102,32 @@ func (v *PathCapabilityValue) RecursiveString(seenReferences SeenReferences) str
 	}
 }
 
-func (v *PathCapabilityValue) MeteredString(
-	interpreter *Interpreter,
-	seenReferences SeenReferences,
-	locationRange LocationRange,
-) string {
-	common.UseMemory(interpreter, common.PathCapabilityValueStringMemoryUsage)
+func (v *PathCapabilityValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+	common.UseMemory(context, common.PathCapabilityValueStringMemoryUsage)
 
 	borrowType := v.BorrowType
 	if borrowType == nil {
 		return fmt.Sprintf(
 			"Capability(address: %s, path: %s)",
-			v.address.MeteredString(interpreter, seenReferences, locationRange),
-			v.Path.MeteredString(interpreter, seenReferences, locationRange),
+			v.address.MeteredString(context, seenReferences, locationRange),
+			v.Path.MeteredString(context, seenReferences, locationRange),
 		)
 	} else {
 		return fmt.Sprintf(
 			"Capability<%s>(address: %s, path: %s)",
 			borrowType.String(),
-			v.address.MeteredString(interpreter, seenReferences, locationRange),
-			v.Path.MeteredString(interpreter, seenReferences, locationRange),
+			v.address.MeteredString(context, seenReferences, locationRange),
+			v.Path.MeteredString(context, seenReferences, locationRange),
 		)
 	}
 }
 
 func (v *PathCapabilityValue) newBorrowFunction(
-	interpreter *Interpreter,
+	context FunctionCreationContext,
 	borrowType *sema.ReferenceType,
 ) BoundFunctionValue {
 	return NewBoundHostFunctionValue(
-		interpreter,
+		context,
 		v,
 		sema.CapabilityTypeBorrowFunctionType(borrowType),
 		func(_ Value, _ Invocation) Value {
@@ -142,11 +138,11 @@ func (v *PathCapabilityValue) newBorrowFunction(
 }
 
 func (v *PathCapabilityValue) newCheckFunction(
-	interpreter *Interpreter,
+	context FunctionCreationContext,
 	borrowType *sema.ReferenceType,
 ) BoundFunctionValue {
 	return NewBoundHostFunctionValue(
-		interpreter,
+		context,
 		v,
 		sema.CapabilityTypeCheckFunctionType(borrowType),
 		func(_ Value, _ Invocation) Value {
@@ -156,23 +152,23 @@ func (v *PathCapabilityValue) newCheckFunction(
 	)
 }
 
-func (v *PathCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v *PathCapabilityValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
 	switch name {
 	case sema.CapabilityTypeBorrowFunctionName:
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
 			// this function will panic already if this conversion fails
-			borrowType, _ = MustConvertStaticToSemaType(v.BorrowType, interpreter).(*sema.ReferenceType)
+			borrowType, _ = MustConvertStaticToSemaType(v.BorrowType, context).(*sema.ReferenceType)
 		}
-		return v.newBorrowFunction(interpreter, borrowType)
+		return v.newBorrowFunction(context, borrowType)
 
 	case sema.CapabilityTypeCheckFunctionName:
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
 			// this function will panic already if this conversion fails
-			borrowType, _ = MustConvertStaticToSemaType(v.BorrowType, interpreter).(*sema.ReferenceType)
+			borrowType, _ = MustConvertStaticToSemaType(v.BorrowType, context).(*sema.ReferenceType)
 		}
-		return v.newCheckFunction(interpreter, borrowType)
+		return v.newCheckFunction(context, borrowType)
 
 	case sema.CapabilityTypeAddressFieldName:
 		return v.address
@@ -188,12 +184,12 @@ func (*PathCapabilityValue) RemoveMember(_ *Interpreter, _ LocationRange, _ stri
 	panic(errors.NewUnreachableError())
 }
 
-func (*PathCapabilityValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (*PathCapabilityValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	panic(errors.NewUnreachableError())
 }
 
 func (v *PathCapabilityValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -241,12 +237,12 @@ func (*PathCapabilityValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*PathCapabilityValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (*PathCapabilityValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v *PathCapabilityValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -255,23 +251,23 @@ func (v *PathCapabilityValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		v.DeepRemove(interpreter, true)
-		interpreter.RemoveReferencedSlab(storable)
+		v.DeepRemove(context, true)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (v *PathCapabilityValue) Clone(interpreter *Interpreter) Value {
+func (v *PathCapabilityValue) Clone(context ValueCloneContext) Value {
 	return &PathCapabilityValue{
 		BorrowType: v.BorrowType,
-		Path:       v.Path.Clone(interpreter).(PathValue),
-		address:    v.address.Clone(interpreter).(AddressValue),
+		Path:       v.Path.Clone(context).(PathValue),
+		address:    v.address.Clone(context).(AddressValue),
 	}
 }
 
-func (v *PathCapabilityValue) DeepRemove(interpreter *Interpreter, _ bool) {
-	v.address.DeepRemove(interpreter, false)
-	v.Path.DeepRemove(interpreter, false)
+func (v *PathCapabilityValue) DeepRemove(context ValueRemoveContext, _ bool) {
+	v.address.DeepRemove(context, false)
+	v.Path.DeepRemove(context, false)
 }
 
 func (v *PathCapabilityValue) ByteSize() uint32 {

@@ -54,7 +54,7 @@ func NewAccountStorage(
 }
 
 func (s *AccountStorage) GetDomainStorageMap(
-	inter *interpreter.Interpreter,
+	storageMutationTracker interpreter.StorageMutationTracker,
 	address common.Address,
 	domain common.StorageDomain,
 	createIfNotExists bool,
@@ -70,7 +70,7 @@ func (s *AccountStorage) GetDomainStorageMap(
 	if accountStorageMap != nil {
 		domainStorageMap = accountStorageMap.GetDomain(
 			s.memoryGauge,
-			inter,
+			storageMutationTracker,
 			domain,
 			createIfNotExists,
 		)

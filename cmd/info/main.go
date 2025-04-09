@@ -21,9 +21,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"slices"
 	"strings"
-
-	"golang.org/x/exp/slices"
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"

@@ -92,7 +92,7 @@ var _ EquatableValue = &IDCapabilityValue{}
 var _ MemberAccessibleValue = &IDCapabilityValue{}
 var _ CapabilityValue = &IDCapabilityValue{}
 
-func (*IDCapabilityValue) isValue() {}
+func (*IDCapabilityValue) IsValue() {}
 
 func (*IDCapabilityValue) isCapabilityValue() {}
 
@@ -100,11 +100,11 @@ func (v *IDCapabilityValue) isInvalid() bool {
 	return v.ID == InvalidCapabilityID
 }
 
-func (v *IDCapabilityValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitCapabilityValue(interpreter, v)
+func (v *IDCapabilityValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitCapabilityValue(context, v)
 }
 
-func (v *IDCapabilityValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
+func (v *IDCapabilityValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {
 	walkChild(v.ID)
 	walkChild(v.address)
 }
@@ -116,7 +116,7 @@ func (v *IDCapabilityValue) StaticType(context ValueStaticTypeContext) StaticTyp
 	)
 }
 
-func (v *IDCapabilityValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (v *IDCapabilityValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return false
 }
 
@@ -132,27 +132,27 @@ func (v *IDCapabilityValue) RecursiveString(seenReferences SeenReferences) strin
 	)
 }
 
-func (v *IDCapabilityValue) MeteredString(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
-	common.UseMemory(interpreter, common.IDCapabilityValueStringMemoryUsage)
+func (v *IDCapabilityValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+	common.UseMemory(context, common.IDCapabilityValueStringMemoryUsage)
 
 	return format.Capability(
-		v.BorrowType.MeteredString(interpreter),
-		v.address.MeteredString(interpreter, seenReferences, locationRange),
-		v.ID.MeteredString(interpreter, seenReferences, locationRange),
+		v.BorrowType.MeteredString(context),
+		v.address.MeteredString(context, seenReferences, locationRange),
+		v.ID.MeteredString(context, seenReferences, locationRange),
 	)
 }
 
-func (v *IDCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v *IDCapabilityValue) GetMember(context MemberAccessibleContext, _ LocationRange, name string) Value {
 	switch name {
 	case sema.CapabilityTypeBorrowFunctionName:
 		// this function will panic already if this conversion fails
-		borrowType, _ := MustConvertStaticToSemaType(v.BorrowType, interpreter).(*sema.ReferenceType)
-		return interpreter.capabilityBorrowFunction(v, v.address, v.ID, borrowType)
+		borrowType, _ := MustConvertStaticToSemaType(v.BorrowType, context).(*sema.ReferenceType)
+		return capabilityBorrowFunction(context, v, v.address, v.ID, borrowType)
 
 	case sema.CapabilityTypeCheckFunctionName:
 		// this function will panic already if this conversion fails
-		borrowType, _ := MustConvertStaticToSemaType(v.BorrowType, interpreter).(*sema.ReferenceType)
-		return interpreter.capabilityCheckFunction(v, v.address, v.ID, borrowType)
+		borrowType, _ := MustConvertStaticToSemaType(v.BorrowType, context).(*sema.ReferenceType)
+		return capabilityCheckFunction(context, v, v.address, v.ID, borrowType)
 
 	case sema.CapabilityTypeAddressFieldName:
 		return v.address
@@ -169,13 +169,13 @@ func (*IDCapabilityValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string
 	panic(errors.NewUnreachableError())
 }
 
-func (*IDCapabilityValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (*IDCapabilityValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Capabilities have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v *IDCapabilityValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -218,12 +218,12 @@ func (*IDCapabilityValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*IDCapabilityValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (*IDCapabilityValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v *IDCapabilityValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -232,22 +232,22 @@ func (v *IDCapabilityValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		v.DeepRemove(interpreter, true)
-		interpreter.RemoveReferencedSlab(storable)
+		v.DeepRemove(context, true)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (v *IDCapabilityValue) Clone(interpreter *Interpreter) Value {
+func (v *IDCapabilityValue) Clone(context ValueCloneContext) Value {
 	return NewUnmeteredCapabilityValue(
 		v.ID,
-		v.address.Clone(interpreter).(AddressValue),
+		v.address.Clone(context).(AddressValue),
 		v.BorrowType,
 	)
 }
 
-func (v *IDCapabilityValue) DeepRemove(interpreter *Interpreter, _ bool) {
-	v.address.DeepRemove(interpreter, false)
+func (v *IDCapabilityValue) DeepRemove(context ValueRemoveContext, _ bool) {
+	v.address.DeepRemove(context, false)
 }
 
 func (v *IDCapabilityValue) ByteSize() uint32 {

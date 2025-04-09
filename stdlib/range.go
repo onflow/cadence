@@ -126,11 +126,11 @@ var InclusiveRangeConstructorFunction = NewStandardLibraryStaticFunction(
 			panic(errors.NewUnreachableError())
 		}
 
-		inter := invocation.Interpreter
+		invocationContext := invocation.InvocationContext
 		locationRange := invocation.LocationRange
 
-		startStaticType := start.StaticType(inter)
-		endStaticType := end.StaticType(inter)
+		startStaticType := start.StaticType(invocationContext)
+		endStaticType := end.StaticType(invocationContext)
 		if !startStaticType.Equal(endStaticType) {
 			panic(interpreter.InclusiveRangeConstructionError{
 				LocationRange: locationRange,
@@ -142,8 +142,8 @@ var InclusiveRangeConstructorFunction = NewStandardLibraryStaticFunction(
 			})
 		}
 
-		rangeStaticType := interpreter.NewInclusiveRangeStaticType(invocation.Interpreter, startStaticType)
-		rangeSemaType := sema.NewInclusiveRangeType(invocation.Interpreter, invocation.ArgumentTypes[0])
+		rangeStaticType := interpreter.NewInclusiveRangeStaticType(invocation.InvocationContext, startStaticType)
+		rangeSemaType := sema.NewInclusiveRangeType(invocation.InvocationContext, invocation.ArgumentTypes[0])
 
 		if len(invocation.Arguments) > 2 {
 			step, ok := invocation.Arguments[2].(interpreter.IntegerValue)
@@ -151,7 +151,7 @@ var InclusiveRangeConstructorFunction = NewStandardLibraryStaticFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			stepStaticType := step.StaticType(inter)
+			stepStaticType := step.StaticType(invocationContext)
 			if stepStaticType != startStaticType {
 				panic(interpreter.InclusiveRangeConstructionError{
 					LocationRange: locationRange,
@@ -164,7 +164,7 @@ var InclusiveRangeConstructorFunction = NewStandardLibraryStaticFunction(
 			}
 
 			return interpreter.NewInclusiveRangeValueWithStep(
-				inter,
+				invocationContext,
 				locationRange,
 				start,
 				end,
@@ -175,7 +175,7 @@ var InclusiveRangeConstructorFunction = NewStandardLibraryStaticFunction(
 		}
 
 		return interpreter.NewInclusiveRangeValue(
-			inter,
+			invocationContext,
 			locationRange,
 			start,
 			end,

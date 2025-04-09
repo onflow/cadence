@@ -92,13 +92,13 @@ var _ EquatableValue = AddressValue{}
 var _ HashableValue = AddressValue{}
 var _ MemberAccessibleValue = AddressValue{}
 
-func (AddressValue) isValue() {}
+func (AddressValue) IsValue() {}
 
-func (v AddressValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitAddressValue(interpreter, v)
+func (v AddressValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitAddressValue(context, v)
 }
 
-func (AddressValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (AddressValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -106,7 +106,7 @@ func (AddressValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeAddress)
 }
 
-func (AddressValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (AddressValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -118,8 +118,8 @@ func (v AddressValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v AddressValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
-	common.UseMemory(interpreter, common.AddressValueStringMemoryUsage)
+func (v AddressValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+	common.UseMemory(context, common.AddressValueStringMemoryUsage)
 	return v.String()
 }
 
@@ -156,16 +156,16 @@ func (v AddressValue) ToAddress() common.Address {
 	return common.Address(v)
 }
 
-func (v AddressValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v AddressValue) GetMember(context MemberAccessibleContext, _ LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ToStringFunctionType,
 			func(v AddressValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
+				interpreter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				memoryUsage := common.NewStringMemoryUsage(
@@ -184,11 +184,11 @@ func (v AddressValue) GetMember(interpreter *Interpreter, _ LocationRange, name 
 
 	case sema.AddressTypeToBytesFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.AddressTypeToBytesFunctionType,
 			func(v AddressValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
+				interpreter := invocation.InvocationContext
 				address := common.Address(v)
 				return ByteSliceToByteArrayValue(interpreter, address[:])
 			},
@@ -203,13 +203,13 @@ func (AddressValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Valu
 	panic(errors.NewUnreachableError())
 }
 
-func (AddressValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (AddressValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Addresses have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v AddressValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -228,12 +228,12 @@ func (AddressValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (AddressValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (AddressValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v AddressValue) Transfer(
-	interpreter *Interpreter,
+	transferContext ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -242,16 +242,16 @@ func (v AddressValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(transferContext, storable)
 	}
 	return v
 }
 
-func (v AddressValue) Clone(_ *Interpreter) Value {
+func (v AddressValue) Clone(_ ValueCloneContext) Value {
 	return v
 }
 
-func (AddressValue) DeepRemove(_ *Interpreter, _ bool) {
+func (AddressValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
@@ -273,14 +273,14 @@ func AddressFromBytes(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	inter := invocation.Interpreter
+	inter := invocation.InvocationContext
 
 	bytes, err := ByteArrayValueToByteSlice(inter, argument, invocation.LocationRange)
 	if err != nil {
 		panic(err)
 	}
 
-	return NewAddressValue(invocation.Interpreter, common.MustBytesToAddress(bytes))
+	return NewAddressValue(invocation.InvocationContext, common.MustBytesToAddress(bytes))
 }
 
 func AddressFromString(invocation Invocation) Value {
@@ -294,6 +294,6 @@ func AddressFromString(invocation Invocation) Value {
 		return Nil
 	}
 
-	inter := invocation.Interpreter
+	inter := invocation.InvocationContext
 	return NewSomeValueNonCopying(inter, NewAddressValue(inter, addr))
 }

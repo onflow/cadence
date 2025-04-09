@@ -35,6 +35,4 @@ type Config struct {
 	ResourceOwnerChangeHandlerEnabled bool
 	// CoverageReport enables and collects coverage reporting metrics
 	CoverageReport *CoverageReport
-	// LegacyContractUpgradeEnabled enabled specifies whether to use the old parser when parsing an old contract
-	LegacyContractUpgradeEnabled bool
 }

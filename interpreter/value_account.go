@@ -25,6 +25,8 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
+const accountTypePrivateAddressFieldName = "address"
+
 // Account
 
 var accountTypeID = sema.AccountType.ID()
@@ -76,7 +78,7 @@ func NewAccountValue(
 		return nil
 	}
 
-	computeField := func(name string, _ *Interpreter, _ LocationRange) Value {
+	computeField := func(name string, _ MemberAccessibleContext, _ LocationRange) Value {
 		switch name {
 		case sema.AccountTypeBalanceFieldName:
 			return accountBalanceGet()
@@ -93,10 +95,10 @@ func NewAccountValue(
 	}
 
 	var str string
-	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
+	stringer := func(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
 		if str == "" {
-			common.UseMemory(interpreter, common.AccountValueStringMemoryUsage)
-			addressStr := address.MeteredString(interpreter, seenReferences, locationRange)
+			common.UseMemory(context, common.AccountValueStringMemoryUsage)
+			addressStr := address.MeteredString(context, seenReferences, locationRange)
 			str = fmt.Sprintf("Account(%s)", addressStr)
 		}
 		return str

@@ -60,13 +60,13 @@ var _ ComparableValue = Int32Value(0)
 var _ HashableValue = Int32Value(0)
 var _ MemberAccessibleValue = Int32Value(0)
 
-func (Int32Value) isValue() {}
+func (Int32Value) IsValue() {}
 
-func (v Int32Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitInt32Value(interpreter, v)
+func (v Int32Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitInt32Value(context, v)
 }
 
-func (Int32Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (Int32Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -74,7 +74,7 @@ func (Int32Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeInt32)
 }
 
-func (Int32Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (Int32Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -86,11 +86,11 @@ func (v Int32Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Int32Value) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v Int32Value) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
-		interpreter,
+		context,
 		common.NewRawStringMemoryUsage(
-			OverEstimateNumberStringLength(interpreter, v),
+			OverEstimateNumberStringLength(context, v),
 		),
 	)
 	return v.String()
@@ -613,8 +613,8 @@ func (v Int32Value) BitwiseRightShift(context ValueStaticTypeContext, other Inte
 	return NewInt32Value(context, valueGetter)
 }
 
-func (v Int32Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	return getNumberValueMember(interpreter, v, name, sema.Int32Type, locationRange)
+func (v Int32Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	return getNumberValueMember(context, v, name, sema.Int32Type, locationRange)
 }
 
 func (Int32Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
@@ -622,7 +622,7 @@ func (Int32Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value 
 	panic(errors.NewUnreachableError())
 }
 
-func (Int32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (Int32Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -634,7 +634,7 @@ func (v Int32Value) ToBigEndianBytes() []byte {
 }
 
 func (v Int32Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -649,12 +649,12 @@ func (Int32Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Int32Value) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (Int32Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v Int32Value) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -663,16 +663,16 @@ func (v Int32Value) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (v Int32Value) Clone(_ *Interpreter) Value {
+func (v Int32Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 
-func (Int32Value) DeepRemove(_ *Interpreter, _ bool) {
+func (Int32Value) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

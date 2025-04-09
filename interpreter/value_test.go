@@ -29,6 +29,7 @@ import (
 	"golang.org/x/tools/go/packages"
 
 	"github.com/onflow/atree"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -1369,10 +1370,10 @@ func TestVisitor(t *testing.T) {
 	var intVisits, stringVisits int
 
 	visitor := EmptyVisitor{
-		IntValueVisitor: func(interpreter *Interpreter, value IntValue) {
+		IntValueVisitor: func(_ ValueVisitContext, _ IntValue) {
 			intVisits++
 		},
-		StringValueVisitor: func(interpreter *Interpreter, value *StringValue) {
+		StringValueVisitor: func(_ ValueVisitContext, _ *StringValue) {
 			stringVisits++
 		},
 	}
@@ -3414,7 +3415,7 @@ func TestPublicKeyValue(t *testing.T) {
 			EmptyLocationRange,
 			publicKey,
 			sigAlgo,
-			func(interpreter *Interpreter, locationRange LocationRange, publicKey *CompositeValue) error {
+			func(context PublicKeyValidationContext, locationRange LocationRange, publicKey *CompositeValue) error {
 				return nil
 			},
 		)
@@ -3468,7 +3469,7 @@ func TestPublicKeyValue(t *testing.T) {
 					EmptyLocationRange,
 					publicKey,
 					sigAlgo,
-					func(interpreter *Interpreter, locationRange LocationRange, publicKey *CompositeValue) error {
+					func(context PublicKeyValidationContext, locationRange LocationRange, publicKey *CompositeValue) error {
 						return fakeError
 					},
 				)

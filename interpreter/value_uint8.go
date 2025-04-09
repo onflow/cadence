@@ -58,13 +58,13 @@ func NewUnmeteredUInt8Value(value uint8) UInt8Value {
 	return UInt8Value(value)
 }
 
-func (UInt8Value) isValue() {}
+func (UInt8Value) IsValue() {}
 
-func (v UInt8Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitUInt8Value(interpreter, v)
+func (v UInt8Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitUInt8Value(context, v)
 }
 
-func (UInt8Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (UInt8Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -72,7 +72,7 @@ func (UInt8Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeUInt8)
 }
 
-func (UInt8Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (UInt8Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -84,11 +84,11 @@ func (v UInt8Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v UInt8Value) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v UInt8Value) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
-		interpreter,
+		context,
 		common.NewRawStringMemoryUsage(
-			OverEstimateNumberStringLength(interpreter, v),
+			OverEstimateNumberStringLength(context, v),
 		),
 	)
 	return v.String()
@@ -547,8 +547,8 @@ func (v UInt8Value) BitwiseRightShift(context ValueStaticTypeContext, other Inte
 	)
 }
 
-func (v UInt8Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	return getNumberValueMember(interpreter, v, name, sema.UInt8Type, locationRange)
+func (v UInt8Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	return getNumberValueMember(context, v, name, sema.UInt8Type, locationRange)
 }
 
 func (UInt8Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
@@ -556,7 +556,7 @@ func (UInt8Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value 
 	panic(errors.NewUnreachableError())
 }
 
-func (UInt8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (UInt8Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -566,7 +566,7 @@ func (v UInt8Value) ToBigEndianBytes() []byte {
 }
 
 func (v UInt8Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -581,12 +581,12 @@ func (UInt8Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (UInt8Value) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (UInt8Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v UInt8Value) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -595,16 +595,16 @@ func (v UInt8Value) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (v UInt8Value) Clone(_ *Interpreter) Value {
+func (v UInt8Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 
-func (UInt8Value) DeepRemove(_ *Interpreter, _ bool) {
+func (UInt8Value) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

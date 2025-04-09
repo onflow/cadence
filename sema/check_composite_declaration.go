@@ -321,7 +321,7 @@ func availableDefaultFunctions(compositeType *CompositeType) map[string]struct{}
 	return defaultFunctions
 }
 
-// declareCompositeNestedTypes declares the types nested in a composite,
+// declareCompositeLikeNestedTypes declares the types nested in a composite,
 // and the constructors for them if `declareConstructors` is true
 // and `kind` is `ContainerKindComposite`.
 //
@@ -769,7 +769,7 @@ func (checker *Checker) declareAttachmentMembersAndValue(declaration *ast.Attach
 	checker.declareCompositeLikeMembersAndValue(declaration)
 }
 
-// declareCompositeMembersAndValue declares the members and the value
+// declareCompositeLikeMembersAndValue declares the members and the value
 // (e.g. constructor function for non-contract types; instance for contracts)
 // for the given composite declaration, and recursively for all nested declarations.
 //
@@ -2338,6 +2338,8 @@ func (checker *Checker) checkSpecialFunction(
 		parameters,
 		VoidTypeAnnotation,
 	)
+
+	checker.Elaboration.SetFunctionDeclarationFunctionType(specialFunction.FunctionDeclaration, functionType)
 
 	checker.checkFunction(
 		specialFunction.FunctionDeclaration.ParameterList,

@@ -117,7 +117,7 @@ type TestRuntimeInterface struct {
 	OnGenerateAccountID              func(address common.Address) (uint64, error)
 	OnRecoverProgram                 func(program *ast.Program, location common.Location) ([]byte, error)
 	OnValidateAccountCapabilitiesGet func(
-		inter *interpreter.Interpreter,
+		context interpreter.AccountCapabilityGetValidationContext,
 		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		path interpreter.PathValue,
@@ -125,7 +125,7 @@ type TestRuntimeInterface struct {
 		capabilityBorrowType *sema.ReferenceType,
 	) (bool, error)
 	OnValidateAccountCapabilitiesPublish func(
-		inter *interpreter.Interpreter,
+		context interpreter.AccountCapabilityPublishValidationContext,
 		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		path interpreter.PathValue,
@@ -626,7 +626,7 @@ func (i *TestRuntimeInterface) RecoverProgram(program *ast.Program, location com
 }
 
 func (i *TestRuntimeInterface) ValidateAccountCapabilitiesGet(
-	inter *interpreter.Interpreter,
+	context interpreter.AccountCapabilityGetValidationContext,
 	locationRange interpreter.LocationRange,
 	address interpreter.AddressValue,
 	path interpreter.PathValue,
@@ -637,7 +637,7 @@ func (i *TestRuntimeInterface) ValidateAccountCapabilitiesGet(
 		return true, nil
 	}
 	return i.OnValidateAccountCapabilitiesGet(
-		inter,
+		context,
 		locationRange,
 		address,
 		path,
@@ -647,7 +647,7 @@ func (i *TestRuntimeInterface) ValidateAccountCapabilitiesGet(
 }
 
 func (i *TestRuntimeInterface) ValidateAccountCapabilitiesPublish(
-	inter *interpreter.Interpreter,
+	context interpreter.AccountCapabilityPublishValidationContext,
 	locationRange interpreter.LocationRange,
 	address interpreter.AddressValue,
 	path interpreter.PathValue,
@@ -657,7 +657,7 @@ func (i *TestRuntimeInterface) ValidateAccountCapabilitiesPublish(
 		return true, nil
 	}
 	return i.OnValidateAccountCapabilitiesPublish(
-		inter,
+		context,
 		locationRange,
 		address,
 		path,

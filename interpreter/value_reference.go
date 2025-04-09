@@ -28,7 +28,7 @@ type ReferenceValue interface {
 	Value
 	AuthorizedValue
 	isReference()
-	ReferencedValue(interpreter *Interpreter, locationRange LocationRange, errorOnFailedDereference bool) *Value
+	ReferencedValue(context ValueStaticTypeContext, locationRange LocationRange, errorOnFailedDereference bool) *Value
 	BorrowType() sema.Type
 }
 

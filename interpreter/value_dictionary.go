@@ -42,13 +42,13 @@ type DictionaryValue struct {
 }
 
 func NewDictionaryValue(
-	interpreter *Interpreter,
+	context DictionaryCreationContext,
 	locationRange LocationRange,
 	dictionaryType *DictionaryStaticType,
 	keysAndValues ...Value,
 ) *DictionaryValue {
 	return NewDictionaryValueWithAddress(
-		interpreter,
+		context,
 		locationRange,
 		dictionaryType,
 		common.ZeroAddress,
@@ -57,20 +57,18 @@ func NewDictionaryValue(
 }
 
 func NewDictionaryValueWithAddress(
-	interpreter *Interpreter,
+	context DictionaryCreationContext,
 	locationRange LocationRange,
 	dictionaryType *DictionaryStaticType,
 	address common.Address,
 	keysAndValues ...Value,
 ) *DictionaryValue {
 
-	interpreter.ReportComputation(common.ComputationKindCreateDictionaryValue, 1)
+	context.ReportComputation(common.ComputationKindCreateDictionaryValue, 1)
 
 	var v *DictionaryValue
 
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		defer func() {
@@ -83,7 +81,7 @@ func NewDictionaryValueWithAddress(
 			typeInfo := v.Type.String()
 			count := v.Count()
 
-			interpreter.reportDictionaryValueConstructTrace(
+			context.ReportDictionaryValueConstructTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -98,7 +96,7 @@ func NewDictionaryValueWithAddress(
 
 	constructor := func() *atree.OrderedMap {
 		dictionary, err := atree.NewMap(
-			config.Storage,
+			context.Storage(),
 			atree.Address(address),
 			atree.NewDefaultDigesterBuilder(),
 			dictionaryType,
@@ -110,17 +108,17 @@ func NewDictionaryValueWithAddress(
 	}
 
 	// values are added to the dictionary after creation, not here
-	v = newDictionaryValueFromConstructor(interpreter, dictionaryType, 0, constructor)
+	v = newDictionaryValueFromConstructor(context, dictionaryType, 0, constructor)
 
 	for i := 0; i < keysAndValuesCount; i += 2 {
 		key := keysAndValues[i]
 		value := keysAndValues[i+1]
-		existingValue := v.Insert(interpreter, locationRange, key, value)
+		existingValue := v.Insert(context, locationRange, key, value)
 		// If the dictionary already contained a value for the key,
 		// and the dictionary is resource-typed,
 		// then we need to prevent a resource loss
 		if _, ok := existingValue.(*SomeValue); ok {
-			if v.IsResourceKinded(interpreter) {
+			if v.IsResourceKinded(context) {
 				panic(DuplicateKeyInResourceDictionaryError{
 					LocationRange: locationRange,
 				})
@@ -141,7 +139,7 @@ func DictionaryElementSize(staticType *DictionaryStaticType) uint {
 }
 
 func newDictionaryValueWithIterator(
-	interpreter *Interpreter,
+	context DictionaryCreationContext,
 	locationRange LocationRange,
 	staticType *DictionaryStaticType,
 	count uint64,
@@ -149,13 +147,11 @@ func newDictionaryValueWithIterator(
 	address common.Address,
 	values func() (Value, Value),
 ) *DictionaryValue {
-	interpreter.ReportComputation(common.ComputationKindCreateDictionaryValue, 1)
+	context.ReportComputation(common.ComputationKindCreateDictionaryValue, 1)
 
 	var v *DictionaryValue
 
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		defer func() {
@@ -168,7 +164,7 @@ func newDictionaryValueWithIterator(
 			typeInfo := v.Type.String()
 			count := v.Count()
 
-			interpreter.reportDictionaryValueConstructTrace(
+			context.ReportDictionaryValueConstructTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -178,12 +174,12 @@ func newDictionaryValueWithIterator(
 
 	constructor := func() *atree.OrderedMap {
 		orderedMap, err := atree.NewMapFromBatchData(
-			config.Storage,
+			context.Storage(),
 			atree.Address(address),
 			atree.NewDefaultDigesterBuilder(),
 			staticType,
-			newValueComparator(interpreter, locationRange),
-			newHashInputProvider(interpreter, locationRange),
+			newValueComparator(context, locationRange),
+			newHashInputProvider(context, locationRange),
 			seed,
 			func() (atree.Value, atree.Value, error) {
 				key, value := values()
@@ -197,7 +193,7 @@ func newDictionaryValueWithIterator(
 	}
 
 	// values are added to the dictionary after creation, not here
-	v = newDictionaryValueFromConstructor(interpreter, staticType, count, constructor)
+	v = newDictionaryValueFromConstructor(context, staticType, count, constructor)
 
 	return v
 }
@@ -250,20 +246,20 @@ var _ MemberAccessibleValue = &DictionaryValue{}
 var _ ReferenceTrackedResourceKindedValue = &DictionaryValue{}
 var _ atreeContainerBackedValue = &DictionaryValue{}
 
-func (*DictionaryValue) isValue() {}
+func (*DictionaryValue) IsValue() {}
 
 func (*DictionaryValue) isAtreeContainerBackedValue() {}
 
-func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
-	descend := visitor.VisitDictionaryValue(interpreter, v)
+func (v *DictionaryValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
+	descend := visitor.VisitDictionaryValue(context, v)
 	if !descend {
 		return
 	}
 
 	v.Walk(
-		interpreter,
+		context,
 		func(value Value) {
-			value.Accept(interpreter, visitor, locationRange)
+			value.Accept(context, visitor, locationRange)
 		},
 		locationRange,
 	)
@@ -310,7 +306,7 @@ func (v *DictionaryValue) iterateKeys(
 		}
 	}
 
-	interpreter.withMutationPrevention(v.ValueID(), iterate)
+	interpreter.WithMutationPrevention(v.ValueID(), iterate)
 }
 
 func (v *DictionaryValue) IterateReadOnly(
@@ -327,12 +323,12 @@ func (v *DictionaryValue) IterateReadOnly(
 }
 
 func (v *DictionaryValue) Iterate(
-	interpreter *Interpreter,
+	context ContainerMutationContext,
 	locationRange LocationRange,
 	f func(key, value Value) (resume bool),
 ) {
-	valueComparator := newValueComparator(interpreter, locationRange)
-	hashInputProvider := newHashInputProvider(interpreter, locationRange)
+	valueComparator := newValueComparator(context, locationRange)
+	hashInputProvider := newHashInputProvider(context, locationRange)
 	iterate := func(fn atree.MapEntryIterationFunc) error {
 		return v.dictionary.Iterate(
 			valueComparator,
@@ -340,18 +336,18 @@ func (v *DictionaryValue) Iterate(
 			fn,
 		)
 	}
-	v.iterate(interpreter, iterate, f, locationRange)
+	v.iterate(context, iterate, f, locationRange)
 }
 
 // IterateReadOnlyLoaded iterates over all LOADED key-value pairs of the array.
 // DO NOT perform storage mutations in the callback!
 func (v *DictionaryValue) IterateReadOnlyLoaded(
-	interpreter *Interpreter,
+	context ContainerMutationContext,
 	locationRange LocationRange,
 	f func(key, value Value) (resume bool),
 ) {
 	v.iterate(
-		interpreter,
+		context,
 		v.dictionary.IterateReadOnlyLoadedValues,
 		f,
 		locationRange,
@@ -359,7 +355,7 @@ func (v *DictionaryValue) IterateReadOnlyLoaded(
 }
 
 func (v *DictionaryValue) iterate(
-	interpreter *Interpreter,
+	context ContainerMutationContext,
 	atreeIterate func(fn atree.MapEntryIterationFunc) error,
 	f func(key Value, value Value) (resume bool),
 	locationRange LocationRange,
@@ -369,11 +365,11 @@ func (v *DictionaryValue) iterate(
 			// atree.OrderedMap iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value
 
-			keyValue := MustConvertStoredValue(interpreter, key)
-			valueValue := MustConvertStoredValue(interpreter, value)
+			keyValue := MustConvertStoredValue(context, key)
+			valueValue := MustConvertStoredValue(context, value)
 
-			checkInvalidatedResourceOrResourceReference(keyValue, locationRange, interpreter)
-			checkInvalidatedResourceOrResourceReference(valueValue, locationRange, interpreter)
+			checkInvalidatedResourceOrResourceReference(keyValue, locationRange, context)
+			checkInvalidatedResourceOrResourceReference(valueValue, locationRange, context)
 
 			resume = f(
 				keyValue,
@@ -387,7 +383,7 @@ func (v *DictionaryValue) iterate(
 		}
 	}
 
-	interpreter.withMutationPrevention(v.ValueID(), iterate)
+	context.WithMutationPrevention(v.ValueID(), iterate)
 }
 
 type DictionaryKeyIterator struct {
@@ -433,9 +429,9 @@ func (v *DictionaryValue) Iterator() DictionaryKeyIterator {
 	}
 }
 
-func (v *DictionaryValue) Walk(interpreter *Interpreter, walkChild func(Value), locationRange LocationRange) {
+func (v *DictionaryValue) Walk(context ValueWalkContext, walkChild func(Value), locationRange LocationRange) {
 	v.Iterate(
-		interpreter,
+		context,
 		locationRange,
 		func(key, value Value) (resume bool) {
 			walkChild(key)
@@ -450,13 +446,13 @@ func (v *DictionaryValue) StaticType(_ ValueStaticTypeContext) StaticType {
 	return v.Type
 }
 
-func (v *DictionaryValue) IsImportable(inter *Interpreter, locationRange LocationRange) bool {
+func (v *DictionaryValue) IsImportable(context ValueImportableContext, locationRange LocationRange) bool {
 	importable := true
 	v.Iterate(
-		inter,
+		context,
 		locationRange,
 		func(key, value Value) (resume bool) {
-			if !key.IsImportable(inter, locationRange) || !value.IsImportable(inter, locationRange) {
+			if !key.IsImportable(context, locationRange) || !value.IsImportable(context, locationRange) {
 				importable = false
 				// stop iteration
 				return false
@@ -482,20 +478,18 @@ func (v *DictionaryValue) IsStaleResource(interpreter *Interpreter) bool {
 	return v.dictionary == nil && v.IsResourceKinded(interpreter)
 }
 
-func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
+func (v *DictionaryValue) Destroy(context ResourceDestructionContext, locationRange LocationRange) {
 
-	interpreter.ReportComputation(common.ComputationKindDestroyDictionaryValue, 1)
+	context.ReportComputation(common.ComputationKindDestroyDictionaryValue, 1)
 
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
 		count := v.Count()
 
 		defer func() {
-			interpreter.reportDictionaryValueDestroyTrace(
+			context.ReportDictionaryValueDestroyTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -505,17 +499,17 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 
 	valueID := v.ValueID()
 
-	interpreter.withResourceDestruction(
+	context.WithResourceDestruction(
 		valueID,
 		locationRange,
 		func() {
 			v.Iterate(
-				interpreter,
+				context,
 				locationRange,
 				func(key, value Value) (resume bool) {
 					// Resources cannot be keys at the moment, so should theoretically not be needed
-					maybeDestroy(interpreter, locationRange, key)
-					maybeDestroy(interpreter, locationRange, value)
+					maybeDestroy(context, locationRange, key)
+					maybeDestroy(context, locationRange, value)
 
 					return true
 				},
@@ -525,17 +519,17 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 
 	v.isDestroyed = true
 
-	interpreter.invalidateReferencedResources(v, locationRange)
+	InvalidateReferencedResources(context, v, locationRange)
 
 	v.dictionary = nil
 }
 
 func (v *DictionaryValue) ForEachKey(
-	interpreter *Interpreter,
+	context InvocationContext,
 	locationRange LocationRange,
 	procedure FunctionValue,
 ) {
-	keyType := v.SemaType(interpreter).KeyType
+	keyType := v.SemaType(context).KeyType
 
 	argumentTypes := []sema.Type{keyType}
 
@@ -546,9 +540,10 @@ func (v *DictionaryValue) ForEachKey(
 	iterate := func() {
 		err := v.dictionary.IterateReadOnlyKeys(
 			func(item atree.Value) (bool, error) {
-				key := MustConvertStoredValue(interpreter, item)
+				key := MustConvertStoredValue(context, item)
 
-				result := interpreter.invokeFunctionValue(
+				result := invokeFunctionValue(
+					context,
 					procedure,
 					[]Value{key},
 					nil,
@@ -573,17 +568,17 @@ func (v *DictionaryValue) ForEachKey(
 		}
 	}
 
-	interpreter.withMutationPrevention(v.ValueID(), iterate)
+	context.WithMutationPrevention(v.ValueID(), iterate)
 }
 
 func (v *DictionaryValue) ContainsKey(
-	interpreter *Interpreter,
+	context ValueComparisonContext,
 	locationRange LocationRange,
 	keyValue Value,
 ) BoolValue {
 
-	valueComparator := newValueComparator(interpreter, locationRange)
-	hashInputProvider := newHashInputProvider(interpreter, locationRange)
+	valueComparator := newValueComparator(context, locationRange)
+	hashInputProvider := newHashInputProvider(context, locationRange)
 
 	exists, err := v.dictionary.Has(
 		valueComparator,
@@ -621,25 +616,21 @@ func (v *DictionaryValue) Get(
 	return MustConvertStoredValue(context, storedValue), true
 }
 
-func (v *DictionaryValue) GetKey(interpreter *Interpreter, locationRange LocationRange, keyValue Value) Value {
-	value, ok := v.Get(interpreter, locationRange, keyValue)
+func (v *DictionaryValue) GetKey(context ValueComparisonContext, locationRange LocationRange, keyValue Value) Value {
+	value, ok := v.Get(context, locationRange, keyValue)
 	if ok {
-		return NewSomeValueNonCopying(interpreter, value)
+		return NewSomeValueNonCopying(context, value)
 	}
 
 	return Nil
 }
 
-func (v *DictionaryValue) SetKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	keyValue Value,
-	value Value,
-) {
-	interpreter.validateMutation(v.ValueID(), locationRange)
+func (v *DictionaryValue) SetKey(context ContainerMutationContext, locationRange LocationRange, keyValue Value, value Value) {
+	context.ValidateMutation(v.ValueID(), locationRange)
 
-	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, locationRange)
-	interpreter.checkContainerMutation(
+	checkContainerMutation(context, v.Type.KeyType, keyValue, locationRange)
+	checkContainerMutation(
+		context,
 		&OptionalStaticType{ // intentionally unmetered
 			Type: v.Type.ValueType,
 		},
@@ -651,10 +642,10 @@ func (v *DictionaryValue) SetKey(
 	switch value := value.(type) {
 	case *SomeValue:
 		innerValue := value.InnerValue()
-		existingValue = v.Insert(interpreter, locationRange, keyValue, innerValue)
+		existingValue = v.Insert(context, locationRange, keyValue, innerValue)
 
 	case NilValue:
-		existingValue = v.Remove(interpreter, locationRange, keyValue)
+		existingValue = v.Remove(context, locationRange, keyValue)
 
 	case placeholderValue:
 		// NO-OP
@@ -664,7 +655,7 @@ func (v *DictionaryValue) SetKey(
 	}
 
 	if existingValue != nil {
-		interpreter.checkResourceLoss(existingValue, locationRange)
+		checkResourceLoss(context, existingValue, locationRange)
 	}
 }
 
@@ -673,10 +664,10 @@ func (v *DictionaryValue) String() string {
 }
 
 func (v *DictionaryValue) RecursiveString(seenReferences SeenReferences) string {
-	return v.MeteredString(nil, seenReferences, EmptyLocationRange)
+	return v.MeteredString(NoOpStringContext{}, seenReferences, EmptyLocationRange)
 }
 
-func (v *DictionaryValue) MeteredString(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
+func (v *DictionaryValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
 
 	pairs := make([]struct {
 		Key   string
@@ -686,7 +677,7 @@ func (v *DictionaryValue) MeteredString(interpreter *Interpreter, seenReferences
 	index := 0
 
 	v.Iterate(
-		interpreter,
+		context,
 		locationRange,
 		func(key, value Value) (resume bool) {
 			// atree.OrderedMap iteration provides low-level atree.Value,
@@ -696,8 +687,8 @@ func (v *DictionaryValue) MeteredString(interpreter *Interpreter, seenReferences
 				Key   string
 				Value string
 			}{
-				Key:   key.MeteredString(interpreter, seenReferences, locationRange),
-				Value: value.MeteredString(interpreter, seenReferences, locationRange),
+				Key:   key.MeteredString(context, seenReferences, locationRange),
+				Value: value.MeteredString(context, seenReferences, locationRange),
 			}
 			index++
 			return true
@@ -714,26 +705,20 @@ func (v *DictionaryValue) MeteredString(interpreter *Interpreter, seenReferences
 	// String of each key and value are metered separately.
 	strLen := len(pairs)*4 + 2
 
-	common.UseMemory(interpreter, common.NewRawStringMemoryUsage(strLen))
+	common.UseMemory(context, common.NewRawStringMemoryUsage(strLen))
 
 	return format.Dictionary(pairs)
 }
 
-func (v *DictionaryValue) GetMember(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	name string,
-) Value {
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+func (v *DictionaryValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
 		count := v.Count()
 
 		defer func() {
-			interpreter.reportDictionaryValueGetMemberTrace(
+			context.ReportDictionaryValueGetMemberTrace(
 				typeInfo,
 				count,
 				name,
@@ -744,7 +729,7 @@ func (v *DictionaryValue) GetMember(
 
 	switch name {
 	case "length":
-		return NewIntValueFromInt64(interpreter, int64(v.Count()))
+		return NewIntValueFromInt64(context, int64(v.Count()))
 
 	case "keys":
 
@@ -754,8 +739,8 @@ func (v *DictionaryValue) GetMember(
 		}
 
 		return NewArrayValueWithIterator(
-			interpreter,
-			NewVariableSizedStaticType(interpreter, v.Type.KeyType),
+			context,
+			NewVariableSizedStaticType(context, v.Type.KeyType),
 			common.ZeroAddress,
 			v.dictionary.Count(),
 			func() Value {
@@ -768,9 +753,9 @@ func (v *DictionaryValue) GetMember(
 					return nil
 				}
 
-				return MustConvertStoredValue(interpreter, key).
+				return MustConvertStoredValue(context, key).
 					Transfer(
-						interpreter,
+						context,
 						locationRange,
 						atree.Address{},
 						false,
@@ -790,8 +775,8 @@ func (v *DictionaryValue) GetMember(
 		}
 
 		return NewArrayValueWithIterator(
-			interpreter,
-			NewVariableSizedStaticType(interpreter, v.Type.ValueType),
+			context,
+			NewVariableSizedStaticType(context, v.Type.ValueType),
 			common.ZeroAddress,
 			v.dictionary.Count(),
 			func() Value {
@@ -804,9 +789,9 @@ func (v *DictionaryValue) GetMember(
 					return nil
 				}
 
-				return MustConvertStoredValue(interpreter, value).
+				return MustConvertStoredValue(context, value).
 					Transfer(
-						interpreter,
+						context,
 						locationRange,
 						atree.Address{},
 						false,
@@ -818,16 +803,16 @@ func (v *DictionaryValue) GetMember(
 
 	case "remove":
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.DictionaryRemoveFunctionType(
-				v.SemaType(interpreter),
+				v.SemaType(context),
 			),
 			func(v *DictionaryValue, invocation Invocation) Value {
 				keyValue := invocation.Arguments[0]
 
 				return v.Remove(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 					keyValue,
 				)
@@ -836,17 +821,17 @@ func (v *DictionaryValue) GetMember(
 
 	case "insert":
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.DictionaryInsertFunctionType(
-				v.SemaType(interpreter),
+				v.SemaType(context),
 			),
 			func(v *DictionaryValue, invocation Invocation) Value {
 				keyValue := invocation.Arguments[0]
 				newValue := invocation.Arguments[1]
 
 				return v.Insert(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 					keyValue,
 					newValue,
@@ -856,14 +841,14 @@ func (v *DictionaryValue) GetMember(
 
 	case "containsKey":
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.DictionaryContainsKeyFunctionType(
-				v.SemaType(interpreter),
+				v.SemaType(context),
 			),
 			func(v *DictionaryValue, invocation Invocation) Value {
 				return v.ContainsKey(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 					invocation.Arguments[0],
 				)
@@ -871,13 +856,13 @@ func (v *DictionaryValue) GetMember(
 		)
 	case "forEachKey":
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.DictionaryForEachKeyFunctionType(
-				v.SemaType(interpreter),
+				v.SemaType(context),
 			),
 			func(v *DictionaryValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
+				invocationContext := invocation.InvocationContext
 
 				funcArgument, ok := invocation.Arguments[0].(FunctionValue)
 				if !ok {
@@ -885,7 +870,7 @@ func (v *DictionaryValue) GetMember(
 				}
 
 				v.ForEachKey(
-					interpreter,
+					invocationContext,
 					invocation.LocationRange,
 					funcArgument,
 				)
@@ -903,7 +888,7 @@ func (v *DictionaryValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string
 	panic(errors.NewUnreachableError())
 }
 
-func (v *DictionaryValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (v *DictionaryValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
 	// Dictionaries have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -912,16 +897,12 @@ func (v *DictionaryValue) Count() int {
 	return int(v.dictionary.Count())
 }
 
-func (v *DictionaryValue) RemoveKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	key Value,
-) Value {
-	return v.Remove(interpreter, locationRange, key)
+func (v *DictionaryValue) RemoveKey(context ContainerMutationContext, locationRange LocationRange, key Value) Value {
+	return v.Remove(context, locationRange, key)
 }
 
 func (v *DictionaryValue) RemoveWithoutTransfer(
-	interpreter *Interpreter,
+	context ContainerMutationContext,
 	locationRange LocationRange,
 	keyValue atree.Value,
 ) (
@@ -929,10 +910,10 @@ func (v *DictionaryValue) RemoveWithoutTransfer(
 	existingValueStorable atree.Storable,
 ) {
 
-	interpreter.validateMutation(v.ValueID(), locationRange)
+	context.ValidateMutation(v.ValueID(), locationRange)
 
-	valueComparator := newValueComparator(interpreter, locationRange)
-	hashInputProvider := newHashInputProvider(interpreter, locationRange)
+	valueComparator := newValueComparator(context, locationRange)
+	hashInputProvider := newHashInputProvider(context, locationRange)
 
 	// No need to clean up storable for passed-in key value,
 	// as atree never calls Storable()
@@ -950,37 +931,37 @@ func (v *DictionaryValue) RemoveWithoutTransfer(
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.maybeValidateAtreeValue(v.dictionary)
-	interpreter.maybeValidateAtreeStorage()
+	context.MaybeValidateAtreeValue(v.dictionary)
+	context.MaybeValidateAtreeStorage()
 
 	return existingKeyStorable, existingValueStorable
 }
 
 func (v *DictionaryValue) Remove(
-	interpreter *Interpreter,
+	context ContainerMutationContext,
 	locationRange LocationRange,
 	keyValue Value,
 ) OptionalValue {
 
-	existingKeyStorable, existingValueStorable := v.RemoveWithoutTransfer(interpreter, locationRange, keyValue)
+	existingKeyStorable, existingValueStorable := v.RemoveWithoutTransfer(context, locationRange, keyValue)
 
 	if existingKeyStorable == nil {
 		return NilOptionalValue
 	}
 
-	storage := interpreter.Storage()
+	storage := context.Storage()
 
 	// Key
 
-	existingKeyValue := StoredValue(interpreter, existingKeyStorable, storage)
-	existingKeyValue.DeepRemove(interpreter, true) // existingValue is standalone because it was removed from parent container.
-	interpreter.RemoveReferencedSlab(existingKeyStorable)
+	existingKeyValue := StoredValue(context, existingKeyStorable, storage)
+	existingKeyValue.DeepRemove(context, true) // existingValue is standalone because it was removed from parent container.
+	RemoveReferencedSlab(context, existingKeyStorable)
 
 	// Value
 
-	existingValue := StoredValue(interpreter, existingValueStorable, storage).
+	existingValue := StoredValue(context, existingValueStorable, storage).
 		Transfer(
-			interpreter,
+			context,
 			locationRange,
 			atree.Address{},
 			true,
@@ -989,33 +970,29 @@ func (v *DictionaryValue) Remove(
 			true, // value is standalone because it was removed from parent container.
 		)
 
-	return NewSomeValueNonCopying(interpreter, existingValue)
+	return NewSomeValueNonCopying(context, existingValue)
 }
 
-func (v *DictionaryValue) InsertKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	key, value Value,
-) {
-	v.SetKey(interpreter, locationRange, key, value)
+func (v *DictionaryValue) InsertKey(context ContainerMutationContext, locationRange LocationRange, key Value, value Value) {
+	v.SetKey(context, locationRange, key, value)
 }
 
 func (v *DictionaryValue) InsertWithoutTransfer(
-	interpreter *Interpreter,
+	context ContainerMutationContext,
 	locationRange LocationRange,
 	keyValue, value atree.Value,
 ) (existingValueStorable atree.Storable) {
 
-	interpreter.validateMutation(v.ValueID(), locationRange)
+	context.ValidateMutation(v.ValueID(), locationRange)
 
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(v.dictionary.Count(), v.elementSize, false)
-	common.UseMemory(interpreter, common.AtreeMapElementOverhead)
-	common.UseMemory(interpreter, dataSlabs)
-	common.UseMemory(interpreter, metaDataSlabs)
+	common.UseMemory(context, common.AtreeMapElementOverhead)
+	common.UseMemory(context, dataSlabs)
+	common.UseMemory(context, metaDataSlabs)
 
-	valueComparator := newValueComparator(interpreter, locationRange)
-	hashInputProvider := newHashInputProvider(interpreter, locationRange)
+	valueComparator := newValueComparator(context, locationRange)
+	hashInputProvider := newHashInputProvider(context, locationRange)
 
 	// atree only calls Storable() on keyValue if needed,
 	// i.e., if the key is a new key
@@ -1030,14 +1007,14 @@ func (v *DictionaryValue) InsertWithoutTransfer(
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.maybeValidateAtreeValue(v.dictionary)
-	interpreter.maybeValidateAtreeStorage()
+	context.MaybeValidateAtreeValue(v.dictionary)
+	context.MaybeValidateAtreeStorage()
 
 	return existingValueStorable
 }
 
 func (v *DictionaryValue) Insert(
-	interpreter *Interpreter,
+	context ContainerMutationContext,
 	locationRange LocationRange,
 	keyValue, value Value,
 ) OptionalValue {
@@ -1049,7 +1026,7 @@ func (v *DictionaryValue) Insert(
 	}
 
 	keyValue = keyValue.Transfer(
-		interpreter,
+		context,
 		locationRange,
 		address,
 		true,
@@ -1059,7 +1036,7 @@ func (v *DictionaryValue) Insert(
 	)
 
 	value = value.Transfer(
-		interpreter,
+		context,
 		locationRange,
 		address,
 		true,
@@ -1068,10 +1045,10 @@ func (v *DictionaryValue) Insert(
 		true, // value is standalone before it is inserted into parent container.
 	)
 
-	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, locationRange)
-	interpreter.checkContainerMutation(v.Type.ValueType, value, locationRange)
+	checkContainerMutation(context, v.Type.KeyType, keyValue, locationRange)
+	checkContainerMutation(context, v.Type.ValueType, value, locationRange)
 
-	existingValueStorable := v.InsertWithoutTransfer(interpreter, locationRange, keyValue, value)
+	existingValueStorable := v.InsertWithoutTransfer(context, locationRange, keyValue, value)
 
 	if existingValueStorable == nil {
 		return NilOptionalValue
@@ -1089,7 +1066,7 @@ func (v *DictionaryValue) Insert(
 	// referenced from dictionary.
 
 	// Remove content of transferred keyValue.
-	keyValue.DeepRemove(interpreter, true)
+	keyValue.DeepRemove(context, true)
 
 	// Remove slab containing transferred keyValue from storage if needed.
 	// Currently, we only need to handle enum composite type because it is the only type that:
@@ -1107,17 +1084,17 @@ func (v *DictionaryValue) Insert(
 		}
 
 		// Remove slab containing transferred enum value from storage.
-		interpreter.RemoveReferencedSlab(atree.SlabIDStorable(keyCompositeSlabID))
+		RemoveReferencedSlab(context, atree.SlabIDStorable(keyCompositeSlabID))
 	}
 
-	storage := interpreter.Storage()
+	storage := context.Storage()
 
 	existingValue := StoredValue(
-		interpreter,
+		context,
 		existingValueStorable,
 		storage,
 	).Transfer(
-		interpreter,
+		context,
 		locationRange,
 		atree.Address{},
 		true,
@@ -1126,7 +1103,7 @@ func (v *DictionaryValue) Insert(
 		true, // existingValueStorable is standalone after it is overwritten in parent container.
 	)
 
-	return NewSomeValueNonCopying(interpreter, existingValue)
+	return NewSomeValueNonCopying(context, existingValue)
 }
 
 type DictionaryEntryValues struct {
@@ -1135,22 +1112,20 @@ type DictionaryEntryValues struct {
 }
 
 func (v *DictionaryValue) ConformsToStaticType(
-	interpreter *Interpreter,
+	context ValueStaticTypeConformanceContext,
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
 
 	count := v.Count()
 
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
 
 		defer func() {
-			interpreter.reportDictionaryValueConformsToStaticTypeTrace(
+			context.ReportDictionaryValueConformsToStaticTypeTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -1158,7 +1133,7 @@ func (v *DictionaryValue) ConformsToStaticType(
 		}()
 	}
 
-	staticType, ok := v.StaticType(interpreter).(*DictionaryStaticType)
+	staticType, ok := v.StaticType(context).(*DictionaryStaticType)
 	if !ok {
 		return false
 	}
@@ -1184,14 +1159,14 @@ func (v *DictionaryValue) ConformsToStaticType(
 
 		// atree.OrderedMap iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
-		entryKey := MustConvertStoredValue(interpreter, key)
+		entryKey := MustConvertStoredValue(context, key)
 
-		if !interpreter.IsSubType(entryKey.StaticType(interpreter), keyType) {
+		if !IsSubType(context, entryKey.StaticType(context), keyType) {
 			return false
 		}
 
 		if !entryKey.ConformsToStaticType(
-			interpreter,
+			context,
 			locationRange,
 			results,
 		) {
@@ -1202,14 +1177,14 @@ func (v *DictionaryValue) ConformsToStaticType(
 
 		// atree.OrderedMap iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
-		entryValue := MustConvertStoredValue(interpreter, value)
+		entryValue := MustConvertStoredValue(context, value)
 
-		if !interpreter.IsSubType(entryValue.StaticType(interpreter), valueType) {
+		if !IsSubType(context, entryValue.StaticType(context), valueType) {
 			return false
 		}
 
 		if !entryValue.ConformsToStaticType(
-			interpreter,
+			context,
 			locationRange,
 			results,
 		) {
@@ -1286,7 +1261,7 @@ func (v *DictionaryValue) UnwrapAtreeValue() (atree.Value, uint64) {
 func (v *DictionaryValue) IsReferenceTrackedResourceKindedValue() {}
 
 func (v *DictionaryValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	address atree.Address,
 	remove bool,
@@ -1295,21 +1270,19 @@ func (v *DictionaryValue) Transfer(
 	hasNoParentContainer bool,
 ) Value {
 
-	config := interpreter.SharedState.Config
-
-	interpreter.ReportComputation(
+	context.ReportComputation(
 		common.ComputationKindTransferDictionaryValue,
 		uint(v.Count()),
 	)
 
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
 		count := v.Count()
 
 		defer func() {
-			interpreter.reportDictionaryValueTransferTrace(
+			context.ReportDictionaryValueTransferTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -1332,12 +1305,12 @@ func (v *DictionaryValue) Transfer(
 	dictionary := v.dictionary
 
 	needsStoreTo := v.NeedsStoreTo(address)
-	isResourceKinded := v.IsResourceKinded(interpreter)
+	isResourceKinded := v.IsResourceKinded(context)
 
 	if needsStoreTo || !isResourceKinded {
 
-		valueComparator := newValueComparator(interpreter, locationRange)
-		hashInputProvider := newHashInputProvider(interpreter, locationRange)
+		valueComparator := newValueComparator(context, locationRange)
+		hashInputProvider := newHashInputProvider(context, locationRange)
 
 		// Use non-readonly iterator here because iterated
 		// value can be removed if remove parameter is true.
@@ -1352,18 +1325,18 @@ func (v *DictionaryValue) Transfer(
 			elementCount,
 			v.elementSize,
 		)
-		common.UseMemory(interpreter, elementOverhead)
-		common.UseMemory(interpreter, dataUse)
-		common.UseMemory(interpreter, metaDataUse)
+		common.UseMemory(context, elementOverhead)
+		common.UseMemory(context, dataUse)
+		common.UseMemory(context, metaDataUse)
 
 		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(
 			elementCount,
 			v.elementSize,
 		)
-		common.UseMemory(config.MemoryGauge, elementMemoryUse)
+		common.UseMemory(context, elementMemoryUse)
 
 		dictionary, err = atree.NewMapFromBatchData(
-			config.Storage,
+			context.Storage(),
 			address,
 			atree.NewDefaultDigesterBuilder(),
 			v.dictionary.Type(),
@@ -1380,9 +1353,9 @@ func (v *DictionaryValue) Transfer(
 					return nil, nil, nil
 				}
 
-				key := MustConvertStoredValue(interpreter, atreeKey).
+				key := MustConvertStoredValue(context, atreeKey).
 					Transfer(
-						interpreter,
+						context,
 						locationRange,
 						address,
 						remove,
@@ -1391,9 +1364,9 @@ func (v *DictionaryValue) Transfer(
 						false, // atreeKey has parent container because it is returned from iterator.
 					)
 
-				value := MustConvertStoredValue(interpreter, atreeValue).
+				value := MustConvertStoredValue(context, atreeValue).
 					Transfer(
-						interpreter,
+						context,
 						locationRange,
 						address,
 						remove,
@@ -1411,19 +1384,19 @@ func (v *DictionaryValue) Transfer(
 
 		if remove {
 			err = v.dictionary.PopIterate(func(keyStorable atree.Storable, valueStorable atree.Storable) {
-				interpreter.RemoveReferencedSlab(keyStorable)
-				interpreter.RemoveReferencedSlab(valueStorable)
+				RemoveReferencedSlab(context, keyStorable)
+				RemoveReferencedSlab(context, valueStorable)
 			})
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
 
-			interpreter.maybeValidateAtreeValue(v.dictionary)
+			context.MaybeValidateAtreeValue(v.dictionary)
 			if hasNoParentContainer {
-				interpreter.maybeValidateAtreeStorage()
+				context.MaybeValidateAtreeStorage()
 			}
 
-			interpreter.RemoveReferencedSlab(storable)
+			RemoveReferencedSlab(context, storable)
 		}
 	}
 
@@ -1437,13 +1410,13 @@ func (v *DictionaryValue) Transfer(
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		interpreter.invalidateReferencedResources(v, locationRange)
+		InvalidateReferencedResources(context, v, locationRange)
 
 		v.dictionary = nil
 	}
 
 	res := newDictionaryValueFromAtreeMap(
-		interpreter,
+		context,
 		v.Type,
 		v.elementSize,
 		dictionary,
@@ -1456,11 +1429,9 @@ func (v *DictionaryValue) Transfer(
 	return res
 }
 
-func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
-	config := interpreter.SharedState.Config
-
-	valueComparator := newValueComparator(interpreter, EmptyLocationRange)
-	hashInputProvider := newHashInputProvider(interpreter, EmptyLocationRange)
+func (v *DictionaryValue) Clone(context ValueCloneContext) Value {
+	valueComparator := newValueComparator(context, EmptyLocationRange)
+	hashInputProvider := newHashInputProvider(context, EmptyLocationRange)
 
 	iterator, err := v.dictionary.ReadOnlyIterator()
 	if err != nil {
@@ -1468,7 +1439,7 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 	}
 
 	orderedMap, err := atree.NewMapFromBatchData(
-		config.Storage,
+		context.Storage(),
 		v.StorageAddress(),
 		atree.NewDefaultDigesterBuilder(),
 		v.dictionary.Type(),
@@ -1485,11 +1456,11 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 				return nil, nil, nil
 			}
 
-			key := MustConvertStoredValue(interpreter, atreeKey).
-				Clone(interpreter)
+			key := MustConvertStoredValue(context, atreeKey).
+				Clone(context)
 
-			value := MustConvertStoredValue(interpreter, atreeValue).
-				Clone(interpreter)
+			value := MustConvertStoredValue(context, atreeValue).
+				Clone(context)
 
 			return key, value, nil
 		},
@@ -1499,7 +1470,7 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 	}
 
 	dictionary := newDictionaryValueFromAtreeMap(
-		interpreter,
+		context,
 		v.Type,
 		v.elementSize,
 		orderedMap,
@@ -1512,18 +1483,16 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 	return dictionary
 }
 
-func (v *DictionaryValue) DeepRemove(interpreter *Interpreter, hasNoParentContainer bool) {
+func (v *DictionaryValue) DeepRemove(context ValueRemoveContext, hasNoParentContainer bool) {
 
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
 		count := v.Count()
 
 		defer func() {
-			interpreter.reportDictionaryValueDeepRemoveTrace(
+			context.ReportDictionaryValueDeepRemoveTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -1537,21 +1506,21 @@ func (v *DictionaryValue) DeepRemove(interpreter *Interpreter, hasNoParentContai
 
 	err := v.dictionary.PopIterate(func(keyStorable atree.Storable, valueStorable atree.Storable) {
 
-		key := StoredValue(interpreter, keyStorable, storage)
-		key.DeepRemove(interpreter, false) // key is an element of v.dictionary because it is from PopIterate() callback.
-		interpreter.RemoveReferencedSlab(keyStorable)
+		key := StoredValue(context, keyStorable, storage)
+		key.DeepRemove(context, false) // key is an element of v.dictionary because it is from PopIterate() callback.
+		RemoveReferencedSlab(context, keyStorable)
 
-		value := StoredValue(interpreter, valueStorable, storage)
-		value.DeepRemove(interpreter, false) // value is an element of v.dictionary because it is from PopIterate() callback.
-		interpreter.RemoveReferencedSlab(valueStorable)
+		value := StoredValue(context, valueStorable, storage)
+		value.DeepRemove(context, false) // value is an element of v.dictionary because it is from PopIterate() callback.
+		RemoveReferencedSlab(context, valueStorable)
 	})
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.maybeValidateAtreeValue(v.dictionary)
+	context.MaybeValidateAtreeValue(v.dictionary)
 	if hasNoParentContainer {
-		interpreter.maybeValidateAtreeStorage()
+		context.MaybeValidateAtreeStorage()
 	}
 }
 

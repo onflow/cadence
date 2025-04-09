@@ -22,10 +22,9 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"slices"
 	"strings"
 	"sync"
-
-	"golang.org/x/exp/slices"
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
@@ -316,13 +315,16 @@ func TypeActivationNestedType(typeActivation *VariableActivation, qualifiedIdent
 type ConformingType interface {
 	Type
 	EffectiveInterfaceConformanceSet() *InterfaceSet
+	EffectiveInterfaceConformances() []Conformance
 }
 
 // CompositeKindedType is a type which has a composite kind
 type CompositeKindedType interface {
 	Type
+	LocatedType
 	EntitlementSupportingType
 	GetCompositeKind() common.CompositeKind
+	GetIdentifier() string
 }
 
 // LocatedType is a type which has a location
@@ -598,13 +600,15 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 	members[IsInstanceFunctionName] = MemberResolver{
 		Kind: common.DeclarationKindFunction,
 		Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.HasPosition, _ func(error)) *Member {
-			return NewPublicFunctionMember(
+			fun := NewPublicFunctionMember(
 				memoryGauge,
 				ty,
 				identifier,
 				IsInstanceFunctionType,
 				isInstanceFunctionDocString,
 			)
+			fun.Predeclared = true
+			return fun
 		},
 	}
 
@@ -613,13 +617,16 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 	members[GetTypeFunctionName] = MemberResolver{
 		Kind: common.DeclarationKindFunction,
 		Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.HasPosition, _ func(error)) *Member {
-			return NewPublicFunctionMember(
+			fun := NewPublicFunctionMember(
 				memoryGauge,
 				ty,
 				identifier,
 				GetTypeFunctionType,
 				getTypeFunctionDocString,
 			)
+
+			fun.Predeclared = true
+			return fun
 		},
 	}
 
@@ -630,13 +637,16 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 		members[ToStringFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
 			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.HasPosition, _ func(error)) *Member {
-				return NewPublicFunctionMember(
+				fun := NewPublicFunctionMember(
 					memoryGauge,
 					ty,
 					identifier,
 					ToStringFunctionType,
 					toStringFunctionDocString,
 				)
+
+				fun.Predeclared = true
+				return fun
 			},
 		}
 	}
@@ -1201,6 +1211,7 @@ type NumericType struct {
 var _ Type = &NumericType{}
 var _ IntegerRangedType = &NumericType{}
 var _ SaturatingArithmeticType = &NumericType{}
+var _ ConformingType = &NumericType{}
 
 func NewNumericType(typeName string) *NumericType {
 	return &NumericType{
@@ -1384,14 +1395,31 @@ func (*NumericType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _
 }
 
 var numericTypeEffectiveInterfaceConformanceSet *InterfaceSet
+var numericTypeEffectiveInterfaceConformances []Conformance
 
 func init() {
+	numericTypeInterfaces := []*InterfaceType{
+		StructStringerType,
+	}
+
 	numericTypeEffectiveInterfaceConformanceSet = NewInterfaceSet()
-	numericTypeEffectiveInterfaceConformanceSet.Add(StructStringerType)
+	for _, interfaceType := range numericTypeInterfaces {
+		numericTypeEffectiveInterfaceConformanceSet.Add(interfaceType)
+	}
+
+	numericTypeEffectiveInterfaceConformances = distinctConformances(
+		numericTypeInterfaces,
+		nil,
+		map[*InterfaceType]struct{}{},
+	)
 }
 
 func (t *NumericType) EffectiveInterfaceConformanceSet() *InterfaceSet {
 	return numericTypeEffectiveInterfaceConformanceSet
+}
+
+func (t *NumericType) EffectiveInterfaceConformances() []Conformance {
+	return numericTypeEffectiveInterfaceConformances
 }
 
 // FixedPointNumericType represents all the types in the fixed-point range.
@@ -4715,7 +4743,7 @@ func init() {
 		),
 	)
 
-	for _, v := range runtimeTypeConstructors {
+	for _, v := range RuntimeTypeConstructors {
 		BaseValueActivation.Set(
 			v.Name,
 			baseFunctionVariable(
@@ -4784,6 +4812,7 @@ var _ ContainedType = &CompositeType{}
 var _ LocatedType = &CompositeType{}
 var _ CompositeKindedType = &CompositeType{}
 var _ TypeIndexableType = &CompositeType{}
+var _ ConformingType = &CompositeType{}
 
 func (t *CompositeType) Tag() TypeTag {
 	return CompositeTypeTag
@@ -5395,6 +5424,10 @@ func (t *CompositeType) CheckInstantiated(pos ast.HasPosition, memoryGauge commo
 	}
 }
 
+func (t *CompositeType) GetIdentifier() string {
+	return t.Identifier
+}
+
 // Member
 
 type Member struct {
@@ -5718,6 +5751,7 @@ var _ ContainerType = &InterfaceType{}
 var _ ContainedType = &InterfaceType{}
 var _ LocatedType = &InterfaceType{}
 var _ CompositeKindedType = &InterfaceType{}
+var _ ConformingType = &InterfaceType{}
 
 func (*InterfaceType) IsType() {}
 
@@ -5994,6 +6028,10 @@ func (t *InterfaceType) initializeEffectiveInterfaceConformanceSet() {
 			t.effectiveInterfaceConformanceSet.Add(conformance.InterfaceType)
 		}
 	})
+}
+
+func (t *InterfaceType) GetIdentifier() string {
+	return t.Identifier
 }
 
 // distinctConformances recursively visit conformances and their conformances,

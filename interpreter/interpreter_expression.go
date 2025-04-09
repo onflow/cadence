@@ -153,7 +153,8 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 	indexedType := indexExpressionTypes.IndexedType
 	indexingType := indexExpressionTypes.IndexingType
 
-	transferredIndexingValue := interpreter.transferAndConvert(
+	transferredIndexingValue := transferAndConvert(
+		interpreter,
 		interpreter.evalExpression(indexExpression.IndexingExpression),
 		indexingType,
 		indexedType.IndexingType(),
@@ -294,7 +295,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(
 		},
 		set: func(value Value) {
 			interpreter.checkMemberAccess(memberExpression, target, locationRange)
-			interpreter.setMember(target, locationRange, identifier, value)
+			setMember(interpreter, target, locationRange, identifier, value)
 		},
 	}
 }
@@ -323,7 +324,7 @@ func (interpreter *Interpreter) getReferenceValue(value Value, resultType sema.T
 		// result reference type is unauthorized
 
 		staticType := value.StaticType(interpreter)
-		if referenceType.Authorization != sema.UnauthorizedAccess || !interpreter.IsSubTypeOfSemaType(staticType, resultType) {
+		if referenceType.Authorization != sema.UnauthorizedAccess || !IsSubTypeOfSemaType(interpreter, staticType, resultType) {
 			panic(InvalidMemberReferenceError{
 				ExpectedType:  resultType,
 				ActualType:    MustConvertStaticToSemaType(staticType, interpreter),
@@ -406,7 +407,7 @@ func (interpreter *Interpreter) checkMemberAccess(
 		}
 	}
 
-	if !interpreter.IsSubTypeOfSemaType(targetStaticType, expectedType) {
+	if !IsSubTypeOfSemaType(interpreter, targetStaticType, expectedType) {
 		targetSemaType := MustConvertStaticToSemaType(targetStaticType, interpreter)
 
 		panic(MemberAccessTypeError{
@@ -653,7 +654,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		resultType := binaryExpressionTypes.ResultType
 
 		// NOTE: important to convert both any and optional
-		return interpreter.ConvertAndBox(locationRange, value, rightType, resultType)
+		return ConvertAndBox(interpreter, locationRange, value, rightType, resultType)
 	}
 
 	panic(&unsupportedOperation{
@@ -664,9 +665,9 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 }
 
 func (interpreter *Interpreter) testEqual(left, right Value, expression *ast.BinaryExpression) BoolValue {
-	left = interpreter.Unbox(left)
+	left = Unbox(left)
 
-	right = interpreter.Unbox(right)
+	right = Unbox(right)
 
 	leftEquatable, ok := left.(EquatableValue)
 	if !ok {
@@ -1002,7 +1003,7 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 				Location:    interpreter.Location,
 				HasPosition: argumentExpression,
 			}
-			copies[i] = interpreter.transferAndConvert(argument, argumentType, elementType, locationRange)
+			copies[i] = transferAndConvert(interpreter, argument, argumentType, elementType, locationRange)
 		}
 	}
 
@@ -1036,7 +1037,8 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 		entryType := entryTypes[i]
 		entry := expression.Entries[i]
 
-		key := interpreter.transferAndConvert(
+		key := transferAndConvert(
+			interpreter,
 			dictionaryEntryValues.Key,
 			entryType.KeyType,
 			dictionaryType.KeyType,
@@ -1046,7 +1048,8 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 			},
 		)
 
-		value := interpreter.transferAndConvert(
+		value := transferAndConvert(
+			interpreter,
 			dictionaryEntryValues.Value,
 			entryType.ValueType,
 			dictionaryType.ValueType,
@@ -1237,7 +1240,8 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 
 	interpreter.reportFunctionInvocation()
 
-	resultValue := interpreter.invokeFunctionValue(
+	resultValue := invokeFunctionValue(
+		interpreter,
 		function,
 		arguments,
 		argumentExpressions,
@@ -1365,7 +1369,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 	}
 
 	castingExpressionTypes := interpreter.Program.Elaboration.CastingExpressionTypes(expression)
-	expectedType := interpreter.SubstituteMappedEntitlements(castingExpressionTypes.TargetType)
+	expectedType := SubstituteMappedEntitlements(interpreter, castingExpressionTypes.TargetType)
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
@@ -1383,11 +1387,11 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		unboxedExpectedType := sema.UnwrapOptionalType(expectedType)
 		if !(unboxedExpectedType == sema.AnyStructType || unboxedExpectedType == sema.AnyResourceType) {
 			// otherwise dynamic cast now always unboxes optionals
-			value = interpreter.Unbox(value)
+			value = Unbox(value)
 		}
-		valueSemaType := interpreter.SubstituteMappedEntitlements(MustSemaTypeOfValue(value, interpreter))
+		valueSemaType := SubstituteMappedEntitlements(interpreter, MustSemaTypeOfValue(value, interpreter))
 		valueStaticType := ConvertSemaToStaticType(interpreter, valueSemaType)
-		isSubType := interpreter.IsSubTypeOfSemaType(valueStaticType, expectedType)
+		isSubType := IsSubTypeOfSemaType(interpreter, valueStaticType, expectedType)
 
 		switch expression.Operation {
 		case ast.OperationFailableCast:
@@ -1414,7 +1418,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		}
 
 		// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-		value = interpreter.ConvertAndBox(locationRange, value, valueSemaType, expectedType)
+		value = ConvertAndBox(interpreter, locationRange, value, valueSemaType, expectedType)
 
 		if expression.Operation == ast.OperationFailableCast {
 			// Failable casting is a resource invalidation
@@ -1428,7 +1432,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 	case ast.OperationCast:
 		staticValueType := castingExpressionTypes.StaticValueType
 		// The cast may upcast to an optional type, e.g. `1 as Int?`, so box
-		return interpreter.ConvertAndBox(locationRange, value, staticValueType, expectedType)
+		return ConvertAndBox(interpreter, locationRange, value, staticValueType, expectedType)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -1644,7 +1648,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		true, // base is standalone.
 	).(*CompositeValue)
 
-	attachment.setBaseValue(interpreter, base)
+	attachment.setBaseValue(base)
 
 	// we enforce this in the checker
 	if !ok {

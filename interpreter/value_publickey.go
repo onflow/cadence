@@ -27,14 +27,14 @@ import (
 // Parameter types:
 // - publicKey: PublicKey
 type PublicKeyValidationHandlerFunc func(
-	interpreter *Interpreter,
+	context PublicKeyValidationContext,
 	locationRange LocationRange,
 	publicKey *CompositeValue,
 ) error
 
 // NewPublicKeyValue constructs a PublicKey value.
 func NewPublicKeyValue(
-	interpreter *Interpreter,
+	context PublicKeyCreationContext,
 	locationRange LocationRange,
 	publicKey *ArrayValue,
 	signAlgo Value,
@@ -53,7 +53,7 @@ func NewPublicKeyValue(
 	}
 
 	publicKeyValue := NewCompositeValue(
-		interpreter,
+		context,
 		locationRange,
 		sema.PublicKeyType.Location,
 		sema.PublicKeyType.QualifiedIdentifier(),
@@ -62,7 +62,7 @@ func NewPublicKeyValue(
 		common.ZeroAddress,
 	)
 
-	err := validatePublicKey(interpreter, locationRange, publicKeyValue)
+	err := validatePublicKey(context, locationRange, publicKeyValue)
 	if err != nil {
 		panic(InvalidPublicKeyError{
 			PublicKey:     publicKey,
