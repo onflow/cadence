@@ -108,9 +108,7 @@ func (executor *interpreterContractFunctionExecutor) preprocess() (err error) {
 	storage := NewStorage(
 		runtimeInterface,
 		runtimeInterface,
-		StorageConfig{
-			StorageFormatV2Enabled: interpreterRuntime.defaultConfig.StorageFormatV2Enabled,
-		},
+		StorageConfig{},
 	)
 	executor.storage = storage
 
