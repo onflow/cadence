@@ -5684,6 +5684,106 @@ func TestResourceOwner(t *testing.T) {
 	)
 }
 
+func TestResourceUUID(t *testing.T) {
+	t.Parallel()
+
+	importLocation := common.NewAddressLocation(nil, common.Address{0x1}, "C")
+
+	importedChecker, err := ParseAndCheckWithOptions(t,
+		`
+          contract C {
+
+              resource R {}
+
+              fun test(): UInt64 {
+                  let r <- create R()
+                  let uuid = r.uuid
+                  destroy r
+                  return uuid
+              }
+          }
+        `,
+		ParseAndCheckOptions{
+			Location: importLocation,
+		},
+	)
+	require.NoError(t, err)
+
+	importCompiler := compiler.NewInstructionCompiler(importedChecker)
+	importedProgram := importCompiler.Compile()
+
+	vmInstance := vm.NewVM(importLocation, importedProgram, nil)
+	importedContractValue, err := vmInstance.InitializeContract()
+	require.NoError(t, err)
+
+	checker, err := ParseAndCheckWithOptions(t,
+		`
+          import C from 0x1
+
+          fun test(): UInt64 {
+              return C.test()
+          }
+        `,
+		ParseAndCheckOptions{
+			Config: &sema.Config{
+				ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker)
+	comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+		return importedProgram
+	}
+
+	program := comp.Compile()
+
+	var uuid uint64 = 42
+
+	vmConfig := (&vm.Config{
+		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
+			return importedProgram
+		},
+		ContractValueHandler: func(*vm.Config, common.Location) *interpreter.CompositeValue {
+			return importedContractValue
+		},
+		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+			elaboration := importedChecker.Elaboration
+			compositeType := elaboration.CompositeType(typeID)
+			if compositeType != nil {
+				return compositeType
+			}
+
+			return elaboration.InterfaceType(typeID)
+		},
+	}).WithInterpreterConfig(&interpreter.Config{
+		UUIDHandler: func() (uint64, error) {
+			uuid++
+			return uuid, nil
+		},
+		AccountHandler: func(context interpreter.AccountCreationContext, address interpreter.AddressValue) interpreter.Value {
+			return stdlib.NewAccountValue(context, nil, address)
+		},
+	})
+
+	vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
+
+	result, err := vmInstance.Invoke("test")
+	require.NoError(t, err)
+	require.Equal(t, 0, vmInstance.StackSize())
+
+	require.Equal(
+		t,
+		interpreter.NewUnmeteredUInt64Value(43),
+		result,
+	)
+}
+
 func TestUnclosedUpvalue(t *testing.T) {
 
 	t.Parallel()
