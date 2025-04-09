@@ -611,14 +611,12 @@ func (v *CompositeValue) OwnerValue(context MemberAccessibleContext, locationRan
 }
 
 func (v *CompositeValue) RemoveMember(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	name string,
 ) Value {
 
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		owner := v.GetOwner().String()
@@ -626,7 +624,7 @@ func (v *CompositeValue) RemoveMember(
 		kind := v.Kind.String()
 
 		defer func() {
-			interpreter.reportCompositeValueRemoveMemberTrace(
+			context.ReportCompositeValueRemoveMemberTrace(
 				owner,
 				typeID,
 				kind,
@@ -651,22 +649,22 @@ func (v *CompositeValue) RemoveMember(
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.MaybeValidateAtreeValue(v.dictionary)
-	interpreter.MaybeValidateAtreeStorage()
+	context.MaybeValidateAtreeValue(v.dictionary)
+	context.MaybeValidateAtreeStorage()
 
 	// Key
-	RemoveReferencedSlab(interpreter, existingKeyStorable)
+	RemoveReferencedSlab(context, existingKeyStorable)
 
 	// Value
 
 	storedValue := StoredValue(
-		interpreter,
+		context,
 		existingValueStorable,
-		config.Storage,
+		context.Storage(),
 	)
 	return storedValue.
 		Transfer(
-			interpreter,
+			context,
 			locationRange,
 			atree.Address{},
 			true,
@@ -677,7 +675,7 @@ func (v *CompositeValue) RemoveMember(
 }
 
 func (v *CompositeValue) SetMemberWithoutTransfer(
-	context MemberAccessibleContext,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	name string,
 	value Value,
@@ -730,7 +728,7 @@ func (v *CompositeValue) SetMemberWithoutTransfer(
 	return false
 }
 
-func (v *CompositeValue) SetMember(context MemberAccessibleContext, locationRange LocationRange, name string, value Value) bool {
+func (v *CompositeValue) SetMember(context ValueTransferContext, locationRange LocationRange, name string, value Value) bool {
 	address := v.StorageAddress()
 
 	value = value.Transfer(

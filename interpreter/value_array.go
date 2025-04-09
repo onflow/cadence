@@ -1149,12 +1149,12 @@ func (v *ArrayValue) GetMember(context MemberAccessibleContext, _ LocationRange,
 	return nil
 }
 
-func (v *ArrayValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (v *ArrayValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Arrays have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (v *ArrayValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (v *ArrayValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Arrays have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

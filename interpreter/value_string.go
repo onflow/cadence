@@ -533,12 +533,12 @@ func StringConcat(
 	return this.Concat(context, otherArray, locationRange)
 }
 
-func (*StringValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (*StringValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Strings have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (*StringValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (*StringValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Strings have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

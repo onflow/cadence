@@ -255,13 +255,13 @@ func (v *AccountCapabilityControllerValue) GetMember(context MemberAccessibleCon
 	return nil
 }
 
-func (*AccountCapabilityControllerValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (*AccountCapabilityControllerValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Account capability controllers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v *AccountCapabilityControllerValue) SetMember(
-	context MemberAccessibleContext,
+	context ValueTransferContext,
 	_ LocationRange,
 	identifier string,
 	value Value,

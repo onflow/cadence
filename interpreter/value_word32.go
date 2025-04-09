@@ -397,12 +397,12 @@ func (v Word32Value) GetMember(context MemberAccessibleContext, locationRange Lo
 	return getNumberValueMember(context, v, name, sema.Word32Type, locationRange)
 }
 
-func (Word32Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (Word32Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (Word32Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (Word32Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

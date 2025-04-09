@@ -139,18 +139,18 @@ func (v *EphemeralReferenceValue) GetMember(context MemberAccessibleContext, loc
 }
 
 func (v *EphemeralReferenceValue) RemoveMember(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	identifier string,
 ) Value {
 	if memberAccessibleValue, ok := v.Value.(MemberAccessibleValue); ok {
-		return memberAccessibleValue.RemoveMember(interpreter, locationRange, identifier)
+		return memberAccessibleValue.RemoveMember(context, locationRange, identifier)
 	}
 
 	return nil
 }
 
-func (v *EphemeralReferenceValue) SetMember(context MemberAccessibleContext, locationRange LocationRange, name string, value Value) bool {
+func (v *EphemeralReferenceValue) SetMember(context ValueTransferContext, locationRange LocationRange, name string, value Value) bool {
 	return setMember(context, v.Value, locationRange, name, value)
 }
 

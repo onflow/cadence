@@ -180,11 +180,11 @@ func (v *PathCapabilityValue) GetMember(context MemberAccessibleContext, locatio
 	return nil
 }
 
-func (*PathCapabilityValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (*PathCapabilityValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (*PathCapabilityValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (*PathCapabilityValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	panic(errors.NewUnreachableError())
 }
 

@@ -154,9 +154,9 @@ type TypeIndexableValue interface {
 type MemberAccessibleValue interface {
 	Value
 	GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value
-	RemoveMember(interpreter *Interpreter, locationRange LocationRange, name string) Value
-	// returns whether a value previously existed with this name
-	SetMember(context MemberAccessibleContext, locationRange LocationRange, name string, value Value) bool
+	RemoveMember(context ValueTransferContext, locationRange LocationRange, name string) Value
+	// SetMember returns whether a value previously existed with this name.
+	SetMember(context ValueTransferContext, locationRange LocationRange, name string, value Value) bool
 }
 
 type ValueComparisonContext interface {

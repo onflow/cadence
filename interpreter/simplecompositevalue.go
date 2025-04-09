@@ -151,13 +151,13 @@ func (v *SimpleCompositeValue) GetMember(context MemberAccessibleContext, locati
 	return nil
 }
 
-func (v *SimpleCompositeValue) RemoveMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v *SimpleCompositeValue) RemoveMember(_ ValueTransferContext, _ LocationRange, name string) Value {
 	value := v.Fields[name]
 	delete(v.Fields, name)
 	return value
 }
 
-func (v *SimpleCompositeValue) SetMember(_ MemberAccessibleContext, _ LocationRange, name string, value Value) bool {
+func (v *SimpleCompositeValue) SetMember(_ ValueTransferContext, _ LocationRange, name string, value Value) bool {
 	_, hasField := v.Fields[name]
 	v.Fields[name] = value
 	return hasField

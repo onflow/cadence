@@ -140,12 +140,12 @@ func (v PathValue) GetMember(context MemberAccessibleContext, locationRange Loca
 	return nil
 }
 
-func (PathValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (PathValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Paths have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (PathValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (PathValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Paths have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

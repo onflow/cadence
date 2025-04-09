@@ -255,12 +255,12 @@ func (v TypeValue) GetMember(context MemberAccessibleContext, _ LocationRange, n
 	return nil
 }
 
-func (TypeValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (TypeValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Types have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (TypeValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (TypeValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Types have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

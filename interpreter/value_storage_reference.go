@@ -220,16 +220,16 @@ func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, locat
 }
 
 func (v *StorageReferenceValue) RemoveMember(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	name string,
 ) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.mustReferencedValue(context, locationRange)
 
-	return self.(MemberAccessibleValue).RemoveMember(interpreter, locationRange, name)
+	return self.(MemberAccessibleValue).RemoveMember(context, locationRange, name)
 }
 
-func (v *StorageReferenceValue) SetMember(context MemberAccessibleContext, locationRange LocationRange, name string, value Value) bool {
+func (v *StorageReferenceValue) SetMember(context ValueTransferContext, locationRange LocationRange, name string, value Value) bool {
 	self := v.mustReferencedValue(context, locationRange)
 
 	return setMember(

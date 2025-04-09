@@ -71,6 +71,7 @@ type Tracer interface {
 	ReportCompositeValueConstructTrace(owner string, id string, kind string, since time.Duration)
 	ReportCompositeValueDestroyTrace(owner string, id string, kind string, since time.Duration)
 	ReportCompositeValueConformsToStaticTypeTrace(owner string, id string, kind string, since time.Duration)
+	ReportCompositeValueRemoveMemberTrace(owner string, id string, kind string, name string, since time.Duration)
 
 	ReportDomainStorageMapDeepRemoveTrace(info string, i int, since time.Duration)
 }
@@ -376,7 +377,7 @@ func (interpreter *Interpreter) ReportCompositeValueSetMemberTrace(
 	)
 }
 
-func (interpreter *Interpreter) reportCompositeValueRemoveMemberTrace(
+func (interpreter *Interpreter) ReportCompositeValueRemoveMemberTrace(
 	owner string,
 	typeID string,
 	kind string,

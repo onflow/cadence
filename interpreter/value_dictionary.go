@@ -883,12 +883,12 @@ func (v *DictionaryValue) GetMember(context MemberAccessibleContext, locationRan
 	return nil
 }
 
-func (v *DictionaryValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (v *DictionaryValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Dictionaries have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (v *DictionaryValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (v *DictionaryValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Dictionaries have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
