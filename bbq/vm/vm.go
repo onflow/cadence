@@ -215,8 +215,9 @@ func (vm *VM) pushCallFrame(functionValue FunctionValue, arguments []Value) {
 }
 
 func (vm *VM) popCallFrame() {
-	// Close all open upvalues before popping the locals
-	for absoluteLocalsIndex, upvalue := range vm.callFrame.openUpvalues {
+	// Close all open upvalues before popping the locals.
+	// The order of the closing does not matter
+	for absoluteLocalsIndex, upvalue := range vm.callFrame.openUpvalues { //nolint:maprange
 		upvalue.closed = vm.locals[absoluteLocalsIndex]
 	}
 
