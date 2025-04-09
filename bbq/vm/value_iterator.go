@@ -39,7 +39,7 @@ func NewIteratorWrapperValue(iterator interpreter.ValueIterator) *IteratorWrappe
 
 func (v IteratorWrapperValue) IsValue() {}
 
-func (v IteratorWrapperValue) Storable(storage atree.SlabStorage, address atree.Address, u uint64) (atree.Storable, error) {
+func (v IteratorWrapperValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	// Iterator is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
@@ -51,49 +51,65 @@ func (v IteratorWrapperValue) String() string {
 	panic(errors.NewUnreachableError())
 }
 
-func (v IteratorWrapperValue) Accept(interpreter *interpreter.Interpreter, visitor interpreter.Visitor, locationRange interpreter.LocationRange) {
+func (v IteratorWrapperValue) Accept(
+	_ interpreter.ValueVisitContext,
+	_ interpreter.Visitor,
+	_ interpreter.LocationRange,
+) {
 	// Iterator is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
 }
 
-func (v IteratorWrapperValue) Walk(interpreter interpreter.ValueWalkContext, walkChild func(interpreter.Value), locationRange interpreter.LocationRange) {
+func (v IteratorWrapperValue) Walk(
+	_ interpreter.ValueWalkContext,
+	_ func(interpreter.Value),
+	_ interpreter.LocationRange,
+) {
 	// Iterator is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
 }
 
-func (v IteratorWrapperValue) StaticType(context interpreter.ValueStaticTypeContext) interpreter.StaticType {
+func (v IteratorWrapperValue) StaticType(_ interpreter.ValueStaticTypeContext) interpreter.StaticType {
 	// Iterator is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
 }
 
-func (v IteratorWrapperValue) ConformsToStaticType(interpreter *interpreter.Interpreter, locationRange interpreter.LocationRange, results interpreter.TypeConformanceResults) bool {
+func (v IteratorWrapperValue) ConformsToStaticType(
+	_ interpreter.ValueStaticTypeConformanceContext,
+	_ interpreter.LocationRange,
+	_ interpreter.TypeConformanceResults,
+) bool {
 	// Iterator is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
 }
 
-func (v IteratorWrapperValue) RecursiveString(seenReferences interpreter.SeenReferences) string {
+func (v IteratorWrapperValue) RecursiveString(_ interpreter.SeenReferences) string {
 	// Iterator is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
 }
 
-func (v IteratorWrapperValue) MeteredString(context interpreter.ValueStringContext, seenReferences interpreter.SeenReferences, locationRange interpreter.LocationRange) string {
+func (v IteratorWrapperValue) MeteredString(
+	_ interpreter.ValueStringContext,
+	_ interpreter.SeenReferences,
+	_ interpreter.LocationRange,
+) string {
 	// Iterator is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
 }
 
-func (v IteratorWrapperValue) IsResourceKinded(context interpreter.ValueStaticTypeContext) bool {
+func (v IteratorWrapperValue) IsResourceKinded(_ interpreter.ValueStaticTypeContext) bool {
 	// Iterator is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
 }
 
-func (v IteratorWrapperValue) NeedsStoreTo(address atree.Address) bool {
+func (v IteratorWrapperValue) NeedsStoreTo(_ atree.Address) bool {
 	// Iterator is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
@@ -111,19 +127,19 @@ func (v IteratorWrapperValue) Transfer(
 	return v
 }
 
-func (v IteratorWrapperValue) DeepRemove(removeContext interpreter.ValueRemoveContext, hasNoParentContainer bool) {
+func (v IteratorWrapperValue) DeepRemove(_ interpreter.ValueRemoveContext, _ bool) {
 	// Iterator is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
 }
 
-func (v IteratorWrapperValue) Clone(interpreter *interpreter.Interpreter) interpreter.Value {
+func (v IteratorWrapperValue) Clone(_ interpreter.ValueCloneContext) interpreter.Value {
 	// Iterator is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
 }
 
-func (v IteratorWrapperValue) IsImportable(interpreter *interpreter.Interpreter, locationRange interpreter.LocationRange) bool {
+func (v IteratorWrapperValue) IsImportable(_ interpreter.ValueImportableContext, _ interpreter.LocationRange) bool {
 	// Iterator is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
