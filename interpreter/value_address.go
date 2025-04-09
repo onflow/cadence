@@ -198,12 +198,12 @@ func (v AddressValue) GetMember(context MemberAccessibleContext, _ LocationRange
 	return nil
 }
 
-func (AddressValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (AddressValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Addresses have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (AddressValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (AddressValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Addresses have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

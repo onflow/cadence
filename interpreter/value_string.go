@@ -533,12 +533,12 @@ func StringConcat(
 	return this.Concat(context, otherArray, locationRange)
 }
 
-func (*StringValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (*StringValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Strings have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (*StringValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (*StringValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Strings have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -854,22 +854,22 @@ func (v *StringValue) Iterator(_ ValueStaticTypeContext, _ LocationRange) ValueI
 }
 
 func (v *StringValue) ForEach(
-	interpreter *Interpreter,
+	context IterableValueForeachContext,
 	_ sema.Type,
 	function func(value Value) (resume bool),
 	transferElements bool,
 	locationRange LocationRange,
 ) {
-	iterator := v.Iterator(interpreter, locationRange)
+	iterator := v.Iterator(context, locationRange)
 	for {
-		value := iterator.Next(interpreter, locationRange)
+		value := iterator.Next(context, locationRange)
 		if value == nil {
 			return
 		}
 
 		if transferElements {
 			value = value.Transfer(
-				interpreter,
+				context,
 				locationRange,
 				atree.Address{},
 				false,

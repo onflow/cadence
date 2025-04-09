@@ -544,12 +544,12 @@ func (v Word128Value) GetMember(context MemberAccessibleContext, locationRange L
 	return getNumberValueMember(context, v, name, sema.Word128Type, locationRange)
 }
 
-func (Word128Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (Word128Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (Word128Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (Word128Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

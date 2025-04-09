@@ -123,6 +123,11 @@ type ValueTransferContext interface {
 
 	WithMutationPrevention(valueID atree.ValueID, f func())
 	ValidateMutation(valueID atree.ValueID, locationRange LocationRange)
+
+	EnforceNotResourceDestruction(
+		valueID atree.ValueID,
+		locationRange LocationRange,
+	)
 }
 
 var _ ValueTransferContext = &Interpreter{}
@@ -188,6 +193,21 @@ type ReferenceCreationContext interface {
 }
 
 var _ ReferenceCreationContext = &Interpreter{}
+
+type GetReferenceContext interface {
+	ReferenceCreationContext
+	ValueStaticTypeContext
+	EntitlementMappingsSubstitutionHandler
+}
+
+var _ GetReferenceContext = &Interpreter{}
+
+type IterableValueForeachContext interface {
+	ValueTransferContext
+	EntitlementMappingsSubstitutionHandler
+}
+
+var _ IterableValueForeachContext = &Interpreter{}
 
 type AccountHandlerContext interface {
 	AccountHandler() AccountHandlerFunc
@@ -258,11 +278,6 @@ type StorageIterationTracker interface {
 var _ StorageIterationTracker = &Interpreter{}
 
 type ResourceDestructionHandler interface {
-	EnforceNotResourceDestruction(
-		valueID atree.ValueID,
-		locationRange LocationRange,
-	)
-
 	WithResourceDestruction(
 		valueID atree.ValueID,
 		locationRange LocationRange,
@@ -533,6 +548,10 @@ func (ctx NoOpStringContext) ValidateMutation(_ atree.ValueID, _ LocationRange) 
 	panic(errors.NewUnreachableError())
 }
 
+func (ctx NoOpStringContext) EnforceNotResourceDestruction(_ atree.ValueID, _ LocationRange) {
+	panic(errors.NewUnreachableError())
+}
+
 func (ctx NoOpStringContext) ReadStored(_ common.Address, _ common.StorageDomain, _ StorageMapKey) Value {
 	panic(errors.NewUnreachableError())
 }
@@ -662,6 +681,10 @@ func (ctx NoOpStringContext) ReportCompositeValueConstructTrace(_ string, _ stri
 }
 
 func (ctx NoOpStringContext) ReportCompositeValueConformsToStaticTypeTrace(_ string, _ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (ctx NoOpStringContext) ReportCompositeValueRemoveMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 

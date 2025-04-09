@@ -290,13 +290,13 @@ func (v *StorageCapabilityControllerValue) GetMember(context MemberAccessibleCon
 	return nil
 }
 
-func (*StorageCapabilityControllerValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (*StorageCapabilityControllerValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Storage capability controllers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v *StorageCapabilityControllerValue) SetMember(
-	context MemberAccessibleContext,
+	context ValueTransferContext,
 	_ LocationRange,
 	identifier string,
 	value Value,

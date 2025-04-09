@@ -639,12 +639,12 @@ func (v UInt128Value) GetMember(context MemberAccessibleContext, locationRange L
 	return getNumberValueMember(context, v, name, sema.UInt128Type, locationRange)
 }
 
-func (UInt128Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (UInt128Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (UInt128Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (UInt128Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

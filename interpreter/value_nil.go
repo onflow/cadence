@@ -107,12 +107,12 @@ func (v NilValue) GetMember(context MemberAccessibleContext, locationRange Locat
 	return nil
 }
 
-func (NilValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (NilValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Nil has no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (NilValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (NilValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Nil has no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

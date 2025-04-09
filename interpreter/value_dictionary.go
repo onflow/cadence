@@ -474,8 +474,8 @@ func (v *DictionaryValue) isInvalidatedResource(context ValueStaticTypeContext) 
 	return v.isDestroyed || (v.dictionary == nil && v.IsResourceKinded(context))
 }
 
-func (v *DictionaryValue) IsStaleResource(interpreter *Interpreter) bool {
-	return v.dictionary == nil && v.IsResourceKinded(interpreter)
+func (v *DictionaryValue) IsStaleResource(context ValueStaticTypeContext) bool {
+	return v.dictionary == nil && v.IsResourceKinded(context)
 }
 
 func (v *DictionaryValue) Destroy(context ResourceDestructionContext, locationRange LocationRange) {
@@ -883,12 +883,12 @@ func (v *DictionaryValue) GetMember(context MemberAccessibleContext, locationRan
 	return nil
 }
 
-func (v *DictionaryValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (v *DictionaryValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Dictionaries have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (v *DictionaryValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (v *DictionaryValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Dictionaries have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

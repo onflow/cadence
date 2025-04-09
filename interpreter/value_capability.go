@@ -164,12 +164,12 @@ func (v *IDCapabilityValue) GetMember(context MemberAccessibleContext, _ Locatio
 	return nil
 }
 
-func (*IDCapabilityValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (*IDCapabilityValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Capabilities have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (*IDCapabilityValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (*IDCapabilityValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Capabilities have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
