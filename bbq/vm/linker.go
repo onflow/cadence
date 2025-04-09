@@ -20,6 +20,8 @@ package vm
 
 import (
 	"fmt"
+	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
 
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
@@ -115,9 +117,17 @@ func LinkGlobals(
 	// TODO: include non-function globals
 	for i := range program.Functions {
 		function := &program.Functions[i]
+
+		staticType := executable.StaticTypes[function.TypeIndex]
+		funcStaticType, ok := staticType.(interpreter.FunctionStaticType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
 		value := FunctionValue{
 			Function:   function,
 			Executable: executable,
+			Type:       funcStaticType,
 		}
 
 		globals = append(globals, value)

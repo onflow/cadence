@@ -296,3 +296,7 @@ func (e *ExtendedElaboration) SetFunctionDeclarationFunctionType(
 	}
 	e.functionDeclarationFunctionTypes[declaration] = functionType
 }
+
+func (e *ExtendedElaboration) FunctionExpressionFunctionType(expression *ast.FunctionExpression) *sema.FunctionType {
+	return e.elaboration.FunctionExpressionFunctionType(expression)
+}
