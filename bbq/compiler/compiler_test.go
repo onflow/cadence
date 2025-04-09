@@ -4501,7 +4501,7 @@ func TestCompileFunctionExpressionOuterOuterVariableUse(t *testing.T) {
 			aLocalIndex = iota
 			// bLocalIndex is the local index of the variable `b`, which is the second local variable
 			bLocalIndex
-			// middleLocalIndex is the local index of the variable `b`, which is the third local variable
+			// middleLocalIndex is the local index of the variable `middle`, which is the third local variable
 			middleLocalIndex
 		)
 
