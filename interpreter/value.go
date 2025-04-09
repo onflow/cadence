@@ -144,9 +144,9 @@ type ValueIndexableValue interface {
 
 type TypeIndexableValue interface {
 	Value
-	GetTypeKey(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) Value
-	SetTypeKey(interpreter *Interpreter, locationRange LocationRange, ty sema.Type, value Value)
-	RemoveTypeKey(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) Value
+	GetTypeKey(context MemberAccessibleContext, locationRange LocationRange, ty sema.Type) Value
+	SetTypeKey(context ValueTransferContext, locationRange LocationRange, ty sema.Type, value Value)
+	RemoveTypeKey(context ValueTransferContext, locationRange LocationRange, ty sema.Type) Value
 }
 
 // MemberAccessibleValue
@@ -154,9 +154,9 @@ type TypeIndexableValue interface {
 type MemberAccessibleValue interface {
 	Value
 	GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value
-	RemoveMember(interpreter *Interpreter, locationRange LocationRange, name string) Value
-	// returns whether a value previously existed with this name
-	SetMember(context MemberAccessibleContext, locationRange LocationRange, name string, value Value) bool
+	RemoveMember(context ValueTransferContext, locationRange LocationRange, name string) Value
+	// SetMember returns whether a value previously existed with this name.
+	SetMember(context ValueTransferContext, locationRange LocationRange, name string, value Value) bool
 }
 
 type ValueComparisonContext interface {
@@ -216,7 +216,7 @@ type ReferenceTrackedResourceKindedValue interface {
 	ResourceKindedValue
 	IsReferenceTrackedResourceKindedValue()
 	ValueID() atree.ValueID
-	IsStaleResource(*Interpreter) bool
+	IsStaleResource(ValueStaticTypeContext) bool
 }
 
 // ContractValue is the value of a contract.
@@ -232,7 +232,7 @@ type ContractValue interface {
 type IterableValue interface {
 	Value
 	ForEach(
-		interpreter *Interpreter,
+		context IterableValueForeachContext,
 		elementType sema.Type,
 		function func(value Value) (resume bool),
 		transferElements bool,

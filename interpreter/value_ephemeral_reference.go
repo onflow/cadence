@@ -139,18 +139,18 @@ func (v *EphemeralReferenceValue) GetMember(context MemberAccessibleContext, loc
 }
 
 func (v *EphemeralReferenceValue) RemoveMember(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	identifier string,
 ) Value {
 	if memberAccessibleValue, ok := v.Value.(MemberAccessibleValue); ok {
-		return memberAccessibleValue.RemoveMember(interpreter, locationRange, identifier)
+		return memberAccessibleValue.RemoveMember(context, locationRange, identifier)
 	}
 
 	return nil
 }
 
-func (v *EphemeralReferenceValue) SetMember(context MemberAccessibleContext, locationRange LocationRange, name string, value Value) bool {
+func (v *EphemeralReferenceValue) SetMember(context ValueTransferContext, locationRange LocationRange, name string, value Value) bool {
 	return setMember(context, v.Value, locationRange, name, value)
 }
 
@@ -175,7 +175,7 @@ func (v *EphemeralReferenceValue) RemoveKey(context ContainerMutationContext, lo
 }
 
 func (v *EphemeralReferenceValue) GetTypeKey(
-	interpreter *Interpreter,
+	context MemberAccessibleContext,
 	locationRange LocationRange,
 	key sema.Type,
 ) Value {
@@ -183,34 +183,34 @@ func (v *EphemeralReferenceValue) GetTypeKey(
 
 	if selfComposite, isComposite := self.(*CompositeValue); isComposite {
 		return selfComposite.getTypeKey(
-			interpreter,
+			context,
 			locationRange,
 			key,
-			MustConvertStaticAuthorizationToSemaAccess(interpreter, v.Authorization),
+			MustConvertStaticAuthorizationToSemaAccess(context, v.Authorization),
 		)
 	}
 
 	return self.(TypeIndexableValue).
-		GetTypeKey(interpreter, locationRange, key)
+		GetTypeKey(context, locationRange, key)
 }
 
 func (v *EphemeralReferenceValue) SetTypeKey(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	key sema.Type,
 	value Value,
 ) {
 	v.Value.(TypeIndexableValue).
-		SetTypeKey(interpreter, locationRange, key, value)
+		SetTypeKey(context, locationRange, key, value)
 }
 
 func (v *EphemeralReferenceValue) RemoveTypeKey(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	key sema.Type,
 ) Value {
 	return v.Value.(TypeIndexableValue).
-		RemoveTypeKey(interpreter, locationRange, key)
+		RemoveTypeKey(context, locationRange, key)
 }
 
 func (v *EphemeralReferenceValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
@@ -308,14 +308,14 @@ func (*EphemeralReferenceValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 func (*EphemeralReferenceValue) isReference() {}
 
 func (v *EphemeralReferenceValue) ForEach(
-	interpreter *Interpreter,
+	context IterableValueForeachContext,
 	elementType sema.Type,
 	function func(value Value) (resume bool),
 	_ bool,
 	locationRange LocationRange,
 ) {
 	forEachReference(
-		interpreter,
+		context,
 		v,
 		v.Value,
 		elementType,

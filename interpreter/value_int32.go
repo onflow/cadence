@@ -617,12 +617,12 @@ func (v Int32Value) GetMember(context MemberAccessibleContext, locationRange Loc
 	return getNumberValueMember(context, v, name, sema.Int32Type, locationRange)
 }
 
-func (Int32Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (Int32Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (Int32Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (Int32Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

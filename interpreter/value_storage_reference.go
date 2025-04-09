@@ -220,16 +220,16 @@ func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, locat
 }
 
 func (v *StorageReferenceValue) RemoveMember(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	name string,
 ) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.mustReferencedValue(context, locationRange)
 
-	return self.(MemberAccessibleValue).RemoveMember(interpreter, locationRange, name)
+	return self.(MemberAccessibleValue).RemoveMember(context, locationRange, name)
 }
 
-func (v *StorageReferenceValue) SetMember(context MemberAccessibleContext, locationRange LocationRange, name string, value Value) bool {
+func (v *StorageReferenceValue) SetMember(context ValueTransferContext, locationRange LocationRange, name string, value Value) bool {
 	self := v.mustReferencedValue(context, locationRange)
 
 	return setMember(
@@ -270,46 +270,46 @@ func (v *StorageReferenceValue) RemoveKey(context ContainerMutationContext, loca
 }
 
 func (v *StorageReferenceValue) GetTypeKey(
-	interpreter *Interpreter,
+	context MemberAccessibleContext,
 	locationRange LocationRange,
 	key sema.Type,
 ) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.mustReferencedValue(context, locationRange)
 
 	if selfComposite, isComposite := self.(*CompositeValue); isComposite {
 		return selfComposite.getTypeKey(
-			interpreter,
+			context,
 			locationRange,
 			key,
-			MustConvertStaticAuthorizationToSemaAccess(interpreter, v.Authorization),
+			MustConvertStaticAuthorizationToSemaAccess(context, v.Authorization),
 		)
 	}
 
 	return self.(TypeIndexableValue).
-		GetTypeKey(interpreter, locationRange, key)
+		GetTypeKey(context, locationRange, key)
 }
 
 func (v *StorageReferenceValue) SetTypeKey(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	key sema.Type,
 	value Value,
 ) {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.mustReferencedValue(context, locationRange)
 
 	self.(TypeIndexableValue).
-		SetTypeKey(interpreter, locationRange, key, value)
+		SetTypeKey(context, locationRange, key, value)
 }
 
 func (v *StorageReferenceValue) RemoveTypeKey(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	key sema.Type,
 ) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.mustReferencedValue(context, locationRange)
 
 	return self.(TypeIndexableValue).
-		RemoveTypeKey(interpreter, locationRange, key)
+		RemoveTypeKey(context, locationRange, key)
 }
 
 func (v *StorageReferenceValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
@@ -401,15 +401,15 @@ func (*StorageReferenceValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 func (*StorageReferenceValue) isReference() {}
 
 func (v *StorageReferenceValue) ForEach(
-	interpreter *Interpreter,
+	context IterableValueForeachContext,
 	elementType sema.Type,
 	function func(value Value) (resume bool),
 	_ bool,
 	locationRange LocationRange,
 ) {
-	referencedValue := v.mustReferencedValue(interpreter, locationRange)
+	referencedValue := v.mustReferencedValue(context, locationRange)
 	forEachReference(
-		interpreter,
+		context,
 		v,
 		referencedValue,
 		elementType,
@@ -419,7 +419,7 @@ func (v *StorageReferenceValue) ForEach(
 }
 
 func forEachReference(
-	interpreter *Interpreter,
+	context IterableValueForeachContext,
 	reference ReferenceValue,
 	referencedValue Value,
 	elementType sema.Type,
@@ -437,10 +437,15 @@ func forEachReference(
 		// The loop dereference the reference once, and hold onto that referenced-value.
 		// But the reference could get invalidated during the iteration, making that referenced-value invalid.
 		// So check the validity of the reference, before each iteration.
-		checkInvalidatedResourceOrResourceReference(reference, locationRange, interpreter)
+		checkInvalidatedResourceOrResourceReference(reference, locationRange, context)
 
 		if isResultReference {
-			value = interpreter.getReferenceValue(value, elementType, locationRange)
+			value = getReferenceValue(
+				context,
+				value,
+				elementType,
+				locationRange,
+			)
 		}
 
 		return function(value)
@@ -456,7 +461,7 @@ func forEachReference(
 	const transferElements = false
 
 	referencedIterable.ForEach(
-		interpreter,
+		context,
 		referencedElementType,
 		updatedFunction,
 		transferElements,

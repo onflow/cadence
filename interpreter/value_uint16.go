@@ -500,12 +500,12 @@ func (v UInt16Value) GetMember(context MemberAccessibleContext, locationRange Lo
 	return getNumberValueMember(context, v, name, sema.UInt16Type, locationRange)
 }
 
-func (UInt16Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (UInt16Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (UInt16Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (UInt16Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

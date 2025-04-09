@@ -545,12 +545,12 @@ func (v Word256Value) GetMember(context MemberAccessibleContext, locationRange L
 	return getNumberValueMember(context, v, name, sema.Word256Type, locationRange)
 }
 
-func (Word256Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (Word256Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (Word256Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (Word256Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

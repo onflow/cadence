@@ -248,12 +248,12 @@ func (v CharacterValue) GetMember(context MemberAccessibleContext, _ LocationRan
 	return nil
 }
 
-func (CharacterValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (CharacterValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Characters have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (CharacterValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (CharacterValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Characters have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

@@ -709,12 +709,12 @@ func (v Int256Value) GetMember(context MemberAccessibleContext, locationRange Lo
 	return getNumberValueMember(context, v, name, sema.Int256Type, locationRange)
 }
 
-func (Int256Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (Int256Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (Int256Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (Int256Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

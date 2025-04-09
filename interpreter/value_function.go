@@ -268,12 +268,12 @@ func (f *HostFunctionValue) GetMember(context MemberAccessibleContext, _ Locatio
 	return nil
 }
 
-func (*HostFunctionValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (*HostFunctionValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Host functions have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (*HostFunctionValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (*HostFunctionValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Host functions have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

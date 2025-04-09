@@ -500,8 +500,8 @@ func (v *CompositeValue) isInvalidatedResource(_ ValueStaticTypeContext) bool {
 	return v.isDestroyed || (v.dictionary == nil && v.Kind == common.CompositeKindResource)
 }
 
-func (v *CompositeValue) IsStaleResource(inter *Interpreter) bool {
-	return v.dictionary == nil && v.IsResourceKinded(inter)
+func (v *CompositeValue) IsStaleResource(context ValueStaticTypeContext) bool {
+	return v.dictionary == nil && v.IsResourceKinded(context)
 }
 
 func (v *CompositeValue) GetComputedFields() map[string]ComputedField {
@@ -611,14 +611,12 @@ func (v *CompositeValue) OwnerValue(context MemberAccessibleContext, locationRan
 }
 
 func (v *CompositeValue) RemoveMember(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	name string,
 ) Value {
 
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		owner := v.GetOwner().String()
@@ -626,7 +624,7 @@ func (v *CompositeValue) RemoveMember(
 		kind := v.Kind.String()
 
 		defer func() {
-			interpreter.reportCompositeValueRemoveMemberTrace(
+			context.ReportCompositeValueRemoveMemberTrace(
 				owner,
 				typeID,
 				kind,
@@ -651,22 +649,22 @@ func (v *CompositeValue) RemoveMember(
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.MaybeValidateAtreeValue(v.dictionary)
-	interpreter.MaybeValidateAtreeStorage()
+	context.MaybeValidateAtreeValue(v.dictionary)
+	context.MaybeValidateAtreeStorage()
 
 	// Key
-	RemoveReferencedSlab(interpreter, existingKeyStorable)
+	RemoveReferencedSlab(context, existingKeyStorable)
 
 	// Value
 
 	storedValue := StoredValue(
-		interpreter,
+		context,
 		existingValueStorable,
-		config.Storage,
+		context.Storage(),
 	)
 	return storedValue.
 		Transfer(
-			interpreter,
+			context,
 			locationRange,
 			atree.Address{},
 			true,
@@ -677,7 +675,7 @@ func (v *CompositeValue) RemoveMember(
 }
 
 func (v *CompositeValue) SetMemberWithoutTransfer(
-	context MemberAccessibleContext,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	name string,
 	value Value,
@@ -730,7 +728,7 @@ func (v *CompositeValue) SetMemberWithoutTransfer(
 	return false
 }
 
-func (v *CompositeValue) SetMember(context MemberAccessibleContext, locationRange LocationRange, name string, value Value) bool {
+func (v *CompositeValue) SetMember(context ValueTransferContext, locationRange LocationRange, name string, value Value) bool {
 	address := v.StorageAddress()
 
 	value = value.Transfer(
@@ -1645,9 +1643,13 @@ func AttachmentMemberName(typeID string) string {
 	return unrepresentableNamePrefix + typeID
 }
 
-func (v *CompositeValue) getAttachmentValue(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) *CompositeValue {
+func (v *CompositeValue) getAttachmentValue(
+	context MemberAccessibleContext,
+	locationRange LocationRange,
+	ty sema.Type,
+) *CompositeValue {
 	attachment := v.GetMember(
-		interpreter,
+		context,
 		locationRange,
 		AttachmentMemberName(string(ty.ID())),
 	)
@@ -1808,12 +1810,12 @@ func forEachAttachment(
 }
 
 func (v *CompositeValue) getTypeKey(
-	interpreter *Interpreter,
+	context MemberAccessibleContext,
 	locationRange LocationRange,
 	keyType sema.Type,
 	baseAccess sema.Access,
 ) Value {
-	attachment := v.getAttachmentValue(interpreter, locationRange, keyType)
+	attachment := v.getAttachmentValue(context, locationRange, keyType)
 	if attachment == nil {
 		return Nil
 	}
@@ -1823,18 +1825,18 @@ func (v *CompositeValue) getTypeKey(
 
 	// The attachment reference has the same entitlements as the base access
 	attachmentRef := NewEphemeralReferenceValue(
-		interpreter,
-		ConvertSemaAccessToStaticAuthorization(interpreter, baseAccess),
+		context,
+		ConvertSemaAccessToStaticAuthorization(context, baseAccess),
 		attachment,
 		attachmentType,
 		locationRange,
 	)
 
-	return NewSomeValueNonCopying(interpreter, attachmentRef)
+	return NewSomeValueNonCopying(context, attachmentRef)
 }
 
 func (v *CompositeValue) GetTypeKey(
-	interpreter *Interpreter,
+	context MemberAccessibleContext,
 	locationRange LocationRange,
 	ty sema.Type,
 ) Value {
@@ -1843,17 +1845,17 @@ func (v *CompositeValue) GetTypeKey(
 	if isAttachmentType {
 		access = attachmentTyp.SupportedEntitlements().Access()
 	}
-	return v.getTypeKey(interpreter, locationRange, ty, access)
+	return v.getTypeKey(context, locationRange, ty, access)
 }
 
 func (v *CompositeValue) SetTypeKey(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	attachmentType sema.Type,
 	attachment Value,
 ) {
 	memberName := AttachmentMemberName(string(attachmentType.ID()))
-	if v.SetMember(interpreter, locationRange, memberName, attachment) {
+	if v.SetMember(context, locationRange, memberName, attachment) {
 		panic(DuplicateAttachmentError{
 			AttachmentType: attachmentType,
 			Value:          v,
@@ -1863,12 +1865,12 @@ func (v *CompositeValue) SetTypeKey(
 }
 
 func (v *CompositeValue) RemoveTypeKey(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	attachmentType sema.Type,
 ) Value {
 	memberName := AttachmentMemberName(string(attachmentType.ID()))
-	return v.RemoveMember(interpreter, locationRange, memberName)
+	return v.RemoveMember(context, locationRange, memberName)
 }
 
 func (v *CompositeValue) Iterator(context ValueStaticTypeContext, locationRange LocationRange) ValueIterator {
@@ -1885,15 +1887,15 @@ func (v *CompositeValue) Iterator(context ValueStaticTypeContext, locationRange 
 }
 
 func (v *CompositeValue) ForEach(
-	interpreter *Interpreter,
+	context IterableValueForeachContext,
 	_ sema.Type,
 	function func(value Value) (resume bool),
 	transferElements bool,
 	locationRange LocationRange,
 ) {
-	iterator := v.Iterator(interpreter, locationRange)
+	iterator := v.Iterator(context, locationRange)
 	for {
-		value := iterator.Next(interpreter, locationRange)
+		value := iterator.Next(context, locationRange)
 		if value == nil {
 			return
 		}
@@ -1901,7 +1903,7 @@ func (v *CompositeValue) ForEach(
 		if transferElements {
 			// Each element must be transferred before passing onto the function.
 			value = value.Transfer(
-				interpreter,
+				context,
 				locationRange,
 				atree.Address{},
 				false,

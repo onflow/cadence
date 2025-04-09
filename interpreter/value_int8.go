@@ -616,12 +616,12 @@ func (v Int8Value) GetMember(context MemberAccessibleContext, locationRange Loca
 	return getNumberValueMember(context, v, name, sema.Int8Type, locationRange)
 }
 
-func (Int8Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (Int8Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (Int8Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (Int8Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

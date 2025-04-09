@@ -195,11 +195,11 @@ func (v *SomeValue) GetMember(context MemberAccessibleContext, _ LocationRange, 
 	return nil
 }
 
-func (v *SomeValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (v *SomeValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (v *SomeValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (v *SomeValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	panic(errors.NewUnreachableError())
 }
 

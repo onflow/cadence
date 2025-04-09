@@ -208,7 +208,7 @@ func (v *ArrayValue) Accept(context ValueVisitContext, visitor Visitor, location
 }
 
 func (v *ArrayValue) Iterate(
-	context ContainerMutationContext,
+	context ValueTransferContext,
 	f func(element Value) (resume bool),
 	transferElements bool,
 	locationRange LocationRange,
@@ -225,7 +225,7 @@ func (v *ArrayValue) Iterate(
 // IterateReadOnlyLoaded iterates over all LOADED elements of the array.
 // DO NOT perform storage mutations in the callback!
 func (v *ArrayValue) IterateReadOnlyLoaded(
-	context ContainerMutationContext,
+	context ValueTransferContext,
 	f func(element Value) (resume bool),
 	locationRange LocationRange,
 ) {
@@ -241,7 +241,7 @@ func (v *ArrayValue) IterateReadOnlyLoaded(
 }
 
 func (v *ArrayValue) iterate(
-	context ContainerMutationContext,
+	context ValueTransferContext,
 	atreeIterate func(fn atree.ArrayIterationFunc) error,
 	f func(element Value) (resume bool),
 	transferElements bool,
@@ -335,8 +335,8 @@ func (v *ArrayValue) isInvalidatedResource(context ValueStaticTypeContext) bool 
 	return v.isDestroyed || (v.array == nil && v.IsResourceKinded(context))
 }
 
-func (v *ArrayValue) IsStaleResource(interpreter *Interpreter) bool {
-	return v.array == nil && v.IsResourceKinded(interpreter)
+func (v *ArrayValue) IsStaleResource(context ValueStaticTypeContext) bool {
+	return v.array == nil && v.IsResourceKinded(context)
 }
 
 func (v *ArrayValue) Destroy(context ResourceDestructionContext, locationRange LocationRange) {
@@ -1149,12 +1149,12 @@ func (v *ArrayValue) GetMember(context MemberAccessibleContext, _ LocationRange,
 	return nil
 }
 
-func (v *ArrayValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (v *ArrayValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Arrays have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (v *ArrayValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, _ Value) bool {
+func (v *ArrayValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Arrays have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -1829,13 +1829,13 @@ func (v *ArrayValue) Map(
 }
 
 func (v *ArrayValue) ForEach(
-	interpreter *Interpreter,
+	context IterableValueForeachContext,
 	_ sema.Type,
 	function func(value Value) (resume bool),
 	transferElements bool,
 	locationRange LocationRange,
 ) {
-	v.Iterate(interpreter, function, transferElements, locationRange)
+	v.Iterate(context, function, transferElements, locationRange)
 }
 
 func (v *ArrayValue) ToVariableSized(
