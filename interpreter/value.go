@@ -92,8 +92,8 @@ type Value interface {
 	// NOTE: important, error messages rely on values to implement String
 	fmt.Stringer
 	IsValue()
-	Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange)
-	Walk(interpreter ValueWalkContext, walkChild func(Value), locationRange LocationRange)
+	Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange)
+	Walk(walkContext ValueWalkContext, walkChild func(Value), locationRange LocationRange)
 	StaticType(context ValueStaticTypeContext) StaticType
 	// ConformsToStaticType returns true if the value (i.e. its dynamic type)
 	// conforms to its own static type.
@@ -104,7 +104,7 @@ type Value interface {
 	// e.g. the element type of an array, it also ensures the nested values'
 	// static types are subtypes.
 	ConformsToStaticType(
-		interpreter *Interpreter,
+		context ValueStaticTypeConformanceContext,
 		locationRange LocationRange,
 		results TypeConformanceResults,
 	) bool
@@ -128,8 +128,8 @@ type Value interface {
 	// Clone returns a new value that is equal to this value.
 	// NOTE: not used by interpreter, but used externally (e.g. state migration)
 	// NOTE: memory metering is unnecessary for Clone methods
-	Clone(interpreter *Interpreter) Value
-	IsImportable(interpreter *Interpreter, locationRange LocationRange) bool
+	Clone(cloneContext ValueCloneContext) Value
+	IsImportable(context ValueImportableContext, locationRange LocationRange) bool
 }
 
 // ValueIndexableValue

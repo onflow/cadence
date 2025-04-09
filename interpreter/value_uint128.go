@@ -76,8 +76,8 @@ var _ MemberAccessibleValue = UInt128Value{}
 
 func (UInt128Value) IsValue() {}
 
-func (v UInt128Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitUInt128Value(interpreter, v)
+func (v UInt128Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitUInt128Value(context, v)
 }
 
 func (UInt128Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -88,7 +88,7 @@ func (UInt128Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeUInt128)
 }
 
-func (UInt128Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (UInt128Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -654,7 +654,7 @@ func (v UInt128Value) ToBigEndianBytes() []byte {
 }
 
 func (v UInt128Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -692,7 +692,7 @@ func (v UInt128Value) Transfer(
 	return v
 }
 
-func (v UInt128Value) Clone(_ *Interpreter) Value {
+func (v UInt128Value) Clone(_ ValueCloneContext) Value {
 	return NewUnmeteredUInt128ValueFromBigInt(v.BigInt)
 }
 

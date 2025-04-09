@@ -58,8 +58,8 @@ var _ MemberAccessibleValue = PathValue{}
 
 func (PathValue) IsValue() {}
 
-func (v PathValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitPathValue(interpreter, v)
+func (v PathValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitPathValue(context, v)
 }
 
 func (PathValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -79,7 +79,7 @@ func (v PathValue) StaticType(context ValueStaticTypeContext) StaticType {
 	}
 }
 
-func (v PathValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (v PathValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	switch v.Domain {
 	case common.PathDomainStorage:
 		return sema.StoragePathType.Importable
@@ -151,7 +151,7 @@ func (PathValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string,
 }
 
 func (v PathValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -245,7 +245,7 @@ func (v PathValue) Transfer(
 	return v
 }
 
-func (v PathValue) Clone(_ *Interpreter) Value {
+func (v PathValue) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

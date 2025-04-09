@@ -76,8 +76,8 @@ var _ MemberAccessibleValue = Int256Value{}
 
 func (Int256Value) IsValue() {}
 
-func (v Int256Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitInt256Value(interpreter, v)
+func (v Int256Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitInt256Value(context, v)
 }
 
 func (Int256Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -88,7 +88,7 @@ func (Int256Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeInt256)
 }
 
-func (Int256Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (Int256Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -724,7 +724,7 @@ func (v Int256Value) ToBigEndianBytes() []byte {
 }
 
 func (v Int256Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -739,7 +739,7 @@ func (Int256Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Int256Value) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (Int256Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -758,7 +758,7 @@ func (v Int256Value) Transfer(
 	return v
 }
 
-func (v Int256Value) Clone(_ *Interpreter) Value {
+func (v Int256Value) Clone(_ ValueCloneContext) Value {
 	return NewUnmeteredInt256ValueFromBigInt(v.BigInt)
 }
 

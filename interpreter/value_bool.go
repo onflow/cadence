@@ -40,8 +40,8 @@ const FalseValue = BoolValue(false)
 
 func (BoolValue) IsValue() {}
 
-func (v BoolValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitBoolValue(interpreter, v)
+func (v BoolValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitBoolValue(context, v)
 }
 
 func (BoolValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -52,7 +52,7 @@ func (BoolValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeBool)
 }
 
-func (BoolValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (BoolValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return sema.BoolType.Importable
 }
 
@@ -149,7 +149,7 @@ func (v BoolValue) MeteredString(context ValueStringContext, _ SeenReferences, _
 }
 
 func (v BoolValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -183,7 +183,7 @@ func (v BoolValue) Transfer(
 	return v
 }
 
-func (v BoolValue) Clone(_ *Interpreter) Value {
+func (v BoolValue) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

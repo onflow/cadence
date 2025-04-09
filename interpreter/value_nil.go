@@ -43,8 +43,8 @@ var _ OptionalValue = NilValue{}
 
 func (NilValue) IsValue() {}
 
-func (v NilValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitNilValue(interpreter, v)
+func (v NilValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitNilValue(context, v)
 }
 
 func (NilValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -58,7 +58,7 @@ func (NilValue) StaticType(context ValueStaticTypeContext) StaticType {
 	)
 }
 
-func (NilValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (NilValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -118,7 +118,7 @@ func (NilValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, 
 }
 
 func (v NilValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -142,7 +142,7 @@ func (NilValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (NilValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (NilValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -161,7 +161,7 @@ func (v NilValue) Transfer(
 	return v
 }
 
-func (v NilValue) Clone(_ *Interpreter) Value {
+func (v NilValue) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

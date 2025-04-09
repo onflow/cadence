@@ -69,8 +69,8 @@ var _ BigNumberValue = Word64Value(0)
 
 func (Word64Value) IsValue() {}
 
-func (v Word64Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitWord64Value(interpreter, v)
+func (v Word64Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitWord64Value(context, v)
 }
 
 func (Word64Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -81,7 +81,7 @@ func (Word64Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeWord64)
 }
 
-func (Word64Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (Word64Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -442,7 +442,7 @@ func (v Word64Value) ToBigEndianBytes() []byte {
 }
 
 func (v Word64Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -480,7 +480,7 @@ func (v Word64Value) Transfer(
 	return v
 }
 
-func (v Word64Value) Clone(_ *Interpreter) Value {
+func (v Word64Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

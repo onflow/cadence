@@ -61,8 +61,8 @@ func NewUnmeteredWord32Value(value uint32) Word32Value {
 
 func (Word32Value) IsValue() {}
 
-func (v Word32Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitWord32Value(interpreter, v)
+func (v Word32Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitWord32Value(context, v)
 }
 
 func (Word32Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -73,7 +73,7 @@ func (Word32Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeWord32)
 }
 
-func (Word32Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (Word32Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -414,7 +414,7 @@ func (v Word32Value) ToBigEndianBytes() []byte {
 }
 
 func (v Word32Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -452,7 +452,7 @@ func (v Word32Value) Transfer(
 	return v
 }
 
-func (v Word32Value) Clone(_ *Interpreter) Value {
+func (v Word32Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

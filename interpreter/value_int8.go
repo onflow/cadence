@@ -60,8 +60,8 @@ var _ HashableValue = Int8Value(0)
 
 func (Int8Value) IsValue() {}
 
-func (v Int8Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitInt8Value(interpreter, v)
+func (v Int8Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitInt8Value(context, v)
 }
 
 func (Int8Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -72,7 +72,7 @@ func (Int8Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeInt8)
 }
 
-func (Int8Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (Int8Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -631,7 +631,7 @@ func (v Int8Value) ToBigEndianBytes() []byte {
 }
 
 func (v Int8Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -646,7 +646,7 @@ func (Int8Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Int8Value) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (Int8Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -665,7 +665,7 @@ func (v Int8Value) Transfer(
 	return v
 }
 
-func (v Int8Value) Clone(_ *Interpreter) Value {
+func (v Int8Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

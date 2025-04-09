@@ -95,8 +95,8 @@ func (f *InterpretedFunctionValue) MeteredString(context ValueStringContext, _ S
 	return f.String()
 }
 
-func (f *InterpretedFunctionValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitInterpretedFunctionValue(interpreter, f)
+func (f *InterpretedFunctionValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitInterpretedFunctionValue(context, f)
 }
 
 func (f *InterpretedFunctionValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -107,7 +107,7 @@ func (f *InterpretedFunctionValue) StaticType(context ValueStaticTypeContext) St
 	return ConvertSemaToStaticType(context, f.Type)
 }
 
-func (*InterpretedFunctionValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (*InterpretedFunctionValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return false
 }
 
@@ -126,7 +126,7 @@ func (f *InterpretedFunctionValue) Invoke(invocation Invocation) Value {
 }
 
 func (f *InterpretedFunctionValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -141,7 +141,7 @@ func (*InterpretedFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*InterpretedFunctionValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (*InterpretedFunctionValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -161,7 +161,7 @@ func (f *InterpretedFunctionValue) Transfer(
 	return f
 }
 
-func (f *InterpretedFunctionValue) Clone(_ *Interpreter) Value {
+func (f *InterpretedFunctionValue) Clone(_ ValueCloneContext) Value {
 	return f
 }
 
@@ -229,8 +229,8 @@ var _ ContractValue = &HostFunctionValue{}
 
 func (*HostFunctionValue) IsValue() {}
 
-func (f *HostFunctionValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitHostFunctionValue(interpreter, f)
+func (f *HostFunctionValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitHostFunctionValue(context, f)
 }
 
 func (f *HostFunctionValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -241,7 +241,7 @@ func (f *HostFunctionValue) StaticType(context ValueStaticTypeContext) StaticTyp
 	return ConvertSemaToStaticType(context, f.Type)
 }
 
-func (*HostFunctionValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (*HostFunctionValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return false
 }
 
@@ -279,7 +279,7 @@ func (*HostFunctionValue) SetMember(_ MemberAccessibleContext, _ LocationRange, 
 }
 
 func (f *HostFunctionValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -294,7 +294,7 @@ func (*HostFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*HostFunctionValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (*HostFunctionValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -314,7 +314,7 @@ func (f *HostFunctionValue) Transfer(
 	return f
 }
 
-func (f *HostFunctionValue) Clone(_ *Interpreter) Value {
+func (f *HostFunctionValue) Clone(_ ValueCloneContext) Value {
 	return f
 }
 
@@ -405,8 +405,8 @@ func (f BoundFunctionValue) MeteredString(context ValueStringContext, seenRefere
 	return f.Function.MeteredString(context, seenReferences, locationRange)
 }
 
-func (f BoundFunctionValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitBoundFunctionValue(interpreter, f)
+func (f BoundFunctionValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitBoundFunctionValue(context, f)
 }
 
 func (f BoundFunctionValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -417,7 +417,7 @@ func (f BoundFunctionValue) StaticType(context ValueStaticTypeContext) StaticTyp
 	return f.Function.StaticType(context)
 }
 
-func (BoundFunctionValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (BoundFunctionValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return false
 }
 
@@ -466,12 +466,12 @@ func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 }
 
 func (f BoundFunctionValue) ConformsToStaticType(
-	interpreter *Interpreter,
+	context ValueStaticTypeConformanceContext,
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
 	return f.Function.ConformsToStaticType(
-		interpreter,
+		context,
 		locationRange,
 		results,
 	)
@@ -485,7 +485,7 @@ func (BoundFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (BoundFunctionValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (BoundFunctionValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -505,7 +505,7 @@ func (f BoundFunctionValue) Transfer(
 	return f
 }
 
-func (f BoundFunctionValue) Clone(_ *Interpreter) Value {
+func (f BoundFunctionValue) Clone(_ ValueCloneContext) Value {
 	return f
 }
 

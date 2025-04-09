@@ -76,8 +76,8 @@ func NewStorageReferenceValue(
 
 func (*StorageReferenceValue) IsValue() {}
 
-func (v *StorageReferenceValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitStorageReferenceValue(interpreter, v)
+func (v *StorageReferenceValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitStorageReferenceValue(context, v)
 }
 
 func (*StorageReferenceValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -117,7 +117,7 @@ func (v *StorageReferenceValue) GetAuthorization() Authorization {
 	return v.Authorization
 }
 
-func (*StorageReferenceValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (*StorageReferenceValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return false
 }
 
@@ -330,25 +330,25 @@ func (v *StorageReferenceValue) Equal(_ ValueComparisonContext, _ LocationRange,
 }
 
 func (v *StorageReferenceValue) ConformsToStaticType(
-	interpreter *Interpreter,
+	context ValueStaticTypeConformanceContext,
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
-	referencedValue, err := v.dereference(interpreter, locationRange)
+	referencedValue, err := v.dereference(context, locationRange)
 	if referencedValue == nil || err != nil {
 		return false
 	}
 
 	self := *referencedValue
 
-	staticType := self.StaticType(interpreter)
+	staticType := self.StaticType(context)
 
-	if !IsSubTypeOfSemaType(interpreter, staticType, v.BorrowedType) {
+	if !IsSubTypeOfSemaType(context, staticType, v.BorrowedType) {
 		return false
 	}
 
 	return self.ConformsToStaticType(
-		interpreter,
+		context,
 		locationRange,
 		results,
 	)
@@ -385,7 +385,7 @@ func (v *StorageReferenceValue) Transfer(
 	return v
 }
 
-func (v *StorageReferenceValue) Clone(_ *Interpreter) Value {
+func (v *StorageReferenceValue) Clone(_ ValueCloneContext) Value {
 	return NewUnmeteredStorageReferenceValue(
 		v.Authorization,
 		v.TargetStorageAddress,

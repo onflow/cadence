@@ -94,8 +94,8 @@ var _ MemberAccessibleValue = AddressValue{}
 
 func (AddressValue) IsValue() {}
 
-func (v AddressValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitAddressValue(interpreter, v)
+func (v AddressValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitAddressValue(context, v)
 }
 
 func (AddressValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -106,7 +106,7 @@ func (AddressValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeAddress)
 }
 
-func (AddressValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (AddressValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -156,7 +156,7 @@ func (v AddressValue) ToAddress() common.Address {
 	return common.Address(v)
 }
 
-func (v AddressValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+func (v AddressValue) GetMember(context MemberAccessibleContext, _ LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -209,7 +209,7 @@ func (AddressValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ stri
 }
 
 func (v AddressValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -228,7 +228,7 @@ func (AddressValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (AddressValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (AddressValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -247,7 +247,7 @@ func (v AddressValue) Transfer(
 	return v
 }
 
-func (v AddressValue) Clone(_ *Interpreter) Value {
+func (v AddressValue) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

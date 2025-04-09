@@ -86,8 +86,8 @@ var _ MemberAccessibleValue = Fix64Value(0)
 
 func (Fix64Value) IsValue() {}
 
-func (v Fix64Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitFix64Value(interpreter, v)
+func (v Fix64Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitFix64Value(context, v)
 }
 
 func (Fix64Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -98,7 +98,7 @@ func (Fix64Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeFix64)
 }
 
-func (Fix64Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (Fix64Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -548,7 +548,7 @@ func (v Fix64Value) ToBigEndianBytes() []byte {
 }
 
 func (v Fix64Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -567,7 +567,7 @@ func (Fix64Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Fix64Value) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (Fix64Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -586,7 +586,7 @@ func (v Fix64Value) Transfer(
 	return v
 }
 
-func (v Fix64Value) Clone(_ *Interpreter) Value {
+func (v Fix64Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

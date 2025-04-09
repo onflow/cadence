@@ -50,8 +50,8 @@ var _ EquatableValue = &PublishedValue{}
 
 func (*PublishedValue) IsValue() {}
 
-func (v *PublishedValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitPublishedValue(interpreter, v)
+func (v *PublishedValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitPublishedValue(context, v)
 }
 
 func (v *PublishedValue) StaticType(context ValueStaticTypeContext) StaticType {
@@ -60,7 +60,7 @@ func (v *PublishedValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return v.Value.StaticType(context)
 }
 
-func (*PublishedValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (*PublishedValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return false
 }
 
@@ -92,7 +92,7 @@ func (v *PublishedValue) Walk(_ ValueWalkContext, walkChild func(Value), _ Locat
 }
 
 func (v *PublishedValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -171,10 +171,10 @@ func (v *PublishedValue) Transfer(
 
 }
 
-func (v *PublishedValue) Clone(interpreter *Interpreter) Value {
+func (v *PublishedValue) Clone(context ValueCloneContext) Value {
 	return &PublishedValue{
 		Recipient: v.Recipient,
-		Value:     v.Value.Clone(interpreter).(*IDCapabilityValue),
+		Value:     v.Value.Clone(context).(*IDCapabilityValue),
 	}
 }
 

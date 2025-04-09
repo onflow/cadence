@@ -165,8 +165,8 @@ var _ MemberAccessibleValue = UFix64Value{}
 
 func (UFix64Value) IsValue() {}
 
-func (v UFix64Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitUFix64Value(interpreter, v)
+func (v UFix64Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitUFix64Value(context, v)
 }
 
 func (UFix64Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -177,7 +177,7 @@ func (UFix64Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeUFix64)
 }
 
-func (UFix64Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (UFix64Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -455,7 +455,7 @@ func (UFix64Value) SetMember(_ MemberAccessibleContext, _ LocationRange, _ strin
 }
 
 func (v UFix64Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -485,7 +485,7 @@ func (v UFix64Value) Transfer(
 	return v
 }
 
-func (v UFix64Value) Clone(_ *Interpreter) Value {
+func (v UFix64Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

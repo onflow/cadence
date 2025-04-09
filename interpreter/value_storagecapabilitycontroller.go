@@ -110,8 +110,8 @@ func (v *StorageCapabilityControllerValue) CapabilityControllerBorrowType() *Ref
 	return v.BorrowType
 }
 
-func (v *StorageCapabilityControllerValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitStorageCapabilityControllerValue(interpreter, v)
+func (v *StorageCapabilityControllerValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitStorageCapabilityControllerValue(context, v)
 }
 
 func (v *StorageCapabilityControllerValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {
@@ -123,7 +123,7 @@ func (v *StorageCapabilityControllerValue) StaticType(_ ValueStaticTypeContext) 
 	return PrimitiveStaticTypeStorageCapabilityController
 }
 
-func (*StorageCapabilityControllerValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (*StorageCapabilityControllerValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return false
 }
 
@@ -150,7 +150,7 @@ func (v *StorageCapabilityControllerValue) MeteredString(context ValueStringCont
 }
 
 func (v *StorageCapabilityControllerValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -206,9 +206,9 @@ func (v *StorageCapabilityControllerValue) Transfer(
 	return v
 }
 
-func (v *StorageCapabilityControllerValue) Clone(interpreter *Interpreter) Value {
+func (v *StorageCapabilityControllerValue) Clone(context ValueCloneContext) Value {
 	return &StorageCapabilityControllerValue{
-		TargetPath:   v.TargetPath.Clone(interpreter).(PathValue),
+		TargetPath:   v.TargetPath.Clone(context).(PathValue),
 		BorrowType:   v.BorrowType,
 		CapabilityID: v.CapabilityID,
 	}

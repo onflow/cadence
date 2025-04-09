@@ -96,8 +96,8 @@ var _ MemberAccessibleValue = IntValue{}
 
 func (IntValue) IsValue() {}
 
-func (v IntValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitIntValue(interpreter, v)
+func (v IntValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitIntValue(context, v)
 }
 
 func (IntValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -108,7 +108,7 @@ func (IntValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeInt)
 }
 
-func (IntValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (IntValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -536,7 +536,7 @@ func (IntValue) SetMember(_ MemberAccessibleContext, _ LocationRange, _ string, 
 }
 
 func (v IntValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -566,7 +566,7 @@ func (v IntValue) Transfer(
 	return v
 }
 
-func (v IntValue) Clone(_ *Interpreter) Value {
+func (v IntValue) Clone(_ ValueCloneContext) Value {
 	return NewUnmeteredIntValueFromBigInt(v.BigInt)
 }
 

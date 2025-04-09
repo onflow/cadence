@@ -62,8 +62,8 @@ var _ MemberAccessibleValue = Int16Value(0)
 
 func (Int16Value) IsValue() {}
 
-func (v Int16Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitInt16Value(interpreter, v)
+func (v Int16Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitInt16Value(context, v)
 }
 
 func (Int16Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -74,7 +74,7 @@ func (Int16Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeInt16)
 }
 
-func (Int16Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (Int16Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -634,7 +634,7 @@ func (v Int16Value) ToBigEndianBytes() []byte {
 }
 
 func (v Int16Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -649,7 +649,7 @@ func (Int16Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Int16Value) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (Int16Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -668,7 +668,7 @@ func (v Int16Value) Transfer(
 	return v
 }
 
-func (v Int16Value) Clone(_ *Interpreter) Value {
+func (v Int16Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

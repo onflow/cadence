@@ -250,16 +250,16 @@ func (*DictionaryValue) IsValue() {}
 
 func (*DictionaryValue) isAtreeContainerBackedValue() {}
 
-func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
-	descend := visitor.VisitDictionaryValue(interpreter, v)
+func (v *DictionaryValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
+	descend := visitor.VisitDictionaryValue(context, v)
 	if !descend {
 		return
 	}
 
 	v.Walk(
-		interpreter,
+		context,
 		func(value Value) {
-			value.Accept(interpreter, visitor, locationRange)
+			value.Accept(context, visitor, locationRange)
 		},
 		locationRange,
 	)
@@ -446,13 +446,13 @@ func (v *DictionaryValue) StaticType(_ ValueStaticTypeContext) StaticType {
 	return v.Type
 }
 
-func (v *DictionaryValue) IsImportable(inter *Interpreter, locationRange LocationRange) bool {
+func (v *DictionaryValue) IsImportable(context ValueImportableContext, locationRange LocationRange) bool {
 	importable := true
 	v.Iterate(
-		inter,
+		context,
 		locationRange,
 		func(key, value Value) (resume bool) {
-			if !key.IsImportable(inter, locationRange) || !value.IsImportable(inter, locationRange) {
+			if !key.IsImportable(context, locationRange) || !value.IsImportable(context, locationRange) {
 				importable = false
 				// stop iteration
 				return false
@@ -1112,22 +1112,20 @@ type DictionaryEntryValues struct {
 }
 
 func (v *DictionaryValue) ConformsToStaticType(
-	interpreter *Interpreter,
+	context ValueStaticTypeConformanceContext,
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
 
 	count := v.Count()
 
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
 
 		defer func() {
-			interpreter.reportDictionaryValueConformsToStaticTypeTrace(
+			context.ReportDictionaryValueConformsToStaticTypeTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -1135,7 +1133,7 @@ func (v *DictionaryValue) ConformsToStaticType(
 		}()
 	}
 
-	staticType, ok := v.StaticType(interpreter).(*DictionaryStaticType)
+	staticType, ok := v.StaticType(context).(*DictionaryStaticType)
 	if !ok {
 		return false
 	}
@@ -1161,14 +1159,14 @@ func (v *DictionaryValue) ConformsToStaticType(
 
 		// atree.OrderedMap iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
-		entryKey := MustConvertStoredValue(interpreter, key)
+		entryKey := MustConvertStoredValue(context, key)
 
-		if !IsSubType(interpreter, entryKey.StaticType(interpreter), keyType) {
+		if !IsSubType(context, entryKey.StaticType(context), keyType) {
 			return false
 		}
 
 		if !entryKey.ConformsToStaticType(
-			interpreter,
+			context,
 			locationRange,
 			results,
 		) {
@@ -1179,14 +1177,14 @@ func (v *DictionaryValue) ConformsToStaticType(
 
 		// atree.OrderedMap iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
-		entryValue := MustConvertStoredValue(interpreter, value)
+		entryValue := MustConvertStoredValue(context, value)
 
-		if !IsSubType(interpreter, entryValue.StaticType(interpreter), valueType) {
+		if !IsSubType(context, entryValue.StaticType(context), valueType) {
 			return false
 		}
 
 		if !entryValue.ConformsToStaticType(
-			interpreter,
+			context,
 			locationRange,
 			results,
 		) {
@@ -1431,11 +1429,9 @@ func (v *DictionaryValue) Transfer(
 	return res
 }
 
-func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
-	config := interpreter.SharedState.Config
-
-	valueComparator := newValueComparator(interpreter, EmptyLocationRange)
-	hashInputProvider := newHashInputProvider(interpreter, EmptyLocationRange)
+func (v *DictionaryValue) Clone(context ValueCloneContext) Value {
+	valueComparator := newValueComparator(context, EmptyLocationRange)
+	hashInputProvider := newHashInputProvider(context, EmptyLocationRange)
 
 	iterator, err := v.dictionary.ReadOnlyIterator()
 	if err != nil {
@@ -1443,7 +1439,7 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 	}
 
 	orderedMap, err := atree.NewMapFromBatchData(
-		config.Storage,
+		context.Storage(),
 		v.StorageAddress(),
 		atree.NewDefaultDigesterBuilder(),
 		v.dictionary.Type(),
@@ -1460,11 +1456,11 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 				return nil, nil, nil
 			}
 
-			key := MustConvertStoredValue(interpreter, atreeKey).
-				Clone(interpreter)
+			key := MustConvertStoredValue(context, atreeKey).
+				Clone(context)
 
-			value := MustConvertStoredValue(interpreter, atreeValue).
-				Clone(interpreter)
+			value := MustConvertStoredValue(context, atreeValue).
+				Clone(context)
 
 			return key, value, nil
 		},
@@ -1474,7 +1470,7 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 	}
 
 	dictionary := newDictionaryValueFromAtreeMap(
-		interpreter,
+		context,
 		v.Type,
 		v.elementSize,
 		orderedMap,

@@ -79,8 +79,8 @@ var _ MemberAccessibleValue = CharacterValue{}
 
 func (CharacterValue) IsValue() {}
 
-func (v CharacterValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitCharacterValue(interpreter, v)
+func (v CharacterValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitCharacterValue(context, v)
 }
 
 func (CharacterValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -91,7 +91,7 @@ func (CharacterValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeCharacter)
 }
 
-func (CharacterValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (CharacterValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return sema.CharacterType.Importable
 }
 
@@ -165,7 +165,7 @@ func (v CharacterValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch
 }
 
 func (v CharacterValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -180,7 +180,7 @@ func (CharacterValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (CharacterValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (CharacterValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -199,7 +199,7 @@ func (v CharacterValue) Transfer(
 	return v
 }
 
-func (v CharacterValue) Clone(_ *Interpreter) Value {
+func (v CharacterValue) Clone(_ ValueCloneContext) Value {
 	return v
 }
 
@@ -219,7 +219,7 @@ func (CharacterValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (v CharacterValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+func (v CharacterValue) GetMember(context MemberAccessibleContext, _ LocationRange, name string) Value {
 	switch name {
 	case sema.ToStringFunctionName:
 		return NewBoundHostFunctionValue(

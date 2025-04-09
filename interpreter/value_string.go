@@ -114,8 +114,8 @@ func (v *StringValue) prepareGraphemes() {
 
 func (*StringValue) IsValue() {}
 
-func (v *StringValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitStringValue(interpreter, v)
+func (v *StringValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitStringValue(context, v)
 }
 
 func (*StringValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -126,7 +126,7 @@ func (*StringValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeString)
 }
 
-func (*StringValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (*StringValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return sema.StringType.Importable
 }
 
@@ -750,7 +750,7 @@ func (*StringValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*StringValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (*StringValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -770,7 +770,7 @@ func (v *StringValue) Transfer(
 	return v
 }
 
-func (v *StringValue) Clone(_ *Interpreter) Value {
+func (v *StringValue) Clone(_ ValueCloneContext) Value {
 	return NewUnmeteredStringValue(v.Str)
 }
 
@@ -840,7 +840,7 @@ func (v *StringValue) DecodeHex(context ArrayCreationContext, locationRange Loca
 }
 
 func (v *StringValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {

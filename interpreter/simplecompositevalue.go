@@ -80,8 +80,8 @@ func NewSimpleCompositeValue(
 
 func (*SimpleCompositeValue) IsValue() {}
 
-func (v *SimpleCompositeValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitSimpleCompositeValue(interpreter, v)
+func (v *SimpleCompositeValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitSimpleCompositeValue(context, v)
 }
 
 // ForEachField iterates over all field-name field-value pairs of the composite value.
@@ -112,10 +112,10 @@ func (v *SimpleCompositeValue) StaticType(_ ValueStaticTypeContext) StaticType {
 	return v.staticType
 }
 
-func (v *SimpleCompositeValue) IsImportable(inter *Interpreter, locationRange LocationRange) bool {
+func (v *SimpleCompositeValue) IsImportable(context ValueImportableContext, locationRange LocationRange) bool {
 	// Check type is importable
-	staticType := v.StaticType(inter)
-	semaType := MustConvertStaticToSemaType(staticType, inter)
+	staticType := v.StaticType(context)
+	semaType := MustConvertStaticToSemaType(staticType, context)
 	if !semaType.IsImportable(map[*sema.Member]bool{}) {
 		return false
 	}
@@ -123,7 +123,7 @@ func (v *SimpleCompositeValue) IsImportable(inter *Interpreter, locationRange Lo
 	// Check all field values are importable
 	importable := true
 	v.ForEachField(func(_ string, value Value) (resume bool) {
-		if !value.IsImportable(inter, locationRange) {
+		if !value.IsImportable(context, locationRange) {
 			importable = false
 			// stop iteration
 			return false
@@ -226,7 +226,7 @@ func (v *SimpleCompositeValue) MeteredString(context ValueStringContext, seenRef
 }
 
 func (v *SimpleCompositeValue) ConformsToStaticType(
-	interpreter *Interpreter,
+	context ValueStaticTypeConformanceContext,
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
@@ -237,7 +237,7 @@ func (v *SimpleCompositeValue) ConformsToStaticType(
 			continue
 		}
 		if !value.ConformsToStaticType(
-			interpreter,
+			context,
 			locationRange,
 			results,
 		) {
@@ -256,7 +256,7 @@ func (*SimpleCompositeValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v *SimpleCompositeValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (v *SimpleCompositeValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -283,14 +283,14 @@ func (v *SimpleCompositeValue) Transfer(
 	return v
 }
 
-func (v *SimpleCompositeValue) Clone(interpreter *Interpreter) Value {
+func (v *SimpleCompositeValue) Clone(context ValueCloneContext) Value {
 
 	clonedFields := make(map[string]Value, len(v.Fields))
 
 	for _, fieldName := range v.FieldNames {
 		fieldValue := v.Fields[fieldName]
 
-		clonedFields[fieldName] = fieldValue.Clone(interpreter)
+		clonedFields[fieldName] = fieldValue.Clone(context)
 	}
 
 	return &SimpleCompositeValue{

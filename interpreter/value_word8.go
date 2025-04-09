@@ -60,8 +60,8 @@ func NewUnmeteredWord8Value(value uint8) Word8Value {
 
 func (Word8Value) IsValue() {}
 
-func (v Word8Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitWord8Value(interpreter, v)
+func (v Word8Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitWord8Value(context, v)
 }
 
 func (Word8Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -72,7 +72,7 @@ func (Word8Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeWord8)
 }
 
-func (Word8Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (Word8Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -411,7 +411,7 @@ func (v Word8Value) ToBigEndianBytes() []byte {
 }
 
 func (v Word8Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -449,7 +449,7 @@ func (v Word8Value) Transfer(
 	return v
 }
 
-func (v Word8Value) Clone(_ *Interpreter) Value {
+func (v Word8Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

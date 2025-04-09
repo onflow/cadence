@@ -61,7 +61,7 @@ func (*PathCapabilityValue) IsValue() {}
 
 func (*PathCapabilityValue) isCapabilityValue() {}
 
-func (v *PathCapabilityValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange) {
+func (v *PathCapabilityValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -77,7 +77,7 @@ func (v *PathCapabilityValue) StaticType(context ValueStaticTypeContext) StaticT
 	)
 }
 
-func (v *PathCapabilityValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (v *PathCapabilityValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return false
 }
 func (v *PathCapabilityValue) String() string {
@@ -189,7 +189,7 @@ func (*PathCapabilityValue) SetMember(_ MemberAccessibleContext, _ LocationRange
 }
 
 func (v *PathCapabilityValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -237,7 +237,7 @@ func (*PathCapabilityValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*PathCapabilityValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (*PathCapabilityValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
@@ -257,11 +257,11 @@ func (v *PathCapabilityValue) Transfer(
 	return v
 }
 
-func (v *PathCapabilityValue) Clone(interpreter *Interpreter) Value {
+func (v *PathCapabilityValue) Clone(context ValueCloneContext) Value {
 	return &PathCapabilityValue{
 		BorrowType: v.BorrowType,
-		Path:       v.Path.Clone(interpreter).(PathValue),
-		address:    v.address.Clone(interpreter).(AddressValue),
+		Path:       v.Path.Clone(context).(PathValue),
+		address:    v.address.Clone(context).(AddressValue),
 	}
 }
 

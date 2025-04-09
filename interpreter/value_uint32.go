@@ -60,8 +60,8 @@ var _ MemberAccessibleValue = UInt32Value(0)
 
 func (UInt32Value) IsValue() {}
 
-func (v UInt32Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitUInt32Value(interpreter, v)
+func (v UInt32Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitUInt32Value(context, v)
 }
 
 func (UInt32Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -72,7 +72,7 @@ func (UInt32Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeUInt32)
 }
 
-func (UInt32Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (UInt32Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -518,7 +518,7 @@ func (v UInt32Value) ToBigEndianBytes() []byte {
 }
 
 func (v UInt32Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -556,7 +556,7 @@ func (v UInt32Value) Transfer(
 	return v
 }
 
-func (v UInt32Value) Clone(_ *Interpreter) Value {
+func (v UInt32Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

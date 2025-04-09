@@ -67,8 +67,8 @@ func NewUnmeteredUInt64Value(value uint64) UInt64Value {
 
 func (UInt64Value) IsValue() {}
 
-func (v UInt64Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitUInt64Value(interpreter, v)
+func (v UInt64Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitUInt64Value(context, v)
 }
 
 func (UInt64Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -79,7 +79,7 @@ func (UInt64Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeUInt64)
 }
 
-func (UInt64Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (UInt64Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -546,7 +546,7 @@ func (v UInt64Value) ToBigEndianBytes() []byte {
 }
 
 func (v UInt64Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -584,7 +584,7 @@ func (v UInt64Value) Transfer(
 	return v
 }
 
-func (v UInt64Value) Clone(_ *Interpreter) Value {
+func (v UInt64Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 

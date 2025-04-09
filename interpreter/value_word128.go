@@ -76,8 +76,8 @@ var _ MemberAccessibleValue = Word128Value{}
 
 func (Word128Value) IsValue() {}
 
-func (v Word128Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitWord128Value(interpreter, v)
+func (v Word128Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitWord128Value(context, v)
 }
 
 func (Word128Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -88,7 +88,7 @@ func (Word128Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeWord128)
 }
 
-func (Word128Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (Word128Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -559,7 +559,7 @@ func (v Word128Value) ToBigEndianBytes() []byte {
 }
 
 func (v Word128Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -597,7 +597,7 @@ func (v Word128Value) Transfer(
 	return v
 }
 
-func (v Word128Value) Clone(_ *Interpreter) Value {
+func (v Word128Value) Clone(_ ValueCloneContext) Value {
 	return NewUnmeteredWord128ValueFromBigInt(v.BigInt)
 }
 

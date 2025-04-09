@@ -60,8 +60,8 @@ func NewUnmeteredUInt16Value(value uint16) UInt16Value {
 
 func (UInt16Value) IsValue() {}
 
-func (v UInt16Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitUInt16Value(interpreter, v)
+func (v UInt16Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitUInt16Value(context, v)
 }
 
 func (UInt16Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
@@ -72,7 +72,7 @@ func (UInt16Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeUInt16)
 }
 
-func (UInt16Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (UInt16Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -517,7 +517,7 @@ func (v UInt16Value) ToBigEndianBytes() []byte {
 }
 
 func (v UInt16Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -555,7 +555,7 @@ func (v UInt16Value) Transfer(
 	return v
 }
 
-func (v UInt16Value) Clone(_ *Interpreter) Value {
+func (v UInt16Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 
