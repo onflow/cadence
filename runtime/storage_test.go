@@ -7762,10 +7762,3 @@ func concatRegisterAddressAndKey(
 ) string {
 	return string(address[:]) + "|" + string(key)
 }
-
-func concatRegisterAddressAndDomain(
-	address common.Address,
-	domain common.StorageDomain,
-) string {
-	return string(address[:]) + "|" + domain.Identifier()
-}
