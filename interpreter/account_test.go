@@ -601,6 +601,7 @@ func testAccountWithErrorHandlerWithCompiler(
 	var storage interpreter.Storage
 
 	if compilerEnabled && *compile {
+
 		//vmConfig := &vm.Config{
 		//	BuiltinGlobalsProvider: func() map[string]*vm.Variable {
 		//		funcs := vm.NativeFunctions()
