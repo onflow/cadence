@@ -144,9 +144,9 @@ type ValueIndexableValue interface {
 
 type TypeIndexableValue interface {
 	Value
-	GetTypeKey(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) Value
-	SetTypeKey(interpreter *Interpreter, locationRange LocationRange, ty sema.Type, value Value)
-	RemoveTypeKey(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) Value
+	GetTypeKey(context MemberAccessibleContext, locationRange LocationRange, ty sema.Type) Value
+	SetTypeKey(context ValueTransferContext, locationRange LocationRange, ty sema.Type, value Value)
+	RemoveTypeKey(context ValueTransferContext, locationRange LocationRange, ty sema.Type) Value
 }
 
 // MemberAccessibleValue

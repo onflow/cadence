@@ -175,7 +175,7 @@ func (v *EphemeralReferenceValue) RemoveKey(context ContainerMutationContext, lo
 }
 
 func (v *EphemeralReferenceValue) GetTypeKey(
-	interpreter *Interpreter,
+	context MemberAccessibleContext,
 	locationRange LocationRange,
 	key sema.Type,
 ) Value {
@@ -183,34 +183,34 @@ func (v *EphemeralReferenceValue) GetTypeKey(
 
 	if selfComposite, isComposite := self.(*CompositeValue); isComposite {
 		return selfComposite.getTypeKey(
-			interpreter,
+			context,
 			locationRange,
 			key,
-			MustConvertStaticAuthorizationToSemaAccess(interpreter, v.Authorization),
+			MustConvertStaticAuthorizationToSemaAccess(context, v.Authorization),
 		)
 	}
 
 	return self.(TypeIndexableValue).
-		GetTypeKey(interpreter, locationRange, key)
+		GetTypeKey(context, locationRange, key)
 }
 
 func (v *EphemeralReferenceValue) SetTypeKey(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	key sema.Type,
 	value Value,
 ) {
 	v.Value.(TypeIndexableValue).
-		SetTypeKey(interpreter, locationRange, key, value)
+		SetTypeKey(context, locationRange, key, value)
 }
 
 func (v *EphemeralReferenceValue) RemoveTypeKey(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	key sema.Type,
 ) Value {
 	return v.Value.(TypeIndexableValue).
-		RemoveTypeKey(interpreter, locationRange, key)
+		RemoveTypeKey(context, locationRange, key)
 }
 
 func (v *EphemeralReferenceValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {

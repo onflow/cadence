@@ -270,46 +270,46 @@ func (v *StorageReferenceValue) RemoveKey(context ContainerMutationContext, loca
 }
 
 func (v *StorageReferenceValue) GetTypeKey(
-	interpreter *Interpreter,
+	context MemberAccessibleContext,
 	locationRange LocationRange,
 	key sema.Type,
 ) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.mustReferencedValue(context, locationRange)
 
 	if selfComposite, isComposite := self.(*CompositeValue); isComposite {
 		return selfComposite.getTypeKey(
-			interpreter,
+			context,
 			locationRange,
 			key,
-			MustConvertStaticAuthorizationToSemaAccess(interpreter, v.Authorization),
+			MustConvertStaticAuthorizationToSemaAccess(context, v.Authorization),
 		)
 	}
 
 	return self.(TypeIndexableValue).
-		GetTypeKey(interpreter, locationRange, key)
+		GetTypeKey(context, locationRange, key)
 }
 
 func (v *StorageReferenceValue) SetTypeKey(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	key sema.Type,
 	value Value,
 ) {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.mustReferencedValue(context, locationRange)
 
 	self.(TypeIndexableValue).
-		SetTypeKey(interpreter, locationRange, key, value)
+		SetTypeKey(context, locationRange, key, value)
 }
 
 func (v *StorageReferenceValue) RemoveTypeKey(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	key sema.Type,
 ) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.mustReferencedValue(context, locationRange)
 
 	return self.(TypeIndexableValue).
-		RemoveTypeKey(interpreter, locationRange, key)
+		RemoveTypeKey(context, locationRange, key)
 }
 
 func (v *StorageReferenceValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {

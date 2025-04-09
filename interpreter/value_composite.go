@@ -1643,9 +1643,13 @@ func AttachmentMemberName(typeID string) string {
 	return unrepresentableNamePrefix + typeID
 }
 
-func (v *CompositeValue) getAttachmentValue(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) *CompositeValue {
+func (v *CompositeValue) getAttachmentValue(
+	context MemberAccessibleContext,
+	locationRange LocationRange,
+	ty sema.Type,
+) *CompositeValue {
 	attachment := v.GetMember(
-		interpreter,
+		context,
 		locationRange,
 		AttachmentMemberName(string(ty.ID())),
 	)
@@ -1806,12 +1810,12 @@ func forEachAttachment(
 }
 
 func (v *CompositeValue) getTypeKey(
-	interpreter *Interpreter,
+	context MemberAccessibleContext,
 	locationRange LocationRange,
 	keyType sema.Type,
 	baseAccess sema.Access,
 ) Value {
-	attachment := v.getAttachmentValue(interpreter, locationRange, keyType)
+	attachment := v.getAttachmentValue(context, locationRange, keyType)
 	if attachment == nil {
 		return Nil
 	}
@@ -1821,18 +1825,18 @@ func (v *CompositeValue) getTypeKey(
 
 	// The attachment reference has the same entitlements as the base access
 	attachmentRef := NewEphemeralReferenceValue(
-		interpreter,
-		ConvertSemaAccessToStaticAuthorization(interpreter, baseAccess),
+		context,
+		ConvertSemaAccessToStaticAuthorization(context, baseAccess),
 		attachment,
 		attachmentType,
 		locationRange,
 	)
 
-	return NewSomeValueNonCopying(interpreter, attachmentRef)
+	return NewSomeValueNonCopying(context, attachmentRef)
 }
 
 func (v *CompositeValue) GetTypeKey(
-	interpreter *Interpreter,
+	context MemberAccessibleContext,
 	locationRange LocationRange,
 	ty sema.Type,
 ) Value {
@@ -1841,17 +1845,17 @@ func (v *CompositeValue) GetTypeKey(
 	if isAttachmentType {
 		access = attachmentTyp.SupportedEntitlements().Access()
 	}
-	return v.getTypeKey(interpreter, locationRange, ty, access)
+	return v.getTypeKey(context, locationRange, ty, access)
 }
 
 func (v *CompositeValue) SetTypeKey(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	attachmentType sema.Type,
 	attachment Value,
 ) {
 	memberName := AttachmentMemberName(string(attachmentType.ID()))
-	if v.SetMember(interpreter, locationRange, memberName, attachment) {
+	if v.SetMember(context, locationRange, memberName, attachment) {
 		panic(DuplicateAttachmentError{
 			AttachmentType: attachmentType,
 			Value:          v,
@@ -1861,12 +1865,12 @@ func (v *CompositeValue) SetTypeKey(
 }
 
 func (v *CompositeValue) RemoveTypeKey(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
 	attachmentType sema.Type,
 ) Value {
 	memberName := AttachmentMemberName(string(attachmentType.ID()))
-	return v.RemoveMember(interpreter, locationRange, memberName)
+	return v.RemoveMember(context, locationRange, memberName)
 }
 
 func (v *CompositeValue) Iterator(context ValueStaticTypeContext, locationRange LocationRange) ValueIterator {
