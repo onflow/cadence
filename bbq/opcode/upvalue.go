@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-package compiler
+package opcode
 
-type local struct {
-	index uint16
+type Upvalue struct {
+	TargetIndex uint16
+	IsLocal     bool
 }

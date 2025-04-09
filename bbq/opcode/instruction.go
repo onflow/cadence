@@ -22,6 +22,7 @@ package opcode
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/onflow/cadence/common"
@@ -107,19 +108,63 @@ func emitCompositeKind(code *[]byte, kind common.CompositeKind) {
 // Uint16Array
 
 func emitUint16Array(code *[]byte, values []uint16) {
-	emitUint16(code, uint16(len(values)))
+	count := len(values)
+	if count > math.MaxUint16 {
+		panic(fmt.Errorf("uint16 array too large: %d", count))
+	}
+	emitUint16(code, uint16(count))
+
 	for _, value := range values {
 		emitUint16(code, value)
 	}
 }
 
 func decodeUint16Array(ip *uint16, code []byte) (values []uint16) {
-	typeArgCount := decodeUint16(ip, code)
-	for i := 0; i < int(typeArgCount); i++ {
+	count := decodeUint16(ip, code)
+	for i := 0; i < int(count); i++ {
 		value := decodeUint16(ip, code)
 		values = append(values, value)
 	}
 	return values
+}
+
+// Upvalue
+
+func emitUpvalue(code *[]byte, upvalue Upvalue) {
+	emitUint16(code, upvalue.TargetIndex)
+	emitBool(code, upvalue.IsLocal)
+}
+
+func decodeUpvalue(ip *uint16, code []byte) Upvalue {
+	targetIndex := decodeUint16(ip, code)
+	isLocal := decodeBool(ip, code)
+	return Upvalue{
+		TargetIndex: targetIndex,
+		IsLocal:     isLocal,
+	}
+}
+
+// UpvalueArray
+
+func emitUpvalueArray(code *[]byte, upvalues []Upvalue) {
+	count := len(upvalues)
+	if count > math.MaxUint16 {
+		panic(fmt.Errorf("uint16 array too large: %d", count))
+	}
+	emitUint16(code, uint16(count))
+
+	for _, upvalue := range upvalues {
+		emitUpvalue(code, upvalue)
+	}
+}
+
+func decodeUpvalueArray(ip *uint16, code []byte) (upvalues []Upvalue) {
+	count := decodeUint16(ip, code)
+	for i := 0; i < int(count); i++ {
+		upvalue := decodeUpvalue(ip, code)
+		upvalues = append(upvalues, upvalue)
+	}
+	return upvalues
 }
 
 // Jump
@@ -149,6 +194,18 @@ func printfUInt16ArrayArgument(sb *strings.Builder, argName string, values []uin
 			_, _ = fmt.Fprint(sb, ", ")
 		}
 		_, _ = fmt.Fprintf(sb, "%d", value)
+	}
+
+	sb.WriteString("]")
+}
+
+func printfUpvalueArrayArgument(sb *strings.Builder, argName string, upvalues []Upvalue) {
+	_, _ = fmt.Fprintf(sb, " %s:[", argName)
+	for i, upvalue := range upvalues {
+		if i > 0 {
+			_, _ = fmt.Fprint(sb, ", ")
+		}
+		_, _ = fmt.Fprintf(sb, "targetIndex:%d isLocal:%v", upvalue.TargetIndex, upvalue.IsLocal)
 	}
 
 	sb.WriteString("]")

@@ -117,14 +117,14 @@ const (
 	GetConstant
 	GetLocal
 	SetLocal
+	GetUpvalue
+	SetUpvalue
 	GetGlobal
 	SetGlobal
 	GetField
 	SetField
 	SetIndex
 	GetIndex
-	_
-	_
 	_
 	_
 	_

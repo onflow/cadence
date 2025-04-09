@@ -93,6 +93,8 @@ func TestPrintInstruction(t *testing.T) {
 		"GetConstant constantIndex:258": {byte(GetConstant), 1, 2},
 		"GetLocal localIndex:258":       {byte(GetLocal), 1, 2},
 		"SetLocal localIndex:258":       {byte(SetLocal), 1, 2},
+		"GetUpvalue upvalueIndex:258":   {byte(GetUpvalue), 1, 2},
+		"SetUpvalue upvalueIndex:258":   {byte(SetUpvalue), 1, 2},
 		"GetGlobal globalIndex:258":     {byte(GetGlobal), 1, 2},
 		"SetGlobal globalIndex:258":     {byte(SetGlobal), 1, 2},
 
@@ -125,7 +127,9 @@ func TestPrintInstruction(t *testing.T) {
 		"NewArray typeIndex:258 size:772 isResource:true":      {byte(NewArray), 1, 2, 3, 4, 1},
 		"NewDictionary typeIndex:258 size:772 isResource:true": {byte(NewDictionary), 1, 2, 3, 4, 1},
 
-		"NewClosure functionIndex:258": {byte(NewClosure), 1, 2},
+		"NewClosure functionIndex:258 upvalues:[targetIndex:772 isLocal:false, targetIndex:1543 isLocal:true]": {
+			byte(NewClosure), 1, 2, 0, 2, 3, 4, 0, 6, 7, 1,
+		},
 
 		"Unknown":     {byte(Unknown)},
 		"Return":      {byte(Return)},

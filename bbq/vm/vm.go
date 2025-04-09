@@ -1162,6 +1162,11 @@ func opNewClosure(vm *VM, ins opcode.InstructionNewClosure) {
 	executable := vm.callFrame.executable
 	function := &executable.Program.Functions[ins.FunctionIndex]
 
+	// TODO: implement upvalues
+	if len(ins.Upvalues) > 0 {
+		panic(errors.NewUnreachableError())
+	}
+
 	vm.push(FunctionValue{
 		Function:   function,
 		Executable: executable,

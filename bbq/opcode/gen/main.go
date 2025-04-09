@@ -37,10 +37,10 @@ const (
 	operandTypeIndex         = "index"
 	operandTypeIndices       = "indices"
 	operandTypeSize          = "size"
-	operandTypeString        = "string"
 	operandTypeCastKind      = "castKind"
 	operandTypePathDomain    = "pathDomain"
 	operandTypeCompositeKind = "compositeKind"
+	operandTypeUpvalues      = "upvalues"
 )
 
 type instruction struct {
@@ -299,9 +299,6 @@ func instructionOperandsFields(ins instruction) *dst.FieldList {
 				Elt: dst.NewIdent("uint16"),
 			}
 
-		case operandTypeString:
-			typeExpr = dst.NewIdent("string")
-
 		case operandTypeCastKind:
 			typeExpr = &dst.Ident{
 				Name: "CastKind",
@@ -318,6 +315,14 @@ func instructionOperandsFields(ins instruction) *dst.FieldList {
 			typeExpr = &dst.Ident{
 				Name: "CompositeKind",
 				Path: commonPackagePath,
+			}
+
+		case operandTypeUpvalues:
+			typeExpr = &dst.ArrayType{
+				Elt: &dst.Ident{
+					Name: "Upvalue",
+					Path: opcodePackagePath,
+				},
 			}
 
 		default:
@@ -477,6 +482,8 @@ func instructionStringFuncDecl(ins instruction) *dst.FuncDecl {
 			switch operand.Type {
 			case operandTypeIndices:
 				funcName = "printfUInt16ArrayArgument"
+			case operandTypeUpvalues:
+				funcName = "printfUpvalueArrayArgument"
 			default:
 				funcName = "printfArgument"
 			}
@@ -599,9 +606,6 @@ func instructionEncodeFuncDecl(ins instruction) *dst.FuncDecl {
 		case operandTypeSize:
 			funcName = "emitUint16"
 
-		case operandTypeString:
-			funcName = "emitString"
-
 		case operandTypeCastKind:
 			funcName = "emitCastKind"
 
@@ -610,6 +614,9 @@ func instructionEncodeFuncDecl(ins instruction) *dst.FuncDecl {
 
 		case operandTypeCompositeKind:
 			funcName = "emitCompositeKind"
+
+		case operandTypeUpvalues:
+			funcName = "emitUpvalueArray"
 
 		default:
 			panic(fmt.Sprintf("unsupported operand type: %s", operand.Type))
@@ -695,9 +702,6 @@ func instructionDecodeFuncDecl(ins instruction) *dst.FuncDecl {
 		case operandTypeSize:
 			funcName = "decodeUint16"
 
-		case operandTypeString:
-			funcName = "decodeString"
-
 		case operandTypeCastKind:
 			funcName = "decodeCastKind"
 
@@ -706,6 +710,9 @@ func instructionDecodeFuncDecl(ins instruction) *dst.FuncDecl {
 
 		case operandTypeCompositeKind:
 			funcName = "decodeCompositeKind"
+
+		case operandTypeUpvalues:
+			funcName = "decodeUpvalueArray"
 
 		default:
 			panic(fmt.Sprintf("unsupported operand type: %s", operand.Type))

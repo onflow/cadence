@@ -28,10 +28,10 @@
             "index",
             "indices",
             "size",
-            "string",
             "castKind",
             "pathDomain",
-            "compositeKind"
+            "compositeKind",
+            "upvalues"
           ]
         },
         "description": { "type": "string" }
