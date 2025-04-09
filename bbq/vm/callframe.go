@@ -22,4 +22,5 @@ type callFrame struct {
 	localsOffset uint16
 	localsCount  uint16
 	function     FunctionValue
+	openUpvalues map[int]*Upvalue
 }

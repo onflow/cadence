@@ -1176,7 +1176,7 @@ func TestContractField(t *testing.T) {
       }
         `,
 			ParseAndCheckOptions{
-				Location: common.NewAddressLocation(nil, common.Address{0x1}, "MyContract"),
+				Location: importLocation,
 			},
 		)
 		require.NoError(t, err)
@@ -1249,7 +1249,7 @@ func TestContractField(t *testing.T) {
       }
         `,
 			ParseAndCheckOptions{
-				Location: common.NewAddressLocation(nil, common.Address{0x1}, "MyContract"),
+				Location: importLocation,
 			},
 		)
 		require.NoError(t, err)
@@ -5775,4 +5775,274 @@ func TestUnclosedUpvalueAssignment(t *testing.T) {
 	)
 	require.NoError(t, err)
 	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), actual)
+}
+
+func TestUnclosedUpvalueAssignment2(t *testing.T) {
+
+	t.Parallel()
+
+	actual, err := compileAndInvoke(t,
+		`
+          fun test(): Int {
+              var x = 1
+              fun addToX(_ y: Int) {
+                  x = x + y
+              }
+              addToX(2)
+              addToX(2)
+              return x
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(5), actual)
+}
+
+func TestClosedUpvalue(t *testing.T) {
+
+	t.Parallel()
+
+	actual, err := compileAndInvoke(t,
+		`
+          fun new(): fun(Int): Int {
+              let x = 1
+              fun addToX(_ y: Int): Int {
+                  return x + y
+              }
+              return addToX
+          }
+
+          fun test(): Int {
+              let f = new()
+              return f(1) + f(2)
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(5), actual)
+}
+
+func TestClosedUpvalueVariableAssignmentBeforeReturn(t *testing.T) {
+
+	t.Parallel()
+
+	actual, err := compileAndInvoke(t,
+		`
+          fun new(): fun(Int): Int {
+              var x = 1
+              fun addToX(_ y: Int): Int {
+                  return x + y
+              }
+              x = 10
+              return addToX
+          }
+
+          fun test(): Int {
+              let f = new()
+              return f(1) + f(2)
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(23), actual)
+}
+
+func TestClosedUpvalueAssignment(t *testing.T) {
+
+	t.Parallel()
+
+	actual, err := compileAndInvoke(t,
+		`
+          fun new(): fun(Int): Int {
+              var x = 1
+              fun addToX(_ y: Int): Int {
+                  x = x + y
+                  return x
+              }
+              return addToX
+          }
+
+          fun test(): Int {
+              let f = new()
+              return f(1) + f(2)
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(6), actual)
+}
+
+func TestCounter(t *testing.T) {
+
+	t.Parallel()
+
+	actual, err := compileAndInvoke(t,
+		`
+          fun newCounter(): fun(): Int {
+              var count = 0
+              return fun(): Int {
+                  count = count + 1
+                  return count
+              }
+          }
+
+          fun test(): Int {
+              let counter = newCounter()
+              return counter() + counter() + counter()
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(6), actual)
+}
+
+func TestCounters(t *testing.T) {
+
+	t.Parallel()
+
+	actual, err := compileAndInvoke(t,
+		`
+          fun newCounter(): fun(): Int {
+              var count = 0
+              return fun(): Int {
+                  count = count + 1
+                  return count
+              }
+          }
+
+          fun test(): Int {
+              let counter1 = newCounter()
+              let counter2 = newCounter()
+              return counter1() + counter2()
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), actual)
+}
+
+func TestCounterWithInitialization(t *testing.T) {
+
+	t.Parallel()
+
+	actual, err := compileAndInvoke(t,
+		`
+          fun newCounter(): fun(): Int {
+              var count = 0
+              let res = fun(): Int {
+                  count = count + 1
+                  return count
+              }
+              res()
+              return res
+          }
+
+          fun test(): Int {
+              let counter1 = newCounter()
+              let counter2 = newCounter()
+              return counter1() + counter2()
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(4), actual)
+}
+
+func TestContractClosure(t *testing.T) {
+
+	t.Parallel()
+
+	importLocation := common.NewAddressLocation(nil, common.Address{0x1}, "Counter")
+
+	importedChecker, err := ParseAndCheckWithOptions(t,
+		`
+          contract Counter {
+              fun newCounter(): fun(): Int {
+                  var count = 0
+                  return fun(): Int {
+                      count = count + 1
+                      return count
+                  }
+              }
+          }
+        `,
+		ParseAndCheckOptions{
+			Location: importLocation,
+		},
+	)
+	require.NoError(t, err)
+
+	importCompiler := compiler.NewInstructionCompiler(importedChecker)
+	importedProgram := importCompiler.Compile()
+
+	vmInstance := vm.NewVM(importLocation, importedProgram, nil)
+	importedContractValue, err := vmInstance.InitializeContract()
+	require.NoError(t, err)
+
+	activation := sema.NewVariableActivation(sema.BaseValueActivation)
+	activation.DeclareValue(stdlib.PanicFunction)
+
+	checker, err := ParseAndCheckWithOptions(t,
+		`
+          import Counter from 0x1
+
+          fun test(): Int {
+              let counter1 = Counter.newCounter()
+              let counter2 = Counter.newCounter()
+
+              if counter1() != 1 { panic("first count wrong") }
+              if counter1() != 2 { panic("second count wrong") } 
+              if counter2() != 1 { panic("third count wrong") }
+              if counter2() != 2 { panic("fourth count wrong") }
+              if counter1() != 3 { panic("fifth count wrong") } 
+              if counter2() != 3 { panic("sixth count wrong") }
+              if counter2() != 4 { panic("seventh count wrong") }
+
+              return counter1() + counter2()
+          }
+        `,
+		ParseAndCheckOptions{
+			Config: &sema.Config{
+				ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
+				},
+				BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+					return activation
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker)
+	comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+		return importedProgram
+	}
+
+	program := comp.Compile()
+
+	vmConfig := &vm.Config{
+		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
+			return importedProgram
+		},
+		ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *interpreter.CompositeValue {
+			return importedContractValue
+		},
+	}
+
+	vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
+
+	result, err := vmInstance.Invoke("test")
+	require.NoError(t, err)
+	require.Equal(t, 0, vmInstance.StackSize())
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(9), result)
 }
