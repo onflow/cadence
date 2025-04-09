@@ -335,8 +335,8 @@ func (v *ArrayValue) isInvalidatedResource(context ValueStaticTypeContext) bool 
 	return v.isDestroyed || (v.array == nil && v.IsResourceKinded(context))
 }
 
-func (v *ArrayValue) IsStaleResource(interpreter *Interpreter) bool {
-	return v.array == nil && v.IsResourceKinded(interpreter)
+func (v *ArrayValue) IsStaleResource(context ValueStaticTypeContext) bool {
+	return v.array == nil && v.IsResourceKinded(context)
 }
 
 func (v *ArrayValue) Destroy(context ResourceDestructionContext, locationRange LocationRange) {

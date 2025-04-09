@@ -216,7 +216,7 @@ type ReferenceTrackedResourceKindedValue interface {
 	ResourceKindedValue
 	IsReferenceTrackedResourceKindedValue()
 	ValueID() atree.ValueID
-	IsStaleResource(*Interpreter) bool
+	IsStaleResource(ValueStaticTypeContext) bool
 }
 
 // ContractValue is the value of a contract.

@@ -500,8 +500,8 @@ func (v *CompositeValue) isInvalidatedResource(_ ValueStaticTypeContext) bool {
 	return v.isDestroyed || (v.dictionary == nil && v.Kind == common.CompositeKindResource)
 }
 
-func (v *CompositeValue) IsStaleResource(inter *Interpreter) bool {
-	return v.dictionary == nil && v.IsResourceKinded(inter)
+func (v *CompositeValue) IsStaleResource(context ValueStaticTypeContext) bool {
+	return v.dictionary == nil && v.IsResourceKinded(context)
 }
 
 func (v *CompositeValue) GetComputedFields() map[string]ComputedField {

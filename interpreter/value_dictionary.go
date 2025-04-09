@@ -474,8 +474,8 @@ func (v *DictionaryValue) isInvalidatedResource(context ValueStaticTypeContext) 
 	return v.isDestroyed || (v.dictionary == nil && v.IsResourceKinded(context))
 }
 
-func (v *DictionaryValue) IsStaleResource(interpreter *Interpreter) bool {
-	return v.dictionary == nil && v.IsResourceKinded(interpreter)
+func (v *DictionaryValue) IsStaleResource(context ValueStaticTypeContext) bool {
+	return v.dictionary == nil && v.IsResourceKinded(context)
 }
 
 func (v *DictionaryValue) Destroy(context ResourceDestructionContext, locationRange LocationRange) {
