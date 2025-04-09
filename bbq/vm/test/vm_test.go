@@ -5563,3 +5563,133 @@ func TestUnclosedUpvalueAssignment(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), actual)
 }
+
+func TestClosedUpvalue(t *testing.T) {
+
+	t.Parallel()
+
+	actual, err := compileAndInvoke(t,
+		`
+          fun new(): fun(Int): Int {
+              let x = 1
+              fun addToX(_ y: Int): Int {
+                  return x + y
+              }
+              return addToX
+          }
+
+          fun test(): Int {
+              let f = new()
+              return f(1) + f(2)
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(5), actual)
+}
+
+func TestClosedUpvalueAssignment(t *testing.T) {
+
+	t.Parallel()
+
+	actual, err := compileAndInvoke(t,
+		`
+          fun new(): fun(Int): Int {
+              var x = 1
+              fun addToX(_ y: Int): Int {
+                  x = x + y
+                  return x
+              }
+              return addToX
+          }
+
+          fun test(): Int {
+              let f = new()
+              return f(1) + f(2)
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(6), actual)
+}
+
+func TestCounter(t *testing.T) {
+
+	t.Parallel()
+
+	actual, err := compileAndInvoke(t,
+		`
+          fun newCounter(): fun(): Int {
+              var count = 0
+              return fun(): Int {
+                  count = count + 1
+                  return count
+              }
+          }
+
+          fun test(): Int {
+              let counter = newCounter()
+              return counter() + counter() + counter()
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(6), actual)
+}
+
+func TestCounters(t *testing.T) {
+
+	t.Parallel()
+
+	actual, err := compileAndInvoke(t,
+		`
+          fun newCounter(): fun(): Int {
+              var count = 0
+              return fun(): Int {
+                  count = count + 1
+                  return count
+              }
+          }
+
+          fun test(): Int {
+              let counter1 = newCounter()
+              let counter2 = newCounter()
+              return counter1() + counter2()
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), actual)
+}
+
+func TestCounterWithInitialization(t *testing.T) {
+
+	t.Parallel()
+
+	actual, err := compileAndInvoke(t,
+		`
+          fun newCounter(): fun(): Int {
+              var count = 0
+              let res = fun(): Int {
+                  count = count + 1
+                  return count
+              }
+              res()
+              return res
+          }
+
+          fun test(): Int {
+              let counter1 = newCounter()
+              let counter2 = newCounter()
+              return counter1() + counter2()
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(4), actual)
+}
