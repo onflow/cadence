@@ -232,7 +232,7 @@ type ContractValue interface {
 type IterableValue interface {
 	Value
 	ForEach(
-		interpreter *Interpreter,
+		context IterableValueForeachContext,
 		elementType sema.Type,
 		function func(value Value) (resume bool),
 		transferElements bool,

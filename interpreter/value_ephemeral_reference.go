@@ -308,14 +308,14 @@ func (*EphemeralReferenceValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 func (*EphemeralReferenceValue) isReference() {}
 
 func (v *EphemeralReferenceValue) ForEach(
-	interpreter *Interpreter,
+	context IterableValueForeachContext,
 	elementType sema.Type,
 	function func(value Value) (resume bool),
 	_ bool,
 	locationRange LocationRange,
 ) {
 	forEachReference(
-		interpreter,
+		context,
 		v,
 		v.Value,
 		elementType,

@@ -1887,15 +1887,15 @@ func (v *CompositeValue) Iterator(context ValueStaticTypeContext, locationRange 
 }
 
 func (v *CompositeValue) ForEach(
-	interpreter *Interpreter,
+	context IterableValueForeachContext,
 	_ sema.Type,
 	function func(value Value) (resume bool),
 	transferElements bool,
 	locationRange LocationRange,
 ) {
-	iterator := v.Iterator(interpreter, locationRange)
+	iterator := v.Iterator(context, locationRange)
 	for {
-		value := iterator.Next(interpreter, locationRange)
+		value := iterator.Next(context, locationRange)
 		if value == nil {
 			return
 		}
@@ -1903,7 +1903,7 @@ func (v *CompositeValue) ForEach(
 		if transferElements {
 			// Each element must be transferred before passing onto the function.
 			value = value.Transfer(
-				interpreter,
+				context,
 				locationRange,
 				atree.Address{},
 				false,

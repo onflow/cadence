@@ -194,6 +194,21 @@ type ReferenceCreationContext interface {
 
 var _ ReferenceCreationContext = &Interpreter{}
 
+type GetReferenceContext interface {
+	ReferenceCreationContext
+	ValueStaticTypeContext
+	EntitlementMappingsSubstitutionHandler
+}
+
+var _ GetReferenceContext = &Interpreter{}
+
+type IterableValueForeachContext interface {
+	ValueTransferContext
+	EntitlementMappingsSubstitutionHandler
+}
+
+var _ IterableValueForeachContext = &Interpreter{}
+
 type AccountHandlerContext interface {
 	AccountHandler() AccountHandlerFunc
 }

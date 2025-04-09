@@ -401,15 +401,15 @@ func (*StorageReferenceValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 func (*StorageReferenceValue) isReference() {}
 
 func (v *StorageReferenceValue) ForEach(
-	interpreter *Interpreter,
+	context IterableValueForeachContext,
 	elementType sema.Type,
 	function func(value Value) (resume bool),
 	_ bool,
 	locationRange LocationRange,
 ) {
-	referencedValue := v.mustReferencedValue(interpreter, locationRange)
+	referencedValue := v.mustReferencedValue(context, locationRange)
 	forEachReference(
-		interpreter,
+		context,
 		v,
 		referencedValue,
 		elementType,
@@ -419,7 +419,7 @@ func (v *StorageReferenceValue) ForEach(
 }
 
 func forEachReference(
-	interpreter *Interpreter,
+	context IterableValueForeachContext,
 	reference ReferenceValue,
 	referencedValue Value,
 	elementType sema.Type,
@@ -437,10 +437,15 @@ func forEachReference(
 		// The loop dereference the reference once, and hold onto that referenced-value.
 		// But the reference could get invalidated during the iteration, making that referenced-value invalid.
 		// So check the validity of the reference, before each iteration.
-		checkInvalidatedResourceOrResourceReference(reference, locationRange, interpreter)
+		checkInvalidatedResourceOrResourceReference(reference, locationRange, context)
 
 		if isResultReference {
-			value = interpreter.getReferenceValue(value, elementType, locationRange)
+			value = getReferenceValue(
+				context,
+				value,
+				elementType,
+				locationRange,
+			)
 		}
 
 		return function(value)
@@ -456,7 +461,7 @@ func forEachReference(
 	const transferElements = false
 
 	referencedIterable.ForEach(
-		interpreter,
+		context,
 		referencedElementType,
 		updatedFunction,
 		transferElements,
