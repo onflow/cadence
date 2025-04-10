@@ -90,6 +90,10 @@ func (c *Config) WithAccountHandler(handler stdlib.AccountHandler) *Config {
 	return c
 }
 
+func (c *Config) InterpreterConfig() *interpreter.Config {
+	return c.interpreterConfig
+}
+
 func (c *Config) WithInterpreterConfig(config *interpreter.Config) *Config {
 	c.interpreterConfig = config
 	return c

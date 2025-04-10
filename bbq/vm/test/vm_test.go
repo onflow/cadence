@@ -31,9 +31,9 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/test_utils/common_utils"
-	"github.com/onflow/cadence/test_utils/interpreter_utils"
-	"github.com/onflow/cadence/test_utils/runtime_utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 
 	"github.com/onflow/cadence/bbq"
@@ -52,7 +52,7 @@ const recursiveFib = `
 `
 
 func scriptLocation() common.Location {
-	scriptLocation := runtime_utils.NewScriptLocationGenerator()
+	scriptLocation := NewScriptLocationGenerator()
 	return scriptLocation()
 }
 
@@ -404,7 +404,7 @@ func TestImport(t *testing.T) {
 
         `,
 		ParseAndCheckOptions{
-			Location: common_utils.ImportedLocation,
+			Location: ImportedLocation,
 		},
 	)
 	require.NoError(t, err)
@@ -2493,7 +2493,16 @@ func TestResource(t *testing.T) {
 		comp := compiler.NewInstructionCompiler(checker)
 		program := comp.Compile()
 
-		vmConfig := &vm.Config{}
+		var uuid uint64
+
+		vmConfig := (&vm.Config{}).
+			WithInterpreterConfig(&interpreter.Config{
+				UUIDHandler: func() (uint64, error) {
+					uuid++
+					return uuid, nil
+				},
+			})
+
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		result, err := vmInstance.Invoke("test")
@@ -2535,7 +2544,15 @@ func TestResource(t *testing.T) {
 		comp := compiler.NewInstructionCompiler(checker)
 		program := comp.Compile()
 
-		vmConfig := &vm.Config{}
+		var uuid uint64 = 42
+
+		vmConfig := (&vm.Config{}).
+			WithInterpreterConfig(&interpreter.Config{
+				UUIDHandler: func() (uint64, error) {
+					uuid++
+					return uuid, nil
+				},
+			})
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		_, err = vmInstance.Invoke("test")
@@ -2668,6 +2685,14 @@ func TestDefaultFunctions(t *testing.T) {
 			return contractValue
 		}
 
+		var uuid uint64 = 42
+		vmConfig.WithInterpreterConfig(&interpreter.Config{
+			UUIDHandler: func() (uint64, error) {
+				uuid++
+				return uuid, nil
+			},
+		})
+
 		contractsAddress := common.MustBytesToAddress([]byte{0x1})
 
 		barLocation := common.NewAddressLocation(nil, contractsAddress, "Bar")
@@ -2742,7 +2767,7 @@ func TestDefaultFunctions(t *testing.T) {
 			contractsAddress.HexWithPrefix(),
 		)
 
-		txLocation := runtime_utils.NewTransactionLocationGenerator()
+		txLocation := NewTransactionLocationGenerator()
 
 		txProgram := parseCheckAndCompile(t, tx, txLocation(), programs)
 		txVM := vm.NewVM(txLocation(), txProgram, vmConfig)
@@ -2777,6 +2802,14 @@ func TestDefaultFunctions(t *testing.T) {
 			}
 			return contractValue
 		}
+
+		var uuid uint64 = 42
+		vmConfig.WithInterpreterConfig(&interpreter.Config{
+			UUIDHandler: func() (uint64, error) {
+				uuid++
+				return uuid, nil
+			},
+		})
 
 		contractsAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -2843,7 +2876,7 @@ func TestDefaultFunctions(t *testing.T) {
 			contractsAddress.HexWithPrefix(),
 		)
 
-		txLocation := runtime_utils.NewTransactionLocationGenerator()
+		txLocation := NewTransactionLocationGenerator()
 
 		txProgram := parseCheckAndCompile(t, tx, txLocation(), programs)
 		txVM := vm.NewVM(txLocation(), txProgram, vmConfig)
@@ -2889,6 +2922,14 @@ func TestDefaultFunctions(t *testing.T) {
 			}
 			return contractValue
 		}
+
+		var uuid uint64 = 42
+		vmConfig.WithInterpreterConfig(&interpreter.Config{
+			UUIDHandler: func() (uint64, error) {
+				uuid++
+				return uuid, nil
+			},
+		})
 
 		contractsAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -2961,7 +3002,7 @@ func TestDefaultFunctions(t *testing.T) {
 			contractsAddress.HexWithPrefix(),
 		)
 
-		txLocation := runtime_utils.NewTransactionLocationGenerator()
+		txLocation := NewTransactionLocationGenerator()
 
 		txProgram := parseCheckAndCompile(t, tx, txLocation(), programs)
 		txVM := vm.NewVM(txLocation(), txProgram, vmConfig)
@@ -5084,7 +5125,7 @@ func TestBinary(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			interpreter_utils.ValuesAreEqual(nil, expected, actual)
+			ValuesAreEqual(nil, expected, actual)
 		})
 	}
 
@@ -5630,6 +5671,8 @@ func TestResourceOwner(t *testing.T) {
 
 	addressValue := interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1})
 
+	var uuid uint64 = 42
+
 	vmConfig := (&vm.Config{
 		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
@@ -5647,6 +5690,11 @@ func TestResourceOwner(t *testing.T) {
 			return elaboration.InterfaceType(typeID)
 		},
 	}).WithInterpreterConfig(&interpreter.Config{
+		UUIDHandler: func() (uint64, error) {
+			uuid++
+			return uuid, nil
+		},
+
 		InjectedCompositeFieldsHandler: func(
 			context interpreter.AccountCreationContext,
 			_ common.Location,

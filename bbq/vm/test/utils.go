@@ -30,8 +30,8 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/test_utils/runtime_utils"
-	"github.com/onflow/cadence/test_utils/sema_utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
@@ -405,7 +405,7 @@ type compiledProgram struct {
 }
 
 type CompilerAndVMOptions struct {
-	*sema_utils.ParseAndCheckOptions
+	*ParseAndCheckOptions
 	CompilerConfig *compiler.Config
 	VMConfig       *vm.Config
 }
@@ -467,15 +467,15 @@ func parseAndCheckWithOptions(
 	t testing.TB,
 	code string,
 	location common.Location,
-	options *sema_utils.ParseAndCheckOptions,
+	options *ParseAndCheckOptions,
 	programs map[common.Location]*compiledProgram,
 ) *sema.Checker {
 
-	var parseAndCheckOptions sema_utils.ParseAndCheckOptions
+	var parseAndCheckOptions ParseAndCheckOptions
 	if options != nil {
 		parseAndCheckOptions = *options
 	} else {
-		parseAndCheckOptions = sema_utils.ParseAndCheckOptions{
+		parseAndCheckOptions = ParseAndCheckOptions{
 			Location: location,
 			Config: &sema.Config{
 				LocationHandler:            singleIdentifierLocationResolver(t),
@@ -497,7 +497,7 @@ func parseAndCheckWithOptions(
 		}
 	}
 
-	checker, err := sema_utils.ParseAndCheckWithOptions(
+	checker, err := ParseAndCheckWithOptions(
 		t,
 		code,
 		parseAndCheckOptions,
@@ -559,7 +559,6 @@ func compileAndInvokeWithLogs(
 	funcName string,
 	arguments ...vm.Value,
 ) (result vm.Value, err error, logs []string) {
-	storage := interpreter.NewInMemoryStorage(nil)
 
 	activation := sema.NewVariableActivation(sema.BaseValueActivation)
 	activation.DeclareValue(stdlib.PanicFunction)
@@ -580,8 +579,7 @@ func compileAndInvokeWithLogs(
 		nil,
 	))
 
-	vmConfig := vm.NewConfig(storage).
-		WithAccountHandler(&testAccountHandler{})
+	vmConfig := prepareVMConfig(nil)
 
 	vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
 		funcs := vm.NativeFunctions()
@@ -602,7 +600,7 @@ func compileAndInvokeWithLogs(
 		funcName,
 		CompilerAndVMOptions{
 			VMConfig: vmConfig,
-			ParseAndCheckOptions: &sema_utils.ParseAndCheckOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
 				Config: &sema.Config{
 					LocationHandler: singleIdentifierLocationResolver(t),
 					BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
@@ -655,12 +653,7 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 		programs,
 	)
 
-	vmConfig := options.VMConfig
-	if vmConfig == nil {
-		storage := interpreter.NewInMemoryStorage(nil)
-		vmConfig = vm.NewConfig(storage).
-			WithAccountHandler(&testAccountHandler{})
-	}
+	vmConfig := prepareVMConfig(options.VMConfig)
 
 	if vmConfig.TypeLoader == nil {
 		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
@@ -703,14 +696,9 @@ func compileAndInvokeWithOptionsAndPrograms(
 		programs,
 	)
 
-	vmConfig := options.VMConfig
-	if vmConfig == nil {
-		storage := interpreter.NewInMemoryStorage(nil)
-		vmConfig = vm.NewConfig(storage).
-			WithAccountHandler(&testAccountHandler{})
-	}
+	vmConfig := prepareVMConfig(options.VMConfig)
 
-	scriptLocation := runtime_utils.NewScriptLocationGenerator()
+	scriptLocation := NewScriptLocationGenerator()
 
 	programVM := vm.NewVM(
 		scriptLocation(),
@@ -724,4 +712,32 @@ func compileAndInvokeWithOptionsAndPrograms(
 	}
 
 	return result, err
+}
+
+func prepareVMConfig(config *vm.Config) *vm.Config {
+
+	if config == nil {
+		storage := interpreter.NewInMemoryStorage(nil)
+		config = vm.NewConfig(storage)
+	}
+
+	if config.GetAccountHandler() == nil {
+		config = config.WithAccountHandler(&testAccountHandler{})
+	}
+
+	interpreterConfig := config.InterpreterConfig()
+	if interpreterConfig == nil {
+		interpreterConfig = &interpreter.Config{}
+		config = config.WithInterpreterConfig(interpreterConfig)
+	}
+
+	if interpreterConfig.UUIDHandler == nil {
+		var uuid uint64
+		interpreterConfig.UUIDHandler = func() (uint64, error) {
+			uuid++
+			return uuid, nil
+		}
+	}
+
+	return config
 }
