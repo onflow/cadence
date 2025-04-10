@@ -23,7 +23,6 @@ import (
 
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 )
 
@@ -118,11 +117,7 @@ func LinkGlobals(
 	for i := range program.Functions {
 		function := &program.Functions[i]
 
-		staticType := executable.StaticTypes[function.TypeIndex]
-		funcStaticType, ok := staticType.(interpreter.FunctionStaticType)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
+		funcStaticType := getTypeFromExecutable[interpreter.FunctionStaticType](executable, function.TypeIndex)
 
 		value := FunctionValue{
 			Function:   function,

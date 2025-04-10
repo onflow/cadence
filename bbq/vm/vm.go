@@ -1194,11 +1194,7 @@ func opNewClosure(vm *VM, ins opcode.InstructionNewClosure) {
 		upvalues[upvalueIndex] = upvalue
 	}
 
-	staticType := executable.StaticTypes[function.TypeIndex]
-	funcStaticType, ok := staticType.(interpreter.FunctionStaticType)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
+	funcStaticType := getTypeFromExecutable[interpreter.FunctionStaticType](executable, function.TypeIndex)
 
 	vm.push(FunctionValue{
 		Function:   function,
