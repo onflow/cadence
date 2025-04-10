@@ -2591,7 +2591,7 @@ func TestEncodeType(t *testing.T) {
                   "staticType": {
                     "kind": "Function",
 					"purity": "",
-                    "typeID": "fun<T>(String):Int",
+                    "typeID": "fun<T:AnyStruct>(String):Int",
                     "return": {
                       "kind": "Int"
                     },

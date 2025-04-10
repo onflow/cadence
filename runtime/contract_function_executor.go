@@ -191,7 +191,6 @@ func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Valu
 		inter,
 		&self,
 		nil,
-		nil,
 		interpreterArguments,
 		executor.argumentTypes,
 		nil,

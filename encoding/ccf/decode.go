@@ -138,10 +138,10 @@ func (esm EnforceSortMode) valid() bool {
 
 // DecOptions specifies CCF decoding options which can be used to create immutable DecMode.
 type DecOptions struct {
-	// EnforceSortCompositeFields specifies how decoder should enforce sort order of compsite fields.
+	// EnforceSortCompositeFields specifies how decoder should enforce sort order of composite fields.
 	EnforceSortCompositeFields EnforceSortMode
 
-	// EnforceSortIntersectionTypes specifies how decoder should enforce sort order of restricted types.
+	// EnforceSortIntersectionTypes specifies how decoder should enforce sort order of intersection types.
 	EnforceSortIntersectionTypes EnforceSortMode
 
 	// EnforceSortEntitlementTypes specifies how decoder should enforce sort order of entitlement types.

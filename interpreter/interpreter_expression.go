@@ -265,7 +265,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(
 			if isNestedResourceMove {
 				resultValue = target.(MemberAccessibleValue).RemoveMember(interpreter, locationRange, identifier)
 			} else {
-				resultValue = interpreter.getMemberWithAuthMapping(target, locationRange, identifier, memberAccessInfo)
+				resultValue = getMember(interpreter, target, locationRange, identifier)
 			}
 
 			if resultValue == nil && !allowMissing {
@@ -316,62 +316,7 @@ func getReferenceValue(
 	resultType sema.Type,
 	locationRange LocationRange,
 ) Value {
-
-	// `resultType` is always an [optional] reference.
-	// This is guaranteed by the checker.
-	referenceType, ok := sema.UnwrapOptionalType(resultType).(*sema.ReferenceType)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	switch value := value.(type) {
-	case NilValue, ReferenceValue:
-		// Reference to a nil, should return a nil.
-		// If the value is already a reference then return the same reference.
-		// However, we need to make sure that this reference is actually a subtype of the resultType,
-		// since the checker may not be aware that we are "short-circuiting" in this case
-		// Additionally, it is only safe to "compress" reference types like this when the desired
-		// result reference type is unauthorized
-
-		staticType := value.StaticType(context)
-		if referenceType.Authorization != sema.UnauthorizedAccess || !IsSubTypeOfSemaType(context, staticType, resultType) {
-			panic(InvalidMemberReferenceError{
-				ExpectedType:  resultType,
-				ActualType:    MustConvertStaticToSemaType(staticType, context),
-				LocationRange: locationRange,
-			})
-		}
-
-		return value
-	case *SomeValue:
-		innerValue := getReferenceValue(
-			context,
-			value.value,
-			resultType,
-			locationRange,
-		)
-		return NewSomeValueNonCopying(context, innerValue)
-	}
-
-	auth := getEffectiveAuthorization(context, referenceType)
-
-	return NewEphemeralReferenceValue(context, auth, value, referenceType.Type, locationRange)
-}
-
-func getEffectiveAuthorization(
-	handler EntitlementMappingsSubstitutionHandler,
-	referenceType *sema.ReferenceType,
-) Authorization {
-	_, isMapped := referenceType.Authorization.(*sema.EntitlementMapAccess)
-
-	if isMapped {
-		currentMappedValue := handler.CurrentEntitlementMappedValue()
-		if currentMappedValue != nil {
-			return currentMappedValue
-		}
-	}
-
-	return ConvertSemaAccessToStaticAuthorization(handler, referenceType.Authorization)
+	return createReference(context, resultType, value, locationRange, true)
 }
 
 func (interpreter *Interpreter) checkMemberAccess(
@@ -1395,7 +1340,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 	}
 
 	castingExpressionTypes := interpreter.Program.Elaboration.CastingExpressionTypes(expression)
-	expectedType := SubstituteMappedEntitlements(interpreter, castingExpressionTypes.TargetType)
+	expectedType := castingExpressionTypes.TargetType
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
@@ -1415,7 +1360,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			// otherwise dynamic cast now always unboxes optionals
 			value = Unbox(value)
 		}
-		valueSemaType := SubstituteMappedEntitlements(interpreter, MustSemaTypeOfValue(value, interpreter))
+		valueSemaType := MustSemaTypeOfValue(value, interpreter)
 		valueStaticType := ConvertSemaToStaticType(interpreter, valueSemaType)
 		isSubType := IsSubTypeOfSemaType(interpreter, valueStaticType, expectedType)
 
@@ -1490,20 +1435,31 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 	result := interpreter.evalExpression(referenceExpression.Expression)
 
-	return interpreter.createReference(borrowType, result, referenceExpression)
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: referenceExpression,
+	}
+
+	return createReference(interpreter, borrowType, result, locationRange, false)
 }
 
-func (interpreter *Interpreter) createReference(
+func createReference(
+	context ReferenceCreationContext,
 	borrowType sema.Type,
 	value Value,
-	hasPosition ast.HasPosition,
+	locationRange LocationRange,
+	isImplicit bool,
 ) Value {
 
 	// There are four potential cases:
-	// 1) Target type is optional, actual value is also optional (nil/SomeValue)
-	// 2) Target type is optional, actual value is non-optional
-	// 3) Target type is non-optional, actual value is optional (SomeValue)
-	// 4) Target type is non-optional, actual value is non-optional
+	// (1) Target type is optional, actual value is also optional
+	//     (1.a) value is SomeValue
+	//     (1.b) value is nil
+	// (2) Target type is optional, actual value is non-optional
+	// (3) Target type is non-optional, actual value is optional
+	//     (3.a) value is SomeValue
+	//     (3.b) value is nil
+	// (4) Target type is non-optional, actual value is non-optional
 
 	switch typ := borrowType.(type) {
 	case *sema.OptionalType:
@@ -1513,61 +1469,92 @@ func (interpreter *Interpreter) createReference(
 		switch value := value.(type) {
 		case *SomeValue:
 			// Case (1):
-			// References to optionals are transformed into optional references,
-			// so move the *SomeValue out to the reference itself
+			// References to optionals are transformed into optional references.
+
+			// (1.a) value is SomeValue
+			// Move the *SomeValue out to the reference itself.
 
 			innerValue := value.InnerValue()
 
-			referenceValue := interpreter.createReference(innerType, innerValue, hasPosition)
+			referenceValue := createReference(context, innerType, innerValue, locationRange, false)
 
 			// Wrap the reference with an optional (since an optional is expected).
-			return NewSomeValueNonCopying(interpreter, referenceValue)
+			return NewSomeValueNonCopying(context, referenceValue)
 
 		case NilValue:
+			// Case (1.b) value is nil.
+			// Since the resulting type can accommodate a nil (optional-reference), return nil,
 			return Nil
 
 		default:
 			// Case (2):
 			// If the referenced value is non-optional,
 			// but the target type is optional.
-			referenceValue := interpreter.createReference(innerType, value, hasPosition)
+			referenceValue := createReference(context, innerType, value, locationRange, false)
 
 			// Wrap the reference with an optional (since an optional is expected).
-			return NewSomeValueNonCopying(interpreter, referenceValue)
+			return NewSomeValueNonCopying(context, referenceValue)
 		}
 
 	case *sema.ReferenceType:
-		// Case (3): target type is non-optional, actual value is optional.
-		if someValue, ok := value.(*SomeValue); ok {
-			innerValue := someValue.InnerValue()
 
-			return interpreter.createReference(typ, innerValue, hasPosition)
+		switch value := value.(type) {
+		case *SomeValue:
+			// Case (3.a): target type is non-optional, actual value is optional.
+			innerValue := value.InnerValue()
+
+			return createReference(context, typ, innerValue, locationRange, false)
+
+		case NilValue:
+			// Case (3.b) value is nil.
+			// Since the resulting type can NOT accommodate a nil (non-optional reference), error-out.
+			panic(NonOptionalReferenceToNilError{
+				ReferenceType: typ,
+				LocationRange: locationRange,
+			})
+
+		case ReferenceValue:
+			if isImplicit {
+				// During implicit reference creation (e.g: member/index access on a reference),
+				// if the value is already a reference then return the same reference.
+				// However, we need to make sure that this reference is actually a subtype of the resultType,
+				// since the checker may not be aware that we are "short-circuiting" in this case.
+				// Additionally, it is only safe to "compress" reference types like this when the desired
+				// result reference type is unauthorized
+				staticType := value.StaticType(context)
+				if typ.Authorization != sema.UnauthorizedAccess || !IsSubTypeOfSemaType(context, staticType, typ) {
+					panic(InvalidMemberReferenceError{
+						ExpectedType:  typ,
+						ActualType:    MustConvertStaticToSemaType(staticType, context),
+						LocationRange: locationRange,
+					})
+				}
+
+				return value
+			}
+
+			// break
 		}
 
 		// Case (4): target type is non-optional, actual value is also non-optional.
-		return interpreter.newEphemeralReference(value, typ, hasPosition)
+		return newEphemeralReference(context, value, typ, locationRange)
 
 	default:
 		panic(errors.NewUnreachableError())
 	}
 }
 
-func (interpreter *Interpreter) newEphemeralReference(
+func newEphemeralReference(
+	context ReferenceCreationContext,
 	value Value,
 	typ *sema.ReferenceType,
-	hasPosition ast.HasPosition,
+	locationRange LocationRange,
 ) *EphemeralReferenceValue {
-	// If we are currently interpreting a function that was declared with mapped entitlement access, any appearances
-	// of that mapped access in the body of the function should be replaced with the computed output of the map
-	auth := getEffectiveAuthorization(interpreter, typ)
 
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: hasPosition,
-	}
+	auth := ConvertSemaAccessToStaticAuthorization(context, typ.Authorization)
 
 	return NewEphemeralReferenceValue(
-		interpreter,
+		context,
 		auth,
 		value,
 		typ.Type,

@@ -956,7 +956,7 @@ func parseEventDeclaration(
 		common.DeclarationKindInitializer,
 		ast.NewFunctionDeclaration(
 			p.memoryGauge,
-			ast.AccessNotSpecified,
+			access,
 			ast.FunctionPurityUnspecified,
 			false,
 			false,
