@@ -4265,52 +4265,51 @@ func (e *InvalidNonEntitlementTypeInMapError) EndPosition(common.MemoryGauge) as
 	return e.Pos
 }
 
-// InvalidMappedEntitlementMemberError
-type InvalidMappedEntitlementMemberError struct {
+// InvalidMappingAccessError
+type InvalidMappingAccessError struct {
 	Pos ast.Position
 }
 
-var _ SemanticError = &InvalidMappedEntitlementMemberError{}
-var _ errors.UserError = &InvalidMappedEntitlementMemberError{}
+var _ SemanticError = &InvalidMappingAccessError{}
+var _ errors.UserError = &InvalidMappingAccessError{}
 
-func (*InvalidMappedEntitlementMemberError) isSemanticError() {}
+func (*InvalidMappingAccessError) isSemanticError() {}
 
-func (*InvalidMappedEntitlementMemberError) IsUserError() {}
+func (*InvalidMappingAccessError) IsUserError() {}
 
-func (e *InvalidMappedEntitlementMemberError) Error() string {
-	return "mapped entitlement access modifiers may only be used for fields or accessors with a container type, " +
-		" or a reference type authorized with the same mapped entitlement"
+func (e *InvalidMappingAccessError) Error() string {
+	return "access(mapping ...) may only be used in structs and resources"
 }
 
-func (e *InvalidMappedEntitlementMemberError) StartPosition() ast.Position {
+func (e *InvalidMappingAccessError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *InvalidMappedEntitlementMemberError) EndPosition(common.MemoryGauge) ast.Position {
+func (e *InvalidMappingAccessError) EndPosition(_ common.MemoryGauge) ast.Position {
 	return e.Pos
 }
 
-// InvalidAttachmentMappedEntitlementMemberError
-type InvalidAttachmentMappedEntitlementMemberError struct {
+// InvalidMappingAccessMemberTypeError
+type InvalidMappingAccessMemberTypeError struct {
 	Pos ast.Position
 }
 
-var _ SemanticError = &InvalidAttachmentMappedEntitlementMemberError{}
-var _ errors.UserError = &InvalidAttachmentMappedEntitlementMemberError{}
+var _ SemanticError = &InvalidMappingAccessMemberTypeError{}
+var _ errors.UserError = &InvalidMappingAccessMemberTypeError{}
 
-func (*InvalidAttachmentMappedEntitlementMemberError) isSemanticError() {}
+func (*InvalidMappingAccessMemberTypeError) isSemanticError() {}
 
-func (*InvalidAttachmentMappedEntitlementMemberError) IsUserError() {}
+func (*InvalidMappingAccessMemberTypeError) IsUserError() {}
 
-func (e *InvalidAttachmentMappedEntitlementMemberError) Error() string {
-	return "entitlement mapped members are not yet supported on attachments"
+func (e *InvalidMappingAccessMemberTypeError) Error() string {
+	return "invalid type for access(mapping ...) declaration"
 }
 
-func (e *InvalidAttachmentMappedEntitlementMemberError) StartPosition() ast.Position {
+func (e *InvalidMappingAccessMemberTypeError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *InvalidAttachmentMappedEntitlementMemberError) EndPosition(common.MemoryGauge) ast.Position {
+func (e *InvalidMappingAccessMemberTypeError) EndPosition(_ common.MemoryGauge) ast.Position {
 	return e.Pos
 }
 
@@ -4401,34 +4400,6 @@ func (e *UnrepresentableEntitlementMapOutputError) StartPosition() ast.Position 
 }
 
 func (e *UnrepresentableEntitlementMapOutputError) EndPosition(common.MemoryGauge) ast.Position {
-	return e.EndPos
-}
-
-// InvalidMappedAuthorizationOutsideOfFieldError
-type InvalidMappedAuthorizationOutsideOfFieldError struct {
-	Map *EntitlementMapType
-	ast.Range
-}
-
-var _ SemanticError = &InvalidMappedAuthorizationOutsideOfFieldError{}
-var _ errors.UserError = &InvalidMappedAuthorizationOutsideOfFieldError{}
-
-func (*InvalidMappedAuthorizationOutsideOfFieldError) isSemanticError() {}
-
-func (*InvalidMappedAuthorizationOutsideOfFieldError) IsUserError() {}
-
-func (e *InvalidMappedAuthorizationOutsideOfFieldError) Error() string {
-	return fmt.Sprintf(
-		"cannot use mapped entitlement authorization for `%s` outside of a field or accessor function using the same entitlement access",
-		e.Map.QualifiedIdentifier(),
-	)
-}
-
-func (e *InvalidMappedAuthorizationOutsideOfFieldError) StartPosition() ast.Position {
-	return e.StartPos
-}
-
-func (e *InvalidMappedAuthorizationOutsideOfFieldError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.EndPos
 }
 
@@ -4907,4 +4878,21 @@ func (*UnconvertableTypeError) IsUserError() {}
 
 func (e *UnconvertableTypeError) Error() string {
 	return fmt.Sprintf("cannot convert type `%s`", e.Type)
+}
+
+// InvalidMappingAuthorizationError
+
+type InvalidMappingAuthorizationError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidMappingAuthorizationError{}
+var _ errors.UserError = &InvalidMappingAuthorizationError{}
+
+func (*InvalidMappingAuthorizationError) isSemanticError() {}
+
+func (*InvalidMappingAuthorizationError) IsUserError() {}
+
+func (e *InvalidMappingAuthorizationError) Error() string {
+	return "auth(mapping ...) is not supported"
 }

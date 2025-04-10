@@ -436,11 +436,42 @@ func (n NoOpReferenceCreationContext) MeterMemory(usage common.MemoryUsage) erro
 	return nil
 }
 
+func (n NoOpReferenceCreationContext) ReadStored(storageAddress common.Address, domain common.StorageDomain, identifier interpreter.StorageMapKey) interpreter.Value {
+	// NO-OP
+	return nil
+}
+
+func (n NoOpReferenceCreationContext) GetEntitlementType(typeID interpreter.TypeID) (*sema.EntitlementType, error) {
+	// NO-OP
+	return nil, nil
+}
+
+func (n NoOpReferenceCreationContext) GetEntitlementMapType(typeID interpreter.TypeID) (*sema.EntitlementMapType, error) {
+	// NO-OP
+	return nil, nil
+}
+
+func (n NoOpReferenceCreationContext) GetInterfaceType(location common.Location, qualifiedIdentifier string, typeID interpreter.TypeID) (*sema.InterfaceType, error) {
+	// NO-OP
+	return nil, nil
+}
+
+func (n NoOpReferenceCreationContext) GetCompositeType(location common.Location, qualifiedIdentifier string, typeID interpreter.TypeID) (*sema.CompositeType, error) {
+	// NO-OP
+	return nil, nil
+}
+
+func (n NoOpReferenceCreationContext) IsTypeInfoRecovered(location common.Location) bool {
+	// NO-OP
+	return false
+}
+
 type NoOpFunctionCreationContext struct {
-	NoOpReferenceCreationContext
 	//Just to make the compiler happy
 	interpreter.ResourceDestructionContext
 }
+
+var _ interpreter.FunctionCreationContext = NoOpFunctionCreationContext{}
 
 func (n NoOpFunctionCreationContext) ClearReferencedResourceKindedValues(valueID atree.ValueID) {
 	// NO-OP
@@ -468,8 +499,6 @@ func (n NoOpFunctionCreationContext) MeterMemory(usage common.MemoryUsage) error
 	// NO-OP
 	return nil
 }
-
-var _ interpreter.FunctionCreationContext = NoOpFunctionCreationContext{}
 
 func testAccountWithErrorHandler(
 	t *testing.T,
@@ -1534,4 +1563,49 @@ func TestInterpretAccountStorageFields(t *testing.T) {
 			})
 		}
 	}
+}
+
+func TestInterpretAccountStorageReadFunctionTypes(t *testing.T) {
+
+	t.Parallel()
+
+	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+	inter, _ := testAccount(t, address, true, nil, `
+          fun getLoadType(): Type {
+              return account.storage.load.getType()
+          }
+
+          fun getCopyType(): Type {
+              return account.storage.copy.getType()
+          }
+
+          fun areEqual(): Bool {
+              return getLoadType() == getCopyType()
+          }
+        `, sema.Config{})
+
+	loadType, err := inter.Invoke("getLoadType")
+	require.NoError(t, err)
+	require.IsType(t, interpreter.TypeValue{}, loadType)
+	assert.Equal(t,
+		interpreter.FunctionStaticType{
+			Type: sema.Account_StorageTypeLoadFunctionType,
+		},
+		loadType.(interpreter.TypeValue).Type,
+	)
+
+	copyType, err := inter.Invoke("getCopyType")
+	require.NoError(t, err)
+	require.IsType(t, interpreter.TypeValue{}, copyType)
+	assert.Equal(t,
+		interpreter.FunctionStaticType{
+			Type: sema.Account_StorageTypeCopyFunctionType,
+		},
+		copyType.(interpreter.TypeValue).Type,
+	)
+
+	areEqual, err := inter.Invoke("areEqual")
+	require.NoError(t, err)
+	require.Equal(t, interpreter.FalseValue, areEqual)
 }

@@ -328,11 +328,10 @@ func (v *HostFunctionValue) SetNestedVariables(variables map[string]Variable) {
 
 // BoundFunctionValue
 type BoundFunctionValue struct {
-	Function           FunctionValue
-	Base               *EphemeralReferenceValue
-	BoundAuthorization Authorization
-	SelfReference      ReferenceValue
-	selfIsReference    bool
+	Function        FunctionValue
+	Base            *EphemeralReferenceValue
+	SelfReference   ReferenceValue
+	selfIsReference bool
 }
 
 var _ Value = BoundFunctionValue{}
@@ -343,7 +342,6 @@ func NewBoundFunctionValue(
 	function FunctionValue,
 	self *Value,
 	base *EphemeralReferenceValue,
-	boundAuth Authorization,
 ) BoundFunctionValue {
 
 	// Since 'self' work as an implicit reference, create an explicit one and hold it.
@@ -353,7 +351,9 @@ func NewBoundFunctionValue(
 	selfRef, selfIsRef := (*self).(ReferenceValue)
 	if !selfIsRef {
 		semaType := MustSemaTypeOfValue(*self, context)
-		selfRef = NewEphemeralReferenceValue(context, boundAuth, *self, semaType, EmptyLocationRange)
+		// Create an unauthorized reference. The purpose of it is only to track and invalidate resource moves,
+		// it is not directly exposed to the users
+		selfRef = NewEphemeralReferenceValue(context, UnauthorizedAccess, *self, semaType, EmptyLocationRange)
 	}
 
 	return NewBoundFunctionValueFromSelfReference(
@@ -362,7 +362,6 @@ func NewBoundFunctionValue(
 		selfRef,
 		selfIsRef,
 		base,
-		boundAuth,
 	)
 }
 
@@ -372,7 +371,6 @@ func NewBoundFunctionValueFromSelfReference(
 	selfReference ReferenceValue,
 	selfIsReference bool,
 	base *EphemeralReferenceValue,
-	boundAuth Authorization,
 ) BoundFunctionValue {
 
 	// If the function is already a bound function, then do not re-wrap.
@@ -383,11 +381,10 @@ func NewBoundFunctionValueFromSelfReference(
 	common.UseMemory(gauge, common.BoundFunctionValueMemoryUsage)
 
 	return BoundFunctionValue{
-		Function:           function,
-		SelfReference:      selfReference,
-		selfIsReference:    selfIsReference,
-		Base:               base,
-		BoundAuthorization: boundAuth,
+		Function:        function,
+		SelfReference:   selfReference,
+		selfIsReference: selfIsReference,
+		Base:            base,
 	}
 }
 
@@ -430,7 +427,6 @@ func (f BoundFunctionValue) FunctionType() *sema.FunctionType {
 func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 
 	invocation.Base = f.Base
-	invocation.BoundAuthorization = f.BoundAuthorization
 
 	locationRange := invocation.LocationRange
 	inter := invocation.InvocationContext
@@ -536,7 +532,6 @@ func NewBoundHostFunctionValue[T Value](
 		hostFunc,
 		&self,
 		nil,
-		nil,
 	)
 }
 
@@ -554,7 +549,6 @@ func NewUnmeteredBoundHostFunctionValue(
 		context,
 		hostFunc,
 		&self,
-		nil,
 		nil,
 	)
 }

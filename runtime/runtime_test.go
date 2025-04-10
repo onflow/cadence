@@ -10804,117 +10804,6 @@ func TestRuntimeContractWithInvalidCapability(t *testing.T) {
 	)
 }
 
-func TestRuntimeAccountEntitlementEscalation(t *testing.T) {
-
-	t.Parallel()
-
-	addressValue := Address{
-		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-	}
-
-	runtime := NewTestInterpreterRuntime()
-
-	contract := []byte(`
-		access(all) contract Test{
-
-			access(all) struct S{
-				access(mapping Identity) var s: AnyStruct
-		
-				init(_ a: AnyStruct){
-				self.s = a
-				}
-			}
-		}
-	`)
-
-	deploy := DeploymentTransaction("Test", contract)
-
-	initialTx := []byte(`
-		transaction {
-
-			prepare(acct: auth(Storage) &Account) {
-				acct.storage.save(42, to: /storage/foo)
-			}
-		}
-	`)
-
-	exploitTx := []byte(`
-		import Test from 0x01
-		
-		transaction {
-			prepare(acct: auth(Storage) &Account) {}
-			execute {
-				var a = getAccount(0x1)
-				var r = &Test.S(a) as auth(Storage) &Test.S
-				var rr = r.s as! auth(Storage) &Account
-
-				rr.storage.load<Int>(from: /storage/foo)
-			}
-		}
-	`)
-
-	accountCodes := map[Location][]byte{}
-	var events []cadence.Event
-
-	runtimeInterface := &TestRuntimeInterface{
-		OnGetCode: func(location Location) (bytes []byte, err error) {
-			return accountCodes[location], nil
-		},
-		Storage: NewTestLedger(nil, nil),
-		OnGetSigningAccounts: func() ([]Address, error) {
-			return []Address{addressValue}, nil
-		},
-		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
-		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-			return accountCodes[location], nil
-		},
-		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
-			accountCodes[location] = code
-			return nil
-		},
-		OnCreateAccount: func(payer Address) (address Address, err error) {
-			return addressValue, nil
-		},
-		OnEmitEvent: func(event cadence.Event) error {
-			events = append(events, event)
-			return nil
-		},
-	}
-
-	nextTransactionLocation := NewTransactionLocationGenerator()
-
-	err := runtime.ExecuteTransaction(
-		Script{
-			Source: deploy,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
-
-	err = runtime.ExecuteTransaction(
-		Script{
-			Source: initialTx,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		})
-	require.NoError(t, err)
-
-	err = runtime.ExecuteTransaction(
-		Script{
-			Source: exploitTx,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		})
-	require.ErrorAs(t, err, &interpreter.InvalidMemberReferenceError{})
-}
-
 func TestRuntimeAccountStorageBorrowEphemeralReferenceValue(t *testing.T) {
 
 	t.Parallel()
@@ -12349,4 +12238,99 @@ func BenchmarkContractFunctionInvocation(b *testing.B) {
 		)
 		require.NoError(b, err)
 	}
+}
+
+func TestRuntimeFunctionTypeConfusion(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntime()
+
+	imported := []byte(`
+        access(all) resource interface Receiver {
+            access(all) balance: Int
+            access(all) fun deposit(from: @{Receiver})
+        }
+
+        access(all) resource Vault: Receiver {
+
+            access(all) var balance: Int
+
+            init(balance: Int) {
+                self.balance = balance
+            }
+
+            access(all) fun withdraw(amount: Int): @Vault {
+                self.balance = self.balance - amount
+                return <-create Vault(balance: amount)
+            }
+
+            access(all) fun deposit(from: @{Receiver}) {
+                self.balance = self.balance + from.balance
+                destroy from
+            }
+        }
+
+        access(all) fun createVault(): @Vault {
+            return <-create Vault(balance: 5)
+        }
+    `)
+
+	script1 := []byte(`
+        import Receiver, createVault from "imported"
+
+        transaction {
+
+            prepare(acc: auth(Storage) &Account) {
+
+                acc.storage.save(<-createVault(), to: /storage/r)
+
+                var g = [ acc.storage.load ]
+
+                var r = &g as auth(Mutate) &[fun(StoragePath):AnyStruct]
+
+                r.append(acc.storage.copy as! fun(StoragePath):AnyStruct)
+				
+                var c <- g[1]<@{Receiver}>(/storage/r)!
+				
+                var vr = acc.storage.borrow<&{Receiver}>(from: /storage/r)!
+                vr.deposit(from:<-c)
+            }
+        }
+    `)
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
+			switch location {
+			case common.StringLocation("imported"):
+				return imported, nil
+			default:
+				return nil, fmt.Errorf("unknown import location: %s", location)
+			}
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{{42}}, nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: script1,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+
+	RequireError(t, err)
+
+	var typeErr *sema.TypeMismatchError
+	require.ErrorAs(t, err, &typeErr)
 }
