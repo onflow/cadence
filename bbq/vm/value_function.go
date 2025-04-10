@@ -142,7 +142,8 @@ func (v FunctionValue) Invoke(invocation interpreter.Invocation) interpreter.Val
 type NativeFunction func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value
 
 type NativeFunctionValue struct {
-	Name           string
+	Name string
+	// ParameterCount includes actual parameters + receiver for type-bound functions.
 	ParameterCount int
 	Function       NativeFunction
 	Type           interpreter.FunctionStaticType
