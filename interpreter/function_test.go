@@ -24,9 +24,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
@@ -322,4 +324,76 @@ func TestInterpretFunctionSubtyping(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(interpreter.UInt8Value(4)),
 		result,
 	)
+}
+
+func TestInterpretGenericFunctionSubtyping(t *testing.T) {
+
+	t.Parallel()
+
+	parseCheckAndInterpretWithGenericFunction := func(
+		tt *testing.T,
+		code string,
+		boundType sema.Type,
+	) (*interpreter.Interpreter, error) {
+
+		typeParameter := &sema.TypeParameter{
+			Name:      "T",
+			TypeBound: boundType,
+		}
+
+		function1 := stdlib.NewStandardLibraryStaticFunction(
+			"foo",
+			&sema.FunctionType{
+				TypeParameters: []*sema.TypeParameter{
+					typeParameter,
+				},
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+			},
+			"",
+			nil,
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(function1)
+
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, function1)
+
+		return parseCheckAndInterpretWithOptions(t,
+			code,
+			ParseCheckAndInterpretOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+				Config: &interpreter.Config{
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
+				},
+			},
+		)
+	}
+
+	t.Run("generic function as non-generic function", func(t *testing.T) {
+		t.Parallel()
+
+		inter, err := parseCheckAndInterpretWithGenericFunction(t, `
+            fun test() {
+                var boxedFunc: AnyStruct = foo  // fun<T Integer>(): Void
+
+                var unboxedFunc = boxedFunc as! fun():Void
+            }
+            `,
+			sema.IntegerType,
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+
+		var typeErr interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &typeErr)
+	})
 }

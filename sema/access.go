@@ -264,12 +264,10 @@ func (e EntitlementSetAccess) PermitsAccess(other Access) bool {
 // EntitlementMapAccess
 
 type EntitlementMapAccess struct {
-	Type         *EntitlementMapType
-	domain       EntitlementSetAccess
-	domainOnce   sync.Once
-	codomain     EntitlementSetAccess
-	codomainOnce sync.Once
-	images       sync.Map
+	Type       *EntitlementMapType
+	domain     EntitlementSetAccess
+	domainOnce sync.Once
+	images     sync.Map
 }
 
 var _ Access = &EntitlementMapAccess{}
@@ -319,40 +317,7 @@ func (e *EntitlementMapAccess) PermitsAccess(other Access) bool {
 	switch otherAccess := other.(type) {
 	case PrimitiveAccess:
 		return otherAccess == PrimitiveAccess(ast.AccessSelf)
-	case *EntitlementMapAccess:
-		return e.Type.Equal(otherAccess.Type)
-	// if we are initializing a field that was declared with an entitlement-mapped reference type,
-	// the type we are using to initialize that member must be fully authorized for the entire codomain
-	// of the map. That is, for some field declared `access(M) let x: auth(M) &T`, when `x` is intialized
-	// by `self.x = y`, `y` must be a reference of type `auth(X, Y, Z, ...) &T` where `{X, Y, Z, ...}` is
-	// a superset of all the possible output types of `M` (all the possible entitlements `x` may have)
-	//
-	// as an example:
-	//
-	// entitlement mapping M {
-	//    X -> Y
-	//    E -> F
-	// }
-	// resource R {
-	//    access(M) let x: auth(M) &T
-	//    init(tref: auth(Y, F) &T) {
-	//        self.x = tref
-	//    }
-	// }
-	//
-	// the tref value used to initialize `x` must be entitled to the full output of `M` (in this case)
-	// `(Y, F)`, because the mapped access of `x` may provide either (or both) `Y` and `F` depending on
-	// the input entitlement. It is only safe for `R` to give out these entitlements if it actually
-	// possesses them, so we require the initializing value to have every possible entitlement that may
-	// be produced by the map
-	//
-	// However, if the map is or includes the `Identity`, there is no possible set that is permitted by
-	// this map, since the theoretical codomain of the Identity map is infinite
-	case EntitlementSetAccess:
-		if e.Type.IncludesIdentity {
-			return false
-		}
-		return e.Codomain().PermitsAccess(otherAccess)
+
 	default:
 		return false
 	}
@@ -369,19 +334,6 @@ func (e *EntitlementMapAccess) Domain() EntitlementSetAccess {
 		e.domain = NewEntitlementSetAccess(domain, Conjunction)
 	})
 	return e.domain
-}
-
-func (e *EntitlementMapAccess) Codomain() Access {
-	e.codomainOnce.Do(func() {
-		codomain := common.MappedSliceWithNoDuplicates(
-			e.Type.Relations,
-			func(r EntitlementRelation) *EntitlementType {
-				return r.Output
-			},
-		)
-		e.codomain = NewEntitlementSetAccess(codomain, Conjunction)
-	})
-	return e.codomain
 }
 
 // produces the image set of a single entitlement through a map
@@ -407,46 +359,54 @@ func (e *EntitlementMapAccess) entitlementImage(entitlement *EntitlementType) *E
 	return imageMap
 }
 
-// Image applies all the entitlements in the `argumentAccess` to the function
-// defined by the map in `e`, producing a new entitlement set of the image of the
-// arguments.
-func (e *EntitlementMapAccess) Image(inputs Access, astRange func() ast.Range) (Access, error) {
+// Image applies all the entitlements in the `argumentAccess` to the function defined by the map in `e`,
+// producing a new entitlement set of the image of the arguments.
+func (e *EntitlementMapAccess) Image(gauge common.MemoryGauge, inputs Access, pos ast.HasPosition) (Access, error) {
 
 	switch inputs := inputs.(type) {
 	// primitive access always passes trivially through the map
 	case PrimitiveAccess:
 		return inputs, nil
+
 	case EntitlementSetAccess:
 		output := orderedmap.New[EntitlementOrderedSet](inputs.Entitlements.Len())
-		var err error = nil
+
+		var err error
 		inputs.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
 			entitlementImage := e.entitlementImage(entitlement)
-			// the image of a single element is always a conjunctive set; consider a mapping
-			// M defined as X -> Y, X -> Z, A -> B, A -> C. M(X) = Y & Z and M(A) = B & C.
+			output.SetAll(entitlementImage)
+
+			// The image of a single element is always a conjunctive set;
+			// consider a mapping M defined as X -> Y, X -> Z, A -> B, A -> C. M(X) = Y & Z and M(A) = B & C.
 			// Thus M(X | A) would be ((Y & Z) | (B & C)), which is a disjunction of two conjunctions,
-			// which is too complex to be represented in Cadence as a type. Thus whenever such a type
-			// would arise, we raise an error instead
-			if inputs.SetKind == Disjunction && entitlementImage.Len() > 1 {
+			// which is too complex to be represented in Cadence as a type.
+			// Thus, whenever such a type would arise, we raise an error instead
+			if err == nil &&
+				inputs.SetKind == Disjunction &&
+				entitlementImage.Len() > 1 {
+
 				err = &UnrepresentableEntitlementMapOutputError{
 					Input: inputs,
 					Map:   e.Type,
-					Range: astRange(),
+					Range: ast.NewRangeFromPositioned(gauge, pos),
 				}
 			}
-			output.SetAll(entitlementImage)
 		})
 		if err != nil {
 			return nil, err
 		}
+
 		// the image of a set through a map is the conjunction of all the output sets
 		if output.Len() == 0 {
 			return UnauthorizedAccess, nil
 		}
+
 		return EntitlementSetAccess{
 			Entitlements: output,
 			SetKind:      inputs.SetKind,
 		}, nil
 	}
+
 	return UnauthorizedAccess, nil
 }
 

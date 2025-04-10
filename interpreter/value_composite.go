@@ -374,7 +374,6 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 			interpreter,
 			nil,
 			nil,
-			nil,
 			[]Value{v},
 			[]sema.Type{},
 			nil,
@@ -495,7 +494,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 func compositeMember(interpreter *Interpreter, compositeValue Value, memberValue Value) Value {
 	hostFunc, isHostFunc := memberValue.(*HostFunctionValue)
 	if isHostFunc {
-		return NewBoundFunctionValue(interpreter, hostFunc, &compositeValue, nil, nil)
+		return NewBoundFunctionValue(interpreter, hostFunc, &compositeValue, nil)
 	}
 
 	return memberValue
@@ -596,7 +595,7 @@ func (v *CompositeValue) GetFunction(interpreter *Interpreter, locationRange Loc
 
 	// If the function is already a bound function, then do not re-wrap.
 	// `NewBoundFunctionValue` already handles this.
-	return NewBoundFunctionValue(interpreter, function, &self, base, nil)
+	return NewBoundFunctionValue(interpreter, function, &self, base)
 }
 
 func (v *CompositeValue) OwnerValue(interpreter *Interpreter, locationRange LocationRange) OptionalValue {

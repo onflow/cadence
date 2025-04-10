@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/parser"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -677,4 +678,255 @@ func TestCheckInvalidFunctionSubtyping(t *testing.T) {
 		common.TypeID("fun(auth(S.test.E)&S.test.R):Void"),
 		errTypeMismatch.ActualType.ID(),
 	)
+}
+
+func TestCheckGenericFunctionSubtyping(t *testing.T) {
+
+	t.Parallel()
+
+	parseAndCheck := func(tt *testing.T, code string, boundType1, boundType2 sema.Type) (*sema.Checker, error) {
+		typeParameter1 := &sema.TypeParameter{
+			Name:      "T",
+			TypeBound: boundType1,
+		}
+
+		function1 := stdlib.NewStandardLibraryStaticFunction(
+			"foo",
+			&sema.FunctionType{
+				TypeParameters: []*sema.TypeParameter{
+					typeParameter1,
+				},
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+			},
+			"",
+			nil,
+		)
+
+		typeParameter2 := &sema.TypeParameter{
+			Name:      "T",
+			TypeBound: boundType2,
+		}
+
+		function2 := stdlib.NewStandardLibraryStaticFunction(
+			"bar",
+			&sema.FunctionType{
+				TypeParameters: []*sema.TypeParameter{
+					typeParameter2,
+				},
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+			},
+			"",
+			nil,
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(function1)
+		baseValueActivation.DeclareValue(function2)
+
+		return ParseAndCheckWithOptions(tt,
+			code,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+		)
+	}
+
+	t.Run("same bound type", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := parseAndCheck(t, `
+            fun test() {
+                var func = foo  // fun<T AnyStruct>(): Void
+                func = bar      // fun<T AnyStruct>(): Void
+            }`,
+			sema.AnyStructType,
+			sema.AnyStructType,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("different bound types", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := parseAndCheck(t, `
+            fun test() {
+                var func = foo  // fun<T Integer>(): Void
+                func = bar      // fun<T Path>(): Void
+            }`,
+			sema.IntegerType,
+			sema.PathType,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errors[0], &typeMismatchError)
+	})
+
+	t.Run("second bound type is a subtype", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := parseAndCheck(t, `
+            fun test() {
+                var func = foo  // fun<T AnyStruct>(): Void
+                func = bar      // fun<T Integer>(): Void
+            }`,
+			sema.AnyStructType,
+			sema.IntegerType,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errors[0], &typeMismatchError)
+	})
+
+	t.Run("second bound type is a super-type", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := parseAndCheck(t, `
+            fun test() {
+                var func = foo  // fun<T Integer>(): Void
+                func = bar      // fun<T AnyStruct>(): Void
+            }`,
+			sema.IntegerType,
+			sema.AnyStructType,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errors[0], &typeMismatchError)
+	})
+
+	t.Run("target has no bound type", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := parseAndCheck(t, `
+            fun test() {
+                var func = foo  // fun<T>(): Void
+                func = bar      // fun<T AnyStruct>(): Void
+            }`,
+			nil,
+			sema.AnyStructType,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errors[0], &typeMismatchError)
+	})
+
+	t.Run("value has no bound type", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := parseAndCheck(t, `
+            fun test() {
+                var func = foo  // fun<T AnyStruct>(): Void
+                func = bar      // fun<T>(): Void
+            }`,
+			sema.AnyStructType,
+			nil,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errors[0], &typeMismatchError)
+	})
+
+	t.Run("generic function to a non-generic var", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := parseAndCheck(t, `
+            fun test() {
+                var func1: fun():Void = foo   // fun<T AnyStruct>(): Void
+                var func2: fun():Void = bar   // fun<T>(): Void
+            }
+        `,
+			sema.AnyStructType,
+			nil,
+		)
+
+		errors := RequireCheckerErrors(t, err, 2)
+
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errors[0], &typeMismatchError)
+
+		require.ErrorAs(t, errors[1], &typeMismatchError)
+	})
+
+	t.Run("no bound types, equal param and return types", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := parseAndCheck(t, `
+            fun test() {
+                var func = foo  // fun<T>(): Void
+                func = bar      // fun<T>(): Void
+            }`,
+			nil,
+			nil,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("no bound types, different return types", func(t *testing.T) {
+		typeParameter1 := &sema.TypeParameter{
+			Name: "T",
+		}
+
+		function1 := stdlib.NewStandardLibraryStaticFunction(
+			"foo",
+			&sema.FunctionType{
+				TypeParameters: []*sema.TypeParameter{
+					typeParameter1,
+				},
+				ReturnTypeAnnotation: sema.IntTypeAnnotation,
+			},
+			"",
+			nil,
+		)
+
+		typeParameter2 := &sema.TypeParameter{
+			Name: "T",
+		}
+
+		function2 := stdlib.NewStandardLibraryStaticFunction(
+			"bar",
+			&sema.FunctionType{
+				TypeParameters: []*sema.TypeParameter{
+					typeParameter2,
+				},
+				ReturnTypeAnnotation: sema.PathTypeAnnotation,
+			},
+			"",
+			nil,
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(function1)
+		baseValueActivation.DeclareValue(function2)
+
+		_, err := ParseAndCheckWithOptions(t,
+			`fun test() {
+                var func = foo  // fun<T>(): Int
+                func = bar      // fun<T>(): Path
+		    }`,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errors[0], &typeMismatchError)
+	})
 }

@@ -1675,34 +1675,49 @@ func TestInterpretInvalidReferenceToOptionalConfusion(t *testing.T) {
 	_, err := inter.Invoke("main")
 	RequireError(t, err)
 
-	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+	require.ErrorAs(t, err, &interpreter.NonOptionalReferenceToNilError{})
 }
 
 func TestInterpretReferenceToOptional(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
-      fun main(): AnyStruct {
-        let y: Int? = nil
-        let z: AnyStruct = y
-        return &z as &AnyStruct
-      }
-    `)
+	t.Run("nil in AnyStruct", func(t *testing.T) {
+		t.Parallel()
 
-	value, err := inter.Invoke("main")
-	require.NoError(t, err)
+		inter := parseCheckAndInterpret(t, `
+            fun main(): &AnyStruct {
+                let y: AnyStruct = nil
+                return &y
+            }
+        `)
 
-	AssertValuesEqual(
-		t,
-		inter,
-		&interpreter.EphemeralReferenceValue{
-			Value:         interpreter.Nil,
-			BorrowedType:  sema.AnyStructType,
-			Authorization: interpreter.UnauthorizedAccess,
-		},
-		value,
-	)
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.NonOptionalReferenceToNilError{})
+	})
+
+	t.Run("nil in optional", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main(): &Int? {
+                let y: Int? = nil
+                return &y
+            }
+        `)
+
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.Nil,
+			value,
+		)
+	})
+
 }
 
 func TestInterpretInvalidatedReferenceToOptional(t *testing.T) {

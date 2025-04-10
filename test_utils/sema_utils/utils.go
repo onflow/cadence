@@ -164,6 +164,8 @@ func ParseAndCheckWithOptionsAndMemoryMetering(
 }
 
 func RequireCheckerErrors(t *testing.T, err error, count int) []error {
+	t.Helper()
+
 	if count <= 0 {
 		require.NoError(t, err)
 		return nil
@@ -176,7 +178,10 @@ func RequireCheckerErrors(t *testing.T, err error, count int) []error {
 
 	errs := checkerErr.Errors
 
-	require.Len(t, errs, count)
+	if !assert.Len(t, errs, count) {
+		t.Log(err.Error())
+		t.FailNow()
+	}
 
 	// Get the error message, to check that it can be successfully generated
 

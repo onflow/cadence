@@ -26,6 +26,7 @@ import (
 
 	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -648,6 +649,58 @@ func TestInterpretMemberAccess(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("composite reference, nil in optional field", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct Test {
+                var x: [Int]?
+                init() {
+                    self.x = nil
+                }
+            }
+
+            fun test(): &[Int]? {
+                let test = Test()
+                let testRef = &test as &Test
+                return testRef.x
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.Nil,
+			value,
+		)
+	})
+
+	t.Run("composite reference, nil in anystruct field", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct Test {
+                var x: AnyStruct
+                init() {
+                    self.x = nil
+                }
+            }
+
+            fun test(): &AnyStruct {
+                let test = Test()
+                let testRef = &test as &Test
+                return testRef.x
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.NonOptionalReferenceToNilError{})
+	})
+
 	t.Run("composite reference, primitive field", func(t *testing.T) {
 		t.Parallel()
 
@@ -1192,108 +1245,6 @@ func TestInterpretNestedReferenceMemberAccess(t *testing.T) {
                 let ref: &AnyStruct = containerRef.value  // <--- run-time error here
                 destroy r
             }        
-        `)
-
-		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.InvalidMemberReferenceError{})
-	})
-
-	t.Run("struct entitlement escalation", func(t *testing.T) {
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-
-            entitlement E
-
-            struct T {
-                access(E) fun foo() {}
-            }
-
-            struct S {
-                access(mapping Identity) var ref: AnyStruct
-        
-                init(_ a: AnyStruct){
-                    self.ref = a
-                }
-            }
-        
-            fun test() {
-                let t = T()
-                let pubTRef = &t as &T
-                var s = &S(pubTRef) as auth(E) &S
-                var tRef = s.ref as! auth(E) &T
-                tRef.foo()
-            }
-            
-        `)
-
-		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.InvalidMemberReferenceError{})
-	})
-
-	t.Run("entitled struct escalation", func(t *testing.T) {
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-
-            entitlement E
-
-            struct T {
-                access(E) fun foo() {}
-            }
-
-            struct S {
-                access(mapping Identity) var ref: AnyStruct
-        
-                init(_ a: AnyStruct){
-                    self.ref = a
-                }
-            }
-        
-            fun test() {
-                let t = T()
-                let pubTRef = &t as auth(E) &T
-                var s = &S(pubTRef) as auth(E) &S
-                var member = s.ref
-                var tRef = member as! auth(E) &T
-                tRef.foo()
-            }
-            
-        `)
-
-		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.InvalidMemberReferenceError{})
-	})
-
-	t.Run("resource entitlement escalation", func(t *testing.T) {
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-
-            entitlement E
-
-            resource R {
-                access(E) fun foo() {}
-            }
-
-            struct S {
-                access(mapping Identity) var ref: AnyStruct
-        
-                init(_ a: AnyStruct){
-                    self.ref = a
-                }
-            }
-        
-            fun test() {
-                let r <- create R()
-                let pubRef = &r as &R
-                var s = &S(pubRef) as auth(E) &S
-                var entitledRef = s.ref as! auth(E) &R
-                entitledRef.foo()
-
-                destroy r
-            }
-            
         `)
 
 		_, err := inter.Invoke("test")

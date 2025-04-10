@@ -2655,7 +2655,7 @@ func newAccountStorageCapabilitiesIssueWithTypeFunction(
 		return interpreter.NewBoundHostFunctionValue(
 			inter,
 			storageCapabilities,
-			sema.Account_StorageCapabilitiesTypeIssueFunctionType,
+			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
 				inter := invocation.Interpreter
@@ -3742,12 +3742,8 @@ func getCheckedCapabilityController(
 ) {
 	if wantedBorrowType == nil {
 		wantedBorrowType = capabilityBorrowType
-	} else {
-		wantedBorrowType = inter.SubstituteMappedEntitlements(wantedBorrowType).(*sema.ReferenceType)
-
-		if !canBorrow(wantedBorrowType, capabilityBorrowType) {
-			return nil, nil
-		}
+	} else if !canBorrow(wantedBorrowType, capabilityBorrowType) {
+		return nil, nil
 	}
 
 	capabilityAddress := capabilityAddressValue.ToAddress()
