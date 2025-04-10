@@ -776,6 +776,16 @@ func NewTypeParameter(
 	}
 }
 
+func (p TypeParameter) IDPart() string {
+	var b strings.Builder
+	b.WriteString(p.Name)
+	if p.TypeBound != nil {
+		b.WriteByte(':')
+		b.WriteString(p.TypeBound.ID())
+	}
+	return b.String()
+}
+
 // CompositeType
 
 type CompositeType interface {
@@ -1525,7 +1535,7 @@ func (t *FunctionType) ID() string {
 	if typeParameterCount > 0 {
 		typeParameters = make([]string, typeParameterCount)
 		for i, typeParameter := range t.TypeParameters {
-			typeParameters[i] = typeParameter.Name
+			typeParameters[i] = typeParameter.IDPart()
 		}
 	}
 

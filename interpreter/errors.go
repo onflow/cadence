@@ -1067,6 +1067,23 @@ func (e NestedReferenceError) Error() string {
 	)
 }
 
+// NonOptionalReferenceToNilError
+type NonOptionalReferenceToNilError struct {
+	ReferenceType sema.Type
+	LocationRange
+}
+
+var _ errors.UserError = NonOptionalReferenceToNilError{}
+
+func (NonOptionalReferenceToNilError) IsUserError() {}
+
+func (e NonOptionalReferenceToNilError) Error() string {
+	return fmt.Sprintf(
+		"cannot create a reference to nil: expected `%s`, but found `nil`",
+		e.ReferenceType.ID(),
+	)
+}
+
 // InclusiveRangeConstructionError
 
 type InclusiveRangeConstructionError struct {

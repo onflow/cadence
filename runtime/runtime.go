@@ -563,9 +563,7 @@ func (r *interpreterRuntime) Storage(context Context) (*Storage, *interpreter.In
 	storage := NewStorage(
 		runtimeInterface,
 		runtimeInterface,
-		StorageConfig{
-			StorageFormatV2Enabled: r.defaultConfig.StorageFormatV2Enabled,
-		},
+		StorageConfig{},
 	)
 
 	environment := context.Environment

@@ -134,7 +134,6 @@ var _ ValueTransferContext = &Interpreter{}
 
 type ValueConversionContext interface {
 	ValueTransferContext
-	EntitlementMappingsSubstitutionHandler
 }
 
 var _ ValueTransferContext = &Interpreter{}
@@ -190,21 +189,19 @@ var _ ValueVisitContext = &Interpreter{}
 type ReferenceCreationContext interface {
 	common.MemoryGauge
 	ReferenceTracker
+	ValueStaticTypeContext
 }
 
 var _ ReferenceCreationContext = &Interpreter{}
 
 type GetReferenceContext interface {
 	ReferenceCreationContext
-	ValueStaticTypeContext
-	EntitlementMappingsSubstitutionHandler
 }
 
 var _ GetReferenceContext = &Interpreter{}
 
 type IterableValueForeachContext interface {
 	ValueTransferContext
-	EntitlementMappingsSubstitutionHandler
 }
 
 var _ IterableValueForeachContext = &Interpreter{}
@@ -335,7 +332,6 @@ var _ CapabilityControllerContext = &Interpreter{}
 
 type GetCapabilityControllerContext interface {
 	TypeConverter
-	EntitlementMappingsSubstitutionHandler
 	StorageReader
 }
 
