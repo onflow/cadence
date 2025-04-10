@@ -301,26 +301,27 @@ func TestNewStruct(t *testing.T) {
 
 	vmConfig := &vm.Config{}
 
-	vmInstance := CompileAndPrepareToInvoke(t, `
-      struct Foo {
-          var id : Int
+	vmInstance := CompileAndPrepareToInvoke(t,
+		`
+          struct Foo {
+              var id : Int
 
-          init(_ id: Int) {
-              self.id = id
+              init(_ id: Int) {
+                  self.id = id
+              }
           }
-      }
 
-      fun test(count: Int): Foo {
-          var i = 0
-          var r = Foo(0)
-          while i < count {
-              i = i + 1
-              r = Foo(i)
-              r.id = r.id + 2
+          fun test(count: Int): Foo {
+              var i = 0
+              var r = Foo(0)
+              while i < count {
+                  i = i + 1
+                  r = Foo(i)
+                  r.id = r.id + 2
+              }
+              return r
           }
-          return r
-      }
-  `,
+        `,
 		CompilerAndVMOptions{
 			VMConfig: vmConfig,
 		},
@@ -363,7 +364,7 @@ func TestStructMethodCall(t *testing.T) {
           var r = Foo("Hello from Foo!")
           return r.sayHello(1)
       }
-  `)
+    `)
 	require.NoError(t, err)
 
 	comp := compiler.NewInstructionCompiler(checker)
@@ -385,23 +386,22 @@ func TestImport(t *testing.T) {
 
 	importedChecker, err := ParseAndCheckWithOptions(t,
 		`
-      fun helloText(): String {
-          return "global function of the imported program"
-      }
-
-      struct Foo {
-          var id : String
-
-          init(_ id: String) {
-              self.id = id
+          fun helloText(): String {
+              return "global function of the imported program"
           }
 
-          fun sayHello(_ id: Int): String {
-              self.id
-              return helloText()
-          }
-      }
+          struct Foo {
+              var id : String
 
+              init(_ id: String) {
+                  self.id = id
+              }
+
+              fun sayHello(_ id: Int): String {
+                  self.id
+                  return helloText()
+              }
+          }
         `,
 		ParseAndCheckOptions{
 			Location: ImportedLocation,
@@ -412,14 +412,15 @@ func TestImport(t *testing.T) {
 	subComp := compiler.NewInstructionCompiler(importedChecker)
 	importedProgram := subComp.Compile()
 
-	checker, err := ParseAndCheckWithOptions(t, `
-      import Foo from 0x01
+	checker, err := ParseAndCheckWithOptions(t,
+		`
+          import Foo from 0x01
 
-      fun test(): String {
-          var r = Foo("Hello from Foo!")
-          return r.sayHello(1)
-      }
-  `,
+          fun test(): String {
+              var r = Foo("Hello from Foo!")
+              return r.sayHello(1)
+          }
+        `,
 		ParseAndCheckOptions{
 			Config: &sema.Config{
 				ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
@@ -460,32 +461,34 @@ func TestContractImport(t *testing.T) {
 
 	t.Run("nested type def", func(t *testing.T) {
 
+		t.Parallel()
+
 		importLocation := common.NewAddressLocation(nil, common.Address{0x1}, "MyContract")
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
-      contract MyContract {
+              contract MyContract {
 
-          fun helloText(): String {
-              return "global function of the imported program"
-          }
+                  fun helloText(): String {
+                      return "global function of the imported program"
+                  }
 
-          init() {}
+                  init() {}
 
-          struct Foo {
-              var id : String
+                  struct Foo {
+                      var id : String
 
-              init(_ id: String) {
-                  self.id = id
+                      init(_ id: String) {
+                          self.id = id
+                      }
+
+                      fun sayHello(_ id: Int): String {
+                          self.id
+                          return MyContract.helloText()
+                      }
+                  }
               }
-
-              fun sayHello(_ id: Int): String {
-                  self.id
-                  return MyContract.helloText()
-              }
-          }
-      }
-        `,
+            `,
 			ParseAndCheckOptions{
 				Location: importLocation,
 			},
@@ -499,14 +502,15 @@ func TestContractImport(t *testing.T) {
 		importedContractValue, err := vmInstance.InitializeContract()
 		require.NoError(t, err)
 
-		checker, err := ParseAndCheckWithOptions(t, `
-      import MyContract from 0x01
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+              import MyContract from 0x01
 
-      fun test(): String {
-          var r = MyContract.Foo("Hello from Foo!")
-          return r.sayHello(1)
-      }
-  `,
+              fun test(): String {
+                  var r = MyContract.Foo("Hello from Foo!")
+                  return r.sayHello(1)
+              }
+            `,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
 					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
@@ -545,23 +549,26 @@ func TestContractImport(t *testing.T) {
 	})
 
 	t.Run("contract function", func(t *testing.T) {
+
+		t.Parallel()
+
 		importLocation := common.NewAddressLocation(nil, common.Address{0x1}, "MyContract")
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
-      contract MyContract {
+              contract MyContract {
 
-          var s: String
+                  var s: String
 
-          fun helloText(): String {
-              return self.s
-          }
+                  fun helloText(): String {
+                      return self.s
+                  }
 
-          init() {
-              self.s = "contract function of the imported program"
-          }
-      }
-        `,
+                  init() {
+                      self.s = "contract function of the imported program"
+                  }
+              }
+            `,
 			ParseAndCheckOptions{
 				Location: importLocation,
 			},
@@ -575,13 +582,14 @@ func TestContractImport(t *testing.T) {
 		importedContractValue, err := vmInstance.InitializeContract()
 		require.NoError(t, err)
 
-		checker, err := ParseAndCheckWithOptions(t, `
-      import MyContract from 0x01
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+              import MyContract from 0x01
 
-      fun test(): String {
-          return MyContract.helloText()
-      }
-  `,
+              fun test(): String {
+                  return MyContract.helloText()
+              }
+            `,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
 					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
@@ -621,6 +629,8 @@ func TestContractImport(t *testing.T) {
 
 	t.Run("nested imports", func(t *testing.T) {
 
+		t.Parallel()
+
 		// Initialize Foo
 
 		fooLocation := common.NewAddressLocation(
@@ -631,15 +641,16 @@ func TestContractImport(t *testing.T) {
 
 		fooChecker, err := ParseAndCheckWithOptions(t,
 			`
-            contract Foo {
-                var s: String
-                init() {
-                    self.s = "Hello from Foo!"
-                }
-                fun sayHello(): String {
-                    return self.s
-                }
-            }`,
+              contract Foo {
+                  var s: String
+                  init() {
+                      self.s = "Hello from Foo!"
+                  }
+                  fun sayHello(): String {
+                      return self.s
+                  }
+              }
+            `,
 			ParseAndCheckOptions{
 				Location: fooLocation,
 			},
@@ -661,15 +672,17 @@ func TestContractImport(t *testing.T) {
 			"Bar",
 		)
 
-		barChecker, err := ParseAndCheckWithOptions(t, `
-            import Foo from 0x01
+		barChecker, err := ParseAndCheckWithOptions(t,
+			`
+              import Foo from 0x01
 
-            contract Bar {
-                init() {}
-                fun sayHello(): String {
-                    return Foo.sayHello()
-                }
-            }`,
+              contract Bar {
+                  init() {}
+                  fun sayHello(): String {
+                      return Foo.sayHello()
+                  }
+              }
+            `,
 			ParseAndCheckOptions{
 				Location: barLocation,
 				Config: &sema.Config{
@@ -711,12 +724,14 @@ func TestContractImport(t *testing.T) {
 
 		// Compile and run main program
 
-		checker, err := ParseAndCheckWithOptions(t, `
-            import Bar from 0x02
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+              import Bar from 0x02
 
-            fun test(): String {
-                return Bar.sayHello()
-            }`,
+              fun test(): String {
+                  return Bar.sayHello()
+              }
+            `,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
 					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
@@ -794,6 +809,8 @@ func TestContractImport(t *testing.T) {
 
 	t.Run("contract interface", func(t *testing.T) {
 
+		t.Parallel()
+
 		// Initialize Foo
 
 		fooLocation := common.NewAddressLocation(
@@ -804,13 +821,14 @@ func TestContractImport(t *testing.T) {
 
 		fooChecker, err := ParseAndCheckWithOptions(t,
 			`
-            contract interface Foo {
-                fun withdraw(_ amount: Int): String {
-                    pre {
-                        amount < 100: "Withdraw limit exceeds"
-                    }
-                }
-            }`,
+              contract interface Foo {
+                  fun withdraw(_ amount: Int): String {
+                      pre {
+                          amount < 100: "Withdraw limit exceeds"
+                      }
+                  }
+              }
+            `,
 			ParseAndCheckOptions{
 				Location: fooLocation,
 			},
@@ -828,15 +846,17 @@ func TestContractImport(t *testing.T) {
 			"Bar",
 		)
 
-		barChecker, err := ParseAndCheckWithOptions(t, `
-            import Foo from 0x01
+		barChecker, err := ParseAndCheckWithOptions(t,
+			`
+              import Foo from 0x01
 
-            contract Bar: Foo {
-                init() {}
-                fun withdraw(_ amount: Int): String {
-                    return "Successfully withdrew"
-                }
-            }`,
+              contract Bar: Foo {
+                  init() {}
+                  fun withdraw(_ amount: Int): String {
+                      return "Successfully withdrew"
+                  }
+              }
+            `,
 			ParseAndCheckOptions{
 				Location: barLocation,
 				Config: &sema.Config{
@@ -885,12 +905,14 @@ func TestContractImport(t *testing.T) {
 
 		// Compile and run main program
 
-		checker, err := ParseAndCheckWithOptions(t, `
-            import Bar from 0x02
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+              import Bar from 0x02
 
-            fun test(): String {
-                return Bar.withdraw(50)
-            }`,
+              fun test(): String {
+                  return Bar.withdraw(50)
+              }
+            `,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
 					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
@@ -969,14 +991,17 @@ func TestContractImport(t *testing.T) {
 
 func TestInitializeContract(t *testing.T) {
 
+	t.Parallel()
+
 	checker, err := ParseAndCheckWithOptions(t,
 		`
-      contract MyContract {
-          var status : String
-          init() {
-              self.status = "PENDING"
+          contract MyContract {
+              var status: String
+
+              init() {
+                  self.status = "PENDING"
+              }
           }
-      }
         `,
 		ParseAndCheckOptions{
 			Location: common.NewAddressLocation(nil, common.Address{0x1}, "MyContract"),
@@ -1003,18 +1028,20 @@ func TestContractAccessDuringInit(t *testing.T) {
 	t.Run("using contract name", func(t *testing.T) {
 		t.Parallel()
 
-		checker, err := ParseAndCheckWithOptions(t, `
-            contract MyContract {
-                var status : String
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+              contract MyContract {
+                  var status: String
 
-                access(all) fun getInitialStatus(): String {
-                    return "PENDING"
-                }
+                  fun getInitialStatus(): String {
+                      return "PENDING"
+                  }
 
-                init() {
-                    self.status = MyContract.getInitialStatus()
-                }
-            }`,
+                  init() {
+                      self.status = MyContract.getInitialStatus()
+                  }
+              }
+            `,
 			ParseAndCheckOptions{
 				Location: common.NewAddressLocation(nil, common.Address{0x1}, "MyContract"),
 			},
@@ -1036,18 +1063,20 @@ func TestContractAccessDuringInit(t *testing.T) {
 	t.Run("using self", func(t *testing.T) {
 		t.Parallel()
 
-		checker, err := ParseAndCheckWithOptions(t, `
-            contract MyContract {
-                var status : String
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+              contract MyContract {
+                  var status: String
 
-                access(all) fun getInitialStatus(): String {
-                    return "PENDING"
-                }
+                  fun getInitialStatus(): String {
+                      return "PENDING"
+                  }
 
-                init() {
-                    self.status = self.getInitialStatus()
-                }
-            }`,
+                  init() {
+                      self.status = self.getInitialStatus()
+                  }
+              }
+            `,
 			ParseAndCheckOptions{
 				Location: common.NewAddressLocation(nil, common.Address{0x1}, "MyContract"),
 			},
@@ -1075,17 +1104,18 @@ func TestFunctionOrder(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-      fun foo(): Int {
-          return 2
-      }
+          fun foo(): Int {
+              return 2
+          }
 
-      fun test(): Int {
-          return foo() + bar()
-      }
+          fun test(): Int {
+              return foo() + bar()
+          }
 
-      fun bar(): Int {
-          return 3
-      }`)
+          fun bar(): Int {
+              return 3
+          }
+        `)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(checker)
@@ -1105,35 +1135,36 @@ func TestFunctionOrder(t *testing.T) {
 		t.Parallel()
 
 		code := `
-      contract MyContract {
+          contract MyContract {
 
-          fun helloText(): String {
-              return "global function of the imported program"
-          }
-
-          init() {}
-
-          fun initializeFoo() {
-              MyContract.Foo("one")
-          }
-
-          struct Foo {
-              var id : String
-
-              init(_ id: String) {
-                  self.id = id
+              fun helloText(): String {
+                  return "global function of the imported program"
               }
 
-              fun sayHello(_ id: Int): String {
-                  self.id
-                  return MyContract.helloText()
+              init() {}
+
+              fun initializeFoo() {
+                  MyContract.Foo("one")
+              }
+
+              struct Foo {
+                  var id : String
+
+                  init(_ id: String) {
+                      self.id = id
+                  }
+
+                  fun sayHello(_ id: Int): String {
+                      self.id
+                      return MyContract.helloText()
+                  }
+              }
+
+              fun initializeFooAgain() {
+                  MyContract.Foo("two")
               }
           }
-
-          fun initializeFooAgain() {
-              MyContract.Foo("two")
-          }
-      }`
+        `
 
 		checker, err := ParseAndCheckWithOptions(
 			t,
@@ -1163,18 +1194,20 @@ func TestContractField(t *testing.T) {
 	t.Parallel()
 
 	t.Run("get", func(t *testing.T) {
+		t.Parallel()
+
 		importLocation := common.NewAddressLocation(nil, common.Address{0x1}, "MyContract")
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
-      contract MyContract {
-          var status : String
+              contract MyContract {
+                  var status : String
 
-          init() {
-              self.status = "PENDING"
-          }
-      }
-        `,
+                  init() {
+                      self.status = "PENDING"
+                  }
+              }
+            `,
 			ParseAndCheckOptions{
 				Location: importLocation,
 			},
@@ -1188,13 +1221,14 @@ func TestContractField(t *testing.T) {
 		importedContractValue, err := vmInstance.InitializeContract()
 		require.NoError(t, err)
 
-		checker, err := ParseAndCheckWithOptions(t, `
-      import MyContract from 0x01
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+              import MyContract from 0x01
 
-      fun test(): String {
-          return MyContract.status
-      }
-  `,
+              fun test(): String {
+                  return MyContract.status
+              }
+            `,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
 					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
@@ -1236,18 +1270,20 @@ func TestContractField(t *testing.T) {
 	})
 
 	t.Run("set", func(t *testing.T) {
+		t.Parallel()
+
 		importLocation := common.NewAddressLocation(nil, common.Address{0x1}, "MyContract")
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
-      contract MyContract {
-          var status : String
+              contract MyContract {
+                  var status : String
 
-          init() {
-              self.status = "PENDING"
-          }
-      }
-        `,
+                  init() {
+                      self.status = "PENDING"
+                  }
+              }
+            `,
 			ParseAndCheckOptions{
 				Location: importLocation,
 			},
@@ -1261,14 +1297,15 @@ func TestContractField(t *testing.T) {
 		importedContractValue, err := vmInstance.InitializeContract()
 		require.NoError(t, err)
 
-		checker, err := ParseAndCheckWithOptions(t, `
-      import MyContract from 0x01
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+              import MyContract from 0x01
 
-      fun test(): String {
-          MyContract.status = "UPDATED"
-          return MyContract.status
-      }
-  `,
+              fun test(): String {
+                  MyContract.status = "UPDATED"
+                  return MyContract.status
+              }
+            `,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
 					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
@@ -1316,6 +1353,8 @@ func TestNativeFunctions(t *testing.T) {
 
 	t.Run("static function", func(t *testing.T) {
 
+		t.Parallel()
+
 		logFunction := stdlib.NewStandardLibraryStaticFunction(
 			"log",
 			&sema.FunctionType{
@@ -1337,10 +1376,12 @@ func TestNativeFunctions(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(logFunction)
 
-		checker, err := ParseAndCheckWithOptions(t, `
-            fun test() {
-                log("Hello, World!")
-            }`,
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+              fun test() {
+                  log("Hello, World!")
+              }
+            `,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
 					BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
@@ -1363,11 +1404,13 @@ func TestNativeFunctions(t *testing.T) {
 	})
 
 	t.Run("bound function", func(t *testing.T) {
+		t.Parallel()
+
 		checker, err := ParseAndCheck(t, `
-            fun test(): String {
-                return "Hello".concat(", World!")
-            }`,
-		)
+          fun test(): String {
+              return "Hello".concat(", World!")
+          }
+        `)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(checker)
@@ -1390,17 +1433,21 @@ func TestTransaction(t *testing.T) {
 
 	t.Run("simple", func(t *testing.T) {
 
+		t.Parallel()
+
 		checker, err := ParseAndCheck(t, `
-            transaction {
-                var a: String
-                prepare() {
-                    self.a = "Hello!"
-                }
-                execute {
-                    self.a = "Hello again!"
-                }
-            }`,
-		)
+          transaction {
+              var a: String
+
+              prepare() {
+                  self.a = "Hello!"
+              }
+
+              execute {
+                  self.a = "Hello again!"
+              }
+          }
+        `)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(checker)
@@ -1444,17 +1491,21 @@ func TestTransaction(t *testing.T) {
 
 	t.Run("with params", func(t *testing.T) {
 
+		t.Parallel()
+
 		checker, err := ParseAndCheck(t, `
             transaction(param1: String, param2: String) {
                 var a: String
+
                 prepare() {
                     self.a = param1
                 }
+
                 execute {
                     self.a = param2
                 }
-            }`,
-		)
+            }
+        `)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(checker)
@@ -1503,6 +1554,8 @@ func TestTransaction(t *testing.T) {
 
 	t.Run("conditions with execute", func(t *testing.T) {
 
+		t.Parallel()
+
 		location := common.TransactionLocation{0x1}
 
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -1534,32 +1587,33 @@ func TestTransaction(t *testing.T) {
 			},
 		}
 
-		checker, err := ParseAndCheckWithOptions(t, `
-            transaction {
-                var count: Int
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+              transaction {
+                  var count: Int
 
-                prepare() {
-                    self.count = 2
-                }
+                  prepare() {
+                      self.count = 2
+                  }
 
-                pre {
-                    print(self.count)
-                }
+                  pre {
+                      print(self.count)
+                  }
 
-                execute {
-                    self.count = 10
-                }
+                  execute {
+                      self.count = 10
+                  }
 
-                post {
-                    print(self.count)
-                }
-            }
+                  post {
+                      print(self.count)
+                  }
+              }
 
-
-            access(all) view fun print(_ n: Int): Bool {
-                log(n.toString())
-                return true
-            }`,
+              view fun print(_ n: Int): Bool {
+                  log(n.toString())
+                  return true
+              }
+            `,
 			parseAndCheckOptions,
 		)
 		require.NoError(t, err)
@@ -1594,6 +1648,8 @@ func TestTransaction(t *testing.T) {
 
 	t.Run("conditions without execute", func(t *testing.T) {
 
+		t.Parallel()
+
 		location := common.TransactionLocation{0x1}
 
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -1625,28 +1681,29 @@ func TestTransaction(t *testing.T) {
 			},
 		}
 
-		checker, err := ParseAndCheckWithOptions(t, `
-            transaction {
-                var count: Int
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+              transaction {
+                  var count: Int
 
-                prepare() {
-                    self.count = 2
-                }
+                  prepare() {
+                      self.count = 2
+                  }
 
-                pre {
-                    print(self.count)
-                }
+                  pre {
+                      print(self.count)
+                  }
 
-                post {
-                    print(self.count)
-                }
-            }
+                  post {
+                      print(self.count)
+                  }
+              }
 
-
-            access(all) view fun print(_ n: Int): Bool {
-                log(n.toString())
-                return true
-            }`,
+              view fun print(_ n: Int): Bool {
+                  log(n.toString())
+                  return true
+              }
+            `,
 			parseAndCheckOptions,
 		)
 		require.NoError(t, err)
@@ -1681,6 +1738,8 @@ func TestTransaction(t *testing.T) {
 
 	t.Run("pre condition failed", func(t *testing.T) {
 
+		t.Parallel()
+
 		location := common.TransactionLocation{0x1}
 
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -1712,33 +1771,34 @@ func TestTransaction(t *testing.T) {
 			},
 		}
 
-		checker, err := ParseAndCheckWithOptions(t, `
-            transaction {
-                var count: Int
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+              transaction {
+                  var count: Int
 
-                prepare() {
-                    self.count = 2
-                }
+                  prepare() {
+                      self.count = 2
+                  }
 
-                pre {
-                    print(self.count)
-                    false
-                }
+                  pre {
+                      print(self.count)
+                      false
+                  }
 
-                execute {
-                    self.count = 10
-                }
+                  execute {
+                      self.count = 10
+                  }
 
-                post {
-                    print(self.count)
-                }
-            }
+                  post {
+                      print(self.count)
+                  }
+              }
 
-
-            access(all) view fun print(_ n: Int): Bool {
-                log(n.toString())
-                return true
-            }`,
+              view fun print(_ n: Int): Bool {
+                  log(n.toString())
+                  return true
+              }
+            `,
 			parseAndCheckOptions,
 		)
 		require.NoError(t, err)
@@ -1773,6 +1833,8 @@ func TestTransaction(t *testing.T) {
 
 	t.Run("post condition failed", func(t *testing.T) {
 
+		t.Parallel()
+
 		location := common.TransactionLocation{0x1}
 
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -1804,33 +1866,35 @@ func TestTransaction(t *testing.T) {
 			},
 		}
 
-		checker, err := ParseAndCheckWithOptions(t, `
-            transaction {
-                var count: Int
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+              transaction {
+                  var count: Int
 
-                prepare() {
-                    self.count = 2
-                }
+                  prepare() {
+                      self.count = 2
+                  }
 
-                pre {
-                    print(self.count)
-                }
+                  pre {
+                      print(self.count)
+                  }
 
-                execute {
-                    self.count = 10
-                }
+                  execute {
+                      self.count = 10
+                  }
 
-                post {
-                    print(self.count)
-                    false
-                }
-            }
+                  post {
+                      print(self.count)
+                      false
+                  }
+              }
 
 
-            access(all) view fun print(_ n: Int): Bool {
-                log(n.toString())
-                return true
-            }`,
+              view fun print(_ n: Int): Bool {
+                  log(n.toString())
+                  return true
+              }
+            `,
 			parseAndCheckOptions,
 		)
 		require.NoError(t, err)
@@ -1880,27 +1944,27 @@ func TestInterfaceMethodCall(t *testing.T) {
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
-      contract MyContract {
-          struct Foo: Greetings {
-              var id : String
+              contract MyContract {
+                  struct Foo: Greetings {
+                      var id : String
 
-              init(_ id: String) {
-                  self.id = id
+                      init(_ id: String) {
+                          self.id = id
+                      }
+
+                      fun sayHello(_ id: Int): String {
+                          return self.id
+                      }
+                  }
+
+                  struct interface Greetings {
+                      fun sayHello(_ id: Int): String
+                  }
+
+                  struct interface SomethingElse {
+                  }
               }
-
-              fun sayHello(_ id: Int): String {
-                  return self.id
-              }
-          }
-
-          struct interface Greetings {
-              fun sayHello(_ id: Int): String
-          }
-
-          struct interface SomethingElse {
-          }
-      }
-        `,
+            `,
 			ParseAndCheckOptions{
 				Location: contractLocation,
 			},
@@ -1922,17 +1986,19 @@ func TestInterfaceMethodCall(t *testing.T) {
 		importedContractValue, err := vmInstance.InitializeContract()
 		require.NoError(t, err)
 
-		checker, err := ParseAndCheckWithOptions(t, `
-        import MyContract from 0x01
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+              import MyContract from 0x01
 
-        fun test(): String {
-            var r: {MyContract.Greetings} = MyContract.Foo("Hello from Foo!")
-            // first call must link
-            r.sayHello(1)
+              fun test(): String {
+                  var r: {MyContract.Greetings} = MyContract.Foo("Hello from Foo!")
+                  // first call must link
+                  r.sayHello(1)
 
-            // second call should pick from the cache
-            return r.sayHello(1)
-        }`,
+                  // second call should pick from the cache
+                  return r.sayHello(1)
+              }
+            `,
 
 			ParseAndCheckOptions{
 				Config: &sema.Config{
@@ -1995,11 +2061,12 @@ func TestInterfaceMethodCall(t *testing.T) {
 
 		fooChecker, err := ParseAndCheckWithOptions(t,
 			`
-        contract Foo {
-            struct interface Greetings {
-                fun sayHello(): String
-            }
-        }`,
+              contract Foo {
+                  struct interface Greetings {
+                      fun sayHello(): String
+                  }
+              }
+            `,
 			ParseAndCheckOptions{
 				Location: fooLocation,
 			},
@@ -2023,11 +2090,12 @@ func TestInterfaceMethodCall(t *testing.T) {
 
 		barChecker, err := ParseAndCheckWithOptions(t,
 			`
-        contract Bar {
-            fun sayHello(): String {
-                return "Hello from Bar!"
-            }
-        }`,
+              contract Bar {
+                  fun sayHello(): String {
+                      return "Hello from Bar!"
+                  }
+              }
+            `,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
 					LocationHandler: singleIdentifierLocationResolver(t),
@@ -2054,16 +2122,17 @@ func TestInterfaceMethodCall(t *testing.T) {
 
 		bazChecker, err := ParseAndCheckWithOptions(t,
 			`
-        import Foo from 0x01
-        import Bar from 0x02
+              import Foo from 0x01
+              import Bar from 0x02
 
-        contract Baz {
-            struct GreetingImpl: Foo.Greetings {
-                fun sayHello(): String {
-                    return Bar.sayHello()
-                }
-            }
-        }`,
+              contract Baz {
+                  struct GreetingImpl: Foo.Greetings {
+                      fun sayHello(): String {
+                          return Bar.sayHello()
+                      }
+                  }
+              }
+            `,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
 					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
@@ -2135,13 +2204,14 @@ func TestInterfaceMethodCall(t *testing.T) {
 
 		// Get `Bar.GreetingsImpl` value
 
-		checker, err := ParseAndCheckWithOptions(t, `
-        import Baz from 0x03
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+              import Baz from 0x03
 
-        fun test(): Baz.GreetingImpl {
-            return Baz.GreetingImpl()
-        }`,
-
+              fun test(): Baz.GreetingImpl {
+                  return Baz.GreetingImpl()
+              }
+            `,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
 					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
@@ -2214,13 +2284,14 @@ func TestInterfaceMethodCall(t *testing.T) {
 		// `Baz` is linked and imported at runtime, its imports also
 		// should get linked at runtime (similar to how static linking works).
 
-		checker, err = ParseAndCheckWithOptions(t, `
-        import Foo from 0x01
+		checker, err = ParseAndCheckWithOptions(t,
+			`
+              import Foo from 0x01
 
-        fun test(v: {Foo.Greetings}): String {
-            return v.sayHello()
-        }`,
-
+              fun test(v: {Foo.Greetings}): String {
+                  return v.sayHello()
+              }
+            `,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
 					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
@@ -2584,19 +2655,20 @@ func TestDefaultFunctions(t *testing.T) {
 	t.Run("simple interface", func(t *testing.T) {
 		t.Parallel()
 
-		result, err := compileAndInvoke(t, `
-            struct interface IA {
-                fun test(): Int {
-                    return 42
-                }
-            }
+		result, err := compileAndInvoke(t,
+			`
+              struct interface IA {
+                  fun test(): Int {
+                      return 42
+                  }
+              }
 
-            struct Test: IA {}
+              struct Test: IA {}
 
-            fun main(): Int {
-               return Test().test()
-            }
-        `,
+              fun main(): Int {
+                 return Test().test()
+              }
+            `,
 			"main",
 		)
 
@@ -2607,23 +2679,24 @@ func TestDefaultFunctions(t *testing.T) {
 	t.Run("overridden", func(t *testing.T) {
 		t.Parallel()
 
-		result, err := compileAndInvoke(t, `
-            struct interface IA {
-                fun test(): Int {
-                    return 41
-                }
-            }
+		result, err := compileAndInvoke(t,
+			`
+              struct interface IA {
+                  fun test(): Int {
+                      return 41
+                  }
+              }
 
-            struct Test: IA {
-                fun test(): Int {
-                    return 42
-                }
-            }
+              struct Test: IA {
+                  fun test(): Int {
+                      return 42
+                  }
+              }
 
-            fun main(): Int {
-               return Test().test()
-            }
-        `,
+              fun main(): Int {
+                 return Test().test()
+              }
+            `,
 			"main",
 		)
 
@@ -2635,24 +2708,25 @@ func TestDefaultFunctions(t *testing.T) {
 
 		t.Parallel()
 
-		result, err := compileAndInvoke(t, `
-            struct interface A {
-                access(all) fun test(): Int {
-                    return 3
-                }
-            }
+		result, err := compileAndInvoke(t,
+			`
+              struct interface A {
+                  fun test(): Int {
+                      return 3
+                  }
+              }
 
-            struct interface B: A {}
+              struct interface B: A {}
 
-            struct interface C: A {}
+              struct interface C: A {}
 
-            struct D: B, C {}
+              struct D: B, C {}
 
-            access(all) fun main(): Int {
-                let d = D()
-                return d.test()
-            }
-        `,
+              fun main(): Int {
+                  let d = D()
+                  return d.test()
+              }
+            `,
 			"main",
 		)
 
@@ -2701,46 +2775,48 @@ func TestDefaultFunctions(t *testing.T) {
 		// Deploy interface contract
 
 		barContract := `
-        access(all) contract interface Bar {
+          contract interface Bar {
 
-            access(all) resource interface VaultInterface {
+              resource interface VaultInterface {
 
-                access(all) var balance: Int
+                  var balance: Int
 
-                access(all) fun getBalance(): Int {
-                    return self.balance
-                }
-            }
-        }
-    `
+                  fun getBalance(): Int {
+                      return self.balance
+                  }
+              }
+          }
+        `
 
 		// Only need to compile
 		parseCheckAndCompile(t, barContract, barLocation, programs)
 
 		// Deploy contract with the implementation
 
-		fooContract := fmt.Sprintf(`
-        import Bar from %[1]s
+		fooContract := fmt.Sprintf(
+			`
+              import Bar from %[1]s
 
-        access(all) contract Foo {
+              contract Foo {
 
-            access(all) resource Vault: Bar.VaultInterface {
-                access(all) var balance: Int
+                  resource Vault: Bar.VaultInterface {
+                      var balance: Int
 
-                init(balance: Int) {
-                    self.balance = balance
-                }
+                      init(balance: Int) {
+                          self.balance = balance
+                      }
 
-                access(all) fun withdraw(amount: Int): @Vault {
-                    self.balance = self.balance - amount
-                    return <-create Vault(balance: amount)
-                }
-            }
+                      fun withdraw(amount: Int): @Vault {
+                          self.balance = self.balance - amount
+                          return <-create Vault(balance: amount)
+                      }
+                  }
 
-            access(all) fun createVault(balance: Int): @Vault {
-                return <- create Vault(balance: balance)
-            }
-        }`,
+                  fun createVault(balance: Int): @Vault {
+                      return <- create Vault(balance: balance)
+                  }
+              }
+            `,
 			contractsAddress.HexWithPrefix(),
 		)
 
@@ -2754,16 +2830,18 @@ func TestDefaultFunctions(t *testing.T) {
 
 		// Run transaction
 
-		tx := fmt.Sprintf(`
-            import Foo from %[1]s
+		tx := fmt.Sprintf(
+			`
+              import Foo from %[1]s
 
-            fun main(): Int {
-               var vault <- Foo.createVault(balance: 10)
-               destroy vault.withdraw(amount: 3)
-               var balance = vault.getBalance()
-               destroy vault
-               return balance
-            }`,
+              fun main(): Int {
+                 var vault <- Foo.createVault(balance: 10)
+                 destroy vault.withdraw(amount: 3)
+                 var balance = vault.getBalance()
+                 destroy vault
+                 return balance
+              }
+            `,
 			contractsAddress.HexWithPrefix(),
 		)
 
@@ -2819,38 +2897,40 @@ func TestDefaultFunctions(t *testing.T) {
 		// Deploy interface contract
 
 		barContract := `
-        access(all) contract interface Bar {
+          contract interface Bar {
 
-            access(all) resource interface HelloInterface {
+              resource interface HelloInterface {
 
-                access(all) fun sayHello(): String {
-                    // Delegate the call
-                    return self.sayHelloImpl()
-                }
+                  fun sayHello(): String {
+                      // Delegate the call
+                      return self.sayHelloImpl()
+                  }
 
-                access(contract) fun sayHelloImpl(): String {
-                    return "Hello from HelloInterface"
-                }
-            }
-        }
-    `
+                  access(contract) fun sayHelloImpl(): String {
+                      return "Hello from HelloInterface"
+                  }
+              }
+          }
+        `
 
 		// Only need to compile
 		parseCheckAndCompile(t, barContract, barLocation, programs)
 
 		// Deploy contract with the implementation
 
-		fooContract := fmt.Sprintf(`
-        import Bar from %[1]s
+		fooContract := fmt.Sprintf(
+			`
+              import Bar from %[1]s
 
-        access(all) contract Foo {
+              contract Foo {
 
-            access(all) resource Hello: Bar.HelloInterface { }
+                  resource Hello: Bar.HelloInterface { }
 
-            access(all) fun createHello(): @Hello {
-                return <- create Hello()
-            }
-        }`,
+                  fun createHello(): @Hello {
+                      return <- create Hello()
+                  }
+              }
+            `,
 			contractsAddress.HexWithPrefix(),
 		)
 
@@ -2864,15 +2944,17 @@ func TestDefaultFunctions(t *testing.T) {
 
 		// Run transaction
 
-		tx := fmt.Sprintf(`
-            import Foo from %[1]s
+		tx := fmt.Sprintf(
+			`
+              import Foo from %[1]s
 
-            fun main(): String {
-               var hello <- Foo.createHello()
-               var msg = hello.sayHello()
-               destroy hello
-               return msg
-            }`,
+              fun main(): String {
+                 var hello <- Foo.createHello()
+                 var msg = hello.sayHello()
+                 destroy hello
+                 return msg
+              }
+            `,
 			contractsAddress.HexWithPrefix(),
 		)
 
@@ -2939,44 +3021,46 @@ func TestDefaultFunctions(t *testing.T) {
 		// Deploy interface contract
 
 		barContract := `
-        access(all) contract interface Bar {
+          contract interface Bar {
 
-            access(all) resource interface HelloInterface {
+              resource interface HelloInterface {
 
-                access(all) fun sayHello(): String {
-                    // Delegate the call
-                    return self.sayHelloImpl()
-                }
+                  fun sayHello(): String {
+                      // Delegate the call
+                      return self.sayHelloImpl()
+                  }
 
-                access(contract) fun sayHelloImpl(): String {
-                    return "Hello from HelloInterface"
-                }
-            }
-        }
-    `
+                  access(contract) fun sayHelloImpl(): String {
+                      return "Hello from HelloInterface"
+                  }
+              }
+          }
+        `
 
 		// Only need to compile
 		parseCheckAndCompile(t, barContract, barLocation, programs)
 
 		// Deploy contract with the implementation
 
-		fooContract := fmt.Sprintf(`
-        import Bar from %[1]s
+		fooContract := fmt.Sprintf(
+			`
+              import Bar from %[1]s
 
-        access(all) contract Foo {
+              contract Foo {
 
-            access(all) resource Hello: Bar.HelloInterface {
+                  resource Hello: Bar.HelloInterface {
 
-                // Override one of the functions (one at the bottom of the call hierarchy)
-                access(contract) fun sayHelloImpl(): String {
-                    return "Hello from Hello"
-                }
-            }
+                      // Override one of the functions (one at the bottom of the call hierarchy)
+                      access(contract) fun sayHelloImpl(): String {
+                          return "Hello from Hello"
+                      }
+                  }
 
-            access(all) fun createHello(): @Hello {
-                return <- create Hello()
-            }
-        }`,
+                  fun createHello(): @Hello {
+                      return <- create Hello()
+                  }
+              }
+            `,
 			contractsAddress.HexWithPrefix(),
 		)
 
@@ -2990,15 +3074,17 @@ func TestDefaultFunctions(t *testing.T) {
 
 		// Run transaction
 
-		tx := fmt.Sprintf(`
-            import Foo from %[1]s
+		tx := fmt.Sprintf(
+			`
+              import Foo from %[1]s
 
-            fun main(): String {
-               var hello <- Foo.createHello()
-               var msg = hello.sayHello()
-               destroy hello
-               return msg
-            }`,
+              fun main(): String {
+                 var hello <- Foo.createHello()
+                 var msg = hello.sayHello()
+                 destroy hello
+                 return msg
+              }
+            `,
 			contractsAddress.HexWithPrefix(),
 		)
 
@@ -3022,13 +3108,15 @@ func TestFunctionPreConditions(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := compileAndInvoke(t, `
-            fun main(x: Int): Int {
-                pre {
-                    x == 0
-                }
-                return x
-            }`,
+		_, err := compileAndInvoke(t,
+			`
+              fun main(x: Int): Int {
+                  pre {
+                      x == 0
+                  }
+                  return x
+              }
+            `,
 			"main",
 			interpreter.NewUnmeteredIntValueFromInt64(3),
 		)
@@ -3041,13 +3129,15 @@ func TestFunctionPreConditions(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := compileAndInvoke(t, `
-            fun main(x: Int): Int {
-                pre {
-                    x == 0: "x must be zero"
-                }
-                return x
-            }`,
+		_, err := compileAndInvoke(t,
+			`
+              fun main(x: Int): Int {
+                  pre {
+                      x == 0: "x must be zero"
+                  }
+                  return x
+              }
+            `,
 			"main",
 			interpreter.NewUnmeteredIntValueFromInt64(3),
 		)
@@ -3060,13 +3150,15 @@ func TestFunctionPreConditions(t *testing.T) {
 
 		t.Parallel()
 
-		result, err := compileAndInvoke(t, `
-            fun main(x: Int): Int {
-                pre {
-                    x != 0
-                }
-                return x
-            }`,
+		result, err := compileAndInvoke(t,
+			`
+              fun main(x: Int): Int {
+                  pre {
+                      x != 0
+                  }
+                  return x
+              }
+            `,
 			"main",
 			interpreter.NewUnmeteredIntValueFromInt64(3),
 		)
@@ -3079,27 +3171,29 @@ func TestFunctionPreConditions(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := compileAndInvoke(t, `
-            struct interface A {
-                access(all) fun test(_ a: Int): Int {
-                    pre { a > 10: "a must be larger than 10" }
-                }
-            }
+		_, err := compileAndInvoke(t,
+			`
+              struct interface A {
+                  fun test(_ a: Int): Int {
+                      pre { a > 10: "a must be larger than 10" }
+                  }
+              }
 
-            struct interface B: A {
-                access(all) fun test(_ a: Int): Int
-            }
+              struct interface B: A {
+                  fun test(_ a: Int): Int
+              }
 
-            struct C: B {
-                fun test(_ a: Int): Int {
-                    return a + 3
-                }
-            }
+              struct C: B {
+                  fun test(_ a: Int): Int {
+                      return a + 3
+                  }
+              }
 
-            access(all) fun main(_ a: Int): Int {
-                let c = C()
-                return c.test(a)
-            }`,
+              fun main(_ a: Int): Int {
+                  let c = C()
+                  return c.test(a)
+              }
+            `,
 			"main",
 			interpreter.NewUnmeteredIntValueFromInt64(4),
 		)
@@ -3112,51 +3206,53 @@ func TestFunctionPreConditions(t *testing.T) {
 
 		t.Parallel()
 
-		code := `struct A: B {
-                access(all) fun test() {
-                    pre { print("A") }
-                }
-            }
+		code := `
+          struct A: B {
+              fun test() {
+                  pre { print("A") }
+              }
+          }
 
-            struct interface B: C, D {
-                access(all) fun test() {
-                    pre { print("B") }
-                }
-            }
+          struct interface B: C, D {
+              fun test() {
+                  pre { print("B") }
+              }
+          }
 
-            struct interface C: E, F {
-                access(all) fun test() {
-                    pre { print("C") }
-                }
-            }
+          struct interface C: E, F {
+              fun test() {
+                  pre { print("C") }
+              }
+          }
 
-            struct interface D: F {
-                access(all) fun test() {
-                    pre { print("D") }
-                }
-            }
+          struct interface D: F {
+              fun test() {
+                  pre { print("D") }
+              }
+          }
 
-            struct interface E {
-                access(all) fun test() {
-                    pre { print("E") }
-                }
-            }
+          struct interface E {
+              fun test() {
+                  pre { print("E") }
+              }
+          }
 
-            struct interface F {
-                access(all) fun test() {
-                    pre { print("F") }
-                }
-            }
+          struct interface F {
+              fun test() {
+                  pre { print("F") }
+              }
+          }
 
-            access(all) view fun print(_ msg: String): Bool {
-                log(msg)
-                return true
-            }
+          view fun print(_ msg: String): Bool {
+              log(msg)
+              return true
+          }
 
-            access(all) fun main() {
-                let a = A()
-                a.test()
-            }`
+          fun main() {
+              let a = A()
+              a.test()
+          }
+        `
 
 		location := common.ScriptLocation{0x1}
 
@@ -3297,31 +3393,33 @@ func TestFunctionPreConditions(t *testing.T) {
 		// Deploy interface contract
 
 		barContract := `
-        access(all) contract interface Bar {
+          contract interface Bar {
 
-            struct interface E {
-                access(all) fun test() {
-                    pre { self.printFromE("E") }
-                }
+              struct interface E {
 
-                access(all) view fun printFromE(_ msg: String): Bool {
-                    log("Bar.".concat(msg))
-                    return true
-                }
-            }
+                  fun test() {
+                      pre { self.printFromE("E") }
+                  }
 
-            struct interface F {
-                access(all) fun test() {
-                    pre { self.printFromF("F") }
-                }
+                  view fun printFromE(_ msg: String): Bool {
+                      log("Bar.".concat(msg))
+                      return true
+                  }
+              }
 
-                access(all) view fun printFromF(_ msg: String): Bool {
-                    log("Bar.".concat(msg))
-                    return true
-                }
-            }
-        }
-    `
+              struct interface F {
+
+                  fun test() {
+                      pre { self.printFromF("F") }
+                  }
+
+                  view fun printFromF(_ msg: String): Bool {
+                      log("Bar.".concat(msg))
+                      return true
+                  }
+              }
+          }
+        `
 
 		// Only need to compile
 		_ = parseCheckAndCompileCodeWithOptions(
@@ -3344,34 +3442,36 @@ func TestFunctionPreConditions(t *testing.T) {
 
 		// Deploy contract with the implementation
 
-		fooContract := fmt.Sprintf(`
-        import Bar from %[1]s
+		fooContract := fmt.Sprintf(
+			`
+              import Bar from %[1]s
 
-        access(all) contract Foo {
+              contract Foo {
 
-            struct interface B: C, D {
-                access(all) fun test() {
-                    pre { Foo.printFromFoo("B") }
-                }
-            }
+                  struct interface B: C, D {
+                      fun test() {
+                          pre { Foo.printFromFoo("B") }
+                      }
+                  }
 
-            struct interface C: Bar.E, Bar.F {
-                access(all) fun test() {
-                    pre { Foo.printFromFoo("C") }
-                }
-            }
+                  struct interface C: Bar.E, Bar.F {
+                      fun test() {
+                          pre { Foo.printFromFoo("C") }
+                      }
+                  }
 
-            struct interface D: Bar.F {
-                access(all) fun test() {
-                    pre { Foo.printFromFoo("D") }
-                }
-            }
+                  struct interface D: Bar.F {
+                      fun test() {
+                          pre { Foo.printFromFoo("D") }
+                      }
+                  }
 
-            access(all) view fun printFromFoo(_ msg: String): Bool {
-                log("Foo.".concat(msg))
-                return true
-            }
-        }`,
+                  view fun printFromFoo(_ msg: String): Bool {
+                      log("Foo.".concat(msg))
+                      return true
+                  }
+              }
+            `,
 			contractsAddress.HexWithPrefix(),
 		)
 
@@ -3401,24 +3501,26 @@ func TestFunctionPreConditions(t *testing.T) {
 
 		// Run script
 
-		code := fmt.Sprintf(`
-            import Foo from %[1]s
+		code := fmt.Sprintf(
+			`
+              import Foo from %[1]s
 
-            access(all) struct A: Foo.B {
-                access(all) fun test() {
-                    pre { print("A") }
-                }
-            }
+              struct A: Foo.B {
+                  fun test() {
+                      pre { print("A") }
+                  }
+              }
 
-            access(all) view fun print(_ msg: String): Bool {
-                log(msg)
-                return true
-            }
+              view fun print(_ msg: String): Bool {
+                  log(msg)
+                  return true
+              }
 
-            access(all) fun main() {
-                let a = A()
-                a.test()
-            }`,
+              fun main() {
+                  let a = A()
+                  a.test()
+              }
+            `,
 			contractsAddress.HexWithPrefix(),
 		)
 
@@ -3455,13 +3557,15 @@ func TestFunctionPostConditions(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := compileAndInvoke(t, `
-            fun main(x: Int): Int {
-                post {
-                    x == 0
-                }
-                return x
-            }`,
+		_, err := compileAndInvoke(t,
+			`
+              fun main(x: Int): Int {
+                  post {
+                      x == 0
+                  }
+                  return x
+              }
+            `,
 			"main",
 			interpreter.NewUnmeteredIntValueFromInt64(3),
 		)
@@ -3474,13 +3578,15 @@ func TestFunctionPostConditions(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := compileAndInvoke(t, `
-            fun main(x: Int): Int {
-                post {
-                    x == 0: "x must be zero"
-                }
-                return x
-            }`,
+		_, err := compileAndInvoke(t,
+			`
+              fun main(x: Int): Int {
+                  post {
+                      x == 0: "x must be zero"
+                  }
+                  return x
+              }
+            `,
 			"main",
 			interpreter.NewUnmeteredIntValueFromInt64(3),
 		)
@@ -3493,13 +3599,15 @@ func TestFunctionPostConditions(t *testing.T) {
 
 		t.Parallel()
 
-		result, err := compileAndInvoke(t, `
-            fun main(x: Int): Int {
-                post {
-                    x != 0
-                }
-                return x
-            }`,
+		result, err := compileAndInvoke(t,
+			`
+              fun main(x: Int): Int {
+                  post {
+                      x != 0
+                  }
+                  return x
+              }
+            `,
 			"main",
 			interpreter.NewUnmeteredIntValueFromInt64(3),
 		)
@@ -3512,14 +3620,16 @@ func TestFunctionPostConditions(t *testing.T) {
 
 		t.Parallel()
 
-		result, err := compileAndInvoke(t, `
-            fun main(x: Int): Int {
-                post {
-                    y == 5
-                }
-                var y = x + 2
-                return y
-            }`,
+		result, err := compileAndInvoke(t,
+			`
+              fun main(x: Int): Int {
+                  post {
+                      y == 5
+                  }
+                  var y = x + 2
+                  return y
+              }
+            `,
 			"main",
 			interpreter.NewUnmeteredIntValueFromInt64(3),
 		)
@@ -3532,14 +3642,16 @@ func TestFunctionPostConditions(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := compileAndInvoke(t, `
-            fun main(x: Int): Int {
-                post {
-                    y == 5: "x must be 5"
-                }
-                var y = x + 2
-                return y
-            }`,
+		_, err := compileAndInvoke(t,
+			`
+              fun main(x: Int): Int {
+                  post {
+                      y == 5: "x must be 5"
+                  }
+                  var y = x + 2
+                  return y
+              }
+            `,
 			"main",
 			interpreter.NewUnmeteredIntValueFromInt64(4),
 		)
@@ -3553,51 +3665,52 @@ func TestFunctionPostConditions(t *testing.T) {
 		t.Parallel()
 
 		code := `
-            struct A: B {
-                access(all) fun test() {
-                    post { print("A") }
-                }
-            }
+          struct A: B {
+              fun test() {
+                  post { print("A") }
+              }
+          }
 
-            struct interface B: C, D {
-                access(all) fun test() {
-                    post { print("B") }
-                }
-            }
+          struct interface B: C, D {
+              fun test() {
+                  post { print("B") }
+              }
+          }
 
-            struct interface C: E, F {
-                access(all) fun test() {
-                    post { print("C") }
-                }
-            }
+          struct interface C: E, F {
+              fun test() {
+                  post { print("C") }
+              }
+          }
 
-            struct interface D: F {
-                access(all) fun test() {
-                    post { print("D") }
-                }
-            }
+          struct interface D: F {
+              fun test() {
+                  post { print("D") }
+              }
+          }
 
-            struct interface E {
-                access(all) fun test() {
-                    post { print("E") }
-                }
-            }
+          struct interface E {
+              fun test() {
+                  post { print("E") }
+              }
+          }
 
-            struct interface F {
-                access(all) fun test() {
-                    post { print("F") }
-                }
-            }
+          struct interface F {
+              fun test() {
+                  post { print("F") }
+              }
+          }
 
-            access(all) view fun print(_ msg: String): Bool {
-                log(msg)
-                return true
-            }
+          view fun print(_ msg: String): Bool {
+              log(msg)
+              return true
+          }
 
-            access(all) fun main() {
-                let a = A()
-                a.test()
-            }`
+          fun main() {
+              let a = A()
+              a.test()
+          }
+        `
 
 		location := common.ScriptLocation{0x1}
 
@@ -3664,13 +3777,15 @@ func TestFunctionPostConditions(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := compileAndInvoke(t, `
-            fun main(x: Int): Int {
-                post {
-                    result == 0: "x must be zero"
-                }
-                return x
-            }`,
+		_, err := compileAndInvoke(t,
+			`
+              fun main(x: Int): Int {
+                  post {
+                      result == 0: "x must be zero"
+                  }
+                  return x
+              }
+            `,
 			"main",
 			interpreter.NewUnmeteredIntValueFromInt64(3),
 		)
@@ -3683,13 +3798,15 @@ func TestFunctionPostConditions(t *testing.T) {
 
 		t.Parallel()
 
-		result, err := compileAndInvoke(t, `
-            fun main(x: Int): Int {
-                post {
-                    result != 0
-                }
-                return x
-            }`,
+		result, err := compileAndInvoke(t,
+			`
+              fun main(x: Int): Int {
+                  post {
+                      result != 0
+                  }
+                  return x
+              }
+            `,
 			"main",
 			interpreter.NewUnmeteredIntValueFromInt64(3),
 		)
@@ -3702,27 +3819,29 @@ func TestFunctionPostConditions(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := compileAndInvoke(t, `
-            struct interface A {
-                access(all) fun test(_ a: Int): Int {
-                    post { result > 10: "result must be larger than 10" }
-                }
-            }
+		_, err := compileAndInvoke(t,
+			`
+              struct interface A {
+                  fun test(_ a: Int): Int {
+                      post { result > 10: "result must be larger than 10" }
+                  }
+              }
 
-            struct interface B: A {
-                access(all) fun test(_ a: Int): Int
-            }
+              struct interface B: A {
+                  fun test(_ a: Int): Int
+              }
 
-            struct C: B {
-                fun test(_ a: Int): Int {
-                    return a + 3
-                }
-            }
+              struct C: B {
+                  fun test(_ a: Int): Int {
+                      return a + 3
+                  }
+              }
 
-            access(all) fun main(_ a: Int): Int {
-                let c = C()
-                return c.test(a)
-            }`,
+              fun main(_ a: Int): Int {
+                  let c = C()
+                  return c.test(a)
+              }
+            `,
 			"main",
 			interpreter.NewUnmeteredIntValueFromInt64(4),
 		)
@@ -3735,22 +3854,23 @@ func TestFunctionPostConditions(t *testing.T) {
 
 		t.Parallel()
 
-		result, err := compileAndInvoke(t, `
-            resource R {
-                var i: Int
-                init() {
-                    self.i = 4
-                }
-            }
+		result, err := compileAndInvoke(t,
+			`
+              resource R {
+                  var i: Int
+                  init() {
+                      self.i = 4
+                  }
+              }
 
-            fun main(): @R {
-                post {
-                    result.i > 0
-                }
+              fun main(): @R {
+                  post {
+                      result.i > 0
+                  }
 
-
-                return <- create R()
-            }`,
+                  return <- create R()
+              }
+            `,
 			"main",
 		)
 
@@ -3762,22 +3882,24 @@ func TestFunctionPostConditions(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := compileAndInvoke(t, `
-            resource R {
-                var i: Int
-                init() {
-                    self.i = 4
-                }
-            }
+		_, err := compileAndInvoke(t,
+			`
+              resource R {
+                  var i: Int
+                  init() {
+                      self.i = 4
+                  }
+              }
 
-            fun main(): @R {
-                post {
-                    result.i > 10
-                }
+              fun main(): @R {
+                  post {
+                      result.i > 10
+                  }
 
 
-                return <- create R()
-            }`,
+                  return <- create R()
+              }
+            `,
 			"main",
 		)
 
@@ -3836,16 +3958,16 @@ func TestIfLetScope(t *testing.T) {
 	test := func(t *testing.T, argument vm.Value) vm.Value {
 		result, err := compileAndInvoke(t,
 			`
-                fun test(y: Int?): Int {
-                    let x = 1
-                    var z = 0
-                    if let x = y {
-                        z = x
-                    } else {
-                        z = x
-                    }
-                    return x + z
-                }
+              fun test(y: Int?): Int {
+                  let x = 1
+                  var z = 0
+                  if let x = y {
+                      z = x
+                  } else {
+                      z = x
+                  }
+                  return x + z
+              }
             `,
 			"test",
 			argument,
@@ -3962,36 +4084,37 @@ func TestDefaultFunctionsWithConditions(t *testing.T) {
 	t.Run("default in parent, conditions in child", func(t *testing.T) {
 		t.Parallel()
 
-		_, err, logs := compileAndInvokeWithLogs(t, `
-            struct interface Foo {
-                fun test(_ a: Int) {
-                    printMessage("invoked Foo.test()")
-                }
-            }
+		_, err, logs := compileAndInvokeWithLogs(t,
+			`
+              struct interface Foo {
+                  fun test(_ a: Int) {
+                      printMessage("invoked Foo.test()")
+                  }
+              }
 
-            struct interface Bar: Foo {
-                fun test(_ a: Int) {
-                    pre {
-                         printMessage("invoked Bar.test() pre-condition")
-                    }
+              struct interface Bar: Foo {
+                  fun test(_ a: Int) {
+                      pre {
+                           printMessage("invoked Bar.test() pre-condition")
+                      }
 
-                    post {
-                         printMessage("invoked Bar.test() post-condition")
-                    }
-                }
-            }
+                      post {
+                           printMessage("invoked Bar.test() post-condition")
+                      }
+                  }
+              }
 
-            struct Test: Bar {}
+              struct Test: Bar {}
 
-            access(all) view fun printMessage(_ msg: String): Bool {
-                log(msg)
-                return true
-            }
+              view fun printMessage(_ msg: String): Bool {
+                  log(msg)
+                  return true
+              }
 
-            fun main() {
-               Test().test(5)
-            }
-        `,
+              fun main() {
+                 Test().test(5)
+              }
+            `,
 			"main",
 		)
 
@@ -4002,49 +4125,51 @@ func TestDefaultFunctionsWithConditions(t *testing.T) {
 				"\"invoked Bar.test() pre-condition\"",
 				"\"invoked Foo.test()\"",
 				"\"invoked Bar.test() post-condition\"",
-			}, logs,
+			},
+			logs,
 		)
 	})
 
 	t.Run("default and conditions in parent, more conditions in child", func(t *testing.T) {
 		t.Parallel()
 
-		_, err, logs := compileAndInvokeWithLogs(t, `
-            struct interface Foo {
-                fun test(_ a: Int) {
-                    pre {
-                         printMessage("invoked Foo.test() pre-condition")
-                    }
-                    post {
-                         printMessage("invoked Foo.test() post-condition")
-                    }
-                    printMessage("invoked Foo.test()")
-                }
-            }
+		_, err, logs := compileAndInvokeWithLogs(t,
+			`
+              struct interface Foo {
+                  fun test(_ a: Int) {
+                      pre {
+                           printMessage("invoked Foo.test() pre-condition")
+                      }
+                      post {
+                           printMessage("invoked Foo.test() post-condition")
+                      }
+                      printMessage("invoked Foo.test()")
+                  }
+              }
 
-            struct interface Bar: Foo {
-                fun test(_ a: Int) {
-                    pre {
-                         printMessage("invoked Bar.test() pre-condition")
-                    }
+              struct interface Bar: Foo {
+                  fun test(_ a: Int) {
+                      pre {
+                           printMessage("invoked Bar.test() pre-condition")
+                      }
 
-                    post {
-                         printMessage("invoked Bar.test() post-condition")
-                    }
-                }
-            }
+                      post {
+                           printMessage("invoked Bar.test() post-condition")
+                      }
+                  }
+              }
 
-            struct Test: Bar {}
+              struct Test: Bar {}
 
-            access(all) view fun printMessage(_ msg: String): Bool {
-                log(msg)
-                return true
-            }
+              view fun printMessage(_ msg: String): Bool {
+                  log(msg)
+                  return true
+              }
 
-            fun main() {
-               Test().test(5)
-            }
-        `,
+              fun main() {
+                 Test().test(5)
+              }
+            `,
 			"main",
 		)
 
@@ -4057,7 +4182,8 @@ func TestDefaultFunctionsWithConditions(t *testing.T) {
 				"\"invoked Foo.test()\"",
 				"\"invoked Foo.test() post-condition\"",
 				"\"invoked Bar.test() post-condition\"",
-			}, logs,
+			},
+			logs,
 		)
 	})
 
@@ -4107,32 +4233,33 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 			return funcs
 		}
 
-		_, err := compileAndInvokeWithOptions(t, `
-            struct Test {
-                var i: Int
+		_, err := compileAndInvokeWithOptions(t,
+			`
+              struct Test {
+                  var i: Int
 
-                init() {
-                    self.i = 2
-                }
+                  init() {
+                      self.i = 2
+                  }
 
-                fun test() {
-                    post {
-                        print(before(self.i).toString())
-                        print(self.i.toString())
-                    }
-                    self.i = 5
-                }
-            }
+                  fun test() {
+                      post {
+                          print(before(self.i).toString())
+                          print(self.i.toString())
+                      }
+                      self.i = 5
+                  }
+              }
 
-            access(all) view fun print(_ msg: String): Bool {
-                log(msg)
-                return true
-            }
+              view fun print(_ msg: String): Bool {
+                  log(msg)
+                  return true
+              }
 
-            fun main() {
-               Test().test()
-            }
-        `,
+              fun main() {
+                 Test().test()
+              }
+            `,
 			"main",
 			CompilerAndVMOptions{
 				VMConfig: vmConfig,
@@ -4153,7 +4280,8 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 			[]string{
 				"\"2\"",
 				"\"5\"",
-			}, logs,
+			},
+			logs,
 		)
 	})
 
@@ -4197,36 +4325,37 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 			return funcs
 		}
 
-		_, err := compileAndInvokeWithOptions(t, `
-            struct interface Foo {
-                var i: Int
+		_, err := compileAndInvokeWithOptions(t,
+			`
+                struct interface Foo {
+                    var i: Int
 
-                fun test() {
-                    post {
-                        print(before(self.i).toString())
-                        print(self.i.toString())
+                    fun test() {
+                        post {
+                            print(before(self.i).toString())
+                            print(self.i.toString())
+                        }
+                        self.i = 5
                     }
-                    self.i = 5
                 }
-            }
 
-            struct Test: Foo {
-                var i: Int
+                struct Test: Foo {
+                    var i: Int
 
-                init() {
-                    self.i = 2
+                    init() {
+                        self.i = 2
+                    }
                 }
-            }
 
-            access(all) view fun print(_ msg: String): Bool {
-                log(msg)
-                return true
-            }
+                view fun print(_ msg: String): Bool {
+                    log(msg)
+                    return true
+                }
 
-            fun main() {
-               Test().test()
-            }
-        `,
+                fun main() {
+                    Test().test()
+                }
+            `,
 			"main",
 			CompilerAndVMOptions{
 				VMConfig: vmConfig,
@@ -4247,7 +4376,8 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 			[]string{
 				"\"2\"",
 				"\"5\"",
-			}, logs,
+			},
+			logs,
 		)
 	})
 
@@ -4291,48 +4421,49 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 			return funcs
 		}
 
-		_, err := compileAndInvokeWithOptions(t, `
-            struct interface Foo {
-                var i: Int
+		_, err := compileAndInvokeWithOptions(t,
+			`
+              struct interface Foo {
+                  var i: Int
 
-                fun test() {
-                    post {
-                        print(before(self.i).toString())
-                        print(before(self.i + 1).toString())
-                        print(self.i.toString())
-                    }
-                    self.i = 8
-                }
-            }
+                  fun test() {
+                      post {
+                          print(before(self.i).toString())
+                          print(before(self.i + 1).toString())
+                          print(self.i.toString())
+                      }
+                      self.i = 8
+                  }
+              }
 
-            struct interface Bar: Foo {
-                var i: Int
+              struct interface Bar: Foo {
+                  var i: Int
 
-                fun test() {
-                    post {
-                        print(before(self.i + 3).toString())
-                    }
-                }
-            }
+                  fun test() {
+                      post {
+                          print(before(self.i + 3).toString())
+                      }
+                  }
+              }
 
 
-            struct Test: Bar {
-                var i: Int
+              struct Test: Bar {
+                  var i: Int
 
-                init() {
-                    self.i = 2
-                }
-            }
+                  init() {
+                      self.i = 2
+                  }
+              }
 
-            access(all) view fun print(_ msg: String): Bool {
-                log(msg)
-                return true
-            }
+              view fun print(_ msg: String): Bool {
+                  log(msg)
+                  return true
+              }
 
-            fun main() {
-               Test().test()
-            }
-        `,
+              fun main() {
+                  Test().test()
+              }
+            `,
 			"main",
 			CompilerAndVMOptions{
 				VMConfig: vmConfig,
@@ -4359,36 +4490,38 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := compileAndInvoke(t, `
-            resource interface RI {
-                var i: Int
+		_, err := compileAndInvoke(t,
+			`
+              resource interface RI {
+                  var i: Int
 
-                fun test(_ r: @R) {
-                    post {
-                        before(r.i) == 4
-                    }
-                }
-            }
+                  fun test(_ r: @R) {
+                      post {
+                          before(r.i) == 4
+                      }
+                  }
+              }
 
-            resource R: RI {
-                var i: Int
-                init() {
-                    self.i = 4
-                }
+              resource R: RI {
+                  var i: Int
+                  init() {
+                      self.i = 4
+                  }
 
-                fun test(_ r: @R) {
-                    destroy r
-                }
-            }
+                  fun test(_ r: @R) {
+                      destroy r
+                  }
+              }
 
-            fun main() {
-                var r1 <- create R()
-                var r2 <- create R()
+              fun main() {
+                  var r1 <- create R()
+                  var r2 <- create R()
 
-                r1.test(<- r2)
+                  r1.test(<- r2)
 
-                destroy r1
-            }`,
+                  destroy r1
+              }
+            `,
 			"main",
 		)
 
@@ -5365,13 +5498,15 @@ func TestReturnStatements(t *testing.T) {
 	t.Run("conditional return", func(t *testing.T) {
 		t.Parallel()
 
-		actual, err := compileAndInvoke(t, `
-            fun test(a: Bool): Int {
-                if a {
-                    return 1
-                }
-                return 2
-            }`,
+		actual, err := compileAndInvoke(t,
+			`
+              fun test(a: Bool): Int {
+                  if a {
+                      return 1
+                  }
+                  return 2
+              }
+            `,
 			"test",
 			interpreter.TrueValue,
 		)
@@ -5383,33 +5518,35 @@ func TestReturnStatements(t *testing.T) {
 	t.Run("conditional return with post condition", func(t *testing.T) {
 		t.Parallel()
 
-		actual, err, logs := compileAndInvokeWithLogs(t, `
-            fun test(a: Bool): Int {
-                post {
-                    printMessage("post condition executed")
-                }
+		actual, err, logs := compileAndInvokeWithLogs(t,
+			`
+              fun test(a: Bool): Int {
+                  post {
+                      printMessage("post condition executed")
+                  }
 
-                if a {
-                    return 1
-                }
+                  if a {
+                      return 1
+                  }
 
-                if a {
-                    // some statements, just to increase the number
-                    // of statements inside the nested block
-                    var b = 1
-                    var c = 2
-                    var d = 3
-                    printMessage("second condition reached 1")
-                    printMessage("second condition reached 2")
-                }
+                  if a {
+                      // some statements, just to increase the number
+                      // of statements inside the nested block
+                      var b = 1
+                      var c = 2
+                      var d = 3
+                      printMessage("second condition reached 1")
+                      printMessage("second condition reached 2")
+                  }
 
-                return 2
-            }
+                  return 2
+              }
 
-            access(all) view fun printMessage(_ msg: String): Bool {
-                log(msg)
-                return true
-            }`,
+              view fun printMessage(_ msg: String): Bool {
+                  log(msg)
+                  return true
+              }
+            `,
 			"test",
 			interpreter.TrueValue,
 		)
@@ -5421,38 +5558,41 @@ func TestReturnStatements(t *testing.T) {
 			t,
 			[]string{
 				"\"post condition executed\"",
-			}, logs,
+			},
+			logs,
 		)
 	})
 
 	t.Run("conditional return with post condition in initializer", func(t *testing.T) {
 		t.Parallel()
 
-		actual, err, logs := compileAndInvokeWithLogs(t, `
-            struct Foo {
-                var i: Int
-                init(_ a: Bool) {
-                    post {
-                        printMessage("post condition executed")
-                    }
-                    if a {
-                        self.i = 5
-                        return
-                    } else {
-                        self.i = 8
-                    }
-                }
-            }
+		actual, err, logs := compileAndInvokeWithLogs(t,
+			`
+              struct Foo {
+                  var i: Int
+                  init(_ a: Bool) {
+                      post {
+                          printMessage("post condition executed")
+                      }
+                      if a {
+                          self.i = 5
+                          return
+                      } else {
+                          self.i = 8
+                      }
+                  }
+              }
 
-            fun test(a: Bool): Int {
-                var foo = Foo(a)
-                return foo.i
-            }
+              fun test(a: Bool): Int {
+                  var foo = Foo(a)
+                  return foo.i
+              }
 
-            access(all) view fun printMessage(_ msg: String): Bool {
-                log(msg)
-                return true
-            }`,
+              view fun printMessage(_ msg: String): Bool {
+                  log(msg)
+                  return true
+              }
+            `,
 			"test",
 			interpreter.TrueValue,
 		)
@@ -5464,7 +5604,8 @@ func TestReturnStatements(t *testing.T) {
 			t,
 			[]string{
 				"\"post condition executed\"",
-			}, logs,
+			},
+			logs,
 		)
 	})
 }
