@@ -35,18 +35,21 @@ type function[E any] struct {
 	parameterCount uint16
 	upvalues       []opcode.Upvalue
 	upvalueIndices map[opcode.Upvalue]uint16
+	typeIndex      uint16
 }
 
 func newFunction[E any](
 	enclosing *function[E],
 	name string,
 	parameterCount uint16,
+	functionTypeIndex uint16,
 ) *function[E] {
 	return &function[E]{
 		enclosing:      enclosing,
 		name:           name,
 		locals:         activations.NewActivations[*local](nil),
 		parameterCount: parameterCount,
+		typeIndex:      functionTypeIndex,
 	}
 }
 

@@ -102,7 +102,7 @@ func (d *Desugar) VisitVariableDeclaration(declaration *ast.VariableDeclaration)
 	return declaration
 }
 
-func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration, _ bool) (modifiedDecl ast.Declaration) {
+func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration, _ bool) ast.Declaration {
 	funcBlock := declaration.FunctionBlock
 	funcName := declaration.Identifier.Identifier
 
@@ -180,7 +180,7 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration,
 	)
 
 	// TODO: Is the generated function needed to be desugared again?
-	return ast.NewFunctionDeclaration(
+	modifiedDecl := ast.NewFunctionDeclaration(
 		d.memoryGauge,
 		declaration.Access,
 		declaration.Purity,
@@ -194,6 +194,10 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration,
 		declaration.StartPos,
 		declaration.DocString,
 	)
+
+	d.elaboration.SetFunctionDeclarationFunctionType(modifiedDecl, functionType)
+
+	return modifiedDecl
 }
 
 // Declare a `$_result` synthetic variable, to temporarily hold return values.
@@ -998,6 +1002,8 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 	var varDeclarations []ast.Declaration
 	var initFunction *ast.FunctionDeclaration
 
+	transactionTypes := d.elaboration.TransactionDeclarationType(transaction)
+
 	if transaction.ParameterList != nil {
 		varDeclarations = make([]ast.Declaration, 0, len(transaction.ParameterList.Parameters))
 		statements := make([]ast.Statement, 0, len(transaction.ParameterList.Parameters))
@@ -1064,7 +1070,6 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 
 			statements = append(statements, assignment)
 
-			transactionTypes := d.elaboration.TransactionDeclarationType(transaction)
 			paramType := transactionTypes.Parameters[index].TypeAnnotation.Type
 			assignmentTypes := sema.AssignmentStatementTypes{
 				ValueType:  paramType,
@@ -1088,6 +1093,14 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 			transaction.StartPos,
 			transaction.Range,
 		)
+
+		initFunctionType := sema.NewSimpleFunctionType(
+			sema.FunctionPurityImpure,
+			transactionTypes.Parameters,
+			sema.VoidTypeAnnotation,
+		)
+
+		d.elaboration.SetFunctionDeclarationFunctionType(initFunction, initFunctionType)
 	}
 
 	var members []ast.Declaration
@@ -1229,6 +1242,12 @@ var emptyInitializer = func() *ast.SpecialFunctionDeclaration {
 		initializer,
 	)
 }()
+
+var emptyInitializerFuncType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityImpure,
+	nil,
+	sema.VoidTypeAnnotation,
+)
 
 func simpleFunctionDeclaration(
 	memoryGauge common.MemoryGauge,

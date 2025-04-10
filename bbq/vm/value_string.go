@@ -29,17 +29,21 @@ import (
 func init() {
 	typeName := interpreter.PrimitiveStaticTypeString.String()
 
-	RegisterTypeBoundFunction(typeName, sema.StringTypeConcatFunctionName, NativeFunctionValue{
-		ParameterCount: len(sema.StringTypeConcatFunctionType.Parameters),
-		Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
-			first := args[receiverIndex].(*interpreter.StringValue)
+	RegisterTypeBoundFunction(
+		typeName,
+		NewNativeFunctionValue(
+			sema.StringTypeConcatFunctionName,
+			sema.StringTypeConcatFunctionType,
+			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+				first := args[receiverIndex].(*interpreter.StringValue)
 
-			return interpreter.StringConcat(
-				config,
-				first,
-				args[typeBoundFunctionArgumentOffset],
-				EmptyLocationRange,
-			)
-		},
-	})
+				return interpreter.StringConcat(
+					config,
+					first,
+					args[typeBoundFunctionArgumentOffset],
+					EmptyLocationRange,
+				)
+			},
+		),
+	)
 }

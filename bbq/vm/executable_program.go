@@ -21,6 +21,8 @@ package vm
 import (
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
 )
 
 // ExecutableProgram is the 'executable' version of a `bbq.Program`.
@@ -48,4 +50,14 @@ func NewExecutableProgram(
 		Constants:   make([]Value, len(program.Constants)),
 		StaticTypes: program.Types,
 	}
+}
+
+func getTypeFromExecutable[T interpreter.StaticType](executable *ExecutableProgram, index uint16) T {
+	staticType := executable.StaticTypes[index]
+	typedStaticType, ok := staticType.(T)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	return typedStaticType
 }

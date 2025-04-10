@@ -30,20 +30,24 @@ import (
 func init() {
 	typeName := interpreter.PrimitiveStaticTypeInt.String()
 
-	RegisterTypeBoundFunction(typeName, sema.ToStringFunctionName, NativeFunctionValue{
-		ParameterCount: len(sema.ToStringFunctionType.Parameters),
-		Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
-			number := args[receiverIndex].(interpreter.IntValue)
+	RegisterTypeBoundFunction(
+		typeName,
+		NewNativeFunctionValue(
+			sema.ToStringFunctionName,
+			sema.ToStringFunctionType,
+			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+				number := args[receiverIndex].(interpreter.IntValue)
 
-			// TODO: Refactor and re-use the logic from interpreter.
-			memoryUsage := common.NewStringMemoryUsage(
-				interpreter.OverEstimateNumberStringLength(config.MemoryGauge, number),
-			)
-			return interpreter.NewStringValue(
-				config.MemoryGauge,
-				memoryUsage,
-				number.String,
-			)
-		},
-	})
+				// TODO: Refactor and re-use the logic from interpreter.
+				memoryUsage := common.NewStringMemoryUsage(
+					interpreter.OverEstimateNumberStringLength(config.MemoryGauge, number),
+				)
+				return interpreter.NewStringValue(
+					config.MemoryGauge,
+					memoryUsage,
+					number.String,
+				)
+			},
+		),
+	)
 }

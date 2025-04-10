@@ -60,26 +60,26 @@ func TestCompileRecursionFib(t *testing.T) {
 	assert.Equal(t,
 		[]opcode.Instruction{
 			// if n < 2
-			opcode.InstructionGetLocal{LocalIndex: 0x0},
-			opcode.InstructionGetConstant{ConstantIndex: 0x0},
+			opcode.InstructionGetLocal{LocalIndex: 0},
+			opcode.InstructionGetConstant{ConstantIndex: 0},
 			opcode.InstructionLess{},
 			opcode.InstructionJumpIfFalse{Target: 6},
 			// then return n
-			opcode.InstructionGetLocal{LocalIndex: 0x0},
+			opcode.InstructionGetLocal{LocalIndex: 0},
 			opcode.InstructionReturnValue{},
 			// fib(n - 1)
-			opcode.InstructionGetLocal{LocalIndex: 0x0},
-			opcode.InstructionGetConstant{ConstantIndex: 0x1},
+			opcode.InstructionGetLocal{LocalIndex: 0},
+			opcode.InstructionGetConstant{ConstantIndex: 1},
 			opcode.InstructionSubtract{},
-			opcode.InstructionTransfer{TypeIndex: 0x0},
-			opcode.InstructionGetGlobal{GlobalIndex: 0x0},
+			opcode.InstructionTransfer{TypeIndex: 1},
+			opcode.InstructionGetGlobal{GlobalIndex: 0},
 			opcode.InstructionInvoke{},
 			// fib(n - 2)
-			opcode.InstructionGetLocal{LocalIndex: 0x0},
-			opcode.InstructionGetConstant{ConstantIndex: 0x0},
+			opcode.InstructionGetLocal{LocalIndex: 0},
+			opcode.InstructionGetConstant{ConstantIndex: 0},
 			opcode.InstructionSubtract{},
-			opcode.InstructionTransfer{TypeIndex: 0x0},
-			opcode.InstructionGetGlobal{GlobalIndex: 0x0},
+			opcode.InstructionTransfer{TypeIndex: 1},
+			opcode.InstructionGetGlobal{GlobalIndex: 0},
 			opcode.InstructionInvoke{},
 			opcode.InstructionAdd{},
 			// return
@@ -155,22 +155,22 @@ func TestCompileImperativeFib(t *testing.T) {
 		[]opcode.Instruction{
 			// var fib1 = 1
 			opcode.InstructionGetConstant{ConstantIndex: 0},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: fib1Index},
 
 			// var fib2 = 1
 			opcode.InstructionGetConstant{ConstantIndex: 0},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: fib2Index},
 
 			// var fibonacci = fib1
 			opcode.InstructionGetLocal{LocalIndex: fib1Index},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: fibonacciIndex},
 
 			// var i = 2
 			opcode.InstructionGetConstant{ConstantIndex: 1},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: iIndex},
 
 			// while i < n
@@ -183,24 +183,24 @@ func TestCompileImperativeFib(t *testing.T) {
 			opcode.InstructionGetLocal{LocalIndex: fib1Index},
 			opcode.InstructionGetLocal{LocalIndex: fib2Index},
 			opcode.InstructionAdd{},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: fibonacciIndex},
 
 			// fib1 = fib2
 			opcode.InstructionGetLocal{LocalIndex: fib2Index},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: fib1Index},
 
 			// fib2 = fibonacci
 			opcode.InstructionGetLocal{LocalIndex: fibonacciIndex},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: fib2Index},
 
 			// i = i + 1
 			opcode.InstructionGetLocal{LocalIndex: iIndex},
 			opcode.InstructionGetConstant{ConstantIndex: 0},
 			opcode.InstructionAdd{},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: iIndex},
 
 			// continue loop
@@ -261,7 +261,7 @@ func TestCompileBreak(t *testing.T) {
 		[]opcode.Instruction{
 			// var i = 0
 			opcode.InstructionGetConstant{ConstantIndex: 0},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: iIndex},
 
 			// while true
@@ -281,7 +281,7 @@ func TestCompileBreak(t *testing.T) {
 			opcode.InstructionGetLocal{LocalIndex: iIndex},
 			opcode.InstructionGetConstant{ConstantIndex: 2},
 			opcode.InstructionAdd{},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: iIndex},
 
 			// repeat
@@ -347,7 +347,7 @@ func TestCompileContinue(t *testing.T) {
 		[]opcode.Instruction{
 			// var i = 0
 			opcode.InstructionGetConstant{ConstantIndex: 0},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: iIndex},
 
 			// while true
@@ -358,7 +358,7 @@ func TestCompileContinue(t *testing.T) {
 			opcode.InstructionGetLocal{LocalIndex: iIndex},
 			opcode.InstructionGetConstant{ConstantIndex: 1},
 			opcode.InstructionAdd{},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: iIndex},
 
 			// if i < 3
@@ -431,13 +431,13 @@ func TestCompileArray(t *testing.T) {
 			opcode.InstructionGetConstant{ConstantIndex: 1},
 			opcode.InstructionGetConstant{ConstantIndex: 2},
 			opcode.InstructionNewArray{
-				TypeIndex:  0,
+				TypeIndex:  1,
 				Size:       3,
 				IsResource: false,
 			},
 
 			// let xs =
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: xsIndex},
 
 			opcode.InstructionReturn{},
@@ -496,12 +496,12 @@ func TestCompileDictionary(t *testing.T) {
 			opcode.InstructionGetConstant{ConstantIndex: 4},
 			opcode.InstructionGetConstant{ConstantIndex: 5},
 			opcode.InstructionNewDictionary{
-				TypeIndex:  0,
+				TypeIndex:  1,
 				Size:       3,
 				IsResource: false,
 			},
 			// let xs =
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: xsIndex},
 
 			opcode.InstructionReturn{},
@@ -581,7 +581,7 @@ func TestCompileIfLet(t *testing.T) {
 			// let y = y'
 			opcode.InstructionGetLocal{LocalIndex: tempYIndex},
 			opcode.InstructionUnwrap{},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: yIndex},
 
 			// then { return y }
@@ -652,12 +652,12 @@ func TestCompileIfLetScope(t *testing.T) {
 		[]opcode.Instruction{
 			// let x = 1
 			opcode.InstructionGetConstant{ConstantIndex: 0},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: x1Index},
 
 			// var z = 0
 			opcode.InstructionGetConstant{ConstantIndex: 1},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: zIndex},
 
 			// if let x = y
@@ -670,18 +670,18 @@ func TestCompileIfLetScope(t *testing.T) {
 			// then
 			opcode.InstructionGetLocal{LocalIndex: tempIfLetIndex},
 			opcode.InstructionUnwrap{},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: x2Index},
 
 			// z = x
 			opcode.InstructionGetLocal{LocalIndex: x2Index},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: zIndex},
 			opcode.InstructionJump{Target: 21},
 
 			// else { z = x }
 			opcode.InstructionGetLocal{LocalIndex: x1Index},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: zIndex},
 
 			// return x
@@ -747,7 +747,7 @@ func TestCompileSwitch(t *testing.T) {
 		[]opcode.Instruction{
 			// var a = 0
 			opcode.InstructionGetConstant{ConstantIndex: 0},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: aIndex},
 
 			// switch x
@@ -762,7 +762,7 @@ func TestCompileSwitch(t *testing.T) {
 
 			// a = 1
 			opcode.InstructionGetConstant{ConstantIndex: 1},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: aIndex},
 
 			// jump to end
@@ -776,7 +776,7 @@ func TestCompileSwitch(t *testing.T) {
 
 			// a = 2
 			opcode.InstructionGetConstant{ConstantIndex: 2},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: aIndex},
 
 			// jump to end
@@ -785,7 +785,7 @@ func TestCompileSwitch(t *testing.T) {
 			// default:
 			// a = 3
 			opcode.InstructionGetConstant{ConstantIndex: 3},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: aIndex},
 
 			// return a
@@ -939,7 +939,7 @@ func TestWhileSwitchBreak(t *testing.T) {
 		[]opcode.Instruction{
 			// var x = 0
 			opcode.InstructionGetConstant{ConstantIndex: 0},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: xIndex},
 
 			// while true
@@ -965,7 +965,7 @@ func TestWhileSwitchBreak(t *testing.T) {
 			opcode.InstructionGetLocal{LocalIndex: xIndex},
 			opcode.InstructionGetConstant{ConstantIndex: 1},
 			opcode.InstructionAdd{},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: xIndex},
 
 			// repeat
@@ -1029,11 +1029,11 @@ func TestCompileEmit(t *testing.T) {
 		[]opcode.Instruction{
 			// Inc(val: x)
 			opcode.InstructionGetLocal{LocalIndex: xIndex},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionGetGlobal{GlobalIndex: 1},
 			opcode.InstructionInvoke{},
 			// emit
-			opcode.InstructionEmitEvent{TypeIndex: 1},
+			opcode.InstructionEmitEvent{TypeIndex: 2},
 
 			opcode.InstructionReturn{},
 		},
@@ -1069,7 +1069,7 @@ func TestCompileSimpleCast(t *testing.T) {
 		[]opcode.Instruction{
 			// x as Int?
 			opcode.InstructionGetLocal{LocalIndex: xIndex},
-			opcode.InstructionSimpleCast{TypeIndex: 0},
+			opcode.InstructionSimpleCast{TypeIndex: 1},
 
 			// return
 			opcode.InstructionReturnValue{},
@@ -1104,7 +1104,7 @@ func TestCompileForceCast(t *testing.T) {
 		[]opcode.Instruction{
 			// x as! Int
 			opcode.InstructionGetLocal{LocalIndex: xIndex},
-			opcode.InstructionForceCast{TypeIndex: 0},
+			opcode.InstructionForceCast{TypeIndex: 1},
 
 			// return
 			opcode.InstructionReturnValue{},
@@ -1139,7 +1139,7 @@ func TestCompileFailableCast(t *testing.T) {
 		[]opcode.Instruction{
 			// x as? Int
 			opcode.InstructionGetLocal{LocalIndex: xIndex},
-			opcode.InstructionFailableCast{TypeIndex: 0},
+			opcode.InstructionFailableCast{TypeIndex: 1},
 
 			// return
 			opcode.InstructionReturnValue{},
@@ -1199,7 +1199,7 @@ func TestCompileNestedLoop(t *testing.T) {
 		[]opcode.Instruction{
 			// var i = 0
 			opcode.InstructionGetConstant{ConstantIndex: zeroIndex},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: iIndex},
 
 			// i < 10
@@ -1211,7 +1211,7 @@ func TestCompileNestedLoop(t *testing.T) {
 
 			// var j = 0
 			opcode.InstructionGetConstant{ConstantIndex: zeroIndex},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: jIndex},
 
 			// j < 10
@@ -1235,7 +1235,7 @@ func TestCompileNestedLoop(t *testing.T) {
 			opcode.InstructionGetLocal{LocalIndex: jIndex},
 			opcode.InstructionGetConstant{ConstantIndex: oneIndex},
 			opcode.InstructionAdd{},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: jIndex},
 
 			// continue
@@ -1248,7 +1248,7 @@ func TestCompileNestedLoop(t *testing.T) {
 			opcode.InstructionGetLocal{LocalIndex: iIndex},
 			opcode.InstructionGetConstant{ConstantIndex: oneIndex},
 			opcode.InstructionAdd{},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: iIndex},
 
 			// continue
@@ -1310,12 +1310,12 @@ func TestCompileAssignLocal(t *testing.T) {
 		[]opcode.Instruction{
 			// var x = 0
 			opcode.InstructionGetConstant{ConstantIndex: 0},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: xIndex},
 
 			// x = 1
 			opcode.InstructionGetConstant{ConstantIndex: 1},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: xIndex},
 
 			opcode.InstructionReturn{},
@@ -1365,7 +1365,7 @@ func TestCompileAssignGlobal(t *testing.T) {
 		[]opcode.Instruction{
 			// x = 1
 			opcode.InstructionGetConstant{ConstantIndex: 0},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetGlobal{GlobalIndex: 0},
 
 			opcode.InstructionReturn{},
@@ -1457,7 +1457,7 @@ func TestCompileAssignIndex(t *testing.T) {
 			opcode.InstructionGetLocal{LocalIndex: arrayIndex},
 			opcode.InstructionGetLocal{LocalIndex: indexIndex},
 			opcode.InstructionGetLocal{LocalIndex: valueIndex},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetIndex{},
 			opcode.InstructionReturn{},
 		},
@@ -1512,14 +1512,14 @@ func TestCompileMember(t *testing.T) {
 				// let self = Test()
 				opcode.InstructionNew{
 					Kind:      common.CompositeKindStructure,
-					TypeIndex: 0,
+					TypeIndex: 1,
 				},
 				opcode.InstructionSetLocal{LocalIndex: selfIndex},
 
 				// self.x = value
 				opcode.InstructionGetLocal{LocalIndex: selfIndex},
 				opcode.InstructionGetLocal{LocalIndex: valueIndex},
-				opcode.InstructionTransfer{TypeIndex: 1},
+				opcode.InstructionTransfer{TypeIndex: 2},
 				opcode.InstructionSetField{FieldNameIndex: 0},
 
 				// return self
@@ -1628,12 +1628,12 @@ func TestCompileBool(t *testing.T) {
 		[]opcode.Instruction{
 			// let yes = true
 			opcode.InstructionTrue{},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: yesIndex},
 
 			// let no = false
 			opcode.InstructionFalse{},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: noIndex},
 
 			opcode.InstructionReturn{},
@@ -1720,7 +1720,7 @@ func TestCompileIntegers(t *testing.T) {
 				[]opcode.Instruction{
 					// let yes = true
 					opcode.InstructionGetConstant{ConstantIndex: 0},
-					opcode.InstructionTransfer{TypeIndex: 0},
+					opcode.InstructionTransfer{TypeIndex: 1},
 					opcode.InstructionSetLocal{LocalIndex: vIndex},
 
 					opcode.InstructionReturn{},
@@ -1788,7 +1788,7 @@ func TestCompileFixedPoint(t *testing.T) {
 				[]opcode.Instruction{
 					// let yes = true
 					opcode.InstructionGetConstant{ConstantIndex: 0},
-					opcode.InstructionTransfer{TypeIndex: 0},
+					opcode.InstructionTransfer{TypeIndex: 1},
 					opcode.InstructionSetLocal{LocalIndex: vIndex},
 
 					opcode.InstructionReturn{},
@@ -1855,7 +1855,7 @@ func TestCompileUnaryNot(t *testing.T) {
 			// let no = !true
 			opcode.InstructionTrue{},
 			opcode.InstructionNot{},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: noIndex},
 
 			opcode.InstructionReturn{},
@@ -1895,7 +1895,7 @@ func TestCompileUnaryNegate(t *testing.T) {
 			// let v = -x
 			opcode.InstructionGetLocal{LocalIndex: xIndex},
 			opcode.InstructionNegate{},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: vIndex},
 
 			opcode.InstructionReturn{},
@@ -1935,7 +1935,7 @@ func TestCompileUnaryDeref(t *testing.T) {
 			// let v = *ref
 			opcode.InstructionGetLocal{LocalIndex: refIndex},
 			opcode.InstructionDeref{},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: vIndex},
 
 			opcode.InstructionReturn{},
@@ -1985,7 +1985,7 @@ func TestCompileBinary(t *testing.T) {
 					opcode.InstructionGetConstant{ConstantIndex: 0},
 					opcode.InstructionGetConstant{ConstantIndex: 1},
 					instruction,
-					opcode.InstructionTransfer{TypeIndex: 0},
+					opcode.InstructionTransfer{TypeIndex: 1},
 					opcode.InstructionSetLocal{LocalIndex: vIndex},
 
 					opcode.InstructionReturn{},
@@ -2126,13 +2126,13 @@ func TestCompileMethodInvocation(t *testing.T) {
 				// let foo = Foo()
 				opcode.InstructionGetGlobal{GlobalIndex: 1},
 				opcode.InstructionInvoke{TypeArgs: nil},
-				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionTransfer{TypeIndex: 1},
 				opcode.InstructionSetLocal{LocalIndex: fooIndex},
 
 				// foo.f(true)
 				opcode.InstructionGetLocal{LocalIndex: fooIndex},
 				opcode.InstructionTrue{},
-				opcode.InstructionTransfer{TypeIndex: 1},
+				opcode.InstructionTransfer{TypeIndex: 2},
 				opcode.InstructionGetGlobal{GlobalIndex: 2},
 				opcode.InstructionInvoke{TypeArgs: nil},
 				opcode.InstructionDrop{},
@@ -2153,7 +2153,7 @@ func TestCompileMethodInvocation(t *testing.T) {
 				// Foo()
 				opcode.InstructionNew{
 					Kind:      common.CompositeKindStructure,
-					TypeIndex: 0,
+					TypeIndex: 1,
 				},
 
 				// assign to self
@@ -2208,7 +2208,7 @@ func TestCompileResourceCreateAndDestroy(t *testing.T) {
 				// let foo <- create Foo()
 				opcode.InstructionGetGlobal{GlobalIndex: 1},
 				opcode.InstructionInvoke{TypeArgs: nil},
-				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionTransfer{TypeIndex: 1},
 				opcode.InstructionSetLocal{LocalIndex: fooIndex},
 
 				// destroy foo
@@ -2231,7 +2231,7 @@ func TestCompileResourceCreateAndDestroy(t *testing.T) {
 				// Foo()
 				opcode.InstructionNew{
 					Kind:      common.CompositeKindResource,
-					TypeIndex: 0,
+					TypeIndex: 1,
 				},
 
 				// assign to self
@@ -2329,7 +2329,7 @@ func TestCompileBlockScope(t *testing.T) {
 		[]opcode.Instruction{
 			// let x = 1
 			opcode.InstructionGetConstant{ConstantIndex: 0},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: x1Index},
 
 			// if y
@@ -2338,14 +2338,14 @@ func TestCompileBlockScope(t *testing.T) {
 
 			// { let x = 2 }
 			opcode.InstructionGetConstant{ConstantIndex: 1},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: x2Index},
 
 			opcode.InstructionJump{Target: 12},
 
 			// else { let x = 3 }
 			opcode.InstructionGetConstant{ConstantIndex: 2},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: x3Index},
 
 			// return x
@@ -2416,7 +2416,7 @@ func TestCompileBlockScope2(t *testing.T) {
 		[]opcode.Instruction{
 			// let x = 1
 			opcode.InstructionGetConstant{ConstantIndex: 0},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: x1Index},
 
 			// if y
@@ -2425,23 +2425,23 @@ func TestCompileBlockScope2(t *testing.T) {
 
 			// var x = x
 			opcode.InstructionGetLocal{LocalIndex: x1Index},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: x2Index},
 
 			// x = 2
 			opcode.InstructionGetConstant{ConstantIndex: 1},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: x2Index},
 
 			opcode.InstructionJump{Target: 18},
 
 			// var x = x
 			opcode.InstructionGetLocal{LocalIndex: x1Index},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: x3Index},
 
 			opcode.InstructionGetConstant{ConstantIndex: 2},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: x3Index},
 
 			// return x
@@ -2622,7 +2622,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// panic("pre/post condition failed")
 				opcode.InstructionGetConstant{ConstantIndex: 1}, // error message
-				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionTransfer{TypeIndex: 1},
 				opcode.InstructionGetGlobal{GlobalIndex: 1}, // global index 1 is 'panic' function
 				opcode.InstructionInvoke{},
 
@@ -2680,7 +2680,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// let result = $_result
 				opcode.InstructionGetLocal{LocalIndex: tempResultIndex},
-				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionTransfer{TypeIndex: 1},
 				opcode.InstructionSetLocal{LocalIndex: resultIndex},
 
 				// x > 0
@@ -2694,7 +2694,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// panic("pre/post condition failed")
 				opcode.InstructionGetConstant{ConstantIndex: 2}, // error message
-				opcode.InstructionTransfer{TypeIndex: 1},
+				opcode.InstructionTransfer{TypeIndex: 2},
 				opcode.InstructionGetGlobal{GlobalIndex: 1}, // global index 1 is 'panic' function
 				opcode.InstructionInvoke{},
 
@@ -2753,8 +2753,8 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// Get the reference and assign to `result`.
 				// i.e: `let result = &$_result`
 				opcode.InstructionGetLocal{LocalIndex: tempResultIndex},
-				opcode.InstructionNewRef{TypeIndex: 0},
-				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionNewRef{TypeIndex: 1},
+				opcode.InstructionTransfer{TypeIndex: 1},
 				opcode.InstructionSetLocal{LocalIndex: resultIndex},
 
 				// result != nil
@@ -2768,7 +2768,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// panic("pre/post condition failed")
 				opcode.InstructionGetConstant{ConstantIndex: 0}, // error message
-				opcode.InstructionTransfer{TypeIndex: 1},
+				opcode.InstructionTransfer{TypeIndex: 2},
 				opcode.InstructionGetGlobal{GlobalIndex: 1}, // global index 1 is 'panic' function
 				opcode.InstructionInvoke{},
 
@@ -2889,7 +2889,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// panic("pre/post condition failed")
 				opcode.InstructionGetConstant{ConstantIndex: constPanicMessageIndex},
-				opcode.InstructionTransfer{TypeIndex: 1},
+				opcode.InstructionTransfer{TypeIndex: 3},
 				opcode.InstructionGetGlobal{GlobalIndex: panicFunctionIndex},
 				opcode.InstructionInvoke{},
 
@@ -2907,7 +2907,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// let result = $_result
 				opcode.InstructionGetLocal{LocalIndex: tempResultIndex},
-				opcode.InstructionTransfer{TypeIndex: 2},
+				opcode.InstructionTransfer{TypeIndex: 4},
 				opcode.InstructionSetLocal{LocalIndex: resultIndex},
 
 				// Inherited post condition
@@ -2923,7 +2923,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// panic("pre/post condition failed")
 				opcode.InstructionGetConstant{ConstantIndex: constPanicMessageIndex},
-				opcode.InstructionTransfer{TypeIndex: 1},
+				opcode.InstructionTransfer{TypeIndex: 3},
 				opcode.InstructionGetGlobal{GlobalIndex: panicFunctionIndex},
 				opcode.InstructionInvoke{},
 
@@ -3031,7 +3031,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// Inherited before function
 				// var $before_0 = x
 				opcode.InstructionGetLocal{LocalIndex: xIndex},
-				opcode.InstructionTransfer{TypeIndex: 1},
+				opcode.InstructionTransfer{TypeIndex: 3},
 				opcode.InstructionSetLocal{LocalIndex: beforeVarIndex},
 
 				// Function body
@@ -3045,7 +3045,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// let result = $_result
 				opcode.InstructionGetLocal{LocalIndex: tempResultIndex},
-				opcode.InstructionTransfer{TypeIndex: 1},
+				opcode.InstructionTransfer{TypeIndex: 3},
 				opcode.InstructionSetLocal{LocalIndex: resultIndex},
 
 				// Inherited post condition
@@ -3061,7 +3061,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// panic("pre/post condition failed")
 				opcode.InstructionGetConstant{ConstantIndex: constPanicMessageIndex},
-				opcode.InstructionTransfer{TypeIndex: 2},
+				opcode.InstructionTransfer{TypeIndex: 4},
 				opcode.InstructionGetGlobal{GlobalIndex: panicFunctionIndex},
 				opcode.InstructionInvoke{},
 
@@ -3231,7 +3231,7 @@ func TestForLoop(t *testing.T) {
 
 				// x = 5
 				opcode.InstructionGetConstant{ConstantIndex: 0},
-				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionTransfer{TypeIndex: 1},
 				opcode.InstructionSetLocal{LocalIndex: x1Index},
 
 				// Get the iterator and store in local var.
@@ -3255,12 +3255,12 @@ func TestForLoop(t *testing.T) {
 
 				// var e = e
 				opcode.InstructionGetLocal{LocalIndex: e1Index},
-				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionTransfer{TypeIndex: 1},
 				opcode.InstructionSetLocal{LocalIndex: e2Index},
 
 				// var x = 8
 				opcode.InstructionGetConstant{ConstantIndex: 1},
-				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionTransfer{TypeIndex: 1},
 				opcode.InstructionSetLocal{LocalIndex: x2Index},
 
 				// Jump to the beginning (condition) of the loop.
@@ -3310,7 +3310,7 @@ func TestCompileIf(t *testing.T) {
 		[]opcode.Instruction{
 			// var y = 0
 			opcode.InstructionGetConstant{ConstantIndex: 0},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: yIndex},
 
 			// if x
@@ -3319,14 +3319,14 @@ func TestCompileIf(t *testing.T) {
 
 			// then { y = 1 }
 			opcode.InstructionGetConstant{ConstantIndex: 1},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: yIndex},
 
 			opcode.InstructionJump{Target: 12},
 
 			// else { y = 2 }
 			opcode.InstructionGetConstant{ConstantIndex: 2},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: yIndex},
 
 			// return y
@@ -3589,7 +3589,7 @@ func TestCompileTransaction(t *testing.T) {
 			// self.count = 2
 			opcode.InstructionGetLocal{LocalIndex: selfIndex},
 			opcode.InstructionGetConstant{ConstantIndex: const2Index},
-			opcode.InstructionTransfer{TypeIndex: 1},
+			opcode.InstructionTransfer{TypeIndex: 2},
 			opcode.InstructionSetField{FieldNameIndex: constFieldNameIndex},
 
 			// return
@@ -3636,7 +3636,7 @@ func TestCompileTransaction(t *testing.T) {
 
 			// panic("pre/post condition failed")
 			opcode.InstructionGetConstant{ConstantIndex: constErrorMsgIndex},
-			opcode.InstructionTransfer{TypeIndex: 2},
+			opcode.InstructionTransfer{TypeIndex: 3},
 			opcode.InstructionGetGlobal{GlobalIndex: 3}, // global index 3 is 'panic' function
 			opcode.InstructionInvoke{},
 
@@ -3646,7 +3646,7 @@ func TestCompileTransaction(t *testing.T) {
 			// self.count = 10
 			opcode.InstructionGetLocal{LocalIndex: selfIndex},
 			opcode.InstructionGetConstant{ConstantIndex: const10Index},
-			opcode.InstructionTransfer{TypeIndex: 1},
+			opcode.InstructionTransfer{TypeIndex: 2},
 			opcode.InstructionSetField{FieldNameIndex: constFieldNameIndex},
 
 			// Post condition
@@ -3662,7 +3662,7 @@ func TestCompileTransaction(t *testing.T) {
 
 			// panic("pre/post condition failed")
 			opcode.InstructionGetConstant{ConstantIndex: constErrorMsgIndex},
-			opcode.InstructionTransfer{TypeIndex: 2},
+			opcode.InstructionTransfer{TypeIndex: 3},
 			opcode.InstructionGetGlobal{GlobalIndex: 3}, // global index 3 is 'panic' function
 			opcode.InstructionInvoke{},
 
@@ -3834,7 +3834,7 @@ func TestCompileReturns(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 9},
 				opcode.InstructionGetConstant{ConstantIndex: 0},
-				opcode.InstructionTransfer{TypeIndex: 0x0},
+				opcode.InstructionTransfer{TypeIndex: 1},
 				opcode.InstructionGetGlobal{GlobalIndex: 1},
 				opcode.InstructionInvoke{},
 				opcode.InstructionDrop{},
@@ -3875,8 +3875,8 @@ func TestCompileReturns(t *testing.T) {
 		assert.Equal(t,
 			[]opcode.Instruction{
 				// var a = 5
-				opcode.InstructionGetConstant{ConstantIndex: 0x0},
-				opcode.InstructionTransfer{TypeIndex: 0x0},
+				opcode.InstructionGetConstant{ConstantIndex: 0},
+				opcode.InstructionTransfer{TypeIndex: 1},
 				opcode.InstructionSetLocal{LocalIndex: aIndex},
 
 				// $_result = a
@@ -3888,7 +3888,7 @@ func TestCompileReturns(t *testing.T) {
 
 				// result = $_result
 				opcode.InstructionGetLocal{LocalIndex: tempResultIndex},
-				opcode.InstructionTransfer{TypeIndex: 0x0},
+				opcode.InstructionTransfer{TypeIndex: 1},
 				opcode.InstructionSetLocal{LocalIndex: resultIndex},
 
 				// Post condition
@@ -3896,7 +3896,7 @@ func TestCompileReturns(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 17},
 				opcode.InstructionGetConstant{ConstantIndex: 1},
-				opcode.InstructionTransfer{TypeIndex: 1},
+				opcode.InstructionTransfer{TypeIndex: 2},
 				opcode.InstructionGetGlobal{GlobalIndex: 1},
 				opcode.InstructionInvoke{},
 				opcode.InstructionDrop{},
@@ -3947,7 +3947,7 @@ func TestCompileReturns(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 12},
 				opcode.InstructionGetConstant{ConstantIndex: 0},
-				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionTransfer{TypeIndex: 1},
 				opcode.InstructionGetGlobal{GlobalIndex: 2},
 				opcode.InstructionInvoke{},
 				opcode.InstructionDrop{},
@@ -3992,18 +3992,18 @@ func TestCompileFunctionExpression(t *testing.T) {
 		[]opcode.Instruction{
 			// let addOne = fun ...
 			opcode.InstructionNewClosure{FunctionIndex: 1},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: addOneIndex},
 
 			// let x = 2
 			opcode.InstructionGetConstant{ConstantIndex: 1},
-			opcode.InstructionTransfer{TypeIndex: 1},
+			opcode.InstructionTransfer{TypeIndex: 2},
 			opcode.InstructionSetLocal{LocalIndex: xIndex},
 
 			// return x + addOne(3)
 			opcode.InstructionGetLocal{LocalIndex: xIndex},
 			opcode.InstructionGetConstant{ConstantIndex: 2},
-			opcode.InstructionTransfer{TypeIndex: 1},
+			opcode.InstructionTransfer{TypeIndex: 2},
 			opcode.InstructionGetLocal{LocalIndex: addOneIndex},
 			opcode.InstructionInvoke{},
 			opcode.InstructionAdd{},
@@ -4078,13 +4078,13 @@ func TestCompileInnerFunction(t *testing.T) {
 
 			// let x = 2
 			opcode.InstructionGetConstant{ConstantIndex: 1},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 2},
 			opcode.InstructionSetLocal{LocalIndex: xIndex},
 
 			// return x + addOne(3)
 			opcode.InstructionGetLocal{LocalIndex: xIndex},
 			opcode.InstructionGetConstant{ConstantIndex: 2},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 2},
 			opcode.InstructionGetLocal{LocalIndex: addOneIndex},
 			opcode.InstructionInvoke{},
 			opcode.InstructionAdd{},
@@ -4157,7 +4157,7 @@ func TestCompileFunctionExpressionOuterVariableUse(t *testing.T) {
 		[]opcode.Instruction{
 			// let x = 1
 			opcode.InstructionGetConstant{ConstantIndex: 0},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: xLocalIndex},
 
 			// let inner = fun(): Int { ...
@@ -4170,7 +4170,7 @@ func TestCompileFunctionExpressionOuterVariableUse(t *testing.T) {
 					},
 				},
 			},
-			opcode.InstructionTransfer{TypeIndex: 1},
+			opcode.InstructionTransfer{TypeIndex: 2},
 			opcode.InstructionSetLocal{LocalIndex: innerLocalIndex},
 
 			opcode.InstructionReturn{},
@@ -4188,7 +4188,7 @@ func TestCompileFunctionExpressionOuterVariableUse(t *testing.T) {
 		[]opcode.Instruction{
 			// let y = 2
 			opcode.InstructionGetConstant{ConstantIndex: 1},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: yIndex},
 
 			// return x + y
@@ -4235,7 +4235,7 @@ func TestCompileInnerFunctionOuterVariableUse(t *testing.T) {
 		[]opcode.Instruction{
 			// let x = 1
 			opcode.InstructionGetConstant{ConstantIndex: 0},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: xLocalIndex},
 
 			// fun inner(): Int { ...
@@ -4265,7 +4265,7 @@ func TestCompileInnerFunctionOuterVariableUse(t *testing.T) {
 		[]opcode.Instruction{
 			// let y = 2
 			opcode.InstructionGetConstant{ConstantIndex: 1},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: yIndex},
 
 			// return x + y
@@ -4328,7 +4328,7 @@ func TestCompileInnerFunctionOuterOuterVariableUse(t *testing.T) {
 		[]opcode.Instruction{
 			// let x = 1
 			opcode.InstructionGetConstant{ConstantIndex: 0},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: xLocalIndex},
 
 			// fun middle(): Int { ...
@@ -4380,7 +4380,7 @@ func TestCompileInnerFunctionOuterOuterVariableUse(t *testing.T) {
 		[]opcode.Instruction{
 			// let y = 2
 			opcode.InstructionGetConstant{ConstantIndex: 1},
-			opcode.InstructionTransfer{TypeIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
 			opcode.InstructionSetLocal{LocalIndex: yIndex},
 
 			// return x + y
@@ -4509,12 +4509,12 @@ func TestCompileFunctionExpressionOuterOuterVariableUse(t *testing.T) {
 			[]opcode.Instruction{
 				// let a = 1
 				opcode.InstructionGetConstant{ConstantIndex: 0},
-				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionTransfer{TypeIndex: 1},
 				opcode.InstructionSetLocal{LocalIndex: aLocalIndex},
 
 				// let b = 2
 				opcode.InstructionGetConstant{ConstantIndex: 1},
-				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionTransfer{TypeIndex: 1},
 				opcode.InstructionSetLocal{LocalIndex: bLocalIndex},
 
 				// fun middle(): Int { ...
@@ -4561,12 +4561,12 @@ func TestCompileFunctionExpressionOuterOuterVariableUse(t *testing.T) {
 			[]opcode.Instruction{
 				// let c = 3
 				opcode.InstructionGetConstant{ConstantIndex: 2},
-				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionTransfer{TypeIndex: 1},
 				opcode.InstructionSetLocal{LocalIndex: cLocalIndex},
 
 				// let d = 4
 				opcode.InstructionGetConstant{ConstantIndex: 3},
-				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionTransfer{TypeIndex: 1},
 				opcode.InstructionSetLocal{LocalIndex: dLocalIndex},
 
 				// fun inner(): Int { ...
@@ -4623,12 +4623,12 @@ func TestCompileFunctionExpressionOuterOuterVariableUse(t *testing.T) {
 			[]opcode.Instruction{
 				// let e = 5
 				opcode.InstructionGetConstant{ConstantIndex: 4},
-				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionTransfer{TypeIndex: 1},
 				opcode.InstructionSetLocal{LocalIndex: eLocalIndex},
 
 				// let f = 6
 				opcode.InstructionGetConstant{ConstantIndex: 5},
-				opcode.InstructionTransfer{TypeIndex: 0},
+				opcode.InstructionTransfer{TypeIndex: 1},
 				opcode.InstructionSetLocal{LocalIndex: fLocalIndex},
 
 				// return f + e + d + b + c + a

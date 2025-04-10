@@ -220,11 +220,19 @@ func (c *Compiler[_, _]) addImportedGlobal(location common.Location, name string
 	return global
 }
 
-func (c *Compiler[E, T]) addFunction(name string, parameterCount uint16) *function[E] {
+func (c *Compiler[E, T]) addFunction(
+	name string,
+	parameterCount uint16,
+	functionType *sema.FunctionType,
+) *function[E] {
+
+	functionTypeIndex := c.getOrAddType(functionType)
+
 	function := newFunction[E](
 		c.currentFunction,
 		name,
 		parameterCount,
+		functionTypeIndex,
 	)
 	c.functions = append(c.functions, function)
 
@@ -565,6 +573,7 @@ func (c *Compiler[E, T]) ExportFunctions() []bbq.Function[E] {
 					Code:           function.code,
 					LocalCount:     function.localCount,
 					ParameterCount: function.parameterCount,
+					TypeIndex:      function.typeIndex,
 				},
 			)
 		}
@@ -1646,7 +1655,13 @@ func (c *Compiler[_, _]) VisitFunctionExpression(expression *ast.FunctionExpress
 		panic(errors.NewDefaultUserError("invalid parameter count"))
 	}
 
-	function := c.addFunction("", uint16(parameterCount))
+	functionType := c.ExtendedElaboration.FunctionExpressionFunctionType(expression)
+
+	function := c.addFunction(
+		"",
+		uint16(parameterCount),
+		functionType,
+	)
 
 	func() {
 		previousFunction := c.currentFunction
@@ -1787,7 +1802,13 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		panic(errors.NewDefaultUserError("invalid parameter count"))
 	}
 
-	function := c.addFunction(functionName, uint16(parameterCount))
+	functionType := c.ExtendedElaboration.FunctionDeclarationFunctionType(declaration.FunctionDeclaration)
+
+	function := c.addFunction(
+		functionName,
+		uint16(parameterCount),
+		functionType,
+	)
 
 	previousFunction := c.currentFunction
 	c.targetFunction(function)
@@ -1893,7 +1914,13 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 		panic(errors.NewDefaultUserError("invalid function index"))
 	}
 
-	function := c.addFunction(functionName, uint16(parameterCount))
+	functionType := c.ExtendedElaboration.FunctionDeclarationFunctionType(declaration)
+
+	function := c.addFunction(
+		functionName,
+		uint16(parameterCount),
+		functionType,
+	)
 
 	func() {
 		c.targetFunction(function)
@@ -2121,6 +2148,10 @@ func (c *Compiler[E, T]) declareParameters(paramList *ast.ParameterList, declare
 }
 
 func (c *Compiler[_, _]) generateEmptyInit() {
+	c.ExtendedElaboration.SetFunctionDeclarationFunctionType(
+		emptyInitializer.FunctionDeclaration,
+		emptyInitializerFuncType,
+	)
 	c.VisitSpecialFunctionDeclaration(emptyInitializer)
 }
 

@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
 )
 
 type LinkedGlobals struct {
@@ -115,9 +116,13 @@ func LinkGlobals(
 	// TODO: include non-function globals
 	for i := range program.Functions {
 		function := &program.Functions[i]
+
+		funcStaticType := getTypeFromExecutable[interpreter.FunctionStaticType](executable, function.TypeIndex)
+
 		value := FunctionValue{
 			Function:   function,
 			Executable: executable,
+			Type:       funcStaticType,
 		}
 
 		globals = append(globals, value)

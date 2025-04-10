@@ -34,10 +34,10 @@ func init() {
 	// Account.Storage.save
 	RegisterTypeBoundFunction(
 		accountStorageTypeName,
-		sema.Account_StorageTypeSaveFunctionName,
-		NativeFunctionValue{
-			ParameterCount: len(sema.Account_StorageTypeSaveFunctionType.Parameters),
-			Function: func(config *Config, typeArs []bbq.StaticType, args ...Value) Value {
+		NewNativeFunctionValue(
+			sema.Account_StorageTypeSaveFunctionName,
+			sema.Account_StorageTypeSaveFunctionType,
+			func(config *Config, typeArs []bbq.StaticType, args ...Value) Value {
 
 				address := getAddressMetaInfoFromValue(args[receiverIndex])
 
@@ -51,16 +51,16 @@ func init() {
 					EmptyLocationRange,
 				)
 			},
-		},
+		),
 	)
 
 	// Account.Storage.borrow
 	RegisterTypeBoundFunction(
 		accountStorageTypeName,
-		sema.Account_StorageTypeBorrowFunctionName,
-		NativeFunctionValue{
-			ParameterCount: len(sema.Account_StorageTypeBorrowFunctionType.Parameters),
-			Function: func(config *Config, typeArgs []bbq.StaticType, args ...Value) Value {
+		NewNativeFunctionValue(
+			sema.Account_StorageTypeBorrowFunctionName,
+			sema.Account_StorageTypeBorrowFunctionType,
+			func(config *Config, typeArgs []bbq.StaticType, args ...Value) Value {
 				address := getAddressMetaInfoFromValue(args[receiverIndex])
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
@@ -77,16 +77,16 @@ func init() {
 					EmptyLocationRange,
 				)
 			},
-		},
+		),
 	)
 
 	// Account.Storage.forEachPublic
 	RegisterTypeBoundFunction(
 		accountStorageTypeName,
-		sema.Account_StorageTypeForEachPublicFunctionName,
-		NativeFunctionValue{
-			ParameterCount: len(sema.Account_StorageTypeForEachPublicFunctionType.Parameters),
-			Function: func(config *Config, typeArs []bbq.StaticType, args ...Value) Value {
+		NewNativeFunctionValue(
+			sema.Account_StorageTypeForEachPublicFunctionName,
+			sema.Account_StorageTypeForEachPublicFunctionType,
+			func(config *Config, typeArs []bbq.StaticType, args ...Value) Value {
 
 				address := getAddressMetaInfoFromValue(args[receiverIndex])
 
@@ -102,16 +102,16 @@ func init() {
 					EmptyLocationRange,
 				)
 			},
-		},
+		),
 	)
 
 	// Account.Storage.forEachStored
 	RegisterTypeBoundFunction(
 		accountStorageTypeName,
-		sema.Account_StorageTypeForEachStoredFunctionName,
-		NativeFunctionValue{
-			ParameterCount: len(sema.Account_StorageTypeForEachPublicFunctionType.Parameters),
-			Function: func(config *Config, typeArs []bbq.StaticType, args ...Value) Value {
+		NewNativeFunctionValue(
+			sema.Account_StorageTypeForEachStoredFunctionName,
+			sema.Account_StorageTypeForEachPublicFunctionType,
+			func(config *Config, typeArs []bbq.StaticType, args ...Value) Value {
 
 				address := getAddressMetaInfoFromValue(args[receiverIndex])
 
@@ -127,16 +127,16 @@ func init() {
 					EmptyLocationRange,
 				)
 			},
-		},
+		),
 	)
 
 	// Account.Storage.type
 	RegisterTypeBoundFunction(
 		accountStorageTypeName,
-		sema.Account_StorageTypeTypeFunctionName,
-		NativeFunctionValue{
-			ParameterCount: len(sema.Account_StorageTypeTypeFunctionType.Parameters),
-			Function: func(config *Config, typeArs []bbq.StaticType, args ...Value) Value {
+		NewNativeFunctionValue(
+			sema.Account_StorageTypeTypeFunctionName,
+			sema.Account_StorageTypeTypeFunctionType,
+			func(config *Config, typeArs []bbq.StaticType, args ...Value) Value {
 
 				address := getAddressMetaInfoFromValue(args[receiverIndex])
 
@@ -149,16 +149,16 @@ func init() {
 					address.ToAddress(),
 				)
 			},
-		},
+		),
 	)
 
 	// Account.Storage.load
 	RegisterTypeBoundFunction(
 		accountStorageTypeName,
-		sema.Account_StorageTypeLoadFunctionName,
-		NativeFunctionValue{
-			ParameterCount: len(sema.Account_StorageTypeLoadFunctionType.Parameters),
-			Function: func(config *Config, typeArgs []bbq.StaticType, args ...Value) Value {
+		NewNativeFunctionValue(
+			sema.Account_StorageTypeLoadFunctionName,
+			sema.Account_StorageTypeLoadFunctionType,
+			func(config *Config, typeArgs []bbq.StaticType, args ...Value) Value {
 				address := getAddressMetaInfoFromValue(args[receiverIndex])
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
@@ -176,16 +176,16 @@ func init() {
 					EmptyLocationRange,
 				)
 			},
-		},
+		),
 	)
 
 	// Account.Storage.copy
 	RegisterTypeBoundFunction(
 		accountStorageTypeName,
-		sema.Account_StorageTypeCopyFunctionName,
-		NativeFunctionValue{
-			ParameterCount: len(sema.Account_StorageTypeCopyFunctionType.Parameters),
-			Function: func(config *Config, typeArgs []bbq.StaticType, args ...Value) Value {
+		NewNativeFunctionValue(
+			sema.Account_StorageTypeCopyFunctionName,
+			sema.Account_StorageTypeCopyFunctionType,
+			func(config *Config, typeArgs []bbq.StaticType, args ...Value) Value {
 				address := getAddressMetaInfoFromValue(args[receiverIndex]).ToAddress()
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
@@ -203,16 +203,16 @@ func init() {
 					EmptyLocationRange,
 				)
 			},
-		},
+		),
 	)
 
 	// Account.Storage.check
 	RegisterTypeBoundFunction(
 		accountStorageTypeName,
-		sema.Account_StorageTypeCheckFunctionName,
-		NativeFunctionValue{
-			ParameterCount: len(sema.Account_StorageTypeCheckFunctionType.Parameters),
-			Function: func(config *Config, typeArgs []bbq.StaticType, args ...Value) Value {
+		NewNativeFunctionValue(
+			sema.Account_StorageTypeCheckFunctionName,
+			sema.Account_StorageTypeCheckFunctionType,
+			func(config *Config, typeArgs []bbq.StaticType, args ...Value) Value {
 				address := getAddressMetaInfoFromValue(args[receiverIndex]).ToAddress()
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
@@ -228,6 +228,6 @@ func init() {
 					semaBorrowType,
 				)
 			},
-		},
+		),
 	)
 }

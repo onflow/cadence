@@ -1213,10 +1213,13 @@ func opNewClosure(vm *VM, ins opcode.InstructionNewClosure) {
 		upvalues[upvalueIndex] = upvalue
 	}
 
+	funcStaticType := getTypeFromExecutable[interpreter.FunctionStaticType](executable, function.TypeIndex)
+
 	vm.push(FunctionValue{
 		Function:   function,
 		Executable: executable,
 		Upvalues:   upvalues,
+		Type:       funcStaticType,
 	})
 }
 
