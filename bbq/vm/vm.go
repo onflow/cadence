@@ -30,7 +30,6 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/sema"
 )
 
 type VM struct {
@@ -696,10 +695,12 @@ func opNew(vm *VM, ins opcode.InstructionNew) {
 	// TODO: Support inclusive-range type
 	compositeStaticType := staticType.(*interpreter.CompositeStaticType)
 
-	compositeFields := newCompositeValueFields(vm, compositeKind)
+	config := vm.config
+
+	compositeFields := newCompositeValueFields(config, compositeKind)
 
 	value := interpreter.NewCompositeValue(
-		vm.config,
+		config,
 		EmptyLocationRange,
 		compositeStaticType.Location,
 		compositeStaticType.QualifiedIdentifier,
@@ -710,41 +711,6 @@ func opNew(vm *VM, ins opcode.InstructionNew) {
 		common.ZeroAddress,
 	)
 	vm.push(value)
-}
-
-func newCompositeValueFields(vm *VM, compositeKind common.CompositeKind) (fields []interpreter.CompositeField) {
-
-	if compositeKind == common.CompositeKindResource {
-
-		uuidHandler := vm.config.interpreterConfig.UUIDHandler
-		if uuidHandler == nil {
-			panic(interpreter.UUIDUnavailableError{
-				// TODO:
-				LocationRange: EmptyLocationRange,
-			})
-		}
-
-		uuid, err := uuidHandler()
-		if err != nil {
-			panic(err)
-		}
-
-		fields = append(
-			fields,
-			interpreter.NewCompositeField(
-				nil,
-				sema.ResourceUUIDFieldName,
-				interpreter.NewUInt64Value(
-					nil,
-					func() uint64 {
-						return uuid
-					},
-				),
-			),
-		)
-	}
-
-	return
 }
 
 func opSetField(vm *VM, ins opcode.InstructionSetField) {
