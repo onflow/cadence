@@ -148,6 +148,19 @@ type NativeFunctionValue struct {
 	Type           interpreter.FunctionStaticType
 }
 
+func NewNativeFunctionValue(
+	name string,
+	funcType *sema.FunctionType,
+	function NativeFunction,
+) NativeFunctionValue {
+	return NativeFunctionValue{
+		Name:           name,
+		ParameterCount: len(funcType.Parameters),
+		Function:       function,
+		Type:           interpreter.NewFunctionStaticType(nil, funcType),
+	}
+}
+
 var _ Value = NativeFunctionValue{}
 var _ interpreter.FunctionValue = NativeFunctionValue{}
 

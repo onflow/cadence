@@ -1249,7 +1249,6 @@ var emptyInitializerFuncType = sema.NewSimpleFunctionType(
 	sema.VoidTypeAnnotation,
 )
 
-
 func simpleFunctionDeclaration(
 	memoryGauge common.MemoryGauge,
 	functionName string,
