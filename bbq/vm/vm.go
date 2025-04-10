@@ -695,13 +695,17 @@ func opNew(vm *VM, ins opcode.InstructionNew) {
 	// TODO: Support inclusive-range type
 	compositeStaticType := staticType.(*interpreter.CompositeStaticType)
 
+	config := vm.config
+
+	compositeFields := newCompositeValueFields(config, compositeKind)
+
 	value := interpreter.NewCompositeValue(
-		vm.config,
+		config,
 		EmptyLocationRange,
 		compositeStaticType.Location,
 		compositeStaticType.QualifiedIdentifier,
 		compositeKind,
-		nil,
+		compositeFields,
 		// Newly created values are always on stack.
 		// Need to 'Transfer' if needed to be stored in an account.
 		common.ZeroAddress,

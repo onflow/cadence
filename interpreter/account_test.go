@@ -39,8 +39,8 @@ import (
 	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
-	"github.com/onflow/cadence/test_utils/runtime_utils"
-	"github.com/onflow/cadence/test_utils/sema_utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 type storageKey struct {
@@ -585,9 +585,9 @@ func testAccountWithErrorHandlerWithCompiler(
 			t,
 			code,
 			compilerUtils.CompilerAndVMOptions{
-				ParseAndCheckOptions: &sema_utils.ParseAndCheckOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
 					Config: &sema.Config{
-						LocationHandler: runtime_utils.NewSingleIdentifierLocationResolver(t),
+						LocationHandler: NewSingleIdentifierLocationResolver(t),
 						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 							return baseValueActivation
 						},
@@ -608,6 +608,16 @@ func testAccountWithErrorHandlerWithCompiler(
 				},
 			},
 		)
+
+		var uuid uint64
+		uuidHandler := func() (uint64, error) {
+			uuid++
+			return uuid, nil
+		}
+
+		vmConfig.WithInterpreterConfig(&interpreter.Config{
+			UUIDHandler: uuidHandler,
+		})
 
 		invokable = test_utils.NewVMInvokable(vmInstance, vmConfig)
 		storage = vmConfig.Storage()
