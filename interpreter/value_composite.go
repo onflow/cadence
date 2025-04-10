@@ -370,7 +370,6 @@ func (v *CompositeValue) Destroy(context ResourceDestructionContext, locationRan
 			context,
 			nil,
 			nil,
-			nil,
 			[]Value{v},
 			[]sema.Type{},
 			nil,
@@ -490,7 +489,7 @@ func (v *CompositeValue) GetMember(context MemberAccessibleContext, locationRang
 func compositeMember(context FunctionCreationContext, compositeValue Value, memberValue Value) Value {
 	hostFunc, isHostFunc := memberValue.(*HostFunctionValue)
 	if isHostFunc {
-		return NewBoundFunctionValue(context, hostFunc, &compositeValue, nil, nil)
+		return NewBoundFunctionValue(context, hostFunc, &compositeValue, nil)
 	}
 
 	return memberValue
@@ -577,7 +576,7 @@ func (v *CompositeValue) GetFunction(context FunctionCreationContext, locationRa
 
 	// If the function is already a bound function, then do not re-wrap.
 	// `NewBoundFunctionValue` already handles this.
-	return NewBoundFunctionValue(context, function, &self, base, nil)
+	return NewBoundFunctionValue(context, function, &self, base)
 }
 
 func (v *CompositeValue) OwnerValue(context MemberAccessibleContext, locationRange LocationRange) OptionalValue {

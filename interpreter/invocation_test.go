@@ -156,7 +156,6 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 		inter,
 		nil,
 		nil,
-		nil,
 		[]interpreter.Value{value},
 		[]sema.Type{sema.IntType},
 		nil,

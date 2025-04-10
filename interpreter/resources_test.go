@@ -2087,7 +2087,7 @@ func TestInterpretOptionalResourceReference(t *testing.T) {
         `, sema.Config{})
 
 	_, err := inter.Invoke("test")
-	require.Error(t, err)
+	RequireError(t, err)
 	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
 
@@ -2119,7 +2119,7 @@ func TestInterpretArrayOptionalResourceReference(t *testing.T) {
         `, sema.Config{})
 
 	_, err := inter.Invoke("test")
-	require.Error(t, err)
+	RequireError(t, err)
 	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
 
@@ -3580,7 +3580,7 @@ func TestInterpretInvalidNilCoalescingResourceDuplication(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("main")
-		require.Error(t, err)
+		RequireError(t, err)
 
 		var inliningError *atree.FatalError
 		require.ErrorAs(t, err, &inliningError)
@@ -3619,7 +3619,7 @@ func TestInterpretInvalidNilCoalescingResourceDuplication(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("main")
-		require.Error(t, err)
+		RequireError(t, err)
 
 		var destroyedResourceErr interpreter.DestroyedResourceError
 		require.ErrorAs(t, err, &destroyedResourceErr)

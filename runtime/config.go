@@ -35,6 +35,4 @@ type Config struct {
 	ResourceOwnerChangeHandlerEnabled bool
 	// CoverageReport enables and collects coverage reporting metrics
 	CoverageReport *CoverageReport
-	// StorageFormatV2Enabled specifies whether storage format V2 is enabled
-	StorageFormatV2Enabled bool
 }

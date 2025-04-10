@@ -160,6 +160,23 @@ func TestType_ID(t *testing.T) {
 			"view fun(Int):String",
 		},
 		{
+			&FunctionType{
+				TypeParameters: []TypeParameter{
+					{Name: "T"},
+					{
+						Name:      "U",
+						TypeBound: AnyStructType,
+					},
+				},
+				Parameters: []Parameter{
+					{Type: IntType},
+				},
+				ReturnType: StringType,
+				Purity:     FunctionPurityView,
+			},
+			"view fun<T,U:AnyStruct>(Int):String",
+		},
+		{
 			&EventType{
 				QualifiedIdentifier: "Event",
 			},

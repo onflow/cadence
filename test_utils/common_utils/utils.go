@@ -47,6 +47,7 @@ const ImportedLocation = common.StringLocation("imported")
 //
 // If the objects are not equal, this function prints a human-readable diff.
 func AssertEqualWithDiff(t *testing.T, expected, actual any) {
+	t.Helper()
 
 	// the maximum levels of a struct to recurse into
 	// this prevents infinite recursion from circular references
@@ -82,6 +83,8 @@ func AssertEqualWithDiff(t *testing.T, expected, actual any) {
 // that the error message, the secondary message (if any),
 // and the error notes' (if any) messages can be successfully produced
 func RequireError(t *testing.T, err error) {
+	t.Helper()
+
 	require.Error(t, err)
 
 	_ = err.Error()

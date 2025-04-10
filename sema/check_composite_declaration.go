@@ -1791,11 +1791,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 
 		fieldAccess := checker.accessFromAstAccess(field.Access)
 
-		if entitlementMapAccess, ok := fieldAccess.(*EntitlementMapAccess); ok {
-			checker.entitlementMappingInScope = entitlementMapAccess.Type
-		}
 		fieldTypeAnnotation := checker.ConvertTypeAnnotation(field.TypeAnnotation)
-		checker.entitlementMappingInScope = nil
 		checker.checkTypeAnnotation(fieldTypeAnnotation, field.TypeAnnotation)
 
 		const declarationKind = common.DeclarationKindField
@@ -1869,7 +1865,6 @@ func (checker *Checker) defaultMembersAndOrigins(
 		functionType := checker.functionType(
 			function.IsNative(),
 			function.Purity,
-			functionAccess,
 			function.TypeParameterList,
 			function.ParameterList,
 			function.ReturnTypeAnnotation,

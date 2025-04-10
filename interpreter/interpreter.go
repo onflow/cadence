@@ -474,7 +474,6 @@ func InvokeExternally(
 
 	var self *Value
 	var base *EphemeralReferenceValue
-	var boundAuth Authorization
 	if boundFunc, ok := functionValue.(BoundFunctionValue); ok {
 		self = boundFunc.SelfReference.ReferencedValue(
 			context,
@@ -482,7 +481,6 @@ func InvokeExternally(
 			true,
 		)
 		base = boundFunc.Base
-		boundAuth = boundFunc.BoundAuthorization
 	}
 
 	// NOTE: can't fill argument types, as they are unknown
@@ -490,7 +488,6 @@ func InvokeExternally(
 		context,
 		self,
 		base,
-		boundAuth,
 		preparedArguments,
 		nil,
 		nil,
@@ -1876,26 +1873,6 @@ func (interpreter *Interpreter) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclarat
 	panic(errors.NewUnreachableError())
 }
 
-func SubstituteMappedEntitlements(handler EntitlementMappingsSubstitutionHandler, ty sema.Type) sema.Type {
-	if handler.CurrentEntitlementMappedValue() == nil {
-		return ty
-	}
-
-	return ty.Map(handler, make(map[*sema.TypeParameter]*sema.TypeParameter), func(t sema.Type) sema.Type {
-		switch refType := t.(type) {
-		case *sema.ReferenceType:
-			if _, isMappedAuth := refType.Authorization.(*sema.EntitlementMapAccess); isMappedAuth {
-				authorization := MustConvertStaticAuthorizationToSemaAccess(
-					handler,
-					handler.CurrentEntitlementMappedValue(),
-				)
-				return sema.NewReferenceType(handler, authorization, refType.Type)
-			}
-		}
-		return t
-	})
-}
-
 func (interpreter *Interpreter) ValueIsSubtypeOfSemaType(value Value, targetType sema.Type) bool {
 	return IsSubTypeOfSemaType(interpreter, value.StaticType(interpreter), targetType)
 }
@@ -1916,8 +1893,6 @@ func transferAndConvert(
 		nil,
 		true, // value is standalone.
 	)
-
-	targetType = SubstituteMappedEntitlements(context, targetType)
 
 	result := ConvertAndBox(
 		context,
@@ -4556,7 +4531,14 @@ func authAccountStorageLoadFunction(
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
-	return authAccountReadFunction(context, storageValue, addressValue, true)
+	const clear = true
+	return authAccountReadFunction(
+		context,
+		storageValue,
+		addressValue,
+		sema.Account_StorageTypeLoadFunctionType,
+		clear,
+	)
 }
 
 func authAccountStorageCopyFunction(
@@ -4564,13 +4546,21 @@ func authAccountStorageCopyFunction(
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
-	return authAccountReadFunction(context, storageValue, addressValue, false)
+	const clear = false
+	return authAccountReadFunction(
+		context,
+		storageValue,
+		addressValue,
+		sema.Account_StorageTypeCopyFunctionType,
+		clear,
+	)
 }
 
 func authAccountReadFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
+	functionType *sema.FunctionType,
 	clear bool,
 ) BoundFunctionValue {
 
@@ -4580,8 +4570,7 @@ func authAccountReadFunction(
 	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
-		// same as sema.Account_StorageTypeCopyFunctionType
-		sema.Account_StorageTypeLoadFunctionType,
+		functionType,
 		func(_ *SimpleCompositeValue, invocation Invocation) Value {
 			invocationContext := invocation.InvocationContext
 			arguments := invocation.Arguments
@@ -5180,86 +5169,6 @@ func getAccessOfMember(context ValueStaticTypeContext, self Value, identifier st
 		return sema.UnauthorizedAccess
 	}
 	return member.Resolve(context, identifier, ast.EmptyRange, func(err error) {}).Access
-}
-
-func mapMemberValueAuthorization(
-	context StaticTypeAndReferenceContext,
-	self Value,
-	memberAccess sema.Access,
-	resultValue Value,
-	resultingType sema.Type,
-	locationRange LocationRange,
-) Value {
-
-	if memberAccess == nil {
-		return resultValue
-	}
-
-	if mappedAccess, isMappedAccess := (memberAccess).(*sema.EntitlementMapAccess); isMappedAccess {
-		var auth Authorization
-		switch selfValue := self.(type) {
-		case AuthorizedValue:
-			selfAccess := MustConvertStaticAuthorizationToSemaAccess(context, selfValue.GetAuthorization())
-			imageAccess, err := mappedAccess.Image(selfAccess, func() ast.Range { return ast.EmptyRange })
-			if err != nil {
-				panic(err)
-			}
-			auth = ConvertSemaAccessToStaticAuthorization(context, imageAccess)
-
-		default:
-			var access sema.Access
-			if mappedAccess.Type.IncludesIdentity {
-				access = sema.AllSupportedEntitlements(resultingType)
-			}
-
-			if access == nil {
-				access = mappedAccess.Codomain()
-			}
-
-			auth = ConvertSemaAccessToStaticAuthorization(context, access)
-		}
-
-		switch refValue := resultValue.(type) {
-		case *EphemeralReferenceValue:
-			return NewEphemeralReferenceValue(context, auth, refValue.Value, refValue.BorrowedType, locationRange)
-		case *StorageReferenceValue:
-			return NewStorageReferenceValue(context, auth, refValue.TargetStorageAddress, refValue.TargetPath, refValue.BorrowedType)
-		case BoundFunctionValue:
-			return NewBoundFunctionValueFromSelfReference(
-				context,
-				refValue.Function,
-				refValue.SelfReference,
-				refValue.selfIsReference,
-				refValue.Base,
-				auth,
-			)
-		}
-	}
-	return resultValue
-}
-
-func (interpreter *Interpreter) getMemberWithAuthMapping(
-	self Value,
-	locationRange LocationRange,
-	identifier string,
-	memberAccessInfo sema.MemberAccessInfo,
-) Value {
-
-	result := getMember(interpreter, self, locationRange, identifier)
-	if result == nil {
-		return nil
-	}
-	// once we have obtained the member, if it was declared with entitlement-mapped access, we must compute the output of the map based
-	// on the runtime authorizations of the accessing reference or composite
-	memberAccess := getAccessOfMember(interpreter, self, identifier)
-	return mapMemberValueAuthorization(
-		interpreter,
-		self,
-		memberAccess,
-		result,
-		memberAccessInfo.ResultingType,
-		locationRange,
-	)
 }
 
 // getMember gets the member value by the given identifier from the given Value depending on its type.
@@ -6049,10 +5958,6 @@ func (interpreter *Interpreter) SetMutationDuringCapabilityControllerIteration()
 
 func (interpreter *Interpreter) MutationDuringCapabilityControllerIteration() bool {
 	return interpreter.SharedState.MutationDuringCapabilityControllerIteration
-}
-
-func (interpreter *Interpreter) CurrentEntitlementMappedValue() Authorization {
-	return interpreter.SharedState.currentEntitlementMappedValue
 }
 
 func (interpreter *Interpreter) ValidateAccountCapabilitiesGetHandler() ValidateAccountCapabilitiesGetHandlerFunc {
