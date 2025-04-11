@@ -56,6 +56,7 @@ var builtinTypes = []sema.Type{
 
 var stdlibFunctions = []string{
 	commons.LogFunctionName,
+	commons.AssertFunctionName,
 	commons.PanicFunctionName,
 	commons.GetAccountFunctionName,
 }

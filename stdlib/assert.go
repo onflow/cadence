@@ -35,7 +35,7 @@ Use this function for internal sanity checks.
 The message argument is optional.
 `
 
-var assertFunctionType = &sema.FunctionType{
+var AssertFunctionType = &sema.FunctionType{
 	Purity: sema.FunctionPurityView,
 	Parameters: []sema.Parameter{
 		{
@@ -55,7 +55,7 @@ var assertFunctionType = &sema.FunctionType{
 
 var AssertFunction = NewStandardLibraryStaticFunction(
 	"assert",
-	assertFunctionType,
+	AssertFunctionType,
 	assertFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		result, ok := invocation.Arguments[0].(interpreter.BoolValue)
@@ -63,23 +63,28 @@ var AssertFunction = NewStandardLibraryStaticFunction(
 			panic(errors.NewUnreachableError())
 		}
 
-		if !result {
-			var message string
-			if len(invocation.Arguments) > 1 {
-				messageValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				message = messageValue.Str
+		var message string
+		if len(invocation.Arguments) > 1 {
+			messageValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
 			}
-			panic(AssertionError{
-				Message:       message,
-				LocationRange: invocation.LocationRange,
-			})
+			message = messageValue.Str
 		}
-		return interpreter.Void
+
+		return Assert(result, message, invocation.LocationRange)
 	},
 )
+
+func Assert(result interpreter.BoolValue, message string, locationRange interpreter.LocationRange) interpreter.Value {
+	if !result {
+		panic(AssertionError{
+			Message:       message,
+			LocationRange: locationRange,
+		})
+	}
+	return interpreter.Void
+}
 
 // AssertionError
 
