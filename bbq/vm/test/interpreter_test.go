@@ -498,7 +498,11 @@ func interpreterFTTransfer(tb testing.TB) {
 		interpreter.EmptyLocationRange,
 	)
 
-	n := 1
+	var transferCount int
+
+	loop := func() bool {
+		return transferCount == 0
+	}
 
 	b, _ := tb.(*testing.B)
 
@@ -507,12 +511,12 @@ func interpreterFTTransfer(tb testing.TB) {
 		b.ReportAllocs()
 		b.ResetTimer()
 
-		n = b.N
+		loop = func() bool {
+			return transferCount < b.N
+		}
 	}
 
-	var transferCount int
-
-	for i := 0; i < n; i++ {
+	for loop() {
 
 		err = inter.InvokeTransaction(
 			0,
