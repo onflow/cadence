@@ -5653,7 +5653,7 @@ func TestInnerFunction(t *testing.T) {
 	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(6), actual)
 }
 
-func TestContractContractAccount(t *testing.T) {
+func TestContractAccount(t *testing.T) {
 	t.Parallel()
 
 	importLocation := common.NewAddressLocation(nil, common.Address{0x1}, "C")
