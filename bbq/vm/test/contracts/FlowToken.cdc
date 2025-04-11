@@ -54,11 +54,15 @@ access(all) contract FlowToken: FungibleToken {
 
         /// getSupportedVaultTypes optionally returns a list of vault types that this receiver accepts
         access(all) view fun getSupportedVaultTypes(): {Type: Bool} {
-            return {self.getType(): true}
+            // TODO: getType
+            // return {self.getType(): true}
+            return {}
         }
 
         access(all) view fun isSupportedVaultType(type: Type): Bool {
-            if (type == self.getType()) { return true } else { return false }
+            // TODO: getType
+            // if (type == self.getType()) { return true } else { return false }
+            return true
         }
 
         /// Asks if the amount can be withdrawn from this vault
@@ -85,17 +89,18 @@ access(all) contract FlowToken: FungibleToken {
             // much more comprehensive metadata
             // Additionally, these events will eventually be removed from this contract completely
             // in favor of the FungibleToken events
-            if let address = self.owner?.address {
-                if address != 0xf8d6e0586b0a20c7 &&
-                   address != 0xf4527793ee68aede &&
-                   address != 0x9eca2b38b18b5dfe &&
-                   address != 0x8624b52f9ddcd04a
-                {
-                    emit TokensWithdrawn(amount: amount, from: address)
-                }
-            } else {
-                emit TokensWithdrawn(amount: amount, from: nil)
-            }
+            // TODO: address constants
+            // if let address = self.owner?.address {
+            //     if address != 0xf8d6e0586b0a20c7 &&
+            //        address != 0xf4527793ee68aede &&
+            //        address != 0x9eca2b38b18b5dfe &&
+            //        address != 0x8624b52f9ddcd04a
+            //     {
+            //         emit TokensWithdrawn(amount: amount, from: address)
+            //     }
+            // } else {
+            //     emit TokensWithdrawn(amount: amount, from: nil)
+            // }
             return <-create Vault(balance: amount)
         }
 
@@ -117,17 +122,18 @@ access(all) contract FlowToken: FungibleToken {
             // much more comprehensive metadata
             // Additionally, these events will eventually be removed from this contract completely
             // in favor of the FungibleToken events
-            if let address = self.owner?.address {
-                if address != 0xf8d6e0586b0a20c7 &&
-                   address != 0xf4527793ee68aede &&
-                   address != 0x9eca2b38b18b5dfe &&
-                   address != 0x8624b52f9ddcd04a
-                {
-                    emit TokensDeposited(amount: vault.balance, to: address)
-                }
-            } else {
-                emit TokensDeposited(amount: vault.balance, to: nil)
-            }
+            // TODO: address constants
+            // if let address = self.owner?.address {
+            //     if address != 0xf8d6e0586b0a20c7 &&
+            //        address != 0xf4527793ee68aede &&
+            //        address != 0x9eca2b38b18b5dfe &&
+            //        address != 0x8624b52f9ddcd04a
+            //     {
+            //         emit TokensDeposited(amount: vault.balance, to: address)
+            //     }
+            // } else {
+            //     emit TokensDeposited(amount: vault.balance, to: nil)
+            // }
             vault.balance = 0.0
             destroy vault
         }

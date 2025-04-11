@@ -178,7 +178,8 @@ access(all) contract interface FungibleToken: ViewResolver {
         /// This is to prevent vault owners from spamming fake Burned events.
         access(contract) fun burnCallback() {
             pre {
-                emit Burned(type: self.getType().identifier, amount: self.balance, fromUUID: self.uuid)
+                // TODO: getType
+                // emit Burned(type: self.getType().identifier, amount: self.balance, fromUUID: self.uuid)
             }
             post {
                 self.balance == 0.0:
@@ -194,15 +195,17 @@ access(all) contract interface FungibleToken: ViewResolver {
         /// for this function
         ///
         access(all) view fun getSupportedVaultTypes(): {Type: Bool} {
-            // Below check is implemented to make sure that run-time type would
-            // only get returned when the parent resource conforms with `FungibleToken.Vault`.
-            if self.getType().isSubtype(of: Type<@{FungibleToken.Vault}>()) {
-                return {self.getType(): true}
-            } else {
-                // Return an empty dictionary as the default value for resource who don't
-                // implement `FungibleToken.Vault`, such as `FungibleTokenSwitchboard`, `TokenForwarder` etc.
-                return {}
-            }
+            // TODO: getType
+            // // Below check is implemented to make sure that run-time type would
+            // // only get returned when the parent resource conforms with `FungibleToken.Vault`.
+            // if self.getType().isSubtype(of: Type<@{FungibleToken.Vault}>()) {
+            //     return {self.getType(): true}
+            // } else {
+            //     // Return an empty dictionary as the default value for resource who don't
+            //     // implement `FungibleToken.Vault`, such as `FungibleTokenSwitchboard`, `TokenForwarder` etc.
+            //     return {}
+            // }
+            return {}
         }
 
         /// Checks if the given type is supported by this Vault
@@ -222,12 +225,13 @@ access(all) contract interface FungibleToken: ViewResolver {
                     .concat(self.balance.toString()).concat(").")
             }
             post {
-                result.getType() == self.getType():
-                    "FungibleToken.Vault.withdraw: Cannot withdraw tokens! "
-                    .concat("The withdraw method tried to return an incompatible Vault type <")
-                    .concat(result.getType().identifier).concat(">. ")
-                    .concat("It must return a Vault with the same type as self <")
-                    .concat(self.getType().identifier).concat(">.")
+                // TODO: getType
+                // result.getType() == self.getType():
+                //     "FungibleToken.Vault.withdraw: Cannot withdraw tokens! "
+                //     .concat("The withdraw method tried to return an incompatible Vault type <")
+                //     .concat(result.getType().identifier).concat(">. ")
+                //     .concat("It must return a Vault with the same type as self <")
+                //     .concat(self.getType().identifier).concat(">.")
 
                 // use the special function `before` to get the value of the `balance` field
                 // at the beginning of the function execution
@@ -239,14 +243,15 @@ access(all) contract interface FungibleToken: ViewResolver {
                     .concat(") must be the difference of the previous balance (").concat(before(self.balance.toString()))
                     .concat(") and the amount withdrawn (").concat(amount.toString()).concat(")")
 
-                emit Withdrawn(
-                        type: result.getType().identifier,
-                        amount: amount,
-                        from: self.owner?.address,
-                        fromUUID: self.uuid,
-                        withdrawnUUID: result.uuid,
-                        balanceAfter: self.balance
-                )
+                // TODO: getType
+                // emit Withdrawn(
+                //         type: result.getType().identifier,
+                //         amount: amount,
+                //         from: self.owner?.address,
+                //         fromUUID: self.uuid,
+                //         withdrawnUUID: result.uuid,
+                //         balanceAfter: self.balance
+                // )
             }
         }
 
@@ -255,25 +260,27 @@ access(all) contract interface FungibleToken: ViewResolver {
         access(all) fun deposit(from: @{FungibleToken.Vault}) {
             // Assert that the concrete type of the deposited vault is the same
             // as the vault that is accepting the deposit
-            pre {
-                from.isInstance(self.getType()):
-                    "FungibleToken.Vault.deposit: Cannot deposit tokens! "
-                    .concat("The type of the deposited tokens <")
-                    .concat(from.getType().identifier)
-                    .concat("> has to be the same type as the Vault being deposited into <")
-                    .concat(self.getType().identifier)
-                    .concat(">. Check that you are withdrawing and depositing to the correct paths in the sender and receiver accounts ")
-                    .concat("and that those paths hold the same Vault types.")
-            }
+            // TODO: getType
+            // pre {
+            //     from.isInstance(self.getType()):
+            //         "FungibleToken.Vault.deposit: Cannot deposit tokens! "
+            //         .concat("The type of the deposited tokens <")
+            //         .concat(from.getType().identifier)
+            //         .concat("> has to be the same type as the Vault being deposited into <")
+            //         .concat(self.getType().identifier)
+            //         .concat(">. Check that you are withdrawing and depositing to the correct paths in the sender and receiver accounts ")
+            //         .concat("and that those paths hold the same Vault types.")
+            // }
             post {
-                emit Deposited(
-                        type: before(from.getType().identifier),
-                        amount: before(from.balance),
-                        to: self.owner?.address,
-                        toUUID: self.uuid,
-                        depositedUUID: before(from.uuid),
-                        balanceAfter: self.balance
-                )
+                // TODO: getType
+                // emit Deposited(
+                //         type: before(from.getType().identifier),
+                //         amount: before(from.balance),
+                //         to: self.owner?.address,
+                //         toUUID: self.uuid,
+                //         depositedUUID: before(from.uuid),
+                //         balanceAfter: self.balance
+                // )
                 self.balance == before(self.balance) + before(from.balance):
                     "FungibleToken.Vault.deposit: Cannot deposit tokens! "
                     .concat("The receiver's balance after the deposit (")
@@ -293,13 +300,14 @@ access(all) contract interface FungibleToken: ViewResolver {
                     .concat("The newly created Vault must have zero balance but it has a balance of ")
                     .concat(result.balance.toString())
 
-                result.getType() == self.getType():
-                    "FungibleToken.Vault.createEmptyVault: Empty Vault creation failed! "
-                    .concat("The type of the new Vault <")
-                    .concat(result.getType().identifier)
-                    .concat("> has to be the same type as the Vault that created it <")
-                    .concat(self.getType().identifier)
-                    .concat(">.")
+                // TODO: getType
+                // result.getType() == self.getType():
+                //     "FungibleToken.Vault.createEmptyVault: Empty Vault creation failed! "
+                //     .concat("The type of the new Vault <")
+                //     .concat(result.getType().identifier)
+                //     .concat("> has to be the same type as the Vault that created it <")
+                //     .concat(self.getType().identifier)
+                //     .concat(">.")
             }
         }
     }
@@ -314,13 +322,14 @@ access(all) contract interface FungibleToken: ViewResolver {
                 .concat("The newly created Vault must have zero balance but it has a balance of (")
                 .concat(result.balance.toString()).concat(")")
 
-            result.getType() == vaultType:
-                "FungibleToken.Vault.createEmptyVault: Empty Vault creation failed! "
-                .concat("The type of the new Vault <")
-                .concat(result.getType().identifier)
-                .concat("> has to be the same as the type that was requested <")
-                .concat(vaultType.identifier)
-                .concat(">.")
+            // TODO: getType
+            // result.getType() == vaultType:
+            //     "FungibleToken.Vault.createEmptyVault: Empty Vault creation failed! "
+            //     .concat("The type of the new Vault <")
+            //     .concat(result.getType().identifier)
+            //     .concat("> has to be the same as the type that was requested <")
+            //     .concat(vaultType.identifier)
+            //     .concat(">.")
         }
     }
 }
