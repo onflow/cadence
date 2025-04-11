@@ -268,6 +268,15 @@ func (f *HostFunctionValue) GetMember(context MemberAccessibleContext, _ Locatio
 	return nil
 }
 
+func (v *HostFunctionValue) GetMethod(
+	context MemberAccessibleContext,
+	locationRange LocationRange,
+	name string,
+) FunctionValue {
+	// TODO:
+	return nil
+}
+
 func (*HostFunctionValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Host functions have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())

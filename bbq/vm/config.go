@@ -452,4 +452,13 @@ func (c *Config) InvokeFunction(
 	return result
 }
 
+func (c *Config) GetMethod(
+	value interpreter.MemberAccessibleValue,
+	name string,
+	locationRange interpreter.LocationRange,
+) interpreter.FunctionValue {
+	//TODO implement me
+	panic("implement me")
+}
+
 type ContractValueHandler func(conf *Config, location common.Location) *interpreter.CompositeValue

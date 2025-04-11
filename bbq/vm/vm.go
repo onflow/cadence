@@ -728,6 +728,19 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 	fieldName := getStringConstant(vm, ins.FieldNameIndex)
 
 	fieldValue := memberAccessibleValue.GetMember(vm.config, EmptyLocationRange, fieldName)
+
+	//if fieldValue == nil {
+	//
+	//	staticType := memberAccessibleValue.StaticType(vm.config)
+	//	semaType := interpreter.MustConvertStaticToSemaType(staticType, vm.config)
+	//	typeQualifier := commons.TypeQualifier(semaType)
+	//
+	//	qualifiedFuncName := commons.TypeQualifiedName(typeQualifier, fieldName)
+	//	var functionValue = vm.lookupFunction(compositeType.Location, qualifiedFuncName)
+	//
+	//	vm.lookupFunction()
+	//}
+
 	if fieldValue == nil {
 		panic(MissingMemberValueError{
 			Parent: memberAccessibleValue,
