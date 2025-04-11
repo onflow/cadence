@@ -146,11 +146,16 @@ func (c *Config) IsSubType(subType interpreter.StaticType, superType interpreter
 
 func (c *Config) GetInterfaceType(
 	location common.Location,
-	_ string,
+	qualifiedIdentifier string,
 	typeID interpreter.TypeID,
 ) (*sema.InterfaceType, error) {
 
-	// TODO: Lookup in built-in types
+	if location == nil {
+		interfaceType := sema.NativeInterfaceTypes[qualifiedIdentifier]
+		if interfaceType != nil {
+			return interfaceType, nil
+		}
+	}
 
 	compositeKindedType := c.TypeLoader(location, typeID)
 	if compositeKindedType != nil {
@@ -170,11 +175,16 @@ func (c *Config) GetInterfaceType(
 
 func (c *Config) GetCompositeType(
 	location common.Location,
-	_ string,
+	qualifiedIdentifier string,
 	typeID interpreter.TypeID,
 ) (*sema.CompositeType, error) {
 
-	// TODO: Lookup in built-in types
+	if location == nil {
+		compositeType := sema.NativeCompositeTypes[qualifiedIdentifier]
+		if compositeType != nil {
+			return compositeType, nil
+		}
+	}
 
 	compositeKindedType := c.TypeLoader(location, typeID)
 	if compositeKindedType != nil {
@@ -193,12 +203,21 @@ func (c *Config) GetCompositeType(
 }
 
 func (c *Config) GetEntitlementType(typeID interpreter.TypeID) (*sema.EntitlementType, error) {
-	location, _, err := common.DecodeTypeID(c, string(typeID))
+	location, qualifiedIdentifier, err := common.DecodeTypeID(c, string(typeID))
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO: Lookup in built-in types
+	if location == nil {
+		ty := sema.BuiltinEntitlements[qualifiedIdentifier]
+		if ty == nil {
+			return nil, interpreter.TypeLoadingError{
+				TypeID: typeID,
+			}
+		}
+
+		return ty, nil
+	}
 
 	typ := c.TypeLoader(location, typeID)
 	if typ != nil {
@@ -217,12 +236,21 @@ func (c *Config) GetEntitlementType(typeID interpreter.TypeID) (*sema.Entitlemen
 }
 
 func (c *Config) GetEntitlementMapType(typeID interpreter.TypeID) (*sema.EntitlementMapType, error) {
-	location, _, err := common.DecodeTypeID(c, string(typeID))
+	location, qualifiedIdentifier, err := common.DecodeTypeID(c, string(typeID))
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO: Lookup in built-in types
+	if location == nil {
+		ty := sema.BuiltinEntitlementMappings[qualifiedIdentifier]
+		if ty == nil {
+			return nil, interpreter.TypeLoadingError{
+				TypeID: typeID,
+			}
+		}
+
+		return ty, nil
+	}
 
 	typ := c.TypeLoader(location, typeID)
 	if typ != nil {
