@@ -25,6 +25,7 @@ const (
 	TransactionExecuteFunctionName  = "transaction.execute"
 	TransactionPrepareFunctionName  = "transaction.prepare"
 	LogFunctionName                 = "log"
+	AssertFunctionName              = "assert"
 	PanicFunctionName               = "panic"
 	GetAccountFunctionName          = "getAccount"
 

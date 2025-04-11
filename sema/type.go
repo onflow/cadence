@@ -2085,9 +2085,13 @@ const arrayTypeLengthFieldDocString = `
 Returns the number of elements in the array
 `
 
+const ArrayTypeAppendFunctionName = "append"
+
 const arrayTypeAppendFunctionDocString = `
 Adds the given element to the end of the array
 `
+
+const ArrayTypeAppendAllFunctionName = "appendAll"
 
 const arrayTypeAppendAllFunctionDocString = `
 Adds all the elements from the given array to the end of the array
@@ -2384,7 +2388,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 	if _, ok := arrayType.(*VariableSizedType); ok {
 
-		members["append"] = MemberResolver{
+		members[ArrayTypeAppendFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
 			Resolve: func(
 				memoryGauge common.MemoryGauge,
@@ -2404,7 +2408,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 			},
 		}
 
-		members["appendAll"] = MemberResolver{
+		members[ArrayTypeAppendAllFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
 			Resolve: func(
 				memoryGauge common.MemoryGauge,
@@ -6195,6 +6199,8 @@ Inserts the given value into the dictionary under the given key.
 Returns the previous value as an optional if the dictionary contained the key, or nil if the dictionary did not contain the key
 `
 
+const DictionaryTypeRemoveFunctionName = "remove"
+
 const dictionaryTypeRemoveFunctionDocString = `
 Removes the value for the given key from the dictionary.
 
@@ -6323,7 +6329,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 						)
 					},
 				},
-				"remove": {
+				DictionaryTypeRemoveFunctionName: {
 					Kind: common.DeclarationKindFunction,
 					Resolve: func(
 						memoryGauge common.MemoryGauge,

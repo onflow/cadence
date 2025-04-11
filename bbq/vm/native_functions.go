@@ -88,6 +88,34 @@ func init() {
 
 	RegisterFunction(
 		NewNativeFunctionValue(
+			commons.AssertFunctionName,
+			stdlib.AssertFunctionType,
+			func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+				result, ok := arguments[0].(interpreter.BoolValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				var message string
+				if len(arguments) > 1 {
+					messageValue, ok := arguments[1].(*interpreter.StringValue)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
+					message = messageValue.Str
+				}
+
+				return stdlib.Assert(
+					result,
+					message,
+					EmptyLocationRange,
+				)
+			},
+		),
+	)
+
+	RegisterFunction(
+		NewNativeFunctionValue(
 			commons.PanicFunctionName,
 			stdlib.PanicFunctionType,
 			func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {

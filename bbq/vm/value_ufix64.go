@@ -20,7 +20,6 @@ package vm
 
 import (
 	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -29,29 +28,15 @@ import (
 
 func init() {
 	RegisterTypeBoundFunction(
-		commons.TypeQualifierArray,
+		sema.UFix64TypeName,
 		NewNativeFunctionValue(
-			sema.GetTypeFunctionName,
-			sema.GetTypeFunctionType,
-			func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
-				value := arguments[receiverIndex]
-				return interpreter.ValueGetType(config, value)
-			},
-		),
-	)
+			sema.ToStringFunctionName,
+			sema.ToStringFunctionType,
+			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+				number := args[receiverIndex].(interpreter.UFix64Value)
 
-	RegisterTypeBoundFunction(
-		commons.TypeQualifierArray,
-		NewNativeFunctionValue(
-			sema.ArrayTypeAppendFunctionName,
-			// TODO:
-			sema.ArrayAppendFunctionType(sema.AnyType),
-			func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
-				value := arguments[receiverIndex]
-				array := value.(*interpreter.ArrayValue)
-				element := arguments[0]
-				array.Append(config, EmptyLocationRange, element)
-				return interpreter.Void
+				// TODO: memory metering
+				return interpreter.NewUnmeteredStringValue(number.String())
 			},
 		),
 	)
