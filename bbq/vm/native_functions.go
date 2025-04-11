@@ -130,6 +130,23 @@ func init() {
 		),
 	)
 
+	RegisterFunction(
+		NewNativeFunctionValue(
+			sema.ReferenceTypeFunctionName,
+			sema.ReferenceTypeFunctionType,
+			func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+				entitlementValues := arguments[0].(*interpreter.ArrayValue)
+				typeValue := arguments[1].(interpreter.TypeValue)
+				return interpreter.ConstructReferenceStaticType(
+					config,
+					entitlementValues,
+					EmptyLocationRange,
+					typeValue,
+				)
+			},
+		),
+	)
+
 	// Value conversion functions
 	for _, declaration := range interpreter.ConverterDeclarations {
 		// NOTE: declare in loop, as captured in closure below

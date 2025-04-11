@@ -583,25 +583,23 @@ func opSetGlobal(vm *VM, ins opcode.InstructionSetGlobal) {
 }
 
 func opSetIndex(vm *VM) {
-	array, index, element := vm.pop3()
-	arrayValue := array.(*interpreter.ArrayValue)
-	indexValue := index.(interpreter.IntValue)
-	arrayValue.SetKey(
+	container, index, value := vm.pop3()
+	containerValue := container.(interpreter.ValueIndexableValue)
+	containerValue.SetKey(
 		vm.config,
 		EmptyLocationRange,
-		indexValue,
-		element,
+		index,
+		value,
 	)
 }
 
 func opGetIndex(vm *VM) {
-	array, index := vm.pop2()
-	arrayValue := array.(*interpreter.ArrayValue)
-	indexValue := index.(interpreter.IntValue)
-	element := arrayValue.GetKey(
+	container, index := vm.pop2()
+	containerValue := container.(interpreter.ValueIndexableValue)
+	element := containerValue.GetKey(
 		vm.config,
 		EmptyLocationRange,
-		indexValue,
+		index,
 	)
 	vm.push(element)
 }

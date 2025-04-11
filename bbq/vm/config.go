@@ -269,6 +269,7 @@ func (c *Config) OnResourceOwnerChange(resource *interpreter.CompositeValue, old
 }
 
 func (c *Config) WithMutationPrevention(valueID atree.ValueID, f func()) {
+	f()
 	//TODO
 }
 
@@ -320,6 +321,7 @@ func (c *Config) SetInStorageIteration(b bool) {
 }
 
 func (c *Config) WithResourceDestruction(valueID atree.ValueID, locationRange interpreter.LocationRange, f func()) {
+	f()
 	//TODO
 }
 

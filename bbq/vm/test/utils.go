@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 
@@ -439,7 +440,7 @@ func parseCheckAndCompileCodeWithOptions(
 		options.ParseAndCheckOptions,
 		programs,
 	)
-	programs[checker.Location] = &compiledProgram{
+	programs[location] = &compiledProgram{
 		Elaboration: checker.Elaboration,
 	}
 
@@ -449,7 +450,7 @@ func parseCheckAndCompileCodeWithOptions(
 		checker,
 		programs,
 	)
-	programs[checker.Location].Program = program
+	programs[location].Program = program
 
 	return program
 }
@@ -641,8 +642,9 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 	if parseAndCheckOptions != nil {
 		location = parseAndCheckOptions.Location
 	}
+
 	if location == nil {
-		location = common.ScriptLocation{0x1}
+		location = TestLocation
 	}
 
 	program := parseCheckAndCompileCodeWithOptions(
@@ -664,6 +666,16 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
 				return compositeType
+			}
+
+			entitlementType := elaboration.EntitlementType(typeID)
+			if entitlementType != nil {
+				return entitlementType
+			}
+
+			entitlementMapType := elaboration.EntitlementMapType(typeID)
+			if entitlementMapType != nil {
+				return entitlementMapType
 			}
 
 			return elaboration.InterfaceType(typeID)

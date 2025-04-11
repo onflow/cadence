@@ -1341,7 +1341,7 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 			panic(errors.NewUnreachableError())
 		}
 
-		typeName := TypeName(memberInfo.AccessedType)
+		typeName := commons.TypeQualifier(memberInfo.AccessedType)
 		var funcName string
 
 		invocationType := memberInfo.Member.TypeAnnotation.Type.(*sema.FunctionType)
@@ -1419,20 +1419,6 @@ func isDynamicMethodInvocation(accessedType sema.Type) bool {
 		return true
 	default:
 		return false
-	}
-}
-
-func TypeName(typ sema.Type) string {
-	switch typ := typ.(type) {
-	case *sema.ReferenceType:
-		return TypeName(typ.Type)
-	case *sema.IntersectionType:
-		// TODO: Revisit. Probably this is not needed here?
-		return TypeName(typ.Types[0])
-	case *sema.CapabilityType:
-		return interpreter.PrimitiveStaticTypeCapability.String()
-	default:
-		return typ.QualifiedString()
 	}
 }
 
