@@ -16,25 +16,27 @@
  * limitations under the License.
  */
 
-package commons
+package vm
 
-const (
-	InitFunctionName                = "init"
-	ExecuteFunctionName             = "execute"
-	TransactionWrapperCompositeName = "transaction"
-	TransactionExecuteFunctionName  = "transaction.execute"
-	TransactionPrepareFunctionName  = "transaction.prepare"
-	LogFunctionName                 = "log"
-	PanicFunctionName               = "panic"
-	GetAccountFunctionName          = "getAccount"
-
-	// Names used by generated constructs
-
-	ProgramInitFunctionName         = "$_init_"
-	TransactionGeneratedParamPrefix = "$_param_"
-
-	// Type qualifiers for built-in member functions
-
-	TypeQualifierArray      = "$Array"
-	TypeQualifierDictionary = "$Dictionary"
+import (
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/commons"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
 )
+
+// members
+
+func init() {
+	RegisterTypeBoundFunction(
+		commons.TypeQualifierArray,
+		NewNativeFunctionValue(
+			sema.GetTypeFunctionName,
+			sema.GetTypeFunctionType,
+			func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+				value := arguments[receiverIndex]
+				return interpreter.ValueGetType(config, value)
+			},
+		),
+	)
+}

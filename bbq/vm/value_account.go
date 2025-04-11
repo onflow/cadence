@@ -65,8 +65,14 @@ func init() {
 }
 
 func getAddressMetaInfoFromValue(value Value) interpreter.AddressValue {
-	simpleCompositeValue, ok := value.(*interpreter.SimpleCompositeValue)
-	if !ok {
+	var simpleCompositeValue *interpreter.SimpleCompositeValue
+	switch typedValue := value.(type) {
+	case *interpreter.SimpleCompositeValue:
+		simpleCompositeValue = typedValue
+	case *interpreter.EphemeralReferenceValue:
+		// Account values are references of simple composites.
+		simpleCompositeValue = typedValue.Value.(*interpreter.SimpleCompositeValue)
+	default:
 		panic(errors.NewUnreachableError())
 	}
 

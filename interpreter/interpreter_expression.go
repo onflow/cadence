@@ -316,7 +316,7 @@ func getReferenceValue(
 	resultType sema.Type,
 	locationRange LocationRange,
 ) Value {
-	return createReference(context, resultType, value, locationRange, true)
+	return CreateReferenceValue(context, resultType, value, locationRange, true)
 }
 
 func (interpreter *Interpreter) checkMemberAccess(
@@ -1440,10 +1440,16 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 		HasPosition: referenceExpression,
 	}
 
-	return createReference(interpreter, borrowType, result, locationRange, false)
+	return CreateReferenceValue(
+		interpreter,
+		borrowType,
+		result,
+		locationRange,
+		false,
+	)
 }
 
-func createReference(
+func CreateReferenceValue(
 	context ReferenceCreationContext,
 	borrowType sema.Type,
 	value Value,
@@ -1476,7 +1482,7 @@ func createReference(
 
 			innerValue := value.InnerValue()
 
-			referenceValue := createReference(context, innerType, innerValue, locationRange, false)
+			referenceValue := CreateReferenceValue(context, innerType, innerValue, locationRange, false)
 
 			// Wrap the reference with an optional (since an optional is expected).
 			return NewSomeValueNonCopying(context, referenceValue)
@@ -1490,7 +1496,7 @@ func createReference(
 			// Case (2):
 			// If the referenced value is non-optional,
 			// but the target type is optional.
-			referenceValue := createReference(context, innerType, value, locationRange, false)
+			referenceValue := CreateReferenceValue(context, innerType, value, locationRange, false)
 
 			// Wrap the reference with an optional (since an optional is expected).
 			return NewSomeValueNonCopying(context, referenceValue)
@@ -1503,7 +1509,7 @@ func createReference(
 			// Case (3.a): target type is non-optional, actual value is optional.
 			innerValue := value.InnerValue()
 
-			return createReference(context, typ, innerValue, locationRange, false)
+			return CreateReferenceValue(context, typ, innerValue, locationRange, false)
 
 		case NilValue:
 			// Case (3.b) value is nil.

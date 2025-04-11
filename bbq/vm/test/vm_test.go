@@ -4541,7 +4541,7 @@ func TestEmit(t *testing.T) {
 		eventEmitted = true
 
 		assert.Equal(t,
-			common.ScriptLocation{0x1}.TypeID(nil, "Inc"),
+			TestLocation.TypeID(nil, "Inc"),
 			eventType.ID(),
 		)
 
@@ -5437,7 +5437,7 @@ func TestTypeConstructor(t *testing.T) {
 				nil,
 				interpreter.NewCompositeStaticTypeComputeTypeID(
 					nil,
-					common.ScriptLocation{0x1},
+					TestLocation,
 					"Foo",
 				),
 			),

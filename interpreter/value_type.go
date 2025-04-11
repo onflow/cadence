@@ -135,26 +135,19 @@ func (v TypeValue) GetMember(context MemberAccessibleContext, _ LocationRange, n
 			context,
 			v,
 			sema.MetaTypeIsSubtypeFunctionType,
-			func(v TypeValue, invocation Invocation) Value {
-				interpreter := invocation.InvocationContext
+			func(typeValue TypeValue, invocation Invocation) Value {
+				invocationContext := invocation.InvocationContext
 
-				staticType := v.Type
 				otherTypeValue, ok := invocation.Arguments[0].(TypeValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				otherStaticType := otherTypeValue.Type
 
-				// if either type is unknown, the subtype relation is false, as it doesn't make sense to even ask this question
-				if staticType == nil || otherStaticType == nil {
-					return FalseValue
-				}
-
-				result := sema.IsSubType(
-					MustConvertStaticToSemaType(staticType, interpreter),
-					MustConvertStaticToSemaType(otherStaticType, interpreter),
+				return MetaTypeIsSubType(
+					invocationContext,
+					typeValue,
+					otherTypeValue,
 				)
-				return BoolValue(result)
 			},
 		)
 
@@ -253,6 +246,26 @@ func (v TypeValue) GetMember(context MemberAccessibleContext, _ LocationRange, n
 	}
 
 	return nil
+}
+
+func MetaTypeIsSubType(
+	invocationContext InvocationContext,
+	typeValue TypeValue,
+	otherTypeValue TypeValue,
+) Value {
+	staticType := typeValue.Type
+	otherStaticType := otherTypeValue.Type
+
+	// if either type is unknown, the subtype relation is false, as it doesn't make sense to even ask this question
+	if staticType == nil || otherStaticType == nil {
+		return FalseValue
+	}
+
+	result := sema.IsSubType(
+		MustConvertStaticToSemaType(staticType, invocationContext),
+		MustConvertStaticToSemaType(otherStaticType, invocationContext),
+	)
+	return BoolValue(result)
 }
 
 func (TypeValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
