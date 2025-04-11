@@ -19,7 +19,6 @@
 package test
 
 import (
-	"encoding/hex"
 	"fmt"
 	"strings"
 	"testing"
@@ -167,9 +166,7 @@ func newStringLocationHandler(tb testing.TB, address common.Address) sema.Locati
 	}
 }
 
-func TestInterpreterFTTransfer(t *testing.T) {
-
-	t.Parallel()
+func interpreterFTTransfer(tb testing.TB) {
 
 	storage := interpreter.NewInMemoryStorage(nil)
 
@@ -258,7 +255,7 @@ func TestInterpreterFTTransfer(t *testing.T) {
 			}, nil
 		},
 		BaseValueActivationHandler: baseValueActivation,
-		LocationHandler:            newStringLocationHandler(t, contractsAddress),
+		LocationHandler:            newStringLocationHandler(tb, contractsAddress),
 	}
 
 	interConfig := &interpreter.Config{
@@ -358,7 +355,7 @@ func TestInterpreterFTTransfer(t *testing.T) {
 		}
 
 		inter, err := parseCheckAndInterpretWithOptions(
-			t,
+			tb,
 			code,
 			location,
 			ParseCheckAndInterpretOptions{
@@ -397,7 +394,7 @@ func TestInterpreterFTTransfer(t *testing.T) {
 
 	for _, location := range contractInterfaceLocations {
 		_, err := parseCheckAndInterpret(string(codes[location]), location)
-		require.NoError(t, err)
+		require.NoError(tb, err)
 	}
 
 	// Deploy FlowToken contract
@@ -411,7 +408,7 @@ func TestInterpreterFTTransfer(t *testing.T) {
 		string(flowTokenDeploymentTransaction),
 		nextTransactionLocation(),
 	)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	signer = stdlib.NewAccountReferenceValue(
 		inter,
@@ -422,7 +419,7 @@ func TestInterpreterFTTransfer(t *testing.T) {
 	)
 
 	err = inter.InvokeTransaction(0, signer)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	// Run setup account transaction
 
@@ -443,7 +440,7 @@ func TestInterpreterFTTransfer(t *testing.T) {
 			realFlowTokenSetupAccountTransaction,
 			nextTransactionLocation(),
 		)
-		require.NoError(t, err)
+		require.NoError(tb, err)
 
 		signer = stdlib.NewAccountReferenceValue(
 			inter,
@@ -454,7 +451,7 @@ func TestInterpreterFTTransfer(t *testing.T) {
 		)
 
 		err = inter.InvokeTransaction(0, signer)
-		require.NoError(t, err)
+		require.NoError(tb, err)
 	}
 
 	// Mint FLOW to sender
@@ -465,7 +462,7 @@ func TestInterpreterFTTransfer(t *testing.T) {
 		realFlowTokenMintTokensTransaction,
 		nextTransactionLocation(),
 	)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	signer = stdlib.NewAccountReferenceValue(
 		inter,
@@ -481,17 +478,17 @@ func TestInterpreterFTTransfer(t *testing.T) {
 		interpreter.NewUnmeteredUFix64ValueWithInteger(total, interpreter.EmptyLocationRange),
 		signer,
 	)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	// Run token transfer transaction
 
-	transferAmount := uint64(1)
+	transferAmount := interpreter.NewUnmeteredUFix64ValueWithInteger(uint64(1), interpreter.EmptyLocationRange)
 
 	inter, err = parseCheckAndInterpret(
 		realFlowTokenTransferTokensTransaction,
 		nextTransactionLocation(),
 	)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	signer = stdlib.NewAccountReferenceValue(
 		inter,
@@ -501,13 +498,36 @@ func TestInterpreterFTTransfer(t *testing.T) {
 		interpreter.EmptyLocationRange,
 	)
 
-	err = inter.InvokeTransaction(
-		0,
-		interpreter.NewUnmeteredUFix64ValueWithInteger(transferAmount, interpreter.EmptyLocationRange),
-		interpreter.AddressValue(receiverAddress),
-		signer,
-	)
-	require.NoError(t, err)
+	n := 1
+
+	b, _ := tb.(*testing.B)
+
+	if b != nil {
+
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		n = b.N
+	}
+
+	var transferCount int
+
+	for i := 0; i < n; i++ {
+
+		err = inter.InvokeTransaction(
+			0,
+			transferAmount,
+			interpreter.AddressValue(receiverAddress),
+			signer,
+		)
+		require.NoError(tb, err)
+
+		transferCount++
+	}
+
+	if b != nil {
+		b.StopTimer()
+	}
 
 	// Run validation scripts
 
@@ -519,28 +539,28 @@ func TestInterpreterFTTransfer(t *testing.T) {
 			realFlowTokenGetBalanceScript,
 			nextScriptLocation(),
 		)
-		require.NoError(t, err)
+		require.NoError(tb, err)
 
 		result, err := inter.Invoke(
 			"main",
 			interpreter.AddressValue(address),
 		)
-		require.NoError(t, err)
+		require.NoError(tb, err)
 
 		if address == senderAddress {
 			assert.Equal(
-				t,
+				tb,
 				interpreter.NewUnmeteredUFix64ValueWithInteger(
-					total-transferAmount,
+					total-uint64(transferCount),
 					interpreter.EmptyLocationRange,
 				),
 				result,
 			)
 		} else {
 			assert.Equal(
-				t,
+				tb,
 				interpreter.NewUnmeteredUFix64ValueWithInteger(
-					transferAmount,
+					uint64(transferCount),
 					interpreter.EmptyLocationRange,
 				),
 				result,
@@ -549,346 +569,15 @@ func TestInterpreterFTTransfer(t *testing.T) {
 	}
 }
 
+func TestInterpreterFTTransfer(t *testing.T) {
+	t.Parallel()
+
+	interpreterFTTransfer(t)
+}
+
 func BenchmarkInterpreterFTTransfer(b *testing.B) {
 
-	// ---- Deploy FT Contract -----
-
-	storage := interpreter.NewInMemoryStorage(nil)
-
-	contractsAddress := common.MustBytesToAddress([]byte{0x1})
-	senderAddress := common.MustBytesToAddress([]byte{0x2})
-	receiverAddress := common.MustBytesToAddress([]byte{0x3})
-
-	flowTokenLocation := common.NewAddressLocation(nil, contractsAddress, "FlowToken")
-	ftLocation := common.NewAddressLocation(nil, contractsAddress, "FungibleToken")
-
-	subInterpreters := map[common.Location]*interpreter.Interpreter{}
-	codes := map[common.Location][]byte{
-		ftLocation: []byte(realFungibleTokenContract),
-	}
-
-	txLocation := NewTransactionLocationGenerator()
-
-	var signer interpreter.Value
-	var flowTokenContractValue *interpreter.CompositeValue
-
-	accountHandler := &testAccountHandler{
-		getAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
-			code, ok := codes[location]
-			if !ok {
-				return nil, nil
-				//	return nil, fmt.Errorf("cannot find code for %s", location)
-			}
-
-			return code, nil
-		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
-			codes[location] = code
-			return nil
-		},
-		contractUpdateRecorded: func(location common.AddressLocation) bool {
-			return false
-		},
-		interpretContract: func(
-			location common.AddressLocation,
-			program *interpreter.Program,
-			name string,
-			invocation stdlib.DeployedContractConstructorInvocation,
-		) (*interpreter.CompositeValue, error) {
-			if location == flowTokenLocation {
-				return flowTokenContractValue, nil
-			}
-			return nil, fmt.Errorf("cannot interpret contract %s", location)
-		},
-		temporarilyRecordCode: func(location common.AddressLocation, code []byte) {
-			// do nothing
-		},
-		emitEvent: func(interpreter.ValueExportContext, interpreter.LocationRange, *sema.CompositeType, []interpreter.Value) {
-			// do nothing
-		},
-		recordContractUpdate: func(location common.AddressLocation, value *interpreter.CompositeValue) {
-			// do nothing
-		},
-	}
-
-	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, stdlib.PanicFunction)
-	interpreter.Declare(baseActivation, stdlib.NewGetAccountFunction(accountHandler))
-
-	checkerConfig := &sema.Config{
-		ImportHandler: func(checker *sema.Checker, location common.Location, importRange ast.Range) (sema.Import, error) {
-			imported, ok := subInterpreters[location]
-			if !ok {
-				return nil, fmt.Errorf("cannot find contract in location %s", location)
-			}
-
-			return sema.ElaborationImport{
-				Elaboration: imported.Program.Elaboration,
-			}, nil
-		},
-		BaseValueActivationHandler: baseValueActivation,
-		LocationHandler:            singleIdentifierLocationResolver(b),
-	}
-
-	interConfig := &interpreter.Config{
-		Storage: storage,
-		BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
-			return baseActivation
-		},
-		ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-			imported, ok := subInterpreters[location]
-			if !ok {
-				panic(fmt.Errorf("cannot find contract in location %s", location))
-			}
-
-			return interpreter.InterpreterImport{
-				Interpreter: imported,
-			}
-		},
-		ContractValueHandler: func(
-			inter *interpreter.Interpreter,
-			compositeType *sema.CompositeType,
-			constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
-			invocationRange ast.Range,
-		) interpreter.ContractValue {
-
-			constructor := constructorGenerator(common.ZeroAddress)
-
-			value, err := interpreter.InvokeFunctionValue(
-				inter,
-				constructor,
-				[]interpreter.Value{signer},
-				[]sema.Type{
-					sema.FullyEntitledAccountReferenceType,
-				},
-				[]sema.Type{
-					sema.FullyEntitledAccountReferenceType,
-				},
-				compositeType,
-				ast.Range{},
-			)
-			if err != nil {
-				panic(err)
-			}
-
-			flowTokenContractValue = value.(*interpreter.CompositeValue)
-			return flowTokenContractValue
-		},
-		CapabilityBorrowHandler: func(
-			context interpreter.BorrowCapabilityControllerContext,
-			locationRange interpreter.LocationRange,
-			address interpreter.AddressValue,
-			capabilityID interpreter.UInt64Value,
-			wantedBorrowType *sema.ReferenceType,
-			capabilityBorrowType *sema.ReferenceType,
-		) interpreter.ReferenceValue {
-			return stdlib.BorrowCapabilityController(
-				context,
-				locationRange,
-				address,
-				capabilityID,
-				wantedBorrowType,
-				capabilityBorrowType,
-				accountHandler,
-			)
-		},
-		OnEventEmitted: func(
-			_ *interpreter.Interpreter,
-			_ interpreter.LocationRange,
-			_ *interpreter.CompositeValue,
-			_ *sema.CompositeType,
-		) error {
-			return nil
-		},
-	}
-
-	accountHandler.parseAndCheckProgram =
-		func(code []byte, location common.Location, getAndSetProgram bool) (*interpreter.Program, error) {
-			if subInterpreter, ok := subInterpreters[location]; ok {
-				return subInterpreter.Program, nil
-			}
-
-			inter, err := parseCheckAndInterpretWithOptions(
-				b,
-				string(code),
-				location,
-				ParseCheckAndInterpretOptions{
-					Config:        interConfig,
-					CheckerConfig: checkerConfig,
-				},
-			)
-
-			if err != nil {
-				return nil, err
-			}
-
-			subInterpreters[location] = inter
-
-			return inter.Program, err
-		}
-
-	// ----- Parse and Check FungibleToken Contract interface -----
-
-	inter, err := parseCheckAndInterpretWithOptions(
-		b,
-		realFungibleTokenContract,
-		ftLocation,
-		ParseCheckAndInterpretOptions{
-			Config:        interConfig,
-			CheckerConfig: checkerConfig,
-		},
-	)
-	require.NoError(b, err)
-	subInterpreters[ftLocation] = inter
-
-	// ----- Deploy FlowToken Contract -----
-
-	tx := fmt.Sprintf(`
-        transaction {
-            prepare(signer: auth(Storage, Capabilities, Contracts) &Account) {
-                signer.contracts.add(name: "FlowToken", code: "%s".decodeHex(), signer)
-            }
-        }`,
-		hex.EncodeToString([]byte(realFlowContract)),
-	)
-
-	inter, err = parseCheckAndInterpretWithOptions(
-		b,
-		tx,
-		txLocation(),
-		ParseCheckAndInterpretOptions{
-			Config:        interConfig,
-			CheckerConfig: checkerConfig,
-		},
-	)
-	require.NoError(b, err)
-
-	signer = stdlib.NewAccountReferenceValue(
-		inter,
-		accountHandler,
-		interpreter.AddressValue(contractsAddress),
-		interpreter.FullyEntitledAccountAccess,
-		interpreter.EmptyLocationRange,
-	)
-
-	err = inter.InvokeTransaction(0, signer)
-	require.NoError(b, err)
-
-	// ----- Run setup account transaction -----
-
-	authorization := sema.NewEntitlementSetAccess(
-		[]*sema.EntitlementType{
-			sema.CapabilitiesType,
-			sema.StorageType,
-		},
-		sema.Conjunction,
-	)
-
-	for _, address := range []common.Address{
-		senderAddress,
-		receiverAddress,
-	} {
-		inter, err := parseCheckAndInterpretWithOptions(
-			b,
-			realFlowTokenSetupAccountTransaction,
-			txLocation(),
-			ParseCheckAndInterpretOptions{
-				Config:        interConfig,
-				CheckerConfig: checkerConfig,
-			},
-		)
-		require.NoError(b, err)
-
-		signer = stdlib.NewAccountReferenceValue(
-			inter,
-			accountHandler,
-			interpreter.AddressValue(address),
-			interpreter.ConvertSemaAccessToStaticAuthorization(nil, authorization),
-			interpreter.EmptyLocationRange,
-		)
-
-		err = inter.InvokeTransaction(0, signer)
-		require.NoError(b, err)
-	}
-
-	// Mint FLOW to sender
-
-	total := uint64(1000000) * sema.Fix64Factor
-
-	inter, err = parseCheckAndInterpretWithOptions(
-		b,
-		realFlowTokenMintTokensTransaction,
-		txLocation(),
-		ParseCheckAndInterpretOptions{
-			Config:        interConfig,
-			CheckerConfig: checkerConfig,
-		},
-	)
-	require.NoError(b, err)
-
-	authorization = sema.NewEntitlementSetAccess(
-		[]*sema.EntitlementType{
-			sema.BorrowValueType,
-		},
-		sema.Conjunction,
-	)
-
-	signer = stdlib.NewAccountReferenceValue(
-		inter,
-		accountHandler,
-		interpreter.AddressValue(contractsAddress),
-		interpreter.ConvertSemaAccessToStaticAuthorization(nil, authorization),
-		interpreter.EmptyLocationRange,
-	)
-
-	err = inter.InvokeTransaction(
-		0,
-		interpreter.AddressValue(senderAddress),
-		interpreter.NewUnmeteredUFix64Value(total),
-		signer,
-	)
-	require.NoError(b, err)
-
-	// ----- Run token transfer transaction -----
-
-	signer = stdlib.NewAccountReferenceValue(
-		inter,
-		accountHandler,
-		interpreter.AddressValue(senderAddress),
-		interpreter.ConvertSemaAccessToStaticAuthorization(nil, authorization),
-		interpreter.EmptyLocationRange,
-	)
-
-	transferAmount := uint64(1) * sema.Fix64Factor
-
-	amount := interpreter.NewUnmeteredUFix64Value(transferAmount)
-	receiver := interpreter.AddressValue(receiverAddress)
-
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		inter, err = parseCheckAndInterpretWithOptions(
-			b,
-			realFlowTokenTransferTokensTransaction,
-			txLocation(),
-			ParseCheckAndInterpretOptions{
-				Config:        interConfig,
-				CheckerConfig: checkerConfig,
-			},
-		)
-		require.NoError(b, err)
-
-		err = inter.InvokeTransaction(
-			0,
-			amount,
-			receiver,
-			signer,
-		)
-		require.NoError(b, err)
-	}
-
-	b.StopTimer()
+	interpreterFTTransfer(b)
 }
 
 func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
