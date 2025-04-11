@@ -48,10 +48,13 @@ var builtinTypes = []sema.Type{
 	sema.AccountType,
 	sema.IntType,
 	sema.MetaType,
+	sema.UFix64Type,
+	sema.UInt64Type,
 
 	&sema.CapabilityType{},
 	&sema.ConstantSizedType{},
 	&sema.VariableSizedType{},
+	&sema.DictionaryType{},
 }
 
 var stdlibFunctions = []string{
