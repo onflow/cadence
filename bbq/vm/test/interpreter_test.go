@@ -150,6 +150,23 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 	return inter, err
 }
 
+func newStringLocationHandler(tb testing.TB, address common.Address) sema.LocationHandlerFunc {
+	return func(identifiers []ast.Identifier, location common.Location) ([]commons.ResolvedLocation, error) {
+		require.Empty(tb, identifiers)
+		require.IsType(tb, common.StringLocation(""), location)
+		name := string(location.(common.StringLocation))
+
+		return []commons.ResolvedLocation{
+			{
+				Location: common.AddressLocation{
+					Address: address,
+					Name:    name,
+				},
+			},
+		}, nil
+	}
+}
+
 func TestInterpreterFTTransfer(t *testing.T) {
 
 	t.Parallel()
@@ -241,20 +258,7 @@ func TestInterpreterFTTransfer(t *testing.T) {
 			}, nil
 		},
 		BaseValueActivationHandler: baseValueActivation,
-		LocationHandler: func(identifiers []ast.Identifier, location common.Location) ([]commons.ResolvedLocation, error) {
-			require.Empty(t, identifiers)
-			require.IsType(t, common.StringLocation(""), location)
-			name := string(location.(common.StringLocation))
-
-			return []commons.ResolvedLocation{
-				{
-					Location: common.AddressLocation{
-						Address: contractsAddress,
-						Name:    name,
-					},
-				},
-			}, nil
-		},
+		LocationHandler:            newStringLocationHandler(t, contractsAddress),
 	}
 
 	interConfig := &interpreter.Config{
@@ -919,7 +923,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 		OnGetSigningAccounts: func() ([]common.Address, error) {
 			return []common.Address{signerAccount}, nil
 		},
-		OnResolveLocation: NewSingleIdentifierLocationResolver(b),
+		OnResolveLocation: newStringLocationHandler(b, contractsAddress),
 		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
@@ -940,35 +944,43 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
-	// Deploy Fungible Token contract
+	// Deploy contract interfaces
 
-	err := interpreterRuntime.ExecuteTransaction(
-		runtime.Script{
-			Source: DeploymentTransaction(
-				"FungibleToken",
-				[]byte(realFungibleTokenContract),
-			),
-		},
-		runtime.Context{
-			Interface:   runtimeInterface,
-			Location:    nextTransactionLocation(),
-			Environment: environment,
-		},
-	)
-	require.NoError(b, err)
+	contractInterfaces := []struct {
+		name string
+		code []byte
+	}{
+		{"Burner", []byte(realBurnerContract)},
+		{"ViewResolver", []byte(realViewResolverContract)},
+		{"FungibleToken", []byte(realFungibleTokenContract)},
+		{"NonFungibleToken", []byte(realNonFungibleTokenContract)},
+		{"MetadataViews", []byte(realMetadataViewsContract)},
+		{"FungibleTokenMetadataViews", []byte(realFungibleTokenMetadataViewsContract)},
+	}
+
+	for _, contract := range contractInterfaces {
+
+		err := interpreterRuntime.ExecuteTransaction(
+			runtime.Script{
+				Source: DeploymentTransaction(
+					contract.name,
+					contract.code,
+				),
+			},
+			runtime.Context{
+				Interface:   runtimeInterface,
+				Location:    nextTransactionLocation(),
+				Environment: environment,
+			},
+		)
+		require.NoError(b, err)
+	}
 
 	// Deploy Flow Token contract
 
-	err = interpreterRuntime.ExecuteTransaction(
+	err := interpreterRuntime.ExecuteTransaction(
 		runtime.Script{
-			Source: []byte(fmt.Sprintf(`
-                transaction {
-                    prepare(signer: auth(Storage, Capabilities, Contracts) &Account) {
-                        signer.contracts.add(name: "FlowToken", code: "%s".decodeHex(), signer)
-                    }
-                }`,
-				hex.EncodeToString([]byte(realFlowContract)),
-			)),
+			Source: DeploymentTransaction("FlowToken", []byte(realFlowContract)),
 		},
 		runtime.Context{
 			Interface:   runtimeInterface,
@@ -1000,11 +1012,12 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 		require.NoError(b, err)
 	}
 
-	// Mint 1000 FLOW to sender
+	// Mint 10000000 FLOW to sender
 
-	amount := 100000000000
-	mintAmount := cadence.NewInt(amount)
-	mintAmountValue := interpreter.NewUnmeteredIntValueFromInt64(int64(amount))
+	mintAmount, err := cadence.NewUFix64("10000000.0")
+	require.NoError(b, err)
+
+	mintAmountValue := interpreter.NewUnmeteredUFix64Value(uint64(mintAmount))
 
 	signerAccount = contractsAddress
 
@@ -1026,7 +1039,8 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	// Benchmark sending tokens from sender to receiver
 
-	sendAmount := cadence.NewInt(1)
+	sendAmount, err := cadence.NewUFix64("1.0")
+	require.NoError(b, err)
 
 	signerAccount = senderAddress
 
@@ -1056,7 +1070,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	// Run validation scripts
 
-	sum := interpreter.NewUnmeteredIntValueFromInt64(0)
+	sum := interpreter.NewUnmeteredUFix64Value(0)
 
 	inter := NewTestInterpreter(b)
 
@@ -1082,11 +1096,11 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 		)
 		require.NoError(b, err)
 
-		value := interpreter.NewUnmeteredIntValueFromBigInt(result.(cadence.Int).Big())
+		value := interpreter.NewUnmeteredUFix64Value(uint64(result.(cadence.UFix64)))
 
 		require.True(b, bool(value.Less(inter, mintAmountValue, interpreter.EmptyLocationRange)))
 
-		sum = sum.Plus(inter, value, interpreter.EmptyLocationRange).(interpreter.IntValue)
+		sum = sum.Plus(inter, value, interpreter.EmptyLocationRange).(interpreter.UFix64Value)
 	}
 
 	RequireValuesEqual(b, nil, mintAmountValue, sum)
