@@ -164,7 +164,7 @@ func TestInterpreterFTTransfer(t *testing.T) {
 
 	subInterpreters := map[common.Location]*interpreter.Interpreter{}
 	codes := map[common.Location][]byte{
-		ftLocation: []byte(realFungibleTokenContractInterface),
+		ftLocation: []byte(realFungibleTokenContract),
 	}
 
 	txLocation := runtime_utils.NewTransactionLocationGenerator()
@@ -333,7 +333,7 @@ func TestInterpreterFTTransfer(t *testing.T) {
 
 	inter, err := parseCheckAndInterpretWithOptions(
 		t,
-		realFungibleTokenContractInterface,
+		realFungibleTokenContract,
 		ftLocation,
 		ParseCheckAndInterpretOptions{
 			Config:        interConfig,
@@ -345,12 +345,14 @@ func TestInterpreterFTTransfer(t *testing.T) {
 
 	// ----- Deploy FlowToken Contract -----
 
-	tx := fmt.Sprintf(`
-        transaction {
-            prepare(signer: auth(Storage, Capabilities, Contracts) &Account) {
-                signer.contracts.add(name: "FlowToken", code: "%s".decodeHex(), signer)
-            }
-        }`,
+	tx := fmt.Sprintf(
+		`
+          transaction {
+              prepare(signer: auth(Storage, Capabilities, Contracts) &Account) {
+                  signer.contracts.add(name: "FlowToken", code: "%s".decodeHex(), signer)
+              }
+          }
+        `,
 		hex.EncodeToString([]byte(realFlowContract)),
 	)
 
@@ -393,7 +395,7 @@ func TestInterpreterFTTransfer(t *testing.T) {
 	} {
 		inter, err := parseCheckAndInterpretWithOptions(
 			t,
-			realSetupFlowTokenAccountTransaction,
+			realFlowTokenSetupAccountTransaction,
 			txLocation(),
 			ParseCheckAndInterpretOptions{
 				Config:        interConfig,
@@ -420,7 +422,7 @@ func TestInterpreterFTTransfer(t *testing.T) {
 
 	inter, err = parseCheckAndInterpretWithOptions(
 		t,
-		realMintFlowTokenTransaction,
+		realFlowTokenMintTokensTransaction,
 		txLocation(),
 		ParseCheckAndInterpretOptions{
 			Config:        interConfig,
@@ -451,7 +453,7 @@ func TestInterpreterFTTransfer(t *testing.T) {
 
 	inter, err = parseCheckAndInterpretWithOptions(
 		t,
-		realFlowTokenTransferTransaction,
+		realFlowTokenTransferTokensTransaction,
 		txLocation(),
 		ParseCheckAndInterpretOptions{
 			Config:        interConfig,
@@ -484,7 +486,7 @@ func TestInterpreterFTTransfer(t *testing.T) {
 	} {
 		inter, err = parseCheckAndInterpretWithOptions(
 			t,
-			realFlowTokenBalanceScript,
+			realFlowTokenGetBalanceScript,
 			scriptLocation(),
 			ParseCheckAndInterpretOptions{
 				Config:        interConfig,
@@ -536,7 +538,7 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 
 	subInterpreters := map[common.Location]*interpreter.Interpreter{}
 	codes := map[common.Location][]byte{
-		ftLocation: []byte(realFungibleTokenContractInterface),
+		ftLocation: []byte(realFungibleTokenContract),
 	}
 
 	txLocation := runtime_utils.NewTransactionLocationGenerator()
@@ -703,7 +705,7 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 
 	inter, err := parseCheckAndInterpretWithOptions(
 		b,
-		realFungibleTokenContractInterface,
+		realFungibleTokenContract,
 		ftLocation,
 		ParseCheckAndInterpretOptions{
 			Config:        interConfig,
@@ -762,7 +764,7 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 	} {
 		inter, err := parseCheckAndInterpretWithOptions(
 			b,
-			realSetupFlowTokenAccountTransaction,
+			realFlowTokenSetupAccountTransaction,
 			txLocation(),
 			ParseCheckAndInterpretOptions{
 				Config:        interConfig,
@@ -789,7 +791,7 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 
 	inter, err = parseCheckAndInterpretWithOptions(
 		b,
-		realMintFlowTokenTransaction,
+		realFlowTokenMintTokensTransaction,
 		txLocation(),
 		ParseCheckAndInterpretOptions{
 			Config:        interConfig,
@@ -842,7 +844,7 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		inter, err = parseCheckAndInterpretWithOptions(
 			b,
-			realFlowTokenTransferTransaction,
+			realFlowTokenTransferTokensTransaction,
 			txLocation(),
 			ParseCheckAndInterpretOptions{
 				Config:        interConfig,
@@ -912,7 +914,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 		runtime.Script{
 			Source: runtime_utils.DeploymentTransaction(
 				"FungibleToken",
-				[]byte(realFungibleTokenContractInterface),
+				[]byte(realFungibleTokenContract),
 			),
 		},
 		runtime.Context{
@@ -955,7 +957,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 		err = interpreterRuntime.ExecuteTransaction(
 			runtime.Script{
-				Source: []byte(realSetupFlowTokenAccountTransaction),
+				Source: []byte(realFlowTokenSetupAccountTransaction),
 			},
 			runtime.Context{
 				Interface:   runtimeInterface,
@@ -976,7 +978,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	err = interpreterRuntime.ExecuteTransaction(
 		runtime.Script{
-			Source: []byte(realMintFlowTokenTransaction),
+			Source: []byte(realFlowTokenMintTokensTransaction),
 			Arguments: encodeArgs([]cadence.Value{
 				cadence.Address(senderAddress),
 				mintAmount,
@@ -1003,7 +1005,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 		err = interpreterRuntime.ExecuteTransaction(
 			runtime.Script{
-				Source: []byte(realFlowTokenTransferTransaction),
+				Source: []byte(realFlowTokenTransferTokensTransaction),
 				Arguments: encodeArgs([]cadence.Value{
 					sendAmount,
 					cadence.Address(receiverAddress),
@@ -1035,7 +1037,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 		result, err := interpreterRuntime.ExecuteScript(
 			runtime.Script{
-				Source: []byte(realFlowTokenBalanceScript),
+				Source: []byte(realFlowTokenGetBalanceScript),
 				Arguments: encodeArgs([]cadence.Value{
 					cadence.Address(address),
 				}),
