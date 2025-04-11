@@ -288,36 +288,6 @@ func getAccountStorageMapFromRegister(
 	return interpreter.NewAccountStorageMapWithRootID(slabStorage, slabID), nil
 }
 
-func hasAccountStorageMap(
-	ledger atree.Ledger,
-	address common.Address,
-) (bool, error) {
-
-	_, registerExists, err := readAccountStorageSlabIndexFromRegister(
-		ledger,
-		address,
-	)
-	if err != nil {
-		return false, err
-	}
-	return registerExists, nil
-}
-
-// hasDomainRegister returns true if given account has given domain register.
-// NOTE: account storage format v1 has domain registers.
-func hasDomainRegister(ledger atree.Ledger, address common.Address, domain common.StorageDomain) (bool, error) {
-	_, domainExists, err := readSlabIndexFromRegister(
-		ledger,
-		address,
-		[]byte(domain.Identifier()),
-	)
-	if err != nil {
-		return false, err
-	}
-
-	return domainExists, nil
-}
-
 func (s *AccountStorage) cachedRootSlabIDs() []atree.SlabID {
 
 	var slabIDs []atree.SlabID
