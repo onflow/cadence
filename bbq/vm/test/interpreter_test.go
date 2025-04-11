@@ -393,14 +393,14 @@ func TestInterpreterFTTransfer(t *testing.T) {
 		fungibleTokenMetadataViewsLocation,
 	}
 
-	// ----- Parse and check contract interfaces -----
+	// Parse and check contract interfaces
 
 	for _, location := range contractInterfaceLocations {
 		_, err := parseCheckAndInterpret(string(codes[location]), location)
 		require.NoError(t, err)
 	}
 
-	// ----- Deploy FlowToken contract -----
+	// Deploy FlowToken contract
 
 	flowTokenDeploymentTransaction := DeploymentTransaction(
 		"FlowToken",
@@ -424,7 +424,7 @@ func TestInterpreterFTTransfer(t *testing.T) {
 	err = inter.InvokeTransaction(0, signer)
 	require.NoError(t, err)
 
-	// ----- Run setup account transaction -----
+	// Run setup account transaction
 
 	authorization := sema.NewEntitlementSetAccess(
 		[]*sema.EntitlementType{
@@ -483,18 +483,13 @@ func TestInterpreterFTTransfer(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// ----- Run token transfer transaction -----
+	// Run token transfer transaction
 
 	transferAmount := uint64(1)
 
-	inter, err = parseCheckAndInterpretWithOptions(
-		t,
+	inter, err = parseCheckAndInterpret(
 		realFlowTokenTransferTokensTransaction,
 		nextTransactionLocation(),
-		ParseCheckAndInterpretOptions{
-			Config:        interConfig,
-			CheckerConfig: checkerConfig,
-		},
 	)
 	require.NoError(t, err)
 
@@ -520,14 +515,9 @@ func TestInterpreterFTTransfer(t *testing.T) {
 		senderAddress,
 		receiverAddress,
 	} {
-		inter, err = parseCheckAndInterpretWithOptions(
-			t,
+		inter, err = parseCheckAndInterpret(
 			realFlowTokenGetBalanceScript,
 			nextScriptLocation(),
-			ParseCheckAndInterpretOptions{
-				Config:        interConfig,
-				CheckerConfig: checkerConfig,
-			},
 		)
 		require.NoError(t, err)
 
