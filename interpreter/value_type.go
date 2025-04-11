@@ -117,7 +117,7 @@ func (v TypeValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value)
 	return staticType.Equal(otherStaticType)
 }
 
-func (v TypeValue) GetMember(context MemberAccessibleContext, _ LocationRange, name string) Value {
+func (v TypeValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
 	switch name {
 	case sema.MetaTypeIdentifierFieldName:
 		var typeID string
@@ -129,34 +129,6 @@ func (v TypeValue) GetMember(context MemberAccessibleContext, _ LocationRange, n
 		return NewStringValue(context, memoryUsage, func() string {
 			return typeID
 		})
-
-	case sema.MetaTypeIsSubtypeFunctionName:
-		return NewBoundHostFunctionValue(
-			context,
-			v,
-			sema.MetaTypeIsSubtypeFunctionType,
-			func(v TypeValue, invocation Invocation) Value {
-				interpreter := invocation.InvocationContext
-
-				staticType := v.Type
-				otherTypeValue, ok := invocation.Arguments[0].(TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				otherStaticType := otherTypeValue.Type
-
-				// if either type is unknown, the subtype relation is false, as it doesn't make sense to even ask this question
-				if staticType == nil || otherStaticType == nil {
-					return FalseValue
-				}
-
-				result := sema.IsSubType(
-					MustConvertStaticToSemaType(staticType, interpreter),
-					MustConvertStaticToSemaType(otherStaticType, interpreter),
-				)
-				return BoolValue(result)
-			},
-		)
 
 	case sema.MetaTypeIsRecoveredFieldName:
 		staticType := v.Type
@@ -249,7 +221,44 @@ func (v TypeValue) GetMember(context MemberAccessibleContext, _ LocationRange, n
 		default:
 			return Nil
 		}
+	}
 
+	return context.GetMethod(v, name, locationRange)
+}
+
+func (v TypeValue) GetMethod(
+	context MemberAccessibleContext,
+	_ LocationRange,
+	name string,
+) FunctionValue {
+	switch name {
+	case sema.MetaTypeIsSubtypeFunctionName:
+		return NewBoundHostFunctionValue(
+			context,
+			v,
+			sema.MetaTypeIsSubtypeFunctionType,
+			func(v TypeValue, invocation Invocation) Value {
+				interpreter := invocation.InvocationContext
+
+				staticType := v.Type
+				otherTypeValue, ok := invocation.Arguments[0].(TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				otherStaticType := otherTypeValue.Type
+
+				// if either type is unknown, the subtype relation is false, as it doesn't make sense to even ask this question
+				if staticType == nil || otherStaticType == nil {
+					return FalseValue
+				}
+
+				result := sema.IsSubType(
+					MustConvertStaticToSemaType(staticType, interpreter),
+					MustConvertStaticToSemaType(otherStaticType, interpreter),
+				)
+				return BoolValue(result)
+			},
+		)
 	}
 
 	return nil

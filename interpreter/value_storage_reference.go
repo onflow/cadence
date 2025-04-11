@@ -219,6 +219,15 @@ func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, locat
 	return member
 }
 
+func (v *StorageReferenceValue) GetMethod(
+	context MemberAccessibleContext,
+	locationRange LocationRange,
+	name string,
+) FunctionValue {
+	// TODO:
+	return nil
+}
+
 func (v *StorageReferenceValue) RemoveMember(
 	context ValueTransferContext,
 	locationRange LocationRange,

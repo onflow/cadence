@@ -250,12 +250,6 @@ func (v *StorageCapabilityControllerValue) GetMember(context MemberAccessibleCon
 	case sema.StorageCapabilityControllerTypeTagFieldName:
 		return v.GetTag(context)
 
-	case sema.StorageCapabilityControllerTypeSetTagFunctionName:
-		if v.setTagFunction == nil {
-			v.setTagFunction = v.newSetTagFunction(context)
-		}
-		return v.setTagFunction
-
 	case sema.StorageCapabilityControllerTypeCapabilityIDFieldName:
 		return v.CapabilityID
 
@@ -264,6 +258,25 @@ func (v *StorageCapabilityControllerValue) GetMember(context MemberAccessibleCon
 
 	case sema.StorageCapabilityControllerTypeCapabilityFieldName:
 		return v.GetCapability(context)
+
+		// NOTE: when adding new functions, ensure checkDeleted is called,
+		// by e.g. using StorageCapabilityControllerValue.newHostFunction
+	}
+
+	return context.GetMethod(v, name, locationRange)
+}
+
+func (v *StorageCapabilityControllerValue) GetMethod(
+	context MemberAccessibleContext,
+	locationRange LocationRange,
+	name string,
+) FunctionValue {
+	switch name {
+	case sema.StorageCapabilityControllerTypeSetTagFunctionName:
+		if v.setTagFunction == nil {
+			v.setTagFunction = v.newSetTagFunction(context)
+		}
+		return v.setTagFunction
 
 	case sema.StorageCapabilityControllerTypeDeleteFunctionName:
 		if v.deleteFunction == nil {

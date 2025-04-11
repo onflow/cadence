@@ -5983,3 +5983,7 @@ func (interpreter *Interpreter) SetInStorageIteration(inStorageIteration bool) {
 func (interpreter *Interpreter) StorageMutatedDuringIteration() bool {
 	return interpreter.SharedState.storageMutatedDuringIteration
 }
+
+func (interpreter *Interpreter) GetMethod(value MemberAccessibleValue, name string, locationRange LocationRange) FunctionValue {
+	return value.GetMethod(interpreter, locationRange, name)
+}

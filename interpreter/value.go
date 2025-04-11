@@ -157,6 +157,7 @@ type MemberAccessibleValue interface {
 	RemoveMember(context ValueTransferContext, locationRange LocationRange, name string) Value
 	// SetMember returns whether a value previously existed with this name.
 	SetMember(context ValueTransferContext, locationRange LocationRange, name string, value Value) bool
+	GetMethod(context MemberAccessibleContext, locationRange LocationRange, name string) FunctionValue
 }
 
 type ValueComparisonContext interface {

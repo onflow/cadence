@@ -138,6 +138,15 @@ func (v *EphemeralReferenceValue) GetMember(context MemberAccessibleContext, loc
 	return getMember(context, v.Value, locationRange, name)
 }
 
+func (v *EphemeralReferenceValue) GetMethod(
+	context MemberAccessibleContext,
+	locationRange LocationRange,
+	name string,
+) FunctionValue {
+	// TODO:
+	return nil
+}
+
 func (v *EphemeralReferenceValue) RemoveMember(
 	context ValueTransferContext,
 	locationRange LocationRange,
