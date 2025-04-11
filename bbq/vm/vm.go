@@ -957,18 +957,19 @@ func opNewDictionary(vm *VM, ins opcode.InstructionNewDictionary) {
 }
 
 func opNewRef(vm *VM, ins opcode.InstructionNewRef) {
-	borrowedType := vm.loadType(ins.TypeIndex).(*interpreter.ReferenceStaticType)
+	borrowedType := vm.loadType(ins.TypeIndex)
 	value := vm.pop()
 
-	semaBorrowedType := interpreter.MustConvertStaticToSemaType(borrowedType.ReferencedType, vm.config)
+	semaBorrowedType := interpreter.MustConvertStaticToSemaType(borrowedType, vm.config)
 
-	ref := interpreter.NewEphemeralReferenceValue(
+	ref := interpreter.CreateReferenceValue(
 		vm.config,
-		borrowedType.Authorization,
-		value,
 		semaBorrowedType,
+		value,
 		EmptyLocationRange,
+		false,
 	)
+
 	vm.push(ref)
 }
 
