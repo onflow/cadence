@@ -32,6 +32,7 @@ type FunctionValue struct {
 	Function   *bbq.Function[opcode.Instruction]
 	Executable *ExecutableProgram
 	Upvalues   []*Upvalue
+	Type       interpreter.FunctionStaticType
 }
 
 var _ Value = FunctionValue{}
@@ -39,125 +40,134 @@ var _ interpreter.FunctionValue = FunctionValue{}
 
 func (FunctionValue) IsValue() {}
 
-func (FunctionValue) StaticType(interpreter.ValueStaticTypeContext) bbq.StaticType {
-	// TODO:
-	return nil
+func (v FunctionValue) IsFunctionValue() {}
+
+func (v FunctionValue) StaticType(interpreter.ValueStaticTypeContext) bbq.StaticType {
+	return v.Type
 }
 
-func (v FunctionValue) Transfer(_ interpreter.ValueTransferContext,
+func (v FunctionValue) Transfer(
+	context interpreter.ValueTransferContext,
 	_ interpreter.LocationRange,
 	_ atree.Address,
-	_ bool,
-	_ atree.Storable,
+	remove bool,
+	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
 	_ bool,
 ) interpreter.Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(context, storable)
+	}
 	return v
 }
 
 func (v FunctionValue) String() string {
-	//TODO
-	panic(errors.NewUnreachableError())
+	return v.Type.String()
 }
 
-func (v FunctionValue) Storable(storage atree.SlabStorage, address atree.Address, u uint64) (atree.Storable, error) {
-	//TODO
-	panic(errors.NewUnreachableError())
+func (v FunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+	return interpreter.NonStorable{Value: v}, nil
 }
 
 func (v FunctionValue) Accept(
-	context interpreter.ValueVisitContext,
-	visitor interpreter.Visitor,
-	locationRange interpreter.LocationRange,
+	_ interpreter.ValueVisitContext,
+	_ interpreter.Visitor,
+	_ interpreter.LocationRange,
 ) {
-	//TODO
+	// Unused for now
 	panic(errors.NewUnreachableError())
 }
 
 func (v FunctionValue) Walk(
-	interpreter interpreter.ValueWalkContext,
-	walkChild func(interpreter.Value),
-	locationRange interpreter.LocationRange,
+	_ interpreter.ValueWalkContext,
+	_ func(interpreter.Value),
+	_ interpreter.LocationRange,
 ) {
-	//TODO
-	panic(errors.NewUnreachableError())
+	// NO-OP
 }
 
 func (v FunctionValue) ConformsToStaticType(
-	context interpreter.ValueStaticTypeConformanceContext,
-	locationRange interpreter.LocationRange,
-	results interpreter.TypeConformanceResults,
+	_ interpreter.ValueStaticTypeConformanceContext,
+	_ interpreter.LocationRange,
+	_ interpreter.TypeConformanceResults,
 ) bool {
-	//TODO
-	panic(errors.NewUnreachableError())
+	return true
 }
 
-func (v FunctionValue) RecursiveString(seenReferences interpreter.SeenReferences) string {
-	//TODO
-	panic(errors.NewUnreachableError())
+func (v FunctionValue) RecursiveString(_ interpreter.SeenReferences) string {
+	return v.String()
 }
 
 func (v FunctionValue) MeteredString(
 	context interpreter.ValueStringContext,
-	seenReferences interpreter.SeenReferences,
-	locationRange interpreter.LocationRange,
+	_ interpreter.SeenReferences,
+	_ interpreter.LocationRange,
 ) string {
-	//TODO
-	panic(errors.NewUnreachableError())
+	return v.Type.MeteredString(context)
 }
 
-func (v FunctionValue) IsResourceKinded(context interpreter.ValueStaticTypeContext) bool {
-	//TODO
-	panic(errors.NewUnreachableError())
+func (v FunctionValue) IsResourceKinded(_ interpreter.ValueStaticTypeContext) bool {
+	return false
 }
 
-func (v FunctionValue) NeedsStoreTo(address atree.Address) bool {
-	//TODO
-	panic(errors.NewUnreachableError())
+func (v FunctionValue) NeedsStoreTo(_ atree.Address) bool {
+	return false
 }
 
-func (v FunctionValue) DeepRemove(removeContext interpreter.ValueRemoveContext, hasNoParentContainer bool) {
-	//TODO
-	panic(errors.NewUnreachableError())
+func (v FunctionValue) DeepRemove(_ interpreter.ValueRemoveContext, _ bool) {
+	// NO-OP
 }
 
-func (v FunctionValue) Clone(context interpreter.ValueCloneContext) interpreter.Value {
-	//TODO
-	panic(errors.NewUnreachableError())
+func (v FunctionValue) Clone(_ interpreter.ValueCloneContext) interpreter.Value {
+	return v
 }
 
-func (v FunctionValue) IsImportable(context interpreter.ValueImportableContext, locationRange interpreter.LocationRange) bool {
-	//TODO
-	panic(errors.NewUnreachableError())
-}
-
-func (v FunctionValue) IsFunctionValue() {
-	//TODO
-	panic(errors.NewUnreachableError())
+func (v FunctionValue) IsImportable(_ interpreter.ValueImportableContext, _ interpreter.LocationRange) bool {
+	return false
 }
 
 func (v FunctionValue) FunctionType() *sema.FunctionType {
-	//TODO
-	panic(errors.NewUnreachableError())
+	return v.Type.Type
 }
 
 func (v FunctionValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
-	//TODO
-	panic(errors.NewUnreachableError())
+	return invocation.InvocationContext.InvokeFunction(
+		v,
+		invocation.Arguments,
+		invocation.ArgumentTypes,
+		invocation.LocationRange,
+	)
 }
 
 type NativeFunction func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value
 
 type NativeFunctionValue struct {
-	Name           string
+	Name string
+	// ParameterCount includes actual parameters + receiver for type-bound functions.
 	ParameterCount int
 	Function       NativeFunction
+	Type           interpreter.FunctionStaticType
+}
+
+func NewNativeFunctionValue(
+	name string,
+	funcType *sema.FunctionType,
+	function NativeFunction,
+) NativeFunctionValue {
+	return NativeFunctionValue{
+		Name:           name,
+		ParameterCount: len(funcType.Parameters),
+		Function:       function,
+		Type:           interpreter.NewFunctionStaticType(nil, funcType),
+	}
 }
 
 var _ Value = NativeFunctionValue{}
 var _ interpreter.FunctionValue = NativeFunctionValue{}
 
 func (NativeFunctionValue) IsValue() {}
+
+func (v NativeFunctionValue) IsFunctionValue() {}
 
 func (NativeFunctionValue) StaticType(interpreter.ValueStaticTypeContext) bbq.StaticType {
 	panic(errors.NewUnreachableError())
@@ -175,95 +185,82 @@ func (v NativeFunctionValue) Transfer(_ interpreter.ValueTransferContext,
 }
 
 func (v NativeFunctionValue) String() string {
-	//TODO
-	panic(errors.NewUnreachableError())
+	return v.Type.String()
 }
 
-func (v NativeFunctionValue) Storable(storage atree.SlabStorage, address atree.Address, u uint64) (atree.Storable, error) {
-	//TODO
-	panic(errors.NewUnreachableError())
+func (v NativeFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+	return interpreter.NonStorable{Value: v}, nil
 }
 
 func (v NativeFunctionValue) Accept(
-	context interpreter.ValueVisitContext,
-	visitor interpreter.Visitor,
-	locationRange interpreter.LocationRange,
+	_ interpreter.ValueVisitContext,
+	_ interpreter.Visitor,
+	_ interpreter.LocationRange,
 ) {
-	//TODO
+	// Unused for now
 	panic(errors.NewUnreachableError())
 }
 
 func (v NativeFunctionValue) Walk(
-	context interpreter.ValueWalkContext,
-	walkChild func(interpreter.Value),
-	locationRange interpreter.LocationRange,
+	_ interpreter.ValueWalkContext,
+	_ func(interpreter.Value),
+	_ interpreter.LocationRange,
 ) {
-	//TODO
-	panic(errors.NewUnreachableError())
+	// NO-OP
 }
 
 func (v NativeFunctionValue) ConformsToStaticType(
-	context interpreter.ValueStaticTypeConformanceContext,
-	locationRange interpreter.LocationRange,
-	results interpreter.TypeConformanceResults,
+	_ interpreter.ValueStaticTypeConformanceContext,
+	_ interpreter.LocationRange,
+	_ interpreter.TypeConformanceResults,
 ) bool {
-	//TODO
-	panic(errors.NewUnreachableError())
+	return true
 }
 
-func (v NativeFunctionValue) RecursiveString(seenReferences interpreter.SeenReferences) string {
-	//TODO
-	panic(errors.NewUnreachableError())
+func (v NativeFunctionValue) RecursiveString(_ interpreter.SeenReferences) string {
+	return v.String()
 }
 
 func (v NativeFunctionValue) MeteredString(
 	context interpreter.ValueStringContext,
-	seenReferences interpreter.SeenReferences,
-	locationRange interpreter.LocationRange,
+	_ interpreter.SeenReferences,
+	_ interpreter.LocationRange,
 ) string {
-	//TODO
-	panic(errors.NewUnreachableError())
+	return v.Type.MeteredString(context)
 }
 
-func (v NativeFunctionValue) IsResourceKinded(context interpreter.ValueStaticTypeContext) bool {
-	//TODO
-	panic(errors.NewUnreachableError())
+func (v NativeFunctionValue) IsResourceKinded(_ interpreter.ValueStaticTypeContext) bool {
+	return false
 }
 
-func (v NativeFunctionValue) NeedsStoreTo(address atree.Address) bool {
-	//TODO
-	panic(errors.NewUnreachableError())
+func (v NativeFunctionValue) NeedsStoreTo(_ atree.Address) bool {
+	return false
 }
 
-func (v NativeFunctionValue) DeepRemove(removeContext interpreter.ValueRemoveContext, hasNoParentContainer bool) {
-	//TODO
-	panic(errors.NewUnreachableError())
+func (v NativeFunctionValue) DeepRemove(_ interpreter.ValueRemoveContext, _ bool) {
+	// NO-OP
 }
 
-func (v NativeFunctionValue) Clone(context interpreter.ValueCloneContext) interpreter.Value {
-	//TODO
-	panic(errors.NewUnreachableError())
+func (v NativeFunctionValue) Clone(_ interpreter.ValueCloneContext) interpreter.Value {
+	return v
 }
 
 func (v NativeFunctionValue) IsImportable(
-	context interpreter.ValueImportableContext,
-	locationRange interpreter.LocationRange,
+	_ interpreter.ValueImportableContext,
+	_ interpreter.LocationRange,
 ) bool {
-	//TODO
-	panic(errors.NewUnreachableError())
-}
-
-func (v NativeFunctionValue) IsFunctionValue() {
-	//TODO
-	panic(errors.NewUnreachableError())
+	return false
 }
 
 func (v NativeFunctionValue) FunctionType() *sema.FunctionType {
-	//TODO
-	panic(errors.NewUnreachableError())
+	return v.Type.Type
 }
 
 func (v NativeFunctionValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
-	//TODO
-	panic(errors.NewUnreachableError())
+	return invocation.InvocationContext.InvokeFunction(
+		v,
+		invocation.Arguments,
+		invocation.ArgumentTypes,
+		invocation.LocationRange,
+	)
 }

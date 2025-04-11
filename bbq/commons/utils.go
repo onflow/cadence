@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
 )
 
 func TypeQualifiedName(typeName, functionName string) string {
@@ -31,6 +32,33 @@ func TypeQualifiedName(typeName, functionName string) string {
 	}
 
 	return typeName + "." + functionName
+}
+
+// TypeQualifier returns the prefix to be appended to an identifier
+// (e.g: to a function name), to make it type-qualified.
+// For primitive types, the type-qualifier is the typeID itself.
+// For derived types (e.g: arrays, dictionaries, capabilities, etc.) the type-qualifier
+// is a predefined identifier.
+// TODO: Add other types
+// TODO: Maybe make this a method on the type
+func TypeQualifier(typ sema.Type) string {
+	switch typ := typ.(type) {
+	case sema.ArrayType:
+		return TypeQualifierArray
+	case *sema.DictionaryType:
+		return TypeQualifierDictionary
+	case *sema.OptionalType:
+		return TypeQualifier(typ.Type)
+	case *sema.ReferenceType:
+		return TypeQualifier(typ.Type)
+	case *sema.IntersectionType:
+		// TODO: Revisit. Probably this is not needed here?
+		return TypeQualifier(typ.Types[0])
+	case *sema.CapabilityType:
+		return interpreter.PrimitiveStaticTypeCapability.String()
+	default:
+		return typ.QualifiedString()
+	}
 }
 
 func LocationToBytes(location common.Location) ([]byte, error) {

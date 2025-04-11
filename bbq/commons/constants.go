@@ -32,4 +32,9 @@ const (
 
 	ProgramInitFunctionName         = "$_init_"
 	TransactionGeneratedParamPrefix = "$_param_"
+
+	// Type qualifiers for built-in member functions
+
+	TypeQualifierArray      = "$Array"
+	TypeQualifierDictionary = "$Dictionary"
 )

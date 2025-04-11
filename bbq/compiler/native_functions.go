@@ -47,16 +47,17 @@ var builtinTypes = []sema.Type{
 	sema.StringType,
 	sema.AccountType,
 	sema.IntType,
+	sema.MetaType,
+
 	&sema.CapabilityType{},
+	&sema.ConstantSizedType{},
+	&sema.VariableSizedType{},
 }
 
 var stdlibFunctions = []string{
 	commons.LogFunctionName,
 	commons.PanicFunctionName,
 	commons.GetAccountFunctionName,
-
-	// TODO: Remove after https://github.com/onflow/cadence-internal/pull/320
-	sema.MetaTypeName,
 }
 
 func init() {
@@ -85,7 +86,8 @@ func init() {
 
 func registerBoundFunctions(typ sema.Type) {
 	for name := range typ.GetMembers() { //nolint:maprange
-		funcName := commons.TypeQualifiedName(typ.QualifiedString(), name)
+		typeQualifier := commons.TypeQualifier(typ)
+		funcName := commons.TypeQualifiedName(typeQualifier, name)
 		addNativeFunction(funcName)
 	}
 

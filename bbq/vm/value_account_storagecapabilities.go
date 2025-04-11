@@ -34,10 +34,10 @@ func init() {
 	// Account.StorageCapabilities.issue
 	RegisterTypeBoundFunction(
 		accountStorageCapabilitiesTypeName,
-		sema.Account_StorageCapabilitiesTypeIssueFunctionName,
-		NativeFunctionValue{
-			ParameterCount: len(sema.Account_StorageCapabilitiesTypeIssueFunctionType.Parameters),
-			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+		NewNativeFunctionValue(
+			sema.Account_StorageCapabilitiesTypeIssueFunctionName,
+			sema.Account_StorageCapabilitiesTypeIssueFunctionType,
+			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.StorageCapabilities)
 				accountAddress := getAddressMetaInfoFromValue(args[receiverIndex]).ToAddress()
 
@@ -57,16 +57,16 @@ func init() {
 					semaType,
 				)
 			},
-		},
+		),
 	)
 
 	// Account.StorageCapabilities.issueWithType
 	RegisterTypeBoundFunction(
 		accountStorageCapabilitiesTypeName,
-		sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionName,
-		NativeFunctionValue{
-			ParameterCount: len(sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionType.Parameters),
-			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+		NewNativeFunctionValue(
+			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionName,
+			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionType,
+			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.StorageCapabilities)
 				accountAddress := getAddressMetaInfoFromValue(args[receiverIndex]).ToAddress()
 
@@ -94,16 +94,16 @@ func init() {
 					EmptyLocationRange,
 				)
 			},
-		},
+		),
 	)
 
 	// Account.StorageCapabilities.getController
 	RegisterTypeBoundFunction(
 		accountStorageCapabilitiesTypeName,
-		sema.Account_StorageCapabilitiesTypeGetControllerFunctionName,
-		NativeFunctionValue{
-			ParameterCount: len(sema.Account_StorageCapabilitiesTypeGetControllerFunctionType.Parameters),
-			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+		NewNativeFunctionValue(
+			sema.Account_StorageCapabilitiesTypeGetControllerFunctionName,
+			sema.Account_StorageCapabilitiesTypeGetControllerFunctionType,
+			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.StorageCapabilities)
 				accountAddress := getAddressMetaInfoFromValue(args[receiverIndex]).ToAddress()
 
@@ -121,16 +121,16 @@ func init() {
 					EmptyLocationRange,
 				)
 			},
-		},
+		),
 	)
 
 	// Account.StorageCapabilities.getControllers
 	RegisterTypeBoundFunction(
 		accountStorageCapabilitiesTypeName,
-		sema.Account_StorageCapabilitiesTypeGetControllersFunctionName,
-		NativeFunctionValue{
-			ParameterCount: len(sema.Account_StorageCapabilitiesTypeGetControllersFunctionType.Parameters),
-			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+		NewNativeFunctionValue(
+			sema.Account_StorageCapabilitiesTypeGetControllersFunctionName,
+			sema.Account_StorageCapabilitiesTypeGetControllersFunctionType,
+			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.StorageCapabilities)
 				accountAddress := getAddressMetaInfoFromValue(args[receiverIndex]).ToAddress()
 
@@ -148,16 +148,16 @@ func init() {
 					EmptyLocationRange,
 				)
 			},
-		},
+		),
 	)
 
 	// Account.StorageCapabilities.forEachController
 	RegisterTypeBoundFunction(
 		accountStorageCapabilitiesTypeName,
-		sema.Account_StorageCapabilitiesTypeForEachControllerFunctionName,
-		NativeFunctionValue{
-			ParameterCount: len(sema.Account_StorageCapabilitiesTypeForEachControllerFunctionType.Parameters),
-			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+		NewNativeFunctionValue(
+			sema.Account_StorageCapabilitiesTypeForEachControllerFunctionName,
+			sema.Account_StorageCapabilitiesTypeForEachControllerFunctionType,
+			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.StorageCapabilities)
 				accountAddress := getAddressMetaInfoFromValue(args[receiverIndex]).ToAddress()
 
@@ -185,6 +185,6 @@ func init() {
 					EmptyLocationRange,
 				)
 			},
-		},
+		),
 	)
 }

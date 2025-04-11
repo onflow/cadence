@@ -49,9 +49,8 @@ func NativeFunctions() map[string]Value {
 	return funcs
 }
 
-func RegisterFunction(functionName string, functionValue NativeFunctionValue) {
-	functionValue.Name = functionName
-
+func RegisterFunction(functionValue NativeFunctionValue) {
+	functionName := functionValue.Name
 	_, ok := nativeFunctions[functionName]
 	if ok {
 		panic(errors.NewUnexpectedError("function already exists: %s", functionName))
@@ -60,75 +59,111 @@ func RegisterFunction(functionName string, functionValue NativeFunctionValue) {
 	nativeFunctions[functionName] = functionValue
 }
 
-func RegisterTypeBoundFunction(typeName, functionName string, functionValue NativeFunctionValue) {
+func RegisterTypeBoundFunction(typeName string, functionValue NativeFunctionValue) {
 	// +1 is for the receiver
 	functionValue.ParameterCount++
-	qualifiedName := commons.TypeQualifiedName(typeName, functionName)
-	RegisterFunction(qualifiedName, functionValue)
+
+	// Update the name of the function to be type-qualified
+	qualifiedName := commons.TypeQualifiedName(typeName, functionValue.Name)
+	functionValue.Name = qualifiedName
+
+	RegisterFunction(functionValue)
 }
 
 func init() {
-	RegisterFunction(commons.LogFunctionName, NativeFunctionValue{
-		ParameterCount: len(stdlib.LogFunctionType.Parameters),
-		Function: func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
-			return stdlib.Log(
-				config,
-				config,
-				arguments[0],
-				EmptyLocationRange,
-			)
-		},
-	})
+	RegisterFunction(
+		NewNativeFunctionValue(
+			commons.LogFunctionName,
+			stdlib.LogFunctionType,
+			func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+				return stdlib.Log(
+					config,
+					config,
+					arguments[0],
+					EmptyLocationRange,
+				)
+			},
+		),
+	)
 
-	RegisterFunction(commons.PanicFunctionName, NativeFunctionValue{
-		ParameterCount: len(stdlib.PanicFunctionType.Parameters),
-		Function: func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
-			return stdlib.PanicWithError(
-				arguments[0],
-				EmptyLocationRange,
-			)
-		},
-	})
+	RegisterFunction(
+		NewNativeFunctionValue(
+			commons.PanicFunctionName,
+			stdlib.PanicFunctionType,
+			func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+				return stdlib.PanicWithError(
+					arguments[0],
+					EmptyLocationRange,
+				)
+			},
+		),
+	)
 
-	RegisterFunction(commons.GetAccountFunctionName, NativeFunctionValue{
-		ParameterCount: len(stdlib.GetAccountFunctionType.Parameters),
-		Function: func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
-			address := arguments[0].(interpreter.AddressValue)
-			return NewAccountReferenceValue(
-				config,
-				config.GetAccountHandler(),
-				common.Address(address),
-			)
-		},
-	})
+	RegisterFunction(
+		NewNativeFunctionValue(
+			commons.GetAccountFunctionName,
+			stdlib.GetAccountFunctionType,
+			func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+				address := arguments[0].(interpreter.AddressValue)
+				return NewAccountReferenceValue(
+					config,
+					config.GetAccountHandler(),
+					common.Address(address),
+				)
+			},
+		),
+	)
 
 	// Type constructors
 	// TODO: add the remaining type constructor functions
 
-	RegisterFunction(sema.MetaTypeName, NativeFunctionValue{
-		ParameterCount: len(sema.MetaTypeFunctionType.Parameters),
-		Function: func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
-			return interpreter.NewTypeValue(
-				config.MemoryGauge,
-				typeArguments[0],
-			)
-		},
-	})
+	RegisterFunction(
+		NewNativeFunctionValue(
+			sema.MetaTypeName,
+			sema.MetaTypeFunctionType,
+			func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+				return interpreter.NewTypeValue(
+					config.MemoryGauge,
+					typeArguments[0],
+				)
+			},
+		),
+	)
+
+	RegisterFunction(
+		NewNativeFunctionValue(
+			sema.ReferenceTypeFunctionName,
+			sema.ReferenceTypeFunctionType,
+			func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+				entitlementValues := arguments[0].(*interpreter.ArrayValue)
+				typeValue := arguments[1].(interpreter.TypeValue)
+				return interpreter.ConstructReferenceStaticType(
+					config,
+					entitlementValues,
+					EmptyLocationRange,
+					typeValue,
+				)
+			},
+		),
+	)
 
 	// Value conversion functions
 	for _, declaration := range interpreter.ConverterDeclarations {
 		// NOTE: declare in loop, as captured in closure below
 		convert := declaration.Convert
 
-		RegisterFunction(declaration.Name, NativeFunctionValue{
-			ParameterCount: len(declaration.FunctionType.Parameters),
-			Function: func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
-				return convert(
-					config.MemoryGauge,
-					arguments[0],
-					EmptyLocationRange,
-				)
-			},
-		})
+		RegisterFunction(
+			NewNativeFunctionValue(
+				declaration.Name,
+				declaration.FunctionType,
+				func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+					return convert(
+						config.MemoryGauge,
+						arguments[0],
+						EmptyLocationRange,
+					)
+				},
+			),
+		)
 	}
 }

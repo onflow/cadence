@@ -34,10 +34,10 @@ func init() {
 	// Account.Capabilities.get
 	RegisterTypeBoundFunction(
 		accountCapabilitiesTypeName,
-		sema.Account_CapabilitiesTypeGetFunctionName,
-		NativeFunctionValue{
-			ParameterCount: len(sema.Account_CapabilitiesTypeGetFunctionType.Parameters),
-			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+		NewNativeFunctionValue(
+			sema.Account_CapabilitiesTypeGetFunctionName,
+			sema.Account_CapabilitiesTypeGetFunctionType,
+			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.Capabilities)
 				address := getAddressMetaInfoFromValue(args[0])
 
@@ -59,16 +59,16 @@ func init() {
 					EmptyLocationRange,
 				)
 			},
-		},
+		),
 	)
 
 	// Account.Capabilities.borrow
 	RegisterTypeBoundFunction(
 		accountCapabilitiesTypeName,
-		sema.Account_CapabilitiesTypeBorrowFunctionName,
-		NativeFunctionValue{
-			ParameterCount: len(sema.Account_CapabilitiesTypeBorrowFunctionType.Parameters),
-			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+		NewNativeFunctionValue(
+			sema.Account_CapabilitiesTypeBorrowFunctionName,
+			sema.Account_CapabilitiesTypeBorrowFunctionType,
+			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.Capabilities)
 				address := getAddressMetaInfoFromValue(args[0])
 
@@ -91,16 +91,16 @@ func init() {
 					EmptyLocationRange,
 				)
 			},
-		},
+		),
 	)
 
 	// Account.Capabilities.publish
 	RegisterTypeBoundFunction(
 		accountCapabilitiesTypeName,
-		sema.Account_CapabilitiesTypePublishFunctionName,
-		NativeFunctionValue{
-			ParameterCount: len(sema.Account_CapabilitiesTypePublishFunctionType.Parameters),
-			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+		NewNativeFunctionValue(
+			sema.Account_CapabilitiesTypePublishFunctionName,
+			sema.Account_CapabilitiesTypePublishFunctionType,
+			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.Capabilities)
 				accountAddress := getAddressMetaInfoFromValue(args[receiverIndex])
 
@@ -128,16 +128,16 @@ func init() {
 					EmptyLocationRange,
 				)
 			},
-		},
+		),
 	)
 
 	// Account.Capabilities.unpublish
 	RegisterTypeBoundFunction(
 		accountCapabilitiesTypeName,
-		sema.Account_CapabilitiesTypeUnpublishFunctionName,
-		NativeFunctionValue{
-			ParameterCount: len(sema.Account_CapabilitiesTypeUnpublishFunctionType.Parameters),
-			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+		NewNativeFunctionValue(
+			sema.Account_CapabilitiesTypeUnpublishFunctionName,
+			sema.Account_CapabilitiesTypeUnpublishFunctionType,
+			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.Capabilities)
 				accountAddress := getAddressMetaInfoFromValue(args[receiverIndex])
 
@@ -155,16 +155,16 @@ func init() {
 					EmptyLocationRange,
 				)
 			},
-		},
+		),
 	)
 
 	// Account.Capabilities.exist
 	RegisterTypeBoundFunction(
 		accountCapabilitiesTypeName,
-		sema.Account_CapabilitiesTypeExistsFunctionName,
-		NativeFunctionValue{
-			ParameterCount: len(sema.Account_CapabilitiesTypeExistsFunctionType.Parameters),
-			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+		NewNativeFunctionValue(
+			sema.Account_CapabilitiesTypeExistsFunctionName,
+			sema.Account_CapabilitiesTypeExistsFunctionType,
+			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.Capabilities)
 				accountAddress := getAddressMetaInfoFromValue(args[receiverIndex])
 
@@ -180,6 +180,6 @@ func init() {
 					accountAddress.ToAddress(),
 				)
 			},
-		},
+		),
 	)
 }

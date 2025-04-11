@@ -3612,11 +3612,26 @@ func referenceTypeFunction(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
+	invocationContext := invocation.InvocationContext
+	locationRange := invocation.LocationRange
+
+	return ConstructReferenceStaticType(
+		invocationContext,
+		entitlementValues,
+		locationRange,
+		typeValue,
+	)
+}
+
+func ConstructReferenceStaticType(
+	invocationContext InvocationContext,
+	entitlementValues *ArrayValue,
+	locationRange LocationRange,
+	typeValue TypeValue,
+) Value {
 	authorization := UnauthorizedAccess
 	errInIteration := false
 	entitlementsCount := entitlementValues.Count()
-
-	invocationContext := invocation.InvocationContext
 
 	if entitlementsCount > 0 {
 		authorization = NewEntitlementSetAuthorization(
@@ -3642,7 +3657,7 @@ func referenceTypeFunction(invocation Invocation) Value {
 						return true
 					},
 					false,
-					invocation.LocationRange,
+					locationRange,
 				)
 				return entitlements
 			},
@@ -3656,11 +3671,11 @@ func referenceTypeFunction(invocation Invocation) Value {
 	}
 
 	return NewSomeValueNonCopying(
-		invocation.InvocationContext,
+		invocationContext,
 		NewTypeValue(
-			invocation.InvocationContext,
+			invocationContext,
 			NewReferenceStaticType(
-				invocation.InvocationContext,
+				invocationContext,
 				authorization,
 				typeValue.Type,
 			),
@@ -5235,11 +5250,15 @@ func getTypeFunction(context FunctionCreationContext, self Value) FunctionValue 
 		self,
 		sema.GetTypeFunctionType,
 		func(self Value, invocation Invocation) Value {
-			interpreter := invocation.InvocationContext
-			staticType := self.StaticType(interpreter)
-			return NewTypeValue(interpreter, staticType)
+			invocationContext := invocation.InvocationContext
+			return ValueGetType(invocationContext, self)
 		},
 	)
+}
+
+func ValueGetType(context InvocationContext, self Value) Value {
+	staticType := self.StaticType(context)
+	return NewTypeValue(context, staticType)
 }
 
 func setMember(

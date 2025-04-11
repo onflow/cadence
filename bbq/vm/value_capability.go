@@ -32,10 +32,11 @@ func init() {
 	// Capability.borrow
 	RegisterTypeBoundFunction(
 		typeName,
-		sema.CapabilityTypeBorrowFunctionName,
-		NativeFunctionValue{
-			ParameterCount: len(sema.CapabilityTypeBorrowFunctionType(nil).Parameters),
-			Function: func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+		NewNativeFunctionValue(
+			sema.CapabilityTypeBorrowFunctionName,
+			// TODO: Should the borrow type need to be changed for each usage?
+			sema.CapabilityTypeBorrowFunctionType(nil),
+			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
 				capabilityValue := getReceiver[*interpreter.IDCapabilityValue](config, args[receiverIndex])
 				capabilityID := capabilityValue.ID
 
@@ -61,5 +62,6 @@ func init() {
 					EmptyLocationRange,
 				)
 			},
-		})
+		),
+	)
 }

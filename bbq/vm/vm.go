@@ -583,25 +583,23 @@ func opSetGlobal(vm *VM, ins opcode.InstructionSetGlobal) {
 }
 
 func opSetIndex(vm *VM) {
-	array, index, element := vm.pop3()
-	arrayValue := array.(*interpreter.ArrayValue)
-	indexValue := index.(interpreter.IntValue)
-	arrayValue.SetKey(
+	container, index, value := vm.pop3()
+	containerValue := container.(interpreter.ValueIndexableValue)
+	containerValue.SetKey(
 		vm.config,
 		EmptyLocationRange,
-		indexValue,
-		element,
+		index,
+		value,
 	)
 }
 
 func opGetIndex(vm *VM) {
-	array, index := vm.pop2()
-	arrayValue := array.(*interpreter.ArrayValue)
-	indexValue := index.(interpreter.IntValue)
-	element := arrayValue.GetKey(
+	container, index := vm.pop2()
+	containerValue := container.(interpreter.ValueIndexableValue)
+	element := containerValue.GetKey(
 		vm.config,
 		EmptyLocationRange,
-		indexValue,
+		index,
 	)
 	vm.push(element)
 }
@@ -959,18 +957,19 @@ func opNewDictionary(vm *VM, ins opcode.InstructionNewDictionary) {
 }
 
 func opNewRef(vm *VM, ins opcode.InstructionNewRef) {
-	borrowedType := vm.loadType(ins.TypeIndex).(*interpreter.ReferenceStaticType)
+	borrowedType := vm.loadType(ins.TypeIndex)
 	value := vm.pop()
 
-	semaBorrowedType := interpreter.MustConvertStaticToSemaType(borrowedType.ReferencedType, vm.config)
+	semaBorrowedType := interpreter.MustConvertStaticToSemaType(borrowedType, vm.config)
 
-	ref := interpreter.NewEphemeralReferenceValue(
+	ref := interpreter.CreateReferenceValue(
 		vm.config,
-		borrowedType.Authorization,
-		value,
 		semaBorrowedType,
+		value,
 		EmptyLocationRange,
+		ins.IsImplicit,
 	)
+
 	vm.push(ref)
 }
 
@@ -1213,10 +1212,13 @@ func opNewClosure(vm *VM, ins opcode.InstructionNewClosure) {
 		upvalues[upvalueIndex] = upvalue
 	}
 
+	funcStaticType := getTypeFromExecutable[interpreter.FunctionStaticType](executable, function.TypeIndex)
+
 	vm.push(FunctionValue{
 		Function:   function,
 		Executable: executable,
 		Upvalues:   upvalues,
+		Type:       funcStaticType,
 	})
 }
 

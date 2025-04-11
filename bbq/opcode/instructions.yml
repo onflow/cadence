@@ -233,6 +233,8 @@
   operands:
     - name: "typeIndex"
       type: "index"
+    - name: "isImplicit"
+      type: "bool"
   valueEffects:
     pop:
       - name: "value"

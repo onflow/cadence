@@ -220,11 +220,19 @@ func (c *Compiler[_, _]) addImportedGlobal(location common.Location, name string
 	return global
 }
 
-func (c *Compiler[E, T]) addFunction(name string, parameterCount uint16) *function[E] {
+func (c *Compiler[E, T]) addFunction(
+	name string,
+	parameterCount uint16,
+	functionType *sema.FunctionType,
+) *function[E] {
+
+	functionTypeIndex := c.getOrAddType(functionType)
+
 	function := newFunction[E](
 		c.currentFunction,
 		name,
 		parameterCount,
+		functionTypeIndex,
 	)
 	c.functions = append(c.functions, function)
 
@@ -565,6 +573,7 @@ func (c *Compiler[E, T]) ExportFunctions() []bbq.Function[E] {
 					Code:           function.code,
 					LocalCount:     function.localCount,
 					ParameterCount: function.parameterCount,
+					TypeIndex:      function.typeIndex,
 				},
 			)
 		}
@@ -1332,7 +1341,7 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 			panic(errors.NewUnreachableError())
 		}
 
-		typeName := TypeName(memberInfo.AccessedType)
+		typeName := commons.TypeQualifier(memberInfo.AccessedType)
 		var funcName string
 
 		invocationType := memberInfo.Member.TypeAnnotation.Type.(*sema.FunctionType)
@@ -1413,20 +1422,6 @@ func isDynamicMethodInvocation(accessedType sema.Type) bool {
 	}
 }
 
-func TypeName(typ sema.Type) string {
-	switch typ := typ.(type) {
-	case *sema.ReferenceType:
-		return TypeName(typ.Type)
-	case *sema.IntersectionType:
-		// TODO: Revisit. Probably this is not needed here?
-		return TypeName(typ.Types[0])
-	case *sema.CapabilityType:
-		return interpreter.PrimitiveStaticTypeCapability.String()
-	default:
-		return typ.QualifiedString()
-	}
-}
-
 func (c *Compiler[_, _]) loadArguments(expression *ast.InvocationExpression) {
 	invocationTypes := c.ExtendedElaboration.InvocationExpressionTypes(expression)
 	for index, argument := range expression.Arguments {
@@ -1463,10 +1458,38 @@ func (c *Compiler[_, _]) loadTypeArguments(expression *ast.InvocationExpression)
 
 func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression) (_ struct{}) {
 	c.compileExpression(expression.Expression)
+
+	memberAccessInfo, ok := c.ExtendedElaboration.MemberExpressionMemberAccessInfo(expression)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	if memberAccessInfo.IsOptional {
+		// TODO: Complete the optional-chaining implementations.
+		//  e.g: Need a nil check, since unwrap panics on nil
+		c.codeGen.Emit(opcode.InstructionUnwrap{})
+	}
+
 	constant := c.addStringConst(expression.Identifier.Identifier)
+
+	// TODO: remove member if `isNestedResourceMove`
+	//  See `Interpreter.memberExpressionGetterSetter` for the reference implementation.
 	c.codeGen.Emit(opcode.InstructionGetField{
 		FieldNameIndex: constant.index,
 	})
+
+	// Return a reference, if the member is accessed via a reference.
+	// This is pre-computed at the checker.
+	if memberAccessInfo.ReturnReference {
+		index := c.getOrAddType(memberAccessInfo.ResultingType)
+		c.codeGen.Emit(opcode.InstructionNewRef{
+			TypeIndex:  index,
+			IsImplicit: true,
+		})
+	}
+
+	// TODO: Need to wrap the result back with an optional, if `memberAccessInfo.IsOptional`
+
 	return
 }
 
@@ -1474,6 +1497,22 @@ func (c *Compiler[_, _]) VisitIndexExpression(expression *ast.IndexExpression) (
 	c.compileExpression(expression.TargetExpression)
 	c.compileExpression(expression.IndexingExpression)
 	c.codeGen.Emit(opcode.InstructionGetIndex{})
+
+	indexExpressionTypes, ok := c.ExtendedElaboration.IndexExpressionTypes(expression)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// Return a reference, if the element is accessed via a reference.
+	// This is pre-computed at the checker.
+	if indexExpressionTypes.ReturnReference {
+		index := c.getOrAddType(indexExpressionTypes.ResultType)
+		c.codeGen.Emit(opcode.InstructionNewRef{
+			TypeIndex:  index,
+			IsImplicit: true,
+		})
+	}
+
 	return
 }
 
@@ -1646,7 +1685,13 @@ func (c *Compiler[_, _]) VisitFunctionExpression(expression *ast.FunctionExpress
 		panic(errors.NewDefaultUserError("invalid parameter count"))
 	}
 
-	function := c.addFunction("", uint16(parameterCount))
+	functionType := c.ExtendedElaboration.FunctionExpressionFunctionType(expression)
+
+	function := c.addFunction(
+		"",
+		uint16(parameterCount),
+		functionType,
+	)
 
 	func() {
 		previousFunction := c.currentFunction
@@ -1787,7 +1832,13 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		panic(errors.NewDefaultUserError("invalid parameter count"))
 	}
 
-	function := c.addFunction(functionName, uint16(parameterCount))
+	functionType := c.ExtendedElaboration.FunctionDeclarationFunctionType(declaration.FunctionDeclaration)
+
+	function := c.addFunction(
+		functionName,
+		uint16(parameterCount),
+		functionType,
+	)
 
 	previousFunction := c.currentFunction
 	c.targetFunction(function)
@@ -1893,7 +1944,13 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 		panic(errors.NewDefaultUserError("invalid function index"))
 	}
 
-	function := c.addFunction(functionName, uint16(parameterCount))
+	functionType := c.ExtendedElaboration.FunctionDeclarationFunctionType(declaration)
+
+	function := c.addFunction(
+		functionName,
+		uint16(parameterCount),
+		functionType,
+	)
 
 	func() {
 		c.targetFunction(function)
@@ -2121,6 +2178,10 @@ func (c *Compiler[E, T]) declareParameters(paramList *ast.ParameterList, declare
 }
 
 func (c *Compiler[_, _]) generateEmptyInit() {
+	c.ExtendedElaboration.SetFunctionDeclarationFunctionType(
+		emptyInitializer.FunctionDeclaration,
+		emptyInitializerFuncType,
+	)
 	c.VisitSpecialFunctionDeclaration(emptyInitializer)
 }
 

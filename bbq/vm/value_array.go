@@ -20,6 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -27,22 +28,14 @@ import (
 // members
 
 func init() {
-	typeName := interpreter.PrimitiveStaticTypeString.String()
-
 	RegisterTypeBoundFunction(
-		typeName,
+		commons.TypeQualifierArray,
 		NewNativeFunctionValue(
-			sema.StringTypeConcatFunctionName,
-			sema.StringTypeConcatFunctionType,
-			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
-				first := args[receiverIndex].(*interpreter.StringValue)
-
-				return interpreter.StringConcat(
-					config,
-					first,
-					args[typeBoundFunctionArgumentOffset],
-					EmptyLocationRange,
-				)
+			sema.GetTypeFunctionName,
+			sema.GetTypeFunctionType,
+			func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+				value := arguments[receiverIndex]
+				return interpreter.ValueGetType(config, value)
 			},
 		),
 	)

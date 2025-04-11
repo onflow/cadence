@@ -121,8 +121,8 @@ func TestPrintInstruction(t *testing.T) {
 			byte(Invoke), 0, 2, 3, 4, 5, 6,
 		},
 
-		"NewRef typeIndex:258": {byte(NewRef), 1, 2},
-		"Deref":                {byte(Deref)},
+		"NewRef typeIndex:258 isImplicit:true": {byte(NewRef), 1, 2, 1},
+		"Deref":                                {byte(Deref)},
 
 		"NewArray typeIndex:258 size:772 isResource:true":      {byte(NewArray), 1, 2, 3, 4, 1},
 		"NewDictionary typeIndex:258 size:772 isResource:true": {byte(NewDictionary), 1, 2, 3, 4, 1},
