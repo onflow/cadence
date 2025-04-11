@@ -300,3 +300,7 @@ func (e *ExtendedElaboration) SetFunctionDeclarationFunctionType(
 func (e *ExtendedElaboration) FunctionExpressionFunctionType(expression *ast.FunctionExpression) *sema.FunctionType {
 	return e.elaboration.FunctionExpressionFunctionType(expression)
 }
+
+func (e *ExtendedElaboration) IndexExpressionTypes(expression *ast.IndexExpression) (types sema.IndexExpressionTypes, contains bool) {
+	return e.elaboration.IndexExpressionTypes(expression)
+}

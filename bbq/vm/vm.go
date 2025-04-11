@@ -967,7 +967,7 @@ func opNewRef(vm *VM, ins opcode.InstructionNewRef) {
 		semaBorrowedType,
 		value,
 		EmptyLocationRange,
-		false,
+		ins.IsImplicit,
 	)
 
 	vm.push(ref)

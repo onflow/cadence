@@ -1480,7 +1480,10 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 	// This is pre-computed at the checker.
 	if memberAccessInfo.ReturnReference {
 		index := c.getOrAddType(memberAccessInfo.ResultingType)
-		c.codeGen.Emit(opcode.InstructionNewRef{TypeIndex: index})
+		c.codeGen.Emit(opcode.InstructionNewRef{
+			TypeIndex:  index,
+			IsImplicit: true,
+		})
 	}
 
 	// TODO: Need to wrap the result back with an optional, if `memberAccessInfo.IsOptional`
@@ -1492,6 +1495,22 @@ func (c *Compiler[_, _]) VisitIndexExpression(expression *ast.IndexExpression) (
 	c.compileExpression(expression.TargetExpression)
 	c.compileExpression(expression.IndexingExpression)
 	c.codeGen.Emit(opcode.InstructionGetIndex{})
+
+	indexExpressionTypes, ok := c.ExtendedElaboration.IndexExpressionTypes(expression)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// Return a reference, if the element is accessed via a reference.
+	// This is pre-computed at the checker.
+	if indexExpressionTypes.ReturnReference {
+		index := c.getOrAddType(indexExpressionTypes.ResultType)
+		c.codeGen.Emit(opcode.InstructionNewRef{
+			TypeIndex:  index,
+			IsImplicit: true,
+		})
+	}
+
 	return
 }
 

@@ -517,7 +517,8 @@ func DecodeNewDictionary(ip *uint16, code []byte) (i InstructionNewDictionary) {
 //
 // Pops a value off the stack, creates a new reference with the given type, and then pushes it onto the stack.
 type InstructionNewRef struct {
-	TypeIndex uint16
+	TypeIndex  uint16
+	IsImplicit bool
 }
 
 var _ Instruction = InstructionNewRef{}
@@ -530,16 +531,19 @@ func (i InstructionNewRef) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
 	printfArgument(&sb, "typeIndex", i.TypeIndex)
+	printfArgument(&sb, "isImplicit", i.IsImplicit)
 	return sb.String()
 }
 
 func (i InstructionNewRef) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 	emitUint16(code, i.TypeIndex)
+	emitBool(code, i.IsImplicit)
 }
 
 func DecodeNewRef(ip *uint16, code []byte) (i InstructionNewRef) {
 	i.TypeIndex = decodeUint16(ip, code)
+	i.IsImplicit = decodeBool(ip, code)
 	return i
 }
 

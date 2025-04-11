@@ -1363,7 +1363,7 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil,
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil,
 			`
               entitlement X
               entitlement Y
