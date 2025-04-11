@@ -24,9 +24,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/onflow/cadence/test_utils/interpreter_utils"
-	"github.com/onflow/cadence/test_utils/runtime_utils"
-	"github.com/onflow/cadence/test_utils/sema_utils"
+	"github.com/onflow/cadence/bbq/commons"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -72,9 +73,9 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 	err error,
 ) {
 
-	checker, err := sema_utils.ParseAndCheckWithOptionsAndMemoryMetering(t,
+	checker, err := ParseAndCheckWithOptionsAndMemoryMetering(t,
 		code,
-		sema_utils.ParseAndCheckOptions{
+		ParseAndCheckOptions{
 			Location: location,
 			Config:   options.CheckerConfig,
 		},
@@ -151,7 +152,7 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 
 func TestInterpreterFTTransfer(t *testing.T) {
 
-	// ---- Deploy FT Contract -----
+	t.Parallel()
 
 	storage := interpreter.NewInMemoryStorage(nil)
 
@@ -159,16 +160,25 @@ func TestInterpreterFTTransfer(t *testing.T) {
 	senderAddress := common.MustBytesToAddress([]byte{0x2})
 	receiverAddress := common.MustBytesToAddress([]byte{0x3})
 
+	burnerLocation := common.NewAddressLocation(nil, contractsAddress, "Burner")
+	viewResolverLocation := common.NewAddressLocation(nil, contractsAddress, "ViewResolver")
+	fungibleTokenLocation := common.NewAddressLocation(nil, contractsAddress, "FungibleToken")
+	metadataViewsLocation := common.NewAddressLocation(nil, contractsAddress, "MetadataViews")
+	fungibleTokenMetadataViewsLocation := common.NewAddressLocation(nil, contractsAddress, "FungibleTokenMetadataViews")
+	nonFungibleTokenLocation := common.NewAddressLocation(nil, contractsAddress, "NonFungibleToken")
 	flowTokenLocation := common.NewAddressLocation(nil, contractsAddress, "FlowToken")
-	ftLocation := common.NewAddressLocation(nil, contractsAddress, "FungibleToken")
 
-	subInterpreters := map[common.Location]*interpreter.Interpreter{}
 	codes := map[common.Location][]byte{
-		ftLocation: []byte(realFungibleTokenContract),
+		burnerLocation:                     []byte(realBurnerContract),
+		viewResolverLocation:               []byte(realViewResolverContract),
+		fungibleTokenLocation:              []byte(realFungibleTokenContract),
+		metadataViewsLocation:              []byte(realMetadataViewsContract),
+		fungibleTokenMetadataViewsLocation: []byte(realFungibleTokenMetadataViewsContract),
+		nonFungibleTokenLocation:           []byte(realNonFungibleTokenContract),
 	}
 
-	txLocation := runtime_utils.NewTransactionLocationGenerator()
-	scriptLocation := runtime_utils.NewScriptLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	var signer interpreter.Value
 	var flowTokenContractValue *interpreter.CompositeValue
@@ -214,7 +224,10 @@ func TestInterpreterFTTransfer(t *testing.T) {
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, stdlib.PanicFunction)
+	interpreter.Declare(baseActivation, stdlib.AssertFunction)
 	interpreter.Declare(baseActivation, stdlib.NewGetAccountFunction(accountHandler))
+
+	subInterpreters := map[common.Location]*interpreter.Interpreter{}
 
 	checkerConfig := &sema.Config{
 		ImportHandler: func(checker *sema.Checker, location common.Location, importRange ast.Range) (sema.Import, error) {
@@ -228,7 +241,20 @@ func TestInterpreterFTTransfer(t *testing.T) {
 			}, nil
 		},
 		BaseValueActivationHandler: baseValueActivation,
-		LocationHandler:            singleIdentifierLocationResolver(t),
+		LocationHandler: func(identifiers []ast.Identifier, location common.Location) ([]commons.ResolvedLocation, error) {
+			require.Empty(t, identifiers)
+			require.IsType(t, common.StringLocation(""), location)
+			name := string(location.(common.StringLocation))
+
+			return []commons.ResolvedLocation{
+				{
+					Location: common.AddressLocation{
+						Address: contractsAddress,
+						Name:    name,
+					},
+				},
+			}, nil
+		},
 	}
 
 	interConfig := &interpreter.Config{
@@ -258,15 +284,11 @@ func TestInterpreterFTTransfer(t *testing.T) {
 			value, err := interpreter.InvokeFunctionValue(
 				inter,
 				constructor,
-				[]interpreter.Value{signer},
-				[]sema.Type{
-					sema.FullyEntitledAccountReferenceType,
-				},
-				[]sema.Type{
-					sema.FullyEntitledAccountReferenceType,
-				},
+				nil,
+				nil,
+				nil,
 				compositeType,
-				ast.Range{},
+				ast.EmptyRange,
 			)
 			if err != nil {
 				panic(err)
@@ -302,68 +324,88 @@ func TestInterpreterFTTransfer(t *testing.T) {
 			// NO-OP
 			return nil
 		},
-	}
+		InjectedCompositeFieldsHandler: func(
+			context interpreter.AccountCreationContext,
+			_ common.Location,
+			_ string,
+			_ common.CompositeKind,
+		) map[string]interpreter.Value {
 
-	accountHandler.parseAndCheckProgram =
-		func(code []byte, location common.Location, getAndSetProgram bool) (*interpreter.Program, error) {
-			if subInterpreter, ok := subInterpreters[location]; ok {
-				return subInterpreter.Program, nil
-			}
-
-			inter, err := parseCheckAndInterpretWithOptions(
-				t,
-				string(code),
-				location,
-				ParseCheckAndInterpretOptions{
-					Config:        interConfig,
-					CheckerConfig: checkerConfig,
-				},
+			accountRef := stdlib.NewAccountReferenceValue(
+				context,
+				accountHandler,
+				interpreter.NewAddressValue(nil, contractsAddress),
+				interpreter.FullyEntitledAccountAccess,
+				interpreter.EmptyLocationRange,
 			)
 
-			if err != nil {
-				return nil, err
+			return map[string]interpreter.Value{
+				sema.ContractAccountFieldName: accountRef,
 			}
+		},
+		AccountHandler: func(context interpreter.AccountCreationContext, address interpreter.AddressValue) interpreter.Value {
+			return stdlib.NewAccountValue(context, nil, address)
+		},
+	}
 
-			subInterpreters[location] = inter
-
-			return inter.Program, err
+	parseCheckAndInterpret := func(code string, location common.Location) (*interpreter.Interpreter, error) {
+		if subInterpreter, ok := subInterpreters[location]; ok {
+			return subInterpreter, nil
 		}
 
-	// ----- Parse and Check FungibleToken Contract interface -----
+		inter, err := parseCheckAndInterpretWithOptions(
+			t,
+			code,
+			location,
+			ParseCheckAndInterpretOptions{
+				Config:        interConfig,
+				CheckerConfig: checkerConfig,
+			},
+		)
 
-	inter, err := parseCheckAndInterpretWithOptions(
-		t,
-		realFungibleTokenContract,
-		ftLocation,
-		ParseCheckAndInterpretOptions{
-			Config:        interConfig,
-			CheckerConfig: checkerConfig,
-		},
+		if err != nil {
+			return nil, err
+		}
+
+		subInterpreters[location] = inter
+
+		return inter, nil
+	}
+
+	accountHandler.parseAndCheckProgram = func(code []byte, location common.Location, getAndSetProgram bool) (*interpreter.Program, error) {
+		inter, err := parseCheckAndInterpret(string(code), location)
+		if err != nil {
+			return nil, err
+		}
+		return inter.Program, err
+	}
+
+	contractInterfaceLocations := []common.Location{
+		burnerLocation,
+		viewResolverLocation,
+		fungibleTokenLocation,
+		nonFungibleTokenLocation,
+		metadataViewsLocation,
+		fungibleTokenMetadataViewsLocation,
+	}
+
+	// ----- Parse and check contract interfaces -----
+
+	for _, location := range contractInterfaceLocations {
+		_, err := parseCheckAndInterpret(string(codes[location]), location)
+		require.NoError(t, err)
+	}
+
+	// ----- Deploy FlowToken contract -----
+
+	flowTokenDeploymentTransaction := DeploymentTransaction(
+		"FlowToken",
+		[]byte(realFlowContract),
 	)
-	require.NoError(t, err)
-	subInterpreters[ftLocation] = inter
 
-	// ----- Deploy FlowToken Contract -----
-
-	tx := fmt.Sprintf(
-		`
-          transaction {
-              prepare(signer: auth(Storage, Capabilities, Contracts) &Account) {
-                  signer.contracts.add(name: "FlowToken", code: "%s".decodeHex(), signer)
-              }
-          }
-        `,
-		hex.EncodeToString([]byte(realFlowContract)),
-	)
-
-	inter, err = parseCheckAndInterpretWithOptions(
-		t,
-		tx,
-		txLocation(),
-		ParseCheckAndInterpretOptions{
-			Config:        interConfig,
-			CheckerConfig: checkerConfig,
-		},
+	inter, err := parseCheckAndInterpret(
+		string(flowTokenDeploymentTransaction),
+		nextTransactionLocation(),
 	)
 	require.NoError(t, err)
 
@@ -393,14 +435,9 @@ func TestInterpreterFTTransfer(t *testing.T) {
 		senderAddress,
 		receiverAddress,
 	} {
-		inter, err := parseCheckAndInterpretWithOptions(
-			t,
+		inter, err := parseCheckAndInterpret(
 			realFlowTokenSetupAccountTransaction,
-			txLocation(),
-			ParseCheckAndInterpretOptions{
-				Config:        interConfig,
-				CheckerConfig: checkerConfig,
-			},
+			nextTransactionLocation(),
 		)
 		require.NoError(t, err)
 
@@ -420,14 +457,9 @@ func TestInterpreterFTTransfer(t *testing.T) {
 
 	total := uint64(1000000)
 
-	inter, err = parseCheckAndInterpretWithOptions(
-		t,
+	inter, err = parseCheckAndInterpret(
 		realFlowTokenMintTokensTransaction,
-		txLocation(),
-		ParseCheckAndInterpretOptions{
-			Config:        interConfig,
-			CheckerConfig: checkerConfig,
-		},
+		nextTransactionLocation(),
 	)
 	require.NoError(t, err)
 
@@ -454,7 +486,7 @@ func TestInterpreterFTTransfer(t *testing.T) {
 	inter, err = parseCheckAndInterpretWithOptions(
 		t,
 		realFlowTokenTransferTokensTransaction,
-		txLocation(),
+		nextTransactionLocation(),
 		ParseCheckAndInterpretOptions{
 			Config:        interConfig,
 			CheckerConfig: checkerConfig,
@@ -487,7 +519,7 @@ func TestInterpreterFTTransfer(t *testing.T) {
 		inter, err = parseCheckAndInterpretWithOptions(
 			t,
 			realFlowTokenGetBalanceScript,
-			scriptLocation(),
+			nextScriptLocation(),
 			ParseCheckAndInterpretOptions{
 				Config:        interConfig,
 				CheckerConfig: checkerConfig,
@@ -541,7 +573,7 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 		ftLocation: []byte(realFungibleTokenContract),
 	}
 
-	txLocation := runtime_utils.NewTransactionLocationGenerator()
+	txLocation := NewTransactionLocationGenerator()
 
 	var signer interpreter.Value
 	var flowTokenContractValue *interpreter.CompositeValue
@@ -867,7 +899,7 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 
 func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
-	interpreterRuntime := runtime_utils.NewTestInterpreterRuntime()
+	interpreterRuntime := NewTestInterpreterRuntime()
 
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
 	senderAddress := common.MustBytesToAddress([]byte{0x2})
@@ -879,15 +911,15 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	signerAccount := contractsAddress
 
-	runtimeInterface := &runtime_utils.TestRuntimeInterface{
+	runtimeInterface := &TestRuntimeInterface{
 		OnGetCode: func(location common.Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
-		Storage: runtime_utils.NewTestLedger(nil, nil),
+		Storage: NewTestLedger(nil, nil),
 		OnGetSigningAccounts: func() ([]common.Address, error) {
 			return []common.Address{signerAccount}, nil
 		},
-		OnResolveLocation: runtime_utils.NewSingleIdentifierLocationResolver(b),
+		OnResolveLocation: NewSingleIdentifierLocationResolver(b),
 		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
@@ -906,13 +938,13 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	environment := runtime.NewBaseInterpreterEnvironment(runtime.Config{})
 
-	nextTransactionLocation := runtime_utils.NewTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// Deploy Fungible Token contract
 
 	err := interpreterRuntime.ExecuteTransaction(
 		runtime.Script{
-			Source: runtime_utils.DeploymentTransaction(
+			Source: DeploymentTransaction(
 				"FungibleToken",
 				[]byte(realFungibleTokenContract),
 			),
@@ -1026,9 +1058,9 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	sum := interpreter.NewUnmeteredIntValueFromInt64(0)
 
-	inter := interpreter_utils.NewTestInterpreter(b)
+	inter := NewTestInterpreter(b)
 
-	nextScriptLocation := runtime_utils.NewScriptLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	for _, address := range []common.Address{
 		senderAddress,
@@ -1057,7 +1089,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 		sum = sum.Plus(inter, value, interpreter.EmptyLocationRange).(interpreter.IntValue)
 	}
 
-	interpreter_utils.RequireValuesEqual(b, nil, mintAmountValue, sum)
+	RequireValuesEqual(b, nil, mintAmountValue, sum)
 }
 
 func encodeArgs(argValues []cadence.Value) [][]byte {
@@ -1076,7 +1108,7 @@ func TestInterpreterImperativeFib(t *testing.T) {
 
 	t.Parallel()
 
-	scriptLocation := runtime_utils.NewScriptLocationGenerator()
+	scriptLocation := NewScriptLocationGenerator()
 
 	inter, err := parseCheckAndInterpretWithOptions(
 		t,
@@ -1095,7 +1127,7 @@ func TestInterpreterImperativeFib(t *testing.T) {
 
 func BenchmarkInterpreterImperativeFib(b *testing.B) {
 
-	scriptLocation := runtime_utils.NewScriptLocationGenerator()
+	scriptLocation := NewScriptLocationGenerator()
 
 	inter, err := parseCheckAndInterpretWithOptions(
 		b,
@@ -1118,7 +1150,7 @@ func BenchmarkInterpreterImperativeFib(b *testing.B) {
 
 func BenchmarkInterpreterNewStruct(b *testing.B) {
 
-	scriptLocation := runtime_utils.NewScriptLocationGenerator()
+	scriptLocation := NewScriptLocationGenerator()
 
 	inter, err := parseCheckAndInterpretWithOptions(
 		b,

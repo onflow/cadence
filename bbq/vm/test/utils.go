@@ -390,6 +390,7 @@ func baseValueActivation(common.Location) *sema.VariableActivation {
 	// Only need to make the checker happy
 	activation := sema.NewVariableActivation(sema.BaseValueActivation)
 	activation.DeclareValue(stdlib.PanicFunction)
+	activation.DeclareValue(stdlib.AssertFunction)
 	activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
 		"getAccount",
 		stdlib.GetAccountFunctionType,
