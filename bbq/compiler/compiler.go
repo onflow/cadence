@@ -1458,10 +1458,28 @@ func (c *Compiler[_, _]) loadTypeArguments(expression *ast.InvocationExpression)
 
 func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression) (_ struct{}) {
 	c.compileExpression(expression.Expression)
+
+	memberAccessInfo, ok := c.ExtendedElaboration.MemberExpressionMemberAccessInfo(expression)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	if memberAccessInfo.IsOptional {
+		c.codeGen.Emit(opcode.InstructionUnwrap{})
+	}
+
 	constant := c.addStringConst(expression.Identifier.Identifier)
 	c.codeGen.Emit(opcode.InstructionGetField{
 		FieldNameIndex: constant.index,
 	})
+
+	// Return a reference, if the member is accessed via a reference.
+	// This is pre-computed at the checker.
+	if memberAccessInfo.ReturnReference {
+		index := c.getOrAddType(memberAccessInfo.ResultingType)
+		c.codeGen.Emit(opcode.InstructionNewRef{TypeIndex: index})
+	}
+
 	return
 }
 
