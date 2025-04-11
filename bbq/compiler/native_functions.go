@@ -58,9 +58,6 @@ var stdlibFunctions = []string{
 	commons.LogFunctionName,
 	commons.PanicFunctionName,
 	commons.GetAccountFunctionName,
-
-	// TODO: Remove after https://github.com/onflow/cadence-internal/pull/320
-	sema.MetaTypeName,
 }
 
 func init() {

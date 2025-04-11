@@ -1469,6 +1469,9 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 	}
 
 	constant := c.addStringConst(expression.Identifier.Identifier)
+
+	// TODO: remove member if `isNestedResourceMove`
+	//  See `Interpreter.memberExpressionGetterSetter` for the reference implementation.
 	c.codeGen.Emit(opcode.InstructionGetField{
 		FieldNameIndex: constant.index,
 	})
@@ -1479,6 +1482,8 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 		index := c.getOrAddType(memberAccessInfo.ResultingType)
 		c.codeGen.Emit(opcode.InstructionNewRef{TypeIndex: index})
 	}
+
+	// TODO: Need to wrap the result back with an optional, if `memberAccessInfo.IsOptional`
 
 	return
 }
