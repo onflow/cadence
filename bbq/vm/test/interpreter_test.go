@@ -381,6 +381,8 @@ func interpreterFTTransfer(tb testing.TB) {
 		return inter.Program, err
 	}
 
+	// Parse and check contract interfaces
+
 	contractInterfaceLocations := []common.Location{
 		burnerLocation,
 		viewResolverLocation,
@@ -389,8 +391,6 @@ func interpreterFTTransfer(tb testing.TB) {
 		metadataViewsLocation,
 		fungibleTokenMetadataViewsLocation,
 	}
-
-	// Parse and check contract interfaces
 
 	for _, location := range contractInterfaceLocations {
 		_, err := parseCheckAndInterpret(string(codes[location]), location)
