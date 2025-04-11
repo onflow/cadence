@@ -1465,6 +1465,8 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 	}
 
 	if memberAccessInfo.IsOptional {
+		// TODO: Complete the optional-chaining implementations.
+		//  e.g: Need a nil check, since unwrap panics on nil
 		c.codeGen.Emit(opcode.InstructionUnwrap{})
 	}
 
