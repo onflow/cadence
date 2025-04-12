@@ -81,10 +81,24 @@ func (p *ProgramPrinter[_, T]) printConstantPool(constants []Constant) {
 		// TODO: duplicate of `VM.initializeConstant()`
 		switch constant.Kind {
 		case constantkind.Int:
-			smallInt, _, _ := leb128.ReadInt64(constant.Data)
-			constantStr = fmt.Sprint(smallInt)
+			// TODO:
+			// TODO: handle error
+			value, _, _ := leb128.ReadInt64(constant.Data)
+			constantStr = fmt.Sprint(value)
+
+		case constantkind.Int64:
+			// TODO: handle error
+			value, _, _ := leb128.ReadInt64(constant.Data)
+			constantStr = fmt.Sprint(value)
+
 		case constantkind.String:
 			constantStr = string(constant.Data)
+
+		case constantkind.UFix64:
+			// TODO: handle error
+			value, _, _ := leb128.ReadUint64(constant.Data)
+			constantStr = fmt.Sprint(value)
+
 		default:
 			panic(errors.NewUnreachableError())
 		}

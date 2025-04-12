@@ -1246,22 +1246,22 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 	switch constant.Kind {
 	case constantkind.Int:
 		// TODO:
-		smallInt, _, _ := leb128.ReadInt64(constant.Data)
-		value = interpreter.NewIntValueFromInt64(vm.config.MemoryGauge, smallInt)
+		// TODO: handle error
+		v, _, _ := leb128.ReadInt64(constant.Data)
+		value = interpreter.NewUnmeteredIntValueFromInt64(v)
+
 	case constantkind.Int64:
-		smallInt, _, _ := leb128.ReadInt64(constant.Data)
-		value = interpreter.NewInt64Value(
-			vm.config.MemoryGauge,
-			func() int64 {
-				return smallInt
-			},
-		)
+		// TODO: handle error
+		v, _, _ := leb128.ReadInt64(constant.Data)
+		value = interpreter.NewUnmeteredInt64Value(v)
+
 	case constantkind.String:
 		value = interpreter.NewUnmeteredStringValue(string(constant.Data))
 
 	case constantkind.UFix64:
-		smallInt, _, _ := leb128.ReadUint64(constant.Data)
-		value = interpreter.NewUnmeteredUFix64Value(smallInt)
+		// TODO: handle error
+		v, _, _ := leb128.ReadUint64(constant.Data)
+		value = interpreter.NewUnmeteredUFix64Value(v)
 
 	default:
 		// TODO:
