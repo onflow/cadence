@@ -332,7 +332,7 @@ func (e *Encoder) encodeTypeAndValue(value cadence.Value, tids ccfTypeIDByCadenc
 	return e.encodeInlineTypeAndValue(value, tids)
 }
 
-// encodeTypeAndValueWithNoTag encodes inline type and value as
+// encodeInlineTypeAndValue encodes inline type and value as
 // language=CDDL
 // inline-type-and-value = [
 //
