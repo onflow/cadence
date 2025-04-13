@@ -117,7 +117,7 @@ func (a Address) Compare(other Address) int {
 	return bytes.Compare(a[:], other[:])
 }
 
-// HexToAddress converts a hex string to an Address after
+// HexToAddressAssertPrefix converts a hex string to an Address after
 // ensuring that the hex string starts with the prefix 0x.
 func HexToAddressAssertPrefix(h string) (Address, error) {
 	if !strings.HasPrefix(h, "0x") {
