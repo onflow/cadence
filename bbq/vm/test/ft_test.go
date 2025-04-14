@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/activations"
@@ -63,9 +64,8 @@ func compiledFTTransfer(tb testing.TB) {
 		nonFungibleTokenLocation:           []byte(realNonFungibleTokenContract),
 	}
 
-	// TODO:
 	nextTransactionLocation := NewTransactionLocationGenerator()
-	//nextScriptLocation := NewScriptLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	locationHandler := newStringLocationHandler(tb, contractsAddress)
 
@@ -414,27 +414,41 @@ func compiledFTTransfer(tb testing.TB) {
 		b.StopTimer()
 	}
 
-	//// Run validation scripts
-	//
-	//for _, address := range []common.Address{
-	//	senderAddress,
-	//	receiverAddress,
-	//} {
-	//	program := parseCheckAndCompile(tb, realFlowTokenGetBalanceScript, nil, programs)
-	//
-	//	validationScriptVM := vm.NewVM(nextScriptLocation(), program, vmConfig)
-	//
-	//	addressValue := interpreter.AddressValue(address)
-	//	result, err := validationScriptVM.Invoke("main", addressValue)
-	//	require.NoError(tb, err)
-	//	require.Equal(tb, 0, validationScriptVM.StackSize())
-	//
-	//	if address == senderAddress {
-	//		assert.Equal(tb, interpreter.NewUnmeteredUFix64Value(total-transferAmount*uint64(transferCount)), result)
-	//	} else {
-	//		assert.Equal(tb, interpreter.NewUnmeteredUFix64Value(transferAmount*uint64(transferCount)), result)
-	//	}
-	//}
+	// Run validation scripts
+
+	for _, address := range []common.Address{
+		senderAddress,
+		receiverAddress,
+	} {
+		scriptLocation := nextScriptLocation()
+
+		program := parseCheckAndCompileCodeWithOptions(
+			tb,
+			realFlowTokenGetBalanceScript,
+			scriptLocation,
+			CompilerAndVMOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: scriptLocation,
+					Config:   semaConfig,
+				},
+				CompilerConfig: compilerConfig,
+			},
+			programs,
+		)
+
+		validationScriptVM := vm.NewVM(scriptLocation, program, vmConfig)
+
+		addressValue := interpreter.AddressValue(address)
+		result, err := validationScriptVM.Invoke("main", addressValue)
+		require.NoError(tb, err)
+		require.Equal(tb, 0, validationScriptVM.StackSize())
+
+		if address == senderAddress {
+			assert.Equal(tb, interpreter.NewUnmeteredUFix64Value(total-transferAmount*uint64(transferCount)), result)
+		} else {
+			assert.Equal(tb, interpreter.NewUnmeteredUFix64Value(transferAmount*uint64(transferCount)), result)
+		}
+	}
 }
 
 func TestFTTransfer(t *testing.T) {
