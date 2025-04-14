@@ -564,7 +564,7 @@ func compileAndInvokeWithLogs(
 	activation := sema.NewVariableActivation(sema.BaseValueActivation)
 	activation.DeclareValue(stdlib.PanicFunction)
 	activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-		"log",
+		commons.LogFunctionName,
 		sema.NewSimpleFunctionType(
 			sema.FunctionPurityView,
 			[]sema.Parameter{
@@ -654,6 +654,10 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 		options,
 		programs,
 	)
+
+	// Ensure the program can be printed
+	printer := bbq.NewInstructionsProgramPrinter()
+	_ = printer.PrintProgram(program)
 
 	vmConfig := prepareVMConfig(options.VMConfig)
 

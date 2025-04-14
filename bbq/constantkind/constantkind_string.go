@@ -10,58 +10,64 @@ func _() {
 	var x [1]struct{}
 	_ = x[Unknown-0]
 	_ = x[String-1]
-	_ = x[Int-2]
-	_ = x[Int8-3]
-	_ = x[Int16-4]
-	_ = x[Int32-5]
-	_ = x[Int64-6]
-	_ = x[Int128-7]
-	_ = x[Int256-8]
-	_ = x[UInt-10]
-	_ = x[UInt8-11]
-	_ = x[UInt16-12]
-	_ = x[UInt32-13]
-	_ = x[UInt64-14]
-	_ = x[UInt128-15]
-	_ = x[UInt256-16]
-	_ = x[Word8-19]
-	_ = x[Word16-20]
-	_ = x[Word32-21]
-	_ = x[Word64-22]
-	_ = x[Word128-23]
-	_ = x[Word256-24]
-	_ = x[Fix64-30]
-	_ = x[UFix64-38]
+	_ = x[Address-2]
+	_ = x[Int-7]
+	_ = x[Int8-8]
+	_ = x[Int16-9]
+	_ = x[Int32-10]
+	_ = x[Int64-11]
+	_ = x[Int128-12]
+	_ = x[Int256-13]
+	_ = x[UInt-15]
+	_ = x[UInt8-16]
+	_ = x[UInt16-17]
+	_ = x[UInt32-18]
+	_ = x[UInt64-19]
+	_ = x[UInt128-20]
+	_ = x[UInt256-21]
+	_ = x[Word8-24]
+	_ = x[Word16-25]
+	_ = x[Word32-26]
+	_ = x[Word64-27]
+	_ = x[Word128-28]
+	_ = x[Word256-29]
+	_ = x[Fix64-35]
+	_ = x[UFix64-43]
 }
 
 const (
-	_ConstantKind_name_0 = "UnknownStringIntInt8Int16Int32Int64Int128Int256"
-	_ConstantKind_name_1 = "UIntUInt8UInt16UInt32UInt64UInt128UInt256"
-	_ConstantKind_name_2 = "Word8Word16Word32Word64Word128Word256"
-	_ConstantKind_name_3 = "Fix64"
-	_ConstantKind_name_4 = "UFix64"
+	_ConstantKind_name_0 = "UnknownStringAddress"
+	_ConstantKind_name_1 = "IntInt8Int16Int32Int64Int128Int256"
+	_ConstantKind_name_2 = "UIntUInt8UInt16UInt32UInt64UInt128UInt256"
+	_ConstantKind_name_3 = "Word8Word16Word32Word64Word128Word256"
+	_ConstantKind_name_4 = "Fix64"
+	_ConstantKind_name_5 = "UFix64"
 )
 
 var (
-	_ConstantKind_index_0 = [...]uint8{0, 7, 13, 16, 20, 25, 30, 35, 41, 47}
-	_ConstantKind_index_1 = [...]uint8{0, 4, 9, 15, 21, 27, 34, 41}
-	_ConstantKind_index_2 = [...]uint8{0, 5, 11, 17, 23, 30, 37}
+	_ConstantKind_index_0 = [...]uint8{0, 7, 13, 20}
+	_ConstantKind_index_1 = [...]uint8{0, 3, 7, 12, 17, 22, 28, 34}
+	_ConstantKind_index_2 = [...]uint8{0, 4, 9, 15, 21, 27, 34, 41}
+	_ConstantKind_index_3 = [...]uint8{0, 5, 11, 17, 23, 30, 37}
 )
 
 func (i ConstantKind) String() string {
 	switch {
-	case i <= 8:
+	case i <= 2:
 		return _ConstantKind_name_0[_ConstantKind_index_0[i]:_ConstantKind_index_0[i+1]]
-	case 10 <= i && i <= 16:
-		i -= 10
+	case 7 <= i && i <= 13:
+		i -= 7
 		return _ConstantKind_name_1[_ConstantKind_index_1[i]:_ConstantKind_index_1[i+1]]
-	case 19 <= i && i <= 24:
-		i -= 19
+	case 15 <= i && i <= 21:
+		i -= 15
 		return _ConstantKind_name_2[_ConstantKind_index_2[i]:_ConstantKind_index_2[i+1]]
-	case i == 30:
-		return _ConstantKind_name_3
-	case i == 38:
+	case 24 <= i && i <= 29:
+		i -= 24
+		return _ConstantKind_name_3[_ConstantKind_index_3[i]:_ConstantKind_index_3[i+1]]
+	case i == 35:
 		return _ConstantKind_name_4
+	case i == 43:
+		return _ConstantKind_name_5
 	default:
 		return "ConstantKind(" + strconv.FormatInt(int64(i), 10) + ")"
 	}

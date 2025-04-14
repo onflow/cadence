@@ -4766,19 +4766,49 @@ func TestIntegers(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(5), result)
+			assert.Equal(t, "5", result.String())
+			assert.Equal(t,
+				integerType,
+				interpreter.MustConvertStaticToSemaType(result.StaticType(nil), nil),
+			)
 		})
 	}
 
-	// TODO:
-	//for _, integerType := range common.Concat(
-	//	sema.AllUnsignedIntegerTypes,
-	//	sema.AllSignedIntegerTypes,
-	//) {
-	//	test(t, integerType)
-	//}
+	for _, integerType := range common.Concat(
+		sema.AllUnsignedIntegerTypes,
+		sema.AllSignedIntegerTypes,
+	) {
+		// TODO:
+		switch integerType {
+		case sema.Int128Type, sema.Int256Type,
+			sema.UInt128Type, sema.UInt256Type,
+			sema.Word128Type, sema.Word256Type:
+			continue
+		}
 
-	test(sema.IntType)
+		test(integerType)
+	}
+}
+
+func TestAddress(t *testing.T) {
+
+	t.Parallel()
+
+	result, err := compileAndInvoke(t,
+		`
+            fun test(): Address {
+                return 0x2
+            }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, "0x0000000000000002", result.String())
+	assert.Equal(t,
+		interpreter.PrimitiveStaticTypeAddress,
+		result.StaticType(nil),
+	)
 }
 
 func TestFixedPoint(t *testing.T) {
@@ -4803,21 +4833,20 @@ func TestFixedPoint(t *testing.T) {
 			)
 			require.NoError(t, err)
 
+			assert.Equal(t, "10.00000000", result.String())
 			assert.Equal(t,
-				interpreter.NewUnmeteredUFix64Value(10*sema.Fix64Factor),
-				result,
+				fixedPointType,
+				interpreter.MustConvertStaticToSemaType(result.StaticType(nil), nil),
 			)
 		})
 	}
 
-	for _, fixedPointType := range sema.AllUnsignedFixedPointTypes {
+	for _, fixedPointType := range common.Concat(
+		sema.AllUnsignedFixedPointTypes,
+		sema.AllSignedFixedPointTypes,
+	) {
 		test(fixedPointType)
 	}
-
-	// TODO:
-	//for _, fixedPointType := range sema.AllSignedFixedPointTypes {
-	//	test(fixedPointType)
-	//}
 }
 
 func TestForLoop(t *testing.T) {
