@@ -326,7 +326,7 @@ func compiledFTTransfer(tb testing.TB) {
 
 	txLocation := nextTransactionLocation()
 
-	program := parseCheckAndCompileCodeWithOptions(
+	mintTokensTxProgram := parseCheckAndCompileCodeWithOptions(
 		tb,
 		realFlowTokenMintTokensTransaction,
 		txLocation,
@@ -340,7 +340,7 @@ func compiledFTTransfer(tb testing.TB) {
 		programs,
 	)
 
-	mintTxVM := vm.NewVM(txLocation, program, vmConfig)
+	mintTxVM := vm.NewVM(txLocation, mintTokensTxProgram, vmConfig)
 
 	total := uint64(1000000) * sema.Fix64Factor
 
@@ -354,52 +354,66 @@ func compiledFTTransfer(tb testing.TB) {
 	require.NoError(tb, err)
 	require.Equal(tb, 0, mintTxVM.StackSize())
 
-	//// ----- Run token transfer transaction -----
-	//
-	//tokenTransferTxProgram := parseCheckAndCompile(tb, realFlowTokenTransferTokensTransaction, nil, programs)
-	//
-	//tokenTransferTxVM := vm.NewVM(nextTransactionLocation(), tokenTransferTxProgram, vmConfig)
-	//
-	//transferAmount := uint64(1) * sema.Fix64Factor
-	//
-	//tokenTransferTxArgs := []vm.Value{
-	//	interpreter.NewUnmeteredUFix64Value(transferAmount),
-	//	interpreter.AddressValue(receiverAddress),
-	//}
-	//
-	//tokenTransferTxAuthorizer := vm.NewAuthAccountReferenceValue(vmConfig, accountHandler, senderAddress)
-	//
-	//var transferCount int
-	//
-	//loop := func() bool {
-	//	return transferCount == 0
-	//}
-	//
-	//b, _ := tb.(*testing.B)
-	//
-	//if b != nil {
-	//
-	//	b.ReportAllocs()
-	//	b.ResetTimer()
-	//
-	//	loop = func() bool {
-	//		return transferCount < b.N
-	//	}
-	//}
-	//
-	//for loop() {
-	//
-	//	err = tokenTransferTxVM.ExecuteTransaction(tokenTransferTxArgs, tokenTransferTxAuthorizer)
-	//	require.NoError(tb, err)
-	//	require.Equal(tb, 0, tokenTransferTxVM.StackSize())
-	//
-	//	transferCount++
-	//}
-	//
-	//if b != nil {
-	//	b.StopTimer()
-	//}
-	//
+	// Run token transfer transaction
+
+	txLocation = nextTransactionLocation()
+
+	tokenTransferTxProgram := parseCheckAndCompileCodeWithOptions(
+		tb,
+		realFlowTokenTransferTokensTransaction,
+		txLocation,
+		CompilerAndVMOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				Location: txLocation,
+				Config:   semaConfig,
+			},
+			CompilerConfig: compilerConfig,
+		},
+		programs,
+	)
+
+	tokenTransferTxVM := vm.NewVM(txLocation, tokenTransferTxProgram, vmConfig)
+
+	transferAmount := uint64(1) * sema.Fix64Factor
+
+	tokenTransferTxArgs := []vm.Value{
+		interpreter.NewUnmeteredUFix64Value(transferAmount),
+		interpreter.AddressValue(receiverAddress),
+	}
+
+	tokenTransferTxAuthorizer := vm.NewAuthAccountReferenceValue(vmConfig, accountHandler, senderAddress)
+
+	var transferCount int
+
+	loop := func() bool {
+		return transferCount == 0
+	}
+
+	b, _ := tb.(*testing.B)
+
+	if b != nil {
+
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		loop = func() bool {
+			return transferCount < b.N
+		}
+	}
+
+	for loop() {
+
+		err = tokenTransferTxVM.ExecuteTransaction(tokenTransferTxArgs, tokenTransferTxAuthorizer)
+		require.NoError(tb, err)
+		require.Equal(tb, 0, tokenTransferTxVM.StackSize())
+
+		transferCount++
+	}
+
+	if b != nil {
+		b.StopTimer()
+	}
+
 	//// Run validation scripts
 	//
 	//for _, address := range []common.Address{
