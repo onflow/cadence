@@ -18,34 +18,7 @@
 
 package vm
 
-import (
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/sema"
-)
-
 // members
 
 func init() {
-	RegisterTypeBoundFunction(
-		sema.IntTypeName,
-		NewNativeFunctionValue(
-			sema.ToStringFunctionName,
-			sema.ToStringFunctionType,
-			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
-				number := args[receiverIndex].(interpreter.IntValue)
-
-				// TODO: Refactor and re-use the logic from interpreter.
-				memoryUsage := common.NewStringMemoryUsage(
-					interpreter.OverEstimateNumberStringLength(config.MemoryGauge, number),
-				)
-				return interpreter.NewStringValue(
-					config.MemoryGauge,
-					memoryUsage,
-					number.String,
-				)
-			},
-		),
-	)
 }

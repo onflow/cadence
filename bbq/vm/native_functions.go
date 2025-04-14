@@ -60,9 +60,6 @@ func RegisterFunction(functionValue NativeFunctionValue) {
 }
 
 func RegisterTypeBoundFunction(typeName string, functionValue NativeFunctionValue) {
-	// +1 is for the receiver
-	functionValue.ParameterCount++
-
 	// Update the name of the function to be type-qualified
 	qualifiedName := commons.TypeQualifiedName(typeName, functionValue.Name)
 	functionValue.Name = qualifiedName
@@ -193,5 +190,58 @@ func init() {
 				},
 			),
 		)
+	}
+
+	// Register type-bound functions that are common to many types.
+	for _, builtinType := range sema.AllBuiltinTypes {
+		registerBuiltinTypeBoundFunctions(string(builtinType.ID()))
+	}
+
+	derivedTypeQualifiers := []string{
+		commons.TypeQualifierArray,
+		commons.TypeQualifierDictionary,
+
+		// TODO: add other types. e.g; Optional, etc
+	}
+
+	for _, builtinType := range derivedTypeQualifiers {
+		registerBuiltinTypeBoundFunctions(builtinType)
+	}
+}
+
+func registerBuiltinTypeBoundFunctions(typeQualifier string) {
+	for _, boundFunction := range builtinTypeBoundFunctions() {
+		RegisterTypeBoundFunction(
+			typeQualifier,
+			boundFunction,
+		)
+	}
+}
+
+func builtinTypeBoundFunctions() []NativeFunctionValue {
+	return []NativeFunctionValue{
+		// `toString` function
+		NewBoundNativeFunctionValue(
+			sema.ToStringFunctionName,
+			sema.ToStringFunctionType,
+			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+				value := args[receiverIndex]
+
+				// TODO: memory metering
+				return interpreter.NewUnmeteredStringValue(value.String())
+			},
+		),
+
+		// `getType` function
+		NewBoundNativeFunctionValue(
+			sema.GetTypeFunctionName,
+			sema.GetTypeFunctionType,
+			func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+				value := arguments[receiverIndex]
+				return interpreter.ValueGetType(config, value)
+			},
+		),
+
+		// TODO: add remaining functions (e.g: isInstance, etc)
 	}
 }

@@ -4142,45 +4142,45 @@ type TypeArgumentsCheck func(
 // the types available in programs
 var BaseTypeActivation = NewVariableActivation(nil)
 
+var AllBuiltinTypes = common.Concat(
+	AllNumberTypes,
+	[]Type{
+		MetaType,
+		VoidType,
+		AnyStructType,
+		AnyStructAttachmentType,
+		AnyResourceType,
+		AnyResourceAttachmentType,
+		NeverType,
+		BoolType,
+		CharacterType,
+		StringType,
+		TheAddressType,
+		AccountType,
+		PathType,
+		StoragePathType,
+		CapabilityPathType,
+		PrivatePathType,
+		PublicPathType,
+		&CapabilityType{},
+		DeployedContractType,
+		BlockType,
+		AccountKeyType,
+		PublicKeyType,
+		SignatureAlgorithmType,
+		HashAlgorithmType,
+		StorageCapabilityControllerType,
+		AccountCapabilityControllerType,
+		DeploymentResultType,
+		HashableStructType,
+		&InclusiveRangeType{},
+		StructStringerType,
+	},
+)
+
 func init() {
 
-	types := common.Concat(
-		AllNumberTypes,
-		[]Type{
-			MetaType,
-			VoidType,
-			AnyStructType,
-			AnyStructAttachmentType,
-			AnyResourceType,
-			AnyResourceAttachmentType,
-			NeverType,
-			BoolType,
-			CharacterType,
-			StringType,
-			TheAddressType,
-			AccountType,
-			PathType,
-			StoragePathType,
-			CapabilityPathType,
-			PrivatePathType,
-			PublicPathType,
-			&CapabilityType{},
-			DeployedContractType,
-			BlockType,
-			AccountKeyType,
-			PublicKeyType,
-			SignatureAlgorithmType,
-			HashAlgorithmType,
-			StorageCapabilityControllerType,
-			AccountCapabilityControllerType,
-			DeploymentResultType,
-			HashableStructType,
-			&InclusiveRangeType{},
-			StructStringerType,
-		},
-	)
-
-	for _, ty := range types {
+	for _, ty := range AllBuiltinTypes {
 		addToBaseActivation(ty)
 	}
 

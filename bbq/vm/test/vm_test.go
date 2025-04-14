@@ -1655,7 +1655,7 @@ func TestTransaction(t *testing.T) {
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
 		activation.DeclareValue(stdlib.PanicFunction)
 		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-			"log",
+			commons.LogFunctionName,
 			sema.NewSimpleFunctionType(
 				sema.FunctionPurityView,
 				[]sema.Parameter{
@@ -1745,7 +1745,7 @@ func TestTransaction(t *testing.T) {
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
 		activation.DeclareValue(stdlib.PanicFunction)
 		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-			"log",
+			commons.LogFunctionName,
 			sema.NewSimpleFunctionType(
 				sema.FunctionPurityView,
 				[]sema.Parameter{
@@ -1840,7 +1840,7 @@ func TestTransaction(t *testing.T) {
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
 		activation.DeclareValue(stdlib.PanicFunction)
 		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-			"log",
+			commons.LogFunctionName,
 			sema.NewSimpleFunctionType(
 				sema.FunctionPurityView,
 				[]sema.Parameter{
@@ -3259,7 +3259,7 @@ func TestFunctionPreConditions(t *testing.T) {
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
 		activation.DeclareValue(stdlib.PanicFunction)
 		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-			"log",
+			commons.LogFunctionName,
 			sema.NewSimpleFunctionType(
 				sema.FunctionPurityView,
 				[]sema.Parameter{
@@ -3369,7 +3369,7 @@ func TestFunctionPreConditions(t *testing.T) {
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
 		activation.DeclareValue(stdlib.PanicFunction)
 		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-			"log",
+			commons.LogFunctionName,
 			sema.NewSimpleFunctionType(
 				sema.FunctionPurityView,
 				[]sema.Parameter{
@@ -3717,7 +3717,7 @@ func TestFunctionPostConditions(t *testing.T) {
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
 		activation.DeclareValue(stdlib.PanicFunction)
 		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-			"log",
+			commons.LogFunctionName,
 			sema.NewSimpleFunctionType(
 				sema.FunctionPurityView,
 				[]sema.Parameter{
@@ -4201,7 +4201,7 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
 		activation.DeclareValue(stdlib.PanicFunction)
 		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-			"log",
+			commons.LogFunctionName,
 			sema.NewSimpleFunctionType(
 				sema.FunctionPurityView,
 				[]sema.Parameter{
@@ -4293,7 +4293,7 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
 		activation.DeclareValue(stdlib.PanicFunction)
 		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-			"log",
+			commons.LogFunctionName,
 			sema.NewSimpleFunctionType(
 				sema.FunctionPurityView,
 				[]sema.Parameter{
@@ -4389,7 +4389,7 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
 		activation.DeclareValue(stdlib.PanicFunction)
 		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-			"log",
+			commons.LogFunctionName,
 			sema.NewSimpleFunctionType(
 				sema.FunctionPurityView,
 				[]sema.Parameter{
