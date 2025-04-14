@@ -46,7 +46,7 @@ func TestFTTransfer(t *testing.T) {
 		if !ok {
 			panic(fmt.Errorf("cannot find elaboration for: %s", location))
 		}
-		elaboration := program.Elaboration
+		elaboration := program.ExtendedElaboration
 		compositeType := elaboration.CompositeType(typeID)
 		if compositeType != nil {
 			return compositeType
@@ -236,7 +236,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 		if !ok {
 			panic(fmt.Errorf("cannot find elaboration for: %s", location))
 		}
-		elaboration := program.Elaboration
+		elaboration := program.ExtendedElaboration
 		compositeType := elaboration.CompositeType(typeID)
 		if compositeType != nil {
 			return compositeType

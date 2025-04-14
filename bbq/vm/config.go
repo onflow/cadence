@@ -49,6 +49,7 @@ type Config struct {
 	interpreterConfig *interpreter.Config
 
 	invokeFunction func(function Value, arguments []Value) (Value, error)
+	lookupFunction func(location common.Location, name string) interpreter.FunctionValue
 
 	// TODO: Move these to a 'shared state'?
 	storage                                     interpreter.Storage
@@ -457,8 +458,20 @@ func (c *Config) GetMethod(
 	name string,
 	locationRange interpreter.LocationRange,
 ) interpreter.FunctionValue {
-	//TODO implement me
-	panic("implement me")
+	staticType := value.StaticType(c)
+
+	// TODO: avoid the sema-type conversion
+	semaType := interpreter.MustConvertStaticToSemaType(staticType, c)
+
+	var location common.Location
+	if locatedType, ok := semaType.(sema.LocatedType); ok {
+		location = locatedType.GetLocation()
+	}
+
+	typeQualifier := commons.TypeQualifier(semaType)
+	qualifiedFuncName := commons.TypeQualifiedName(typeQualifier, name)
+
+	return c.lookupFunction(location, qualifiedFuncName)
 }
 
 type ContractValueHandler func(conf *Config, location common.Location) *interpreter.CompositeValue

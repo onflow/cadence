@@ -879,12 +879,12 @@ func TestContractImport(t *testing.T) {
 			return fooProgram
 		}
 
-		barCompiler.Config.ElaborationResolver = func(location common.Location) (*sema.Elaboration, error) {
+		barCompiler.Config.ElaborationResolver = func(location common.Location) (*compiler.ExtendedElaboration, error) {
 			switch location {
 			case fooLocation:
-				return fooChecker.Elaboration, nil
+				return compiler.NewExtendedElaboration(fooChecker.Elaboration), nil
 			case barLocation:
-				return barChecker.Elaboration, nil
+				return compiler.NewExtendedElaboration(barChecker.Elaboration), nil
 			default:
 				return nil, fmt.Errorf("cannot find elaboration for %s", location)
 			}
@@ -1435,7 +1435,11 @@ func TestTransaction(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
+		vmConfig := &vm.Config{}
+
+		vmInstance := CompileAndPrepareToInvoke(
+			t,
+			`
           transaction {
               var a: String
 
@@ -1447,16 +1451,13 @@ func TestTransaction(t *testing.T) {
                   self.a = "Hello again!"
               }
           }
-        `)
-		require.NoError(t, err)
+        `,
+			CompilerAndVMOptions{
+				VMConfig: vmConfig,
+			},
+		)
 
-		comp := compiler.NewInstructionCompiler(checker)
-		program := comp.Compile()
-
-		vmConfig := &vm.Config{}
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-
-		err = vmInstance.ExecuteTransaction(nil)
+		err := vmInstance.ExecuteTransaction(nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1478,7 +1479,11 @@ func TestTransaction(t *testing.T) {
 		require.Equal(t, 0, vmInstance.StackSize())
 
 		// Once 'prepare' is called, 'a' is initialized to "Hello!"
-		assert.Equal(t, interpreter.NewUnmeteredStringValue("Hello!"), compositeValue.GetMember(vmConfig, vm.EmptyLocationRange, "a"))
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredStringValue("Hello!"),
+			compositeValue.GetMember(vmConfig, vm.EmptyLocationRange, "a"),
+		)
 
 		// Invoke 'execute'
 		_, err = vmInstance.Invoke(commons.TransactionExecuteFunctionName, transaction)
@@ -1486,14 +1491,22 @@ func TestTransaction(t *testing.T) {
 		require.Equal(t, 0, vmInstance.StackSize())
 
 		// Once 'execute' is called, 'a' is initialized to "Hello, again!"
-		assert.Equal(t, interpreter.NewUnmeteredStringValue("Hello again!"), compositeValue.GetMember(vmConfig, vm.EmptyLocationRange, "a"))
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredStringValue("Hello again!"),
+			compositeValue.GetMember(vmConfig, vm.EmptyLocationRange, "a"),
+		)
 	})
 
 	t.Run("with params", func(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
+		vmConfig := &vm.Config{}
+
+		vmInstance := CompileAndPrepareToInvoke(
+			t,
+			`
             transaction(param1: String, param2: String) {
                 var a: String
 
@@ -1505,21 +1518,18 @@ func TestTransaction(t *testing.T) {
                     self.a = param2
                 }
             }
-        `)
-		require.NoError(t, err)
-
-		comp := compiler.NewInstructionCompiler(checker)
-		program := comp.Compile()
-
-		vmConfig := &vm.Config{}
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+        `,
+			CompilerAndVMOptions{
+				VMConfig: vmConfig,
+			},
+		)
 
 		args := []vm.Value{
 			interpreter.NewUnmeteredStringValue("Hello!"),
 			interpreter.NewUnmeteredStringValue("Hello again!"),
 		}
 
-		err = vmInstance.ExecuteTransaction(args)
+		err := vmInstance.ExecuteTransaction(args)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1577,7 +1587,7 @@ func TestTransaction(t *testing.T) {
 			nil,
 		))
 
-		parseAndCheckOptions := ParseAndCheckOptions{
+		parseAndCheckOptions := &ParseAndCheckOptions{
 			Location: location,
 			Config: &sema.Config{
 				LocationHandler: singleIdentifierLocationResolver(t),
@@ -1587,7 +1597,24 @@ func TestTransaction(t *testing.T) {
 			},
 		}
 
-		checker, err := ParseAndCheckWithOptions(t,
+		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+
+		var logs []string
+
+		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
+			funcs := vm.NativeFunctions()
+			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+				ParameterCount: len(stdlib.LogFunctionType.Parameters),
+				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+					logs = append(logs, arguments[0].String())
+					return interpreter.Void
+				},
+			}
+
+			return funcs
+		}
+
+		vmInstance := CompileAndPrepareToInvoke(t,
 			`
               transaction {
                   var count: Int
@@ -1614,32 +1641,13 @@ func TestTransaction(t *testing.T) {
                   return true
               }
             `,
-			parseAndCheckOptions,
+			CompilerAndVMOptions{
+				VMConfig:             vmConfig,
+				ParseAndCheckOptions: parseAndCheckOptions,
+			},
 		)
-		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
-		program := comp.Compile()
-
-		var logs []string
-		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
-
-		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return interpreter.Void
-				},
-			}
-
-			return funcs
-		}
-
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-
-		err = vmInstance.ExecuteTransaction(nil)
+		err := vmInstance.ExecuteTransaction(nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1671,7 +1679,7 @@ func TestTransaction(t *testing.T) {
 			nil,
 		))
 
-		parseAndCheckOptions := ParseAndCheckOptions{
+		parseAndCheckOptions := &ParseAndCheckOptions{
 			Location: location,
 			Config: &sema.Config{
 				LocationHandler: singleIdentifierLocationResolver(t),
@@ -1681,7 +1689,24 @@ func TestTransaction(t *testing.T) {
 			},
 		}
 
-		checker, err := ParseAndCheckWithOptions(t,
+		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+
+		var logs []string
+
+		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
+			funcs := vm.NativeFunctions()
+			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+				ParameterCount: len(stdlib.LogFunctionType.Parameters),
+				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+					logs = append(logs, arguments[0].String())
+					return interpreter.Void
+				},
+			}
+
+			return funcs
+		}
+
+		vmInstance := CompileAndPrepareToInvoke(t,
 			`
               transaction {
                   var count: Int
@@ -1704,32 +1729,13 @@ func TestTransaction(t *testing.T) {
                   return true
               }
             `,
-			parseAndCheckOptions,
+			CompilerAndVMOptions{
+				VMConfig:             vmConfig,
+				ParseAndCheckOptions: parseAndCheckOptions,
+			},
 		)
-		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
-		program := comp.Compile()
-
-		var logs []string
-		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
-
-		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return interpreter.Void
-				},
-			}
-
-			return funcs
-		}
-
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-
-		err = vmInstance.ExecuteTransaction(nil)
+		err := vmInstance.ExecuteTransaction(nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1761,7 +1767,7 @@ func TestTransaction(t *testing.T) {
 			nil,
 		))
 
-		parseAndCheckOptions := ParseAndCheckOptions{
+		parseAndCheckOptions := &ParseAndCheckOptions{
 			Location: location,
 			Config: &sema.Config{
 				LocationHandler: singleIdentifierLocationResolver(t),
@@ -1771,7 +1777,24 @@ func TestTransaction(t *testing.T) {
 			},
 		}
 
-		checker, err := ParseAndCheckWithOptions(t,
+		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+
+		var logs []string
+
+		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
+			funcs := vm.NativeFunctions()
+			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+				ParameterCount: len(stdlib.LogFunctionType.Parameters),
+				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+					logs = append(logs, arguments[0].String())
+					return interpreter.Void
+				},
+			}
+
+			return funcs
+		}
+
+		vmInstance := CompileAndPrepareToInvoke(t,
 			`
               transaction {
                   var count: Int
@@ -1799,32 +1822,13 @@ func TestTransaction(t *testing.T) {
                   return true
               }
             `,
-			parseAndCheckOptions,
+			CompilerAndVMOptions{
+				VMConfig:             vmConfig,
+				ParseAndCheckOptions: parseAndCheckOptions,
+			},
 		)
-		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
-		program := comp.Compile()
-
-		var logs []string
-		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
-
-		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return interpreter.Void
-				},
-			}
-
-			return funcs
-		}
-
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-
-		err = vmInstance.ExecuteTransaction(nil)
+		err := vmInstance.ExecuteTransaction(nil)
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "pre/post condition failed")
 
@@ -1856,7 +1860,7 @@ func TestTransaction(t *testing.T) {
 			nil,
 		))
 
-		parseAndCheckOptions := ParseAndCheckOptions{
+		parseAndCheckOptions := &ParseAndCheckOptions{
 			Location: location,
 			Config: &sema.Config{
 				LocationHandler: singleIdentifierLocationResolver(t),
@@ -1866,7 +1870,24 @@ func TestTransaction(t *testing.T) {
 			},
 		}
 
-		checker, err := ParseAndCheckWithOptions(t,
+		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+
+		var logs []string
+
+		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
+			funcs := vm.NativeFunctions()
+			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+				ParameterCount: len(stdlib.LogFunctionType.Parameters),
+				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+					logs = append(logs, arguments[0].String())
+					return interpreter.Void
+				},
+			}
+
+			return funcs
+		}
+
+		vmInstance := CompileAndPrepareToInvoke(t,
 			`
               transaction {
                   var count: Int
@@ -1895,32 +1916,13 @@ func TestTransaction(t *testing.T) {
                   return true
               }
             `,
-			parseAndCheckOptions,
+			CompilerAndVMOptions{
+				VMConfig:             vmConfig,
+				ParseAndCheckOptions: parseAndCheckOptions,
+			},
 		)
-		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
-		program := comp.Compile()
-
-		var logs []string
-		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
-
-		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return interpreter.Void
-				},
-			}
-
-			return funcs
-		}
-
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-
-		err = vmInstance.ExecuteTransaction(nil)
+		err := vmInstance.ExecuteTransaction(nil)
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "pre/post condition failed")
 
@@ -1972,9 +1974,9 @@ func TestInterfaceMethodCall(t *testing.T) {
 		require.NoError(t, err)
 
 		importCompiler := compiler.NewInstructionCompiler(importedChecker)
-		importCompiler.Config.ElaborationResolver = func(location common.Location) (*sema.Elaboration, error) {
+		importCompiler.Config.ElaborationResolver = func(location common.Location) (*compiler.ExtendedElaboration, error) {
 			if location == contractLocation {
-				return importedChecker.Elaboration, nil
+				return compiler.NewExtendedElaboration(importedChecker.Elaboration), nil
 			}
 
 			return nil, fmt.Errorf("cannot find elaboration for %s", location)
@@ -2171,12 +2173,12 @@ func TestInterfaceMethodCall(t *testing.T) {
 		bazCompiler := compiler.NewInstructionCompiler(bazChecker)
 		bazCompiler.Config.LocationHandler = singleIdentifierLocationResolver(t)
 		bazCompiler.Config.ImportHandler = bazImportHandler
-		bazCompiler.Config.ElaborationResolver = func(location common.Location) (*sema.Elaboration, error) {
+		bazCompiler.Config.ElaborationResolver = func(location common.Location) (*compiler.ExtendedElaboration, error) {
 			switch location {
 			case fooLocation:
-				return fooChecker.Elaboration, nil
+				return compiler.NewExtendedElaboration(fooChecker.Elaboration), nil
 			case barLocation:
-				return barChecker.Elaboration, nil
+				return compiler.NewExtendedElaboration(barChecker.Elaboration), nil
 			default:
 				return nil, fmt.Errorf("cannot find elaboration for %s", location)
 			}

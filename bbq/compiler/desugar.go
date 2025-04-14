@@ -649,7 +649,7 @@ func (d *Desugar) inheritedFunctionsWithConditions(compositeType sema.Conforming
 				interfaceType:       interfaceType,
 				functionDecl:        functionDecl,
 				rewrittenConditions: rewrittenConditions,
-				elaboration:         NewExtendedElaboration(elaboration),
+				elaboration:         elaboration,
 			})
 			inheritedFunctions[name] = funcs
 		}
@@ -1162,7 +1162,9 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 		ast.EmptyRange,
 	)
 
-	d.elaboration.SetCompositeDeclarationType(compositeDecl, transactionCompositeType)
+	compositeType := d.transactionCompositeType()
+	d.elaboration.SetCompositeDeclarationType(compositeDecl, compositeType)
+	d.elaboration.SetCompositeType(compositeType.ID(), compositeType)
 
 	// We can only return one declaration.
 	// So manually add the rest of the declarations.
@@ -1296,12 +1298,14 @@ func simpleFunctionDeclaration(
 	)
 }
 
-var transactionCompositeType = &sema.CompositeType{
-	Location:    nil,
-	Identifier:  commons.TransactionWrapperCompositeName,
-	Kind:        common.CompositeKindStructure,
-	NestedTypes: &sema.StringTypeOrderedMap{},
-	Members:     &sema.StringMemberOrderedMap{},
+func (d *Desugar) transactionCompositeType() *sema.CompositeType {
+	return &sema.CompositeType{
+		Location:    d.checker.Location,
+		Identifier:  commons.TransactionWrapperCompositeName,
+		Kind:        common.CompositeKindStructure,
+		NestedTypes: &sema.StringTypeOrderedMap{},
+		Members:     &sema.StringMemberOrderedMap{},
+	}
 }
 
 var executeFuncType = sema.NewSimpleFunctionType(

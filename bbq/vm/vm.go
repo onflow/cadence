@@ -85,6 +85,7 @@ func NewVM(
 
 	// Delegate the function invocations to the vm.
 	conf.invokeFunction = vm.invoke
+	conf.lookupFunction = vm.maybeLookupFunction
 
 	// Link global variables and functions.
 	linkedGlobals := LinkGlobals(
@@ -665,7 +666,7 @@ func opInvokeDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
 	funcName := getStringConstant(vm, ins.NameIndex)
 
 	qualifiedFuncName := commons.TypeQualifiedName(compositeType.QualifiedIdentifier, funcName)
-	var functionValue = vm.lookupFunction(compositeType.Location, qualifiedFuncName)
+	var functionValue = vm.mustLookupFunction(compositeType.Location, qualifiedFuncName)
 
 	parameterCount := int(functionValue.Function.ParameterCount)
 	arguments := vm.peekN(parameterCount)
@@ -1295,11 +1296,27 @@ func (vm *VM) loadType(index uint16) bbq.StaticType {
 	return staticType
 }
 
-func (vm *VM) lookupFunction(location common.Location, name string) FunctionValue {
+func (vm *VM) mustLookupFunction(location common.Location, name string) FunctionValue {
+	funcValue, ok := vm.lookupFunction(location, name)
+	if !ok {
+		panic(errors.NewUnexpectedError("cannot link global: %s", name))
+	}
+	return funcValue.(FunctionValue)
+}
+
+func (vm *VM) maybeLookupFunction(location common.Location, name string) interpreter.FunctionValue {
+	funcValue, ok := vm.lookupFunction(location, name)
+	if !ok {
+		return nil
+	}
+	return funcValue.(interpreter.FunctionValue)
+}
+
+func (vm *VM) lookupFunction(location common.Location, name string) (Value, bool) {
 	// First check in current program.
 	value, ok := vm.globals[name]
 	if ok {
-		return value.(FunctionValue)
+		return value, true
 	}
 
 	// If not found, check in already linked imported functions.
@@ -1320,11 +1337,7 @@ func (vm *VM) lookupFunction(location common.Location, name string) FunctionValu
 	}
 
 	value, ok = linkedGlobals.indexedGlobals[name]
-	if !ok {
-		panic(errors.NewUnexpectedError("cannot link global: %s", name))
-	}
-
-	return value.(FunctionValue)
+	return value, ok
 }
 
 func (vm *VM) StackSize() int {

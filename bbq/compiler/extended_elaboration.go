@@ -20,6 +20,7 @@ package compiler
 
 import (
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/sema"
 )
 
@@ -43,6 +44,8 @@ type ExtendedElaboration struct {
 	referenceExpressionBorrowTypes    map[*ast.ReferenceExpression]sema.Type
 	functionDeclarationFunctionTypes  map[*ast.FunctionDeclaration]*sema.FunctionType
 	returnStatementTypes              map[*ast.ReturnStatement]sema.ReturnStatementTypes
+
+	compositeTypes map[common.TypeID]*sema.CompositeType
 }
 
 func NewExtendedElaboration(elaboration *sema.Elaboration) *ExtendedElaboration {
@@ -152,6 +155,38 @@ func (e *ExtendedElaboration) SetCompositeDeclarationType(
 		e.compositeDeclarationTypes = map[ast.CompositeLikeDeclaration]*sema.CompositeType{}
 	}
 	e.compositeDeclarationTypes[declaration] = compositeType
+}
+
+func (e *ExtendedElaboration) CompositeType(typeID common.TypeID) *sema.CompositeType {
+	// First lookup in the extended type info
+	if e.compositeTypes != nil {
+		typ, ok := e.compositeTypes[typeID]
+		if ok {
+			return typ
+		}
+	}
+
+	// If not found, then fallback and look in the original elaboration
+	return e.elaboration.CompositeType(typeID)
+}
+
+func (e *ExtendedElaboration) SetCompositeType(typeID common.TypeID, compositeType *sema.CompositeType) {
+	if e.compositeTypes == nil {
+		e.compositeTypes = map[common.TypeID]*sema.CompositeType{}
+	}
+	e.compositeTypes[typeID] = compositeType
+}
+
+func (e *ExtendedElaboration) InterfaceType(typeID common.TypeID) *sema.InterfaceType {
+	return e.elaboration.InterfaceType(typeID)
+}
+
+func (e *ExtendedElaboration) EntitlementType(typeID common.TypeID) *sema.EntitlementType {
+	return e.elaboration.EntitlementType(typeID)
+}
+
+func (e *ExtendedElaboration) EntitlementMapType(typeID common.TypeID) *sema.EntitlementMapType {
+	return e.elaboration.EntitlementMapType(typeID)
 }
 
 func (e *ExtendedElaboration) InvocationExpressionTypes(
@@ -303,4 +338,18 @@ func (e *ExtendedElaboration) FunctionExpressionFunctionType(expression *ast.Fun
 
 func (e *ExtendedElaboration) IndexExpressionTypes(expression *ast.IndexExpression) (types sema.IndexExpressionTypes, contains bool) {
 	return e.elaboration.IndexExpressionTypes(expression)
+}
+
+func (e *ExtendedElaboration) InterfaceTypeDeclaration(interfaceType *sema.InterfaceType) *ast.InterfaceDeclaration {
+	return e.elaboration.InterfaceTypeDeclaration(interfaceType)
+}
+
+// Elaboration returns the underlying elaboration.
+// IMPORTANT: Only use the original elaboration for type-checking use-cases.
+// It is safe to use in type-checker, since the type checker doesn't rely on
+// extra information added by the desugar phase.
+// Never use it in the compiler or desugar, as it may not include the
+// type information added during the desugar phase.
+func (e *ExtendedElaboration) Elaboration() *sema.Elaboration {
+	return e.elaboration
 }
