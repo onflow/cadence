@@ -274,23 +274,27 @@ func (c *Compiler[_, _]) addConstant(kind constantkind.ConstantKind, data []byte
 	return constant
 }
 
-func (c *Compiler[_, _]) stringConstLoad(str string) {
-	constant := c.addStringConst(str)
-	c.codeGen.Emit(opcode.InstructionGetConstant{ConstantIndex: constant.index})
+func (c *Compiler[_, _]) emitGetConstant(constant *constant) {
+	c.codeGen.Emit(opcode.InstructionGetConstant{
+		ConstantIndex: constant.index,
+	})
+}
+
+func (c *Compiler[_, _]) emitStringConst(str string) {
+	c.emitGetConstant(c.addStringConst(str))
 }
 
 func (c *Compiler[_, _]) addStringConst(str string) *constant {
 	return c.addConstant(constantkind.String, []byte(str))
 }
 
-func (c *Compiler[_, _]) intConstLoad(intKind constantkind.ConstantKind, i int64) {
-	constant := c.addIntConst(intKind, i)
-	c.codeGen.Emit(opcode.InstructionGetConstant{ConstantIndex: constant.index})
+func (c *Compiler[_, _]) emitIntConst(i int64) {
+	c.emitGetConstant(c.addIntConst(i))
 }
 
-func (c *Compiler[_, _]) addIntConst(intKind constantkind.ConstantKind, i int64) *constant {
+func (c *Compiler[_, _]) addIntConst(i int64) *constant {
 	data := leb128.AppendInt64(nil, i)
-	return c.addConstant(intKind, data)
+	return c.addConstant(constantkind.Int, data)
 }
 
 func (c *Compiler[_, _]) emitJump(target int) int {
@@ -938,7 +942,7 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 		// `var <index> = -1`
 		// Start with -1 and then increment at the start of the loop,
 		// so that we don't have to deal with early exists of the loop.
-		c.intConstLoad(constantkind.Int, -1)
+		c.emitIntConst(-1)
 		indexLocalVar = c.emitDeclareLocal(index.Identifier)
 	}
 
@@ -964,7 +968,7 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 		c.codeGen.Emit(opcode.InstructionGetLocal{
 			LocalIndex: indexLocalVar.index,
 		})
-		c.intConstLoad(constantkind.Int, 1)
+		c.emitIntConst(1)
 		c.codeGen.Emit(opcode.InstructionAdd{})
 		c.codeGen.Emit(opcode.InstructionSetLocal{
 			LocalIndex: indexLocalVar.index,
@@ -1161,8 +1165,55 @@ func (c *Compiler[_, _]) VisitIntegerExpression(expression *ast.IntegerExpressio
 	integerType := c.ExtendedElaboration.IntegerExpressionType(expression)
 	constantKind := constantkind.FromSemaType(integerType)
 
-	// TODO: Support all integer types
-	c.intConstLoad(constantKind, expression.Value.Int64())
+	value := expression.Value
+	var data []byte
+
+	switch constantKind {
+	case constantkind.Int:
+		// TODO: support larger integers
+		data = leb128.AppendInt64(nil, value.Int64())
+
+	case constantkind.Int8,
+		constantkind.Int16,
+		constantkind.Int32:
+		data = leb128.AppendInt32(nil, int32(value.Int64()))
+
+	case constantkind.Int64:
+		data = leb128.AppendInt64(nil, value.Int64())
+
+	case constantkind.UInt:
+		// TODO: support larger integers
+		data = leb128.AppendUint64(nil, value.Uint64())
+
+	case constantkind.UInt8,
+		constantkind.Word8,
+		constantkind.UInt16,
+		constantkind.Word16,
+		constantkind.UInt32,
+		constantkind.Word32:
+		data = leb128.AppendUint32(nil, uint32(value.Uint64()))
+
+	case constantkind.UInt64,
+		constantkind.Word64:
+		data = leb128.AppendUint64(nil, value.Uint64())
+
+	case constantkind.Address:
+		data = value.Bytes()
+
+	// TODO:
+	// case constantkind.Int128:
+	// case constantkind.Int256:
+	// case constantkind.UInt128:
+	// case constantkind.UInt256:
+	// case constantkind.Word128:
+	// case constantkind.Word256:
+
+	default:
+		panic(errors.NewUnexpectedError("unsupported constant kind: %s", constantKind))
+	}
+
+	c.emitGetConstant(c.addConstant(constantKind, data))
+
 	return
 }
 
@@ -1179,26 +1230,26 @@ func (c *Compiler[_, _]) VisitFixedPointExpression(expression *ast.FixedPointExp
 		sema.Fix64Scale,
 	)
 
-	var con *constant
+	var constant *constant
 
 	switch fixedPointSubType {
 	case sema.Fix64Type, sema.SignedFixedPointType:
-		con = c.addFix64Constant(value)
+		constant = c.addFix64Constant(value)
 
 	case sema.UFix64Type:
-		con = c.addUFix64Constant(value)
+		constant = c.addUFix64Constant(value)
 
 	case sema.FixedPointType:
 		if expression.Negative {
-			con = c.addFix64Constant(value)
+			constant = c.addFix64Constant(value)
 		} else {
-			con = c.addUFix64Constant(value)
+			constant = c.addUFix64Constant(value)
 		}
 	default:
 		panic(errors.NewUnreachableError())
 	}
 
-	c.codeGen.Emit(opcode.InstructionGetConstant{ConstantIndex: con.index})
+	c.emitGetConstant(constant)
 
 	return
 }
@@ -1711,7 +1762,7 @@ func (c *Compiler[_, _]) VisitFunctionExpression(expression *ast.FunctionExpress
 }
 
 func (c *Compiler[_, _]) VisitStringExpression(expression *ast.StringExpression) (_ struct{}) {
-	c.stringConstLoad(expression.Value)
+	c.emitStringConst(expression.Value)
 	return
 }
 
