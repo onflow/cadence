@@ -19,6 +19,9 @@
 package vm
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/bbq"
@@ -1034,6 +1037,20 @@ func opDeref(vm *VM) {
 }
 
 func (vm *VM) run() {
+
+	if vm.config.debugEnabled {
+		defer func() {
+			if r := recover(); r != nil {
+				printInstructionError(
+					vm.callFrame.function.Function,
+					int(vm.ip),
+					r,
+				)
+				panic(r)
+			}
+		}()
+	}
+
 	for {
 
 		callFrame := vm.callFrame
@@ -1520,4 +1537,25 @@ func getReceiver[T any](config *Config, receiver Value) T {
 	default:
 		return receiver.(T)
 	}
+}
+
+func printInstructionError(
+	function *bbq.Function[opcode.Instruction],
+	instructionIndex int,
+	error any,
+) {
+	var builder strings.Builder
+
+	builder.WriteString(fmt.Sprintf("-- %s -- \n", function.Name))
+
+	for index, instruction := range function.Code {
+		if index == instructionIndex {
+			builder.WriteString(fmt.Sprintf("^^^^^^^^^^ %s\n", error))
+		}
+
+		_, _ = fmt.Fprint(&builder, instruction)
+		builder.WriteByte('\n')
+	}
+
+	fmt.Println(builder.String())
 }
