@@ -266,6 +266,8 @@ func compiledFTTransfer(tb testing.TB) {
 		WithAccountHandler(accountHandler).
 		WithInterpreterConfig(interConfig)
 
+	vmConfig = prepareVMConfig(vmConfig)
+
 	vmConfig.TypeLoader = typeLoader
 	vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 		imported, ok := programs[location]
