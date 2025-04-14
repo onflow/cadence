@@ -34,6 +34,7 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -42,9 +43,8 @@ func compiledFTTransfer(tb testing.TB) {
 	programs := map[common.Location]*compiledProgram{}
 
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
-	// TODO:
-	//senderAddress := common.MustBytesToAddress([]byte{0x2})
-	//receiverAddress := common.MustBytesToAddress([]byte{0x3})
+	senderAddress := common.MustBytesToAddress([]byte{0x2})
+	receiverAddress := common.MustBytesToAddress([]byte{0x3})
 
 	burnerLocation := common.NewAddressLocation(nil, contractsAddress, "Burner")
 	viewResolverLocation := common.NewAddressLocation(nil, contractsAddress, "ViewResolver")
@@ -64,7 +64,7 @@ func compiledFTTransfer(tb testing.TB) {
 	}
 
 	// TODO:
-	//nextTransactionLocation := NewTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 	//nextScriptLocation := NewScriptLocationGenerator()
 
 	locationHandler := newStringLocationHandler(tb, contractsAddress)
@@ -277,57 +277,51 @@ func compiledFTTransfer(tb testing.TB) {
 		return imported.Program
 	}
 
+	contractValues := make(map[common.Location]*interpreter.CompositeValue)
+	vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+		return contractValues[location]
+	}
+
 	flowTokenVM := vm.NewVM(
 		flowTokenLocation,
 		flowTokenProgram,
 		vmConfig,
 	)
 
-	_, err := flowTokenVM.InitializeContract()
+	flowTokenValue, err := flowTokenVM.InitializeContract()
 	require.NoError(tb, err)
+	contractValues[flowTokenLocation] = flowTokenValue
 
-	// TODO:
-	//// ----- Run setup account transaction -----
-	//vmConfig := vm.NewConfig(storage).
-	//	WithAccountHandler(accountHandler).
-	//	WithInterpreterConfig(interpreterEnv.NewInterpreterConfig())
-	//
-	//vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
-	//	imported, ok := programs[location]
-	//	if !ok {
-	//		return nil
-	//	}
-	//	return imported.Program
-	//}
-	//vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
-	//	switch location {
-	//	case ftLocation:
-	//		// interface
-	//		return nil
-	//	case flowTokenLocation:
-	//		return flowTokenContractValue
-	//	default:
-	//		assert.FailNow(tb, "invalid location")
-	//		return nil
-	//	}
-	//}
-	//
-	//vmConfig.TypeLoader = typeLoader
-	//
-	//for _, address := range []common.Address{
-	//	senderAddress,
-	//	receiverAddress,
-	//} {
-	//	program := parseCheckAndCompile(tb, realFlowTokenSetupAccountTransaction, nil, programs)
-	//
-	//	setupTxVM := vm.NewVM(nexTransactionLocation(), program, vmConfig)
-	//
-	//	authorizer := vm.NewAuthAccountReferenceValue(vmConfig, accountHandler, address)
-	//	err = setupTxVM.ExecuteTransaction(nil, authorizer)
-	//	require.NoError(tb, err)
-	//	require.Equal(tb, 0, setupTxVM.StackSize())
-	//}
-	//
+	// Setup accounts
+
+	for _, address := range []common.Address{
+		senderAddress,
+		receiverAddress,
+	} {
+		txLocation := nextTransactionLocation()
+
+		program := parseCheckAndCompileCodeWithOptions(
+			tb,
+			realFlowTokenSetupAccountTransaction,
+			txLocation,
+			CompilerAndVMOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: txLocation,
+					Config:   semaConfig,
+				},
+				CompilerConfig: compilerConfig,
+			},
+			programs,
+		)
+
+		setupTxVM := vm.NewVM(txLocation, program, vmConfig)
+
+		authorizer := vm.NewAuthAccountReferenceValue(vmConfig, accountHandler, address)
+		err = setupTxVM.ExecuteTransaction(nil, authorizer)
+		require.NoError(tb, err)
+		require.Equal(tb, 0, setupTxVM.StackSize())
+	}
+
 	//// Mint FLOW to sender
 	//
 	//program := parseCheckAndCompile(tb, realFlowTokenMintTokensTransaction, nil, programs)
