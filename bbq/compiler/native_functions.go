@@ -50,6 +50,7 @@ var builtinTypes = []sema.Type{
 	sema.MetaType,
 	sema.UFix64Type,
 	sema.UInt64Type,
+	sema.TheAddressType,
 
 	&sema.CapabilityType{},
 	&sema.ConstantSizedType{},

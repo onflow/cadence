@@ -322,24 +322,38 @@ func compiledFTTransfer(tb testing.TB) {
 		require.Equal(tb, 0, setupTxVM.StackSize())
 	}
 
-	//// Mint FLOW to sender
-	//
-	//program := parseCheckAndCompile(tb, realFlowTokenMintTokensTransaction, nil, programs)
-	//
-	//mintTxVM := vm.NewVM(nextTransactionLocation(), program, vmConfig)
-	//
-	//total := uint64(1000000) * sema.Fix64Factor
-	//
-	//mintTxArgs := []vm.Value{
-	//	interpreter.AddressValue(senderAddress),
-	//	interpreter.NewUnmeteredUFix64Value(total),
-	//}
-	//
-	//mintTxAuthorizer := vm.NewAuthAccountReferenceValue(vmConfig, accountHandler, contractsAddress)
-	//err = mintTxVM.ExecuteTransaction(mintTxArgs, mintTxAuthorizer)
-	//require.NoError(tb, err)
-	//require.Equal(tb, 0, mintTxVM.StackSize())
-	//
+	// Mint FLOW to sender
+
+	txLocation := nextTransactionLocation()
+
+	program := parseCheckAndCompileCodeWithOptions(
+		tb,
+		realFlowTokenMintTokensTransaction,
+		txLocation,
+		CompilerAndVMOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				Location: txLocation,
+				Config:   semaConfig,
+			},
+			CompilerConfig: compilerConfig,
+		},
+		programs,
+	)
+
+	mintTxVM := vm.NewVM(txLocation, program, vmConfig)
+
+	total := uint64(1000000) * sema.Fix64Factor
+
+	mintTxArgs := []vm.Value{
+		interpreter.AddressValue(senderAddress),
+		interpreter.NewUnmeteredUFix64Value(total),
+	}
+
+	mintTxAuthorizer := vm.NewAuthAccountReferenceValue(vmConfig, accountHandler, contractsAddress)
+	err = mintTxVM.ExecuteTransaction(mintTxArgs, mintTxAuthorizer)
+	require.NoError(tb, err)
+	require.Equal(tb, 0, mintTxVM.StackSize())
+
 	//// ----- Run token transfer transaction -----
 	//
 	//tokenTransferTxProgram := parseCheckAndCompile(tb, realFlowTokenTransferTokensTransaction, nil, programs)
