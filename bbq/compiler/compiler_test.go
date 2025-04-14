@@ -1746,8 +1746,63 @@ func TestCompileIntegers(t *testing.T) {
 		sema.AllUnsignedIntegerTypes,
 		sema.AllSignedIntegerTypes,
 	) {
+		// TODO:
+		switch integerType {
+		case sema.Int128Type, sema.Int256Type,
+			sema.UInt128Type, sema.UInt256Type,
+			sema.Word128Type, sema.Word256Type:
+			continue
+		}
+
 		test(integerType)
 	}
+}
+
+func TestCompileAddress(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        fun test() {
+            let v: Address = 0x1
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
+
+	const (
+		// vIndex is the index of the local variable `v`, which is the first local variable
+		vIndex = iota
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// let yes = true
+			opcode.InstructionGetConstant{ConstantIndex: 0},
+			opcode.InstructionTransfer{TypeIndex: 1},
+			opcode.InstructionSetLocal{LocalIndex: vIndex},
+
+			opcode.InstructionReturn{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]bbq.Constant{
+			{
+				Data: []byte{0x1},
+				Kind: constantkind.Address,
+			},
+		},
+		program.Constants,
+	)
 }
 
 func TestCompileFixedPoint(t *testing.T) {

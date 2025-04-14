@@ -30,6 +30,11 @@ type ConstantKind uint8
 const (
 	Unknown ConstantKind = iota
 	String
+	Address
+	_
+	_
+	_
+	_
 
 	// Int*
 	Int
@@ -85,6 +90,9 @@ func FromSemaType(ty sema.Type) ConstantKind {
 	switch ty {
 	case sema.StringType:
 		return String
+
+	case sema.TheAddressType:
+		return Address
 
 	// Int*
 	case sema.IntType, sema.IntegerType:

@@ -1243,32 +1243,211 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 	executable := vm.callFrame.function.Executable
 
 	constant := executable.Program.Constants[index]
-	switch constant.Kind {
+	kind := constant.Kind
+	data := constant.Data
+
+	memoryGauge := vm.config.MemoryGauge
+
+	switch kind {
+	case constantkind.String:
+		value = interpreter.NewUnmeteredStringValue(string(data))
+
 	case constantkind.Int:
-		// TODO:
-		smallInt, _, _ := leb128.ReadInt64(constant.Data)
-		value = interpreter.NewIntValueFromInt64(vm.config.MemoryGauge, smallInt)
-	case constantkind.Int64:
-		smallInt, _, _ := leb128.ReadInt64(constant.Data)
-		value = interpreter.NewInt64Value(
-			vm.config.MemoryGauge,
-			func() int64 {
-				return smallInt
+		// TODO: support larger integers
+		v, _, err := leb128.ReadInt64(data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read Int constant: %s", err))
+		}
+		value = interpreter.NewIntValueFromInt64(memoryGauge, v)
+
+	case constantkind.Int8:
+		v, _, err := leb128.ReadInt32(data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read Int8 constant: %s", err))
+		}
+		value = interpreter.NewInt8Value(
+			memoryGauge,
+			func() int8 {
+				return int8(v)
 			},
 		)
-	case constantkind.String:
-		value = interpreter.NewUnmeteredStringValue(string(constant.Data))
+
+	case constantkind.Int16:
+		v, _, err := leb128.ReadInt32(data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read Int16 constant: %s", err))
+		}
+		value = interpreter.NewInt16Value(
+			memoryGauge,
+			func() int16 {
+				return int16(v)
+			},
+		)
+
+	case constantkind.Int32:
+		v, _, err := leb128.ReadInt32(data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read Int32 constant: %s", err))
+		}
+		value = interpreter.NewInt32Value(
+			memoryGauge,
+			func() int32 {
+				return v
+			},
+		)
+
+	case constantkind.Int64:
+		v, _, err := leb128.ReadInt64(data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read Int64 constant: %s", err))
+		}
+		value = interpreter.NewInt64Value(
+			memoryGauge,
+			func() int64 {
+				return v
+			},
+		)
+
+	case constantkind.UInt:
+		// TODO: support larger integers
+		v, _, err := leb128.ReadUint64(data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read UInt constant: %s", err))
+		}
+		value = interpreter.NewUIntValueFromUint64(memoryGauge, v)
+
+	case constantkind.UInt8:
+		v, _, err := leb128.ReadUint32(data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read UInt8 constant: %s", err))
+		}
+		value = interpreter.NewUInt8Value(
+			memoryGauge,
+			func() uint8 {
+				return uint8(v)
+			},
+		)
+
+	case constantkind.UInt16:
+		v, _, err := leb128.ReadUint32(data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read UInt16 constant: %s", err))
+		}
+		value = interpreter.NewUInt16Value(
+			memoryGauge,
+			func() uint16 {
+				return uint16(v)
+			},
+		)
+
+	case constantkind.UInt32:
+		v, _, err := leb128.ReadUint32(data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read UInt32 constant: %s", err))
+		}
+		value = interpreter.NewUInt32Value(
+			memoryGauge,
+			func() uint32 {
+				return v
+			},
+		)
+
+	case constantkind.UInt64:
+		v, _, err := leb128.ReadUint64(data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read UInt64 constant: %s", err))
+		}
+		value = interpreter.NewUInt64Value(
+			memoryGauge,
+			func() uint64 {
+				return v
+			},
+		)
+
+	case constantkind.Word8:
+		v, _, err := leb128.ReadUint32(data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read Word8 constant: %s", err))
+		}
+		value = interpreter.NewWord8Value(
+			memoryGauge,
+			func() uint8 {
+				return uint8(v)
+			},
+		)
+
+	case constantkind.Word16:
+		v, _, err := leb128.ReadUint32(data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read Word16 constant: %s", err))
+		}
+		value = interpreter.NewWord16Value(
+			memoryGauge,
+			func() uint16 {
+				return uint16(v)
+			},
+		)
+
+	case constantkind.Word32:
+		v, _, err := leb128.ReadUint32(data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read Word32 constant: %s", err))
+		}
+		value = interpreter.NewWord32Value(
+			memoryGauge,
+			func() uint32 {
+				return v
+			},
+		)
+
+	case constantkind.Word64:
+		v, _, err := leb128.ReadUint64(data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read Word64 constant: %s", err))
+		}
+		value = interpreter.NewWord64Value(
+			memoryGauge,
+			func() uint64 {
+				return v
+			},
+		)
+
+	case constantkind.Fix64:
+		v, _, err := leb128.ReadInt64(data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read Fix64 constant: %s", err))
+		}
+		value = interpreter.NewUnmeteredFix64Value(v)
 
 	case constantkind.UFix64:
-		smallInt, _, _ := leb128.ReadUint64(constant.Data)
-		value = interpreter.NewUnmeteredUFix64Value(smallInt)
+		v, _, err := leb128.ReadUint64(data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read UFix64 constant: %s", err))
+		}
+		value = interpreter.NewUnmeteredUFix64Value(v)
+
+	case constantkind.Address:
+		value = interpreter.NewAddressValueFromBytes(
+			memoryGauge,
+			func() []byte {
+				return data
+			},
+		)
+
+	// TODO:
+	// case constantkind.Int128:
+	// case constantkind.Int256:
+	// case constantkind.UInt128:
+	// case constantkind.UInt256:
+	// case constantkind.Word128:
+	// case constantkind.Word256:
 
 	default:
-		// TODO:
-		panic(errors.NewUnexpectedError("unsupported constant kind '%s'", constant.Kind.String()))
+		panic(errors.NewUnexpectedError("unsupported constant kind: %s", kind))
 	}
 
 	executable.Constants[index] = value
+
 	return value
 }
 
