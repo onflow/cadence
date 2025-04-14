@@ -23,6 +23,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/bbq/opcode"
 )
 
@@ -70,7 +71,7 @@ func (p *ProgramPrinter[E, T]) printFunction(function Function[E]) {
 	}
 }
 
-func (p *ProgramPrinter[_, T]) printConstantPool(constants []Constant) {
+func (p *ProgramPrinter[_, T]) printConstantPool(constants []constant.Constant) {
 	p.stringBuilder.WriteString("-- Constant Pool --\n")
 
 	tabWriter := tabwriter.NewWriter(&p.stringBuilder, 0, 0, 1, ' ', tabwriter.AlignRight)

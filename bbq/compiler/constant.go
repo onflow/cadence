@@ -18,10 +18,12 @@
 
 package compiler
 
-import "github.com/onflow/cadence/bbq/constantkind"
+import (
+	"github.com/onflow/cadence/bbq/constant"
+)
 
-type constant struct {
+type Constant struct {
 	index uint16
 	data  []byte
-	kind  constantkind.ConstantKind
+	kind  constant.Kind
 }

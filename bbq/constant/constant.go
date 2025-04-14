@@ -16,12 +16,11 @@
  * limitations under the License.
  */
 
-package bbq
+package constant
 
 import (
 	"fmt"
 
-	"github.com/onflow/cadence/bbq/constantkind"
 	"github.com/onflow/cadence/bbq/leb128"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -29,7 +28,7 @@ import (
 
 type Constant struct {
 	Data []byte
-	Kind constantkind.ConstantKind
+	Kind Kind
 }
 
 func (c Constant) String() string {
@@ -43,108 +42,108 @@ func (c Constant) String() string {
 	)
 
 	switch kind {
-	case constantkind.String:
+	case String:
 		v = string(data)
 
-	case constantkind.Int:
+	case Int:
 		// TODO: support larger integers
 		v, _, err = leb128.ReadInt64(data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read Int constant: %s", err))
 		}
 
-	case constantkind.Int8:
+	case Int8:
 		v, _, err = leb128.ReadInt32(data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read Int8 constant: %s", err))
 		}
 
-	case constantkind.Int16:
+	case Int16:
 		v, _, err = leb128.ReadInt32(data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read Int16 constant: %s", err))
 		}
 
-	case constantkind.Int32:
+	case Int32:
 		v, _, err = leb128.ReadInt32(data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read Int32 constant: %s", err))
 		}
 
-	case constantkind.Int64:
+	case Int64:
 		v, _, err = leb128.ReadInt64(data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read Int64 constant: %s", err))
 		}
 
-	case constantkind.UInt:
+	case UInt:
 		// TODO: support larger integers
 		v, _, err = leb128.ReadUint64(data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read UInt constant: %s", err))
 		}
 
-	case constantkind.UInt8:
+	case UInt8:
 		v, _, err = leb128.ReadUint32(data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read UInt8 constant: %s", err))
 		}
 
-	case constantkind.UInt16:
+	case UInt16:
 		v, _, err = leb128.ReadUint32(data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read UInt16 constant: %s", err))
 		}
 
-	case constantkind.UInt32:
+	case UInt32:
 		v, _, err = leb128.ReadUint32(data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read UInt32 constant: %s", err))
 		}
 
-	case constantkind.UInt64:
+	case UInt64:
 		v, _, err = leb128.ReadUint64(data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read UInt64 constant: %s", err))
 		}
 
-	case constantkind.Word8:
+	case Word8:
 		v, _, err = leb128.ReadUint32(data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read Word8 constant: %s", err))
 		}
 
-	case constantkind.Word16:
+	case Word16:
 		v, _, err = leb128.ReadUint32(data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read Word16 constant: %s", err))
 		}
 
-	case constantkind.Word32:
+	case Word32:
 		v, _, err = leb128.ReadUint32(data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read Word32 constant: %s", err))
 		}
 
-	case constantkind.Word64:
+	case Word64:
 		v, _, err = leb128.ReadUint64(data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read Word64 constant: %s", err))
 		}
 
-	case constantkind.Fix64:
+	case Fix64:
 		v, _, err = leb128.ReadInt64(data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read Fix64 constant: %s", err))
 		}
 
-	case constantkind.UFix64:
+	case UFix64:
 		v, _, err = leb128.ReadUint64(data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read UFix64 constant: %s", err))
 		}
 
-	case constantkind.Address:
+	case Address:
 		v = common.MustBytesToAddress(data)
 
 	// TODO:

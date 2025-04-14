@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package constantkind
+package constant
 
 import (
 	"github.com/onflow/cadence/errors"
@@ -25,10 +25,10 @@ import (
 
 //go:generate go run golang.org/x/tools/cmd/stringer -type=ConstantKind
 
-type ConstantKind uint8
+type Kind uint8
 
 const (
-	Unknown ConstantKind = iota
+	Unknown Kind = iota
 	String
 	Address
 	_
@@ -86,7 +86,7 @@ const (
 	_ // future: UFix256
 )
 
-func FromSemaType(ty sema.Type) ConstantKind {
+func FromSemaType(ty sema.Type) Kind {
 	switch ty {
 	case sema.StringType:
 		return String

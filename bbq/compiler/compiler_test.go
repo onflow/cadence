@@ -28,7 +28,7 @@ import (
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/compiler"
-	"github.com/onflow/cadence/bbq/constantkind"
+	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/sema"
@@ -89,14 +89,14 @@ func TestCompileRecursionFib(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte{0x2},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x1},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 		},
 		program.Constants,
@@ -214,14 +214,14 @@ func TestCompileImperativeFib(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte{0x1},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x2},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 		},
 		program.Constants,
@@ -295,18 +295,18 @@ func TestCompileBreak(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte{0x0},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x3},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x1},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 		},
 		program.Constants,
@@ -384,18 +384,18 @@ func TestCompileContinue(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte{0x0},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x1},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x3},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 		},
 		program.Constants,
@@ -446,18 +446,18 @@ func TestCompileArray(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte{0x1},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x2},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x3},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 		},
 		program.Constants,
@@ -510,30 +510,30 @@ func TestCompileDictionary(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte{'a'},
-				Kind: constantkind.String,
+				Kind: constant.String,
 			},
 			{
 				Data: []byte{0x1},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{'b'},
-				Kind: constantkind.String,
+				Kind: constant.String,
 			},
 			{
 				Data: []byte{0x2},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{'c'},
-				Kind: constantkind.String,
+				Kind: constant.String,
 			},
 			{
 				Data: []byte{0x3},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 		},
 		program.Constants,
@@ -599,10 +599,10 @@ func TestCompileIfLet(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte{0x2},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 		},
 		program.Constants,
@@ -692,14 +692,14 @@ func TestCompileIfLetScope(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte{1},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 		},
 		program.Constants,
@@ -796,22 +796,22 @@ func TestCompileSwitch(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte{0x0},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x1},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x2},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x3},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 		},
 		program.Constants,
@@ -887,14 +887,14 @@ func TestSwitchBreak(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte{0x1},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x2},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 		},
 		program.Constants,
@@ -979,14 +979,14 @@ func TestWhileSwitchBreak(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte{0x0},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x1},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 		},
 		program.Constants,
@@ -1265,18 +1265,18 @@ func TestCompileNestedLoop(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte{0x0},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0xa},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x1},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 		},
 		program.Constants,
@@ -1324,14 +1324,14 @@ func TestCompileAssignLocal(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte{0x0},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x1},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 		},
 		program.Constants,
@@ -1374,10 +1374,10 @@ func TestCompileAssignGlobal(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte{0x1},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 		},
 		program.Constants,
@@ -1545,10 +1545,10 @@ func TestCompileMember(t *testing.T) {
 	}
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte("foo"),
-				Kind: constantkind.String,
+				Kind: constant.String,
 			},
 		},
 		program.Constants,
@@ -1672,10 +1672,10 @@ func TestCompileString(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte("Hello, world!"),
-				Kind: constantkind.String,
+				Kind: constant.String,
 			},
 		},
 		program.Constants,
@@ -1728,10 +1728,10 @@ func TestCompileIntegers(t *testing.T) {
 				functions[0].Code,
 			)
 
-			expectedConstantKind := constantkind.FromSemaType(integerType)
+			expectedConstantKind := constant.FromSemaType(integerType)
 
 			assert.Equal(t,
-				[]bbq.Constant{
+				[]constant.Constant{
 					{
 						Data: []byte{0x2},
 						Kind: expectedConstantKind,
@@ -1795,10 +1795,10 @@ func TestCompileAddress(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte{0x1},
-				Kind: constantkind.Address,
+				Kind: constant.Address,
 			},
 		},
 		program.Constants,
@@ -1851,7 +1851,7 @@ func TestCompileFixedPoint(t *testing.T) {
 				functions[0].Code,
 			)
 
-			expectedConstantKind := constantkind.FromSemaType(fixedPointType)
+			expectedConstantKind := constant.FromSemaType(fixedPointType)
 
 			var expectedData []byte
 			if isSigned {
@@ -1861,7 +1861,7 @@ func TestCompileFixedPoint(t *testing.T) {
 			}
 
 			assert.Equal(t,
-				[]bbq.Constant{
+				[]constant.Constant{
 					{
 						Data: expectedData,
 						Kind: expectedConstantKind,
@@ -2049,14 +2049,14 @@ func TestCompileBinary(t *testing.T) {
 			)
 
 			assert.Equal(t,
-				[]bbq.Constant{
+				[]constant.Constant{
 					{
 						Data: []byte{0x6},
-						Kind: constantkind.Int,
+						Kind: constant.Int,
 					},
 					{
 						Data: []byte{0x3},
-						Kind: constantkind.Int,
+						Kind: constant.Int,
 					},
 				},
 				program.Constants,
@@ -2136,10 +2136,10 @@ func TestCompileNilCoalesce(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte{0},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 		},
 		program.Constants,
@@ -2334,10 +2334,10 @@ func TestCompilePath(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte("foo"),
-				Kind: constantkind.String,
+				Kind: constant.String,
 			},
 		},
 		program.Constants,
@@ -2411,18 +2411,18 @@ func TestCompileBlockScope(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte{1},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{2},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{3},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 		},
 		program.Constants,
@@ -2507,18 +2507,18 @@ func TestCompileBlockScope2(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte{1},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{2},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{3},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 		},
 		program.Constants,
@@ -3392,18 +3392,18 @@ func TestCompileIf(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte{0x0},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x1},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x2},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 		},
 		program.Constants,
@@ -3453,14 +3453,14 @@ func TestCompileConditional(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte{0x1},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x2},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 		},
 		program.Constants,
@@ -4079,18 +4079,18 @@ func TestCompileFunctionExpression(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte{0x1},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x2},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x3},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 		},
 		program.Constants,
@@ -4160,18 +4160,18 @@ func TestCompileInnerFunction(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte{0x1},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x2},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x3},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 		},
 		program.Constants,
@@ -4333,14 +4333,14 @@ func TestCompileInnerFunctionOuterVariableUse(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte{0x1},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x2},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 		},
 		program.Constants,
@@ -4448,14 +4448,14 @@ func TestCompileInnerFunctionOuterOuterVariableUse(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte{0x1},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x2},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 		},
 		program.Constants,
@@ -4710,30 +4710,30 @@ func TestCompileFunctionExpressionOuterOuterVariableUse(t *testing.T) {
 	}
 
 	assert.Equal(t,
-		[]bbq.Constant{
+		[]constant.Constant{
 			{
 				Data: []byte{0x1},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x2},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x3},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x4},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x5},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 			{
 				Data: []byte{0x6},
-				Kind: constantkind.Int,
+				Kind: constant.Int,
 			},
 		},
 		program.Constants,
