@@ -35,7 +35,7 @@ func (i InstructionUnknown) Encode(code *[]byte) {
 //
 // Pushes the value of the local at the given index onto the stack.
 type InstructionGetLocal struct {
-	LocalIndex uint16
+	Local uint16
 }
 
 var _ Instruction = InstructionGetLocal{}
@@ -52,16 +52,16 @@ func (i InstructionGetLocal) String() string {
 }
 
 func (i InstructionGetLocal) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "localIndex", i.LocalIndex)
+	printfArgument(sb, "local", i.Local)
 }
 
 func (i InstructionGetLocal) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.LocalIndex)
+	emitUint16(code, i.Local)
 }
 
 func DecodeGetLocal(ip *uint16, code []byte) (i InstructionGetLocal) {
-	i.LocalIndex = decodeUint16(ip, code)
+	i.Local = decodeUint16(ip, code)
 	return i
 }
 
@@ -69,7 +69,7 @@ func DecodeGetLocal(ip *uint16, code []byte) (i InstructionGetLocal) {
 //
 // Pops a value off the stack and then sets the local at the given index to that value.
 type InstructionSetLocal struct {
-	LocalIndex uint16
+	Local uint16
 }
 
 var _ Instruction = InstructionSetLocal{}
@@ -86,16 +86,16 @@ func (i InstructionSetLocal) String() string {
 }
 
 func (i InstructionSetLocal) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "localIndex", i.LocalIndex)
+	printfArgument(sb, "local", i.Local)
 }
 
 func (i InstructionSetLocal) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.LocalIndex)
+	emitUint16(code, i.Local)
 }
 
 func DecodeSetLocal(ip *uint16, code []byte) (i InstructionSetLocal) {
-	i.LocalIndex = decodeUint16(ip, code)
+	i.Local = decodeUint16(ip, code)
 	return i
 }
 
@@ -103,7 +103,7 @@ func DecodeSetLocal(ip *uint16, code []byte) (i InstructionSetLocal) {
 //
 // Pushes the value of the upvalue at the given index onto the stack.
 type InstructionGetUpvalue struct {
-	UpvalueIndex uint16
+	Upvalue uint16
 }
 
 var _ Instruction = InstructionGetUpvalue{}
@@ -120,16 +120,16 @@ func (i InstructionGetUpvalue) String() string {
 }
 
 func (i InstructionGetUpvalue) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "upvalueIndex", i.UpvalueIndex)
+	printfArgument(sb, "upvalue", i.Upvalue)
 }
 
 func (i InstructionGetUpvalue) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.UpvalueIndex)
+	emitUint16(code, i.Upvalue)
 }
 
 func DecodeGetUpvalue(ip *uint16, code []byte) (i InstructionGetUpvalue) {
-	i.UpvalueIndex = decodeUint16(ip, code)
+	i.Upvalue = decodeUint16(ip, code)
 	return i
 }
 
@@ -137,7 +137,7 @@ func DecodeGetUpvalue(ip *uint16, code []byte) (i InstructionGetUpvalue) {
 //
 // Pops a value off the stack and then sets the upvalue at the given index to that value.
 type InstructionSetUpvalue struct {
-	UpvalueIndex uint16
+	Upvalue uint16
 }
 
 var _ Instruction = InstructionSetUpvalue{}
@@ -154,16 +154,16 @@ func (i InstructionSetUpvalue) String() string {
 }
 
 func (i InstructionSetUpvalue) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "upvalueIndex", i.UpvalueIndex)
+	printfArgument(sb, "upvalue", i.Upvalue)
 }
 
 func (i InstructionSetUpvalue) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.UpvalueIndex)
+	emitUint16(code, i.Upvalue)
 }
 
 func DecodeSetUpvalue(ip *uint16, code []byte) (i InstructionSetUpvalue) {
-	i.UpvalueIndex = decodeUint16(ip, code)
+	i.Upvalue = decodeUint16(ip, code)
 	return i
 }
 
@@ -171,7 +171,7 @@ func DecodeSetUpvalue(ip *uint16, code []byte) (i InstructionSetUpvalue) {
 //
 // Pushes the value of the global at the given index onto the stack.
 type InstructionGetGlobal struct {
-	GlobalIndex uint16
+	Global uint16
 }
 
 var _ Instruction = InstructionGetGlobal{}
@@ -188,16 +188,16 @@ func (i InstructionGetGlobal) String() string {
 }
 
 func (i InstructionGetGlobal) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "globalIndex", i.GlobalIndex)
+	printfArgument(sb, "global", i.Global)
 }
 
 func (i InstructionGetGlobal) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.GlobalIndex)
+	emitUint16(code, i.Global)
 }
 
 func DecodeGetGlobal(ip *uint16, code []byte) (i InstructionGetGlobal) {
-	i.GlobalIndex = decodeUint16(ip, code)
+	i.Global = decodeUint16(ip, code)
 	return i
 }
 
@@ -205,7 +205,7 @@ func DecodeGetGlobal(ip *uint16, code []byte) (i InstructionGetGlobal) {
 //
 // Pops a value off the stack and then sets the global at the given index to that value.
 type InstructionSetGlobal struct {
-	GlobalIndex uint16
+	Global uint16
 }
 
 var _ Instruction = InstructionSetGlobal{}
@@ -222,16 +222,16 @@ func (i InstructionSetGlobal) String() string {
 }
 
 func (i InstructionSetGlobal) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "globalIndex", i.GlobalIndex)
+	printfArgument(sb, "global", i.Global)
 }
 
 func (i InstructionSetGlobal) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.GlobalIndex)
+	emitUint16(code, i.Global)
 }
 
 func DecodeSetGlobal(ip *uint16, code []byte) (i InstructionSetGlobal) {
-	i.GlobalIndex = decodeUint16(ip, code)
+	i.Global = decodeUint16(ip, code)
 	return i
 }
 
@@ -239,7 +239,7 @@ func DecodeSetGlobal(ip *uint16, code []byte) (i InstructionSetGlobal) {
 //
 // Pops a value off the stack, the target, and then pushes the value of the field at the given index onto the stack.
 type InstructionGetField struct {
-	FieldNameIndex uint16
+	FieldName uint16
 }
 
 var _ Instruction = InstructionGetField{}
@@ -256,16 +256,16 @@ func (i InstructionGetField) String() string {
 }
 
 func (i InstructionGetField) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "fieldNameIndex", i.FieldNameIndex)
+	printfArgument(sb, "fieldName", i.FieldName)
 }
 
 func (i InstructionGetField) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.FieldNameIndex)
+	emitUint16(code, i.FieldName)
 }
 
 func DecodeGetField(ip *uint16, code []byte) (i InstructionGetField) {
-	i.FieldNameIndex = decodeUint16(ip, code)
+	i.FieldName = decodeUint16(ip, code)
 	return i
 }
 
@@ -273,7 +273,7 @@ func DecodeGetField(ip *uint16, code []byte) (i InstructionGetField) {
 //
 // Pops two values off the stack, the target and the value, and then sets the field at the given index of the target to the value.
 type InstructionSetField struct {
-	FieldNameIndex uint16
+	FieldName uint16
 }
 
 var _ Instruction = InstructionSetField{}
@@ -290,16 +290,16 @@ func (i InstructionSetField) String() string {
 }
 
 func (i InstructionSetField) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "fieldNameIndex", i.FieldNameIndex)
+	printfArgument(sb, "fieldName", i.FieldName)
 }
 
 func (i InstructionSetField) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.FieldNameIndex)
+	emitUint16(code, i.FieldName)
 }
 
 func DecodeSetField(ip *uint16, code []byte) (i InstructionSetField) {
-	i.FieldNameIndex = decodeUint16(ip, code)
+	i.FieldName = decodeUint16(ip, code)
 	return i
 }
 
@@ -417,8 +417,8 @@ func (i InstructionNil) Encode(code *[]byte) {
 //
 // Creates a new path with the given domain and identifier and then pushes it onto the stack.
 type InstructionPath struct {
-	Domain          common.PathDomain
-	IdentifierIndex uint16
+	Domain     common.PathDomain
+	Identifier uint16
 }
 
 var _ Instruction = InstructionPath{}
@@ -436,18 +436,18 @@ func (i InstructionPath) String() string {
 
 func (i InstructionPath) OperandsString(sb *strings.Builder) {
 	printfArgument(sb, "domain", i.Domain)
-	printfArgument(sb, "identifierIndex", i.IdentifierIndex)
+	printfArgument(sb, "identifier", i.Identifier)
 }
 
 func (i InstructionPath) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 	emitPathDomain(code, i.Domain)
-	emitUint16(code, i.IdentifierIndex)
+	emitUint16(code, i.Identifier)
 }
 
 func DecodePath(ip *uint16, code []byte) (i InstructionPath) {
 	i.Domain = decodePathDomain(ip, code)
-	i.IdentifierIndex = decodeUint16(ip, code)
+	i.Identifier = decodeUint16(ip, code)
 	return i
 }
 
@@ -455,8 +455,8 @@ func DecodePath(ip *uint16, code []byte) (i InstructionPath) {
 //
 // Creates a new instance of the given kind and type and then pushes it onto the stack.
 type InstructionNew struct {
-	Kind      common.CompositeKind
-	TypeIndex uint16
+	Kind common.CompositeKind
+	Type uint16
 }
 
 var _ Instruction = InstructionNew{}
@@ -474,18 +474,18 @@ func (i InstructionNew) String() string {
 
 func (i InstructionNew) OperandsString(sb *strings.Builder) {
 	printfArgument(sb, "kind", i.Kind)
-	printfArgument(sb, "typeIndex", i.TypeIndex)
+	printfArgument(sb, "type", i.Type)
 }
 
 func (i InstructionNew) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 	emitCompositeKind(code, i.Kind)
-	emitUint16(code, i.TypeIndex)
+	emitUint16(code, i.Type)
 }
 
 func DecodeNew(ip *uint16, code []byte) (i InstructionNew) {
 	i.Kind = decodeCompositeKind(ip, code)
-	i.TypeIndex = decodeUint16(ip, code)
+	i.Type = decodeUint16(ip, code)
 	return i
 }
 
@@ -493,7 +493,7 @@ func DecodeNew(ip *uint16, code []byte) (i InstructionNew) {
 //
 // Pops the given number of elements off the stack, creates a new array with the given type, size, and elements, and then pushes it onto the stack.
 type InstructionNewArray struct {
-	TypeIndex  uint16
+	Type       uint16
 	Size       uint16
 	IsResource bool
 }
@@ -512,20 +512,20 @@ func (i InstructionNewArray) String() string {
 }
 
 func (i InstructionNewArray) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "typeIndex", i.TypeIndex)
+	printfArgument(sb, "type", i.Type)
 	printfArgument(sb, "size", i.Size)
 	printfArgument(sb, "isResource", i.IsResource)
 }
 
 func (i InstructionNewArray) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.TypeIndex)
+	emitUint16(code, i.Type)
 	emitUint16(code, i.Size)
 	emitBool(code, i.IsResource)
 }
 
 func DecodeNewArray(ip *uint16, code []byte) (i InstructionNewArray) {
-	i.TypeIndex = decodeUint16(ip, code)
+	i.Type = decodeUint16(ip, code)
 	i.Size = decodeUint16(ip, code)
 	i.IsResource = decodeBool(ip, code)
 	return i
@@ -535,7 +535,7 @@ func DecodeNewArray(ip *uint16, code []byte) (i InstructionNewArray) {
 //
 // Pops the given number of entries off the stack (twice the number of the given size), creates a new dictionary with the given type, size, and entries, and then pushes it onto the stack.
 type InstructionNewDictionary struct {
-	TypeIndex  uint16
+	Type       uint16
 	Size       uint16
 	IsResource bool
 }
@@ -554,20 +554,20 @@ func (i InstructionNewDictionary) String() string {
 }
 
 func (i InstructionNewDictionary) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "typeIndex", i.TypeIndex)
+	printfArgument(sb, "type", i.Type)
 	printfArgument(sb, "size", i.Size)
 	printfArgument(sb, "isResource", i.IsResource)
 }
 
 func (i InstructionNewDictionary) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.TypeIndex)
+	emitUint16(code, i.Type)
 	emitUint16(code, i.Size)
 	emitBool(code, i.IsResource)
 }
 
 func DecodeNewDictionary(ip *uint16, code []byte) (i InstructionNewDictionary) {
-	i.TypeIndex = decodeUint16(ip, code)
+	i.Type = decodeUint16(ip, code)
 	i.Size = decodeUint16(ip, code)
 	i.IsResource = decodeBool(ip, code)
 	return i
@@ -577,7 +577,7 @@ func DecodeNewDictionary(ip *uint16, code []byte) (i InstructionNewDictionary) {
 //
 // Pops a value off the stack, creates a new reference with the given type, and then pushes it onto the stack.
 type InstructionNewRef struct {
-	TypeIndex  uint16
+	Type       uint16
 	IsImplicit bool
 }
 
@@ -595,18 +595,18 @@ func (i InstructionNewRef) String() string {
 }
 
 func (i InstructionNewRef) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "typeIndex", i.TypeIndex)
+	printfArgument(sb, "type", i.Type)
 	printfArgument(sb, "isImplicit", i.IsImplicit)
 }
 
 func (i InstructionNewRef) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.TypeIndex)
+	emitUint16(code, i.Type)
 	emitBool(code, i.IsImplicit)
 }
 
 func DecodeNewRef(ip *uint16, code []byte) (i InstructionNewRef) {
-	i.TypeIndex = decodeUint16(ip, code)
+	i.Type = decodeUint16(ip, code)
 	i.IsImplicit = decodeBool(ip, code)
 	return i
 }
@@ -615,7 +615,7 @@ func DecodeNewRef(ip *uint16, code []byte) (i InstructionNewRef) {
 //
 // Pushes the constant at the given index onto the stack.
 type InstructionGetConstant struct {
-	ConstantIndex uint16
+	Constant uint16
 }
 
 var _ Instruction = InstructionGetConstant{}
@@ -632,16 +632,16 @@ func (i InstructionGetConstant) String() string {
 }
 
 func (i InstructionGetConstant) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "constantIndex", i.ConstantIndex)
+	printfArgument(sb, "constant", i.Constant)
 }
 
 func (i InstructionGetConstant) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.ConstantIndex)
+	emitUint16(code, i.Constant)
 }
 
 func DecodeGetConstant(ip *uint16, code []byte) (i InstructionGetConstant) {
-	i.ConstantIndex = decodeUint16(ip, code)
+	i.Constant = decodeUint16(ip, code)
 	return i
 }
 
@@ -649,8 +649,8 @@ func DecodeGetConstant(ip *uint16, code []byte) (i InstructionGetConstant) {
 //
 // Creates a new closure with the function at the given index and pushes it onto the stack.
 type InstructionNewClosure struct {
-	FunctionIndex uint16
-	Upvalues      []Upvalue
+	Function uint16
+	Upvalues []Upvalue
 }
 
 var _ Instruction = InstructionNewClosure{}
@@ -667,18 +667,18 @@ func (i InstructionNewClosure) String() string {
 }
 
 func (i InstructionNewClosure) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "functionIndex", i.FunctionIndex)
+	printfArgument(sb, "function", i.Function)
 	printfUpvalueArrayArgument(sb, "upvalues", i.Upvalues)
 }
 
 func (i InstructionNewClosure) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.FunctionIndex)
+	emitUint16(code, i.Function)
 	emitUpvalueArray(code, i.Upvalues)
 }
 
 func DecodeNewClosure(ip *uint16, code []byte) (i InstructionNewClosure) {
-	i.FunctionIndex = decodeUint16(ip, code)
+	i.Function = decodeUint16(ip, code)
 	i.Upvalues = decodeUpvalueArray(ip, code)
 	return i
 }
@@ -721,9 +721,9 @@ func DecodeInvoke(ip *uint16, code []byte) (i InstructionInvoke) {
 //
 // Pops the arguments off the stack, invokes the function with the given name and argument count, and then pushes the result back on to the stack.
 type InstructionInvokeDynamic struct {
-	NameIndex uint16
-	TypeArgs  []uint16
-	ArgCount  uint16
+	Name     uint16
+	TypeArgs []uint16
+	ArgCount uint16
 }
 
 var _ Instruction = InstructionInvokeDynamic{}
@@ -740,20 +740,20 @@ func (i InstructionInvokeDynamic) String() string {
 }
 
 func (i InstructionInvokeDynamic) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "nameIndex", i.NameIndex)
+	printfArgument(sb, "name", i.Name)
 	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs)
 	printfArgument(sb, "argCount", i.ArgCount)
 }
 
 func (i InstructionInvokeDynamic) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.NameIndex)
+	emitUint16(code, i.Name)
 	emitUint16Array(code, i.TypeArgs)
 	emitUint16(code, i.ArgCount)
 }
 
 func DecodeInvokeDynamic(ip *uint16, code []byte) (i InstructionInvokeDynamic) {
-	i.NameIndex = decodeUint16(ip, code)
+	i.Name = decodeUint16(ip, code)
 	i.TypeArgs = decodeUint16Array(ip, code)
 	i.ArgCount = decodeUint16(ip, code)
 	return i
@@ -851,7 +851,7 @@ func (i InstructionUnwrap) Encode(code *[]byte) {
 //
 // Pops a value off the stack, transfers it to the given type, and then pushes it back on to the stack.
 type InstructionTransfer struct {
-	TypeIndex uint16
+	Type uint16
 }
 
 var _ Instruction = InstructionTransfer{}
@@ -867,17 +867,15 @@ func (i InstructionTransfer) String() string {
 	return sb.String()
 }
 
-func (i InstructionTransfer) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "typeIndex", i.TypeIndex)
-}
+func (i InstructionTransfer) OperandsString(sb *strings.Builder) { printfArgument(sb, "type", i.Type) }
 
 func (i InstructionTransfer) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.TypeIndex)
+	emitUint16(code, i.Type)
 }
 
 func DecodeTransfer(ip *uint16, code []byte) (i InstructionTransfer) {
-	i.TypeIndex = decodeUint16(ip, code)
+	i.Type = decodeUint16(ip, code)
 	return i
 }
 
@@ -885,7 +883,7 @@ func DecodeTransfer(ip *uint16, code []byte) (i InstructionTransfer) {
 //
 // Pops a value off the stack, casts it to the given type, and then pushes it back on to the stack.
 type InstructionSimpleCast struct {
-	TypeIndex uint16
+	Type uint16
 }
 
 var _ Instruction = InstructionSimpleCast{}
@@ -902,16 +900,16 @@ func (i InstructionSimpleCast) String() string {
 }
 
 func (i InstructionSimpleCast) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "typeIndex", i.TypeIndex)
+	printfArgument(sb, "type", i.Type)
 }
 
 func (i InstructionSimpleCast) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.TypeIndex)
+	emitUint16(code, i.Type)
 }
 
 func DecodeSimpleCast(ip *uint16, code []byte) (i InstructionSimpleCast) {
-	i.TypeIndex = decodeUint16(ip, code)
+	i.Type = decodeUint16(ip, code)
 	return i
 }
 
@@ -919,7 +917,7 @@ func DecodeSimpleCast(ip *uint16, code []byte) (i InstructionSimpleCast) {
 //
 // Pops a value off the stack and casts it to the given type. If the value is a subtype of the given type, then casted value is pushed back on to the stack. If the value is not a subtype of the given type, then a `nil` is pushed to the stack instead.
 type InstructionFailableCast struct {
-	TypeIndex uint16
+	Type uint16
 }
 
 var _ Instruction = InstructionFailableCast{}
@@ -936,16 +934,16 @@ func (i InstructionFailableCast) String() string {
 }
 
 func (i InstructionFailableCast) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "typeIndex", i.TypeIndex)
+	printfArgument(sb, "type", i.Type)
 }
 
 func (i InstructionFailableCast) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.TypeIndex)
+	emitUint16(code, i.Type)
 }
 
 func DecodeFailableCast(ip *uint16, code []byte) (i InstructionFailableCast) {
-	i.TypeIndex = decodeUint16(ip, code)
+	i.Type = decodeUint16(ip, code)
 	return i
 }
 
@@ -953,7 +951,7 @@ func DecodeFailableCast(ip *uint16, code []byte) (i InstructionFailableCast) {
 //
 // Pops a value off the stack, force-casts it to the given type, and then pushes it back on to the stack. Panics if the value is not a subtype of the given type.
 type InstructionForceCast struct {
-	TypeIndex uint16
+	Type uint16
 }
 
 var _ Instruction = InstructionForceCast{}
@@ -969,17 +967,15 @@ func (i InstructionForceCast) String() string {
 	return sb.String()
 }
 
-func (i InstructionForceCast) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "typeIndex", i.TypeIndex)
-}
+func (i InstructionForceCast) OperandsString(sb *strings.Builder) { printfArgument(sb, "type", i.Type) }
 
 func (i InstructionForceCast) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.TypeIndex)
+	emitUint16(code, i.Type)
 }
 
 func DecodeForceCast(ip *uint16, code []byte) (i InstructionForceCast) {
-	i.TypeIndex = decodeUint16(ip, code)
+	i.Type = decodeUint16(ip, code)
 	return i
 }
 
@@ -1649,7 +1645,7 @@ func (i InstructionIteratorNext) Encode(code *[]byte) {
 //
 // Pops an event off the stack and then emits it.
 type InstructionEmitEvent struct {
-	TypeIndex uint16
+	Type uint16
 }
 
 var _ Instruction = InstructionEmitEvent{}
@@ -1665,17 +1661,15 @@ func (i InstructionEmitEvent) String() string {
 	return sb.String()
 }
 
-func (i InstructionEmitEvent) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "typeIndex", i.TypeIndex)
-}
+func (i InstructionEmitEvent) OperandsString(sb *strings.Builder) { printfArgument(sb, "type", i.Type) }
 
 func (i InstructionEmitEvent) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.TypeIndex)
+	emitUint16(code, i.Type)
 }
 
 func DecodeEmitEvent(ip *uint16, code []byte) (i InstructionEmitEvent) {
-	i.TypeIndex = decodeUint16(ip, code)
+	i.Type = decodeUint16(ip, code)
 	return i
 }
 

@@ -57,23 +57,23 @@ func TestPrintRecursionFib(t *testing.T) {
 		byte(ReturnValue),
 	}
 
-	const expected = `  0 |    GetLocal | localIndex:0
-  1 | GetConstant | constantIndex:0
+	const expected = `  0 |    GetLocal | local:0
+  1 | GetConstant | constant:0
   2 |        Less |
   3 | JumpIfFalse | target:14
-  4 |    GetLocal | localIndex:0
+  4 |    GetLocal | local:0
   5 | ReturnValue |
-  6 |    GetLocal | localIndex:0
-  7 | GetConstant | constantIndex:1
+  6 |    GetLocal | local:0
+  7 | GetConstant | constant:1
   8 |    Subtract |
-  9 |    Transfer | typeIndex:0
- 10 |   GetGlobal | globalIndex:0
+  9 |    Transfer | type:0
+ 10 |   GetGlobal | global:0
  11 |      Invoke | typeArgs:[]
- 12 |    GetLocal | localIndex:0
- 13 | GetConstant | constantIndex:0
+ 12 |    GetLocal | local:0
+ 13 | GetConstant | constant:0
  14 |    Subtract |
- 15 |    Transfer | typeIndex:0
- 16 |   GetGlobal | globalIndex:0
+ 15 |    Transfer | type:0
+ 16 |   GetGlobal | global:0
  17 |      Invoke | typeArgs:[]
  18 |         Add |
  19 | ReturnValue |
@@ -91,30 +91,30 @@ func TestPrintInstruction(t *testing.T) {
 	t.Parallel()
 
 	instructions := map[string][]byte{
-		"GetConstant constantIndex:258": {byte(GetConstant), 1, 2},
-		"GetLocal localIndex:258":       {byte(GetLocal), 1, 2},
-		"SetLocal localIndex:258":       {byte(SetLocal), 1, 2},
-		"GetUpvalue upvalueIndex:258":   {byte(GetUpvalue), 1, 2},
-		"SetUpvalue upvalueIndex:258":   {byte(SetUpvalue), 1, 2},
-		"GetGlobal globalIndex:258":     {byte(GetGlobal), 1, 2},
-		"SetGlobal globalIndex:258":     {byte(SetGlobal), 1, 2},
+		"GetConstant constant:258": {byte(GetConstant), 1, 2},
+		"GetLocal local:258":       {byte(GetLocal), 1, 2},
+		"SetLocal local:258":       {byte(SetLocal), 1, 2},
+		"GetUpvalue upvalue:258":   {byte(GetUpvalue), 1, 2},
+		"SetUpvalue upvalue:258":   {byte(SetUpvalue), 1, 2},
+		"GetGlobal global:258":     {byte(GetGlobal), 1, 2},
+		"SetGlobal global:258":     {byte(SetGlobal), 1, 2},
 
 		"Jump target:258":        {byte(Jump), 1, 2},
 		"JumpIfFalse target:258": {byte(JumpIfFalse), 1, 2},
 		"JumpIfTrue target:258":  {byte(JumpIfTrue), 1, 2},
 		"JumpIfNil target:258":   {byte(JumpIfNil), 1, 2},
 
-		"Transfer typeIndex:258": {byte(Transfer), 1, 2},
+		"Transfer type:258": {byte(Transfer), 1, 2},
 
-		"New kind:CompositeKind(258) typeIndex:772": {byte(New), 1, 2, 3, 4},
+		"New kind:CompositeKind(258) type:772": {byte(New), 1, 2, 3, 4},
 
-		"SimpleCast typeIndex:258":   {byte(SimpleCast), 1, 2, 3},
-		"FailableCast typeIndex:258": {byte(FailableCast), 1, 2, 3},
-		"ForceCast typeIndex:258":    {byte(ForceCast), 1, 2, 3},
+		"SimpleCast type:258":   {byte(SimpleCast), 1, 2, 3},
+		"FailableCast type:258": {byte(FailableCast), 1, 2, 3},
+		"ForceCast type:258":    {byte(ForceCast), 1, 2, 3},
 
-		`Path domain:PathDomainStorage identifierIndex:5`: {byte(Path), 1, 0, 5},
+		`Path domain:PathDomainStorage identifier:5`: {byte(Path), 1, 0, 5},
 
-		`InvokeDynamic nameIndex:1 typeArgs:[772, 1286] argCount:1800`: {
+		`InvokeDynamic name:1 typeArgs:[772, 1286] argCount:1800`: {
 			byte(InvokeDynamic), 0, 1, 0, 2, 3, 4, 5, 6, 7, 8,
 		},
 
@@ -122,13 +122,13 @@ func TestPrintInstruction(t *testing.T) {
 			byte(Invoke), 0, 2, 3, 4, 5, 6,
 		},
 
-		"NewRef typeIndex:258 isImplicit:true": {byte(NewRef), 1, 2, 1},
-		"Deref":                                {byte(Deref)},
+		"NewRef type:258 isImplicit:true": {byte(NewRef), 1, 2, 1},
+		"Deref":                           {byte(Deref)},
 
-		"NewArray typeIndex:258 size:772 isResource:true":      {byte(NewArray), 1, 2, 3, 4, 1},
-		"NewDictionary typeIndex:258 size:772 isResource:true": {byte(NewDictionary), 1, 2, 3, 4, 1},
+		"NewArray type:258 size:772 isResource:true":      {byte(NewArray), 1, 2, 3, 4, 1},
+		"NewDictionary type:258 size:772 isResource:true": {byte(NewDictionary), 1, 2, 3, 4, 1},
 
-		"NewClosure functionIndex:258 upvalues:[targetIndex:772 isLocal:false, targetIndex:1543 isLocal:true]": {
+		"NewClosure function:258 upvalues:[targetIndex:772 isLocal:false, targetIndex:1543 isLocal:true]": {
 			byte(NewClosure), 1, 2, 0, 2, 3, 4, 0, 6, 7, 1,
 		},
 
@@ -151,18 +151,18 @@ func TestPrintInstruction(t *testing.T) {
 		"Equal":    {byte(Equal)},
 		"NotEqual": {byte(NotEqual)},
 
-		"Unwrap":                      {byte(Unwrap)},
-		"Destroy":                     {byte(Destroy)},
-		"True":                        {byte(True)},
-		"False":                       {byte(False)},
-		"Nil":                         {byte(Nil)},
-		"GetField fieldNameIndex:258": {byte(GetField), 1, 2},
-		"SetField fieldNameIndex:258": {byte(SetField), 1, 2},
-		"SetIndex":                    {byte(SetIndex)},
-		"GetIndex":                    {byte(GetIndex)},
-		"Drop":                        {byte(Drop)},
-		"Dup":                         {byte(Dup)},
-		"Not":                         {byte(Not)},
+		"Unwrap":                 {byte(Unwrap)},
+		"Destroy":                {byte(Destroy)},
+		"True":                   {byte(True)},
+		"False":                  {byte(False)},
+		"Nil":                    {byte(Nil)},
+		"GetField fieldName:258": {byte(GetField), 1, 2},
+		"SetField fieldName:258": {byte(SetField), 1, 2},
+		"SetIndex":               {byte(SetIndex)},
+		"GetIndex":               {byte(GetIndex)},
+		"Drop":                   {byte(Drop)},
+		"Dup":                    {byte(Dup)},
+		"Not":                    {byte(Not)},
 
 		"BitwiseOr":         {byte(BitwiseOr)},
 		"BitwiseAnd":        {byte(BitwiseAnd)},
@@ -174,7 +174,7 @@ func TestPrintInstruction(t *testing.T) {
 		"IteratorHasNext": {byte(IteratorHasNext)},
 		"IteratorNext":    {byte(IteratorNext)},
 
-		"EmitEvent typeIndex:258": {byte(EmitEvent), 1, 2},
+		"EmitEvent type:258": {byte(EmitEvent), 1, 2},
 	}
 
 	// Check if there is any opcode that is not tested

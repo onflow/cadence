@@ -536,26 +536,30 @@ func opFalse(vm *VM) {
 }
 
 func opGetConstant(vm *VM, ins opcode.InstructionGetConstant) {
-	constant := vm.callFrame.function.Executable.Constants[ins.ConstantIndex]
+	constantIndex := ins.Constant
+	constant := vm.callFrame.function.Executable.Constants[constantIndex]
 	if constant == nil {
-		constant = vm.initializeConstant(ins.ConstantIndex)
+		constant = vm.initializeConstant(constantIndex)
 	}
 	vm.push(constant)
 }
 
 func opGetLocal(vm *VM, ins opcode.InstructionGetLocal) {
-	absoluteIndex := vm.callFrame.localsOffset + ins.LocalIndex
+	localIndex := ins.Local
+	absoluteIndex := vm.callFrame.localsOffset + localIndex
 	local := vm.locals[absoluteIndex]
 	vm.push(local)
 }
 
 func opSetLocal(vm *VM, ins opcode.InstructionSetLocal) {
-	absoluteIndex := vm.callFrame.localsOffset + ins.LocalIndex
+	localIndex := ins.Local
+	absoluteIndex := vm.callFrame.localsOffset + localIndex
 	vm.locals[absoluteIndex] = vm.pop()
 }
 
 func opGetUpvalue(vm *VM, ins opcode.InstructionGetUpvalue) {
-	upvalue := vm.callFrame.function.Upvalues[ins.UpvalueIndex]
+	upvalueIndex := ins.Upvalue
+	upvalue := vm.callFrame.function.Upvalues[upvalueIndex]
 	value := upvalue.closed
 	if value == nil {
 		value = vm.locals[upvalue.absoluteLocalsIndex]
@@ -564,7 +568,8 @@ func opGetUpvalue(vm *VM, ins opcode.InstructionGetUpvalue) {
 }
 
 func opSetUpvalue(vm *VM, ins opcode.InstructionSetUpvalue) {
-	upvalue := vm.callFrame.function.Upvalues[ins.UpvalueIndex]
+	upvalueIndex := ins.Upvalue
+	upvalue := vm.callFrame.function.Upvalues[upvalueIndex]
 	value := vm.pop()
 	if upvalue.closed == nil {
 		vm.locals[upvalue.absoluteLocalsIndex] = value
@@ -574,12 +579,17 @@ func opSetUpvalue(vm *VM, ins opcode.InstructionSetUpvalue) {
 }
 
 func opGetGlobal(vm *VM, ins opcode.InstructionGetGlobal) {
-	value := vm.callFrame.function.Executable.Globals[ins.GlobalIndex]
+	globalIndex := ins.Global
+	globals := vm.callFrame.function.Executable.Globals
+	value := globals[globalIndex]
 	vm.push(value)
 }
 
 func opSetGlobal(vm *VM, ins opcode.InstructionSetGlobal) {
-	vm.callFrame.function.Executable.Globals[ins.GlobalIndex] = vm.pop()
+	globalIndex := ins.Global
+	globals := vm.callFrame.function.Executable.Globals
+	value := vm.pop()
+	globals[globalIndex] = value
 }
 
 func opSetIndex(vm *VM) {
@@ -662,7 +672,8 @@ func opInvokeDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
 	// TODO: for inclusive range, this is different.
 	compositeType := staticType.(*interpreter.CompositeStaticType)
 
-	funcName := getStringConstant(vm, ins.NameIndex)
+	nameIndex := ins.Name
+	funcName := getStringConstant(vm, nameIndex)
 
 	qualifiedFuncName := commons.TypeQualifiedName(compositeType.QualifiedIdentifier, funcName)
 	var functionValue = vm.lookupFunction(compositeType.Location, qualifiedFuncName)
@@ -688,7 +699,8 @@ func opNew(vm *VM, ins opcode.InstructionNew) {
 	compositeKind := ins.Kind
 
 	// decode location
-	staticType := vm.loadType(ins.TypeIndex)
+	typeIndex := ins.Type
+	staticType := vm.loadType(typeIndex)
 
 	// TODO: Support inclusive-range type
 	compositeStaticType := staticType.(*interpreter.CompositeStaticType)
@@ -715,7 +727,8 @@ func opSetField(vm *VM, ins opcode.InstructionSetField) {
 	target, fieldValue := vm.pop2()
 
 	// VM assumes the field name is always a string.
-	fieldName := getStringConstant(vm, ins.FieldNameIndex)
+	fieldNameIndex := ins.FieldName
+	fieldName := getStringConstant(vm, fieldNameIndex)
 
 	target.(interpreter.MemberAccessibleValue).
 		SetMember(vm.config, EmptyLocationRange, fieldName, fieldValue)
@@ -725,7 +738,8 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 	memberAccessibleValue := vm.pop().(interpreter.MemberAccessibleValue)
 
 	// VM assumes the field name is always a string.
-	fieldName := getStringConstant(vm, ins.FieldNameIndex)
+	fieldNameIndex := ins.FieldName
+	fieldName := getStringConstant(vm, fieldNameIndex)
 
 	fieldValue := memberAccessibleValue.GetMember(vm.config, EmptyLocationRange, fieldName)
 	if fieldValue == nil {
@@ -744,7 +758,8 @@ func getStringConstant(vm *VM, index uint16) string {
 }
 
 func opTransfer(vm *VM, ins opcode.InstructionTransfer) {
-	targetType := vm.loadType(ins.TypeIndex)
+	typeIndex := ins.Type
+	targetType := vm.loadType(typeIndex)
 	value := vm.peek()
 
 	config := vm.config
@@ -780,7 +795,8 @@ func opDestroy(vm *VM) {
 }
 
 func opPath(vm *VM, ins opcode.InstructionPath) {
-	identifier := getStringConstant(vm, ins.IdentifierIndex)
+	identifierIndex := ins.Identifier
+	identifier := getStringConstant(vm, identifierIndex)
 	value := interpreter.NewPathValue(
 		vm.config.MemoryGauge,
 		ins.Domain,
@@ -792,7 +808,8 @@ func opPath(vm *VM, ins opcode.InstructionPath) {
 func opSimpleCast(vm *VM, ins opcode.InstructionSimpleCast) {
 	value := vm.pop()
 
-	targetType := vm.loadType(ins.TypeIndex)
+	typeIndex := ins.Type
+	targetType := vm.loadType(typeIndex)
 	valueType := value.StaticType(vm.config)
 
 	// The cast may upcast to an optional type, e.g. `1 as Int?`, so box
@@ -804,8 +821,11 @@ func opSimpleCast(vm *VM, ins opcode.InstructionSimpleCast) {
 func opFailableCast(vm *VM, ins opcode.InstructionFailableCast) {
 	value := vm.pop()
 
-	targetType := vm.loadType(ins.TypeIndex)
+	typeIndex := ins.Type
+	targetType := vm.loadType(typeIndex)
+
 	value, valueType := castValueAndValueType(vm.config, targetType, value)
+
 	isSubType := vm.config.IsSubType(valueType, targetType)
 
 	var result Value
@@ -831,8 +851,11 @@ func opFailableCast(vm *VM, ins opcode.InstructionFailableCast) {
 func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 	value := vm.pop()
 
-	targetType := vm.loadType(ins.TypeIndex)
+	typeIndex := ins.Type
+	targetType := vm.loadType(typeIndex)
+
 	value, valueType := castValueAndValueType(vm.config, targetType, value)
+
 	isSubType := vm.config.IsSubType(valueType, targetType)
 
 	var result Value
@@ -921,7 +944,8 @@ func opUnwrap(vm *VM) {
 }
 
 func opNewArray(vm *VM, ins opcode.InstructionNewArray) {
-	typ := vm.loadType(ins.TypeIndex).(interpreter.ArrayStaticType)
+	typeIndex := ins.Type
+	typ := vm.loadType(typeIndex).(interpreter.ArrayStaticType)
 
 	elements := vm.peekN(int(ins.Size))
 	array := interpreter.NewArrayValue(
@@ -942,7 +966,8 @@ func opNewArray(vm *VM, ins opcode.InstructionNewArray) {
 }
 
 func opNewDictionary(vm *VM, ins opcode.InstructionNewDictionary) {
-	typ := vm.loadType(ins.TypeIndex).(*interpreter.DictionaryStaticType)
+	typeIndex := ins.Type
+	typ := vm.loadType(typeIndex).(*interpreter.DictionaryStaticType)
 
 	entries := vm.peekN(int(ins.Size * 2))
 	dictionary := interpreter.NewDictionaryValue(
@@ -957,7 +982,8 @@ func opNewDictionary(vm *VM, ins opcode.InstructionNewDictionary) {
 }
 
 func opNewRef(vm *VM, ins opcode.InstructionNewRef) {
-	borrowedType := vm.loadType(ins.TypeIndex)
+	typeIndex := ins.Type
+	borrowedType := vm.loadType(typeIndex)
 	value := vm.pop()
 
 	semaBorrowedType := interpreter.MustConvertStaticToSemaType(borrowedType, vm.config)
@@ -1181,7 +1207,8 @@ func onEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
 		return
 	}
 
-	eventType := vm.loadType(ins.TypeIndex).(*interpreter.CompositeStaticType)
+	typeIndex := ins.Type
+	eventType := vm.loadType(typeIndex).(*interpreter.CompositeStaticType)
 
 	err := onEventEmitted(eventValue, eventType)
 	if err != nil {
@@ -1192,7 +1219,8 @@ func onEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
 func opNewClosure(vm *VM, ins opcode.InstructionNewClosure) {
 
 	executable := vm.callFrame.function.Executable
-	function := &executable.Program.Functions[ins.FunctionIndex]
+	functionIndex := ins.Function
+	function := &executable.Program.Functions[functionIndex]
 
 	var upvalues []*Upvalue
 	upvalueCount := len(ins.Upvalues)

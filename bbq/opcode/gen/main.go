@@ -34,7 +34,13 @@ type operandType string
 
 const (
 	operandTypeBool          = "bool"
-	operandTypeIndex         = "index"
+	operandTypeLocalIndex    = "localIndex"
+	operandTypeGlobalIndex   = "globalIndex"
+	operandTypeTypeIndex     = "typeIndex"
+	operandTypeConstantIndex = "constantIndex"
+	operandTypeFunctionIndex = "functionIndex"
+	operandTypeUpvalueIndex  = "upvalueIndex"
+	operandTypeOffset        = "offset"
 	operandTypeIndices       = "indices"
 	operandTypeSize          = "size"
 	operandTypeCastKind      = "castKind"
@@ -290,7 +296,13 @@ func instructionOperandsFields(ins instruction) *dst.FieldList {
 		case operandTypeBool:
 			typeExpr = dst.NewIdent("bool")
 
-		case operandTypeIndex,
+		case operandTypeLocalIndex,
+			operandTypeGlobalIndex,
+			operandTypeTypeIndex,
+			operandTypeConstantIndex,
+			operandTypeFunctionIndex,
+			operandTypeUpvalueIndex,
+			operandTypeOffset,
 			operandTypeSize:
 
 			typeExpr = dst.NewIdent("uint16")
@@ -644,14 +656,18 @@ func instructionEncodeFuncDecl(ins instruction) *dst.FuncDecl {
 		case operandTypeBool:
 			funcName = "emitBool"
 
-		case operandTypeIndex:
+		case operandTypeLocalIndex,
+			operandTypeGlobalIndex,
+			operandTypeTypeIndex,
+			operandTypeConstantIndex,
+			operandTypeFunctionIndex,
+			operandTypeUpvalueIndex,
+			operandTypeOffset,
+			operandTypeSize:
 			funcName = "emitUint16"
 
 		case operandTypeIndices:
 			funcName = "emitUint16Array"
-
-		case operandTypeSize:
-			funcName = "emitUint16"
 
 		case operandTypeCastKind:
 			funcName = "emitCastKind"
@@ -740,14 +756,18 @@ func instructionDecodeFuncDecl(ins instruction) *dst.FuncDecl {
 		case operandTypeBool:
 			funcName = "decodeBool"
 
-		case operandTypeIndex:
+		case operandTypeLocalIndex,
+			operandTypeGlobalIndex,
+			operandTypeTypeIndex,
+			operandTypeConstantIndex,
+			operandTypeFunctionIndex,
+			operandTypeUpvalueIndex,
+			operandTypeOffset,
+			operandTypeSize:
 			funcName = "decodeUint16"
 
 		case operandTypeIndices:
 			funcName = "decodeUint16Array"
-
-		case operandTypeSize:
-			funcName = "decodeUint16"
 
 		case operandTypeCastKind:
 			funcName = "decodeCastKind"
