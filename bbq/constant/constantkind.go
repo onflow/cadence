@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=ConstantKind
+//go:generate go run golang.org/x/tools/cmd/stringer -type=Kind
 
 type Kind uint8
 
