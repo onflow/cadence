@@ -57,26 +57,27 @@ func TestPrintRecursionFib(t *testing.T) {
 		byte(ReturnValue),
 	}
 
-	const expected = `GetLocal localIndex:0
-GetConstant constantIndex:0
-Less
-JumpIfFalse target:14
-GetLocal localIndex:0
-ReturnValue
-GetLocal localIndex:0
-GetConstant constantIndex:1
-Subtract
-Transfer typeIndex:0
-GetGlobal globalIndex:0
-Invoke typeArgs:[]
-GetLocal localIndex:0
-GetConstant constantIndex:0
-Subtract
-Transfer typeIndex:0
-GetGlobal globalIndex:0
-Invoke typeArgs:[]
-Add
-ReturnValue
+	const expected = `  0 |    GetLocal | localIndex:0
+  1 | GetConstant | constantIndex:0
+  2 |        Less |
+  3 | JumpIfFalse | target:14
+  4 |    GetLocal | localIndex:0
+  5 | ReturnValue |
+  6 |    GetLocal | localIndex:0
+  7 | GetConstant | constantIndex:1
+  8 |    Subtract |
+  9 |    Transfer | typeIndex:0
+ 10 |   GetGlobal | globalIndex:0
+ 11 |      Invoke | typeArgs:[]
+ 12 |    GetLocal | localIndex:0
+ 13 | GetConstant | constantIndex:0
+ 14 |    Subtract |
+ 15 |    Transfer | typeIndex:0
+ 16 |   GetGlobal | globalIndex:0
+ 17 |      Invoke | typeArgs:[]
+ 18 |         Add |
+ 19 | ReturnValue |
+
 `
 
 	var builder strings.Builder
