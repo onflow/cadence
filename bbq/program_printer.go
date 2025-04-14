@@ -23,12 +23,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/onflow/cadence/common"
-
-	"github.com/onflow/cadence/bbq/constantkind"
-	"github.com/onflow/cadence/bbq/leb128"
 	"github.com/onflow/cadence/bbq/opcode"
-	"github.com/onflow/cadence/errors"
 )
 
 type ProgramPrinter[E, T any] struct {
@@ -81,134 +76,13 @@ func (p *ProgramPrinter[_, T]) printConstantPool(constants []Constant) {
 	tabWriter := tabwriter.NewWriter(&p.stringBuilder, 0, 0, 1, ' ', tabwriter.AlignRight)
 
 	for index, constant := range constants {
-
-		// TODO: duplicate of `VM.initializeConstant()`
-		kind := constant.Kind
-		data := constant.Data
-
-		var (
-			v   any
-			err error
+		_, _ = fmt.Fprintf(
+			tabWriter,
+			"%d |\t%s |\t %s\n",
+			index,
+			constant.Kind,
+			constant,
 		)
-
-		switch kind {
-		case constantkind.String:
-			v = string(data)
-
-		case constantkind.Int:
-			// TODO: support larger integers
-			v, _, err = leb128.ReadInt64(data)
-			if err != nil {
-				panic(errors.NewUnexpectedError("failed to read Int constant: %s", err))
-			}
-
-		case constantkind.Int8:
-			v, _, err = leb128.ReadInt32(data)
-			if err != nil {
-				panic(errors.NewUnexpectedError("failed to read Int8 constant: %s", err))
-			}
-
-		case constantkind.Int16:
-			v, _, err = leb128.ReadInt32(data)
-			if err != nil {
-				panic(errors.NewUnexpectedError("failed to read Int16 constant: %s", err))
-			}
-
-		case constantkind.Int32:
-			v, _, err = leb128.ReadInt32(data)
-			if err != nil {
-				panic(errors.NewUnexpectedError("failed to read Int32 constant: %s", err))
-			}
-
-		case constantkind.Int64:
-			v, _, err = leb128.ReadInt64(data)
-			if err != nil {
-				panic(errors.NewUnexpectedError("failed to read Int64 constant: %s", err))
-			}
-
-		case constantkind.UInt:
-			// TODO: support larger integers
-			v, _, err = leb128.ReadUint64(data)
-			if err != nil {
-				panic(errors.NewUnexpectedError("failed to read UInt constant: %s", err))
-			}
-
-		case constantkind.UInt8:
-			v, _, err = leb128.ReadUint32(data)
-			if err != nil {
-				panic(errors.NewUnexpectedError("failed to read UInt8 constant: %s", err))
-			}
-
-		case constantkind.UInt16:
-			v, _, err = leb128.ReadUint32(data)
-			if err != nil {
-				panic(errors.NewUnexpectedError("failed to read UInt16 constant: %s", err))
-			}
-
-		case constantkind.UInt32:
-			v, _, err = leb128.ReadUint32(data)
-			if err != nil {
-				panic(errors.NewUnexpectedError("failed to read UInt32 constant: %s", err))
-			}
-
-		case constantkind.UInt64:
-			v, _, err = leb128.ReadUint64(data)
-			if err != nil {
-				panic(errors.NewUnexpectedError("failed to read UInt64 constant: %s", err))
-			}
-
-		case constantkind.Word8:
-			v, _, err = leb128.ReadUint32(data)
-			if err != nil {
-				panic(errors.NewUnexpectedError("failed to read Word8 constant: %s", err))
-			}
-
-		case constantkind.Word16:
-			v, _, err = leb128.ReadUint32(data)
-			if err != nil {
-				panic(errors.NewUnexpectedError("failed to read Word16 constant: %s", err))
-			}
-
-		case constantkind.Word32:
-			v, _, err = leb128.ReadUint32(data)
-			if err != nil {
-				panic(errors.NewUnexpectedError("failed to read Word32 constant: %s", err))
-			}
-
-		case constantkind.Word64:
-			v, _, err = leb128.ReadUint64(data)
-			if err != nil {
-				panic(errors.NewUnexpectedError("failed to read Word64 constant: %s", err))
-			}
-
-		case constantkind.Fix64:
-			v, _, err = leb128.ReadInt64(data)
-			if err != nil {
-				panic(errors.NewUnexpectedError("failed to read Fix64 constant: %s", err))
-			}
-
-		case constantkind.UFix64:
-			v, _, err = leb128.ReadUint64(data)
-			if err != nil {
-				panic(errors.NewUnexpectedError("failed to read UFix64 constant: %s", err))
-			}
-
-		case constantkind.Address:
-			v = common.MustBytesToAddress(data)
-
-		// TODO:
-		// case constantkind.Int128:
-		// case constantkind.Int256:
-		// case constantkind.UInt128:
-		// case constantkind.UInt256:
-		// case constantkind.Word128:
-		// case constantkind.Word256:
-
-		default:
-			panic(errors.NewUnexpectedError("unsupported constant kind: %s", kind))
-		}
-
-		_, _ = fmt.Fprintf(tabWriter, "%d |\t%s |\t %v\n", index, constant.Kind, v)
 	}
 
 	_ = tabWriter.Flush()
