@@ -20,8 +20,9 @@ package bbq
 
 import (
 	"fmt"
-	"github.com/onflow/cadence/common"
 	"strings"
+
+	"github.com/onflow/cadence/common"
 
 	"github.com/onflow/cadence/bbq/constantkind"
 	"github.com/onflow/cadence/bbq/leb128"
