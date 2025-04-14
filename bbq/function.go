@@ -26,3 +26,7 @@ type Function[E any] struct {
 	LocalCount         uint16
 	TypeIndex          uint16
 }
+
+func (f Function[E]) IsAnonymous() bool {
+	return f.Name == ""
+}
