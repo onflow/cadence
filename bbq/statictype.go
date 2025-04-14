@@ -23,4 +23,3 @@ import (
 )
 
 type StaticType = interpreter.StaticType
-
