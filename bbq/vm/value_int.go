@@ -28,10 +28,8 @@ import (
 // members
 
 func init() {
-	typeName := interpreter.PrimitiveStaticTypeInt.String()
-
 	RegisterTypeBoundFunction(
-		typeName,
+		sema.IntTypeName,
 		NewNativeFunctionValue(
 			sema.ToStringFunctionName,
 			sema.ToStringFunctionType,

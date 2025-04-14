@@ -139,6 +139,6 @@ func FromSemaType(ty sema.Type) ConstantKind {
 		return UFix64
 
 	default:
-		panic(errors.NewUnreachableError())
+		panic(errors.NewUnexpectedError("unsupported type: %T", ty))
 	}
 }
