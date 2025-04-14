@@ -23,6 +23,8 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/logrusorgru/aurora/v4"
+
 	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/interpreter"
 )
@@ -34,6 +36,7 @@ func PrintBytecode(
 	constants []constant.Constant,
 	types [][]byte,
 	functionNames []string,
+	colorize bool,
 ) error {
 	instructions := DecodeInstructions(code)
 	staticTypes := DecodeStaticTypes(types)
@@ -44,6 +47,7 @@ func PrintBytecode(
 		constants,
 		staticTypes,
 		functionNames,
+		colorize,
 	)
 }
 
@@ -69,6 +73,7 @@ func PrintInstructions(
 	constants []constant.Constant,
 	types []interpreter.StaticType,
 	functionNames []string,
+	colorize bool,
 ) error {
 
 	tabWriter := tabwriter.NewWriter(builder, 0, 0, 1, ' ', tabwriter.AlignRight)
@@ -82,11 +87,25 @@ func PrintInstructions(
 			instruction.OperandsString(&operandsBuilder)
 		}
 
+		var formattedOffset string
+		if colorize {
+			formattedOffset = ColorizeOffset(offset)
+		} else {
+			formattedOffset = fmt.Sprint(offset)
+		}
+
+		var formattedOpcode string
+		if colorize {
+			formattedOpcode = ColorizeOpcode(instruction.Opcode())
+		} else {
+			formattedOpcode = fmt.Sprint(instruction.Opcode())
+		}
+
 		_, _ = fmt.Fprintf(
 			tabWriter,
-			"%d |\t%s |\t%s\n",
-			offset,
-			instruction.Opcode(),
+			"%s |\t%s |\t%s\n",
+			formattedOffset,
+			formattedOpcode,
 			operandsBuilder.String(),
 		)
 	}
@@ -95,4 +114,16 @@ func PrintInstructions(
 	_, _ = fmt.Fprintln(builder)
 
 	return nil
+}
+
+func ColorizeOffset(offset int) string {
+	return aurora.Gray(12, offset).String()
+}
+
+func ColorizeOpcode(opcode Opcode) string {
+	if opcode.IsControlFlow() {
+		return aurora.Red(opcode).String()
+	}
+
+	return aurora.Blue(opcode).String()
 }

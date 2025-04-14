@@ -23,6 +23,8 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/logrusorgru/aurora/v4"
+
 	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/interpreter"
@@ -35,6 +37,7 @@ type CodePrinter[T, E any] func(
 	constants []constant.Constant,
 	types []T,
 	functionNames []string,
+	colorize bool,
 ) error
 
 type TypeDecoder[T any] func(bytes T) (StaticType, error)
@@ -44,23 +47,26 @@ type ProgramPrinter[E, T any] struct {
 	codePrinter   CodePrinter[T, E]
 	typeDecoder   TypeDecoder[T]
 	resolve       bool
+	colorize      bool
 }
 
-func NewBytecodeProgramPrinter(resolve bool) *ProgramPrinter[byte, []byte] {
+func NewBytecodeProgramPrinter(resolve bool, colorize bool) *ProgramPrinter[byte, []byte] {
 	return &ProgramPrinter[byte, []byte]{
 		codePrinter: opcode.PrintBytecode,
 		typeDecoder: interpreter.StaticTypeFromBytes,
 		resolve:     resolve,
+		colorize:    colorize,
 	}
 }
 
-func NewInstructionsProgramPrinter(resolve bool) *ProgramPrinter[opcode.Instruction, StaticType] {
+func NewInstructionsProgramPrinter(resolve bool, colorize bool) *ProgramPrinter[opcode.Instruction, StaticType] {
 	return &ProgramPrinter[opcode.Instruction, StaticType]{
 		codePrinter: opcode.PrintInstructions,
 		typeDecoder: func(typ StaticType) (StaticType, error) {
 			return typ, nil
 		},
-		resolve: resolve,
+		resolve:  resolve,
+		colorize: colorize,
 	}
 }
 
@@ -96,7 +102,8 @@ func (p *ProgramPrinter[E, T]) printFunction(
 	types []T,
 	functionNames []string,
 ) {
-	p.stringBuilder.WriteString("-- " + function.Name + " --\n")
+	p.printHeader(function.Name)
+
 	err := p.codePrinter(
 		&p.stringBuilder,
 		function.Code,
@@ -104,6 +111,7 @@ func (p *ProgramPrinter[E, T]) printFunction(
 		constants,
 		types,
 		functionNames,
+		p.colorize,
 	)
 	if err != nil {
 		// TODO: propagate error
@@ -112,16 +120,16 @@ func (p *ProgramPrinter[E, T]) printFunction(
 }
 
 func (p *ProgramPrinter[_, T]) printConstantPool(constants []constant.Constant) {
-	p.stringBuilder.WriteString("-- Constant Pool --\n")
+	p.printHeader("Constant Pool")
 
 	tabWriter := tabwriter.NewWriter(&p.stringBuilder, 0, 0, 1, ' ', tabwriter.AlignRight)
 
 	for index, constant := range constants {
 		_, _ = fmt.Fprintf(
 			tabWriter,
-			"%d |\t%s |\t %s\n",
-			index,
-			constant.Kind,
+			"%s |\t%s |\t %s\n",
+			p.colorizeIndex(index),
+			p.colorizeConstantKind(constant.Kind),
 			constant,
 		)
 	}
@@ -131,7 +139,7 @@ func (p *ProgramPrinter[_, T]) printConstantPool(constants []constant.Constant) 
 }
 
 func (p *ProgramPrinter[_, T]) printTypePool(types []T) {
-	p.stringBuilder.WriteString("-- Type Pool --\n")
+	p.printHeader("Type Pool")
 
 	tabWriter := tabwriter.NewWriter(&p.stringBuilder, 0, 0, 1, ' ', tabwriter.AlignRight)
 
@@ -141,7 +149,12 @@ func (p *ProgramPrinter[_, T]) printTypePool(types []T) {
 			panic(err)
 		}
 
-		_, _ = fmt.Fprintf(tabWriter, "%d |\t %s\n", index, staticType.ID())
+		_, _ = fmt.Fprintf(
+			tabWriter,
+			"%s |\t %s\n",
+			p.colorizeIndex(index),
+			staticType.ID(),
+		)
 	}
 
 	_ = tabWriter.Flush()
@@ -149,7 +162,7 @@ func (p *ProgramPrinter[_, T]) printTypePool(types []T) {
 }
 
 func (p *ProgramPrinter[_, _]) printImports(imports []Import) {
-	p.stringBuilder.WriteString("-- Imports --\n")
+	p.printHeader("Imports")
 
 	tabWriter := tabwriter.NewWriter(&p.stringBuilder, 0, 0, 1, ' ', tabwriter.AlignRight)
 
@@ -160,9 +173,38 @@ func (p *ProgramPrinter[_, _]) printImports(imports []Import) {
 			name = string(impt.Location.TypeID(nil, impt.Name))
 		}
 
-		_, _ = fmt.Fprintf(tabWriter, "%d |\t %s\n", index, name)
+		_, _ = fmt.Fprintf(
+			tabWriter,
+			"%s |\t %s\n",
+			p.colorizeIndex(index),
+			name,
+		)
 	}
 
 	_ = tabWriter.Flush()
 	_, _ = fmt.Fprintln(&p.stringBuilder)
+}
+
+func (p *ProgramPrinter[_, _]) colorizeIndex(index int) string {
+	if p.colorize {
+		return opcode.ColorizeOffset(index)
+	} else {
+		return fmt.Sprint(index)
+	}
+}
+
+func (p *ProgramPrinter[_, _]) colorizeConstantKind(kind constant.Kind) string {
+	if p.colorize {
+		return aurora.Blue(kind).String()
+	} else {
+		return kind.String()
+	}
+}
+
+func (p *ProgramPrinter[_, _]) printHeader(title string) {
+	title = fmt.Sprintf("-- %s --\n", title)
+	if p.colorize {
+		title = aurora.Bold(title).String()
+	}
+	p.stringBuilder.WriteString(title)
 }
