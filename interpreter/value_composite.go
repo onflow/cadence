@@ -479,7 +479,7 @@ func (v *CompositeValue) GetMember(context MemberAccessibleContext, locationRang
 		return injectedField
 	}
 
-	if function := v.GetMethod(context, locationRange, name); function != nil {
+	if function := context.GetMethod(v, name, locationRange); function != nil {
 		return function
 	}
 
