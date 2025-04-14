@@ -24,8 +24,3 @@ import (
 
 type StaticType = interpreter.StaticType
 
-func StaticTypeFromBytes(bytes []byte) (StaticType, error) {
-	dec := interpreter.CBORDecMode.NewByteStreamDecoder(bytes)
-	typeDecoder := interpreter.NewTypeDecoder(dec, nil)
-	return typeDecoder.DecodeStaticType()
-}

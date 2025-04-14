@@ -8,6 +8,7 @@ import (
 	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
 )
 
 // InstructionUnknown
@@ -28,7 +29,10 @@ func (i InstructionUnknown) String() string {
 
 func (i InstructionUnknown) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionUnknown) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionUnknown) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionUnknown) Encode(code *[]byte) {
@@ -59,7 +63,10 @@ func (i InstructionGetLocal) OperandsString(sb *strings.Builder) {
 	printfArgument(sb, "local", i.Local)
 }
 
-func (i InstructionGetLocal) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionGetLocal) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 	printfArgument(sb, "local", i.Local)
 }
 
@@ -97,7 +104,10 @@ func (i InstructionSetLocal) OperandsString(sb *strings.Builder) {
 	printfArgument(sb, "local", i.Local)
 }
 
-func (i InstructionSetLocal) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionSetLocal) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 	printfArgument(sb, "local", i.Local)
 }
 
@@ -135,7 +145,10 @@ func (i InstructionGetUpvalue) OperandsString(sb *strings.Builder) {
 	printfArgument(sb, "upvalue", i.Upvalue)
 }
 
-func (i InstructionGetUpvalue) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionGetUpvalue) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 	printfArgument(sb, "upvalue", i.Upvalue)
 }
 
@@ -173,7 +186,10 @@ func (i InstructionSetUpvalue) OperandsString(sb *strings.Builder) {
 	printfArgument(sb, "upvalue", i.Upvalue)
 }
 
-func (i InstructionSetUpvalue) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionSetUpvalue) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 	printfArgument(sb, "upvalue", i.Upvalue)
 }
 
@@ -211,7 +227,10 @@ func (i InstructionGetGlobal) OperandsString(sb *strings.Builder) {
 	printfArgument(sb, "global", i.Global)
 }
 
-func (i InstructionGetGlobal) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionGetGlobal) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 	printfArgument(sb, "global", i.Global)
 }
 
@@ -249,7 +268,10 @@ func (i InstructionSetGlobal) OperandsString(sb *strings.Builder) {
 	printfArgument(sb, "global", i.Global)
 }
 
-func (i InstructionSetGlobal) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionSetGlobal) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 	printfArgument(sb, "global", i.Global)
 }
 
@@ -287,7 +309,10 @@ func (i InstructionGetField) OperandsString(sb *strings.Builder) {
 	printfArgument(sb, "fieldName", i.FieldName)
 }
 
-func (i InstructionGetField) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionGetField) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 	printfConstantArgument(sb, "fieldName", constants[i.FieldName])
 }
 
@@ -325,7 +350,10 @@ func (i InstructionSetField) OperandsString(sb *strings.Builder) {
 	printfArgument(sb, "fieldName", i.FieldName)
 }
 
-func (i InstructionSetField) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionSetField) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 	printfConstantArgument(sb, "fieldName", constants[i.FieldName])
 }
 
@@ -357,7 +385,10 @@ func (i InstructionGetIndex) String() string {
 
 func (i InstructionGetIndex) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionGetIndex) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionGetIndex) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionGetIndex) Encode(code *[]byte) {
@@ -382,7 +413,10 @@ func (i InstructionSetIndex) String() string {
 
 func (i InstructionSetIndex) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionSetIndex) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionSetIndex) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionSetIndex) Encode(code *[]byte) {
@@ -407,7 +441,10 @@ func (i InstructionTrue) String() string {
 
 func (i InstructionTrue) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionTrue) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionTrue) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionTrue) Encode(code *[]byte) {
@@ -432,7 +469,10 @@ func (i InstructionFalse) String() string {
 
 func (i InstructionFalse) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionFalse) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionFalse) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionFalse) Encode(code *[]byte) {
@@ -457,7 +497,10 @@ func (i InstructionNil) String() string {
 
 func (i InstructionNil) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionNil) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionNil) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionNil) Encode(code *[]byte) {
@@ -490,7 +533,10 @@ func (i InstructionPath) OperandsString(sb *strings.Builder) {
 	printfArgument(sb, "identifier", i.Identifier)
 }
 
-func (i InstructionPath) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionPath) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 	printfArgument(sb, "domain", i.Domain)
 	printfConstantArgument(sb, "identifier", constants[i.Identifier])
 }
@@ -533,7 +579,10 @@ func (i InstructionNew) OperandsString(sb *strings.Builder) {
 	printfArgument(sb, "type", i.Type)
 }
 
-func (i InstructionNew) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionNew) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 	printfArgument(sb, "kind", i.Kind)
 	printfTypeArgument(sb, "type", types[i.Type])
 }
@@ -578,7 +627,10 @@ func (i InstructionNewArray) OperandsString(sb *strings.Builder) {
 	printfArgument(sb, "isResource", i.IsResource)
 }
 
-func (i InstructionNewArray) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionNewArray) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 	printfTypeArgument(sb, "type", types[i.Type])
 	printfArgument(sb, "size", i.Size)
 	printfArgument(sb, "isResource", i.IsResource)
@@ -626,7 +678,10 @@ func (i InstructionNewDictionary) OperandsString(sb *strings.Builder) {
 	printfArgument(sb, "isResource", i.IsResource)
 }
 
-func (i InstructionNewDictionary) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionNewDictionary) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 	printfTypeArgument(sb, "type", types[i.Type])
 	printfArgument(sb, "size", i.Size)
 	printfArgument(sb, "isResource", i.IsResource)
@@ -672,7 +727,10 @@ func (i InstructionNewRef) OperandsString(sb *strings.Builder) {
 	printfArgument(sb, "isImplicit", i.IsImplicit)
 }
 
-func (i InstructionNewRef) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionNewRef) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 	printfTypeArgument(sb, "type", types[i.Type])
 	printfArgument(sb, "isImplicit", i.IsImplicit)
 }
@@ -713,7 +771,10 @@ func (i InstructionGetConstant) OperandsString(sb *strings.Builder) {
 	printfArgument(sb, "constant", i.Constant)
 }
 
-func (i InstructionGetConstant) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionGetConstant) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 	printfConstantArgument(sb, "constant", constants[i.Constant])
 }
 
@@ -753,7 +814,10 @@ func (i InstructionNewClosure) OperandsString(sb *strings.Builder) {
 	printfUpvalueArrayArgument(sb, "upvalues", i.Upvalues)
 }
 
-func (i InstructionNewClosure) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionNewClosure) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 	printfFunctionNameArgument(sb, "function", functionNames[i.Function])
 	printfUpvalueArrayArgument(sb, "upvalues", i.Upvalues)
 }
@@ -794,7 +858,10 @@ func (i InstructionInvoke) OperandsString(sb *strings.Builder) {
 	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs)
 }
 
-func (i InstructionInvoke) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionInvoke) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs)
 }
 
@@ -836,7 +903,10 @@ func (i InstructionInvokeDynamic) OperandsString(sb *strings.Builder) {
 	printfArgument(sb, "argCount", i.ArgCount)
 }
 
-func (i InstructionInvokeDynamic) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionInvokeDynamic) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 	printfConstantArgument(sb, "name", constants[i.Name])
 	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs)
 	printfArgument(sb, "argCount", i.ArgCount)
@@ -874,7 +944,10 @@ func (i InstructionDup) String() string {
 
 func (i InstructionDup) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionDup) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionDup) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionDup) Encode(code *[]byte) {
@@ -899,7 +972,10 @@ func (i InstructionDrop) String() string {
 
 func (i InstructionDrop) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionDrop) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionDrop) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionDrop) Encode(code *[]byte) {
@@ -924,7 +1000,10 @@ func (i InstructionDestroy) String() string {
 
 func (i InstructionDestroy) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionDestroy) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionDestroy) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionDestroy) Encode(code *[]byte) {
@@ -949,7 +1028,10 @@ func (i InstructionUnwrap) String() string {
 
 func (i InstructionUnwrap) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionUnwrap) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionUnwrap) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionUnwrap) Encode(code *[]byte) {
@@ -978,7 +1060,10 @@ func (i InstructionTransfer) String() string {
 
 func (i InstructionTransfer) OperandsString(sb *strings.Builder) { printfArgument(sb, "type", i.Type) }
 
-func (i InstructionTransfer) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionTransfer) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 	printfTypeArgument(sb, "type", types[i.Type])
 }
 
@@ -1016,7 +1101,10 @@ func (i InstructionSimpleCast) OperandsString(sb *strings.Builder) {
 	printfArgument(sb, "type", i.Type)
 }
 
-func (i InstructionSimpleCast) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionSimpleCast) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 	printfTypeArgument(sb, "type", types[i.Type])
 }
 
@@ -1054,7 +1142,10 @@ func (i InstructionFailableCast) OperandsString(sb *strings.Builder) {
 	printfArgument(sb, "type", i.Type)
 }
 
-func (i InstructionFailableCast) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionFailableCast) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 	printfTypeArgument(sb, "type", types[i.Type])
 }
 
@@ -1090,7 +1181,10 @@ func (i InstructionForceCast) String() string {
 
 func (i InstructionForceCast) OperandsString(sb *strings.Builder) { printfArgument(sb, "type", i.Type) }
 
-func (i InstructionForceCast) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionForceCast) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 	printfTypeArgument(sb, "type", types[i.Type])
 }
 
@@ -1122,7 +1216,10 @@ func (i InstructionDeref) String() string {
 
 func (i InstructionDeref) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionDeref) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionDeref) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionDeref) Encode(code *[]byte) {
@@ -1151,7 +1248,10 @@ func (i InstructionJump) String() string {
 
 func (i InstructionJump) OperandsString(sb *strings.Builder) { printfArgument(sb, "target", i.Target) }
 
-func (i InstructionJump) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionJump) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 	printfArgument(sb, "target", i.Target)
 }
 
@@ -1189,7 +1289,10 @@ func (i InstructionJumpIfFalse) OperandsString(sb *strings.Builder) {
 	printfArgument(sb, "target", i.Target)
 }
 
-func (i InstructionJumpIfFalse) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionJumpIfFalse) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 	printfArgument(sb, "target", i.Target)
 }
 
@@ -1227,7 +1330,10 @@ func (i InstructionJumpIfTrue) OperandsString(sb *strings.Builder) {
 	printfArgument(sb, "target", i.Target)
 }
 
-func (i InstructionJumpIfTrue) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionJumpIfTrue) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 	printfArgument(sb, "target", i.Target)
 }
 
@@ -1265,7 +1371,10 @@ func (i InstructionJumpIfNil) OperandsString(sb *strings.Builder) {
 	printfArgument(sb, "target", i.Target)
 }
 
-func (i InstructionJumpIfNil) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionJumpIfNil) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 	printfArgument(sb, "target", i.Target)
 }
 
@@ -1297,7 +1406,10 @@ func (i InstructionReturn) String() string {
 
 func (i InstructionReturn) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionReturn) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionReturn) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionReturn) Encode(code *[]byte) {
@@ -1322,7 +1434,10 @@ func (i InstructionReturnValue) String() string {
 
 func (i InstructionReturnValue) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionReturnValue) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionReturnValue) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionReturnValue) Encode(code *[]byte) {
@@ -1347,7 +1462,10 @@ func (i InstructionEqual) String() string {
 
 func (i InstructionEqual) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionEqual) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionEqual) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionEqual) Encode(code *[]byte) {
@@ -1372,7 +1490,10 @@ func (i InstructionNotEqual) String() string {
 
 func (i InstructionNotEqual) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionNotEqual) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionNotEqual) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionNotEqual) Encode(code *[]byte) {
@@ -1397,7 +1518,10 @@ func (i InstructionNot) String() string {
 
 func (i InstructionNot) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionNot) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionNot) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionNot) Encode(code *[]byte) {
@@ -1422,7 +1546,10 @@ func (i InstructionAdd) String() string {
 
 func (i InstructionAdd) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionAdd) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionAdd) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionAdd) Encode(code *[]byte) {
@@ -1447,7 +1574,10 @@ func (i InstructionSubtract) String() string {
 
 func (i InstructionSubtract) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionSubtract) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionSubtract) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionSubtract) Encode(code *[]byte) {
@@ -1472,7 +1602,10 @@ func (i InstructionMultiply) String() string {
 
 func (i InstructionMultiply) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionMultiply) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionMultiply) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionMultiply) Encode(code *[]byte) {
@@ -1497,7 +1630,10 @@ func (i InstructionDivide) String() string {
 
 func (i InstructionDivide) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionDivide) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionDivide) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionDivide) Encode(code *[]byte) {
@@ -1522,7 +1658,10 @@ func (i InstructionMod) String() string {
 
 func (i InstructionMod) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionMod) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionMod) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionMod) Encode(code *[]byte) {
@@ -1547,7 +1686,10 @@ func (i InstructionNegate) String() string {
 
 func (i InstructionNegate) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionNegate) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionNegate) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionNegate) Encode(code *[]byte) {
@@ -1572,7 +1714,10 @@ func (i InstructionLess) String() string {
 
 func (i InstructionLess) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionLess) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionLess) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionLess) Encode(code *[]byte) {
@@ -1597,7 +1742,10 @@ func (i InstructionLessOrEqual) String() string {
 
 func (i InstructionLessOrEqual) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionLessOrEqual) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionLessOrEqual) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionLessOrEqual) Encode(code *[]byte) {
@@ -1622,7 +1770,10 @@ func (i InstructionGreater) String() string {
 
 func (i InstructionGreater) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionGreater) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionGreater) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionGreater) Encode(code *[]byte) {
@@ -1647,7 +1798,10 @@ func (i InstructionGreaterOrEqual) String() string {
 
 func (i InstructionGreaterOrEqual) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionGreaterOrEqual) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionGreaterOrEqual) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionGreaterOrEqual) Encode(code *[]byte) {
@@ -1672,7 +1826,10 @@ func (i InstructionBitwiseOr) String() string {
 
 func (i InstructionBitwiseOr) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionBitwiseOr) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionBitwiseOr) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionBitwiseOr) Encode(code *[]byte) {
@@ -1697,7 +1854,10 @@ func (i InstructionBitwiseXor) String() string {
 
 func (i InstructionBitwiseXor) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionBitwiseXor) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionBitwiseXor) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionBitwiseXor) Encode(code *[]byte) {
@@ -1722,7 +1882,10 @@ func (i InstructionBitwiseAnd) String() string {
 
 func (i InstructionBitwiseAnd) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionBitwiseAnd) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionBitwiseAnd) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionBitwiseAnd) Encode(code *[]byte) {
@@ -1747,7 +1910,10 @@ func (i InstructionBitwiseLeftShift) String() string {
 
 func (i InstructionBitwiseLeftShift) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionBitwiseLeftShift) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionBitwiseLeftShift) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionBitwiseLeftShift) Encode(code *[]byte) {
@@ -1772,7 +1938,10 @@ func (i InstructionBitwiseRightShift) String() string {
 
 func (i InstructionBitwiseRightShift) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionBitwiseRightShift) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionBitwiseRightShift) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionBitwiseRightShift) Encode(code *[]byte) {
@@ -1797,7 +1966,10 @@ func (i InstructionIterator) String() string {
 
 func (i InstructionIterator) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionIterator) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionIterator) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionIterator) Encode(code *[]byte) {
@@ -1822,7 +1994,10 @@ func (i InstructionIteratorHasNext) String() string {
 
 func (i InstructionIteratorHasNext) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionIteratorHasNext) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionIteratorHasNext) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionIteratorHasNext) Encode(code *[]byte) {
@@ -1847,7 +2022,10 @@ func (i InstructionIteratorNext) String() string {
 
 func (i InstructionIteratorNext) OperandsString(sb *strings.Builder) {}
 
-func (i InstructionIteratorNext) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionIteratorNext) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 }
 
 func (i InstructionIteratorNext) Encode(code *[]byte) {
@@ -1876,7 +2054,10 @@ func (i InstructionEmitEvent) String() string {
 
 func (i InstructionEmitEvent) OperandsString(sb *strings.Builder) { printfArgument(sb, "type", i.Type) }
 
-func (i InstructionEmitEvent) ResolvedOperandsString(sb *strings.Builder, constants []constant.Constant, types [][]byte, functionNames []string) {
+func (i InstructionEmitEvent) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string) {
 	printfTypeArgument(sb, "type", types[i.Type])
 }
 

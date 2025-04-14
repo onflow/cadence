@@ -24,6 +24,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/bbq/constant"
+	"github.com/onflow/cadence/interpreter"
 )
 
 func TestPrintRecursionFib(t *testing.T) {
@@ -81,7 +84,68 @@ func TestPrintRecursionFib(t *testing.T) {
 `
 
 	var builder strings.Builder
-	err := PrintBytecode(&builder, code)
+	err := PrintBytecode(&builder, code, false, nil, nil, nil)
+	require.NoError(t, err)
+
+	assert.Equal(t, expected, builder.String())
+}
+
+func TestPrintResolved(t *testing.T) {
+	t.Parallel()
+
+	instructions := []Instruction{
+		InstructionGetConstant{Constant: 0},
+		InstructionGetConstant{Constant: 1},
+
+		InstructionEmitEvent{Type: 0},
+		InstructionEmitEvent{Type: 1},
+
+		InstructionNewClosure{
+			Function: 0,
+			Upvalues: nil,
+		},
+		InstructionNewClosure{
+			Function: 1,
+			Upvalues: nil,
+		},
+	}
+
+	const expected = ` 0 | GetConstant | constant:foo
+ 1 | GetConstant | constant:1
+ 2 |   EmitEvent | type:Int
+ 3 |   EmitEvent | type:[String]
+ 4 |  NewClosure | function:bar upvalues:[]
+ 5 |  NewClosure | function:baz upvalues:[]
+
+`
+
+	var builder strings.Builder
+	err := PrintInstructions(
+		&builder,
+		instructions,
+		true,
+		[]constant.Constant{
+			{
+				Data: []byte("foo"),
+				Kind: constant.String,
+			},
+			{
+				Data: []byte{0x1},
+				Kind: constant.Int,
+			},
+		},
+		[]interpreter.StaticType{
+			interpreter.PrimitiveStaticTypeInt,
+			interpreter.NewVariableSizedStaticType(
+				nil,
+				interpreter.PrimitiveStaticTypeString,
+			),
+		},
+		[]string{
+			"bar",
+			"baz",
+		},
+	)
 	require.NoError(t, err)
 
 	assert.Equal(t, expected, builder.String())

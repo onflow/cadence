@@ -27,6 +27,7 @@ import (
 
 	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
 )
 
 type Instruction interface {
@@ -36,7 +37,7 @@ type Instruction interface {
 	ResolvedOperandsString(
 		sb *strings.Builder,
 		constants []constant.Constant,
-		types [][]byte,
+		types []interpreter.StaticType,
 		functionNames []string,
 	)
 	Opcode() Opcode
@@ -227,8 +228,8 @@ func printfConstantArgument(sb *strings.Builder, fieldName string, constant cons
 	_, _ = fmt.Fprintf(sb, " %s:%s", fieldName, constant)
 }
 
-func printfTypeArgument(sb *strings.Builder, fieldName string, typ []byte) {
-	_, _ = fmt.Fprintf(sb, " %s:%s", fieldName, string(typ))
+func printfTypeArgument(sb *strings.Builder, fieldName string, typ interpreter.StaticType) {
+	_, _ = fmt.Fprintf(sb, " %s:%s", fieldName, typ)
 }
 
 func printfFunctionNameArgument(sb *strings.Builder, fieldName string, functionName string) {

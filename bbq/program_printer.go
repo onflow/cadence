@@ -25,27 +25,42 @@ import (
 
 	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/bbq/opcode"
+	"github.com/onflow/cadence/interpreter"
 )
+
+type CodePrinter[T, E any] func(
+	builder *strings.Builder,
+	code []E,
+	resolve bool,
+	constants []constant.Constant,
+	types []T,
+	functionNames []string,
+) error
+
+type TypeDecoder[T any] func(bytes T) (StaticType, error)
 
 type ProgramPrinter[E, T any] struct {
 	stringBuilder strings.Builder
-	codePrinter   func(builder *strings.Builder, code []E) error
-	typeDecoder   func(bytes T) (StaticType, error)
+	codePrinter   CodePrinter[T, E]
+	typeDecoder   TypeDecoder[T]
+	resolve       bool
 }
 
-func NewBytecodeProgramPrinter() *ProgramPrinter[byte, []byte] {
+func NewBytecodeProgramPrinter(resolve bool) *ProgramPrinter[byte, []byte] {
 	return &ProgramPrinter[byte, []byte]{
 		codePrinter: opcode.PrintBytecode,
-		typeDecoder: StaticTypeFromBytes,
+		typeDecoder: interpreter.StaticTypeFromBytes,
+		resolve:     resolve,
 	}
 }
 
-func NewInstructionsProgramPrinter() *ProgramPrinter[opcode.Instruction, StaticType] {
+func NewInstructionsProgramPrinter(resolve bool) *ProgramPrinter[opcode.Instruction, StaticType] {
 	return &ProgramPrinter[opcode.Instruction, StaticType]{
 		codePrinter: opcode.PrintInstructions,
 		typeDecoder: func(typ StaticType) (StaticType, error) {
 			return typ, nil
 		},
+		resolve: resolve,
 	}
 }
 
@@ -54,17 +69,42 @@ func (p *ProgramPrinter[E, T]) PrintProgram(program *Program[E, T]) string {
 	p.printConstantPool(program.Constants)
 	p.printTypePool(program.Types)
 
+	var functionNames []string
+	if len(program.Functions) > 0 {
+		functionNames = make([]string, 0, len(program.Functions))
+		for _, function := range program.Functions {
+			functionNames = append(functionNames, function.Name)
+		}
+	}
+
 	for _, function := range program.Functions {
-		p.printFunction(function)
+		p.printFunction(
+			function,
+			program.Constants,
+			program.Types,
+			functionNames,
+		)
 		p.stringBuilder.WriteRune('\n')
 	}
 
 	return p.stringBuilder.String()
 }
 
-func (p *ProgramPrinter[E, T]) printFunction(function Function[E]) {
+func (p *ProgramPrinter[E, T]) printFunction(
+	function Function[E],
+	constants []constant.Constant,
+	types []T,
+	functionNames []string,
+) {
 	p.stringBuilder.WriteString("-- " + function.Name + " --\n")
-	err := p.codePrinter(&p.stringBuilder, function.Code)
+	err := p.codePrinter(
+		&p.stringBuilder,
+		function.Code,
+		p.resolve,
+		constants,
+		types,
+		functionNames,
+	)
 	if err != nil {
 		// TODO: propagate error
 		panic(err)
