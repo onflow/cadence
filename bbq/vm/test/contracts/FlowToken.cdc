@@ -89,18 +89,17 @@ access(all) contract FlowToken: FungibleToken {
             // much more comprehensive metadata
             // Additionally, these events will eventually be removed from this contract completely
             // in favor of the FungibleToken events
-            // TODO: address constants
-            // if let address = self.owner?.address {
-            //     if address != 0xf8d6e0586b0a20c7 &&
-            //        address != 0xf4527793ee68aede &&
-            //        address != 0x9eca2b38b18b5dfe &&
-            //        address != 0x8624b52f9ddcd04a
-            //     {
-            //         emit TokensWithdrawn(amount: amount, from: address)
-            //     }
-            // } else {
-            //     emit TokensWithdrawn(amount: amount, from: nil)
-            // }
+            if let address = self.owner?.address {
+                if address != 0xf8d6e0586b0a20c7 &&
+                   address != 0xf4527793ee68aede &&
+                   address != 0x9eca2b38b18b5dfe &&
+                   address != 0x8624b52f9ddcd04a
+                {
+                    emit TokensWithdrawn(amount: amount, from: address)
+                }
+            } else {
+                emit TokensWithdrawn(amount: amount, from: nil)
+            }
             return <-create Vault(balance: amount)
         }
 
@@ -122,18 +121,17 @@ access(all) contract FlowToken: FungibleToken {
             // much more comprehensive metadata
             // Additionally, these events will eventually be removed from this contract completely
             // in favor of the FungibleToken events
-            // TODO: address constants
-            // if let address = self.owner?.address {
-            //     if address != 0xf8d6e0586b0a20c7 &&
-            //        address != 0xf4527793ee68aede &&
-            //        address != 0x9eca2b38b18b5dfe &&
-            //        address != 0x8624b52f9ddcd04a
-            //     {
-            //         emit TokensDeposited(amount: vault.balance, to: address)
-            //     }
-            // } else {
-            //     emit TokensDeposited(amount: vault.balance, to: nil)
-            // }
+            if let address = self.owner?.address {
+                if address != 0xf8d6e0586b0a20c7 &&
+                   address != 0xf4527793ee68aede &&
+                   address != 0x9eca2b38b18b5dfe &&
+                   address != 0x8624b52f9ddcd04a
+                {
+                    emit TokensDeposited(amount: vault.balance, to: address)
+                }
+            } else {
+                emit TokensDeposited(amount: vault.balance, to: nil)
+            }
             vault.balance = 0.0
             destroy vault
         }
