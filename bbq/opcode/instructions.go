@@ -25,6 +25,8 @@ func (i InstructionUnknown) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionUnknown) OperandsString(sb *strings.Builder) {}
+
 func (i InstructionUnknown) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -45,8 +47,12 @@ func (InstructionGetLocal) Opcode() Opcode {
 func (i InstructionGetLocal) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "localIndex", i.LocalIndex)
+	i.OperandsString(&sb)
 	return sb.String()
+}
+
+func (i InstructionGetLocal) OperandsString(sb *strings.Builder) {
+	printfArgument(sb, "localIndex", i.LocalIndex)
 }
 
 func (i InstructionGetLocal) Encode(code *[]byte) {
@@ -75,8 +81,12 @@ func (InstructionSetLocal) Opcode() Opcode {
 func (i InstructionSetLocal) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "localIndex", i.LocalIndex)
+	i.OperandsString(&sb)
 	return sb.String()
+}
+
+func (i InstructionSetLocal) OperandsString(sb *strings.Builder) {
+	printfArgument(sb, "localIndex", i.LocalIndex)
 }
 
 func (i InstructionSetLocal) Encode(code *[]byte) {
@@ -105,8 +115,12 @@ func (InstructionGetUpvalue) Opcode() Opcode {
 func (i InstructionGetUpvalue) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "upvalueIndex", i.UpvalueIndex)
+	i.OperandsString(&sb)
 	return sb.String()
+}
+
+func (i InstructionGetUpvalue) OperandsString(sb *strings.Builder) {
+	printfArgument(sb, "upvalueIndex", i.UpvalueIndex)
 }
 
 func (i InstructionGetUpvalue) Encode(code *[]byte) {
@@ -135,8 +149,12 @@ func (InstructionSetUpvalue) Opcode() Opcode {
 func (i InstructionSetUpvalue) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "upvalueIndex", i.UpvalueIndex)
+	i.OperandsString(&sb)
 	return sb.String()
+}
+
+func (i InstructionSetUpvalue) OperandsString(sb *strings.Builder) {
+	printfArgument(sb, "upvalueIndex", i.UpvalueIndex)
 }
 
 func (i InstructionSetUpvalue) Encode(code *[]byte) {
@@ -165,8 +183,12 @@ func (InstructionGetGlobal) Opcode() Opcode {
 func (i InstructionGetGlobal) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "globalIndex", i.GlobalIndex)
+	i.OperandsString(&sb)
 	return sb.String()
+}
+
+func (i InstructionGetGlobal) OperandsString(sb *strings.Builder) {
+	printfArgument(sb, "globalIndex", i.GlobalIndex)
 }
 
 func (i InstructionGetGlobal) Encode(code *[]byte) {
@@ -195,8 +217,12 @@ func (InstructionSetGlobal) Opcode() Opcode {
 func (i InstructionSetGlobal) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "globalIndex", i.GlobalIndex)
+	i.OperandsString(&sb)
 	return sb.String()
+}
+
+func (i InstructionSetGlobal) OperandsString(sb *strings.Builder) {
+	printfArgument(sb, "globalIndex", i.GlobalIndex)
 }
 
 func (i InstructionSetGlobal) Encode(code *[]byte) {
@@ -225,8 +251,12 @@ func (InstructionGetField) Opcode() Opcode {
 func (i InstructionGetField) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "fieldNameIndex", i.FieldNameIndex)
+	i.OperandsString(&sb)
 	return sb.String()
+}
+
+func (i InstructionGetField) OperandsString(sb *strings.Builder) {
+	printfArgument(sb, "fieldNameIndex", i.FieldNameIndex)
 }
 
 func (i InstructionGetField) Encode(code *[]byte) {
@@ -255,8 +285,12 @@ func (InstructionSetField) Opcode() Opcode {
 func (i InstructionSetField) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "fieldNameIndex", i.FieldNameIndex)
+	i.OperandsString(&sb)
 	return sb.String()
+}
+
+func (i InstructionSetField) OperandsString(sb *strings.Builder) {
+	printfArgument(sb, "fieldNameIndex", i.FieldNameIndex)
 }
 
 func (i InstructionSetField) Encode(code *[]byte) {
@@ -285,6 +319,8 @@ func (i InstructionGetIndex) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionGetIndex) OperandsString(sb *strings.Builder) {}
+
 func (i InstructionGetIndex) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -304,6 +340,8 @@ func (InstructionSetIndex) Opcode() Opcode {
 func (i InstructionSetIndex) String() string {
 	return i.Opcode().String()
 }
+
+func (i InstructionSetIndex) OperandsString(sb *strings.Builder) {}
 
 func (i InstructionSetIndex) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
@@ -325,6 +363,8 @@ func (i InstructionTrue) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionTrue) OperandsString(sb *strings.Builder) {}
+
 func (i InstructionTrue) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -345,6 +385,8 @@ func (i InstructionFalse) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionFalse) OperandsString(sb *strings.Builder) {}
+
 func (i InstructionFalse) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -364,6 +406,8 @@ func (InstructionNil) Opcode() Opcode {
 func (i InstructionNil) String() string {
 	return i.Opcode().String()
 }
+
+func (i InstructionNil) OperandsString(sb *strings.Builder) {}
 
 func (i InstructionNil) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
@@ -386,9 +430,13 @@ func (InstructionPath) Opcode() Opcode {
 func (i InstructionPath) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "domain", i.Domain)
-	printfArgument(&sb, "identifierIndex", i.IdentifierIndex)
+	i.OperandsString(&sb)
 	return sb.String()
+}
+
+func (i InstructionPath) OperandsString(sb *strings.Builder) {
+	printfArgument(sb, "domain", i.Domain)
+	printfArgument(sb, "identifierIndex", i.IdentifierIndex)
 }
 
 func (i InstructionPath) Encode(code *[]byte) {
@@ -420,9 +468,13 @@ func (InstructionNew) Opcode() Opcode {
 func (i InstructionNew) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "kind", i.Kind)
-	printfArgument(&sb, "typeIndex", i.TypeIndex)
+	i.OperandsString(&sb)
 	return sb.String()
+}
+
+func (i InstructionNew) OperandsString(sb *strings.Builder) {
+	printfArgument(sb, "kind", i.Kind)
+	printfArgument(sb, "typeIndex", i.TypeIndex)
 }
 
 func (i InstructionNew) Encode(code *[]byte) {
@@ -455,10 +507,14 @@ func (InstructionNewArray) Opcode() Opcode {
 func (i InstructionNewArray) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "typeIndex", i.TypeIndex)
-	printfArgument(&sb, "size", i.Size)
-	printfArgument(&sb, "isResource", i.IsResource)
+	i.OperandsString(&sb)
 	return sb.String()
+}
+
+func (i InstructionNewArray) OperandsString(sb *strings.Builder) {
+	printfArgument(sb, "typeIndex", i.TypeIndex)
+	printfArgument(sb, "size", i.Size)
+	printfArgument(sb, "isResource", i.IsResource)
 }
 
 func (i InstructionNewArray) Encode(code *[]byte) {
@@ -493,10 +549,14 @@ func (InstructionNewDictionary) Opcode() Opcode {
 func (i InstructionNewDictionary) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "typeIndex", i.TypeIndex)
-	printfArgument(&sb, "size", i.Size)
-	printfArgument(&sb, "isResource", i.IsResource)
+	i.OperandsString(&sb)
 	return sb.String()
+}
+
+func (i InstructionNewDictionary) OperandsString(sb *strings.Builder) {
+	printfArgument(sb, "typeIndex", i.TypeIndex)
+	printfArgument(sb, "size", i.Size)
+	printfArgument(sb, "isResource", i.IsResource)
 }
 
 func (i InstructionNewDictionary) Encode(code *[]byte) {
@@ -530,9 +590,13 @@ func (InstructionNewRef) Opcode() Opcode {
 func (i InstructionNewRef) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "typeIndex", i.TypeIndex)
-	printfArgument(&sb, "isImplicit", i.IsImplicit)
+	i.OperandsString(&sb)
 	return sb.String()
+}
+
+func (i InstructionNewRef) OperandsString(sb *strings.Builder) {
+	printfArgument(sb, "typeIndex", i.TypeIndex)
+	printfArgument(sb, "isImplicit", i.IsImplicit)
 }
 
 func (i InstructionNewRef) Encode(code *[]byte) {
@@ -563,8 +627,12 @@ func (InstructionGetConstant) Opcode() Opcode {
 func (i InstructionGetConstant) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "constantIndex", i.ConstantIndex)
+	i.OperandsString(&sb)
 	return sb.String()
+}
+
+func (i InstructionGetConstant) OperandsString(sb *strings.Builder) {
+	printfArgument(sb, "constantIndex", i.ConstantIndex)
 }
 
 func (i InstructionGetConstant) Encode(code *[]byte) {
@@ -594,9 +662,13 @@ func (InstructionNewClosure) Opcode() Opcode {
 func (i InstructionNewClosure) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "functionIndex", i.FunctionIndex)
-	printfUpvalueArrayArgument(&sb, "upvalues", i.Upvalues)
+	i.OperandsString(&sb)
 	return sb.String()
+}
+
+func (i InstructionNewClosure) OperandsString(sb *strings.Builder) {
+	printfArgument(sb, "functionIndex", i.FunctionIndex)
+	printfUpvalueArrayArgument(sb, "upvalues", i.Upvalues)
 }
 
 func (i InstructionNewClosure) Encode(code *[]byte) {
@@ -627,8 +699,12 @@ func (InstructionInvoke) Opcode() Opcode {
 func (i InstructionInvoke) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfUInt16ArrayArgument(&sb, "typeArgs", i.TypeArgs)
+	i.OperandsString(&sb)
 	return sb.String()
+}
+
+func (i InstructionInvoke) OperandsString(sb *strings.Builder) {
+	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs)
 }
 
 func (i InstructionInvoke) Encode(code *[]byte) {
@@ -659,10 +735,14 @@ func (InstructionInvokeDynamic) Opcode() Opcode {
 func (i InstructionInvokeDynamic) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "nameIndex", i.NameIndex)
-	printfUInt16ArrayArgument(&sb, "typeArgs", i.TypeArgs)
-	printfArgument(&sb, "argCount", i.ArgCount)
+	i.OperandsString(&sb)
 	return sb.String()
+}
+
+func (i InstructionInvokeDynamic) OperandsString(sb *strings.Builder) {
+	printfArgument(sb, "nameIndex", i.NameIndex)
+	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs)
+	printfArgument(sb, "argCount", i.ArgCount)
 }
 
 func (i InstructionInvokeDynamic) Encode(code *[]byte) {
@@ -695,6 +775,8 @@ func (i InstructionDup) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionDup) OperandsString(sb *strings.Builder) {}
+
 func (i InstructionDup) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -714,6 +796,8 @@ func (InstructionDrop) Opcode() Opcode {
 func (i InstructionDrop) String() string {
 	return i.Opcode().String()
 }
+
+func (i InstructionDrop) OperandsString(sb *strings.Builder) {}
 
 func (i InstructionDrop) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
@@ -735,6 +819,8 @@ func (i InstructionDestroy) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionDestroy) OperandsString(sb *strings.Builder) {}
+
 func (i InstructionDestroy) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -754,6 +840,8 @@ func (InstructionUnwrap) Opcode() Opcode {
 func (i InstructionUnwrap) String() string {
 	return i.Opcode().String()
 }
+
+func (i InstructionUnwrap) OperandsString(sb *strings.Builder) {}
 
 func (i InstructionUnwrap) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
@@ -775,8 +863,12 @@ func (InstructionTransfer) Opcode() Opcode {
 func (i InstructionTransfer) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "typeIndex", i.TypeIndex)
+	i.OperandsString(&sb)
 	return sb.String()
+}
+
+func (i InstructionTransfer) OperandsString(sb *strings.Builder) {
+	printfArgument(sb, "typeIndex", i.TypeIndex)
 }
 
 func (i InstructionTransfer) Encode(code *[]byte) {
@@ -805,8 +897,12 @@ func (InstructionSimpleCast) Opcode() Opcode {
 func (i InstructionSimpleCast) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "typeIndex", i.TypeIndex)
+	i.OperandsString(&sb)
 	return sb.String()
+}
+
+func (i InstructionSimpleCast) OperandsString(sb *strings.Builder) {
+	printfArgument(sb, "typeIndex", i.TypeIndex)
 }
 
 func (i InstructionSimpleCast) Encode(code *[]byte) {
@@ -835,8 +931,12 @@ func (InstructionFailableCast) Opcode() Opcode {
 func (i InstructionFailableCast) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "typeIndex", i.TypeIndex)
+	i.OperandsString(&sb)
 	return sb.String()
+}
+
+func (i InstructionFailableCast) OperandsString(sb *strings.Builder) {
+	printfArgument(sb, "typeIndex", i.TypeIndex)
 }
 
 func (i InstructionFailableCast) Encode(code *[]byte) {
@@ -865,8 +965,12 @@ func (InstructionForceCast) Opcode() Opcode {
 func (i InstructionForceCast) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "typeIndex", i.TypeIndex)
+	i.OperandsString(&sb)
 	return sb.String()
+}
+
+func (i InstructionForceCast) OperandsString(sb *strings.Builder) {
+	printfArgument(sb, "typeIndex", i.TypeIndex)
 }
 
 func (i InstructionForceCast) Encode(code *[]byte) {
@@ -895,6 +999,8 @@ func (i InstructionDeref) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionDeref) OperandsString(sb *strings.Builder) {}
+
 func (i InstructionDeref) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -915,9 +1021,11 @@ func (InstructionJump) Opcode() Opcode {
 func (i InstructionJump) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "target", i.Target)
+	i.OperandsString(&sb)
 	return sb.String()
 }
+
+func (i InstructionJump) OperandsString(sb *strings.Builder) { printfArgument(sb, "target", i.Target) }
 
 func (i InstructionJump) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
@@ -945,8 +1053,12 @@ func (InstructionJumpIfFalse) Opcode() Opcode {
 func (i InstructionJumpIfFalse) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "target", i.Target)
+	i.OperandsString(&sb)
 	return sb.String()
+}
+
+func (i InstructionJumpIfFalse) OperandsString(sb *strings.Builder) {
+	printfArgument(sb, "target", i.Target)
 }
 
 func (i InstructionJumpIfFalse) Encode(code *[]byte) {
@@ -975,8 +1087,12 @@ func (InstructionJumpIfTrue) Opcode() Opcode {
 func (i InstructionJumpIfTrue) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "target", i.Target)
+	i.OperandsString(&sb)
 	return sb.String()
+}
+
+func (i InstructionJumpIfTrue) OperandsString(sb *strings.Builder) {
+	printfArgument(sb, "target", i.Target)
 }
 
 func (i InstructionJumpIfTrue) Encode(code *[]byte) {
@@ -1005,8 +1121,12 @@ func (InstructionJumpIfNil) Opcode() Opcode {
 func (i InstructionJumpIfNil) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "target", i.Target)
+	i.OperandsString(&sb)
 	return sb.String()
+}
+
+func (i InstructionJumpIfNil) OperandsString(sb *strings.Builder) {
+	printfArgument(sb, "target", i.Target)
 }
 
 func (i InstructionJumpIfNil) Encode(code *[]byte) {
@@ -1035,6 +1155,8 @@ func (i InstructionReturn) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionReturn) OperandsString(sb *strings.Builder) {}
+
 func (i InstructionReturn) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -1054,6 +1176,8 @@ func (InstructionReturnValue) Opcode() Opcode {
 func (i InstructionReturnValue) String() string {
 	return i.Opcode().String()
 }
+
+func (i InstructionReturnValue) OperandsString(sb *strings.Builder) {}
 
 func (i InstructionReturnValue) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
@@ -1075,6 +1199,8 @@ func (i InstructionEqual) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionEqual) OperandsString(sb *strings.Builder) {}
+
 func (i InstructionEqual) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -1094,6 +1220,8 @@ func (InstructionNotEqual) Opcode() Opcode {
 func (i InstructionNotEqual) String() string {
 	return i.Opcode().String()
 }
+
+func (i InstructionNotEqual) OperandsString(sb *strings.Builder) {}
 
 func (i InstructionNotEqual) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
@@ -1115,6 +1243,8 @@ func (i InstructionNot) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionNot) OperandsString(sb *strings.Builder) {}
+
 func (i InstructionNot) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -1134,6 +1264,8 @@ func (InstructionAdd) Opcode() Opcode {
 func (i InstructionAdd) String() string {
 	return i.Opcode().String()
 }
+
+func (i InstructionAdd) OperandsString(sb *strings.Builder) {}
 
 func (i InstructionAdd) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
@@ -1155,6 +1287,8 @@ func (i InstructionSubtract) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionSubtract) OperandsString(sb *strings.Builder) {}
+
 func (i InstructionSubtract) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -1174,6 +1308,8 @@ func (InstructionMultiply) Opcode() Opcode {
 func (i InstructionMultiply) String() string {
 	return i.Opcode().String()
 }
+
+func (i InstructionMultiply) OperandsString(sb *strings.Builder) {}
 
 func (i InstructionMultiply) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
@@ -1195,6 +1331,8 @@ func (i InstructionDivide) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionDivide) OperandsString(sb *strings.Builder) {}
+
 func (i InstructionDivide) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -1214,6 +1352,8 @@ func (InstructionMod) Opcode() Opcode {
 func (i InstructionMod) String() string {
 	return i.Opcode().String()
 }
+
+func (i InstructionMod) OperandsString(sb *strings.Builder) {}
 
 func (i InstructionMod) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
@@ -1235,6 +1375,8 @@ func (i InstructionNegate) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionNegate) OperandsString(sb *strings.Builder) {}
+
 func (i InstructionNegate) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -1254,6 +1396,8 @@ func (InstructionLess) Opcode() Opcode {
 func (i InstructionLess) String() string {
 	return i.Opcode().String()
 }
+
+func (i InstructionLess) OperandsString(sb *strings.Builder) {}
 
 func (i InstructionLess) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
@@ -1275,6 +1419,8 @@ func (i InstructionLessOrEqual) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionLessOrEqual) OperandsString(sb *strings.Builder) {}
+
 func (i InstructionLessOrEqual) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -1294,6 +1440,8 @@ func (InstructionGreater) Opcode() Opcode {
 func (i InstructionGreater) String() string {
 	return i.Opcode().String()
 }
+
+func (i InstructionGreater) OperandsString(sb *strings.Builder) {}
 
 func (i InstructionGreater) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
@@ -1315,6 +1463,8 @@ func (i InstructionGreaterOrEqual) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionGreaterOrEqual) OperandsString(sb *strings.Builder) {}
+
 func (i InstructionGreaterOrEqual) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -1334,6 +1484,8 @@ func (InstructionBitwiseOr) Opcode() Opcode {
 func (i InstructionBitwiseOr) String() string {
 	return i.Opcode().String()
 }
+
+func (i InstructionBitwiseOr) OperandsString(sb *strings.Builder) {}
 
 func (i InstructionBitwiseOr) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
@@ -1355,6 +1507,8 @@ func (i InstructionBitwiseXor) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionBitwiseXor) OperandsString(sb *strings.Builder) {}
+
 func (i InstructionBitwiseXor) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -1374,6 +1528,8 @@ func (InstructionBitwiseAnd) Opcode() Opcode {
 func (i InstructionBitwiseAnd) String() string {
 	return i.Opcode().String()
 }
+
+func (i InstructionBitwiseAnd) OperandsString(sb *strings.Builder) {}
 
 func (i InstructionBitwiseAnd) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
@@ -1395,6 +1551,8 @@ func (i InstructionBitwiseLeftShift) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionBitwiseLeftShift) OperandsString(sb *strings.Builder) {}
+
 func (i InstructionBitwiseLeftShift) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -1414,6 +1572,8 @@ func (InstructionBitwiseRightShift) Opcode() Opcode {
 func (i InstructionBitwiseRightShift) String() string {
 	return i.Opcode().String()
 }
+
+func (i InstructionBitwiseRightShift) OperandsString(sb *strings.Builder) {}
 
 func (i InstructionBitwiseRightShift) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
@@ -1435,6 +1595,8 @@ func (i InstructionIterator) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionIterator) OperandsString(sb *strings.Builder) {}
+
 func (i InstructionIterator) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -1454,6 +1616,8 @@ func (InstructionIteratorHasNext) Opcode() Opcode {
 func (i InstructionIteratorHasNext) String() string {
 	return i.Opcode().String()
 }
+
+func (i InstructionIteratorHasNext) OperandsString(sb *strings.Builder) {}
 
 func (i InstructionIteratorHasNext) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
@@ -1475,6 +1639,8 @@ func (i InstructionIteratorNext) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionIteratorNext) OperandsString(sb *strings.Builder) {}
+
 func (i InstructionIteratorNext) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -1495,8 +1661,12 @@ func (InstructionEmitEvent) Opcode() Opcode {
 func (i InstructionEmitEvent) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "typeIndex", i.TypeIndex)
+	i.OperandsString(&sb)
 	return sb.String()
+}
+
+func (i InstructionEmitEvent) OperandsString(sb *strings.Builder) {
+	printfArgument(sb, "typeIndex", i.TypeIndex)
 }
 
 func (i InstructionEmitEvent) Encode(code *[]byte) {

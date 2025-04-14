@@ -238,6 +238,7 @@ func instructionDecls(instruction instruction) []dst.Decl {
 		instructionConformanceDecl(instruction),
 		instructionOpcodeFuncDecl(instruction),
 		instructionStringFuncDecl(instruction),
+		instructionOperandsStringFuncDecl(instruction),
 		instructionEncodeFuncDecl(instruction),
 	}
 	if len(instruction.Operands) > 0 {
@@ -447,8 +448,8 @@ func instructionStringFuncDecl(ins instruction) *dst.FuncDecl {
 								dst.NewIdent("sb"),
 							},
 							Type: &dst.Ident{
-								Name: "Builder",
 								Path: "strings",
+								Name: "Builder",
 							},
 						},
 					},
@@ -475,46 +476,20 @@ func instructionStringFuncDecl(ins instruction) *dst.FuncDecl {
 					},
 				},
 			},
-		)
-
-		for _, operand := range ins.Operands {
-			var funcName string
-			switch operand.Type {
-			case operandTypeIndices:
-				funcName = "printfUInt16ArrayArgument"
-			case operandTypeUpvalues:
-				funcName = "printfUpvalueArrayArgument"
-			default:
-				funcName = "printfArgument"
-			}
-			stmts = append(
-				stmts,
-				&dst.ExprStmt{
-					X: &dst.CallExpr{
-						Fun: &dst.Ident{
-							Name: funcName,
-						},
-						Args: []dst.Expr{
-							&dst.UnaryExpr{
-								Op: token.AND,
-								X:  dst.NewIdent("sb"),
-							},
-							&dst.BasicLit{
-								Kind:  token.STRING,
-								Value: fmt.Sprintf(`"%s"`, operand.Name),
-							},
-							&dst.SelectorExpr{
-								X:   dst.NewIdent("i"),
-								Sel: operandIdent(operand),
-							},
+			&dst.ExprStmt{
+				X: &dst.CallExpr{
+					Fun: &dst.SelectorExpr{
+						X:   dst.NewIdent("i"),
+						Sel: dst.NewIdent("OperandsString"),
+					},
+					Args: []dst.Expr{
+						&dst.UnaryExpr{
+							Op: token.AND,
+							X:  dst.NewIdent("sb"),
 						},
 					},
 				},
-			)
-		}
-
-		stmts = append(
-			stmts,
+			},
 			&dst.ReturnStmt{
 				Results: []dst.Expr{
 					&dst.CallExpr{
@@ -552,6 +527,78 @@ func instructionStringFuncDecl(ins instruction) *dst.FuncDecl {
 				List: []*dst.Field{
 					{
 						Type: dst.NewIdent("string"),
+					},
+				},
+			},
+		},
+		Body: &dst.BlockStmt{
+			List: stmts,
+		},
+	}
+}
+
+func instructionOperandsStringFuncDecl(ins instruction) *dst.FuncDecl {
+
+	var stmts []dst.Stmt
+
+	for _, operand := range ins.Operands {
+		var funcName string
+		switch operand.Type {
+		case operandTypeIndices:
+			funcName = "printfUInt16ArrayArgument"
+		case operandTypeUpvalues:
+			funcName = "printfUpvalueArrayArgument"
+		default:
+			funcName = "printfArgument"
+		}
+		stmts = append(
+			stmts,
+			&dst.ExprStmt{
+				X: &dst.CallExpr{
+					Fun: &dst.Ident{
+						Name: funcName,
+					},
+					Args: []dst.Expr{
+						dst.NewIdent("sb"),
+						&dst.BasicLit{
+							Kind:  token.STRING,
+							Value: fmt.Sprintf(`"%s"`, operand.Name),
+						},
+						&dst.SelectorExpr{
+							X:   dst.NewIdent("i"),
+							Sel: operandIdent(operand),
+						},
+					},
+				},
+			},
+		)
+	}
+
+	return &dst.FuncDecl{
+		Recv: &dst.FieldList{
+			List: []*dst.Field{
+				{
+					Names: []*dst.Ident{
+						dst.NewIdent("i"),
+					},
+					Type: instructionIdent(ins),
+				},
+			},
+		},
+		Name: dst.NewIdent("OperandsString"),
+		Type: &dst.FuncType{
+			Params: &dst.FieldList{
+				List: []*dst.Field{
+					{
+						Names: []*dst.Ident{
+							dst.NewIdent("sb"),
+						},
+						Type: &dst.StarExpr{
+							X: &dst.Ident{
+								Path: "strings",
+								Name: "Builder",
+							},
+						},
 					},
 				},
 			},

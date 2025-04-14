@@ -21,6 +21,7 @@ package bbq
 import (
 	"fmt"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/onflow/cadence/common"
 
@@ -76,6 +77,8 @@ func (p *ProgramPrinter[E, T]) printFunction(function Function[E]) {
 
 func (p *ProgramPrinter[_, T]) printConstantPool(constants []Constant) {
 	p.stringBuilder.WriteString("-- Constant Pool --\n")
+
+	tabWriter := tabwriter.NewWriter(&p.stringBuilder, 0, 0, 1, ' ', tabwriter.AlignRight)
 
 	for index, constant := range constants {
 
@@ -205,19 +208,17 @@ func (p *ProgramPrinter[_, T]) printConstantPool(constants []Constant) {
 			panic(errors.NewUnexpectedError("unsupported constant kind: %s", kind))
 		}
 
-		p.stringBuilder.WriteString(fmt.Sprint(index))
-		p.stringBuilder.WriteString(" | ")
-		p.stringBuilder.WriteString(constant.Kind.String())
-		p.stringBuilder.WriteString(" | ")
-		p.stringBuilder.WriteString(fmt.Sprint(v))
-		p.stringBuilder.WriteRune('\n')
+		_, _ = fmt.Fprintf(tabWriter, "%d |\t%s |\t %v\n", index, constant.Kind, v)
 	}
 
-	p.stringBuilder.WriteRune('\n')
+	_ = tabWriter.Flush()
+	_, _ = fmt.Fprintln(&p.stringBuilder)
 }
 
 func (p *ProgramPrinter[_, T]) printTypePool(types []T) {
 	p.stringBuilder.WriteString("-- Type Pool --\n")
+
+	tabWriter := tabwriter.NewWriter(&p.stringBuilder, 0, 0, 1, ' ', tabwriter.AlignRight)
 
 	for index, typ := range types {
 		staticType, err := p.typeDecoder(typ)
@@ -225,25 +226,28 @@ func (p *ProgramPrinter[_, T]) printTypePool(types []T) {
 			panic(err)
 		}
 
-		p.stringBuilder.WriteString(fmt.Sprint(index))
-		p.stringBuilder.WriteString(" | ")
-		p.stringBuilder.WriteString(string(staticType.ID()))
-		p.stringBuilder.WriteRune('\n')
+		_, _ = fmt.Fprintf(tabWriter, "%d |\t %s\n", index, staticType.ID())
 	}
 
-	p.stringBuilder.WriteRune('\n')
+	_ = tabWriter.Flush()
+	_, _ = fmt.Fprintln(&p.stringBuilder)
 }
 
 func (p *ProgramPrinter[_, _]) printImports(imports []Import) {
 	p.stringBuilder.WriteString("-- Imports --\n")
-	for _, impt := range imports {
-		location := impt.Location
-		if location != nil {
-			p.stringBuilder.WriteString(location.String())
-			p.stringBuilder.WriteRune('.')
+
+	tabWriter := tabwriter.NewWriter(&p.stringBuilder, 0, 0, 1, ' ', tabwriter.AlignRight)
+
+	for index, impt := range imports {
+
+		name := impt.Name
+		if impt.Location != nil {
+			name = string(impt.Location.TypeID(nil, impt.Name))
 		}
-		p.stringBuilder.WriteString(impt.Name)
-		p.stringBuilder.WriteRune('\n')
+
+		_, _ = fmt.Fprintf(tabWriter, "%d |\t %s\n", index, name)
 	}
-	p.stringBuilder.WriteRune('\n')
+
+	_ = tabWriter.Flush()
+	_, _ = fmt.Fprintln(&p.stringBuilder)
 }

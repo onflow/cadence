@@ -31,6 +31,7 @@ import (
 type Instruction interface {
 	Encode(code *[]byte)
 	String() string
+	OperandsString(*strings.Builder)
 	Opcode() Opcode
 }
 

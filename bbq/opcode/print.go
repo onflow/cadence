@@ -21,6 +21,7 @@ package opcode
 import (
 	"fmt"
 	"strings"
+	"text/tabwriter"
 )
 
 func PrintBytecode(builder *strings.Builder, code []byte) error {
@@ -29,12 +30,24 @@ func PrintBytecode(builder *strings.Builder, code []byte) error {
 }
 
 func PrintInstructions(builder *strings.Builder, instructions []Instruction) error {
-	for _, instruction := range instructions {
-		_, err := fmt.Fprint(builder, instruction)
-		if err != nil {
-			return err
-		}
-		builder.WriteByte('\n')
+
+	tabWriter := tabwriter.NewWriter(builder, 0, 0, 1, ' ', tabwriter.AlignRight)
+
+	for offset, instruction := range instructions {
+
+		var operandsBuilder strings.Builder
+		instruction.OperandsString(&operandsBuilder)
+		_, _ = fmt.Fprintf(
+			tabWriter,
+			"%d |\t%s |\t%s\n",
+			offset,
+			instruction.Opcode(),
+			operandsBuilder.String(),
+		)
 	}
+
+	_ = tabWriter.Flush()
+	_, _ = fmt.Fprintln(builder)
+
 	return nil
 }
