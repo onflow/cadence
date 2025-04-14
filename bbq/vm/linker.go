@@ -117,6 +117,12 @@ func LinkGlobals(
 	for i := range program.Functions {
 		function := &program.Functions[i]
 
+		// Anonymous functions are not needed as global variables.
+		// Compiler doesn't reserve global variable for them either.
+		if function.IsAnonymous() {
+			continue
+		}
+
 		funcStaticType := getTypeFromExecutable[interpreter.FunctionStaticType](executable, function.TypeIndex)
 
 		value := FunctionValue{

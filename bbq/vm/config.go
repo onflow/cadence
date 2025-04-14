@@ -60,6 +60,8 @@ type Config struct {
 	OnEventEmitted OnEventEmittedFunc
 
 	TypeLoader func(location common.Location, typeID interpreter.TypeID) sema.ContainedType
+
+	debugEnabled bool
 }
 
 var _ interpreter.ReferenceTracker = &Config{}
@@ -96,6 +98,11 @@ func (c *Config) InterpreterConfig() *interpreter.Config {
 
 func (c *Config) WithInterpreterConfig(config *interpreter.Config) *Config {
 	c.interpreterConfig = config
+	return c
+}
+
+func (c *Config) WithDebugEnabled() *Config {
+	c.debugEnabled = true
 	return c
 }
 
