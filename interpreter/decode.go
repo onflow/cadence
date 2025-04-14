@@ -1498,6 +1498,12 @@ func NewTypeDecoder(
 	}
 }
 
+func StaticTypeFromBytes(bytes []byte) (StaticType, error) {
+	dec := CBORDecMode.NewByteStreamDecoder(bytes)
+	typeDecoder := NewTypeDecoder(dec, nil)
+	return typeDecoder.DecodeStaticType()
+}
+
 func (d TypeDecoder) DecodeStaticType() (StaticType, error) {
 	number, err := d.decoder.DecodeTagNumber()
 	if err != nil {
