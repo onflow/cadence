@@ -223,13 +223,12 @@ access(all) contract interface FungibleToken: ViewResolver {
                     .concat(self.balance.toString()).concat(").")
             }
             post {
-                // TODO: getType
-                // result.getType() == self.getType():
-                //     "FungibleToken.Vault.withdraw: Cannot withdraw tokens! "
-                //     .concat("The withdraw method tried to return an incompatible Vault type <")
-                //     .concat(result.getType().identifier).concat(">. ")
-                //     .concat("It must return a Vault with the same type as self <")
-                //     .concat(self.getType().identifier).concat(">.")
+                result.getType() == self.getType():
+                    "FungibleToken.Vault.withdraw: Cannot withdraw tokens! "
+                    .concat("The withdraw method tried to return an incompatible Vault type <")
+                    .concat(result.getType().identifier).concat(">. ")
+                    .concat("It must return a Vault with the same type as self <")
+                    .concat(self.getType().identifier).concat(">.")
 
                 // use the special function `before` to get the value of the `balance` field
                 // at the beginning of the function execution
