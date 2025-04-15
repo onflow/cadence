@@ -4781,7 +4781,7 @@ func TestCompileFunctionExpressionOuterOuterVariableUse(t *testing.T) {
 	)
 }
 
-func TestCompileConstantTransfer(t *testing.T) {
+func TestCompileTransferConstant(t *testing.T) {
 
 	t.Parallel()
 
@@ -4821,4 +4821,97 @@ func TestCompileConstantTransfer(t *testing.T) {
 		},
 		program.Constants,
 	)
+}
+
+func TestCompileTransferNewPath(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("storage", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+          fun test() {
+              let x = /storage/foo
+          }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(checker)
+		program := comp.Compile()
+
+		require.Len(t, program.Functions, 1)
+
+		functions := comp.ExportFunctions()
+		require.Equal(t, len(program.Functions), len(functions))
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// let x = /storage/foo
+				opcode.InstructionNewPath{
+					Domain:     common.PathDomainStorage,
+					Identifier: 0,
+				},
+				// NOTE: *no* transfer
+				opcode.InstructionSetLocal{Local: 0},
+				// return
+				opcode.InstructionReturn{},
+			},
+			functions[0].Code,
+		)
+
+		assert.Equal(t,
+			[]constant.Constant{
+				{
+					Data: []byte("foo"),
+					Kind: constant.String,
+				},
+			},
+			program.Constants,
+		)
+	})
+
+	t.Run("public", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+          fun test() {
+              let x = /public/foo
+          }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(checker)
+		program := comp.Compile()
+
+		require.Len(t, program.Functions, 1)
+
+		functions := comp.ExportFunctions()
+		require.Equal(t, len(program.Functions), len(functions))
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// let x = /public/foo
+				opcode.InstructionNewPath{
+					Domain:     common.PathDomainPublic,
+					Identifier: 0,
+				},
+				// NOTE: *no* transfer
+				opcode.InstructionSetLocal{Local: 0},
+				// return
+				opcode.InstructionReturn{},
+			},
+			functions[0].Code,
+		)
+
+		assert.Equal(t,
+			[]constant.Constant{
+				{
+					Data: []byte("foo"),
+					Kind: constant.String,
+				},
+			},
+			program.Constants,
+		)
+	})
 }
