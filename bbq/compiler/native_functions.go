@@ -46,7 +46,6 @@ func NativeFunctions() map[string]*Global {
 var builtinTypes = common.Concat[sema.Type](
 	sema.AllBuiltinTypes,
 	[]sema.Type{
-		&sema.CapabilityType{},
 		&sema.ConstantSizedType{},
 		&sema.VariableSizedType{},
 		&sema.DictionaryType{},

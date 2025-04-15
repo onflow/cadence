@@ -471,6 +471,8 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 		}
 	}
 
+	// Add natively provided methods as globals.
+	// Only do it for user-defined types (i.e: `compositeTypeName` is not empty).
 	if compositeTypeName != "" {
 		for _, boundFunction := range commonBuiltinTypeBoundFunctions {
 			funcName := commons.TypeQualifiedName(compositeTypeName, boundFunction.name)
