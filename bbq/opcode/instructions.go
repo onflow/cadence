@@ -61,6 +61,7 @@ func (i InstructionGetLocal) String() string {
 }
 
 func (i InstructionGetLocal) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "local", i.Local, colorize)
 }
 
@@ -69,6 +70,7 @@ func (i InstructionGetLocal) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "local", i.Local, colorize)
 }
 
@@ -103,6 +105,7 @@ func (i InstructionSetLocal) String() string {
 }
 
 func (i InstructionSetLocal) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "local", i.Local, colorize)
 }
 
@@ -111,6 +114,7 @@ func (i InstructionSetLocal) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "local", i.Local, colorize)
 }
 
@@ -145,6 +149,7 @@ func (i InstructionGetUpvalue) String() string {
 }
 
 func (i InstructionGetUpvalue) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "upvalue", i.Upvalue, colorize)
 }
 
@@ -153,6 +158,7 @@ func (i InstructionGetUpvalue) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "upvalue", i.Upvalue, colorize)
 }
 
@@ -187,6 +193,7 @@ func (i InstructionSetUpvalue) String() string {
 }
 
 func (i InstructionSetUpvalue) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "upvalue", i.Upvalue, colorize)
 }
 
@@ -195,6 +202,7 @@ func (i InstructionSetUpvalue) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "upvalue", i.Upvalue, colorize)
 }
 
@@ -229,6 +237,7 @@ func (i InstructionGetGlobal) String() string {
 }
 
 func (i InstructionGetGlobal) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "global", i.Global, colorize)
 }
 
@@ -237,6 +246,7 @@ func (i InstructionGetGlobal) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "global", i.Global, colorize)
 }
 
@@ -271,6 +281,7 @@ func (i InstructionSetGlobal) String() string {
 }
 
 func (i InstructionSetGlobal) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "global", i.Global, colorize)
 }
 
@@ -279,6 +290,7 @@ func (i InstructionSetGlobal) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "global", i.Global, colorize)
 }
 
@@ -313,6 +325,7 @@ func (i InstructionGetField) String() string {
 }
 
 func (i InstructionGetField) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "fieldName", i.FieldName, colorize)
 }
 
@@ -321,6 +334,7 @@ func (i InstructionGetField) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
 	printfConstantArgument(sb, "fieldName", constants[i.FieldName], colorize)
 }
 
@@ -355,6 +369,7 @@ func (i InstructionSetField) String() string {
 }
 
 func (i InstructionSetField) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "fieldName", i.FieldName, colorize)
 }
 
@@ -363,6 +378,7 @@ func (i InstructionSetField) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
 	printfConstantArgument(sb, "fieldName", constants[i.FieldName], colorize)
 }
 
@@ -543,7 +559,9 @@ func (i InstructionPath) String() string {
 }
 
 func (i InstructionPath) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "domain", i.Domain, colorize)
+	sb.WriteByte(' ')
 	printfArgument(sb, "identifier", i.Identifier, colorize)
 }
 
@@ -552,7 +570,9 @@ func (i InstructionPath) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "domain", i.Domain, colorize)
+	sb.WriteByte(' ')
 	printfConstantArgument(sb, "identifier", constants[i.Identifier], colorize)
 }
 
@@ -590,7 +610,9 @@ func (i InstructionNew) String() string {
 }
 
 func (i InstructionNew) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "kind", i.Kind, colorize)
+	sb.WriteByte(' ')
 	printfArgument(sb, "type", i.Type, colorize)
 }
 
@@ -599,7 +621,9 @@ func (i InstructionNew) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "kind", i.Kind, colorize)
+	sb.WriteByte(' ')
 	printfTypeArgument(sb, "type", types[i.Type], colorize)
 }
 
@@ -638,8 +662,11 @@ func (i InstructionNewArray) String() string {
 }
 
 func (i InstructionNewArray) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "type", i.Type, colorize)
+	sb.WriteByte(' ')
 	printfArgument(sb, "size", i.Size, colorize)
+	sb.WriteByte(' ')
 	printfArgument(sb, "isResource", i.IsResource, colorize)
 }
 
@@ -648,8 +675,11 @@ func (i InstructionNewArray) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
 	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	sb.WriteByte(' ')
 	printfArgument(sb, "size", i.Size, colorize)
+	sb.WriteByte(' ')
 	printfArgument(sb, "isResource", i.IsResource, colorize)
 }
 
@@ -690,8 +720,11 @@ func (i InstructionNewDictionary) String() string {
 }
 
 func (i InstructionNewDictionary) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "type", i.Type, colorize)
+	sb.WriteByte(' ')
 	printfArgument(sb, "size", i.Size, colorize)
+	sb.WriteByte(' ')
 	printfArgument(sb, "isResource", i.IsResource, colorize)
 }
 
@@ -700,8 +733,11 @@ func (i InstructionNewDictionary) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
 	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	sb.WriteByte(' ')
 	printfArgument(sb, "size", i.Size, colorize)
+	sb.WriteByte(' ')
 	printfArgument(sb, "isResource", i.IsResource, colorize)
 }
 
@@ -741,7 +777,9 @@ func (i InstructionNewRef) String() string {
 }
 
 func (i InstructionNewRef) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "type", i.Type, colorize)
+	sb.WriteByte(' ')
 	printfArgument(sb, "isImplicit", i.IsImplicit, colorize)
 }
 
@@ -750,7 +788,9 @@ func (i InstructionNewRef) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
 	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	sb.WriteByte(' ')
 	printfArgument(sb, "isImplicit", i.IsImplicit, colorize)
 }
 
@@ -787,6 +827,7 @@ func (i InstructionGetConstant) String() string {
 }
 
 func (i InstructionGetConstant) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "constant", i.Constant, colorize)
 }
 
@@ -795,6 +836,7 @@ func (i InstructionGetConstant) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
 	printfConstantArgument(sb, "constant", constants[i.Constant], colorize)
 }
 
@@ -830,7 +872,9 @@ func (i InstructionNewClosure) String() string {
 }
 
 func (i InstructionNewClosure) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "function", i.Function, colorize)
+	sb.WriteByte(' ')
 	printfUpvalueArrayArgument(sb, "upvalues", i.Upvalues, colorize)
 }
 
@@ -839,7 +883,9 @@ func (i InstructionNewClosure) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
 	printfFunctionNameArgument(sb, "function", functionNames[i.Function], colorize)
+	sb.WriteByte(' ')
 	printfUpvalueArrayArgument(sb, "upvalues", i.Upvalues, colorize)
 }
 
@@ -876,6 +922,7 @@ func (i InstructionInvoke) String() string {
 }
 
 func (i InstructionInvoke) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
 	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs, colorize)
 }
 
@@ -884,6 +931,7 @@ func (i InstructionInvoke) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
 	printfTypeArrayArgument(sb, "typeArgs", i.TypeArgs, colorize, types)
 }
 
@@ -920,8 +968,11 @@ func (i InstructionInvokeDynamic) String() string {
 }
 
 func (i InstructionInvokeDynamic) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "name", i.Name, colorize)
+	sb.WriteByte(' ')
 	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs, colorize)
+	sb.WriteByte(' ')
 	printfArgument(sb, "argCount", i.ArgCount, colorize)
 }
 
@@ -930,8 +981,11 @@ func (i InstructionInvokeDynamic) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
 	printfConstantArgument(sb, "name", constants[i.Name], colorize)
+	sb.WriteByte(' ')
 	printfTypeArrayArgument(sb, "typeArgs", i.TypeArgs, colorize, types)
+	sb.WriteByte(' ')
 	printfArgument(sb, "argCount", i.ArgCount, colorize)
 }
 
@@ -1086,6 +1140,7 @@ func (i InstructionTransfer) String() string {
 }
 
 func (i InstructionTransfer) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "type", i.Type, colorize)
 }
 
@@ -1094,6 +1149,7 @@ func (i InstructionTransfer) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
 	printfTypeArgument(sb, "type", types[i.Type], colorize)
 }
 
@@ -1128,6 +1184,7 @@ func (i InstructionSimpleCast) String() string {
 }
 
 func (i InstructionSimpleCast) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "type", i.Type, colorize)
 }
 
@@ -1136,6 +1193,7 @@ func (i InstructionSimpleCast) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
 	printfTypeArgument(sb, "type", types[i.Type], colorize)
 }
 
@@ -1170,6 +1228,7 @@ func (i InstructionFailableCast) String() string {
 }
 
 func (i InstructionFailableCast) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "type", i.Type, colorize)
 }
 
@@ -1178,6 +1237,7 @@ func (i InstructionFailableCast) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
 	printfTypeArgument(sb, "type", types[i.Type], colorize)
 }
 
@@ -1212,6 +1272,7 @@ func (i InstructionForceCast) String() string {
 }
 
 func (i InstructionForceCast) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "type", i.Type, colorize)
 }
 
@@ -1220,6 +1281,7 @@ func (i InstructionForceCast) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
 	printfTypeArgument(sb, "type", types[i.Type], colorize)
 }
 
@@ -1283,6 +1345,7 @@ func (i InstructionJump) String() string {
 }
 
 func (i InstructionJump) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "target", i.Target, colorize)
 }
 
@@ -1291,6 +1354,7 @@ func (i InstructionJump) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "target", i.Target, colorize)
 }
 
@@ -1325,6 +1389,7 @@ func (i InstructionJumpIfFalse) String() string {
 }
 
 func (i InstructionJumpIfFalse) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "target", i.Target, colorize)
 }
 
@@ -1333,6 +1398,7 @@ func (i InstructionJumpIfFalse) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "target", i.Target, colorize)
 }
 
@@ -1367,6 +1433,7 @@ func (i InstructionJumpIfTrue) String() string {
 }
 
 func (i InstructionJumpIfTrue) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "target", i.Target, colorize)
 }
 
@@ -1375,6 +1442,7 @@ func (i InstructionJumpIfTrue) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "target", i.Target, colorize)
 }
 
@@ -1409,6 +1477,7 @@ func (i InstructionJumpIfNil) String() string {
 }
 
 func (i InstructionJumpIfNil) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "target", i.Target, colorize)
 }
 
@@ -1417,6 +1486,7 @@ func (i InstructionJumpIfNil) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "target", i.Target, colorize)
 }
 
@@ -2118,6 +2188,7 @@ func (i InstructionEmitEvent) String() string {
 }
 
 func (i InstructionEmitEvent) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
 	printfArgument(sb, "type", i.Type, colorize)
 }
 
@@ -2126,6 +2197,7 @@ func (i InstructionEmitEvent) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
 	printfTypeArgument(sb, "type", types[i.Type], colorize)
 }
 

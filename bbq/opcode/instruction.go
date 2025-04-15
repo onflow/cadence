@@ -210,7 +210,7 @@ func printfUInt16ArrayArgument(
 		argumentName = colorizeArgumentName(argumentName)
 	}
 
-	_, _ = fmt.Fprintf(sb, " %s:[", argumentName)
+	_, _ = fmt.Fprintf(sb, "%s:[", argumentName)
 	for i, value := range values {
 		if i > 0 {
 			sb.WriteString(", ")
@@ -235,13 +235,14 @@ func printfUpvalueArrayArgument(
 		argumentName = colorizeArgumentName(argumentName)
 	}
 
-	_, _ = fmt.Fprintf(sb, " %s:[", argumentName)
+	_, _ = fmt.Fprintf(sb, "%s:[", argumentName)
 
 	for i, upvalue := range upvalues {
 		if i > 0 {
-			sb.WriteByte(',')
+			sb.WriteString(", ")
 		}
 		printfArgument(sb, "targetIndex", upvalue.TargetIndex, colorize)
+		sb.WriteByte(' ')
 		printfArgument(sb, "isLocal", upvalue.IsLocal, colorize)
 	}
 
@@ -260,7 +261,7 @@ func printfArgument(
 		formattedValue = colorizeArgumentValue(formattedValue)
 	}
 
-	_, _ = fmt.Fprintf(sb, " %s:%s", argumentName, formattedValue)
+	_, _ = fmt.Fprintf(sb, "%s:%s", argumentName, formattedValue)
 }
 
 func printfConstantArgument(
@@ -282,7 +283,7 @@ func printfConstantArgument(
 		formattedConstant = colorizeArgumentValue(formattedConstant)
 	}
 
-	_, _ = fmt.Fprintf(sb, " %s:%s", argumentName, formattedConstant)
+	_, _ = fmt.Fprintf(sb, "%s:%s", argumentName, formattedConstant)
 }
 
 func printfTypeArgument(
@@ -296,7 +297,7 @@ func printfTypeArgument(
 		argumentName = colorizeArgumentName(argumentName)
 		formattedType = colorizeArgumentValue(formattedType)
 	}
-	_, _ = fmt.Fprintf(sb, " %s:%s", argumentName, formattedType)
+	_, _ = fmt.Fprintf(sb, "%s:%s", argumentName, formattedType)
 }
 
 func printfTypeArrayArgument(
@@ -310,7 +311,7 @@ func printfTypeArrayArgument(
 		argumentName = colorizeArgumentName(argumentName)
 	}
 
-	_, _ = fmt.Fprintf(sb, " %s:[", argumentName)
+	_, _ = fmt.Fprintf(sb, "%s:[", argumentName)
 
 	for i, typeIndex := range typeIndices {
 		if i > 0 {
@@ -340,7 +341,7 @@ func printfFunctionNameArgument(
 		argumentName = colorizeArgumentName(argumentName)
 		functionName = colorizeArgumentValue(functionName)
 	}
-	_, _ = fmt.Fprintf(sb, " %s:%s", argumentName, functionName)
+	_, _ = fmt.Fprintf(sb, "%s:%s", argumentName, functionName)
 }
 
 func colorizeArgumentName(argumentName string) string {

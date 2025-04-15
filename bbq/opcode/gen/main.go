@@ -567,8 +567,23 @@ func instructionOperandsStringFuncDecl(ins instruction) *dst.FuncDecl {
 		default:
 			funcName = "printfArgument"
 		}
+
 		stmts = append(
 			stmts,
+			&dst.ExprStmt{
+				X: &dst.CallExpr{
+					Fun: &dst.SelectorExpr{
+						X:   dst.NewIdent("sb"),
+						Sel: dst.NewIdent("WriteByte"),
+					},
+					Args: []dst.Expr{
+						&dst.BasicLit{
+							Kind:  token.CHAR,
+							Value: "' '",
+						},
+					},
+				},
+			},
 			&dst.ExprStmt{
 				X: &dst.CallExpr{
 					Fun: &dst.Ident{
@@ -697,6 +712,20 @@ func instructionResolvedOperandsStringFuncDecl(ins instruction) *dst.FuncDecl {
 
 		stmts = append(
 			stmts,
+			&dst.ExprStmt{
+				X: &dst.CallExpr{
+					Fun: &dst.SelectorExpr{
+						X:   dst.NewIdent("sb"),
+						Sel: dst.NewIdent("WriteByte"),
+					},
+					Args: []dst.Expr{
+						&dst.BasicLit{
+							Kind:  token.CHAR,
+							Value: "' '",
+						},
+					},
+				},
+			},
 			&dst.ExprStmt{
 				X: &dst.CallExpr{
 					Fun: &dst.Ident{

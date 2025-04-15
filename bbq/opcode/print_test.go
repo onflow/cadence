@@ -112,10 +112,10 @@ func TestPrintResolved(t *testing.T) {
 		},
 	}
 
-	const expected = ` 0 | GetConstant | constant:foo
- 1 | GetConstant | constant:1
- 2 |   EmitEvent | type:Int
- 3 |   EmitEvent | type:[String]
+	const expected = ` 0 | GetConstant | constant:"foo"
+ 1 | GetConstant | constant:1(Int)
+ 2 |   EmitEvent | type:"Int"
+ 3 |   EmitEvent | type:"[String]"
  4 |  NewClosure | function:bar upvalues:[]
  5 |  NewClosure | function:baz upvalues:[]
 
