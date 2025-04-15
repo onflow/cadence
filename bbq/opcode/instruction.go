@@ -25,12 +25,21 @@ import (
 	"math"
 	"strings"
 
+	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
 )
 
 type Instruction interface {
 	Encode(code *[]byte)
 	String() string
+	OperandsString(*strings.Builder)
+	ResolvedOperandsString(
+		sb *strings.Builder,
+		constants []constant.Constant,
+		types []interpreter.StaticType,
+		functionNames []string,
+	)
 	Opcode() Opcode
 }
 
@@ -213,4 +222,16 @@ func printfUpvalueArrayArgument(sb *strings.Builder, argName string, upvalues []
 
 func printfArgument(sb *strings.Builder, fieldName string, v any) {
 	_, _ = fmt.Fprintf(sb, " %s:%v", fieldName, v)
+}
+
+func printfConstantArgument(sb *strings.Builder, fieldName string, constant constant.Constant) {
+	_, _ = fmt.Fprintf(sb, " %s:%s", fieldName, constant)
+}
+
+func printfTypeArgument(sb *strings.Builder, fieldName string, typ interpreter.StaticType) {
+	_, _ = fmt.Fprintf(sb, " %s:%s", fieldName, typ)
+}
+
+func printfFunctionNameArgument(sb *strings.Builder, fieldName string, functionName string) {
+	_, _ = fmt.Fprintf(sb, " %s:%s", fieldName, functionName)
 }

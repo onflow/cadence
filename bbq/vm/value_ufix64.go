@@ -18,26 +18,7 @@
 
 package vm
 
-import (
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/sema"
-)
-
 // members
 
 func init() {
-	RegisterTypeBoundFunction(
-		sema.UFix64TypeName,
-		NewNativeFunctionValue(
-			sema.ToStringFunctionName,
-			sema.ToStringFunctionType,
-			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
-				number := args[receiverIndex].(interpreter.UFix64Value)
-
-				// TODO: memory metering
-				return interpreter.NewUnmeteredStringValue(number.String())
-			},
-		),
-	)
 }

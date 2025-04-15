@@ -26,7 +26,7 @@ import (
 
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
-	"github.com/onflow/cadence/bbq/constantkind"
+	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/bbq/leb128"
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
@@ -539,26 +539,30 @@ func opFalse(vm *VM) {
 }
 
 func opGetConstant(vm *VM, ins opcode.InstructionGetConstant) {
-	constant := vm.callFrame.function.Executable.Constants[ins.ConstantIndex]
+	constantIndex := ins.Constant
+	constant := vm.callFrame.function.Executable.Constants[constantIndex]
 	if constant == nil {
-		constant = vm.initializeConstant(ins.ConstantIndex)
+		constant = vm.initializeConstant(constantIndex)
 	}
 	vm.push(constant)
 }
 
 func opGetLocal(vm *VM, ins opcode.InstructionGetLocal) {
-	absoluteIndex := vm.callFrame.localsOffset + ins.LocalIndex
+	localIndex := ins.Local
+	absoluteIndex := vm.callFrame.localsOffset + localIndex
 	local := vm.locals[absoluteIndex]
 	vm.push(local)
 }
 
 func opSetLocal(vm *VM, ins opcode.InstructionSetLocal) {
-	absoluteIndex := vm.callFrame.localsOffset + ins.LocalIndex
+	localIndex := ins.Local
+	absoluteIndex := vm.callFrame.localsOffset + localIndex
 	vm.locals[absoluteIndex] = vm.pop()
 }
 
 func opGetUpvalue(vm *VM, ins opcode.InstructionGetUpvalue) {
-	upvalue := vm.callFrame.function.Upvalues[ins.UpvalueIndex]
+	upvalueIndex := ins.Upvalue
+	upvalue := vm.callFrame.function.Upvalues[upvalueIndex]
 	value := upvalue.closed
 	if value == nil {
 		value = vm.locals[upvalue.absoluteLocalsIndex]
@@ -567,7 +571,8 @@ func opGetUpvalue(vm *VM, ins opcode.InstructionGetUpvalue) {
 }
 
 func opSetUpvalue(vm *VM, ins opcode.InstructionSetUpvalue) {
-	upvalue := vm.callFrame.function.Upvalues[ins.UpvalueIndex]
+	upvalueIndex := ins.Upvalue
+	upvalue := vm.callFrame.function.Upvalues[upvalueIndex]
 	value := vm.pop()
 	if upvalue.closed == nil {
 		vm.locals[upvalue.absoluteLocalsIndex] = value
@@ -577,12 +582,17 @@ func opSetUpvalue(vm *VM, ins opcode.InstructionSetUpvalue) {
 }
 
 func opGetGlobal(vm *VM, ins opcode.InstructionGetGlobal) {
-	value := vm.callFrame.function.Executable.Globals[ins.GlobalIndex]
+	globalIndex := ins.Global
+	globals := vm.callFrame.function.Executable.Globals
+	value := globals[globalIndex]
 	vm.push(value)
 }
 
 func opSetGlobal(vm *VM, ins opcode.InstructionSetGlobal) {
-	vm.callFrame.function.Executable.Globals[ins.GlobalIndex] = vm.pop()
+	globalIndex := ins.Global
+	globals := vm.callFrame.function.Executable.Globals
+	value := vm.pop()
+	globals[globalIndex] = value
 }
 
 func opSetIndex(vm *VM) {
@@ -665,7 +675,8 @@ func opInvokeDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
 	// TODO: for inclusive range, this is different.
 	compositeType := staticType.(*interpreter.CompositeStaticType)
 
-	funcName := getStringConstant(vm, ins.NameIndex)
+	nameIndex := ins.Name
+	funcName := getStringConstant(vm, nameIndex)
 
 	qualifiedFuncName := commons.TypeQualifiedName(compositeType.QualifiedIdentifier, funcName)
 	var functionValue = vm.lookupFunction(compositeType.Location, qualifiedFuncName)
@@ -691,7 +702,8 @@ func opNew(vm *VM, ins opcode.InstructionNew) {
 	compositeKind := ins.Kind
 
 	// decode location
-	staticType := vm.loadType(ins.TypeIndex)
+	typeIndex := ins.Type
+	staticType := vm.loadType(typeIndex)
 
 	// TODO: Support inclusive-range type
 	compositeStaticType := staticType.(*interpreter.CompositeStaticType)
@@ -718,7 +730,8 @@ func opSetField(vm *VM, ins opcode.InstructionSetField) {
 	target, fieldValue := vm.pop2()
 
 	// VM assumes the field name is always a string.
-	fieldName := getStringConstant(vm, ins.FieldNameIndex)
+	fieldNameIndex := ins.FieldName
+	fieldName := getStringConstant(vm, fieldNameIndex)
 
 	target.(interpreter.MemberAccessibleValue).
 		SetMember(vm.config, EmptyLocationRange, fieldName, fieldValue)
@@ -728,7 +741,8 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 	memberAccessibleValue := vm.pop().(interpreter.MemberAccessibleValue)
 
 	// VM assumes the field name is always a string.
-	fieldName := getStringConstant(vm, ins.FieldNameIndex)
+	fieldNameIndex := ins.FieldName
+	fieldName := getStringConstant(vm, fieldNameIndex)
 
 	fieldValue := memberAccessibleValue.GetMember(vm.config, EmptyLocationRange, fieldName)
 	if fieldValue == nil {
@@ -747,7 +761,8 @@ func getStringConstant(vm *VM, index uint16) string {
 }
 
 func opTransfer(vm *VM, ins opcode.InstructionTransfer) {
-	targetType := vm.loadType(ins.TypeIndex)
+	typeIndex := ins.Type
+	targetType := vm.loadType(typeIndex)
 	value := vm.peek()
 
 	config := vm.config
@@ -783,7 +798,8 @@ func opDestroy(vm *VM) {
 }
 
 func opPath(vm *VM, ins opcode.InstructionPath) {
-	identifier := getStringConstant(vm, ins.IdentifierIndex)
+	identifierIndex := ins.Identifier
+	identifier := getStringConstant(vm, identifierIndex)
 	value := interpreter.NewPathValue(
 		vm.config.MemoryGauge,
 		ins.Domain,
@@ -795,7 +811,8 @@ func opPath(vm *VM, ins opcode.InstructionPath) {
 func opSimpleCast(vm *VM, ins opcode.InstructionSimpleCast) {
 	value := vm.pop()
 
-	targetType := vm.loadType(ins.TypeIndex)
+	typeIndex := ins.Type
+	targetType := vm.loadType(typeIndex)
 	valueType := value.StaticType(vm.config)
 
 	// The cast may upcast to an optional type, e.g. `1 as Int?`, so box
@@ -807,8 +824,11 @@ func opSimpleCast(vm *VM, ins opcode.InstructionSimpleCast) {
 func opFailableCast(vm *VM, ins opcode.InstructionFailableCast) {
 	value := vm.pop()
 
-	targetType := vm.loadType(ins.TypeIndex)
+	typeIndex := ins.Type
+	targetType := vm.loadType(typeIndex)
+
 	value, valueType := castValueAndValueType(vm.config, targetType, value)
+
 	isSubType := vm.config.IsSubType(valueType, targetType)
 
 	var result Value
@@ -834,8 +854,11 @@ func opFailableCast(vm *VM, ins opcode.InstructionFailableCast) {
 func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 	value := vm.pop()
 
-	targetType := vm.loadType(ins.TypeIndex)
+	typeIndex := ins.Type
+	targetType := vm.loadType(typeIndex)
+
 	value, valueType := castValueAndValueType(vm.config, targetType, value)
+
 	isSubType := vm.config.IsSubType(valueType, targetType)
 
 	var result Value
@@ -924,7 +947,8 @@ func opUnwrap(vm *VM) {
 }
 
 func opNewArray(vm *VM, ins opcode.InstructionNewArray) {
-	typ := vm.loadType(ins.TypeIndex).(interpreter.ArrayStaticType)
+	typeIndex := ins.Type
+	typ := vm.loadType(typeIndex).(interpreter.ArrayStaticType)
 
 	elements := vm.peekN(int(ins.Size))
 	array := interpreter.NewArrayValue(
@@ -945,7 +969,8 @@ func opNewArray(vm *VM, ins opcode.InstructionNewArray) {
 }
 
 func opNewDictionary(vm *VM, ins opcode.InstructionNewDictionary) {
-	typ := vm.loadType(ins.TypeIndex).(*interpreter.DictionaryStaticType)
+	typeIndex := ins.Type
+	typ := vm.loadType(typeIndex).(*interpreter.DictionaryStaticType)
 
 	entries := vm.peekN(int(ins.Size * 2))
 	dictionary := interpreter.NewDictionaryValue(
@@ -960,7 +985,8 @@ func opNewDictionary(vm *VM, ins opcode.InstructionNewDictionary) {
 }
 
 func opNewRef(vm *VM, ins opcode.InstructionNewRef) {
-	borrowedType := vm.loadType(ins.TypeIndex)
+	typeIndex := ins.Type
+	borrowedType := vm.loadType(typeIndex)
 	value := vm.pop()
 
 	semaBorrowedType := interpreter.MustConvertStaticToSemaType(borrowedType, vm.config)
@@ -1198,7 +1224,8 @@ func onEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
 		return
 	}
 
-	eventType := vm.loadType(ins.TypeIndex).(*interpreter.CompositeStaticType)
+	typeIndex := ins.Type
+	eventType := vm.loadType(typeIndex).(*interpreter.CompositeStaticType)
 
 	err := onEventEmitted(eventValue, eventType)
 	if err != nil {
@@ -1209,7 +1236,8 @@ func onEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
 func opNewClosure(vm *VM, ins opcode.InstructionNewClosure) {
 
 	executable := vm.callFrame.function.Executable
-	function := &executable.Program.Functions[ins.FunctionIndex]
+	functionIndex := ins.Function
+	function := &executable.Program.Functions[functionIndex]
 
 	var upvalues []*Upvalue
 	upvalueCount := len(ins.Upvalues)
@@ -1259,26 +1287,23 @@ func (vm *VM) captureUpvalue(absoluteLocalsIndex int) *Upvalue {
 func (vm *VM) initializeConstant(index uint16) (value Value) {
 	executable := vm.callFrame.function.Executable
 
-	constant := executable.Program.Constants[index]
-	kind := constant.Kind
-	data := constant.Data
-
+	c := executable.Program.Constants[index]
 	memoryGauge := vm.config.MemoryGauge
 
-	switch kind {
-	case constantkind.String:
-		value = interpreter.NewUnmeteredStringValue(string(data))
+	switch c.Kind {
+	case constant.String:
+		value = interpreter.NewUnmeteredStringValue(string(c.Data))
 
-	case constantkind.Int:
+	case constant.Int:
 		// TODO: support larger integers
-		v, _, err := leb128.ReadInt64(data)
+		v, _, err := leb128.ReadInt64(c.Data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read Int constant: %s", err))
 		}
 		value = interpreter.NewIntValueFromInt64(memoryGauge, v)
 
-	case constantkind.Int8:
-		v, _, err := leb128.ReadInt32(data)
+	case constant.Int8:
+		v, _, err := leb128.ReadInt32(c.Data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read Int8 constant: %s", err))
 		}
@@ -1289,8 +1314,8 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 			},
 		)
 
-	case constantkind.Int16:
-		v, _, err := leb128.ReadInt32(data)
+	case constant.Int16:
+		v, _, err := leb128.ReadInt32(c.Data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read Int16 constant: %s", err))
 		}
@@ -1301,8 +1326,8 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 			},
 		)
 
-	case constantkind.Int32:
-		v, _, err := leb128.ReadInt32(data)
+	case constant.Int32:
+		v, _, err := leb128.ReadInt32(c.Data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read Int32 constant: %s", err))
 		}
@@ -1313,8 +1338,8 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 			},
 		)
 
-	case constantkind.Int64:
-		v, _, err := leb128.ReadInt64(data)
+	case constant.Int64:
+		v, _, err := leb128.ReadInt64(c.Data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read Int64 constant: %s", err))
 		}
@@ -1325,16 +1350,16 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 			},
 		)
 
-	case constantkind.UInt:
+	case constant.UInt:
 		// TODO: support larger integers
-		v, _, err := leb128.ReadUint64(data)
+		v, _, err := leb128.ReadUint64(c.Data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read UInt constant: %s", err))
 		}
 		value = interpreter.NewUIntValueFromUint64(memoryGauge, v)
 
-	case constantkind.UInt8:
-		v, _, err := leb128.ReadUint32(data)
+	case constant.UInt8:
+		v, _, err := leb128.ReadUint32(c.Data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read UInt8 constant: %s", err))
 		}
@@ -1345,8 +1370,8 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 			},
 		)
 
-	case constantkind.UInt16:
-		v, _, err := leb128.ReadUint32(data)
+	case constant.UInt16:
+		v, _, err := leb128.ReadUint32(c.Data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read UInt16 constant: %s", err))
 		}
@@ -1357,8 +1382,8 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 			},
 		)
 
-	case constantkind.UInt32:
-		v, _, err := leb128.ReadUint32(data)
+	case constant.UInt32:
+		v, _, err := leb128.ReadUint32(c.Data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read UInt32 constant: %s", err))
 		}
@@ -1369,8 +1394,8 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 			},
 		)
 
-	case constantkind.UInt64:
-		v, _, err := leb128.ReadUint64(data)
+	case constant.UInt64:
+		v, _, err := leb128.ReadUint64(c.Data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read UInt64 constant: %s", err))
 		}
@@ -1381,8 +1406,8 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 			},
 		)
 
-	case constantkind.Word8:
-		v, _, err := leb128.ReadUint32(data)
+	case constant.Word8:
+		v, _, err := leb128.ReadUint32(c.Data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read Word8 constant: %s", err))
 		}
@@ -1393,8 +1418,8 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 			},
 		)
 
-	case constantkind.Word16:
-		v, _, err := leb128.ReadUint32(data)
+	case constant.Word16:
+		v, _, err := leb128.ReadUint32(c.Data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read Word16 constant: %s", err))
 		}
@@ -1405,8 +1430,8 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 			},
 		)
 
-	case constantkind.Word32:
-		v, _, err := leb128.ReadUint32(data)
+	case constant.Word32:
+		v, _, err := leb128.ReadUint32(c.Data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read Word32 constant: %s", err))
 		}
@@ -1417,8 +1442,8 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 			},
 		)
 
-	case constantkind.Word64:
-		v, _, err := leb128.ReadUint64(data)
+	case constant.Word64:
+		v, _, err := leb128.ReadUint64(c.Data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read Word64 constant: %s", err))
 		}
@@ -1429,25 +1454,25 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 			},
 		)
 
-	case constantkind.Fix64:
-		v, _, err := leb128.ReadInt64(data)
+	case constant.Fix64:
+		v, _, err := leb128.ReadInt64(c.Data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read Fix64 constant: %s", err))
 		}
 		value = interpreter.NewUnmeteredFix64Value(v)
 
-	case constantkind.UFix64:
-		v, _, err := leb128.ReadUint64(data)
+	case constant.UFix64:
+		v, _, err := leb128.ReadUint64(c.Data)
 		if err != nil {
 			panic(errors.NewUnexpectedError("failed to read UFix64 constant: %s", err))
 		}
 		value = interpreter.NewUnmeteredUFix64Value(v)
 
-	case constantkind.Address:
+	case constant.Address:
 		value = interpreter.NewAddressValueFromBytes(
 			memoryGauge,
 			func() []byte {
-				return data
+				return c.Data
 			},
 		)
 
@@ -1460,7 +1485,7 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 	// case constantkind.Word256:
 
 	default:
-		panic(errors.NewUnexpectedError("unsupported constant kind: %s", kind))
+		panic(errors.NewUnexpectedError("unsupported constant kind: %s", c.Kind))
 	}
 
 	executable.Constants[index] = value

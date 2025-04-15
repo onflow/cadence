@@ -623,7 +623,7 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 
 	// All number types, addresses, and path types have a `toString` function
 
-	if IsSubType(ty, NumberType) || IsSubType(ty, TheAddressType) || IsSubType(ty, PathType) {
+	if HasToStringFunction(ty) {
 
 		members[ToStringFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
@@ -661,6 +661,10 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 	}
 
 	return members
+}
+
+func HasToStringFunction(ty Type) bool {
+	return IsSubType(ty, NumberType) || IsSubType(ty, TheAddressType) || IsSubType(ty, PathType)
 }
 
 // OptionalType represents the optional variant of another type
@@ -4142,45 +4146,45 @@ type TypeArgumentsCheck func(
 // the types available in programs
 var BaseTypeActivation = NewVariableActivation(nil)
 
+var AllBuiltinTypes = common.Concat(
+	AllNumberTypes,
+	[]Type{
+		MetaType,
+		VoidType,
+		AnyStructType,
+		AnyStructAttachmentType,
+		AnyResourceType,
+		AnyResourceAttachmentType,
+		NeverType,
+		BoolType,
+		CharacterType,
+		StringType,
+		TheAddressType,
+		AccountType,
+		PathType,
+		StoragePathType,
+		CapabilityPathType,
+		PrivatePathType,
+		PublicPathType,
+		&CapabilityType{},
+		DeployedContractType,
+		BlockType,
+		AccountKeyType,
+		PublicKeyType,
+		SignatureAlgorithmType,
+		HashAlgorithmType,
+		StorageCapabilityControllerType,
+		AccountCapabilityControllerType,
+		DeploymentResultType,
+		HashableStructType,
+		&InclusiveRangeType{},
+		StructStringerType,
+	},
+)
+
 func init() {
 
-	types := common.Concat(
-		AllNumberTypes,
-		[]Type{
-			MetaType,
-			VoidType,
-			AnyStructType,
-			AnyStructAttachmentType,
-			AnyResourceType,
-			AnyResourceAttachmentType,
-			NeverType,
-			BoolType,
-			CharacterType,
-			StringType,
-			TheAddressType,
-			AccountType,
-			PathType,
-			StoragePathType,
-			CapabilityPathType,
-			PrivatePathType,
-			PublicPathType,
-			&CapabilityType{},
-			DeployedContractType,
-			BlockType,
-			AccountKeyType,
-			PublicKeyType,
-			SignatureAlgorithmType,
-			HashAlgorithmType,
-			StorageCapabilityControllerType,
-			AccountCapabilityControllerType,
-			DeploymentResultType,
-			HashableStructType,
-			&InclusiveRangeType{},
-			StructStringerType,
-		},
-	)
-
-	for _, ty := range types {
+	for _, ty := range AllBuiltinTypes {
 		addToBaseActivation(ty)
 	}
 
