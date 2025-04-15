@@ -222,6 +222,7 @@ func (c *Compiler[_, _]) addImportedGlobal(location common.Location, name string
 
 func (c *Compiler[E, T]) addFunction(
 	name string,
+	qualifiedName string,
 	parameterCount uint16,
 	functionType *sema.FunctionType,
 ) *function[E] {
@@ -231,6 +232,7 @@ func (c *Compiler[E, T]) addFunction(
 	function := newFunction[E](
 		c.currentFunction,
 		name,
+		qualifiedName,
 		parameterCount,
 		functionTypeIndex,
 	)
@@ -469,6 +471,15 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 		}
 	}
 
+	// Add natively provided methods as globals.
+	// Only do it for user-defined types (i.e: `compositeTypeName` is not empty).
+	if compositeTypeName != "" {
+		for _, boundFunction := range commonBuiltinTypeBoundFunctions {
+			funcName := commons.TypeQualifiedName(compositeTypeName, boundFunction.name)
+			c.addGlobal(funcName)
+		}
+	}
+
 	for _, declaration := range functionDecls {
 		funcName := commons.TypeQualifiedName(compositeTypeName, declaration.Identifier.Identifier)
 		c.addGlobal(funcName)
@@ -574,6 +585,7 @@ func (c *Compiler[E, T]) ExportFunctions() []bbq.Function[E] {
 				functions,
 				bbq.Function[E]{
 					Name:           function.name,
+					QualifiedName:  function.qualifiedName,
 					Code:           function.code,
 					LocalCount:     function.localCount,
 					ParameterCount: function.parameterCount,
@@ -1734,6 +1746,7 @@ func (c *Compiler[_, _]) VisitFunctionExpression(expression *ast.FunctionExpress
 
 	function := c.addFunction(
 		"",
+		"",
 		uint16(parameterCount),
 		functionType,
 	)
@@ -1885,6 +1898,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 
 	function := c.addFunction(
 		functionName,
+		functionName,
 		uint16(parameterCount),
 		functionType,
 	)
@@ -1995,6 +2009,7 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 
 	function := c.addFunction(
 		functionName,
+		functionName,
 		uint16(parameterCount),
 		functionType,
 	)
@@ -2043,6 +2058,9 @@ func (c *Compiler[_, _]) VisitCompositeDeclaration(declaration *ast.CompositeDec
 		c.generateEmptyInit()
 	}
 
+	// Add the methods that are provided natively.
+	c.addBuiltinMethods()
+
 	for _, function := range declaration.Members.Functions() {
 		c.compileDeclaration(function)
 	}
@@ -2065,6 +2083,9 @@ func (c *Compiler[_, _]) VisitInterfaceDeclaration(declaration *ast.InterfaceDec
 		c.compositeTypeStack.pop()
 	}()
 
+	// Add the methods that are provided natively.
+	c.addBuiltinMethods()
+
 	for _, function := range declaration.Members.Functions() {
 		c.compileDeclaration(function)
 	}
@@ -2075,6 +2096,22 @@ func (c *Compiler[_, _]) VisitInterfaceDeclaration(declaration *ast.InterfaceDec
 		c.compileDeclaration(nestedTypes)
 	}
 	return
+}
+
+func (c *Compiler[_, _]) addBuiltinMethods() {
+	for _, boundFunction := range commonBuiltinTypeBoundFunctions {
+		name := boundFunction.name
+		qualifiedName := commons.TypeQualifiedName(
+			c.enclosingCompositeTypeFullyQualifiedName(),
+			name,
+		)
+		c.addFunction(
+			name,
+			qualifiedName,
+			uint16(len(boundFunction.typ.Parameters)+1),
+			boundFunction.typ,
+		)
+	}
 }
 
 func (c *Compiler[_, _]) VisitFieldDeclaration(_ *ast.FieldDeclaration) (_ struct{}) {
@@ -2108,7 +2145,7 @@ func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclarati
 		}
 
 		for _, function := range importedProgram.Functions {
-			name := function.Name
+			name := function.QualifiedName
 
 			// Skip the contract initializer.
 			// It should never be able to invoked within the code.
@@ -2117,7 +2154,7 @@ func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclarati
 			}
 
 			// TODO: Filter-in only public functions
-			c.addImportedGlobal(location.Location, function.Name)
+			c.addImportedGlobal(location.Location, function.QualifiedName)
 		}
 	}
 

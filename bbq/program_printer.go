@@ -102,7 +102,7 @@ func (p *ProgramPrinter[E, T]) printFunction(
 	types []T,
 	functionNames []string,
 ) {
-	p.printHeader(function.Name)
+	p.printHeader(function.QualifiedName)
 
 	err := p.codePrinter(
 		&p.stringBuilder,

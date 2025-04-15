@@ -29,6 +29,7 @@ import (
 type function[E any] struct {
 	enclosing      *function[E]
 	name           string
+	qualifiedName  string
 	code           []E
 	locals         *activations.Activations[*local]
 	localCount     uint16
@@ -41,12 +42,14 @@ type function[E any] struct {
 func newFunction[E any](
 	enclosing *function[E],
 	name string,
+	qualifiedName string,
 	parameterCount uint16,
 	functionTypeIndex uint16,
 ) *function[E] {
 	return &function[E]{
 		enclosing:      enclosing,
 		name:           name,
+		qualifiedName:  qualifiedName,
 		locals:         activations.NewActivations[*local](nil),
 		parameterCount: parameterCount,
 		typeIndex:      functionTypeIndex,
