@@ -195,17 +195,15 @@ access(all) contract interface FungibleToken: ViewResolver {
         /// for this function
         ///
         access(all) view fun getSupportedVaultTypes(): {Type: Bool} {
-            // TODO: getType
-            // // Below check is implemented to make sure that run-time type would
-            // // only get returned when the parent resource conforms with `FungibleToken.Vault`.
-            // if self.getType().isSubtype(of: Type<@{FungibleToken.Vault}>()) {
-            //     return {self.getType(): true}
-            // } else {
-            //     // Return an empty dictionary as the default value for resource who don't
-            //     // implement `FungibleToken.Vault`, such as `FungibleTokenSwitchboard`, `TokenForwarder` etc.
-            //     return {}
-            // }
-            return {}
+            // Below check is implemented to make sure that run-time type would
+            // only get returned when the parent resource conforms with `FungibleToken.Vault`.
+            if self.getType().isSubtype(of: Type<@{FungibleToken.Vault}>()) {
+                return {self.getType(): true}
+            } else {
+                // Return an empty dictionary as the default value for resource who don't
+                // implement `FungibleToken.Vault`, such as `FungibleTokenSwitchboard`, `TokenForwarder` etc.
+                return {}
+            }
         }
 
         /// Checks if the given type is supported by this Vault
