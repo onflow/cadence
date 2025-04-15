@@ -60,7 +60,7 @@ func TestCompileRecursionFib(t *testing.T) {
 
 	const (
 		// functionTypeIndex is the index of the function type, which is the first type
-		functionTypeIndex = iota
+		functionTypeIndex = iota //nolint:unused
 		// intTypeIndex is the index of the Int type, which is the second type
 		intTypeIndex
 	)
@@ -181,7 +181,7 @@ func TestCompileImperativeFib(t *testing.T) {
 
 	const (
 		// functionTypeIndex is the index of the function type, which is the first type
-		functionTypeIndex = iota
+		functionTypeIndex = iota //nolint:unused
 		// intTypeIndex is the index of the Int type, which is the second type
 		intTypeIndex
 	)
