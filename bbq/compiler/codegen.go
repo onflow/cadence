@@ -28,11 +28,13 @@ type CodeGen[E any] interface {
 	SetTarget(code *[]E)
 	Emit(instruction opcode.Instruction)
 	PatchJump(offset int, newTarget uint16)
+	LastInstruction() opcode.Instruction
 }
 
 // ByteCodeGen is a CodeGen implementation that emits bytecode
 type ByteCodeGen struct {
-	target *[]byte
+	target     *[]byte
+	lastOffset int
 }
 
 var _ CodeGen[byte] = &ByteCodeGen{}
@@ -46,11 +48,20 @@ func (g *ByteCodeGen) SetTarget(target *[]byte) {
 }
 
 func (g *ByteCodeGen) Emit(instruction opcode.Instruction) {
+	g.lastOffset = g.Offset()
 	instruction.Encode(g.target)
 }
 
 func (g *ByteCodeGen) PatchJump(offset int, newTarget uint16) {
 	opcode.PatchJump(g.target, offset, newTarget)
+}
+
+func (g *ByteCodeGen) LastInstruction() opcode.Instruction {
+	if g.Offset() == 0 {
+		return nil
+	}
+	ip := uint16(g.lastOffset)
+	return opcode.DecodeInstruction(&ip, *g.target)
 }
 
 // InstructionCodeGen is a CodeGen implementation that emits opcode.Instruction
@@ -93,4 +104,12 @@ func (g *InstructionCodeGen) PatchJump(offset int, newTarget uint16) {
 	default:
 		panic(errors.NewUnreachableError())
 	}
+}
+
+func (g *InstructionCodeGen) LastInstruction() opcode.Instruction {
+	offset := g.Offset()
+	if offset == 0 {
+		return nil
+	}
+	return (*g.target)[offset-1]
 }
