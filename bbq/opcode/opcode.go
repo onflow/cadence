@@ -172,3 +172,21 @@ const (
 	// NOTE: not an actual opcode, must be last item
 	OpcodeMax
 )
+
+func (i Opcode) IsControlFlow() bool {
+	switch i {
+	case Return,
+		ReturnValue,
+		Jump,
+		JumpIfFalse,
+		JumpIfTrue,
+		JumpIfNil,
+		Invoke,
+		InvokeDynamic:
+
+		return true
+
+	default:
+		return false
+	}
+}
