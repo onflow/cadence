@@ -26,6 +26,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/logrusorgru/aurora/v4"
+
 	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
@@ -34,12 +36,13 @@ import (
 type Instruction interface {
 	Encode(code *[]byte)
 	String() string
-	OperandsString(*strings.Builder)
+	OperandsString(sb *strings.Builder, colorize bool)
 	ResolvedOperandsString(
 		sb *strings.Builder,
 		constants []constant.Constant,
 		types []interpreter.StaticType,
 		functionNames []string,
+		colorize bool,
 	)
 	Opcode() Opcode
 }
@@ -197,35 +200,75 @@ func DecodeInstructions(code []byte) []Instruction {
 
 // Instruction pretty print
 
-func printfUInt16ArrayArgument(sb *strings.Builder, argName string, values []uint16) {
-	_, _ = fmt.Fprintf(sb, " %s:[", argName)
+func printfUInt16ArrayArgument(
+	sb *strings.Builder,
+	argumentName string,
+	values []uint16,
+	colorize bool,
+) {
+	if colorize {
+		argumentName = colorizeArgumentName(argumentName)
+	}
+
+	_, _ = fmt.Fprintf(sb, " %s:[", argumentName)
 	for i, value := range values {
 		if i > 0 {
-			_, _ = fmt.Fprint(sb, ", ")
+			sb.WriteString(", ")
 		}
-		_, _ = fmt.Fprintf(sb, "%d", value)
+		formattedValue := fmt.Sprint(value)
+		if colorize {
+			formattedValue = colorizeArgumentValue(formattedValue)
+		}
+		sb.WriteString(formattedValue)
 	}
 
 	sb.WriteByte(']')
 }
 
-func printfUpvalueArrayArgument(sb *strings.Builder, argName string, upvalues []Upvalue) {
-	_, _ = fmt.Fprintf(sb, " %s:[", argName)
+func printfUpvalueArrayArgument(
+	sb *strings.Builder,
+	argumentName string,
+	upvalues []Upvalue,
+	colorize bool,
+) {
+	if colorize {
+		argumentName = colorizeArgumentName(argumentName)
+	}
+
+	_, _ = fmt.Fprintf(sb, " %s:[", argumentName)
+
 	for i, upvalue := range upvalues {
 		if i > 0 {
-			_, _ = fmt.Fprint(sb, ", ")
+			sb.WriteByte(',')
 		}
-		_, _ = fmt.Fprintf(sb, "targetIndex:%d isLocal:%v", upvalue.TargetIndex, upvalue.IsLocal)
+		printfArgument(sb, "targetIndex", upvalue.TargetIndex, colorize)
+		printfArgument(sb, "isLocal", upvalue.IsLocal, colorize)
 	}
 
 	sb.WriteByte(']')
 }
 
-func printfArgument(sb *strings.Builder, fieldName string, v any) {
-	_, _ = fmt.Fprintf(sb, " %s:%v", fieldName, v)
+func printfArgument(
+	sb *strings.Builder,
+	argumentName string,
+	v any,
+	colorize bool,
+) {
+	formattedValue := fmt.Sprint(v)
+	if colorize {
+		argumentName = colorizeArgumentName(argumentName)
+		formattedValue = colorizeArgumentValue(formattedValue)
+	}
+
+	_, _ = fmt.Fprintf(sb, " %s:%s", argumentName, formattedValue)
 }
 
-func printfConstantArgument(sb *strings.Builder, fieldName string, c constant.Constant) {
+func printfConstantArgument(
+	sb *strings.Builder,
+	fieldName string,
+	c constant.Constant,
+	colorize bool,
+) {
 	formattedConstant := c.String()
 	switch c.Kind {
 	case constant.String:
@@ -233,13 +276,46 @@ func printfConstantArgument(sb *strings.Builder, fieldName string, c constant.Co
 	default:
 		formattedConstant = fmt.Sprintf("%s(%s)", formattedConstant, c.Kind)
 	}
+
+	if colorize {
+		fieldName = colorizeArgumentName(fieldName)
+		formattedConstant = colorizeArgumentValue(formattedConstant)
+	}
+
 	_, _ = fmt.Fprintf(sb, " %s:%s", fieldName, formattedConstant)
 }
 
-func printfTypeArgument(sb *strings.Builder, fieldName string, typ interpreter.StaticType) {
-	_, _ = fmt.Fprintf(sb, " %s:%s", fieldName, typ)
+func printfTypeArgument(
+	sb *strings.Builder,
+	fieldName string,
+	typ interpreter.StaticType,
+	colorize bool,
+) {
+	formattedType := strconv.Quote(typ.String())
+	if colorize {
+		fieldName = colorizeArgumentName(fieldName)
+		formattedType = colorizeArgumentValue(formattedType)
+	}
+	_, _ = fmt.Fprintf(sb, " %s:%s", fieldName, formattedType)
 }
 
-func printfFunctionNameArgument(sb *strings.Builder, fieldName string, functionName string) {
-	_, _ = fmt.Fprintf(sb, " %s:%s", fieldName, functionName)
+func printfFunctionNameArgument(
+	sb *strings.Builder,
+	argumentName string,
+	functionName string,
+	colorize bool,
+) {
+	if colorize {
+		argumentName = colorizeArgumentName(argumentName)
+		functionName = colorizeArgumentValue(functionName)
+	}
+	_, _ = fmt.Fprintf(sb, " %s:%s", argumentName, functionName)
+}
+
+func colorizeArgumentName(argumentName string) string {
+	return aurora.Green(argumentName).String()
+}
+
+func colorizeArgumentValue(argumentValue string) string {
+	return aurora.Yellow(argumentValue).String()
 }

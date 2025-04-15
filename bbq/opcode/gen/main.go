@@ -502,6 +502,7 @@ func instructionStringFuncDecl(ins instruction) *dst.FuncDecl {
 							Op: token.AND,
 							X:  dst.NewIdent("sb"),
 						},
+						dst.NewIdent("false"),
 					},
 				},
 			},
@@ -583,6 +584,7 @@ func instructionOperandsStringFuncDecl(ins instruction) *dst.FuncDecl {
 							X:   dst.NewIdent("i"),
 							Sel: operandIdent(operand),
 						},
+						dst.NewIdent("colorize"),
 					},
 				},
 			},
@@ -614,6 +616,12 @@ func instructionOperandsStringFuncDecl(ins instruction) *dst.FuncDecl {
 								Name: "Builder",
 							},
 						},
+					},
+					{
+						Names: []*dst.Ident{
+							dst.NewIdent("colorize"),
+						},
+						Type: dst.NewIdent("bool"),
 					},
 				},
 			},
@@ -697,6 +705,7 @@ func instructionResolvedOperandsStringFuncDecl(ins instruction) *dst.FuncDecl {
 							Value: fmt.Sprintf(`"%s"`, operand.Name),
 						},
 						arg,
+						dst.NewIdent("colorize"),
 					},
 				},
 			},
@@ -744,6 +753,12 @@ func instructionResolvedOperandsStringFuncDecl(ins instruction) *dst.FuncDecl {
 			Type: &dst.ArrayType{
 				Elt: dst.NewIdent("string"),
 			},
+		},
+		{
+			Names: []*dst.Ident{
+				dst.NewIdent("colorize"),
+			},
+			Type: dst.NewIdent("bool"),
 		},
 	}
 
