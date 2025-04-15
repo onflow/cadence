@@ -23,6 +23,7 @@ package opcode
 import (
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 
 	"github.com/onflow/cadence/bbq/constant"
@@ -224,8 +225,15 @@ func printfArgument(sb *strings.Builder, fieldName string, v any) {
 	_, _ = fmt.Fprintf(sb, " %s:%v", fieldName, v)
 }
 
-func printfConstantArgument(sb *strings.Builder, fieldName string, constant constant.Constant) {
-	_, _ = fmt.Fprintf(sb, " %s:%s", fieldName, constant)
+func printfConstantArgument(sb *strings.Builder, fieldName string, c constant.Constant) {
+	formattedConstant := c.String()
+	switch c.Kind {
+	case constant.String:
+		formattedConstant = strconv.Quote(formattedConstant)
+	default:
+		formattedConstant = fmt.Sprintf("%s(%s)", formattedConstant, c.Kind)
+	}
+	_, _ = fmt.Fprintf(sb, " %s:%s", fieldName, formattedConstant)
 }
 
 func printfTypeArgument(sb *strings.Builder, fieldName string, typ interpreter.StaticType) {
