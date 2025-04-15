@@ -4785,42 +4785,89 @@ func TestCompileTransferConstant(t *testing.T) {
 
 	t.Parallel()
 
-	checker, err := ParseAndCheck(t, `
-      fun test() {
-          let x = 1
-      }
-    `)
-	require.NoError(t, err)
+	t.Run("optimized", func(t *testing.T) {
+		t.Parallel()
 
-	comp := compiler.NewInstructionCompiler(checker)
-	program := comp.Compile()
+		checker, err := ParseAndCheck(t, `
+          fun test() {
+              let x = 1
+          }
+        `)
+		require.NoError(t, err)
 
-	require.Len(t, program.Functions, 1)
+		comp := compiler.NewInstructionCompiler(checker)
+		program := comp.Compile()
 
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+		require.Len(t, program.Functions, 1)
 
-	assert.Equal(t,
-		[]opcode.Instruction{
-			// let x = 1
-			opcode.InstructionGetConstant{Constant: 0},
-			// NOTE: *no* transfer
-			opcode.InstructionSetLocal{Local: 0},
-			// return
-			opcode.InstructionReturn{},
-		},
-		functions[0].Code,
-	)
+		functions := comp.ExportFunctions()
+		require.Equal(t, len(program.Functions), len(functions))
 
-	assert.Equal(t,
-		[]constant.Constant{
-			{
-				Data: []byte{0x1},
-				Kind: constant.Int,
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// let x = 1
+				opcode.InstructionGetConstant{Constant: 0},
+				// NOTE: *no* transfer
+				opcode.InstructionSetLocal{Local: 0},
+				// return
+				opcode.InstructionReturn{},
 			},
-		},
-		program.Constants,
-	)
+			functions[0].Code,
+		)
+
+		assert.Equal(t,
+			[]constant.Constant{
+				{
+					Data: []byte{0x1},
+					Kind: constant.Int,
+				},
+			},
+			program.Constants,
+		)
+	})
+
+	t.Run("unoptimized", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+          fun test() {
+              let x: Int? = 1
+          }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(checker)
+		program := comp.Compile()
+
+		require.Len(t, program.Functions, 1)
+
+		functions := comp.ExportFunctions()
+		require.Equal(t, len(program.Functions), len(functions))
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// let x = 1
+				opcode.InstructionGetConstant{Constant: 0},
+				// NOTE: transfer
+				opcode.InstructionTransfer{Type: 1},
+				opcode.InstructionSetLocal{Local: 0},
+				// return
+				opcode.InstructionReturn{},
+			},
+			functions[0].Code,
+		)
+
+		assert.Equal(t,
+			[]constant.Constant{
+				{
+					Data: []byte{0x1},
+					Kind: constant.Int,
+				},
+			},
+			program.Constants,
+		)
+	})
+
 }
 
 func TestCompileTransferNewPath(t *testing.T) {
