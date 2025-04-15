@@ -382,7 +382,9 @@ func singleIdentifierLocationResolver(t testing.TB) func(
 }
 
 func printProgram(name string, program *bbq.InstructionProgram) { //nolint:unused
-	printer := bbq.NewInstructionsProgramPrinter()
+	const resolve = true
+	const colorize = true
+	printer := bbq.NewInstructionsProgramPrinter(resolve, colorize)
 	fmt.Println("===================", name, "===================")
 	fmt.Println(printer.PrintProgram(program))
 }
@@ -656,7 +658,9 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 	)
 
 	// Ensure the program can be printed
-	printer := bbq.NewInstructionsProgramPrinter()
+	const resolve = false
+	const colorize = false
+	printer := bbq.NewInstructionsProgramPrinter(resolve, colorize)
 	_ = printer.PrintProgram(program)
 
 	vmConfig := prepareVMConfig(options.VMConfig)

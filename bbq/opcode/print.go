@@ -22,26 +22,90 @@ import (
 	"fmt"
 	"strings"
 	"text/tabwriter"
+
+	"github.com/logrusorgru/aurora/v4"
+
+	"github.com/onflow/cadence/bbq/constant"
+	"github.com/onflow/cadence/interpreter"
 )
 
-func PrintBytecode(builder *strings.Builder, code []byte) error {
+func PrintBytecode(
+	builder *strings.Builder,
+	code []byte,
+	resolve bool,
+	constants []constant.Constant,
+	types [][]byte,
+	functionNames []string,
+	colorize bool,
+) error {
 	instructions := DecodeInstructions(code)
-	return PrintInstructions(builder, instructions)
+	staticTypes := DecodeStaticTypes(types)
+	return PrintInstructions(
+		builder,
+		instructions,
+		resolve,
+		constants,
+		staticTypes,
+		functionNames,
+		colorize,
+	)
 }
 
-func PrintInstructions(builder *strings.Builder, instructions []Instruction) error {
+func DecodeStaticTypes(types [][]byte) []interpreter.StaticType {
+	var staticTypes []interpreter.StaticType
+	if len(types) > 0 {
+		staticTypes = make([]interpreter.StaticType, len(types))
+		for i, typ := range types {
+			staticType, err := interpreter.StaticTypeFromBytes(typ)
+			if err != nil {
+				panic(fmt.Sprintf("failed to decode static type: %v", err))
+			}
+			staticTypes[i] = staticType
+		}
+	}
+	return staticTypes
+}
+
+func PrintInstructions(
+	builder *strings.Builder,
+	instructions []Instruction,
+	resolve bool,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool,
+) error {
 
 	tabWriter := tabwriter.NewWriter(builder, 0, 0, 1, ' ', tabwriter.AlignRight)
 
 	for offset, instruction := range instructions {
 
 		var operandsBuilder strings.Builder
-		instruction.OperandsString(&operandsBuilder)
+		if resolve {
+			instruction.ResolvedOperandsString(&operandsBuilder, constants, types, functionNames)
+		} else {
+			instruction.OperandsString(&operandsBuilder)
+		}
+
+		var formattedOffset string
+		if colorize {
+			formattedOffset = ColorizeOffset(offset)
+		} else {
+			formattedOffset = fmt.Sprint(offset)
+		}
+
+		var formattedOpcode string
+		if colorize {
+			formattedOpcode = ColorizeOpcode(instruction.Opcode())
+		} else {
+			formattedOpcode = fmt.Sprint(instruction.Opcode())
+		}
+
 		_, _ = fmt.Fprintf(
 			tabWriter,
-			"%d |\t%s |\t%s\n",
-			offset,
-			instruction.Opcode(),
+			"%s |\t%s |\t%s\n",
+			formattedOffset,
+			formattedOpcode,
 			operandsBuilder.String(),
 		)
 	}
@@ -50,4 +114,16 @@ func PrintInstructions(builder *strings.Builder, instructions []Instruction) err
 	_, _ = fmt.Fprintln(builder)
 
 	return nil
+}
+
+func ColorizeOffset(offset int) string {
+	return aurora.Gray(12, offset).String()
+}
+
+func ColorizeOpcode(opcode Opcode) string {
+	if opcode.IsControlFlow() {
+		return aurora.Red(opcode).String()
+	}
+
+	return aurora.Blue(opcode).String()
 }

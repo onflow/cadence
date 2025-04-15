@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
-	"github.com/onflow/cadence/bbq/constantkind"
+	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/bbq/leb128"
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
@@ -47,7 +47,7 @@ type Compiler[E, T any] struct {
 	compositeTypeStack *Stack[sema.CompositeKindedType]
 
 	functions           []*function[E]
-	constants           []*constant
+	constants           []*Constant
 	Globals             map[string]*Global
 	importedGlobals     map[string]*Global
 	usedImportedGlobals []*Global
@@ -69,7 +69,7 @@ type Compiler[E, T any] struct {
 
 	// Cache alike for staticTypes and constants in the pool.
 	typesInPool     map[sema.TypeID]uint16
-	constantsInPool map[constantsCacheKey]*constant
+	constantsInPool map[constantsCacheKey]*Constant
 
 	// TODO: initialize
 	memoryGauge common.MemoryGauge
@@ -80,7 +80,7 @@ type Compiler[E, T any] struct {
 
 type constantsCacheKey struct {
 	data string
-	kind constantkind.ConstantKind
+	kind constant.Kind
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Compiler[any, any]{}
@@ -139,7 +139,7 @@ func newCompiler[E, T any](
 		Globals:             make(map[string]*Global),
 		importedGlobals:     globals,
 		typesInPool:         make(map[sema.TypeID]uint16),
-		constantsInPool:     make(map[constantsCacheKey]*constant),
+		constantsInPool:     make(map[constantsCacheKey]*Constant),
 		compositeTypeStack: &Stack[sema.CompositeKindedType]{
 			elements: make([]sema.CompositeKindedType, 0),
 		},
@@ -251,7 +251,7 @@ func (c *Compiler[E, T]) targetFunction(function *function[E]) {
 	c.codeGen.SetTarget(code)
 }
 
-func (c *Compiler[_, _]) addConstant(kind constantkind.ConstantKind, data []byte) *constant {
+func (c *Compiler[_, _]) addConstant(kind constant.Kind, data []byte) *Constant {
 	count := len(c.constants)
 	if count >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid constant declaration"))
@@ -266,7 +266,7 @@ func (c *Compiler[_, _]) addConstant(kind constantkind.ConstantKind, data []byte
 		return constant
 	}
 
-	constant := &constant{
+	constant := &Constant{
 		index: uint16(count),
 		kind:  kind,
 		data:  data[:],
@@ -276,9 +276,9 @@ func (c *Compiler[_, _]) addConstant(kind constantkind.ConstantKind, data []byte
 	return constant
 }
 
-func (c *Compiler[_, _]) emitGetConstant(constant *constant) {
+func (c *Compiler[_, _]) emitGetConstant(constant *Constant) {
 	c.codeGen.Emit(opcode.InstructionGetConstant{
-		ConstantIndex: constant.index,
+		Constant: constant.index,
 	})
 }
 
@@ -286,17 +286,17 @@ func (c *Compiler[_, _]) emitStringConst(str string) {
 	c.emitGetConstant(c.addStringConst(str))
 }
 
-func (c *Compiler[_, _]) addStringConst(str string) *constant {
-	return c.addConstant(constantkind.String, []byte(str))
+func (c *Compiler[_, _]) addStringConst(str string) *Constant {
+	return c.addConstant(constant.String, []byte(str))
 }
 
 func (c *Compiler[_, _]) emitIntConst(i int64) {
 	c.emitGetConstant(c.addIntConst(i))
 }
 
-func (c *Compiler[_, _]) addIntConst(i int64) *constant {
+func (c *Compiler[_, _]) addIntConst(i int64) *Constant {
 	data := leb128.AppendInt64(nil, i)
-	return c.addConstant(constantkind.Int, data)
+	return c.addConstant(constant.Int, data)
 }
 
 func (c *Compiler[_, _]) emitJump(target int) int {
@@ -530,18 +530,18 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 	}
 }
 
-func (c *Compiler[_, _]) exportConstants() []bbq.Constant {
-	var constants []bbq.Constant
+func (c *Compiler[_, _]) exportConstants() []constant.Constant {
+	var constants []constant.Constant
 
 	count := len(c.constants)
 	if count > 0 {
-		constants = make([]bbq.Constant, 0, count)
-		for _, constant := range c.constants {
+		constants = make([]constant.Constant, 0, count)
+		for _, c := range c.constants {
 			constants = append(
 				constants,
-				bbq.Constant{
-					Data: constant.data,
-					Kind: constant.kind,
+				constant.Constant{
+					Data: c.data,
+					Kind: c.kind,
 				},
 			)
 		}
@@ -696,9 +696,7 @@ func (c *Compiler[_, _]) compileBlock(block *ast.Block, enclosingDeclKind common
 			if local == nil {
 				c.codeGen.Emit(opcode.InstructionReturn{})
 			} else {
-				c.codeGen.Emit(opcode.InstructionGetLocal{
-					LocalIndex: local.index,
-				})
+				c.emitGetLocal(local.index)
 				c.codeGen.Emit(opcode.InstructionReturnValue{})
 			}
 		} else if needsSyntheticReturn(block.Statements) {
@@ -795,9 +793,7 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 			if tempResultVar != nil {
 				// (1.a.i)
 				// Assign the return value to the temp-result variable.
-				c.codeGen.Emit(opcode.InstructionSetLocal{
-					LocalIndex: tempResultVar.index,
-				})
+				c.emitSetLocal(tempResultVar.index)
 			} else {
 				// (1.a.ii)
 				// If there is no temp-result variable, that means the return type is void.
@@ -827,6 +823,18 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 	}
 
 	return
+}
+
+func (c *Compiler[_, _]) emitGetLocal(localIndex uint16) {
+	c.codeGen.Emit(opcode.InstructionGetLocal{
+		Local: localIndex,
+	})
+}
+
+func (c *Compiler[_, _]) emitSetLocal(localIndex uint16) {
+	c.codeGen.Emit(opcode.InstructionSetLocal{
+		Local: localIndex,
+	})
 }
 
 func (c *Compiler[_, _]) hasPostConditions() bool {
@@ -869,15 +877,15 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 			c.compileExpression(test.Value)
 
 			tempIndex := c.currentFunction.generateLocalIndex()
-			c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: tempIndex})
+			c.emitSetLocal(tempIndex)
 
 			// Test: check if the optional is nil,
 			// and jump to the else branch if it is
-			c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: tempIndex})
+			c.emitGetLocal(tempIndex)
 			elseJump = c.emitUndefinedJumpIfNil()
 
 			// Then branch: unwrap the optional and declare the variable
-			c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: tempIndex})
+			c.emitGetLocal(tempIndex)
 			c.codeGen.Emit(opcode.InstructionUnwrap{})
 			varDeclTypes := c.ExtendedElaboration.VariableDeclarationTypes(test)
 			c.emitTransfer(varDeclTypes.TargetType)
@@ -940,7 +948,7 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 	c.codeGen.Emit(opcode.InstructionIterator{})
 	iteratorLocalIndex := c.currentFunction.generateLocalIndex()
 	c.codeGen.Emit(opcode.InstructionSetLocal{
-		LocalIndex: iteratorLocalIndex,
+		Local: iteratorLocalIndex,
 	})
 
 	// Initialize 'index' variable, if needed.
@@ -961,9 +969,7 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 	defer c.popControlFlow()
 
 	// Loop test: Get the iterator and call `hasNext()`.
-	c.codeGen.Emit(opcode.InstructionGetLocal{
-		LocalIndex: iteratorLocalIndex,
-	})
+	c.emitGetLocal(iteratorLocalIndex)
 	c.codeGen.Emit(opcode.InstructionIteratorHasNext{})
 
 	endJump := c.emitUndefinedJumpIfFalse()
@@ -975,20 +981,14 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 	// worry about loop-control statements (e.g: continue, return, break) in the body.
 	if indexNeeded {
 		// <index> = <index> + 1
-		c.codeGen.Emit(opcode.InstructionGetLocal{
-			LocalIndex: indexLocalVar.index,
-		})
+		c.emitGetLocal(indexLocalVar.index)
 		c.emitIntConst(1)
 		c.codeGen.Emit(opcode.InstructionAdd{})
-		c.codeGen.Emit(opcode.InstructionSetLocal{
-			LocalIndex: indexLocalVar.index,
-		})
+		c.emitSetLocal(indexLocalVar.index)
 	}
 
 	// Get the iterator and call `next()` (value for arrays, key for dictionaries, etc.)
-	c.codeGen.Emit(opcode.InstructionGetLocal{
-		LocalIndex: iteratorLocalIndex,
-	})
+	c.emitGetLocal(iteratorLocalIndex)
 	c.codeGen.Emit(opcode.InstructionIteratorNext{})
 
 	// Store it (next entry) in a local var.
@@ -1010,7 +1010,7 @@ func (c *Compiler[_, _]) VisitEmitStatement(statement *ast.EmitStatement) (_ str
 	eventType := c.ExtendedElaboration.EmitStatementEventType(statement)
 	typeIndex := c.getOrAddType(eventType)
 	c.codeGen.Emit(opcode.InstructionEmitEvent{
-		TypeIndex: typeIndex,
+		Type: typeIndex,
 	})
 
 	return
@@ -1019,7 +1019,7 @@ func (c *Compiler[_, _]) VisitEmitStatement(statement *ast.EmitStatement) (_ str
 func (c *Compiler[_, _]) VisitSwitchStatement(statement *ast.SwitchStatement) (_ struct{}) {
 	c.compileExpression(statement.Expression)
 	localIndex := c.currentFunction.generateLocalIndex()
-	c.codeGen.Emit(opcode.InstructionSetLocal{LocalIndex: localIndex})
+	c.emitSetLocal(localIndex)
 
 	// Pass an invalid start offset to pushControlFlow to indicate that this is a switch statement,
 	// which does not allow jumps to the start (i.e., no continue statements).
@@ -1036,7 +1036,7 @@ func (c *Compiler[_, _]) VisitSwitchStatement(statement *ast.SwitchStatement) (_
 
 		isDefault := switchCase.Expression == nil
 		if !isDefault {
-			c.codeGen.Emit(opcode.InstructionGetLocal{LocalIndex: localIndex})
+			c.emitGetLocal(localIndex)
 			c.compileExpression(switchCase.Expression)
 			c.codeGen.Emit(opcode.InstructionEqual{})
 			previousJump = c.emitUndefinedJumpIfFalse()
@@ -1088,9 +1088,7 @@ func (c *Compiler[_, _]) VisitVariableDeclaration(declaration *ast.VariableDecla
 
 func (c *Compiler[_, _]) emitDeclareLocal(name string) *local {
 	local := c.currentFunction.declareLocal(name)
-	c.codeGen.Emit(opcode.InstructionSetLocal{
-		LocalIndex: local.index,
-	})
+	c.emitSetLocal(local.index)
 	return local
 }
 
@@ -1113,7 +1111,7 @@ func (c *Compiler[_, _]) VisitAssignmentStatement(statement *ast.AssignmentState
 
 		constant := c.addStringConst(target.Identifier.Identifier)
 		c.codeGen.Emit(opcode.InstructionSetField{
-			FieldNameIndex: constant.index,
+			FieldName: constant.index,
 		})
 
 	case *ast.IndexExpression:
@@ -1173,41 +1171,41 @@ func (c *Compiler[_, _]) VisitNilExpression(_ *ast.NilExpression) (_ struct{}) {
 
 func (c *Compiler[_, _]) VisitIntegerExpression(expression *ast.IntegerExpression) (_ struct{}) {
 	integerType := c.ExtendedElaboration.IntegerExpressionType(expression)
-	constantKind := constantkind.FromSemaType(integerType)
+	constantKind := constant.FromSemaType(integerType)
 
 	value := expression.Value
 	var data []byte
 
 	switch constantKind {
-	case constantkind.Int:
+	case constant.Int:
 		// TODO: support larger integers
 		data = leb128.AppendInt64(nil, value.Int64())
 
-	case constantkind.Int8,
-		constantkind.Int16,
-		constantkind.Int32:
+	case constant.Int8,
+		constant.Int16,
+		constant.Int32:
 		data = leb128.AppendInt32(nil, int32(value.Int64()))
 
-	case constantkind.Int64:
+	case constant.Int64:
 		data = leb128.AppendInt64(nil, value.Int64())
 
-	case constantkind.UInt:
+	case constant.UInt:
 		// TODO: support larger integers
 		data = leb128.AppendUint64(nil, value.Uint64())
 
-	case constantkind.UInt8,
-		constantkind.Word8,
-		constantkind.UInt16,
-		constantkind.Word16,
-		constantkind.UInt32,
-		constantkind.Word32:
+	case constant.UInt8,
+		constant.Word8,
+		constant.UInt16,
+		constant.Word16,
+		constant.UInt32,
+		constant.Word32:
 		data = leb128.AppendUint32(nil, uint32(value.Uint64()))
 
-	case constantkind.UInt64,
-		constantkind.Word64:
+	case constant.UInt64,
+		constant.Word64:
 		data = leb128.AppendUint64(nil, value.Uint64())
 
-	case constantkind.Address:
+	case constant.Address:
 		data = value.Bytes()
 
 	// TODO:
@@ -1240,7 +1238,7 @@ func (c *Compiler[_, _]) VisitFixedPointExpression(expression *ast.FixedPointExp
 		sema.Fix64Scale,
 	)
 
-	var constant *constant
+	var constant *Constant
 
 	switch fixedPointSubType {
 	case sema.Fix64Type, sema.SignedFixedPointType:
@@ -1264,14 +1262,14 @@ func (c *Compiler[_, _]) VisitFixedPointExpression(expression *ast.FixedPointExp
 	return
 }
 
-func (c *Compiler[_, _]) addUFix64Constant(value *big.Int) *constant {
+func (c *Compiler[_, _]) addUFix64Constant(value *big.Int) *Constant {
 	data := leb128.AppendUint64(nil, value.Uint64())
-	return c.addConstant(constantkind.UFix64, data)
+	return c.addConstant(constant.UFix64, data)
 }
 
-func (c *Compiler[_, _]) addFix64Constant(value *big.Int) *constant {
+func (c *Compiler[_, _]) addFix64Constant(value *big.Int) *Constant {
 	data := leb128.AppendInt64(nil, value.Int64())
-	return c.addConstant(constantkind.Fix64, data)
+	return c.addConstant(constant.Fix64, data)
 }
 
 func (c *Compiler[_, _]) VisitArrayExpression(array *ast.ArrayExpression) (_ struct{}) {
@@ -1290,7 +1288,7 @@ func (c *Compiler[_, _]) VisitArrayExpression(array *ast.ArrayExpression) (_ str
 
 	c.codeGen.Emit(
 		opcode.InstructionNewArray{
-			TypeIndex:  typeIndex,
+			Type:       typeIndex,
 			Size:       uint16(size),
 			IsResource: arrayTypes.ArrayType.IsResourceType(),
 		},
@@ -1316,7 +1314,7 @@ func (c *Compiler[_, _]) VisitDictionaryExpression(dictionary *ast.DictionaryExp
 
 	c.codeGen.Emit(
 		opcode.InstructionNewDictionary{
-			TypeIndex:  typeIndex,
+			Type:       typeIndex,
 			Size:       uint16(size),
 			IsResource: dictionaryTypes.DictionaryType.IsResourceType(),
 		},
@@ -1333,46 +1331,42 @@ func (c *Compiler[_, _]) VisitIdentifierExpression(expression *ast.IdentifierExp
 func (c *Compiler[_, _]) emitVariableLoad(name string) {
 	local := c.currentFunction.findLocal(name)
 	if local != nil {
-		c.codeGen.Emit(opcode.InstructionGetLocal{
-			LocalIndex: local.index,
-		})
+		c.emitGetLocal(local.index)
 		return
 	}
 
 	upvalueIndex, ok := c.currentFunction.findOrAddUpvalue(name)
 	if ok {
 		c.codeGen.Emit(opcode.InstructionGetUpvalue{
-			UpvalueIndex: upvalueIndex,
+			Upvalue: upvalueIndex,
 		})
 		return
 	}
 
 	global := c.findGlobal(name)
 	c.codeGen.Emit(opcode.InstructionGetGlobal{
-		GlobalIndex: global.Index,
+		Global: global.Index,
 	})
 }
 
 func (c *Compiler[_, _]) emitVariableStore(name string) {
 	local := c.currentFunction.findLocal(name)
 	if local != nil {
-		c.codeGen.Emit(opcode.InstructionSetLocal{
-			LocalIndex: local.index,
-		})
+		c.emitSetLocal(local.index)
 		return
 	}
 
 	upvalueIndex, ok := c.currentFunction.findOrAddUpvalue(name)
 	if ok {
 		c.codeGen.Emit(opcode.InstructionSetUpvalue{
-			UpvalueIndex: upvalueIndex,
+			Upvalue: upvalueIndex,
 		})
 		return
 	}
 
 	global := c.findGlobal(name)
 	c.codeGen.Emit(opcode.InstructionSetGlobal{
-		GlobalIndex: global.Index,
+		Global: global.Index,
 	})
 }
 
@@ -1446,9 +1440,9 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 			funcNameConst := c.addStringConst(funcName)
 			c.codeGen.Emit(
 				opcode.InstructionInvokeDynamic{
-					NameIndex: funcNameConst.index,
-					TypeArgs:  typeArgs,
-					ArgCount:  uint16(argumentCount),
+					Name:     funcNameConst.index,
+					TypeArgs: typeArgs,
+					ArgCount: uint16(argumentCount),
 				},
 			)
 
@@ -1536,7 +1530,7 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 	// TODO: remove member if `isNestedResourceMove`
 	//  See `Interpreter.memberExpressionGetterSetter` for the reference implementation.
 	c.codeGen.Emit(opcode.InstructionGetField{
-		FieldNameIndex: constant.index,
+		FieldName: constant.index,
 	})
 
 	// Return a reference, if the member is accessed via a reference.
@@ -1544,7 +1538,7 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 	if memberAccessInfo.ReturnReference {
 		index := c.getOrAddType(memberAccessInfo.ResultingType)
 		c.codeGen.Emit(opcode.InstructionNewRef{
-			TypeIndex:  index,
+			Type:       index,
 			IsImplicit: true,
 		})
 	}
@@ -1569,7 +1563,7 @@ func (c *Compiler[_, _]) VisitIndexExpression(expression *ast.IndexExpression) (
 	if indexExpressionTypes.ReturnReference {
 		index := c.getOrAddType(indexExpressionTypes.ResultType)
 		c.codeGen.Emit(opcode.InstructionNewRef{
-			TypeIndex:  index,
+			Type:       index,
 			IsImplicit: true,
 		})
 	}
@@ -1792,15 +1786,15 @@ func (c *Compiler[_, _]) VisitCastingExpression(expression *ast.CastingExpressio
 	switch expression.Operation {
 	case ast.OperationCast:
 		castInstruction = opcode.InstructionSimpleCast{
-			TypeIndex: index,
+			Type: index,
 		}
 	case ast.OperationFailableCast:
 		castInstruction = opcode.InstructionFailableCast{
-			TypeIndex: index,
+			Type: index,
 		}
 	case ast.OperationForceCast:
 		castInstruction = opcode.InstructionForceCast{
-			TypeIndex: index,
+			Type: index,
 		}
 	default:
 		panic(errors.NewUnreachableError())
@@ -1824,8 +1818,10 @@ func (c *Compiler[_, _]) VisitDestroyExpression(expression *ast.DestroyExpressio
 func (c *Compiler[_, _]) VisitReferenceExpression(expression *ast.ReferenceExpression) (_ struct{}) {
 	c.compileExpression(expression.Expression)
 	borrowType := c.ExtendedElaboration.ReferenceExpressionBorrowType(expression)
-	index := c.getOrAddType(borrowType)
-	c.codeGen.Emit(opcode.InstructionNewRef{TypeIndex: index})
+	typeIndex := c.getOrAddType(borrowType)
+	c.codeGen.Emit(opcode.InstructionNewRef{
+		Type: typeIndex,
+	})
 	return
 }
 
@@ -1846,8 +1842,8 @@ func (c *Compiler[_, _]) VisitPathExpression(expression *ast.PathExpression) (_ 
 
 	c.codeGen.Emit(
 		opcode.InstructionPath{
-			Domain:          domain,
-			IdentifierIndex: identifierConst.index,
+			Domain:     domain,
+			Identifier: identifierConst.index,
 		},
 	)
 	return
@@ -1922,8 +1918,8 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 
 	c.codeGen.Emit(
 		opcode.InstructionNew{
-			Kind:      kind,
-			TypeIndex: typeIndex,
+			Kind: kind,
+			Type: typeIndex,
 		},
 	)
 
@@ -1941,12 +1937,12 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		c.codeGen.Emit(opcode.InstructionDup{})
 		global := c.findGlobal(enclosingCompositeTypeName)
 
-		c.codeGen.Emit(opcode.InstructionSetGlobal{GlobalIndex: global.Index})
+		c.codeGen.Emit(opcode.InstructionSetGlobal{
+			Global: global.Index,
+		})
 	}
 
-	c.codeGen.Emit(opcode.InstructionSetLocal{
-		LocalIndex: self.index,
-	})
+	c.emitSetLocal(self.index)
 
 	// emit for the statements in `init()` body.
 	c.compileFunctionBlock(
@@ -1955,9 +1951,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	)
 
 	// Constructor should return the created the struct. i.e: return `self`
-	c.codeGen.Emit(opcode.InstructionGetLocal{
-		LocalIndex: self.index,
-	})
+	c.emitGetLocal(self.index)
 	c.codeGen.Emit(opcode.InstructionReturnValue{})
 }
 
@@ -2033,9 +2027,7 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 
 		c.emitNewClosure(uint16(functionIndex), function)
 
-		c.codeGen.Emit(opcode.InstructionSetLocal{
-			LocalIndex: innerFunctionLocal.index,
-		})
+		c.emitSetLocal(innerFunctionLocal.index)
 	}
 
 	return
@@ -2193,9 +2185,10 @@ func (c *Compiler[_, _]) VisitAttachExpression(_ *ast.AttachExpression) (_ struc
 }
 
 func (c *Compiler[_, _]) emitTransfer(targetType sema.Type) {
-	index := c.getOrAddType(targetType)
-
-	c.codeGen.Emit(opcode.InstructionTransfer{TypeIndex: index})
+	typeIndex := c.getOrAddType(targetType)
+	c.codeGen.Emit(opcode.InstructionTransfer{
+		Type: typeIndex,
+	})
 }
 
 func (c *Compiler[_, T]) getOrAddType(targetType sema.Type) uint16 {
@@ -2277,7 +2270,7 @@ func (c *Compiler[_, _]) withConditionExtendedElaboration(statement ast.Statemen
 
 func (c *Compiler[E, _]) emitNewClosure(functionIndex uint16, function *function[E]) {
 	c.codeGen.Emit(opcode.InstructionNewClosure{
-		FunctionIndex: functionIndex,
-		Upvalues:      function.upvalues,
+		Function: functionIndex,
+		Upvalues: function.upvalues,
 	})
 }
