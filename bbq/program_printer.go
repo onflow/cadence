@@ -67,7 +67,7 @@ func (p *ProgramPrinter[E, T]) PrintProgram(program *Program[E, T]) string {
 }
 
 func (p *ProgramPrinter[E, T]) printFunction(function Function[E]) {
-	p.stringBuilder.WriteString("-- " + function.Name + " --\n")
+	p.stringBuilder.WriteString("-- " + function.QualifiedName + " --\n")
 	err := p.codePrinter(&p.stringBuilder, function.Code)
 	if err != nil {
 		// TODO: propagate error

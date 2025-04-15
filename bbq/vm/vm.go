@@ -1546,7 +1546,7 @@ func printInstructionError(
 ) {
 	var builder strings.Builder
 
-	builder.WriteString(fmt.Sprintf("-- %s -- \n", function.Name))
+	builder.WriteString(fmt.Sprintf("-- %s -- \n", function.QualifiedName))
 
 	for index, instruction := range function.Code {
 		if index == instructionIndex {

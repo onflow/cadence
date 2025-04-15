@@ -1016,7 +1016,7 @@ func TestCompileEmit(t *testing.T) {
 
 	var testFunction bbq.Function[opcode.Instruction]
 	for _, f := range functions {
-		if f.Name == "test" {
+		if f.QualifiedName == "test" {
 			testFunction = f
 		}
 	}
@@ -2567,7 +2567,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 	// Not interested in the content of the constructor.
 	const concreteTypeConstructorName = "Test"
 	constructor := program.Functions[concreteTypeConstructorIndex]
-	require.Equal(t, concreteTypeConstructorName, constructor.Name)
+	require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].Index)
@@ -2576,7 +2576,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 	const concreteTypeTestFuncName = "Test.test"
 	concreteTypeTestFunc := program.Functions[concreteTypeFunctionIndex]
-	require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.Name)
+	require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].Index)
@@ -2609,7 +2609,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 	const interfaceTypeTestFuncName = "IA.test"
 	interfaceTypeTestFunc := program.Functions[interfaceFunctionIndex]
-	require.Equal(t, interfaceTypeTestFuncName, interfaceTypeTestFunc.Name)
+	require.Equal(t, interfaceTypeTestFuncName, interfaceTypeTestFunc.QualifiedName)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t, interfaceFunctionIndex, comp.Globals[interfaceTypeTestFuncName].Index)
@@ -2883,7 +2883,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		// Not interested in the content of the constructor.
 		const concreteTypeConstructorName = "Test"
 		constructor := program.Functions[concreteTypeConstructorIndex]
-		require.Equal(t, concreteTypeConstructorName, constructor.Name)
+		require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
 
 		// Also check if the globals are linked properly.
 		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].Index)
@@ -2907,7 +2907,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		const concreteTypeTestFuncName = "Test.test"
 		concreteTypeTestFunc := program.Functions[concreteTypeFunctionIndex]
-		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.Name)
+		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
 
 		// Also check if the globals are linked properly.
 		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].Index)
@@ -3037,7 +3037,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		// Not interested in the content of the constructor.
 		const concreteTypeConstructorName = "Test"
 		constructor := program.Functions[concreteTypeConstructorIndex]
-		require.Equal(t, concreteTypeConstructorName, constructor.Name)
+		require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
 
 		// Also check if the globals are linked properly.
 		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].Index)
@@ -3061,7 +3061,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		const concreteTypeTestFuncName = "Test.test"
 		concreteTypeTestFunc := program.Functions[concreteTypeFunctionIndex]
-		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.Name)
+		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
 
 		// Also check if the globals are linked properly.
 		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].Index)
@@ -3614,7 +3614,7 @@ func TestCompileTransaction(t *testing.T) {
 	// Transaction constructor
 	// Not interested in the content of the constructor.
 	constructor := program.Functions[transactionInitFunctionIndex]
-	require.Equal(t, commons.TransactionWrapperCompositeName, constructor.Name)
+	require.Equal(t, commons.TransactionWrapperCompositeName, constructor.QualifiedName)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t, transactionInitFunctionIndex, comp.Globals[commons.TransactionWrapperCompositeName].Index)
@@ -3634,7 +3634,7 @@ func TestCompileTransaction(t *testing.T) {
 	)
 
 	prepareFunction := program.Functions[prepareFunctionIndex]
-	require.Equal(t, commons.TransactionPrepareFunctionName, prepareFunction.Name)
+	require.Equal(t, commons.TransactionPrepareFunctionName, prepareFunction.QualifiedName)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t, prepareFunctionIndex, comp.Globals[commons.TransactionPrepareFunctionName].Index)
@@ -3671,7 +3671,7 @@ func TestCompileTransaction(t *testing.T) {
 	//    }
 
 	executeFunction := program.Functions[executeFunctionIndex]
-	require.Equal(t, commons.TransactionExecuteFunctionName, executeFunction.Name)
+	require.Equal(t, commons.TransactionExecuteFunctionName, executeFunction.QualifiedName)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t, executeFunctionIndex, comp.Globals[commons.TransactionExecuteFunctionName].Index)

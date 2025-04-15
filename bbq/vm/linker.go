@@ -123,16 +123,23 @@ func LinkGlobals(
 			continue
 		}
 
-		funcStaticType := getTypeFromExecutable[interpreter.FunctionStaticType](executable, function.TypeIndex)
+		var value interpreter.FunctionValue
 
-		value := FunctionValue{
-			Function:   function,
-			Executable: executable,
-			Type:       funcStaticType,
+		if function.IsNative() {
+			// Look-up using the unqualified name, in the common-builtin functions.
+			value = IndexedCommonBuiltinTypeBoundFunctions[function.Name]
+		} else {
+			funcStaticType := getTypeFromExecutable[interpreter.FunctionStaticType](executable, function.TypeIndex)
+
+			value = FunctionValue{
+				Function:   function,
+				Executable: executable,
+				Type:       funcStaticType,
+			}
 		}
 
 		globals = append(globals, value)
-		indexedGlobals[function.Name] = value
+		indexedGlobals[function.QualifiedName] = value
 	}
 
 	// Globals of the current program are added first.
