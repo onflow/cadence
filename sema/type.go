@@ -623,7 +623,7 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 
 	// All number types, addresses, and path types have a `toString` function
 
-	if IsSubType(ty, NumberType) || IsSubType(ty, TheAddressType) || IsSubType(ty, PathType) {
+	if HasToStringFunction(ty) {
 
 		members[ToStringFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
@@ -661,6 +661,10 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 	}
 
 	return members
+}
+
+func HasToStringFunction(ty Type) bool {
+	return IsSubType(ty, NumberType) || IsSubType(ty, TheAddressType) || IsSubType(ty, PathType)
 }
 
 // OptionalType represents the optional variant of another type

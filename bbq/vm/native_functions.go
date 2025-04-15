@@ -194,7 +194,11 @@ func init() {
 
 	// Register type-bound functions that are common to many types.
 	for _, builtinType := range sema.AllBuiltinTypes {
-		registerBuiltinTypeBoundFunctions(string(builtinType.ID()))
+		includeToStringFunction := sema.HasToStringFunction(builtinType)
+		registerBuiltinTypeBoundFunctions(
+			string(builtinType.ID()),
+			includeToStringFunction,
+		)
 	}
 
 	derivedTypeQualifiers := []string{
@@ -205,12 +209,15 @@ func init() {
 	}
 
 	for _, builtinType := range derivedTypeQualifiers {
-		registerBuiltinTypeBoundFunctions(builtinType)
+		registerBuiltinTypeBoundFunctions(builtinType, false)
 	}
 }
 
-func registerBuiltinTypeBoundFunctions(typeQualifier string) {
-	for _, boundFunction := range builtinTypeBoundFunctions() {
+func registerBuiltinTypeBoundFunctions(
+	typeQualifier string,
+	includeToStringFunc bool,
+) {
+	for _, boundFunction := range builtinTypeBoundFunctions(includeToStringFunc) {
 		RegisterTypeBoundFunction(
 			typeQualifier,
 			boundFunction,
@@ -218,17 +225,21 @@ func registerBuiltinTypeBoundFunctions(typeQualifier string) {
 	}
 }
 
-func builtinTypeBoundFunctions() []NativeFunctionValue {
-	return []NativeFunctionValue{
-		// `toString` function
+func builtinTypeBoundFunctions(includeToStringFunc bool) []NativeFunctionValue {
+	functions := []NativeFunctionValue{
+		// `isInstance` function
 		NewBoundNativeFunctionValue(
-			sema.ToStringFunctionName,
-			sema.ToStringFunctionType,
-			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
-				value := args[receiverIndex]
+			sema.IsInstanceFunctionName,
+			sema.IsInstanceFunctionType,
+			func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+				value := arguments[receiverIndex]
 
-				// TODO: memory metering
-				return interpreter.NewUnmeteredStringValue(value.String())
+				typeValue, ok := arguments[0].(interpreter.TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return interpreter.IsInstance(config, value, typeValue)
 			},
 		),
 
@@ -242,6 +253,24 @@ func builtinTypeBoundFunctions() []NativeFunctionValue {
 			},
 		),
 
-		// TODO: add remaining functions (e.g: isInstance, etc)
+		// TODO: add remaining functions
 	}
+
+	if includeToStringFunc {
+		functions = append(
+			functions,
+			NewBoundNativeFunctionValue(
+				sema.ToStringFunctionName,
+				sema.ToStringFunctionType,
+				func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+					value := args[receiverIndex]
+
+					// TODO: memory metering
+					return interpreter.NewUnmeteredStringValue(value.String())
+				},
+			),
+		)
+	}
+
+	return functions
 }
