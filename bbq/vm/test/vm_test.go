@@ -6426,6 +6426,36 @@ func TestCommonBuiltinTypeBoundFunctions(t *testing.T) {
 				actual,
 			)
 		})
+
+		t.Run("struct interface", func(t *testing.T) {
+
+			t.Parallel()
+
+			actual, err := compileAndInvoke(t,
+				`
+                    struct interface I {}
+                    struct S: I {}
+
+                    fun test(): Type {
+                        let i: {I} = S()
+                        return i.getType()
+                    }
+                `,
+				"test",
+			)
+			require.NoError(t, err)
+			assert.Equal(
+				t,
+				interpreter.NewUnmeteredTypeValue(
+					interpreter.NewCompositeStaticTypeComputeTypeID(
+						nil,
+						TestLocation,
+						"S",
+					),
+				),
+				actual,
+			)
+		})
 	})
 
 	t.Run("getIsInstance", func(t *testing.T) {

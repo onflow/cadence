@@ -619,7 +619,10 @@ func opGetIndex(vm *VM) {
 
 func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	value := vm.pop()
+	invokeFunctionValue(vm, value, ins.TypeArgs)
+}
 
+func invokeFunctionValue(vm *VM, value Value, typeArgs []uint16) {
 	switch value := value.(type) {
 	case FunctionValue:
 		parameterCount := int(value.Function.ParameterCount)
@@ -631,7 +634,7 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 		parameterCount := value.ParameterCount
 
 		var typeArguments []bbq.StaticType
-		for _, index := range ins.TypeArgs {
+		for _, index := range typeArgs {
 			typeArg := vm.loadType(index)
 			typeArguments = append(typeArguments, typeArg)
 		}
@@ -644,6 +647,8 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	default:
 		panic(errors.NewUnreachableError())
 	}
+
+	// We do not need to drop the receiver, as the parameter count given in the instruction already includes it
 }
 
 func opInvokeDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
@@ -679,14 +684,9 @@ func opInvokeDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
 	funcName := getStringConstant(vm, nameIndex)
 
 	qualifiedFuncName := commons.TypeQualifiedName(compositeType.QualifiedIdentifier, funcName)
-	var functionValue = vm.lookupFunction(compositeType.Location, qualifiedFuncName)
+	functionValue := vm.lookupFunction(compositeType.Location, qualifiedFuncName)
 
-	parameterCount := int(functionValue.Function.ParameterCount)
-	arguments := vm.peekN(parameterCount)
-	vm.pushCallFrame(functionValue, arguments)
-	vm.dropN(len(arguments))
-
-	// We do not need to drop the receiver, as the parameter count given in the instruction already includes it
+	invokeFunctionValue(vm, functionValue, ins.TypeArgs)
 }
 
 func opDrop(vm *VM) {
@@ -1503,11 +1503,11 @@ func (vm *VM) loadType(index uint16) bbq.StaticType {
 	return staticType
 }
 
-func (vm *VM) lookupFunction(location common.Location, name string) FunctionValue {
+func (vm *VM) lookupFunction(location common.Location, name string) interpreter.FunctionValue {
 	// First check in current program.
 	value, ok := vm.globals[name]
 	if ok {
-		return value.(FunctionValue)
+		return value.(interpreter.FunctionValue)
 	}
 
 	// If not found, check in already linked imported functions.
@@ -1532,7 +1532,7 @@ func (vm *VM) lookupFunction(location common.Location, name string) FunctionValu
 		panic(errors.NewUnexpectedError("cannot link global: %s", name))
 	}
 
-	return value.(FunctionValue)
+	return value.(interpreter.FunctionValue)
 }
 
 func (vm *VM) StackSize() int {
