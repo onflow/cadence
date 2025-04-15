@@ -162,6 +162,19 @@ func NewNativeFunctionValue(
 	}
 }
 
+func NewBoundNativeFunctionValue(
+	name string,
+	funcType *sema.FunctionType,
+	function NativeFunction,
+) NativeFunctionValue {
+	return NativeFunctionValue{
+		Name:           name,
+		ParameterCount: len(funcType.Parameters) + 1, // +1 is for the receiver
+		Function:       function,
+		Type:           interpreter.NewFunctionStaticType(nil, funcType),
+	}
+}
+
 var _ Value = NativeFunctionValue{}
 var _ interpreter.FunctionValue = NativeFunctionValue{}
 

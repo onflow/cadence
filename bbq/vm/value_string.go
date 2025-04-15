@@ -31,7 +31,7 @@ func init() {
 
 	RegisterTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewBoundNativeFunctionValue(
 			sema.StringTypeConcatFunctionName,
 			sema.StringTypeConcatFunctionType,
 			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
