@@ -2056,19 +2056,8 @@ func (c *Compiler[_, _]) VisitCompositeDeclaration(declaration *ast.CompositeDec
 		c.generateEmptyInit()
 	}
 
-	for _, boundFunction := range commonBuiltinTypeBoundFunctions {
-		name := boundFunction.name
-		qualifiedName := commons.TypeQualifiedName(
-			c.enclosingCompositeTypeFullyQualifiedName(),
-			name,
-		)
-		c.addFunction(
-			name,
-			qualifiedName,
-			uint16(len(boundFunction.typ.Parameters)+1),
-			boundFunction.typ,
-		)
-	}
+	// Add the methods that are provided natively.
+	c.addBuiltinMethods()
 
 	for _, function := range declaration.Members.Functions() {
 		c.compileDeclaration(function)
@@ -2092,6 +2081,9 @@ func (c *Compiler[_, _]) VisitInterfaceDeclaration(declaration *ast.InterfaceDec
 		c.compositeTypeStack.pop()
 	}()
 
+	// Add the methods that are provided natively.
+	c.addBuiltinMethods()
+
 	for _, function := range declaration.Members.Functions() {
 		c.compileDeclaration(function)
 	}
@@ -2102,6 +2094,22 @@ func (c *Compiler[_, _]) VisitInterfaceDeclaration(declaration *ast.InterfaceDec
 		c.compileDeclaration(nestedTypes)
 	}
 	return
+}
+
+func (c *Compiler[_, _]) addBuiltinMethods() {
+	for _, boundFunction := range commonBuiltinTypeBoundFunctions {
+		name := boundFunction.name
+		qualifiedName := commons.TypeQualifiedName(
+			c.enclosingCompositeTypeFullyQualifiedName(),
+			name,
+		)
+		c.addFunction(
+			name,
+			qualifiedName,
+			uint16(len(boundFunction.typ.Parameters)+1),
+			boundFunction.typ,
+		)
+	}
 }
 
 func (c *Compiler[_, _]) VisitFieldDeclaration(_ *ast.FieldDeclaration) (_ struct{}) {
