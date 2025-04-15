@@ -181,7 +181,7 @@ func TestPrintInstruction(t *testing.T) {
 		"FailableCast type:258": {byte(FailableCast), 1, 2, 3},
 		"ForceCast type:258":    {byte(ForceCast), 1, 2, 3},
 
-		`Path domain:PathDomainStorage identifier:5`: {byte(Path), 1, 0, 5},
+		`NewPath domain:PathDomainStorage identifier:5`: {byte(NewPath), 1, 0, 5},
 
 		`InvokeDynamic name:1 typeArgs:[772, 1286] argCount:1800`: {
 			byte(InvokeDynamic), 0, 1, 0, 2, 3, 4, 5, 6, 7, 8,

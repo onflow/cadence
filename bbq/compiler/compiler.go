@@ -1828,13 +1828,15 @@ func (c *Compiler[_, _]) VisitPathExpression(expression *ast.PathExpression) (_ 
 	}
 
 	identifierConst := c.addStringConst(identifier)
+	identifierIndex := identifierConst.index
 
 	c.codeGen.Emit(
-		opcode.InstructionPath{
+		opcode.InstructionNewPath{
 			Domain:     domain,
-			Identifier: identifierConst.index,
+			Identifier: identifierIndex,
 		},
 	)
+
 	return
 }
 

@@ -158,18 +158,6 @@
       - name: "value"
         type: "value"
 
-- name: "path"
-  description: Creates a new path with the given domain and identifier and then pushes it onto the stack.
-  operands:
-    - name: "domain"
-      type: "pathDomain"
-    - name: "identifier"
-      type: "constantIndex"
-  valueEffects:
-    push:
-      - name: "value"
-        type: "path"
-
 - name: "new"
   description: Creates a new instance of the given kind and type and then pushes it onto the stack.
   operands:
@@ -181,6 +169,18 @@
     push:
       - name: "value"
         type: "value"
+
+- name: "newPath"
+  description: Creates a new path with the given domain and identifier and then pushes it onto the stack.
+  operands:
+    - name: "domain"
+      type: "pathDomain"
+    - name: "identifier"
+      type: "constantIndex"
+  valueEffects:
+    push:
+      - name: "value"
+        type: "path"
 
 - name: "newArray"
   description:
