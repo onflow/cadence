@@ -95,9 +95,9 @@ const (
 
 	True
 	False
-	New
-	Path
 	Nil
+	New
+	NewPath
 	NewArray
 	NewDictionary
 	NewRef

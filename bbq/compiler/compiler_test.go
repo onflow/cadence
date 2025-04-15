@@ -1009,14 +1009,14 @@ func TestCompileEmit(t *testing.T) {
 	comp := compiler.NewInstructionCompiler(checker)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 2)
+	require.Len(t, program.Functions, 4)
 
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(program.Functions), len(functions))
 
 	var testFunction bbq.Function[opcode.Instruction]
 	for _, f := range functions {
-		if f.Name == "test" {
+		if f.QualifiedName == "test" {
 			testFunction = f
 		}
 	}
@@ -1487,10 +1487,18 @@ func TestCompileMember(t *testing.T) {
 	comp := compiler.NewInstructionCompiler(checker)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 2)
+	require.Len(t, program.Functions, 4)
 
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(program.Functions), len(functions))
+
+	const (
+		initFuncIndex = iota
+		// Next two indexes are for builtin methods (i.e: getType, isInstance)
+		_
+		_
+		getValueFuncIndex
+	)
 
 	{
 		const parameterCount = 1
@@ -1526,7 +1534,7 @@ func TestCompileMember(t *testing.T) {
 				opcode.InstructionGetLocal{Local: selfIndex},
 				opcode.InstructionReturnValue{},
 			},
-			functions[0].Code,
+			functions[initFuncIndex].Code,
 		)
 	}
 
@@ -1540,7 +1548,7 @@ func TestCompileMember(t *testing.T) {
 				opcode.InstructionGetField{FieldName: 0},
 				opcode.InstructionReturnValue{},
 			},
-			functions[1].Code,
+			functions[getValueFuncIndex].Code,
 		)
 	}
 
@@ -2165,10 +2173,19 @@ func TestCompileMethodInvocation(t *testing.T) {
 	comp := compiler.NewInstructionCompiler(checker)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 3)
+	require.Len(t, program.Functions, 5)
 
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(program.Functions), len(functions))
+
+	const (
+		testFuncIndex = iota
+		initFuncIndex
+		// Next two indexes are for builtin methods (i.e: getType, isInstance)
+		_
+		_
+		fFuncIndex
+	)
 
 	{
 		const (
@@ -2179,7 +2196,7 @@ func TestCompileMethodInvocation(t *testing.T) {
 		assert.Equal(t,
 			[]opcode.Instruction{
 				// let foo = Foo()
-				opcode.InstructionGetGlobal{Global: 1},
+				opcode.InstructionGetGlobal{Global: initFuncIndex},
 				opcode.InstructionInvoke{TypeArgs: nil},
 				opcode.InstructionTransfer{Type: 1},
 				opcode.InstructionSetLocal{Local: fooIndex},
@@ -2188,13 +2205,13 @@ func TestCompileMethodInvocation(t *testing.T) {
 				opcode.InstructionGetLocal{Local: fooIndex},
 				opcode.InstructionTrue{},
 				opcode.InstructionTransfer{Type: 2},
-				opcode.InstructionGetGlobal{Global: 2},
+				opcode.InstructionGetGlobal{Global: fFuncIndex},
 				opcode.InstructionInvoke{TypeArgs: nil},
 				opcode.InstructionDrop{},
 
 				opcode.InstructionReturn{},
 			},
-			functions[0].Code,
+			functions[testFuncIndex].Code,
 		)
 	}
 
@@ -2218,7 +2235,7 @@ func TestCompileMethodInvocation(t *testing.T) {
 				opcode.InstructionGetLocal{Local: selfIndex},
 				opcode.InstructionReturnValue{},
 			},
-			functions[1].Code,
+			functions[initFuncIndex].Code,
 		)
 	}
 
@@ -2226,7 +2243,7 @@ func TestCompileMethodInvocation(t *testing.T) {
 		[]opcode.Instruction{
 			opcode.InstructionReturn{},
 		},
-		functions[2].Code,
+		functions[fFuncIndex].Code,
 	)
 }
 
@@ -2247,10 +2264,18 @@ func TestCompileResourceCreateAndDestroy(t *testing.T) {
 	comp := compiler.NewInstructionCompiler(checker)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 2)
+	require.Len(t, program.Functions, 4)
 
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(functions), len(program.Functions))
+
+	const (
+		testFuncIndex = iota
+		initFuncIndex
+		// Next two indexes are for builtin methods (i.e: getType, isInstance)
+		_
+		_
+	)
 
 	{
 		const (
@@ -2261,7 +2286,7 @@ func TestCompileResourceCreateAndDestroy(t *testing.T) {
 		assert.Equal(t,
 			[]opcode.Instruction{
 				// let foo <- create Foo()
-				opcode.InstructionGetGlobal{Global: 1},
+				opcode.InstructionGetGlobal{Global: initFuncIndex},
 				opcode.InstructionInvoke{TypeArgs: nil},
 				opcode.InstructionTransfer{Type: 1},
 				opcode.InstructionSetLocal{Local: fooIndex},
@@ -2272,7 +2297,7 @@ func TestCompileResourceCreateAndDestroy(t *testing.T) {
 
 				opcode.InstructionReturn{},
 			},
-			functions[0].Code,
+			functions[testFuncIndex].Code,
 		)
 	}
 
@@ -2296,7 +2321,7 @@ func TestCompileResourceCreateAndDestroy(t *testing.T) {
 				opcode.InstructionGetLocal{Local: selfIndex},
 				opcode.InstructionReturnValue{},
 			},
-			functions[1].Code,
+			functions[initFuncIndex].Code,
 		)
 	}
 }
@@ -2322,7 +2347,7 @@ func TestCompilePath(t *testing.T) {
 
 	assert.Equal(t,
 		[]opcode.Instruction{
-			opcode.InstructionPath{
+			opcode.InstructionNewPath{
 				Domain:     common.PathDomainStorage,
 				Identifier: 0,
 			},
@@ -2555,11 +2580,17 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 3)
+	require.Len(t, program.Functions, 7)
 
 	const (
 		concreteTypeConstructorIndex uint16 = iota
+		// Next two indexes are for builtin methods (i.e: getType, isInstance) for concrete type
+		_
+		_
 		concreteTypeFunctionIndex
+		// Next two indexes are for builtin methods (i.e: getType, isInstance) for interface type
+		_
+		_
 		interfaceFunctionIndex
 	)
 
@@ -2567,7 +2598,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 	// Not interested in the content of the constructor.
 	const concreteTypeConstructorName = "Test"
 	constructor := program.Functions[concreteTypeConstructorIndex]
-	require.Equal(t, concreteTypeConstructorName, constructor.Name)
+	require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].Index)
@@ -2576,7 +2607,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 	const concreteTypeTestFuncName = "Test.test"
 	concreteTypeTestFunc := program.Functions[concreteTypeFunctionIndex]
-	require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.Name)
+	require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].Index)
@@ -2609,7 +2640,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 	const interfaceTypeTestFuncName = "IA.test"
 	interfaceTypeTestFunc := program.Functions[interfaceFunctionIndex]
-	require.Equal(t, interfaceTypeTestFuncName, interfaceTypeTestFunc.Name)
+	require.Equal(t, interfaceTypeTestFuncName, interfaceTypeTestFunc.QualifiedName)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t, interfaceFunctionIndex, comp.Globals[interfaceTypeTestFuncName].Index)
@@ -2870,12 +2901,18 @@ func TestCompileFunctionConditions(t *testing.T) {
 		)
 
 		program := comp.Compile()
-		require.Len(t, program.Functions, 2)
+		require.Len(t, program.Functions, 6)
 
 		// Function indexes
 		const (
 			concreteTypeConstructorIndex uint16 = iota
+			// Next two indexes are for builtin methods (i.e: getType, isInstance) for concrete type
+			_
+			_
 			concreteTypeFunctionIndex
+			// Next two indexes are for builtin methods (i.e: getType, isInstance) for interface type
+			_
+			_
 			panicFunctionIndex
 		)
 
@@ -2883,7 +2920,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		// Not interested in the content of the constructor.
 		const concreteTypeConstructorName = "Test"
 		constructor := program.Functions[concreteTypeConstructorIndex]
-		require.Equal(t, concreteTypeConstructorName, constructor.Name)
+		require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
 
 		// Also check if the globals are linked properly.
 		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].Index)
@@ -2907,7 +2944,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		const concreteTypeTestFuncName = "Test.test"
 		concreteTypeTestFunc := program.Functions[concreteTypeFunctionIndex]
-		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.Name)
+		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
 
 		// Also check if the globals are linked properly.
 		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].Index)
@@ -2944,7 +2981,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// panic("pre/post condition failed")
 				opcode.InstructionGetConstant{Constant: constPanicMessageIndex},
-				opcode.InstructionTransfer{Type: 3},
+				opcode.InstructionTransfer{Type: 5},
 				opcode.InstructionGetGlobal{Global: panicFunctionIndex},
 				opcode.InstructionInvoke{},
 
@@ -2962,7 +2999,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// let result = $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransfer{Type: 4},
+				opcode.InstructionTransfer{Type: 6},
 				opcode.InstructionSetLocal{Local: resultIndex},
 
 				// Inherited post condition
@@ -2978,7 +3015,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// panic("pre/post condition failed")
 				opcode.InstructionGetConstant{Constant: constPanicMessageIndex},
-				opcode.InstructionTransfer{Type: 3},
+				opcode.InstructionTransfer{Type: 5},
 				opcode.InstructionGetGlobal{Global: panicFunctionIndex},
 				opcode.InstructionInvoke{},
 
@@ -3024,12 +3061,18 @@ func TestCompileFunctionConditions(t *testing.T) {
 		)
 
 		program := comp.Compile()
-		require.Len(t, program.Functions, 2)
+		require.Len(t, program.Functions, 6)
 
 		// Function indexes
 		const (
 			concreteTypeConstructorIndex uint16 = iota
+			// Next two indexes are for builtin methods (i.e: getType, isInstance) for concrete type
+			_
+			_
 			concreteTypeFunctionIndex
+			// Next two indexes are for builtin methods (i.e: getType, isInstance) for interface type
+			_
+			_
 			panicFunctionIndex
 		)
 
@@ -3037,7 +3080,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		// Not interested in the content of the constructor.
 		const concreteTypeConstructorName = "Test"
 		constructor := program.Functions[concreteTypeConstructorIndex]
-		require.Equal(t, concreteTypeConstructorName, constructor.Name)
+		require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
 
 		// Also check if the globals are linked properly.
 		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].Index)
@@ -3061,7 +3104,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		const concreteTypeTestFuncName = "Test.test"
 		concreteTypeTestFunc := program.Functions[concreteTypeFunctionIndex]
-		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.Name)
+		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
 
 		// Also check if the globals are linked properly.
 		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].Index)
@@ -3086,7 +3129,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// Inherited before function
 				// var $before_0 = x
 				opcode.InstructionGetLocal{Local: xIndex},
-				opcode.InstructionTransfer{Type: 3},
+				opcode.InstructionTransfer{Type: 5},
 				opcode.InstructionSetLocal{Local: beforeVarIndex},
 
 				// Function body
@@ -3100,7 +3143,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// let result = $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransfer{Type: 3},
+				opcode.InstructionTransfer{Type: 5},
 				opcode.InstructionSetLocal{Local: resultIndex},
 
 				// Inherited post condition
@@ -3116,7 +3159,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// panic("pre/post condition failed")
 				opcode.InstructionGetConstant{Constant: constPanicMessageIndex},
-				opcode.InstructionTransfer{Type: 4},
+				opcode.InstructionTransfer{Type: 6},
 				opcode.InstructionGetGlobal{Global: panicFunctionIndex},
 				opcode.InstructionInvoke{},
 
@@ -3602,19 +3645,23 @@ func TestCompileTransaction(t *testing.T) {
 	)
 
 	program := comp.Compile()
-	require.Len(t, program.Functions, 3)
+	require.Len(t, program.Functions, 5)
 
 	// Function indexes
 	const (
 		transactionInitFunctionIndex uint16 = iota
+		// Next two indexes are for builtin methods (i.e: getType, isInstance)
+		_
+		_
 		prepareFunctionIndex
 		executeFunctionIndex
+		panicFunctionIndex
 	)
 
 	// Transaction constructor
 	// Not interested in the content of the constructor.
 	constructor := program.Functions[transactionInitFunctionIndex]
-	require.Equal(t, commons.TransactionWrapperCompositeName, constructor.Name)
+	require.Equal(t, commons.TransactionWrapperCompositeName, constructor.QualifiedName)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t, transactionInitFunctionIndex, comp.Globals[commons.TransactionWrapperCompositeName].Index)
@@ -3634,7 +3681,7 @@ func TestCompileTransaction(t *testing.T) {
 	)
 
 	prepareFunction := program.Functions[prepareFunctionIndex]
-	require.Equal(t, commons.TransactionPrepareFunctionName, prepareFunction.Name)
+	require.Equal(t, commons.TransactionPrepareFunctionName, prepareFunction.QualifiedName)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t, prepareFunctionIndex, comp.Globals[commons.TransactionPrepareFunctionName].Index)
@@ -3644,7 +3691,7 @@ func TestCompileTransaction(t *testing.T) {
 			// self.count = 2
 			opcode.InstructionGetLocal{Local: selfIndex},
 			opcode.InstructionGetConstant{Constant: const2Index},
-			opcode.InstructionTransfer{Type: 2},
+			opcode.InstructionTransfer{Type: 4},
 			opcode.InstructionSetField{FieldName: constFieldNameIndex},
 
 			// return
@@ -3671,7 +3718,7 @@ func TestCompileTransaction(t *testing.T) {
 	//    }
 
 	executeFunction := program.Functions[executeFunctionIndex]
-	require.Equal(t, commons.TransactionExecuteFunctionName, executeFunction.Name)
+	require.Equal(t, commons.TransactionExecuteFunctionName, executeFunction.QualifiedName)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t, executeFunctionIndex, comp.Globals[commons.TransactionExecuteFunctionName].Index)
@@ -3691,8 +3738,8 @@ func TestCompileTransaction(t *testing.T) {
 
 			// panic("pre/post condition failed")
 			opcode.InstructionGetConstant{Constant: constErrorMsgIndex},
-			opcode.InstructionTransfer{Type: 3},
-			opcode.InstructionGetGlobal{Global: 3}, // global index 3 is 'panic' function
+			opcode.InstructionTransfer{Type: 5},
+			opcode.InstructionGetGlobal{Global: panicFunctionIndex},
 			opcode.InstructionInvoke{},
 
 			// Drop since it's a statement-expression
@@ -3701,7 +3748,7 @@ func TestCompileTransaction(t *testing.T) {
 			// self.count = 10
 			opcode.InstructionGetLocal{Local: selfIndex},
 			opcode.InstructionGetConstant{Constant: const10Index},
-			opcode.InstructionTransfer{Type: 2},
+			opcode.InstructionTransfer{Type: 4},
 			opcode.InstructionSetField{FieldName: constFieldNameIndex},
 
 			// Post condition
@@ -3717,8 +3764,8 @@ func TestCompileTransaction(t *testing.T) {
 
 			// panic("pre/post condition failed")
 			opcode.InstructionGetConstant{Constant: constErrorMsgIndex},
-			opcode.InstructionTransfer{Type: 3},
-			opcode.InstructionGetGlobal{Global: 3}, // global index 3 is 'panic' function
+			opcode.InstructionTransfer{Type: 5},
+			opcode.InstructionGetGlobal{Global: panicFunctionIndex},
 			opcode.InstructionInvoke{},
 
 			// Drop since it's a statement-expression
