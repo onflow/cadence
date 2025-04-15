@@ -54,15 +54,11 @@ access(all) contract FlowToken: FungibleToken {
 
         /// getSupportedVaultTypes optionally returns a list of vault types that this receiver accepts
         access(all) view fun getSupportedVaultTypes(): {Type: Bool} {
-            // TODO: getType
-            // return {self.getType(): true}
-            return {}
+            return {self.getType(): true}
         }
 
         access(all) view fun isSupportedVaultType(type: Type): Bool {
-            // TODO: getType
-            // if (type == self.getType()) { return true } else { return false }
-            return true
+            if (type == self.getType()) { return true } else { return false }
         }
 
         /// Asks if the amount can be withdrawn from this vault
