@@ -2213,7 +2213,6 @@ func (c *Compiler[_, _]) emitTransfer(targetType sema.Type) {
 	case opcode.InstructionNewPath:
 		// If the last instruction is a path creation of the same type,
 		// then the transfer is not needed.
-		//if lastInstruction.Domain == common.PathDomainPublic {
 		switch lastInstruction.Domain {
 		case common.PathDomainPublic:
 			if targetType == sema.PublicPathType {
