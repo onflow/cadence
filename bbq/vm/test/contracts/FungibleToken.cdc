@@ -298,14 +298,13 @@ access(all) contract interface FungibleToken: ViewResolver {
                     .concat("The newly created Vault must have zero balance but it has a balance of ")
                     .concat(result.balance.toString())
 
-                // TODO: getType
-                // result.getType() == self.getType():
-                //     "FungibleToken.Vault.createEmptyVault: Empty Vault creation failed! "
-                //     .concat("The type of the new Vault <")
-                //     .concat(result.getType().identifier)
-                //     .concat("> has to be the same type as the Vault that created it <")
-                //     .concat(self.getType().identifier)
-                //     .concat(">.")
+                result.getType() == self.getType():
+                    "FungibleToken.Vault.createEmptyVault: Empty Vault creation failed! "
+                    .concat("The type of the new Vault <")
+                    .concat(result.getType().identifier)
+                    .concat("> has to be the same type as the Vault that created it <")
+                    .concat(self.getType().identifier)
+                    .concat(">.")
             }
         }
     }
