@@ -2322,7 +2322,7 @@ func TestCompilePath(t *testing.T) {
 
 	assert.Equal(t,
 		[]opcode.Instruction{
-			opcode.InstructionPath{
+			opcode.InstructionNewPath{
 				Domain:     common.PathDomainStorage,
 				Identifier: 0,
 			},

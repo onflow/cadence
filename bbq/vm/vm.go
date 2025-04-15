@@ -797,7 +797,7 @@ func opDestroy(vm *VM) {
 	value.Destroy(vm.config, EmptyLocationRange)
 }
 
-func opPath(vm *VM, ins opcode.InstructionPath) {
+func opNewPath(vm *VM, ins opcode.InstructionNewPath) {
 	identifierIndex := ins.Identifier
 	identifier := getStringConstant(vm, identifierIndex)
 	value := interpreter.NewPathValue(
@@ -1180,8 +1180,8 @@ func (vm *VM) run() {
 			opTransfer(vm, ins)
 		case opcode.InstructionDestroy:
 			opDestroy(vm)
-		case opcode.InstructionPath:
-			opPath(vm, ins)
+		case opcode.InstructionNewPath:
+			opNewPath(vm, ins)
 		case opcode.InstructionSimpleCast:
 			opSimpleCast(vm, ins)
 		case opcode.InstructionFailableCast:
