@@ -5225,28 +5225,31 @@ func isInstanceFunction(context FunctionCreationContext, self Value) FunctionVal
 		self,
 		sema.IsInstanceFunctionType,
 		func(self Value, invocation Invocation) Value {
-			interpreter := invocation.InvocationContext
+			invocationContext := invocation.InvocationContext
 
 			firstArgument := invocation.Arguments[0]
 			typeValue, ok := firstArgument.(TypeValue)
-
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
-			staticType := typeValue.Type
-
-			// Values are never instances of unknown types
-			if staticType == nil {
-				return FalseValue
-			}
-
-			// NOTE: not invocation.Self, as that is only set for composite values
-			selfType := self.StaticType(interpreter)
-			return BoolValue(
-				IsSubType(interpreter, selfType, staticType),
-			)
+			return IsInstance(invocationContext, self, typeValue)
 		},
+	)
+}
+
+func IsInstance(invocationContext InvocationContext, self Value, typeValue TypeValue) Value {
+	staticType := typeValue.Type
+
+	// Values are never instances of unknown types
+	if staticType == nil {
+		return FalseValue
+	}
+
+	// NOTE: not invocation.Self, as that is only set for composite values
+	selfType := self.StaticType(invocationContext)
+	return BoolValue(
+		IsSubType(invocationContext, selfType, staticType),
 	)
 }
 
