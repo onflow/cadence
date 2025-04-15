@@ -273,7 +273,7 @@
     and then pushes the result back on to the stack.
   operands:
     - name: "typeArgs"
-      type: "indices"
+      type: "typeIndices"
   valueEffects:
     pop:
       - name: "arguments"
@@ -294,7 +294,7 @@
     - name: "name"
       type: "constantIndex"
     - name: "typeArgs"
-      type: "indices"
+      type: "typeIndices"
     - name: "argCount"
       type: "size"
   valueEffects:

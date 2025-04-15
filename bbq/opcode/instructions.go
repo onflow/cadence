@@ -884,7 +884,7 @@ func (i InstructionInvoke) ResolvedOperandsString(sb *strings.Builder,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
-	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs, colorize)
+	printfTypeArrayArgument(sb, "typeArgs", i.TypeArgs, colorize, types)
 }
 
 func (i InstructionInvoke) Encode(code *[]byte) {
@@ -931,7 +931,7 @@ func (i InstructionInvokeDynamic) ResolvedOperandsString(sb *strings.Builder,
 	functionNames []string,
 	colorize bool) {
 	printfConstantArgument(sb, "name", constants[i.Name], colorize)
-	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs, colorize)
+	printfTypeArrayArgument(sb, "typeArgs", i.TypeArgs, colorize, types)
 	printfArgument(sb, "argCount", i.ArgCount, colorize)
 }
 

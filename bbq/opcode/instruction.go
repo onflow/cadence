@@ -265,7 +265,7 @@ func printfArgument(
 
 func printfConstantArgument(
 	sb *strings.Builder,
-	fieldName string,
+	argumentName string,
 	c constant.Constant,
 	colorize bool,
 ) {
@@ -278,25 +278,56 @@ func printfConstantArgument(
 	}
 
 	if colorize {
-		fieldName = colorizeArgumentName(fieldName)
+		argumentName = colorizeArgumentName(argumentName)
 		formattedConstant = colorizeArgumentValue(formattedConstant)
 	}
 
-	_, _ = fmt.Fprintf(sb, " %s:%s", fieldName, formattedConstant)
+	_, _ = fmt.Fprintf(sb, " %s:%s", argumentName, formattedConstant)
 }
 
 func printfTypeArgument(
 	sb *strings.Builder,
-	fieldName string,
+	argumentName string,
 	typ interpreter.StaticType,
 	colorize bool,
 ) {
 	formattedType := strconv.Quote(typ.String())
 	if colorize {
-		fieldName = colorizeArgumentName(fieldName)
+		argumentName = colorizeArgumentName(argumentName)
 		formattedType = colorizeArgumentValue(formattedType)
 	}
-	_, _ = fmt.Fprintf(sb, " %s:%s", fieldName, formattedType)
+	_, _ = fmt.Fprintf(sb, " %s:%s", argumentName, formattedType)
+}
+
+func printfTypeArrayArgument(
+	sb *strings.Builder,
+	argumentName string,
+	typeIndices []uint16,
+	colorize bool,
+	types []interpreter.StaticType,
+) {
+	if colorize {
+		argumentName = colorizeArgumentName(argumentName)
+	}
+
+	_, _ = fmt.Fprintf(sb, " %s:[", argumentName)
+
+	for i, typeIndex := range typeIndices {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+
+		typ := types[typeIndex]
+
+		formattedType := strconv.Quote(typ.String())
+		if colorize {
+			formattedType = colorizeArgumentValue(formattedType)
+		}
+
+		sb.WriteString(formattedType)
+	}
+
+	sb.WriteByte(']')
 }
 
 func printfFunctionNameArgument(
