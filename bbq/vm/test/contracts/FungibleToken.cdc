@@ -178,8 +178,7 @@ access(all) contract interface FungibleToken: ViewResolver {
         /// This is to prevent vault owners from spamming fake Burned events.
         access(contract) fun burnCallback() {
             pre {
-                // TODO: getType
-                // emit Burned(type: self.getType().identifier, amount: self.balance, fromUUID: self.uuid)
+                emit Burned(type: self.getType().identifier, amount: self.balance, fromUUID: self.uuid)
             }
             post {
                 self.balance == 0.0:
@@ -240,15 +239,14 @@ access(all) contract interface FungibleToken: ViewResolver {
                     .concat(") must be the difference of the previous balance (").concat(before(self.balance.toString()))
                     .concat(") and the amount withdrawn (").concat(amount.toString()).concat(")")
 
-                // TODO: getType
-                // emit Withdrawn(
-                //         type: result.getType().identifier,
-                //         amount: amount,
-                //         from: self.owner?.address,
-                //         fromUUID: self.uuid,
-                //         withdrawnUUID: result.uuid,
-                //         balanceAfter: self.balance
-                // )
+                emit Withdrawn(
+                        type: result.getType().identifier,
+                        amount: amount,
+                        from: self.owner?.address,
+                        fromUUID: self.uuid,
+                        withdrawnUUID: result.uuid,
+                        balanceAfter: self.balance
+                )
             }
         }
 
@@ -269,15 +267,14 @@ access(all) contract interface FungibleToken: ViewResolver {
             //         .concat("and that those paths hold the same Vault types.")
             // }
             post {
-                // TODO: getType
-                // emit Deposited(
-                //         type: before(from.getType().identifier),
-                //         amount: before(from.balance),
-                //         to: self.owner?.address,
-                //         toUUID: self.uuid,
-                //         depositedUUID: before(from.uuid),
-                //         balanceAfter: self.balance
-                // )
+                emit Deposited(
+                        type: before(from.getType().identifier),
+                        amount: before(from.balance),
+                        to: self.owner?.address,
+                        toUUID: self.uuid,
+                        depositedUUID: before(from.uuid),
+                        balanceAfter: self.balance
+                )
                 self.balance == before(self.balance) + before(from.balance):
                     "FungibleToken.Vault.deposit: Cannot deposit tokens! "
                     .concat("The receiver's balance after the deposit (")
