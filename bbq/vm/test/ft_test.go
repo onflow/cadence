@@ -41,7 +41,7 @@ import (
 
 func compiledFTTransfer(tb testing.TB) {
 
-	programs := map[common.Location]*compiledProgram{}
+	compiledPrograms := map[common.Location]*compiledProgram{}
 
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
 	senderAddress := common.MustBytesToAddress([]byte{0x2})
@@ -62,6 +62,7 @@ func compiledFTTransfer(tb testing.TB) {
 		metadataViewsLocation:              []byte(realMetadataViewsContract),
 		fungibleTokenMetadataViewsLocation: []byte(realFungibleTokenMetadataViewsContract),
 		nonFungibleTokenLocation:           []byte(realNonFungibleTokenContract),
+		flowTokenLocation:                  []byte(realFlowContract),
 	}
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
@@ -75,7 +76,7 @@ func compiledFTTransfer(tb testing.TB) {
 	}
 
 	importHandler := func(location common.Location) *bbq.InstructionProgram {
-		imported, ok := programs[location]
+		imported, ok := compiledPrograms[location]
 		if !ok {
 			return nil
 		}
@@ -86,7 +87,7 @@ func compiledFTTransfer(tb testing.TB) {
 		LocationHandler: commons.LocationHandler(locationHandler),
 		ImportHandler:   importHandler,
 		ElaborationResolver: func(location common.Location) (*sema.Elaboration, error) {
-			imported, ok := programs[location]
+			imported, ok := compiledPrograms[location]
 			if !ok {
 				return nil, fmt.Errorf("cannot find elaboration for %s", location)
 			}
@@ -94,18 +95,17 @@ func compiledFTTransfer(tb testing.TB) {
 		},
 	}
 
-	// Parse and check contract interfaces
+	// Parse and check contracts
 
-	contractInterfaceLocations := []common.Location{
+	for _, location := range []common.Location{
 		burnerLocation,
 		viewResolverLocation,
 		fungibleTokenLocation,
 		nonFungibleTokenLocation,
 		metadataViewsLocation,
 		fungibleTokenMetadataViewsLocation,
-	}
-
-	for _, location := range contractInterfaceLocations {
+		flowTokenLocation,
+	} {
 		_ = parseCheckAndCompileCodeWithOptions(
 			tb,
 			string(codes[location]),
@@ -117,25 +117,9 @@ func compiledFTTransfer(tb testing.TB) {
 				},
 				CompilerConfig: compilerConfig,
 			},
-			programs,
+			compiledPrograms,
 		)
 	}
-
-	// Deploy Flow Token contract
-
-	flowTokenProgram := parseCheckAndCompileCodeWithOptions(
-		tb,
-		realFlowContract,
-		flowTokenLocation,
-		CompilerAndVMOptions{
-			ParseAndCheckOptions: &ParseAndCheckOptions{
-				Location: flowTokenLocation,
-				Config:   semaConfig,
-			},
-			CompilerConfig: compilerConfig,
-		},
-		programs,
-	)
 
 	// Prepare VM
 
@@ -153,7 +137,7 @@ func compiledFTTransfer(tb testing.TB) {
 	storage := interpreter.NewInMemoryStorage(nil)
 
 	typeLoader := func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-		program, ok := programs[location]
+		program, ok := compiledPrograms[location]
 		if !ok {
 			panic(fmt.Errorf("cannot find elaboration for: %s", location))
 		}
@@ -270,7 +254,7 @@ func compiledFTTransfer(tb testing.TB) {
 
 	vmConfig.TypeLoader = typeLoader
 	vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
-		imported, ok := programs[location]
+		imported, ok := compiledPrograms[location]
 		if !ok {
 			return nil
 		}
@@ -282,15 +266,24 @@ func compiledFTTransfer(tb testing.TB) {
 		return contractValues[location]
 	}
 
-	flowTokenVM := vm.NewVM(
-		flowTokenLocation,
-		flowTokenProgram,
-		vmConfig,
-	)
+	// Initialize contracts
 
-	flowTokenValue, err := flowTokenVM.InitializeContract()
-	require.NoError(tb, err)
-	contractValues[flowTokenLocation] = flowTokenValue
+	for _, location := range []common.Location{
+		metadataViewsLocation,
+		fungibleTokenMetadataViewsLocation,
+		flowTokenLocation,
+	} {
+		compiledProgram := compiledPrograms[location]
+		contractVM := vm.NewVM(
+			location,
+			compiledProgram.Program,
+			vmConfig,
+		)
+
+		contractValue, err := contractVM.InitializeContract()
+		require.NoError(tb, err)
+		contractValues[location] = contractValue
+	}
 
 	// Setup accounts
 
@@ -311,13 +304,13 @@ func compiledFTTransfer(tb testing.TB) {
 				},
 				CompilerConfig: compilerConfig,
 			},
-			programs,
+			compiledPrograms,
 		)
 
 		setupTxVM := vm.NewVM(txLocation, program, vmConfig)
 
 		authorizer := vm.NewAuthAccountReferenceValue(vmConfig, accountHandler, address)
-		err = setupTxVM.ExecuteTransaction(nil, authorizer)
+		err := setupTxVM.ExecuteTransaction(nil, authorizer)
 		require.NoError(tb, err)
 		require.Equal(tb, 0, setupTxVM.StackSize())
 	}
@@ -337,7 +330,7 @@ func compiledFTTransfer(tb testing.TB) {
 			},
 			CompilerConfig: compilerConfig,
 		},
-		programs,
+		compiledPrograms,
 	)
 
 	mintTxVM := vm.NewVM(txLocation, mintTokensTxProgram, vmConfig)
@@ -350,7 +343,7 @@ func compiledFTTransfer(tb testing.TB) {
 	}
 
 	mintTxAuthorizer := vm.NewAuthAccountReferenceValue(vmConfig, accountHandler, contractsAddress)
-	err = mintTxVM.ExecuteTransaction(mintTxArgs, mintTxAuthorizer)
+	err := mintTxVM.ExecuteTransaction(mintTxArgs, mintTxAuthorizer)
 	require.NoError(tb, err)
 	require.Equal(tb, 0, mintTxVM.StackSize())
 
@@ -369,7 +362,7 @@ func compiledFTTransfer(tb testing.TB) {
 			},
 			CompilerConfig: compilerConfig,
 		},
-		programs,
+		compiledPrograms,
 	)
 
 	tokenTransferTxVM := vm.NewVM(txLocation, tokenTransferTxProgram, vmConfig)
@@ -403,7 +396,7 @@ func compiledFTTransfer(tb testing.TB) {
 
 	for loop() {
 
-		err = tokenTransferTxVM.ExecuteTransaction(tokenTransferTxArgs, tokenTransferTxAuthorizer)
+		err := tokenTransferTxVM.ExecuteTransaction(tokenTransferTxArgs, tokenTransferTxAuthorizer)
 		require.NoError(tb, err)
 		require.Equal(tb, 0, tokenTransferTxVM.StackSize())
 
@@ -433,7 +426,7 @@ func compiledFTTransfer(tb testing.TB) {
 				},
 				CompilerConfig: compilerConfig,
 			},
-			programs,
+			compiledPrograms,
 		)
 
 		validationScriptVM := vm.NewVM(scriptLocation, program, vmConfig)
