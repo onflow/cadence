@@ -839,6 +839,28 @@ func TestInterpretGetType(t *testing.T) {
 	}
 }
 
+func TestInterpretReferenceGetType(t *testing.T) {
+
+	t.Parallel()
+
+	invokable := parseCheckAndPrepare(t, `
+       fun test(): Type {
+           let x = 1
+           let ref = &x as &Int
+           return ref.getType()
+       }
+    `)
+
+	result, err := invokable.Invoke("test")
+	require.NoError(t, err)
+
+	RequireValuesEqual(t,
+		invokable,
+		interpreter.NewUnmeteredTypeValue(interpreter.PrimitiveStaticTypeInt),
+		result,
+	)
+}
+
 func TestInterpretMetaTypeHashInput(t *testing.T) {
 
 	t.Parallel()

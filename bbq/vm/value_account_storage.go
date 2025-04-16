@@ -39,7 +39,7 @@ func init() {
 			sema.Account_StorageTypeSaveFunctionType,
 			func(config *Config, typeArs []bbq.StaticType, args ...Value) Value {
 
-				address := getAddressMetaInfoFromValue(args[receiverIndex])
+				address := getAccountTypePrivateAddressValue(args[receiverIndex])
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
 				arguments := args[typeBoundFunctionArgumentOffset:]
@@ -61,7 +61,7 @@ func init() {
 			sema.Account_StorageTypeBorrowFunctionName,
 			sema.Account_StorageTypeBorrowFunctionType,
 			func(config *Config, typeArgs []bbq.StaticType, args ...Value) Value {
-				address := getAddressMetaInfoFromValue(args[receiverIndex])
+				address := getAccountTypePrivateAddressValue(args[receiverIndex])
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
 				arguments := args[typeBoundFunctionArgumentOffset:]
@@ -88,7 +88,7 @@ func init() {
 			sema.Account_StorageTypeForEachPublicFunctionType,
 			func(config *Config, typeArs []bbq.StaticType, args ...Value) Value {
 
-				address := getAddressMetaInfoFromValue(args[receiverIndex])
+				address := getAccountTypePrivateAddressValue(args[receiverIndex])
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
 				arguments := args[typeBoundFunctionArgumentOffset:]
@@ -113,7 +113,7 @@ func init() {
 			sema.Account_StorageTypeForEachPublicFunctionType,
 			func(config *Config, typeArs []bbq.StaticType, args ...Value) Value {
 
-				address := getAddressMetaInfoFromValue(args[receiverIndex])
+				address := getAccountTypePrivateAddressValue(args[receiverIndex])
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
 				arguments := args[typeBoundFunctionArgumentOffset:]
@@ -138,7 +138,7 @@ func init() {
 			sema.Account_StorageTypeTypeFunctionType,
 			func(config *Config, typeArs []bbq.StaticType, args ...Value) Value {
 
-				address := getAddressMetaInfoFromValue(args[receiverIndex])
+				address := getAccountTypePrivateAddressValue(args[receiverIndex])
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
 				arguments := args[typeBoundFunctionArgumentOffset:]
@@ -159,7 +159,7 @@ func init() {
 			sema.Account_StorageTypeLoadFunctionName,
 			sema.Account_StorageTypeLoadFunctionType,
 			func(config *Config, typeArgs []bbq.StaticType, args ...Value) Value {
-				address := getAddressMetaInfoFromValue(args[receiverIndex])
+				address := getAccountTypePrivateAddressValue(args[receiverIndex])
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
 				arguments := args[typeBoundFunctionArgumentOffset:]
@@ -186,7 +186,7 @@ func init() {
 			sema.Account_StorageTypeCopyFunctionName,
 			sema.Account_StorageTypeCopyFunctionType,
 			func(config *Config, typeArgs []bbq.StaticType, args ...Value) Value {
-				address := getAddressMetaInfoFromValue(args[receiverIndex]).ToAddress()
+				address := getAccountTypePrivateAddressValue(args[receiverIndex]).ToAddress()
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
 				arguments := args[typeBoundFunctionArgumentOffset:]
@@ -213,7 +213,7 @@ func init() {
 			sema.Account_StorageTypeCheckFunctionName,
 			sema.Account_StorageTypeCheckFunctionType,
 			func(config *Config, typeArgs []bbq.StaticType, args ...Value) Value {
-				address := getAddressMetaInfoFromValue(args[receiverIndex]).ToAddress()
+				address := getAccountTypePrivateAddressValue(args[receiverIndex]).ToAddress()
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
 				arguments := args[typeBoundFunctionArgumentOffset:]

@@ -71,7 +71,22 @@ func LinkGlobals(
 
 				// TODO: remove this check. This shouldn't be nil ideally.
 				if !contract.IsInterface && conf.ContractValueHandler != nil {
-					contractValue := conf.ContractValueHandler(conf, location)
+					var contractValue interpreter.Value = conf.ContractValueHandler(conf, location)
+
+					staticType := contractValue.StaticType(conf)
+					semaType, err := interpreter.ConvertStaticToSemaType(conf, staticType)
+					if err != nil {
+						panic(err)
+					}
+
+					contractValue = interpreter.NewEphemeralReferenceValue(
+						conf,
+						interpreter.UnauthorizedAccess,
+						contractValue,
+						semaType,
+						EmptyLocationRange,
+					)
+
 					// Update the globals - both the context and the mapping.
 					// Contract value is always at the zero-th index.
 					linkedGlobals.executable.Globals[0] = contractValue

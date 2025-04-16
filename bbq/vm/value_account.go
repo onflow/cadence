@@ -64,17 +64,8 @@ func init() {
 	// Any member methods goes here
 }
 
-func getAddressMetaInfoFromValue(value Value) interpreter.AddressValue {
-	var simpleCompositeValue *interpreter.SimpleCompositeValue
-	switch typedValue := value.(type) {
-	case *interpreter.SimpleCompositeValue:
-		simpleCompositeValue = typedValue
-	case *interpreter.EphemeralReferenceValue:
-		// Account values are references of simple composites.
-		simpleCompositeValue = typedValue.Value.(*interpreter.SimpleCompositeValue)
-	default:
-		panic(errors.NewUnreachableError())
-	}
+func getAccountTypePrivateAddressValue(receiver Value) interpreter.AddressValue {
+	simpleCompositeValue := receiver.(*interpreter.SimpleCompositeValue)
 
 	addressMetaInfo := simpleCompositeValue.PrivateField(interpreter.AccountTypePrivateAddressFieldName)
 	address, ok := addressMetaInfo.(interpreter.AddressValue)

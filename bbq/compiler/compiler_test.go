@@ -2241,7 +2241,9 @@ func TestCompileMethodInvocation(t *testing.T) {
 				opcode.InstructionTrue{},
 				opcode.InstructionTransfer{Type: 2},
 				opcode.InstructionGetGlobal{Global: fFuncIndex},
-				opcode.InstructionInvoke{TypeArgs: nil},
+				opcode.InstructionInvokeMethodStatic{
+					TypeArgs: nil,
+				},
 				opcode.InstructionDrop{},
 
 				opcode.InstructionReturn{},
@@ -2657,7 +2659,9 @@ func TestCompileDefaultFunction(t *testing.T) {
 			// self.test()
 			opcode.InstructionGetLocal{Local: selfIndex},
 			opcode.InstructionGetGlobal{Global: interfaceFunctionIndex}, // must be interface method's index
-			opcode.InstructionInvoke{},
+			opcode.InstructionInvokeMethodStatic{
+				TypeArgs: nil,
+			},
 
 			// return
 			opcode.InstructionReturnValue{},
@@ -2690,6 +2694,16 @@ func TestCompileDefaultFunction(t *testing.T) {
 			opcode.InstructionReturnValue{},
 		},
 		interfaceTypeTestFunc.Code,
+	)
+
+	assert.Equal(t,
+		[]constant.Constant{
+			{
+				Data: []byte{42},
+				Kind: constant.Int,
+			},
+		},
+		program.Constants,
 	)
 }
 
