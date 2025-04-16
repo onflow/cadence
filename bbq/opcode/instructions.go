@@ -947,7 +947,7 @@ func DecodeInvoke(ip *uint16, code []byte) (i InstructionInvoke) {
 
 // InstructionInvokeMethodStatic
 //
-// Pops the method and arguments off the stack, invokes the method with the arguments, and then pushes the result back on to the stack.
+// Pops the method and arguments off the stack, invokes the method with the arguments, and then pushes the result back on to the stack. The first argument is the receiver of the method.
 type InstructionInvokeMethodStatic struct {
 	TypeArgs []uint16
 }
@@ -991,7 +991,7 @@ func DecodeInvokeMethodStatic(ip *uint16, code []byte) (i InstructionInvokeMetho
 
 // InstructionInvokeMethodDynamic
 //
-// Pops the arguments off the stack, invokes the method with the given name and argument count, and then pushes the result back on to the stack.
+// Pops the arguments off the stack, invokes the method with the given name and argument count, and then pushes the result back on to the stack. The first argument is the receiver of the method.
 type InstructionInvokeMethodDynamic struct {
 	Name     uint16
 	TypeArgs []uint16

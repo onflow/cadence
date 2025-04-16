@@ -290,6 +290,7 @@
   description:
     Pops the method and arguments off the stack, invokes the method with the arguments,
     and then pushes the result back on to the stack.
+    The first argument is the receiver of the method.
   operands:
     - name: "typeArgs"
       type: "typeIndices"
@@ -309,6 +310,7 @@
   description:
     Pops the arguments off the stack, invokes the method with the given name and argument count,
     and then pushes the result back on to the stack.
+    The first argument is the receiver of the method.
   operands:
     - name: "name"
       type: "constantIndex"
