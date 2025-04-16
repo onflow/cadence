@@ -1390,8 +1390,8 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 		//if invocationType.IsConstructor {
 		//}
 
-		// Load arguments
-		c.loadArguments(expression)
+		// Compile arguments
+		c.compileArguments(expression)
 		// Load function value
 		c.emitVariableLoad(invokedExpr.Identifier.Identifier)
 
@@ -1413,8 +1413,8 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 			funcName = commons.TypeQualifiedName(typeName, invokedExpr.Identifier.Identifier)
 
 			// Calling a type constructor must be invoked statically. e.g: `SomeContract.Foo()`.
-			// Load arguments
-			c.loadArguments(expression)
+			// Compile arguments
+			c.compileArguments(expression)
 			// Load function value
 			c.emitVariableLoad(funcName)
 
@@ -1430,8 +1430,8 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 			c.codeGen.Emit(opcode.InstructionDeref{})
 		}
 
-		// Load arguments
-		c.loadArguments(expression)
+		// Compile arguments
+		c.compileArguments(expression)
 
 		// Invocations into the interface code, such as default functions and inherited conditions,
 		// that were synthetically added at the desugar phase, must be static calls.
@@ -1491,7 +1491,7 @@ func isDynamicMethodInvocation(accessedType sema.Type) bool {
 	}
 }
 
-func (c *Compiler[_, _]) loadArguments(expression *ast.InvocationExpression) {
+func (c *Compiler[_, _]) compileArguments(expression *ast.InvocationExpression) {
 	invocationTypes := c.ExtendedElaboration.InvocationExpressionTypes(expression)
 	for index, argument := range expression.Arguments {
 		c.compileExpression(argument.Expression)
