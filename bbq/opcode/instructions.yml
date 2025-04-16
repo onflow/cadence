@@ -286,9 +286,28 @@
   controlEffects:
     - call:
 
-- name: "invokeDynamic"
+- name: "invokeMethodStatic"
   description:
-    Pops the arguments off the stack, invokes the function with the given name and argument count,
+    Pops the method and arguments off the stack, invokes the method with the arguments,
+    and then pushes the result back on to the stack.
+  operands:
+    - name: "typeArgs"
+      type: "typeIndices"
+  valueEffects:
+    pop:
+      - name: "arguments"
+        # TODO: count
+      - name: "method"
+        type: "function"
+    push:
+      - name: "result"
+        type: "value"
+  controlEffects:
+    - call:
+
+- name: "invokeMethodDynamic"
+  description:
+    Pops the arguments off the stack, invokes the method with the given name and argument count,
     and then pushes the result back on to the stack.
   operands:
     - name: "name"

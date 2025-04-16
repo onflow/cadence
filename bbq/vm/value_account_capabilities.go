@@ -39,7 +39,7 @@ func init() {
 			sema.Account_CapabilitiesTypeGetFunctionType,
 			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.Capabilities)
-				address := getAddressMetaInfoFromValue(args[0])
+				address := getAccountTypePrivateAddressValue(args[receiverIndex])
 
 				pathValue, ok := args[typeBoundFunctionArgumentOffset].(interpreter.PathValue)
 				if !ok {
@@ -70,7 +70,7 @@ func init() {
 			sema.Account_CapabilitiesTypeBorrowFunctionType,
 			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.Capabilities)
-				address := getAddressMetaInfoFromValue(args[0])
+				address := getAccountTypePrivateAddressValue(args[receiverIndex])
 
 				// Get path argument
 				pathValue, ok := args[typeBoundFunctionArgumentOffset].(interpreter.PathValue)
@@ -102,7 +102,7 @@ func init() {
 			sema.Account_CapabilitiesTypePublishFunctionType,
 			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.Capabilities)
-				accountAddress := getAddressMetaInfoFromValue(args[receiverIndex])
+				accountAddress := getAccountTypePrivateAddressValue(args[receiverIndex])
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
 				arguments := args[typeBoundFunctionArgumentOffset:]
@@ -139,7 +139,7 @@ func init() {
 			sema.Account_CapabilitiesTypeUnpublishFunctionType,
 			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.Capabilities)
-				accountAddress := getAddressMetaInfoFromValue(args[receiverIndex])
+				accountAddress := getAccountTypePrivateAddressValue(args[receiverIndex])
 
 				// Get path argument
 				pathValue, ok := args[typeBoundFunctionArgumentOffset].(interpreter.PathValue)
@@ -166,7 +166,7 @@ func init() {
 			sema.Account_CapabilitiesTypeExistsFunctionType,
 			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.Capabilities)
-				accountAddress := getAddressMetaInfoFromValue(args[receiverIndex])
+				accountAddress := getAccountTypePrivateAddressValue(args[receiverIndex])
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
 				pathValue, ok := args[typeBoundFunctionArgumentOffset].(interpreter.PathValue)

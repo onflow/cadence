@@ -618,6 +618,8 @@ func opGetIndex(vm *VM) {
 }
 
 func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
+	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
+
 	value := vm.pop()
 
 	switch value := value.(type) {
@@ -629,13 +631,6 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 
 	case NativeFunctionValue:
 		parameterCount := value.ParameterCount
-
-		var typeArguments []bbq.StaticType
-		for _, index := range ins.TypeArgs {
-			typeArg := vm.loadType(index)
-			typeArguments = append(typeArguments, typeArg)
-		}
-
 		arguments := vm.peekN(parameterCount)
 		result := value.Function(vm.config, typeArguments, arguments...)
 		vm.dropN(len(arguments))
@@ -646,20 +641,68 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	}
 }
 
-func opInvokeDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
-	stackHeight := len(vm.stack)
-	receiver := vm.stack[stackHeight-int(ins.ArgCount)-1]
+func opInvokeMethodStatic(vm *VM, ins opcode.InstructionInvokeMethodStatic) {
+	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
 
-	// TODO:
-	var typeArguments []bbq.StaticType
-	for _, index := range ins.TypeArgs {
-		typeArg := vm.loadType(index)
-		typeArguments = append(typeArguments, typeArg)
+	value := vm.pop()
+
+	switch value := value.(type) {
+	case FunctionValue:
+		parameterCount := int(value.Function.ParameterCount)
+		arguments := vm.peekN(parameterCount)
+
+		receiver := getReceiver(vm, parameterCount-1)
+		arguments[receiverIndex] = receiver
+
+		vm.pushCallFrame(value, arguments)
+		vm.dropN(len(arguments))
+
+	case NativeFunctionValue:
+		parameterCount := value.ParameterCount
+		arguments := vm.peekN(parameterCount)
+
+		receiver := getReceiver(vm, parameterCount-1)
+		arguments[receiverIndex] = receiver
+
+		result := value.Function(vm.config, typeArguments, arguments...)
+		vm.dropN(len(arguments))
+		vm.push(result)
+
+	default:
+		panic(errors.NewUnreachableError())
 	}
+}
+
+func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
+	var typeArguments []bbq.StaticType
+	if len(typeArgs) > 0 {
+		typeArguments = make([]bbq.StaticType, 0, len(typeArgs))
+		for _, typeIndex := range typeArgs {
+			typeArg := vm.loadType(typeIndex)
+			typeArguments = append(typeArguments, typeArg)
+		}
+	}
+	return typeArguments
+}
+
+func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
+	// TODO:
+	// Load type arguments
+	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
 	// TODO: Just to make the linter happy
 	_ = typeArguments
 
+	// Get receiver
+
+	argumentCount := int(ins.ArgCount)
+
+	receiver := getReceiver(vm, argumentCount)
+
+	// TODO: maybe add support for calling methods dynamically on non-composite values, e.g. simple composite values
+
 	compositeValue := receiver.(*interpreter.CompositeValue)
+
+	// Get function
 
 	staticType := compositeValue.StaticType(vm.config)
 
@@ -669,15 +712,47 @@ func opInvokeDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
 	nameIndex := ins.Name
 	funcName := getStringConstant(vm, nameIndex)
 
+	// TODO: maybe add support for calling methods dynamically on e.g. native functions
+
 	qualifiedFuncName := commons.TypeQualifiedName(compositeType.QualifiedIdentifier, funcName)
-	var functionValue = vm.lookupFunction(compositeType.Location, qualifiedFuncName)
+	functionValue := vm.lookupFunction(compositeType.Location, qualifiedFuncName)
 
 	parameterCount := int(functionValue.Function.ParameterCount)
 	arguments := vm.peekN(parameterCount)
+
+	arguments[receiverIndex] = receiver
+
 	vm.pushCallFrame(functionValue, arguments)
 	vm.dropN(len(arguments))
 
 	// We do not need to drop the receiver, as the parameter count given in the instruction already includes it
+}
+
+func getReceiver(vm *VM, argumentCount int) Value {
+	stackHeight := len(vm.stack)
+	receiver := vm.stack[stackHeight-argumentCount-1]
+
+	return unwrapReceiver(vm.config, receiver)
+}
+
+func unwrapReceiver(config *Config, receiver Value) Value {
+	for {
+		switch typedReceiver := receiver.(type) {
+		case *interpreter.SomeValue:
+			receiver = typedReceiver.InnerValue()
+		case *interpreter.EphemeralReferenceValue:
+			receiver = typedReceiver.Value
+		case *interpreter.StorageReferenceValue:
+			referencedValue := typedReceiver.ReferencedValue(
+				config,
+				EmptyLocationRange,
+				true,
+			)
+			receiver = *referencedValue
+		default:
+			return receiver
+		}
+	}
 }
 
 func opDrop(vm *VM) {
@@ -1149,8 +1224,10 @@ func (vm *VM) run() {
 			opGetIndex(vm)
 		case opcode.InstructionInvoke:
 			opInvoke(vm, ins)
-		case opcode.InstructionInvokeDynamic:
-			opInvokeDynamic(vm, ins)
+		case opcode.InstructionInvokeMethodStatic:
+			opInvokeMethodStatic(vm, ins)
+		case opcode.InstructionInvokeMethodDynamic:
+			opInvokeMethodDynamic(vm, ins)
 		case opcode.InstructionDrop:
 			opDrop(vm)
 		case opcode.InstructionDup:
@@ -1535,24 +1612,6 @@ func (vm *VM) Reset() {
 	vm.locals = vm.locals[:0]
 	vm.callstack = vm.callstack[:0]
 	vm.ipStack = vm.ipStack[:0]
-}
-
-func getReceiver[T any](config *Config, receiver Value) T {
-	switch receiver := receiver.(type) {
-	case *interpreter.SomeValue:
-		return getReceiver[T](config, receiver.InnerValue())
-	case *interpreter.EphemeralReferenceValue:
-		return getReceiver[T](config, receiver.Value)
-	case *interpreter.StorageReferenceValue:
-		referencedValue := receiver.ReferencedValue(
-			config,
-			EmptyLocationRange,
-			true,
-		)
-		return getReceiver[T](config, *referencedValue)
-	default:
-		return receiver.(T)
-	}
 }
 
 func printInstructionError(

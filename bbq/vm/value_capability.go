@@ -37,7 +37,7 @@ func init() {
 			// TODO: Should the borrow type need to be changed for each usage?
 			sema.CapabilityTypeBorrowFunctionType(nil),
 			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
-				capabilityValue := getReceiver[*interpreter.IDCapabilityValue](config, args[receiverIndex])
+				capabilityValue := args[receiverIndex].(*interpreter.IDCapabilityValue)
 				capabilityID := capabilityValue.ID
 
 				if capabilityID == interpreter.InvalidCapabilityID {

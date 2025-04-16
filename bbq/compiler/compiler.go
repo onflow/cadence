@@ -1426,12 +1426,10 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 		// Receiver is loaded first. So 'self' is always the zero-th argument.
 		c.compileExpression(invokedExpr.Expression)
 
-		if _, ok := memberInfo.AccessedType.(*sema.ReferenceType); ok {
-			c.codeGen.Emit(opcode.InstructionDeref{})
-		}
-
 		// Compile arguments
 		c.compileArguments(expression)
+
+		typeArgs := c.loadTypeArguments(expression)
 
 		// Invocations into the interface code, such as default functions and inherited conditions,
 		// that were synthetically added at the desugar phase, must be static calls.
@@ -1444,8 +1442,6 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 				panic(errors.NewDefaultUserError("invalid function name"))
 			}
 
-			typeArgs := c.loadTypeArguments(expression)
-
 			argumentCount := len(expression.Arguments)
 			if argumentCount >= math.MaxUint16 {
 				panic(errors.NewDefaultUserError("invalid number of arguments"))
@@ -1453,7 +1449,7 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 
 			funcNameConst := c.addStringConst(funcName)
 			c.codeGen.Emit(
-				opcode.InstructionInvokeDynamic{
+				opcode.InstructionInvokeMethodDynamic{
 					Name:     funcNameConst.index,
 					TypeArgs: typeArgs,
 					ArgCount: uint16(argumentCount),
@@ -1465,8 +1461,9 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 			funcName = commons.TypeQualifiedName(typeName, invokedExpr.Identifier.Identifier)
 			c.emitVariableLoad(funcName)
 
-			typeArgs := c.loadTypeArguments(expression)
-			c.codeGen.Emit(opcode.InstructionInvoke{TypeArgs: typeArgs})
+			c.codeGen.Emit(opcode.InstructionInvokeMethodStatic{
+				TypeArgs: typeArgs,
+			})
 		}
 	default:
 		panic(errors.NewUnreachableError())
