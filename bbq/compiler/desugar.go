@@ -349,7 +349,7 @@ func (d *Desugar) desugarPreConditions(
 		conditions = funcBlock.PreConditions
 
 		for _, condition := range conditions.Conditions {
-			desugaredCondition := d.desugarCondition(condition, false)
+			desugaredCondition := d.desugarCondition(condition, nil)
 			desugaredConditions = append(desugaredConditions, desugaredCondition)
 		}
 	}
@@ -383,7 +383,7 @@ func (d *Desugar) desugarPostConditions(
 		beforeStatements = postConditionsRewrite.BeforeStatements
 
 		for _, condition := range conditionsList {
-			desugaredCondition := d.desugarCondition(condition, false)
+			desugaredCondition := d.desugarCondition(condition, nil)
 			desugaredConditions = append(desugaredConditions, desugaredCondition)
 		}
 	}
@@ -438,7 +438,7 @@ func (d *Desugar) desugarInheritedCondition(condition ast.Condition, inheritedFu
 	prevElaboration := d.elaboration
 	d.elaboration = inheritedFunc.elaboration
 
-	desugaredCondition := d.desugarCondition(condition, true)
+	desugaredCondition := d.desugarCondition(condition, inheritedFunc.interfaceType)
 	d.elaboration = prevElaboration
 
 	// Elaboration to be used by the condition must be set in the current elaboration.
@@ -464,7 +464,7 @@ var panicFuncInvocationTypes = sema.InvocationExpressionTypes{
 	},
 }
 
-func (d *Desugar) desugarCondition(condition ast.Condition, isInherited bool) ast.Statement {
+func (d *Desugar) desugarCondition(condition ast.Condition, inheritedFrom *sema.InterfaceType) ast.Statement {
 	switch condition := condition.(type) {
 	case *ast.TestCondition:
 
@@ -534,7 +534,8 @@ func (d *Desugar) desugarCondition(condition ast.Condition, isInherited bool) as
 	case *ast.EmitCondition:
 		emitStmt := (*ast.EmitStatement)(condition)
 
-		if !isInherited {
+		// If this is a locally defined condition, do nothing.
+		if inheritedFrom == nil {
 			return emitStmt
 		}
 
@@ -595,7 +596,7 @@ func (d *Desugar) desugarCondition(condition ast.Condition, isInherited bool) as
 			emitStmt.StartPos,
 		)
 
-		//Inject a static import so the compiler can link the functions.
+		// Inject a static import so the compiler can link the functions.
 		d.addImport(eventType.Location)
 
 		d.elaboration.SetInvocationExpressionTypes(newEventConstructorInvocation, invocationTypes)

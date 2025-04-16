@@ -6946,4 +6946,170 @@ func TestInheritedConditions(t *testing.T) {
 		require.True(t, eventEmitted)
 		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(10), result)
 	})
+
+	t.Run("local function call in parent", func(t *testing.T) {
+
+		t.Parallel()
+
+		storage := interpreter.NewInMemoryStorage(nil)
+
+		programs := map[common.Location]*compiledProgram{}
+		contractValues := map[common.Location]*interpreter.CompositeValue{}
+
+		vmConfig := vm.NewConfig(storage)
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			program, ok := programs[location]
+			if !ok {
+				assert.FailNow(t, "invalid location")
+			}
+			return program.Program
+		}
+		vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+			contractValue, ok := contractValues[location]
+			if !ok {
+				assert.FailNow(t, "invalid location")
+			}
+			return contractValue
+		}
+
+		var uuid uint64 = 42
+		vmConfig.WithInterpreterConfig(&interpreter.Config{
+			UUIDHandler: func() (uint64, error) {
+				uuid++
+				return uuid, nil
+			},
+		})
+
+		contractsAddress := common.MustBytesToAddress([]byte{0x1})
+
+		aLocation := common.NewAddressLocation(nil, contractsAddress, "A")
+		bLocation := common.NewAddressLocation(nil, contractsAddress, "B")
+		cLocation := common.NewAddressLocation(nil, contractsAddress, "C")
+
+		// Deploy contract with a type
+
+		aContract := fmt.Sprintf(
+			`
+              contract A {
+                  struct TestStruct {}
+              }
+            `,
+		)
+
+		aProgram := parseCheckAndCompile(t, aContract, aLocation, programs)
+
+		aVM := vm.NewVM(aLocation, aProgram, vmConfig)
+
+		aContractValue, err := aVM.InitializeContract()
+		require.NoError(t, err)
+		contractValues[aLocation] = aContractValue
+
+		// Deploy interface contract
+
+		bContract := fmt.Sprintf(`
+          import A from %[1]s
+
+          contract interface B {
+
+              resource interface VaultInterface {
+                  var balance: Int
+
+                  fun getBalance(): Int {
+                      // Call 'A.TestStruct()' which is only available to this contract interface.
+                      pre { self.test(A.TestStruct()) }
+                  }
+
+                  view fun test(_ a: A.TestStruct): Bool {
+                     return true
+                  }
+              }
+          }
+        `,
+			contractsAddress.HexWithPrefix(),
+		)
+
+		// Only need to compile
+		parseCheckAndCompile(t, bContract, bLocation, programs)
+
+		// Deploy contract with the implementation
+
+		cContract := fmt.Sprintf(
+			`
+              import B from %[1]s
+
+              contract C {
+
+                  resource Vault: B.VaultInterface {
+                      var balance: Int
+
+                      init(balance: Int) {
+                          self.balance = balance
+                      }
+
+                      fun getBalance(): Int {
+                          // Inherits a function call 'A.TestStruct()',
+                          // which is NOT available to this contract.
+                          return self.balance
+                      }
+                  }
+
+                  fun createVault(balance: Int): @Vault {
+                      return <- create Vault(balance: balance)
+                  }
+              }
+            `,
+			contractsAddress.HexWithPrefix(),
+		)
+
+		cProgram := parseCheckAndCompile(t, cContract, cLocation, programs)
+
+		cVM := vm.NewVM(cLocation, cProgram, vmConfig)
+
+		cContractValue, err := cVM.InitializeContract()
+		require.NoError(t, err)
+		contractValues[cLocation] = cContractValue
+
+		// Run transaction
+
+		tx := fmt.Sprintf(
+			`
+              import C from %[1]s
+
+              fun main(): Int {
+                 var vault <- B.createVault(balance: 10)
+                 var balance = vault.getBalance()
+                 destroy vault
+                 return balance
+              }
+            `,
+			contractsAddress.HexWithPrefix(),
+		)
+
+		txLocation := NewTransactionLocationGenerator()
+		txProgram := parseCheckAndCompile(t, tx, txLocation(), programs)
+
+		eventEmitted := false
+		vmConfig.OnEventEmitted = func(event *interpreter.CompositeValue, eventType *interpreter.CompositeStaticType) error {
+			require.False(t, eventEmitted)
+			eventEmitted = true
+
+			assert.Equal(t,
+				cLocation.TypeID(nil, "A.TestEvent"),
+				eventType.ID(),
+			)
+
+			return nil
+		}
+
+		txVM := vm.NewVM(txLocation(), txProgram, vmConfig)
+
+		require.False(t, eventEmitted)
+
+		result, err := txVM.Invoke("main")
+		require.NoError(t, err)
+		require.Equal(t, 0, txVM.StackSize())
+
+		require.True(t, eventEmitted)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(7), result)
+	})
 }
