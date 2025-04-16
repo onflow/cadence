@@ -32,7 +32,7 @@
             "functionIndex",
             "upvalueIndex",
             "offset",
-            "indices",
+            "typeIndices",
             "size",
             "castKind",
             "pathDomain",

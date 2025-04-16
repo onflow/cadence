@@ -82,9 +82,15 @@ func PrintInstructions(
 
 		var operandsBuilder strings.Builder
 		if resolve {
-			instruction.ResolvedOperandsString(&operandsBuilder, constants, types, functionNames)
+			instruction.ResolvedOperandsString(
+				&operandsBuilder,
+				constants,
+				types,
+				functionNames,
+				colorize,
+			)
 		} else {
-			instruction.OperandsString(&operandsBuilder)
+			instruction.OperandsString(&operandsBuilder, colorize)
 		}
 
 		var formattedOffset string

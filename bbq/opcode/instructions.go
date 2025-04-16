@@ -27,12 +27,13 @@ func (i InstructionUnknown) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionUnknown) OperandsString(sb *strings.Builder) {}
+func (i InstructionUnknown) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionUnknown) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionUnknown) Encode(code *[]byte) {
@@ -55,19 +56,22 @@ func (InstructionGetLocal) Opcode() Opcode {
 func (i InstructionGetLocal) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionGetLocal) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "local", i.Local)
+func (i InstructionGetLocal) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "local", i.Local, colorize)
 }
 
 func (i InstructionGetLocal) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
-	printfArgument(sb, "local", i.Local)
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "local", i.Local, colorize)
 }
 
 func (i InstructionGetLocal) Encode(code *[]byte) {
@@ -96,19 +100,22 @@ func (InstructionSetLocal) Opcode() Opcode {
 func (i InstructionSetLocal) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionSetLocal) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "local", i.Local)
+func (i InstructionSetLocal) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "local", i.Local, colorize)
 }
 
 func (i InstructionSetLocal) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
-	printfArgument(sb, "local", i.Local)
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "local", i.Local, colorize)
 }
 
 func (i InstructionSetLocal) Encode(code *[]byte) {
@@ -137,19 +144,22 @@ func (InstructionGetUpvalue) Opcode() Opcode {
 func (i InstructionGetUpvalue) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionGetUpvalue) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "upvalue", i.Upvalue)
+func (i InstructionGetUpvalue) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "upvalue", i.Upvalue, colorize)
 }
 
 func (i InstructionGetUpvalue) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
-	printfArgument(sb, "upvalue", i.Upvalue)
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "upvalue", i.Upvalue, colorize)
 }
 
 func (i InstructionGetUpvalue) Encode(code *[]byte) {
@@ -178,19 +188,22 @@ func (InstructionSetUpvalue) Opcode() Opcode {
 func (i InstructionSetUpvalue) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionSetUpvalue) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "upvalue", i.Upvalue)
+func (i InstructionSetUpvalue) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "upvalue", i.Upvalue, colorize)
 }
 
 func (i InstructionSetUpvalue) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
-	printfArgument(sb, "upvalue", i.Upvalue)
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "upvalue", i.Upvalue, colorize)
 }
 
 func (i InstructionSetUpvalue) Encode(code *[]byte) {
@@ -219,19 +232,22 @@ func (InstructionGetGlobal) Opcode() Opcode {
 func (i InstructionGetGlobal) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionGetGlobal) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "global", i.Global)
+func (i InstructionGetGlobal) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "global", i.Global, colorize)
 }
 
 func (i InstructionGetGlobal) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
-	printfArgument(sb, "global", i.Global)
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "global", i.Global, colorize)
 }
 
 func (i InstructionGetGlobal) Encode(code *[]byte) {
@@ -260,19 +276,22 @@ func (InstructionSetGlobal) Opcode() Opcode {
 func (i InstructionSetGlobal) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionSetGlobal) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "global", i.Global)
+func (i InstructionSetGlobal) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "global", i.Global, colorize)
 }
 
 func (i InstructionSetGlobal) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
-	printfArgument(sb, "global", i.Global)
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "global", i.Global, colorize)
 }
 
 func (i InstructionSetGlobal) Encode(code *[]byte) {
@@ -301,19 +320,22 @@ func (InstructionGetField) Opcode() Opcode {
 func (i InstructionGetField) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionGetField) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "fieldName", i.FieldName)
+func (i InstructionGetField) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "fieldName", i.FieldName, colorize)
 }
 
 func (i InstructionGetField) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
-	printfConstantArgument(sb, "fieldName", constants[i.FieldName])
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfConstantArgument(sb, "fieldName", constants[i.FieldName], colorize)
 }
 
 func (i InstructionGetField) Encode(code *[]byte) {
@@ -342,19 +364,22 @@ func (InstructionSetField) Opcode() Opcode {
 func (i InstructionSetField) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionSetField) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "fieldName", i.FieldName)
+func (i InstructionSetField) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "fieldName", i.FieldName, colorize)
 }
 
 func (i InstructionSetField) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
-	printfConstantArgument(sb, "fieldName", constants[i.FieldName])
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfConstantArgument(sb, "fieldName", constants[i.FieldName], colorize)
 }
 
 func (i InstructionSetField) Encode(code *[]byte) {
@@ -383,12 +408,13 @@ func (i InstructionGetIndex) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionGetIndex) OperandsString(sb *strings.Builder) {}
+func (i InstructionGetIndex) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionGetIndex) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionGetIndex) Encode(code *[]byte) {
@@ -411,12 +437,13 @@ func (i InstructionSetIndex) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionSetIndex) OperandsString(sb *strings.Builder) {}
+func (i InstructionSetIndex) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionSetIndex) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionSetIndex) Encode(code *[]byte) {
@@ -439,12 +466,13 @@ func (i InstructionTrue) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionTrue) OperandsString(sb *strings.Builder) {}
+func (i InstructionTrue) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionTrue) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionTrue) Encode(code *[]byte) {
@@ -467,12 +495,13 @@ func (i InstructionFalse) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionFalse) OperandsString(sb *strings.Builder) {}
+func (i InstructionFalse) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionFalse) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionFalse) Encode(code *[]byte) {
@@ -495,12 +524,13 @@ func (i InstructionNil) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionNil) OperandsString(sb *strings.Builder) {}
+func (i InstructionNil) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionNil) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionNil) Encode(code *[]byte) {
@@ -524,21 +554,26 @@ func (InstructionNew) Opcode() Opcode {
 func (i InstructionNew) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionNew) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "kind", i.Kind)
-	printfArgument(sb, "type", i.Type)
+func (i InstructionNew) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "kind", i.Kind, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
 }
 
 func (i InstructionNew) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
-	printfArgument(sb, "kind", i.Kind)
-	printfTypeArgument(sb, "type", types[i.Type])
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "kind", i.Kind, colorize)
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
 }
 
 func (i InstructionNew) Encode(code *[]byte) {
@@ -570,21 +605,26 @@ func (InstructionNewPath) Opcode() Opcode {
 func (i InstructionNewPath) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionNewPath) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "domain", i.Domain)
-	printfArgument(sb, "identifier", i.Identifier)
+func (i InstructionNewPath) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "domain", i.Domain, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "identifier", i.Identifier, colorize)
 }
 
 func (i InstructionNewPath) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
-	printfArgument(sb, "domain", i.Domain)
-	printfConstantArgument(sb, "identifier", constants[i.Identifier])
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "domain", i.Domain, colorize)
+	sb.WriteByte(' ')
+	printfConstantArgument(sb, "identifier", constants[i.Identifier], colorize)
 }
 
 func (i InstructionNewPath) Encode(code *[]byte) {
@@ -617,23 +657,30 @@ func (InstructionNewArray) Opcode() Opcode {
 func (i InstructionNewArray) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionNewArray) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "type", i.Type)
-	printfArgument(sb, "size", i.Size)
-	printfArgument(sb, "isResource", i.IsResource)
+func (i InstructionNewArray) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "size", i.Size, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "isResource", i.IsResource, colorize)
 }
 
 func (i InstructionNewArray) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
-	printfTypeArgument(sb, "type", types[i.Type])
-	printfArgument(sb, "size", i.Size)
-	printfArgument(sb, "isResource", i.IsResource)
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "size", i.Size, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "isResource", i.IsResource, colorize)
 }
 
 func (i InstructionNewArray) Encode(code *[]byte) {
@@ -668,23 +715,30 @@ func (InstructionNewDictionary) Opcode() Opcode {
 func (i InstructionNewDictionary) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionNewDictionary) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "type", i.Type)
-	printfArgument(sb, "size", i.Size)
-	printfArgument(sb, "isResource", i.IsResource)
+func (i InstructionNewDictionary) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "size", i.Size, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "isResource", i.IsResource, colorize)
 }
 
 func (i InstructionNewDictionary) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
-	printfTypeArgument(sb, "type", types[i.Type])
-	printfArgument(sb, "size", i.Size)
-	printfArgument(sb, "isResource", i.IsResource)
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "size", i.Size, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "isResource", i.IsResource, colorize)
 }
 
 func (i InstructionNewDictionary) Encode(code *[]byte) {
@@ -718,21 +772,26 @@ func (InstructionNewRef) Opcode() Opcode {
 func (i InstructionNewRef) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionNewRef) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "type", i.Type)
-	printfArgument(sb, "isImplicit", i.IsImplicit)
+func (i InstructionNewRef) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "isImplicit", i.IsImplicit, colorize)
 }
 
 func (i InstructionNewRef) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
-	printfTypeArgument(sb, "type", types[i.Type])
-	printfArgument(sb, "isImplicit", i.IsImplicit)
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "isImplicit", i.IsImplicit, colorize)
 }
 
 func (i InstructionNewRef) Encode(code *[]byte) {
@@ -763,19 +822,22 @@ func (InstructionGetConstant) Opcode() Opcode {
 func (i InstructionGetConstant) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionGetConstant) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "constant", i.Constant)
+func (i InstructionGetConstant) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "constant", i.Constant, colorize)
 }
 
 func (i InstructionGetConstant) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
-	printfConstantArgument(sb, "constant", constants[i.Constant])
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfConstantArgument(sb, "constant", constants[i.Constant], colorize)
 }
 
 func (i InstructionGetConstant) Encode(code *[]byte) {
@@ -805,21 +867,26 @@ func (InstructionNewClosure) Opcode() Opcode {
 func (i InstructionNewClosure) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionNewClosure) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "function", i.Function)
-	printfUpvalueArrayArgument(sb, "upvalues", i.Upvalues)
+func (i InstructionNewClosure) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "function", i.Function, colorize)
+	sb.WriteByte(' ')
+	printfUpvalueArrayArgument(sb, "upvalues", i.Upvalues, colorize)
 }
 
 func (i InstructionNewClosure) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
-	printfFunctionNameArgument(sb, "function", functionNames[i.Function])
-	printfUpvalueArrayArgument(sb, "upvalues", i.Upvalues)
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfFunctionNameArgument(sb, "function", functionNames[i.Function], colorize)
+	sb.WriteByte(' ')
+	printfUpvalueArrayArgument(sb, "upvalues", i.Upvalues, colorize)
 }
 
 func (i InstructionNewClosure) Encode(code *[]byte) {
@@ -850,19 +917,22 @@ func (InstructionInvoke) Opcode() Opcode {
 func (i InstructionInvoke) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionInvoke) OperandsString(sb *strings.Builder) {
-	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs)
+func (i InstructionInvoke) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs, colorize)
 }
 
 func (i InstructionInvoke) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
-	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs)
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArrayArgument(sb, "typeArgs", i.TypeArgs, colorize, types)
 }
 
 func (i InstructionInvoke) Encode(code *[]byte) {
@@ -893,23 +963,30 @@ func (InstructionInvokeDynamic) Opcode() Opcode {
 func (i InstructionInvokeDynamic) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionInvokeDynamic) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "name", i.Name)
-	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs)
-	printfArgument(sb, "argCount", i.ArgCount)
+func (i InstructionInvokeDynamic) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "name", i.Name, colorize)
+	sb.WriteByte(' ')
+	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "argCount", i.ArgCount, colorize)
 }
 
 func (i InstructionInvokeDynamic) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
-	printfConstantArgument(sb, "name", constants[i.Name])
-	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs)
-	printfArgument(sb, "argCount", i.ArgCount)
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfConstantArgument(sb, "name", constants[i.Name], colorize)
+	sb.WriteByte(' ')
+	printfTypeArrayArgument(sb, "typeArgs", i.TypeArgs, colorize, types)
+	sb.WriteByte(' ')
+	printfArgument(sb, "argCount", i.ArgCount, colorize)
 }
 
 func (i InstructionInvokeDynamic) Encode(code *[]byte) {
@@ -942,12 +1019,13 @@ func (i InstructionDup) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionDup) OperandsString(sb *strings.Builder) {}
+func (i InstructionDup) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionDup) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionDup) Encode(code *[]byte) {
@@ -970,12 +1048,13 @@ func (i InstructionDrop) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionDrop) OperandsString(sb *strings.Builder) {}
+func (i InstructionDrop) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionDrop) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionDrop) Encode(code *[]byte) {
@@ -998,12 +1077,13 @@ func (i InstructionDestroy) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionDestroy) OperandsString(sb *strings.Builder) {}
+func (i InstructionDestroy) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionDestroy) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionDestroy) Encode(code *[]byte) {
@@ -1026,12 +1106,13 @@ func (i InstructionUnwrap) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionUnwrap) OperandsString(sb *strings.Builder) {}
+func (i InstructionUnwrap) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionUnwrap) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionUnwrap) Encode(code *[]byte) {
@@ -1054,17 +1135,22 @@ func (InstructionTransfer) Opcode() Opcode {
 func (i InstructionTransfer) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionTransfer) OperandsString(sb *strings.Builder) { printfArgument(sb, "type", i.Type) }
+func (i InstructionTransfer) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
+}
 
 func (i InstructionTransfer) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
-	printfTypeArgument(sb, "type", types[i.Type])
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
 }
 
 func (i InstructionTransfer) Encode(code *[]byte) {
@@ -1093,19 +1179,22 @@ func (InstructionSimpleCast) Opcode() Opcode {
 func (i InstructionSimpleCast) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionSimpleCast) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "type", i.Type)
+func (i InstructionSimpleCast) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
 }
 
 func (i InstructionSimpleCast) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
-	printfTypeArgument(sb, "type", types[i.Type])
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
 }
 
 func (i InstructionSimpleCast) Encode(code *[]byte) {
@@ -1134,19 +1223,22 @@ func (InstructionFailableCast) Opcode() Opcode {
 func (i InstructionFailableCast) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionFailableCast) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "type", i.Type)
+func (i InstructionFailableCast) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
 }
 
 func (i InstructionFailableCast) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
-	printfTypeArgument(sb, "type", types[i.Type])
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
 }
 
 func (i InstructionFailableCast) Encode(code *[]byte) {
@@ -1175,17 +1267,22 @@ func (InstructionForceCast) Opcode() Opcode {
 func (i InstructionForceCast) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionForceCast) OperandsString(sb *strings.Builder) { printfArgument(sb, "type", i.Type) }
+func (i InstructionForceCast) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
+}
 
 func (i InstructionForceCast) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
-	printfTypeArgument(sb, "type", types[i.Type])
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
 }
 
 func (i InstructionForceCast) Encode(code *[]byte) {
@@ -1214,12 +1311,13 @@ func (i InstructionDeref) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionDeref) OperandsString(sb *strings.Builder) {}
+func (i InstructionDeref) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionDeref) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionDeref) Encode(code *[]byte) {
@@ -1242,17 +1340,22 @@ func (InstructionJump) Opcode() Opcode {
 func (i InstructionJump) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionJump) OperandsString(sb *strings.Builder) { printfArgument(sb, "target", i.Target) }
+func (i InstructionJump) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "target", i.Target, colorize)
+}
 
 func (i InstructionJump) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
-	printfArgument(sb, "target", i.Target)
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "target", i.Target, colorize)
 }
 
 func (i InstructionJump) Encode(code *[]byte) {
@@ -1281,19 +1384,22 @@ func (InstructionJumpIfFalse) Opcode() Opcode {
 func (i InstructionJumpIfFalse) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionJumpIfFalse) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "target", i.Target)
+func (i InstructionJumpIfFalse) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "target", i.Target, colorize)
 }
 
 func (i InstructionJumpIfFalse) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
-	printfArgument(sb, "target", i.Target)
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "target", i.Target, colorize)
 }
 
 func (i InstructionJumpIfFalse) Encode(code *[]byte) {
@@ -1322,19 +1428,22 @@ func (InstructionJumpIfTrue) Opcode() Opcode {
 func (i InstructionJumpIfTrue) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionJumpIfTrue) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "target", i.Target)
+func (i InstructionJumpIfTrue) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "target", i.Target, colorize)
 }
 
 func (i InstructionJumpIfTrue) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
-	printfArgument(sb, "target", i.Target)
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "target", i.Target, colorize)
 }
 
 func (i InstructionJumpIfTrue) Encode(code *[]byte) {
@@ -1363,19 +1472,22 @@ func (InstructionJumpIfNil) Opcode() Opcode {
 func (i InstructionJumpIfNil) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionJumpIfNil) OperandsString(sb *strings.Builder) {
-	printfArgument(sb, "target", i.Target)
+func (i InstructionJumpIfNil) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "target", i.Target, colorize)
 }
 
 func (i InstructionJumpIfNil) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
-	printfArgument(sb, "target", i.Target)
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "target", i.Target, colorize)
 }
 
 func (i InstructionJumpIfNil) Encode(code *[]byte) {
@@ -1404,12 +1516,13 @@ func (i InstructionReturn) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionReturn) OperandsString(sb *strings.Builder) {}
+func (i InstructionReturn) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionReturn) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionReturn) Encode(code *[]byte) {
@@ -1432,12 +1545,13 @@ func (i InstructionReturnValue) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionReturnValue) OperandsString(sb *strings.Builder) {}
+func (i InstructionReturnValue) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionReturnValue) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionReturnValue) Encode(code *[]byte) {
@@ -1460,12 +1574,13 @@ func (i InstructionEqual) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionEqual) OperandsString(sb *strings.Builder) {}
+func (i InstructionEqual) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionEqual) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionEqual) Encode(code *[]byte) {
@@ -1488,12 +1603,13 @@ func (i InstructionNotEqual) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionNotEqual) OperandsString(sb *strings.Builder) {}
+func (i InstructionNotEqual) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionNotEqual) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionNotEqual) Encode(code *[]byte) {
@@ -1516,12 +1632,13 @@ func (i InstructionNot) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionNot) OperandsString(sb *strings.Builder) {}
+func (i InstructionNot) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionNot) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionNot) Encode(code *[]byte) {
@@ -1544,12 +1661,13 @@ func (i InstructionAdd) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionAdd) OperandsString(sb *strings.Builder) {}
+func (i InstructionAdd) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionAdd) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionAdd) Encode(code *[]byte) {
@@ -1572,12 +1690,13 @@ func (i InstructionSubtract) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionSubtract) OperandsString(sb *strings.Builder) {}
+func (i InstructionSubtract) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionSubtract) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionSubtract) Encode(code *[]byte) {
@@ -1600,12 +1719,13 @@ func (i InstructionMultiply) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionMultiply) OperandsString(sb *strings.Builder) {}
+func (i InstructionMultiply) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionMultiply) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionMultiply) Encode(code *[]byte) {
@@ -1628,12 +1748,13 @@ func (i InstructionDivide) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionDivide) OperandsString(sb *strings.Builder) {}
+func (i InstructionDivide) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionDivide) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionDivide) Encode(code *[]byte) {
@@ -1656,12 +1777,13 @@ func (i InstructionMod) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionMod) OperandsString(sb *strings.Builder) {}
+func (i InstructionMod) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionMod) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionMod) Encode(code *[]byte) {
@@ -1684,12 +1806,13 @@ func (i InstructionNegate) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionNegate) OperandsString(sb *strings.Builder) {}
+func (i InstructionNegate) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionNegate) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionNegate) Encode(code *[]byte) {
@@ -1712,12 +1835,13 @@ func (i InstructionLess) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionLess) OperandsString(sb *strings.Builder) {}
+func (i InstructionLess) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionLess) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionLess) Encode(code *[]byte) {
@@ -1740,12 +1864,13 @@ func (i InstructionLessOrEqual) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionLessOrEqual) OperandsString(sb *strings.Builder) {}
+func (i InstructionLessOrEqual) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionLessOrEqual) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionLessOrEqual) Encode(code *[]byte) {
@@ -1768,12 +1893,13 @@ func (i InstructionGreater) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionGreater) OperandsString(sb *strings.Builder) {}
+func (i InstructionGreater) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionGreater) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionGreater) Encode(code *[]byte) {
@@ -1796,12 +1922,13 @@ func (i InstructionGreaterOrEqual) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionGreaterOrEqual) OperandsString(sb *strings.Builder) {}
+func (i InstructionGreaterOrEqual) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionGreaterOrEqual) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionGreaterOrEqual) Encode(code *[]byte) {
@@ -1824,12 +1951,13 @@ func (i InstructionBitwiseOr) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionBitwiseOr) OperandsString(sb *strings.Builder) {}
+func (i InstructionBitwiseOr) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionBitwiseOr) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionBitwiseOr) Encode(code *[]byte) {
@@ -1852,12 +1980,13 @@ func (i InstructionBitwiseXor) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionBitwiseXor) OperandsString(sb *strings.Builder) {}
+func (i InstructionBitwiseXor) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionBitwiseXor) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionBitwiseXor) Encode(code *[]byte) {
@@ -1880,12 +2009,13 @@ func (i InstructionBitwiseAnd) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionBitwiseAnd) OperandsString(sb *strings.Builder) {}
+func (i InstructionBitwiseAnd) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionBitwiseAnd) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionBitwiseAnd) Encode(code *[]byte) {
@@ -1908,12 +2038,13 @@ func (i InstructionBitwiseLeftShift) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionBitwiseLeftShift) OperandsString(sb *strings.Builder) {}
+func (i InstructionBitwiseLeftShift) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionBitwiseLeftShift) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionBitwiseLeftShift) Encode(code *[]byte) {
@@ -1936,12 +2067,13 @@ func (i InstructionBitwiseRightShift) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionBitwiseRightShift) OperandsString(sb *strings.Builder) {}
+func (i InstructionBitwiseRightShift) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionBitwiseRightShift) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionBitwiseRightShift) Encode(code *[]byte) {
@@ -1964,12 +2096,13 @@ func (i InstructionIterator) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionIterator) OperandsString(sb *strings.Builder) {}
+func (i InstructionIterator) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionIterator) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionIterator) Encode(code *[]byte) {
@@ -1992,12 +2125,13 @@ func (i InstructionIteratorHasNext) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionIteratorHasNext) OperandsString(sb *strings.Builder) {}
+func (i InstructionIteratorHasNext) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionIteratorHasNext) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionIteratorHasNext) Encode(code *[]byte) {
@@ -2020,12 +2154,13 @@ func (i InstructionIteratorNext) String() string {
 	return i.Opcode().String()
 }
 
-func (i InstructionIteratorNext) OperandsString(sb *strings.Builder) {}
+func (i InstructionIteratorNext) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionIteratorNext) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionIteratorNext) Encode(code *[]byte) {
@@ -2048,17 +2183,22 @@ func (InstructionEmitEvent) Opcode() Opcode {
 func (i InstructionEmitEvent) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionEmitEvent) OperandsString(sb *strings.Builder) { printfArgument(sb, "type", i.Type) }
+func (i InstructionEmitEvent) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
+}
 
 func (i InstructionEmitEvent) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
-	functionNames []string) {
-	printfTypeArgument(sb, "type", types[i.Type])
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
 }
 
 func (i InstructionEmitEvent) Encode(code *[]byte) {

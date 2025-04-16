@@ -19,7 +19,6 @@
 package constant
 
 import (
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 )
 
@@ -147,6 +146,6 @@ func FromSemaType(ty sema.Type) Kind {
 		return UFix64
 
 	default:
-		panic(errors.NewUnexpectedError("unsupported type: %T", ty))
+		return Unknown
 	}
 }
