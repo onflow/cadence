@@ -51,6 +51,10 @@ func NativeFunctions() map[string]Value {
 
 func RegisterFunction(functionValue NativeFunctionValue) {
 	functionName := functionValue.Name
+	registerFunction(functionName, functionValue)
+}
+
+func registerFunction(functionName string, functionValue NativeFunctionValue) {
 	_, ok := nativeFunctions[functionName]
 	if ok {
 		panic(errors.NewUnexpectedError("function already exists: %s", functionName))
@@ -65,6 +69,14 @@ func RegisterTypeBoundFunction(typeName string, functionValue NativeFunctionValu
 	functionValue.Name = qualifiedName
 
 	RegisterFunction(functionValue)
+}
+
+func RegisterBuiltinTypeBoundFunction(typeName string, functionValue NativeFunctionValue) {
+	// Here the function value is common for many types.
+	// Hence, do not update the function name to be type-qualified.
+	// Only the key in the map is type-qualified.
+	qualifiedName := commons.TypeQualifiedName(typeName, functionValue.Name)
+	registerFunction(qualifiedName, functionValue)
 }
 
 func init() {
@@ -193,84 +205,88 @@ func init() {
 	}
 
 	// Register type-bound functions that are common to many types.
+	registerCommonBuiltinTypeBoundFunctions()
+}
+
+func registerCommonBuiltinTypeBoundFunctions() {
 	for _, builtinType := range sema.AllBuiltinTypes {
+		typeQualifier := string(builtinType.ID())
 		includeToStringFunction := sema.HasToStringFunction(builtinType)
-		registerBuiltinTypeBoundFunctions(
-			string(builtinType.ID()),
-			includeToStringFunction,
-		)
+		registerBuiltinTypeBoundFunctions(typeQualifier)
+
+		if includeToStringFunction {
+			RegisterBuiltinTypeBoundFunction(
+				typeQualifier,
+				NewBoundNativeFunctionValue(
+					sema.ToStringFunctionName,
+					sema.ToStringFunctionType,
+					func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+						value := args[receiverIndex]
+
+						// TODO: memory metering
+						return interpreter.NewUnmeteredStringValue(value.String())
+					},
+				),
+			)
+		}
 	}
 
 	derivedTypeQualifiers := []string{
 		commons.TypeQualifierArray,
 		commons.TypeQualifierDictionary,
-
 		// TODO: add other types. e.g; Optional, etc
 	}
 
 	for _, builtinType := range derivedTypeQualifiers {
-		registerBuiltinTypeBoundFunctions(builtinType, false)
+		registerBuiltinTypeBoundFunctions(builtinType)
+	}
+
+	for _, function := range commonBuiltinTypeBoundFunctions {
+		IndexedCommonBuiltinTypeBoundFunctions[function.Name] = function
 	}
 }
 
 func registerBuiltinTypeBoundFunctions(
 	typeQualifier string,
-	includeToStringFunc bool,
 ) {
-	for _, boundFunction := range builtinTypeBoundFunctions(includeToStringFunc) {
-		RegisterTypeBoundFunction(
+	for _, boundFunction := range commonBuiltinTypeBoundFunctions {
+		RegisterBuiltinTypeBoundFunction(
 			typeQualifier,
 			boundFunction,
 		)
 	}
 }
 
-func builtinTypeBoundFunctions(includeToStringFunc bool) []NativeFunctionValue {
-	functions := []NativeFunctionValue{
-		// `isInstance` function
-		NewBoundNativeFunctionValue(
-			sema.IsInstanceFunctionName,
-			sema.IsInstanceFunctionType,
-			func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
-				value := arguments[receiverIndex]
+// Built-in functions that are common to all the types.
+var commonBuiltinTypeBoundFunctions = []NativeFunctionValue{
 
-				typeValue, ok := arguments[0].(interpreter.TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
+	// `isInstance` function
+	NewBoundNativeFunctionValue(
+		sema.IsInstanceFunctionName,
+		sema.IsInstanceFunctionType,
+		func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			value := arguments[receiverIndex]
 
-				return interpreter.IsInstance(config, value, typeValue)
-			},
-		),
+			typeValue, ok := arguments[typeBoundFunctionArgumentOffset].(interpreter.TypeValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
-		// `getType` function
-		NewBoundNativeFunctionValue(
-			sema.GetTypeFunctionName,
-			sema.GetTypeFunctionType,
-			func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
-				value := arguments[receiverIndex]
-				return interpreter.ValueGetType(config, value)
-			},
-		),
+			return interpreter.IsInstance(config, value, typeValue)
+		},
+	),
 
-		// TODO: add remaining functions
-	}
+	// `getType` function
+	NewBoundNativeFunctionValue(
+		sema.GetTypeFunctionName,
+		sema.GetTypeFunctionType,
+		func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			value := arguments[receiverIndex]
+			return interpreter.ValueGetType(config, value)
+		},
+	),
 
-	if includeToStringFunc {
-		functions = append(
-			functions,
-			NewBoundNativeFunctionValue(
-				sema.ToStringFunctionName,
-				sema.ToStringFunctionType,
-				func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
-					value := args[receiverIndex]
-
-					// TODO: memory metering
-					return interpreter.NewUnmeteredStringValue(value.String())
-				},
-			),
-		)
-	}
-
-	return functions
+	// TODO: add remaining functions
 }
+
+var IndexedCommonBuiltinTypeBoundFunctions = map[string]NativeFunctionValue{}

@@ -537,57 +537,6 @@ func (i InstructionNil) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
-// InstructionPath
-//
-// Creates a new path with the given domain and identifier and then pushes it onto the stack.
-type InstructionPath struct {
-	Domain     common.PathDomain
-	Identifier uint16
-}
-
-var _ Instruction = InstructionPath{}
-
-func (InstructionPath) Opcode() Opcode {
-	return Path
-}
-
-func (i InstructionPath) String() string {
-	var sb strings.Builder
-	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb, false)
-	return sb.String()
-}
-
-func (i InstructionPath) OperandsString(sb *strings.Builder, colorize bool) {
-	sb.WriteByte(' ')
-	printfArgument(sb, "domain", i.Domain, colorize)
-	sb.WriteByte(' ')
-	printfArgument(sb, "identifier", i.Identifier, colorize)
-}
-
-func (i InstructionPath) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
-	types []interpreter.StaticType,
-	functionNames []string,
-	colorize bool) {
-	sb.WriteByte(' ')
-	printfArgument(sb, "domain", i.Domain, colorize)
-	sb.WriteByte(' ')
-	printfConstantArgument(sb, "identifier", constants[i.Identifier], colorize)
-}
-
-func (i InstructionPath) Encode(code *[]byte) {
-	emitOpcode(code, i.Opcode())
-	emitPathDomain(code, i.Domain)
-	emitUint16(code, i.Identifier)
-}
-
-func DecodePath(ip *uint16, code []byte) (i InstructionPath) {
-	i.Domain = decodePathDomain(ip, code)
-	i.Identifier = decodeUint16(ip, code)
-	return i
-}
-
 // InstructionNew
 //
 // Creates a new instance of the given kind and type and then pushes it onto the stack.
@@ -636,6 +585,57 @@ func (i InstructionNew) Encode(code *[]byte) {
 func DecodeNew(ip *uint16, code []byte) (i InstructionNew) {
 	i.Kind = decodeCompositeKind(ip, code)
 	i.Type = decodeUint16(ip, code)
+	return i
+}
+
+// InstructionNewPath
+//
+// Creates a new path with the given domain and identifier and then pushes it onto the stack.
+type InstructionNewPath struct {
+	Domain     common.PathDomain
+	Identifier uint16
+}
+
+var _ Instruction = InstructionNewPath{}
+
+func (InstructionNewPath) Opcode() Opcode {
+	return NewPath
+}
+
+func (i InstructionNewPath) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
+}
+
+func (i InstructionNewPath) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "domain", i.Domain, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "identifier", i.Identifier, colorize)
+}
+
+func (i InstructionNewPath) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "domain", i.Domain, colorize)
+	sb.WriteByte(' ')
+	printfConstantArgument(sb, "identifier", constants[i.Identifier], colorize)
+}
+
+func (i InstructionNewPath) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitPathDomain(code, i.Domain)
+	emitUint16(code, i.Identifier)
+}
+
+func DecodeNewPath(ip *uint16, code []byte) (i InstructionNewPath) {
+	i.Domain = decodePathDomain(ip, code)
+	i.Identifier = decodeUint16(ip, code)
 	return i
 }
 
@@ -2241,10 +2241,10 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionFalse{}
 	case Nil:
 		return InstructionNil{}
-	case Path:
-		return DecodePath(ip, code)
 	case New:
 		return DecodeNew(ip, code)
+	case NewPath:
+		return DecodeNewPath(ip, code)
 	case NewArray:
 		return DecodeNewArray(ip, code)
 	case NewDictionary:

@@ -6364,3 +6364,165 @@ func TestContractClosure(t *testing.T) {
 	require.Equal(t, 0, vmInstance.StackSize())
 	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(9), result)
 }
+
+func TestCommonBuiltinTypeBoundFunctions(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("getType", func(t *testing.T) {
+
+		t.Parallel()
+
+		t.Run("int32", func(t *testing.T) {
+
+			t.Parallel()
+
+			actual, err := compileAndInvoke(t,
+				`
+                    struct S {}
+
+                    fun test(): Type {
+                        let i: Int32 = 6
+                        return i.getType()
+                    }
+                `,
+				"test",
+			)
+			require.NoError(t, err)
+			assert.Equal(
+				t,
+				interpreter.NewUnmeteredTypeValue(
+					interpreter.PrimitiveStaticTypeInt32,
+				),
+				actual,
+			)
+		})
+
+		t.Run("struct", func(t *testing.T) {
+
+			t.Parallel()
+
+			actual, err := compileAndInvoke(t,
+				`
+                    struct S {}
+
+                    fun test(): Type {
+                        let s = S()
+                        return s.getType()
+                    }
+                `,
+				"test",
+			)
+			require.NoError(t, err)
+			assert.Equal(
+				t,
+				interpreter.NewUnmeteredTypeValue(
+					interpreter.NewCompositeStaticTypeComputeTypeID(
+						nil,
+						TestLocation,
+						"S",
+					),
+				),
+				actual,
+			)
+		})
+	})
+
+	t.Run("getIsInstance", func(t *testing.T) {
+
+		t.Parallel()
+
+		t.Run("int32, pass", func(t *testing.T) {
+
+			t.Parallel()
+
+			actual, err := compileAndInvoke(t,
+				`
+                    struct S {}
+
+                    fun test(): Bool {
+                        let i: Int32 = 6
+                        return i.isInstance(Type<Int32>())
+                    }
+                `,
+				"test",
+			)
+			require.NoError(t, err)
+			assert.Equal(
+				t,
+				interpreter.BoolValue(true),
+				actual,
+			)
+		})
+
+		t.Run("int32, fail", func(t *testing.T) {
+
+			t.Parallel()
+
+			actual, err := compileAndInvoke(t,
+				`
+                    struct S {}
+
+                    fun test(): Bool {
+                        let i: Int32 = 6
+                        return i.isInstance(Type<Int64>())
+                    }
+                `,
+				"test",
+			)
+			require.NoError(t, err)
+			assert.Equal(
+				t,
+				interpreter.BoolValue(false),
+				actual,
+			)
+		})
+
+		t.Run("struct, pass", func(t *testing.T) {
+
+			t.Parallel()
+
+			actual, err := compileAndInvoke(t,
+				`
+                    struct S {}
+
+                    fun test(): Bool {
+                        let s = S()
+                        return s.isInstance(Type<S>())
+                    }
+                `,
+				"test",
+			)
+			require.NoError(t, err)
+			assert.Equal(
+				t,
+				interpreter.BoolValue(true),
+				actual,
+			)
+		})
+
+		t.Run("struct, fail", func(t *testing.T) {
+
+			t.Parallel()
+
+			actual, err := compileAndInvoke(t,
+				`
+                    struct S1 {}
+                    struct S2 {}
+
+                    fun test(): Bool {
+                        let s1 = S1()
+                        return s1.isInstance(Type<S2>())
+                    }
+                `,
+				"test",
+			)
+			require.NoError(t, err)
+			assert.Equal(
+				t,
+				interpreter.BoolValue(false),
+				actual,
+			)
+		})
+	})
+}
