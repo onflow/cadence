@@ -2197,6 +2197,35 @@ func (c *Compiler[_, _]) VisitAttachExpression(_ *ast.AttachExpression) (_ struc
 }
 
 func (c *Compiler[_, _]) emitTransfer(targetType sema.Type) {
+
+	// Optimization: We can omit the transfer in some cases
+	switch lastInstruction := c.codeGen.LastInstruction().(type) {
+	case opcode.InstructionGetConstant:
+		// If the last instruction is a constant load of the same type,
+		// then the transfer is not needed.
+		targetConstantKind := constant.FromSemaType(targetType)
+		constantIndex := lastInstruction.Constant
+		c := c.constants[constantIndex]
+		if c.kind == targetConstantKind {
+			return
+		}
+
+	case opcode.InstructionNewPath:
+		// If the last instruction is a path creation of the same type,
+		// then the transfer is not needed.
+		switch lastInstruction.Domain {
+		case common.PathDomainPublic:
+			if targetType == sema.PublicPathType {
+				return
+			}
+
+		case common.PathDomainStorage:
+			if targetType == sema.StoragePathType {
+				return
+			}
+		}
+	}
+
 	typeIndex := c.getOrAddType(targetType)
 	c.codeGen.Emit(opcode.InstructionTransfer{
 		Type: typeIndex,
