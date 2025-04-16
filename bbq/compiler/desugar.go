@@ -349,7 +349,7 @@ func (d *Desugar) desugarPreConditions(
 		conditions = funcBlock.PreConditions
 
 		for _, condition := range conditions.Conditions {
-			desugaredCondition := d.desugarCondition(condition)
+			desugaredCondition := d.desugarCondition(condition, false)
 			desugaredConditions = append(desugaredConditions, desugaredCondition)
 		}
 	}
@@ -383,7 +383,7 @@ func (d *Desugar) desugarPostConditions(
 		beforeStatements = postConditionsRewrite.BeforeStatements
 
 		for _, condition := range conditionsList {
-			desugaredCondition := d.desugarCondition(condition)
+			desugaredCondition := d.desugarCondition(condition, false)
 			desugaredConditions = append(desugaredConditions, desugaredCondition)
 		}
 	}
@@ -438,7 +438,7 @@ func (d *Desugar) desugarInheritedCondition(condition ast.Condition, inheritedFu
 	prevElaboration := d.elaboration
 	d.elaboration = inheritedFunc.elaboration
 
-	desugaredCondition := d.desugarCondition(condition)
+	desugaredCondition := d.desugarCondition(condition, true)
 	d.elaboration = prevElaboration
 
 	// Elaboration to be used by the condition must be set in the current elaboration.
@@ -464,7 +464,7 @@ var panicFuncInvocationTypes = sema.InvocationExpressionTypes{
 	},
 }
 
-func (d *Desugar) desugarCondition(condition ast.Condition) ast.Statement {
+func (d *Desugar) desugarCondition(condition ast.Condition, isInherited bool) ast.Statement {
 	switch condition := condition.(type) {
 	case *ast.TestCondition:
 
@@ -533,10 +533,111 @@ func (d *Desugar) desugarCondition(condition ast.Condition) ast.Statement {
 		return ifStmt
 	case *ast.EmitCondition:
 		emitStmt := (*ast.EmitStatement)(condition)
-		return emitStmt
+
+		if !isInherited {
+			return emitStmt
+		}
+
+		// If the condition is inherited, then re-write
+		// the emit statement to be type-qualified.
+		// i.e: `emit Event()` will be re-written as `emit Contract.Event()`.
+		// Otherwise, the compiler can't find the symbol.
+
+		eventConstructorInvocation := emitStmt.InvocationExpression
+
+		// If the event constructor is already type-qualified, then no need to change anything.
+		if _, ok := eventConstructorInvocation.InvokedExpression.(*ast.MemberExpression); ok {
+			return emitStmt
+		}
+
+		// Otherwise, make it type-qualified
+		invocationTypes := d.elaboration.InvocationExpressionTypes(eventConstructorInvocation)
+
+		pos := eventConstructorInvocation.StartPosition()
+
+		// Get the contract in which the event was declared.
+		// This is guaranteed, since events can only be declared in contracts.
+		eventType := d.elaboration.EmitStatementEventType(emitStmt)
+		declaredContract := declaredContractType(eventType).(sema.CompositeKindedType)
+
+		memberExpression := ast.NewMemberExpression(
+			d.memoryGauge,
+			ast.NewIdentifierExpression(
+				d.memoryGauge,
+				ast.NewIdentifier(
+					d.memoryGauge,
+					declaredContract.GetIdentifier(),
+					pos,
+				),
+			),
+			false,
+			pos,
+			ast.NewIdentifier(
+				d.memoryGauge,
+				eventType.Identifier,
+				pos,
+			),
+		)
+
+		newEventConstructorInvocation := ast.NewInvocationExpression(
+			d.memoryGauge,
+			memberExpression,
+			eventConstructorInvocation.TypeArguments,
+			eventConstructorInvocation.Arguments,
+			eventConstructorInvocation.ArgumentsStartPos,
+			eventConstructorInvocation.EndPos,
+		)
+
+		newEmitStmt := ast.NewEmitStatement(
+			d.memoryGauge,
+			newEventConstructorInvocation,
+			emitStmt.StartPos,
+		)
+
+		//Inject a static import so the compiler can link the functions.
+		d.addImport(eventType.Location)
+
+		// TODO: Is there a way to get the type for the constructor
+		//  from the elaboration, rather than manually constructing it here?
+		eventConstructorFuncType := sema.NewSimpleFunctionType(
+			sema.FunctionPurityImpure,
+			// Parameters are not needed, since they are not used in the compiler
+			nil,
+			sema.NewTypeAnnotation(eventType),
+		)
+		eventConstructorFuncType.IsConstructor = true
+
+		memberAccessInfo := sema.MemberAccessInfo{
+			AccessedType:  declaredContract,
+			ResultingType: eventType,
+			Member: sema.NewPublicFunctionMember(
+				d.memoryGauge,
+				declaredContract,
+				eventType.Identifier,
+				eventConstructorFuncType,
+				"",
+			),
+			IsOptional:      false,
+			ReturnReference: false,
+		}
+
+		d.elaboration.SetInvocationExpressionTypes(newEventConstructorInvocation, invocationTypes)
+		d.elaboration.SetEmitStatementEventType(newEmitStmt, eventType)
+		d.elaboration.SetMemberExpressionMemberAccessInfo(memberExpression, memberAccessInfo)
+
+		return newEmitStmt
 	default:
 		panic(errors.NewUnreachableError())
 	}
+}
+
+func declaredContractType(containedType sema.ContainedType) sema.Type {
+	containerType := containedType.GetContainerType()
+	if containerType == nil {
+		return containedType
+	}
+
+	return declaredContractType(containerType.(sema.ContainedType))
 }
 
 func (d *Desugar) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) ast.Declaration {
@@ -921,8 +1022,13 @@ func (d *Desugar) interfaceDelegationMethodCall(
 	// Given these invocations are treated as static calls,
 	// we need to inject a static import as well, so the
 	// compiler can link these functions.
+	d.addImport(interfaceType.Location)
 
-	interfaceLocation, isAddressLocation := interfaceType.Location.(common.AddressLocation)
+	return invocation
+}
+
+func (d *Desugar) addImport(location common.Location) {
+	interfaceLocation, isAddressLocation := location.(common.AddressLocation)
 	if isAddressLocation {
 		if _, exists := d.importsSet[interfaceLocation]; !exists {
 			d.newImports = append(
@@ -940,8 +1046,6 @@ func (d *Desugar) interfaceDelegationMethodCall(
 			d.importsSet[interfaceLocation] = struct{}{}
 		}
 	}
-
-	return invocation
 }
 
 func (d *Desugar) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) ast.Declaration {

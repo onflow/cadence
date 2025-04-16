@@ -1008,12 +1008,19 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 }
 
 func (c *Compiler[_, _]) VisitEmitStatement(statement *ast.EmitStatement) (_ struct{}) {
-	c.compileExpression(statement.InvocationExpression)
-	eventType := c.ExtendedElaboration.EmitStatementEventType(statement)
-	typeIndex := c.getOrAddType(eventType)
-	c.codeGen.Emit(opcode.InstructionEmitEvent{
-		Type: typeIndex,
-	})
+	// Emit statements can be coming from inherited conditions.
+	// If so, use the corresponding elaboration.
+	c.withConditionExtendedElaboration(
+		statement,
+		func() {
+			c.compileExpression(statement.InvocationExpression)
+			eventType := c.ExtendedElaboration.EmitStatementEventType(statement)
+			typeIndex := c.getOrAddType(eventType)
+			c.codeGen.Emit(opcode.InstructionEmitEvent{
+				Type: typeIndex,
+			})
+		},
+	)
 
 	return
 }
