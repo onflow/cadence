@@ -43,7 +43,7 @@ const (
 	operandTypeFunctionIndex = "functionIndex"
 	operandTypeUpvalueIndex  = "upvalueIndex"
 	operandTypeOffset        = "offset"
-	operandTypeIndices       = "indices"
+	operandTypeTypeIndices   = "typeIndices"
 	operandTypeSize          = "size"
 	operandTypeCastKind      = "castKind"
 	operandTypePathDomain    = "pathDomain"
@@ -310,7 +310,7 @@ func instructionOperandsFields(ins instruction) *dst.FieldList {
 
 			typeExpr = dst.NewIdent("uint16")
 
-		case operandTypeIndices:
+		case operandTypeTypeIndices:
 			typeExpr = &dst.ArrayType{
 				Elt: dst.NewIdent("uint16"),
 			}
@@ -502,6 +502,7 @@ func instructionStringFuncDecl(ins instruction) *dst.FuncDecl {
 							Op: token.AND,
 							X:  dst.NewIdent("sb"),
 						},
+						dst.NewIdent("false"),
 					},
 				},
 			},
@@ -559,15 +560,30 @@ func instructionOperandsStringFuncDecl(ins instruction) *dst.FuncDecl {
 	for _, operand := range ins.Operands {
 		var funcName string
 		switch operand.Type {
-		case operandTypeIndices:
+		case operandTypeTypeIndices:
 			funcName = "printfUInt16ArrayArgument"
 		case operandTypeUpvalues:
 			funcName = "printfUpvalueArrayArgument"
 		default:
 			funcName = "printfArgument"
 		}
+
 		stmts = append(
 			stmts,
+			&dst.ExprStmt{
+				X: &dst.CallExpr{
+					Fun: &dst.SelectorExpr{
+						X:   dst.NewIdent("sb"),
+						Sel: dst.NewIdent("WriteByte"),
+					},
+					Args: []dst.Expr{
+						&dst.BasicLit{
+							Kind:  token.CHAR,
+							Value: "' '",
+						},
+					},
+				},
+			},
 			&dst.ExprStmt{
 				X: &dst.CallExpr{
 					Fun: &dst.Ident{
@@ -583,6 +599,7 @@ func instructionOperandsStringFuncDecl(ins instruction) *dst.FuncDecl {
 							X:   dst.NewIdent("i"),
 							Sel: operandIdent(operand),
 						},
+						dst.NewIdent("colorize"),
 					},
 				},
 			},
@@ -615,6 +632,12 @@ func instructionOperandsStringFuncDecl(ins instruction) *dst.FuncDecl {
 							},
 						},
 					},
+					{
+						Names: []*dst.Ident{
+							dst.NewIdent("colorize"),
+						},
+						Type: dst.NewIdent("bool"),
+					},
 				},
 			},
 		},
@@ -631,13 +654,17 @@ func instructionResolvedOperandsStringFuncDecl(ins instruction) *dst.FuncDecl {
 	for _, operand := range ins.Operands {
 
 		var (
-			funcName string
-			arg      dst.Expr
+			funcName  string
+			arg       dst.Expr
+			extraArgs []dst.Expr
 		)
 
 		switch operand.Type {
-		case operandTypeIndices:
-			funcName = "printfUInt16ArrayArgument"
+		case operandTypeTypeIndices:
+			funcName = "printfTypeArrayArgument"
+			extraArgs = []dst.Expr{
+				dst.NewIdent("types"),
+			}
 
 		case operandTypeUpvalues:
 			funcName = "printfUpvalueArrayArgument"
@@ -687,17 +714,35 @@ func instructionResolvedOperandsStringFuncDecl(ins instruction) *dst.FuncDecl {
 			stmts,
 			&dst.ExprStmt{
 				X: &dst.CallExpr{
+					Fun: &dst.SelectorExpr{
+						X:   dst.NewIdent("sb"),
+						Sel: dst.NewIdent("WriteByte"),
+					},
+					Args: []dst.Expr{
+						&dst.BasicLit{
+							Kind:  token.CHAR,
+							Value: "' '",
+						},
+					},
+				},
+			},
+			&dst.ExprStmt{
+				X: &dst.CallExpr{
 					Fun: &dst.Ident{
 						Name: funcName,
 					},
-					Args: []dst.Expr{
-						dst.NewIdent("sb"),
-						&dst.BasicLit{
-							Kind:  token.STRING,
-							Value: fmt.Sprintf(`"%s"`, operand.Name),
+					Args: append(
+						[]dst.Expr{
+							dst.NewIdent("sb"),
+							&dst.BasicLit{
+								Kind:  token.STRING,
+								Value: fmt.Sprintf(`"%s"`, operand.Name),
+							},
+							arg,
+							dst.NewIdent("colorize"),
 						},
-						arg,
-					},
+						extraArgs...,
+					),
 				},
 			},
 		)
@@ -744,6 +789,12 @@ func instructionResolvedOperandsStringFuncDecl(ins instruction) *dst.FuncDecl {
 			Type: &dst.ArrayType{
 				Elt: dst.NewIdent("string"),
 			},
+		},
+		{
+			Names: []*dst.Ident{
+				dst.NewIdent("colorize"),
+			},
+			Type: dst.NewIdent("bool"),
 		},
 	}
 
@@ -820,7 +871,7 @@ func instructionEncodeFuncDecl(ins instruction) *dst.FuncDecl {
 			operandTypeSize:
 			funcName = "emitUint16"
 
-		case operandTypeIndices:
+		case operandTypeTypeIndices:
 			funcName = "emitUint16Array"
 
 		case operandTypeCastKind:
@@ -920,7 +971,7 @@ func instructionDecodeFuncDecl(ins instruction) *dst.FuncDecl {
 			operandTypeSize:
 			funcName = "decodeUint16"
 
-		case operandTypeIndices:
+		case operandTypeTypeIndices:
 			funcName = "decodeUint16Array"
 
 		case operandTypeCastKind:
