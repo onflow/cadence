@@ -1013,8 +1013,8 @@ func (c *Compiler[_, _]) VisitEmitStatement(statement *ast.EmitStatement) (_ str
 	c.withConditionExtendedElaboration(
 		statement,
 		func() {
-			eventType := c.ExtendedElaboration.EmitStatementEventType(statement)
 			c.compileExpression(statement.InvocationExpression)
+			eventType := c.ExtendedElaboration.EmitStatementEventType(statement)
 			typeIndex := c.getOrAddType(eventType)
 			c.codeGen.Emit(opcode.InstructionEmitEvent{
 				Type: typeIndex,
