@@ -255,17 +255,16 @@ access(all) contract interface FungibleToken: ViewResolver {
         access(all) fun deposit(from: @{FungibleToken.Vault}) {
             // Assert that the concrete type of the deposited vault is the same
             // as the vault that is accepting the deposit
-            // TODO: getType
-            // pre {
-            //     from.isInstance(self.getType()):
-            //         "FungibleToken.Vault.deposit: Cannot deposit tokens! "
-            //         .concat("The type of the deposited tokens <")
-            //         .concat(from.getType().identifier)
-            //         .concat("> has to be the same type as the Vault being deposited into <")
-            //         .concat(self.getType().identifier)
-            //         .concat(">. Check that you are withdrawing and depositing to the correct paths in the sender and receiver accounts ")
-            //         .concat("and that those paths hold the same Vault types.")
-            // }
+            pre {
+                from.isInstance(self.getType()):
+                    "FungibleToken.Vault.deposit: Cannot deposit tokens! "
+                    .concat("The type of the deposited tokens <")
+                    .concat(from.getType().identifier)
+                    .concat("> has to be the same type as the Vault being deposited into <")
+                    .concat(self.getType().identifier)
+                    .concat(">. Check that you are withdrawing and depositing to the correct paths in the sender and receiver accounts ")
+                    .concat("and that those paths hold the same Vault types.")
+            }
             post {
                 emit Deposited(
                         type: before(from.getType().identifier),
@@ -315,14 +314,13 @@ access(all) contract interface FungibleToken: ViewResolver {
                 .concat("The newly created Vault must have zero balance but it has a balance of (")
                 .concat(result.balance.toString()).concat(")")
 
-            // TODO: getType
-            // result.getType() == vaultType:
-            //     "FungibleToken.Vault.createEmptyVault: Empty Vault creation failed! "
-            //     .concat("The type of the new Vault <")
-            //     .concat(result.getType().identifier)
-            //     .concat("> has to be the same as the type that was requested <")
-            //     .concat(vaultType.identifier)
-            //     .concat(">.")
+            result.getType() == vaultType:
+                "FungibleToken.Vault.createEmptyVault: Empty Vault creation failed! "
+                .concat("The type of the new Vault <")
+                .concat(result.getType().identifier)
+                .concat("> has to be the same as the type that was requested <")
+                .concat(vaultType.identifier)
+                .concat(">.")
         }
     }
 }
