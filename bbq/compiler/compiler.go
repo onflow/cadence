@@ -1425,6 +1425,11 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 
 		// Receiver is loaded first. So 'self' is always the zero-th argument.
 		c.compileExpression(invokedExpr.Expression)
+
+		if _, ok := memberInfo.AccessedType.(*sema.ReferenceType); ok {
+			c.codeGen.Emit(opcode.InstructionDeref{})
+		}
+
 		// Load arguments
 		c.loadArguments(expression)
 

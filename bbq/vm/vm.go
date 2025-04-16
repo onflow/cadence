@@ -659,15 +659,6 @@ func opInvokeDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
 	// TODO: Just to make the linter happy
 	_ = typeArguments
 
-	switch typedReceiver := receiver.(type) {
-	case interpreter.ReferenceValue:
-		referenced := typedReceiver.ReferencedValue(vm.config, EmptyLocationRange, true)
-		receiver = *referenced
-
-		// TODO:
-		//case ReferenceValue
-	}
-
 	compositeValue := receiver.(*interpreter.CompositeValue)
 
 	staticType := compositeValue.StaticType(vm.config)
