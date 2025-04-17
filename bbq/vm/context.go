@@ -35,8 +35,6 @@ import (
 //
 // Should not be re-used across executions.
 type Context struct {
-	// Config contains the VM configurations that is safe to be re-used across VMs/executions.
-	// It does not hold data specific to a single execution. i.e: No state is maintained.
 	*Config
 
 	CapabilityControllerIterations              map[interpreter.AddressPath]int

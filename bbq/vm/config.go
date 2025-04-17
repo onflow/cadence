@@ -35,6 +35,8 @@ type OnEventEmittedFunc func(
 	eventType *interpreter.CompositeStaticType,
 ) error
 
+// Config contains the VM configurations that is safe to be re-used across VMs/executions.
+// It does not hold data specific to a single execution. i.e: No state is maintained.
 type Config struct {
 	common.MemoryGauge
 	commons.ImportHandler
