@@ -1203,6 +1203,295 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 			}, logs,
 		)
 	})
+
+	t.Run("default function with conditions", func(t *testing.T) {
+
+		t.Parallel()
+
+		var logs []string
+
+		logFunction := stdlib.NewStandardLibraryStaticFunction(
+			"log",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityView,
+				[]sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
+					},
+				},
+				sema.BoolTypeAnnotation,
+			),
+			``,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				message := invocation.Arguments[0].MeteredString(
+					invocation.Interpreter,
+					interpreter.SeenReferences{},
+					invocation.LocationRange,
+				)
+				logs = append(logs, message)
+				return interpreter.TrueValue
+			},
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(logFunction)
+
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, logFunction)
+
+		code := `
+            resource interface I {
+                fun foo() {
+                    pre {
+                        log("interface pre-condition 1")
+                        true == false
+                        log("interface pre-condition 3")
+                    }
+                    log("interface body")
+                }
+            }
+
+            resource R: I {
+                fun foo() {
+                    log("implementation body")
+                }
+
+                init() {
+                    self.foo()
+                }
+            }
+
+            fun main() {
+                let r <- create R()
+                destroy r
+            }
+        `
+
+		inter, err := parseCheckAndInterpretWithOptions(
+			t,
+			code,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
+				},
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+				HandleCheckerError: nil,
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		require.NoError(t, err)
+
+		require.Equal(
+			t,
+			[]string{
+				`"implementation body"`,
+			},
+			logs,
+		)
+	})
+
+	t.Run("only conditions, failing", func(t *testing.T) {
+
+		t.Parallel()
+
+		var logs []string
+
+		logFunction := stdlib.NewStandardLibraryStaticFunction(
+			"log",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityView,
+				[]sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
+					},
+				},
+				sema.BoolTypeAnnotation,
+			),
+			``,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				message := invocation.Arguments[0].MeteredString(
+					invocation.Interpreter,
+					interpreter.SeenReferences{},
+					invocation.LocationRange,
+				)
+				logs = append(logs, message)
+				return interpreter.TrueValue
+			},
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(logFunction)
+
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, logFunction)
+
+		code := `
+            resource interface I {
+                fun foo() {
+                    pre {
+                        log("interface pre-condition 1")
+                        true == false
+                        log("interface pre-condition 3")
+                    }
+                }
+            }
+
+            resource R: I {
+                fun foo() {
+                    log("implementation body")
+                }
+
+                init() {
+                    self.foo()
+                }
+            }
+
+            fun main() {
+                let r <- create R()
+                destroy r
+            }
+        `
+
+		inter, err := parseCheckAndInterpretWithOptions(
+			t,
+			code,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
+				},
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+				HandleCheckerError: nil,
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		RequireError(t, err)
+		assert.ErrorAs(t, err, &interpreter.ConditionError{})
+
+		require.Equal(
+			t,
+			[]string{
+				`"interface pre-condition 1"`,
+			},
+			logs,
+		)
+	})
+
+	t.Run("only conditions, succeeding", func(t *testing.T) {
+
+		t.Parallel()
+
+		var logs []string
+
+		logFunction := stdlib.NewStandardLibraryStaticFunction(
+			"log",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityView,
+				[]sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
+					},
+				},
+				sema.BoolTypeAnnotation,
+			),
+			``,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				message := invocation.Arguments[0].MeteredString(
+					invocation.Interpreter,
+					interpreter.SeenReferences{},
+					invocation.LocationRange,
+				)
+				logs = append(logs, message)
+				return interpreter.TrueValue
+			},
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(logFunction)
+
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, logFunction)
+
+		code := `
+            resource interface I {
+                fun foo() {
+                    pre {
+                        log("interface pre-condition 1")
+                        true
+                        log("interface pre-condition 3")
+                    }
+                }
+            }
+
+            resource R: I {
+                fun foo() {
+                    log("implementation body")
+                }
+
+                init() {
+                    self.foo()
+                }
+            }
+
+            fun main() {
+                let r <- create R()
+                destroy r
+            }
+        `
+
+		inter, err := parseCheckAndInterpretWithOptions(
+			t,
+			code,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
+				},
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+				HandleCheckerError: nil,
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		require.NoError(t, err)
+
+		require.Equal(
+			t,
+			[]string{
+				`"interface pre-condition 1"`,
+				`"interface pre-condition 3"`,
+				`"implementation body"`,
+			},
+			logs,
+		)
+	})
 }
 
 func TestInterpretNestedInterfaceCast(t *testing.T) {
