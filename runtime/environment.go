@@ -90,25 +90,7 @@ type interpreterEnvironmentReconfigured struct {
 type interpreterEnvironment struct {
 	interpreterEnvironmentReconfigured
 
-	// defaultBaseTypeActivation is the base type activation that applies to all locations by default.
-	defaultBaseTypeActivation *sema.VariableActivation
-	// The base type activations for individual locations.
-	// location == nil is the base type activation that applies to all locations,
-	// unless there is a base type activation for the given location.
-	//
-	// Base type activations are lazily / implicitly created
-	// by DeclareType / semaBaseActivationFor
-	baseTypeActivationsByLocation map[common.Location]*sema.VariableActivation
-
-	// defaultBaseValueActivation is the base value activation that applies to all locations by default.
-	defaultBaseValueActivation *sema.VariableActivation
-	// The base value activations for individual locations.
-	// location == nil is the base value activation that applies to all locations,
-	// unless there is a base value activation for the given location.
-	//
-	// Base value activations are lazily / implicitly created
-	// by DeclareValue / semaBaseActivationFor
-	baseValueActivationsByLocation map[common.Location]*sema.VariableActivation
+	checkingEnvironment *checkingEnvironment
 
 	// defaultBaseActivation is the base activation that applies to all locations by default
 	defaultBaseActivation *interpreter.VariableActivation
@@ -148,16 +130,13 @@ var _ ArgumentDecoder = &interpreterEnvironment{}
 var _ common.MemoryGauge = &interpreterEnvironment{}
 
 func NewInterpreterEnvironment(config Config) *interpreterEnvironment {
-	defaultBaseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	defaultBaseTypeActivation := sema.NewVariableActivation(sema.BaseTypeActivation)
 	defaultBaseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 
 	env := &interpreterEnvironment{
-		config:                     config,
-		defaultBaseValueActivation: defaultBaseValueActivation,
-		defaultBaseTypeActivation:  defaultBaseTypeActivation,
-		defaultBaseActivation:      defaultBaseActivation,
-		stackDepthLimiter:          newStackDepthLimiter(config.StackDepthLimit),
+		config:                config,
+		checkingEnvironment:   newCheckingEnvironment(),
+		defaultBaseActivation: defaultBaseActivation,
+		stackDepthLimiter:     newStackDepthLimiter(config.StackDepthLimit),
 	}
 	env.InterpreterConfig = env.NewInterpreterConfig()
 	env.CheckerConfig = env.newCheckerConfig()
@@ -201,8 +180,8 @@ func (e *interpreterEnvironment) NewInterpreterConfig() *interpreter.Config {
 func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 	return &sema.Config{
 		AccessCheckMode:                  sema.AccessCheckModeStrict,
-		BaseValueActivationHandler:       e.getBaseValueActivation,
-		BaseTypeActivationHandler:        e.getBaseTypeActivation,
+		BaseValueActivationHandler:       e.checkingEnvironment.getBaseValueActivation,
+		BaseTypeActivationHandler:        e.checkingEnvironment.getBaseTypeActivation,
 		ValidTopLevelDeclarationsHandler: validTopLevelDeclarations,
 		LocationHandler:                  e.ResolveLocation,
 		ImportHandler:                    e.resolveImport,
@@ -243,43 +222,14 @@ func (e *interpreterEnvironment) Configure(
 }
 
 func (e *interpreterEnvironment) DeclareValue(valueDeclaration stdlib.StandardLibraryValue, location common.Location) {
-	e.semaBaseActivationFor(
-		location,
-		&e.baseValueActivationsByLocation,
-		e.defaultBaseValueActivation,
-	).DeclareValue(valueDeclaration)
+	e.checkingEnvironment.declareValue(valueDeclaration, location)
 
 	activation := e.interpreterBaseActivationFor(location)
 	interpreter.Declare(activation, valueDeclaration)
 }
 
 func (e *interpreterEnvironment) DeclareType(typeDeclaration stdlib.StandardLibraryType, location common.Location) {
-	e.semaBaseActivationFor(
-		location,
-		&e.baseTypeActivationsByLocation,
-		e.defaultBaseTypeActivation,
-	).DeclareType(typeDeclaration)
-}
-
-func (e *interpreterEnvironment) semaBaseActivationFor(
-	location common.Location,
-	baseActivationsByLocation *map[Location]*sema.VariableActivation,
-	defaultBaseActivation *sema.VariableActivation,
-) (baseActivation *sema.VariableActivation) {
-	if location == nil {
-		return defaultBaseActivation
-	}
-
-	if *baseActivationsByLocation == nil {
-		*baseActivationsByLocation = map[Location]*sema.VariableActivation{}
-	} else {
-		baseActivation = (*baseActivationsByLocation)[location]
-	}
-	if baseActivation == nil {
-		baseActivation = sema.NewVariableActivation(defaultBaseActivation)
-		(*baseActivationsByLocation)[location] = baseActivation
-	}
-	return baseActivation
+	e.checkingEnvironment.declareType(typeDeclaration, location)
 }
 
 func (e *interpreterEnvironment) interpreterBaseActivationFor(
@@ -966,7 +916,7 @@ func (e *interpreterEnvironment) newCompositeTypeHandler() interpreter.Composite
 
 		case nil:
 			qualifiedIdentifier := string(typeID)
-			baseTypeActivation := e.getBaseTypeActivation(location)
+			baseTypeActivation := e.checkingEnvironment.getBaseTypeActivation(location)
 			ty := sema.TypeActivationNestedType(baseTypeActivation, qualifiedIdentifier)
 			if ty == nil {
 				return nil
@@ -1120,51 +1070,6 @@ func (e *interpreterEnvironment) newResourceOwnerChangedHandler() interpreter.On
 func (e *interpreterEnvironment) commitStorage(context interpreter.ValueTransferContext) error {
 	checkStorageHealth := e.config.AtreeValidationEnabled
 	return CommitStorage(context, e.storage, checkStorageHealth)
-}
-
-// getBaseValueActivation returns the base activation for the given location.
-// If a value was declared for the location (using DeclareValue),
-// then the specific base value activation for this location is returned.
-// Otherwise, the default base activation that applies for all locations is returned.
-func (e *interpreterEnvironment) getBaseValueActivation(
-	location common.Location,
-) (
-	baseValueActivation *sema.VariableActivation,
-) {
-	baseValueActivationsByLocation := e.baseValueActivationsByLocation
-	// Use the base value activation for the location, if any
-	// (previously implicitly created using DeclareValue)
-	baseValueActivation = baseValueActivationsByLocation[location]
-	if baseValueActivation == nil {
-		// If no base value activation for the location exists
-		// (no value was previously, specifically declared for the location using DeclareValue),
-		// return the base value activation that applies to all locations by default
-		baseValueActivation = e.defaultBaseValueActivation
-	}
-	return
-
-}
-
-// getBaseTypeActivation returns the base activation for the given location.
-// If a type was declared for the location (using DeclareType),
-// then the specific base type activation for this location is returned.
-// Otherwise, the default base activation that applies for all locations is returned.
-func (e *interpreterEnvironment) getBaseTypeActivation(
-	location common.Location,
-) (
-	baseTypeActivation *sema.VariableActivation,
-) {
-	// Use the base type activation for the location, if any
-	// (previously implicitly created using DeclareType)
-	baseTypeActivationsByLocation := e.baseTypeActivationsByLocation
-	baseTypeActivation = baseTypeActivationsByLocation[location]
-	if baseTypeActivation == nil {
-		// If no base type activation for the location exists
-		// (no type was previously, specifically declared for the location using DeclareType),
-		// return the base type activation that applies to all locations by default
-		baseTypeActivation = e.defaultBaseTypeActivation
-	}
-	return
 }
 
 // getBaseActivation returns the base activation for the given location.
