@@ -172,12 +172,12 @@ func (e *interpreterEnvironment) NewInterpreterConfig() *interpreter.Config {
 		MemoryGauge:                    e,
 		BaseActivationHandler:          e.getBaseActivation,
 		OnEventEmitted:                 e.newOnEventEmittedHandler(),
-		InjectedCompositeFieldsHandler: e.newInjectedCompositeFieldsHandler(),
-		UUIDHandler:                    e.newUUIDHandler(),
+		InjectedCompositeFieldsHandler: newInjectedCompositeFieldsHandler(e),
+		UUIDHandler:                    newUUIDHandler(&e.runtimeInterface),
 		ContractValueHandler:           e.newContractValueHandler(),
 		ImportLocationHandler:          e.newImportLocationHandler(),
 		AccountHandler:                 e.NewAccountValue,
-		OnRecordTrace:                  e.newOnRecordTraceHandler(),
+		OnRecordTrace:                  newOnRecordTraceHandler(&e.runtimeInterface),
 		OnResourceOwnerChange:          e.newResourceOwnerChangedHandler(),
 		CompositeTypeHandler:           e.newCompositeTypeHandler(),
 		CompositeValueFunctionsHandler: e.newCompositeValueFunctionsHandler(),
@@ -190,13 +190,13 @@ func (e *interpreterEnvironment) NewInterpreterConfig() *interpreter.Config {
 		AtreeStorageValidationEnabled:             false,
 		Debugger:                                  e.config.Debugger,
 		OnStatement:                               e.newOnStatementHandler(),
-		OnMeterComputation:                        e.newOnMeterComputation(),
+		OnMeterComputation:                        newOnMeterComputation(&e.runtimeInterface),
 		OnFunctionInvocation:                      e.newOnFunctionInvocationHandler(),
 		OnInvokedFunctionReturn:                   e.newOnInvokedFunctionReturnHandler(),
-		CapabilityBorrowHandler:                   e.newCapabilityBorrowHandler(),
-		CapabilityCheckHandler:                    e.newCapabilityCheckHandler(),
-		ValidateAccountCapabilitiesGetHandler:     e.newValidateAccountCapabilitiesGetHandler(),
-		ValidateAccountCapabilitiesPublishHandler: e.newValidateAccountCapabilitiesPublishHandler(),
+		CapabilityBorrowHandler:                   newCapabilityBorrowHandler(e),
+		CapabilityCheckHandler:                    newCapabilityCheckHandler(e),
+		ValidateAccountCapabilitiesGetHandler:     newValidateAccountCapabilitiesGetHandler(&e.runtimeInterface),
+		ValidateAccountCapabilitiesPublishHandler: newValidateAccountCapabilitiesPublishHandler(&e.runtimeInterface),
 	}
 }
 
@@ -208,7 +208,7 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 		ValidTopLevelDeclarationsHandler: validTopLevelDeclarations,
 		LocationHandler:                  e.ResolveLocation,
 		ImportHandler:                    e.resolveImport,
-		CheckHandler:                     e.newCheckHandler(),
+		CheckHandler:                     newCheckHandler(&e.runtimeInterface),
 	}
 }
 
@@ -241,7 +241,7 @@ func (e *interpreterEnvironment) Configure(
 	e.coverageReport = coverageReport
 	e.stackDepthLimiter.depth = 0
 
-	e.configureVersionedFeatures()
+	configureVersionedFeatures(runtimeInterface)
 }
 
 func (e *interpreterEnvironment) DeclareValue(valueDeclaration stdlib.StandardLibraryValue, location common.Location) {
@@ -661,11 +661,11 @@ func (e *interpreterEnvironment) ResolveLocation(
 	return
 }
 
-func (e *interpreterEnvironment) newCheckHandler() sema.CheckHandlerFunc {
+func newCheckHandler(i *Interface) sema.CheckHandlerFunc {
 	return func(checker *sema.Checker, check func()) {
 		reportMetric(
 			check,
-			e.runtimeInterface,
+			*i,
 			func(metrics Metrics, duration time.Duration) {
 				metrics.ProgramChecked(checker.Location, duration)
 			},
@@ -855,7 +855,7 @@ func (e *interpreterEnvironment) newOnStatementHandler() interpreter.OnStatement
 	}
 }
 
-func (e *interpreterEnvironment) newOnRecordTraceHandler() interpreter.OnRecordTraceFunc {
+func newOnRecordTraceHandler(i *Interface) interpreter.OnRecordTraceFunc {
 	return func(
 		interpreter *interpreter.Interpreter,
 		functionName string,
@@ -863,7 +863,7 @@ func (e *interpreterEnvironment) newOnRecordTraceHandler() interpreter.OnRecordT
 		attrs []attribute.KeyValue,
 	) {
 		errors.WrapPanic(func() {
-			e.runtimeInterface.RecordTrace(functionName, interpreter.Location, duration, attrs)
+			(*i).RecordTrace(functionName, interpreter.Location, duration, attrs)
 		})
 	}
 }
@@ -962,10 +962,10 @@ func (e *interpreterEnvironment) newContractValueHandler() interpreter.ContractV
 	}
 }
 
-func (e *interpreterEnvironment) newUUIDHandler() interpreter.UUIDHandlerFunc {
+func newUUIDHandler(i *Interface) interpreter.UUIDHandlerFunc {
 	return func() (uuid uint64, err error) {
 		errors.WrapPanic(func() {
-			uuid, err = e.runtimeInterface.GenerateUUID()
+			uuid, err = (*i).GenerateUUID()
 		})
 		if err != nil {
 			err = interpreter.WrappedExternalError(err)
@@ -993,7 +993,7 @@ func (e *interpreterEnvironment) newOnEventEmittedHandler() interpreter.OnEventE
 	}
 }
 
-func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter.InjectedCompositeFieldsHandlerFunc {
+func newInjectedCompositeFieldsHandler(accountHandler stdlib.AccountHandler) interpreter.InjectedCompositeFieldsHandlerFunc {
 	return func(
 		context interpreter.AccountCreationContext,
 		location Location,
@@ -1020,7 +1020,7 @@ func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter
 			return map[string]interpreter.Value{
 				sema.ContractAccountFieldName: stdlib.NewAccountReferenceValue(
 					context,
-					e,
+					accountHandler,
 					addressValue,
 					interpreter.FullyEntitledAccountAccess,
 					interpreter.EmptyLocationRange,
@@ -1139,11 +1139,11 @@ func (e *interpreterEnvironment) newOnInvokedFunctionReturnHandler() func(_ *int
 	}
 }
 
-func (e *interpreterEnvironment) newOnMeterComputation() interpreter.OnMeterComputationFunc {
+func newOnMeterComputation(i *Interface) interpreter.OnMeterComputationFunc {
 	return func(compKind common.ComputationKind, intensity uint) {
 		var err error
 		errors.WrapPanic(func() {
-			err = e.runtimeInterface.MeterComputation(compKind, intensity)
+			err = (*i).MeterComputation(compKind, intensity)
 		})
 		if err != nil {
 			panic(interpreter.WrappedExternalError(err))
@@ -1224,6 +1224,10 @@ func (e *interpreterEnvironment) newResourceOwnerChangedHandler() interpreter.On
 		return nil
 	}
 
+	return newResourceOwnerChangedHandler(&e.runtimeInterface)
+}
+
+func newResourceOwnerChangedHandler(i *Interface) interpreter.OnResourceOwnerChangeFunc {
 	return func(
 		interpreter *interpreter.Interpreter,
 		resource *interpreter.CompositeValue,
@@ -1231,7 +1235,7 @@ func (e *interpreterEnvironment) newResourceOwnerChangedHandler() interpreter.On
 		newOwner common.Address,
 	) {
 		errors.WrapPanic(func() {
-			e.runtimeInterface.ResourceOwnerChanged(
+			(*i).ResourceOwnerChanged(
 				interpreter,
 				resource,
 				oldOwner,
@@ -1325,7 +1329,7 @@ func (e *interpreterEnvironment) getBaseActivation(
 	return
 }
 
-func (e *interpreterEnvironment) newCapabilityBorrowHandler() interpreter.CapabilityBorrowHandlerFunc {
+func newCapabilityBorrowHandler(handler stdlib.CapabilityControllerHandler) interpreter.CapabilityBorrowHandlerFunc {
 
 	return func(
 		context interpreter.BorrowCapabilityControllerContext,
@@ -1343,12 +1347,12 @@ func (e *interpreterEnvironment) newCapabilityBorrowHandler() interpreter.Capabi
 			capabilityID,
 			wantedBorrowType,
 			capabilityBorrowType,
-			e,
+			handler,
 		)
 	}
 }
 
-func (e *interpreterEnvironment) newCapabilityCheckHandler() interpreter.CapabilityCheckHandlerFunc {
+func newCapabilityCheckHandler(handler stdlib.CapabilityControllerHandler) interpreter.CapabilityCheckHandlerFunc {
 	return func(
 		context interpreter.CheckCapabilityControllerContext,
 		locationRange interpreter.LocationRange,
@@ -1365,12 +1369,12 @@ func (e *interpreterEnvironment) newCapabilityCheckHandler() interpreter.Capabil
 			capabilityID,
 			wantedBorrowType,
 			capabilityBorrowType,
-			e,
+			handler,
 		)
 	}
 }
 
-func (e *interpreterEnvironment) newValidateAccountCapabilitiesGetHandler() interpreter.ValidateAccountCapabilitiesGetHandlerFunc {
+func newValidateAccountCapabilitiesGetHandler(i *Interface) interpreter.ValidateAccountCapabilitiesGetHandlerFunc {
 	return func(
 		context interpreter.AccountCapabilityGetValidationContext,
 		locationRange interpreter.LocationRange,
@@ -1384,7 +1388,7 @@ func (e *interpreterEnvironment) newValidateAccountCapabilitiesGetHandler() inte
 			err error
 		)
 		errors.WrapPanic(func() {
-			ok, err = e.runtimeInterface.ValidateAccountCapabilitiesGet(
+			ok, err = (*i).ValidateAccountCapabilitiesGet(
 				context,
 				locationRange,
 				address,
@@ -1400,7 +1404,7 @@ func (e *interpreterEnvironment) newValidateAccountCapabilitiesGetHandler() inte
 	}
 }
 
-func (e *interpreterEnvironment) newValidateAccountCapabilitiesPublishHandler() interpreter.ValidateAccountCapabilitiesPublishHandlerFunc {
+func newValidateAccountCapabilitiesPublishHandler(i *Interface) interpreter.ValidateAccountCapabilitiesPublishHandlerFunc {
 	return func(
 		context interpreter.AccountCapabilityPublishValidationContext,
 		locationRange interpreter.LocationRange,
@@ -1413,7 +1417,7 @@ func (e *interpreterEnvironment) newValidateAccountCapabilitiesPublishHandler() 
 			err error
 		)
 		errors.WrapPanic(func() {
-			ok, err = e.runtimeInterface.ValidateAccountCapabilitiesPublish(
+			ok, err = (*i).ValidateAccountCapabilitiesPublish(
 				context,
 				locationRange,
 				address,
@@ -1428,13 +1432,13 @@ func (e *interpreterEnvironment) newValidateAccountCapabilitiesPublishHandler() 
 	}
 }
 
-func (e *interpreterEnvironment) configureVersionedFeatures() {
+func configureVersionedFeatures(i Interface) {
 	var (
 		minimumRequiredVersion string
 		err                    error
 	)
 	errors.WrapPanic(func() {
-		minimumRequiredVersion, err = e.runtimeInterface.MinimumRequiredVersion()
+		minimumRequiredVersion, err = i.MinimumRequiredVersion()
 	})
 	if err != nil {
 		panic(err)
