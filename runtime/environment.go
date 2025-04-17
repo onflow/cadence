@@ -856,12 +856,7 @@ func (e *interpreterEnvironment) newContractValueHandler() interpreter.ContractV
 			}
 		}
 
-		return e.loadContract(
-			inter,
-			compositeType,
-			constructorGenerator,
-			invocationRange,
-		)
+		return loadContractValue(inter, compositeType, e.storage)
 	}
 }
 
@@ -945,38 +940,6 @@ func (e *interpreterEnvironment) newCompositeValueFunctionsHandler() interpreter
 
 		return handler(inter, locationRange, compositeValue)
 	}
-}
-
-func (e *interpreterEnvironment) loadContract(
-	inter *interpreter.Interpreter,
-	compositeType *sema.CompositeType,
-	_ func(common.Address) *interpreter.HostFunctionValue,
-	_ ast.Range,
-) *interpreter.CompositeValue {
-
-	var contractValue interpreter.Value
-
-	location := compositeType.Location
-	if addressLocation, ok := location.(common.AddressLocation); ok {
-		storageMap := e.storage.GetDomainStorageMap(
-			inter,
-			addressLocation.Address,
-			common.StorageDomainContract,
-			false,
-		)
-		if storageMap != nil {
-			contractValue = storageMap.ReadValue(
-				inter,
-				interpreter.StringStorageMapKey(addressLocation.Name),
-			)
-		}
-	}
-
-	if contractValue == nil {
-		panic(errors.NewDefaultUserError("failed to load contract: %s", location))
-	}
-
-	return contractValue.(*interpreter.CompositeValue)
 }
 
 func (e *interpreterEnvironment) newOnFunctionInvocationHandler() func(_ *interpreter.Interpreter) {
