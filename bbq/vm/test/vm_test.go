@@ -5865,7 +5865,7 @@ func TestInnerFunction(t *testing.T) {
 	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(6), actual)
 }
 
-func TestContractContractAccount(t *testing.T) {
+func TestContractAccount(t *testing.T) {
 	t.Parallel()
 
 	importLocation := common.NewAddressLocation(nil, common.Address{0x1}, "C")
@@ -6610,6 +6610,36 @@ func TestCommonBuiltinTypeBoundFunctions(t *testing.T) {
                     fun test(): Type {
                         let s = S()
                         return s.getType()
+                    }
+                `,
+				"test",
+			)
+			require.NoError(t, err)
+			assert.Equal(
+				t,
+				interpreter.NewUnmeteredTypeValue(
+					interpreter.NewCompositeStaticTypeComputeTypeID(
+						nil,
+						TestLocation,
+						"S",
+					),
+				),
+				actual,
+			)
+		})
+
+		t.Run("struct interface", func(t *testing.T) {
+
+			t.Parallel()
+
+			actual, err := compileAndInvoke(t,
+				`
+                    struct interface I {}
+                    struct S: I {}
+
+                    fun test(): Type {
+                        let i: {I} = S()
+                        return i.getType()
                     }
                 `,
 				"test",
