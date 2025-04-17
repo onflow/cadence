@@ -700,7 +700,7 @@ func (e *interpreterEnvironment) GetProgram(
 	return e.getProgram(
 		location,
 		func() ([]byte, error) {
-			return e.getCode(location)
+			return getLocationCodeFromInterface(e.runtimeInterface, location)
 		},
 		storeProgram,
 		checkedImports,
@@ -767,24 +767,6 @@ func (e *interpreterEnvironment) getProgram(
 			return
 		})
 	})
-
-	return
-}
-
-func (e *interpreterEnvironment) getCode(location common.Location) (code []byte, err error) {
-	if addressLocation, ok := location.(common.AddressLocation); ok {
-		errors.WrapPanic(func() {
-			code, err = e.runtimeInterface.GetAccountContractCode(addressLocation)
-		})
-	} else {
-		errors.WrapPanic(func() {
-			code, err = e.runtimeInterface.GetCode(location)
-		})
-	}
-
-	if err != nil {
-		err = interpreter.WrappedExternalError(err)
-	}
 
 	return
 }
