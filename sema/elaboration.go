@@ -871,6 +871,10 @@ func (e *Elaboration) SetImportDeclarationsResolvedLocations(
 	e.importDeclarationsResolvedLocations[declaration] = locations
 }
 
+func (e *Elaboration) AllImportDeclarationsResolvedLocations() map[*ast.ImportDeclaration][]ResolvedLocation {
+	return e.importDeclarationsResolvedLocations
+}
+
 func (e *Elaboration) ReferenceExpressionBorrowType(expression *ast.ReferenceExpression) Type {
 	if e.referenceExpressionBorrowTypes == nil {
 		return nil
