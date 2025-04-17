@@ -598,53 +598,8 @@ func testAccountWithErrorHandlerWithCompiler(
 
 	if compilerEnabled && *compile {
 
-		//vmConfig := &vm.Config{
-		//	NativeFunctionsProvider: func() map[string]interpreter.Value {
-		//		funcs := vm.NativeFunctions()
-		//		funcs[accountValueDeclaration.Name] = accountValueDeclaration.Value
-		//		return funcs
-		//	},
-		//}
-		//
-		//vmInstance := compilerUtils.CompileAndPrepareToInvoke(
-		//	t,
-		//	code,
-		//	compilerUtils.CompilerAndVMOptions{
-		//		ParseAndCheckOptions: &ParseAndCheckOptions{
-		//			Config: &sema.Config{
-		//				LocationHandler: NewSingleIdentifierLocationResolver(t),
-		//				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-		//					return baseValueActivation
-		//				},
-		//			},
-		//		},
-		//		VMConfig: vmConfig,
-		//		CompilerConfig: &compiler.Config{
-		//			BuiltinGlobalsProvider: func() map[string]*compiler.Global {
-		//				builtins := compiler.NativeFunctions()
-		//				for _, valueDeclaration := range valueDeclarations {
-		//					name := valueDeclaration.Name
-		//					builtins[name] = &compiler.Global{
-		//						Name: name,
-		//					}
-		//				}
-		//				return builtins
-		//			},
-		//		},
-		//	},
-		//)
-		//
-		//var uuid uint64
-		//uuidHandler := func() (uint64, error) {
-		//	uuid++
-		//	return uuid, nil
-		//}
-		//
-		//vmConfig.WithInterpreterConfig(&interpreter.Config{
-		//	UUIDHandler: uuidHandler,
-		//})
-		//
-		//invokable = test_utils.NewVMInvokable(vmInstance, vmConfig)
+		// TODO: Uncomment once the compiler branch is merged to master.
+		//invokable = test_utils.NewVMInvokable(vmInstance)
 		//storage = vmConfig.Storage()
 
 		// Not supported for now
