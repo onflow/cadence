@@ -37,22 +37,22 @@ func init() {
 		NewBoundNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeIssueFunctionName,
 			sema.Account_StorageCapabilitiesTypeIssueFunctionType,
-			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.StorageCapabilities)
-				accountAddress := getAddressMetaInfoFromValue(args[receiverIndex]).ToAddress()
+				accountAddress := getAccountTypePrivateAddressValue(args[receiverIndex]).ToAddress()
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
 				arguments := args[typeBoundFunctionArgumentOffset:]
 
 				// Get borrow type type-argument
 				typeParameter := typeArguments[0]
-				semaType := interpreter.MustConvertStaticToSemaType(typeParameter, config)
+				semaType := interpreter.MustConvertStaticToSemaType(typeParameter, context)
 
 				return stdlib.AccountStorageCapabilitiesIssue(
 					arguments,
-					config,
+					context,
 					EmptyLocationRange,
-					config.GetAccountHandler(),
+					context.GetAccountHandler(),
 					accountAddress,
 					semaType,
 				)
@@ -66,9 +66,9 @@ func init() {
 		NewBoundNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionName,
 			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionType,
-			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.StorageCapabilities)
-				accountAddress := getAddressMetaInfoFromValue(args[receiverIndex]).ToAddress()
+				accountAddress := getAccountTypePrivateAddressValue(args[receiverIndex]).ToAddress()
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
 				arguments := args[typeBoundFunctionArgumentOffset:]
@@ -86,8 +86,8 @@ func init() {
 				}
 
 				return stdlib.AccountStorageCapabilitiesIssueWithType(
-					config,
-					config.GetAccountHandler(),
+					context,
+					context.GetAccountHandler(),
 					typeValue,
 					accountAddress,
 					targetPathValue,
@@ -103,9 +103,9 @@ func init() {
 		NewBoundNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeGetControllerFunctionName,
 			sema.Account_StorageCapabilitiesTypeGetControllerFunctionType,
-			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.StorageCapabilities)
-				accountAddress := getAddressMetaInfoFromValue(args[receiverIndex]).ToAddress()
+				accountAddress := getAccountTypePrivateAddressValue(args[receiverIndex]).ToAddress()
 
 				// Get capability ID argument
 				capabilityIDValue, ok := args[typeBoundFunctionArgumentOffset].(interpreter.UInt64Value)
@@ -114,8 +114,8 @@ func init() {
 				}
 
 				return stdlib.AccountStorageCapabilitiesGetController(
-					config,
-					config.GetAccountHandler(),
+					context,
+					context.GetAccountHandler(),
 					capabilityIDValue,
 					accountAddress,
 					EmptyLocationRange,
@@ -130,9 +130,9 @@ func init() {
 		NewBoundNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeGetControllersFunctionName,
 			sema.Account_StorageCapabilitiesTypeGetControllersFunctionType,
-			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.StorageCapabilities)
-				accountAddress := getAddressMetaInfoFromValue(args[receiverIndex]).ToAddress()
+				accountAddress := getAccountTypePrivateAddressValue(args[receiverIndex]).ToAddress()
 
 				// Get path argument
 				targetPathValue, ok := args[typeBoundFunctionArgumentOffset].(interpreter.PathValue)
@@ -141,8 +141,8 @@ func init() {
 				}
 
 				return stdlib.AccountStorageCapabilitiesGetControllers(
-					config,
-					config.GetAccountHandler(),
+					context,
+					context.GetAccountHandler(),
 					targetPathValue,
 					accountAddress,
 					EmptyLocationRange,
@@ -157,9 +157,9 @@ func init() {
 		NewBoundNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeForEachControllerFunctionName,
 			sema.Account_StorageCapabilitiesTypeForEachControllerFunctionType,
-			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.StorageCapabilities)
-				accountAddress := getAddressMetaInfoFromValue(args[receiverIndex]).ToAddress()
+				accountAddress := getAccountTypePrivateAddressValue(args[receiverIndex]).ToAddress()
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
 				arguments := args[typeBoundFunctionArgumentOffset:]
@@ -177,8 +177,8 @@ func init() {
 				}
 
 				return stdlib.AccountStorageCapabilitiesForeachController(
-					config,
-					config.GetAccountHandler(),
+					context,
+					context.GetAccountHandler(),
 					functionValue,
 					accountAddress,
 					targetPathValue,

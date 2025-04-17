@@ -1013,8 +1013,8 @@ func (c *Compiler[_, _]) VisitEmitStatement(statement *ast.EmitStatement) (_ str
 	c.withConditionExtendedElaboration(
 		statement,
 		func() {
-			eventType := c.ExtendedElaboration.EmitStatementEventType(statement)
 			c.compileExpression(statement.InvocationExpression)
+			eventType := c.ExtendedElaboration.EmitStatementEventType(statement)
 			typeIndex := c.getOrAddType(eventType)
 			c.codeGen.Emit(opcode.InstructionEmitEvent{
 				Type: typeIndex,
@@ -1390,8 +1390,8 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 		//if invocationType.IsConstructor {
 		//}
 
-		// Load arguments
-		c.loadArguments(expression)
+		// Compile arguments
+		c.compileArguments(expression)
 		// Load function value
 		c.emitVariableLoad(invokedExpr.Identifier.Identifier)
 
@@ -1413,8 +1413,8 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 			funcName = commons.TypeQualifiedName(typeName, invokedExpr.Identifier.Identifier)
 
 			// Calling a type constructor must be invoked statically. e.g: `SomeContract.Foo()`.
-			// Load arguments
-			c.loadArguments(expression)
+			// Compile arguments
+			c.compileArguments(expression)
 			// Load function value
 			c.emitVariableLoad(funcName)
 
@@ -1425,8 +1425,11 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 
 		// Receiver is loaded first. So 'self' is always the zero-th argument.
 		c.compileExpression(invokedExpr.Expression)
-		// Load arguments
-		c.loadArguments(expression)
+
+		// Compile arguments
+		c.compileArguments(expression)
+
+		typeArgs := c.loadTypeArguments(expression)
 
 		// Invocations into the interface code, such as default functions and inherited conditions,
 		// that were synthetically added at the desugar phase, must be static calls.
@@ -1439,8 +1442,6 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 				panic(errors.NewDefaultUserError("invalid function name"))
 			}
 
-			typeArgs := c.loadTypeArguments(expression)
-
 			argumentCount := len(expression.Arguments)
 			if argumentCount >= math.MaxUint16 {
 				panic(errors.NewDefaultUserError("invalid number of arguments"))
@@ -1448,7 +1449,7 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 
 			funcNameConst := c.addStringConst(funcName)
 			c.codeGen.Emit(
-				opcode.InstructionInvokeDynamic{
+				opcode.InstructionInvokeMethodDynamic{
 					Name:     funcNameConst.index,
 					TypeArgs: typeArgs,
 					ArgCount: uint16(argumentCount),
@@ -1460,8 +1461,9 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 			funcName = commons.TypeQualifiedName(typeName, invokedExpr.Identifier.Identifier)
 			c.emitVariableLoad(funcName)
 
-			typeArgs := c.loadTypeArguments(expression)
-			c.codeGen.Emit(opcode.InstructionInvoke{TypeArgs: typeArgs})
+			c.codeGen.Emit(opcode.InstructionInvokeMethodStatic{
+				TypeArgs: typeArgs,
+			})
 		}
 	default:
 		panic(errors.NewUnreachableError())
@@ -1486,7 +1488,7 @@ func isDynamicMethodInvocation(accessedType sema.Type) bool {
 	}
 }
 
-func (c *Compiler[_, _]) loadArguments(expression *ast.InvocationExpression) {
+func (c *Compiler[_, _]) compileArguments(expression *ast.InvocationExpression) {
 	invocationTypes := c.ExtendedElaboration.InvocationExpressionTypes(expression)
 	for index, argument := range expression.Arguments {
 		c.compileExpression(argument.Expression)
@@ -2204,6 +2206,35 @@ func (c *Compiler[_, _]) VisitAttachExpression(_ *ast.AttachExpression) (_ struc
 }
 
 func (c *Compiler[_, _]) emitTransfer(targetType sema.Type) {
+
+	// Optimization: We can omit the transfer in some cases
+	switch lastInstruction := c.codeGen.LastInstruction().(type) {
+	case opcode.InstructionGetConstant:
+		// If the last instruction is a constant load of the same type,
+		// then the transfer is not needed.
+		targetConstantKind := constant.FromSemaType(targetType)
+		constantIndex := lastInstruction.Constant
+		c := c.constants[constantIndex]
+		if c.kind == targetConstantKind {
+			return
+		}
+
+	case opcode.InstructionNewPath:
+		// If the last instruction is a path creation of the same type,
+		// then the transfer is not needed.
+		switch lastInstruction.Domain {
+		case common.PathDomainPublic:
+			if targetType == sema.PublicPathType {
+				return
+			}
+
+		case common.PathDomainStorage:
+			if targetType == sema.StoragePathType {
+				return
+			}
+		}
+	}
+
 	typeIndex := c.getOrAddType(targetType)
 	c.codeGen.Emit(opcode.InstructionTransfer{
 		Type: typeIndex,

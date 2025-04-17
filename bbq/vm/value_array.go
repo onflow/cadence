@@ -34,11 +34,11 @@ func init() {
 			sema.ArrayTypeAppendFunctionName,
 			// TODO:
 			sema.ArrayAppendFunctionType(sema.AnyType),
-			func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				value := arguments[receiverIndex]
 				array := value.(*interpreter.ArrayValue)
 				element := arguments[0]
-				array.Append(config, EmptyLocationRange, element)
+				array.Append(context, EmptyLocationRange, element)
 				return interpreter.Void
 			},
 		),

@@ -35,7 +35,7 @@ func init() {
 		NewBoundNativeFunctionValue(
 			sema.MetaTypeIsSubtypeFunctionName,
 			sema.MetaTypeIsSubtypeFunctionType,
-			func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				typeValue := arguments[receiverIndex].(interpreter.TypeValue)
 
 				otherTypeValue, ok := arguments[typeBoundFunctionArgumentOffset].(interpreter.TypeValue)
@@ -44,7 +44,7 @@ func init() {
 				}
 
 				return interpreter.MetaTypeIsSubType(
-					config,
+					context,
 					typeValue,
 					otherTypeValue,
 				)

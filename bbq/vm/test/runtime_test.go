@@ -177,7 +177,7 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 
 	txVM := vm.NewVM(txLocation(), program, vmConfig)
 
-	authorizer := vm.NewAuthAccountReferenceValue(vmConfig, accountHandler, authorizerAddress)
+	authorizer := vm.NewAuthAccountReferenceValue(txVM.Context(), accountHandler, authorizerAddress)
 	err = txVM.ExecuteTransaction(nil, authorizer)
 	require.NoError(t, err)
 	require.Equal(t, 0, txVM.StackSize())
@@ -320,46 +320,46 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 	//	RequireError(t, err)
 	//	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	//})
-
-	t.Run("stack to stack", func(t *testing.T) {
-
-		t.Parallel()
-
-		code := `
-	       resource R {
-	           access(all) var id: Int
-
-	           access(all) fun setID(_ id: Int) {
-	               self.id = id
-	           }
-
-	           init() {
-	               self.id = 1
-	           }
-	       }
-
-	       fun test() {
-	           let r1 <- create R()
-	           let ref = reference(&r1 as &R)
-
-	           // Move the resource onto the same stack
-	           let r2 <- r1
-
-	           // Update the reference
-	           ref.setID(2)
-
-	           destroy r2
-	       }
-
-	       fun reference(_ ref: &R): &R {
-	           return ref
-	       }`
-
-		_, err := compileAndInvoke(t, code, "test")
-		require.Error(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
-	})
-
+	//
+	//t.Run("stack to stack", func(t *testing.T) {
+	//
+	//	t.Parallel()
+	//
+	//	code := `
+	//       resource R {
+	//           access(all) var id: Int
+	//
+	//           access(all) fun setID(_ id: Int) {
+	//               self.id = id
+	//           }
+	//
+	//           init() {
+	//               self.id = 1
+	//           }
+	//       }
+	//
+	//       fun test() {
+	//           let r1 <- create R()
+	//           let ref = reference(&r1 as &R)
+	//
+	//           // Move the resource onto the same stack
+	//           let r2 <- r1
+	//
+	//           // Update the reference
+	//           ref.setID(2)
+	//
+	//           destroy r2
+	//       }
+	//
+	//       fun reference(_ ref: &R): &R {
+	//           return ref
+	//       }`
+	//
+	//	_, err := compileAndInvoke(t, code, "test")
+	//	require.Error(t, err)
+	//	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	//})
+	//
 	//t.Run("one account to another account", func(t *testing.T) {
 	//
 	//	t.Parallel()

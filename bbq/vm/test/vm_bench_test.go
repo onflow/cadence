@@ -174,7 +174,9 @@ func BenchmarkNewResource(b *testing.B) {
 func BenchmarkNewStructRaw(b *testing.B) {
 
 	storage := interpreter.NewInMemoryStorage(nil)
-	vmConfig := vm.NewConfig(storage)
+	vmConfig := vm.NewContext(
+		vm.NewConfig(storage),
+	)
 
 	fieldValue := interpreter.NewUnmeteredIntValueFromInt64(7)
 
@@ -253,7 +255,7 @@ func BenchmarkContractImport(b *testing.B) {
 		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
 		},
-		ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *interpreter.CompositeValue {
+		ContractValueHandler: func(_ *vm.Config, _ common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		},
 	}
@@ -380,7 +382,7 @@ func BenchmarkMethodCall(b *testing.B) {
 			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 				return importedProgram
 			},
-			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *interpreter.CompositeValue {
+			ContractValueHandler: func(_ *vm.Config, _ common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
 			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
@@ -482,7 +484,7 @@ func BenchmarkMethodCall(b *testing.B) {
 			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 				return importedProgram
 			},
-			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *interpreter.CompositeValue {
+			ContractValueHandler: func(_ *vm.Config, _ common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
 		}

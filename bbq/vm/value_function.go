@@ -139,7 +139,7 @@ func (v FunctionValue) Invoke(invocation interpreter.Invocation) interpreter.Val
 	)
 }
 
-type NativeFunction func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value
+type NativeFunction func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value
 
 type NativeFunctionValue struct {
 	Name string

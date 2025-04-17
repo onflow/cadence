@@ -393,6 +393,7 @@ func baseValueActivation(common.Location) *sema.VariableActivation {
 	// Only need to make the checker happy
 	activation := sema.NewVariableActivation(sema.BaseValueActivation)
 	activation.DeclareValue(stdlib.PanicFunction)
+	activation.DeclareValue(stdlib.AssertFunction)
 	activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
 		"getAccount",
 		stdlib.GetAccountFunctionType,
@@ -588,7 +589,7 @@ func compileAndInvokeWithLogs(
 		funcs := vm.NativeFunctions()
 		funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
 			ParameterCount: len(stdlib.LogFunctionType.Parameters),
-			Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+			Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 				logs = append(logs, arguments[0].String())
 				return interpreter.Void
 			},

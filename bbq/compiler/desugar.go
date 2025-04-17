@@ -534,7 +534,6 @@ func (d *Desugar) desugarCondition(condition ast.Condition, inheritedFrom *sema.
 	case *ast.EmitCondition:
 		emitStmt := (*ast.EmitStatement)(condition)
 
-		// If this is a locally defined condition, do nothing.
 		if inheritedFrom == nil {
 			return emitStmt
 		}
@@ -543,12 +542,6 @@ func (d *Desugar) desugarCondition(condition ast.Condition, inheritedFrom *sema.
 		// the emit statement to be type-qualified.
 		// i.e: `emit Event()` will be re-written as `emit Contract.Event()`.
 		// Otherwise, the compiler can't find the symbol.
-
-		eventType := d.elaboration.EmitStatementEventType(emitStmt)
-
-		// Get the contract in which the event was declared.
-		// This is guaranteed, since events can only be declared in contracts.
-		declaredContract := declaredContract(eventType).(sema.CompositeKindedType)
 
 		eventConstructorInvocation := emitStmt.InvocationExpression
 
@@ -561,6 +554,11 @@ func (d *Desugar) desugarCondition(condition ast.Condition, inheritedFrom *sema.
 		invocationTypes := d.elaboration.InvocationExpressionTypes(eventConstructorInvocation)
 
 		pos := eventConstructorInvocation.StartPosition()
+
+		// Get the contract in which the event was declared.
+		// This is guaranteed, since events can only be declared in contracts.
+		eventType := d.elaboration.EmitStatementEventType(emitStmt)
+		declaredContract := declaredContractType(eventType).(sema.CompositeKindedType)
 
 		memberExpression := ast.NewMemberExpression(
 			d.memoryGauge,
@@ -596,11 +594,8 @@ func (d *Desugar) desugarCondition(condition ast.Condition, inheritedFrom *sema.
 			emitStmt.StartPos,
 		)
 
-		// Inject a static import so the compiler can link the functions.
+		//Inject a static import so the compiler can link the functions.
 		d.addImport(eventType.Location)
-
-		d.elaboration.SetInvocationExpressionTypes(newEventConstructorInvocation, invocationTypes)
-		d.elaboration.SetEmitStatementEventType(newEmitStmt, eventType)
 
 		// TODO: Is there a way to get the type for the constructor
 		//  from the elaboration, rather than manually constructing it here?
@@ -626,6 +621,8 @@ func (d *Desugar) desugarCondition(condition ast.Condition, inheritedFrom *sema.
 			ReturnReference: false,
 		}
 
+		d.elaboration.SetInvocationExpressionTypes(newEventConstructorInvocation, invocationTypes)
+		d.elaboration.SetEmitStatementEventType(newEmitStmt, eventType)
 		d.elaboration.SetMemberExpressionMemberAccessInfo(memberExpression, memberAccessInfo)
 
 		return newEmitStmt
@@ -634,13 +631,13 @@ func (d *Desugar) desugarCondition(condition ast.Condition, inheritedFrom *sema.
 	}
 }
 
-func declaredContract(containedType sema.ContainedType) sema.Type {
+func declaredContractType(containedType sema.ContainedType) sema.Type {
 	containerType := containedType.GetContainerType()
 	if containerType == nil {
 		return containedType
 	}
 
-	return declaredContract(containerType.(sema.ContainedType))
+	return declaredContractType(containerType.(sema.ContainedType))
 }
 
 func (d *Desugar) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) ast.Declaration {

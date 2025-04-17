@@ -50,15 +50,15 @@ type Invokable interface {
 
 type VMInvokable struct {
 	vmInstance *vm.VM
-	*vm.Config
+	*vm.Context
 }
 
 var _ Invokable = &VMInvokable{}
 
-func NewVMInvokable(vmInstance *vm.VM, vmConfig *vm.Config) *VMInvokable {
+func NewVMInvokable(vmInstance *vm.VM) *VMInvokable {
 	return &VMInvokable{
 		vmInstance: vmInstance,
-		Config:     vmConfig,
+		Context:    vmInstance.Context(),
 	}
 }
 
@@ -88,11 +88,7 @@ func ParseCheckAndPrepare(t testing.TB, code string, compile bool) Invokable {
 		},
 	)
 
-	return &VMInvokable{
-		vmInstance: vmInstance,
-		Config:     vmConfig,
-	}
-
+	return NewVMInvokable(vmInstance)
 }
 
 // Below helper functions were copied as-is from `misc_test.go`.
