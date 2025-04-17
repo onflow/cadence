@@ -177,7 +177,7 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 
 	txVM := vm.NewVM(txLocation(), program, vmConfig)
 
-	authorizer := vm.NewAuthAccountReferenceValue(vmConfig, accountHandler, authorizerAddress)
+	authorizer := vm.NewAuthAccountReferenceValue(txVM.Context(), accountHandler, authorizerAddress)
 	err = txVM.ExecuteTransaction(nil, authorizer)
 	require.NoError(t, err)
 	require.Equal(t, 0, txVM.StackSize())

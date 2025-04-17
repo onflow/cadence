@@ -38,7 +38,7 @@ type LinkedGlobals struct {
 func LinkGlobals(
 	location common.Location,
 	program *bbq.InstructionProgram,
-	conf *Config,
+	context *Context,
 	linkedGlobalsCache map[common.Location]LinkedGlobals,
 ) LinkedGlobals {
 
@@ -49,13 +49,13 @@ func LinkGlobals(
 		linkedGlobals, ok := linkedGlobalsCache[importLocation]
 
 		if !ok {
-			importedProgram := conf.ImportHandler(importLocation)
+			importedProgram := context.ImportHandler(importLocation)
 
 			// Link and get all globals at the import location.
 			linkedGlobals = LinkGlobals(
 				importLocation,
 				importedProgram,
-				conf,
+				context,
 				linkedGlobalsCache,
 			)
 
@@ -64,23 +64,23 @@ func LinkGlobals(
 			if importedProgram.Contract != nil {
 				contract := importedProgram.Contract
 				location := common.NewAddressLocation(
-					conf.MemoryGauge,
+					context.MemoryGauge,
 					common.MustBytesToAddress(contract.Address),
 					contract.Name,
 				)
 
 				// TODO: remove this check. This shouldn't be nil ideally.
-				if !contract.IsInterface && conf.ContractValueHandler != nil {
-					var contractValue interpreter.Value = conf.ContractValueHandler(conf, location)
+				if !contract.IsInterface && context.ContractValueHandler != nil {
+					var contractValue interpreter.Value = context.ContractValueHandler(context.Config, location)
 
-					staticType := contractValue.StaticType(conf)
-					semaType, err := interpreter.ConvertStaticToSemaType(conf, staticType)
+					staticType := contractValue.StaticType(context)
+					semaType, err := interpreter.ConvertStaticToSemaType(context, staticType)
 					if err != nil {
 						panic(err)
 					}
 
 					contractValue = interpreter.NewEphemeralReferenceValue(
-						conf,
+						context,
 						interpreter.UnauthorizedAccess,
 						contractValue,
 						semaType,

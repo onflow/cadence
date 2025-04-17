@@ -84,10 +84,10 @@ func init() {
 		NewNativeFunctionValue(
 			commons.LogFunctionName,
 			stdlib.LogFunctionType,
-			func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				return stdlib.Log(
-					config,
-					config,
+					context,
+					context,
 					arguments[0],
 					EmptyLocationRange,
 				)
@@ -99,7 +99,7 @@ func init() {
 		NewNativeFunctionValue(
 			commons.AssertFunctionName,
 			stdlib.AssertFunctionType,
-			func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				result, ok := arguments[0].(interpreter.BoolValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -127,7 +127,7 @@ func init() {
 		NewNativeFunctionValue(
 			commons.PanicFunctionName,
 			stdlib.PanicFunctionType,
-			func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				return stdlib.PanicWithError(
 					arguments[0],
 					EmptyLocationRange,
@@ -140,11 +140,11 @@ func init() {
 		NewNativeFunctionValue(
 			commons.GetAccountFunctionName,
 			stdlib.GetAccountFunctionType,
-			func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				address := arguments[0].(interpreter.AddressValue)
 				return NewAccountReferenceValue(
-					config,
-					config.GetAccountHandler(),
+					context,
+					context.GetAccountHandler(),
 					common.Address(address),
 				)
 			},
@@ -158,9 +158,9 @@ func init() {
 		NewNativeFunctionValue(
 			sema.MetaTypeName,
 			sema.MetaTypeFunctionType,
-			func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				return interpreter.NewTypeValue(
-					config.MemoryGauge,
+					context.MemoryGauge,
 					typeArguments[0],
 				)
 			},
@@ -171,11 +171,11 @@ func init() {
 		NewNativeFunctionValue(
 			sema.ReferenceTypeFunctionName,
 			sema.ReferenceTypeFunctionType,
-			func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				entitlementValues := arguments[0].(*interpreter.ArrayValue)
 				typeValue := arguments[1].(interpreter.TypeValue)
 				return interpreter.ConstructReferenceStaticType(
-					config,
+					context,
 					entitlementValues,
 					EmptyLocationRange,
 					typeValue,
@@ -193,9 +193,9 @@ func init() {
 			NewNativeFunctionValue(
 				declaration.Name,
 				declaration.FunctionType,
-				func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+				func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 					return convert(
-						config.MemoryGauge,
+						context.MemoryGauge,
 						arguments[0],
 						EmptyLocationRange,
 					)
@@ -220,7 +220,7 @@ func registerCommonBuiltinTypeBoundFunctions() {
 				NewBoundNativeFunctionValue(
 					sema.ToStringFunctionName,
 					sema.ToStringFunctionType,
-					func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+					func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
 						value := args[receiverIndex]
 
 						// TODO: memory metering
@@ -264,7 +264,7 @@ var commonBuiltinTypeBoundFunctions = []NativeFunctionValue{
 	NewBoundNativeFunctionValue(
 		sema.IsInstanceFunctionName,
 		sema.IsInstanceFunctionType,
-		func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+		func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 			value := arguments[receiverIndex]
 
 			typeValue, ok := arguments[typeBoundFunctionArgumentOffset].(interpreter.TypeValue)
@@ -272,7 +272,7 @@ var commonBuiltinTypeBoundFunctions = []NativeFunctionValue{
 				panic(errors.NewUnreachableError())
 			}
 
-			return interpreter.IsInstance(config, value, typeValue)
+			return interpreter.IsInstance(context, value, typeValue)
 		},
 	),
 
@@ -280,9 +280,9 @@ var commonBuiltinTypeBoundFunctions = []NativeFunctionValue{
 	NewBoundNativeFunctionValue(
 		sema.GetTypeFunctionName,
 		sema.GetTypeFunctionType,
-		func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+		func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 			value := arguments[receiverIndex]
-			return interpreter.ValueGetType(config, value)
+			return interpreter.ValueGetType(context, value)
 		},
 	),
 

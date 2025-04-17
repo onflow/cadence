@@ -26,7 +26,7 @@ import (
 
 type ReferencedResourceKindedValues map[atree.ValueID]map[*interpreter.EphemeralReferenceValue]struct{}
 
-func (c *Config) MaybeTrackReferencedResourceKindedValue(referenceValue *interpreter.EphemeralReferenceValue) {
+func (c *Context) MaybeTrackReferencedResourceKindedValue(referenceValue *interpreter.EphemeralReferenceValue) {
 	referenceTrackedValue, ok := referenceValue.Value.(interpreter.ReferenceTrackedResourceKindedValue)
 	if !ok {
 		return
@@ -42,7 +42,7 @@ func (c *Config) MaybeTrackReferencedResourceKindedValue(referenceValue *interpr
 	values[referenceValue] = struct{}{}
 }
 
-func (c *Config) CheckInvalidatedResourceOrResourceReference(
+func (c *Context) CheckInvalidatedResourceOrResourceReference(
 	value Value,
 	locationRange interpreter.LocationRange,
 ) {
@@ -79,10 +79,10 @@ func (c *Config) CheckInvalidatedResourceOrResourceReference(
 	}
 }
 
-func (c *Config) ClearReferencedResourceKindedValues(valueID atree.ValueID) {
+func (c *Context) ClearReferencedResourceKindedValues(valueID atree.ValueID) {
 	delete(c.referencedResourceKindedValues, valueID)
 }
 
-func (c *Config) ReferencedResourceKindedValues(valueID atree.ValueID) map[*interpreter.EphemeralReferenceValue]struct{} {
+func (c *Context) ReferencedResourceKindedValues(valueID atree.ValueID) map[*interpreter.EphemeralReferenceValue]struct{} {
 	return c.referencedResourceKindedValues[valueID]
 }

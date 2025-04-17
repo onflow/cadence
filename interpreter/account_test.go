@@ -648,7 +648,7 @@ func testAccountWithErrorHandlerWithCompiler(
 			UUIDHandler: uuidHandler,
 		})
 
-		invokable = test_utils.NewVMInvokable(vmInstance, vmConfig)
+		invokable = test_utils.NewVMInvokable(vmInstance)
 		storage = vmConfig.Storage()
 	} else {
 
