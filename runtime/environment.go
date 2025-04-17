@@ -72,8 +72,6 @@ type Environment interface {
 	)
 	commitStorage(context interpreter.ValueTransferContext) error
 	NewAccountValue(context interpreter.AccountCreationContext, address interpreter.AddressValue) interpreter.Value
-
-	ResolveLocation(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error)
 }
 
 // interpreterEnvironmentReconfigured is the portion of interpreterEnvironment
