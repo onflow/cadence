@@ -189,7 +189,7 @@ func (executor *interpreterScriptExecutor) execute() (val cadence.Value, err err
 		codesAndPrograms,
 	)
 
-	value, inter, err := environment.Interpret(
+	value, inter, err := environment.interpret(
 		location,
 		executor.program,
 		executor.interpret,

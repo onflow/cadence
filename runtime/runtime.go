@@ -582,7 +582,7 @@ func (r *interpreterRuntime) Storage(context Context) (*Storage, *interpreter.In
 		context.CoverageReport,
 	)
 
-	_, inter, err := environment.Interpret(
+	_, inter, err := environment.interpret(
 		location,
 		nil,
 		nil,

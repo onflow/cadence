@@ -61,7 +61,7 @@ type Environment interface {
 		*interpreter.Program,
 		error,
 	)
-	Interpret(
+	interpret(
 		location common.Location,
 		program *interpreter.Program,
 		f InterpretFunc,
@@ -71,7 +71,7 @@ type Environment interface {
 		error,
 	)
 	commitStorage(context interpreter.ValueTransferContext) error
-	NewAccountValue(context interpreter.AccountCreationContext, address interpreter.AddressValue) interpreter.Value
+	newAccountValue(context interpreter.AccountCreationContext, address interpreter.AddressValue) interpreter.Value
 }
 
 // interpreterEnvironmentReconfigured is the portion of interpreterEnvironment
@@ -147,7 +147,7 @@ func (e *interpreterEnvironment) NewInterpreterConfig() *interpreter.Config {
 		UUIDHandler:                    newUUIDHandler(&e.runtimeInterface),
 		ContractValueHandler:           e.newContractValueHandler(),
 		ImportLocationHandler:          e.newImportLocationHandler(),
-		AccountHandler:                 e.NewAccountValue,
+		AccountHandler:                 e.newAccountValue,
 		OnRecordTrace:                  newOnRecordTraceHandler(&e.runtimeInterface),
 		OnResourceOwnerChange:          e.newResourceOwnerChangedHandler(),
 		CompositeTypeHandler:           e.newCompositeTypeHandler(),
@@ -452,7 +452,7 @@ func (e *interpreterEnvironment) newOnStatementHandler() interpreter.OnStatement
 	}
 }
 
-func (e *interpreterEnvironment) NewAccountValue(
+func (e *interpreterEnvironment) newAccountValue(
 	context interpreter.AccountCreationContext,
 	address interpreter.AddressValue,
 ) interpreter.Value {
@@ -630,7 +630,7 @@ func (e *interpreterEnvironment) InterpretContract(
 		e.deployedContractConstructorInvocation = nil
 	}()
 
-	_, inter, err := e.Interpret(location, program, nil)
+	_, inter, err := e.interpret(location, program, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -648,7 +648,7 @@ func (e *interpreterEnvironment) InterpretContract(
 	return
 }
 
-func (e *interpreterEnvironment) Interpret(
+func (e *interpreterEnvironment) interpret(
 	location common.Location,
 	program *interpreter.Program,
 	f InterpretFunc,
