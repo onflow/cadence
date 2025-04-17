@@ -254,3 +254,22 @@ func newOnMeterComputation(i *Interface) interpreter.OnMeterComputationFunc {
 		}
 	}
 }
+
+func newOnEventEmittedHandler(i *Interface) interpreter.OnEventEmittedFunc {
+	return func(
+		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
+		eventValue *interpreter.CompositeValue,
+		eventType *sema.CompositeType,
+	) error {
+		emitEventValue(
+			inter,
+			locationRange,
+			eventType,
+			eventValue,
+			(*i).EmitEvent,
+		)
+
+		return nil
+	}
+}

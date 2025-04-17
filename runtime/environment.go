@@ -148,7 +148,7 @@ func (e *interpreterEnvironment) NewInterpreterConfig() *interpreter.Config {
 	return &interpreter.Config{
 		MemoryGauge:                    e,
 		BaseActivationHandler:          e.getBaseActivation,
-		OnEventEmitted:                 e.newOnEventEmittedHandler(),
+		OnEventEmitted:                 newOnEventEmittedHandler(&e.runtimeInterface),
 		InjectedCompositeFieldsHandler: newInjectedCompositeFieldsHandler(e),
 		UUIDHandler:                    newUUIDHandler(&e.runtimeInterface),
 		ContractValueHandler:           e.newContractValueHandler(),
@@ -857,25 +857,6 @@ func (e *interpreterEnvironment) newContractValueHandler() interpreter.ContractV
 		}
 
 		return loadContractValue(inter, compositeType, e.storage)
-	}
-}
-
-func (e *interpreterEnvironment) newOnEventEmittedHandler() interpreter.OnEventEmittedFunc {
-	return func(
-		inter *interpreter.Interpreter,
-		locationRange interpreter.LocationRange,
-		eventValue *interpreter.CompositeValue,
-		eventType *sema.CompositeType,
-	) error {
-		emitEventValue(
-			inter,
-			locationRange,
-			eventType,
-			eventValue,
-			e.runtimeInterface.EmitEvent,
-		)
-
-		return nil
 	}
 }
 
