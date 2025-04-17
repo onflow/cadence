@@ -650,13 +650,11 @@ func (e *interpreterEnvironment) ResolveLocation(
 	res []ResolvedLocation,
 	err error,
 ) {
-	errors.WrapPanic(func() {
-		res, err = e.runtimeInterface.ResolveLocation(identifiers, location)
-	})
-	if err != nil {
-		err = interpreter.WrappedExternalError(err)
-	}
-	return
+	return ResolveLocationWithInterface(
+		e.runtimeInterface,
+		identifiers,
+		location,
+	)
 }
 
 func (e *interpreterEnvironment) resolveImport(
