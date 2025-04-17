@@ -72,7 +72,7 @@ type Environment interface {
 		*interpreter.Interpreter,
 		error,
 	)
-	CommitStorage(inter *interpreter.Interpreter) error
+	commitStorage(context interpreter.ValueTransferContext) error
 	NewAccountValue(context interpreter.AccountCreationContext, address interpreter.AddressValue) interpreter.Value
 
 	ResolveLocation(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error)
@@ -184,7 +184,7 @@ func (e *interpreterEnvironment) NewInterpreterConfig() *interpreter.Config {
 		// NOTE: ignore e.config.AtreeValidationEnabled here,
 		// and disable storage validation after each value modification.
 		// Instead, storage is validated after commits (if validation is enabled),
-		// see interpreterEnvironment.CommitStorage
+		// see interpreterEnvironment.commitStorage
 		AtreeStorageValidationEnabled:             false,
 		Debugger:                                  e.config.Debugger,
 		OnStatement:                               e.newOnStatementHandler(),
@@ -1137,9 +1137,9 @@ func (e *interpreterEnvironment) newResourceOwnerChangedHandler() interpreter.On
 	return newResourceOwnerChangedHandler(&e.runtimeInterface)
 }
 
-func (e *interpreterEnvironment) CommitStorage(inter *interpreter.Interpreter) error {
+func (e *interpreterEnvironment) commitStorage(context interpreter.ValueTransferContext) error {
 	const commitContractUpdates = true
-	err := e.storage.Commit(inter, commitContractUpdates)
+	err := e.storage.Commit(context, commitContractUpdates)
 	if err != nil {
 		return err
 	}

@@ -220,7 +220,7 @@ func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Valu
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage
-	err = environment.CommitStorage(inter)
+	err = environment.commitStorage(inter)
 	if err != nil {
 		return nil, newError(err, location, codesAndPrograms)
 	}

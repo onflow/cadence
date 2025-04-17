@@ -267,7 +267,7 @@ func (executor *interpreterTransactionExecutor) execute() (err error) {
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage
-	err = environment.CommitStorage(inter)
+	err = environment.commitStorage(inter)
 	if err != nil {
 		return newError(err, location, codesAndPrograms)
 	}
