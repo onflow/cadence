@@ -111,7 +111,7 @@ type interpreterEnvironment struct {
 	stackDepthLimiter                     *stackDepthLimiter
 	compositeValueFunctionsHandlers       stdlib.CompositeValueFunctionsHandlers
 	config                                Config
-	deployedContracts                     map[Location]struct{}
+	*stdlib.SimpleContractAdditionTracker
 }
 
 var _ Environment = &interpreterEnvironment{}
@@ -135,10 +135,11 @@ func NewInterpreterEnvironment(config Config) *interpreterEnvironment {
 	defaultBaseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 
 	env := &interpreterEnvironment{
-		config:                config,
-		checkingEnvironment:   newCheckingEnvironment(),
-		defaultBaseActivation: defaultBaseActivation,
-		stackDepthLimiter:     newStackDepthLimiter(config.StackDepthLimit),
+		config:                        config,
+		checkingEnvironment:           newCheckingEnvironment(),
+		defaultBaseActivation:         defaultBaseActivation,
+		stackDepthLimiter:             newStackDepthLimiter(config.StackDepthLimit),
+		SimpleContractAdditionTracker: stdlib.NewSimpleContractAdditionTracker(),
 	}
 	env.InterpreterConfig = env.NewInterpreterConfig()
 
@@ -285,23 +286,6 @@ func (e *interpreterEnvironment) RecordContractUpdate(
 
 func (e *interpreterEnvironment) ContractUpdateRecorded(location common.AddressLocation) bool {
 	return e.storage.contractUpdateRecorded(location)
-}
-
-func (e *interpreterEnvironment) StartContractAddition(location common.AddressLocation) {
-	if e.deployedContracts == nil {
-		e.deployedContracts = map[Location]struct{}{}
-	}
-
-	e.deployedContracts[location] = struct{}{}
-}
-
-func (e *interpreterEnvironment) EndContractAddition(location common.AddressLocation) {
-	delete(e.deployedContracts, location)
-}
-
-func (e *interpreterEnvironment) IsContractBeingAdded(location common.AddressLocation) bool {
-	_, contains := e.deployedContracts[location]
-	return contains
 }
 
 func (e *interpreterEnvironment) TemporarilyRecordCode(location common.AddressLocation, code []byte) {
