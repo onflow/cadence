@@ -38,11 +38,11 @@ func init() {
 				KeyType:   sema.HashableStructType,
 				ValueType: sema.AnyType,
 			}),
-			func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				value := arguments[receiverIndex]
 				dictionary := value.(*interpreter.DictionaryValue)
 				key := arguments[0]
-				return dictionary.Remove(config, EmptyLocationRange, key)
+				return dictionary.Remove(context, EmptyLocationRange, key)
 			},
 		),
 	)

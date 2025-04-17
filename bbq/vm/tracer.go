@@ -44,11 +44,11 @@ func (ctx Tracer) ReportArrayValueConstructTrace(_ string, _ int, _ time.Duratio
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Config) ReportArrayValueDestroyTrace(_ string, _ int, _ time.Duration) {
+func (c *Context) ReportArrayValueDestroyTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Config) ReportArrayValueConformsToStaticTypeTrace(_ string, _ int, _ time.Duration) {
+func (c *Context) ReportArrayValueConformsToStaticTypeTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -68,15 +68,15 @@ func (ctx Tracer) ReportDictionaryValueGetMemberTrace(_ string, _ int, _ string,
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Config) ReportDictionaryValueConstructTrace(_ string, _ int, _ time.Duration) {
+func (c *Context) ReportDictionaryValueConstructTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Config) ReportDictionaryValueDestroyTrace(_ string, _ int, _ time.Duration) {
+func (c *Context) ReportDictionaryValueDestroyTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Config) ReportDictionaryValueConformsToStaticTypeTrace(_ string, _ int, _ time.Duration) {
+func (c *Context) ReportDictionaryValueConformsToStaticTypeTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -96,15 +96,15 @@ func (ctx Tracer) ReportCompositeValueConstructTrace(_ string, _ string, _ strin
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Config) ReportCompositeValueDestroyTrace(_ string, _ string, _ string, _ time.Duration) {
+func (c *Context) ReportCompositeValueDestroyTrace(_ string, _ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Config) ReportCompositeValueConformsToStaticTypeTrace(_ string, _ string, _ string, _ time.Duration) {
+func (c *Context) ReportCompositeValueConformsToStaticTypeTrace(_ string, _ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Config) ReportCompositeValueRemoveMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
+func (c *Context) ReportCompositeValueRemoveMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 

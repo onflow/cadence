@@ -331,15 +331,17 @@ func TestNewStruct(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, vmInstance.StackSize())
 
+	vmContext := vmInstance.Context()
+
 	require.IsType(t, &interpreter.CompositeValue{}, result)
 	structValue := result.(*interpreter.CompositeValue)
-	compositeType := structValue.StaticType(vmConfig).(*interpreter.CompositeStaticType)
+	compositeType := structValue.StaticType(vmContext).(*interpreter.CompositeStaticType)
 
 	require.Equal(t, "Foo", compositeType.QualifiedIdentifier)
 	require.Equal(
 		t,
 		interpreter.NewUnmeteredIntValueFromInt64(12),
-		structValue.GetMember(vmConfig, vm.EmptyLocationRange, "id"),
+		structValue.GetMember(vmContext, vm.EmptyLocationRange, "id"),
 	)
 }
 
@@ -1082,7 +1084,7 @@ func TestInitializeContract(t *testing.T) {
 	contractValue, err := vmInstance.InitializeContract()
 	require.NoError(t, err)
 
-	fieldValue := contractValue.GetMember(vmConfig, vm.EmptyLocationRange, "status")
+	fieldValue := contractValue.GetMember(vmInstance.Context(), vm.EmptyLocationRange, "status")
 	assert.Equal(t, interpreter.NewUnmeteredStringValue("PENDING"), fieldValue)
 }
 
@@ -1121,7 +1123,7 @@ func TestContractAccessDuringInit(t *testing.T) {
 		contractValue, err := vmInstance.InitializeContract()
 		require.NoError(t, err)
 
-		fieldValue := contractValue.GetMember(vmConfig, vm.EmptyLocationRange, "status")
+		fieldValue := contractValue.GetMember(vmInstance.Context(), vm.EmptyLocationRange, "status")
 		assert.Equal(t, interpreter.NewUnmeteredStringValue("PENDING"), fieldValue)
 	})
 
@@ -1156,7 +1158,7 @@ func TestContractAccessDuringInit(t *testing.T) {
 		contractValue, err := vmInstance.InitializeContract()
 		require.NoError(t, err)
 
-		fieldValue := contractValue.GetMember(vmConfig, vm.EmptyLocationRange, "status")
+		fieldValue := contractValue.GetMember(vmInstance.Context(), vm.EmptyLocationRange, "status")
 		assert.Equal(t, interpreter.NewUnmeteredStringValue("PENDING"), fieldValue)
 	})
 }
@@ -1321,7 +1323,7 @@ func TestContractField(t *testing.T) {
 			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 				return importedProgram
 			},
-			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *interpreter.CompositeValue {
+			ContractValueHandler: func(_ *vm.Config, _ common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
 			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
@@ -1403,7 +1405,7 @@ func TestContractField(t *testing.T) {
 			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 				return importedProgram
 			},
-			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *interpreter.CompositeValue {
+			ContractValueHandler: func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
 			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
@@ -1425,7 +1427,7 @@ func TestContractField(t *testing.T) {
 
 		require.Equal(t, interpreter.NewUnmeteredStringValue("UPDATED"), result)
 
-		fieldValue := importedContractValue.GetMember(vmConfig, vm.EmptyLocationRange, "status")
+		fieldValue := importedContractValue.GetMember(vmInstance.Context(), vm.EmptyLocationRange, "status")
 		assert.Equal(t, interpreter.NewUnmeteredStringValue("UPDATED"), fieldValue)
 	})
 }
@@ -1539,6 +1541,8 @@ func TestTransaction(t *testing.T) {
 		vmConfig := &vm.Config{}
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
+		vmContext := vmInstance.Context()
+
 		err = vmInstance.ExecuteTransaction(nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
@@ -1553,7 +1557,7 @@ func TestTransaction(t *testing.T) {
 		compositeValue := transaction.(*interpreter.CompositeValue)
 
 		// At the beginning, 'a' is uninitialized
-		assert.Nil(t, compositeValue.GetMember(vmConfig, vm.EmptyLocationRange, "a"))
+		assert.Nil(t, compositeValue.GetMember(vmContext, vm.EmptyLocationRange, "a"))
 
 		// Invoke 'prepare'
 		_, err = vmInstance.Invoke(commons.TransactionPrepareFunctionName, transaction)
@@ -1561,7 +1565,11 @@ func TestTransaction(t *testing.T) {
 		require.Equal(t, 0, vmInstance.StackSize())
 
 		// Once 'prepare' is called, 'a' is initialized to "Hello!"
-		assert.Equal(t, interpreter.NewUnmeteredStringValue("Hello!"), compositeValue.GetMember(vmConfig, vm.EmptyLocationRange, "a"))
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredStringValue("Hello!"),
+			compositeValue.GetMember(vmContext, vm.EmptyLocationRange, "a"),
+		)
 
 		// Invoke 'execute'
 		_, err = vmInstance.Invoke(commons.TransactionExecuteFunctionName, transaction)
@@ -1569,7 +1577,11 @@ func TestTransaction(t *testing.T) {
 		require.Equal(t, 0, vmInstance.StackSize())
 
 		// Once 'execute' is called, 'a' is initialized to "Hello, again!"
-		assert.Equal(t, interpreter.NewUnmeteredStringValue("Hello again!"), compositeValue.GetMember(vmConfig, vm.EmptyLocationRange, "a"))
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredStringValue("Hello again!"),
+			compositeValue.GetMember(vmContext, vm.EmptyLocationRange, "a"),
+		)
 	})
 
 	t.Run("with params", func(t *testing.T) {
@@ -1597,6 +1609,8 @@ func TestTransaction(t *testing.T) {
 		vmConfig := &vm.Config{}
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
+		vmContext := vmInstance.Context()
+
 		args := []vm.Value{
 			interpreter.NewUnmeteredStringValue("Hello!"),
 			interpreter.NewUnmeteredStringValue("Hello again!"),
@@ -1616,7 +1630,7 @@ func TestTransaction(t *testing.T) {
 		compositeValue := transaction.(*interpreter.CompositeValue)
 
 		// At the beginning, 'a' is uninitialized
-		assert.Nil(t, compositeValue.GetMember(vmConfig, vm.EmptyLocationRange, "a"))
+		assert.Nil(t, compositeValue.GetMember(vmContext, vm.EmptyLocationRange, "a"))
 
 		// Invoke 'prepare'
 		_, err = vmInstance.Invoke(commons.TransactionPrepareFunctionName, transaction)
@@ -1624,7 +1638,11 @@ func TestTransaction(t *testing.T) {
 		require.Equal(t, 0, vmInstance.StackSize())
 
 		// Once 'prepare' is called, 'a' is initialized to "Hello!"
-		assert.Equal(t, interpreter.NewUnmeteredStringValue("Hello!"), compositeValue.GetMember(vmConfig, vm.EmptyLocationRange, "a"))
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredStringValue("Hello!"),
+			compositeValue.GetMember(vmContext, vm.EmptyLocationRange, "a"),
+		)
 
 		// Invoke 'execute'
 		_, err = vmInstance.Invoke(commons.TransactionExecuteFunctionName, transaction)
@@ -1632,7 +1650,11 @@ func TestTransaction(t *testing.T) {
 		require.Equal(t, 0, vmInstance.StackSize())
 
 		// Once 'execute' is called, 'a' is initialized to "Hello, again!"
-		assert.Equal(t, interpreter.NewUnmeteredStringValue("Hello again!"), compositeValue.GetMember(vmConfig, vm.EmptyLocationRange, "a"))
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredStringValue("Hello again!"),
+			compositeValue.GetMember(vmContext, vm.EmptyLocationRange, "a"),
+		)
 	})
 
 	t.Run("conditions with execute", func(t *testing.T) {
@@ -1711,7 +1733,7 @@ func TestTransaction(t *testing.T) {
 			funcs := vm.NativeFunctions()
 			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
 				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+				Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
@@ -1801,7 +1823,7 @@ func TestTransaction(t *testing.T) {
 			funcs := vm.NativeFunctions()
 			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
 				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+				Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
@@ -1896,7 +1918,7 @@ func TestTransaction(t *testing.T) {
 			funcs := vm.NativeFunctions()
 			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
 				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+				Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
@@ -1992,7 +2014,7 @@ func TestTransaction(t *testing.T) {
 			funcs := vm.NativeFunctions()
 			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
 				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+				Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
@@ -2108,7 +2130,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 				return importedProgram
 			},
-			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *interpreter.CompositeValue {
+			ContractValueHandler: func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
 			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
@@ -2267,9 +2289,9 @@ func TestInterfaceMethodCall(t *testing.T) {
 
 		bazProgram := bazCompiler.Compile()
 
-		implProgramVMConfig := &vm.Config{
+		implProgramvmConfig := &vm.Config{
 			ImportHandler: bazImportHandler,
-			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *interpreter.CompositeValue {
+			ContractValueHandler: func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
 				switch location {
 				case fooLocation:
 					return fooContractValue
@@ -2302,7 +2324,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 			},
 		}
 
-		bazVM := vm.NewVM(bazLocation, bazProgram, implProgramVMConfig)
+		bazVM := vm.NewVM(bazLocation, bazProgram, implProgramvmConfig)
 		bazContractValue, err := bazVM.InitializeContract()
 		require.NoError(t, err)
 
@@ -2356,7 +2378,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 
 		vmConfig := &vm.Config{
 			ImportHandler: scriptImportHandler,
-			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *interpreter.CompositeValue {
+			ContractValueHandler: func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
 				switch location {
 				case barLocation:
 					return barContractValue
@@ -2460,7 +2482,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 
 		vmConfig = &vm.Config{
 			ImportHandler: scriptImportHandler,
-			ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *interpreter.CompositeValue {
+			ContractValueHandler: func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
 				switch location {
 				case fooLocation:
 					return fooContractValue
@@ -2527,6 +2549,8 @@ func TestArrayLiteral(t *testing.T) {
 		vmConfig := &vm.Config{}
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
+		vmContext := vmInstance.Context()
+
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
@@ -2537,12 +2561,12 @@ func TestArrayLiteral(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredIntValueFromInt64(2),
-			array.Get(vmConfig, vm.EmptyLocationRange, 0),
+			array.Get(vmContext, vm.EmptyLocationRange, 0),
 		)
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredIntValueFromInt64(5),
-			array.Get(vmConfig, vm.EmptyLocationRange, 1),
+			array.Get(vmContext, vm.EmptyLocationRange, 1),
 		)
 	})
 
@@ -2586,6 +2610,7 @@ func TestArrayLiteral(t *testing.T) {
 
 		vmConfig := &vm.Config{}
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		vmContext := vmInstance.Context()
 
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
@@ -2594,9 +2619,9 @@ func TestArrayLiteral(t *testing.T) {
 		require.IsType(t, &interpreter.ArrayValue{}, result)
 		array := result.(*interpreter.ArrayValue)
 		assert.Equal(t, 3, array.Count())
-		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), array.Get(vmConfig, vm.EmptyLocationRange, 0))
-		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(5), array.Get(vmConfig, vm.EmptyLocationRange, 1))
-		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(8), array.Get(vmConfig, vm.EmptyLocationRange, 2))
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), array.Get(vmContext, vm.EmptyLocationRange, 0))
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(5), array.Get(vmContext, vm.EmptyLocationRange, 1))
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(8), array.Get(vmContext, vm.EmptyLocationRange, 2))
 	})
 }
 
@@ -2619,6 +2644,7 @@ func TestDictionaryLiteral(t *testing.T) {
 
 		vmConfig := &vm.Config{}
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		vmContext := vmInstance.Context()
 
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
@@ -2632,7 +2658,7 @@ func TestDictionaryLiteral(t *testing.T) {
 				interpreter.NewUnmeteredIntValueFromInt64(2),
 			),
 			dictionary.GetKey(
-				vmConfig,
+				vmContext,
 				vm.EmptyLocationRange,
 				interpreter.NewUnmeteredStringValue("b"),
 			),
@@ -2642,7 +2668,7 @@ func TestDictionaryLiteral(t *testing.T) {
 				interpreter.NewUnmeteredIntValueFromInt64(5),
 			),
 			dictionary.GetKey(
-				vmConfig,
+				vmContext,
 				vm.EmptyLocationRange,
 				interpreter.NewUnmeteredStringValue("e"),
 			),
@@ -2723,19 +2749,21 @@ func TestResource(t *testing.T) {
 
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
+		vmContext := vmInstance.Context()
+
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
 		require.IsType(t, &interpreter.CompositeValue{}, result)
 		structValue := result.(*interpreter.CompositeValue)
-		compositeType := structValue.StaticType(vmConfig).(*interpreter.CompositeStaticType)
+		compositeType := structValue.StaticType(vmContext).(*interpreter.CompositeStaticType)
 
 		require.Equal(t, "Foo", compositeType.QualifiedIdentifier)
 		require.Equal(
 			t,
 			interpreter.NewUnmeteredIntValueFromInt64(5),
-			structValue.GetMember(vmConfig, vm.EmptyLocationRange, "id"),
+			structValue.GetMember(vmContext, vm.EmptyLocationRange, "id"),
 		)
 	})
 
@@ -3456,14 +3484,14 @@ func TestFunctionPreConditions(t *testing.T) {
 			return map[string]vm.Value{
 				commons.LogFunctionName: vm.NativeFunctionValue{
 					ParameterCount: len(stdlib.LogFunctionType.Parameters),
-					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+					Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 						logs = append(logs, arguments[0].String())
 						return interpreter.Void
 					},
 				},
 				commons.PanicFunctionName: vm.NativeFunctionValue{
 					ParameterCount: len(stdlib.PanicFunctionType.Parameters),
-					Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+					Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 						messageValue, ok := arguments[0].(*interpreter.StringValue)
 						if !ok {
 							panic(errors.NewUnreachableError())
@@ -3540,7 +3568,7 @@ func TestFunctionPreConditions(t *testing.T) {
 			funcs := vm.NativeFunctions()
 			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
 				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+				Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
@@ -3923,7 +3951,7 @@ func TestFunctionPostConditions(t *testing.T) {
 			funcs := vm.NativeFunctions()
 			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
 				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+				Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
@@ -4407,7 +4435,7 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 			funcs := vm.NativeFunctions()
 			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
 				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+				Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
@@ -4499,7 +4527,7 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 			funcs := vm.NativeFunctions()
 			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
 				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+				Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
@@ -4595,7 +4623,7 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 			funcs := vm.NativeFunctions()
 			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
 				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+				Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
@@ -6544,7 +6572,7 @@ func TestContractClosure(t *testing.T) {
 		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
 		},
-		ContractValueHandler: func(vmConfig *vm.Config, location common.Location) *interpreter.CompositeValue {
+		ContractValueHandler: func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		},
 		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {

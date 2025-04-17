@@ -309,7 +309,7 @@ func compiledFTTransfer(tb testing.TB) {
 
 		setupTxVM := vm.NewVM(txLocation, program, vmConfig)
 
-		authorizer := vm.NewAuthAccountReferenceValue(vmConfig, accountHandler, address)
+		authorizer := vm.NewAuthAccountReferenceValue(setupTxVM.Context(), accountHandler, address)
 		err := setupTxVM.ExecuteTransaction(nil, authorizer)
 		require.NoError(tb, err)
 		require.Equal(tb, 0, setupTxVM.StackSize())
@@ -342,7 +342,7 @@ func compiledFTTransfer(tb testing.TB) {
 		interpreter.NewUnmeteredUFix64Value(total),
 	}
 
-	mintTxAuthorizer := vm.NewAuthAccountReferenceValue(vmConfig, accountHandler, contractsAddress)
+	mintTxAuthorizer := vm.NewAuthAccountReferenceValue(mintTxVM.Context(), accountHandler, contractsAddress)
 	err := mintTxVM.ExecuteTransaction(mintTxArgs, mintTxAuthorizer)
 	require.NoError(tb, err)
 	require.Equal(tb, 0, mintTxVM.StackSize())
@@ -374,7 +374,7 @@ func compiledFTTransfer(tb testing.TB) {
 		interpreter.AddressValue(receiverAddress),
 	}
 
-	tokenTransferTxAuthorizer := vm.NewAuthAccountReferenceValue(vmConfig, accountHandler, senderAddress)
+	tokenTransferTxAuthorizer := vm.NewAuthAccountReferenceValue(tokenTransferTxVM.Context(), accountHandler, senderAddress)
 
 	var transferCount int
 

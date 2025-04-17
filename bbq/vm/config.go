@@ -21,8 +21,6 @@ package vm
 import (
 	"fmt"
 
-	"github.com/onflow/atree"
-
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -41,59 +39,29 @@ type Config struct {
 	common.MemoryGauge
 	commons.ImportHandler
 	ContractValueHandler
+	NativeFunctionsProvider
 	Tracer
 
-	accountHandler stdlib.AccountHandler
-
-	NativeFunctionsProvider
+	storage           interpreter.Storage
 	interpreterConfig *interpreter.Config
 
-	invokeFunction func(function Value, arguments []Value) (Value, error)
-
-	// TODO: Move these to a 'shared state'?
-	storage                                     interpreter.Storage
-	CapabilityControllerIterations              map[interpreter.AddressPath]int
-	mutationDuringCapabilityControllerIteration bool
-	referencedResourceKindedValues              ReferencedResourceKindedValues
-
+	accountHandler stdlib.AccountHandler
+	TypeLoader     func(location common.Location, typeID interpreter.TypeID) sema.ContainedType
 	// OnEventEmitted is triggered when an event is emitted by the program
 	OnEventEmitted OnEventEmittedFunc
-
-	TypeLoader func(location common.Location, typeID interpreter.TypeID) sema.ContainedType
 
 	debugEnabled bool
 }
 
-var _ interpreter.ReferenceTracker = &Config{}
-var _ interpreter.ValueStaticTypeContext = &Config{}
-var _ interpreter.ValueTransferContext = &Config{}
-var _ interpreter.StorageContext = &Config{}
-var _ interpreter.StaticTypeConversionHandler = &Config{}
-var _ interpreter.ValueComparisonContext = &Config{}
-var _ interpreter.InvocationContext = &Config{}
-var _ stdlib.Logger = &Config{}
-
 func NewConfig(storage interpreter.Storage) *Config {
 	return &Config{
-		storage:              storage,
-		MemoryGauge:          nil,
-		ImportHandler:        nil,
-		ContractValueHandler: nil,
-		accountHandler:       nil,
-
-		CapabilityControllerIterations:              make(map[interpreter.AddressPath]int),
-		mutationDuringCapabilityControllerIteration: false,
-		referencedResourceKindedValues:              ReferencedResourceKindedValues{},
+		storage: storage,
 	}
 }
 
 func (c *Config) WithAccountHandler(handler stdlib.AccountHandler) *Config {
 	c.accountHandler = handler
 	return c
-}
-
-func (c *Config) InterpreterConfig() *interpreter.Config {
-	return c.interpreterConfig
 }
 
 func (c *Config) WithInterpreterConfig(config *interpreter.Config) *Config {
@@ -114,41 +82,12 @@ func (c *Config) MeterMemory(usage common.MemoryUsage) error {
 	return c.MemoryGauge.MeterMemory(usage)
 }
 
+func (c *Config) InterpreterConfig() *interpreter.Config {
+	return c.interpreterConfig
+}
+
 func (c *Config) Storage() interpreter.Storage {
 	return c.storage
-}
-
-func (c *Config) ReadStored(storageAddress common.Address, domain common.StorageDomain, identifier interpreter.StorageMapKey) interpreter.Value {
-	accountStorage := c.storage.GetDomainStorageMap(
-		c,
-		storageAddress,
-		domain,
-		false,
-	)
-	if accountStorage == nil {
-		return nil
-	}
-
-	return accountStorage.ReadValue(c, identifier)
-}
-
-func (c *Config) WriteStored(
-	storageAddress common.Address,
-	domain common.StorageDomain,
-	key interpreter.StorageMapKey,
-	value interpreter.Value,
-) (existed bool) {
-	accountStorage := c.storage.GetDomainStorageMap(c, storageAddress, domain, true)
-
-	return accountStorage.WriteValue(
-		c,
-		key,
-		value,
-	)
-}
-
-func (c *Config) IsSubType(subType interpreter.StaticType, superType interpreter.StaticType) bool {
-	return interpreter.IsSubType(c, subType, superType)
 }
 
 func (c *Config) GetInterfaceType(
@@ -275,49 +214,7 @@ func (c *Config) GetEntitlementMapType(typeID interpreter.TypeID) (*sema.Entitle
 	}
 }
 
-func (c *Config) MaybeValidateAtreeValue(v atree.Value) {
-	//TODO
-	// NO-OP: no validation happens for now
-}
-
-func (c *Config) MaybeValidateAtreeStorage() {
-	//TODO
-	// NO-OP: no validation happens for now
-}
-
-func (c *Config) RecordStorageMutation() {
-	// TODO
-	// NO-OP
-}
-
-func (c *Config) IsTypeInfoRecovered(location common.Location) bool {
-	//TODO
-	return false
-}
-
 func (c *Config) ReportComputation(compKind common.ComputationKind, intensity uint) {
-	//TODO
-}
-
-func (c *Config) OnResourceOwnerChange(resource *interpreter.CompositeValue, oldOwner common.Address, newOwner common.Address) {
-	//TODO
-}
-
-func (c *Config) WithMutationPrevention(valueID atree.ValueID, f func()) {
-	f()
-	//TODO
-}
-
-func (c *Config) ValidateMutation(valueID atree.ValueID, locationRange interpreter.LocationRange) {
-	//TODO
-}
-
-func (c *Config) GetCompositeValueFunctions(v *interpreter.CompositeValue, locationRange interpreter.LocationRange) *interpreter.FunctionOrderedMap {
-	//TODO
-	return nil
-}
-
-func (c *Config) EnforceNotResourceDestruction(valueID atree.ValueID, locationRange interpreter.LocationRange) {
 	//TODO
 }
 
@@ -328,11 +225,6 @@ func (c *Config) InjectedCompositeFieldsHandler() interpreter.InjectedCompositeF
 	return c.interpreterConfig.InjectedCompositeFieldsHandler
 }
 
-func (c *Config) GetMemberAccessContextForLocation(_ common.Location) interpreter.MemberAccessibleContext {
-	//TODO
-	return c
-}
-
 func (c *Config) AccountHandler() interpreter.AccountHandlerFunc {
 	return c.interpreterConfig.AccountHandler
 }
@@ -341,54 +233,9 @@ func (c *Config) GetAccountHandler() stdlib.AccountHandler {
 	return c.accountHandler
 }
 
-func (c *Config) StorageMutatedDuringIteration() bool {
-	//TODO
-	return false
-}
-
-func (c *Config) InStorageIteration() bool {
-	//TODO
-	return false
-}
-
-func (c *Config) SetInStorageIteration(b bool) {
-	//TODO
-}
-
-func (c *Config) WithResourceDestruction(valueID atree.ValueID, locationRange interpreter.LocationRange, f func()) {
-	f()
-	//TODO
-}
-
-func (c *Config) GetCapabilityControllerIterations() map[interpreter.AddressPath]int {
-	return c.CapabilityControllerIterations
-}
-
-func (c *Config) SetMutationDuringCapabilityControllerIteration() {
-	c.mutationDuringCapabilityControllerIteration = true
-}
-
-func (c *Config) MutationDuringCapabilityControllerIteration() bool {
-	return c.mutationDuringCapabilityControllerIteration
-}
-
 func (c *Config) GetContractValue(contractLocation common.AddressLocation) (*interpreter.CompositeValue, error) {
 	//TODO
 	return nil, nil
-}
-
-func (c *Config) SetAttachmentIteration(composite *interpreter.CompositeValue, state bool) bool {
-	//TODO
-	return false
-}
-
-func (c *Config) RecoverErrors(onError func(error)) {
-	//TODO
-}
-
-func (c *Config) CurrentEntitlementMappedValue() interpreter.Authorization {
-	//TODO
-	return nil
 }
 
 func (c *Config) ValidateAccountCapabilitiesGetHandler() interpreter.ValidateAccountCapabilitiesGetHandlerFunc {
@@ -407,27 +254,12 @@ func (c *Config) GetCapabilityCheckHandler() interpreter.CapabilityCheckHandlerF
 	return c.interpreterConfig.CapabilityCheckHandler
 }
 
-func (c *Config) GetValueOfVariable(name string) interpreter.Value {
+func (c *Config) EmitEventValue(
+	event *interpreter.CompositeValue,
+	eventType *sema.CompositeType,
+	locationRange interpreter.LocationRange,
+) {
 	//TODO
-	panic(errors.NewUnreachableError())
-}
-
-func (c *Config) GetLocation() common.Location {
-	//TODO
-	panic(errors.NewUnreachableError())
-}
-
-func (c *Config) CallStack() []interpreter.Invocation {
-	//TODO
-	return nil
-}
-
-func (c *Config) EmitEventValue(event *interpreter.CompositeValue, eventType *sema.CompositeType, locationRange interpreter.LocationRange) {
-	//TODO
-}
-
-func (c *Config) GetResourceDestructionContextForLocation(location common.Location) interpreter.ResourceDestructionContext {
-	return c
 }
 
 func (c *Config) EmitEvent(
@@ -445,18 +277,12 @@ func (c *Config) ProgramLog(message string, locationRange interpreter.LocationRa
 	return nil
 }
 
-func (c *Config) InvokeFunction(
-	fn interpreter.FunctionValue,
-	arguments []interpreter.Value,
-	_ []sema.Type,
-	_ interpreter.LocationRange,
-) interpreter.Value {
-	result, err := c.invokeFunction(fn, arguments)
-	if err != nil {
-		panic(err)
-	}
-
-	return result
+func (c *Config) OnResourceOwnerChange(
+	resource *interpreter.CompositeValue,
+	oldOwner common.Address,
+	newOwner common.Address,
+) {
+	//TODO
 }
 
 type ContractValueHandler func(conf *Config, location common.Location) *interpreter.CompositeValue

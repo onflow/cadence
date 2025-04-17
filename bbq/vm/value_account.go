@@ -31,7 +31,7 @@ type AccountIDGenerator interface {
 }
 
 func NewAuthAccountReferenceValue(
-	conf *Config,
+	conf *Context,
 	handler stdlib.AccountHandler,
 	address common.Address,
 ) interpreter.Value {
@@ -45,7 +45,7 @@ func NewAuthAccountReferenceValue(
 }
 
 func NewAccountReferenceValue(
-	conf *Config,
+	conf *Context,
 	handler stdlib.AccountHandler,
 	address common.Address,
 ) interpreter.Value {
