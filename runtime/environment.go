@@ -73,19 +73,10 @@ type Environment interface {
 	newAccountValue(context interpreter.AccountCreationContext, address interpreter.AddressValue) interpreter.Value
 }
 
-// TODO: improve naming
-type interfaceImpl struct {
-	Interface
-}
-
-func (i interfaceImpl) ProgramLog(message string, _ interpreter.LocationRange) error {
-	return i.Interface.ProgramLog(message)
-}
-
 // interpreterEnvironmentReconfigured is the portion of interpreterEnvironment
 // that gets reconfigured by interpreterEnvironment.Configure
 type interpreterEnvironmentReconfigured struct {
-	interfaceImpl
+	Interface
 	storage        *Storage
 	coverageReport *CoverageReport
 }
@@ -586,4 +577,8 @@ func (e *interpreterEnvironment) getBaseActivation(
 		baseActivation = e.defaultBaseActivation
 	}
 	return
+}
+
+func (e *interpreterEnvironment) ProgramLog(message string, _ interpreter.LocationRange) error {
+	return e.Interface.ProgramLog(message)
 }
