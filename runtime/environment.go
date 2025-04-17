@@ -1136,20 +1136,8 @@ func (e *interpreterEnvironment) newResourceOwnerChangedHandler() interpreter.On
 }
 
 func (e *interpreterEnvironment) commitStorage(context interpreter.ValueTransferContext) error {
-	const commitContractUpdates = true
-	err := e.storage.Commit(context, commitContractUpdates)
-	if err != nil {
-		return err
-	}
-
-	if e.config.AtreeValidationEnabled {
-		err = e.storage.CheckHealth()
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	checkStorageHealth := e.config.AtreeValidationEnabled
+	return CommitStorage(context, e.storage, checkStorageHealth)
 }
 
 // getBaseValueActivation returns the base activation for the given location.
