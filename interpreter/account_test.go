@@ -599,6 +599,44 @@ func testAccountWithErrorHandlerWithCompiler(
 	if compilerEnabled && *compile {
 
 		// TODO: Uncomment once the compiler branch is merged to master.
+		//vmConfig := &vm.Config{
+		//	NativeFunctionsProvider: func() map[string]interpreter.Value {
+		//		funcs := vm.NativeFunctions()
+		//		funcs[accountValueDeclaration.Name] = accountValueDeclaration.Value
+		//		return funcs
+		//	},
+		//}
+		//
+		//vmInstance := compilerUtils.CompileAndPrepareToInvoke(
+		//	t,
+		//	code,
+		//	compilerUtils.CompilerAndVMOptions{
+		//		ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+		//			ParseAndCheckOptions: &ParseAndCheckOptions{
+		//				Config: &sema.Config{
+		//					LocationHandler: NewSingleIdentifierLocationResolver(t),
+		//					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+		//						return baseValueActivation
+		//					},
+		//				},
+		//			},
+		//			CompilerConfig: &compiler.Config{
+		//				BuiltinGlobalsProvider: func() map[string]*compiler.Global {
+		//					builtins := compiler.NativeFunctions()
+		//					for _, valueDeclaration := range valueDeclarations {
+		//						name := valueDeclaration.Name
+		//						builtins[name] = &compiler.Global{
+		//							Name: name,
+		//						}
+		//					}
+		//					return builtins
+		//				},
+		//			},
+		//		},
+		//		VMConfig: vmConfig,
+		//	},
+		//)
+		//
 		//invokable = test_utils.NewVMInvokable(vmInstance)
 		//storage = vmConfig.Storage()
 
