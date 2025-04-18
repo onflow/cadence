@@ -30,12 +30,16 @@ import (
 func init() {
 	RegisterTypeBoundFunction(
 		commons.TypeQualifierArray,
-		NewNativeFunctionValue(
-			sema.GetTypeFunctionName,
-			sema.GetTypeFunctionType,
-			func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value {
+		NewBoundNativeFunctionValue(
+			sema.ArrayTypeAppendFunctionName,
+			// TODO:
+			sema.ArrayAppendFunctionType(sema.AnyType),
+			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				value := arguments[receiverIndex]
-				return interpreter.ValueGetType(config, value)
+				array := value.(*interpreter.ArrayValue)
+				element := arguments[0]
+				array.Append(context, EmptyLocationRange, element)
+				return interpreter.Void
 			},
 		),
 	)

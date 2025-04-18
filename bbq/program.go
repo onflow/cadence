@@ -18,13 +18,16 @@
 
 package bbq
 
-import "github.com/onflow/cadence/bbq/opcode"
+import (
+	"github.com/onflow/cadence/bbq/constant"
+	"github.com/onflow/cadence/bbq/opcode"
+)
 
 type Program[E, T any] struct {
 	Contract  *Contract
 	Imports   []Import
 	Functions []Function[E]
-	Constants []Constant
+	Constants []constant.Constant
 	Variables []Variable
 	Types     []T
 }

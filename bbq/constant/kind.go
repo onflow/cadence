@@ -16,20 +16,24 @@
  * limitations under the License.
  */
 
-package constantkind
+package constant
 
 import (
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 )
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=ConstantKind
+//go:generate go run golang.org/x/tools/cmd/stringer -type=Kind
 
-type ConstantKind uint8
+type Kind uint8
 
 const (
-	Unknown ConstantKind = iota
+	Unknown Kind = iota
 	String
+	Address
+	_
+	_
+	_
+	_
 
 	// Int*
 	Int
@@ -81,10 +85,13 @@ const (
 	_ // future: UFix256
 )
 
-func FromSemaType(ty sema.Type) ConstantKind {
+func FromSemaType(ty sema.Type) Kind {
 	switch ty {
 	case sema.StringType:
 		return String
+
+	case sema.TheAddressType:
+		return Address
 
 	// Int*
 	case sema.IntType, sema.IntegerType:
@@ -139,6 +146,6 @@ func FromSemaType(ty sema.Type) ConstantKind {
 		return UFix64
 
 	default:
-		panic(errors.NewUnreachableError())
+		return Unknown
 	}
 }

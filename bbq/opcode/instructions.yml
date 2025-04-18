@@ -9,8 +9,8 @@
   description:
     Pushes the value of the local at the given index onto the stack.
   operands:
-    - name: "localIndex"
-      type: "index"
+    - name: "local"
+      type: "localIndex"
   valueEffects:
     push:
       - name: "value"
@@ -20,8 +20,8 @@
   description:
     Pops a value off the stack and then sets the local at the given index to that value.
   operands:
-    - name: "localIndex"
-      type: "index"
+    - name: "local"
+      type: "localIndex"
   valueEffects:
     pop:
       - name: "value"
@@ -33,8 +33,8 @@
   description:
     Pushes the value of the upvalue at the given index onto the stack.
   operands:
-    - name: "upvalueIndex"
-      type: "index"
+    - name: "upvalue"
+      type: "upvalueIndex"
   valueEffects:
     push:
       - name: "value"
@@ -44,8 +44,8 @@
   description:
     Pops a value off the stack and then sets the upvalue at the given index to that value.
   operands:
-    - name: "upvalueIndex"
-      type: "index"
+    - name: "upvalue"
+      type: "upvalueIndex"
   valueEffects:
     pop:
       - name: "value"
@@ -57,8 +57,8 @@
   description:
     Pushes the value of the global at the given index onto the stack.
   operands:
-    - name: "globalIndex"
-      type: "index"
+    - name: "global"
+      type: "globalIndex"
   valueEffects:
     push:
       - name: "value"
@@ -68,8 +68,8 @@
   description:
     Pops a value off the stack and then sets the global at the given index to that value.
   operands:
-    - name: "globalIndex"
-      type: "index"
+    - name: "global"
+      type: "globalIndex"
   valueEffects:
     pop:
       - name: "value"
@@ -82,8 +82,8 @@
     Pops a value off the stack, the target,
     and then pushes the value of the field at the given index onto the stack.
   operands:
-    - name: "fieldNameIndex"
-      type: "index"
+    - name: "fieldName"
+      type: "constantIndex"
   valueEffects:
     pop:
       - name: "target"
@@ -97,8 +97,8 @@
     Pops two values off the stack, the target and the value,
     and then sets the field at the given index of the target to the value.
   operands:
-    - name: "fieldNameIndex"
-      type: "index"
+    - name: "fieldName"
+      type: "constantIndex"
   valueEffects:
     pop:
       - name: "target"
@@ -158,37 +158,37 @@
       - name: "value"
         type: "value"
 
-- name: "path"
-  description: Creates a new path with the given domain and identifier and then pushes it onto the stack.
-  operands:
-    - name: "domain"
-      type: "pathDomain"
-    - name: "identifierIndex"
-      type: "index"
-  valueEffects:
-    push:
-      - name: "value"
-        type: "path"
-
 - name: "new"
   description: Creates a new instance of the given kind and type and then pushes it onto the stack.
   operands:
     - name: "kind"
       type: "compositeKind"
-    - name: "typeIndex"
-      type: "index"
+    - name: "type"
+      type: "typeIndex"
   valueEffects:
     push:
       - name: "value"
         type: "value"
+
+- name: "newPath"
+  description: Creates a new path with the given domain and identifier and then pushes it onto the stack.
+  operands:
+    - name: "domain"
+      type: "pathDomain"
+    - name: "identifier"
+      type: "constantIndex"
+  valueEffects:
+    push:
+      - name: "value"
+        type: "path"
 
 - name: "newArray"
   description:
     Pops the given number of elements off the stack, creates a new array with the given type, size, and elements,
     and then pushes it onto the stack.
   operands:
-    - name: "typeIndex"
-      type: "index"
+    - name: "type"
+      type: "typeIndex"
     - name: "size"
       type: "size"
     - name: "isResource"
@@ -209,8 +209,8 @@
     creates a new dictionary with the given type, size, and entries,
     and then pushes it onto the stack.
   operands:
-    - name: "typeIndex"
-      type: "index"
+    - name: "type"
+      type: "typeIndex"
     - name: "size"
       type: "size"
     - name: "isResource"
@@ -231,8 +231,8 @@
     Pops a value off the stack, creates a new reference with the given type,
     and then pushes it onto the stack.
   operands:
-    - name: "typeIndex"
-      type: "index"
+    - name: "type"
+      type: "typeIndex"
     - name: "isImplicit"
       type: "bool"
   valueEffects:
@@ -246,8 +246,8 @@
 - name: "getConstant"
   description: Pushes the constant at the given index onto the stack.
   operands:
-    - name: "constantIndex"
-      type: "index"
+    - name: "constant"
+      type: "constantIndex"
   valueEffects:
     push:
       - name: "value"
@@ -256,8 +256,8 @@
 - name: "newClosure"
   description: Creates a new closure with the function at the given index and pushes it onto the stack.
   operands:
-    - name: "functionIndex"
-      type: "index"
+    - name: "function"
+      type: "functionIndex"
     - name: "upvalues"
       type: "upvalues"
   valueEffects:
@@ -273,7 +273,7 @@
     and then pushes the result back on to the stack.
   operands:
     - name: "typeArgs"
-      type: "indices"
+      type: "typeIndices"
   valueEffects:
     pop:
       - name: "arguments"
@@ -286,15 +286,36 @@
   controlEffects:
     - call:
 
-- name: "invokeDynamic"
+- name: "invokeMethodStatic"
   description:
-    Pops the arguments off the stack, invokes the function with the given name and argument count,
+    Pops the method and arguments off the stack, invokes the method with the arguments,
     and then pushes the result back on to the stack.
+    The first argument is the receiver of the method.
   operands:
-    - name: "nameIndex"
-      type: "index"
     - name: "typeArgs"
-      type: "indices"
+      type: "typeIndices"
+  valueEffects:
+    pop:
+      - name: "arguments"
+        # TODO: count
+      - name: "method"
+        type: "function"
+    push:
+      - name: "result"
+        type: "value"
+  controlEffects:
+    - call:
+
+- name: "invokeMethodDynamic"
+  description:
+    Pops the arguments off the stack, invokes the method with the given name and argument count,
+    and then pushes the result back on to the stack.
+    The first argument is the receiver of the method.
+  operands:
+    - name: "name"
+      type: "constantIndex"
+    - name: "typeArgs"
+      type: "typeIndices"
     - name: "argCount"
       type: "size"
   valueEffects:
@@ -362,8 +383,8 @@
   description:
     Pops a value off the stack, transfers it to the given type, and then pushes it back on to the stack.
   operands:
-    - name: "typeIndex"
-      type: "index"
+    - name: "type"
+      type: "typeIndex"
   valueEffects:
     pop:
       - name: "value"
@@ -376,8 +397,8 @@
   description:
     Pops a value off the stack, casts it to the given type, and then pushes it back on to the stack.
   operands:
-    - name: "typeIndex"
-      type: "index"
+    - name: "type"
+      type: "typeIndex"
   valueEffects:
     pop:
       - name: "value"
@@ -392,8 +413,8 @@
     If the value is a subtype of the given type, then casted value is pushed back on to the stack.
     If the value is not a subtype of the given type, then a `nil` is pushed to the stack instead.
   operands:
-    - name: "typeIndex"
-      type: "index"
+    - name: "type"
+      type: "typeIndex"
   valueEffects:
     pop:
       - name: "value"
@@ -407,8 +428,8 @@
     Pops a value off the stack, force-casts it to the given type, and then pushes it back on to the stack.
     Panics if the value is not a subtype of the given type.
   operands:
-    - name: "typeIndex"
-      type: "index"
+    - name: "type"
+      type: "typeIndex"
   valueEffects:
     pop:
       - name: "value"
@@ -436,7 +457,7 @@
     Unconditionally jumps to the given instruction.
   operands:
     - name: "target"
-      type: "index"
+      type: "offset"
   controlEffects:
     - jump: "target"
 
@@ -445,7 +466,7 @@
     Pops a value off the stack. If it is `false`, jumps to the target instruction.
   operands:
     - name: "target"
-      type: "index"
+      type: "offset"
   controlEffects:
     - jump: "target"
   valueEffects:
@@ -458,7 +479,7 @@
     Pops a value off the stack. If it is `true`, jumps to the target instruction.
   operands:
     - name: "target"
-      type: "index"
+      type: "offset"
   controlEffects:
     - jump: "target"
   valueEffects:
@@ -471,7 +492,7 @@
     Pops a value off the stack. If it is `nil`, jumps to the target instruction.
   operands:
     - name: "target"
-      type: "index"
+      type: "offset"
   controlEffects:
     - jump: "target"
   valueEffects:
@@ -795,8 +816,8 @@
   description:
     Pops an event off the stack and then emits it.
   operands:
-    - name: "typeIndex"
-      type: "index"
+    - name: "type"
+      type: "typeIndex"
   valueEffects:
     pop:
       - name: "event"

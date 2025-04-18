@@ -382,7 +382,9 @@ func singleIdentifierLocationResolver(t testing.TB) func(
 }
 
 func printProgram(name string, program *bbq.InstructionProgram) { //nolint:unused
-	printer := bbq.NewInstructionsProgramPrinter()
+	const resolve = true
+	const colorize = true
+	printer := bbq.NewInstructionsProgramPrinter(resolve, colorize)
 	fmt.Println("===================", name, "===================")
 	fmt.Println(printer.PrintProgram(program))
 }
@@ -391,6 +393,7 @@ func baseValueActivation(common.Location) *sema.VariableActivation {
 	// Only need to make the checker happy
 	activation := sema.NewVariableActivation(sema.BaseValueActivation)
 	activation.DeclareValue(stdlib.PanicFunction)
+	activation.DeclareValue(stdlib.AssertFunction)
 	activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
 		"getAccount",
 		stdlib.GetAccountFunctionType,
@@ -576,7 +579,7 @@ func compileAndInvokeWithLogs(
 	activation := sema.NewVariableActivation(sema.BaseValueActivation)
 	activation.DeclareValue(stdlib.PanicFunction)
 	activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-		"log",
+		commons.LogFunctionName,
 		sema.NewSimpleFunctionType(
 			sema.FunctionPurityView,
 			[]sema.Parameter{
@@ -598,7 +601,7 @@ func compileAndInvokeWithLogs(
 		funcs := vm.NativeFunctions()
 		funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
 			ParameterCount: len(stdlib.LogFunctionType.Parameters),
-			Function: func(config *vm.Config, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+			Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 				logs = append(logs, arguments[0].String())
 				return interpreter.Void
 			},
@@ -666,6 +669,12 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 		options,
 		programs,
 	)
+
+	// Ensure the program can be printed
+	const resolve = false
+	const colorize = false
+	printer := bbq.NewInstructionsProgramPrinter(resolve, colorize)
+	_ = printer.PrintProgram(program)
 
 	vmConfig := prepareVMConfig(options.VMConfig)
 

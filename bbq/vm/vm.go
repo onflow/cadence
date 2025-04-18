@@ -19,11 +19,14 @@
 package vm
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
-	"github.com/onflow/cadence/bbq/constantkind"
+	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/bbq/leb128"
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
@@ -42,7 +45,7 @@ type VM struct {
 	ipStack []uint16
 	ip      uint16
 
-	config             *Config
+	context            *Context
 	globals            map[string]Value
 	linkedGlobalsCache map[common.Location]LinkedGlobals
 }
@@ -50,22 +53,25 @@ type VM struct {
 func NewVM(
 	location common.Location,
 	program *bbq.InstructionProgram,
-	conf *Config,
+	config *Config,
 ) *VM {
 	// TODO: Remove initializing config. Following is for testing purpose only.
-	if conf == nil {
-		conf = &Config{}
-	}
-	if conf.storage == nil {
-		conf.storage = interpreter.NewInMemoryStorage(nil)
+	if config == nil {
+		config = &Config{}
 	}
 
-	if conf.NativeFunctionsProvider == nil {
-		conf.NativeFunctionsProvider = NativeFunctions
+	context := NewContext(config)
+
+	if context.storage == nil {
+		context.storage = interpreter.NewInMemoryStorage(nil)
 	}
 
-	if conf.referencedResourceKindedValues == nil {
-		conf.referencedResourceKindedValues = ReferencedResourceKindedValues{}
+	if context.NativeFunctionsProvider == nil {
+		context.NativeFunctionsProvider = NativeFunctions
+	}
+
+	if context.referencedResourceKindedValues == nil {
+		context.referencedResourceKindedValues = ReferencedResourceKindedValues{}
 	}
 
 	// linkedGlobalsCache is a local cache-alike that is being used to hold already linked imports.
@@ -74,24 +80,24 @@ func NewVM(
 			// It is NOT safe to re-use native functions map here because,
 			// once put into the cache, it will be updated by adding the
 			// globals of the current program.
-			indexedGlobals: conf.NativeFunctionsProvider(),
+			indexedGlobals: context.NativeFunctionsProvider(),
 		},
 	}
 
 	vm := &VM{
 		linkedGlobalsCache: linkedGlobalsCache,
-		config:             conf,
+		context:            context,
 	}
 
 	// Delegate the function invocations to the vm.
-	conf.invokeFunction = vm.invoke
-	conf.lookupFunction = vm.maybeLookupFunction
+	context.invokeFunction = vm.invoke
+	context.lookupFunction = vm.maybeLookupFunction
 
 	// Link global variables and functions.
 	linkedGlobals := LinkGlobals(
 		location,
 		program,
-		conf,
+		context,
 		linkedGlobalsCache,
 	)
 
@@ -101,6 +107,10 @@ func NewVM(
 }
 
 var EmptyLocationRange = interpreter.EmptyLocationRange
+
+func (vm *VM) Context() *Context {
+	return vm.context
+}
 
 func (vm *VM) push(value Value) {
 	vm.stack = append(vm.stack, value)
@@ -112,7 +122,7 @@ func (vm *VM) pop() Value {
 	vm.stack[lastIndex] = nil
 	vm.stack = vm.stack[:lastIndex]
 
-	vm.config.CheckInvalidatedResourceOrResourceReference(value, EmptyLocationRange)
+	vm.context.CheckInvalidatedResourceOrResourceReference(value, EmptyLocationRange)
 
 	return value
 }
@@ -126,8 +136,8 @@ func (vm *VM) pop2() (Value, Value) {
 	vm.stack[lastIndex-1], vm.stack[lastIndex] = nil, nil
 	vm.stack = vm.stack[:lastIndex-1]
 
-	vm.config.CheckInvalidatedResourceOrResourceReference(value1, EmptyLocationRange)
-	vm.config.CheckInvalidatedResourceOrResourceReference(value2, EmptyLocationRange)
+	vm.context.CheckInvalidatedResourceOrResourceReference(value1, EmptyLocationRange)
+	vm.context.CheckInvalidatedResourceOrResourceReference(value2, EmptyLocationRange)
 
 	return value1, value2
 }
@@ -141,9 +151,9 @@ func (vm *VM) pop3() (Value, Value, Value) {
 	vm.stack[lastIndex-2], vm.stack[lastIndex-1], vm.stack[lastIndex] = nil, nil, nil
 	vm.stack = vm.stack[:lastIndex-2]
 
-	vm.config.CheckInvalidatedResourceOrResourceReference(value1, EmptyLocationRange)
-	vm.config.CheckInvalidatedResourceOrResourceReference(value2, EmptyLocationRange)
-	vm.config.CheckInvalidatedResourceOrResourceReference(value3, EmptyLocationRange)
+	vm.context.CheckInvalidatedResourceOrResourceReference(value1, EmptyLocationRange)
+	vm.context.CheckInvalidatedResourceOrResourceReference(value2, EmptyLocationRange)
+	vm.context.CheckInvalidatedResourceOrResourceReference(value3, EmptyLocationRange)
 
 	return value1, value2, value3
 }
@@ -163,7 +173,7 @@ func (vm *VM) dropN(count int) {
 	stackHeight := len(vm.stack)
 	startIndex := stackHeight - count
 	for _, value := range vm.stack[startIndex:] {
-		vm.config.CheckInvalidatedResourceOrResourceReference(value, EmptyLocationRange)
+		vm.context.CheckInvalidatedResourceOrResourceReference(value, EmptyLocationRange)
 	}
 	clear(vm.stack[startIndex:])
 	vm.stack = vm.stack[:startIndex]
@@ -387,7 +397,7 @@ func opAdd(vm *VM) {
 	leftNumber := left.(interpreter.NumberValue)
 	rightNumber := right.(interpreter.NumberValue)
 	vm.replaceTop(leftNumber.Plus(
-		vm.config,
+		vm.context,
 		rightNumber,
 		EmptyLocationRange,
 	))
@@ -398,7 +408,7 @@ func opSubtract(vm *VM) {
 	leftNumber := left.(interpreter.NumberValue)
 	rightNumber := right.(interpreter.NumberValue)
 	vm.replaceTop(leftNumber.Minus(
-		vm.config,
+		vm.context,
 		rightNumber,
 		EmptyLocationRange,
 	))
@@ -409,7 +419,7 @@ func opMultiply(vm *VM) {
 	leftNumber := left.(interpreter.NumberValue)
 	rightNumber := right.(interpreter.NumberValue)
 	vm.replaceTop(leftNumber.Mul(
-		vm.config,
+		vm.context,
 		rightNumber,
 		EmptyLocationRange,
 	))
@@ -420,7 +430,7 @@ func opDivide(vm *VM) {
 	leftNumber := left.(interpreter.NumberValue)
 	rightNumber := right.(interpreter.NumberValue)
 	vm.replaceTop(leftNumber.Div(
-		vm.config,
+		vm.context,
 		rightNumber,
 		EmptyLocationRange,
 	))
@@ -431,7 +441,7 @@ func opMod(vm *VM) {
 	leftNumber := left.(interpreter.NumberValue)
 	rightNumber := right.(interpreter.NumberValue)
 	vm.replaceTop(leftNumber.Mod(
-		vm.config,
+		vm.context,
 		rightNumber,
 		EmptyLocationRange,
 	))
@@ -440,7 +450,7 @@ func opMod(vm *VM) {
 func opNegate(vm *VM) {
 	value := vm.pop().(interpreter.NumberValue)
 	vm.push(value.Negate(
-		vm.config,
+		vm.context,
 		EmptyLocationRange,
 	))
 }
@@ -450,7 +460,7 @@ func opBitwiseOr(vm *VM) {
 	leftNumber := left.(interpreter.IntegerValue)
 	rightNumber := right.(interpreter.IntegerValue)
 	vm.replaceTop(leftNumber.BitwiseOr(
-		vm.config,
+		vm.context,
 		rightNumber,
 		EmptyLocationRange,
 	))
@@ -461,7 +471,7 @@ func opBitwiseXor(vm *VM) {
 	leftNumber := left.(interpreter.IntegerValue)
 	rightNumber := right.(interpreter.IntegerValue)
 	vm.replaceTop(leftNumber.BitwiseXor(
-		vm.config,
+		vm.context,
 		rightNumber,
 		EmptyLocationRange,
 	))
@@ -472,7 +482,7 @@ func opBitwiseAnd(vm *VM) {
 	leftNumber := left.(interpreter.IntegerValue)
 	rightNumber := right.(interpreter.IntegerValue)
 	vm.replaceTop(leftNumber.BitwiseAnd(
-		vm.config,
+		vm.context,
 		rightNumber,
 		EmptyLocationRange,
 	))
@@ -483,7 +493,7 @@ func opBitwiseLeftShift(vm *VM) {
 	leftNumber := left.(interpreter.IntegerValue)
 	rightNumber := right.(interpreter.IntegerValue)
 	vm.replaceTop(leftNumber.BitwiseLeftShift(
-		vm.config,
+		vm.context,
 		rightNumber,
 		EmptyLocationRange,
 	))
@@ -494,7 +504,7 @@ func opBitwiseRightShift(vm *VM) {
 	leftNumber := left.(interpreter.IntegerValue)
 	rightNumber := right.(interpreter.IntegerValue)
 	vm.replaceTop(leftNumber.BitwiseRightShift(
-		vm.config,
+		vm.context,
 		rightNumber,
 		EmptyLocationRange,
 	))
@@ -504,28 +514,28 @@ func opLess(vm *VM) {
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.NumberValue)
 	rightNumber := right.(interpreter.NumberValue)
-	vm.replaceTop(leftNumber.Less(vm.config, rightNumber, EmptyLocationRange))
+	vm.replaceTop(leftNumber.Less(vm.context, rightNumber, EmptyLocationRange))
 }
 
 func opLessOrEqual(vm *VM) {
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.NumberValue)
 	rightNumber := right.(interpreter.NumberValue)
-	vm.replaceTop(leftNumber.LessEqual(vm.config, rightNumber, EmptyLocationRange))
+	vm.replaceTop(leftNumber.LessEqual(vm.context, rightNumber, EmptyLocationRange))
 }
 
 func opGreater(vm *VM) {
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.NumberValue)
 	rightNumber := right.(interpreter.NumberValue)
-	vm.replaceTop(leftNumber.Greater(vm.config, rightNumber, EmptyLocationRange))
+	vm.replaceTop(leftNumber.Greater(vm.context, rightNumber, EmptyLocationRange))
 }
 
 func opGreaterOrEqual(vm *VM) {
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.NumberValue)
 	rightNumber := right.(interpreter.NumberValue)
-	vm.replaceTop(leftNumber.GreaterEqual(vm.config, rightNumber, EmptyLocationRange))
+	vm.replaceTop(leftNumber.GreaterEqual(vm.context, rightNumber, EmptyLocationRange))
 }
 
 func opTrue(vm *VM) {
@@ -537,26 +547,30 @@ func opFalse(vm *VM) {
 }
 
 func opGetConstant(vm *VM, ins opcode.InstructionGetConstant) {
-	constant := vm.callFrame.function.Executable.Constants[ins.ConstantIndex]
+	constantIndex := ins.Constant
+	constant := vm.callFrame.function.Executable.Constants[constantIndex]
 	if constant == nil {
-		constant = vm.initializeConstant(ins.ConstantIndex)
+		constant = vm.initializeConstant(constantIndex)
 	}
 	vm.push(constant)
 }
 
 func opGetLocal(vm *VM, ins opcode.InstructionGetLocal) {
-	absoluteIndex := vm.callFrame.localsOffset + ins.LocalIndex
+	localIndex := ins.Local
+	absoluteIndex := vm.callFrame.localsOffset + localIndex
 	local := vm.locals[absoluteIndex]
 	vm.push(local)
 }
 
 func opSetLocal(vm *VM, ins opcode.InstructionSetLocal) {
-	absoluteIndex := vm.callFrame.localsOffset + ins.LocalIndex
+	localIndex := ins.Local
+	absoluteIndex := vm.callFrame.localsOffset + localIndex
 	vm.locals[absoluteIndex] = vm.pop()
 }
 
 func opGetUpvalue(vm *VM, ins opcode.InstructionGetUpvalue) {
-	upvalue := vm.callFrame.function.Upvalues[ins.UpvalueIndex]
+	upvalueIndex := ins.Upvalue
+	upvalue := vm.callFrame.function.Upvalues[upvalueIndex]
 	value := upvalue.closed
 	if value == nil {
 		value = vm.locals[upvalue.absoluteLocalsIndex]
@@ -565,7 +579,8 @@ func opGetUpvalue(vm *VM, ins opcode.InstructionGetUpvalue) {
 }
 
 func opSetUpvalue(vm *VM, ins opcode.InstructionSetUpvalue) {
-	upvalue := vm.callFrame.function.Upvalues[ins.UpvalueIndex]
+	upvalueIndex := ins.Upvalue
+	upvalue := vm.callFrame.function.Upvalues[upvalueIndex]
 	value := vm.pop()
 	if upvalue.closed == nil {
 		vm.locals[upvalue.absoluteLocalsIndex] = value
@@ -575,19 +590,24 @@ func opSetUpvalue(vm *VM, ins opcode.InstructionSetUpvalue) {
 }
 
 func opGetGlobal(vm *VM, ins opcode.InstructionGetGlobal) {
-	value := vm.callFrame.function.Executable.Globals[ins.GlobalIndex]
+	globalIndex := ins.Global
+	globals := vm.callFrame.function.Executable.Globals
+	value := globals[globalIndex]
 	vm.push(value)
 }
 
 func opSetGlobal(vm *VM, ins opcode.InstructionSetGlobal) {
-	vm.callFrame.function.Executable.Globals[ins.GlobalIndex] = vm.pop()
+	globalIndex := ins.Global
+	globals := vm.callFrame.function.Executable.Globals
+	value := vm.pop()
+	globals[globalIndex] = value
 }
 
 func opSetIndex(vm *VM) {
 	container, index, value := vm.pop3()
 	containerValue := container.(interpreter.ValueIndexableValue)
 	containerValue.SetKey(
-		vm.config,
+		vm.context,
 		EmptyLocationRange,
 		index,
 		value,
@@ -598,7 +618,7 @@ func opGetIndex(vm *VM) {
 	container, index := vm.pop2()
 	containerValue := container.(interpreter.ValueIndexableValue)
 	element := containerValue.GetKey(
-		vm.config,
+		vm.context,
 		EmptyLocationRange,
 		index,
 	)
@@ -606,6 +626,8 @@ func opGetIndex(vm *VM) {
 }
 
 func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
+	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
+
 	value := vm.pop()
 
 	switch value := value.(type) {
@@ -617,15 +639,42 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 
 	case NativeFunctionValue:
 		parameterCount := value.ParameterCount
-
-		var typeArguments []bbq.StaticType
-		for _, index := range ins.TypeArgs {
-			typeArg := vm.loadType(index)
-			typeArguments = append(typeArguments, typeArg)
-		}
-
 		arguments := vm.peekN(parameterCount)
-		result := value.Function(vm.config, typeArguments, arguments...)
+		result := value.Function(vm.context, typeArguments, arguments...)
+		vm.dropN(len(arguments))
+		vm.push(result)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	// We do not need to drop the receiver, as the parameter count given in the instruction already includes it
+}
+
+func opInvokeMethodStatic(vm *VM, ins opcode.InstructionInvokeMethodStatic) {
+	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
+
+	value := vm.pop()
+
+	switch value := value.(type) {
+	case FunctionValue:
+		parameterCount := int(value.Function.ParameterCount)
+		arguments := vm.peekN(parameterCount)
+
+		receiver := getReceiver(vm, parameterCount-1)
+		arguments[receiverIndex] = receiver
+
+		vm.pushCallFrame(value, arguments)
+		vm.dropN(len(arguments))
+
+	case NativeFunctionValue:
+		parameterCount := value.ParameterCount
+		arguments := vm.peekN(parameterCount)
+
+		receiver := getReceiver(vm, parameterCount-1)
+		arguments[receiverIndex] = receiver
+
+		result := value.Function(vm.context, typeArguments, arguments...)
 		vm.dropN(len(arguments))
 		vm.push(result)
 
@@ -634,46 +683,100 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	}
 }
 
-func opInvokeDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
-	stackHeight := len(vm.stack)
-	receiver := vm.stack[stackHeight-int(ins.ArgCount)-1]
-
-	// TODO:
+func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
 	var typeArguments []bbq.StaticType
-	for _, index := range ins.TypeArgs {
-		typeArg := vm.loadType(index)
-		typeArguments = append(typeArguments, typeArg)
+	if len(typeArgs) > 0 {
+		typeArguments = make([]bbq.StaticType, 0, len(typeArgs))
+		for _, typeIndex := range typeArgs {
+			typeArg := vm.loadType(typeIndex)
+			typeArguments = append(typeArguments, typeArg)
+		}
 	}
+	return typeArguments
+}
+
+func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
+	// TODO:
+	// Load type arguments
+	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
 	// TODO: Just to make the linter happy
 	_ = typeArguments
 
-	switch typedReceiver := receiver.(type) {
-	case interpreter.ReferenceValue:
-		referenced := typedReceiver.ReferencedValue(vm.config, EmptyLocationRange, true)
-		receiver = *referenced
+	// Get receiver
 
-		// TODO:
-		//case ReferenceValue
-	}
+	argumentCount := int(ins.ArgCount)
+
+	receiver := getReceiver(vm, argumentCount)
+
+	// TODO: maybe add support for calling methods dynamically on non-composite values, e.g. simple composite values
 
 	compositeValue := receiver.(*interpreter.CompositeValue)
 
-	staticType := compositeValue.StaticType(vm.config)
+	// Get function
+
+	staticType := compositeValue.StaticType(vm.context)
 
 	// TODO: for inclusive range, this is different.
 	compositeType := staticType.(*interpreter.CompositeStaticType)
 
-	funcName := getStringConstant(vm, ins.NameIndex)
+	nameIndex := ins.Name
+	funcName := getStringConstant(vm, nameIndex)
+
+	// TODO: maybe add support for calling methods dynamically on e.g. native functions
 
 	qualifiedFuncName := commons.TypeQualifiedName(compositeType.QualifiedIdentifier, funcName)
-	var functionValue = vm.mustLookupFunction(compositeType.Location, qualifiedFuncName)
+	functionValue := vm.mustLookupFunction(compositeType.Location, qualifiedFuncName)
 
-	parameterCount := int(functionValue.Function.ParameterCount)
-	arguments := vm.peekN(parameterCount)
-	vm.pushCallFrame(functionValue, arguments)
-	vm.dropN(len(arguments))
+	switch functionValue := functionValue.(type) {
+	case FunctionValue:
+		parameterCount := int(functionValue.Function.ParameterCount)
+		arguments := vm.peekN(parameterCount)
 
-	// We do not need to drop the receiver, as the parameter count given in the instruction already includes it
+		arguments[receiverIndex] = receiver
+
+		vm.pushCallFrame(functionValue, arguments)
+		vm.dropN(len(arguments))
+
+	case NativeFunctionValue:
+		parameterCount := functionValue.ParameterCount
+		arguments := vm.peekN(parameterCount)
+
+		arguments[receiverIndex] = receiver
+
+		result := functionValue.Function(vm.context, typeArguments, arguments...)
+		vm.dropN(len(arguments))
+		vm.push(result)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func getReceiver(vm *VM, argumentCount int) Value {
+	stackHeight := len(vm.stack)
+	receiver := vm.stack[stackHeight-argumentCount-1]
+
+	return unwrapReceiver(vm.context, receiver)
+}
+
+func unwrapReceiver(context *Context, receiver Value) Value {
+	for {
+		switch typedReceiver := receiver.(type) {
+		case *interpreter.SomeValue:
+			receiver = typedReceiver.InnerValue()
+		case *interpreter.EphemeralReferenceValue:
+			receiver = typedReceiver.Value
+		case *interpreter.StorageReferenceValue:
+			referencedValue := typedReceiver.ReferencedValue(
+				context,
+				EmptyLocationRange,
+				true,
+			)
+			receiver = *referencedValue
+		default:
+			return receiver
+		}
+	}
 }
 
 func opDrop(vm *VM) {
@@ -689,12 +792,13 @@ func opNew(vm *VM, ins opcode.InstructionNew) {
 	compositeKind := ins.Kind
 
 	// decode location
-	staticType := vm.loadType(ins.TypeIndex)
+	typeIndex := ins.Type
+	staticType := vm.loadType(typeIndex)
 
 	// TODO: Support inclusive-range type
 	compositeStaticType := staticType.(*interpreter.CompositeStaticType)
 
-	config := vm.config
+	config := vm.context
 
 	compositeFields := newCompositeValueFields(config, compositeKind)
 
@@ -716,19 +820,27 @@ func opSetField(vm *VM, ins opcode.InstructionSetField) {
 	target, fieldValue := vm.pop2()
 
 	// VM assumes the field name is always a string.
-	fieldName := getStringConstant(vm, ins.FieldNameIndex)
+	fieldNameIndex := ins.FieldName
+	fieldName := getStringConstant(vm, fieldNameIndex)
 
 	target.(interpreter.MemberAccessibleValue).
-		SetMember(vm.config, EmptyLocationRange, fieldName, fieldValue)
+		SetMember(vm.context, EmptyLocationRange, fieldName, fieldValue)
 }
 
 func opGetField(vm *VM, ins opcode.InstructionGetField) {
 	memberAccessibleValue := vm.pop().(interpreter.MemberAccessibleValue)
 
 	// VM assumes the field name is always a string.
-	fieldName := getStringConstant(vm, ins.FieldNameIndex)
+	fieldNameIndex := ins.FieldName
+	fieldName := getStringConstant(vm, fieldNameIndex)
 
-	fieldValue := memberAccessibleValue.GetMember(vm.config, EmptyLocationRange, fieldName)
+	fieldValue := memberAccessibleValue.GetMember(vm.context, EmptyLocationRange, fieldName)
+	if fieldValue == nil {
+		panic(MissingMemberValueError{
+			Parent: memberAccessibleValue,
+			Name:   fieldName,
+		})
+	}
 
 	//if fieldValue == nil {
 	//
@@ -742,12 +854,6 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 	//	vm.lookupFunction()
 	//}
 
-	if fieldValue == nil {
-		panic(MissingMemberValueError{
-			Parent: memberAccessibleValue,
-			Name:   fieldName,
-		})
-	}
 
 	vm.push(fieldValue)
 }
@@ -758,10 +864,11 @@ func getStringConstant(vm *VM, index uint16) string {
 }
 
 func opTransfer(vm *VM, ins opcode.InstructionTransfer) {
-	targetType := vm.loadType(ins.TypeIndex)
+	typeIndex := ins.Type
+	targetType := vm.loadType(typeIndex)
 	value := vm.peek()
 
-	config := vm.config
+	config := vm.context
 
 	transferredValue := value.Transfer(
 		config,
@@ -777,7 +884,7 @@ func opTransfer(vm *VM, ins opcode.InstructionTransfer) {
 
 	valueType := transferredValue.StaticType(config)
 	// TODO: remove nil check after ensuring all implementations of Value.StaticType are implemented
-	if valueType != nil && !vm.config.IsSubType(valueType, targetType) {
+	if valueType != nil && !vm.context.IsSubType(valueType, targetType) {
 		panic(errors.NewUnexpectedError(
 			"invalid transfer: expected '%s', found '%s'",
 			targetType,
@@ -790,13 +897,14 @@ func opTransfer(vm *VM, ins opcode.InstructionTransfer) {
 
 func opDestroy(vm *VM) {
 	value := vm.pop().(interpreter.ResourceKindedValue)
-	value.Destroy(vm.config, EmptyLocationRange)
+	value.Destroy(vm.context, EmptyLocationRange)
 }
 
-func opPath(vm *VM, ins opcode.InstructionPath) {
-	identifier := getStringConstant(vm, ins.IdentifierIndex)
+func opNewPath(vm *VM, ins opcode.InstructionNewPath) {
+	identifierIndex := ins.Identifier
+	identifier := getStringConstant(vm, identifierIndex)
 	value := interpreter.NewPathValue(
-		vm.config.MemoryGauge,
+		vm.context.MemoryGauge,
 		ins.Domain,
 		identifier,
 	)
@@ -806,11 +914,12 @@ func opPath(vm *VM, ins opcode.InstructionPath) {
 func opSimpleCast(vm *VM, ins opcode.InstructionSimpleCast) {
 	value := vm.pop()
 
-	targetType := vm.loadType(ins.TypeIndex)
-	valueType := value.StaticType(vm.config)
+	typeIndex := ins.Type
+	targetType := vm.loadType(typeIndex)
+	valueType := value.StaticType(vm.context)
 
 	// The cast may upcast to an optional type, e.g. `1 as Int?`, so box
-	result := ConvertAndBox(vm.config, value, valueType, targetType)
+	result := ConvertAndBox(vm.context, value, valueType, targetType)
 
 	vm.push(result)
 }
@@ -818,21 +927,24 @@ func opSimpleCast(vm *VM, ins opcode.InstructionSimpleCast) {
 func opFailableCast(vm *VM, ins opcode.InstructionFailableCast) {
 	value := vm.pop()
 
-	targetType := vm.loadType(ins.TypeIndex)
-	value, valueType := castValueAndValueType(vm.config, targetType, value)
-	isSubType := vm.config.IsSubType(valueType, targetType)
+	typeIndex := ins.Type
+	targetType := vm.loadType(typeIndex)
+
+	value, valueType := castValueAndValueType(vm.context, targetType, value)
+
+	isSubType := vm.context.IsSubType(valueType, targetType)
 
 	var result Value
 	if isSubType {
 		// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-		result = ConvertAndBox(vm.config, value, valueType, targetType)
+		result = ConvertAndBox(vm.context, value, valueType, targetType)
 
 		// TODO:
 		// Failable casting is a resource invalidation
 		//interpreter.invalidateResource(value)
 
 		result = interpreter.NewSomeValueNonCopying(
-			vm.config.MemoryGauge,
+			vm.context.MemoryGauge,
 			result,
 		)
 	} else {
@@ -845,14 +957,17 @@ func opFailableCast(vm *VM, ins opcode.InstructionFailableCast) {
 func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 	value := vm.pop()
 
-	targetType := vm.loadType(ins.TypeIndex)
-	value, valueType := castValueAndValueType(vm.config, targetType, value)
-	isSubType := vm.config.IsSubType(valueType, targetType)
+	typeIndex := ins.Type
+	targetType := vm.loadType(typeIndex)
+
+	value, valueType := castValueAndValueType(vm.context, targetType, value)
+
+	isSubType := vm.context.IsSubType(valueType, targetType)
 
 	var result Value
 	if !isSubType {
-		targetSemaType := interpreter.MustConvertStaticToSemaType(targetType, vm.config)
-		valueSemaType := interpreter.MustConvertStaticToSemaType(valueType, vm.config)
+		targetSemaType := interpreter.MustConvertStaticToSemaType(targetType, vm.context)
+		valueSemaType := interpreter.MustConvertStaticToSemaType(valueType, vm.context)
 
 		panic(interpreter.ForceCastTypeMismatchError{
 			ExpectedType: targetSemaType,
@@ -861,12 +976,12 @@ func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 	}
 
 	// The force cast may upcast to an optional type, e.g. `1 as! Int?`, so box
-	result = ConvertAndBox(vm.config, value, valueType, targetType)
+	result = ConvertAndBox(vm.context, value, valueType, targetType)
 	vm.push(result)
 }
 
-func castValueAndValueType(config *Config, targetType bbq.StaticType, value Value) (Value, bbq.StaticType) {
-	valueType := value.StaticType(config)
+func castValueAndValueType(context *Context, targetType bbq.StaticType, value Value) (Value, bbq.StaticType) {
+	valueType := value.StaticType(context)
 
 	// if the value itself has a mapped entitlement type in its authorization
 	// (e.g. if it is a reference to `self` or `base`  in an attachment function with mapped access)
@@ -900,7 +1015,7 @@ func opNil(vm *VM) {
 func opEqual(vm *VM) {
 	left, right := vm.peekPop()
 	result := left.(interpreter.EquatableValue).Equal(
-		vm.config,
+		vm.context,
 		EmptyLocationRange,
 		right,
 	)
@@ -910,7 +1025,7 @@ func opEqual(vm *VM) {
 func opNotEqual(vm *VM) {
 	left, right := vm.peekPop()
 	result := !left.(interpreter.EquatableValue).Equal(
-		vm.config,
+		vm.context,
 		EmptyLocationRange,
 		right,
 	)
@@ -935,11 +1050,12 @@ func opUnwrap(vm *VM) {
 }
 
 func opNewArray(vm *VM, ins opcode.InstructionNewArray) {
-	typ := vm.loadType(ins.TypeIndex).(interpreter.ArrayStaticType)
+	typeIndex := ins.Type
+	typ := vm.loadType(typeIndex).(interpreter.ArrayStaticType)
 
 	elements := vm.peekN(int(ins.Size))
 	array := interpreter.NewArrayValue(
-		vm.config,
+		vm.context,
 		EmptyLocationRange,
 		typ,
 
@@ -956,11 +1072,12 @@ func opNewArray(vm *VM, ins opcode.InstructionNewArray) {
 }
 
 func opNewDictionary(vm *VM, ins opcode.InstructionNewDictionary) {
-	typ := vm.loadType(ins.TypeIndex).(*interpreter.DictionaryStaticType)
+	typeIndex := ins.Type
+	typ := vm.loadType(typeIndex).(*interpreter.DictionaryStaticType)
 
 	entries := vm.peekN(int(ins.Size * 2))
 	dictionary := interpreter.NewDictionaryValue(
-		vm.config,
+		vm.context,
 		EmptyLocationRange,
 		typ,
 		entries...,
@@ -971,13 +1088,14 @@ func opNewDictionary(vm *VM, ins opcode.InstructionNewDictionary) {
 }
 
 func opNewRef(vm *VM, ins opcode.InstructionNewRef) {
-	borrowedType := vm.loadType(ins.TypeIndex)
+	typeIndex := ins.Type
+	borrowedType := vm.loadType(typeIndex)
 	value := vm.pop()
 
-	semaBorrowedType := interpreter.MustConvertStaticToSemaType(borrowedType, vm.config)
+	semaBorrowedType := interpreter.MustConvertStaticToSemaType(borrowedType, vm.context)
 
 	ref := interpreter.CreateReferenceValue(
-		vm.config,
+		vm.context,
 		semaBorrowedType,
 		value,
 		EmptyLocationRange,
@@ -990,7 +1108,7 @@ func opNewRef(vm *VM, ins opcode.InstructionNewRef) {
 func opIterator(vm *VM) {
 	value := vm.pop()
 	iterable := value.(interpreter.IterableValue)
-	iterator := iterable.Iterator(vm.config, EmptyLocationRange)
+	iterator := iterable.Iterator(vm.context, EmptyLocationRange)
 	vm.push(NewIteratorWrapperValue(iterator))
 }
 
@@ -1003,7 +1121,7 @@ func opIteratorHasNext(vm *VM) {
 func opIteratorNext(vm *VM) {
 	value := vm.pop()
 	iterator := value.(*IteratorWrapperValue)
-	element := iterator.Next(vm.config, EmptyLocationRange)
+	element := iterator.Next(vm.context, EmptyLocationRange)
 	vm.push(element)
 }
 
@@ -1026,14 +1144,14 @@ func deref(vm *VM, value Value) Value {
 
 	// TODO: port and use interpreter.DereferenceValue
 	dereferencedValue := *referenceValue.ReferencedValue(
-		vm.config,
+		vm.context,
 		EmptyLocationRange,
 		true,
 	)
 
 	if isOptional {
 		return interpreter.NewSomeValueNonCopying(
-			vm.config.MemoryGauge,
+			vm.context.MemoryGauge,
 			dereferencedValue,
 		)
 	} else {
@@ -1048,6 +1166,20 @@ func opDeref(vm *VM) {
 }
 
 func (vm *VM) run() {
+
+	if vm.context.debugEnabled {
+		defer func() {
+			if r := recover(); r != nil {
+				printInstructionError(
+					vm.callFrame.function.Function,
+					int(vm.ip),
+					r,
+				)
+				panic(r)
+			}
+		}()
+	}
+
 	for {
 
 		callFrame := vm.callFrame
@@ -1129,8 +1261,10 @@ func (vm *VM) run() {
 			opGetIndex(vm)
 		case opcode.InstructionInvoke:
 			opInvoke(vm, ins)
-		case opcode.InstructionInvokeDynamic:
-			opInvokeDynamic(vm, ins)
+		case opcode.InstructionInvokeMethodStatic:
+			opInvokeMethodStatic(vm, ins)
+		case opcode.InstructionInvokeMethodDynamic:
+			opInvokeMethodDynamic(vm, ins)
 		case opcode.InstructionDrop:
 			opDrop(vm)
 		case opcode.InstructionDup:
@@ -1151,8 +1285,8 @@ func (vm *VM) run() {
 			opTransfer(vm, ins)
 		case opcode.InstructionDestroy:
 			opDestroy(vm)
-		case opcode.InstructionPath:
-			opPath(vm, ins)
+		case opcode.InstructionNewPath:
+			opNewPath(vm, ins)
 		case opcode.InstructionSimpleCast:
 			opSimpleCast(vm, ins)
 		case opcode.InstructionFailableCast:
@@ -1190,12 +1324,13 @@ func (vm *VM) run() {
 func onEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
 	eventValue := vm.pop().(*interpreter.CompositeValue)
 
-	onEventEmitted := vm.config.OnEventEmitted
+	onEventEmitted := vm.context.OnEventEmitted
 	if onEventEmitted == nil {
 		return
 	}
 
-	eventType := vm.loadType(ins.TypeIndex).(*interpreter.CompositeStaticType)
+	typeIndex := ins.Type
+	eventType := vm.loadType(typeIndex).(*interpreter.CompositeStaticType)
 
 	err := onEventEmitted(eventValue, eventType)
 	if err != nil {
@@ -1206,7 +1341,8 @@ func onEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
 func opNewClosure(vm *VM, ins opcode.InstructionNewClosure) {
 
 	executable := vm.callFrame.function.Executable
-	function := &executable.Program.Functions[ins.FunctionIndex]
+	functionIndex := ins.Function
+	function := &executable.Program.Functions[functionIndex]
 
 	var upvalues []*Upvalue
 	upvalueCount := len(ins.Upvalues)
@@ -1256,33 +1392,209 @@ func (vm *VM) captureUpvalue(absoluteLocalsIndex int) *Upvalue {
 func (vm *VM) initializeConstant(index uint16) (value Value) {
 	executable := vm.callFrame.function.Executable
 
-	constant := executable.Program.Constants[index]
-	switch constant.Kind {
-	case constantkind.Int:
-		// TODO:
-		smallInt, _, _ := leb128.ReadInt64(constant.Data)
-		value = interpreter.NewIntValueFromInt64(vm.config.MemoryGauge, smallInt)
-	case constantkind.Int64:
-		smallInt, _, _ := leb128.ReadInt64(constant.Data)
-		value = interpreter.NewInt64Value(
-			vm.config.MemoryGauge,
-			func() int64 {
-				return smallInt
+	c := executable.Program.Constants[index]
+	memoryGauge := vm.context.MemoryGauge
+
+	switch c.Kind {
+	case constant.String:
+		value = interpreter.NewUnmeteredStringValue(string(c.Data))
+
+	case constant.Int:
+		// TODO: support larger integers
+		v, _, err := leb128.ReadInt64(c.Data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read Int constant: %s", err))
+		}
+		value = interpreter.NewIntValueFromInt64(memoryGauge, v)
+
+	case constant.Int8:
+		v, _, err := leb128.ReadInt32(c.Data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read Int8 constant: %s", err))
+		}
+		value = interpreter.NewInt8Value(
+			memoryGauge,
+			func() int8 {
+				return int8(v)
 			},
 		)
-	case constantkind.String:
-		value = interpreter.NewUnmeteredStringValue(string(constant.Data))
 
-	case constantkind.UFix64:
-		smallInt, _, _ := leb128.ReadUint64(constant.Data)
-		value = interpreter.NewUnmeteredUFix64Value(smallInt)
+	case constant.Int16:
+		v, _, err := leb128.ReadInt32(c.Data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read Int16 constant: %s", err))
+		}
+		value = interpreter.NewInt16Value(
+			memoryGauge,
+			func() int16 {
+				return int16(v)
+			},
+		)
+
+	case constant.Int32:
+		v, _, err := leb128.ReadInt32(c.Data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read Int32 constant: %s", err))
+		}
+		value = interpreter.NewInt32Value(
+			memoryGauge,
+			func() int32 {
+				return v
+			},
+		)
+
+	case constant.Int64:
+		v, _, err := leb128.ReadInt64(c.Data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read Int64 constant: %s", err))
+		}
+		value = interpreter.NewInt64Value(
+			memoryGauge,
+			func() int64 {
+				return v
+			},
+		)
+
+	case constant.UInt:
+		// TODO: support larger integers
+		v, _, err := leb128.ReadUint64(c.Data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read UInt constant: %s", err))
+		}
+		value = interpreter.NewUIntValueFromUint64(memoryGauge, v)
+
+	case constant.UInt8:
+		v, _, err := leb128.ReadUint32(c.Data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read UInt8 constant: %s", err))
+		}
+		value = interpreter.NewUInt8Value(
+			memoryGauge,
+			func() uint8 {
+				return uint8(v)
+			},
+		)
+
+	case constant.UInt16:
+		v, _, err := leb128.ReadUint32(c.Data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read UInt16 constant: %s", err))
+		}
+		value = interpreter.NewUInt16Value(
+			memoryGauge,
+			func() uint16 {
+				return uint16(v)
+			},
+		)
+
+	case constant.UInt32:
+		v, _, err := leb128.ReadUint32(c.Data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read UInt32 constant: %s", err))
+		}
+		value = interpreter.NewUInt32Value(
+			memoryGauge,
+			func() uint32 {
+				return v
+			},
+		)
+
+	case constant.UInt64:
+		v, _, err := leb128.ReadUint64(c.Data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read UInt64 constant: %s", err))
+		}
+		value = interpreter.NewUInt64Value(
+			memoryGauge,
+			func() uint64 {
+				return v
+			},
+		)
+
+	case constant.Word8:
+		v, _, err := leb128.ReadUint32(c.Data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read Word8 constant: %s", err))
+		}
+		value = interpreter.NewWord8Value(
+			memoryGauge,
+			func() uint8 {
+				return uint8(v)
+			},
+		)
+
+	case constant.Word16:
+		v, _, err := leb128.ReadUint32(c.Data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read Word16 constant: %s", err))
+		}
+		value = interpreter.NewWord16Value(
+			memoryGauge,
+			func() uint16 {
+				return uint16(v)
+			},
+		)
+
+	case constant.Word32:
+		v, _, err := leb128.ReadUint32(c.Data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read Word32 constant: %s", err))
+		}
+		value = interpreter.NewWord32Value(
+			memoryGauge,
+			func() uint32 {
+				return v
+			},
+		)
+
+	case constant.Word64:
+		v, _, err := leb128.ReadUint64(c.Data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read Word64 constant: %s", err))
+		}
+		value = interpreter.NewWord64Value(
+			memoryGauge,
+			func() uint64 {
+				return v
+			},
+		)
+
+	case constant.Fix64:
+		v, _, err := leb128.ReadInt64(c.Data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read Fix64 constant: %s", err))
+		}
+		value = interpreter.NewUnmeteredFix64Value(v)
+
+	case constant.UFix64:
+		v, _, err := leb128.ReadUint64(c.Data)
+		if err != nil {
+			panic(errors.NewUnexpectedError("failed to read UFix64 constant: %s", err))
+		}
+		value = interpreter.NewUnmeteredUFix64Value(v)
+
+	case constant.Address:
+		value = interpreter.NewAddressValueFromBytes(
+			memoryGauge,
+			func() []byte {
+				return c.Data
+			},
+		)
+
+	// TODO:
+	// case constantkind.Int128:
+	// case constantkind.Int256:
+	// case constantkind.UInt128:
+	// case constantkind.UInt256:
+	// case constantkind.Word128:
+	// case constantkind.Word256:
 
 	default:
-		// TODO:
-		panic(errors.NewUnexpectedError("unsupported constant kind '%s'", constant.Kind.String()))
+		panic(errors.NewUnexpectedError("unsupported constant kind: %s", c.Kind))
 	}
 
 	executable.Constants[index] = value
+
 	return value
 }
 
@@ -1296,12 +1608,12 @@ func (vm *VM) loadType(index uint16) bbq.StaticType {
 	return staticType
 }
 
-func (vm *VM) mustLookupFunction(location common.Location, name string) FunctionValue {
+func (vm *VM) mustLookupFunction(location common.Location, name string) interpreter.FunctionValue {
 	funcValue, ok := vm.lookupFunction(location, name)
 	if !ok {
 		panic(errors.NewUnexpectedError("cannot link global: %s", name))
 	}
-	return funcValue.(FunctionValue)
+	return funcValue.(interpreter.FunctionValue)
 }
 
 func (vm *VM) maybeLookupFunction(location common.Location, name string) interpreter.FunctionValue {
@@ -1312,11 +1624,11 @@ func (vm *VM) maybeLookupFunction(location common.Location, name string) interpr
 	return funcValue.(interpreter.FunctionValue)
 }
 
-func (vm *VM) lookupFunction(location common.Location, name string) (Value, bool) {
+func (vm *VM) lookupFunction(location common.Location, name string) (interpreter.FunctionValue, bool) {
 	// First check in current program.
 	value, ok := vm.globals[name]
 	if ok {
-		return value, true
+		return value.(interpreter.FunctionValue), true
 	}
 
 	// If not found, check in already linked imported functions.
@@ -1326,18 +1638,22 @@ func (vm *VM) lookupFunction(location common.Location, name string) (Value, bool
 	if !ok {
 		// TODO: This currently link all functions in program, unnecessarily.
 		//   Link only the requested function.
-		program := vm.config.ImportHandler(location)
+		program := vm.context.ImportHandler(location)
 
 		linkedGlobals = LinkGlobals(
 			location,
 			program,
-			vm.config,
+			vm.context,
 			vm.linkedGlobalsCache,
 		)
 	}
 
 	value, ok = linkedGlobals.indexedGlobals[name]
-	return value, ok
+	if !ok {
+		return nil, false
+	}
+
+	return value.(interpreter.FunctionValue), true
 }
 
 func (vm *VM) StackSize() int {
@@ -1351,20 +1667,23 @@ func (vm *VM) Reset() {
 	vm.ipStack = vm.ipStack[:0]
 }
 
-func getReceiver[T any](config *Config, receiver Value) T {
-	switch receiver := receiver.(type) {
-	case *interpreter.SomeValue:
-		return getReceiver[T](config, receiver.InnerValue())
-	case *interpreter.EphemeralReferenceValue:
-		return getReceiver[T](config, receiver.Value)
-	case *interpreter.StorageReferenceValue:
-		referencedValue := receiver.ReferencedValue(
-			config,
-			EmptyLocationRange,
-			true,
-		)
-		return getReceiver[T](config, *referencedValue)
-	default:
-		return receiver.(T)
+func printInstructionError(
+	function *bbq.Function[opcode.Instruction],
+	instructionIndex int,
+	error any,
+) {
+	var builder strings.Builder
+
+	builder.WriteString(fmt.Sprintf("-- %s -- \n", function.QualifiedName))
+
+	for index, instruction := range function.Code {
+		if index == instructionIndex {
+			builder.WriteString(fmt.Sprintf("^^^^^^^^^^ %s\n", error))
+		}
+
+		_, _ = fmt.Fprint(&builder, instruction)
+		builder.WriteByte('\n')
 	}
+
+	fmt.Println(builder.String())
 }

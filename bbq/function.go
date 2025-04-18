@@ -20,9 +20,18 @@ package bbq
 
 type Function[E any] struct {
 	Name               string
+	QualifiedName      string
 	Code               []E
 	ParameterCount     uint16
 	TypeParameterCount uint16
 	LocalCount         uint16
 	TypeIndex          uint16
+}
+
+func (f Function[E]) IsAnonymous() bool {
+	return f.QualifiedName == ""
+}
+
+func (f Function[E]) IsNative() bool {
+	return f.Code == nil
 }

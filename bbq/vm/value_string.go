@@ -31,14 +31,14 @@ func init() {
 
 	RegisterTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewBoundNativeFunctionValue(
 			sema.StringTypeConcatFunctionName,
 			sema.StringTypeConcatFunctionType,
-			func(config *Config, typeArguments []bbq.StaticType, args ...Value) Value {
+			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
 				first := args[receiverIndex].(*interpreter.StringValue)
 
 				return interpreter.StringConcat(
-					config,
+					context,
 					first,
 					args[typeBoundFunctionArgumentOffset],
 					EmptyLocationRange,

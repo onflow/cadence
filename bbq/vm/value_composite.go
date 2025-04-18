@@ -24,11 +24,11 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-func newCompositeValueFields(config *Config, compositeKind common.CompositeKind) (fields []interpreter.CompositeField) {
+func newCompositeValueFields(context *Context, compositeKind common.CompositeKind) (fields []interpreter.CompositeField) {
 
 	if compositeKind == common.CompositeKindResource {
 
-		uuidHandler := config.interpreterConfig.UUIDHandler
+		uuidHandler := context.interpreterConfig.UUIDHandler
 		if uuidHandler == nil {
 			panic(interpreter.UUIDUnavailableError{
 				// TODO:

@@ -95,9 +95,9 @@ const (
 
 	True
 	False
-	New
-	Path
 	Nil
+	New
+	NewPath
 	NewArray
 	NewDictionary
 	NewRef
@@ -138,8 +138,8 @@ const (
 	// Invocations
 
 	Invoke
-	InvokeDynamic
-	_
+	InvokeMethodStatic
+	InvokeMethodDynamic
 	_
 	_
 	_
@@ -172,3 +172,22 @@ const (
 	// NOTE: not an actual opcode, must be last item
 	OpcodeMax
 )
+
+func (i Opcode) IsControlFlow() bool {
+	switch i {
+	case Return,
+		ReturnValue,
+		Jump,
+		JumpIfFalse,
+		JumpIfTrue,
+		JumpIfNil,
+		Invoke,
+		InvokeMethodStatic,
+		InvokeMethodDynamic:
+
+		return true
+
+	default:
+		return false
+	}
+}

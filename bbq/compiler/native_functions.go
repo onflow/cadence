@@ -19,6 +19,7 @@
 package compiler
 
 import (
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 
@@ -42,22 +43,36 @@ func NativeFunctions() map[string]*Global {
 	return funcs
 }
 
-var builtinTypes = []sema.Type{
-	sema.IntType,
-	sema.StringType,
-	sema.AccountType,
-	sema.IntType,
-	sema.MetaType,
-
-	&sema.CapabilityType{},
-	&sema.ConstantSizedType{},
-	&sema.VariableSizedType{},
-}
+var builtinTypes = common.Concat[sema.Type](
+	sema.AllBuiltinTypes,
+	[]sema.Type{
+		&sema.ConstantSizedType{},
+		&sema.VariableSizedType{},
+		&sema.DictionaryType{},
+	},
+)
 
 var stdlibFunctions = []string{
 	commons.LogFunctionName,
+	commons.AssertFunctionName,
 	commons.PanicFunctionName,
 	commons.GetAccountFunctionName,
+}
+
+type builtinFunction struct {
+	name string
+	typ  *sema.FunctionType
+}
+
+var commonBuiltinTypeBoundFunctions = []builtinFunction{
+	{
+		name: sema.GetTypeFunctionName,
+		typ:  sema.GetTypeFunctionType,
+	},
+	{
+		name: sema.IsInstanceFunctionName,
+		typ:  sema.IsInstanceFunctionType,
+	},
 }
 
 func init() {

@@ -16,11 +16,9 @@
  * limitations under the License.
  */
 
-package bbq
+package vm
 
-import "github.com/onflow/cadence/bbq/constantkind"
+// members
 
-type Constant struct {
-	Data []byte
-	Kind constantkind.ConstantKind
+func init() {
 }

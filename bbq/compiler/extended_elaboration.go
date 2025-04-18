@@ -44,7 +44,7 @@ type ExtendedElaboration struct {
 	referenceExpressionBorrowTypes    map[*ast.ReferenceExpression]sema.Type
 	functionDeclarationFunctionTypes  map[*ast.FunctionDeclaration]*sema.FunctionType
 	returnStatementTypes              map[*ast.ReturnStatement]sema.ReturnStatementTypes
-
+	emitStatementEventTypes           map[*ast.EmitStatement]*sema.CompositeType
 	compositeTypes map[common.TypeID]*sema.CompositeType
 }
 
@@ -275,7 +275,20 @@ func (e *ExtendedElaboration) CastingExpressionTypes(expression *ast.CastingExpr
 }
 
 func (e *ExtendedElaboration) EmitStatementEventType(statement *ast.EmitStatement) *sema.CompositeType {
+	if e.emitStatementEventTypes != nil {
+		types, ok := e.emitStatementEventTypes[statement]
+		if ok {
+			return types
+		}
+	}
 	return e.elaboration.EmitStatementEventType(statement)
+}
+
+func (e *ExtendedElaboration) SetEmitStatementEventType(statement *ast.EmitStatement, compositeType *sema.CompositeType) {
+	if e.emitStatementEventTypes == nil {
+		e.emitStatementEventTypes = map[*ast.EmitStatement]*sema.CompositeType{}
+	}
+	e.emitStatementEventTypes[statement] = compositeType
 }
 
 func (e *ExtendedElaboration) ResultVariableType(enclosingBlock ast.Element) (typ sema.Type, exist bool) {

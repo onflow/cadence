@@ -623,7 +623,7 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 
 	// All number types, addresses, and path types have a `toString` function
 
-	if IsSubType(ty, NumberType) || IsSubType(ty, TheAddressType) || IsSubType(ty, PathType) {
+	if HasToStringFunction(ty) {
 
 		members[ToStringFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
@@ -661,6 +661,10 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 	}
 
 	return members
+}
+
+func HasToStringFunction(ty Type) bool {
+	return IsSubType(ty, NumberType) || IsSubType(ty, TheAddressType) || IsSubType(ty, PathType)
 }
 
 // OptionalType represents the optional variant of another type
@@ -2085,9 +2089,13 @@ const arrayTypeLengthFieldDocString = `
 Returns the number of elements in the array
 `
 
+const ArrayTypeAppendFunctionName = "append"
+
 const arrayTypeAppendFunctionDocString = `
 Adds the given element to the end of the array
 `
+
+const ArrayTypeAppendAllFunctionName = "appendAll"
 
 const arrayTypeAppendAllFunctionDocString = `
 Adds all the elements from the given array to the end of the array
@@ -2384,7 +2392,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 	if _, ok := arrayType.(*VariableSizedType); ok {
 
-		members["append"] = MemberResolver{
+		members[ArrayTypeAppendFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
 			Resolve: func(
 				memoryGauge common.MemoryGauge,
@@ -2404,7 +2412,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 			},
 		}
 
-		members["appendAll"] = MemberResolver{
+		members[ArrayTypeAppendAllFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
 			Resolve: func(
 				memoryGauge common.MemoryGauge,
@@ -4138,45 +4146,45 @@ type TypeArgumentsCheck func(
 // the types available in programs
 var BaseTypeActivation = NewVariableActivation(nil)
 
+var AllBuiltinTypes = common.Concat(
+	AllNumberTypes,
+	[]Type{
+		MetaType,
+		VoidType,
+		AnyStructType,
+		AnyStructAttachmentType,
+		AnyResourceType,
+		AnyResourceAttachmentType,
+		NeverType,
+		BoolType,
+		CharacterType,
+		StringType,
+		TheAddressType,
+		AccountType,
+		PathType,
+		StoragePathType,
+		CapabilityPathType,
+		PrivatePathType,
+		PublicPathType,
+		&CapabilityType{},
+		DeployedContractType,
+		BlockType,
+		AccountKeyType,
+		PublicKeyType,
+		SignatureAlgorithmType,
+		HashAlgorithmType,
+		StorageCapabilityControllerType,
+		AccountCapabilityControllerType,
+		DeploymentResultType,
+		HashableStructType,
+		&InclusiveRangeType{},
+		StructStringerType,
+	},
+)
+
 func init() {
 
-	types := common.Concat(
-		AllNumberTypes,
-		[]Type{
-			MetaType,
-			VoidType,
-			AnyStructType,
-			AnyStructAttachmentType,
-			AnyResourceType,
-			AnyResourceAttachmentType,
-			NeverType,
-			BoolType,
-			CharacterType,
-			StringType,
-			TheAddressType,
-			AccountType,
-			PathType,
-			StoragePathType,
-			CapabilityPathType,
-			PrivatePathType,
-			PublicPathType,
-			&CapabilityType{},
-			DeployedContractType,
-			BlockType,
-			AccountKeyType,
-			PublicKeyType,
-			SignatureAlgorithmType,
-			HashAlgorithmType,
-			StorageCapabilityControllerType,
-			AccountCapabilityControllerType,
-			DeploymentResultType,
-			HashableStructType,
-			&InclusiveRangeType{},
-			StructStringerType,
-		},
-	)
-
-	for _, ty := range types {
+	for _, ty := range AllBuiltinTypes {
 		addToBaseActivation(ty)
 	}
 
@@ -6195,6 +6203,8 @@ Inserts the given value into the dictionary under the given key.
 Returns the previous value as an optional if the dictionary contained the key, or nil if the dictionary did not contain the key
 `
 
+const DictionaryTypeRemoveFunctionName = "remove"
+
 const dictionaryTypeRemoveFunctionDocString = `
 Removes the value for the given key from the dictionary.
 
@@ -6323,7 +6333,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 						)
 					},
 				},
-				"remove": {
+				DictionaryTypeRemoveFunctionName: {
 					Kind: common.DeclarationKindFunction,
 					Resolve: func(
 						memoryGauge common.MemoryGauge,

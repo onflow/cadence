@@ -5,8 +5,10 @@ package opcode
 import (
 	"strings"
 
+	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
 )
 
 // InstructionUnknown
@@ -25,6 +27,15 @@ func (i InstructionUnknown) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionUnknown) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionUnknown) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
 func (i InstructionUnknown) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -33,7 +44,7 @@ func (i InstructionUnknown) Encode(code *[]byte) {
 //
 // Pushes the value of the local at the given index onto the stack.
 type InstructionGetLocal struct {
-	LocalIndex uint16
+	Local uint16
 }
 
 var _ Instruction = InstructionGetLocal{}
@@ -45,17 +56,31 @@ func (InstructionGetLocal) Opcode() Opcode {
 func (i InstructionGetLocal) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "localIndex", i.LocalIndex)
+	i.OperandsString(&sb, false)
 	return sb.String()
+}
+
+func (i InstructionGetLocal) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "local", i.Local, colorize)
+}
+
+func (i InstructionGetLocal) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "local", i.Local, colorize)
 }
 
 func (i InstructionGetLocal) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.LocalIndex)
+	emitUint16(code, i.Local)
 }
 
 func DecodeGetLocal(ip *uint16, code []byte) (i InstructionGetLocal) {
-	i.LocalIndex = decodeUint16(ip, code)
+	i.Local = decodeUint16(ip, code)
 	return i
 }
 
@@ -63,7 +88,7 @@ func DecodeGetLocal(ip *uint16, code []byte) (i InstructionGetLocal) {
 //
 // Pops a value off the stack and then sets the local at the given index to that value.
 type InstructionSetLocal struct {
-	LocalIndex uint16
+	Local uint16
 }
 
 var _ Instruction = InstructionSetLocal{}
@@ -75,17 +100,31 @@ func (InstructionSetLocal) Opcode() Opcode {
 func (i InstructionSetLocal) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "localIndex", i.LocalIndex)
+	i.OperandsString(&sb, false)
 	return sb.String()
+}
+
+func (i InstructionSetLocal) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "local", i.Local, colorize)
+}
+
+func (i InstructionSetLocal) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "local", i.Local, colorize)
 }
 
 func (i InstructionSetLocal) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.LocalIndex)
+	emitUint16(code, i.Local)
 }
 
 func DecodeSetLocal(ip *uint16, code []byte) (i InstructionSetLocal) {
-	i.LocalIndex = decodeUint16(ip, code)
+	i.Local = decodeUint16(ip, code)
 	return i
 }
 
@@ -93,7 +132,7 @@ func DecodeSetLocal(ip *uint16, code []byte) (i InstructionSetLocal) {
 //
 // Pushes the value of the upvalue at the given index onto the stack.
 type InstructionGetUpvalue struct {
-	UpvalueIndex uint16
+	Upvalue uint16
 }
 
 var _ Instruction = InstructionGetUpvalue{}
@@ -105,17 +144,31 @@ func (InstructionGetUpvalue) Opcode() Opcode {
 func (i InstructionGetUpvalue) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "upvalueIndex", i.UpvalueIndex)
+	i.OperandsString(&sb, false)
 	return sb.String()
+}
+
+func (i InstructionGetUpvalue) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "upvalue", i.Upvalue, colorize)
+}
+
+func (i InstructionGetUpvalue) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "upvalue", i.Upvalue, colorize)
 }
 
 func (i InstructionGetUpvalue) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.UpvalueIndex)
+	emitUint16(code, i.Upvalue)
 }
 
 func DecodeGetUpvalue(ip *uint16, code []byte) (i InstructionGetUpvalue) {
-	i.UpvalueIndex = decodeUint16(ip, code)
+	i.Upvalue = decodeUint16(ip, code)
 	return i
 }
 
@@ -123,7 +176,7 @@ func DecodeGetUpvalue(ip *uint16, code []byte) (i InstructionGetUpvalue) {
 //
 // Pops a value off the stack and then sets the upvalue at the given index to that value.
 type InstructionSetUpvalue struct {
-	UpvalueIndex uint16
+	Upvalue uint16
 }
 
 var _ Instruction = InstructionSetUpvalue{}
@@ -135,17 +188,31 @@ func (InstructionSetUpvalue) Opcode() Opcode {
 func (i InstructionSetUpvalue) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "upvalueIndex", i.UpvalueIndex)
+	i.OperandsString(&sb, false)
 	return sb.String()
+}
+
+func (i InstructionSetUpvalue) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "upvalue", i.Upvalue, colorize)
+}
+
+func (i InstructionSetUpvalue) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "upvalue", i.Upvalue, colorize)
 }
 
 func (i InstructionSetUpvalue) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.UpvalueIndex)
+	emitUint16(code, i.Upvalue)
 }
 
 func DecodeSetUpvalue(ip *uint16, code []byte) (i InstructionSetUpvalue) {
-	i.UpvalueIndex = decodeUint16(ip, code)
+	i.Upvalue = decodeUint16(ip, code)
 	return i
 }
 
@@ -153,7 +220,7 @@ func DecodeSetUpvalue(ip *uint16, code []byte) (i InstructionSetUpvalue) {
 //
 // Pushes the value of the global at the given index onto the stack.
 type InstructionGetGlobal struct {
-	GlobalIndex uint16
+	Global uint16
 }
 
 var _ Instruction = InstructionGetGlobal{}
@@ -165,17 +232,31 @@ func (InstructionGetGlobal) Opcode() Opcode {
 func (i InstructionGetGlobal) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "globalIndex", i.GlobalIndex)
+	i.OperandsString(&sb, false)
 	return sb.String()
+}
+
+func (i InstructionGetGlobal) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "global", i.Global, colorize)
+}
+
+func (i InstructionGetGlobal) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "global", i.Global, colorize)
 }
 
 func (i InstructionGetGlobal) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.GlobalIndex)
+	emitUint16(code, i.Global)
 }
 
 func DecodeGetGlobal(ip *uint16, code []byte) (i InstructionGetGlobal) {
-	i.GlobalIndex = decodeUint16(ip, code)
+	i.Global = decodeUint16(ip, code)
 	return i
 }
 
@@ -183,7 +264,7 @@ func DecodeGetGlobal(ip *uint16, code []byte) (i InstructionGetGlobal) {
 //
 // Pops a value off the stack and then sets the global at the given index to that value.
 type InstructionSetGlobal struct {
-	GlobalIndex uint16
+	Global uint16
 }
 
 var _ Instruction = InstructionSetGlobal{}
@@ -195,17 +276,31 @@ func (InstructionSetGlobal) Opcode() Opcode {
 func (i InstructionSetGlobal) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "globalIndex", i.GlobalIndex)
+	i.OperandsString(&sb, false)
 	return sb.String()
+}
+
+func (i InstructionSetGlobal) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "global", i.Global, colorize)
+}
+
+func (i InstructionSetGlobal) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "global", i.Global, colorize)
 }
 
 func (i InstructionSetGlobal) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.GlobalIndex)
+	emitUint16(code, i.Global)
 }
 
 func DecodeSetGlobal(ip *uint16, code []byte) (i InstructionSetGlobal) {
-	i.GlobalIndex = decodeUint16(ip, code)
+	i.Global = decodeUint16(ip, code)
 	return i
 }
 
@@ -213,7 +308,7 @@ func DecodeSetGlobal(ip *uint16, code []byte) (i InstructionSetGlobal) {
 //
 // Pops a value off the stack, the target, and then pushes the value of the field at the given index onto the stack.
 type InstructionGetField struct {
-	FieldNameIndex uint16
+	FieldName uint16
 }
 
 var _ Instruction = InstructionGetField{}
@@ -225,17 +320,31 @@ func (InstructionGetField) Opcode() Opcode {
 func (i InstructionGetField) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "fieldNameIndex", i.FieldNameIndex)
+	i.OperandsString(&sb, false)
 	return sb.String()
+}
+
+func (i InstructionGetField) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "fieldName", i.FieldName, colorize)
+}
+
+func (i InstructionGetField) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfConstantArgument(sb, "fieldName", constants[i.FieldName], colorize)
 }
 
 func (i InstructionGetField) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.FieldNameIndex)
+	emitUint16(code, i.FieldName)
 }
 
 func DecodeGetField(ip *uint16, code []byte) (i InstructionGetField) {
-	i.FieldNameIndex = decodeUint16(ip, code)
+	i.FieldName = decodeUint16(ip, code)
 	return i
 }
 
@@ -243,7 +352,7 @@ func DecodeGetField(ip *uint16, code []byte) (i InstructionGetField) {
 //
 // Pops two values off the stack, the target and the value, and then sets the field at the given index of the target to the value.
 type InstructionSetField struct {
-	FieldNameIndex uint16
+	FieldName uint16
 }
 
 var _ Instruction = InstructionSetField{}
@@ -255,17 +364,31 @@ func (InstructionSetField) Opcode() Opcode {
 func (i InstructionSetField) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "fieldNameIndex", i.FieldNameIndex)
+	i.OperandsString(&sb, false)
 	return sb.String()
+}
+
+func (i InstructionSetField) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "fieldName", i.FieldName, colorize)
+}
+
+func (i InstructionSetField) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfConstantArgument(sb, "fieldName", constants[i.FieldName], colorize)
 }
 
 func (i InstructionSetField) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.FieldNameIndex)
+	emitUint16(code, i.FieldName)
 }
 
 func DecodeSetField(ip *uint16, code []byte) (i InstructionSetField) {
-	i.FieldNameIndex = decodeUint16(ip, code)
+	i.FieldName = decodeUint16(ip, code)
 	return i
 }
 
@@ -283,6 +406,15 @@ func (InstructionGetIndex) Opcode() Opcode {
 
 func (i InstructionGetIndex) String() string {
 	return i.Opcode().String()
+}
+
+func (i InstructionGetIndex) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionGetIndex) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionGetIndex) Encode(code *[]byte) {
@@ -305,6 +437,15 @@ func (i InstructionSetIndex) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionSetIndex) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionSetIndex) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
 func (i InstructionSetIndex) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -323,6 +464,15 @@ func (InstructionTrue) Opcode() Opcode {
 
 func (i InstructionTrue) String() string {
 	return i.Opcode().String()
+}
+
+func (i InstructionTrue) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionTrue) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionTrue) Encode(code *[]byte) {
@@ -345,6 +495,15 @@ func (i InstructionFalse) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionFalse) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionFalse) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
 func (i InstructionFalse) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -365,50 +524,25 @@ func (i InstructionNil) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionNil) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionNil) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
 func (i InstructionNil) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-}
-
-// InstructionPath
-//
-// Creates a new path with the given domain and identifier and then pushes it onto the stack.
-type InstructionPath struct {
-	Domain          common.PathDomain
-	IdentifierIndex uint16
-}
-
-var _ Instruction = InstructionPath{}
-
-func (InstructionPath) Opcode() Opcode {
-	return Path
-}
-
-func (i InstructionPath) String() string {
-	var sb strings.Builder
-	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "domain", i.Domain)
-	printfArgument(&sb, "identifierIndex", i.IdentifierIndex)
-	return sb.String()
-}
-
-func (i InstructionPath) Encode(code *[]byte) {
-	emitOpcode(code, i.Opcode())
-	emitPathDomain(code, i.Domain)
-	emitUint16(code, i.IdentifierIndex)
-}
-
-func DecodePath(ip *uint16, code []byte) (i InstructionPath) {
-	i.Domain = decodePathDomain(ip, code)
-	i.IdentifierIndex = decodeUint16(ip, code)
-	return i
 }
 
 // InstructionNew
 //
 // Creates a new instance of the given kind and type and then pushes it onto the stack.
 type InstructionNew struct {
-	Kind      common.CompositeKind
-	TypeIndex uint16
+	Kind common.CompositeKind
+	Type uint16
 }
 
 var _ Instruction = InstructionNew{}
@@ -420,20 +554,88 @@ func (InstructionNew) Opcode() Opcode {
 func (i InstructionNew) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "kind", i.Kind)
-	printfArgument(&sb, "typeIndex", i.TypeIndex)
+	i.OperandsString(&sb, false)
 	return sb.String()
+}
+
+func (i InstructionNew) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "kind", i.Kind, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
+}
+
+func (i InstructionNew) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "kind", i.Kind, colorize)
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
 }
 
 func (i InstructionNew) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 	emitCompositeKind(code, i.Kind)
-	emitUint16(code, i.TypeIndex)
+	emitUint16(code, i.Type)
 }
 
 func DecodeNew(ip *uint16, code []byte) (i InstructionNew) {
 	i.Kind = decodeCompositeKind(ip, code)
-	i.TypeIndex = decodeUint16(ip, code)
+	i.Type = decodeUint16(ip, code)
+	return i
+}
+
+// InstructionNewPath
+//
+// Creates a new path with the given domain and identifier and then pushes it onto the stack.
+type InstructionNewPath struct {
+	Domain     common.PathDomain
+	Identifier uint16
+}
+
+var _ Instruction = InstructionNewPath{}
+
+func (InstructionNewPath) Opcode() Opcode {
+	return NewPath
+}
+
+func (i InstructionNewPath) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
+}
+
+func (i InstructionNewPath) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "domain", i.Domain, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "identifier", i.Identifier, colorize)
+}
+
+func (i InstructionNewPath) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "domain", i.Domain, colorize)
+	sb.WriteByte(' ')
+	printfConstantArgument(sb, "identifier", constants[i.Identifier], colorize)
+}
+
+func (i InstructionNewPath) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitPathDomain(code, i.Domain)
+	emitUint16(code, i.Identifier)
+}
+
+func DecodeNewPath(ip *uint16, code []byte) (i InstructionNewPath) {
+	i.Domain = decodePathDomain(ip, code)
+	i.Identifier = decodeUint16(ip, code)
 	return i
 }
 
@@ -441,7 +643,7 @@ func DecodeNew(ip *uint16, code []byte) (i InstructionNew) {
 //
 // Pops the given number of elements off the stack, creates a new array with the given type, size, and elements, and then pushes it onto the stack.
 type InstructionNewArray struct {
-	TypeIndex  uint16
+	Type       uint16
 	Size       uint16
 	IsResource bool
 }
@@ -455,21 +657,41 @@ func (InstructionNewArray) Opcode() Opcode {
 func (i InstructionNewArray) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "typeIndex", i.TypeIndex)
-	printfArgument(&sb, "size", i.Size)
-	printfArgument(&sb, "isResource", i.IsResource)
+	i.OperandsString(&sb, false)
 	return sb.String()
+}
+
+func (i InstructionNewArray) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "size", i.Size, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "isResource", i.IsResource, colorize)
+}
+
+func (i InstructionNewArray) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "size", i.Size, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "isResource", i.IsResource, colorize)
 }
 
 func (i InstructionNewArray) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.TypeIndex)
+	emitUint16(code, i.Type)
 	emitUint16(code, i.Size)
 	emitBool(code, i.IsResource)
 }
 
 func DecodeNewArray(ip *uint16, code []byte) (i InstructionNewArray) {
-	i.TypeIndex = decodeUint16(ip, code)
+	i.Type = decodeUint16(ip, code)
 	i.Size = decodeUint16(ip, code)
 	i.IsResource = decodeBool(ip, code)
 	return i
@@ -479,7 +701,7 @@ func DecodeNewArray(ip *uint16, code []byte) (i InstructionNewArray) {
 //
 // Pops the given number of entries off the stack (twice the number of the given size), creates a new dictionary with the given type, size, and entries, and then pushes it onto the stack.
 type InstructionNewDictionary struct {
-	TypeIndex  uint16
+	Type       uint16
 	Size       uint16
 	IsResource bool
 }
@@ -493,21 +715,41 @@ func (InstructionNewDictionary) Opcode() Opcode {
 func (i InstructionNewDictionary) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "typeIndex", i.TypeIndex)
-	printfArgument(&sb, "size", i.Size)
-	printfArgument(&sb, "isResource", i.IsResource)
+	i.OperandsString(&sb, false)
 	return sb.String()
+}
+
+func (i InstructionNewDictionary) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "size", i.Size, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "isResource", i.IsResource, colorize)
+}
+
+func (i InstructionNewDictionary) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "size", i.Size, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "isResource", i.IsResource, colorize)
 }
 
 func (i InstructionNewDictionary) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.TypeIndex)
+	emitUint16(code, i.Type)
 	emitUint16(code, i.Size)
 	emitBool(code, i.IsResource)
 }
 
 func DecodeNewDictionary(ip *uint16, code []byte) (i InstructionNewDictionary) {
-	i.TypeIndex = decodeUint16(ip, code)
+	i.Type = decodeUint16(ip, code)
 	i.Size = decodeUint16(ip, code)
 	i.IsResource = decodeBool(ip, code)
 	return i
@@ -517,7 +759,7 @@ func DecodeNewDictionary(ip *uint16, code []byte) (i InstructionNewDictionary) {
 //
 // Pops a value off the stack, creates a new reference with the given type, and then pushes it onto the stack.
 type InstructionNewRef struct {
-	TypeIndex  uint16
+	Type       uint16
 	IsImplicit bool
 }
 
@@ -530,19 +772,36 @@ func (InstructionNewRef) Opcode() Opcode {
 func (i InstructionNewRef) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "typeIndex", i.TypeIndex)
-	printfArgument(&sb, "isImplicit", i.IsImplicit)
+	i.OperandsString(&sb, false)
 	return sb.String()
+}
+
+func (i InstructionNewRef) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "isImplicit", i.IsImplicit, colorize)
+}
+
+func (i InstructionNewRef) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "isImplicit", i.IsImplicit, colorize)
 }
 
 func (i InstructionNewRef) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.TypeIndex)
+	emitUint16(code, i.Type)
 	emitBool(code, i.IsImplicit)
 }
 
 func DecodeNewRef(ip *uint16, code []byte) (i InstructionNewRef) {
-	i.TypeIndex = decodeUint16(ip, code)
+	i.Type = decodeUint16(ip, code)
 	i.IsImplicit = decodeBool(ip, code)
 	return i
 }
@@ -551,7 +810,7 @@ func DecodeNewRef(ip *uint16, code []byte) (i InstructionNewRef) {
 //
 // Pushes the constant at the given index onto the stack.
 type InstructionGetConstant struct {
-	ConstantIndex uint16
+	Constant uint16
 }
 
 var _ Instruction = InstructionGetConstant{}
@@ -563,17 +822,31 @@ func (InstructionGetConstant) Opcode() Opcode {
 func (i InstructionGetConstant) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "constantIndex", i.ConstantIndex)
+	i.OperandsString(&sb, false)
 	return sb.String()
+}
+
+func (i InstructionGetConstant) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "constant", i.Constant, colorize)
+}
+
+func (i InstructionGetConstant) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfConstantArgument(sb, "constant", constants[i.Constant], colorize)
 }
 
 func (i InstructionGetConstant) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.ConstantIndex)
+	emitUint16(code, i.Constant)
 }
 
 func DecodeGetConstant(ip *uint16, code []byte) (i InstructionGetConstant) {
-	i.ConstantIndex = decodeUint16(ip, code)
+	i.Constant = decodeUint16(ip, code)
 	return i
 }
 
@@ -581,8 +854,8 @@ func DecodeGetConstant(ip *uint16, code []byte) (i InstructionGetConstant) {
 //
 // Creates a new closure with the function at the given index and pushes it onto the stack.
 type InstructionNewClosure struct {
-	FunctionIndex uint16
-	Upvalues      []Upvalue
+	Function uint16
+	Upvalues []Upvalue
 }
 
 var _ Instruction = InstructionNewClosure{}
@@ -594,19 +867,36 @@ func (InstructionNewClosure) Opcode() Opcode {
 func (i InstructionNewClosure) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "functionIndex", i.FunctionIndex)
-	printfUpvalueArrayArgument(&sb, "upvalues", i.Upvalues)
+	i.OperandsString(&sb, false)
 	return sb.String()
+}
+
+func (i InstructionNewClosure) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "function", i.Function, colorize)
+	sb.WriteByte(' ')
+	printfUpvalueArrayArgument(sb, "upvalues", i.Upvalues, colorize)
+}
+
+func (i InstructionNewClosure) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfFunctionNameArgument(sb, "function", functionNames[i.Function], colorize)
+	sb.WriteByte(' ')
+	printfUpvalueArrayArgument(sb, "upvalues", i.Upvalues, colorize)
 }
 
 func (i InstructionNewClosure) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.FunctionIndex)
+	emitUint16(code, i.Function)
 	emitUpvalueArray(code, i.Upvalues)
 }
 
 func DecodeNewClosure(ip *uint16, code []byte) (i InstructionNewClosure) {
-	i.FunctionIndex = decodeUint16(ip, code)
+	i.Function = decodeUint16(ip, code)
 	i.Upvalues = decodeUpvalueArray(ip, code)
 	return i
 }
@@ -627,8 +917,22 @@ func (InstructionInvoke) Opcode() Opcode {
 func (i InstructionInvoke) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfUInt16ArrayArgument(&sb, "typeArgs", i.TypeArgs)
+	i.OperandsString(&sb, false)
 	return sb.String()
+}
+
+func (i InstructionInvoke) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs, colorize)
+}
+
+func (i InstructionInvoke) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArrayArgument(sb, "typeArgs", i.TypeArgs, colorize, types)
 }
 
 func (i InstructionInvoke) Encode(code *[]byte) {
@@ -641,39 +945,103 @@ func DecodeInvoke(ip *uint16, code []byte) (i InstructionInvoke) {
 	return i
 }
 
-// InstructionInvokeDynamic
+// InstructionInvokeMethodStatic
 //
-// Pops the arguments off the stack, invokes the function with the given name and argument count, and then pushes the result back on to the stack.
-type InstructionInvokeDynamic struct {
-	NameIndex uint16
-	TypeArgs  []uint16
-	ArgCount  uint16
+// Pops the method and arguments off the stack, invokes the method with the arguments, and then pushes the result back on to the stack. The first argument is the receiver of the method.
+type InstructionInvokeMethodStatic struct {
+	TypeArgs []uint16
 }
 
-var _ Instruction = InstructionInvokeDynamic{}
+var _ Instruction = InstructionInvokeMethodStatic{}
 
-func (InstructionInvokeDynamic) Opcode() Opcode {
-	return InvokeDynamic
+func (InstructionInvokeMethodStatic) Opcode() Opcode {
+	return InvokeMethodStatic
 }
 
-func (i InstructionInvokeDynamic) String() string {
+func (i InstructionInvokeMethodStatic) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "nameIndex", i.NameIndex)
-	printfUInt16ArrayArgument(&sb, "typeArgs", i.TypeArgs)
-	printfArgument(&sb, "argCount", i.ArgCount)
+	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionInvokeDynamic) Encode(code *[]byte) {
+func (i InstructionInvokeMethodStatic) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs, colorize)
+}
+
+func (i InstructionInvokeMethodStatic) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArrayArgument(sb, "typeArgs", i.TypeArgs, colorize, types)
+}
+
+func (i InstructionInvokeMethodStatic) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.NameIndex)
+	emitUint16Array(code, i.TypeArgs)
+}
+
+func DecodeInvokeMethodStatic(ip *uint16, code []byte) (i InstructionInvokeMethodStatic) {
+	i.TypeArgs = decodeUint16Array(ip, code)
+	return i
+}
+
+// InstructionInvokeMethodDynamic
+//
+// Pops the arguments off the stack, invokes the method with the given name and argument count, and then pushes the result back on to the stack. The first argument is the receiver of the method.
+type InstructionInvokeMethodDynamic struct {
+	Name     uint16
+	TypeArgs []uint16
+	ArgCount uint16
+}
+
+var _ Instruction = InstructionInvokeMethodDynamic{}
+
+func (InstructionInvokeMethodDynamic) Opcode() Opcode {
+	return InvokeMethodDynamic
+}
+
+func (i InstructionInvokeMethodDynamic) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
+}
+
+func (i InstructionInvokeMethodDynamic) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "name", i.Name, colorize)
+	sb.WriteByte(' ')
+	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "argCount", i.ArgCount, colorize)
+}
+
+func (i InstructionInvokeMethodDynamic) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfConstantArgument(sb, "name", constants[i.Name], colorize)
+	sb.WriteByte(' ')
+	printfTypeArrayArgument(sb, "typeArgs", i.TypeArgs, colorize, types)
+	sb.WriteByte(' ')
+	printfArgument(sb, "argCount", i.ArgCount, colorize)
+}
+
+func (i InstructionInvokeMethodDynamic) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.Name)
 	emitUint16Array(code, i.TypeArgs)
 	emitUint16(code, i.ArgCount)
 }
 
-func DecodeInvokeDynamic(ip *uint16, code []byte) (i InstructionInvokeDynamic) {
-	i.NameIndex = decodeUint16(ip, code)
+func DecodeInvokeMethodDynamic(ip *uint16, code []byte) (i InstructionInvokeMethodDynamic) {
+	i.Name = decodeUint16(ip, code)
 	i.TypeArgs = decodeUint16Array(ip, code)
 	i.ArgCount = decodeUint16(ip, code)
 	return i
@@ -693,6 +1061,15 @@ func (InstructionDup) Opcode() Opcode {
 
 func (i InstructionDup) String() string {
 	return i.Opcode().String()
+}
+
+func (i InstructionDup) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionDup) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionDup) Encode(code *[]byte) {
@@ -715,6 +1092,15 @@ func (i InstructionDrop) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionDrop) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionDrop) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
 func (i InstructionDrop) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -733,6 +1119,15 @@ func (InstructionDestroy) Opcode() Opcode {
 
 func (i InstructionDestroy) String() string {
 	return i.Opcode().String()
+}
+
+func (i InstructionDestroy) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionDestroy) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionDestroy) Encode(code *[]byte) {
@@ -755,6 +1150,15 @@ func (i InstructionUnwrap) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionUnwrap) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionUnwrap) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
 func (i InstructionUnwrap) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -763,7 +1167,7 @@ func (i InstructionUnwrap) Encode(code *[]byte) {
 //
 // Pops a value off the stack, transfers it to the given type, and then pushes it back on to the stack.
 type InstructionTransfer struct {
-	TypeIndex uint16
+	Type uint16
 }
 
 var _ Instruction = InstructionTransfer{}
@@ -775,17 +1179,31 @@ func (InstructionTransfer) Opcode() Opcode {
 func (i InstructionTransfer) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "typeIndex", i.TypeIndex)
+	i.OperandsString(&sb, false)
 	return sb.String()
+}
+
+func (i InstructionTransfer) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
+}
+
+func (i InstructionTransfer) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
 }
 
 func (i InstructionTransfer) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.TypeIndex)
+	emitUint16(code, i.Type)
 }
 
 func DecodeTransfer(ip *uint16, code []byte) (i InstructionTransfer) {
-	i.TypeIndex = decodeUint16(ip, code)
+	i.Type = decodeUint16(ip, code)
 	return i
 }
 
@@ -793,7 +1211,7 @@ func DecodeTransfer(ip *uint16, code []byte) (i InstructionTransfer) {
 //
 // Pops a value off the stack, casts it to the given type, and then pushes it back on to the stack.
 type InstructionSimpleCast struct {
-	TypeIndex uint16
+	Type uint16
 }
 
 var _ Instruction = InstructionSimpleCast{}
@@ -805,17 +1223,31 @@ func (InstructionSimpleCast) Opcode() Opcode {
 func (i InstructionSimpleCast) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "typeIndex", i.TypeIndex)
+	i.OperandsString(&sb, false)
 	return sb.String()
+}
+
+func (i InstructionSimpleCast) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
+}
+
+func (i InstructionSimpleCast) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
 }
 
 func (i InstructionSimpleCast) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.TypeIndex)
+	emitUint16(code, i.Type)
 }
 
 func DecodeSimpleCast(ip *uint16, code []byte) (i InstructionSimpleCast) {
-	i.TypeIndex = decodeUint16(ip, code)
+	i.Type = decodeUint16(ip, code)
 	return i
 }
 
@@ -823,7 +1255,7 @@ func DecodeSimpleCast(ip *uint16, code []byte) (i InstructionSimpleCast) {
 //
 // Pops a value off the stack and casts it to the given type. If the value is a subtype of the given type, then casted value is pushed back on to the stack. If the value is not a subtype of the given type, then a `nil` is pushed to the stack instead.
 type InstructionFailableCast struct {
-	TypeIndex uint16
+	Type uint16
 }
 
 var _ Instruction = InstructionFailableCast{}
@@ -835,17 +1267,31 @@ func (InstructionFailableCast) Opcode() Opcode {
 func (i InstructionFailableCast) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "typeIndex", i.TypeIndex)
+	i.OperandsString(&sb, false)
 	return sb.String()
+}
+
+func (i InstructionFailableCast) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
+}
+
+func (i InstructionFailableCast) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
 }
 
 func (i InstructionFailableCast) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.TypeIndex)
+	emitUint16(code, i.Type)
 }
 
 func DecodeFailableCast(ip *uint16, code []byte) (i InstructionFailableCast) {
-	i.TypeIndex = decodeUint16(ip, code)
+	i.Type = decodeUint16(ip, code)
 	return i
 }
 
@@ -853,7 +1299,7 @@ func DecodeFailableCast(ip *uint16, code []byte) (i InstructionFailableCast) {
 //
 // Pops a value off the stack, force-casts it to the given type, and then pushes it back on to the stack. Panics if the value is not a subtype of the given type.
 type InstructionForceCast struct {
-	TypeIndex uint16
+	Type uint16
 }
 
 var _ Instruction = InstructionForceCast{}
@@ -865,17 +1311,31 @@ func (InstructionForceCast) Opcode() Opcode {
 func (i InstructionForceCast) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "typeIndex", i.TypeIndex)
+	i.OperandsString(&sb, false)
 	return sb.String()
+}
+
+func (i InstructionForceCast) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
+}
+
+func (i InstructionForceCast) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
 }
 
 func (i InstructionForceCast) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.TypeIndex)
+	emitUint16(code, i.Type)
 }
 
 func DecodeForceCast(ip *uint16, code []byte) (i InstructionForceCast) {
-	i.TypeIndex = decodeUint16(ip, code)
+	i.Type = decodeUint16(ip, code)
 	return i
 }
 
@@ -893,6 +1353,15 @@ func (InstructionDeref) Opcode() Opcode {
 
 func (i InstructionDeref) String() string {
 	return i.Opcode().String()
+}
+
+func (i InstructionDeref) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionDeref) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionDeref) Encode(code *[]byte) {
@@ -915,8 +1384,22 @@ func (InstructionJump) Opcode() Opcode {
 func (i InstructionJump) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "target", i.Target)
+	i.OperandsString(&sb, false)
 	return sb.String()
+}
+
+func (i InstructionJump) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "target", i.Target, colorize)
+}
+
+func (i InstructionJump) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "target", i.Target, colorize)
 }
 
 func (i InstructionJump) Encode(code *[]byte) {
@@ -945,8 +1428,22 @@ func (InstructionJumpIfFalse) Opcode() Opcode {
 func (i InstructionJumpIfFalse) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "target", i.Target)
+	i.OperandsString(&sb, false)
 	return sb.String()
+}
+
+func (i InstructionJumpIfFalse) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "target", i.Target, colorize)
+}
+
+func (i InstructionJumpIfFalse) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "target", i.Target, colorize)
 }
 
 func (i InstructionJumpIfFalse) Encode(code *[]byte) {
@@ -975,8 +1472,22 @@ func (InstructionJumpIfTrue) Opcode() Opcode {
 func (i InstructionJumpIfTrue) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "target", i.Target)
+	i.OperandsString(&sb, false)
 	return sb.String()
+}
+
+func (i InstructionJumpIfTrue) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "target", i.Target, colorize)
+}
+
+func (i InstructionJumpIfTrue) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "target", i.Target, colorize)
 }
 
 func (i InstructionJumpIfTrue) Encode(code *[]byte) {
@@ -1005,8 +1516,22 @@ func (InstructionJumpIfNil) Opcode() Opcode {
 func (i InstructionJumpIfNil) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "target", i.Target)
+	i.OperandsString(&sb, false)
 	return sb.String()
+}
+
+func (i InstructionJumpIfNil) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "target", i.Target, colorize)
+}
+
+func (i InstructionJumpIfNil) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "target", i.Target, colorize)
 }
 
 func (i InstructionJumpIfNil) Encode(code *[]byte) {
@@ -1035,6 +1560,15 @@ func (i InstructionReturn) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionReturn) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionReturn) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
 func (i InstructionReturn) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -1053,6 +1587,15 @@ func (InstructionReturnValue) Opcode() Opcode {
 
 func (i InstructionReturnValue) String() string {
 	return i.Opcode().String()
+}
+
+func (i InstructionReturnValue) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionReturnValue) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionReturnValue) Encode(code *[]byte) {
@@ -1075,6 +1618,15 @@ func (i InstructionEqual) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionEqual) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionEqual) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
 func (i InstructionEqual) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -1093,6 +1645,15 @@ func (InstructionNotEqual) Opcode() Opcode {
 
 func (i InstructionNotEqual) String() string {
 	return i.Opcode().String()
+}
+
+func (i InstructionNotEqual) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionNotEqual) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionNotEqual) Encode(code *[]byte) {
@@ -1115,6 +1676,15 @@ func (i InstructionNot) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionNot) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionNot) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
 func (i InstructionNot) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -1133,6 +1703,15 @@ func (InstructionAdd) Opcode() Opcode {
 
 func (i InstructionAdd) String() string {
 	return i.Opcode().String()
+}
+
+func (i InstructionAdd) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionAdd) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionAdd) Encode(code *[]byte) {
@@ -1155,6 +1734,15 @@ func (i InstructionSubtract) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionSubtract) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionSubtract) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
 func (i InstructionSubtract) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -1173,6 +1761,15 @@ func (InstructionMultiply) Opcode() Opcode {
 
 func (i InstructionMultiply) String() string {
 	return i.Opcode().String()
+}
+
+func (i InstructionMultiply) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionMultiply) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionMultiply) Encode(code *[]byte) {
@@ -1195,6 +1792,15 @@ func (i InstructionDivide) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionDivide) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionDivide) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
 func (i InstructionDivide) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -1213,6 +1819,15 @@ func (InstructionMod) Opcode() Opcode {
 
 func (i InstructionMod) String() string {
 	return i.Opcode().String()
+}
+
+func (i InstructionMod) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionMod) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionMod) Encode(code *[]byte) {
@@ -1235,6 +1850,15 @@ func (i InstructionNegate) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionNegate) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionNegate) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
 func (i InstructionNegate) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -1253,6 +1877,15 @@ func (InstructionLess) Opcode() Opcode {
 
 func (i InstructionLess) String() string {
 	return i.Opcode().String()
+}
+
+func (i InstructionLess) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionLess) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionLess) Encode(code *[]byte) {
@@ -1275,6 +1908,15 @@ func (i InstructionLessOrEqual) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionLessOrEqual) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionLessOrEqual) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
 func (i InstructionLessOrEqual) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -1293,6 +1935,15 @@ func (InstructionGreater) Opcode() Opcode {
 
 func (i InstructionGreater) String() string {
 	return i.Opcode().String()
+}
+
+func (i InstructionGreater) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionGreater) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionGreater) Encode(code *[]byte) {
@@ -1315,6 +1966,15 @@ func (i InstructionGreaterOrEqual) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionGreaterOrEqual) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionGreaterOrEqual) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
 func (i InstructionGreaterOrEqual) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -1333,6 +1993,15 @@ func (InstructionBitwiseOr) Opcode() Opcode {
 
 func (i InstructionBitwiseOr) String() string {
 	return i.Opcode().String()
+}
+
+func (i InstructionBitwiseOr) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionBitwiseOr) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionBitwiseOr) Encode(code *[]byte) {
@@ -1355,6 +2024,15 @@ func (i InstructionBitwiseXor) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionBitwiseXor) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionBitwiseXor) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
 func (i InstructionBitwiseXor) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -1373,6 +2051,15 @@ func (InstructionBitwiseAnd) Opcode() Opcode {
 
 func (i InstructionBitwiseAnd) String() string {
 	return i.Opcode().String()
+}
+
+func (i InstructionBitwiseAnd) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionBitwiseAnd) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionBitwiseAnd) Encode(code *[]byte) {
@@ -1395,6 +2082,15 @@ func (i InstructionBitwiseLeftShift) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionBitwiseLeftShift) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionBitwiseLeftShift) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
 func (i InstructionBitwiseLeftShift) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -1413,6 +2109,15 @@ func (InstructionBitwiseRightShift) Opcode() Opcode {
 
 func (i InstructionBitwiseRightShift) String() string {
 	return i.Opcode().String()
+}
+
+func (i InstructionBitwiseRightShift) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionBitwiseRightShift) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionBitwiseRightShift) Encode(code *[]byte) {
@@ -1435,6 +2140,15 @@ func (i InstructionIterator) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionIterator) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionIterator) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
 func (i InstructionIterator) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -1453,6 +2167,15 @@ func (InstructionIteratorHasNext) Opcode() Opcode {
 
 func (i InstructionIteratorHasNext) String() string {
 	return i.Opcode().String()
+}
+
+func (i InstructionIteratorHasNext) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionIteratorHasNext) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
 }
 
 func (i InstructionIteratorHasNext) Encode(code *[]byte) {
@@ -1475,6 +2198,15 @@ func (i InstructionIteratorNext) String() string {
 	return i.Opcode().String()
 }
 
+func (i InstructionIteratorNext) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionIteratorNext) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
 func (i InstructionIteratorNext) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
@@ -1483,7 +2215,7 @@ func (i InstructionIteratorNext) Encode(code *[]byte) {
 //
 // Pops an event off the stack and then emits it.
 type InstructionEmitEvent struct {
-	TypeIndex uint16
+	Type uint16
 }
 
 var _ Instruction = InstructionEmitEvent{}
@@ -1495,17 +2227,31 @@ func (InstructionEmitEvent) Opcode() Opcode {
 func (i InstructionEmitEvent) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
-	printfArgument(&sb, "typeIndex", i.TypeIndex)
+	i.OperandsString(&sb, false)
 	return sb.String()
+}
+
+func (i InstructionEmitEvent) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
+}
+
+func (i InstructionEmitEvent) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
 }
 
 func (i InstructionEmitEvent) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.TypeIndex)
+	emitUint16(code, i.Type)
 }
 
 func DecodeEmitEvent(ip *uint16, code []byte) (i InstructionEmitEvent) {
-	i.TypeIndex = decodeUint16(ip, code)
+	i.Type = decodeUint16(ip, code)
 	return i
 }
 
@@ -1539,10 +2285,10 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionFalse{}
 	case Nil:
 		return InstructionNil{}
-	case Path:
-		return DecodePath(ip, code)
 	case New:
 		return DecodeNew(ip, code)
+	case NewPath:
+		return DecodeNewPath(ip, code)
 	case NewArray:
 		return DecodeNewArray(ip, code)
 	case NewDictionary:
@@ -1555,8 +2301,10 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return DecodeNewClosure(ip, code)
 	case Invoke:
 		return DecodeInvoke(ip, code)
-	case InvokeDynamic:
-		return DecodeInvokeDynamic(ip, code)
+	case InvokeMethodStatic:
+		return DecodeInvokeMethodStatic(ip, code)
+	case InvokeMethodDynamic:
+		return DecodeInvokeMethodDynamic(ip, code)
 	case Dup:
 		return InstructionDup{}
 	case Drop:

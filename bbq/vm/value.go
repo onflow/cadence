@@ -27,15 +27,15 @@ type Value = interpreter.Value
 
 // ConvertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
 func ConvertAndBox(
-	config *Config,
+	context *Context,
 	value Value,
 	valueType, targetType bbq.StaticType,
 ) Value {
-	valueSemaType := interpreter.MustConvertStaticToSemaType(valueType, config)
-	targetSemaType := interpreter.MustConvertStaticToSemaType(targetType, config)
+	valueSemaType := interpreter.MustConvertStaticToSemaType(valueType, context)
+	targetSemaType := interpreter.MustConvertStaticToSemaType(targetType, context)
 
 	return interpreter.ConvertAndBox(
-		config,
+		context,
 		EmptyLocationRange,
 		value,
 		valueSemaType,

@@ -139,7 +139,7 @@ func (v FunctionValue) Invoke(invocation interpreter.Invocation) interpreter.Val
 	)
 }
 
-type NativeFunction func(config *Config, typeArguments []bbq.StaticType, arguments ...Value) Value
+type NativeFunction func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value
 
 type NativeFunctionValue struct {
 	Name string
@@ -157,6 +157,19 @@ func NewNativeFunctionValue(
 	return NativeFunctionValue{
 		Name:           name,
 		ParameterCount: len(funcType.Parameters),
+		Function:       function,
+		Type:           interpreter.NewFunctionStaticType(nil, funcType),
+	}
+}
+
+func NewBoundNativeFunctionValue(
+	name string,
+	funcType *sema.FunctionType,
+	function NativeFunction,
+) NativeFunctionValue {
+	return NativeFunctionValue{
+		Name:           name,
+		ParameterCount: len(funcType.Parameters) + 1, // +1 is for the receiver
 		Function:       function,
 		Type:           interpreter.NewFunctionStaticType(nil, funcType),
 	}
