@@ -288,7 +288,7 @@ func (executor *interpreterTransactionExecutor) transactionExecutionFunction(
 			err = internalErr
 		})
 
-		values, err := validateArgumentParams(
+		values, err := importValidatedArguments(
 			inter,
 			executor.environment,
 			interpreter.EmptyLocationRange,
