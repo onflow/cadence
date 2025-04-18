@@ -736,15 +736,17 @@ func TestInterpretMemberAccess(t *testing.T) {
                 }
             }
 
-            fun test() {
+            fun test(): Int {
                 let test = Test()
                 let testRef = &test as &Test
                 var foo: (fun(): Int) = testRef.foo
+                return foo()
             }
         `)
 
-		_, err := inter.Invoke("test")
+		result, err := inter.Invoke("test")
 		require.NoError(t, err)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), result)
 	})
 
 	t.Run("resource reference, nested", func(t *testing.T) {

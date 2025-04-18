@@ -7227,3 +7227,73 @@ func TestInheritedConditions(t *testing.T) {
 		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(10), result)
 	})
 }
+
+func TestMethodsAsFunctionPointers(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("composite value, user function", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := compileAndInvoke(
+			t,
+			`
+            struct Test {
+                access(all) fun add(_ a: Int, _ b: Int): Int {
+                    return a + b
+                }
+            }
+
+            fun test(): Int {
+                let test = Test()
+                var add: (fun(Int, Int): Int) = test.add
+                return add( 1, 3)
+            }
+        `,
+			"test",
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(4), result)
+	})
+
+	t.Run("composite value, builtin function", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := compileAndInvoke(
+			t,
+			`
+            struct Test {}
+
+            fun test(): Bool {
+                let test = Test()
+                var isInstance = test.isInstance
+                return isInstance(Type<Test>())
+            }
+        `,
+			"test",
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.BoolValue(true), result)
+	})
+
+	t.Run("primitive value, builtin function", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := compileAndInvoke(
+			t,
+			`
+            fun test(): Bool {
+                let a: Int64 = 5
+                var isInstance = a.isInstance
+                return isInstance(Type<Int32>())
+            }
+        `,
+			"test",
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.BoolValue(false), result)
+	})
+}

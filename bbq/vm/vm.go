@@ -90,7 +90,9 @@ func NewVM(
 	}
 
 	// Delegate the function invocations to the vm.
+	// TODO: Fix: this should also be able to call native functions.
 	context.invokeFunction = vm.invoke
+
 	context.lookupFunction = vm.maybeLookupFunction
 
 	// Link global variables and functions.
@@ -708,24 +710,33 @@ func invokeFunction(
 	parameterCount int,
 	typeArguments []bbq.StaticType,
 ) {
+
+	var arguments []Value
+
+	if methodPointer, ok := functionValue.(BoundFunctionPointerValue); ok {
+		// If the function is a pointer to an object-method,
+		// then the receiver is implicitly captured.
+		receiver = methodPointer.Receiver
+		functionValue = methodPointer.Method
+		parameterCount = methodPointer.ParameterCount
+
+		arguments = append(arguments, receiver)
+		arguments = append(arguments, vm.peekN(parameterCount)...)
+	} else {
+		arguments = vm.peekN(parameterCount)
+		if receiver != nil {
+			arguments[receiverIndex] = receiver
+		}
+	}
+
 	switch functionValue := functionValue.(type) {
 	case CompiledFunctionValue:
-		arguments := vm.peekN(parameterCount)
-		if receiver != nil {
-			arguments[receiverIndex] = receiver
-		}
-
 		vm.pushCallFrame(functionValue, arguments)
-		vm.dropN(len(arguments))
+		vm.dropN(parameterCount)
 
 	case NativeFunctionValue:
-		arguments := vm.peekN(parameterCount)
-		if receiver != nil {
-			arguments[receiverIndex] = receiver
-		}
-
 		result := functionValue.Function(vm.context, typeArguments, arguments...)
-		vm.dropN(len(arguments))
+		vm.dropN(parameterCount)
 		vm.push(result)
 
 	default:
