@@ -349,7 +349,7 @@ func (d *Desugar) desugarPreConditions(
 		conditions = funcBlock.PreConditions
 
 		for _, condition := range conditions.Conditions {
-			desugaredCondition := d.desugarCondition(condition, false)
+			desugaredCondition := d.desugarCondition(condition, nil)
 			desugaredConditions = append(desugaredConditions, desugaredCondition)
 		}
 	}
@@ -383,7 +383,7 @@ func (d *Desugar) desugarPostConditions(
 		beforeStatements = postConditionsRewrite.BeforeStatements
 
 		for _, condition := range conditionsList {
-			desugaredCondition := d.desugarCondition(condition, false)
+			desugaredCondition := d.desugarCondition(condition, nil)
 			desugaredConditions = append(desugaredConditions, desugaredCondition)
 		}
 	}
@@ -438,7 +438,7 @@ func (d *Desugar) desugarInheritedCondition(condition ast.Condition, inheritedFu
 	prevElaboration := d.elaboration
 	d.elaboration = inheritedFunc.elaboration
 
-	desugaredCondition := d.desugarCondition(condition, true)
+	desugaredCondition := d.desugarCondition(condition, inheritedFunc.interfaceType)
 	d.elaboration = prevElaboration
 
 	// Elaboration to be used by the condition must be set in the current elaboration.
@@ -464,7 +464,26 @@ var panicFuncInvocationTypes = sema.InvocationExpressionTypes{
 	},
 }
 
-func (d *Desugar) desugarCondition(condition ast.Condition, isInherited bool) ast.Statement {
+func (d *Desugar) desugarCondition(condition ast.Condition, inheritedFrom *sema.InterfaceType) ast.Statement {
+
+	// If the conditions are inherited, they could be referring to their own imports.
+	// i.e: transitive dependencies of the concrete type.
+	// Therefore, add those transitive dependencies to the current compiling program.
+	// They will only be added to the final compiled program, if those are used in the code.
+	if inheritedFrom != nil {
+		elaboration, err := d.config.ElaborationResolver(inheritedFrom.Location)
+		if err != nil {
+			panic(err)
+		}
+
+		// Order doesn't matter, since imports are only added to globals in the order of usage.
+		for _, resolvedLocations := range elaboration.AllImportDeclarationsResolvedLocations() { // nolint:maprange
+			for _, location := range resolvedLocations {
+				d.addImport(location.Location)
+			}
+		}
+	}
+
 	switch condition := condition.(type) {
 	case *ast.TestCondition:
 
@@ -534,7 +553,7 @@ func (d *Desugar) desugarCondition(condition ast.Condition, isInherited bool) as
 	case *ast.EmitCondition:
 		emitStmt := (*ast.EmitStatement)(condition)
 
-		if !isInherited {
+		if inheritedFrom == nil {
 			return emitStmt
 		}
 
@@ -1028,22 +1047,22 @@ func (d *Desugar) interfaceDelegationMethodCall(
 }
 
 func (d *Desugar) addImport(location common.Location) {
-	interfaceLocation, isAddressLocation := location.(common.AddressLocation)
+	addressLocation, isAddressLocation := location.(common.AddressLocation)
 	if isAddressLocation {
-		if _, exists := d.importsSet[interfaceLocation]; !exists {
+		if _, exists := d.importsSet[addressLocation]; !exists {
 			d.newImports = append(
 				d.newImports,
 				ast.NewImportDeclaration(
 					d.memoryGauge,
 					[]ast.Identifier{
-						ast.NewIdentifier(d.memoryGauge, interfaceLocation.Name, ast.EmptyPosition),
+						ast.NewIdentifier(d.memoryGauge, addressLocation.Name, ast.EmptyPosition),
 					},
-					interfaceLocation,
+					addressLocation,
 					ast.EmptyRange,
 					ast.EmptyPosition,
 				))
 
-			d.importsSet[interfaceLocation] = struct{}{}
+			d.importsSet[addressLocation] = struct{}{}
 		}
 	}
 }

@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/test_utils/runtime_utils"
 
 	"github.com/onflow/cadence/bbq"
+	. "github.com/onflow/cadence/bbq/test-utils"
 	"github.com/onflow/cadence/bbq/vm"
 )
 
@@ -42,7 +43,7 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 
 	storage := interpreter.NewInMemoryStorage(nil)
 
-	programs := map[common.Location]*compiledProgram{}
+	programs := CompiledPrograms{}
 
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
 	authorizerAddress := common.MustBytesToAddress([]byte{0x2})
@@ -85,7 +86,7 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
     `
 	barLocation := common.NewAddressLocation(nil, contractsAddress, "Bar")
 
-	barProgram := parseCheckAndCompile(t, contractCode, barLocation, programs)
+	barProgram := ParseCheckAndCompile(t, contractCode, barLocation, programs)
 
 	config := vm.NewConfig(storage)
 
@@ -157,7 +158,7 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 	}
 
 	fooLocation := common.NewAddressLocation(nil, contractsAddress, "Foo")
-	program := parseCheckAndCompile(t, fooContract, fooLocation, programs)
+	program := ParseCheckAndCompile(t, fooContract, fooLocation, programs)
 
 	accountHandler := &testAccountHandler{}
 
