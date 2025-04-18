@@ -441,7 +441,15 @@ func (v UFix64Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []
 }
 
 func (v UFix64Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
-	return getNumberValueMember(context, v, name, sema.UFix64Type, locationRange)
+	return context.GetMethod(v, name, locationRange)
+}
+
+func (v UFix64Value) GetMethod(
+	context MemberAccessibleContext,
+	locationRange LocationRange,
+	name string,
+) FunctionValue {
+	return getNumberValueFunctionMember(context, v, name, sema.UFix64Type, locationRange)
 }
 
 func (UFix64Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {

@@ -142,7 +142,23 @@ func (v *IDCapabilityValue) MeteredString(context ValueStringContext, seenRefere
 	)
 }
 
-func (v *IDCapabilityValue) GetMember(context MemberAccessibleContext, _ LocationRange, name string) Value {
+func (v *IDCapabilityValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	switch name {
+	case sema.CapabilityTypeAddressFieldName:
+		return v.address
+
+	case sema.CapabilityTypeIDFieldName:
+		return v.ID
+	}
+
+	return context.GetMethod(v, name, locationRange)
+}
+
+func (v *IDCapabilityValue) GetMethod(
+	context MemberAccessibleContext,
+	locationRange LocationRange,
+	name string,
+) FunctionValue {
 	switch name {
 	case sema.CapabilityTypeBorrowFunctionName:
 		// this function will panic already if this conversion fails
@@ -153,12 +169,6 @@ func (v *IDCapabilityValue) GetMember(context MemberAccessibleContext, _ Locatio
 		// this function will panic already if this conversion fails
 		borrowType, _ := MustConvertStaticToSemaType(v.BorrowType, context).(*sema.ReferenceType)
 		return capabilityCheckFunction(context, v, v.address, v.ID, borrowType)
-
-	case sema.CapabilityTypeAddressFieldName:
-		return v.address
-
-	case sema.CapabilityTypeIDFieldName:
-		return v.ID
 	}
 
 	return nil

@@ -99,6 +99,14 @@ var nilValueMapFunction = NewUnmeteredStaticHostFunctionValue(
 )
 
 func (v NilValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	return context.GetMethod(v, name, locationRange)
+}
+
+func (v NilValue) GetMethod(
+	context MemberAccessibleContext,
+	locationRange LocationRange,
+	name string,
+) FunctionValue {
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
 		return nilValueMapFunction

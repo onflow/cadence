@@ -171,7 +171,7 @@ func init() {
 				}
 
 				// Get function argument
-				functionValue, ok := arguments[1].(interpreter.FunctionValue)
+				functionValue, ok := arguments[1].(FunctionValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}

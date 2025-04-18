@@ -799,8 +799,19 @@ func (v *DictionaryValue) GetMember(context MemberAccessibleContext, locationRan
 						nil,
 						false, // value is an element of parent container because it is returned from iterator.
 					)
-			})
+			},
+		)
+	}
 
+	return context.GetMethod(v, name, locationRange)
+}
+
+func (v *DictionaryValue) GetMethod(
+	context MemberAccessibleContext,
+	locationRange LocationRange,
+	name string,
+) FunctionValue {
+	switch name {
 	case "remove":
 		return NewBoundHostFunctionValue(
 			context,

@@ -404,8 +404,8 @@ func baseValueActivation(common.Location) *sema.VariableActivation {
 }
 
 type compiledProgram struct {
-	Program *bbq.InstructionProgram
-	*sema.Elaboration
+	Program             *bbq.InstructionProgram
+	ExtendedElaboration *compiler.ExtendedElaboration
 }
 
 type CompilerAndVMOptions struct {
@@ -443,16 +443,25 @@ func parseCheckAndCompileCodeWithOptions(
 		options.ParseAndCheckOptions,
 		programs,
 	)
+
 	programs[location] = &compiledProgram{
-		Elaboration: checker.Elaboration,
+		ExtendedElaboration: compiler.NewExtendedElaboration(checker.Elaboration),
 	}
 
-	program := compile(
+	program, extendedElaboration := compile(
 		t,
 		options.CompilerConfig,
 		checker,
 		programs,
 	)
+
+	// Replace the original elaboration with the extended one.
+	// Extended elaboration is not needed during the compilation,
+	// only needed during runtime. e.g: for type resolving.
+	// So it is safe to set the *after* the compilation.
+	programs[location] = &compiledProgram{
+		ExtendedElaboration: extendedElaboration,
+	}
 	programs[location].Program = program
 
 	return program
@@ -496,7 +505,9 @@ func parseAndCheckWithOptions(
 			}
 
 			return sema.ElaborationImport{
-				Elaboration: imported.Elaboration,
+				// Here the elaboration is only used for type checking.
+				// Hence, it is safe to use the original elaboration.
+				Elaboration: imported.ExtendedElaboration.Elaboration(),
 			}, nil
 		}
 	}
@@ -515,7 +526,7 @@ func compile(
 	config *compiler.Config,
 	checker *sema.Checker,
 	programs map[common.Location]*compiledProgram,
-) *bbq.InstructionProgram {
+) (*bbq.InstructionProgram, *compiler.ExtendedElaboration) {
 
 	if config == nil {
 		config = &compiler.Config{
@@ -527,19 +538,20 @@ func compile(
 				}
 				return imported.Program
 			},
-			ElaborationResolver: func(location common.Location) (*sema.Elaboration, error) {
+			ElaborationResolver: func(location common.Location) (*compiler.ExtendedElaboration, error) {
 				imported, ok := programs[location]
 				if !ok {
 					return nil, fmt.Errorf("cannot find elaboration for %s", location)
 				}
-				return imported.Elaboration, nil
+				return imported.ExtendedElaboration, nil
 			},
 		}
 	}
 	comp := compiler.NewInstructionCompilerWithConfig(checker, config)
 
 	program := comp.Compile()
-	return program
+
+	return program, comp.ExtendedElaboration
 }
 
 func compileAndInvoke(
@@ -671,7 +683,7 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 			program, ok := programs[location]
 			require.True(t, ok, "cannot find elaboration for %s", location)
 
-			elaboration := program.Elaboration
+			elaboration := program.ExtendedElaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
 				return compositeType
@@ -687,7 +699,20 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 				return entitlementMapType
 			}
 
-			return elaboration.InterfaceType(typeID)
+			interfaceType := elaboration.InterfaceType(typeID)
+			if interfaceType != nil {
+				return interfaceType
+			}
+
+			return nil
+		}
+	}
+
+	if vmConfig.ImportHandler == nil {
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			program, ok := programs[location]
+			require.True(t, ok, "cannot find elaboration for %s", location)
+			return program.Program
 		}
 	}
 

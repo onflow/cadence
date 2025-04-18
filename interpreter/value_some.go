@@ -146,7 +146,15 @@ func (v *SomeValue) MeteredString(context ValueStringContext, seenReferences See
 	return v.value.MeteredString(context, seenReferences, locationRange)
 }
 
-func (v *SomeValue) GetMember(context MemberAccessibleContext, _ LocationRange, name string) Value {
+func (v *SomeValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	return context.GetMethod(v, name, locationRange)
+}
+
+func (v *SomeValue) GetMethod(
+	context MemberAccessibleContext,
+	locationRange LocationRange,
+	name string,
+) FunctionValue {
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
 		innerValueType := MustConvertStaticToSemaType(

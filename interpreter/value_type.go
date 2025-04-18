@@ -117,7 +117,7 @@ func (v TypeValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value)
 	return staticType.Equal(otherStaticType)
 }
 
-func (v TypeValue) GetMember(context MemberAccessibleContext, _ LocationRange, name string) Value {
+func (v TypeValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
 	switch name {
 	case sema.MetaTypeIdentifierFieldName:
 		var typeID string
@@ -129,27 +129,6 @@ func (v TypeValue) GetMember(context MemberAccessibleContext, _ LocationRange, n
 		return NewStringValue(context, memoryUsage, func() string {
 			return typeID
 		})
-
-	case sema.MetaTypeIsSubtypeFunctionName:
-		return NewBoundHostFunctionValue(
-			context,
-			v,
-			sema.MetaTypeIsSubtypeFunctionType,
-			func(typeValue TypeValue, invocation Invocation) Value {
-				invocationContext := invocation.InvocationContext
-
-				otherTypeValue, ok := invocation.Arguments[0].(TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return MetaTypeIsSubType(
-					invocationContext,
-					typeValue,
-					otherTypeValue,
-				)
-			},
-		)
 
 	case sema.MetaTypeIsRecoveredFieldName:
 		staticType := v.Type
@@ -242,7 +221,37 @@ func (v TypeValue) GetMember(context MemberAccessibleContext, _ LocationRange, n
 		default:
 			return Nil
 		}
+	}
 
+	return context.GetMethod(v, name, locationRange)
+}
+
+func (v TypeValue) GetMethod(
+	context MemberAccessibleContext,
+	_ LocationRange,
+	name string,
+) FunctionValue {
+	switch name {
+	case sema.MetaTypeIsSubtypeFunctionName:
+		return NewBoundHostFunctionValue(
+			context,
+			v,
+			sema.MetaTypeIsSubtypeFunctionType,
+			func(typeValue TypeValue, invocation Invocation) Value {
+				invocationContext := invocation.InvocationContext
+
+				otherTypeValue, ok := invocation.Arguments[0].(TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return MetaTypeIsSubType(
+					invocationContext,
+					typeValue,
+					otherTypeValue,
+				)
+			},
+		)
 	}
 
 	return nil

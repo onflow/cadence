@@ -90,7 +90,10 @@ func NewVM(
 	}
 
 	// Delegate the function invocations to the vm.
+	// TODO: Fix: this should also be able to call native functions.
 	context.invokeFunction = vm.invoke
+
+	context.lookupFunction = vm.maybeLookupFunction
 
 	// Link global variables and functions.
 	linkedGlobals := LinkGlobals(
@@ -195,7 +198,7 @@ func fill(slice []Value, n int) []Value {
 	return slice
 }
 
-func (vm *VM) pushCallFrame(functionValue FunctionValue, arguments []Value) {
+func (vm *VM) pushCallFrame(functionValue CompiledFunctionValue, arguments []Value) {
 	localsCount := functionValue.Function.LocalCount
 
 	vm.locals = append(vm.locals, arguments...)
@@ -268,7 +271,7 @@ func (vm *VM) Invoke(name string, arguments ...Value) (v Value, err error) {
 }
 
 func (vm *VM) invoke(function Value, arguments []Value) (Value, error) {
-	functionValue, ok := function.(FunctionValue)
+	functionValue, ok := function.(CompiledFunctionValue)
 	if !ok {
 		return nil, errors.NewDefaultUserError("not invocable")
 	}
@@ -629,25 +632,12 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 
 	value := vm.pop()
 
-	switch value := value.(type) {
-	case FunctionValue:
-		parameterCount := int(value.Function.ParameterCount)
-		arguments := vm.peekN(parameterCount)
-		vm.pushCallFrame(value, arguments)
-		vm.dropN(len(arguments))
-
-	case NativeFunctionValue:
-		parameterCount := value.ParameterCount
-		arguments := vm.peekN(parameterCount)
-		result := value.Function(vm.context, typeArguments, arguments...)
-		vm.dropN(len(arguments))
-		vm.push(result)
-
-	default:
-		panic(errors.NewUnreachableError())
-	}
-
-	// We do not need to drop the receiver, as the parameter count given in the instruction already includes it
+	invokeFunction(
+		vm,
+		value,
+		false,
+		typeArguments,
+	)
 }
 
 func opInvokeMethodStatic(vm *VM, ins opcode.InstructionInvokeMethodStatic) {
@@ -655,31 +645,100 @@ func opInvokeMethodStatic(vm *VM, ins opcode.InstructionInvokeMethodStatic) {
 
 	value := vm.pop()
 
-	switch value := value.(type) {
+	invokeFunction(
+		vm,
+		value,
+		true,
+		typeArguments,
+	)
+}
+
+func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
+	// TODO: This method is now equivalent to: `GetField` + `Invoke` instructions.
+	// See if it can be replaced. That will reduce the complexity of `invokeFunction` method below.
+
+	// Load type arguments
+	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
+
+	// Get receiver
+	argumentCount := int(ins.ArgCount)
+	receiver := getReceiver(vm, argumentCount)
+	memberAccessibleValue := receiver.(interpreter.MemberAccessibleValue)
+
+	// Get function
+	nameIndex := ins.Name
+	funcName := getStringConstant(vm, nameIndex)
+
+	functionValue := memberAccessibleValue.GetMember(
+		vm.context,
+		EmptyLocationRange,
+		funcName,
+	)
+
+	invokeFunction(
+		vm,
+		functionValue,
+		true,
+		typeArguments,
+	)
+}
+
+func invokeFunction(
+	vm *VM,
+	functionValue Value,
+	hasExplicitReceiver bool,
+	typeArguments []bbq.StaticType,
+) {
+
+	var arguments []Value
+	var explicitArgumentsCount int
+
+	switch typedFunctionValue := functionValue.(type) {
+	case BoundFunctionPointerValue:
+		wrapper := typedFunctionValue
+		functionValue = wrapper.Method
+		explicitArgumentsCount = wrapper.ParameterCount
+
+		// If the function is a pointer to an object-method, then the receiver is implicitly captured.
+		// However, in `InvokeMethodDynamic` instruction, it is also explicitly provided as well.
+
+		if hasExplicitReceiver {
+			explicitArgumentsCount++
+			arguments = vm.peekN(explicitArgumentsCount)
+			receiver := arguments[receiverIndex]
+			arguments[receiverIndex] = unwrapReceiver(vm.context, receiver)
+		} else {
+			receiver := unwrapReceiver(vm.context, wrapper.Receiver)
+			arguments = append(arguments, receiver)
+			arguments = append(arguments, vm.peekN(explicitArgumentsCount)...)
+		}
 	case FunctionValue:
-		parameterCount := int(value.Function.ParameterCount)
-		arguments := vm.peekN(parameterCount)
+		explicitArgumentsCount = typedFunctionValue.GetParameterCount()
+		arguments = vm.peekN(explicitArgumentsCount)
+		if hasExplicitReceiver {
+			receiver := arguments[receiverIndex]
+			arguments[receiverIndex] = unwrapReceiver(vm.context, receiver)
+		}
+	default:
+		panic(errors.NewUnreachableError())
+	}
 
-		receiver := getReceiver(vm, parameterCount-1)
-		arguments[receiverIndex] = receiver
-
-		vm.pushCallFrame(value, arguments)
-		vm.dropN(len(arguments))
+	switch functionValue := functionValue.(type) {
+	case CompiledFunctionValue:
+		vm.pushCallFrame(functionValue, arguments)
+		vm.dropN(explicitArgumentsCount)
 
 	case NativeFunctionValue:
-		parameterCount := value.ParameterCount
-		arguments := vm.peekN(parameterCount)
-
-		receiver := getReceiver(vm, parameterCount-1)
-		arguments[receiverIndex] = receiver
-
-		result := value.Function(vm.context, typeArguments, arguments...)
-		vm.dropN(len(arguments))
+		result := functionValue.Function(vm.context, typeArguments, arguments...)
+		vm.dropN(explicitArgumentsCount)
 		vm.push(result)
 
 	default:
 		panic(errors.NewUnreachableError())
 	}
+
+	// We do not need to drop the receiver explicitly,
+	// as the `explicitArgumentsCount` already includes it.
 }
 
 func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
@@ -692,63 +751,6 @@ func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
 		}
 	}
 	return typeArguments
-}
-
-func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
-	// TODO:
-	// Load type arguments
-	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
-	// TODO: Just to make the linter happy
-	_ = typeArguments
-
-	// Get receiver
-
-	argumentCount := int(ins.ArgCount)
-
-	receiver := getReceiver(vm, argumentCount)
-
-	// TODO: maybe add support for calling methods dynamically on non-composite values, e.g. simple composite values
-
-	compositeValue := receiver.(*interpreter.CompositeValue)
-
-	// Get function
-
-	staticType := compositeValue.StaticType(vm.context)
-
-	// TODO: for inclusive range, this is different.
-	compositeType := staticType.(*interpreter.CompositeStaticType)
-
-	nameIndex := ins.Name
-	funcName := getStringConstant(vm, nameIndex)
-
-	// TODO: maybe add support for calling methods dynamically on e.g. native functions
-
-	qualifiedFuncName := commons.TypeQualifiedName(compositeType.QualifiedIdentifier, funcName)
-	functionValue := vm.lookupFunction(compositeType.Location, qualifiedFuncName)
-
-	switch functionValue := functionValue.(type) {
-	case FunctionValue:
-		parameterCount := int(functionValue.Function.ParameterCount)
-		arguments := vm.peekN(parameterCount)
-
-		arguments[receiverIndex] = receiver
-
-		vm.pushCallFrame(functionValue, arguments)
-		vm.dropN(len(arguments))
-
-	case NativeFunctionValue:
-		parameterCount := functionValue.ParameterCount
-		arguments := vm.peekN(parameterCount)
-
-		arguments[receiverIndex] = receiver
-
-		result := functionValue.Function(vm.context, typeArguments, arguments...)
-		vm.dropN(len(arguments))
-		vm.push(result)
-
-	default:
-		panic(errors.NewUnreachableError())
-	}
 }
 
 func getReceiver(vm *VM, argumentCount int) Value {
@@ -1350,7 +1352,7 @@ func opNewClosure(vm *VM, ins opcode.InstructionNewClosure) {
 
 	funcStaticType := getTypeFromExecutable[interpreter.FunctionStaticType](executable, function.TypeIndex)
 
-	vm.push(FunctionValue{
+	vm.push(CompiledFunctionValue{
 		Function:   function,
 		Executable: executable,
 		Upvalues:   upvalues,
@@ -1594,11 +1596,19 @@ func (vm *VM) loadType(index uint16) bbq.StaticType {
 	return staticType
 }
 
-func (vm *VM) lookupFunction(location common.Location, name string) interpreter.FunctionValue {
+func (vm *VM) maybeLookupFunction(location common.Location, name string) FunctionValue {
+	funcValue, ok := vm.lookupFunction(location, name)
+	if !ok {
+		return nil
+	}
+	return funcValue
+}
+
+func (vm *VM) lookupFunction(location common.Location, name string) (FunctionValue, bool) {
 	// First check in current program.
 	value, ok := vm.globals[name]
 	if ok {
-		return value.(interpreter.FunctionValue)
+		return value.(FunctionValue), true
 	}
 
 	// If not found, check in already linked imported functions.
@@ -1620,10 +1630,10 @@ func (vm *VM) lookupFunction(location common.Location, name string) interpreter.
 
 	value, ok = linkedGlobals.indexedGlobals[name]
 	if !ok {
-		panic(errors.NewUnexpectedError("cannot link global: %s", name))
+		return nil, false
 	}
 
-	return value.(interpreter.FunctionValue)
+	return value.(FunctionValue), true
 }
 
 func (vm *VM) StackSize() int {

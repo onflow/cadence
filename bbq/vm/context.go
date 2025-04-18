@@ -21,6 +21,7 @@ package vm
 import (
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -42,6 +43,7 @@ type Context struct {
 	referencedResourceKindedValues              ReferencedResourceKindedValues
 
 	invokeFunction func(function Value, arguments []Value) (Value, error)
+	lookupFunction func(location common.Location, name string) FunctionValue
 
 	// TODO: stack-trace, location, etc.
 }
@@ -211,4 +213,33 @@ func (c *Context) InvokeFunction(
 
 func (c *Context) GetResourceDestructionContextForLocation(location common.Location) interpreter.ResourceDestructionContext {
 	return c
+}
+
+func (c *Context) GetMethod(
+	value interpreter.MemberAccessibleValue,
+	name string,
+	locationRange interpreter.LocationRange,
+) interpreter.FunctionValue {
+	staticType := value.StaticType(c)
+
+	// TODO: avoid the sema-type conversion
+	semaType := interpreter.MustConvertStaticToSemaType(staticType, c)
+
+	var location common.Location
+	if locatedType, ok := semaType.(sema.LocatedType); ok {
+		location = locatedType.GetLocation()
+	}
+
+	typeQualifier := commons.TypeQualifier(semaType)
+	qualifiedFuncName := commons.TypeQualifiedName(typeQualifier, name)
+
+	method := c.lookupFunction(location, qualifiedFuncName)
+	if method == nil {
+		return nil
+	}
+
+	return NewBoundFunctionPointerValue(
+		value,
+		method,
+	)
 }

@@ -829,11 +829,21 @@ func (v *ArrayValue) Contains(
 	return BoolValue(result)
 }
 
-func (v *ArrayValue) GetMember(context MemberAccessibleContext, _ LocationRange, name string) Value {
+func (v *ArrayValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
 	switch name {
 	case "length":
 		return NewIntValueFromInt64(context, int64(v.Count()))
+	}
 
+	return context.GetMethod(v, name, locationRange)
+}
+
+func (v *ArrayValue) GetMethod(
+	context MemberAccessibleContext,
+	_ LocationRange,
+	name string,
+) FunctionValue {
+	switch name {
 	case "append":
 		return NewBoundHostFunctionValue(
 			context,

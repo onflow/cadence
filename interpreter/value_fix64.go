@@ -528,7 +528,15 @@ func ConvertFix64(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 }
 
 func (v Fix64Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
-	return getNumberValueMember(context, v, name, sema.Fix64Type, locationRange)
+	return context.GetMethod(v, name, locationRange)
+}
+
+func (v Fix64Value) GetMethod(
+	context MemberAccessibleContext,
+	locationRange LocationRange,
+	name string,
+) FunctionValue {
+	return getNumberValueFunctionMember(context, v, name, sema.Fix64Type, locationRange)
 }
 
 func (Fix64Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {

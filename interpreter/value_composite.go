@@ -479,7 +479,7 @@ func (v *CompositeValue) GetMember(context MemberAccessibleContext, locationRang
 		return injectedField
 	}
 
-	if function := v.GetFunction(context, locationRange, name); function != nil {
+	if function := context.GetMethod(v, name, locationRange); function != nil {
 		return function
 	}
 
@@ -534,7 +534,7 @@ func (v *CompositeValue) GetInjectedField(context MemberAccessibleContext, name 
 	return value
 }
 
-func (v *CompositeValue) GetFunction(context FunctionCreationContext, locationRange LocationRange, name string) FunctionValue {
+func (v *CompositeValue) GetMethod(context MemberAccessibleContext, locationRange LocationRange, name string) FunctionValue {
 	if v.Functions == nil {
 		v.Functions = context.GetCompositeValueFunctions(v, locationRange)
 	}

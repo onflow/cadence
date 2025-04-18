@@ -111,6 +111,14 @@ func (v PathValue) MeteredString(context ValueStringContext, _ SeenReferences, _
 }
 
 func (v PathValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	return context.GetMethod(v, name, locationRange)
+}
+
+func (v PathValue) GetMethod(
+	context MemberAccessibleContext,
+	locationRange LocationRange,
+	name string,
+) FunctionValue {
 	switch name {
 
 	case sema.ToStringFunctionName:

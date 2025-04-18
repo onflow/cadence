@@ -21,12 +21,11 @@ package compiler
 import (
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/sema"
 )
 
 type Config struct {
 	ImportHandler          commons.ImportHandler
 	LocationHandler        commons.LocationHandler
-	ElaborationResolver    func(common.Location) (*sema.Elaboration, error)
+	ElaborationResolver    func(location common.Location) (*ExtendedElaboration, error)
 	BuiltinGlobalsProvider func() map[string]*Global
 }
