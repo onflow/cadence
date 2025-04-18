@@ -20,6 +20,8 @@ package vm
 
 import (
 	"github.com/onflow/atree"
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/opcode"
 
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
@@ -43,6 +45,7 @@ type Context struct {
 	referencedResourceKindedValues              ReferencedResourceKindedValues
 
 	invokeFunction func(function Value, arguments []Value) (Value, error)
+	lookupFunction func(location common.Location, name string) FunctionValue
 
 	// TODO: stack-trace, location, etc.
 }
@@ -232,5 +235,38 @@ func (c *Context) GetMethod(
 	typeQualifier := commons.TypeQualifier(semaType)
 	qualifiedFuncName := commons.TypeQualifiedName(typeQualifier, name)
 
-	return c.lookupFunction(location, qualifiedFuncName)
+	method := c.lookupFunction(location, qualifiedFuncName)
+	if method == nil {
+		return nil
+	}
+
+	return methodAsFunctionPointer(value, method)
+}
+
+func methodAsFunctionPointer(value Value, method FunctionValue) FunctionValue {
+	switch method := method.(type) {
+	case CompiledFunctionValue:
+		bbqFunction := method.Function
+		return CompiledFunctionValue{
+			Function: &bbq.Function[opcode.Instruction]{
+				Name:               bbqFunction.Name,
+				QualifiedName:      bbqFunction.QualifiedName,
+				Code:               bbqFunction.Code,
+				TypeParameterCount: bbqFunction.TypeParameterCount,
+				LocalCount:         bbqFunction.LocalCount,
+				TypeIndex:          bbqFunction.TypeIndex,
+
+				// Receiver is now captured in a closure.
+				// Hence, it is not passed-in as an argument explicitly.
+				ParameterCount: bbqFunction.ParameterCount - 1,
+			},
+			Executable: method.Executable,
+			Upvalues:   method.Upvalues,
+			Type:       interpreter.FunctionStaticType{},
+		}
+	case NativeFunctionValue:
+		return nil
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }

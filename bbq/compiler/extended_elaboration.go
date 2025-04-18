@@ -45,7 +45,7 @@ type ExtendedElaboration struct {
 	functionDeclarationFunctionTypes  map[*ast.FunctionDeclaration]*sema.FunctionType
 	returnStatementTypes              map[*ast.ReturnStatement]sema.ReturnStatementTypes
 	emitStatementEventTypes           map[*ast.EmitStatement]*sema.CompositeType
-	compositeTypes map[common.TypeID]*sema.CompositeType
+	compositeTypes                    map[common.TypeID]*sema.CompositeType
 }
 
 func NewExtendedElaboration(elaboration *sema.Elaboration) *ExtendedElaboration {

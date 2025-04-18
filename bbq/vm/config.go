@@ -47,9 +47,6 @@ type Config struct {
 	storage           interpreter.Storage
 	interpreterConfig *interpreter.Config
 
-	// TODO: Move to Context
-	lookupFunction func(location common.Location, name string) interpreter.FunctionValue
-
 	accountHandler stdlib.AccountHandler
 	TypeLoader     func(location common.Location, typeID interpreter.TypeID) sema.ContainedType
 	// OnEventEmitted is triggered when an event is emitted by the program
