@@ -35,12 +35,12 @@ import (
 // ExportValue converts a runtime value to its native Go representation.
 func ExportValue(
 	value interpreter.Value,
-	inter *interpreter.Interpreter,
+	context interpreter.ValueExportContext,
 	locationRange interpreter.LocationRange,
 ) (cadence.Value, error) {
 	return exportValue(
 		value,
-		inter,
+		context,
 		locationRange,
 		seenReferences{},
 	)
