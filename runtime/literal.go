@@ -50,14 +50,14 @@ var LiteralExpressionTypeError = parser.NewSyntaxError(
 func ParseLiteral(
 	literal string,
 	ty sema.Type,
-	inter *interpreter.Interpreter,
+	context interpreter.ValueExportContext,
 ) (
 	cadence.Value,
 	error,
 ) {
 	code := []byte(literal)
 
-	expression, errs := parser.ParseExpression(inter, code, parser.Config{})
+	expression, errs := parser.ParseExpression(context, code, parser.Config{})
 	if len(errs) > 0 {
 		return nil, parser.Error{
 			Code:   code,
@@ -65,7 +65,7 @@ func ParseLiteral(
 		}
 	}
 
-	return LiteralValue(inter, expression, ty)
+	return LiteralValue(context, expression, ty)
 }
 
 // ParseLiteralArgumentList parses an argument list with literals, that should have the given types.
