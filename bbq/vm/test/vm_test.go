@@ -2928,7 +2928,7 @@ func TestDefaultFunctions(t *testing.T) {
 			return contractValue
 		}
 		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-			elaboration := programs[location].Elaboration
+			elaboration := programs[location].ExtendedElaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
 				return compositeType
@@ -3059,7 +3059,7 @@ func TestDefaultFunctions(t *testing.T) {
 			return contractValue
 		}
 		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-			elaboration := programs[location].Elaboration
+			elaboration := programs[location].ExtendedElaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
 				return compositeType
@@ -3192,7 +3192,7 @@ func TestDefaultFunctions(t *testing.T) {
 			return contractValue
 		}
 		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-			elaboration := programs[location].Elaboration
+			elaboration := programs[location].ExtendedElaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
 				return compositeType
@@ -3549,7 +3549,7 @@ func TestFunctionPreConditions(t *testing.T) {
 			return contractValue
 		}
 		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-			elaboration := programs[location].Elaboration
+			elaboration := programs[location].ExtendedElaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
 				return compositeType
@@ -6809,7 +6809,7 @@ func TestEmitInContract(t *testing.T) {
 			return contractValue
 		}
 		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-			elaboration := programs[location].Elaboration
+			elaboration := programs[location].ExtendedElaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
 				return compositeType
@@ -6939,7 +6939,7 @@ func TestInheritedConditions(t *testing.T) {
 			return contractValue
 		}
 		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-			elaboration := programs[location].Elaboration
+			elaboration := programs[location].ExtendedElaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
 				return compositeType
@@ -7087,7 +7087,7 @@ func TestInheritedConditions(t *testing.T) {
 			return contractValue
 		}
 		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-			elaboration := programs[location].Elaboration
+			elaboration := programs[location].ExtendedElaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
 				return compositeType

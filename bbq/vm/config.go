@@ -290,25 +290,4 @@ func (c *Config) OnResourceOwnerChange(
 	//TODO
 }
 
-func (c *Config) GetMethod(
-	value interpreter.MemberAccessibleValue,
-	name string,
-	locationRange interpreter.LocationRange,
-) interpreter.FunctionValue {
-	staticType := value.StaticType(c)
-
-	// TODO: avoid the sema-type conversion
-	semaType := interpreter.MustConvertStaticToSemaType(staticType, c)
-
-	var location common.Location
-	if locatedType, ok := semaType.(sema.LocatedType); ok {
-		location = locatedType.GetLocation()
-	}
-
-	typeQualifier := commons.TypeQualifier(semaType)
-	qualifiedFuncName := commons.TypeQualifiedName(typeQualifier, name)
-
-	return c.lookupFunction(location, qualifiedFuncName)
-}
-
 type ContractValueHandler func(conf *Config, location common.Location) *interpreter.CompositeValue

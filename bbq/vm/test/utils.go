@@ -404,8 +404,8 @@ func baseValueActivation(common.Location) *sema.VariableActivation {
 }
 
 type compiledProgram struct {
-	Program *bbq.InstructionProgram
-	*compiler.ExtendedElaboration
+	Program             *bbq.InstructionProgram
+	ExtendedElaboration *compiler.ExtendedElaboration
 }
 
 type CompilerAndVMOptions struct {
