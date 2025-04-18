@@ -302,7 +302,7 @@ func NewBoundFunctionPointerValue(
 	receiver interpreter.MemberAccessibleValue,
 	method FunctionValue,
 ) FunctionValue {
-	return &BoundFunctionPointerValue{
+	return BoundFunctionPointerValue{
 		Receiver:       receiver,
 		Method:         method,
 		ParameterCount: method.GetParameterCount() - 1,

@@ -631,112 +631,106 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
 
 	value := vm.pop()
-	functionValue, ok := value.(FunctionValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	paramCount := functionValue.GetParameterCount()
 
 	invokeFunction(
 		vm,
-		functionValue,
-		nil,
-		paramCount,
+		value,
+		false,
 		typeArguments,
 	)
-
-	// We do not need to drop the receiver, as the parameter count given in the instruction already includes it
 }
 
 func opInvokeMethodStatic(vm *VM, ins opcode.InstructionInvokeMethodStatic) {
 	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
 
 	value := vm.pop()
-	functionValue, ok := value.(FunctionValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	paramCount := functionValue.GetParameterCount()
-	receiver := getReceiver(vm, paramCount-1)
 
 	invokeFunction(
 		vm,
-		functionValue,
-		receiver,
-		paramCount,
+		value,
+		true,
 		typeArguments,
 	)
 }
 
 func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
+	// TODO: This method is now equivalent to: `GetField` + `Invoke` instructions.
+	// See if it can be replaced. That will reduce the complexity of `invokeFunction` method below.
+
 	// Load type arguments
 	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
 
 	// Get receiver
 	argumentCount := int(ins.ArgCount)
 	receiver := getReceiver(vm, argumentCount)
-
-	// TODO: maybe add support for calling methods dynamically on non-composite values, e.g. simple composite values
-	// TODO: maybe add support for calling methods dynamically on e.g. native functions
+	memberAccessibleValue := receiver.(interpreter.MemberAccessibleValue)
 
 	// Get function
-
-	compositeValue := receiver.(*interpreter.CompositeValue)
-	staticType := compositeValue.StaticType(vm.context)
-
-	// TODO: for inclusive range, this is different.
-	compositeType := staticType.(*interpreter.CompositeStaticType)
-
 	nameIndex := ins.Name
 	funcName := getStringConstant(vm, nameIndex)
-	qualifiedFuncName := commons.TypeQualifiedName(compositeType.QualifiedIdentifier, funcName)
 
-	functionValue := vm.mustLookupFunction(compositeType.Location, qualifiedFuncName)
+	functionValue := memberAccessibleValue.GetMember(
+		vm.context,
+		EmptyLocationRange,
+		funcName,
+	)
+
 	invokeFunction(
 		vm,
 		functionValue,
-		receiver,
-		functionValue.GetParameterCount(),
+		true,
 		typeArguments,
 	)
 }
 
 func invokeFunction(
 	vm *VM,
-	functionValue FunctionValue,
-	receiver Value,
-	parameterCount int,
+	functionValue Value,
+	hasExplicitReceiver bool,
 	typeArguments []bbq.StaticType,
 ) {
 
 	var arguments []Value
+	var explicitArgumentsCount int
 
-	if methodPointer, ok := functionValue.(BoundFunctionPointerValue); ok {
-		// If the function is a pointer to an object-method,
-		// then the receiver is implicitly captured.
-		receiver = methodPointer.Receiver
-		functionValue = methodPointer.Method
-		parameterCount = methodPointer.ParameterCount
+	switch typedFunctionValue := functionValue.(type) {
+	case BoundFunctionPointerValue:
+		wrapper := typedFunctionValue
+		functionValue = wrapper.Method
+		explicitArgumentsCount = wrapper.ParameterCount
 
-		arguments = append(arguments, receiver)
-		arguments = append(arguments, vm.peekN(parameterCount)...)
-	} else {
-		arguments = vm.peekN(parameterCount)
-		if receiver != nil {
-			arguments[receiverIndex] = receiver
+		// If the function is a pointer to an object-method, then the receiver is implicitly captured.
+		// However, in `InvokeMethodDynamic` instruction, it is also explicitly provided as well.
+
+		if hasExplicitReceiver {
+			explicitArgumentsCount++
+			arguments = vm.peekN(explicitArgumentsCount)
+			receiver := arguments[receiverIndex]
+			arguments[receiverIndex] = unwrapReceiver(vm.context, receiver)
+		} else {
+			receiver := unwrapReceiver(vm.context, wrapper.Receiver)
+			arguments = append(arguments, receiver)
+			arguments = append(arguments, vm.peekN(explicitArgumentsCount)...)
 		}
+	case FunctionValue:
+		explicitArgumentsCount = typedFunctionValue.GetParameterCount()
+		arguments = vm.peekN(explicitArgumentsCount)
+		if hasExplicitReceiver {
+			receiver := arguments[receiverIndex]
+			arguments[receiverIndex] = unwrapReceiver(vm.context, receiver)
+		}
+	default:
+		panic(errors.NewUnreachableError())
 	}
 
 	switch functionValue := functionValue.(type) {
 	case CompiledFunctionValue:
 		vm.pushCallFrame(functionValue, arguments)
-		vm.dropN(parameterCount)
+		vm.dropN(explicitArgumentsCount)
 
 	case NativeFunctionValue:
 		result := functionValue.Function(vm.context, typeArguments, arguments...)
-		vm.dropN(parameterCount)
+		vm.dropN(explicitArgumentsCount)
 		vm.push(result)
 
 	default:
@@ -744,7 +738,7 @@ func invokeFunction(
 	}
 
 	// We do not need to drop the receiver explicitly,
-	// as the parameter count given in the instruction already includes it.
+	// as the `explicitArgumentsCount` already includes it.
 }
 
 func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
@@ -848,18 +842,6 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 			Name:   fieldName,
 		})
 	}
-
-	//if fieldValue == nil {
-	//
-	//	staticType := memberAccessibleValue.StaticType(vm.config)
-	//	semaType := interpreter.MustConvertStaticToSemaType(staticType, vm.config)
-	//	typeQualifier := commons.TypeQualifier(semaType)
-	//
-	//	qualifiedFuncName := commons.TypeQualifiedName(typeQualifier, fieldName)
-	//	var functionValue = vm.lookupFunction(compositeType.Location, qualifiedFuncName)
-	//
-	//	vm.lookupFunction()
-	//}
 
 	vm.push(fieldValue)
 }
@@ -1614,20 +1596,12 @@ func (vm *VM) loadType(index uint16) bbq.StaticType {
 	return staticType
 }
 
-func (vm *VM) mustLookupFunction(location common.Location, name string) FunctionValue {
-	funcValue, ok := vm.lookupFunction(location, name)
-	if !ok {
-		panic(errors.NewUnexpectedError("cannot link global: %s", name))
-	}
-	return funcValue.(FunctionValue)
-}
-
 func (vm *VM) maybeLookupFunction(location common.Location, name string) FunctionValue {
 	funcValue, ok := vm.lookupFunction(location, name)
 	if !ok {
 		return nil
 	}
-	return funcValue.(FunctionValue)
+	return funcValue
 }
 
 func (vm *VM) lookupFunction(location common.Location, name string) (FunctionValue, bool) {

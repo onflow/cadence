@@ -7278,6 +7278,37 @@ func TestMethodsAsFunctionPointers(t *testing.T) {
 		assert.Equal(t, interpreter.BoolValue(true), result)
 	})
 
+	t.Run("interface function", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := compileAndInvoke(
+			t,
+			`
+            struct interface Interface {
+                access(all) fun add(_ a: Int, _ b: Int): Int {
+                    return a + b
+                }
+            }
+
+            struct Test: Interface {
+                access(all) fun add(_ a: Int, _ b: Int): Int {
+                    return a + b
+                }
+            }
+
+            fun test(): Int {
+                let test: {Interface} = Test()
+                var add = test.add
+                return add( 1, 3)
+            }
+        `,
+			"test",
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(4), result)
+	})
+
 	t.Run("primitive value, builtin function", func(t *testing.T) {
 		t.Parallel()
 
