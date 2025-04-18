@@ -210,7 +210,7 @@ func (executor *interpreterTransactionExecutor) authorizerValues(
 
 		addressValue := interpreter.NewAddressValue(inter, address)
 
-		accountValue := executor.environment.NewAccountValue(inter, addressValue)
+		accountValue := executor.environment.newAccountValue(inter, addressValue)
 
 		referenceType, ok := parameter.TypeAnnotation.Type.(*sema.ReferenceType)
 		if !ok || referenceType.Type != sema.AccountType {
@@ -257,7 +257,7 @@ func (executor *interpreterTransactionExecutor) execute() (err error) {
 		codesAndPrograms,
 	)
 
-	_, inter, err := environment.Interpret(
+	_, inter, err := environment.interpret(
 		location,
 		executor.program,
 		executor.interpret,
@@ -267,7 +267,7 @@ func (executor *interpreterTransactionExecutor) execute() (err error) {
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage
-	err = environment.CommitStorage(inter)
+	err = environment.commitStorage(inter)
 	if err != nil {
 		return newError(err, location, codesAndPrograms)
 	}

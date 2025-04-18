@@ -148,7 +148,7 @@ func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Valu
 	)
 
 	// create interpreter
-	_, inter, err := environment.Interpret(
+	_, inter, err := environment.interpret(
 		location,
 		nil,
 		nil,
@@ -220,7 +220,7 @@ func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Valu
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage
-	err = environment.CommitStorage(inter)
+	err = environment.commitStorage(inter)
 	if err != nil {
 		return nil, newError(err, location, codesAndPrograms)
 	}
@@ -253,7 +253,7 @@ func (executor *interpreterContractFunctionExecutor) convertArgument(
 
 			address := interpreter.NewAddressValue(inter, common.Address(addressValue))
 
-			accountValue := environment.NewAccountValue(inter, address)
+			accountValue := environment.newAccountValue(inter, address)
 
 			authorization := interpreter.ConvertSemaAccessToStaticAuthorization(
 				inter,

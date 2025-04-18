@@ -355,9 +355,13 @@ func UserPanicToError(f func()) (returnedError error) {
 	return nil
 }
 
+type LocationResolver interface {
+	ResolveLocation(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error)
+}
+
 type ArgumentDecoder interface {
 	stdlib.StandardLibraryHandler
-	ResolveLocation(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error)
+	LocationResolver
 
 	// DecodeArgument decodes a transaction/script argument against the given type.
 	DecodeArgument(argument []byte, argumentType cadence.Type) (cadence.Value, error)
@@ -578,7 +582,7 @@ func (r *interpreterRuntime) Storage(context Context) (*Storage, *interpreter.In
 		context.CoverageReport,
 	)
 
-	_, inter, err := environment.Interpret(
+	_, inter, err := environment.interpret(
 		location,
 		nil,
 		nil,

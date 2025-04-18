@@ -189,7 +189,7 @@ func (executor *interpreterScriptExecutor) execute() (val cadence.Value, err err
 		codesAndPrograms,
 	)
 
-	value, inter, err := environment.Interpret(
+	value, inter, err := environment.interpret(
 		location,
 		executor.program,
 		executor.interpret,
@@ -214,7 +214,7 @@ func (executor *interpreterScriptExecutor) execute() (val cadence.Value, err err
 	// Even though this function is `ExecuteScript`, that doesn't imply the changes
 	// to storage will be actually persisted
 
-	err = environment.CommitStorage(inter)
+	err = environment.commitStorage(inter)
 	if err != nil {
 		return nil, newError(err, location, codesAndPrograms)
 	}
