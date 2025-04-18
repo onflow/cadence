@@ -233,7 +233,7 @@ func (executor *interpreterScriptExecutor) scriptExecutionFunction() InterpretFu
 			err = internalErr
 		})
 
-		values, err := validateArgumentParams(
+		values, err := importValidatedArguments(
 			inter,
 			executor.environment,
 			interpreter.EmptyLocationRange,
