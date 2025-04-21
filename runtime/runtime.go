@@ -205,30 +205,30 @@ func reportMetric(
 	report(metrics, elapsed)
 }
 
-// interpreterRuntime is an interpreter-based version of the Flow runtime.
-type interpreterRuntime struct {
+// runtime is an interpreter-based version of the Flow runtime.
+type runtime struct {
 	defaultConfig Config
 }
 
-// NewInterpreterRuntime returns an interpreter-based version of the Flow runtime.
-func NewInterpreterRuntime(defaultConfig Config) Runtime {
-	return &interpreterRuntime{
+// NewRuntime returns an interpreter-based version of the Flow runtime.
+func NewRuntime(defaultConfig Config) Runtime {
+	return &runtime{
 		defaultConfig: defaultConfig,
 	}
 }
 
-func (r *interpreterRuntime) Config() Config {
+func (r *runtime) Config() Config {
 	return r.defaultConfig
 }
 
-func (r *interpreterRuntime) NewScriptExecutor(
+func (r *runtime) NewScriptExecutor(
 	script Script,
 	context Context,
 ) Executor {
 	return newScriptExecutor(r, script, context)
 }
 
-func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
+func (r *runtime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
 	location := context.Location
 	if _, ok := location.(common.ScriptLocation); !ok {
 		return nil, errors.NewUnexpectedError("invalid non-script location: %s", location)
@@ -236,7 +236,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 	return r.NewScriptExecutor(script, context).Result()
 }
 
-func (r *interpreterRuntime) NewContractFunctionExecutor(
+func (r *runtime) NewContractFunctionExecutor(
 	contractLocation common.AddressLocation,
 	functionName string,
 	arguments []cadence.Value,
@@ -253,7 +253,7 @@ func (r *interpreterRuntime) NewContractFunctionExecutor(
 	)
 }
 
-func (r *interpreterRuntime) InvokeContractFunction(
+func (r *runtime) InvokeContractFunction(
 	contractLocation common.AddressLocation,
 	functionName string,
 	arguments []cadence.Value,
@@ -269,11 +269,11 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	).Result()
 }
 
-func (r *interpreterRuntime) NewTransactionExecutor(script Script, context Context) Executor {
+func (r *runtime) NewTransactionExecutor(script Script, context Context) Executor {
 	return newTransactionExecutor(r, script, context)
 }
 
-func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error) {
+func (r *runtime) ExecuteTransaction(script Script, context Context) (err error) {
 	location := context.Location
 	if _, ok := location.(common.TransactionLocation); !ok {
 		return errors.NewUnexpectedError("invalid non-transaction location: %s", location)
@@ -329,7 +329,7 @@ type ArgumentDecoder interface {
 
 // ParseAndCheckProgram parses the given code and checks it.
 // Returns a program that can be interpreted (AST + elaboration).
-func (r *interpreterRuntime) ParseAndCheckProgram(
+func (r *runtime) ParseAndCheckProgram(
 	code []byte,
 	context Context,
 ) (
@@ -373,7 +373,7 @@ func (r *interpreterRuntime) ParseAndCheckProgram(
 
 type InterpretFunc func(inter *interpreter.Interpreter) (interpreter.Value, error)
 
-func (r *interpreterRuntime) Storage(context Context) (*Storage, *interpreter.Interpreter, error) {
+func (r *runtime) Storage(context Context) (*Storage, *interpreter.Interpreter, error) {
 
 	location := context.Location
 
@@ -411,7 +411,7 @@ func (r *interpreterRuntime) Storage(context Context) (*Storage, *interpreter.In
 	return storage, inter, nil
 }
 
-func (r *interpreterRuntime) ReadStored(
+func (r *runtime) ReadStored(
 	address common.Address,
 	path cadence.Path,
 	context Context,
@@ -457,6 +457,6 @@ func (r *interpreterRuntime) ReadStored(
 	return exportedValue, nil
 }
 
-func (r *interpreterRuntime) SetDebugger(debugger *interpreter.Debugger) {
+func (r *runtime) SetDebugger(debugger *interpreter.Debugger) {
 	r.defaultConfig.Debugger = debugger
 }
