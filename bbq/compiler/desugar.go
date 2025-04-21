@@ -1047,23 +1047,33 @@ func (d *Desugar) interfaceDelegationMethodCall(
 }
 
 func (d *Desugar) addImport(location common.Location) {
-	addressLocation, isAddressLocation := location.(common.AddressLocation)
-	if isAddressLocation {
-		if _, exists := d.importsSet[addressLocation]; !exists {
-			d.newImports = append(
-				d.newImports,
-				ast.NewImportDeclaration(
-					d.memoryGauge,
-					[]ast.Identifier{
-						ast.NewIdentifier(d.memoryGauge, addressLocation.Name, ast.EmptyPosition),
-					},
-					addressLocation,
-					ast.EmptyRange,
-					ast.EmptyPosition,
-				))
+	// If the import is for the same program, then do not add any new imports.
+	if location == d.checker.Location {
+		return
+	}
 
-			d.importsSet[addressLocation] = struct{}{}
+	switch location := location.(type) {
+	case common.AddressLocation:
+		_, exists := d.importsSet[location]
+		if exists {
+			return
 		}
+
+		d.newImports = append(
+			d.newImports,
+			ast.NewImportDeclaration(
+				d.memoryGauge,
+				[]ast.Identifier{
+					ast.NewIdentifier(d.memoryGauge, location.Name, ast.EmptyPosition),
+				},
+				location,
+				ast.EmptyRange,
+				ast.EmptyPosition,
+			))
+
+		d.importsSet[location] = struct{}{}
+	default:
+		panic(errors.NewUnreachableError())
 	}
 }
 
