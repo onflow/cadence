@@ -586,3 +586,20 @@ func (e AccountStorageFormatV1Error) Error() string {
 		e.Address.HexWithPrefix(),
 	)
 }
+
+func CommitStorage(context interpreter.ValueTransferContext, storage *Storage, checkStorageHealth bool) error {
+	const commitContractUpdates = true
+	err := storage.Commit(context, commitContractUpdates)
+	if err != nil {
+		return err
+	}
+
+	if checkStorageHealth {
+		err = storage.CheckHealth()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
