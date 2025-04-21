@@ -31,6 +31,8 @@ import (
 	"github.com/onflow/cadence/stdlib"
 )
 
+type interpretFunc func(inter *interpreter.Interpreter) (interpreter.Value, error)
+
 type Environment interface {
 	ArgumentDecoder
 
@@ -58,15 +60,6 @@ type Environment interface {
 		getAndSetProgram bool,
 	) (
 		*interpreter.Program,
-		error,
-	)
-	interpret(
-		location common.Location,
-		program *interpreter.Program,
-		f InterpretFunc,
-	) (
-		interpreter.Value,
-		*interpreter.Interpreter,
 		error,
 	)
 	commitStorage(context interpreter.ValueTransferContext) error
@@ -511,7 +504,7 @@ func (e *interpreterEnvironment) InterpretContract(
 func (e *interpreterEnvironment) interpret(
 	location common.Location,
 	program *interpreter.Program,
-	f InterpretFunc,
+	f interpretFunc,
 ) (
 	interpreter.Value,
 	*interpreter.Interpreter,

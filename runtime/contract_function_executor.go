@@ -24,6 +24,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -132,17 +133,34 @@ func (executor *contractFunctionExecutor) execute() (val cadence.Value, err erro
 	}
 
 	environment := executor.environment
-	context := executor.context
-	location := context.Location
 	codesAndPrograms := executor.codesAndPrograms
 
 	defer Recover(
 		func(internalErr Error) {
 			err = internalErr
 		},
-		location,
+		executor.context.Location,
 		codesAndPrograms,
 	)
+
+	switch environment := environment.(type) {
+	case *interpreterEnvironment:
+		value, err := executor.executeWithInterpreter(environment)
+		if err != nil {
+			return nil, newError(err, executor.context.Location, codesAndPrograms)
+		}
+		return value, nil
+
+	default:
+		panic(errors.NewUnexpectedError("unsupported environment: %T", environment))
+	}
+}
+
+func (executor *contractFunctionExecutor) executeWithInterpreter(
+	environment *interpreterEnvironment,
+) (val cadence.Value, err error) {
+
+	location := executor.context.Location
 
 	// create interpreter
 	_, inter, err := environment.interpret(
@@ -151,34 +169,20 @@ func (executor *contractFunctionExecutor) execute() (val cadence.Value, err erro
 		nil,
 	)
 	if err != nil {
-		return nil, newError(err, location, codesAndPrograms)
+		return nil, err
 	}
 
 	// ensure the contract is loaded
 	inter = inter.EnsureLoaded(executor.contractLocation)
 
-	interpreterArguments := make([]interpreter.Value, len(executor.arguments))
-
-	locationRange := interpreter.LocationRange{
-		Location:    location,
-		HasPosition: ast.EmptyRange,
-	}
-
-	for i, argumentType := range executor.argumentTypes {
-		interpreterArguments[i], err = executor.convertArgument(
-			inter,
-			executor.arguments[i],
-			argumentType,
-			locationRange,
-		)
-		if err != nil {
-			return nil, newError(err, location, codesAndPrograms)
-		}
+	interpreterArguments, err := executor.convertArguments(inter)
+	if err != nil {
+		return nil, err
 	}
 
 	contractValue, err := inter.GetContractComposite(executor.contractLocation)
 	if err != nil {
-		return nil, newError(err, location, codesAndPrograms)
+		return nil, err
 	}
 
 	var self interpreter.Value = contractValue
@@ -192,7 +196,7 @@ func (executor *contractFunctionExecutor) execute() (val cadence.Value, err erro
 		executor.argumentTypes,
 		nil,
 		interpreter.LocationRange{
-			Location:    context.Location,
+			Location:    location,
 			HasPosition: ast.EmptyRange,
 		},
 	)
@@ -208,24 +212,24 @@ func (executor *contractFunctionExecutor) execute() (val cadence.Value, err erro
 		err := interpreter.NotInvokableError{
 			Value: contractFunction,
 		}
-		return nil, newError(err, location, codesAndPrograms)
+		return nil, err
 	}
 
 	value, err := interpreter.InvokeFunction(inter, contractFunction, invocation)
 	if err != nil {
-		return nil, newError(err, location, codesAndPrograms)
+		return nil, err
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage
 	err = environment.commitStorage(inter)
 	if err != nil {
-		return nil, newError(err, location, codesAndPrograms)
+		return nil, err
 	}
 
 	var exportedValue cadence.Value
 	exportedValue, err = ExportValue(value, inter, interpreter.EmptyLocationRange)
 	if err != nil {
-		return nil, newError(err, location, codesAndPrograms)
+		return nil, err
 	}
 
 	return exportedValue, nil
@@ -272,4 +276,27 @@ func (executor *contractFunctionExecutor) convertArgument(
 		argument,
 		argumentType,
 	)
+}
+
+func (executor *contractFunctionExecutor) convertArguments(context ArgumentConversionContext) (arguments []interpreter.Value, err error) {
+	arguments = make([]interpreter.Value, len(executor.arguments))
+
+	locationRange := interpreter.LocationRange{
+		Location:    executor.context.Location,
+		HasPosition: ast.EmptyRange,
+	}
+
+	for i, argumentType := range executor.argumentTypes {
+		arguments[i], err = executor.convertArgument(
+			context,
+			executor.arguments[i],
+			argumentType,
+			locationRange,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return arguments, nil
 }

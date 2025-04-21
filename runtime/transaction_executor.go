@@ -39,7 +39,7 @@ type transactionExecutorPreparation struct {
 
 type transactionExecutorExecution struct {
 	executeErr  error
-	interpret   InterpretFunc
+	interpret   interpretFunc
 	executeOnce sync.Once
 }
 
@@ -213,19 +213,35 @@ func (executor *transactionExecutor) execute() (err error) {
 		codesAndPrograms,
 	)
 
+	switch environment := environment.(type) {
+	case *interpreterEnvironment:
+		err = executor.executeWithInterpreter(environment)
+		if err != nil {
+			return newError(err, executor.context.Location, codesAndPrograms)
+		}
+		return nil
+
+	default:
+		panic(errors.NewUnexpectedError("unsupported environment: %T", environment))
+	}
+}
+
+func (executor *transactionExecutor) executeWithInterpreter(
+	environment *interpreterEnvironment,
+) error {
 	_, inter, err := environment.interpret(
-		location,
+		executor.context.Location,
 		executor.program,
 		executor.interpret,
 	)
 	if err != nil {
-		return newError(err, location, codesAndPrograms)
+		return err
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage
 	err = environment.commitStorage(inter)
 	if err != nil {
-		return newError(err, location, codesAndPrograms)
+		return err
 	}
 
 	return nil
@@ -233,7 +249,7 @@ func (executor *transactionExecutor) execute() (err error) {
 
 func (executor *transactionExecutor) transactionExecutionFunction(
 	authorizerValues func(*interpreter.Interpreter) []interpreter.Value,
-) InterpretFunc {
+) interpretFunc {
 	return func(inter *interpreter.Interpreter) (value interpreter.Value, err error) {
 
 		// Recover internal panics and return them as an error.

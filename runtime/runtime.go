@@ -318,8 +318,6 @@ func (r *runtime) ParseAndCheckProgram(
 	return program, nil
 }
 
-type InterpretFunc func(inter *interpreter.Interpreter) (interpreter.Value, error)
-
 func (r *runtime) Storage(context Context) (*Storage, *interpreter.Interpreter, error) {
 
 	location := context.Location
@@ -346,7 +344,12 @@ func (r *runtime) Storage(context Context) (*Storage, *interpreter.Interpreter, 
 		context.CoverageReport,
 	)
 
-	_, inter, err := environment.interpret(
+	interpreterEnv, ok := environment.(*interpreterEnvironment)
+	if !ok {
+		panic(errors.NewUnexpectedError("unsupported environment: %T", environment))
+	}
+
+	_, inter, err := interpreterEnv.interpret(
 		location,
 		nil,
 		nil,
