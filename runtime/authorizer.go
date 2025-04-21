@@ -32,7 +32,7 @@ func newAccountReferenceValueFromAddress(
 	authorization sema.Access,
 	locationRange interpreter.LocationRange,
 ) *interpreter.EphemeralReferenceValue {
-	addressValue := interpreter.NewAddressValue(context, common.Address(address))
+	addressValue := interpreter.NewAddressValue(context, address)
 
 	accountValue := environment.newAccountValue(context, addressValue)
 
