@@ -221,51 +221,11 @@ func (r *interpreterRuntime) Config() Config {
 	return r.defaultConfig
 }
 
-func (r *interpreterRuntime) Recover(onError func(Error), location Location, codesAndPrograms CodesAndPrograms) {
-	recovered := recover()
-	if recovered == nil {
-		return
-	}
-
-	err := GetWrappedError(recovered, location, codesAndPrograms)
-	onError(err)
-}
-
-func GetWrappedError(recovered any, location Location, codesAndPrograms CodesAndPrograms) Error {
-	switch recovered := recovered.(type) {
-
-	// If the error is already a `runtime.Error`, then avoid redundant wrapping.
-	case Error:
-		return recovered
-
-	// Wrap with `runtime.Error` to include meta info.
-	//
-	// The following set of errors are the only known types of errors that would reach this point.
-	// `interpreter.Error` is a generic wrapper for any error. Hence, it doesn't belong to any of the
-	// three types: `UserError`, `InternalError`, `ExternalError`.
-	// So it needs to be specially handled here
-	case errors.InternalError,
-		errors.UserError,
-		errors.ExternalError,
-		interpreter.Error:
-		return newError(recovered.(error), location, codesAndPrograms)
-
-	// Wrap any other unhandled error with a generic internal error first.
-	// And then wrap with `runtime.Error` to include meta info.
-	case error:
-		err := errors.NewUnexpectedErrorFromCause(recovered)
-		return newError(err, location, codesAndPrograms)
-	default:
-		err := errors.NewUnexpectedError("%s", recovered)
-		return newError(err, location, codesAndPrograms)
-	}
-}
-
 func (r *interpreterRuntime) NewScriptExecutor(
 	script Script,
 	context Context,
 ) Executor {
-	return newInterpreterScriptExecutor(r, script, context)
+	return newScriptExecutor(r, script, context)
 }
 
 func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
@@ -283,7 +243,7 @@ func (r *interpreterRuntime) NewContractFunctionExecutor(
 	argumentTypes []sema.Type,
 	context Context,
 ) Executor {
-	return newInterpreterContractFunctionExecutor(
+	return newContractFunctionExecutor(
 		r,
 		contractLocation,
 		functionName,
@@ -310,7 +270,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 }
 
 func (r *interpreterRuntime) NewTransactionExecutor(script Script, context Context) Executor {
-	return newInterpreterTransactionExecutor(r, script, context)
+	return newTransactionExecutor(r, script, context)
 }
 
 func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error) {
@@ -380,7 +340,7 @@ func (r *interpreterRuntime) ParseAndCheckProgram(
 
 	codesAndPrograms := NewCodesAndPrograms()
 
-	defer r.Recover(
+	defer Recover(
 		func(internalErr Error) {
 			err = internalErr
 		},
@@ -463,7 +423,7 @@ func (r *interpreterRuntime) ReadStored(
 
 	var codesAndPrograms CodesAndPrograms
 
-	defer r.Recover(
+	defer Recover(
 		func(internalErr Error) {
 			err = internalErr
 		},

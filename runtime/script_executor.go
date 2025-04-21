@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-type interpreterScriptExecutorPreparation struct {
+type scriptExecutorPreparation struct {
 	environment            Environment
 	preprocessErr          error
 	codesAndPrograms       CodesAndPrograms
@@ -37,34 +37,34 @@ type interpreterScriptExecutorPreparation struct {
 	preprocessOnce         sync.Once
 }
 
-type interpreterScriptExecutorExecution struct {
+type scriptExecutorExecution struct {
 	executeErr  error
 	result      cadence.Value
 	executeOnce sync.Once
 }
 
-type interpreterScriptExecutor struct {
+type scriptExecutor struct {
 	context Context
-	interpreterScriptExecutorExecution
-	runtime *interpreterRuntime
-	interpreterScriptExecutorPreparation
+	scriptExecutorExecution
+	runtime Runtime
+	scriptExecutorPreparation
 	script Script
 }
 
-func newInterpreterScriptExecutor(
-	runtime *interpreterRuntime,
+func newScriptExecutor(
+	runtime Runtime,
 	script Script,
 	context Context,
-) *interpreterScriptExecutor {
+) *scriptExecutor {
 
-	return &interpreterScriptExecutor{
+	return &scriptExecutor{
 		runtime: runtime,
 		script:  script,
 		context: context,
 	}
 }
 
-func (executor *interpreterScriptExecutor) Preprocess() error {
+func (executor *scriptExecutor) Preprocess() error {
 	executor.preprocessOnce.Do(func() {
 		executor.preprocessErr = executor.preprocess()
 	})
@@ -72,7 +72,7 @@ func (executor *interpreterScriptExecutor) Preprocess() error {
 	return executor.preprocessErr
 }
 
-func (executor *interpreterScriptExecutor) Execute() error {
+func (executor *scriptExecutor) Execute() error {
 	executor.executeOnce.Do(func() {
 		executor.result, executor.executeErr = executor.execute()
 	})
@@ -80,14 +80,14 @@ func (executor *interpreterScriptExecutor) Execute() error {
 	return executor.executeErr
 }
 
-func (executor *interpreterScriptExecutor) Result() (cadence.Value, error) {
+func (executor *scriptExecutor) Result() (cadence.Value, error) {
 	// Note: Execute's error is saved into executor.executeErr and return in
 	// the next line.
 	_ = executor.Execute()
 	return executor.result, executor.executeErr
 }
 
-func (executor *interpreterScriptExecutor) preprocess() (err error) {
+func (executor *scriptExecutor) preprocess() (err error) {
 	context := executor.context
 	location := context.Location
 	script := executor.script
@@ -95,9 +95,7 @@ func (executor *interpreterScriptExecutor) preprocess() (err error) {
 	codesAndPrograms := NewCodesAndPrograms()
 	executor.codesAndPrograms = codesAndPrograms
 
-	interpreterRuntime := executor.runtime
-
-	defer interpreterRuntime.Recover(
+	defer Recover(
 		func(internalErr Error) {
 			err = internalErr
 		},
@@ -116,7 +114,7 @@ func (executor *interpreterScriptExecutor) preprocess() (err error) {
 
 	environment := context.Environment
 	if environment == nil {
-		environment = NewScriptInterpreterEnvironment(interpreterRuntime.defaultConfig)
+		environment = NewScriptInterpreterEnvironment(executor.runtime.Config())
 	}
 	environment.Configure(
 		runtimeInterface,
@@ -169,7 +167,7 @@ func (executor *interpreterScriptExecutor) preprocess() (err error) {
 	return nil
 }
 
-func (executor *interpreterScriptExecutor) execute() (val cadence.Value, err error) {
+func (executor *scriptExecutor) execute() (val cadence.Value, err error) {
 	err = executor.Preprocess()
 	if err != nil {
 		return nil, err
@@ -179,9 +177,8 @@ func (executor *interpreterScriptExecutor) execute() (val cadence.Value, err err
 	context := executor.context
 	location := context.Location
 	codesAndPrograms := executor.codesAndPrograms
-	interpreterRuntime := executor.runtime
 
-	defer interpreterRuntime.Recover(
+	defer Recover(
 		func(internalErr Error) {
 			err = internalErr
 		},
@@ -222,7 +219,7 @@ func (executor *interpreterScriptExecutor) execute() (val cadence.Value, err err
 	return result, nil
 }
 
-func (executor *interpreterScriptExecutor) scriptExecutionFunction() InterpretFunc {
+func (executor *scriptExecutor) scriptExecutionFunction() InterpretFunc {
 	return func(inter *interpreter.Interpreter) (value interpreter.Value, err error) {
 
 		// Recover internal panics and return them as an error.
