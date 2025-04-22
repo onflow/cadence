@@ -1404,9 +1404,49 @@ func newAccountContractsBorrowFunction(
 	}
 }
 
+type ContractAdditionTracker interface {
+	// StartContractAddition starts adding a contract.
+	StartContractAddition(location common.AddressLocation)
+
+	// EndContractAddition ends adding the contract
+	EndContractAddition(location common.AddressLocation)
+
+	// IsContractBeingAdded checks whether a contract is being added in the current execution.
+	IsContractBeingAdded(location common.AddressLocation) bool
+}
+
+type SimpleContractAdditionTracker struct {
+	deployedContracts map[common.AddressLocation]struct{}
+}
+
+func NewSimpleContractAdditionTracker() *SimpleContractAdditionTracker {
+	return &SimpleContractAdditionTracker{}
+}
+
+var _ ContractAdditionTracker = &SimpleContractAdditionTracker{}
+
+func (t *SimpleContractAdditionTracker) StartContractAddition(location common.AddressLocation) {
+	if t.deployedContracts == nil {
+		t.deployedContracts = map[common.AddressLocation]struct{}{}
+	}
+
+	t.deployedContracts[location] = struct{}{}
+}
+
+func (t *SimpleContractAdditionTracker) EndContractAddition(location common.AddressLocation) {
+	delete(t.deployedContracts, location)
+}
+
+func (t *SimpleContractAdditionTracker) IsContractBeingAdded(location common.AddressLocation) bool {
+	_, contains := t.deployedContracts[location]
+	return contains
+}
+
 type AccountContractAdditionHandler interface {
 	EventEmitter
 	AccountContractProvider
+	ContractAdditionTracker
+
 	ParseAndCheckProgram(
 		code []byte,
 		location common.Location,
@@ -1429,15 +1469,6 @@ type AccountContractAdditionHandler interface {
 		error,
 	)
 	TemporarilyRecordCode(location common.AddressLocation, code []byte)
-
-	// StartContractAddition starts adding a contract.
-	StartContractAddition(location common.AddressLocation)
-
-	// EndContractAddition ends adding the contract
-	EndContractAddition(location common.AddressLocation)
-
-	// IsContractBeingAdded checks whether a contract is being added in the current execution.
-	IsContractBeingAdded(location common.AddressLocation) bool
 }
 
 // newAccountContractsChangeFunction called when e.g.
@@ -2643,7 +2674,7 @@ func newAccountStorageCapabilitiesIssueFunction(
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			storageCapabilities,
-			sema.Account_StorageCapabilitiesTypeIssueFunctionType,
+			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
 				invocationContext := invocation.InvocationContext
@@ -3863,12 +3894,8 @@ func getCheckedCapabilityController(
 ) {
 	if wantedBorrowType == nil {
 		wantedBorrowType = capabilityBorrowType
-	} else {
-		wantedBorrowType = interpreter.SubstituteMappedEntitlements(context, wantedBorrowType).(*sema.ReferenceType)
-
-		if !canBorrow(wantedBorrowType, capabilityBorrowType) {
-			return nil, nil
-		}
+	} else if !canBorrow(wantedBorrowType, capabilityBorrowType) {
+		return nil, nil
 	}
 
 	capabilityAddress := capabilityAddressValue.ToAddress()

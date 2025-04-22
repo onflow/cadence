@@ -3573,7 +3573,7 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+		require.IsType(t, &sema.InvalidMappingAccessError{}, errs[0])
 	})
 
 	t.Run("in base", func(t *testing.T) {
@@ -3648,7 +3648,7 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+		require.IsType(t, &sema.InvalidMappingAccessError{}, errs[0])
 	})
 
 	t.Run("in self, through base", func(t *testing.T) {
@@ -3811,7 +3811,7 @@ func TestCheckAttachmentBaseNonMember(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+		require.IsType(t, &sema.InvalidMappingAccessError{}, errs[0])
 	})
 
 	t.Run("entitlement mapped function self value cast", func(t *testing.T) {
@@ -3852,8 +3852,9 @@ func TestCheckAttachmentBaseNonMember(t *testing.T) {
 				`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
+		assert.IsType(t, &sema.InvalidMappingAccessError{}, errs[1])
 	})
 
 	t.Run("entitlement mapped function self value cast invalid access", func(t *testing.T) {
@@ -3894,9 +3895,10 @@ func TestCheckAttachmentBaseNonMember(t *testing.T) {
 				`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 2)
-		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
-		require.IsType(t, &sema.InvalidAccessError{}, errs[1])
+		errs := RequireCheckerErrors(t, err, 3)
+		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
+		assert.IsType(t, &sema.InvalidMappingAccessError{}, errs[1])
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[2])
 	})
 
 	t.Run("entitlement mapped function base value cast", func(t *testing.T) {
@@ -3936,8 +3938,9 @@ func TestCheckAttachmentBaseNonMember(t *testing.T) {
 				`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
+		assert.IsType(t, &sema.InvalidMappingAccessError{}, errs[1])
 	})
 
 	t.Run("entitlement mapped function base value cast invalid access", func(t *testing.T) {
@@ -3977,9 +3980,10 @@ func TestCheckAttachmentBaseNonMember(t *testing.T) {
 				`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 2)
-		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
-		assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
+		errs := RequireCheckerErrors(t, err, 3)
+		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
+		assert.IsType(t, &sema.InvalidMappingAccessError{}, errs[1])
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[2])
 	})
 
 	t.Run("entitlement mapped function self value access", func(t *testing.T) {
@@ -4017,9 +4021,10 @@ func TestCheckAttachmentBaseNonMember(t *testing.T) {
 				`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 2)
-		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
-		assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
+		errs := RequireCheckerErrors(t, err, 3)
+		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
+		assert.IsType(t, &sema.InvalidMappingAccessError{}, errs[1])
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[2])
 	})
 
 	t.Run("entitlement mapped function base value access", func(t *testing.T) {
@@ -4056,9 +4061,10 @@ func TestCheckAttachmentBaseNonMember(t *testing.T) {
 			`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 2)
-		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
-		assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
+		errs := RequireCheckerErrors(t, err, 3)
+		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
+		assert.IsType(t, &sema.InvalidMappingAccessError{}, errs[1])
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[2])
 	})
 }
 

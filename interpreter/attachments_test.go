@@ -26,6 +26,7 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 
 	"github.com/stretchr/testify/require"
@@ -2260,7 +2261,7 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.AttachmentIterationMutationError{})
 	})
@@ -2282,7 +2283,7 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.AttachmentIterationMutationError{})
 	})
@@ -2349,7 +2350,7 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.AttachmentIterationMutationError{})
 	})
@@ -2372,7 +2373,7 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.AttachmentIterationMutationError{})
 	})
@@ -2551,7 +2552,7 @@ func TestInterpretAttachmentSelfInvalidationInIteration(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("main")
-		require.Error(t, err)
+		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
