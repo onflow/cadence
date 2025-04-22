@@ -198,12 +198,16 @@ func (v *StorageReferenceValue) mustReferencedValue(
 func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
 	referencedValue := v.mustReferencedValue(context, locationRange)
 
-	member := getMember(
-		context,
-		referencedValue,
-		locationRange,
-		name,
-	)
+	var member Value
+
+	if memberAccessibleValue, ok := referencedValue.(MemberAccessibleValue); ok {
+		member = memberAccessibleValue.GetMember(context, locationRange, name)
+	}
+
+	if member == nil {
+		// NOTE: Must call the `GetMethod` of the `StorageReferenceValue`, not of the referenced-value.
+		member = context.GetMethod(v, name, locationRange)
+	}
 
 	// If the member is a function, it is always a bound-function.
 	// By default, bound functions create and hold an ephemeral reference (`SelfReference`).
@@ -224,8 +228,8 @@ func (v *StorageReferenceValue) GetMethod(
 	locationRange LocationRange,
 	name string,
 ) FunctionValue {
-	// TODO:
-	return nil
+	referencedValue := v.mustReferencedValue(context, locationRange)
+	return getBuiltinFunctionMember(context, referencedValue, name)
 }
 
 func (v *StorageReferenceValue) RemoveMember(
