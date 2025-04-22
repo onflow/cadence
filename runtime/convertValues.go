@@ -35,12 +35,12 @@ import (
 // ExportValue converts a runtime value to its native Go representation.
 func ExportValue(
 	value interpreter.Value,
-	inter *interpreter.Interpreter,
+	context interpreter.ValueExportContext,
 	locationRange interpreter.LocationRange,
 ) (cadence.Value, error) {
 	return exportValue(
 		value,
-		inter,
+		context,
 		locationRange,
 		seenReferences{},
 	)
@@ -780,8 +780,14 @@ func exportFunctionValue(
 	)
 }
 
+type ValueImportContext interface {
+	common.MemoryGauge
+	interpreter.ArrayCreationContext
+	interpreter.MemberAccessibleContext
+}
+
 type valueImporter struct {
-	inter                  *interpreter.Interpreter
+	context                ValueImportContext
 	locationRange          interpreter.LocationRange
 	standardLibraryHandler stdlib.StandardLibraryHandler
 	resolveLocation        sema.LocationHandlerFunc
@@ -789,7 +795,7 @@ type valueImporter struct {
 
 // ImportValue converts a Cadence value to a runtime value.
 func ImportValue(
-	inter *interpreter.Interpreter,
+	context ValueImportContext,
 	locationRange interpreter.LocationRange,
 	standardLibraryHandler stdlib.StandardLibraryHandler,
 	resolveLocation sema.LocationHandlerFunc,
@@ -797,7 +803,7 @@ func ImportValue(
 	expectedType sema.Type,
 ) (interpreter.Value, error) {
 	return valueImporter{
-		inter:                  inter,
+		context:                context,
 		locationRange:          locationRange,
 		standardLibraryHandler: standardLibraryHandler,
 		resolveLocation:        resolveLocation,
@@ -823,7 +829,7 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 	case cadence.Character:
 		return i.importCharacter(v), nil
 	case cadence.Bytes:
-		return interpreter.ByteSliceToByteArrayValue(i.inter, v), nil
+		return interpreter.ByteSliceToByteArrayValue(i.context, v), nil
 	case cadence.Address:
 		return i.importAddress(v), nil
 	case cadence.Int:
@@ -930,7 +936,7 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 }
 func (i valueImporter) importUInt8(v cadence.UInt8) interpreter.UInt8Value {
 	return interpreter.NewUInt8Value(
-		i.inter,
+		i.context,
 		func() uint8 {
 			return uint8(v)
 		},
@@ -939,7 +945,7 @@ func (i valueImporter) importUInt8(v cadence.UInt8) interpreter.UInt8Value {
 
 func (i valueImporter) importUInt16(v cadence.UInt16) interpreter.UInt16Value {
 	return interpreter.NewUInt16Value(
-		i.inter,
+		i.context,
 		func() uint16 {
 			return uint16(v)
 		},
@@ -948,7 +954,7 @@ func (i valueImporter) importUInt16(v cadence.UInt16) interpreter.UInt16Value {
 
 func (i valueImporter) importUInt32(v cadence.UInt32) interpreter.UInt32Value {
 	return interpreter.NewUInt32Value(
-		i.inter,
+		i.context,
 		func() uint32 {
 			return uint32(v)
 		},
@@ -957,7 +963,7 @@ func (i valueImporter) importUInt32(v cadence.UInt32) interpreter.UInt32Value {
 
 func (i valueImporter) importUInt64(v cadence.UInt64) interpreter.UInt64Value {
 	return interpreter.NewUInt64Value(
-		i.inter,
+		i.context,
 		func() uint64 {
 			return uint64(v)
 		},
@@ -966,7 +972,7 @@ func (i valueImporter) importUInt64(v cadence.UInt64) interpreter.UInt64Value {
 
 func (i valueImporter) importUInt128(v cadence.UInt128) interpreter.UInt128Value {
 	return interpreter.NewUInt128ValueFromBigInt(
-		i.inter,
+		i.context,
 		func() *big.Int {
 			return v.Value
 		},
@@ -975,7 +981,7 @@ func (i valueImporter) importUInt128(v cadence.UInt128) interpreter.UInt128Value
 
 func (i valueImporter) importUInt256(v cadence.UInt256) interpreter.UInt256Value {
 	return interpreter.NewUInt256ValueFromBigInt(
-		i.inter,
+		i.context,
 		func() *big.Int {
 			return v.Value
 		},
@@ -987,7 +993,7 @@ func (i valueImporter) importInt(v cadence.Int) interpreter.IntValue {
 		common.BigIntByteLength(v.Value),
 	)
 	return interpreter.NewIntValueFromBigInt(
-		i.inter,
+		i.context,
 		memoryUsage,
 		func() *big.Int {
 			return v.Value
@@ -997,7 +1003,7 @@ func (i valueImporter) importInt(v cadence.Int) interpreter.IntValue {
 
 func (i valueImporter) importInt8(v cadence.Int8) interpreter.Int8Value {
 	return interpreter.NewInt8Value(
-		i.inter,
+		i.context,
 		func() int8 {
 			return int8(v)
 		},
@@ -1006,7 +1012,7 @@ func (i valueImporter) importInt8(v cadence.Int8) interpreter.Int8Value {
 
 func (i valueImporter) importInt16(v cadence.Int16) interpreter.Int16Value {
 	return interpreter.NewInt16Value(
-		i.inter,
+		i.context,
 		func() int16 {
 			return int16(v)
 		},
@@ -1015,7 +1021,7 @@ func (i valueImporter) importInt16(v cadence.Int16) interpreter.Int16Value {
 
 func (i valueImporter) importInt32(v cadence.Int32) interpreter.Int32Value {
 	return interpreter.NewInt32Value(
-		i.inter,
+		i.context,
 		func() int32 {
 			return int32(v)
 		},
@@ -1024,7 +1030,7 @@ func (i valueImporter) importInt32(v cadence.Int32) interpreter.Int32Value {
 
 func (i valueImporter) importInt64(v cadence.Int64) interpreter.Int64Value {
 	return interpreter.NewInt64Value(
-		i.inter,
+		i.context,
 		func() int64 {
 			return int64(v)
 		},
@@ -1033,7 +1039,7 @@ func (i valueImporter) importInt64(v cadence.Int64) interpreter.Int64Value {
 
 func (i valueImporter) importInt128(v cadence.Int128) interpreter.Int128Value {
 	return interpreter.NewInt128ValueFromBigInt(
-		i.inter,
+		i.context,
 		func() *big.Int {
 			return v.Value
 		},
@@ -1042,7 +1048,7 @@ func (i valueImporter) importInt128(v cadence.Int128) interpreter.Int128Value {
 
 func (i valueImporter) importInt256(v cadence.Int256) interpreter.Int256Value {
 	return interpreter.NewInt256ValueFromBigInt(
-		i.inter,
+		i.context,
 		func() *big.Int {
 			return v.Value
 		},
@@ -1054,7 +1060,7 @@ func (i valueImporter) importUInt(v cadence.UInt) interpreter.UIntValue {
 		common.BigIntByteLength(v.Value),
 	)
 	return interpreter.NewUIntValueFromBigInt(
-		i.inter,
+		i.context,
 		memoryUsage,
 		func() *big.Int {
 			return v.Value
@@ -1064,7 +1070,7 @@ func (i valueImporter) importUInt(v cadence.UInt) interpreter.UIntValue {
 
 func (i valueImporter) importWord8(v cadence.Word8) interpreter.Word8Value {
 	return interpreter.NewWord8Value(
-		i.inter,
+		i.context,
 		func() uint8 {
 			return uint8(v)
 		},
@@ -1073,7 +1079,7 @@ func (i valueImporter) importWord8(v cadence.Word8) interpreter.Word8Value {
 
 func (i valueImporter) importWord16(v cadence.Word16) interpreter.Word16Value {
 	return interpreter.NewWord16Value(
-		i.inter,
+		i.context,
 		func() uint16 {
 			return uint16(v)
 		},
@@ -1082,7 +1088,7 @@ func (i valueImporter) importWord16(v cadence.Word16) interpreter.Word16Value {
 
 func (i valueImporter) importWord32(v cadence.Word32) interpreter.Word32Value {
 	return interpreter.NewWord32Value(
-		i.inter,
+		i.context,
 		func() uint32 {
 			return uint32(v)
 		},
@@ -1091,7 +1097,7 @@ func (i valueImporter) importWord32(v cadence.Word32) interpreter.Word32Value {
 
 func (i valueImporter) importWord64(v cadence.Word64) interpreter.Word64Value {
 	return interpreter.NewWord64Value(
-		i.inter,
+		i.context,
 		func() uint64 {
 			return uint64(v)
 		},
@@ -1100,7 +1106,7 @@ func (i valueImporter) importWord64(v cadence.Word64) interpreter.Word64Value {
 
 func (i valueImporter) importWord128(v cadence.Word128) interpreter.Word128Value {
 	return interpreter.NewWord128ValueFromBigInt(
-		i.inter,
+		i.context,
 		func() *big.Int {
 			return v.Value
 		},
@@ -1109,7 +1115,7 @@ func (i valueImporter) importWord128(v cadence.Word128) interpreter.Word128Value
 
 func (i valueImporter) importWord256(v cadence.Word256) interpreter.Word256Value {
 	return interpreter.NewWord256ValueFromBigInt(
-		i.inter,
+		i.context,
 		func() *big.Int {
 			return v.Value
 		},
@@ -1118,7 +1124,7 @@ func (i valueImporter) importWord256(v cadence.Word256) interpreter.Word256Value
 
 func (i valueImporter) importFix64(v cadence.Fix64) interpreter.Fix64Value {
 	return interpreter.NewFix64Value(
-		i.inter,
+		i.context,
 		func() int64 {
 			return int64(v)
 		},
@@ -1127,7 +1133,7 @@ func (i valueImporter) importFix64(v cadence.Fix64) interpreter.Fix64Value {
 
 func (i valueImporter) importUFix64(v cadence.UFix64) interpreter.UFix64Value {
 	return interpreter.NewUFix64Value(
-		i.inter,
+		i.context,
 		func() uint64 {
 			return uint64(v)
 		},
@@ -1137,7 +1143,7 @@ func (i valueImporter) importUFix64(v cadence.UFix64) interpreter.UFix64Value {
 func (i valueImporter) importString(v cadence.String) *interpreter.StringValue {
 	memoryUsage := common.NewStringMemoryUsage(len(v))
 	return interpreter.NewStringValue(
-		i.inter,
+		i.context,
 		memoryUsage,
 		func() string {
 			return string(v)
@@ -1149,7 +1155,7 @@ func (i valueImporter) importCharacter(v cadence.Character) interpreter.Characte
 	s := string(v)
 	memoryUsage := common.NewCharacterMemoryUsage(len(s))
 	return interpreter.NewCharacterValue(
-		i.inter,
+		i.context,
 		memoryUsage,
 		func() string {
 			return s
@@ -1159,13 +1165,13 @@ func (i valueImporter) importCharacter(v cadence.Character) interpreter.Characte
 
 func (i valueImporter) importAddress(v cadence.Address) interpreter.AddressValue {
 	return interpreter.NewAddressValue(
-		i.inter,
+		i.context,
 		common.Address(v),
 	)
 }
 
 func (i valueImporter) importPathValue(v cadence.Path) interpreter.PathValue {
-	inter := i.inter
+	inter := i.context
 
 	// meter the Path's Identifier since path is just a container
 	common.UseMemory(inter, common.NewRawStringMemoryUsage(len(v.Identifier)))
@@ -1178,7 +1184,7 @@ func (i valueImporter) importPathValue(v cadence.Path) interpreter.PathValue {
 }
 
 func (i valueImporter) importTypeValue(v cadence.Type) (interpreter.TypeValue, error) {
-	inter := i.inter
+	inter := i.context
 
 	typ := ImportType(inter, v)
 
@@ -1213,7 +1219,7 @@ func (i valueImporter) importCapability(
 		)
 	}
 
-	inter := i.inter
+	inter := i.context
 
 	addressValue := interpreter.NewAddressValue(
 		inter,
@@ -1249,7 +1255,7 @@ func (i valueImporter) importOptionalValue(
 		return nil, err
 	}
 
-	return interpreter.NewSomeValueNonCopying(i.inter, innerValue), nil
+	return interpreter.NewSomeValueNonCopying(i.context, innerValue), nil
 }
 
 func (i valueImporter) importArrayValue(
@@ -1267,7 +1273,7 @@ func (i valueImporter) importArrayValue(
 		elementType = arrayType.ElementType(false)
 	}
 
-	inter := i.inter
+	inter := i.context
 	locationRange := i.locationRange
 
 	for elementIndex, element := range v.Values {
@@ -1333,7 +1339,7 @@ func (i valueImporter) importDictionaryValue(
 		valueType = dictionaryType.ValueType
 	}
 
-	inter := i.inter
+	inter := i.context
 	locationRange := i.locationRange
 
 	for pairIndex, pair := range v.Pairs {
@@ -1415,7 +1421,7 @@ func (i valueImporter) importInclusiveRangeValue(
 		memberType = inclusiveRangeType.MemberType
 	}
 
-	inter := i.inter
+	inter := i.context
 	locationRange := i.locationRange
 
 	// start, end, and step. The order matters.
@@ -1501,7 +1507,7 @@ func (i valueImporter) importCompositeValue(
 ) {
 	var fields []interpreter.CompositeField
 
-	inter := i.inter
+	inter := i.context
 	locationRange := i.locationRange
 
 	// Resolve the location if it is not nil (not a built-in type)
@@ -1665,7 +1671,7 @@ func (i valueImporter) importPublicKey(
 	}
 
 	return stdlib.NewPublicKeyFromFields(
-		i.inter,
+		i.context,
 		i.locationRange,
 		publicKeyValue,
 		signAlgoValue,

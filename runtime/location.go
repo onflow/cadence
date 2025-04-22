@@ -16,23 +16,26 @@
  * limitations under the License.
  */
 
-package interpreter
+package runtime
 
-type valueInspector func(Value) bool
+import (
+	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
+)
 
-func (f valueInspector) WalkValue(_ ValueWalkContext, value Value) ValueWalker {
-	if f(value) {
-		return f
+func ResolveLocationWithInterface(
+	i Interface,
+	identifiers []Identifier,
+	location Location,
+) (
+	res []ResolvedLocation,
+	err error,
+) {
+	errors.WrapPanic(func() {
+		res, err = i.ResolveLocation(identifiers, location)
+	})
+	if err != nil {
+		err = interpreter.WrappedExternalError(err)
 	}
-
-	return nil
-}
-
-func InspectValue(context ValueWalkContext, value Value, f func(Value) bool, locationRange LocationRange) {
-	WalkValue(
-		context,
-		valueInspector(f),
-		value,
-		locationRange,
-	)
+	return
 }
