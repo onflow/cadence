@@ -44,9 +44,9 @@ func NewAccountKeysValue(
 
 	var accountKeys *SimpleCompositeValue
 
-	fields := map[string]Value{}
+	methods := map[string]FunctionValue{}
 
-	computeLazyStoredField := func(name string) Value {
+	computeLazyStoredMethod := func(name string) FunctionValue {
 		switch name {
 		case sema.Account_KeysTypeAddFunctionName:
 			return addFunction(accountKeys)
@@ -66,12 +66,19 @@ func NewAccountKeysValue(
 		case sema.Account_KeysTypeCountFieldName:
 			return getKeysCount()
 		}
+		return nil
+	}
 
-		field := computeLazyStoredField(name)
-		if field != nil {
-			fields[name] = field
+	methodsGetter := func(name string, _ MemberAccessibleContext) FunctionValue {
+		method, ok := methods[name]
+		if !ok {
+			method = computeLazyStoredMethod(name)
+			if method != nil {
+				methods[name] = method
+			}
 		}
-		return field
+
+		return method
 	}
 
 	var str string
@@ -89,8 +96,10 @@ func NewAccountKeysValue(
 		account_KeysTypeID,
 		account_KeysStaticType,
 		account_KeysFieldNames,
-		fields,
+		// No fields, only computed fields, and methods.
+		nil,
 		computeField,
+		methodsGetter,
 		nil,
 		stringer,
 	)

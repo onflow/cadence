@@ -195,9 +195,29 @@ func NewBLSContract(
 	gauge common.MemoryGauge,
 	handler BLSContractHandler,
 ) StandardLibraryValue {
-	blsContractFields := map[string]interpreter.Value{
-		BLSTypeAggregatePublicKeysFunctionName: newBLSAggregatePublicKeysFunction(gauge, handler),
-		BLSTypeAggregateSignaturesFunctionName: newBLSAggregateSignaturesFunction(gauge, handler),
+	methods := map[string]interpreter.FunctionValue{}
+
+	computeLazyStoredMethod := func(name string) interpreter.FunctionValue {
+		switch name {
+		case BLSTypeAggregatePublicKeysFunctionName:
+			return newBLSAggregatePublicKeysFunction(gauge, handler)
+		case BLSTypeAggregateSignaturesFunctionName:
+			return newBLSAggregateSignaturesFunction(gauge, handler)
+		default:
+			return nil
+		}
+	}
+
+	blsContractMethodsGetter := func(name string, _ interpreter.MemberAccessibleContext) interpreter.FunctionValue {
+		method, ok := methods[name]
+		if !ok {
+			method = computeLazyStoredMethod(name)
+			if method != nil {
+				methods[name] = method
+			}
+		}
+
+		return method
 	}
 
 	blsContractValue := interpreter.NewSimpleCompositeValue(
@@ -205,8 +225,9 @@ func NewBLSContract(
 		BLSType.ID(),
 		BLSTypeStaticType,
 		nil,
-		blsContractFields,
 		nil,
+		nil,
+		blsContractMethodsGetter,
 		nil,
 		nil,
 	)
