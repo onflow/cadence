@@ -1226,7 +1226,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 			``,
 			func(invocation interpreter.Invocation) interpreter.Value {
 				message := invocation.Arguments[0].MeteredString(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					interpreter.SeenReferences{},
 					invocation.LocationRange,
 				)
@@ -1322,7 +1322,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 			``,
 			func(invocation interpreter.Invocation) interpreter.Value {
 				message := invocation.Arguments[0].MeteredString(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					interpreter.SeenReferences{},
 					invocation.LocationRange,
 				)
@@ -1418,7 +1418,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 			``,
 			func(invocation interpreter.Invocation) interpreter.Value {
 				message := invocation.Arguments[0].MeteredString(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					interpreter.SeenReferences{},
 					invocation.LocationRange,
 				)
