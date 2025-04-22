@@ -930,12 +930,12 @@ func TestContractImport(t *testing.T) {
 			return fooProgram
 		}
 
-		barCompiler.Config.ElaborationResolver = func(location common.Location) (*compiler.ExtendedElaboration, error) {
+		barCompiler.Config.ElaborationResolver = func(location common.Location) (*compiler.DesugaredElaboration, error) {
 			switch location {
 			case fooLocation:
-				return compiler.NewExtendedElaboration(fooChecker.Elaboration), nil
+				return compiler.NewDesugaredElaboration(fooChecker.Elaboration), nil
 			case barLocation:
-				return compiler.NewExtendedElaboration(barChecker.Elaboration), nil
+				return compiler.NewDesugaredElaboration(barChecker.Elaboration), nil
 			default:
 				return nil, fmt.Errorf("cannot find elaboration for %s", location)
 			}
@@ -2071,9 +2071,9 @@ func TestInterfaceMethodCall(t *testing.T) {
 		require.NoError(t, err)
 
 		importCompiler := compiler.NewInstructionCompiler(importedChecker)
-		importCompiler.Config.ElaborationResolver = func(location common.Location) (*compiler.ExtendedElaboration, error) {
+		importCompiler.Config.ElaborationResolver = func(location common.Location) (*compiler.DesugaredElaboration, error) {
 			if location == contractLocation {
-				return compiler.NewExtendedElaboration(importedChecker.Elaboration), nil
+				return compiler.NewDesugaredElaboration(importedChecker.Elaboration), nil
 			}
 
 			return nil, fmt.Errorf("cannot find elaboration for %s", location)
@@ -2270,12 +2270,12 @@ func TestInterfaceMethodCall(t *testing.T) {
 		bazCompiler := compiler.NewInstructionCompiler(bazChecker)
 		bazCompiler.Config.LocationHandler = singleIdentifierLocationResolver(t)
 		bazCompiler.Config.ImportHandler = bazImportHandler
-		bazCompiler.Config.ElaborationResolver = func(location common.Location) (*compiler.ExtendedElaboration, error) {
+		bazCompiler.Config.ElaborationResolver = func(location common.Location) (*compiler.DesugaredElaboration, error) {
 			switch location {
 			case fooLocation:
-				return compiler.NewExtendedElaboration(fooChecker.Elaboration), nil
+				return compiler.NewDesugaredElaboration(fooChecker.Elaboration), nil
 			case barLocation:
-				return compiler.NewExtendedElaboration(barChecker.Elaboration), nil
+				return compiler.NewDesugaredElaboration(barChecker.Elaboration), nil
 			default:
 				return nil, fmt.Errorf("cannot find elaboration for %s", location)
 			}
@@ -2928,7 +2928,7 @@ func TestDefaultFunctions(t *testing.T) {
 			return contractValue
 		}
 		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-			elaboration := programs[location].ExtendedElaboration
+			elaboration := programs[location].DesugaredElaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
 				return compositeType
@@ -3059,7 +3059,7 @@ func TestDefaultFunctions(t *testing.T) {
 			return contractValue
 		}
 		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-			elaboration := programs[location].ExtendedElaboration
+			elaboration := programs[location].DesugaredElaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
 				return compositeType
@@ -3192,7 +3192,7 @@ func TestDefaultFunctions(t *testing.T) {
 			return contractValue
 		}
 		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-			elaboration := programs[location].ExtendedElaboration
+			elaboration := programs[location].DesugaredElaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
 				return compositeType
@@ -3549,7 +3549,7 @@ func TestFunctionPreConditions(t *testing.T) {
 			return contractValue
 		}
 		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-			elaboration := programs[location].ExtendedElaboration
+			elaboration := programs[location].DesugaredElaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
 				return compositeType
@@ -6809,7 +6809,7 @@ func TestEmitInContract(t *testing.T) {
 			return contractValue
 		}
 		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-			elaboration := programs[location].ExtendedElaboration
+			elaboration := programs[location].DesugaredElaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
 				return compositeType
@@ -6939,7 +6939,7 @@ func TestInheritedConditions(t *testing.T) {
 			return contractValue
 		}
 		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-			elaboration := programs[location].ExtendedElaboration
+			elaboration := programs[location].DesugaredElaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
 				return compositeType
@@ -7087,7 +7087,7 @@ func TestInheritedConditions(t *testing.T) {
 			return contractValue
 		}
 		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-			elaboration := programs[location].ExtendedElaboration
+			elaboration := programs[location].DesugaredElaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
 				return compositeType

@@ -34,7 +34,7 @@ const tempResultVariableName = "$_result"
 // abstractions, so the compiler and vm could work with a minimal set of language features.
 type Desugar struct {
 	memoryGauge            common.MemoryGauge
-	elaboration            *ExtendedElaboration
+	elaboration            *DesugaredElaboration
 	program                *ast.Program
 	checker                *sema.Checker
 	config                 *Config
@@ -52,7 +52,7 @@ type inheritedFunction struct {
 	interfaceType       *sema.InterfaceType
 	functionDecl        *ast.FunctionDeclaration
 	rewrittenConditions sema.PostConditionsRewrite
-	elaboration         *ExtendedElaboration
+	elaboration         *DesugaredElaboration
 }
 
 var _ ast.DeclarationVisitor[ast.Declaration] = &Desugar{}
@@ -61,7 +61,7 @@ func NewDesugar(
 	memoryGauge common.MemoryGauge,
 	compilerConfig *Config,
 	program *ast.Program,
-	elaboration *ExtendedElaboration,
+	elaboration *DesugaredElaboration,
 	checker *sema.Checker,
 ) *Desugar {
 	return &Desugar{

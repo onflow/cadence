@@ -86,12 +86,12 @@ func compiledFTTransfer(tb testing.TB) {
 	compilerConfig := &compiler.Config{
 		LocationHandler: commons.LocationHandler(locationHandler),
 		ImportHandler:   importHandler,
-		ElaborationResolver: func(location common.Location) (*compiler.ExtendedElaboration, error) {
+		ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 			imported, ok := compiledPrograms[location]
 			if !ok {
 				return nil, fmt.Errorf("cannot find elaboration for %s", location)
 			}
-			return imported.ExtendedElaboration, nil
+			return imported.DesugaredElaboration, nil
 		},
 	}
 
@@ -141,7 +141,7 @@ func compiledFTTransfer(tb testing.TB) {
 		if !ok {
 			panic(fmt.Errorf("cannot find elaboration for: %s", location))
 		}
-		elaboration := program.ExtendedElaboration
+		elaboration := program.DesugaredElaboration
 		compositeType := elaboration.CompositeType(typeID)
 		if compositeType != nil {
 			return compositeType

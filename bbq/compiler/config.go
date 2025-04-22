@@ -26,6 +26,6 @@ import (
 type Config struct {
 	ImportHandler          commons.ImportHandler
 	LocationHandler        commons.LocationHandler
-	ElaborationResolver    func(location common.Location) (*ExtendedElaboration, error)
+	ElaborationResolver    func(location common.Location) (*DesugaredElaboration, error)
 	BuiltinGlobalsProvider func() map[string]*Global
 }

@@ -37,10 +37,10 @@ import (
 )
 
 type Compiler[E, T any] struct {
-	Program             *ast.Program
-	ExtendedElaboration *ExtendedElaboration
-	Config              *Config
-	checker             *sema.Checker
+	Program              *ast.Program
+	DesugaredElaboration *DesugaredElaboration
+	Config               *Config
+	checker              *sema.Checker
 
 	currentFunction *function[E]
 
@@ -132,14 +132,14 @@ func newCompiler[E, T any](
 	}
 
 	return &Compiler[E, T]{
-		Program:             checker.Program,
-		ExtendedElaboration: NewExtendedElaboration(checker.Elaboration),
-		Config:              config,
-		checker:             checker,
-		Globals:             make(map[string]*Global),
-		importedGlobals:     globals,
-		typesInPool:         make(map[sema.TypeID]uint16),
-		constantsInPool:     make(map[constantsCacheKey]*Constant),
+		Program:              checker.Program,
+		DesugaredElaboration: NewDesugaredElaboration(checker.Elaboration),
+		Config:               config,
+		checker:              checker,
+		Globals:              make(map[string]*Global),
+		importedGlobals:      globals,
+		typesInPool:          make(map[sema.TypeID]uint16),
+		constantsInPool:      make(map[constantsCacheKey]*Constant),
 		compositeTypeStack: &Stack[sema.CompositeKindedType]{
 			elements: make([]sema.CompositeKindedType, 0),
 		},
@@ -395,7 +395,7 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 		c.memoryGauge,
 		c.Config,
 		c.Program,
-		c.ExtendedElaboration,
+		c.DesugaredElaboration,
 		c.checker,
 	)
 	c.Program, c.postConditionsIndices = desugar.Run()
@@ -620,13 +620,13 @@ func (c *Compiler[_, _]) exportVariables(variableDecls []*ast.VariableDeclaratio
 func (c *Compiler[_, _]) contractType() (contractType sema.CompositeKindedType) {
 	contractDecl := c.Program.SoleContractDeclaration()
 	if contractDecl != nil {
-		contractType = c.ExtendedElaboration.CompositeDeclarationType(contractDecl)
+		contractType = c.DesugaredElaboration.CompositeDeclarationType(contractDecl)
 		return
 	}
 
 	interfaceDecl := c.Program.SoleContractInterfaceDeclaration()
 	if interfaceDecl != nil {
-		contractType = c.ExtendedElaboration.InterfaceDeclarationType(interfaceDecl)
+		contractType = c.DesugaredElaboration.InterfaceDeclarationType(interfaceDecl)
 		return
 	}
 
@@ -859,9 +859,9 @@ func (c *Compiler[_, _]) VisitContinueStatement(_ *ast.ContinueStatement) (_ str
 }
 
 func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{}) {
-	// If statements can be coming from inherited conditions.
+	// If-statements can be coming from inherited conditions.
 	// If so, use the corresponding elaboration.
-	c.withConditionExtendedElaboration(statement, func() {
+	c.withConditionElaboration(statement, func() {
 		var (
 			elseJump            int
 			additionalThenScope bool
@@ -889,7 +889,7 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 			// Then branch: unwrap the optional and declare the variable
 			c.emitGetLocal(tempIndex)
 			c.codeGen.Emit(opcode.InstructionUnwrap{})
-			varDeclTypes := c.ExtendedElaboration.VariableDeclarationTypes(test)
+			varDeclTypes := c.DesugaredElaboration.VariableDeclarationTypes(test)
 			c.emitTransfer(varDeclTypes.TargetType)
 
 			// Declare the variable *after* unwrapping the optional,
@@ -1010,11 +1010,11 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 func (c *Compiler[_, _]) VisitEmitStatement(statement *ast.EmitStatement) (_ struct{}) {
 	// Emit statements can be coming from inherited conditions.
 	// If so, use the corresponding elaboration.
-	c.withConditionExtendedElaboration(
+	c.withConditionElaboration(
 		statement,
 		func() {
 			c.compileExpression(statement.InvocationExpression)
-			eventType := c.ExtendedElaboration.EmitStatementEventType(statement)
+			eventType := c.DesugaredElaboration.EmitStatementEventType(statement)
 			typeIndex := c.getOrAddType(eventType)
 			c.codeGen.Emit(opcode.InstructionEmitEvent{
 				Type: typeIndex,
@@ -1071,7 +1071,7 @@ func (c *Compiler[_, _]) VisitSwitchStatement(statement *ast.SwitchStatement) (_
 func (c *Compiler[_, _]) VisitVariableDeclaration(declaration *ast.VariableDeclaration) (_ struct{}) {
 	// Some variable declarations can be coming from inherited before-statements.
 	// If so, use the corresponding elaboration.
-	c.withConditionExtendedElaboration(declaration, func() {
+	c.withConditionElaboration(declaration, func() {
 
 		// TODO: second value
 
@@ -1084,7 +1084,7 @@ func (c *Compiler[_, _]) VisitVariableDeclaration(declaration *ast.VariableDecla
 			// Compile the value expression *before* declaring the variable
 			c.compileExpression(declaration.Value)
 
-			varDeclTypes := c.ExtendedElaboration.VariableDeclarationTypes(declaration)
+			varDeclTypes := c.DesugaredElaboration.VariableDeclarationTypes(declaration)
 			c.emitTransfer(varDeclTypes.TargetType)
 
 			// Declare the variable *after* compiling the value expression
@@ -1106,7 +1106,7 @@ func (c *Compiler[_, _]) VisitAssignmentStatement(statement *ast.AssignmentState
 	switch target := statement.Target.(type) {
 	case *ast.IdentifierExpression:
 		c.compileExpression(statement.Value)
-		assignmentTypes := c.ExtendedElaboration.AssignmentStatementTypes(statement)
+		assignmentTypes := c.DesugaredElaboration.AssignmentStatementTypes(statement)
 		c.emitTransfer(assignmentTypes.TargetType)
 
 		c.emitVariableStore(target.Identifier.Identifier)
@@ -1115,7 +1115,7 @@ func (c *Compiler[_, _]) VisitAssignmentStatement(statement *ast.AssignmentState
 		c.compileExpression(target.Expression)
 
 		c.compileExpression(statement.Value)
-		assignmentTypes := c.ExtendedElaboration.AssignmentStatementTypes(statement)
+		assignmentTypes := c.DesugaredElaboration.AssignmentStatementTypes(statement)
 		c.emitTransfer(assignmentTypes.TargetType)
 
 		constant := c.addStringConst(target.Identifier.Identifier)
@@ -1128,7 +1128,7 @@ func (c *Compiler[_, _]) VisitAssignmentStatement(statement *ast.AssignmentState
 		c.compileExpression(target.IndexingExpression)
 
 		c.compileExpression(statement.Value)
-		assignmentTypes := c.ExtendedElaboration.AssignmentStatementTypes(statement)
+		assignmentTypes := c.DesugaredElaboration.AssignmentStatementTypes(statement)
 		c.emitTransfer(assignmentTypes.TargetType)
 
 		c.codeGen.Emit(opcode.InstructionSetIndex{})
@@ -1179,7 +1179,7 @@ func (c *Compiler[_, _]) VisitNilExpression(_ *ast.NilExpression) (_ struct{}) {
 }
 
 func (c *Compiler[_, _]) VisitIntegerExpression(expression *ast.IntegerExpression) (_ struct{}) {
-	integerType := c.ExtendedElaboration.IntegerExpressionType(expression)
+	integerType := c.DesugaredElaboration.IntegerExpressionType(expression)
 	constantKind := constant.FromSemaType(integerType)
 
 	value := expression.Value
@@ -1237,7 +1237,7 @@ func (c *Compiler[_, _]) VisitIntegerExpression(expression *ast.IntegerExpressio
 func (c *Compiler[_, _]) VisitFixedPointExpression(expression *ast.FixedPointExpression) (_ struct{}) {
 	// TODO: adjust once/if we support more fixed point types
 
-	fixedPointSubType := c.ExtendedElaboration.FixedPointExpressionType(expression)
+	fixedPointSubType := c.DesugaredElaboration.FixedPointExpressionType(expression)
 
 	value := fixedpoint.ConvertToFixedPointBigInt(
 		expression.Negative,
@@ -1282,7 +1282,7 @@ func (c *Compiler[_, _]) addFix64Constant(value *big.Int) *Constant {
 }
 
 func (c *Compiler[_, _]) VisitArrayExpression(array *ast.ArrayExpression) (_ struct{}) {
-	arrayTypes := c.ExtendedElaboration.ArrayExpressionTypes(array)
+	arrayTypes := c.DesugaredElaboration.ArrayExpressionTypes(array)
 
 	typeIndex := c.getOrAddType(arrayTypes.ArrayType)
 
@@ -1307,7 +1307,7 @@ func (c *Compiler[_, _]) VisitArrayExpression(array *ast.ArrayExpression) (_ str
 }
 
 func (c *Compiler[_, _]) VisitDictionaryExpression(dictionary *ast.DictionaryExpression) (_ struct{}) {
-	dictionaryTypes := c.ExtendedElaboration.DictionaryExpressionTypes(dictionary)
+	dictionaryTypes := c.DesugaredElaboration.DictionaryExpressionTypes(dictionary)
 
 	typeIndex := c.getOrAddType(dictionaryTypes.DictionaryType)
 
@@ -1385,7 +1385,7 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 	switch invokedExpr := expression.InvokedExpression.(type) {
 	case *ast.IdentifierExpression:
 		// TODO: Does constructors need any special handling?
-		//typ := c.ExtendedElaboration.IdentifierInInvocationType(invokedExpr)
+		//typ := c.DesugaredElaboration.IdentifierInInvocationType(invokedExpr)
 		//invocationType := typ.(*sema.FunctionType)
 		//if invocationType.IsConstructor {
 		//}
@@ -1399,7 +1399,7 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 		c.codeGen.Emit(opcode.InstructionInvoke{TypeArgs: typeArgs})
 
 	case *ast.MemberExpression:
-		memberInfo, ok := c.ExtendedElaboration.MemberExpressionMemberAccessInfo(invokedExpr)
+		memberInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(invokedExpr)
 		if !ok {
 			// TODO: verify
 			panic(errors.NewUnreachableError())
@@ -1433,7 +1433,7 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 
 		// Invocations into the interface code, such as default functions and inherited conditions,
 		// that were synthetically added at the desugar phase, must be static calls.
-		isInterfaceInheritedFuncCall := c.ExtendedElaboration.IsInterfaceMethodStaticCall(expression)
+		isInterfaceInheritedFuncCall := c.DesugaredElaboration.IsInterfaceMethodStaticCall(expression)
 
 		// Any invocation on restricted-types must be dynamic
 		if !isInterfaceInheritedFuncCall && isDynamicMethodInvocation(memberInfo.AccessedType) {
@@ -1489,7 +1489,7 @@ func isDynamicMethodInvocation(accessedType sema.Type) bool {
 }
 
 func (c *Compiler[_, _]) compileArguments(expression *ast.InvocationExpression) {
-	invocationTypes := c.ExtendedElaboration.InvocationExpressionTypes(expression)
+	invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(expression)
 	for index, argument := range expression.Arguments {
 		c.compileExpression(argument.Expression)
 		c.emitTransfer(invocationTypes.ArgumentTypes[index])
@@ -1503,7 +1503,7 @@ func (c *Compiler[_, _]) compileArguments(expression *ast.InvocationExpression) 
 }
 
 func (c *Compiler[_, _]) loadTypeArguments(expression *ast.InvocationExpression) []uint16 {
-	invocationTypes := c.ExtendedElaboration.InvocationExpressionTypes(expression)
+	invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(expression)
 
 	typeArgsCount := invocationTypes.TypeArguments.Len()
 	if typeArgsCount >= math.MaxUint16 {
@@ -1525,7 +1525,7 @@ func (c *Compiler[_, _]) loadTypeArguments(expression *ast.InvocationExpression)
 func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression) (_ struct{}) {
 	c.compileExpression(expression.Expression)
 
-	memberAccessInfo, ok := c.ExtendedElaboration.MemberExpressionMemberAccessInfo(expression)
+	memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(expression)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -1564,7 +1564,7 @@ func (c *Compiler[_, _]) VisitIndexExpression(expression *ast.IndexExpression) (
 	c.compileExpression(expression.IndexingExpression)
 	c.codeGen.Emit(opcode.InstructionGetIndex{})
 
-	indexExpressionTypes, ok := c.ExtendedElaboration.IndexExpressionTypes(expression)
+	indexExpressionTypes, ok := c.DesugaredElaboration.IndexExpressionTypes(expression)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -1751,7 +1751,7 @@ func (c *Compiler[_, _]) VisitFunctionExpression(expression *ast.FunctionExpress
 		panic(errors.NewDefaultUserError("invalid parameter count"))
 	}
 
-	functionType := c.ExtendedElaboration.FunctionExpressionFunctionType(expression)
+	functionType := c.DesugaredElaboration.FunctionExpressionFunctionType(expression)
 
 	function := c.addFunction(
 		"",
@@ -1790,7 +1790,7 @@ func (c *Compiler[_, _]) VisitStringTemplateExpression(_ *ast.StringTemplateExpr
 func (c *Compiler[_, _]) VisitCastingExpression(expression *ast.CastingExpression) (_ struct{}) {
 	c.compileExpression(expression.Expression)
 
-	castingTypes := c.ExtendedElaboration.CastingExpressionTypes(expression)
+	castingTypes := c.DesugaredElaboration.CastingExpressionTypes(expression)
 	index := c.getOrAddType(castingTypes.TargetType)
 
 	var castInstruction opcode.Instruction
@@ -1828,7 +1828,7 @@ func (c *Compiler[_, _]) VisitDestroyExpression(expression *ast.DestroyExpressio
 
 func (c *Compiler[_, _]) VisitReferenceExpression(expression *ast.ReferenceExpression) (_ struct{}) {
 	c.compileExpression(expression.Expression)
-	borrowType := c.ExtendedElaboration.ReferenceExpressionBorrowType(expression)
+	borrowType := c.DesugaredElaboration.ReferenceExpressionBorrowType(expression)
 	typeIndex := c.getOrAddType(borrowType)
 	c.codeGen.Emit(opcode.InstructionNewRef{
 		Type: typeIndex,
@@ -1903,7 +1903,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		panic(errors.NewDefaultUserError("invalid parameter count"))
 	}
 
-	functionType := c.ExtendedElaboration.FunctionDeclarationFunctionType(declaration.FunctionDeclaration)
+	functionType := c.DesugaredElaboration.FunctionDeclarationFunctionType(declaration.FunctionDeclaration)
 
 	function := c.addFunction(
 		functionName,
@@ -2014,7 +2014,7 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 		panic(errors.NewDefaultUserError("invalid function index"))
 	}
 
-	functionType := c.ExtendedElaboration.FunctionDeclarationFunctionType(declaration)
+	functionType := c.DesugaredElaboration.FunctionDeclarationFunctionType(declaration)
 
 	function := c.addFunction(
 		functionName,
@@ -2047,7 +2047,7 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 }
 
 func (c *Compiler[_, _]) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) (_ struct{}) {
-	compositeType := c.ExtendedElaboration.CompositeDeclarationType(declaration)
+	compositeType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
 	c.compositeTypeStack.push(compositeType)
 	defer func() {
 		c.compositeTypeStack.pop()
@@ -2086,7 +2086,7 @@ func (c *Compiler[_, _]) VisitCompositeDeclaration(declaration *ast.CompositeDec
 }
 
 func (c *Compiler[_, _]) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) (_ struct{}) {
-	interfaceType := c.ExtendedElaboration.InterfaceDeclarationType(declaration)
+	interfaceType := c.DesugaredElaboration.InterfaceDeclarationType(declaration)
 	c.compositeTypeStack.push(interfaceType)
 	defer func() {
 		c.compositeTypeStack.pop()
@@ -2299,20 +2299,20 @@ func (c *Compiler[E, T]) declareParameters(paramList *ast.ParameterList, declare
 }
 
 func (c *Compiler[_, _]) generateEmptyInit() {
-	c.ExtendedElaboration.SetFunctionDeclarationFunctionType(
+	c.DesugaredElaboration.SetFunctionDeclarationFunctionType(
 		emptyInitializer.FunctionDeclaration,
 		emptyInitializerFuncType,
 	)
 	c.VisitSpecialFunctionDeclaration(emptyInitializer)
 }
 
-func (c *Compiler[_, _]) withConditionExtendedElaboration(statement ast.Statement, f func()) {
-	stmtElaboration, ok := c.ExtendedElaboration.conditionsElaborations[statement]
+func (c *Compiler[_, _]) withConditionElaboration(statement ast.Statement, f func()) {
+	stmtElaboration, ok := c.DesugaredElaboration.conditionsElaborations[statement]
 	if ok {
-		prevElaboration := c.ExtendedElaboration
-		c.ExtendedElaboration = stmtElaboration
+		prevElaboration := c.DesugaredElaboration
+		c.DesugaredElaboration = stmtElaboration
 		defer func() {
-			c.ExtendedElaboration = prevElaboration
+			c.DesugaredElaboration = prevElaboration
 		}()
 	}
 	f()
