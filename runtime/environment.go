@@ -469,7 +469,7 @@ func (e *interpreterEnvironment) newOnInvokedFunctionReturnHandler() func(_ *int
 	}
 }
 
-func (e *interpreterEnvironment) InterpretContract(
+func (e *interpreterEnvironment) LoadContractValue(
 	location common.AddressLocation,
 	program *interpreter.Program,
 	name string,

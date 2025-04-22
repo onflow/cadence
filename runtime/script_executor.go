@@ -115,8 +115,19 @@ func (executor *scriptExecutor) preprocess() (err error) {
 
 	environment := context.Environment
 	if environment == nil {
+		if context.UseVM {
+			return errors.NewUnexpectedError("cannot execute script with the VM")
+		}
 		environment = NewScriptInterpreterEnvironment(executor.runtime.Config())
 	}
+
+	switch environment.(type) {
+	case *interpreterEnvironment:
+		break
+	default:
+		return errors.NewUnexpectedError("scripts can only be executed with the interpreter")
+	}
+
 	environment.Configure(
 		runtimeInterface,
 		codesAndPrograms,
