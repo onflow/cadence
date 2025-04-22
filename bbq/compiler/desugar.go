@@ -19,6 +19,9 @@
 package compiler
 
 import (
+	"slices"
+	"strings"
+
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
@@ -466,7 +469,7 @@ var panicFuncInvocationTypes = sema.InvocationExpressionTypes{
 
 func (d *Desugar) desugarCondition(condition ast.Condition, inheritedFrom *sema.InterfaceType) ast.Statement {
 
-	// If the conditions are inherited, they could be referring to their own imports.
+	// If the conditions are inherited, they could be referring to the imports of their original program.
 	// i.e: transitive dependencies of the concrete type.
 	// Therefore, add those transitive dependencies to the current compiling program.
 	// They will only be added to the final compiled program, if those are used in the code.
@@ -476,11 +479,22 @@ func (d *Desugar) desugarCondition(condition ast.Condition, inheritedFrom *sema.
 			panic(err)
 		}
 
-		// Order doesn't matter, since imports are only added to globals in the order of usage.
-		for _, resolvedLocations := range elaboration.AllImportDeclarationsResolvedLocations() { // nolint:maprange
+		allImports := elaboration.AllImportDeclarationsResolvedLocations()
+		transitiveImportLocations := make([]common.Location, 0, len(allImports))
+
+		// Collect and sort the locations to make it deterministic.
+		for _, resolvedLocations := range allImports { // nolint:maprange
 			for _, location := range resolvedLocations {
-				d.addImport(location.Location)
+				transitiveImportLocations = append(transitiveImportLocations, location.Location)
 			}
+		}
+		slices.SortFunc(transitiveImportLocations, func(a, b common.Location) int {
+			return strings.Compare(a.ID(), b.ID())
+		})
+
+		// Add new imports for all the transitive imports.
+		for _, location := range transitiveImportLocations {
+			d.addImport(location)
 		}
 	}
 
