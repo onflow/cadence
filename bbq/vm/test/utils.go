@@ -19,12 +19,11 @@
 package test
 
 import (
-	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -36,7 +35,7 @@ import (
 
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
-	"github.com/onflow/cadence/bbq/compiler"
+	. "github.com/onflow/cadence/bbq/test-utils"
 	"github.com/onflow/cadence/bbq/vm"
 )
 
@@ -361,194 +360,18 @@ func (t *testAccountHandler) IsContractBeingAdded(common.AddressLocation) bool {
 	return false
 }
 
-func singleIdentifierLocationResolver(t testing.TB) func(
-	identifiers []ast.Identifier,
-	location common.Location,
-) ([]commons.ResolvedLocation, error) {
-	return func(identifiers []ast.Identifier, location common.Location) ([]commons.ResolvedLocation, error) {
-		require.Len(t, identifiers, 1)
-		require.IsType(t, common.AddressLocation{}, location)
-
-		return []commons.ResolvedLocation{
-			{
-				Location: common.AddressLocation{
-					Address: location.(common.AddressLocation).Address,
-					Name:    identifiers[0].Identifier,
-				},
-				Identifiers: identifiers,
-			},
-		}, nil
-	}
-}
-
-func printProgram(name string, program *bbq.InstructionProgram) { //nolint:unused
-	const resolve = true
-	const colorize = true
-	printer := bbq.NewInstructionsProgramPrinter(resolve, colorize)
-	fmt.Println("===================", name, "===================")
-	fmt.Println(printer.PrintProgram(program))
-}
-
-func baseValueActivation(common.Location) *sema.VariableActivation {
-	// Only need to make the checker happy
-	activation := sema.NewVariableActivation(sema.BaseValueActivation)
-	activation.DeclareValue(stdlib.PanicFunction)
-	activation.DeclareValue(stdlib.AssertFunction)
-	activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-		"getAccount",
-		stdlib.GetAccountFunctionType,
-		"",
-		nil,
-	))
-	return activation
-}
-
-type compiledProgram struct {
-	Program *bbq.InstructionProgram
-	*sema.Elaboration
-}
-
 type CompilerAndVMOptions struct {
-	*ParseAndCheckOptions
-	CompilerConfig *compiler.Config
-	VMConfig       *vm.Config
+	ParseCheckAndCompileOptions
+	VMConfig *vm.Config
 }
 
-func parseCheckAndCompile(
-	t testing.TB,
-	code string,
-	location common.Location,
-	programs map[common.Location]*compiledProgram,
-) *bbq.InstructionProgram {
-	return parseCheckAndCompileCodeWithOptions(
-		t,
-		code,
-		location,
-		CompilerAndVMOptions{},
-		programs,
-	)
-}
-
-func parseCheckAndCompileCodeWithOptions(
-	t testing.TB,
-	code string,
-	location common.Location,
-	options CompilerAndVMOptions,
-	programs map[common.Location]*compiledProgram,
-) *bbq.InstructionProgram {
-	checker := parseAndCheckWithOptions(
-		t,
-		code,
-		location,
-		options.ParseAndCheckOptions,
-		programs,
-	)
-	programs[location] = &compiledProgram{
-		Elaboration: checker.Elaboration,
-	}
-
-	program := compile(
-		t,
-		options.CompilerConfig,
-		checker,
-		programs,
-	)
-	programs[location].Program = program
-
-	return program
-}
-
-func parseAndCheck( // nolint:unused
-	t testing.TB,
-	code string,
-	location common.Location,
-	programs map[common.Location]*compiledProgram,
-) *sema.Checker {
-	return parseAndCheckWithOptions(t, code, location, nil, programs)
-}
-
-func parseAndCheckWithOptions(
-	t testing.TB,
-	code string,
-	location common.Location,
-	options *ParseAndCheckOptions,
-	programs map[common.Location]*compiledProgram,
-) *sema.Checker {
-
-	var parseAndCheckOptions ParseAndCheckOptions
-	if options != nil {
-		parseAndCheckOptions = *options
-	} else {
-		parseAndCheckOptions = ParseAndCheckOptions{
-			Location: location,
-			Config: &sema.Config{
-				LocationHandler:            singleIdentifierLocationResolver(t),
-				BaseValueActivationHandler: baseValueActivation,
-			},
-		}
-	}
-
-	if parseAndCheckOptions.Config.ImportHandler == nil {
-		parseAndCheckOptions.Config.ImportHandler = func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
-			imported, ok := programs[location]
-			if !ok {
-				return nil, fmt.Errorf("cannot find contract in location %s", location)
-			}
-
-			return sema.ElaborationImport{
-				Elaboration: imported.Elaboration,
-			}, nil
-		}
-	}
-
-	checker, err := ParseAndCheckWithOptions(
-		t,
-		code,
-		parseAndCheckOptions,
-	)
-	require.NoError(t, err)
-	return checker
-}
-
-func compile(
-	t testing.TB,
-	config *compiler.Config,
-	checker *sema.Checker,
-	programs map[common.Location]*compiledProgram,
-) *bbq.InstructionProgram {
-
-	if config == nil {
-		config = &compiler.Config{
-			LocationHandler: singleIdentifierLocationResolver(t),
-			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
-				imported, ok := programs[location]
-				if !ok {
-					return nil
-				}
-				return imported.Program
-			},
-			ElaborationResolver: func(location common.Location) (*sema.Elaboration, error) {
-				imported, ok := programs[location]
-				if !ok {
-					return nil, fmt.Errorf("cannot find elaboration for %s", location)
-				}
-				return imported.Elaboration, nil
-			},
-		}
-	}
-	comp := compiler.NewInstructionCompilerWithConfig(checker, config)
-
-	program := comp.Compile()
-	return program
-}
-
-func compileAndInvoke(
+func CompileAndInvoke(
 	t testing.TB,
 	code string,
 	funcName string,
 	arguments ...vm.Value,
 ) (vm.Value, error) {
-	return compileAndInvokeWithOptions(
+	return CompileAndInvokeWithOptions(
 		t,
 		code,
 		funcName,
@@ -557,7 +380,7 @@ func compileAndInvoke(
 	)
 }
 
-func compileAndInvokeWithLogs(
+func CompileAndInvokeWithLogs(
 	t testing.TB,
 	code string,
 	funcName string,
@@ -583,7 +406,8 @@ func compileAndInvokeWithLogs(
 		nil,
 	))
 
-	vmConfig := prepareVMConfig(nil)
+	storage := interpreter.NewInMemoryStorage(nil)
+	vmConfig := vm.NewConfig(storage)
 
 	vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
 		funcs := vm.NativeFunctions()
@@ -598,17 +422,19 @@ func compileAndInvokeWithLogs(
 		return funcs
 	}
 
-	result, err = compileAndInvokeWithOptions(
+	result, err = CompileAndInvokeWithOptions(
 		t,
 		code,
 		funcName,
 		CompilerAndVMOptions{
 			VMConfig: vmConfig,
-			ParseAndCheckOptions: &ParseAndCheckOptions{
-				Config: &sema.Config{
-					LocationHandler: singleIdentifierLocationResolver(t),
-					BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
-						return activation
+			ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Config: &sema.Config{
+						LocationHandler: SingleIdentifierLocationResolver(t),
+						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+							return activation
+						},
 					},
 				},
 			},
@@ -619,7 +445,7 @@ func compileAndInvokeWithLogs(
 	return
 }
 
-func compileAndInvokeWithOptions(
+func CompileAndInvokeWithOptions(
 	t testing.TB,
 	code string,
 	funcName string,
@@ -638,7 +464,7 @@ func compileAndInvokeWithOptions(
 }
 
 func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMOptions) *vm.VM {
-	programs := map[common.Location]*compiledProgram{}
+	programs := map[common.Location]*CompiledProgram{}
 
 	var location common.Location
 	parseAndCheckOptions := options.ParseAndCheckOptions
@@ -650,11 +476,11 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 		location = TestLocation
 	}
 
-	program := parseCheckAndCompileCodeWithOptions(
+	program := ParseCheckAndCompileCodeWithOptions(
 		t,
 		code,
 		location,
-		options,
+		options.ParseCheckAndCompileOptions,
 		programs,
 	)
 
@@ -664,31 +490,10 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 	printer := bbq.NewInstructionsProgramPrinter(resolve, colorize)
 	_ = printer.PrintProgram(program)
 
-	vmConfig := prepareVMConfig(options.VMConfig)
+	vmConfig := prepareVMConfig(t, options.VMConfig, programs)
 
 	if vmConfig.TypeLoader == nil {
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-			program, ok := programs[location]
-			require.True(t, ok, "cannot find elaboration for %s", location)
-
-			elaboration := program.Elaboration
-			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType
-			}
-
-			entitlementType := elaboration.EntitlementType(typeID)
-			if entitlementType != nil {
-				return entitlementType
-			}
-
-			entitlementMapType := elaboration.EntitlementMapType(typeID)
-			if entitlementMapType != nil {
-				return entitlementMapType
-			}
-
-			return elaboration.InterfaceType(typeID)
-		}
+		vmConfig.TypeLoader = typeLoader(t, programs)
 	}
 
 	programVM := vm.NewVM(
@@ -699,25 +504,57 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 	return programVM
 }
 
+func typeLoader(
+	tb testing.TB,
+	programs CompiledPrograms,
+) func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+	return func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+		program, ok := programs[location]
+		require.True(tb, ok, "cannot find elaboration for %s", location)
+
+		elaboration := program.Elaboration
+		compositeType := elaboration.CompositeType(typeID)
+		if compositeType != nil {
+			return compositeType
+		}
+
+		entitlementType := elaboration.EntitlementType(typeID)
+		if entitlementType != nil {
+			return entitlementType
+		}
+
+		entitlementMapType := elaboration.EntitlementMapType(typeID)
+		if entitlementMapType != nil {
+			return entitlementMapType
+		}
+
+		return elaboration.InterfaceType(typeID)
+	}
+}
+
 func compileAndInvokeWithOptionsAndPrograms(
 	t testing.TB,
 	code string,
 	funcName string,
 	options CompilerAndVMOptions,
-	programs map[common.Location]*compiledProgram,
+	programs CompiledPrograms,
 	arguments ...vm.Value,
 ) (vm.Value, error) {
 
 	location := common.ScriptLocation{0x1}
-	program := parseCheckAndCompileCodeWithOptions(
+	program := ParseCheckAndCompileCodeWithOptions(
 		t,
 		code,
 		location,
-		options,
+		options.ParseCheckAndCompileOptions,
 		programs,
 	)
 
-	vmConfig := prepareVMConfig(options.VMConfig)
+	vmConfig := prepareVMConfig(
+		t,
+		options.VMConfig,
+		programs,
+	)
 
 	scriptLocation := NewScriptLocationGenerator()
 
@@ -735,7 +572,11 @@ func compileAndInvokeWithOptionsAndPrograms(
 	return result, err
 }
 
-func prepareVMConfig(config *vm.Config) *vm.Config {
+func prepareVMConfig(
+	tb testing.TB,
+	config *vm.Config,
+	programs CompiledPrograms,
+) *vm.Config {
 
 	if config == nil {
 		storage := interpreter.NewInMemoryStorage(nil)
@@ -757,6 +598,20 @@ func prepareVMConfig(config *vm.Config) *vm.Config {
 		interpreterConfig.UUIDHandler = func() (uint64, error) {
 			uuid++
 			return uuid, nil
+		}
+	}
+
+	if config.TypeLoader == nil {
+		config.TypeLoader = typeLoader(tb, programs)
+	}
+
+	if config.ImportHandler == nil {
+		config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			program, ok := programs[location]
+			if !ok {
+				assert.FailNow(tb, "invalid location")
+			}
+			return program.Program
 		}
 	}
 
