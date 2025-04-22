@@ -242,9 +242,12 @@ func (v *AccountCapabilityControllerValue) GetMember(context MemberAccessibleCon
 
 func (v *AccountCapabilityControllerValue) GetMethod(
 	context MemberAccessibleContext,
-	locationRange LocationRange,
+	_ LocationRange,
 	name string,
 ) FunctionValue {
+	// NOTE: check if controller is already deleted
+	v.checkDeleted()
+
 	switch name {
 	case sema.AccountCapabilityControllerTypeSetTagFunctionName:
 		if v.setTagFunction == nil {

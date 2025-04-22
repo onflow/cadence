@@ -40,7 +40,7 @@ type Compiler[E, T any] struct {
 	Program              *ast.Program
 	DesugaredElaboration *DesugaredElaboration
 	Config               *Config
-	checker              *sema.Checker
+	location             common.Location
 
 	currentFunction *function[E]
 
@@ -135,7 +135,7 @@ func newCompiler[E, T any](
 		Program:              checker.Program,
 		DesugaredElaboration: NewDesugaredElaboration(checker.Elaboration),
 		Config:               config,
-		checker:              checker,
+		location:             checker.Location,
 		Globals:              make(map[string]*Global),
 		importedGlobals:      globals,
 		typesInPool:          make(map[sema.TypeID]uint16),
@@ -396,7 +396,7 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 		c.Config,
 		c.Program,
 		c.DesugaredElaboration,
-		c.checker,
+		c.location,
 	)
 	c.Program, c.postConditionsIndices = desugar.Run()
 

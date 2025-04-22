@@ -36,7 +36,7 @@ type Desugar struct {
 	memoryGauge            common.MemoryGauge
 	elaboration            *DesugaredElaboration
 	program                *ast.Program
-	checker                *sema.Checker
+	location               common.Location
 	config                 *Config
 	enclosingInterfaceType *sema.InterfaceType
 
@@ -62,14 +62,14 @@ func NewDesugar(
 	compilerConfig *Config,
 	program *ast.Program,
 	elaboration *DesugaredElaboration,
-	checker *sema.Checker,
+	location common.Location,
 ) *Desugar {
 	return &Desugar{
 		memoryGauge:                  memoryGauge,
 		config:                       compilerConfig,
 		elaboration:                  elaboration,
 		program:                      program,
-		checker:                      checker,
+		location:                     location,
 		importsSet:                   map[common.Location]struct{}{},
 		inheritedFuncsWithConditions: map[string][]*inheritedFunction{},
 		postConditionIndices:         map[*ast.FunctionBlock]int{},
@@ -1404,7 +1404,7 @@ func simpleFunctionDeclaration(
 
 func (d *Desugar) transactionCompositeType() *sema.CompositeType {
 	return &sema.CompositeType{
-		Location:    d.checker.Location,
+		Location:    d.location,
 		Identifier:  commons.TransactionWrapperCompositeName,
 		Kind:        common.CompositeKindStructure,
 		NestedTypes: &sema.StringTypeOrderedMap{},

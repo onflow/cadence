@@ -135,16 +135,26 @@ func (v *EphemeralReferenceValue) ReferencedValue(
 }
 
 func (v *EphemeralReferenceValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
-	return getMember(context, v.Value, locationRange, name)
+	var result Value
+
+	if memberAccessibleValue, ok := v.Value.(MemberAccessibleValue); ok {
+		result = memberAccessibleValue.GetMember(context, locationRange, name)
+	}
+
+	if result == nil {
+		// NOTE: Must call the `GetMethod` of the `EphemeralReferenceValue`, not of the referenced-value.
+		result = context.GetMethod(v, name, locationRange)
+	}
+
+	return result
 }
 
 func (v *EphemeralReferenceValue) GetMethod(
 	context MemberAccessibleContext,
-	locationRange LocationRange,
+	_ LocationRange,
 	name string,
 ) FunctionValue {
-	// TODO:
-	return nil
+	return getBuiltinFunctionMember(context, v.Value, name)
 }
 
 func (v *EphemeralReferenceValue) RemoveMember(
