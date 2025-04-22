@@ -355,155 +355,16 @@ func UserPanicToError(f func()) (returnedError error) {
 	return nil
 }
 
+type LocationResolver interface {
+	ResolveLocation(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error)
+}
+
 type ArgumentDecoder interface {
 	stdlib.StandardLibraryHandler
-	ResolveLocation(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error)
+	LocationResolver
 
 	// DecodeArgument decodes a transaction/script argument against the given type.
 	DecodeArgument(argument []byte, argumentType cadence.Type) (cadence.Value, error)
-}
-
-func validateArgumentParams(
-	inter *interpreter.Interpreter,
-	decoder ArgumentDecoder,
-	locationRange interpreter.LocationRange,
-	arguments [][]byte,
-	parameters []sema.Parameter,
-) (
-	[]interpreter.Value,
-	error,
-) {
-	argumentCount := len(arguments)
-	parameterCount := len(parameters)
-
-	if argumentCount != parameterCount {
-		return nil, InvalidEntryPointParameterCountError{
-			Expected: parameterCount,
-			Actual:   argumentCount,
-		}
-	}
-
-	argumentValues := make([]interpreter.Value, len(arguments))
-
-	// Decode arguments against parameter types
-	for parameterIndex, parameter := range parameters {
-		parameterType := parameter.TypeAnnotation.Type
-		argument := arguments[parameterIndex]
-
-		exportedParameterType := ExportMeteredType(inter, parameterType, map[sema.TypeID]cadence.Type{})
-		var value cadence.Value
-		var err error
-
-		errors.WrapPanic(func() {
-			value, err = decoder.DecodeArgument(
-				argument,
-				exportedParameterType,
-			)
-		})
-
-		if err != nil {
-			return nil, &InvalidEntryPointArgumentError{
-				Index: parameterIndex,
-				Err:   err,
-			}
-		}
-
-		var arg interpreter.Value
-		panicError := UserPanicToError(func() {
-			// if importing an invalid public key, this call panics
-			arg, err = ImportValue(
-				inter,
-				locationRange,
-				decoder,
-				decoder.ResolveLocation,
-				value,
-				parameterType,
-			)
-		})
-
-		if panicError != nil {
-			return nil, &InvalidEntryPointArgumentError{
-				Index: parameterIndex,
-				Err:   panicError,
-			}
-		}
-
-		if err != nil {
-			return nil, &InvalidEntryPointArgumentError{
-				Index: parameterIndex,
-				Err:   err,
-			}
-		}
-
-		// Ensure the argument is of an importable type
-		argType := arg.StaticType(inter)
-
-		if !arg.IsImportable(inter, locationRange) {
-			return nil, &ArgumentNotImportableError{
-				Type: argType,
-			}
-		}
-
-		// Check that decoded value is a subtype of static parameter type
-		if !interpreter.IsSubTypeOfSemaType(inter, argType, parameterType) {
-			return nil, &InvalidEntryPointArgumentError{
-				Index: parameterIndex,
-				Err: &InvalidValueTypeError{
-					ExpectedType: parameterType,
-				},
-			}
-		}
-
-		// Check whether the decoded value conforms to the type associated with the value
-		if !arg.ConformsToStaticType(
-			inter,
-			interpreter.EmptyLocationRange,
-			interpreter.TypeConformanceResults{},
-		) {
-			return nil, &InvalidEntryPointArgumentError{
-				Index: parameterIndex,
-				Err: &MalformedValueError{
-					ExpectedType: parameterType,
-				},
-			}
-		}
-
-		// Ensure static type info is available for all values
-		interpreter.InspectValue(
-			inter,
-			arg,
-			func(value interpreter.Value) bool {
-				if value == nil {
-					return true
-				}
-
-				if !hasValidStaticType(inter, value) {
-					panic(errors.NewUnexpectedError("invalid static type for argument: %d", parameterIndex))
-				}
-
-				return true
-			},
-			locationRange,
-		)
-
-		argumentValues[parameterIndex] = arg
-	}
-
-	return argumentValues, nil
-}
-
-func hasValidStaticType(inter *interpreter.Interpreter, value interpreter.Value) bool {
-	switch value := value.(type) {
-	case *interpreter.ArrayValue:
-		return value.Type != nil
-	case *interpreter.DictionaryValue:
-		return value.Type.KeyType != nil &&
-			value.Type.ValueType != nil
-	default:
-		// For other values, static type is NOT inferred.
-		// Hence no need to validate it here.
-		return value.StaticType(inter) != nil
-	}
 }
 
 // ParseAndCheckProgram parses the given code and checks it.
@@ -578,7 +439,7 @@ func (r *interpreterRuntime) Storage(context Context) (*Storage, *interpreter.In
 		context.CoverageReport,
 	)
 
-	_, inter, err := environment.Interpret(
+	_, inter, err := environment.interpret(
 		location,
 		nil,
 		nil,
@@ -616,7 +477,7 @@ func (r *interpreterRuntime) ReadStored(
 		return nil, err
 	}
 
-	pathValue := valueImporter{inter: inter}.importPathValue(path)
+	pathValue := valueImporter{context: inter}.importPathValue(path)
 
 	domain := pathValue.Domain.StorageDomain()
 	identifier := pathValue.Identifier

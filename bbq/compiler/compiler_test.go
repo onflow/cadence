@@ -30,9 +30,11 @@ import (
 	"github.com/onflow/cadence/bbq/compiler"
 	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/bbq/opcode"
+	. "github.com/onflow/cadence/bbq/test-utils"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -3208,6 +3210,220 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionReturnValue{},
 			},
 			concreteTypeTestFunc.Code,
+		)
+	})
+
+	t.Run("inherited condition with transitive dependency", func(t *testing.T) {
+
+		// Deploy contract with a type
+
+		aContract := `
+            contract A {
+                struct TestStruct {
+                    view fun test(): Bool {
+                        log("invoked TestStruct.test()")
+                        return true
+                    }
+                }
+            }
+        `
+
+		logFunction := stdlib.NewStandardLibraryStaticFunction(
+			commons.LogFunctionName,
+			&sema.FunctionType{
+				Purity: sema.FunctionPurityView,
+				Parameters: []sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
+					},
+				},
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					sema.VoidType,
+				),
+			},
+			``,
+			nil,
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(logFunction)
+
+		programs := CompiledPrograms{}
+
+		contractsAddress := common.MustBytesToAddress([]byte{0x1})
+
+		aLocation := common.NewAddressLocation(nil, contractsAddress, "A")
+		bLocation := common.NewAddressLocation(nil, contractsAddress, "B")
+		cLocation := common.NewAddressLocation(nil, contractsAddress, "C")
+		dLocation := common.NewAddressLocation(nil, contractsAddress, "D")
+
+		// Only need to compile
+		ParseCheckAndCompileCodeWithOptions(
+			t,
+			aContract,
+			aLocation,
+			ParseCheckAndCompileOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Config: &sema.Config{
+						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+					},
+				},
+			},
+			programs,
+		)
+
+		// Deploy contract interface
+
+		bContract := fmt.Sprintf(`
+          import A from %[1]s
+
+          contract interface B {
+
+              resource interface VaultInterface {
+                  var balance: Int
+
+                  fun getBalance(): Int {
+                      // Call 'A.TestStruct()' which is only available to this contract interface.
+                      pre { A.TestStruct().test() }
+                  }
+              }
+          }
+        `,
+			contractsAddress.HexWithPrefix(),
+		)
+
+		// Only need to compile
+		ParseCheckAndCompile(t, bContract, bLocation, programs)
+
+		// Deploy another intermediate contract interface
+
+		cContract := fmt.Sprintf(`
+          import B from %[1]s
+
+          contract interface C: B {
+              resource interface VaultIntermediateInterface: B.VaultInterface {}
+          }
+        `,
+			contractsAddress.HexWithPrefix(),
+		)
+
+		// Only need to compile
+		ParseCheckAndCompile(t, cContract, cLocation, programs)
+
+		// Deploy contract with the implementation
+
+		dContract := fmt.Sprintf(
+			`
+              import C from %[1]s
+
+              contract D: C {
+
+                  resource Vault: C.VaultIntermediateInterface {
+                      var balance: Int
+
+                      init(balance: Int) {
+                          self.balance = balance
+                      }
+
+                      fun getBalance(): Int {
+                          // Inherits a function call 'A.TestStruct()' from the grand-parent 'B',
+                          // But 'A' is NOT available to this contract (as an import).
+                          return self.balance
+                      }
+                  }
+
+                  fun createVault(balance: Int): @Vault {
+                      return <- create Vault(balance: balance)
+                  }
+              }
+            `,
+			contractsAddress.HexWithPrefix(),
+		)
+
+		dProgram := ParseCheckAndCompile(t, dContract, dLocation, programs)
+		require.Len(t, dProgram.Functions, 8)
+
+		// Function indexes
+		const (
+			concreteTypeFunctionIndex = 7
+			panicFunctionIndex        = 11
+		)
+
+		// `D.Vault` type's `getBalance` function.
+
+		const (
+			selfIndex         = 0
+			panicMessageIndex = 1
+		)
+
+		const concreteTypeTestFuncName = "D.Vault.getBalance"
+		concreteTypeTestFunc := dProgram.Functions[concreteTypeFunctionIndex]
+		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
+
+		// Would be equivalent to:
+		// ```
+		//  fun getBalance(): Int {
+		//	  if !A.TestStruct().test() {
+		//	    panic("pre/post condition failed")
+		//    }
+		//	  return self.balance
+		//  }
+		// ```
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// A.TestStruct()
+				opcode.InstructionGetGlobal{Global: 9},
+				opcode.InstructionInvoke{},
+
+				// A.TestStruct().test()
+				opcode.InstructionGetGlobal{Global: 10},
+				opcode.InstructionInvokeMethodStatic{},
+
+				// if !<condition>
+				// panic("pre/post condition failed")
+				opcode.InstructionNot{},
+				opcode.InstructionJumpIfFalse{Target: 10},
+
+				opcode.InstructionGetConstant{Constant: panicMessageIndex},
+				opcode.InstructionGetGlobal{Global: panicFunctionIndex},
+				opcode.InstructionInvoke{},
+
+				// Drop since it's a statement-expression
+				opcode.InstructionDrop{},
+
+				// return self.balance
+				opcode.InstructionGetLocal{Local: selfIndex},
+				opcode.InstructionGetField{FieldName: 0},
+				opcode.InstructionReturnValue{},
+			},
+			concreteTypeTestFunc.Code,
+		)
+
+		// Check whether the transitive dependency `A.TestStruct`
+		// has been added as imports.
+
+		assert.Equal(
+			t,
+			[]bbq.Import{
+				{
+					Location: aLocation,
+					Name:     "A.TestStruct",
+				},
+				{
+					Location: aLocation,
+					Name:     "A.TestStruct.test",
+				},
+				{
+					Location: nil,
+					Name:     "panic",
+				},
+			},
+			dProgram.Imports,
 		)
 	})
 }

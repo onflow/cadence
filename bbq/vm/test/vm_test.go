@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/ast"
+	. "github.com/onflow/cadence/bbq/test-utils"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -120,7 +121,7 @@ func TestWhileBreak(t *testing.T) {
 
 	t.Parallel()
 
-	result, err := compileAndInvoke(t,
+	result, err := CompileAndInvoke(t,
 		`
           fun test(): Int {
               var i = 0
@@ -144,7 +145,7 @@ func TestSwitchBreak(t *testing.T) {
 	t.Parallel()
 
 	test := func(t *testing.T, value int64) vm.Value {
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
               fun test(x: Int): Int {
                   switch x {
@@ -190,7 +191,7 @@ func TestWhileSwitchBreak(t *testing.T) {
 	t.Parallel()
 
 	test := func(t *testing.T, value int64) vm.Value {
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
                 fun test(x: Int): Int {
                   while true {
@@ -238,7 +239,7 @@ func TestContinue(t *testing.T) {
 
 	t.Parallel()
 
-	result, err := compileAndInvoke(t,
+	result, err := CompileAndInvoke(t,
 		`
           fun test(): Int {
               var i = 0
@@ -264,7 +265,7 @@ func TestNilCoalesce(t *testing.T) {
 	t.Parallel()
 
 	test := func(t *testing.T, argument vm.Value) vm.Value {
-		actual, err := compileAndInvoke(t,
+		actual, err := CompileAndInvoke(t,
 			`
                 fun test(i: Int?): Int {
                     var j = i ?? 3
@@ -712,14 +713,14 @@ func TestContractImport(t *testing.T) {
 							Elaboration: fooChecker.Elaboration,
 						}, nil
 					},
-					LocationHandler: singleIdentifierLocationResolver(t),
+					LocationHandler: SingleIdentifierLocationResolver(t),
 				},
 			},
 		)
 		require.NoError(t, err)
 
 		barCompiler := compiler.NewInstructionCompiler(barChecker)
-		barCompiler.Config.LocationHandler = singleIdentifierLocationResolver(t)
+		barCompiler.Config.LocationHandler = SingleIdentifierLocationResolver(t)
 		barCompiler.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 			require.Equal(t, fooLocation, location)
 			return fooProgram
@@ -782,14 +783,14 @@ func TestContractImport(t *testing.T) {
 							Elaboration: elaboration,
 						}, nil
 					},
-					LocationHandler: singleIdentifierLocationResolver(t),
+					LocationHandler: SingleIdentifierLocationResolver(t),
 				},
 			},
 		)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(checker)
-		comp.Config.LocationHandler = singleIdentifierLocationResolver(t)
+		comp.Config.LocationHandler = SingleIdentifierLocationResolver(t)
 		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 			switch location {
 			case fooLocation:
@@ -917,14 +918,14 @@ func TestContractImport(t *testing.T) {
 							Elaboration: fooChecker.Elaboration,
 						}, nil
 					},
-					LocationHandler: singleIdentifierLocationResolver(t),
+					LocationHandler: SingleIdentifierLocationResolver(t),
 				},
 			},
 		)
 		require.NoError(t, err)
 
 		barCompiler := compiler.NewInstructionCompiler(barChecker)
-		barCompiler.Config.LocationHandler = singleIdentifierLocationResolver(t)
+		barCompiler.Config.LocationHandler = SingleIdentifierLocationResolver(t)
 		barCompiler.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 			require.Equal(t, fooLocation, location)
 			return fooProgram
@@ -983,14 +984,14 @@ func TestContractImport(t *testing.T) {
 							Elaboration: elaboration,
 						}, nil
 					},
-					LocationHandler: singleIdentifierLocationResolver(t),
+					LocationHandler: SingleIdentifierLocationResolver(t),
 				},
 			},
 		)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(checker)
-		comp.Config.LocationHandler = singleIdentifierLocationResolver(t)
+		comp.Config.LocationHandler = SingleIdentifierLocationResolver(t)
 		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 			switch location {
 			case fooLocation:
@@ -1441,7 +1442,7 @@ func TestNativeFunctions(t *testing.T) {
 		t.Parallel()
 
 		logFunction := stdlib.NewStandardLibraryStaticFunction(
-			"log",
+			commons.LogFunctionName,
 			&sema.FunctionType{
 				Parameters: []sema.Parameter{
 					{
@@ -1687,7 +1688,7 @@ func TestTransaction(t *testing.T) {
 		parseAndCheckOptions := &ParseAndCheckOptions{
 			Location: location,
 			Config: &sema.Config{
-				LocationHandler: singleIdentifierLocationResolver(t),
+				LocationHandler: SingleIdentifierLocationResolver(t),
 				BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 					return activation
 				},
@@ -1739,8 +1740,10 @@ func TestTransaction(t *testing.T) {
               }
             `,
 			CompilerAndVMOptions{
-				VMConfig:             vmConfig,
-				ParseAndCheckOptions: parseAndCheckOptions,
+				VMConfig: vmConfig,
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					ParseAndCheckOptions: parseAndCheckOptions,
+				},
 			},
 		)
 
@@ -1779,7 +1782,7 @@ func TestTransaction(t *testing.T) {
 		parseAndCheckOptions := &ParseAndCheckOptions{
 			Location: location,
 			Config: &sema.Config{
-				LocationHandler: singleIdentifierLocationResolver(t),
+				LocationHandler: SingleIdentifierLocationResolver(t),
 				BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 					return activation
 				},
@@ -1827,8 +1830,10 @@ func TestTransaction(t *testing.T) {
               }
             `,
 			CompilerAndVMOptions{
-				VMConfig:             vmConfig,
-				ParseAndCheckOptions: parseAndCheckOptions,
+				VMConfig: vmConfig,
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					ParseAndCheckOptions: parseAndCheckOptions,
+				},
 			},
 		)
 
@@ -1867,7 +1872,7 @@ func TestTransaction(t *testing.T) {
 		parseAndCheckOptions := &ParseAndCheckOptions{
 			Location: location,
 			Config: &sema.Config{
-				LocationHandler: singleIdentifierLocationResolver(t),
+				LocationHandler: SingleIdentifierLocationResolver(t),
 				BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 					return activation
 				},
@@ -1920,8 +1925,10 @@ func TestTransaction(t *testing.T) {
               }
             `,
 			CompilerAndVMOptions{
-				VMConfig:             vmConfig,
-				ParseAndCheckOptions: parseAndCheckOptions,
+				VMConfig: vmConfig,
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					ParseAndCheckOptions: parseAndCheckOptions,
+				},
 			},
 		)
 
@@ -1960,7 +1967,7 @@ func TestTransaction(t *testing.T) {
 		parseAndCheckOptions := &ParseAndCheckOptions{
 			Location: location,
 			Config: &sema.Config{
-				LocationHandler: singleIdentifierLocationResolver(t),
+				LocationHandler: SingleIdentifierLocationResolver(t),
 				BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 					return activation
 				},
@@ -2014,8 +2021,10 @@ func TestTransaction(t *testing.T) {
               }
             `,
 			CompilerAndVMOptions{
-				VMConfig:             vmConfig,
-				ParseAndCheckOptions: parseAndCheckOptions,
+				VMConfig: vmConfig,
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					ParseAndCheckOptions: parseAndCheckOptions,
+				},
 			},
 		)
 
@@ -2106,14 +2115,14 @@ func TestInterfaceMethodCall(t *testing.T) {
 							Elaboration: importedChecker.Elaboration,
 						}, nil
 					},
-					LocationHandler: singleIdentifierLocationResolver(t),
+					LocationHandler: SingleIdentifierLocationResolver(t),
 				},
 			},
 		)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(checker)
-		comp.Config.LocationHandler = singleIdentifierLocationResolver(t)
+		comp.Config.LocationHandler = SingleIdentifierLocationResolver(t)
 		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
 		}
@@ -2197,7 +2206,7 @@ func TestInterfaceMethodCall(t *testing.T) {
             `,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
-					LocationHandler: singleIdentifierLocationResolver(t),
+					LocationHandler: SingleIdentifierLocationResolver(t),
 				},
 				Location: barLocation,
 			},
@@ -2249,7 +2258,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 							Elaboration: elaboration,
 						}, nil
 					},
-					LocationHandler: singleIdentifierLocationResolver(t),
+					LocationHandler: SingleIdentifierLocationResolver(t),
 				},
 				Location: bazLocation,
 			},
@@ -2268,7 +2277,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 		}
 
 		bazCompiler := compiler.NewInstructionCompiler(bazChecker)
-		bazCompiler.Config.LocationHandler = singleIdentifierLocationResolver(t)
+		bazCompiler.Config.LocationHandler = SingleIdentifierLocationResolver(t)
 		bazCompiler.Config.ImportHandler = bazImportHandler
 		bazCompiler.Config.ElaborationResolver = func(location common.Location) (*compiler.DesugaredElaboration, error) {
 			switch location {
@@ -2347,7 +2356,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 							Elaboration: elaboration,
 						}, nil
 					},
-					LocationHandler: singleIdentifierLocationResolver(t),
+					LocationHandler: SingleIdentifierLocationResolver(t),
 				},
 			},
 		)
@@ -2365,7 +2374,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 		}
 
 		comp := compiler.NewInstructionCompiler(checker)
-		comp.Config.LocationHandler = singleIdentifierLocationResolver(t)
+		comp.Config.LocationHandler = SingleIdentifierLocationResolver(t)
 		comp.Config.ImportHandler = scriptImportHandler
 
 		program := comp.Compile()
@@ -2449,7 +2458,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 							Elaboration: elaboration,
 						}, nil
 					},
-					LocationHandler: singleIdentifierLocationResolver(t),
+					LocationHandler: SingleIdentifierLocationResolver(t),
 				},
 			},
 		)
@@ -2469,7 +2478,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 		}
 
 		comp = compiler.NewInstructionCompiler(checker)
-		comp.Config.LocationHandler = singleIdentifierLocationResolver(t)
+		comp.Config.LocationHandler = SingleIdentifierLocationResolver(t)
 		comp.Config.ImportHandler = scriptImportHandler
 
 		program = comp.Compile()
@@ -2697,7 +2706,7 @@ func TestReference(t *testing.T) {
             }
         `
 
-		result, err := compileAndInvoke(t, code, "test")
+		result, err := CompileAndInvoke(t, code, "test")
 		require.NoError(t, err)
 
 		require.Equal(t, interpreter.NewUnmeteredStringValue("Hello from Foo!"), result)
@@ -2824,7 +2833,7 @@ func TestDefaultFunctions(t *testing.T) {
 	t.Run("simple interface", func(t *testing.T) {
 		t.Parallel()
 
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
               struct interface IA {
                   fun test(): Int {
@@ -2848,7 +2857,7 @@ func TestDefaultFunctions(t *testing.T) {
 	t.Run("overridden", func(t *testing.T) {
 		t.Parallel()
 
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
               struct interface IA {
                   fun test(): Int {
@@ -2877,7 +2886,7 @@ func TestDefaultFunctions(t *testing.T) {
 
 		t.Parallel()
 
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
               struct interface A {
                   fun test(): Int {
@@ -2909,7 +2918,7 @@ func TestDefaultFunctions(t *testing.T) {
 
 		storage := interpreter.NewInMemoryStorage(nil)
 
-		programs := map[common.Location]*compiledProgram{}
+		programs := map[common.Location]*CompiledProgram{}
 		contractValues := map[common.Location]*interpreter.CompositeValue{}
 
 		vmConfig := vm.NewConfig(storage)
@@ -2967,7 +2976,7 @@ func TestDefaultFunctions(t *testing.T) {
         `
 
 		// Only need to compile
-		parseCheckAndCompile(t, barContract, barLocation, programs)
+		ParseCheckAndCompile(t, barContract, barLocation, programs)
 
 		// Deploy contract with the implementation
 
@@ -2998,7 +3007,7 @@ func TestDefaultFunctions(t *testing.T) {
 			contractsAddress.HexWithPrefix(),
 		)
 
-		fooProgram := parseCheckAndCompile(t, fooContract, fooLocation, programs)
+		fooProgram := ParseCheckAndCompile(t, fooContract, fooLocation, programs)
 
 		fooVM := vm.NewVM(fooLocation, fooProgram, vmConfig)
 
@@ -3025,7 +3034,7 @@ func TestDefaultFunctions(t *testing.T) {
 
 		txLocation := NewTransactionLocationGenerator()
 
-		txProgram := parseCheckAndCompile(t, tx, txLocation(), programs)
+		txProgram := ParseCheckAndCompile(t, tx, txLocation(), programs)
 		txVM := vm.NewVM(txLocation(), txProgram, vmConfig)
 
 		result, err := txVM.Invoke("main")
@@ -3040,7 +3049,7 @@ func TestDefaultFunctions(t *testing.T) {
 
 		storage := interpreter.NewInMemoryStorage(nil)
 
-		programs := map[common.Location]*compiledProgram{}
+		programs := map[common.Location]*CompiledProgram{}
 		contractValues := map[common.Location]*interpreter.CompositeValue{}
 
 		vmConfig := vm.NewConfig(storage)
@@ -3101,7 +3110,7 @@ func TestDefaultFunctions(t *testing.T) {
         `
 
 		// Only need to compile
-		parseCheckAndCompile(t, barContract, barLocation, programs)
+		ParseCheckAndCompile(t, barContract, barLocation, programs)
 
 		// Deploy contract with the implementation
 
@@ -3121,7 +3130,7 @@ func TestDefaultFunctions(t *testing.T) {
 			contractsAddress.HexWithPrefix(),
 		)
 
-		fooProgram := parseCheckAndCompile(t, fooContract, fooLocation, programs)
+		fooProgram := ParseCheckAndCompile(t, fooContract, fooLocation, programs)
 
 		fooVM := vm.NewVM(fooLocation, fooProgram, vmConfig)
 
@@ -3147,7 +3156,7 @@ func TestDefaultFunctions(t *testing.T) {
 
 		txLocation := NewTransactionLocationGenerator()
 
-		txProgram := parseCheckAndCompile(t, tx, txLocation(), programs)
+		txProgram := ParseCheckAndCompile(t, tx, txLocation(), programs)
 		txVM := vm.NewVM(txLocation(), txProgram, vmConfig)
 
 		result, err := txVM.Invoke("main")
@@ -3162,19 +3171,19 @@ func TestDefaultFunctions(t *testing.T) {
 
 		storage := interpreter.NewInMemoryStorage(nil)
 
-		programs := map[common.Location]*compiledProgram{}
+		programs := map[common.Location]*CompiledProgram{}
 		contractValues := map[common.Location]*interpreter.CompositeValue{}
 
 		vmConfig := vm.NewConfig(storage).
 			WithAccountHandler(&testAccountHandler{
-				emitEvent: func(
-					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
-					_ *sema.CompositeType,
-					_ []interpreter.Value,
-				) {
-					// ignore
-				},
+				//emitEvent: func(
+				//	_ interpreter.ValueExportContext,
+				//	_ interpreter.LocationRange,
+				//	_ *sema.CompositeType,
+				//	_ []interpreter.Value,
+				//) {
+				//	// ignore
+				//},
 			})
 
 		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
@@ -3234,7 +3243,7 @@ func TestDefaultFunctions(t *testing.T) {
         `
 
 		// Only need to compile
-		parseCheckAndCompile(t, barContract, barLocation, programs)
+		ParseCheckAndCompile(t, barContract, barLocation, programs)
 
 		// Deploy contract with the implementation
 
@@ -3260,7 +3269,7 @@ func TestDefaultFunctions(t *testing.T) {
 			contractsAddress.HexWithPrefix(),
 		)
 
-		fooProgram := parseCheckAndCompile(t, fooContract, fooLocation, programs)
+		fooProgram := ParseCheckAndCompile(t, fooContract, fooLocation, programs)
 
 		fooVM := vm.NewVM(fooLocation, fooProgram, vmConfig)
 
@@ -3286,7 +3295,7 @@ func TestDefaultFunctions(t *testing.T) {
 
 		txLocation := NewTransactionLocationGenerator()
 
-		txProgram := parseCheckAndCompile(t, tx, txLocation(), programs)
+		txProgram := ParseCheckAndCompile(t, tx, txLocation(), programs)
 		txVM := vm.NewVM(txLocation(), txProgram, vmConfig)
 
 		result, err := txVM.Invoke("main")
@@ -3304,7 +3313,7 @@ func TestFunctionPreConditions(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := compileAndInvoke(t,
+		_, err := CompileAndInvoke(t,
 			`
               fun main(x: Int): Int {
                   pre {
@@ -3325,7 +3334,7 @@ func TestFunctionPreConditions(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := compileAndInvoke(t,
+		_, err := CompileAndInvoke(t,
 			`
               fun main(x: Int): Int {
                   pre {
@@ -3346,7 +3355,7 @@ func TestFunctionPreConditions(t *testing.T) {
 
 		t.Parallel()
 
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
               fun main(x: Int): Int {
                   pre {
@@ -3367,7 +3376,7 @@ func TestFunctionPreConditions(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := compileAndInvoke(t,
+		_, err := CompileAndInvoke(t,
 			`
               struct interface A {
                   fun test(_ a: Int): Int {
@@ -3499,17 +3508,19 @@ func TestFunctionPreConditions(t *testing.T) {
 			}
 		}
 
-		_, err := compileAndInvokeWithOptions(
+		_, err := CompileAndInvokeWithOptions(
 			t,
 			code,
 			"main",
 			CompilerAndVMOptions{
-				ParseAndCheckOptions: &ParseAndCheckOptions{
-					Location: location,
-					Config: &sema.Config{
-						LocationHandler: singleIdentifierLocationResolver(t),
-						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
-							return activation
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						Location: location,
+						Config: &sema.Config{
+							LocationHandler: SingleIdentifierLocationResolver(t),
+							BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+								return activation
+							},
 						},
 					},
 				},
@@ -3529,7 +3540,7 @@ func TestFunctionPreConditions(t *testing.T) {
 
 		storage := interpreter.NewInMemoryStorage(nil)
 
-		programs := map[common.Location]*compiledProgram{}
+		programs := map[common.Location]*CompiledProgram{}
 		contractValues := map[common.Location]*interpreter.CompositeValue{}
 		var logs []string
 
@@ -3627,15 +3638,15 @@ func TestFunctionPreConditions(t *testing.T) {
         `
 
 		// Only need to compile
-		_ = parseCheckAndCompileCodeWithOptions(
+		_ = ParseCheckAndCompileCodeWithOptions(
 			t,
 			barContract,
 			barLocation,
-			CompilerAndVMOptions{
+			ParseCheckAndCompileOptions{
 				ParseAndCheckOptions: &ParseAndCheckOptions{
 					Location: barLocation,
 					Config: &sema.Config{
-						LocationHandler: singleIdentifierLocationResolver(t),
+						LocationHandler: SingleIdentifierLocationResolver(t),
 						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 							return activation
 						},
@@ -3680,15 +3691,15 @@ func TestFunctionPreConditions(t *testing.T) {
 			contractsAddress.HexWithPrefix(),
 		)
 
-		fooProgram := parseCheckAndCompileCodeWithOptions(
+		fooProgram := ParseCheckAndCompileCodeWithOptions(
 			t,
 			fooContract,
 			fooLocation,
-			CompilerAndVMOptions{
+			ParseCheckAndCompileOptions{
 				ParseAndCheckOptions: &ParseAndCheckOptions{
 					Location: fooLocation,
 					Config: &sema.Config{
-						LocationHandler: singleIdentifierLocationResolver(t),
+						LocationHandler: SingleIdentifierLocationResolver(t),
 						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 							return activation
 						},
@@ -3736,12 +3747,14 @@ func TestFunctionPreConditions(t *testing.T) {
 			code,
 			"main",
 			CompilerAndVMOptions{
-				ParseAndCheckOptions: &ParseAndCheckOptions{
-					Location: location,
-					Config: &sema.Config{
-						LocationHandler: singleIdentifierLocationResolver(t),
-						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
-							return activation
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						Location: location,
+						Config: &sema.Config{
+							LocationHandler: SingleIdentifierLocationResolver(t),
+							BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+								return activation
+							},
 						},
 					},
 				},
@@ -3762,7 +3775,7 @@ func TestFunctionPostConditions(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := compileAndInvoke(t,
+		_, err := CompileAndInvoke(t,
 			`
               fun main(x: Int): Int {
                   post {
@@ -3783,7 +3796,7 @@ func TestFunctionPostConditions(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := compileAndInvoke(t,
+		_, err := CompileAndInvoke(t,
 			`
               fun main(x: Int): Int {
                   post {
@@ -3804,7 +3817,7 @@ func TestFunctionPostConditions(t *testing.T) {
 
 		t.Parallel()
 
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
               fun main(x: Int): Int {
                   post {
@@ -3825,7 +3838,7 @@ func TestFunctionPostConditions(t *testing.T) {
 
 		t.Parallel()
 
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
               fun main(x: Int): Int {
                   post {
@@ -3847,7 +3860,7 @@ func TestFunctionPostConditions(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := compileAndInvoke(t,
+		_, err := CompileAndInvoke(t,
 			`
               fun main(x: Int): Int {
                   post {
@@ -3954,17 +3967,19 @@ func TestFunctionPostConditions(t *testing.T) {
 			return funcs
 		}
 
-		_, err := compileAndInvokeWithOptions(
+		_, err := CompileAndInvokeWithOptions(
 			t,
 			code,
 			"main",
 			CompilerAndVMOptions{
-				ParseAndCheckOptions: &ParseAndCheckOptions{
-					Location: location,
-					Config: &sema.Config{
-						LocationHandler: singleIdentifierLocationResolver(t),
-						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
-							return activation
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						Location: location,
+						Config: &sema.Config{
+							LocationHandler: SingleIdentifierLocationResolver(t),
+							BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+								return activation
+							},
 						},
 					},
 				},
@@ -3982,7 +3997,7 @@ func TestFunctionPostConditions(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := compileAndInvoke(t,
+		_, err := CompileAndInvoke(t,
 			`
               fun main(x: Int): Int {
                   post {
@@ -4003,7 +4018,7 @@ func TestFunctionPostConditions(t *testing.T) {
 
 		t.Parallel()
 
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
               fun main(x: Int): Int {
                   post {
@@ -4024,7 +4039,7 @@ func TestFunctionPostConditions(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := compileAndInvoke(t,
+		_, err := CompileAndInvoke(t,
 			`
               struct interface A {
                   fun test(_ a: Int): Int {
@@ -4059,7 +4074,7 @@ func TestFunctionPostConditions(t *testing.T) {
 
 		t.Parallel()
 
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
               resource R {
                   var i: Int
@@ -4087,7 +4102,7 @@ func TestFunctionPostConditions(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := compileAndInvoke(t,
+		_, err := CompileAndInvoke(t,
 			`
               resource R {
                   var i: Int
@@ -4118,7 +4133,7 @@ func TestIfLet(t *testing.T) {
 	t.Parallel()
 
 	test := func(t *testing.T, argument vm.Value) vm.Value {
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
               fun main(x: Int?): Int {
                   if let y = x {
@@ -4161,7 +4176,7 @@ func TestIfLetScope(t *testing.T) {
 	t.Parallel()
 
 	test := func(t *testing.T, argument vm.Value) vm.Value {
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
               fun test(y: Int?): Int {
                   let x = 1
@@ -4209,7 +4224,7 @@ func TestSwitch(t *testing.T) {
 	t.Run("1", func(t *testing.T) {
 		t.Parallel()
 
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
               fun test(x: Int): Int {
                   var a = 0
@@ -4234,7 +4249,7 @@ func TestSwitch(t *testing.T) {
 	t.Run("2", func(t *testing.T) {
 		t.Parallel()
 
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
               fun test(x: Int): Int {
                   var a = 0
@@ -4259,7 +4274,7 @@ func TestSwitch(t *testing.T) {
 	t.Run("4", func(t *testing.T) {
 		t.Parallel()
 
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
               fun test(x: Int): Int {
                   var a = 0
@@ -4289,7 +4304,7 @@ func TestDefaultFunctionsWithConditions(t *testing.T) {
 	t.Run("default in parent, conditions in child", func(t *testing.T) {
 		t.Parallel()
 
-		_, err, logs := compileAndInvokeWithLogs(t,
+		_, err, logs := CompileAndInvokeWithLogs(t,
 			`
               struct interface Foo {
                   fun test(_ a: Int) {
@@ -4338,7 +4353,7 @@ func TestDefaultFunctionsWithConditions(t *testing.T) {
 	t.Run("default and conditions in parent, more conditions in child", func(t *testing.T) {
 		t.Parallel()
 
-		_, err, logs := compileAndInvokeWithLogs(t,
+		_, err, logs := CompileAndInvokeWithLogs(t,
 			`
               struct interface Foo {
                   fun test(_ a: Int) {
@@ -4438,7 +4453,7 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 			return funcs
 		}
 
-		_, err := compileAndInvokeWithOptions(t,
+		_, err := CompileAndInvokeWithOptions(t,
 			`
               struct Test {
                   var i: Int
@@ -4468,11 +4483,13 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 			"main",
 			CompilerAndVMOptions{
 				VMConfig: vmConfig,
-				ParseAndCheckOptions: &ParseAndCheckOptions{
-					Config: &sema.Config{
-						LocationHandler: singleIdentifierLocationResolver(t),
-						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
-							return activation
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						Config: &sema.Config{
+							LocationHandler: SingleIdentifierLocationResolver(t),
+							BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+								return activation
+							},
 						},
 					},
 				},
@@ -4530,7 +4547,7 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 			return funcs
 		}
 
-		_, err := compileAndInvokeWithOptions(t,
+		_, err := CompileAndInvokeWithOptions(t,
 			`
                 struct interface Foo {
                     var i: Int
@@ -4564,11 +4581,13 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 			"main",
 			CompilerAndVMOptions{
 				VMConfig: vmConfig,
-				ParseAndCheckOptions: &ParseAndCheckOptions{
-					Config: &sema.Config{
-						LocationHandler: singleIdentifierLocationResolver(t),
-						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
-							return activation
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						Config: &sema.Config{
+							LocationHandler: SingleIdentifierLocationResolver(t),
+							BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+								return activation
+							},
 						},
 					},
 				},
@@ -4626,7 +4645,7 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 			return funcs
 		}
 
-		_, err := compileAndInvokeWithOptions(t,
+		_, err := CompileAndInvokeWithOptions(t,
 			`
               struct interface Foo {
                   var i: Int
@@ -4672,11 +4691,13 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 			"main",
 			CompilerAndVMOptions{
 				VMConfig: vmConfig,
-				ParseAndCheckOptions: &ParseAndCheckOptions{
-					Config: &sema.Config{
-						LocationHandler: singleIdentifierLocationResolver(t),
-						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
-							return activation
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						Config: &sema.Config{
+							LocationHandler: SingleIdentifierLocationResolver(t),
+							BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+								return activation
+							},
 						},
 					},
 				},
@@ -4695,7 +4716,7 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := compileAndInvoke(t,
+		_, err := CompileAndInvoke(t,
 			`
               resource interface RI {
                   var i: Int
@@ -4753,7 +4774,7 @@ func TestEmit(t *testing.T) {
 		return nil
 	}
 
-	_, err := compileAndInvokeWithOptions(t,
+	_, err := CompileAndInvokeWithOptions(t,
 		`
           event Inc(val: Int)
 
@@ -4779,7 +4800,7 @@ func TestCasting(t *testing.T) {
 	t.Run("simple cast success", func(t *testing.T) {
 		t.Parallel()
 
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
               fun test(x: Int): AnyStruct {
                   return x as Int?
@@ -4795,7 +4816,7 @@ func TestCasting(t *testing.T) {
 	t.Run("force cast success", func(t *testing.T) {
 		t.Parallel()
 
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
               fun test(x: AnyStruct): Int {
                   return x as! Int
@@ -4811,7 +4832,7 @@ func TestCasting(t *testing.T) {
 	t.Run("force cast fail", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := compileAndInvoke(t,
+		_, err := CompileAndInvoke(t,
 			`
               fun test(x: AnyStruct): Int {
                   return x as! Int
@@ -4834,7 +4855,7 @@ func TestCasting(t *testing.T) {
 	t.Run("failable cast success", func(t *testing.T) {
 		t.Parallel()
 
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
               fun test(x: AnyStruct): Int? {
                   return x as? Int
@@ -4850,7 +4871,7 @@ func TestCasting(t *testing.T) {
 	t.Run("failable cast fail", func(t *testing.T) {
 		t.Parallel()
 
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
               fun test(x: AnyStruct): Int? {
                   return x as? Int
@@ -4870,7 +4891,7 @@ func TestBlockScope(t *testing.T) {
 
 	test := func(t *testing.T, argument vm.Value) vm.Value {
 
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
                 fun test(y: Bool): Int {
                     let x = 1
@@ -4910,7 +4931,7 @@ func TestBlockScope2(t *testing.T) {
 
 	test := func(t *testing.T, argument vm.Value) vm.Value {
 
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
                 fun test(y: Bool): Int {
                     let x = 1
@@ -4959,7 +4980,7 @@ func TestIntegers(t *testing.T) {
 
 			t.Parallel()
 
-			result, err := compileAndInvoke(t,
+			result, err := CompileAndInvoke(t,
 				fmt.Sprintf(`
                         fun test(): %s {
                             return 2 + 3
@@ -4999,7 +5020,7 @@ func TestAddress(t *testing.T) {
 
 	t.Parallel()
 
-	result, err := compileAndInvoke(t,
+	result, err := CompileAndInvoke(t,
 		`
             fun test(): Address {
                 return 0x2
@@ -5026,7 +5047,7 @@ func TestFixedPoint(t *testing.T) {
 
 			t.Parallel()
 
-			result, err := compileAndInvoke(t,
+			result, err := CompileAndInvoke(t,
 				fmt.Sprintf(`
                         fun test(): %s {
                             return 2.1 + 7.9
@@ -5061,7 +5082,7 @@ func TestForLoop(t *testing.T) {
 	t.Run("array", func(t *testing.T) {
 		t.Parallel()
 
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
                 fun test(): Int {
                     var array = [5, 6, 7, 8]
@@ -5082,7 +5103,7 @@ func TestForLoop(t *testing.T) {
 	t.Run("array with index", func(t *testing.T) {
 		t.Parallel()
 
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
                 fun test(): String {
                     var array = [5, 6, 7, 8]
@@ -5105,7 +5126,7 @@ func TestForLoop(t *testing.T) {
 	t.Run("array loop scoping", func(t *testing.T) {
 		t.Parallel()
 
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
                 fun test(): String {
                     var array = [5, 6, 7, 8]
@@ -5134,7 +5155,7 @@ func TestCompileIf(t *testing.T) {
 	t.Parallel()
 
 	test := func(t *testing.T, argument vm.Value) vm.Value {
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
                 fun test(x: Bool): Int {
                     var y = 0
@@ -5173,7 +5194,7 @@ func TestCompileConditional(t *testing.T) {
 	t.Parallel()
 
 	test := func(t *testing.T, argument vm.Value) vm.Value {
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
                 fun test(x: Bool): Int {
                     return x ? 1 : 2
@@ -5206,7 +5227,7 @@ func TestCompileOr(t *testing.T) {
 	t.Parallel()
 
 	test := func(t *testing.T, x, y vm.Value) vm.Value {
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
                 struct Tester {
                     let x: Bool
@@ -5284,7 +5305,7 @@ func TestCompileAnd(t *testing.T) {
 	t.Parallel()
 
 	test := func(t *testing.T, x, y vm.Value) vm.Value {
-		result, err := compileAndInvoke(t,
+		result, err := CompileAndInvoke(t,
 			`
                 struct Tester {
                     let x: Bool
@@ -5363,7 +5384,7 @@ func TestCompileUnaryNot(t *testing.T) {
 
 	test := func(t *testing.T, argument vm.Value) vm.Value {
 
-		actual, err := compileAndInvoke(t,
+		actual, err := CompileAndInvoke(t,
 			`
             fun test(x: Bool): Bool {
                 return !x
@@ -5396,7 +5417,7 @@ func TestCompileUnaryNegate(t *testing.T) {
 
 	t.Parallel()
 
-	actual, err := compileAndInvoke(t,
+	actual, err := CompileAndInvoke(t,
 		`
             fun test(x: Int): Int {
                 return -x
@@ -5414,7 +5435,7 @@ func TestCompileUnaryDeref(t *testing.T) {
 
 	t.Parallel()
 
-	actual, err := compileAndInvoke(t,
+	actual, err := CompileAndInvoke(t,
 		`
             fun test(): Int {
                 let x = 42
@@ -5433,7 +5454,7 @@ func TestCompileUnaryDerefSome(t *testing.T) {
 
 	t.Parallel()
 
-	actual, err := compileAndInvoke(t,
+	actual, err := CompileAndInvoke(t,
 		`
             fun test(): Int? {
                 let x = 42
@@ -5456,7 +5477,7 @@ func TestCompileUnaryDerefNil(t *testing.T) {
 
 	t.Parallel()
 
-	actual, err := compileAndInvoke(t,
+	actual, err := CompileAndInvoke(t,
 		`
             fun test(): Int? {
                 let optRef: &Int? = nil
@@ -5480,7 +5501,7 @@ func TestBinary(t *testing.T) {
 
 			t.Parallel()
 
-			actual, err := compileAndInvoke(t,
+			actual, err := CompileAndInvoke(t,
 				fmt.Sprintf(`
                         fun test(): AnyStruct {
                             return 6 %s 4
@@ -5530,7 +5551,7 @@ func TestCompileForce(t *testing.T) {
 	t.Run("non-nil", func(t *testing.T) {
 		t.Parallel()
 
-		actual, err := compileAndInvoke(t,
+		actual, err := CompileAndInvoke(t,
 			`
                 fun test(x: Int?): Int {
                     return x!
@@ -5547,7 +5568,7 @@ func TestCompileForce(t *testing.T) {
 	t.Run("non-nil, AnyStruct", func(t *testing.T) {
 		t.Parallel()
 
-		actual, err := compileAndInvoke(t,
+		actual, err := CompileAndInvoke(t,
 			`
                 fun test(x: Int?): AnyStruct {
                     let y: AnyStruct = x
@@ -5565,7 +5586,7 @@ func TestCompileForce(t *testing.T) {
 	t.Run("nil", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := compileAndInvoke(t,
+		_, err := CompileAndInvoke(t,
 			`
                 fun test(x: Int?): Int {
                     return x!
@@ -5581,7 +5602,7 @@ func TestCompileForce(t *testing.T) {
 	t.Run("nil, AnyStruct", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := compileAndInvoke(t,
+		_, err := CompileAndInvoke(t,
 			`
                 fun test(x: Int?): AnyStruct {
                     let y: AnyStruct = x
@@ -5598,7 +5619,7 @@ func TestCompileForce(t *testing.T) {
 	t.Run("non-optional", func(t *testing.T) {
 		t.Parallel()
 
-		actual, err := compileAndInvoke(t,
+		actual, err := CompileAndInvoke(t,
 			`
                 fun test(x: Int): Int {
                     return x!
@@ -5614,7 +5635,7 @@ func TestCompileForce(t *testing.T) {
 	t.Run("non-optional, AnyStruct", func(t *testing.T) {
 		t.Parallel()
 
-		actual, err := compileAndInvoke(t,
+		actual, err := CompileAndInvoke(t,
 			`
                 fun test(x: Int): AnyStruct {
                     let y: AnyStruct = x
@@ -5636,7 +5657,7 @@ func TestTypeConstructor(t *testing.T) {
 	t.Run("simple type", func(t *testing.T) {
 		t.Parallel()
 
-		actual, err := compileAndInvoke(t,
+		actual, err := CompileAndInvoke(t,
 			`
                 fun test(): Type {
                     return Type<Int>()
@@ -5655,7 +5676,7 @@ func TestTypeConstructor(t *testing.T) {
 	t.Run("user defined type", func(t *testing.T) {
 		t.Parallel()
 
-		actual, err := compileAndInvoke(t,
+		actual, err := CompileAndInvoke(t,
 			`
                 struct Foo{}
                 fun test(): Type {
@@ -5686,7 +5707,7 @@ func TestTypeConversions(t *testing.T) {
 	t.Run("address", func(t *testing.T) {
 		t.Parallel()
 
-		actual, err := compileAndInvoke(t,
+		actual, err := CompileAndInvoke(t,
 			`
                 fun test(): Address {
                     return Address(0x2)
@@ -5707,7 +5728,7 @@ func TestTypeConversions(t *testing.T) {
 	t.Run("Int", func(t *testing.T) {
 		t.Parallel()
 
-		actual, err := compileAndInvoke(t,
+		actual, err := CompileAndInvoke(t,
 			`
                 fun test(): Int {
                     var v: Int64 = 5
@@ -5732,7 +5753,7 @@ func TestReturnStatements(t *testing.T) {
 	t.Run("conditional return", func(t *testing.T) {
 		t.Parallel()
 
-		actual, err := compileAndInvoke(t,
+		actual, err := CompileAndInvoke(t,
 			`
               fun test(a: Bool): Int {
                   if a {
@@ -5752,7 +5773,7 @@ func TestReturnStatements(t *testing.T) {
 	t.Run("conditional return with post condition", func(t *testing.T) {
 		t.Parallel()
 
-		actual, err, logs := compileAndInvokeWithLogs(t,
+		actual, err, logs := CompileAndInvokeWithLogs(t,
 			`
               fun test(a: Bool): Int {
                   post {
@@ -5800,7 +5821,7 @@ func TestReturnStatements(t *testing.T) {
 	t.Run("conditional return with post condition in initializer", func(t *testing.T) {
 		t.Parallel()
 
-		actual, err, logs := compileAndInvokeWithLogs(t,
+		actual, err, logs := CompileAndInvokeWithLogs(t,
 			`
               struct Foo {
                   var i: Int
@@ -5848,7 +5869,7 @@ func TestFunctionExpression(t *testing.T) {
 
 	t.Parallel()
 
-	actual, err := compileAndInvoke(t,
+	actual, err := CompileAndInvoke(t,
 		`
           fun test(): Int {
               let addOne = fun(_ x: Int): Int {
@@ -5871,7 +5892,7 @@ func TestInnerFunction(t *testing.T) {
 
 	t.Parallel()
 
-	actual, err := compileAndInvoke(t,
+	actual, err := CompileAndInvoke(t,
 		`
           fun test(): Int {
               fun addOne(_ x: Int): Int {
@@ -6220,7 +6241,7 @@ func TestUnclosedUpvalue(t *testing.T) {
 
 	t.Parallel()
 
-	actual, err := compileAndInvoke(t,
+	actual, err := CompileAndInvoke(t,
 		`
           fun test(): Int {
               let x = 1
@@ -6240,7 +6261,7 @@ func TestUnclosedUpvalueNested(t *testing.T) {
 
 	t.Parallel()
 
-	actual, err := compileAndInvoke(t,
+	actual, err := CompileAndInvoke(t,
 		`
           fun test(): Int {
               let x = 1
@@ -6264,7 +6285,7 @@ func TestUnclosedUpvalueDeeplyNested(t *testing.T) {
 
 	t.Parallel()
 
-	actual, err := compileAndInvoke(t,
+	actual, err := CompileAndInvoke(t,
 		`
           fun test(): Int {
               let a = 1
@@ -6292,7 +6313,7 @@ func TestUnclosedUpvalueAssignment(t *testing.T) {
 
 	t.Parallel()
 
-	actual, err := compileAndInvoke(t,
+	actual, err := CompileAndInvoke(t,
 		`
           fun test(): Int {
               var x = 1
@@ -6313,7 +6334,7 @@ func TestUnclosedUpvalueAssignment2(t *testing.T) {
 
 	t.Parallel()
 
-	actual, err := compileAndInvoke(t,
+	actual, err := CompileAndInvoke(t,
 		`
           fun test(): Int {
               var x = 1
@@ -6335,7 +6356,7 @@ func TestClosedUpvalue(t *testing.T) {
 
 	t.Parallel()
 
-	actual, err := compileAndInvoke(t,
+	actual, err := CompileAndInvoke(t,
 		`
           fun new(): fun(Int): Int {
               let x = 1
@@ -6360,7 +6381,7 @@ func TestClosedUpvalueVariableAssignmentBeforeReturn(t *testing.T) {
 
 	t.Parallel()
 
-	actual, err := compileAndInvoke(t,
+	actual, err := CompileAndInvoke(t,
 		`
           fun new(): fun(Int): Int {
               var x = 1
@@ -6386,7 +6407,7 @@ func TestClosedUpvalueAssignment(t *testing.T) {
 
 	t.Parallel()
 
-	actual, err := compileAndInvoke(t,
+	actual, err := CompileAndInvoke(t,
 		`
           fun new(): fun(Int): Int {
               var x = 1
@@ -6412,7 +6433,7 @@ func TestCounter(t *testing.T) {
 
 	t.Parallel()
 
-	actual, err := compileAndInvoke(t,
+	actual, err := CompileAndInvoke(t,
 		`
           fun newCounter(): fun(): Int {
               var count = 0
@@ -6437,7 +6458,7 @@ func TestCounters(t *testing.T) {
 
 	t.Parallel()
 
-	actual, err := compileAndInvoke(t,
+	actual, err := CompileAndInvoke(t,
 		`
           fun newCounter(): fun(): Int {
               var count = 0
@@ -6463,7 +6484,7 @@ func TestCounterWithInitialization(t *testing.T) {
 
 	t.Parallel()
 
-	actual, err := compileAndInvoke(t,
+	actual, err := CompileAndInvoke(t,
 		`
           fun newCounter(): fun(): Int {
               var count = 0
@@ -6600,7 +6621,7 @@ func TestCommonBuiltinTypeBoundFunctions(t *testing.T) {
 
 			t.Parallel()
 
-			actual, err := compileAndInvoke(t,
+			actual, err := CompileAndInvoke(t,
 				`
                     struct S {}
 
@@ -6625,7 +6646,7 @@ func TestCommonBuiltinTypeBoundFunctions(t *testing.T) {
 
 			t.Parallel()
 
-			actual, err := compileAndInvoke(t,
+			actual, err := CompileAndInvoke(t,
 				`
                     struct S {}
 
@@ -6654,7 +6675,7 @@ func TestCommonBuiltinTypeBoundFunctions(t *testing.T) {
 
 			t.Parallel()
 
-			actual, err := compileAndInvoke(t,
+			actual, err := CompileAndInvoke(t,
 				`
                     struct interface I {}
                     struct S: I {}
@@ -6689,7 +6710,7 @@ func TestCommonBuiltinTypeBoundFunctions(t *testing.T) {
 
 			t.Parallel()
 
-			actual, err := compileAndInvoke(t,
+			actual, err := CompileAndInvoke(t,
 				`
                     struct S {}
 
@@ -6712,7 +6733,7 @@ func TestCommonBuiltinTypeBoundFunctions(t *testing.T) {
 
 			t.Parallel()
 
-			actual, err := compileAndInvoke(t,
+			actual, err := CompileAndInvoke(t,
 				`
                     struct S {}
 
@@ -6735,7 +6756,7 @@ func TestCommonBuiltinTypeBoundFunctions(t *testing.T) {
 
 			t.Parallel()
 
-			actual, err := compileAndInvoke(t,
+			actual, err := CompileAndInvoke(t,
 				`
                     struct S {}
 
@@ -6758,7 +6779,7 @@ func TestCommonBuiltinTypeBoundFunctions(t *testing.T) {
 
 			t.Parallel()
 
-			actual, err := compileAndInvoke(t,
+			actual, err := CompileAndInvoke(t,
 				`
                     struct S1 {}
                     struct S2 {}
@@ -6790,7 +6811,7 @@ func TestEmitInContract(t *testing.T) {
 
 		storage := interpreter.NewInMemoryStorage(nil)
 
-		programs := map[common.Location]*compiledProgram{}
+		programs := map[common.Location]*CompiledProgram{}
 		contractValues := map[common.Location]*interpreter.CompositeValue{}
 
 		vmConfig := vm.NewConfig(storage)
@@ -6856,7 +6877,7 @@ func TestEmitInContract(t *testing.T) {
             }
         `
 
-		cProgram := parseCheckAndCompile(t, cContract, cLocation, programs)
+		cProgram := ParseCheckAndCompile(t, cContract, cLocation, programs)
 
 		cVM := vm.NewVM(cLocation, cProgram, vmConfig)
 
@@ -6895,7 +6916,7 @@ func TestEmitInContract(t *testing.T) {
 			return nil
 		}
 
-		txProgram := parseCheckAndCompile(t, tx, txLocation(), programs)
+		txProgram := ParseCheckAndCompile(t, tx, txLocation(), programs)
 		txVM := vm.NewVM(txLocation(), txProgram, vmConfig)
 
 		require.False(t, eventEmitted)
@@ -6920,7 +6941,7 @@ func TestInheritedConditions(t *testing.T) {
 
 		storage := interpreter.NewInMemoryStorage(nil)
 
-		programs := map[common.Location]*compiledProgram{}
+		programs := map[common.Location]*CompiledProgram{}
 		contractValues := map[common.Location]*interpreter.CompositeValue{}
 
 		vmConfig := vm.NewConfig(storage)
@@ -6979,7 +7000,7 @@ func TestInheritedConditions(t *testing.T) {
         `
 
 		// Only need to compile
-		parseCheckAndCompile(t, bContract, bLocation, programs)
+		ParseCheckAndCompile(t, bContract, bLocation, programs)
 
 		// Deploy contract with the implementation
 
@@ -7009,7 +7030,7 @@ func TestInheritedConditions(t *testing.T) {
 			contractsAddress.HexWithPrefix(),
 		)
 
-		cProgram := parseCheckAndCompile(t, cContract, cLocation, programs)
+		cProgram := ParseCheckAndCompile(t, cContract, cLocation, programs)
 
 		cVM := vm.NewVM(cLocation, cProgram, vmConfig)
 
@@ -7048,7 +7069,7 @@ func TestInheritedConditions(t *testing.T) {
 			return nil
 		}
 
-		txProgram := parseCheckAndCompile(t, tx, txLocation(), programs)
+		txProgram := ParseCheckAndCompile(t, tx, txLocation(), programs)
 		txVM := vm.NewVM(txLocation(), txProgram, vmConfig)
 
 		require.False(t, eventEmitted)
@@ -7068,7 +7089,7 @@ func TestInheritedConditions(t *testing.T) {
 
 		storage := interpreter.NewInMemoryStorage(nil)
 
-		programs := map[common.Location]*compiledProgram{}
+		programs := map[common.Location]*CompiledProgram{}
 		contractValues := map[common.Location]*interpreter.CompositeValue{}
 
 		vmConfig := vm.NewConfig(storage)
@@ -7128,7 +7149,7 @@ func TestInheritedConditions(t *testing.T) {
         `
 
 		// Only need to compile
-		parseCheckAndCompile(t, aContract, aLocation, programs)
+		ParseCheckAndCompile(t, aContract, aLocation, programs)
 
 		// Deploy interface contract
 
@@ -7144,7 +7165,7 @@ func TestInheritedConditions(t *testing.T) {
 		)
 
 		// Only need to compile
-		parseCheckAndCompile(t, bContract, bLocation, programs)
+		ParseCheckAndCompile(t, bContract, bLocation, programs)
 
 		// Deploy contract with the implementation
 
@@ -7174,7 +7195,7 @@ func TestInheritedConditions(t *testing.T) {
 			contractsAddress.HexWithPrefix(),
 		)
 
-		cProgram := parseCheckAndCompile(t, cContract, cLocation, programs)
+		cProgram := ParseCheckAndCompile(t, cContract, cLocation, programs)
 
 		cVM := vm.NewVM(cLocation, cProgram, vmConfig)
 
@@ -7213,7 +7234,7 @@ func TestInheritedConditions(t *testing.T) {
 			return nil
 		}
 
-		txProgram := parseCheckAndCompile(t, tx, txLocation(), programs)
+		txProgram := ParseCheckAndCompile(t, tx, txLocation(), programs)
 		txVM := vm.NewVM(txLocation(), txProgram, vmConfig)
 
 		require.False(t, eventEmitted)
@@ -7226,6 +7247,217 @@ func TestInheritedConditions(t *testing.T) {
 		require.True(t, eventEmitted)
 		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(10), result)
 	})
+
+	t.Run("transitive dependency function call in parent", func(t *testing.T) {
+
+		t.Parallel()
+
+		storage := interpreter.NewInMemoryStorage(nil)
+
+		programs := map[common.Location]*CompiledProgram{}
+		contractValues := map[common.Location]*interpreter.CompositeValue{}
+
+		vmConfig := vm.NewConfig(storage)
+
+		vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+			contractValue, ok := contractValues[location]
+			if !ok {
+				assert.FailNow(t, "invalid location")
+			}
+			return contractValue
+		}
+
+		var logs []string
+		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
+			funcs := vm.NativeFunctions()
+			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
+				ParameterCount: len(stdlib.LogFunctionType.Parameters),
+				Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+					logs = append(logs, arguments[0].String())
+					return interpreter.Void
+				},
+			}
+
+			return funcs
+		}
+
+		prepareVMConfig(t, vmConfig, programs)
+
+		contractsAddress := common.MustBytesToAddress([]byte{0x1})
+
+		aLocation := common.NewAddressLocation(nil, contractsAddress, "A")
+		bLocation := common.NewAddressLocation(nil, contractsAddress, "B")
+		cLocation := common.NewAddressLocation(nil, contractsAddress, "C")
+		dLocation := common.NewAddressLocation(nil, contractsAddress, "D")
+
+		// Deploy contract with a type
+
+		aContract := `
+            contract A {
+                struct TestStruct {
+                    view fun test(): Bool {
+                        log("invoked TestStruct.test()")
+                        return true
+                    }
+                }
+            }
+        `
+
+		logFunction := stdlib.NewStandardLibraryStaticFunction(
+			commons.LogFunctionName,
+			&sema.FunctionType{
+				Purity: sema.FunctionPurityView,
+				Parameters: []sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
+					},
+				},
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					sema.VoidType,
+				),
+			},
+			``,
+			nil,
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(logFunction)
+
+		aProgram := ParseCheckAndCompileCodeWithOptions(
+			t,
+			aContract,
+			aLocation,
+			ParseCheckAndCompileOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Config: &sema.Config{
+						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+					},
+				},
+			},
+			programs,
+		)
+
+		aVM := vm.NewVM(aLocation, aProgram, vmConfig)
+
+		aContractValue, err := aVM.InitializeContract()
+		require.NoError(t, err)
+		contractValues[aLocation] = aContractValue
+
+		// Deploy contract interface
+
+		bContract := fmt.Sprintf(`
+          import A from %[1]s
+
+          contract interface B {
+
+              resource interface VaultInterface {
+                  var balance: Int
+
+                  fun getBalance(): Int {
+                      // Call 'A.TestStruct()' which is only available to this contract interface.
+                      pre { self.test(A.TestStruct()) }
+                  }
+
+                  view fun test(_ a: A.TestStruct): Bool {
+                     return a.test()
+                  }
+              }
+          }
+        `,
+			contractsAddress.HexWithPrefix(),
+		)
+
+		// Only need to compile
+		ParseCheckAndCompile(t, bContract, bLocation, programs)
+
+		// Deploy another intermediate contract interface
+
+		cContract := fmt.Sprintf(`
+          import B from %[1]s
+
+          contract interface C: B {
+              resource interface VaultIntermediateInterface: B.VaultInterface {}
+          }
+        `,
+			contractsAddress.HexWithPrefix(),
+		)
+
+		// Only need to compile
+		ParseCheckAndCompile(t, cContract, cLocation, programs)
+
+		// Deploy contract with the implementation
+
+		dContract := fmt.Sprintf(
+			`
+              import C from %[1]s
+
+              contract D: C {
+
+                  resource Vault: C.VaultIntermediateInterface {
+                      var balance: Int
+
+                      init(balance: Int) {
+                          self.balance = balance
+                      }
+
+                      fun getBalance(): Int {
+                          // Inherits a function call 'A.TestStruct()' from the grand-parent 'B',
+                          // But 'A' is NOT available to this contract (as an import).
+                          return self.balance
+                      }
+                  }
+
+                  fun createVault(balance: Int): @Vault {
+                      return <- create Vault(balance: balance)
+                  }
+              }
+            `,
+			contractsAddress.HexWithPrefix(),
+		)
+
+		dProgram := ParseCheckAndCompile(t, dContract, dLocation, programs)
+
+		dVM := vm.NewVM(dLocation, dProgram, vmConfig)
+
+		cContractValue, err := dVM.InitializeContract()
+		require.NoError(t, err)
+		contractValues[dLocation] = cContractValue
+
+		// Run transaction
+
+		tx := fmt.Sprintf(
+			`
+              import D from %[1]s
+
+              fun main(): Int {
+                 var vault <- D.createVault(balance: 10)
+                 var balance = vault.getBalance()
+                 destroy vault
+                 return balance
+              }
+            `,
+			contractsAddress.HexWithPrefix(),
+		)
+
+		txLocation := NewTransactionLocationGenerator()
+		txProgram := ParseCheckAndCompile(t, tx, txLocation(), programs)
+
+		txVM := vm.NewVM(txLocation(), txProgram, vmConfig)
+		result, err := txVM.Invoke("main")
+		require.NoError(t, err)
+
+		require.Equal(t, 0, txVM.StackSize())
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(10), result)
+		assert.Equal(
+			t,
+			[]string{"\"invoked TestStruct.test()\""},
+			logs,
+		)
+	})
 }
 
 func TestMethodsAsFunctionPointers(t *testing.T) {
@@ -7235,7 +7467,7 @@ func TestMethodsAsFunctionPointers(t *testing.T) {
 	t.Run("composite value, user function", func(t *testing.T) {
 		t.Parallel()
 
-		result, err := compileAndInvoke(
+		result, err := CompileAndInvoke(
 			t,
 			`
             struct Test {
@@ -7260,7 +7492,7 @@ func TestMethodsAsFunctionPointers(t *testing.T) {
 	t.Run("composite value, builtin function", func(t *testing.T) {
 		t.Parallel()
 
-		result, err := compileAndInvoke(
+		result, err := CompileAndInvoke(
 			t,
 			`
             struct Test {}
@@ -7281,7 +7513,7 @@ func TestMethodsAsFunctionPointers(t *testing.T) {
 	t.Run("interface function", func(t *testing.T) {
 		t.Parallel()
 
-		result, err := compileAndInvoke(
+		result, err := CompileAndInvoke(
 			t,
 			`
             struct interface Interface {
@@ -7312,7 +7544,7 @@ func TestMethodsAsFunctionPointers(t *testing.T) {
 	t.Run("primitive value, builtin function", func(t *testing.T) {
 		t.Parallel()
 
-		result, err := compileAndInvoke(
+		result, err := CompileAndInvoke(
 			t,
 			`
             fun test(): Bool {

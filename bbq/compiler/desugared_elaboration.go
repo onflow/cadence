@@ -357,6 +357,10 @@ func (e *DesugaredElaboration) InterfaceTypeDeclaration(interfaceType *sema.Inte
 	return e.elaboration.InterfaceTypeDeclaration(interfaceType)
 }
 
+func (e *DesugaredElaboration) AllImportDeclarationsResolvedLocations() map[*ast.ImportDeclaration][]sema.ResolvedLocation {
+	return e.elaboration.AllImportDeclarationsResolvedLocations()
+}
+
 // OriginalElaboration returns the underlying elaboration.
 // IMPORTANT: Only use the original elaboration for type-checking use-cases.
 // It is safe to use in type-checker, since the type checker doesn't rely on
