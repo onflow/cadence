@@ -20,7 +20,7 @@ package runtime
 
 import (
 	"fmt"
-	"runtime"
+	goRuntime "runtime"
 	"sort"
 
 	"github.com/fxamacker/cbor/v2"
@@ -433,10 +433,11 @@ func (s *Storage) commit(context interpreter.ValueTransferContext, commitContrac
 	common.UseMemory(context, common.NewAtreeEncodedSlabMemoryUsage(deltas))
 
 	// TODO: report encoding metric for all encoded slabs
+	workerCount := goRuntime.NumCPU()
 	if deterministic {
-		return slabStorage.FastCommit(runtime.NumCPU())
+		return slabStorage.FastCommit(workerCount)
 	} else {
-		return slabStorage.NondeterministicFastCommit(runtime.NumCPU())
+		return slabStorage.NondeterministicFastCommit(workerCount)
 	}
 }
 
