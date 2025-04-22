@@ -155,6 +155,13 @@ func (executor *contractFunctionExecutor) execute() (val cadence.Value, err erro
 		}
 		return value, nil
 
+	case *vmEnvironment:
+		value, err := executor.executeWithVM(environment)
+		if err != nil {
+			return nil, newError(err, executor.context.Location, codesAndPrograms)
+		}
+		return value, nil
+
 	default:
 		panic(errors.NewUnexpectedError("unsupported environment: %T", environment))
 	}
@@ -237,6 +244,16 @@ func (executor *contractFunctionExecutor) executeWithInterpreter(
 	}
 
 	return exportedValue, nil
+}
+
+func (executor *contractFunctionExecutor) executeWithVM(
+	environment *vmEnvironment,
+) (val cadence.Value, err error) {
+
+	// TODO:
+
+	return nil, nil
+
 }
 
 type ArgumentConversionContext interface {
