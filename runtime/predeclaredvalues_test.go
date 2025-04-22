@@ -340,6 +340,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 				nil,
 				nil,
 				nil,
+				nil,
 			),
 		}
 
@@ -417,6 +418,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 				nil,
 				nil,
 				nil,
+				nil,
 			),
 		}
 
@@ -482,6 +484,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 			Value: interpreter.NewSimpleCompositeValue(nil,
 				yType.ID(),
 				interpreter.ConvertSemaCompositeTypeToStaticCompositeType(nil, yType),
+				nil,
 				nil,
 				nil,
 				nil,
@@ -567,6 +570,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 			Value: interpreter.NewSimpleCompositeValue(nil,
 				yType.ID(),
 				interpreter.ConvertSemaCompositeTypeToStaticCompositeType(nil, yType),
+				nil,
 				nil,
 				nil,
 				nil,
