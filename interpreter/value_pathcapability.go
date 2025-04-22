@@ -154,6 +154,22 @@ func (v *PathCapabilityValue) newCheckFunction(
 
 func (v *PathCapabilityValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
 	switch name {
+	case sema.CapabilityTypeAddressFieldName:
+		return v.address
+
+	case sema.CapabilityTypeIDFieldName:
+		return InvalidCapabilityID
+	}
+
+	return context.GetMethod(v, name, locationRange)
+}
+
+func (v *PathCapabilityValue) GetMethod(
+	context MemberAccessibleContext,
+	_ LocationRange,
+	name string,
+) FunctionValue {
+	switch name {
 	case sema.CapabilityTypeBorrowFunctionName:
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
@@ -169,22 +185,7 @@ func (v *PathCapabilityValue) GetMember(context MemberAccessibleContext, locatio
 			borrowType, _ = MustConvertStaticToSemaType(v.BorrowType, context).(*sema.ReferenceType)
 		}
 		return v.newCheckFunction(context, borrowType)
-
-	case sema.CapabilityTypeAddressFieldName:
-		return v.address
-
-	case sema.CapabilityTypeIDFieldName:
-		return InvalidCapabilityID
 	}
-
-	return nil
-}
-
-func (v *PathCapabilityValue) GetMethod(
-	_ MemberAccessibleContext,
-	_ LocationRange,
-	_ string,
-) FunctionValue {
 	return nil
 }
 
