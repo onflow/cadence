@@ -157,6 +157,8 @@ type MemberAccessibleValue interface {
 	RemoveMember(context ValueTransferContext, locationRange LocationRange, name string) Value
 	// SetMember returns whether a value previously existed with this name.
 	SetMember(context ValueTransferContext, locationRange LocationRange, name string, value Value) bool
+	// GetMethod returns member functions of this value.
+	// IMPORTANT: This method is for internal use only. Always use `GetMember` to retrieve a member of any kind.
 	GetMethod(context MemberAccessibleContext, locationRange LocationRange, name string) FunctionValue
 }
 
