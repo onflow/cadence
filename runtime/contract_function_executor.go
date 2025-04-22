@@ -113,7 +113,11 @@ func (executor *contractFunctionExecutor) preprocess() (err error) {
 
 	environment := context.Environment
 	if environment == nil {
-		environment = NewBaseInterpreterEnvironment(executor.runtime.Config())
+		if context.UseVM {
+			environment = NewBaseVMEnvironment(executor.runtime.Config())
+		} else {
+			environment = NewBaseInterpreterEnvironment(executor.runtime.Config())
+		}
 	}
 	environment.Configure(
 		runtimeInterface,

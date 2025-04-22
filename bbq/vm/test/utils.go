@@ -300,7 +300,7 @@ func (t *testAccountHandler) ContractUpdateRecorded(location common.AddressLocat
 	return t.contractUpdateRecorded(location)
 }
 
-func (t *testAccountHandler) InterpretContract(
+func (t *testAccountHandler) LoadContractValue(
 	location common.AddressLocation,
 	program *interpreter.Program,
 	name string,
@@ -310,7 +310,7 @@ func (t *testAccountHandler) InterpretContract(
 	error,
 ) {
 	if t.interpretContract == nil {
-		panic(errors.NewUnexpectedError("unexpected call to InterpretContract"))
+		panic(errors.NewUnexpectedError("unexpected call to LoadContractValue"))
 	}
 	return t.interpretContract(
 		location,

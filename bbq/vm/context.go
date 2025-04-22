@@ -95,7 +95,11 @@ func (c *Context) SetAttachmentIteration(composite *interpreter.CompositeValue, 
 	return false
 }
 
-func (c *Context) ReadStored(storageAddress common.Address, domain common.StorageDomain, identifier interpreter.StorageMapKey) interpreter.Value {
+func (c *Context) ReadStored(
+	storageAddress common.Address,
+	domain common.StorageDomain,
+	identifier interpreter.StorageMapKey,
+) interpreter.Value {
 	accountStorage := c.storage.GetDomainStorageMap(
 		c,
 		storageAddress,
