@@ -844,7 +844,7 @@ func (v *ArrayValue) GetMethod(
 	name string,
 ) FunctionValue {
 	switch name {
-	case "append":
+	case sema.ArrayTypeAppendFunctionName:
 		return NewBoundHostFunctionValue(
 			context,
 			v,
@@ -861,7 +861,7 @@ func (v *ArrayValue) GetMethod(
 			},
 		)
 
-	case "appendAll":
+	case sema.ArrayTypeAppendAllFunctionName:
 		return NewBoundHostFunctionValue(
 			context,
 			v,
@@ -882,7 +882,7 @@ func (v *ArrayValue) GetMethod(
 			},
 		)
 
-	case "concat":
+	case sema.ArrayTypeConcatFunctionName:
 		return NewBoundHostFunctionValue(
 			context,
 			v,
@@ -902,7 +902,7 @@ func (v *ArrayValue) GetMethod(
 			},
 		)
 
-	case "insert":
+	case sema.ArrayTypeInsertFunctionName:
 		return NewBoundHostFunctionValue(
 			context,
 			v,
@@ -931,7 +931,7 @@ func (v *ArrayValue) GetMethod(
 			},
 		)
 
-	case "remove":
+	case sema.ArrayTypeRemoveFunctionName:
 		return NewBoundHostFunctionValue(
 			context,
 			v,
@@ -956,7 +956,7 @@ func (v *ArrayValue) GetMethod(
 			},
 		)
 
-	case "removeFirst":
+	case sema.ArrayTypeRemoveFirstFunctionName:
 		return NewBoundHostFunctionValue(
 			context,
 			v,
@@ -971,7 +971,7 @@ func (v *ArrayValue) GetMethod(
 			},
 		)
 
-	case "removeLast":
+	case sema.ArrayTypeRemoveLastFunctionName:
 		return NewBoundHostFunctionValue(
 			context,
 			v,
@@ -986,7 +986,7 @@ func (v *ArrayValue) GetMethod(
 			},
 		)
 
-	case "firstIndex":
+	case sema.ArrayTypeFirstIndexFunctionName:
 		return NewBoundHostFunctionValue(
 			context,
 			v,
@@ -1002,7 +1002,7 @@ func (v *ArrayValue) GetMethod(
 			},
 		)
 
-	case "contains":
+	case sema.ArrayTypeContainsFunctionName:
 		return NewBoundHostFunctionValue(
 			context,
 			v,
@@ -1018,7 +1018,7 @@ func (v *ArrayValue) GetMethod(
 			},
 		)
 
-	case "slice":
+	case sema.ArrayTypeSliceFunctionName:
 		return NewBoundHostFunctionValue(
 			context,
 			v,

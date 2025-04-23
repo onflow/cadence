@@ -73,12 +73,12 @@ type Invokable interface {
 func ParseCheckAndPrepare(t testing.TB, code string, compile bool) Invokable {
 	t.Helper()
 
-	if !compile {
-		return parseCheckAndInterpret(t, code)
-	}
+	//if !compile {
+	//	return parseCheckAndInterpret(t, code)
+	//}
 
 	// TODO: Uncomment once the compiler branch is merged to master.
-	//vmConfig := &vm.Config{}
+	//vmConfig := (&vm.Config{}).WithDebugEnabled()
 	//vmInstance := compilerUtils.CompileAndPrepareToInvoke(
 	//	t,
 	//	code,
