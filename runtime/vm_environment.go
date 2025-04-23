@@ -19,6 +19,11 @@
 package runtime
 
 import (
+	"fmt"
+
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/compiler"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -40,7 +45,11 @@ type vmEnvironment struct {
 	checkingEnvironment *checkingEnvironment
 
 	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
-	config                                Config
+
+	config         Config
+	vmConfig       *vm.Config
+	compilerConfig *compiler.Config
+
 	*stdlib.SimpleContractAdditionTracker
 }
 
@@ -67,6 +76,8 @@ func newVMEnvironment(config Config) *vmEnvironment {
 		checkingEnvironment:           newCheckingEnvironment(),
 		SimpleContractAdditionTracker: stdlib.NewSimpleContractAdditionTracker(),
 	}
+	env.vmConfig = env.newVMConfig()
+	env.compilerConfig = env.newCompilerConfig()
 	return env
 }
 
@@ -86,6 +97,23 @@ func NewScriptVMEnvironment(config Config) Environment {
 	return env
 }
 
+func (e *vmEnvironment) newVMConfig() *vm.Config {
+	return vm.NewConfig(nil)
+}
+func (e *vmEnvironment) newCompilerConfig() *compiler.Config {
+	return &compiler.Config{
+		LocationHandler: e.ResolveLocation,
+		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
+			// TODO:
+			panic(errors.NewUnexpectedError("cannot import %s", location))
+		},
+		ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
+			// TODO:
+			return nil, fmt.Errorf("cannot find elaboration for %s", location)
+		},
+	}
+}
+
 func (e *vmEnvironment) Configure(
 	runtimeInterface Interface,
 	codesAndPrograms CodesAndPrograms,
@@ -94,8 +122,7 @@ func (e *vmEnvironment) Configure(
 ) {
 	e.Interface = runtimeInterface
 	e.storage = storage
-	// TODO:
-	//e.InterpreterConfig.Storage = storage
+	e.vmConfig.SetStorage(storage)
 	e.coverageReport = coverageReport
 
 	e.checkingEnvironment.configure(
@@ -109,7 +136,7 @@ func (e *vmEnvironment) Configure(
 func (e *vmEnvironment) DeclareValue(valueDeclaration stdlib.StandardLibraryValue, location common.Location) {
 	e.checkingEnvironment.declareValue(valueDeclaration, location)
 
-	// TODO: declare in VM
+	// TODO: declare in compiler
 }
 
 func (e *vmEnvironment) DeclareType(typeDeclaration stdlib.StandardLibraryType, location common.Location) {
@@ -216,4 +243,43 @@ func (e *vmEnvironment) commitStorage(context interpreter.ValueTransferContext) 
 
 func (e *vmEnvironment) ProgramLog(message string, _ interpreter.LocationRange) error {
 	return e.Interface.ProgramLog(message)
+}
+
+func (e *vmEnvironment) loadProgram(location common.Location) (*interpreter.Program, error) {
+	const getAndSetProgram = true
+	program, err := e.checkingEnvironment.GetProgram(
+		location,
+		getAndSetProgram,
+		importResolutionResults{},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return program, nil
+}
+
+func (e *vmEnvironment) compileProgram(
+	compiledProgram *interpreter.Program,
+	location common.Location,
+) *bbq.InstructionProgram {
+
+	comp := compiler.NewInstructionCompilerWithConfig(
+		compiledProgram,
+		location,
+		e.compilerConfig,
+	)
+
+	return comp.Compile()
+}
+
+func (e *vmEnvironment) newVM(
+	location common.Location,
+	program *bbq.InstructionProgram,
+) *vm.VM {
+	return vm.NewVM(
+		location,
+		program,
+		e.vmConfig,
+	)
 }
