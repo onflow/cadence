@@ -222,7 +222,7 @@ func (c *Context) GetResourceDestructionContextForLocation(location common.Locat
 func (c *Context) GetMethod(
 	value interpreter.MemberAccessibleValue,
 	name string,
-	locationRange interpreter.LocationRange,
+	_ interpreter.LocationRange,
 ) interpreter.FunctionValue {
 	staticType := value.StaticType(c)
 

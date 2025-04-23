@@ -100,6 +100,7 @@ func NewScriptVMEnvironment(config Config) Environment {
 func (e *vmEnvironment) newVMConfig() *vm.Config {
 	config := vm.NewConfig(nil)
 	config.TypeLoader = e.loadType
+	config.Logger = e
 	return config
 }
 

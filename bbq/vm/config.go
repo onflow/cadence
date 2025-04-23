@@ -19,8 +19,6 @@
 package vm
 
 import (
-	"fmt"
-
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -43,6 +41,7 @@ type Config struct {
 	ContractValueHandler
 	NativeFunctionsProvider
 	Tracer
+	stdlib.Logger
 
 	storage           interpreter.Storage
 	interpreterConfig *interpreter.Config
@@ -274,9 +273,10 @@ func (c *Config) EmitEvent(
 }
 
 func (c *Config) ProgramLog(message string, locationRange interpreter.LocationRange) error {
-	//TODO implement properly
-	fmt.Println(message)
-	return nil
+	if c.Logger == nil {
+		return errors.NewDefaultUserError("logging is not supported in this environment")
+	}
+	return c.Logger.ProgramLog(message, locationRange)
 }
 
 func (c *Config) OnResourceOwnerChange(
