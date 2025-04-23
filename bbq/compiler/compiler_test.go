@@ -4334,7 +4334,6 @@ func TestCompileFunctionExpression(t *testing.T) {
 		[]opcode.Instruction{
 			// let addOne = fun ...
 			opcode.InstructionNewClosure{Function: 1},
-			opcode.InstructionTransfer{Type: 1},
 			opcode.InstructionSetLocal{Local: addOneIndex},
 
 			// let x = 2
@@ -4507,7 +4506,6 @@ func TestCompileFunctionExpressionOuterVariableUse(t *testing.T) {
 					},
 				},
 			},
-			opcode.InstructionTransfer{Type: 1},
 			opcode.InstructionSetLocal{Local: innerLocalIndex},
 
 			opcode.InstructionReturn{},
@@ -5191,4 +5189,70 @@ func TestCompileTransferNewPath(t *testing.T) {
 			program.Constants,
 		)
 	})
+}
+
+func TestCompileTransferClosure(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun test() {
+          let x = fun() {}
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
+
+	require.Len(t, program.Functions, 2)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// let x = fun() {}
+			opcode.InstructionNewClosure{
+				Function: 1,
+			},
+			// NOTE: *no* transfer
+			opcode.InstructionSetLocal{Local: 0},
+			// return
+			opcode.InstructionReturn{},
+		},
+		functions[0].Code,
+	)
+}
+
+func TestCompileTransferNil(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun test() {
+          let x: Int? = nil
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(checker)
+	program := comp.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// let x: Int? = nil
+			opcode.InstructionNil{},
+			// NOTE: *no* transfer
+			opcode.InstructionSetLocal{Local: 0},
+			// return
+			opcode.InstructionReturn{},
+		},
+		functions[0].Code,
+	)
 }
