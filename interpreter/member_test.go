@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/interpreter"
@@ -42,7 +43,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct S {
                         var foo: Int
 
@@ -127,7 +128,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct S {
                         var foo: Int
 
@@ -205,7 +206,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct interface SI {
                         var foo: Int
                     }
@@ -298,7 +299,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct interface SI {
                         let foo: Int
                     }
@@ -567,7 +568,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("composite, field", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct Test {
                 var x: [Int]
                 init() {
@@ -588,27 +589,29 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("composite, function", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct Test {
                 access(all) fun foo(): Int {
                     return 1
                 }
             }
 
-            fun test() {
+            fun test(): Int {
                 let test = Test()
                 var foo: (fun(): Int) = test.foo
+                return foo()
             }
         `)
 
-		_, err := inter.Invoke("test")
+		result, err := inter.Invoke("test")
 		require.NoError(t, err)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), result)
 	})
 
 	t.Run("composite reference, field", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct Test {
                 var x: [Int]
                 init() {
@@ -630,7 +633,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("composite reference, optional field", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct Test {
                 var x: [Int]?
                 init() {
@@ -652,7 +655,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("composite reference, nil in optional field", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct Test {
                 var x: [Int]?
                 init() {
@@ -681,7 +684,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("composite reference, nil in anystruct field", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct Test {
                 var x: AnyStruct
                 init() {
@@ -704,7 +707,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("composite reference, primitive field", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct Test {
                 var x: Int
                 init() {
@@ -726,28 +729,30 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("composite reference, function", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct Test {
                 access(all) fun foo(): Int {
                     return 1
                 }
             }
 
-            fun test() {
+            fun test(): Int {
                 let test = Test()
                 let testRef = &test as &Test
                 var foo: (fun(): Int) = testRef.foo
+                return foo()
             }
         `)
 
-		_, err := inter.Invoke("test")
+		result, err := inter.Invoke("test")
 		require.NoError(t, err)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), result)
 	})
 
 	t.Run("resource reference, nested", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource Foo {
                 var bar: @Bar
                 init() {
@@ -791,7 +796,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("composite reference, anystruct typed field, with reference value", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct Test {
                 var x: AnyStruct
                 init() {
@@ -820,7 +825,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("array, element", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test() {
                 let array: [[Int]] = [[1, 2]]
                 var x: [Int] = array[0]
@@ -834,7 +839,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("array reference, element", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test() {
                 let array: [[Int]] = [[1, 2]]
                 let arrayRef = &array as &[[Int]]
@@ -849,7 +854,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("array authorized reference, element", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement A
 
             fun test() {
@@ -868,7 +873,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("array reference, element, in assignment", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test() {
                 let array: [[Int]] = [[1, 2]]
                 let arrayRef = &array as &[[Int]]
@@ -884,7 +889,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("array reference, optional typed element", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test() {
                 let array: [[Int]?] = [[1, 2]]
                 let arrayRef = &array as &[[Int]?]
@@ -899,7 +904,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("array reference, primitive typed element", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test() {
                 let array: [Int] = [1, 2]
                 let arrayRef = &array as &[Int]
@@ -914,7 +919,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("array reference, anystruct typed element, with reference value", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): &AnyStruct {
                 var s = "hello"
                 let array: [AnyStruct] = [&s as &String]
@@ -936,7 +941,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("dictionary, value", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test() {
                 let dict: {String: {String: Int}} = {"one": {"two": 2}}
                 var x: {String: Int}? = dict["one"]
@@ -950,7 +955,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("dictionary reference, value", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test() {
                 let dict: {String: {String: Int} } = {"one": {"two": 2}}
                 let dictRef = &dict as &{String: {String: Int}}
@@ -965,7 +970,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("dictionary authorized reference, value", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement A
 
             fun test() {
@@ -984,7 +989,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("dictionary reference, value, in assignment", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test() {
                 let dict: {String: {String: Int} } = {"one": {"two": 2}}
                 let dictRef = &dict as &{String: {String: Int}}
@@ -1000,7 +1005,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("dictionary reference, optional typed value", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test() {
                 let dict: {String: {String: Int}?} = {"one": {"two": 2}}
                 let dictRef = &dict as &{String: {String: Int}?}
@@ -1015,7 +1020,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("dictionary reference, primitive typed value", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test() {
                 let dict: {String: Int} = {"one": 1}
                 let dictRef = &dict as &{String: Int}
@@ -1114,7 +1119,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("entitlement map access on field", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement A
             entitlement B
             entitlement mapping M {
@@ -1165,7 +1170,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 				typeName,
 			)
 
-			inter := parseCheckAndInterpret(t, code)
+			inter := parseCheckAndPrepare(t, code)
 
 			_, err := inter.Invoke("test")
 			require.NoError(t, err)

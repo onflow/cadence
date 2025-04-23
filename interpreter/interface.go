@@ -223,6 +223,8 @@ type MemberAccessibleContext interface {
 
 	InjectedCompositeFieldsHandler() InjectedCompositeFieldsHandlerFunc
 	GetMemberAccessContextForLocation(location common.Location) MemberAccessibleContext
+
+	GetMethod(value MemberAccessibleValue, name string, locationRange LocationRange) FunctionValue
 }
 
 var _ MemberAccessibleContext = &Interpreter{}

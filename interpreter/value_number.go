@@ -49,7 +49,13 @@ type NumberValue interface {
 	ToBigEndianBytes() []byte
 }
 
-func getNumberValueMember(context MemberAccessibleContext, v NumberValue, name string, typ sema.Type, locationRange LocationRange) Value {
+func getNumberValueFunctionMember(
+	context MemberAccessibleContext,
+	v NumberValue,
+	name string,
+	typ sema.Type,
+	locationRange LocationRange,
+) FunctionValue {
 	switch name {
 
 	case sema.ToStringFunctionName:

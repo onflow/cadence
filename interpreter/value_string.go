@@ -362,7 +362,17 @@ func (v *StringValue) GetMember(context MemberAccessibleContext, locationRange L
 
 	case sema.StringTypeUtf8FieldName:
 		return ByteSliceToByteArrayValue(context, []byte(v.Str))
+	}
 
+	return context.GetMethod(v, name, locationRange)
+}
+
+func (v *StringValue) GetMethod(
+	context MemberAccessibleContext,
+	locationRange LocationRange,
+	name string,
+) FunctionValue {
+	switch name {
 	case sema.StringTypeConcatFunctionName:
 		return NewBoundHostFunctionValue(
 			context,

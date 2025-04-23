@@ -67,6 +67,7 @@ func NewBlockValue(
 			sema.BlockTypeTimestampFieldName: timestamp,
 		},
 		nil,
+		nil,
 		blockFieldFormatters(context),
 		nil,
 	)

@@ -63,6 +63,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 		nil,
 		nil,
 		nil,
+		nil,
 	)
 
 	self.isTransaction = true

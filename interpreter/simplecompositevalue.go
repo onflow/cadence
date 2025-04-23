@@ -29,10 +29,11 @@ import (
 // SimpleCompositeValue
 
 type SimpleCompositeValue struct {
-	staticType      StaticType
-	Fields          map[string]Value
-	ComputeField    func(name string, context MemberAccessibleContext, locationRange LocationRange) Value
-	fieldFormatters map[string]func(common.MemoryGauge, Value, SeenReferences) string
+	staticType           StaticType
+	Fields               map[string]Value
+	ComputeField         func(name string, context MemberAccessibleContext, locationRange LocationRange) Value
+	FunctionMemberGetter func(name string, context MemberAccessibleContext) FunctionValue
+	fieldFormatters      map[string]func(common.MemoryGauge, Value, SeenReferences) string
 	// stringer is an optional function that is used to produce the string representation of the value.
 	// If nil, the FieldNames are used.
 	stringer func(ValueStringContext, SeenReferences, LocationRange) string
@@ -60,6 +61,7 @@ func NewSimpleCompositeValue(
 	fieldNames []string,
 	fields map[string]Value,
 	computeField func(name string, context MemberAccessibleContext, locationRange LocationRange) Value,
+	functionMemberGetter func(name string, context MemberAccessibleContext) FunctionValue,
 	fieldFormatters map[string]func(common.MemoryGauge, Value, SeenReferences) string,
 	stringer func(ValueStringContext, SeenReferences, LocationRange) string,
 ) *SimpleCompositeValue {
@@ -68,13 +70,14 @@ func NewSimpleCompositeValue(
 	common.UseMemory(gauge, common.NewSimpleCompositeMemoryUsage(len(fields)))
 
 	return &SimpleCompositeValue{
-		TypeID:          typeID,
-		staticType:      staticType,
-		FieldNames:      fieldNames,
-		Fields:          fields,
-		ComputeField:    computeField,
-		fieldFormatters: fieldFormatters,
-		stringer:        stringer,
+		TypeID:               typeID,
+		staticType:           staticType,
+		FieldNames:           fieldNames,
+		Fields:               fields,
+		ComputeField:         computeField,
+		FunctionMemberGetter: functionMemberGetter,
+		fieldFormatters:      fieldFormatters,
+		stringer:             stringer,
 	}
 }
 
@@ -137,7 +140,6 @@ func (v *SimpleCompositeValue) IsImportable(context ValueImportableContext, loca
 }
 
 func (v *SimpleCompositeValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
-
 	value, ok := v.Fields[name]
 	if ok {
 		return value
@@ -145,10 +147,25 @@ func (v *SimpleCompositeValue) GetMember(context MemberAccessibleContext, locati
 
 	computeField := v.ComputeField
 	if computeField != nil {
-		return computeField(name, context, locationRange)
+		value = computeField(name, context, locationRange)
+		if value != nil {
+			return value
+		}
 	}
 
-	return nil
+	return context.GetMethod(v, name, locationRange)
+}
+
+func (v *SimpleCompositeValue) GetMethod(
+	context MemberAccessibleContext,
+	locationRange LocationRange,
+	name string,
+) FunctionValue {
+	if v.FunctionMemberGetter == nil {
+		return nil
+	}
+
+	return v.FunctionMemberGetter(name, context)
 }
 
 func (v *SimpleCompositeValue) RemoveMember(_ ValueTransferContext, _ LocationRange, name string) Value {

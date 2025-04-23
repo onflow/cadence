@@ -219,7 +219,21 @@ func (CharacterValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (v CharacterValue) GetMember(context MemberAccessibleContext, _ LocationRange, name string) Value {
+func (v CharacterValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	switch name {
+	case sema.CharacterTypeUtf8FieldName:
+		common.UseMemory(context, common.NewBytesMemoryUsage(len(v.Str)))
+		return ByteSliceToByteArrayValue(context, []byte(v.Str))
+	}
+
+	return context.GetMethod(v, name, locationRange)
+}
+
+func (v CharacterValue) GetMethod(
+	context MemberAccessibleContext,
+	locationRange LocationRange,
+	name string,
+) FunctionValue {
 	switch name {
 	case sema.ToStringFunctionName:
 		return NewBoundHostFunctionValue(
@@ -240,11 +254,8 @@ func (v CharacterValue) GetMember(context MemberAccessibleContext, _ LocationRan
 				)
 			},
 		)
-
-	case sema.CharacterTypeUtf8FieldName:
-		common.UseMemory(context, common.NewBytesMemoryUsage(len(v.Str)))
-		return ByteSliceToByteArrayValue(context, []byte(v.Str))
 	}
+
 	return nil
 }
 
