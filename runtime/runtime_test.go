@@ -22,6 +22,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"flag"
 	"fmt"
 	"math/big"
 	mrand "math/rand"
@@ -47,6 +48,8 @@ import (
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
+
+var compile = flag.Bool("compile", false, "Run tests using the compiler")
 
 func TestRuntimeImport(t *testing.T) {
 
@@ -2940,7 +2943,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			Context{
 				Interface: interf,
 				Location:  nextTransactionLocation(),
-				UseVM:       true,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2972,6 +2975,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			Context{
 				Interface: interf,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3003,6 +3007,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			Context{
 				Interface: interf,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3038,6 +3043,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			Context{
 				Interface: interf,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3071,6 +3077,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			Context{
 				Interface: interf,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -3098,6 +3105,8 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			Context{
 				Interface: interf,
 				Location:  nextTransactionLocation(),
+				// TODO:
+				// UseVM:     *compile,
 			},
 		)
 		RequireError(t, err)
@@ -3128,6 +3137,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			Context{
 				Interface: interf,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		RequireError(t, err)
@@ -3158,6 +3168,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			Context{
 				Interface: interf,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		RequireError(t, err)
@@ -3184,6 +3195,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			Context{
 				Interface: interf,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3214,6 +3226,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			Context{
 				Interface: interf,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
