@@ -2434,10 +2434,10 @@ func (interpreter *Interpreter) declareInterface(
 	)
 
 	var defaultDestroyEventConstructor FunctionValue
-	if defautlDestroyEvent := interpreter.Program.Elaboration.DefaultDestroyDeclaration(declaration); defautlDestroyEvent != nil {
+	if defaultDestroyEvent := interpreter.Program.Elaboration.DefaultDestroyDeclaration(declaration); defaultDestroyEvent != nil {
 		var nestedVariable Variable
 		lexicalScope, nestedVariable = interpreter.declareCompositeValue(
-			defautlDestroyEvent,
+			defaultDestroyEvent,
 			lexicalScope,
 		)
 		defaultDestroyEventConstructor = nestedVariable.GetValue(interpreter).(FunctionValue)
