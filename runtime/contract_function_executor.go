@@ -22,10 +22,10 @@ import (
 	"sync"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
 )
 
 type interpreterContractFunctionExecutor struct {
@@ -105,7 +105,13 @@ func (executor *interpreterContractFunctionExecutor) preprocess() (err error) {
 
 	runtimeInterface := context.Interface
 
-	storage := NewStorage(runtimeInterface, runtimeInterface)
+	storage := NewStorage(
+		runtimeInterface,
+		runtimeInterface,
+		StorageConfig{
+			StorageFormatV2Enabled: interpreterRuntime.defaultConfig.StorageFormatV2Enabled,
+		},
+	)
 	executor.storage = storage
 
 	environment := context.Environment
@@ -273,6 +279,7 @@ func (executor *interpreterContractFunctionExecutor) convertArgument(
 		inter,
 		locationRange,
 		environment,
+		environment.ResolveLocation,
 		argument,
 		argumentType,
 	)

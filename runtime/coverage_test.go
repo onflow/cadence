@@ -27,12 +27,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/parser"
 	. "github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/parser"
-	"github.com/onflow/cadence/runtime/stdlib"
-	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/onflow/cadence/stdlib"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
 )
 
 func TestRuntimeNewLocationCoverage(t *testing.T) {
@@ -1816,7 +1815,7 @@ func TestRuntimeCoverageWithNoStatements(t *testing.T) {
 	}
 
 	coverageReport.ExcludeLocation(txLocation)
-	deploy := utils.DeploymentTransaction("FooContract", contract)
+	deploy := DeploymentTransaction("FooContract", contract)
 	err := runtime.ExecuteTransaction(
 		Script{
 			Source: deploy,

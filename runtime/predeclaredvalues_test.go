@@ -27,15 +27,15 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/common/orderedmap"
+	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/onflow/cadence/runtime/tests/checker"
-	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
-	. "github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestRuntimePredeclaredValues(t *testing.T) {
@@ -245,7 +245,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 				require.ErrorAs(t, err, &checkerErr)
 				assert.Equal(t, common.ScriptLocation{}, checkerErr.Location)
 
-				errs := checker.RequireCheckerErrors(t, err, 1)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				var notDeclaredErr *sema.NotDeclaredError
 				require.ErrorAs(t, errs[0], &notDeclaredErr)

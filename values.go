@@ -25,12 +25,13 @@ import (
 	"unicode/utf8"
 	"unsafe"
 
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/fixedpoint"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/format"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/format"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // Value
@@ -362,7 +363,7 @@ func (v Int) Big() *big.Int {
 }
 
 func (v Int) ToBigEndianBytes() []byte {
-	return interpreter.SignedBigIntToBigEndianBytes(v.Value)
+	return values.SignedBigIntToBigEndianBytes(v.Value)
 }
 
 func (v Int) String() string {
@@ -572,7 +573,7 @@ func (v Int128) Big() *big.Int {
 }
 
 func (v Int128) ToBigEndianBytes() []byte {
-	return interpreter.SignedBigIntToSizedBigEndianBytes(v.Value, sema.Int128TypeSize)
+	return values.SignedBigIntToSizedBigEndianBytes(v.Value, sema.Int128TypeSize)
 }
 
 func (v Int128) String() string {
@@ -636,7 +637,7 @@ func (v Int256) Big() *big.Int {
 }
 
 func (v Int256) ToBigEndianBytes() []byte {
-	return interpreter.SignedBigIntToSizedBigEndianBytes(v.Value, sema.Int256TypeSize)
+	return values.SignedBigIntToSizedBigEndianBytes(v.Value, sema.Int256TypeSize)
 }
 
 func (v Int256) String() string {
@@ -653,7 +654,7 @@ var _ Value = UInt{}
 
 func NewUInt(i uint) UInt {
 	return UInt{
-		Value: big.NewInt(int64(i)),
+		Value: (&big.Int{}).SetUint64(uint64(i)),
 	}
 }
 
@@ -695,7 +696,7 @@ func (v UInt) Big() *big.Int {
 }
 
 func (v UInt) ToBigEndianBytes() []byte {
-	return interpreter.UnsignedBigIntToBigEndianBytes(v.Value)
+	return values.UnsignedBigIntToBigEndianBytes(v.Value)
 }
 
 func (v UInt) String() string {
@@ -860,7 +861,7 @@ var UInt128MemoryUsage = common.NewCadenceBigIntMemoryUsage(16)
 
 func NewUInt128(i uint) UInt128 {
 	return UInt128{
-		Value: big.NewInt(int64(i)),
+		Value: (&big.Int{}).SetUint64(uint64(i)),
 	}
 }
 
@@ -905,7 +906,7 @@ func (v UInt128) Big() *big.Int {
 }
 
 func (v UInt128) ToBigEndianBytes() []byte {
-	return interpreter.UnsignedBigIntToSizedBigEndianBytes(v.Value, sema.UInt128TypeSize)
+	return values.UnsignedBigIntToSizedBigEndianBytes(v.Value, sema.UInt128TypeSize)
 }
 
 func (v UInt128) String() string {
@@ -924,7 +925,7 @@ var UInt256MemoryUsage = common.NewCadenceBigIntMemoryUsage(32)
 
 func NewUInt256(i uint) UInt256 {
 	return UInt256{
-		Value: big.NewInt(int64(i)),
+		Value: (&big.Int{}).SetUint64(uint64(i)),
 	}
 }
 
@@ -969,7 +970,7 @@ func (v UInt256) Big() *big.Int {
 }
 
 func (v UInt256) ToBigEndianBytes() []byte {
-	return interpreter.UnsignedBigIntToSizedBigEndianBytes(v.Value, sema.UInt256TypeSize)
+	return values.UnsignedBigIntToSizedBigEndianBytes(v.Value, sema.UInt256TypeSize)
 }
 
 func (v UInt256) String() string {
@@ -1134,7 +1135,7 @@ var Word128MemoryUsage = common.NewCadenceBigIntMemoryUsage(16)
 
 func NewWord128(i uint) Word128 {
 	return Word128{
-		Value: big.NewInt(int64(i)),
+		Value: (&big.Int{}).SetUint64(uint64(i)),
 	}
 }
 
@@ -1179,7 +1180,7 @@ func (v Word128) Big() *big.Int {
 }
 
 func (v Word128) ToBigEndianBytes() []byte {
-	return interpreter.UnsignedBigIntToBigEndianBytes(v.Value)
+	return values.UnsignedBigIntToBigEndianBytes(v.Value)
 }
 
 func (v Word128) String() string {
@@ -1198,7 +1199,7 @@ var Word256MemoryUsage = common.NewCadenceBigIntMemoryUsage(32)
 
 func NewWord256(i uint) Word256 {
 	return Word256{
-		Value: big.NewInt(int64(i)),
+		Value: (&big.Int{}).SetUint64(uint64(i)),
 	}
 }
 
@@ -1243,7 +1244,7 @@ func (v Word256) Big() *big.Int {
 }
 
 func (v Word256) ToBigEndianBytes() []byte {
-	return interpreter.UnsignedBigIntToBigEndianBytes(v.Value)
+	return values.UnsignedBigIntToBigEndianBytes(v.Value)
 }
 
 func (v Word256) String() string {

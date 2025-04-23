@@ -28,14 +28,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/tests/checker"
-
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/sema"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 type encodeTest struct {
@@ -1123,7 +1122,7 @@ func TestEncodeDictionary(t *testing.T) {
 }
 
 func exportFromScript(t *testing.T, code string) cadence.Value {
-	checker, err := checker.ParseAndCheck(t, code)
+	checker, err := ParseAndCheck(t, code)
 	require.NoError(t, err)
 
 	var uuid uint64 = 0
@@ -1337,7 +1336,7 @@ func TestEncodeStruct(t *testing.T) {
 	t.Parallel()
 
 	simpleStructType := cadence.NewStructType(
-		utils.TestLocation,
+		TestLocation,
 		"FooStruct",
 		[]cadence.Field{
 			{
@@ -1390,7 +1389,7 @@ func TestEncodeStruct(t *testing.T) {
 	fooResourceType := newFooResourceType()
 
 	resourceStructType := cadence.NewStructType(
-		utils.TestLocation,
+		TestLocation,
 		"FooStruct",
 		[]cadence.Field{
 			{
@@ -1499,7 +1498,7 @@ func TestEncodeEvent(t *testing.T) {
 	t.Parallel()
 
 	simpleEventType := cadence.NewEventType(
-		utils.TestLocation,
+		TestLocation,
 		"FooEvent",
 		[]cadence.Field{
 			{
@@ -1552,7 +1551,7 @@ func TestEncodeEvent(t *testing.T) {
 	fooResourceType := newFooResourceType()
 
 	resourceEventType := cadence.NewEventType(
-		utils.TestLocation,
+		TestLocation,
 		"FooEvent",
 		[]cadence.Field{
 			{
@@ -1625,7 +1624,7 @@ func TestEncodeContract(t *testing.T) {
 	t.Parallel()
 
 	simpleContractType := cadence.NewContractType(
-		utils.TestLocation,
+		TestLocation,
 		"FooContract",
 		[]cadence.Field{
 			{
@@ -1678,7 +1677,7 @@ func TestEncodeContract(t *testing.T) {
 	fooResourceType := newFooResourceType()
 
 	resourceContractType := cadence.NewContractType(
-		utils.TestLocation,
+		TestLocation,
 		"FooContract",
 		[]cadence.Field{
 			{
@@ -1916,7 +1915,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewStructType(
-					utils.TestLocation,
+					TestLocation,
 					"S",
 					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
@@ -1977,7 +1976,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewResourceType(
-					utils.TestLocation,
+					TestLocation,
 					"R",
 					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
@@ -2038,7 +2037,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewContractType(
-					utils.TestLocation,
+					TestLocation,
 					"C",
 					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
@@ -2099,7 +2098,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewStructInterfaceType(
-					utils.TestLocation,
+					TestLocation,
 					"S",
 					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
@@ -2160,7 +2159,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewResourceInterfaceType(
-					utils.TestLocation,
+					TestLocation,
 					"R",
 					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
@@ -2221,7 +2220,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewContractInterfaceType(
-					utils.TestLocation,
+					TestLocation,
 					"C",
 					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
@@ -2282,7 +2281,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewEventType(
-					utils.TestLocation,
+					TestLocation,
 					"E",
 					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
@@ -2341,7 +2340,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewEnumType(
-					utils.TestLocation,
+					TestLocation,
 					"E",
 					cadence.StringType,
 					[]cadence.Field{
@@ -3317,7 +3316,7 @@ func TestExportRecursiveType(t *testing.T) {
 		},
 	}
 	ty := cadence.NewResourceType(
-		utils.TestLocation,
+		TestLocation,
 		"Foo",
 		fields,
 		nil,
@@ -3368,7 +3367,7 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 			},
 		}
 		ty := cadence.NewResourceType(
-			utils.TestLocation,
+			TestLocation,
 			"Foo",
 			fields,
 			[][]cadence.Parameter{},
@@ -3415,14 +3414,14 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 		t.Parallel()
 
 		fooTy := cadence.NewResourceType(
-			utils.TestLocation,
+			TestLocation,
 			"Foo",
 			[]cadence.Field{},
 			[][]cadence.Parameter{},
 		)
 
 		barTy := cadence.NewResourceType(
-			utils.TestLocation,
+			TestLocation,
 			"Bar",
 			[]cadence.Field{
 				{
@@ -3638,7 +3637,7 @@ func testDecode(t *testing.T, actualJSON string, expectedVal cadence.Value, opti
 
 func newFooResourceType() *cadence.ResourceType {
 	return cadence.NewResourceType(
-		utils.TestLocation,
+		TestLocation,
 		"Foo",
 		[]cadence.Field{
 			{

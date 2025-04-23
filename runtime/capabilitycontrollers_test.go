@@ -27,13 +27,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
-	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
-	. "github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
 )
 
 func TestRuntimeCapabilityControllers(t *testing.T) {
@@ -2036,6 +2036,48 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				nonDeploymentEventStrings(events),
 			)
 		})
+
+		t.Run("forEachController, box and convert argument", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _, _ := test(
+				t,
+				// language=cadence
+				`
+                  import Test from 0x1
+
+                  transaction {
+                      prepare(signer: auth(Capabilities) &Account) {
+                          let storagePath = /storage/r
+
+                          // Arrange
+						  signer.capabilities.storage.issue<&Test.R>(storagePath)
+
+                          // Act
+                          var res: String? = nil
+                          signer.capabilities.storage.forEachController(
+                              forPath: storagePath,
+                              // NOTE: The function has a parameter of type &StorageCapabilityController?
+                              // instead of just &StorageCapabilityController
+                              fun (controller: &StorageCapabilityController?): Bool {
+                                  // The map should call Optional.map, not fail,
+                                  // because path is PublicPath?, not PublicPath
+                                  res = controller.map(fun(string: AnyStruct): String {
+                                      return "Optional.map"
+                                  })
+                                  return true
+                              }
+                          )
+
+                          // Assert
+                          assert(res == "Optional.map")
+                      }
+                  }
+                `,
+			)
+			require.NoError(t, err)
+		})
 	})
 
 	t.Run("Account.AccountCapabilities", func(t *testing.T) {
@@ -2606,6 +2648,45 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				nonDeploymentEventStrings(events),
 			)
 		})
+
+		t.Run("forEachController, box and convert argument", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _, _ := test(
+				t,
+				// language=cadence
+				`
+                  import Test from 0x1
+
+                  transaction {
+                      prepare(signer: auth(Capabilities) &Account) {
+                          // Arrange
+						  signer.capabilities.account.issue<&Account>()
+
+                          // Act
+                          var res: String? = nil
+                          signer.capabilities.account.forEachController(
+                              // NOTE: The function has a parameter of type &AccountCapabilityController?
+                              // instead of just &AccountCapabilityController
+                              fun (controller: &AccountCapabilityController?): Bool {
+                                  // The map should call Optional.map, not fail,
+                                  // because path is PublicPath?, not PublicPath
+                                  res = controller.map(fun(string: AnyStruct): String {
+                                      return "Optional.map"
+                                  })
+                                  return true
+                              }
+                          )
+
+                          // Assert
+                          assert(res == "Optional.map")
+                      }
+                  }
+                `,
+			)
+			require.NoError(t, err)
+		})
 	})
 
 	t.Run("StorageCapabilityController", func(t *testing.T) {
@@ -3170,9 +3251,12 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				)
 				require.NoError(t, err)
 
-				storageMap := storage.GetStorageMap(
+				// Use *interpreter.Interpreter(nil) here because createIfNotExists is false.
+
+				storageMap := storage.GetDomainStorageMap(
+					nil,
 					common.MustBytesToAddress([]byte{0x1}),
-					stdlib.PathCapabilityStorageDomain,
+					common.StorageDomainPathCapability,
 					false,
 				)
 				require.Zero(t, storageMap.Count())
@@ -3759,9 +3843,10 @@ func TestRuntimeCapabilitiesGetBackwardCompatibility(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		publicStorageMap := storage.GetStorageMap(
+		publicStorageMap := storage.GetDomainStorageMap(
+			inter,
 			testAddress,
-			common.PathDomainPublic.Identifier(),
+			common.PathDomainPublic.StorageDomain(),
 			true,
 		)
 
@@ -3866,9 +3951,10 @@ func TestRuntimeCapabilitiesPublishBackwardCompatibility(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		publicStorageMap := storage.GetStorageMap(
+		publicStorageMap := storage.GetDomainStorageMap(
+			inter,
 			testAddress,
-			common.PathDomainStorage.Identifier(),
+			common.PathDomainStorage.StorageDomain(),
 			true,
 		)
 
@@ -3956,9 +4042,10 @@ func TestRuntimeCapabilitiesUnpublishBackwardCompatibility(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		publicStorageMap := storage.GetStorageMap(
+		publicStorageMap := storage.GetDomainStorageMap(
+			inter,
 			testAddress,
-			common.PathDomainPublic.Identifier(),
+			common.PathDomainPublic.StorageDomain(),
 			true,
 		)
 

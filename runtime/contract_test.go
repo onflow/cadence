@@ -27,15 +27,16 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/onflow/cadence/runtime/tests/checker"
-	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
-	. "github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestRuntimeContract(t *testing.T) {
@@ -43,18 +44,21 @@ func TestRuntimeContract(t *testing.T) {
 	t.Parallel()
 
 	type testCase struct {
-		name        string // the name of the contract used in add/update calls
-		code        string // the code we use to add the contract
-		code2       string // the code we use to update the contract
-		valid       bool
-		isInterface bool
+		name                   string // the name of the contract used in add/update calls
+		code                   string // the code we use to add the contract
+		code2                  string // the code we use to update the contract
+		valid                  bool
+		isInterface            bool
+		storageFormatV2Enabled bool
 	}
 
-	test := func(t *testing.T, tc testCase) {
-
+	runTest := func(t *testing.T, tc testCase) {
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		config := DefaultTestInterpreterConfig
+		config.StorageFormatV2Enabled = tc.storageFormatV2Enabled
+
+		runtime := NewTestInterpreterRuntimeWithConfig(config)
 
 		var loggedMessages []string
 
@@ -221,8 +225,18 @@ func TestRuntimeContract(t *testing.T) {
 		// so getting the storage map here once upfront would result in outdated data
 
 		getContractValueExists := func() bool {
-			storageMap := NewStorage(storage, nil).
-				GetStorageMap(signerAddress, StorageDomainContract, false)
+			storageMap := NewStorage(
+				storage,
+				nil,
+				StorageConfig{
+					StorageFormatV2Enabled: tc.storageFormatV2Enabled,
+				},
+			).GetDomainStorageMap(
+				inter,
+				signerAddress,
+				common.StorageDomainContract,
+				false,
+			)
 			if storageMap == nil {
 				return false
 			}
@@ -511,6 +525,18 @@ func TestRuntimeContract(t *testing.T) {
 			}
 		})
 
+	}
+
+	test := func(t *testing.T, tc testCase) {
+		t.Run("storage format V2 disabled", func(t *testing.T) {
+			tc.storageFormatV2Enabled = false
+			runTest(t, tc)
+		})
+
+		t.Run("storage format V2 enabled", func(t *testing.T) {
+			tc.storageFormatV2Enabled = true
+			runTest(t, tc)
+		})
 	}
 
 	t.Run("valid contract, correct name", func(t *testing.T) {
@@ -1234,7 +1260,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 		)
 		RequireError(t, err)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 		var notExportedError *sema.NotExportedError
 		require.ErrorAs(t, errs[0], &notExportedError)
 	})

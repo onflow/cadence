@@ -20,14 +20,16 @@ package runtime
 
 import (
 	"math/big"
+	"strings"
 	_ "unsafe"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 )
 
 // exportValue converts a runtime value to its native Go representation.
@@ -202,7 +204,7 @@ func exportValueWithInterpreter(
 	case interpreter.Fix64Value:
 		return cadence.Fix64(v), nil
 	case interpreter.UFix64Value:
-		return cadence.UFix64(v), nil
+		return cadence.UFix64(v.UFix64Value), nil
 	case *interpreter.CompositeValue:
 		return exportCompositeValue(
 			v,
@@ -235,6 +237,10 @@ func exportValueWithInterpreter(
 	case *interpreter.PathCapabilityValue: //nolint:staticcheck
 		return exportPathCapabilityValue(v, inter)
 	case *interpreter.EphemeralReferenceValue:
+		if v.Value == nil {
+			return nil, nil
+		}
+
 		// Break recursion through references
 		if _, ok := seenReferences[v]; ok {
 			return nil, nil
@@ -260,6 +266,7 @@ func exportValueWithInterpreter(
 		if referencedValue == nil {
 			return nil, nil
 		}
+
 		return exportValueWithInterpreter(
 			*referencedValue,
 			inter,
@@ -268,10 +275,11 @@ func exportValueWithInterpreter(
 		)
 	case interpreter.FunctionValue:
 		return exportFunctionValue(v, inter), nil
-	default:
-		return nil, &ValueNotExportableError{
-			Type: v.StaticType(inter),
-		}
+	case nil:
+		return nil, nil
+	}
+	return nil, &ValueNotExportableError{
+		Type: value.StaticType(inter),
 	}
 }
 
@@ -284,7 +292,7 @@ func exportSomeValue(
 	cadence.Optional,
 	error,
 ) {
-	innerValue := v.InnerValue(inter, locationRange)
+	innerValue := v.InnerValue()
 
 	if innerValue == nil {
 		return cadence.NewMeteredOptional(inter, nil), nil
@@ -421,7 +429,7 @@ func exportCompositeValue(
 				}
 
 			case *interpreter.CompositeValue:
-				fieldValue = v.GetField(inter, locationRange, fieldName)
+				fieldValue = v.GetField(inter, fieldName)
 				if fieldValue == nil {
 					fieldValue = v.GetComputedField(inter, locationRange, fieldName)
 				}
@@ -635,7 +643,7 @@ func exportCompositeValueAsInclusiveRange(
 	}
 
 	getNonComputedField := func(fieldName string) (cadence.Value, error) {
-		fieldValue := compositeValue.GetField(inter, locationRange, fieldName)
+		fieldValue := compositeValue.GetField(inter, fieldName)
 		if fieldValue == nil {
 			// Bug if the field is absent.
 			panic(errors.NewUnreachableError())
@@ -686,7 +694,7 @@ func exportPathValue(gauge common.MemoryGauge, v interpreter.PathValue) (cadence
 func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) cadence.TypeValue {
 	var typ sema.Type
 	if v.Type != nil {
-		typ = inter.MustConvertStaticToSemaType(v.Type)
+		typ = interpreter.MustConvertStaticToSemaType(v.Type, inter)
 	}
 	return cadence.NewMeteredTypeValue(
 		inter,
@@ -698,7 +706,7 @@ func exportCapabilityValue(
 	v *interpreter.IDCapabilityValue,
 	inter *interpreter.Interpreter,
 ) (cadence.Capability, error) {
-	borrowType := inter.MustConvertStaticToSemaType(v.BorrowType)
+	borrowType := interpreter.MustConvertStaticToSemaType(v.BorrowType, inter)
 	exportedBorrowType := ExportMeteredType(inter, borrowType, map[sema.TypeID]cadence.Type{})
 
 	return cadence.NewMeteredCapability(
@@ -716,7 +724,7 @@ func exportPathCapabilityValue(
 	var exportedBorrowType cadence.Type
 
 	if v.BorrowType != nil {
-		borrowType := inter.MustConvertStaticToSemaType(v.BorrowType)
+		borrowType := interpreter.MustConvertStaticToSemaType(v.BorrowType, inter)
 		exportedBorrowType = ExportMeteredType(inter, borrowType, map[sema.TypeID]cadence.Type{})
 	}
 
@@ -792,6 +800,7 @@ type valueImporter struct {
 	inter                  *interpreter.Interpreter
 	locationRange          interpreter.LocationRange
 	standardLibraryHandler stdlib.StandardLibraryHandler
+	resolveLocation        sema.LocationHandlerFunc
 }
 
 // ImportValue converts a Cadence value to a runtime value.
@@ -799,6 +808,7 @@ func ImportValue(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
 	standardLibraryHandler stdlib.StandardLibraryHandler,
+	resolveLocation sema.LocationHandlerFunc,
 	value cadence.Value,
 	expectedType sema.Type,
 ) (interpreter.Value, error) {
@@ -806,6 +816,7 @@ func ImportValue(
 		inter:                  inter,
 		locationRange:          locationRange,
 		standardLibraryHandler: standardLibraryHandler,
+		resolveLocation:        resolveLocation,
 	}.importValue(value, expectedType)
 }
 
@@ -822,7 +833,7 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 	case cadence.Optional:
 		return i.importOptionalValue(v, expectedType)
 	case cadence.Bool:
-		return interpreter.AsBoolValue(bool(v)), nil
+		return interpreter.BoolValue(v), nil
 	case cadence.String:
 		return i.importString(v), nil
 	case cadence.Character:
@@ -1508,6 +1519,33 @@ func (i valueImporter) importCompositeValue(
 
 	inter := i.inter
 	locationRange := i.locationRange
+
+	// Resolve the location if it is not nil (not a built-in type)
+
+	if location != nil {
+		resolveLocation := i.resolveLocation
+		if resolveLocation != nil {
+
+			rootIdentifier := strings.SplitN(qualifiedIdentifier, ".", 2)[0]
+
+			resolvedLocations, err := resolveLocation(
+				[]ast.Identifier{{Identifier: rootIdentifier}},
+				location,
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			if len(resolvedLocations) != 1 {
+				return nil, errors.NewDefaultUserError(
+					"cannot import value of type %s: location resolution failed",
+					qualifiedIdentifier,
+				)
+			}
+
+			location = resolvedLocations[0].Location
+		}
+	}
 
 	typeID := common.NewTypeIDFromQualifiedName(inter, location, qualifiedIdentifier)
 	compositeType, typeErr := inter.GetCompositeType(location, qualifiedIdentifier, typeID)

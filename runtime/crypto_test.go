@@ -28,95 +28,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/json"
 	. "github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
-	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
+	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
 )
-
-func TestRuntimeCrypto_verify(t *testing.T) {
-
-	t.Parallel()
-
-	runtime := NewTestInterpreterRuntime()
-
-	script := []byte(`
-      import Crypto
-
-      access(all) fun main(): Bool {
-          let publicKey = PublicKey(
-              publicKey: "0102".decodeHex(),
-              signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
-          )
-
-          let keyList = Crypto.KeyList()
-          keyList.add(
-              publicKey,
-              hashAlgorithm: HashAlgorithm.SHA3_256,
-              weight: 1.0
-          )
-
-          let signatureSet = [
-              Crypto.KeyListSignature(
-                  keyIndex: 0,
-                  signature: "0304".decodeHex()
-              )
-          ]
-
-          return keyList.verify(
-              signatureSet: signatureSet,
-              signedData: "0506".decodeHex(),
-              domainSeparationTag: "foo"
-          )
-      }
-    `)
-
-	var called bool
-
-	storage := NewTestLedger(nil, nil)
-
-	runtimeInterface := &TestRuntimeInterface{
-		Storage: storage,
-		OnVerifySignature: func(
-			signature []byte,
-			tag string,
-			signedData []byte,
-			publicKey []byte,
-			signatureAlgorithm SignatureAlgorithm,
-			hashAlgorithm HashAlgorithm,
-		) (bool, error) {
-			called = true
-			assert.Equal(t, []byte{3, 4}, signature)
-			assert.Equal(t, "foo", tag)
-			assert.Equal(t, []byte{5, 6}, signedData)
-			assert.Equal(t, []byte{1, 2}, publicKey)
-			assert.Equal(t, SignatureAlgorithmECDSA_P256, signatureAlgorithm)
-			assert.Equal(t, HashAlgorithmSHA3_256, hashAlgorithm)
-			return true, nil
-		},
-	}
-	addPublicKeyValidation(runtimeInterface, nil)
-
-	result, err := runtime.ExecuteScript(
-		Script{
-			Source: script,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
-		},
-	)
-	require.NoError(t, err)
-
-	assert.Equal(t,
-		cadence.NewBool(true),
-		result,
-	)
-
-	assert.True(t, called)
-}
 
 func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 

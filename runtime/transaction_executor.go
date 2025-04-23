@@ -22,9 +22,9 @@ import (
 	"sync"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
 )
 
 type interpreterTransactionExecutorPreparation struct {
@@ -106,7 +106,13 @@ func (executor *interpreterTransactionExecutor) preprocess() (err error) {
 
 	runtimeInterface := context.Interface
 
-	storage := NewStorage(runtimeInterface, runtimeInterface)
+	storage := NewStorage(
+		runtimeInterface,
+		runtimeInterface,
+		StorageConfig{
+			StorageFormatV2Enabled: interpreterRuntime.defaultConfig.StorageFormatV2Enabled,
+		},
+	)
 	executor.storage = storage
 
 	environment := context.Environment

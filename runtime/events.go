@@ -20,9 +20,9 @@ package runtime
 
 import (
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
 )
 
 func emitEventValue(
@@ -35,7 +35,7 @@ func emitEventValue(
 	fields := make([]interpreter.Value, len(eventType.ConstructorParameters))
 
 	for i, parameter := range eventType.ConstructorParameters {
-		value := event.GetField(inter, locationRange, parameter.Identifier)
+		value := event.GetField(inter, parameter.Identifier)
 		fields[i] = value
 	}
 

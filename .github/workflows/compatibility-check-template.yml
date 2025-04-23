@@ -17,11 +17,11 @@ on:
         required: true
         type: string
     secrets:
-      FLOWDIVER_API_KEY:
+      FIND_API_AUTH:
         required: true
 
 env:
-  GO_VERSION: '1.22'
+  GO_VERSION: '1.23'
 
 concurrency:
   group: ${{ github.workflow }}-${{ inputs.base-branch || github.run_id }}-${{ inputs.chain }}
@@ -62,10 +62,10 @@ jobs:
       - name: Download contracts
         if: ${{ steps.restore-cached-contracts.outputs.cache-hit != 'true' }}
         env:
-          FLOWDIVER_API_KEY: ${{ secrets.FLOWDIVER_API_KEY }}
+          FIND_API_AUTH: ${{ secrets.FIND_API_AUTH }}
         working-directory: ./tools/get-contracts
         run: |
-          go run . --chain=${{ inputs.chain }} --apiKey="$FLOWDIVER_API_KEY" > ../../tmp/contracts.csv
+          go run . -chain=${{ inputs.chain }} -auth="$FIND_API_AUTH" > ../../tmp/contracts.csv
 
       - name: Cache Contracts
         id: cache-contracts
@@ -88,26 +88,27 @@ jobs:
         run: |
           GOPROXY=direct go mod edit -replace github.com/onflow/cadence=github.com/${{ inputs.repo }}@${{ inputs.current-branch }}
           go mod tidy
-          go run ./cmd/check_contracts/main.go ../../tmp/contracts.csv ../../tmp/output-new.txt
+          go run ./cmd/check_contracts/main.go flow-${{ inputs.chain }} ../../tmp/contracts.csv ../../tmp/output-new.txt
 
       # Check contracts using base branch
 
       - name: Check contracts using ${{ inputs.base-branch }}
         working-directory: ./tools/compatibility-check
         run: |
-          GOPROXY=direct go mod edit -replace github.com/onflow/cadence=github.com/${{ inputs.repo }}@${{ inputs.base-branch }}
+          GOPROXY=direct go mod edit -replace github.com/onflow/cadence=github.com/${{ inputs.repo }}@`git rev-parse origin/${{ inputs.base-branch }}`
           go mod tidy
-          go run ./cmd/check_contracts/main.go ../../tmp/contracts.csv ../../tmp/output-old.txt
+          go run ./cmd/check_contracts/main.go flow-${{ inputs.chain }} ../../tmp/contracts.csv ../../tmp/output-old.txt
 
       # Upload checking results for later use
 
       - name: Archive checking results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.chain }}-checking-results
           path: |
             ./tmp/output-old.txt
             ./tmp/output-new.txt
+            ./tmp/contracts.csv
 
       # Check Diff
 

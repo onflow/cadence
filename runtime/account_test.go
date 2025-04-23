@@ -28,17 +28,17 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/json"
+	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/onflow/cadence/runtime/tests/checker"
-	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
-	"github.com/onflow/cadence/runtime/tests/utils"
-	. "github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestRuntimeAccountKeyConstructor(t *testing.T) {
@@ -998,7 +998,7 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 
 		value, err := test.executeScript(testEnv.runtime, testEnv.runtimeInterface)
 		require.NoError(t, err)
-		utils.AssertEqualWithDiff(t, cadence.Void{}, value)
+		AssertEqualWithDiff(t, cadence.Void{}, value)
 
 		keys := make(map[int]*AccountKey, len(testEnv.storage.keys))
 		for _, key := range testEnv.storage.keys {
@@ -1015,6 +1015,38 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 			require.NotNil(t, key)
 			keys[keyIdx] = nil // no key should be passed to the callback twice
 		}
+	})
+
+	t.Run("keys.forEach, box and convert argument", func(t *testing.T) {
+		t.Parallel()
+
+		testEnv := initTestEnv(revokedAccountKeyA, accountKeyB)
+		test := accountKeyTestCase{
+			//language=Cadence
+			code: `
+                access(all)
+                fun main(): String? {
+                    var res: String? = nil
+                    // NOTE: The function has a parameter of type AccountKey? instead of just AccountKey
+                    getAccount(0x02).keys.forEach(fun(key: AccountKey?): Bool {
+                        // The map should call Optional.map, not fail,
+                        // because path is AccountKey?, not AccountKey
+                        res = key.map(fun(string: AnyStruct): String {
+                            return "Optional.map"
+                        })
+                        return true
+                    })
+                    return res
+                }
+            `,
+		}
+
+		value, err := test.executeScript(testEnv.runtime, testEnv.runtimeInterface)
+		require.NoError(t, err)
+		AssertEqualWithDiff(t,
+			cadence.NewOptional(cadence.String("Optional.map")),
+			value,
+		)
 	})
 }
 
@@ -1685,7 +1717,7 @@ func TestRuntimePublicKey(t *testing.T) {
 		}
 
 		_, err := executeScript(script, runtimeInterface)
-		errs := checker.RequireCheckerErrors(t, err, 4)
+		errs := RequireCheckerErrors(t, err, 4)
 
 		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[0])
 		assert.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[1])
@@ -2328,7 +2360,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			},
 		)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.UnauthorizedReferenceAssignmentError{}, errs[0])
 	})
@@ -2370,7 +2402,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			},
 		)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.UnauthorizedReferenceAssignmentError{}, errs[0])
 	})
@@ -2582,7 +2614,7 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 			},
 		)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
@@ -2610,7 +2642,7 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 			},
 		)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InsufficientArgumentsError{}, errs[0])
 	})
@@ -2637,7 +2669,7 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 				Location:  common.ScriptLocation{0x1},
 			},
 		)
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ExcessiveArgumentsError{}, errs[0])
 	})
@@ -2672,7 +2704,7 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 			},
 		)
 
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})

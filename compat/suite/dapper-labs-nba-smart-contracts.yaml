@@ -1,0 +1,7 @@
+description: Dapper Labs NBA Top Shot
+maintainers:
+url: https://github.com/dapperlabs/nba-smart-contracts.git
+branch: master
+go_tests:
+- path: lib/go/test
+  command: make test

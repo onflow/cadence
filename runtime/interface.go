@@ -25,9 +25,10 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
 )
 
 type Interface interface {
@@ -145,6 +146,23 @@ type Interface interface {
 	// GenerateAccountID generates a new, *non-zero*, unique ID for the given account.
 	GenerateAccountID(address common.Address) (uint64, error)
 	RecoverProgram(program *ast.Program, location common.Location) ([]byte, error)
+	ValidateAccountCapabilitiesGet(
+		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
+		address interpreter.AddressValue,
+		path interpreter.PathValue,
+		wantedBorrowType *sema.ReferenceType,
+		capabilityBorrowType *sema.ReferenceType,
+	) (bool, error)
+	ValidateAccountCapabilitiesPublish(
+		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
+		address interpreter.AddressValue,
+		path interpreter.PathValue,
+		capabilityBorrowType *interpreter.ReferenceStaticType,
+	) (bool, error)
+
+	MinimumRequiredVersion() (string, error)
 }
 
 type MeterInterface interface {

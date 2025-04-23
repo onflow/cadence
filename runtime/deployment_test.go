@@ -29,13 +29,14 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
-	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
-	. "github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
 )
 
 func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
@@ -70,6 +71,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 		codeHash, err := ImportValue(
 			inter,
 			interpreter.EmptyLocationRange,
+			nil,
 			nil,
 			codeHashValue,
 			stdlib.HashType,

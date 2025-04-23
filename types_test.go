@@ -24,9 +24,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/sema"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 func TestType_ID(t *testing.T) {
@@ -85,7 +85,7 @@ func TestType_ID(t *testing.T) {
 		},
 		{
 			&StructType{
-				Location:            utils.TestLocation,
+				Location:            TestLocation,
 				QualifiedIdentifier: "Foo",
 			},
 			"S.test.Foo",
@@ -98,7 +98,7 @@ func TestType_ID(t *testing.T) {
 		},
 		{
 			&StructInterfaceType{
-				Location:            utils.TestLocation,
+				Location:            TestLocation,
 				QualifiedIdentifier: "FooI",
 			},
 			"S.test.FooI",
@@ -111,7 +111,7 @@ func TestType_ID(t *testing.T) {
 		},
 		{
 			&ResourceType{
-				Location:            utils.TestLocation,
+				Location:            TestLocation,
 				QualifiedIdentifier: "Bar",
 			},
 			"S.test.Bar",
@@ -124,7 +124,7 @@ func TestType_ID(t *testing.T) {
 		},
 		{
 			&ResourceInterfaceType{
-				Location:            utils.TestLocation,
+				Location:            TestLocation,
 				QualifiedIdentifier: "BarI",
 			},
 			"S.test.BarI",
@@ -133,7 +133,7 @@ func TestType_ID(t *testing.T) {
 			&IntersectionType{
 				Types: []Type{
 					&ResourceInterfaceType{
-						Location:            utils.TestLocation,
+						Location:            TestLocation,
 						QualifiedIdentifier: "FooI",
 					},
 				},
@@ -167,7 +167,7 @@ func TestType_ID(t *testing.T) {
 		},
 		{
 			&EventType{
-				Location:            utils.TestLocation,
+				Location:            TestLocation,
 				QualifiedIdentifier: "Event",
 			},
 			"S.test.Event",
@@ -180,7 +180,7 @@ func TestType_ID(t *testing.T) {
 		},
 		{
 			&EnumType{
-				Location:            utils.TestLocation,
+				Location:            TestLocation,
 				QualifiedIdentifier: "Enum",
 			},
 			"S.test.Enum",
@@ -193,7 +193,7 @@ func TestType_ID(t *testing.T) {
 		},
 		{
 			&ContractType{
-				Location:            utils.TestLocation,
+				Location:            TestLocation,
 				QualifiedIdentifier: "Contract",
 			},
 			"S.test.Contract",
@@ -206,7 +206,7 @@ func TestType_ID(t *testing.T) {
 		},
 		{
 			&ContractInterfaceType{
-				Location:            utils.TestLocation,
+				Location:            TestLocation,
 				QualifiedIdentifier: "ContractI",
 			},
 			"S.test.ContractI",
@@ -2287,7 +2287,7 @@ func TestDecodeFields(t *testing.T) {
 			NewStruct([]Value{
 				NewInt(42),
 			}).WithType(NewStructType(
-				utils.TestLocation,
+				TestLocation,
 				"NestedStruct",
 				[]Field{
 					{
@@ -2299,7 +2299,7 @@ func TestDecodeFields(t *testing.T) {
 			)),
 		},
 	).WithType(NewEventType(
-		utils.TestLocation,
+		TestLocation,
 		"SimpleEvent",
 		[]Field{
 			{

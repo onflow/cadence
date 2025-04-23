@@ -20,6 +20,7 @@ package cadence
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 	"testing"
 	"unicode/utf8"
@@ -27,9 +28,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/sema"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 type valueTestCase struct {
@@ -58,8 +59,8 @@ func newValueTestCases() map[string]valueTestCase {
 
 	return map[string]valueTestCase{
 		"UInt": {
-			value:        NewUInt(10),
-			string:       "10",
+			value:        NewUInt(math.MaxUint64),
+			string:       "18446744073709551615",
 			expectedType: UIntType,
 		},
 		"UInt8": {
@@ -83,13 +84,13 @@ func newValueTestCases() map[string]valueTestCase {
 			expectedType: UInt64Type,
 		},
 		"UInt128": {
-			value:        NewUInt128(128),
-			string:       "128",
+			value:        NewUInt128(math.MaxUint64),
+			string:       "18446744073709551615",
 			expectedType: UInt128Type,
 		},
 		"UInt256": {
-			value:        NewUInt256(256),
-			string:       "256",
+			value:        NewUInt256(math.MaxUint64),
+			string:       "18446744073709551615",
 			expectedType: UInt256Type,
 		},
 		"Int": {
@@ -148,13 +149,13 @@ func newValueTestCases() map[string]valueTestCase {
 			expectedType: Word64Type,
 		},
 		"Word128": {
-			value:        NewWord128(128),
-			string:       "128",
+			value:        NewWord128(math.MaxUint64),
+			string:       "18446744073709551615",
 			expectedType: Word128Type,
 		},
 		"Word256": {
-			value:        NewWord256(256),
-			string:       "256",
+			value:        NewWord256(math.MaxUint64),
+			string:       "18446744073709551615",
 			expectedType: Word256Type,
 		},
 		"UFix64": {
@@ -242,7 +243,7 @@ func newValueTestCases() map[string]valueTestCase {
 		"struct": {
 			value: NewStruct([]Value{String("bar")}),
 			exampleType: NewStructType(
-				utils.TestLocation,
+				TestLocation,
 				"FooStruct",
 				[]Field{
 					{
@@ -260,7 +261,7 @@ func newValueTestCases() map[string]valueTestCase {
 		"resource": {
 			value: NewResource([]Value{NewInt(1)}),
 			exampleType: NewResourceType(
-				utils.TestLocation,
+				TestLocation,
 				"FooResource",
 				[]Field{
 					{
@@ -283,7 +284,7 @@ func newValueTestCases() map[string]valueTestCase {
 				},
 			),
 			exampleType: NewEventType(
-				utils.TestLocation,
+				TestLocation,
 				"FooEvent",
 				[]Field{
 					{
@@ -305,7 +306,7 @@ func newValueTestCases() map[string]valueTestCase {
 		"contract": {
 			value: NewContract([]Value{String("bar")}),
 			exampleType: NewContractType(
-				utils.TestLocation,
+				TestLocation,
 				"FooContract",
 				[]Field{
 					{
@@ -323,7 +324,7 @@ func newValueTestCases() map[string]valueTestCase {
 		"enum": {
 			value: NewEnum([]Value{UInt8(1)}),
 			exampleType: NewEnumType(
-				utils.TestLocation,
+				TestLocation,
 				"FooEnum",
 				nil,
 				[]Field{
@@ -342,7 +343,7 @@ func newValueTestCases() map[string]valueTestCase {
 		"attachment": {
 			value: NewAttachment([]Value{NewInt(1)}),
 			exampleType: NewAttachmentType(
-				utils.TestLocation,
+				TestLocation,
 				"FooAttachment",
 				nil,
 				[]Field{
@@ -960,7 +961,7 @@ func TestEvent_GetFieldByName(t *testing.T) {
 	assert.Nil(t, SearchFieldByName(simpleEvent, "a"))
 
 	simpleEventWithType := simpleEvent.WithType(NewEventType(
-		utils.TestLocation,
+		TestLocation,
 		"SimpleEvent",
 		[]Field{
 			{

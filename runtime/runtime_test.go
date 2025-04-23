@@ -34,18 +34,18 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/json"
+	runtimeErrors "github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/parser"
 	. "github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-	runtimeErrors "github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/parser"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/onflow/cadence/runtime/tests/checker"
-	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
-	. "github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestRuntimeImport(t *testing.T) {
@@ -1773,7 +1773,7 @@ func TestRuntimeStorageMultipleTransactionsInclusiveRangeFunction(t *testing.T) 
 	var checkerErr *sema.CheckerError
 	require.ErrorAs(t, err, &checkerErr)
 
-	errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+	errs := RequireCheckerErrors(t, checkerErr, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 
@@ -3356,7 +3356,7 @@ func TestRuntimeStorageLoadedDestructionConcreteTypeWithAttachment(t *testing.T)
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntimeWithAttachments()
+	runtime := NewTestInterpreterRuntime()
 
 	addressValue := Address{
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
@@ -3486,7 +3486,7 @@ func TestRuntimeStorageLoadedDestructionConcreteTypeWithAttachmentUnloadedContra
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntimeWithAttachments()
+	runtime := NewTestInterpreterRuntime()
 
 	addressValue := Address{
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
@@ -3620,7 +3620,7 @@ func TestRuntimeStorageLoadedDestructionConcreteTypeSameNamedInterface(t *testin
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntimeWithAttachments()
+	runtime := NewTestInterpreterRuntime()
 
 	addressValue := Address{
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
@@ -4883,7 +4883,7 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 		var checkerErr *sema.CheckerError
 		require.ErrorAs(t, err, &checkerErr)
 
-		errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+		errs := RequireCheckerErrors(t, checkerErr, 1)
 
 		assert.IsType(t, &sema.InvalidTopLevelDeclarationError{}, errs[0])
 	})
@@ -5683,102 +5683,159 @@ func TestRuntimeContractWriteback(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
-
 	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
-	contract := []byte(`
-      access(all) contract Test {
+	test := func(
+		storageFormatV2Enabled bool,
+		expectedDeployTxWrites []ownerKeyPair,
+		expectedWriteTxWrites []ownerKeyPair,
+	) {
 
-          access(all) var test: Int
+		name := fmt.Sprintf(
+			"storage format V2 enabled: %v",
+			storageFormatV2Enabled,
+		)
 
-          init() {
-              self.test = 1
-          }
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-		  access(all) fun setTest(_ test: Int) {
-			self.test = test
-		  }
-      }
-    `)
+			config := DefaultTestInterpreterConfig
+			config.StorageFormatV2Enabled = storageFormatV2Enabled
+			runtime := NewTestInterpreterRuntimeWithConfig(config)
 
-	deploy := DeploymentTransaction("Test", contract)
+			contract := []byte(`
+              access(all) contract Test {
 
-	readTx := []byte(`
-      import Test from 0xCADE
+                  access(all) var test: Int
 
-       transaction {
+                  init() {
+                      self.test = 1
+                  }
 
-          prepare(signer: &Account) {
-              log(Test.test)
-          }
-       }
-    `)
+                  access(all) fun setTest(_ test: Int) {
+                    self.test = test
+                  }
+              }
+            `)
 
-	writeTx := []byte(`
-      import Test from 0xCADE
+			deploy := DeploymentTransaction("Test", contract)
 
-       transaction {
+			readTx := []byte(`
+              import Test from 0xCADE
 
-          prepare(signer: &Account) {
-              Test.setTest(2)
-          }
-       }
-    `)
+               transaction {
 
-	var accountCode []byte
-	var events []cadence.Event
-	var loggedMessages []string
-	var writes []ownerKeyPair
+                  prepare(signer: &Account) {
+                      log(Test.test)
+                  }
+               }
+            `)
 
-	onWrite := func(owner, key, value []byte) {
-		writes = append(writes, ownerKeyPair{
-			owner,
-			key,
+			writeTx := []byte(`
+              import Test from 0xCADE
+
+               transaction {
+
+                  prepare(signer: &Account) {
+                      Test.setTest(2)
+                  }
+               }
+            `)
+
+			var accountCode []byte
+			var events []cadence.Event
+			var loggedMessages []string
+			var writes []ownerKeyPair
+
+			onWrite := func(owner, key, value []byte) {
+				writes = append(writes, ownerKeyPair{
+					owner,
+					key,
+				})
+			}
+
+			runtimeInterface := &TestRuntimeInterface{
+				OnGetCode: func(_ Location) (bytes []byte, err error) {
+					return accountCode, nil
+				},
+				Storage: NewTestLedger(nil, onWrite),
+				OnGetSigningAccounts: func() ([]Address, error) {
+					return []Address{Address(addressValue)}, nil
+				},
+				OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+				OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+					return accountCode, nil
+				},
+				OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) (err error) {
+					accountCode = code
+					return nil
+				},
+				OnEmitEvent: func(event cadence.Event) error {
+					events = append(events, event)
+					return nil
+				},
+				OnProgramLog: func(message string) {
+					loggedMessages = append(loggedMessages, message)
+				},
+			}
+
+			nextTransactionLocation := NewTransactionLocationGenerator()
+
+			err := runtime.ExecuteTransaction(
+				Script{
+					Source: deploy,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			require.NoError(t, err)
+
+			assert.NotNil(t, accountCode)
+
+			assert.Equal(t,
+				expectedDeployTxWrites,
+				writes,
+			)
+
+			writes = nil
+
+			err = runtime.ExecuteTransaction(
+				Script{
+					Source: readTx,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			require.NoError(t, err)
+
+			assert.Empty(t, writes)
+
+			writes = nil
+
+			err = runtime.ExecuteTransaction(
+				Script{
+					Source: writeTx,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			require.NoError(t, err)
+
+			assert.Equal(t,
+				expectedWriteTxWrites,
+				writes,
+			)
+
 		})
 	}
 
-	runtimeInterface := &TestRuntimeInterface{
-		OnGetCode: func(_ Location) (bytes []byte, err error) {
-			return accountCode, nil
-		},
-		Storage: NewTestLedger(nil, onWrite),
-		OnGetSigningAccounts: func() ([]Address, error) {
-			return []Address{Address(addressValue)}, nil
-		},
-		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
-		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
-			return accountCode, nil
-		},
-		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) (err error) {
-			accountCode = code
-			return nil
-		},
-		OnEmitEvent: func(event cadence.Event) error {
-			events = append(events, event)
-			return nil
-		},
-		OnProgramLog: func(message string) {
-			loggedMessages = append(loggedMessages, message)
-		},
-	}
-
-	nextTransactionLocation := NewTransactionLocationGenerator()
-
-	err := runtime.ExecuteTransaction(
-		Script{
-			Source: deploy,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
-
-	assert.NotNil(t, accountCode)
-
-	assert.Equal(t,
+	test(false,
 		[]ownerKeyPair{
 			// storage index to contract domain storage map
 			{
@@ -5796,38 +5853,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
 			},
 		},
-		writes,
-	)
 
-	writes = nil
-
-	err = runtime.ExecuteTransaction(
-		Script{
-			Source: readTx,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
-
-	assert.Empty(t, writes)
-
-	writes = nil
-
-	err = runtime.ExecuteTransaction(
-		Script{
-			Source: writeTx,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
-
-	assert.Equal(t,
 		[]ownerKeyPair{
 			// Storage map is modified because contract value is inlined in contract storage map.
 			// NOTE: contract value slab doesn't exist.
@@ -5836,7 +5862,46 @@ func TestRuntimeContractWriteback(t *testing.T) {
 				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
 			},
 		},
-		writes,
+	)
+
+	test(
+		true,
+
+		[]ownerKeyPair{
+			// storage index to account storage map
+			{
+				addressValue[:],
+				[]byte(AccountStorageKey),
+			},
+			// contract value
+			// NOTE: contract value is empty because it is inlined in contract domain storage map
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+			},
+			// contract domain storage map
+			// NOTE: contract domain storage map is empty because it is inlined in account storage map
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+			},
+			// account storage map
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3},
+			},
+		},
+
+		[]ownerKeyPair{
+			// Account storage map is modified because:
+			// - contract value is inlined in contract storage map, and
+			// - contract storage map is inlined in account storage map.
+			// NOTE: both contract storage map slab and contract value slab don't exist.
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+			},
+		},
 	)
 }
 
@@ -5844,88 +5909,195 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
-
 	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
-	contract := []byte(`
-      access(all) contract Test {
+	test := func(
+		storageFormatV2Enabled bool,
+		expectedDeployTxWrites []ownerKeyPair,
+		expectedSaveToStorageTxWrites []ownerKeyPair,
+		expectedModifyStorageTxWrites []ownerKeyPair,
+	) {
 
-          access(all) resource R {
+		name := fmt.Sprintf(
+			"storage format V2 enabled: %v",
+			storageFormatV2Enabled,
+		)
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-              access(all) var test: Int
+			config := DefaultTestInterpreterConfig
+			config.StorageFormatV2Enabled = storageFormatV2Enabled
+			runtime := NewTestInterpreterRuntimeWithConfig(config)
 
-              init() {
-                  self.test = 1
+			contract := []byte(`
+              access(all) contract Test {
+
+                  access(all) resource R {
+
+                      access(all) var test: Int
+
+                      init() {
+                          self.test = 1
+                      }
+
+                      access(all) fun setTest(_ test: Int) {
+                        self.test = test
+                      }
+                  }
+
+
+                  access(all) fun createR(): @R {
+                      return <-create R()
+                  }
               }
+            `)
 
-			  access(all) fun setTest(_ test: Int) {
-				self.test = test
-			  }
-          }
+			deploy := DeploymentTransaction("Test", contract)
 
+			var accountCode []byte
+			var events []cadence.Event
+			var loggedMessages []string
+			var writes []ownerKeyPair
 
-          access(all) fun createR(): @R {
-              return <-create R()
-          }
-      }
-    `)
+			onWrite := func(owner, key, _ []byte) {
+				writes = append(writes, ownerKeyPair{
+					owner,
+					key,
+				})
+			}
 
-	deploy := DeploymentTransaction("Test", contract)
+			runtimeInterface := &TestRuntimeInterface{
+				OnGetCode: func(_ Location) (bytes []byte, err error) {
+					return accountCode, nil
+				},
+				Storage: NewTestLedger(nil, onWrite),
+				OnGetSigningAccounts: func() ([]Address, error) {
+					return []Address{Address(addressValue)}, nil
+				},
+				OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+				OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+					return accountCode, nil
+				},
+				OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+					accountCode = code
+					return nil
+				},
+				OnEmitEvent: func(event cadence.Event) error {
+					events = append(events, event)
+					return nil
+				},
+				OnProgramLog: func(message string) {
+					loggedMessages = append(loggedMessages, message)
+				},
+			}
 
-	var accountCode []byte
-	var events []cadence.Event
-	var loggedMessages []string
-	var writes []ownerKeyPair
+			nextTransactionLocation := NewTransactionLocationGenerator()
 
-	onWrite := func(owner, key, _ []byte) {
-		writes = append(writes, ownerKeyPair{
-			owner,
-			key,
+			err := runtime.ExecuteTransaction(
+				Script{
+					Source: deploy,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			require.NoError(t, err)
+
+			assert.NotNil(t, accountCode)
+
+			assert.Equal(t,
+				expectedDeployTxWrites,
+				writes,
+			)
+
+			writes = nil
+
+			err = runtime.ExecuteTransaction(
+				Script{
+					Source: []byte(`
+                       import Test from 0xCADE
+
+                        transaction {
+
+                           prepare(signer: auth(Storage) &Account) {
+                               signer.storage.save(<-Test.createR(), to: /storage/r)
+                           }
+                        }
+                    `),
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			require.NoError(t, err)
+
+			assert.Equal(t,
+				expectedSaveToStorageTxWrites,
+				writes,
+			)
+
+			readTx := []byte(`
+              import Test from 0xCADE
+
+              transaction {
+
+                 prepare(signer: auth(Storage) &Account) {
+                     log(signer.storage.borrow<&Test.R>(from: /storage/r)!.test)
+                 }
+              }
+            `)
+
+			writes = nil
+
+			err = runtime.ExecuteTransaction(
+				Script{
+					Source: readTx,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			require.NoError(t, err)
+
+			assert.Empty(t, writes)
+
+			writeTx := []byte(`
+              import Test from 0xCADE
+
+              transaction {
+
+                 prepare(signer: auth(Storage) &Account) {
+                     let r = signer.storage.borrow<&Test.R>(from: /storage/r)!
+                     r.setTest(2)
+                 }
+              }
+            `)
+
+			writes = nil
+
+			err = runtime.ExecuteTransaction(
+				Script{
+					Source: writeTx,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			require.NoError(t, err)
+
+			assert.Equal(t,
+				expectedModifyStorageTxWrites,
+				writes,
+			)
 		})
 	}
 
-	runtimeInterface := &TestRuntimeInterface{
-		OnGetCode: func(_ Location) (bytes []byte, err error) {
-			return accountCode, nil
-		},
-		Storage: NewTestLedger(nil, onWrite),
-		OnGetSigningAccounts: func() ([]Address, error) {
-			return []Address{Address(addressValue)}, nil
-		},
-		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
-		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-			return accountCode, nil
-		},
-		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
-			accountCode = code
-			return nil
-		},
-		OnEmitEvent: func(event cadence.Event) error {
-			events = append(events, event)
-			return nil
-		},
-		OnProgramLog: func(message string) {
-			loggedMessages = append(loggedMessages, message)
-		},
-	}
-
-	nextTransactionLocation := NewTransactionLocationGenerator()
-
-	err := runtime.ExecuteTransaction(
-		Script{
-			Source: deploy,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
-
-	assert.NotNil(t, accountCode)
-
-	assert.Equal(t,
+	test(
+		false,
 		[]ownerKeyPair{
 			// storage index to contract domain storage map
 			{
@@ -5944,32 +6116,6 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
 			},
 		},
-		writes,
-	)
-
-	writes = nil
-
-	err = runtime.ExecuteTransaction(
-		Script{
-			Source: []byte(`
-              import Test from 0xCADE
-
-               transaction {
-
-                  prepare(signer: auth(Storage) &Account) {
-                      signer.storage.save(<-Test.createR(), to: /storage/r)
-                  }
-               }
-            `),
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
-
-	assert.Equal(t,
 		[]ownerKeyPair{
 			// storage index to storage domain storage map
 			{
@@ -5989,61 +6135,6 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4},
 			},
 		},
-		writes,
-	)
-
-	readTx := []byte(`
-     import Test from 0xCADE
-
-      transaction {
-
-         prepare(signer: auth(Storage) &Account) {
-             log(signer.storage.borrow<&Test.R>(from: /storage/r)!.test)
-         }
-      }
-    `)
-
-	writes = nil
-
-	err = runtime.ExecuteTransaction(
-		Script{
-			Source: readTx,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
-
-	assert.Empty(t, writes)
-
-	writeTx := []byte(`
-     import Test from 0xCADE
-
-      transaction {
-
-         prepare(signer: auth(Storage) &Account) {
-             let r = signer.storage.borrow<&Test.R>(from: /storage/r)!
-             r.setTest(2)
-         }
-      }
-    `)
-
-	writes = nil
-
-	err = runtime.ExecuteTransaction(
-		Script{
-			Source: writeTx,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
-
-	assert.Equal(t,
 		[]ownerKeyPair{
 			// Storage map is modified because resource value is inlined in storage map
 			// NOTE: resource value slab is empty.
@@ -6052,7 +6143,65 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4},
 			},
 		},
-		writes,
+	)
+
+	test(
+		true,
+		[]ownerKeyPair{
+			// storage index to account storage map
+			{
+				addressValue[:],
+				[]byte(AccountStorageKey),
+			},
+			// contract value
+			// NOTE: contract value slab is empty because it is inlined in contract domain storage map
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+			},
+			// contract domain storage map
+			// NOTE: contract domain storage map is empty because it is inlined in account storage map
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+			},
+			// account storage map
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3},
+			},
+		},
+
+		[]ownerKeyPair{
+			// account storage map
+			// NOTE: account storage map is updated with new storage domain storage map (inlined).
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+			},
+			// resource value
+			// NOTE: resource value slab is empty because it is inlined in storage domain storage map
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4},
+			},
+			// storage domain storage map
+			// NOTE: storage domain storage map is empty because it is inlined in account storage map.
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x5},
+			},
+		},
+
+		[]ownerKeyPair{
+			// Account storage map is modified because resource value is inlined in storage map,
+			// and storage map is inlined in account storage map.
+			// NOTE: resource value slab is empty.
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+			},
+		},
 	)
 }
 
@@ -7506,11 +7655,12 @@ func TestRuntimeComputationMetring(t *testing.T) {
 	t.Parallel()
 
 	type test struct {
-		name      string
-		code      string
-		ok        bool
-		hits      uint
-		intensity uint
+		name        string
+		code        string
+		ok          bool
+		hits        uint
+		v1Intensity uint
+		v2Intensity uint
 	}
 
 	compLimit := uint(6)
@@ -7519,116 +7669,143 @@ func TestRuntimeComputationMetring(t *testing.T) {
 		{
 			name: "Infinite while loop",
 			code: `
-          while true {}
-        `,
-			ok:        false,
-			hits:      compLimit,
-			intensity: 6,
+              while true {}
+            `,
+			ok:          false,
+			hits:        compLimit,
+			v1Intensity: 6,
+			v2Intensity: 6,
 		},
 		{
 			name: "Limited while loop",
 			code: `
-          var i = 0
-          while i < 5 {
-              i = i + 1
-          }
-        `,
-			ok:        false,
-			hits:      compLimit,
-			intensity: 6,
+              var i = 0
+              while i < 5 {
+                  i = i + 1
+              }
+            `,
+			ok:          false,
+			hits:        compLimit,
+			v1Intensity: 6,
+			v2Intensity: 6,
 		},
 		{
 			name: "statement + createArray + transferArray + too many for-in loop iterations",
 			code: `
-          for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] {}
-        `,
-			ok:        false,
-			hits:      compLimit,
-			intensity: 6,
+              for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] {}
+            `,
+			ok:          false,
+			hits:        compLimit,
+			v1Intensity: 6,
+			v2Intensity: 6,
 		},
 		{
 			name: "statement + createArray + transferArray + two for-in loop iterations",
 			code: `
-          for i in [1, 2] {}
-        `,
-			ok:        true,
-			hits:      4,
-			intensity: 4,
+              for i in [1, 2] {}
+            `,
+			ok:          true,
+			hits:        4,
+			v1Intensity: 4,
+			v2Intensity: 4,
 		},
 		{
 			name: "statement + functionInvocation + encoding",
 			code: `
-          acc.storage.save("A quick brown fox jumps over the lazy dog", to:/storage/some_path)
-        `,
-			ok:        true,
-			hits:      3,
-			intensity: 76,
+              acc.storage.save("A quick brown fox jumps over the lazy dog", to:/storage/some_path)
+            `,
+			ok:          true,
+			hits:        3,
+			v1Intensity: 76,
+			v2Intensity: 108,
 		},
 	}
 
-	for _, test := range tests {
+	for _, testCase := range tests {
 
-		t.Run(test.name, func(t *testing.T) {
+		t.Run(testCase.name, func(t *testing.T) {
 
-			script := []byte(
-				fmt.Sprintf(
-					`
-                  transaction {
-                      prepare(acc: auth(Storage) &Account) {
-                          %s
-                      }
-                  }
-                `,
-					test.code,
-				),
-			)
+			test := func(storageFormatV2Enabled bool) {
 
-			runtime := NewTestInterpreterRuntime()
+				name := fmt.Sprintf(
+					"storage format V2 enabled: %v",
+					storageFormatV2Enabled,
+				)
+				t.Run(name, func(t *testing.T) {
+					t.Parallel()
 
-			compErr := errors.New("computation exceeded limit")
-			var hits, totalIntensity uint
-			meterComputationFunc := func(kind common.ComputationKind, intensity uint) error {
-				hits++
-				totalIntensity += intensity
-				if hits >= compLimit {
-					return compErr
-				}
-				return nil
+					script := []byte(
+						fmt.Sprintf(
+							`
+                              transaction {
+                                  prepare(acc: auth(Storage) &Account) {
+                                      %s
+                                  }
+                              }
+                            `,
+							testCase.code,
+						),
+					)
+
+					config := DefaultTestInterpreterConfig
+					config.StorageFormatV2Enabled = storageFormatV2Enabled
+					runtime := NewTestInterpreterRuntimeWithConfig(config)
+
+					compErr := errors.New("computation exceeded limit")
+					var hits, totalIntensity uint
+					meterComputationFunc := func(kind common.ComputationKind, intensity uint) error {
+						hits++
+						totalIntensity += intensity
+						if hits >= compLimit {
+							return compErr
+						}
+						return nil
+					}
+
+					address := common.MustBytesToAddress([]byte{0x1})
+
+					runtimeInterface := &TestRuntimeInterface{
+						Storage: NewTestLedger(nil, nil),
+						OnGetSigningAccounts: func() ([]Address, error) {
+							return []Address{address}, nil
+						},
+						OnMeterComputation: meterComputationFunc,
+					}
+
+					nextTransactionLocation := NewTransactionLocationGenerator()
+
+					err := runtime.ExecuteTransaction(
+						Script{
+							Source: script,
+						},
+						Context{
+							Interface: runtimeInterface,
+							Location:  nextTransactionLocation(),
+						},
+					)
+					if testCase.ok {
+						require.NoError(t, err)
+					} else {
+						RequireError(t, err)
+
+						var executionErr Error
+						require.ErrorAs(t, err, &executionErr)
+						require.ErrorAs(t, err.(Error).Unwrap(), &compErr)
+					}
+
+					assert.Equal(t, testCase.hits, hits)
+
+					if storageFormatV2Enabled {
+						assert.Equal(t, testCase.v2Intensity, totalIntensity)
+					} else {
+						assert.Equal(t, testCase.v1Intensity, totalIntensity)
+					}
+				})
 			}
 
-			address := common.MustBytesToAddress([]byte{0x1})
-
-			runtimeInterface := &TestRuntimeInterface{
-				Storage: NewTestLedger(nil, nil),
-				OnGetSigningAccounts: func() ([]Address, error) {
-					return []Address{address}, nil
-				},
-				OnMeterComputation: meterComputationFunc,
+			for _, storageFormatV2Enabled := range []bool{false, true} {
+				test(storageFormatV2Enabled)
 			}
-
-			nextTransactionLocation := NewTransactionLocationGenerator()
-
-			err := runtime.ExecuteTransaction(
-				Script{
-					Source: script,
-				},
-				Context{
-					Interface: runtimeInterface,
-					Location:  nextTransactionLocation(),
-				},
-			)
-			if test.ok {
-				require.NoError(t, err)
-			} else {
-				RequireError(t, err)
-
-				var executionErr Error
-				require.ErrorAs(t, err, &executionErr)
-				require.ErrorAs(t, err.(Error).Unwrap(), &compErr)
-			}
-
-			assert.Equal(t, test.hits, hits)
-			assert.Equal(t, test.intensity, totalIntensity)
 		})
 	}
 }
@@ -7730,8 +7907,6 @@ func BenchmarkRuntimeScriptNoop(b *testing.B) {
 		Environment: environment,
 	}
 
-	require.NotNil(b, stdlib.CryptoChecker())
-
 	runtime := NewTestInterpreterRuntime()
 
 	b.ReportAllocs()
@@ -7768,7 +7943,7 @@ func TestRuntimeImportTestStdlib(t *testing.T) {
 
 	RequireError(t, err)
 
-	errs := checker.RequireCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	notDeclaredErr := &sema.NotDeclaredError{}
 	require.ErrorAs(t, errs[0], &notDeclaredErr)
@@ -8541,7 +8716,7 @@ func TestRuntimeOptionalReferenceAttack(t *testing.T) {
 	var checkerErr *sema.CheckerError
 	require.ErrorAs(t, err, &checkerErr)
 
-	errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+	errs := RequireCheckerErrors(t, checkerErr, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
@@ -9072,7 +9247,7 @@ func TestRuntimeTypesAndConversions(t *testing.T) {
 		})
 	}
 
-	for name, ty := range checker.AllBaseSemaTypes() {
+	for name, ty := range AllBaseSemaTypes() {
 		// Inclusive range is a dynamically created type.
 		if _, isInclusiveRange := ty.(*sema.InclusiveRangeType); isInclusiveRange {
 			continue
@@ -9844,7 +10019,7 @@ func TestRuntimePreconditionDuplication(t *testing.T) {
 	var checkerErr *sema.CheckerError
 	require.ErrorAs(t, err, &checkerErr)
 
-	errs := checker.RequireCheckerErrors(t, checkerErr, 3)
+	errs := RequireCheckerErrors(t, checkerErr, 3)
 
 	assert.IsType(t, &sema.PurityError{}, errs[0])
 	assert.IsType(t, &sema.InvalidInterfaceConditionResourceInvalidationError{}, errs[1])
@@ -10562,7 +10737,7 @@ func TestRuntimeNonPublicAccessModifierInInterface(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntimeWithAttachments()
+	runtime := NewTestInterpreterRuntime()
 
 	address1 := common.MustBytesToAddress([]byte{0x1})
 	address2 := common.MustBytesToAddress([]byte{0x2})
@@ -10695,7 +10870,7 @@ func TestRuntimeContractWithInvalidCapability(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntimeWithAttachments()
+	runtime := NewTestInterpreterRuntime()
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
@@ -10966,4 +11141,1265 @@ func TestRuntimeAccountStorageBorrowEphemeralReferenceValue(t *testing.T) {
 
 	var nestedReferenceErr interpreter.NestedReferenceError
 	require.ErrorAs(t, err, &nestedReferenceErr)
+}
+
+func TestRuntimeForbidPublicEntitlementBorrow(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntime()
+
+	script1 := []byte(`
+      transaction {
+
+        prepare(signer: auth (Storage, Capabilities) &Account) {
+          signer.storage.save(42, to: /storage/number)
+          let cap = signer.capabilities.storage.issue<auth(Insert) &Int>(/storage/number)
+          signer.capabilities.publish(cap, at: /public/number)
+        }
+      }
+    `)
+
+	script2 := []byte(`
+      access(all)
+      fun main() {
+          let number = getAccount(0x1).capabilities.borrow<auth(Insert) &Int>(/public/number)
+          assert(number == nil)
+      }
+    `)
+
+	var validatedPaths []interpreter.PathValue
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{
+				common.MustBytesToAddress([]byte{0x1}),
+			}, nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnValidateAccountCapabilitiesGet: func(
+			inter *interpreter.Interpreter,
+			locationRange interpreter.LocationRange,
+			address interpreter.AddressValue,
+			path interpreter.PathValue,
+			wantedBorrowType *sema.ReferenceType,
+			capabilityBorrowType *sema.ReferenceType,
+		) (bool, error) {
+
+			validatedPaths = append(validatedPaths, path)
+
+			_, wantedHasEntitlements := wantedBorrowType.Authorization.(sema.EntitlementSetAccess)
+			return !wantedHasEntitlements, nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nexScriptLocation := NewScriptLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: script1,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = runtime.ExecuteScript(
+		Script{
+			Source: script2,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nexScriptLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]interpreter.PathValue{
+			{
+				Domain:     common.PathDomainPublic,
+				Identifier: "number",
+			},
+		},
+		validatedPaths,
+	)
+}
+
+func TestRuntimeForbidPublicEntitlementGet(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntime()
+
+	script1 := []byte(`
+      transaction {
+
+        prepare(signer: auth (Storage, Capabilities) &Account) {
+          signer.storage.save(42, to: /storage/number)
+          let cap = signer.capabilities.storage.issue<auth(Insert) &Int>(/storage/number)
+          signer.capabilities.publish(cap, at: /public/number)
+        }
+      }
+    `)
+
+	script2 := []byte(`
+      access(all)
+      fun main() {
+          let cap = getAccount(0x1).capabilities.get<auth(Insert) &Int>(/public/number)
+          assert(cap.id == 0)
+      }
+    `)
+
+	var validatedPaths []interpreter.PathValue
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{
+				common.MustBytesToAddress([]byte{0x1}),
+			}, nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnValidateAccountCapabilitiesGet: func(
+			inter *interpreter.Interpreter,
+			locationRange interpreter.LocationRange,
+			address interpreter.AddressValue,
+			path interpreter.PathValue,
+			wantedBorrowType *sema.ReferenceType,
+			capabilityBorrowType *sema.ReferenceType,
+		) (bool, error) {
+
+			validatedPaths = append(validatedPaths, path)
+
+			_, wantedHasEntitlements := wantedBorrowType.Authorization.(sema.EntitlementSetAccess)
+			return !wantedHasEntitlements, nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nexScriptLocation := NewScriptLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: script1,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = runtime.ExecuteScript(
+		Script{
+			Source: script2,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nexScriptLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]interpreter.PathValue{
+			{
+				Domain:     common.PathDomainPublic,
+				Identifier: "number",
+			},
+		},
+		validatedPaths,
+	)
+}
+
+func TestRuntimeForbidPublicEntitlementPublish(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntime()
+
+	t.Run("entitled capability", func(t *testing.T) {
+
+		t.Parallel()
+
+		script1 := []byte(`
+          transaction {
+
+            prepare(signer: auth (Storage, Capabilities) &Account) {
+              signer.storage.save(42, to: /storage/number)
+              let cap = signer.capabilities.storage.issue<auth(Insert) &Int>(/storage/number)
+              signer.capabilities.publish(cap, at: /public/number)
+            }
+          }
+        `)
+
+		var validatedPaths []interpreter.PathValue
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{
+					common.MustBytesToAddress([]byte{0x1}),
+				}, nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				return nil
+			},
+			OnValidateAccountCapabilitiesPublish: func(
+				inter *interpreter.Interpreter,
+				locationRange interpreter.LocationRange,
+				address interpreter.AddressValue,
+				path interpreter.PathValue,
+				capabilityBorrowType *interpreter.ReferenceStaticType,
+			) (bool, error) {
+
+				validatedPaths = append(validatedPaths, path)
+
+				_, isEntitledCapability := capabilityBorrowType.Authorization.(interpreter.EntitlementSetAuthorization)
+				return !isEntitledCapability, nil
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: script1,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.EntitledCapabilityPublishingError{})
+	})
+
+	t.Run("non entitled capability", func(t *testing.T) {
+		t.Parallel()
+
+		script1 := []byte(`
+          transaction {
+
+            prepare(signer: auth (Storage, Capabilities) &Account) {
+              signer.storage.save(42, to: /storage/number)
+              let cap = signer.capabilities.storage.issue<&Int>(/storage/number)
+              signer.capabilities.publish(cap, at: /public/number)
+            }
+          }
+        `)
+
+		var validatedPaths []interpreter.PathValue
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{
+					common.MustBytesToAddress([]byte{0x1}),
+				}, nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				return nil
+			},
+			OnValidateAccountCapabilitiesPublish: func(
+				inter *interpreter.Interpreter,
+				locationRange interpreter.LocationRange,
+				address interpreter.AddressValue,
+				path interpreter.PathValue,
+				capabilityBorrowType *interpreter.ReferenceStaticType,
+			) (bool, error) {
+
+				validatedPaths = append(validatedPaths, path)
+
+				_, isEntitledCapability := capabilityBorrowType.Authorization.(interpreter.EntitlementSetAuthorization)
+				return !isEntitledCapability, nil
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: script1,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("untyped entitled capability", func(t *testing.T) {
+
+		t.Parallel()
+
+		script1 := []byte(`
+          transaction {
+
+            prepare(signer: auth (Storage, Capabilities) &Account) {
+              signer.storage.save(42, to: /storage/number)
+              let cap = signer.capabilities.storage.issue<auth(Insert) &Int>(/storage/number)
+              let untypedCap: Capability = cap
+              signer.capabilities.publish(untypedCap, at: /public/number)
+            }
+          }
+        `)
+
+		var validatedPaths []interpreter.PathValue
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{
+					common.MustBytesToAddress([]byte{0x1}),
+				}, nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				return nil
+			},
+			OnValidateAccountCapabilitiesPublish: func(
+				inter *interpreter.Interpreter,
+				locationRange interpreter.LocationRange,
+				address interpreter.AddressValue,
+				path interpreter.PathValue,
+				capabilityBorrowType *interpreter.ReferenceStaticType,
+			) (bool, error) {
+
+				validatedPaths = append(validatedPaths, path)
+
+				_, isEntitledCapability := capabilityBorrowType.Authorization.(interpreter.EntitlementSetAuthorization)
+				return !isEntitledCapability, nil
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: script1,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.EntitledCapabilityPublishingError{})
+	})
+}
+
+func TestRuntimeStorageEnumAsDictionaryKey(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntime()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	accountCodes := map[common.AddressLocation][]byte{}
+	var events []cadence.Event
+	var loggedMessages []string
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]common.Address, error) {
+			return []common.Address{address}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		OnProgramLog: func(message string) {
+			loggedMessages = append(loggedMessages, message)
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	// Deploy contract
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: DeploymentTransaction(
+				"C",
+				[]byte(`
+                  access(all) contract C {
+					access(self) let counter: {E: UInt64}
+                    access(all) enum E: UInt8 {
+                        access(all) case A
+                        access(all) case B
+                    }
+                    access(all) resource R {
+                        access(all) let id: UInt64
+                        access(all) let e: E
+                        init(id: UInt64, e: E) {
+                            self.id = id
+                            self.e = e
+							let counter = C.counter[e] ?? panic("couldn't retrieve resource counter")
+							// e is transferred and is stored in a slab which isn't removed after C.counter is updated.
+							C.counter[e] = counter + 1
+                        }
+                    }
+                    access(all) fun createR(id: UInt64, e: E): @R {						
+                        return <- create R(id: id, e: e)
+                    }
+                    access(all) resource Collection {
+                        access(all) var rs: @{UInt64: R}
+                        init () {
+                            self.rs <- {}
+                        }
+                        access(all) fun withdraw(id: UInt64): @R {
+                            return <- self.rs.remove(key: id)!
+                        }
+                        access(all) fun deposit(_ r: @R) {
+                            let counts: {E: UInt64} = {}
+                            log(r.e)
+                            counts[r.e] = 42 // test indexing expression is transferred properly
+                            log(r.e)
+                            let oldR <- self.rs[r.id] <-! r
+                            destroy oldR
+                        }
+                    }
+                    access(all) fun createEmptyCollection(): @Collection {
+                      return <- create Collection()
+                    }
+					init() {
+						self.counter = {
+							E.A: 0,
+							E.B: 0
+						}
+					}
+                  }
+                `),
+			),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Store enum case
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(`
+              import C from 0x1
+              transaction {
+                  prepare(signer: auth(Storage) &Account) {
+                      signer.storage.save(<-C.createEmptyCollection(), to: /storage/collection)
+                      let collection = signer.storage.borrow<&C.Collection>(from: /storage/collection)!
+                      collection.deposit(<-C.createR(id: 0, e: C.E.B))
+                  }
+               }
+            `),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Load enum case
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(`
+              import C from 0x1
+              transaction {
+                  prepare(signer: auth(Storage) &Account) {
+                      let collection = signer.storage.borrow<&C.Collection>(from: /storage/collection)!
+                      let r <- collection.withdraw(id: 0)
+                      log(r.e)
+                      destroy r
+                  }
+               }
+            `),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		[]string{
+			"A.0000000000000001.C.E(rawValue: 1)",
+			"A.0000000000000001.C.E(rawValue: 1)",
+			"A.0000000000000001.C.E(rawValue: 1)",
+		},
+		loggedMessages,
+	)
+}
+
+func TestResultRedeclared(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("function", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := NewTestInterpreterRuntime()
+
+		script := []byte(`
+          access(all) fun main(): Int {
+              let result = 1
+              return result
+          }
+        `)
+
+		runtimeInterface := &TestRuntimeInterface{}
+
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextScriptLocation(),
+			},
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("method with inherited post-condition using result", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := NewTestInterpreterRuntime()
+
+		script := []byte(`
+          access(all)
+          struct interface SI {
+              access(all)
+              fun test(): Int {
+                  post {
+                      result == 2
+                  }
+              }
+          }
+
+          access(all)
+          struct S: SI {
+
+              access(all)
+              fun test(): Int {
+                  let result = 1
+                  return 2  // return a different value than the local variable
+              }
+          }
+
+          access(all) fun main(): Int {
+			  return S().test()
+          }
+        `)
+
+		runtimeInterface := &TestRuntimeInterface{}
+
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextScriptLocation(),
+			},
+		)
+		require.NoError(t, err)
+	})
+
+}
+
+func TestRuntimeIdentifierLocationToAddressLocationRewrite(t *testing.T) {
+
+	t.Parallel()
+
+	signerAddress := common.MustBytesToAddress([]byte{0x42})
+
+	const fooContractName = "Foo"
+	fooIdentifierLocation := common.IdentifierLocation(fooContractName)
+	fooAddressLocation := common.AddressLocation{
+		Address: signerAddress,
+		Name:    fooContractName,
+	}
+
+	fooContract := []byte(`
+      access(all)
+      contract Foo {
+          access(all) var answer: Int
+
+          init() {
+              self.answer = 42
+          }
+      }
+    `)
+
+	accountCodes := map[Location][]byte{}
+	var events []cadence.Event
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAddress}, nil
+		},
+		OnResolveLocation: func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
+			assert.Empty(t, identifiers)
+			assert.Equal(t, fooIdentifierLocation, location)
+
+			// NOTE: rewrite identifier location to address location
+			location = fooAddressLocation
+
+			return []ResolvedLocation{
+				{
+					Location:    location,
+					Identifiers: identifiers,
+				},
+			}, nil
+		},
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		OnGetCode: func(location Location) ([]byte, error) {
+			return nil, errors.New("GetCode should not be called")
+		},
+	}
+
+	runtime := NewTestInterpreterRuntime()
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	// Deploy
+
+	deploy := DeploymentTransaction(fooContractName, fooContract)
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Test
+
+	result, err := runtime.ExecuteScript(
+		Script{
+			Source: []byte(`
+              import Foo
+
+              access(all)
+              fun main(): Int {
+                  return Foo.answer
+              }
+            `),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextScriptLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, cadence.NewInt(42), result)
+}
+
+func TestRuntimeBuiltInFunctionConfusion(t *testing.T) {
+
+	t.Parallel()
+
+	const contract = `
+      access(all) contract Foo {
+          access(all) resource getType {}
+
+          init() {
+              Foo.getType()
+          }
+      }
+    `
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	newRuntimeInterface := func() Interface {
+
+		accountCodes := map[common.AddressLocation][]byte{}
+		var events []cadence.Event
+		var loggedMessages []string
+
+		return &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]common.Address, error) {
+				return []common.Address{address}, nil
+			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				code = accountCodes[location]
+				return code, nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+			OnProgramLog: func(message string) {
+				loggedMessages = append(loggedMessages, message)
+			},
+		}
+	}
+
+	runtime := NewTestInterpreterRuntime()
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: DeploymentTransaction(
+				"Foo",
+				[]byte(contract),
+			),
+		},
+		Context{
+			Interface: newRuntimeInterface(),
+			Location:  nextTransactionLocation(),
+		},
+	)
+	RequireError(t, err)
+
+	var redeclarationError *sema.RedeclarationError
+	require.ErrorAs(t, err, &redeclarationError)
+}
+
+func TestRuntimeInvocationReturnTypeInferenceFailure(t *testing.T) {
+
+	t.Parallel()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	newRuntimeInterface := func() Interface {
+
+		return &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]common.Address, error) {
+				return []common.Address{address}, nil
+			},
+		}
+	}
+
+	runtime := NewTestInterpreterRuntime()
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	tx := []byte(`
+      transaction{
+          prepare(signer: auth(Storage) &Account){
+              let functions = [signer.storage.save].reverse()
+          }
+      }
+    `)
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: tx,
+		},
+		Context{
+			Interface: newRuntimeInterface(),
+			Location:  nextTransactionLocation(),
+		},
+	)
+	RequireError(t, err)
+
+	var typeErr *sema.InvocationTypeInferenceError
+	require.ErrorAs(t, err, &typeErr)
+}
+
+func TestRuntimeSomeValueChildContainerMutation(t *testing.T) {
+
+	t.Parallel()
+
+	buyTicketTx := []byte(`
+       import Foo from 0x1
+
+       transaction() {
+           prepare(acct: auth(Storage, Capabilities) &Account) {
+               Foo.logVaultBalance()
+               var pool = Foo.borrowLotteryPool()!
+               pool.buyTickets()
+               Foo.logVaultBalance()
+           }
+           execute {}
+       }
+    `)
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	setupTest := func(t *testing.T) (
+		runTransaction func(tx []byte) (logs []string),
+	) {
+
+		rt := NewTestInterpreterRuntime()
+
+		accountCodes := map[Location][]byte{}
+
+		address := common.MustBytesToAddress([]byte{0x1})
+
+		var logs []string
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{address}, nil
+			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				return accountCodes[location], nil
+			},
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
+			OnProgramLog: func(message string) {
+				logs = append(logs, message)
+			},
+			OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+				return json.Decode(nil, b)
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				return nil
+			},
+		}
+
+		runTransaction = func(tx []byte) []string {
+
+			logs = logs[:0]
+
+			err := rt.ExecuteTransaction(
+				Script{
+					Source: tx,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			require.NoError(t, err)
+
+			return logs
+		}
+
+		return runTransaction
+	}
+
+	t.Run("non optional vault", func(t *testing.T) {
+
+		t.Parallel()
+
+		contractFoo := `
+			access(all) contract Foo {
+				access(all) resource Vault {
+					access(all)
+					var balance: UFix64
+					init(balance: UFix64) {
+						self.balance = balance
+					}
+					access(all) fun withdraw(amount: UFix64): @Vault {
+						self.balance = self.balance - amount
+						return <-create Vault(balance: amount)
+					}
+					access(all) fun deposit(from: @Vault) {
+						self.balance = self.balance + from.balance
+						destroy from
+					}
+				}
+				access(all) fun createEmptyVault(): @Vault {
+				   return <- create Vault(balance: 0.0)
+				}
+				access(all) resource LotteryPool {
+					access(contract)
+					let ftVault: @Vault
+					init() {
+						self.ftVault <- Foo.createEmptyVault()
+					}
+					access(all)
+					fun buyTickets() {
+						self.borrowVault().deposit(from: <- create Vault(balance: 5.0))
+					}
+					access(all) fun buyNewTicket() {
+						self.borrowVault().deposit(from: <- create Vault(balance: 5.0))
+					}
+					access(self)
+					view fun borrowVault(): &Vault {
+						return &self.ftVault as &Vault
+					}
+				}
+				init() {
+					self.account.storage.save(<- create LotteryPool(), to: /storage/lottery_pool)
+				}
+				access(all) fun borrowLotteryPool(): &LotteryPool? {
+					return self.account.storage.borrow<&LotteryPool>(from: /storage/lottery_pool)
+				}
+				access(all) fun logVaultBalance() {
+					var pool = self.borrowLotteryPool()!
+					log(pool.ftVault.balance)
+				}
+			}
+		`
+
+		runTransaction := setupTest(t)
+
+		runTransaction(DeploymentTransaction(
+			"Foo",
+			[]byte(contractFoo),
+		))
+
+		logs := runTransaction(buyTicketTx)
+		assert.Equal(t, []string{"0.00000000", "5.00000000"}, logs)
+
+		logs = runTransaction(buyTicketTx)
+		assert.Equal(t, []string{"5.00000000", "10.00000000"}, logs)
+	})
+
+	t.Run("optional vault", func(t *testing.T) {
+
+		t.Parallel()
+
+		contractFoo := `
+		  access(all) contract Foo {
+			  access(all) resource Vault {
+				  access(all)
+				  var balance: UFix64
+				  init(balance: UFix64) {
+					  self.balance = balance
+				  }
+				  access(all) fun withdraw(amount: UFix64): @Vault {
+					  self.balance = self.balance - amount
+					  return <-create Vault(balance: amount)
+				  }
+				  access(all) fun deposit(from: @Vault) {
+					  self.balance = self.balance + from.balance
+					  destroy from
+				  }
+			  }
+			  access(all) fun createEmptyVault(): @Vault {
+				 return <- create Vault(balance: 0.0)
+			  }
+			  access(all) resource LotteryPool {
+				  access(contract)
+				  let ftVault: @Vault?
+				  init() {
+					  self.ftVault <- Foo.createEmptyVault()
+				  }
+				  access(all)
+				  fun buyTickets() {
+					  self.borrowVault().deposit(from: <- create Vault(balance: 5.0))
+				  }
+				  access(all) fun buyNewTicket() {
+					  self.borrowVault().deposit(from: <- create Vault(balance: 5.0))
+				  }
+				  access(self)
+				  view fun borrowVault(): &Vault {
+					  return &self.ftVault as &Vault? ?? panic("Cannot borrow vault")
+				  }
+			  }
+			  init() {
+				  self.account.storage.save(<- create LotteryPool(), to: /storage/lottery_pool)
+			  }
+			  access(all) fun borrowLotteryPool(): &LotteryPool? {
+				  return self.account.storage.borrow<&LotteryPool>(from: /storage/lottery_pool)
+			  }
+			  access(all) fun logVaultBalance() {
+				  var pool = self.borrowLotteryPool()!
+				  log(pool.ftVault!.balance)
+			  }
+		  }
+	   `
+
+		runTransaction := setupTest(t)
+
+		runTransaction(DeploymentTransaction(
+			"Foo",
+			[]byte(contractFoo),
+		))
+
+		logs := runTransaction(buyTicketTx)
+		assert.Equal(t, []string{"0.00000000", "5.00000000"}, logs)
+
+		logs = runTransaction(buyTicketTx)
+		assert.Equal(t, []string{"5.00000000", "10.00000000"}, logs)
+	})
+
+	t.Run("deeply nested optional vault", func(t *testing.T) {
+		contractFoo := `
+		   access(all)
+		   contract Foo {
+			   access(all)
+			   resource Vault {
+				   access(all)
+				   var balance: UFix64
+				   init(balance: UFix64) {
+					   self.balance = balance
+				   }
+				   access(all)
+				   fun withdraw(amount: UFix64): @Vault {
+					   self.balance = self.balance - amount
+					   return <-create Vault(balance: amount)
+				   }
+				   access(all)
+				   fun deposit(from: @Vault) {
+					   self.balance = self.balance + from.balance
+					   destroy from
+				   }
+			   }
+			   access(all)
+			   fun createEmptyVault(): @Vault {
+				  return <- create Vault(balance: 0.0)
+			   }
+			   access(all)
+			   resource LotteryPool {
+				   access(contract)
+				   let jackpotPool: @Change
+				   access(contract)
+				   let lotteries: @{UInt64: Lottery}
+				   init() {
+					   self.jackpotPool <- create Change()
+					   self.lotteries <- {0: <- create Lottery()}
+				   }
+				   access(all)
+				   fun buyTickets() {
+					   var lotteryRef = self.borrowLotteryRef()!
+					   lotteryRef.buyNewTicket()
+				   }
+				   access(self)
+				   fun borrowLotteryRef(): &Lottery? {
+						return &self.lotteries[0]
+				   }
+			   }
+			   access(all)
+			   resource Lottery {
+				   access(contract)
+				   let current: @Change
+				   init() {
+					   self.current <- create Change()
+				   }
+				   access(all)
+				   fun buyNewTicket() {
+					   var change = self.borrowCurrentLotteryChange()
+					   change.forceMerge()
+				   }
+				   access(contract)
+				   view fun borrowCurrentLotteryChange(): &Change {
+					   return &self.current
+				   }
+			   }
+			   access(all)
+			   resource Change {
+				   access(contract)
+				   var ftVault: @Vault?
+				   init() {
+					   self.ftVault <- Foo.createEmptyVault()
+				   }
+				   access(all)
+				   fun forceMerge() {
+						self.borrowVault().deposit(from: <- create Vault(balance: 5.0))
+				   }
+				   access(self)
+				   view fun borrowVault(): &Vault {
+					   return &self.ftVault as &Vault? ?? panic("Cannot borrow vault")
+				   }
+			   }
+			   init() {
+				   self.account.storage.save(<- create LotteryPool(), to: /storage/lottery_pool)
+			   }
+			   access(all)
+			   fun borrowLotteryPool(): &LotteryPool? {
+				   return self.account.storage.borrow<&LotteryPool>(from: /storage/lottery_pool)
+			   }
+			   access(all)
+			   fun logVaultBalance() {
+				   var pool = self.borrowLotteryPool()!
+				   log(pool.lotteries[0]!.current.ftVault!.balance)
+			   }
+		   }
+	    `
+
+		runTransaction := setupTest(t)
+
+		runTransaction(DeploymentTransaction(
+			"Foo",
+			[]byte(contractFoo),
+		))
+
+		logs := runTransaction(buyTicketTx)
+		assert.Equal(t, []string{"0.00000000", "5.00000000"}, logs)
+
+		logs = runTransaction(buyTicketTx)
+		assert.Equal(t, []string{"5.00000000", "10.00000000"}, logs)
+	})
+}
+
+func TestRuntimeClosureScopingFunctionExpression(t *testing.T) {
+	t.Parallel()
+
+	rt := NewTestInterpreterRuntime()
+
+	script := `
+        access(all) fun main(a: Int): Int {
+            let bar = fun(): Int {
+                return a
+            }
+            let a = 2
+            return bar()
+        }
+    `
+
+	actual, err := rt.ExecuteScript(
+		Script{
+			Source:    []byte(script),
+			Arguments: encodeArgs([]cadence.Value{cadence.NewInt(1)}),
+		},
+		Context{
+			Interface: &TestRuntimeInterface{
+				OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+					return json.Decode(nil, b)
+				},
+			},
+			Location: common.ScriptLocation{},
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, cadence.NewInt(1), actual)
+
+}
+
+func TestRuntimeClosureScopingInnerFunction(t *testing.T) {
+	t.Parallel()
+
+	rt := NewTestInterpreterRuntime()
+
+	script := `
+        access(all) fun main(a: Int): Int {
+			fun bar(): Int {
+                return a
+            }
+            let a = 2
+            return bar()
+        }
+    `
+
+	actual, err := rt.ExecuteScript(
+		Script{
+			Source:    []byte(script),
+			Arguments: encodeArgs([]cadence.Value{cadence.NewInt(1)}),
+		},
+		Context{
+			Interface: &TestRuntimeInterface{
+				OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+					return json.Decode(nil, b)
+				},
+			},
+			Location: common.ScriptLocation{},
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, cadence.NewInt(1), actual)
+}
+
+func TestRuntimeInterfaceConditionDeduplication(t *testing.T) {
+	t.Parallel()
+
+	script := `
+		access(all) event Log(message: String)
+
+        access(all) struct interface Foo {
+
+            access(all) fun test() {
+                pre {
+                     emit Log(message: "invoked Foo.test() pre-condition")
+                }
+                post {
+                     emit Log(message: "invoked Foo.test() post-condition")
+                }
+                emit Log(message: "invoked Foo.test()")
+            }
+        }
+
+        access(all) struct Test: Foo {
+        }
+
+        access(all) fun main() {
+           Test().test()
+        }
+    `
+
+	rt := NewTestInterpreterRuntime()
+
+	var events []string
+
+	_, err := rt.ExecuteScript(
+		Script{
+			Source: []byte(script),
+		},
+		Context{
+			Interface: &TestRuntimeInterface{
+				OnEmitEvent: func(event cadence.Event) error {
+					events = append(events, event.FieldsMappedByName()["message"].String())
+					return nil
+				},
+			},
+			Location: common.ScriptLocation{},
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(
+		t,
+		[]string{
+			`"invoked Foo.test() pre-condition"`,
+			`"invoked Foo.test()"`,
+			`"invoked Foo.test() post-condition"`,
+		},
+		events,
+	)
 }

@@ -1,0 +1,1921 @@
+/*
+ * Cadence - The resource-oriented smart contract programming language
+ *
+ * Copyright Flow Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package parser
+
+import (
+	"math/big"
+	"strings"
+	"unicode/utf8"
+
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/parser/lexer"
+)
+
+const exprBindingPowerGap = 10
+
+const (
+	exprLeftBindingPowerTernary = exprBindingPowerGap * (iota + 2)
+	exprLeftBindingPowerLogicalOr
+	exprLeftBindingPowerLogicalAnd
+	exprLeftBindingPowerComparison
+	exprLeftBindingPowerNilCoalescing
+	exprLeftBindingPowerBitwiseOr
+	exprLeftBindingPowerBitwiseXor
+	exprLeftBindingPowerBitwiseAnd
+	exprLeftBindingPowerBitwiseShift
+	exprLeftBindingPowerAddition
+	exprLeftBindingPowerMultiplication
+	exprLeftBindingPowerMove
+	exprLeftBindingPowerCasting
+	exprLeftBindingPowerUnaryPrefix
+	exprLeftBindingPowerUnaryPostfix
+	exprLeftBindingPowerAccess
+)
+
+type infixExprFunc func(parser *parser, left, right ast.Expression) (ast.Expression, error)
+type prefixExprFunc func(parser *parser, right ast.Expression, tokenRange ast.Range) (ast.Expression, error)
+type postfixExprFunc func(parser *parser, left ast.Expression, tokenRange ast.Range) (ast.Expression, error)
+type exprNullDenotationFunc func(parser *parser, token lexer.Token) (ast.Expression, error)
+type exprMetaLeftDenotationFunc func(
+	p *parser,
+	rightBindingPower int,
+	left ast.Expression,
+) (
+	result ast.Expression,
+	err error,
+	done bool,
+)
+
+type literalExpr struct {
+	nullDenotation exprNullDenotationFunc
+	tokenType      lexer.TokenType
+}
+
+type infixExpr struct {
+	leftDenotation   infixExprFunc
+	leftBindingPower int
+	tokenType        lexer.TokenType
+	rightAssociative bool
+}
+
+type binaryExpr struct {
+	leftBindingPower int
+	operation        ast.Operation
+	tokenType        lexer.TokenType
+	rightAssociative bool
+}
+
+type prefixExpr struct {
+	nullDenotation prefixExprFunc
+	bindingPower   int
+	tokenType      lexer.TokenType
+}
+
+type unaryExpr struct {
+	tokenType    lexer.TokenType
+	bindingPower int
+	operation    ast.Operation
+}
+
+type postfixExpr struct {
+	leftDenotation postfixExprFunc
+	bindingPower   int
+	tokenType      lexer.TokenType
+}
+
+var exprNullDenotations = [lexer.TokenMax]exprNullDenotationFunc{}
+
+type exprLeftDenotationFunc func(parser *parser, token lexer.Token, left ast.Expression) (ast.Expression, error)
+
+var exprLeftBindingPowers = [lexer.TokenMax]int{}
+var exprIdentifierLeftBindingPowers = map[string]int{}
+var exprLeftDenotations = [lexer.TokenMax]exprLeftDenotationFunc{}
+var exprMetaLeftDenotations = [lexer.TokenMax]exprMetaLeftDenotationFunc{}
+
+func defineExpr(def any) {
+	switch def := def.(type) {
+	case infixExpr:
+		tokenType := def.tokenType
+
+		setExprLeftBindingPower(tokenType, def.leftBindingPower)
+
+		rightBindingPower := def.leftBindingPower
+		if def.rightAssociative {
+			rightBindingPower--
+		}
+
+		setExprLeftDenotation(
+			tokenType,
+			func(parser *parser, _ lexer.Token, left ast.Expression) (ast.Expression, error) {
+				right, err := parseExpression(parser, rightBindingPower)
+				if err != nil {
+					return nil, err
+				}
+
+				return def.leftDenotation(parser, left, right)
+			},
+		)
+
+	case binaryExpr:
+		defineExpr(infixExpr{
+			tokenType:        def.tokenType,
+			leftBindingPower: def.leftBindingPower,
+			rightAssociative: def.rightAssociative,
+			leftDenotation: func(p *parser, left, right ast.Expression) (ast.Expression, error) {
+				return ast.NewBinaryExpression(
+					p.memoryGauge,
+					def.operation,
+					left,
+					right,
+				), nil
+			},
+		})
+
+	case literalExpr:
+		tokenType := def.tokenType
+		setExprNullDenotation(tokenType, def.nullDenotation)
+
+	case prefixExpr:
+		tokenType := def.tokenType
+		setExprNullDenotation(
+			tokenType,
+			func(parser *parser, token lexer.Token) (ast.Expression, error) {
+				right, err := parseExpression(parser, def.bindingPower)
+				if err != nil {
+					return nil, err
+				}
+
+				return def.nullDenotation(parser, right, token.Range)
+			},
+		)
+
+	case unaryExpr:
+		defineExpr(prefixExpr{
+			tokenType:    def.tokenType,
+			bindingPower: def.bindingPower,
+			nullDenotation: func(p *parser, right ast.Expression, tokenRange ast.Range) (ast.Expression, error) {
+				return ast.NewUnaryExpression(
+					p.memoryGauge,
+					def.operation,
+					right,
+					tokenRange.StartPos,
+				), nil
+			},
+		})
+
+	case postfixExpr:
+		tokenType := def.tokenType
+		setExprLeftBindingPower(tokenType, def.bindingPower)
+		setExprLeftDenotation(
+			tokenType,
+			func(p *parser, token lexer.Token, left ast.Expression) (ast.Expression, error) {
+				return def.leftDenotation(p, left, token.Range)
+			},
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func setExprNullDenotation(tokenType lexer.TokenType, nullDenotation exprNullDenotationFunc) {
+	current := exprNullDenotations[tokenType]
+	if current != nil {
+		panic(errors.NewUnexpectedError(
+			"expression null denotation for token %s already exists",
+			tokenType,
+		))
+	}
+	exprNullDenotations[tokenType] = nullDenotation
+}
+
+func setExprLeftBindingPower(tokenType lexer.TokenType, power int) {
+	current := exprLeftBindingPowers[tokenType]
+	if current > power {
+		return
+	}
+	exprLeftBindingPowers[tokenType] = power
+}
+
+func setExprIdentifierLeftBindingPower(keyword string, power int) {
+	current := exprIdentifierLeftBindingPowers[keyword]
+	if current > power {
+		return
+	}
+	exprIdentifierLeftBindingPowers[keyword] = power
+}
+
+func setExprLeftDenotation(tokenType lexer.TokenType, leftDenotation exprLeftDenotationFunc) {
+	current := exprLeftDenotations[tokenType]
+	if current != nil {
+		panic(errors.NewUnexpectedError(
+			"expression left denotation for token %s already exists",
+			tokenType,
+		))
+	}
+
+	exprLeftDenotations[tokenType] = leftDenotation
+}
+
+func setExprMetaLeftDenotation(tokenType lexer.TokenType, metaLeftDenotation exprMetaLeftDenotationFunc) {
+	current := exprMetaLeftDenotations[tokenType]
+	if current != nil {
+		panic(errors.NewUnexpectedError(
+			"expression meta left denotation for token %s already exists",
+			tokenType,
+		))
+	}
+	exprMetaLeftDenotations[tokenType] = metaLeftDenotation
+}
+
+// init defines the binding power for operations.
+func init() {
+
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenVerticalBarVerticalBar,
+		leftBindingPower: exprLeftBindingPowerLogicalOr,
+		operation:        ast.OperationOr,
+	})
+
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenAmpersandAmpersand,
+		leftBindingPower: exprLeftBindingPowerLogicalAnd,
+		operation:        ast.OperationAnd,
+	})
+
+	defineLessThanOrTypeArgumentsExpression()
+	defineGreaterThanOrBitwiseRightShiftExpression()
+
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenLessEqual,
+		leftBindingPower: exprLeftBindingPowerComparison,
+		operation:        ast.OperationLessEqual,
+	})
+
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenGreaterEqual,
+		leftBindingPower: exprLeftBindingPowerComparison,
+		operation:        ast.OperationGreaterEqual,
+	})
+
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenEqualEqual,
+		leftBindingPower: exprLeftBindingPowerComparison,
+		operation:        ast.OperationEqual,
+	})
+
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenNotEqual,
+		leftBindingPower: exprLeftBindingPowerComparison,
+		operation:        ast.OperationNotEqual,
+	})
+
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenDoubleQuestionMark,
+		leftBindingPower: exprLeftBindingPowerNilCoalescing,
+		operation:        ast.OperationNilCoalesce,
+		rightAssociative: true,
+	})
+
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenVerticalBar,
+		leftBindingPower: exprLeftBindingPowerBitwiseOr,
+		operation:        ast.OperationBitwiseOr,
+	})
+
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenCaret,
+		leftBindingPower: exprLeftBindingPowerBitwiseXor,
+		operation:        ast.OperationBitwiseXor,
+	})
+
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenAmpersand,
+		leftBindingPower: exprLeftBindingPowerBitwiseAnd,
+		operation:        ast.OperationBitwiseAnd,
+	})
+
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenLessLess,
+		leftBindingPower: exprLeftBindingPowerBitwiseShift,
+		operation:        ast.OperationBitwiseLeftShift,
+	})
+
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenPlus,
+		leftBindingPower: exprLeftBindingPowerAddition,
+		operation:        ast.OperationPlus,
+	})
+
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenMinus,
+		leftBindingPower: exprLeftBindingPowerAddition,
+		operation:        ast.OperationMinus,
+	})
+
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenStar,
+		leftBindingPower: exprLeftBindingPowerMultiplication,
+		operation:        ast.OperationMul,
+	})
+
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenSlash,
+		leftBindingPower: exprLeftBindingPowerMultiplication,
+		operation:        ast.OperationDiv,
+	})
+
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenPercent,
+		leftBindingPower: exprLeftBindingPowerMultiplication,
+		operation:        ast.OperationMod,
+	})
+
+	defineIdentifierLeftDenotations()
+
+	defineExpr(literalExpr{
+		tokenType: lexer.TokenBinaryIntegerLiteral,
+		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
+			literal := p.tokenSource(token)
+			return parseIntegerLiteral(
+				p,
+				literal,
+				literal[2:],
+				common.IntegerLiteralKindBinary,
+				token,
+			), nil
+		},
+	})
+
+	defineExpr(literalExpr{
+		tokenType: lexer.TokenOctalIntegerLiteral,
+		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
+			literal := p.tokenSource(token)
+			return parseIntegerLiteral(
+				p,
+				literal,
+				literal[2:],
+				common.IntegerLiteralKindOctal,
+				token,
+			), nil
+		},
+	})
+
+	defineExpr(literalExpr{
+		tokenType: lexer.TokenDecimalIntegerLiteral,
+		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
+			literal := p.tokenSource(token)
+			return parseIntegerLiteral(
+				p,
+				literal,
+				literal,
+				common.IntegerLiteralKindDecimal,
+				token,
+			), nil
+		},
+	})
+
+	defineExpr(literalExpr{
+		tokenType: lexer.TokenHexadecimalIntegerLiteral,
+		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
+			literal := p.tokenSource(token)
+			return parseIntegerLiteral(
+				p,
+				literal,
+				literal[2:],
+				common.IntegerLiteralKindHexadecimal,
+				token,
+			), nil
+		},
+	})
+
+	defineExpr(literalExpr{
+		tokenType: lexer.TokenUnknownBaseIntegerLiteral,
+		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
+			literal := p.tokenSource(token)
+			return parseIntegerLiteral(
+				p,
+				literal,
+				literal[2:],
+				common.IntegerLiteralKindUnknown,
+				token,
+			), nil
+		},
+	})
+
+	defineExpr(literalExpr{
+		tokenType: lexer.TokenFixedPointNumberLiteral,
+		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
+			literal := p.tokenSource(token)
+			return parseFixedPointLiteral(
+				p,
+				literal,
+				token.Range,
+			), nil
+		},
+	})
+
+	defineExpr(prefixExpr{
+		tokenType:    lexer.TokenMinus,
+		bindingPower: exprLeftBindingPowerUnaryPrefix,
+		nullDenotation: func(p *parser, right ast.Expression, tokenRange ast.Range) (ast.Expression, error) {
+			switch right := right.(type) {
+			case *ast.IntegerExpression:
+				if right.Value.Sign() > 0 {
+					if right.Value != nil {
+						right.Value.Neg(right.Value)
+					}
+					right.StartPos = tokenRange.StartPos
+					return right, nil
+				}
+
+			case *ast.FixedPointExpression:
+				if !right.Negative {
+					right.Negative = !right.Negative
+					right.StartPos = tokenRange.StartPos
+					return right, nil
+				}
+			}
+
+			return ast.NewUnaryExpression(
+				p.memoryGauge,
+				ast.OperationMinus,
+				right,
+				tokenRange.StartPos,
+			), nil
+		},
+	})
+
+	defineExpr(unaryExpr{
+		tokenType:    lexer.TokenExclamationMark,
+		bindingPower: exprLeftBindingPowerUnaryPrefix,
+		operation:    ast.OperationNegate,
+	})
+
+	defineExpr(unaryExpr{
+		tokenType:    lexer.TokenLeftArrow,
+		bindingPower: exprLeftBindingPowerMove,
+		operation:    ast.OperationMove,
+	})
+
+	defineExpr(unaryExpr{
+		tokenType:    lexer.TokenStar,
+		bindingPower: exprLeftBindingPowerUnaryPrefix,
+		operation:    ast.OperationMul,
+	})
+
+	defineExpr(postfixExpr{
+		tokenType:    lexer.TokenExclamationMark,
+		bindingPower: exprLeftBindingPowerUnaryPostfix,
+		leftDenotation: func(p *parser, left ast.Expression, tokenRange ast.Range) (ast.Expression, error) {
+			return ast.NewForceExpression(
+				p.memoryGauge,
+				left,
+				tokenRange.EndPos,
+			), nil
+		},
+	})
+
+	defineNestedExpression()
+	defineInvocationExpression()
+	defineArrayExpression()
+	defineStringExpression()
+	defineDictionaryExpression()
+	defineIndexExpression()
+	definePathExpression()
+	defineConditionalExpression()
+	defineReferenceExpression()
+	defineMemberExpression()
+	defineIdentifierExpression()
+
+	setExprNullDenotation(lexer.TokenEOF, func(parser *parser, token lexer.Token) (ast.Expression, error) {
+		return nil, NewSyntaxError(token.StartPos, "unexpected end of program")
+	})
+}
+
+func defineLessThanOrTypeArgumentsExpression() {
+
+	// The less token `<` does not have a single left binding power,
+	// but one depending on the tokens following it:
+	//
+	// Either an invocation with type arguments (zero or more, comma separated),
+	// followed by a closing greater token `>` and argument list;
+	// or a normal expression.
+	//
+	//     lessThenOrTypeArguments : '<'
+	//         ( ( ( typeAnnotation ( ',' )* )? '>' argumentList )
+	//         | expression
+	//         )
+	//
+	//
+	// Parse this ambiguity by first trying to parse type arguments
+	// and a closing greater token `>` and start of an argument list,
+	// i.e. the open paren token `(`.
+	//
+	// If that parse fails, the result expression must be a binary expression,
+	// and a normal expression must follow.
+	//
+	// In both cases, the right binding power must be checked,
+	// just like it is before a normal left denotation is applied.
+
+	const binaryExpressionLeftBindingPower = exprLeftBindingPowerComparison
+	const invocationExpressionLeftBindingPower = exprLeftBindingPowerAccess
+
+	setExprMetaLeftDenotation(
+		lexer.TokenLess,
+		func(p *parser, rightBindingPower int, left ast.Expression) (result ast.Expression, err error, done bool) {
+
+			var typeArguments []*ast.TypeAnnotation
+
+			// Start buffering before skipping the `<` token,
+			// so it can be replayed in case the right binding power
+			// was higher than the determined left binding power.
+
+			p.startBuffering()
+			p.startAmbiguity()
+			defer p.endAmbiguity()
+
+			// Skip the `<` token.
+			p.nextSemanticToken()
+
+			// First, try to parse zero or more comma-separated type
+			// arguments (type annotations), a closing greater token `>`,
+			// and the start of an argument list, i.e. the open paren token `(`.
+			//
+			// This parse may fail, in which case we just ignore the error,
+			// except for fatal errors.
+
+			var argumentsStartPos ast.Position
+
+			err = func() error {
+				defer func() {
+					err := recover()
+					// MemoryError should abort parsing
+					_, ok := err.(errors.MemoryError)
+					if ok {
+						panic(err)
+					}
+				}()
+
+				typeArguments, err = parseCommaSeparatedTypeAnnotations(p, lexer.TokenGreater)
+				if err != nil {
+					return err
+				}
+
+				_, err = p.mustOne(lexer.TokenGreater)
+				if err != nil {
+					return err
+				}
+
+				p.skipSpace()
+				parenOpenToken, err := p.mustOne(lexer.TokenParenOpen)
+				if err != nil {
+					return err
+				}
+
+				argumentsStartPos = parenOpenToken.EndPos
+
+				return nil
+			}()
+
+			// `err` is nil means the expression is an invocation
+			if err == nil {
+
+				// The expression was determined to be an invocation.
+				// Still, it should have maybe not been parsed if the right binding power
+				// was higher. In that case, replay the buffered tokens and stop.
+
+				if rightBindingPower >= invocationExpressionLeftBindingPower {
+					err = p.replayBuffered()
+					if err != nil {
+						return nil, err, true
+					}
+
+					return left, nil, true
+				}
+
+				// The previous attempt to parse an invocation succeeded,
+				// accept the buffered tokens.
+
+				p.acceptBuffered()
+
+				arguments, endPos, err := parseArgumentListRemainder(p)
+				if err != nil {
+					return nil, err, true
+				}
+
+				invocationExpression := ast.NewInvocationExpression(
+					p.memoryGauge,
+					left,
+					typeArguments,
+					arguments,
+					argumentsStartPos,
+					endPos,
+				)
+
+				return invocationExpression, nil, false
+
+			} else {
+
+				// if the error specifically occurred during parsing restricted types,
+				// this is still an invocation and we should report that error instead
+				if _, isRestrictedTypeErr := err.(*RestrictedTypeError); isRestrictedTypeErr {
+					return nil, err, true
+				}
+
+				// The previous attempt to parse an invocation failed,
+				// replay the buffered tokens.
+
+				err = p.replayBuffered()
+				if err != nil {
+					return nil, err, true
+				}
+
+				// The expression was determined to *not* be an invocation,
+				// so it must be a binary expression.
+				//
+				// Like for a normal left denotation,
+				// check if this left denotation applies.
+
+				if rightBindingPower >= binaryExpressionLeftBindingPower {
+					return left, nil, true
+				}
+
+				// Skip the `<` token.
+				// The token buffering started before this token,
+				// because it should have maybe not been parsed in the first place
+				// if the right binding power is higher.
+
+				p.nextSemanticToken()
+
+				right, err := parseExpression(p, binaryExpressionLeftBindingPower)
+				if err != nil {
+					return nil, err, true
+				}
+
+				binaryExpression := ast.NewBinaryExpression(
+					p.memoryGauge,
+					ast.OperationLess,
+					left,
+					right,
+				)
+
+				return binaryExpression, nil, false
+			}
+		})
+}
+
+// defineGreaterThanOrBitwiseRightShiftExpression parses
+// the greater-than expression (operator `>`, e.g. `1 > 2`)
+// and the bitwise right shift expression (operator `>>`, e.g. `1 >> 3`).
+//
+// The `>>` operator consists of two `>` tokens, instead of one dedicated `>>` token,
+// because that would introduce a parsing problem for function calls/invocations
+// which have a type argument, where the type argument is a type instantiation,
+// for example, `f<T<U>>()`.
+func defineGreaterThanOrBitwiseRightShiftExpression() {
+
+	setExprMetaLeftDenotation(
+		lexer.TokenGreater,
+		func(p *parser, rightBindingPower int, left ast.Expression) (result ast.Expression, err error, done bool) {
+
+			// If the right binding power is higher than any of the potential cases,
+			// then return early
+
+			if rightBindingPower >= exprLeftBindingPowerBitwiseShift &&
+				rightBindingPower >= exprLeftBindingPowerComparison {
+
+				return left, nil, true
+			}
+
+			// Perform a lookahead for '>'
+
+			current := p.current
+			cursor := p.tokens.Cursor()
+
+			// Skip the `>` token.
+			p.next()
+
+			// If another '>' token appears immediately,
+			// then the operator is actually a bitwise right shift operator
+
+			isBitwiseShift := p.current.Is(lexer.TokenGreater)
+
+			var operation ast.Operation
+			var nextRightBindingPower int
+
+			if isBitwiseShift {
+
+				operation = ast.OperationBitwiseRightShift
+
+				// The expression was determined to be a bitwise shift.
+				// Still, it should have maybe not been parsed if the right binding power
+				// was higher. In that case, replay the buffered tokens and stop.
+
+				if rightBindingPower >= exprLeftBindingPowerBitwiseShift {
+					p.current = current
+					p.tokens.Revert(cursor)
+
+					return left, nil, true
+				}
+
+				// The previous attempt to parse a bitwise right shift succeeded,
+				// accept the buffered tokens.
+
+				nextRightBindingPower = exprLeftBindingPowerBitwiseShift
+
+			} else {
+
+				operation = ast.OperationGreater
+
+				// The previous attempt to parse a bitwise right shift failed,
+				// replay the buffered tokens.
+
+				p.current = current
+				p.tokens.Revert(cursor)
+
+				// The expression was determined to *not* be a bitwise shift,
+				// so it must be a comparison expression.
+				//
+				// Like for a normal left denotation,
+				// check if this left denotation applies.
+
+				if rightBindingPower >= exprLeftBindingPowerComparison {
+					return left, nil, true
+				}
+
+				nextRightBindingPower = exprLeftBindingPowerComparison
+			}
+
+			p.nextSemanticToken()
+
+			right, err := parseExpression(p, nextRightBindingPower)
+			if err != nil {
+				return nil, err, true
+			}
+
+			binaryExpression := ast.NewBinaryExpression(
+				p.memoryGauge,
+				operation,
+				left,
+				right,
+			)
+
+			return binaryExpression, err, false
+		})
+}
+
+func defineIdentifierExpression() {
+	defineExpr(literalExpr{
+		tokenType: lexer.TokenIdentifier,
+		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
+			switch string(p.tokenSource(token)) {
+			case KeywordTrue:
+				return ast.NewBoolExpression(p.memoryGauge, true, token.Range), nil
+
+			case KeywordFalse:
+				return ast.NewBoolExpression(p.memoryGauge, false, token.Range), nil
+
+			case KeywordNil:
+				return ast.NewNilExpression(p.memoryGauge, token.Range.StartPos), nil
+
+			case KeywordCreate:
+				return parseCreateExpressionRemainder(p, token)
+
+			case KeywordDestroy:
+				expression, err := parseExpression(p, lowestBindingPower)
+				if err != nil {
+					return nil, err
+				}
+
+				return ast.NewDestroyExpression(
+					p.memoryGauge,
+					expression,
+					token.Range.StartPos,
+				), nil
+
+			case KeywordAttach:
+				return parseAttachExpressionRemainder(p, token)
+
+			case KeywordView:
+				// if `view` is followed by `fun`, then it denotes a view function expression
+				current := p.current
+				cursor := p.tokens.Cursor()
+
+				p.skipSpace()
+
+				if p.isToken(p.current, lexer.TokenIdentifier, KeywordFun) {
+					// skip the `fun` keyword
+					p.nextSemanticToken()
+					return parseFunctionExpression(p, token, ast.FunctionPurityView)
+				}
+
+				p.tokens.Revert(cursor)
+				p.current = current
+
+				// otherwise, we treat it as an identifier called "view"
+
+			case KeywordFun:
+				return parseFunctionExpression(p, token, ast.FunctionPurityUnspecified)
+			}
+
+			return ast.NewIdentifierExpression(
+				p.memoryGauge,
+				p.tokenToIdentifier(token),
+			), nil
+		},
+	})
+}
+
+func parseFunctionExpression(p *parser, token lexer.Token, purity ast.FunctionPurity) (*ast.FunctionExpression, error) {
+	parameterList, returnTypeAnnotation, functionBlock, err :=
+		parseFunctionParameterListAndRest(p, false)
+	if err != nil {
+		return nil, err
+	}
+
+	return ast.NewFunctionExpression(
+		p.memoryGauge,
+		purity,
+		parameterList,
+		returnTypeAnnotation,
+		functionBlock,
+		token.StartPos,
+	), nil
+}
+
+func defineIdentifierLeftDenotations() {
+
+	setExprIdentifierLeftBindingPower(KeywordAs, exprLeftBindingPowerCasting)
+	setExprLeftDenotation(
+		lexer.TokenIdentifier,
+		func(parser *parser, t lexer.Token, left ast.Expression) (ast.Expression, error) {
+			// NOTE: switch statement with just one case instead of if,
+			// as this function is called for *any identifier left denotation ("postfix keyword"),
+			// not just for `as`, it might be extended with more cases (keywords) in the future
+			switch string(parser.tokenSource(t)) {
+			case KeywordAs:
+				right, err := parseTypeAnnotation(parser)
+				if err != nil {
+					return nil, err
+				}
+
+				return ast.NewCastingExpression(
+					parser.memoryGauge,
+					left,
+					ast.OperationCast,
+					right,
+					nil,
+				), nil
+
+			default:
+				panic(errors.NewUnreachableError())
+			}
+		},
+	)
+
+	for _, tokenOperation := range []struct {
+		token     lexer.TokenType
+		operation ast.Operation
+	}{
+		{
+			token:     lexer.TokenAsExclamationMark,
+			operation: ast.OperationForceCast,
+		},
+		{
+			token:     lexer.TokenAsQuestionMark,
+			operation: ast.OperationFailableCast,
+		},
+	} {
+		operation := tokenOperation.operation
+		tokenType := tokenOperation.token
+
+		// Rebind operation, so the closure captures to current iteration's value,
+		// i.e. the next iteration doesn't override `operation`
+
+		leftDenotation := (func(operation ast.Operation) exprLeftDenotationFunc {
+			return func(parser *parser, t lexer.Token, left ast.Expression) (ast.Expression, error) {
+				right, err := parseTypeAnnotation(parser)
+				if err != nil {
+					return nil, err
+				}
+
+				return ast.NewCastingExpression(
+					parser.memoryGauge,
+					left,
+					operation,
+					right,
+					nil,
+				), nil
+			}
+		})(operation)
+
+		setExprLeftBindingPower(tokenType, exprLeftBindingPowerCasting)
+		setExprLeftDenotation(tokenType, leftDenotation)
+	}
+}
+
+func parseCreateExpressionRemainder(p *parser, token lexer.Token) (*ast.CreateExpression, error) {
+	invocation, err := parseNominalTypeInvocationRemainder(p)
+	if err != nil {
+		return nil, err
+	}
+
+	return ast.NewCreateExpression(
+		p.memoryGauge,
+		invocation,
+		token.StartPos,
+	), nil
+}
+
+func parseAttachExpressionRemainder(p *parser, token lexer.Token) (*ast.AttachExpression, error) {
+	attachment, err := parseNominalTypeInvocationRemainder(p)
+
+	if err != nil {
+		return nil, err
+	}
+
+	p.skipSpace()
+
+	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordTo) {
+		return nil, p.syntaxError(
+			"expected 'to', got %s",
+			p.current.Type,
+		)
+	}
+
+	// consume the `to` token
+	p.nextSemanticToken()
+
+	base, err := parseExpression(p, lowestBindingPower)
+	if err != nil {
+		return nil, err
+	}
+
+	p.skipSpace()
+
+	return ast.NewAttachExpression(p.memoryGauge, base, attachment, token.StartPos), nil
+}
+
+// Invocation Expression Grammar:
+//
+//	invocation : '(' ( argument ( ',' argument )* )? ')'
+func defineInvocationExpression() {
+	setExprLeftBindingPower(lexer.TokenParenOpen, exprLeftBindingPowerAccess)
+
+	setExprLeftDenotation(
+		lexer.TokenParenOpen,
+		func(p *parser, token lexer.Token, left ast.Expression) (ast.Expression, error) {
+			arguments, endPos, err := parseArgumentListRemainder(p)
+			if err != nil {
+				return nil, err
+			}
+
+			return ast.NewInvocationExpression(
+				p.memoryGauge,
+				left,
+				nil,
+				arguments,
+				token.EndPos,
+				endPos,
+			), nil
+		},
+	)
+}
+
+func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos ast.Position, err error) {
+	atEnd := false
+	expectArgument := true
+	for !atEnd {
+		p.skipSpace()
+
+		switch p.current.Type {
+		case lexer.TokenComma:
+			if expectArgument {
+				return nil, ast.EmptyPosition, p.syntaxError(
+					"expected argument or end of argument list, got %s",
+					p.current.Type,
+				)
+			}
+			// Skip the comma
+			p.next()
+			expectArgument = true
+
+		case lexer.TokenParenClose:
+			endPos = p.current.EndPos
+			// Skip the closing paren
+			p.next()
+			atEnd = true
+
+		case lexer.TokenEOF:
+			return nil,
+				ast.EmptyPosition,
+				p.syntaxError("missing ')' at end of invocation argument list")
+
+		default:
+			if !expectArgument {
+				return nil,
+					ast.EmptyPosition,
+					p.syntaxError(
+						"unexpected argument in argument list (expecting delimiter or end of argument list), got %s",
+						p.current.Type,
+					)
+			}
+
+			argument, err := parseArgument(p)
+			if err != nil {
+				return nil, ast.EmptyPosition, err
+			}
+
+			p.skipSpace()
+
+			argument.TrailingSeparatorPos = p.current.StartPos
+
+			arguments = append(arguments, argument)
+
+			expectArgument = false
+		}
+	}
+	return
+}
+
+// parseArgument parses an argument in an invocation.
+//
+//	argument : (identifier ':' )? expression
+func parseArgument(p *parser) (*ast.Argument, error) {
+	var label string
+	var labelStartPos, labelEndPos ast.Position
+
+	expr, err := parseExpression(p, lowestBindingPower)
+	if err != nil {
+		return nil, err
+	}
+
+	p.skipSpace()
+
+	// If a colon follows the expression, the expression was our label.
+	if p.current.Is(lexer.TokenColon) {
+		labelEndPos = p.current.EndPos
+
+		identifier, ok := expr.(*ast.IdentifierExpression)
+		if !ok {
+			return nil, p.syntaxError(
+				"expected identifier for label, got %s",
+				expr,
+			)
+		}
+		label = identifier.Identifier.Identifier
+		labelStartPos = expr.StartPosition()
+
+		// Skip the identifier
+		p.nextSemanticToken()
+
+		expr, err = parseExpression(p, lowestBindingPower)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if len(label) > 0 {
+		return ast.NewArgument(
+			p.memoryGauge,
+			label,
+			&labelStartPos,
+			&labelEndPos,
+			expr,
+		), nil
+	}
+	return ast.NewUnlabeledArgument(p.memoryGauge, expr), nil
+}
+
+func defineNestedExpression() {
+	setExprNullDenotation(
+		lexer.TokenParenOpen,
+		func(p *parser, startToken lexer.Token) (ast.Expression, error) {
+			p.skipSpace()
+
+			// special case: parse a Void literal `()`
+			if p.current.Type == lexer.TokenParenClose {
+				// skip the closing parenthesis
+				p.next()
+
+				voidExpr := ast.NewVoidExpression(p.memoryGauge, startToken.StartPos, p.current.EndPos)
+				return voidExpr, nil
+			}
+
+			expression, err := parseExpression(p, lowestBindingPower)
+			if err != nil {
+				return nil, err
+			}
+
+			_, err = p.mustOne(lexer.TokenParenClose)
+			return expression, err
+		},
+	)
+}
+
+func defineStringExpression() {
+	setExprNullDenotation(
+		lexer.TokenString,
+		func(p *parser, startToken lexer.Token) (ast.Expression, error) {
+			var literals []string
+			var values []ast.Expression
+			curToken := startToken
+			endToken := startToken
+
+			// check for start " of string literal
+			literal := p.tokenSource(curToken)
+			length := len(literal)
+			if length == 0 {
+				p.reportSyntaxError("invalid end of string literal: missing '\"'")
+				return ast.NewStringExpression(
+					p.memoryGauge,
+					"",
+					startToken.Range,
+				), nil
+			}
+
+			if length >= 1 {
+				first := literal[0]
+				if first != '"' {
+					p.reportSyntaxError("invalid start of string literal: expected '\"', got %q", first)
+				}
+			}
+
+			// flag for ending " check
+			missingEnd := true
+
+			for curToken.Is(lexer.TokenString) {
+				literal = p.tokenSource(curToken)
+
+				// remove quotation marks if they exist
+				if curToken == startToken {
+					literal = literal[1:]
+				}
+
+				length = len(literal)
+				if length >= 1 && literal[length-1] == '"' {
+					literal = literal[:length-1]
+					missingEnd = false
+				}
+
+				parsedString := parseStringLiteralContent(p, literal)
+				literals = append(literals, parsedString)
+				endToken = curToken
+
+				// parser already points to next token
+				curToken = p.current
+				if curToken.Is(lexer.TokenStringTemplate) {
+					// advance to the expression
+					p.next()
+					value, err := parseExpression(p, lowestBindingPower)
+					// consider invalid expression first
+					if err != nil {
+						return nil, err
+					}
+					_, err = p.mustOne(lexer.TokenParenClose)
+					if err != nil {
+						return nil, err
+					}
+					values = append(values, value)
+					// parser already points to next token
+					curToken = p.current
+					// safely call next because this should always be a string
+					p.next()
+					missingEnd = true
+				}
+			}
+
+			// check for end " of string literal
+			if missingEnd {
+				p.reportSyntaxError("invalid end of string literal: missing '\"'")
+			}
+
+			if len(values) == 0 {
+				return ast.NewStringExpression(
+					p.memoryGauge,
+					literals[0], // must exist
+					startToken.Range,
+				), nil
+			} else {
+				return ast.NewStringTemplateExpression(
+					p.memoryGauge,
+					literals, values,
+					ast.NewRange(p.memoryGauge,
+						startToken.StartPos,
+						endToken.EndPos),
+				), nil
+			}
+
+		},
+	)
+}
+
+func defineArrayExpression() {
+	setExprNullDenotation(
+		lexer.TokenBracketOpen,
+		func(p *parser, startToken lexer.Token) (ast.Expression, error) {
+			p.skipSpace()
+
+			var values []ast.Expression
+			for !p.current.Is(lexer.TokenBracketClose) {
+				p.skipSpace()
+				if len(values) > 0 {
+					if !p.current.Is(lexer.TokenComma) {
+						break
+					}
+					p.next()
+				}
+
+				value, err := parseExpression(p, lowestBindingPower)
+				if err != nil {
+					return nil, err
+				}
+				values = append(values, value)
+			}
+
+			endToken, err := p.mustOne(lexer.TokenBracketClose)
+			if err != nil {
+				return nil, err
+			}
+
+			return ast.NewArrayExpression(
+				p.memoryGauge,
+				values,
+				ast.NewRange(
+					p.memoryGauge,
+					startToken.StartPos,
+					endToken.EndPos,
+				),
+			), nil
+		},
+	)
+}
+
+func defineDictionaryExpression() {
+	setExprNullDenotation(
+		lexer.TokenBraceOpen,
+		func(p *parser, startToken lexer.Token) (ast.Expression, error) {
+			p.skipSpace()
+
+			var entries []ast.DictionaryEntry
+			for !p.current.Is(lexer.TokenBraceClose) {
+				p.skipSpace()
+				if len(entries) > 0 {
+					if !p.current.Is(lexer.TokenComma) {
+						break
+					}
+					p.next()
+				}
+
+				key, err := parseExpression(p, lowestBindingPower)
+				if err != nil {
+					return nil, err
+				}
+
+				_, err = p.mustOne(lexer.TokenColon)
+				if err != nil {
+					return nil, err
+				}
+
+				value, err := parseExpression(p, lowestBindingPower)
+				if err != nil {
+					return nil, err
+				}
+
+				entries = append(entries, ast.NewDictionaryEntry(
+					p.memoryGauge,
+					key,
+					value,
+				))
+			}
+
+			endToken, err := p.mustOne(lexer.TokenBraceClose)
+			if err != nil {
+				return nil, err
+			}
+
+			return ast.NewDictionaryExpression(
+				p.memoryGauge,
+				entries,
+				ast.NewRange(
+					p.memoryGauge,
+					startToken.StartPos,
+					endToken.EndPos,
+				),
+			), nil
+		},
+	)
+}
+
+func defineIndexExpression() {
+	setExprLeftBindingPower(lexer.TokenBracketOpen, exprLeftBindingPowerAccess)
+	setExprLeftDenotation(
+		lexer.TokenBracketOpen,
+		func(p *parser, _ lexer.Token, left ast.Expression) (ast.Expression, error) {
+			firstIndexExpr, err := parseExpression(p, lowestBindingPower)
+			if err != nil {
+				return nil, err
+			}
+
+			endToken, err := p.mustOne(lexer.TokenBracketClose)
+			if err != nil {
+				return nil, err
+			}
+
+			return ast.NewIndexExpression(
+				p.memoryGauge,
+				left,
+				firstIndexExpr,
+				ast.NewRange(
+					p.memoryGauge,
+					left.StartPosition(),
+					endToken.EndPos,
+				),
+			), nil
+		},
+	)
+}
+
+func defineConditionalExpression() {
+	setExprLeftBindingPower(lexer.TokenQuestionMark, exprLeftBindingPowerTernary)
+	setExprLeftDenotation(
+		lexer.TokenQuestionMark,
+		func(p *parser, _ lexer.Token, left ast.Expression) (ast.Expression, error) {
+			testExpression := left
+			thenExpression, err := parseExpression(p, lowestBindingPower)
+			if err != nil {
+				return nil, err
+			}
+
+			_, err = p.mustOne(lexer.TokenColon)
+			if err != nil {
+				return nil, err
+			}
+
+			elseExpression, err := parseExpression(p, lowestBindingPower)
+			if err != nil {
+				return nil, err
+			}
+
+			return ast.NewConditionalExpression(
+				p.memoryGauge,
+				testExpression,
+				thenExpression,
+				elseExpression,
+			), nil
+		},
+	)
+}
+
+func definePathExpression() {
+	setExprNullDenotation(
+		lexer.TokenSlash,
+		func(p *parser, token lexer.Token) (ast.Expression, error) {
+			domain, err := p.mustIdentifier()
+			if err != nil {
+				return nil, err
+			}
+
+			_, err = p.mustOne(lexer.TokenSlash)
+			if err != nil {
+				return nil, err
+			}
+
+			identifier, err := p.mustIdentifier()
+			if err != nil {
+				return nil, err
+			}
+
+			return ast.NewPathExpression(
+				p.memoryGauge,
+				domain,
+				identifier,
+				token.StartPos,
+			), nil
+		},
+	)
+}
+
+func defineReferenceExpression() {
+	defineExpr(prefixExpr{
+		tokenType:    lexer.TokenAmpersand,
+		bindingPower: exprLeftBindingPowerUnaryPrefix,
+		nullDenotation: func(p *parser, right ast.Expression, tokenRange ast.Range) (ast.Expression, error) {
+			return ast.NewReferenceExpression(
+				p.memoryGauge,
+				right,
+				tokenRange.StartPos,
+			), nil
+		},
+	})
+}
+
+func defineMemberExpression() {
+
+	setExprLeftBindingPower(lexer.TokenDot, exprLeftBindingPowerAccess)
+	setExprLeftDenotation(
+		lexer.TokenDot,
+		func(p *parser, token lexer.Token, left ast.Expression) (ast.Expression, error) {
+			return parseMemberAccess(p, token, left, false), nil
+		},
+	)
+
+	setExprLeftBindingPower(lexer.TokenQuestionMarkDot, exprLeftBindingPowerAccess)
+	setExprLeftDenotation(
+		lexer.TokenQuestionMarkDot,
+		func(p *parser, token lexer.Token, left ast.Expression) (ast.Expression, error) {
+			return parseMemberAccess(p, token, left, true), nil
+		},
+	)
+}
+
+func parseMemberAccess(p *parser, token lexer.Token, left ast.Expression, optional bool) ast.Expression {
+
+	// Whitespace after '.' (dot token) and '?.' (question mark dot token) is not allowed.
+	// We parse it anyway and report an error
+
+	if p.current.Is(lexer.TokenSpace) {
+		errorPos := p.current.StartPos
+		p.skipSpace()
+		p.report(NewSyntaxError(
+			errorPos,
+			"invalid whitespace after %s",
+			lexer.TokenDot,
+		))
+	}
+
+	// If there is an identifier, use it.
+	// If not, report an error
+
+	var identifier ast.Identifier
+	if p.current.Is(lexer.TokenIdentifier) {
+		identifier = p.tokenToIdentifier(p.current)
+		p.next()
+	} else {
+		p.reportSyntaxError(
+			"expected member name, got %s",
+			p.current.Type,
+		)
+	}
+
+	return ast.NewMemberExpression(
+		p.memoryGauge,
+		left,
+		optional,
+		// NOTE: use the end position, because the token
+		// can be an optional access token `?.`
+		token.EndPos,
+		identifier,
+	)
+}
+
+func exprLeftDenotationAllowsNewlineAfterNullDenotation(tokenType lexer.TokenType) bool {
+
+	// Some tokens do not support newlines before them,
+	// as this could lead to ambiguities and potential underhanded code
+
+	switch tokenType {
+	case
+		// '!': postfix force-unwrap VS unary prefix negation
+		lexer.TokenExclamationMark,
+		// '(': invocation VS parenthesized expression
+		lexer.TokenParenOpen,
+		// '[': indexing VS array literal
+		lexer.TokenBracketOpen:
+
+		return false
+	}
+
+	return true
+}
+
+// parseExpression uses "Top-Down operator precedence parsing" (TDOP) technique to
+// parse expressions.
+func parseExpression(p *parser, rightBindingPower int) (ast.Expression, error) {
+
+	if p.expressionDepth == expressionDepthLimit {
+		return nil, ExpressionDepthLimitReachedError{
+			Pos: p.current.StartPos,
+		}
+	}
+
+	p.expressionDepth++
+	defer func() {
+		p.expressionDepth--
+	}()
+
+	p.skipSpace()
+	t := p.current
+	p.next()
+
+	left, err := applyExprNullDenotation(p, t)
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		// Automatically skip any trivia between the left and right expression.
+		// However, do not automatically skip newlines:
+		// Some left denotations do not support newlines before them,
+		// to avoid ambiguities and potential underhanded code
+
+		p.skipSpaceWithOptions(skipSpaceOptions{
+			skipNewlines: false,
+		})
+
+		current := p.current
+		if current.Is(lexer.TokenSpace) {
+			cursor := p.tokens.Cursor()
+			p.next()
+			if !exprLeftDenotationAllowsNewlineAfterNullDenotation(p.current.Type) {
+				p.tokens.Revert(cursor)
+				p.current = current
+			}
+		}
+
+		var done bool
+		left, err, done = applyExprMetaLeftDenotation(p, rightBindingPower, left)
+		if err != nil {
+			return nil, err
+		}
+
+		if done {
+			break
+		}
+	}
+
+	return left, nil
+}
+
+func applyExprMetaLeftDenotation(
+	p *parser,
+	rightBindingPower int,
+	left ast.Expression,
+) (
+	result ast.Expression,
+	err error,
+	done bool,
+) {
+	// By default, left denotations are applied if the right binding power
+	// is less than the left binding power of the current token.
+	//
+	// Token-specific meta-left denotations allow customizing this,
+	// e.g. determining the left binding power based on parsing more tokens
+	// or performing look-ahead
+
+	metaLeftDenotation := exprMetaLeftDenotations[p.current.Type]
+	if metaLeftDenotation == nil {
+		metaLeftDenotation = defaultExprMetaLeftDenotation
+	}
+
+	return metaLeftDenotation(p, rightBindingPower, left)
+}
+
+// defaultExprMetaLeftDenotation is the default expression left denotation, which applies
+// if the right binding power is less than the left binding power of the current token
+func defaultExprMetaLeftDenotation(
+	p *parser,
+	rightBindingPower int,
+	left ast.Expression,
+) (
+	result ast.Expression,
+	err error,
+	done bool,
+) {
+	leftBindingPower, err := exprLeftBindingPower(p)
+	if err != nil {
+		return nil, err, true
+	}
+
+	if rightBindingPower >= leftBindingPower {
+		return left, nil, true
+	}
+
+	t := p.current
+
+	p.next()
+
+	result, err = applyExprLeftDenotation(p, t, left)
+	return result, err, false
+}
+
+func exprLeftBindingPower(p *parser) (int, error) {
+	token := p.current
+	tokenType := token.Type
+	if tokenType == lexer.TokenIdentifier {
+		identifier := p.tokenSource(token)
+		return exprIdentifierLeftBindingPowers[string(identifier)], nil
+	}
+	return exprLeftBindingPowers[tokenType], nil
+}
+
+func applyExprNullDenotation(p *parser, token lexer.Token) (ast.Expression, error) {
+	tokenType := token.Type
+	nullDenotation := exprNullDenotations[tokenType]
+	if nullDenotation == nil {
+		return nil, p.syntaxError("unexpected token in expression: %s", tokenType)
+	}
+	return nullDenotation(p, token)
+}
+
+func applyExprLeftDenotation(p *parser, token lexer.Token, left ast.Expression) (ast.Expression, error) {
+	leftDenotation := exprLeftDenotations[token.Type]
+	if leftDenotation == nil {
+		return nil, p.syntaxError("unexpected token in expression: %s", token.Type)
+	}
+	return leftDenotation(p, token, left)
+}
+
+// parseStringLiteral parses a whole string literal, including start and end quotes
+func parseStringLiteral(p *parser, literal []byte) (result string) {
+	length := len(literal)
+	if length == 0 {
+		p.reportSyntaxError("missing start of string literal: expected '\"'")
+		return
+	}
+
+	if length >= 1 {
+		first := literal[0]
+		if first != '"' {
+			p.reportSyntaxError("invalid start of string literal: expected '\"', got %q", first)
+		}
+	}
+
+	missingEnd := false
+	endOffset := length
+	if length >= 2 {
+		lastIndex := length - 1
+		last := literal[lastIndex]
+		if last != '"' {
+			missingEnd = true
+		} else {
+			endOffset = lastIndex
+		}
+	} else {
+		missingEnd = true
+	}
+
+	result = parseStringLiteralContent(p, literal[1:endOffset])
+
+	if missingEnd {
+		p.reportSyntaxError("invalid end of string literal: missing '\"'")
+	}
+
+	return
+}
+
+// parseStringLiteralContent parses the string literalExpr contents, excluding start and end quotes
+func parseStringLiteralContent(p *parser, s []byte) (result string) {
+
+	var builder strings.Builder
+	defer func() {
+		result = builder.String()
+	}()
+
+	length := len(s)
+
+	var r rune
+	index := 0
+
+	atEnd := index >= length
+
+	advance := func() {
+		if atEnd {
+			r = lexer.EOF
+			return
+		}
+
+		var width int
+		r, width = utf8.DecodeRune(s[index:])
+		index += width
+
+		atEnd = index >= length
+	}
+
+	for index < length {
+		advance()
+
+		if r != '\\' {
+			builder.WriteRune(r)
+			continue
+		}
+
+		if atEnd {
+			p.reportSyntaxError("incomplete escape sequence: missing character after escape character")
+			return
+		}
+
+		advance()
+
+		switch r {
+		case '0':
+			builder.WriteByte(0)
+		case 'n':
+			builder.WriteByte('\n')
+		case 'r':
+			builder.WriteByte('\r')
+		case 't':
+			builder.WriteByte('\t')
+		case '"':
+			builder.WriteByte('"')
+		case '\'':
+			builder.WriteByte('\'')
+		case '\\':
+			builder.WriteByte('\\')
+		case 'u':
+			if atEnd {
+				p.reportSyntaxError(
+					"incomplete Unicode escape sequence: missing character '{' after escape character",
+				)
+				return
+			}
+			advance()
+			if r != '{' {
+				p.reportSyntaxError("invalid Unicode escape sequence: expected '{', got %q", r)
+				continue
+			}
+
+			var r2 rune
+			valid := true
+			digitIndex := 0
+			for ; !atEnd && digitIndex < 8; digitIndex++ {
+				advance()
+				if r == '}' {
+					break
+				}
+
+				parsed := parseHex(r)
+
+				if parsed < 0 {
+					p.reportSyntaxError("invalid Unicode escape sequence: expected hex digit, got %q", r)
+					valid = false
+				} else {
+					r2 = r2<<4 | parsed
+				}
+			}
+
+			if digitIndex > 0 && valid {
+				builder.WriteRune(r2)
+			}
+
+			if r != '}' {
+				advance()
+			}
+
+			switch r {
+			case '}':
+				break
+			case lexer.EOF:
+				p.reportSyntaxError(
+					"incomplete Unicode escape sequence: missing character '}' after escape character",
+				)
+			default:
+				p.reportSyntaxError("incomplete Unicode escape sequence: expected '}', got %q", r)
+			}
+
+		default:
+			// TODO: include index/column in error
+			p.reportSyntaxError("invalid escape character: %q", r)
+			// skip invalid escape character, don't write to result
+		}
+	}
+
+	return
+}
+
+func parseHex(r rune) rune {
+	switch {
+	case '0' <= r && r <= '9':
+		return r - '0'
+	case 'a' <= r && r <= 'f':
+		return r - 'a' + 10
+	case 'A' <= r && r <= 'F':
+		return r - 'A' + 10
+	}
+
+	return -1
+}
+
+func parseIntegerLiteral(p *parser, literal, text []byte, kind common.IntegerLiteralKind, token lexer.Token) *ast.IntegerExpression {
+
+	report := func(invalidKind InvalidNumberLiteralKind) {
+		p.report(
+			&InvalidIntegerLiteralError{
+				IntegerLiteralKind:        kind,
+				InvalidIntegerLiteralKind: invalidKind,
+				// NOTE: not using text, because it has the base-prefix stripped
+				Literal: string(literal),
+				Range:   token.Range,
+			},
+		)
+	}
+
+	// TODO: improve
+	s := string(text)
+
+	// check literal has no leading underscore
+	if strings.HasPrefix(s, "_") {
+		report(InvalidNumberLiteralKindLeadingUnderscore)
+	}
+
+	// check literal has no trailing underscore
+	if strings.HasSuffix(s, "_") {
+		report(InvalidNumberLiteralKindTrailingUnderscore)
+	}
+
+	withoutUnderscores := strings.ReplaceAll(s, "_", "")
+
+	var value *big.Int
+	var base int
+
+	if kind == common.IntegerLiteralKindUnknown {
+		base = 1
+
+		report(InvalidNumberLiteralKindUnknownPrefix)
+	} else {
+		base = kind.Base()
+
+		if withoutUnderscores == "" {
+			report(InvalidNumberLiteralKindMissingDigits)
+		} else {
+			estimatedSize := common.OverEstimateBigIntFromString(withoutUnderscores, kind)
+			common.UseMemory(p.memoryGauge, common.NewBigIntMemoryUsage(estimatedSize))
+
+			var ok bool
+			value, ok = new(big.Int).SetString(withoutUnderscores, base)
+			if !ok {
+				report(InvalidNumberLiteralKindUnknown)
+			}
+		}
+	}
+
+	if value == nil {
+		common.UseMemory(p.memoryGauge, common.NewBigIntMemoryUsage(1))
+
+		value = new(big.Int)
+	}
+
+	return ast.NewIntegerExpression(p.memoryGauge, literal, value, base, token.Range, token.Comments)
+}
+
+func parseFixedPointPart(gauge common.MemoryGauge, part string) (integer *big.Int, scale uint) {
+	withoutUnderscores := strings.ReplaceAll(part, "_", "")
+
+	base := common.IntegerLiteralKindDecimal
+
+	common.UseMemory(
+		gauge,
+		common.NewBigIntMemoryUsage(
+			common.OverEstimateBigIntFromString(withoutUnderscores, base),
+		),
+	)
+
+	estimatedSize := common.OverEstimateBigIntFromString(withoutUnderscores, base)
+	common.UseMemory(gauge, common.NewBigIntMemoryUsage(estimatedSize))
+
+	integer, _ = new(big.Int).SetString(withoutUnderscores, base.Base())
+	if integer == nil {
+		integer = new(big.Int)
+	}
+	scale = uint(len(withoutUnderscores))
+	if scale == 0 {
+		scale = 1
+	}
+	return integer, scale
+}
+
+func parseFixedPointLiteral(p *parser, literal []byte, tokenRange ast.Range) *ast.FixedPointExpression {
+	// TODO: improve
+	parts := strings.Split(string(literal), ".")
+	integer, _ := parseFixedPointPart(p.memoryGauge, parts[0])
+	fractional, scale := parseFixedPointPart(p.memoryGauge, parts[1])
+
+	return ast.NewFixedPointExpression(
+		p.memoryGauge,
+		literal,
+		false,
+		integer,
+		fractional,
+		scale,
+		tokenRange,
+	)
+}
