@@ -187,7 +187,7 @@ func (executor *contractFunctionExecutor) executeWithInterpreter(
 	// ensure the contract is loaded
 	inter = inter.EnsureLoaded(executor.contractLocation)
 
-	arguments := make([]interpreter.Value, len(executor.arguments))
+	arguments := make([]interpreter.Value, 0, len(executor.arguments))
 
 	arguments, err = executor.appendArguments(inter, arguments)
 	if err != nil {
@@ -273,9 +273,8 @@ func (executor *contractFunctionExecutor) executeWithVM(
 	)
 
 	// receiver + arguments
-	invocationArguments := make([]interpreter.Value, 1+len(executor.arguments))
-	invocationArguments[0] = contractValue
-
+	invocationArguments := make([]interpreter.Value, 0, 1+len(executor.arguments))
+	invocationArguments = append(invocationArguments, contractValue)
 	invocationArguments, err = executor.appendArguments(context, invocationArguments)
 	if err != nil {
 		return nil, err
