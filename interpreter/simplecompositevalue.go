@@ -151,6 +151,15 @@ func (v *SimpleCompositeValue) GetMember(context MemberAccessibleContext, locati
 	return nil
 }
 
+func (v *SimpleCompositeValue) GetMethod(
+	context MemberAccessibleContext,
+	locationRange LocationRange,
+	name string,
+) FunctionValue {
+	// TODO:
+	return nil
+}
+
 func (v *SimpleCompositeValue) RemoveMember(_ ValueTransferContext, _ LocationRange, name string) Value {
 	value := v.Fields[name]
 	delete(v.Fields, name)

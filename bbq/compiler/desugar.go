@@ -37,9 +37,9 @@ const tempResultVariableName = "$_result"
 // abstractions, so the compiler and vm could work with a minimal set of language features.
 type Desugar struct {
 	memoryGauge            common.MemoryGauge
-	elaboration            *ExtendedElaboration
+	elaboration            *DesugaredElaboration
 	program                *ast.Program
-	checker                *sema.Checker
+	location               common.Location
 	config                 *Config
 	enclosingInterfaceType *sema.InterfaceType
 
@@ -55,7 +55,7 @@ type inheritedFunction struct {
 	interfaceType       *sema.InterfaceType
 	functionDecl        *ast.FunctionDeclaration
 	rewrittenConditions sema.PostConditionsRewrite
-	elaboration         *ExtendedElaboration
+	elaboration         *DesugaredElaboration
 }
 
 var _ ast.DeclarationVisitor[ast.Declaration] = &Desugar{}
@@ -64,15 +64,15 @@ func NewDesugar(
 	memoryGauge common.MemoryGauge,
 	compilerConfig *Config,
 	program *ast.Program,
-	elaboration *ExtendedElaboration,
-	checker *sema.Checker,
+	elaboration *DesugaredElaboration,
+	location common.Location,
 ) *Desugar {
 	return &Desugar{
 		memoryGauge:                  memoryGauge,
 		config:                       compilerConfig,
 		elaboration:                  elaboration,
 		program:                      program,
-		checker:                      checker,
+		location:                     location,
 		importsSet:                   map[common.Location]struct{}{},
 		inheritedFuncsWithConditions: map[string][]*inheritedFunction{},
 		postConditionIndices:         map[*ast.FunctionBlock]int{},
@@ -783,7 +783,7 @@ func (d *Desugar) inheritedFunctionsWithConditions(compositeType sema.Conforming
 				interfaceType:       interfaceType,
 				functionDecl:        functionDecl,
 				rewrittenConditions: rewrittenConditions,
-				elaboration:         NewExtendedElaboration(elaboration),
+				elaboration:         elaboration,
 			})
 			inheritedFunctions[name] = funcs
 		}
@@ -1062,7 +1062,7 @@ func (d *Desugar) interfaceDelegationMethodCall(
 
 func (d *Desugar) addImport(location common.Location) {
 	// If the import is for the same program, then do not add any new imports.
-	if location == d.checker.Location {
+	if location == d.location {
 		return
 	}
 
@@ -1309,7 +1309,9 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 		ast.EmptyRange,
 	)
 
-	d.elaboration.SetCompositeDeclarationType(compositeDecl, transactionCompositeType)
+	compositeType := d.transactionCompositeType()
+	d.elaboration.SetCompositeDeclarationType(compositeDecl, compositeType)
+	d.elaboration.SetCompositeType(compositeType.ID(), compositeType)
 
 	// We can only return one declaration.
 	// So manually add the rest of the declarations.
@@ -1443,12 +1445,14 @@ func simpleFunctionDeclaration(
 	)
 }
 
-var transactionCompositeType = &sema.CompositeType{
-	Location:    nil,
-	Identifier:  commons.TransactionWrapperCompositeName,
-	Kind:        common.CompositeKindStructure,
-	NestedTypes: &sema.StringTypeOrderedMap{},
-	Members:     &sema.StringMemberOrderedMap{},
+func (d *Desugar) transactionCompositeType() *sema.CompositeType {
+	return &sema.CompositeType{
+		Location:    d.location,
+		Identifier:  commons.TransactionWrapperCompositeName,
+		Kind:        common.CompositeKindStructure,
+		NestedTypes: &sema.StringTypeOrderedMap{},
+		Members:     &sema.StringMemberOrderedMap{},
+	}
 }
 
 var executeFuncType = sema.NewSimpleFunctionType(

@@ -25,7 +25,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/compiler"
@@ -2602,9 +2601,9 @@ func TestCompileDefaultFunction(t *testing.T) {
 	comp := compiler.NewInstructionCompilerWithConfig(
 		checker,
 		&compiler.Config{
-			ElaborationResolver: func(location common.Location) (*sema.Elaboration, error) {
+			ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 				if location == checker.Location {
-					return checker.Elaboration, nil
+					return compiler.NewDesugaredElaboration(checker.Elaboration), nil
 				}
 
 				return nil, fmt.Errorf("cannot find elaboration for: %s", location)
@@ -2933,9 +2932,9 @@ func TestCompileFunctionConditions(t *testing.T) {
 		comp := compiler.NewInstructionCompilerWithConfig(
 			checker,
 			&compiler.Config{
-				ElaborationResolver: func(location common.Location) (*sema.Elaboration, error) {
+				ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 					if location == checker.Location {
-						return checker.Elaboration, nil
+						return compiler.NewDesugaredElaboration(checker.Elaboration), nil
 					}
 
 					return nil, fmt.Errorf("cannot find elaboration for: %s", location)
@@ -3091,9 +3090,9 @@ func TestCompileFunctionConditions(t *testing.T) {
 		comp := compiler.NewInstructionCompilerWithConfig(
 			checker,
 			&compiler.Config{
-				ElaborationResolver: func(location common.Location) (*sema.Elaboration, error) {
+				ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 					if location == checker.Location {
-						return checker.Elaboration, nil
+						return compiler.NewDesugaredElaboration(checker.Elaboration), nil
 					}
 
 					return nil, fmt.Errorf("cannot find elaboration for: %s", location)
@@ -3345,50 +3344,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 			contractsAddress.HexWithPrefix(),
 		)
 
-		checker, err := ParseAndCheckWithOptions(
-			t,
-			dContract,
-			ParseAndCheckOptions{
-				Location: dLocation,
-				Config: &sema.Config{
-					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
-						imported, ok := programs[location]
-						if !ok {
-							return nil, fmt.Errorf("cannot find contract in location %s", location)
-						}
-
-						return sema.ElaborationImport{
-							Elaboration: imported.Elaboration,
-						}, nil
-					},
-					LocationHandler: SingleIdentifierLocationResolver(t),
-				},
-			},
-		)
-		require.NoError(t, err)
-
-		comp := compiler.NewInstructionCompilerWithConfig(
-			checker,
-			&compiler.Config{
-				LocationHandler: SingleIdentifierLocationResolver(t),
-				ElaborationResolver: func(location common.Location) (*sema.Elaboration, error) {
-					imported, ok := programs[location]
-					if !ok {
-						return nil, fmt.Errorf("cannot find elaboration for %s", location)
-					}
-					return imported.Elaboration, nil
-				},
-				ImportHandler: func(location common.Location) *bbq.InstructionProgram {
-					imported, ok := programs[location]
-					if !ok {
-						return nil
-					}
-					return imported.Program
-				},
-			},
-		)
-
-		dProgram := comp.Compile()
+		dProgram := ParseCheckAndCompile(t, dContract, dLocation, programs)
 		require.Len(t, dProgram.Functions, 8)
 
 		// Function indexes
@@ -3926,9 +3882,9 @@ func TestCompileTransaction(t *testing.T) {
 	comp := compiler.NewInstructionCompilerWithConfig(
 		checker,
 		&compiler.Config{
-			ElaborationResolver: func(location common.Location) (*sema.Elaboration, error) {
+			ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 				if location == checker.Location {
-					return checker.Elaboration, nil
+					return compiler.NewDesugaredElaboration(checker.Elaboration), nil
 				}
 
 				return nil, fmt.Errorf("cannot find elaboration for: %s", location)

@@ -614,7 +614,15 @@ func (v Int32Value) BitwiseRightShift(context ValueStaticTypeContext, other Inte
 }
 
 func (v Int32Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
-	return getNumberValueMember(context, v, name, sema.Int32Type, locationRange)
+	return context.GetMethod(v, name, locationRange)
+}
+
+func (v Int32Value) GetMethod(
+	context MemberAccessibleContext,
+	locationRange LocationRange,
+	name string,
+) FunctionValue {
+	return getNumberValueFunctionMember(context, v, name, sema.Int32Type, locationRange)
 }
 
 func (Int32Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {

@@ -512,10 +512,16 @@ func typeLoader(
 		program, ok := programs[location]
 		require.True(tb, ok, "cannot find elaboration for %s", location)
 
-		elaboration := program.Elaboration
+		elaboration := program.DesugaredElaboration
+
 		compositeType := elaboration.CompositeType(typeID)
 		if compositeType != nil {
 			return compositeType
+		}
+
+		interfaceType := elaboration.InterfaceType(typeID)
+		if interfaceType != nil {
+			return interfaceType
 		}
 
 		entitlementType := elaboration.EntitlementType(typeID)
@@ -528,7 +534,7 @@ func typeLoader(
 			return entitlementMapType
 		}
 
-		return elaboration.InterfaceType(typeID)
+		return nil
 	}
 }
 

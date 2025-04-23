@@ -5199,18 +5199,24 @@ func getMember(context MemberAccessibleContext, self Value, locationRange Locati
 		result = memberAccessibleValue.GetMember(context, locationRange, identifier)
 	}
 	if result == nil {
-		switch identifier {
-		case sema.IsInstanceFunctionName:
-			return isInstanceFunction(context, self)
-		case sema.GetTypeFunctionName:
-			return getTypeFunction(context, self)
-		}
+		result = getBuiltinFunctionMember(context, self, identifier)
 	}
 
 	// NOTE: do not panic if the member is nil. This is a valid state.
 	// For example, when a composite field is initialized with a force-assignment, the field's value is read.
 
 	return result
+}
+
+func getBuiltinFunctionMember(context MemberAccessibleContext, self Value, identifier string) FunctionValue {
+	switch identifier {
+	case sema.IsInstanceFunctionName:
+		return isInstanceFunction(context, self)
+	case sema.GetTypeFunctionName:
+		return getTypeFunction(context, self)
+	default:
+		return nil
+	}
 }
 
 func isInstanceFunction(context FunctionCreationContext, self Value) FunctionValue {
@@ -6004,4 +6010,8 @@ func (interpreter *Interpreter) SetInStorageIteration(inStorageIteration bool) {
 
 func (interpreter *Interpreter) StorageMutatedDuringIteration() bool {
 	return interpreter.SharedState.storageMutatedDuringIteration
+}
+
+func (interpreter *Interpreter) GetMethod(value MemberAccessibleValue, name string, locationRange LocationRange) FunctionValue {
+	return value.GetMethod(interpreter, locationRange, name)
 }

@@ -79,8 +79,8 @@ func TestBaseValueActivation(common.Location) *sema.VariableActivation {
 
 type CompiledPrograms map[common.Location]*CompiledProgram
 type CompiledProgram struct {
-	Program *bbq.InstructionProgram
-	*sema.Elaboration
+	Program              *bbq.InstructionProgram
+	DesugaredElaboration *compiler.DesugaredElaboration
 }
 
 type ParseCheckAndCompileOptions struct {
@@ -118,15 +118,24 @@ func ParseCheckAndCompileCodeWithOptions(
 		programs,
 	)
 	programs[location] = &CompiledProgram{
-		Elaboration: checker.Elaboration,
+		DesugaredElaboration: compiler.NewDesugaredElaboration(checker.Elaboration),
 	}
 
-	program := compile(
+	program, desugaredElaboration := compile(
 		t,
 		options.CompilerConfig,
 		checker,
 		programs,
 	)
+
+	// Replace the original elaboration with the extended one.
+	// Desugared elaboration is not needed during the compilation of the same program,
+	// only needed during runtime. e.g: for type resolving.
+	// So it is safe to set the *after* the compilation.
+	programs[location] = &CompiledProgram{
+		DesugaredElaboration: desugaredElaboration,
+	}
+
 	programs[location].Program = program
 
 	return program
@@ -172,7 +181,9 @@ func parseAndCheckWithOptions(
 			}
 
 			return sema.ElaborationImport{
-				Elaboration: imported.Elaboration,
+				// Here the elaboration is only used for type checking.
+				// Hence, it is safe to use the original elaboration.
+				Elaboration: imported.DesugaredElaboration.OriginalElaboration(),
 			}, nil
 		}
 	}
@@ -191,7 +202,7 @@ func compile(
 	config *compiler.Config,
 	checker *sema.Checker,
 	programs map[common.Location]*CompiledProgram,
-) *bbq.InstructionProgram {
+) (*bbq.InstructionProgram, *compiler.DesugaredElaboration) {
 
 	if config == nil {
 		config = &compiler.Config{
@@ -203,17 +214,18 @@ func compile(
 				}
 				return imported.Program
 			},
-			ElaborationResolver: func(location common.Location) (*sema.Elaboration, error) {
+			ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 				imported, ok := programs[location]
 				if !ok {
 					return nil, fmt.Errorf("cannot find elaboration for %s", location)
 				}
-				return imported.Elaboration, nil
+
+				return imported.DesugaredElaboration, nil
 			},
 		}
 	}
 	comp := compiler.NewInstructionCompilerWithConfig(checker, config)
 
 	program := comp.Compile()
-	return program
+	return program, comp.DesugaredElaboration
 }

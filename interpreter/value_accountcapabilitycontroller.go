@@ -210,7 +210,7 @@ type deletionCheckedFunctionValue struct {
 	FunctionValue
 }
 
-func (v *AccountCapabilityControllerValue) GetMember(context MemberAccessibleContext, _ LocationRange, name string) (result Value) {
+func (v *AccountCapabilityControllerValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) (result Value) {
 	defer func() {
 		switch typedResult := result.(type) {
 		case deletionCheckedFunctionValue:
@@ -227,12 +227,6 @@ func (v *AccountCapabilityControllerValue) GetMember(context MemberAccessibleCon
 	case sema.AccountCapabilityControllerTypeTagFieldName:
 		return v.GetTag(context)
 
-	case sema.AccountCapabilityControllerTypeSetTagFunctionName:
-		if v.setTagFunction == nil {
-			v.setTagFunction = v.newSetTagFunction(context)
-		}
-		return v.setTagFunction
-
 	case sema.AccountCapabilityControllerTypeCapabilityIDFieldName:
 		return v.CapabilityID
 
@@ -241,6 +235,25 @@ func (v *AccountCapabilityControllerValue) GetMember(context MemberAccessibleCon
 
 	case sema.AccountCapabilityControllerTypeCapabilityFieldName:
 		return v.GetCapability(context)
+	}
+
+	return context.GetMethod(v, name, locationRange)
+}
+
+func (v *AccountCapabilityControllerValue) GetMethod(
+	context MemberAccessibleContext,
+	_ LocationRange,
+	name string,
+) FunctionValue {
+	// NOTE: check if controller is already deleted
+	v.checkDeleted()
+
+	switch name {
+	case sema.AccountCapabilityControllerTypeSetTagFunctionName:
+		if v.setTagFunction == nil {
+			v.setTagFunction = v.newSetTagFunction(context)
+		}
+		return v.setTagFunction
 
 	case sema.AccountCapabilityControllerTypeDeleteFunctionName:
 		if v.deleteFunction == nil {

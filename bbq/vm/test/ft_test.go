@@ -96,12 +96,12 @@ func compiledFTTransfer(tb testing.TB) {
 	compilerConfig := &compiler.Config{
 		LocationHandler: commons.LocationHandler(locationHandler),
 		ImportHandler:   importHandler,
-		ElaborationResolver: func(location common.Location) (*sema.Elaboration, error) {
+		ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 			imported, ok := compiledPrograms[location]
 			if !ok {
 				return nil, fmt.Errorf("cannot find elaboration for %s", location)
 			}
-			return imported.Elaboration, nil
+			return imported.DesugaredElaboration, nil
 		},
 	}
 

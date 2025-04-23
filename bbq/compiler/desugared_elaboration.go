@@ -20,17 +20,18 @@ package compiler
 
 import (
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/sema"
 )
 
-type ExtendedElaboration struct {
+type DesugaredElaboration struct {
 	// Do not expose functionality directly (by embedding the type),
 	// since that would make it easy to mistakenly modify the original elaboration.
 	elaboration *sema.Elaboration
 
 	// Holds the elaborations associated with inherited pre-/post-conditions and
 	// before-statements of those post conditions.
-	conditionsElaborations map[ast.Statement]*ExtendedElaboration
+	conditionsElaborations map[ast.Statement]*DesugaredElaboration
 
 	interfaceMethodStaticCalls        map[*ast.InvocationExpression]struct{}
 	interfaceDeclarationTypes         map[*ast.InterfaceDeclaration]*sema.InterfaceType
@@ -44,23 +45,24 @@ type ExtendedElaboration struct {
 	functionDeclarationFunctionTypes  map[*ast.FunctionDeclaration]*sema.FunctionType
 	returnStatementTypes              map[*ast.ReturnStatement]sema.ReturnStatementTypes
 	emitStatementEventTypes           map[*ast.EmitStatement]*sema.CompositeType
+	compositeTypes                    map[common.TypeID]*sema.CompositeType
 }
 
-func NewExtendedElaboration(elaboration *sema.Elaboration) *ExtendedElaboration {
-	return &ExtendedElaboration{
+func NewDesugaredElaboration(elaboration *sema.Elaboration) *DesugaredElaboration {
+	return &DesugaredElaboration{
 		elaboration:            elaboration,
-		conditionsElaborations: map[ast.Statement]*ExtendedElaboration{},
+		conditionsElaborations: map[ast.Statement]*DesugaredElaboration{},
 	}
 }
 
-func (e *ExtendedElaboration) SetInterfaceMethodStaticCall(invocation *ast.InvocationExpression) {
+func (e *DesugaredElaboration) SetInterfaceMethodStaticCall(invocation *ast.InvocationExpression) {
 	if e.interfaceMethodStaticCalls == nil {
 		e.interfaceMethodStaticCalls = make(map[*ast.InvocationExpression]struct{})
 	}
 	e.interfaceMethodStaticCalls[invocation] = struct{}{}
 }
 
-func (e *ExtendedElaboration) IsInterfaceMethodStaticCall(invocation *ast.InvocationExpression) bool {
+func (e *DesugaredElaboration) IsInterfaceMethodStaticCall(invocation *ast.InvocationExpression) bool {
 	if e.interfaceMethodStaticCalls == nil {
 		return false
 	}
@@ -69,7 +71,7 @@ func (e *ExtendedElaboration) IsInterfaceMethodStaticCall(invocation *ast.Invoca
 	return ok
 }
 
-func (e *ExtendedElaboration) SetInterfaceDeclarationType(decl *ast.InterfaceDeclaration, interfaceType *sema.InterfaceType) {
+func (e *DesugaredElaboration) SetInterfaceDeclarationType(decl *ast.InterfaceDeclaration, interfaceType *sema.InterfaceType) {
 	if e.interfaceDeclarationTypes == nil {
 		e.interfaceDeclarationTypes = make(map[*ast.InterfaceDeclaration]*sema.InterfaceType)
 	}
@@ -77,7 +79,7 @@ func (e *ExtendedElaboration) SetInterfaceDeclarationType(decl *ast.InterfaceDec
 	e.interfaceDeclarationTypes[decl] = interfaceType
 }
 
-func (e *ExtendedElaboration) InterfaceDeclarationType(decl *ast.InterfaceDeclaration) *sema.InterfaceType {
+func (e *DesugaredElaboration) InterfaceDeclarationType(decl *ast.InterfaceDeclaration) *sema.InterfaceType {
 	// First lookup in the extended type info
 	if e.interfaceDeclarationTypes != nil {
 		typ, ok := e.interfaceDeclarationTypes[decl]
@@ -90,7 +92,7 @@ func (e *ExtendedElaboration) InterfaceDeclarationType(decl *ast.InterfaceDeclar
 	return e.elaboration.InterfaceDeclarationType(decl)
 }
 
-func (e *ExtendedElaboration) ReturnStatementTypes(statement *ast.ReturnStatement) sema.ReturnStatementTypes {
+func (e *DesugaredElaboration) ReturnStatementTypes(statement *ast.ReturnStatement) sema.ReturnStatementTypes {
 	if e.returnStatementTypes != nil {
 		typ, ok := e.returnStatementTypes[statement]
 		if ok {
@@ -101,14 +103,14 @@ func (e *ExtendedElaboration) ReturnStatementTypes(statement *ast.ReturnStatemen
 	return e.elaboration.ReturnStatementTypes(statement)
 }
 
-func (e *ExtendedElaboration) SetReturnStatementTypes(statement *ast.ReturnStatement, types sema.ReturnStatementTypes) {
+func (e *DesugaredElaboration) SetReturnStatementTypes(statement *ast.ReturnStatement, types sema.ReturnStatementTypes) {
 	if e.returnStatementTypes == nil {
 		e.returnStatementTypes = map[*ast.ReturnStatement]sema.ReturnStatementTypes{}
 	}
 	e.returnStatementTypes[statement] = types
 }
 
-func (e *ExtendedElaboration) VariableDeclarationTypes(declaration *ast.VariableDeclaration) sema.VariableDeclarationTypes {
+func (e *DesugaredElaboration) VariableDeclarationTypes(declaration *ast.VariableDeclaration) sema.VariableDeclarationTypes {
 	if e.variableDeclarationTypes != nil {
 		typ, ok := e.variableDeclarationTypes[declaration]
 		if ok {
@@ -118,7 +120,7 @@ func (e *ExtendedElaboration) VariableDeclarationTypes(declaration *ast.Variable
 	return e.elaboration.VariableDeclarationTypes(declaration)
 }
 
-func (e *ExtendedElaboration) SetVariableDeclarationTypes(
+func (e *DesugaredElaboration) SetVariableDeclarationTypes(
 	declaration *ast.VariableDeclaration,
 	types sema.VariableDeclarationTypes,
 ) {
@@ -128,11 +130,11 @@ func (e *ExtendedElaboration) SetVariableDeclarationTypes(
 	e.variableDeclarationTypes[declaration] = types
 }
 
-func (e *ExtendedElaboration) PostConditionsRewrite(conditions *ast.Conditions) sema.PostConditionsRewrite {
+func (e *DesugaredElaboration) PostConditionsRewrite(conditions *ast.Conditions) sema.PostConditionsRewrite {
 	return e.elaboration.PostConditionsRewrite(conditions)
 }
 
-func (e *ExtendedElaboration) CompositeDeclarationType(declaration ast.CompositeLikeDeclaration) *sema.CompositeType {
+func (e *DesugaredElaboration) CompositeDeclarationType(declaration ast.CompositeLikeDeclaration) *sema.CompositeType {
 	// First lookup in the extended type info
 	if e.compositeDeclarationTypes != nil {
 		typ, ok := e.compositeDeclarationTypes[declaration]
@@ -145,7 +147,7 @@ func (e *ExtendedElaboration) CompositeDeclarationType(declaration ast.Composite
 	return e.elaboration.CompositeDeclarationType(declaration)
 }
 
-func (e *ExtendedElaboration) SetCompositeDeclarationType(
+func (e *DesugaredElaboration) SetCompositeDeclarationType(
 	declaration ast.CompositeLikeDeclaration,
 	compositeType *sema.CompositeType,
 ) {
@@ -155,7 +157,39 @@ func (e *ExtendedElaboration) SetCompositeDeclarationType(
 	e.compositeDeclarationTypes[declaration] = compositeType
 }
 
-func (e *ExtendedElaboration) InvocationExpressionTypes(
+func (e *DesugaredElaboration) CompositeType(typeID common.TypeID) *sema.CompositeType {
+	// First lookup in the extended type info
+	if e.compositeTypes != nil {
+		typ, ok := e.compositeTypes[typeID]
+		if ok {
+			return typ
+		}
+	}
+
+	// If not found, then fallback and look in the original elaboration
+	return e.elaboration.CompositeType(typeID)
+}
+
+func (e *DesugaredElaboration) SetCompositeType(typeID common.TypeID, compositeType *sema.CompositeType) {
+	if e.compositeTypes == nil {
+		e.compositeTypes = map[common.TypeID]*sema.CompositeType{}
+	}
+	e.compositeTypes[typeID] = compositeType
+}
+
+func (e *DesugaredElaboration) InterfaceType(typeID common.TypeID) *sema.InterfaceType {
+	return e.elaboration.InterfaceType(typeID)
+}
+
+func (e *DesugaredElaboration) EntitlementType(typeID common.TypeID) *sema.EntitlementType {
+	return e.elaboration.EntitlementType(typeID)
+}
+
+func (e *DesugaredElaboration) EntitlementMapType(typeID common.TypeID) *sema.EntitlementMapType {
+	return e.elaboration.EntitlementMapType(typeID)
+}
+
+func (e *DesugaredElaboration) InvocationExpressionTypes(
 	expression *ast.InvocationExpression,
 ) sema.InvocationExpressionTypes {
 	// First lookup in the extended type info
@@ -169,7 +203,7 @@ func (e *ExtendedElaboration) InvocationExpressionTypes(
 	return e.elaboration.InvocationExpressionTypes(expression)
 }
 
-func (e *ExtendedElaboration) SetInvocationExpressionTypes(
+func (e *DesugaredElaboration) SetInvocationExpressionTypes(
 	expression *ast.InvocationExpression,
 	types sema.InvocationExpressionTypes,
 ) {
@@ -179,7 +213,7 @@ func (e *ExtendedElaboration) SetInvocationExpressionTypes(
 	e.invocationExpressionTypes[expression] = types
 }
 
-func (e *ExtendedElaboration) MemberExpressionMemberAccessInfo(expression *ast.MemberExpression) (memberInfo sema.MemberAccessInfo, ok bool) {
+func (e *DesugaredElaboration) MemberExpressionMemberAccessInfo(expression *ast.MemberExpression) (memberInfo sema.MemberAccessInfo, ok bool) {
 	if e.memberExpressionMemberAccessInfos != nil {
 		memberInfo, ok = e.memberExpressionMemberAccessInfos[expression]
 		if ok {
@@ -189,14 +223,14 @@ func (e *ExtendedElaboration) MemberExpressionMemberAccessInfo(expression *ast.M
 	return e.elaboration.MemberExpressionMemberAccessInfo(expression)
 }
 
-func (e *ExtendedElaboration) SetMemberExpressionMemberAccessInfo(expression *ast.MemberExpression, memberAccessInfo sema.MemberAccessInfo) {
+func (e *DesugaredElaboration) SetMemberExpressionMemberAccessInfo(expression *ast.MemberExpression, memberAccessInfo sema.MemberAccessInfo) {
 	if e.memberExpressionMemberAccessInfos == nil {
 		e.memberExpressionMemberAccessInfos = map[*ast.MemberExpression]sema.MemberAccessInfo{}
 	}
 	e.memberExpressionMemberAccessInfos[expression] = memberAccessInfo
 }
 
-func (e *ExtendedElaboration) AssignmentStatementTypes(assignment *ast.AssignmentStatement) sema.AssignmentStatementTypes {
+func (e *DesugaredElaboration) AssignmentStatementTypes(assignment *ast.AssignmentStatement) sema.AssignmentStatementTypes {
 	if e.assignmentStatementTypes != nil {
 		types, ok := e.assignmentStatementTypes[assignment]
 		if ok {
@@ -206,7 +240,7 @@ func (e *ExtendedElaboration) AssignmentStatementTypes(assignment *ast.Assignmen
 	return e.elaboration.AssignmentStatementTypes(assignment)
 }
 
-func (e *ExtendedElaboration) SetAssignmentStatementTypes(
+func (e *DesugaredElaboration) SetAssignmentStatementTypes(
 	assignment *ast.AssignmentStatement,
 	types sema.AssignmentStatementTypes,
 ) {
@@ -216,31 +250,31 @@ func (e *ExtendedElaboration) SetAssignmentStatementTypes(
 	e.assignmentStatementTypes[assignment] = types
 }
 
-func (e *ExtendedElaboration) TransactionDeclarationType(declaration *ast.TransactionDeclaration) *sema.TransactionType {
+func (e *DesugaredElaboration) TransactionDeclarationType(declaration *ast.TransactionDeclaration) *sema.TransactionType {
 	return e.elaboration.TransactionDeclarationType(declaration)
 }
 
-func (e *ExtendedElaboration) IntegerExpressionType(expression *ast.IntegerExpression) sema.Type {
+func (e *DesugaredElaboration) IntegerExpressionType(expression *ast.IntegerExpression) sema.Type {
 	return e.elaboration.IntegerExpressionType(expression)
 }
 
-func (e *ExtendedElaboration) FixedPointExpressionType(expression *ast.FixedPointExpression) sema.Type {
+func (e *DesugaredElaboration) FixedPointExpressionType(expression *ast.FixedPointExpression) sema.Type {
 	return e.elaboration.FixedPointExpression(expression)
 }
 
-func (e *ExtendedElaboration) ArrayExpressionTypes(expression *ast.ArrayExpression) sema.ArrayExpressionTypes {
+func (e *DesugaredElaboration) ArrayExpressionTypes(expression *ast.ArrayExpression) sema.ArrayExpressionTypes {
 	return e.elaboration.ArrayExpressionTypes(expression)
 }
 
-func (e *ExtendedElaboration) DictionaryExpressionTypes(expression *ast.DictionaryExpression) sema.DictionaryExpressionTypes {
+func (e *DesugaredElaboration) DictionaryExpressionTypes(expression *ast.DictionaryExpression) sema.DictionaryExpressionTypes {
 	return e.elaboration.DictionaryExpressionTypes(expression)
 }
 
-func (e *ExtendedElaboration) CastingExpressionTypes(expression *ast.CastingExpression) sema.CastingExpressionTypes {
+func (e *DesugaredElaboration) CastingExpressionTypes(expression *ast.CastingExpression) sema.CastingExpressionTypes {
 	return e.elaboration.CastingExpressionTypes(expression)
 }
 
-func (e *ExtendedElaboration) EmitStatementEventType(statement *ast.EmitStatement) *sema.CompositeType {
+func (e *DesugaredElaboration) EmitStatementEventType(statement *ast.EmitStatement) *sema.CompositeType {
 	if e.emitStatementEventTypes != nil {
 		types, ok := e.emitStatementEventTypes[statement]
 		if ok {
@@ -250,14 +284,14 @@ func (e *ExtendedElaboration) EmitStatementEventType(statement *ast.EmitStatemen
 	return e.elaboration.EmitStatementEventType(statement)
 }
 
-func (e *ExtendedElaboration) SetEmitStatementEventType(statement *ast.EmitStatement, compositeType *sema.CompositeType) {
+func (e *DesugaredElaboration) SetEmitStatementEventType(statement *ast.EmitStatement, compositeType *sema.CompositeType) {
 	if e.emitStatementEventTypes == nil {
 		e.emitStatementEventTypes = map[*ast.EmitStatement]*sema.CompositeType{}
 	}
 	e.emitStatementEventTypes[statement] = compositeType
 }
 
-func (e *ExtendedElaboration) ResultVariableType(enclosingBlock ast.Element) (typ sema.Type, exist bool) {
+func (e *DesugaredElaboration) ResultVariableType(enclosingBlock ast.Element) (typ sema.Type, exist bool) {
 	if e.resultVariableTypes != nil {
 		types, ok := e.resultVariableTypes[enclosingBlock]
 		if ok {
@@ -267,14 +301,14 @@ func (e *ExtendedElaboration) ResultVariableType(enclosingBlock ast.Element) (ty
 	return e.elaboration.ResultVariableType(enclosingBlock)
 }
 
-func (e *ExtendedElaboration) SetResultVariableType(declaration ast.Element, typ sema.Type) {
+func (e *DesugaredElaboration) SetResultVariableType(declaration ast.Element, typ sema.Type) {
 	if e.resultVariableTypes == nil {
 		e.resultVariableTypes = map[ast.Element]sema.Type{}
 	}
 	e.resultVariableTypes[declaration] = typ
 }
 
-func (e *ExtendedElaboration) ReferenceExpressionBorrowType(expression *ast.ReferenceExpression) sema.Type {
+func (e *DesugaredElaboration) ReferenceExpressionBorrowType(expression *ast.ReferenceExpression) sema.Type {
 	if e.referenceExpressionBorrowTypes != nil {
 		typ, ok := e.referenceExpressionBorrowTypes[expression]
 		if ok {
@@ -284,14 +318,14 @@ func (e *ExtendedElaboration) ReferenceExpressionBorrowType(expression *ast.Refe
 	return e.elaboration.ReferenceExpressionBorrowType(expression)
 }
 
-func (e *ExtendedElaboration) SetReferenceExpressionBorrowType(expression *ast.ReferenceExpression, ty sema.Type) {
+func (e *DesugaredElaboration) SetReferenceExpressionBorrowType(expression *ast.ReferenceExpression, ty sema.Type) {
 	if e.referenceExpressionBorrowTypes == nil {
 		e.referenceExpressionBorrowTypes = map[*ast.ReferenceExpression]sema.Type{}
 	}
 	e.referenceExpressionBorrowTypes[expression] = ty
 }
 
-func (e *ExtendedElaboration) FunctionDeclarationFunctionType(declaration *ast.FunctionDeclaration) *sema.FunctionType {
+func (e *DesugaredElaboration) FunctionDeclarationFunctionType(declaration *ast.FunctionDeclaration) *sema.FunctionType {
 	if e.functionDeclarationFunctionTypes != nil {
 		typ, ok := e.functionDeclarationFunctionTypes[declaration]
 		if ok {
@@ -301,7 +335,7 @@ func (e *ExtendedElaboration) FunctionDeclarationFunctionType(declaration *ast.F
 	return e.elaboration.FunctionDeclarationFunctionType(declaration)
 }
 
-func (e *ExtendedElaboration) SetFunctionDeclarationFunctionType(
+func (e *DesugaredElaboration) SetFunctionDeclarationFunctionType(
 	declaration *ast.FunctionDeclaration,
 	functionType *sema.FunctionType,
 ) {
@@ -311,10 +345,28 @@ func (e *ExtendedElaboration) SetFunctionDeclarationFunctionType(
 	e.functionDeclarationFunctionTypes[declaration] = functionType
 }
 
-func (e *ExtendedElaboration) FunctionExpressionFunctionType(expression *ast.FunctionExpression) *sema.FunctionType {
+func (e *DesugaredElaboration) FunctionExpressionFunctionType(expression *ast.FunctionExpression) *sema.FunctionType {
 	return e.elaboration.FunctionExpressionFunctionType(expression)
 }
 
-func (e *ExtendedElaboration) IndexExpressionTypes(expression *ast.IndexExpression) (types sema.IndexExpressionTypes, contains bool) {
+func (e *DesugaredElaboration) IndexExpressionTypes(expression *ast.IndexExpression) (types sema.IndexExpressionTypes, contains bool) {
 	return e.elaboration.IndexExpressionTypes(expression)
+}
+
+func (e *DesugaredElaboration) InterfaceTypeDeclaration(interfaceType *sema.InterfaceType) *ast.InterfaceDeclaration {
+	return e.elaboration.InterfaceTypeDeclaration(interfaceType)
+}
+
+func (e *DesugaredElaboration) AllImportDeclarationsResolvedLocations() map[*ast.ImportDeclaration][]sema.ResolvedLocation {
+	return e.elaboration.AllImportDeclarationsResolvedLocations()
+}
+
+// OriginalElaboration returns the underlying elaboration.
+// IMPORTANT: Only use the original elaboration for type-checking use-cases.
+// It is safe to use in type-checker, since the type checker doesn't rely on
+// extra information added by the desugar phase.
+// Never use it in the compiler or desugar, as it may not include the
+// type information added during the desugar phase.
+func (e *DesugaredElaboration) OriginalElaboration() *sema.Elaboration {
+	return e.elaboration
 }

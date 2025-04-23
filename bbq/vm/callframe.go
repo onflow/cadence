@@ -21,6 +21,6 @@ package vm
 type callFrame struct {
 	localsOffset uint16
 	localsCount  uint16
-	function     FunctionValue
+	function     CompiledFunctionValue
 	openUpvalues map[int]*Upvalue
 }
