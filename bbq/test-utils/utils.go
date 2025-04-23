@@ -26,6 +26,7 @@ import (
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
@@ -224,8 +225,14 @@ func compile(
 			},
 		}
 	}
-	comp := compiler.NewInstructionCompilerWithConfig(checker, config)
 
-	program := comp.Compile()
-	return program, comp.DesugaredElaboration
+	program := interpreter.ProgramFromChecker(checker)
+	comp := compiler.NewInstructionCompilerWithConfig(
+		program,
+		checker.Location,
+		config,
+	)
+
+	compiledProgram := comp.Compile()
+	return compiledProgram, comp.DesugaredElaboration
 }

@@ -52,7 +52,10 @@ func TestCompileRecursionFib(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -154,7 +157,10 @@ func TestCompileImperativeFib(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	const parameterCount = 0
@@ -300,7 +306,10 @@ func TestCompileBreak(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	// iIndex is the index of the local variable `i`, which is the first local variable
@@ -385,7 +394,10 @@ func TestCompileContinue(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -465,7 +477,10 @@ func TestCompileArray(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -527,7 +542,10 @@ func TestCompileDictionary(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -607,7 +625,10 @@ func TestCompileIfLet(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -679,7 +700,10 @@ func TestCompileIfLetScope(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -776,7 +800,10 @@ func TestCompileSwitch(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -882,7 +909,10 @@ func TestSwitchBreak(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -966,7 +996,10 @@ func TestWhileSwitchBreak(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -1051,7 +1084,10 @@ func TestCompileEmit(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 4)
@@ -1099,7 +1135,10 @@ func TestCompileSimpleCast(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -1134,7 +1173,10 @@ func TestCompileForceCast(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -1169,7 +1211,10 @@ func TestCompileFailableCast(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -1217,7 +1262,10 @@ func TestCompileNestedLoop(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -1338,7 +1386,10 @@ func TestCompileAssignLocal(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -1394,7 +1445,10 @@ func TestCompileAssignGlobal(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -1435,7 +1489,10 @@ func TestCompileIndex(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -1475,7 +1532,10 @@ func TestCompileAssignIndex(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -1524,7 +1584,10 @@ func TestCompileMember(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 4)
@@ -1616,7 +1679,10 @@ func TestCompileExpressionStatement(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 2)
@@ -1657,7 +1723,10 @@ func TestCompileBool(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -1702,7 +1771,10 @@ func TestCompileString(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -1751,7 +1823,10 @@ func TestCompileIntegers(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			comp := compiler.NewInstructionCompiler(checker)
+			comp := compiler.NewInstructionCompiler(
+				interpreter.ProgramFromChecker(checker),
+				checker.Location,
+			)
 			program := comp.Compile()
 
 			require.Len(t, program.Functions, 1)
@@ -1816,7 +1891,10 @@ func TestCompileAddress(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -1872,7 +1950,10 @@ func TestCompileFixedPoint(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			comp := compiler.NewInstructionCompiler(checker)
+			comp := compiler.NewInstructionCompiler(
+				interpreter.ProgramFromChecker(checker),
+				checker.Location,
+			)
 			program := comp.Compile()
 
 			require.Len(t, program.Functions, 1)
@@ -1937,7 +2018,10 @@ func TestCompileUnaryNot(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -1975,7 +2059,10 @@ func TestCompileUnaryNegate(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -2015,7 +2102,10 @@ func TestCompileUnaryDeref(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -2066,7 +2156,10 @@ func TestCompileBinary(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			comp := compiler.NewInstructionCompiler(checker)
+			comp := compiler.NewInstructionCompiler(
+				interpreter.ProgramFromChecker(checker),
+				checker.Location,
+			)
 			program := comp.Compile()
 
 			require.Len(t, program.Functions, 1)
@@ -2148,7 +2241,10 @@ func TestCompileNilCoalesce(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -2207,7 +2303,10 @@ func TestCompileMethodInvocation(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 5)
@@ -2300,7 +2399,10 @@ func TestCompileResourceCreateAndDestroy(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 4)
@@ -2376,7 +2478,10 @@ func TestCompilePath(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -2425,7 +2530,10 @@ func TestCompileBlockScope(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -2509,7 +2617,10 @@ func TestCompileBlockScope2(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
@@ -2599,7 +2710,8 @@ func TestCompileDefaultFunction(t *testing.T) {
 	require.NoError(t, err)
 
 	comp := compiler.NewInstructionCompilerWithConfig(
-		checker,
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
 		&compiler.Config{
 			ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 				if location == checker.Location {
@@ -2724,7 +2836,10 @@ func TestCompileFunctionConditions(t *testing.T) {
     `)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 
 		require.Len(t, program.Functions, 1)
@@ -2778,7 +2893,10 @@ func TestCompileFunctionConditions(t *testing.T) {
     `)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 
 		require.Len(t, program.Functions, 1)
@@ -2849,7 +2967,10 @@ func TestCompileFunctionConditions(t *testing.T) {
     `)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 
 		require.Len(t, program.Functions, 1)
@@ -2930,7 +3051,8 @@ func TestCompileFunctionConditions(t *testing.T) {
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompilerWithConfig(
-			checker,
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
 			&compiler.Config{
 				ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 					if location == checker.Location {
@@ -3088,7 +3210,8 @@ func TestCompileFunctionConditions(t *testing.T) {
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompilerWithConfig(
-			checker,
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
 			&compiler.Config{
 				ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 					if location == checker.Location {
@@ -3443,7 +3566,10 @@ func TestForLoop(t *testing.T) {
         `)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 		require.Len(t, program.Functions, 1)
 
@@ -3495,7 +3621,10 @@ func TestForLoop(t *testing.T) {
         `)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 		require.Len(t, program.Functions, 1)
 
@@ -3564,7 +3693,10 @@ func TestForLoop(t *testing.T) {
         `)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 		require.Len(t, program.Functions, 1)
 
@@ -3640,7 +3772,10 @@ func TestCompileIf(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	const (
@@ -3712,7 +3847,10 @@ func TestCompileConditional(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	// xIndex is the index of the parameter `x`, which is the first parameter
@@ -3769,7 +3907,10 @@ func TestCompileOr(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	const (
@@ -3816,7 +3957,10 @@ func TestCompileAnd(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	const (
@@ -3880,7 +4024,8 @@ func TestCompileTransaction(t *testing.T) {
 	require.NoError(t, err)
 
 	comp := compiler.NewInstructionCompilerWithConfig(
-		checker,
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
 		&compiler.Config{
 			ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 				if location == checker.Location {
@@ -4035,7 +4180,10 @@ func TestCompileForce(t *testing.T) {
         `)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 
 		require.Len(t, program.Functions, 1)
@@ -4066,7 +4214,10 @@ func TestCompileForce(t *testing.T) {
         `)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 
 		require.Len(t, program.Functions, 1)
@@ -4103,7 +4254,10 @@ func TestCompileReturns(t *testing.T) {
         `)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 
 		require.Len(t, program.Functions, 1)
@@ -4130,7 +4284,10 @@ func TestCompileReturns(t *testing.T) {
         `)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 
 		require.Len(t, program.Functions, 1)
@@ -4162,7 +4319,10 @@ func TestCompileReturns(t *testing.T) {
         `)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 
 		require.Len(t, program.Functions, 1)
@@ -4203,7 +4363,10 @@ func TestCompileReturns(t *testing.T) {
         `)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 
 		require.Len(t, program.Functions, 1)
@@ -4265,7 +4428,10 @@ func TestCompileReturns(t *testing.T) {
         `)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 
 		require.Len(t, program.Functions, 2)
@@ -4317,7 +4483,10 @@ func TestCompileFunctionExpression(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 2)
@@ -4397,7 +4566,10 @@ func TestCompileInnerFunction(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 2)
@@ -4476,7 +4648,10 @@ func TestCompileFunctionExpressionOuterVariableUse(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 2)
@@ -4552,7 +4727,10 @@ func TestCompileInnerFunctionOuterVariableUse(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 2)
@@ -4643,7 +4821,10 @@ func TestCompileInnerFunctionOuterOuterVariableUse(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 3)
@@ -4752,7 +4933,10 @@ func TestCompileRecursiveInnerFunction(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 2)
@@ -4819,7 +5003,10 @@ func TestCompileFunctionExpressionOuterOuterVariableUse(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 3)
@@ -5025,7 +5212,10 @@ func TestCompileTransferConstant(t *testing.T) {
         `)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 
 		require.Len(t, program.Functions, 1)
@@ -5066,7 +5256,10 @@ func TestCompileTransferConstant(t *testing.T) {
         `)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 
 		require.Len(t, program.Functions, 1)
@@ -5114,7 +5307,10 @@ func TestCompileTransferNewPath(t *testing.T) {
         `)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 
 		require.Len(t, program.Functions, 1)
@@ -5158,7 +5354,10 @@ func TestCompileTransferNewPath(t *testing.T) {
         `)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 
 		require.Len(t, program.Functions, 1)
