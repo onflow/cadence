@@ -52,6 +52,7 @@ func NewDeployedContractValue(
 		nil,
 		nil,
 		nil,
+		nil,
 	)
 
 	publicTypesFuncValue := newPublicTypesFunctionValue(

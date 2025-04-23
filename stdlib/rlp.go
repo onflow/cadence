@@ -165,6 +165,7 @@ var rlpContractValue = interpreter.NewSimpleCompositeValue(
 	nil,
 	nil,
 	nil,
+	nil,
 )
 
 var RLPContract = StandardLibraryValue{

@@ -45,5 +45,6 @@ func NewDeploymentResultValue(
 		nil,
 		nil,
 		nil,
+		nil,
 	)
 }

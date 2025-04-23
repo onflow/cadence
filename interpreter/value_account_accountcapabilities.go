@@ -43,9 +43,9 @@ func NewAccountAccountCapabilitiesValue(
 
 	var accountCapabilities *SimpleCompositeValue
 
-	fields := map[string]Value{}
+	methods := map[string]FunctionValue{}
 
-	computeLazyStoredField := func(name string) Value {
+	computeLazyStoredMethod := func(name string) FunctionValue {
 		switch name {
 		case sema.Account_AccountCapabilitiesTypeGetControllerFunctionName:
 			return getControllerFunction(accountCapabilities)
@@ -62,12 +62,16 @@ func NewAccountAccountCapabilitiesValue(
 		return nil
 	}
 
-	computeField := func(name string, _ MemberAccessibleContext, _ LocationRange) Value {
-		field := computeLazyStoredField(name)
-		if field != nil {
-			fields[name] = field
+	methodGetter := func(name string, _ MemberAccessibleContext) FunctionValue {
+		method, ok := methods[name]
+		if !ok {
+			method = computeLazyStoredMethod(name)
+			if method != nil {
+				methods[name] = method
+			}
 		}
-		return field
+
+		return method
 	}
 
 	var str string
@@ -85,8 +89,10 @@ func NewAccountAccountCapabilitiesValue(
 		account_AccountCapabilitiesTypeID,
 		account_AccountCapabilitiesStaticType,
 		account_AccountCapabilitiesFieldNames,
-		fields,
-		computeField,
+		// No fields, only methods.
+		nil,
+		nil,
+		methodGetter,
 		nil,
 		stringer,
 	).WithPrivateField(AccountTypePrivateAddressFieldName, address)

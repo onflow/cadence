@@ -269,11 +269,10 @@ func (f *HostFunctionValue) GetMember(context MemberAccessibleContext, _ Locatio
 }
 
 func (v *HostFunctionValue) GetMethod(
-	context MemberAccessibleContext,
-	locationRange LocationRange,
-	name string,
+	_ MemberAccessibleContext,
+	_ LocationRange,
+	_ string,
 ) FunctionValue {
-	// TODO:
 	return nil
 }
 

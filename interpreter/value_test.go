@@ -4373,6 +4373,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 					nil,
 					nil,
 					nil,
+					nil,
 				)
 			},
 			true,
@@ -4388,6 +4389,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 					map[string]Value{
 						"foo": newInvalidCompositeValue(inter),
 					},
+					nil,
 					nil,
 					nil,
 					nil,

@@ -41,9 +41,9 @@ func NewAccountStorageValue(
 
 	var storageValue *SimpleCompositeValue
 
-	fields := map[string]Value{}
+	methods := map[string]FunctionValue{}
 
-	computeLazyStoredField := func(name string, context MemberAccessibleContext) Value {
+	computeLazyStoredMethod := func(name string, context MemberAccessibleContext) FunctionValue {
 		switch name {
 		case sema.Account_StorageTypeForEachPublicFunctionName:
 			return newStorageIterationFunction(
@@ -102,11 +102,19 @@ func NewAccountStorageValue(
 			return storageCapacityGet(context)
 		}
 
-		field := computeLazyStoredField(name, context)
-		if field != nil {
-			fields[name] = field
+		return nil
+	}
+
+	methodsGetter := func(name string, context MemberAccessibleContext) FunctionValue {
+		method, ok := methods[name]
+		if !ok {
+			method = computeLazyStoredMethod(name, context)
+			if method != nil {
+				methods[name] = method
+			}
 		}
-		return field
+
+		return method
 	}
 
 	var str string
@@ -124,8 +132,10 @@ func NewAccountStorageValue(
 		account_StorageTypeID,
 		account_StorageStaticType,
 		account_StorageFieldNames,
-		fields,
+		// No fields, only computed fields, and methods.
+		nil,
 		computeField,
+		methodsGetter,
 		nil,
 		stringer,
 	).WithPrivateField(AccountTypePrivateAddressFieldName, address)

@@ -47,9 +47,9 @@ func NewAccountContractsValue(
 
 	var accountContracts *SimpleCompositeValue
 
-	fields := map[string]Value{}
+	methods := map[string]FunctionValue{}
 
-	computeLazyStoredField := func(name string) Value {
+	computeLazyStoredMethod := func(name string) FunctionValue {
 		switch name {
 		case sema.Account_ContractsTypeAddFunctionName:
 			return addFunction(accountContracts)
@@ -74,11 +74,19 @@ func NewAccountContractsValue(
 			return namesGetter(context, locationRange)
 		}
 
-		field := computeLazyStoredField(name)
-		if field != nil {
-			fields[name] = field
+		return nil
+	}
+
+	methodGetter := func(name string, _ MemberAccessibleContext) FunctionValue {
+		method, ok := methods[name]
+		if !ok {
+			method = computeLazyStoredMethod(name)
+			if method != nil {
+				methods[name] = method
+			}
 		}
-		return field
+
+		return method
 	}
 
 	var str string
@@ -96,8 +104,10 @@ func NewAccountContractsValue(
 		account_ContractsTypeID,
 		account_ContractsStaticType,
 		account_ContractsFieldNames,
-		fields,
+		// No fields, only computed fields, and methods.
+		nil,
 		computeField,
+		methodGetter,
 		nil,
 		stringer,
 	)
