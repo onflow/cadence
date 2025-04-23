@@ -264,7 +264,7 @@ func (executor *contractFunctionExecutor) executeWithVM(
 
 	context := vm.Context()
 
-	_, err = executor.convertArguments(context)
+	arguments, err := executor.convertArguments(context)
 	if err != nil {
 		return nil, err
 	}
@@ -280,14 +280,37 @@ func (executor *contractFunctionExecutor) executeWithVM(
 		HasPosition: ast.EmptyRange,
 	}
 
+	var self interpreter.Value = contractValue
+
+	// prepare invocation
+	invocation := interpreter.NewInvocation(
+		context,
+		&self,
+		nil,
+		arguments,
+		executor.argumentTypes,
+		nil,
+		locationRange,
+	)
+
 	contractMember := contractValue.GetMember(
 		context,
 		locationRange,
 		executor.functionName,
 	)
 
+	contractFunction, ok := contractMember.(interpreter.FunctionValue)
+	if !ok {
+		err := interpreter.NotInvokableError{
+			Value: contractFunction,
+		}
+		return nil, err
+	}
 
-	var value interpreter.Value
+	value, err := interpreter.InvokeFunction(context, contractFunction, invocation)
+	if err != nil {
+		return nil, err
+	}
 
 	// Write back all stored values, which were actually just cached, back into storage
 	err = environment.commitStorage(context)
