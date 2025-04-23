@@ -98,8 +98,11 @@ func NewScriptVMEnvironment(config Config) Environment {
 }
 
 func (e *vmEnvironment) newVMConfig() *vm.Config {
-	return vm.NewConfig(nil)
+	config := vm.NewConfig(nil)
+	config.TypeLoader = e.loadType
+	return config
 }
+
 func (e *vmEnvironment) newCompilerConfig() *compiler.Config {
 	return &compiler.Config{
 		LocationHandler: e.ResolveLocation,
@@ -257,6 +260,37 @@ func (e *vmEnvironment) loadProgram(location common.Location) (*interpreter.Prog
 	}
 
 	return program, nil
+}
+
+func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+	program, err := e.loadProgram(location)
+	if err != nil {
+		panic(err)
+	}
+
+	elaboration := program.Elaboration
+
+	compositeType := elaboration.CompositeType(typeID)
+	if compositeType != nil {
+		return compositeType
+	}
+
+	interfaceType := elaboration.InterfaceType(typeID)
+	if interfaceType != nil {
+		return interfaceType
+	}
+
+	entitlementType := elaboration.EntitlementType(typeID)
+	if entitlementType != nil {
+		return entitlementType
+	}
+
+	entitlementMapType := elaboration.EntitlementMapType(typeID)
+	if entitlementMapType != nil {
+		return entitlementMapType
+	}
+
+	return nil
 }
 
 func (e *vmEnvironment) compileProgram(

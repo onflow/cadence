@@ -250,6 +250,7 @@ func (executor *contractFunctionExecutor) executeWithVM(
 	environment *vmEnvironment,
 ) (val cadence.Value, err error) {
 
+	location := executor.context.Location
 	contractLocation := executor.contractLocation
 
 	contractProgram, err := environment.loadProgram(contractLocation)
@@ -268,7 +269,22 @@ func (executor *contractFunctionExecutor) executeWithVM(
 		return nil, err
 	}
 
-	// TODO:
+	contractValue := loadContractValue(
+		context,
+		contractLocation,
+		environment.storage,
+	)
+
+	locationRange := interpreter.LocationRange{
+		Location:    location,
+		HasPosition: ast.EmptyRange,
+	}
+
+	contractMember := contractValue.GetMember(
+		context,
+		locationRange,
+		executor.functionName,
+	)
 
 
 	var value interpreter.Value
