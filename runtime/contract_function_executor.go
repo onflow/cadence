@@ -187,7 +187,9 @@ func (executor *contractFunctionExecutor) executeWithInterpreter(
 	// ensure the contract is loaded
 	inter = inter.EnsureLoaded(executor.contractLocation)
 
-	interpreterArguments, err := executor.convertArguments(inter)
+	arguments := make([]interpreter.Value, len(executor.arguments))
+
+	arguments, err = executor.appendArguments(inter, arguments)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +206,7 @@ func (executor *contractFunctionExecutor) executeWithInterpreter(
 		inter,
 		&self,
 		nil,
-		interpreterArguments,
+		arguments,
 		executor.argumentTypes,
 		nil,
 		interpreter.LocationRange{
@@ -264,26 +266,27 @@ func (executor *contractFunctionExecutor) executeWithVM(
 
 	context := vm.Context()
 
-	arguments, err := executor.convertArguments(context)
-	if err != nil {
-		return nil, err
-	}
-
 	contractValue := loadContractValue(
 		context,
 		contractLocation,
 		environment.storage,
 	)
 
+	// receiver + arguments
+	invocationArguments := make([]interpreter.Value, 1+len(executor.arguments))
+	invocationArguments[0] = contractValue
+
+	invocationArguments, err = executor.appendArguments(context, invocationArguments)
+	if err != nil {
+		return nil, err
+	}
+
 	staticType := contractValue.StaticType(context)
 	semaType := interpreter.MustConvertStaticToSemaType(staticType, context)
 	typeQualifier := commons.TypeQualifier(semaType)
 	qualifiedFuncName := commons.TypeQualifiedName(typeQualifier, executor.functionName)
 
-	// Add receiver as the first argument.
-	arguments = append([]interpreter.Value{contractValue}, arguments...)
-
-	value, err := vm.Invoke(qualifiedFuncName, arguments...)
+	value, err := vm.Invoke(qualifiedFuncName, invocationArguments...)
 	if err != nil {
 		return nil, err
 	}
@@ -346,16 +349,20 @@ func (executor *contractFunctionExecutor) convertArgument(
 	)
 }
 
-func (executor *contractFunctionExecutor) convertArguments(context ArgumentConversionContext) (arguments []interpreter.Value, err error) {
-	arguments = make([]interpreter.Value, len(executor.arguments))
-
+func (executor *contractFunctionExecutor) appendArguments(
+	context ArgumentConversionContext,
+	arguments []interpreter.Value,
+) (
+	[]interpreter.Value,
+	error,
+) {
 	locationRange := interpreter.LocationRange{
 		Location:    executor.context.Location,
 		HasPosition: ast.EmptyRange,
 	}
 
 	for i, argumentType := range executor.argumentTypes {
-		arguments[i], err = executor.convertArgument(
+		argument, err := executor.convertArgument(
 			context,
 			executor.arguments[i],
 			argumentType,
@@ -364,6 +371,7 @@ func (executor *contractFunctionExecutor) convertArguments(context ArgumentConve
 		if err != nil {
 			return nil, err
 		}
+		arguments = append(arguments, argument)
 	}
 
 	return arguments, nil
