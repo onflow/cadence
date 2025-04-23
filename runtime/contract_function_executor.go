@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -250,7 +251,6 @@ func (executor *contractFunctionExecutor) executeWithVM(
 	environment *vmEnvironment,
 ) (val cadence.Value, err error) {
 
-	location := executor.context.Location
 	contractLocation := executor.contractLocation
 
 	contractProgram, err := environment.loadProgram(contractLocation)
@@ -275,39 +275,15 @@ func (executor *contractFunctionExecutor) executeWithVM(
 		environment.storage,
 	)
 
-	locationRange := interpreter.LocationRange{
-		Location:    location,
-		HasPosition: ast.EmptyRange,
-	}
+	staticType := contractValue.StaticType(context)
+	semaType := interpreter.MustConvertStaticToSemaType(staticType, context)
+	typeQualifier := commons.TypeQualifier(semaType)
+	qualifiedFuncName := commons.TypeQualifiedName(typeQualifier, executor.functionName)
 
-	var self interpreter.Value = contractValue
+	// Add receiver as the first argument.
+	arguments = append([]interpreter.Value{contractValue}, arguments...)
 
-	// prepare invocation
-	invocation := interpreter.NewInvocation(
-		context,
-		&self,
-		nil,
-		arguments,
-		executor.argumentTypes,
-		nil,
-		locationRange,
-	)
-
-	contractMember := contractValue.GetMember(
-		context,
-		locationRange,
-		executor.functionName,
-	)
-
-	contractFunction, ok := contractMember.(interpreter.FunctionValue)
-	if !ok {
-		err := interpreter.NotInvokableError{
-			Value: contractFunction,
-		}
-		return nil, err
-	}
-
-	value, err := interpreter.InvokeFunction(context, contractFunction, invocation)
+	value, err := vm.Invoke(qualifiedFuncName, arguments...)
 	if err != nil {
 		return nil, err
 	}
