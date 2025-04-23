@@ -75,11 +75,11 @@ func (v *VMInvokable) Invoke(functionName string, arguments ...interpreter.Value
 func ParseCheckAndPrepare(t testing.TB, code string, compile bool) Invokable {
 	t.Helper()
 
-	if !compile {
-		return parseCheckAndInterpret(t, code)
-	}
+	//if !compile {
+	//	return parseCheckAndInterpret(t, code)
+	//}
 
-	vmConfig := &vm.Config{}
+	vmConfig := (&vm.Config{}).WithDebugEnabled()
 	vmInstance := compilerUtils.CompileAndPrepareToInvoke(
 		t,
 		code,
