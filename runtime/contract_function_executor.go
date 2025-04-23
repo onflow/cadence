@@ -250,10 +250,42 @@ func (executor *contractFunctionExecutor) executeWithVM(
 	environment *vmEnvironment,
 ) (val cadence.Value, err error) {
 
+	contractLocation := executor.contractLocation
+
+	contractProgram, err := environment.loadProgram(contractLocation)
+	if err != nil {
+		return nil, err
+	}
+
+	compiledProgram := environment.compileProgram(contractProgram, contractLocation)
+
+	vm := environment.newVM(contractLocation, compiledProgram)
+
+	context := vm.Context()
+
+	_, err = executor.convertArguments(context)
+	if err != nil {
+		return nil, err
+	}
+
 	// TODO:
 
-	return nil, nil
 
+	var value interpreter.Value
+
+	// Write back all stored values, which were actually just cached, back into storage
+	err = environment.commitStorage(context)
+	if err != nil {
+		return nil, err
+	}
+
+	var exportedValue cadence.Value
+	exportedValue, err = ExportValue(value, context, interpreter.EmptyLocationRange)
+	if err != nil {
+		return nil, err
+	}
+
+	return exportedValue, nil
 }
 
 type ArgumentConversionContext interface {
