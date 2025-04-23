@@ -55,7 +55,9 @@ type Compiler[E, T any] struct {
 	currentControlFlow  *controlFlow
 	returns             []returns
 	currentReturn       *returns
-	staticTypes         []T
+
+	types         []sema.Type
+	compiledTypes []T
 
 	// postConditionsIndices keeps track of where the post conditions start (i.e: index of the statement in the block),
 	// for each function.
@@ -67,7 +69,7 @@ type Compiler[E, T any] struct {
 	// postConditionsIndex is the statement-index of the post-conditions for the current function.
 	postConditionsIndex int
 
-	// Cache alike for staticTypes and constants in the pool.
+	// Cache alike for compiledTypes and constants in the pool.
 	typesInPool     map[sema.TypeID]uint16
 	constantsInPool map[constantsCacheKey]*Constant
 
@@ -563,7 +565,7 @@ func (c *Compiler[_, _]) exportConstants() []constant.Constant {
 }
 
 func (c *Compiler[_, T]) exportTypes() []T {
-	return c.staticTypes
+	return c.compiledTypes
 }
 
 func (c *Compiler[_, _]) exportImports() []bbq.Import {
@@ -2243,6 +2245,22 @@ func (c *Compiler[_, _]) emitTransfer(targetType sema.Type) {
 				return
 			}
 		}
+
+	case opcode.InstructionNewClosure:
+		// If the last instruction is a closure creation of the same type,
+		// then the transfer is not needed.
+		function := c.functions[lastInstruction.Function]
+		functionSourceType := c.types[function.typeIndex].(*sema.FunctionType)
+		if functionTargetType, ok := targetType.(*sema.FunctionType); ok {
+			if functionSourceType.Equal(functionTargetType) {
+				return
+			}
+		}
+
+	case opcode.InstructionNil:
+		// If the last instruction is a nil load,
+		// then the transfer is not needed.
+		return
 	}
 
 	typeIndex := c.getOrAddType(targetType)
@@ -2251,29 +2269,30 @@ func (c *Compiler[_, _]) emitTransfer(targetType sema.Type) {
 	})
 }
 
-func (c *Compiler[_, T]) getOrAddType(targetType sema.Type) uint16 {
-	typeID := targetType.ID()
+func (c *Compiler[_, T]) getOrAddType(ty sema.Type) uint16 {
+	typeID := ty.ID()
 
 	// Optimization: Re-use types in the pool.
 	index, ok := c.typesInPool[typeID]
 
 	if !ok {
-		staticType := interpreter.ConvertSemaToStaticType(c.memoryGauge, targetType)
-		typ := c.typeGen.CompileType(staticType)
-		index = c.addType(typ)
+		staticType := interpreter.ConvertSemaToStaticType(c.memoryGauge, ty)
+		data := c.typeGen.CompileType(staticType)
+		index = c.addCompiledType(ty, data)
 		c.typesInPool[typeID] = index
 	}
 
 	return index
 }
 
-func (c *Compiler[_, T]) addType(data T) uint16 {
-	count := len(c.staticTypes)
+func (c *Compiler[_, T]) addCompiledType(ty sema.Type, data T) uint16 {
+	count := len(c.compiledTypes)
 	if count >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid type declaration"))
 	}
 
-	c.staticTypes = append(c.staticTypes, data)
+	c.compiledTypes = append(c.compiledTypes, data)
+	c.types = append(c.types, ty)
 	return uint16(count)
 }
 
