@@ -870,6 +870,7 @@ func opTransfer(vm *VM, ins opcode.InstructionTransfer) {
 	valueType := transferredValue.StaticType(config)
 	// TODO: remove nil check after ensuring all implementations of Value.StaticType are implemented
 	if valueType != nil && !vm.context.IsSubType(valueType, targetType) {
+		// TODO: improve error
 		panic(errors.NewUnexpectedError(
 			"invalid transfer: expected '%s', found '%s'",
 			targetType,
