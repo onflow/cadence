@@ -2940,6 +2940,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			Context{
 				Interface: interf,
 				Location:  nextTransactionLocation(),
+				UseVM:       true,
 			},
 		)
 		require.NoError(t, err)
