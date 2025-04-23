@@ -58,6 +58,7 @@ func NewHashAlgorithmCase(
 		nil,
 		nil,
 		nil,
+		nil,
 	)
 	value.Fields = map[string]interpreter.Value{
 		sema.EnumRawValueFieldName:                    rawValue,

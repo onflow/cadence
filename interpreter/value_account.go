@@ -109,8 +109,10 @@ func NewAccountValue(
 		accountTypeID,
 		accountStaticType,
 		accountFieldNames,
+		// Only fields, no methods
 		fields,
 		computeField,
+		nil,
 		nil,
 		stringer,
 	)

@@ -422,7 +422,15 @@ func (v Word64Value) BitwiseRightShift(context ValueStaticTypeContext, other Int
 }
 
 func (v Word64Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
-	return getNumberValueMember(context, v, name, sema.Word64Type, locationRange)
+	return context.GetMethod(v, name, locationRange)
+}
+
+func (v Word64Value) GetMethod(
+	context MemberAccessibleContext,
+	locationRange LocationRange,
+	name string,
+) FunctionValue {
+	return getNumberValueFunctionMember(context, v, name, sema.Word64Type, locationRange)
 }
 
 func (Word64Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {

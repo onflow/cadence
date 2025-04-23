@@ -138,7 +138,7 @@ func LinkGlobals(
 			continue
 		}
 
-		var value interpreter.FunctionValue
+		var value FunctionValue
 
 		if function.IsNative() {
 			// Look-up using the unqualified name, in the common-builtin functions.
@@ -146,7 +146,7 @@ func LinkGlobals(
 		} else {
 			funcStaticType := getTypeFromExecutable[interpreter.FunctionStaticType](executable, function.TypeIndex)
 
-			value = FunctionValue{
+			value = CompiledFunctionValue{
 				Function:   function,
 				Executable: executable,
 				Type:       funcStaticType,

@@ -23,7 +23,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/onflow/cadence/bbq/commons"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
@@ -41,6 +40,9 @@ import (
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
+
+	"github.com/onflow/cadence/bbq/commons"
+	. "github.com/onflow/cadence/bbq/test-utils"
 )
 
 type ParseCheckAndInterpretOptions struct {
@@ -254,7 +256,7 @@ func interpreterFTTransfer(tb testing.TB) {
 				Elaboration: imported.Program.Elaboration,
 			}, nil
 		},
-		BaseValueActivationHandler: baseValueActivation,
+		BaseValueActivationHandler: TestBaseValueActivation,
 		LocationHandler:            newStringLocationHandler(tb, contractsAddress),
 	}
 

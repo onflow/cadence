@@ -119,6 +119,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 		},
 		nil,
 		nil,
+		nil,
 	)
 
 	valueDeclaration := stdlib.StandardLibraryValue{

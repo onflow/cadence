@@ -44,6 +44,7 @@ func NewSignatureAlgorithmCase(rawValue interpreter.UInt8Value) interpreter.Memb
 		nil,
 		nil,
 		nil,
+		nil,
 	)
 }
 

@@ -19,6 +19,9 @@
 package compiler
 
 import (
+	"slices"
+	"strings"
+
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
@@ -34,9 +37,9 @@ const tempResultVariableName = "$_result"
 // abstractions, so the compiler and vm could work with a minimal set of language features.
 type Desugar struct {
 	memoryGauge            common.MemoryGauge
-	elaboration            *ExtendedElaboration
+	elaboration            *DesugaredElaboration
 	program                *ast.Program
-	checker                *sema.Checker
+	location               common.Location
 	config                 *Config
 	enclosingInterfaceType *sema.InterfaceType
 
@@ -52,7 +55,7 @@ type inheritedFunction struct {
 	interfaceType       *sema.InterfaceType
 	functionDecl        *ast.FunctionDeclaration
 	rewrittenConditions sema.PostConditionsRewrite
-	elaboration         *ExtendedElaboration
+	elaboration         *DesugaredElaboration
 }
 
 var _ ast.DeclarationVisitor[ast.Declaration] = &Desugar{}
@@ -61,15 +64,15 @@ func NewDesugar(
 	memoryGauge common.MemoryGauge,
 	compilerConfig *Config,
 	program *ast.Program,
-	elaboration *ExtendedElaboration,
-	checker *sema.Checker,
+	elaboration *DesugaredElaboration,
+	location common.Location,
 ) *Desugar {
 	return &Desugar{
 		memoryGauge:                  memoryGauge,
 		config:                       compilerConfig,
 		elaboration:                  elaboration,
 		program:                      program,
-		checker:                      checker,
+		location:                     location,
 		importsSet:                   map[common.Location]struct{}{},
 		inheritedFuncsWithConditions: map[string][]*inheritedFunction{},
 		postConditionIndices:         map[*ast.FunctionBlock]int{},
@@ -349,7 +352,7 @@ func (d *Desugar) desugarPreConditions(
 		conditions = funcBlock.PreConditions
 
 		for _, condition := range conditions.Conditions {
-			desugaredCondition := d.desugarCondition(condition, false)
+			desugaredCondition := d.desugarCondition(condition, nil)
 			desugaredConditions = append(desugaredConditions, desugaredCondition)
 		}
 	}
@@ -383,7 +386,7 @@ func (d *Desugar) desugarPostConditions(
 		beforeStatements = postConditionsRewrite.BeforeStatements
 
 		for _, condition := range conditionsList {
-			desugaredCondition := d.desugarCondition(condition, false)
+			desugaredCondition := d.desugarCondition(condition, nil)
 			desugaredConditions = append(desugaredConditions, desugaredCondition)
 		}
 	}
@@ -438,7 +441,7 @@ func (d *Desugar) desugarInheritedCondition(condition ast.Condition, inheritedFu
 	prevElaboration := d.elaboration
 	d.elaboration = inheritedFunc.elaboration
 
-	desugaredCondition := d.desugarCondition(condition, true)
+	desugaredCondition := d.desugarCondition(condition, inheritedFunc.interfaceType)
 	d.elaboration = prevElaboration
 
 	// Elaboration to be used by the condition must be set in the current elaboration.
@@ -464,7 +467,37 @@ var panicFuncInvocationTypes = sema.InvocationExpressionTypes{
 	},
 }
 
-func (d *Desugar) desugarCondition(condition ast.Condition, isInherited bool) ast.Statement {
+func (d *Desugar) desugarCondition(condition ast.Condition, inheritedFrom *sema.InterfaceType) ast.Statement {
+
+	// If the conditions are inherited, they could be referring to the imports of their original program.
+	// i.e: transitive dependencies of the concrete type.
+	// Therefore, add those transitive dependencies to the current compiling program.
+	// They will only be added to the final compiled program, if those are used in the code.
+	if inheritedFrom != nil {
+		elaboration, err := d.config.ElaborationResolver(inheritedFrom.Location)
+		if err != nil {
+			panic(err)
+		}
+
+		allImports := elaboration.AllImportDeclarationsResolvedLocations()
+		transitiveImportLocations := make([]common.Location, 0, len(allImports))
+
+		// Collect and sort the locations to make it deterministic.
+		for _, resolvedLocations := range allImports { // nolint:maprange
+			for _, location := range resolvedLocations {
+				transitiveImportLocations = append(transitiveImportLocations, location.Location)
+			}
+		}
+		slices.SortFunc(transitiveImportLocations, func(a, b common.Location) int {
+			return strings.Compare(a.ID(), b.ID())
+		})
+
+		// Add new imports for all the transitive imports.
+		for _, location := range transitiveImportLocations {
+			d.addImport(location)
+		}
+	}
+
 	switch condition := condition.(type) {
 	case *ast.TestCondition:
 
@@ -534,7 +567,7 @@ func (d *Desugar) desugarCondition(condition ast.Condition, isInherited bool) as
 	case *ast.EmitCondition:
 		emitStmt := (*ast.EmitStatement)(condition)
 
-		if !isInherited {
+		if inheritedFrom == nil {
 			return emitStmt
 		}
 
@@ -750,7 +783,7 @@ func (d *Desugar) inheritedFunctionsWithConditions(compositeType sema.Conforming
 				interfaceType:       interfaceType,
 				functionDecl:        functionDecl,
 				rewrittenConditions: rewrittenConditions,
-				elaboration:         NewExtendedElaboration(elaboration),
+				elaboration:         elaboration,
 			})
 			inheritedFunctions[name] = funcs
 		}
@@ -1028,23 +1061,33 @@ func (d *Desugar) interfaceDelegationMethodCall(
 }
 
 func (d *Desugar) addImport(location common.Location) {
-	interfaceLocation, isAddressLocation := location.(common.AddressLocation)
-	if isAddressLocation {
-		if _, exists := d.importsSet[interfaceLocation]; !exists {
-			d.newImports = append(
-				d.newImports,
-				ast.NewImportDeclaration(
-					d.memoryGauge,
-					[]ast.Identifier{
-						ast.NewIdentifier(d.memoryGauge, interfaceLocation.Name, ast.EmptyPosition),
-					},
-					interfaceLocation,
-					ast.EmptyRange,
-					ast.EmptyPosition,
-				))
+	// If the import is for the same program, then do not add any new imports.
+	if location == d.location {
+		return
+	}
 
-			d.importsSet[interfaceLocation] = struct{}{}
+	switch location := location.(type) {
+	case common.AddressLocation:
+		_, exists := d.importsSet[location]
+		if exists {
+			return
 		}
+
+		d.newImports = append(
+			d.newImports,
+			ast.NewImportDeclaration(
+				d.memoryGauge,
+				[]ast.Identifier{
+					ast.NewIdentifier(d.memoryGauge, location.Name, ast.EmptyPosition),
+				},
+				location,
+				ast.EmptyRange,
+				ast.EmptyPosition,
+			))
+
+		d.importsSet[location] = struct{}{}
+	default:
+		panic(errors.NewUnreachableError())
 	}
 }
 
@@ -1266,7 +1309,9 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 		ast.EmptyRange,
 	)
 
-	d.elaboration.SetCompositeDeclarationType(compositeDecl, transactionCompositeType)
+	compositeType := d.transactionCompositeType()
+	d.elaboration.SetCompositeDeclarationType(compositeDecl, compositeType)
+	d.elaboration.SetCompositeType(compositeType.ID(), compositeType)
 
 	// We can only return one declaration.
 	// So manually add the rest of the declarations.
@@ -1400,12 +1445,14 @@ func simpleFunctionDeclaration(
 	)
 }
 
-var transactionCompositeType = &sema.CompositeType{
-	Location:    nil,
-	Identifier:  commons.TransactionWrapperCompositeName,
-	Kind:        common.CompositeKindStructure,
-	NestedTypes: &sema.StringTypeOrderedMap{},
-	Members:     &sema.StringMemberOrderedMap{},
+func (d *Desugar) transactionCompositeType() *sema.CompositeType {
+	return &sema.CompositeType{
+		Location:    d.location,
+		Identifier:  commons.TransactionWrapperCompositeName,
+		Kind:        common.CompositeKindStructure,
+		NestedTypes: &sema.StringTypeOrderedMap{},
+		Members:     &sema.StringMemberOrderedMap{},
+	}
 }
 
 var executeFuncType = sema.NewSimpleFunctionType(

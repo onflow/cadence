@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/compiler"
+	. "github.com/onflow/cadence/bbq/test-utils"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
@@ -41,7 +42,7 @@ import (
 
 func compiledFTTransfer(tb testing.TB) {
 
-	compiledPrograms := map[common.Location]*compiledProgram{}
+	compiledPrograms := CompiledPrograms{}
 
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
 	senderAddress := common.MustBytesToAddress([]byte{0x2})
@@ -68,11 +69,20 @@ func compiledFTTransfer(tb testing.TB) {
 	nextTransactionLocation := NewTransactionLocationGenerator()
 	nextScriptLocation := NewScriptLocationGenerator()
 
-	locationHandler := newStringLocationHandler(tb, contractsAddress)
+	locationHandler := func(identifiers []ast.Identifier, location common.Location) ([]commons.ResolvedLocation, error) {
+		switch location.(type) {
+		case common.StringLocation:
+			return newStringLocationHandler(tb, contractsAddress)(identifiers, location)
+		case common.AddressLocation:
+			return NewSingleIdentifierLocationResolver(tb)(identifiers, location)
+		default:
+			panic(fmt.Errorf("unknown location type: %T", location))
+		}
+	}
 
 	semaConfig := &sema.Config{
 		LocationHandler:            locationHandler,
-		BaseValueActivationHandler: baseValueActivation,
+		BaseValueActivationHandler: TestBaseValueActivation,
 	}
 
 	importHandler := func(location common.Location) *bbq.InstructionProgram {
@@ -86,12 +96,12 @@ func compiledFTTransfer(tb testing.TB) {
 	compilerConfig := &compiler.Config{
 		LocationHandler: commons.LocationHandler(locationHandler),
 		ImportHandler:   importHandler,
-		ElaborationResolver: func(location common.Location) (*sema.Elaboration, error) {
+		ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 			imported, ok := compiledPrograms[location]
 			if !ok {
 				return nil, fmt.Errorf("cannot find elaboration for %s", location)
 			}
-			return imported.Elaboration, nil
+			return imported.DesugaredElaboration, nil
 		},
 	}
 
@@ -106,11 +116,11 @@ func compiledFTTransfer(tb testing.TB) {
 		fungibleTokenMetadataViewsLocation,
 		flowTokenLocation,
 	} {
-		_ = parseCheckAndCompileCodeWithOptions(
+		_ = ParseCheckAndCompileCodeWithOptions(
 			tb,
 			string(codes[location]),
 			location,
-			CompilerAndVMOptions{
+			ParseCheckAndCompileOptions{
 				ParseAndCheckOptions: &ParseAndCheckOptions{
 					Location: location,
 					Config:   semaConfig,
@@ -135,30 +145,6 @@ func compiledFTTransfer(tb testing.TB) {
 	}
 
 	storage := interpreter.NewInMemoryStorage(nil)
-
-	typeLoader := func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-		program, ok := compiledPrograms[location]
-		if !ok {
-			panic(fmt.Errorf("cannot find elaboration for: %s", location))
-		}
-		elaboration := program.Elaboration
-		compositeType := elaboration.CompositeType(typeID)
-		if compositeType != nil {
-			return compositeType
-		}
-
-		interfaceType := elaboration.InterfaceType(typeID)
-		if interfaceType != nil {
-			return interfaceType
-		}
-
-		entitlementType := elaboration.EntitlementType(typeID)
-		if entitlementType != nil {
-			return entitlementType
-		}
-
-		return elaboration.EntitlementMapType(typeID)
-	}
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, stdlib.PanicFunction)
@@ -250,9 +236,8 @@ func compiledFTTransfer(tb testing.TB) {
 		WithAccountHandler(accountHandler).
 		WithInterpreterConfig(interConfig)
 
-	vmConfig = prepareVMConfig(vmConfig)
+	vmConfig = prepareVMConfig(tb, vmConfig, compiledPrograms)
 
-	vmConfig.TypeLoader = typeLoader
 	vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 		imported, ok := compiledPrograms[location]
 		if !ok {
@@ -293,11 +278,11 @@ func compiledFTTransfer(tb testing.TB) {
 	} {
 		txLocation := nextTransactionLocation()
 
-		program := parseCheckAndCompileCodeWithOptions(
+		program := ParseCheckAndCompileCodeWithOptions(
 			tb,
 			realFlowTokenSetupAccountTransaction,
 			txLocation,
-			CompilerAndVMOptions{
+			ParseCheckAndCompileOptions{
 				ParseAndCheckOptions: &ParseAndCheckOptions{
 					Location: txLocation,
 					Config:   semaConfig,
@@ -319,11 +304,11 @@ func compiledFTTransfer(tb testing.TB) {
 
 	txLocation := nextTransactionLocation()
 
-	mintTokensTxProgram := parseCheckAndCompileCodeWithOptions(
+	mintTokensTxProgram := ParseCheckAndCompileCodeWithOptions(
 		tb,
 		realFlowTokenMintTokensTransaction,
 		txLocation,
-		CompilerAndVMOptions{
+		ParseCheckAndCompileOptions{
 			ParseAndCheckOptions: &ParseAndCheckOptions{
 				Location: txLocation,
 				Config:   semaConfig,
@@ -351,11 +336,11 @@ func compiledFTTransfer(tb testing.TB) {
 
 	txLocation = nextTransactionLocation()
 
-	tokenTransferTxProgram := parseCheckAndCompileCodeWithOptions(
+	tokenTransferTxProgram := ParseCheckAndCompileCodeWithOptions(
 		tb,
 		realFlowTokenTransferTokensTransaction,
 		txLocation,
-		CompilerAndVMOptions{
+		ParseCheckAndCompileOptions{
 			ParseAndCheckOptions: &ParseAndCheckOptions{
 				Location: txLocation,
 				Config:   semaConfig,
@@ -415,11 +400,11 @@ func compiledFTTransfer(tb testing.TB) {
 	} {
 		scriptLocation := nextScriptLocation()
 
-		program := parseCheckAndCompileCodeWithOptions(
+		program := ParseCheckAndCompileCodeWithOptions(
 			tb,
 			realFlowTokenGetBalanceScript,
 			scriptLocation,
-			CompilerAndVMOptions{
+			ParseCheckAndCompileOptions{
 				ParseAndCheckOptions: &ParseAndCheckOptions{
 					Location: scriptLocation,
 					Config:   semaConfig,
