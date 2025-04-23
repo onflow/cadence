@@ -22,7 +22,6 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/sema"
 )
 
 type contractLoader interface {
@@ -32,25 +31,23 @@ type contractLoader interface {
 
 func loadContractValue(
 	loader contractLoader,
-	compositeType *sema.CompositeType,
+	location common.AddressLocation,
 	storage *Storage,
 ) *interpreter.CompositeValue {
+
 	var contractValue interpreter.Value
 
-	location := compositeType.Location
-	if addressLocation, ok := location.(common.AddressLocation); ok {
-		storageMap := storage.GetDomainStorageMap(
+	storageMap := storage.GetDomainStorageMap(
+		loader,
+		location.Address,
+		common.StorageDomainContract,
+		false,
+	)
+	if storageMap != nil {
+		contractValue = storageMap.ReadValue(
 			loader,
-			addressLocation.Address,
-			common.StorageDomainContract,
-			false,
+			interpreter.StringStorageMapKey(location.Name),
 		)
-		if storageMap != nil {
-			contractValue = storageMap.ReadValue(
-				loader,
-				interpreter.StringStorageMapKey(addressLocation.Name),
-			)
-		}
 	}
 
 	if contractValue == nil {
