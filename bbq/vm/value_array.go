@@ -275,7 +275,7 @@ func init() {
 			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				value := arguments[receiverIndex]
 				array := value.(*interpreter.ArrayValue)
-				constantSizedArrayType := typeArguments[0].(*interpreter.ConstantSizedStaticType)
+				constantSizedArrayType := typeArguments[1].(*interpreter.ConstantSizedStaticType)
 				return array.ToConstantSized(
 					context,
 					EmptyLocationRange,

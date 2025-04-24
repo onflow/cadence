@@ -1701,13 +1701,14 @@ func TestTransaction(t *testing.T) {
 
 		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
 			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(_ *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
+				commons.LogFunctionName,
+				stdlib.LogFunctionType,
+				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
-			}
+			)
 
 			return funcs
 		}
@@ -1795,13 +1796,14 @@ func TestTransaction(t *testing.T) {
 
 		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
 			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(_ *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
+				commons.LogFunctionName,
+				stdlib.LogFunctionType,
+				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
-			}
+			)
 
 			return funcs
 		}
@@ -1885,13 +1887,14 @@ func TestTransaction(t *testing.T) {
 
 		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
 			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(_ *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
+				commons.LogFunctionName,
+				stdlib.LogFunctionType,
+				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
-			}
+			)
 
 			return funcs
 		}
@@ -1980,13 +1983,14 @@ func TestTransaction(t *testing.T) {
 
 		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
 			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(_ *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
+				commons.LogFunctionName,
+				stdlib.LogFunctionType,
+				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
-			}
+			)
 
 			return funcs
 		}
@@ -3485,16 +3489,18 @@ func TestFunctionPreConditions(t *testing.T) {
 		config := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
 		config.NativeFunctionsProvider = func() map[string]vm.Value {
 			return map[string]vm.Value{
-				commons.LogFunctionName: vm.NativeFunctionValue{
-					ParameterCount: len(stdlib.LogFunctionType.Parameters),
-					Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+				commons.LogFunctionName: vm.NewNativeFunctionValue(
+					commons.LogFunctionName,
+					stdlib.LogFunctionType,
+					func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 						logs = append(logs, arguments[0].String())
 						return interpreter.Void
 					},
-				},
-				commons.PanicFunctionName: vm.NativeFunctionValue{
-					ParameterCount: len(stdlib.PanicFunctionType.Parameters),
-					Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+				),
+				commons.PanicFunctionName: vm.NewNativeFunctionValue(
+					commons.PanicFunctionName,
+					stdlib.PanicFunctionType,
+					func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 						messageValue, ok := arguments[0].(*interpreter.StringValue)
 						if !ok {
 							panic(errors.NewUnreachableError())
@@ -3504,7 +3510,7 @@ func TestFunctionPreConditions(t *testing.T) {
 							Message: messageValue.Str,
 						})
 					},
-				},
+				),
 			}
 		}
 
@@ -3571,13 +3577,14 @@ func TestFunctionPreConditions(t *testing.T) {
 
 		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
 			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
+				commons.LogFunctionName,
+				stdlib.LogFunctionType,
+				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
-			}
+			)
 
 			return funcs
 		}
@@ -3956,13 +3963,14 @@ func TestFunctionPostConditions(t *testing.T) {
 		config := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
 		config.NativeFunctionsProvider = func() map[string]vm.Value {
 			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
+				commons.LogFunctionName,
+				stdlib.LogFunctionType,
+				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
-			}
+			)
 
 			return funcs
 		}
@@ -4442,13 +4450,14 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 
 		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
 			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
+				commons.LogFunctionName,
+				stdlib.LogFunctionType,
+				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
-			}
+			)
 
 			return funcs
 		}
@@ -4536,13 +4545,14 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 
 		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
 			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
+				commons.LogFunctionName,
+				stdlib.LogFunctionType,
+				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
-			}
+			)
 
 			return funcs
 		}
@@ -4634,13 +4644,14 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 
 		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
 			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
+				commons.LogFunctionName,
+				stdlib.LogFunctionType,
+				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
-			}
+			)
 
 			return funcs
 		}
@@ -7270,13 +7281,14 @@ func TestInheritedConditions(t *testing.T) {
 		var logs []string
 		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
 			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
+				commons.LogFunctionName,
+				stdlib.LogFunctionType,
+				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
-			}
+			)
 
 			return funcs
 		}

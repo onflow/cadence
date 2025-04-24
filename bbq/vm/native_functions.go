@@ -71,7 +71,7 @@ func RegisterTypeBoundFunction(typeName string, functionValue NativeFunctionValu
 	RegisterFunction(functionValue)
 }
 
-func RegisterBuiltinTypeBoundFunction(typeName string, functionValue NativeFunctionValue) {
+func RegisterTypeBoundCommonFunction(typeName string, functionValue NativeFunctionValue) {
 	// Here the function value is common for many types.
 	// Hence, do not update the function name to be type-qualified.
 	// Only the key in the map is type-qualified.
@@ -215,7 +215,7 @@ func registerCommonBuiltinTypeBoundFunctions() {
 		registerBuiltinTypeBoundFunctions(typeQualifier)
 
 		if includeToStringFunction {
-			RegisterBuiltinTypeBoundFunction(
+			RegisterTypeBoundCommonFunction(
 				typeQualifier,
 				NewBoundNativeFunctionValue(
 					sema.ToStringFunctionName,
@@ -250,7 +250,7 @@ func registerBuiltinTypeBoundFunctions(
 	typeQualifier string,
 ) {
 	for _, boundFunction := range commonBuiltinTypeBoundFunctions {
-		RegisterBuiltinTypeBoundFunction(
+		RegisterTypeBoundCommonFunction(
 			typeQualifier,
 			boundFunction,
 		)

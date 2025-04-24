@@ -30,7 +30,8 @@ import (
 
 type FunctionValue interface {
 	interpreter.FunctionValue
-	GetParameterCount() int
+	ParameterCount() int
+	HasDerivedType() bool
 }
 
 type CompiledFunctionValue struct {
@@ -47,7 +48,11 @@ func (CompiledFunctionValue) IsValue() {}
 
 func (v CompiledFunctionValue) IsFunctionValue() {}
 
-func (v CompiledFunctionValue) GetParameterCount() int {
+func (v CompiledFunctionValue) HasDerivedType() bool {
+	return false
+}
+
+func (v CompiledFunctionValue) ParameterCount() int {
 	return int(v.Function.ParameterCount)
 }
 
@@ -151,11 +156,11 @@ func (v CompiledFunctionValue) Invoke(invocation interpreter.Invocation) interpr
 type NativeFunction func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value
 
 type NativeFunctionValue struct {
-	Name string
-	// ParameterCount includes actual parameters + receiver for type-bound functions.
-	ParameterCount int
+	Name           string
 	Function       NativeFunction
-	Type           interpreter.FunctionStaticType
+	typeGetter     func(receiver Value) *sema.FunctionType
+	functionType   *sema.FunctionType
+	hasDerivedType bool
 }
 
 func NewNativeFunctionValue(
@@ -164,10 +169,9 @@ func NewNativeFunctionValue(
 	function NativeFunction,
 ) NativeFunctionValue {
 	return NativeFunctionValue{
-		Name:           name,
-		ParameterCount: len(funcType.Parameters),
-		Function:       function,
-		Type:           interpreter.NewFunctionStaticType(nil, funcType),
+		Name:         name,
+		Function:     function,
+		functionType: funcType,
 	}
 }
 
@@ -178,9 +182,22 @@ func NewBoundNativeFunctionValue(
 ) NativeFunctionValue {
 	return NativeFunctionValue{
 		Name:           name,
-		ParameterCount: len(funcType.Parameters) + 1, // +1 is for the receiver
 		Function:       function,
-		Type:           interpreter.NewFunctionStaticType(nil, funcType),
+		functionType:   funcType,
+		hasDerivedType: true,
+	}
+}
+
+func NewDerivedTypeBoundNativeFunctionValue(
+	name string,
+	typeGetter func(receiver Value) *sema.FunctionType,
+	function NativeFunction,
+) NativeFunctionValue {
+	return NativeFunctionValue{
+		Name:           name,
+		Function:       function,
+		typeGetter:     typeGetter,
+		hasDerivedType: true,
 	}
 }
 
@@ -191,12 +208,23 @@ func (NativeFunctionValue) IsValue() {}
 
 func (v NativeFunctionValue) IsFunctionValue() {}
 
-func (v NativeFunctionValue) GetParameterCount() int {
-	return v.ParameterCount
+func (v NativeFunctionValue) HasDerivedType() bool {
+	return v.hasDerivedType
+}
+
+// ParameterCount includes the actual parameters + receiver for type-bound functions.
+func (v NativeFunctionValue) ParameterCount() int {
+	typ := v.FunctionType()
+	parameterCount := len(typ.Parameters)
+	if v.hasDerivedType {
+		// +1 is for the receiver
+		return parameterCount + 1
+	}
+	return parameterCount
 }
 
 func (v NativeFunctionValue) StaticType(interpreter.ValueStaticTypeContext) bbq.StaticType {
-	return v.Type
+	return interpreter.NewFunctionStaticType(nil, v.FunctionType())
 }
 
 func (v NativeFunctionValue) Transfer(_ interpreter.ValueTransferContext,
@@ -211,7 +239,7 @@ func (v NativeFunctionValue) Transfer(_ interpreter.ValueTransferContext,
 }
 
 func (v NativeFunctionValue) String() string {
-	return v.Type.String()
+	return v.FunctionType().String()
 }
 
 func (v NativeFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -252,7 +280,7 @@ func (v NativeFunctionValue) MeteredString(
 	_ interpreter.SeenReferences,
 	_ interpreter.LocationRange,
 ) string {
-	return v.Type.MeteredString(context)
+	return v.StaticType(context).MeteredString(context)
 }
 
 func (v NativeFunctionValue) IsResourceKinded(_ interpreter.ValueStaticTypeContext) bool {
@@ -279,7 +307,13 @@ func (v NativeFunctionValue) IsImportable(
 }
 
 func (v NativeFunctionValue) FunctionType() *sema.FunctionType {
-	return v.Type.Type
+	if v.functionType == nil {
+		// For native functions where the type is NOT pre-known,
+		// This method should never be invoked.
+		// Such functions must always be wrapped with a `BoundFunctionPointerValue`.
+		panic(errors.NewUnreachableError())
+	}
+	return v.functionType
 }
 
 func (v NativeFunctionValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
@@ -293,9 +327,8 @@ func (v NativeFunctionValue) Invoke(invocation interpreter.Invocation) interpret
 
 // BoundFunctionPointerValue is a function-pointer taken for an object-method.
 type BoundFunctionPointerValue struct {
-	Receiver       interpreter.MemberAccessibleValue
-	Method         FunctionValue
-	ParameterCount int
+	Receiver interpreter.MemberAccessibleValue
+	Method   FunctionValue
 }
 
 func NewBoundFunctionPointerValue(
@@ -303,9 +336,8 @@ func NewBoundFunctionPointerValue(
 	method FunctionValue,
 ) FunctionValue {
 	return BoundFunctionPointerValue{
-		Receiver:       receiver,
-		Method:         method,
-		ParameterCount: method.GetParameterCount() - 1,
+		Receiver: receiver,
+		Method:   method,
 	}
 }
 
@@ -316,8 +348,12 @@ func (BoundFunctionPointerValue) IsValue() {}
 
 func (v BoundFunctionPointerValue) IsFunctionValue() {}
 
-func (v BoundFunctionPointerValue) GetParameterCount() int {
-	return v.ParameterCount
+func (v BoundFunctionPointerValue) HasDerivedType() bool {
+	return false
+}
+
+func (v BoundFunctionPointerValue) ParameterCount() int {
+	return v.Method.ParameterCount() - 1
 }
 
 func (v BoundFunctionPointerValue) StaticType(context interpreter.ValueStaticTypeContext) bbq.StaticType {
