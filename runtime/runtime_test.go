@@ -3105,13 +3105,17 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			Context{
 				Interface: interf,
 				Location:  nextTransactionLocation(),
-				// TODO:
-				// UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
+		if *compile {
+			require.ErrorContains(t, err, "invalid transfer: expected 'String', found 'Int'")
+		} else {
+			require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
+		}
+
 	})
 
 	t.Run("function with un-importable argument errors and error propagates (ID capability)", func(t *testing.T) {
