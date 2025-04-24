@@ -101,6 +101,18 @@ func (e *vmEnvironment) newVMConfig() *vm.Config {
 	config := vm.NewConfig(nil)
 	config.TypeLoader = e.loadType
 	config.Logger = e
+	config.ContractValueHandler = func(conf *vm.Config, location common.Location) *interpreter.CompositeValue {
+		addressLocation, ok := location.(common.AddressLocation)
+		if !ok {
+			panic(fmt.Errorf("cannot get contract value for non-address location %T", location))
+		}
+
+		return loadContractValue(
+			vm.NewContext(conf),
+			addressLocation,
+			e.storage,
+		)
+	}
 	config.ImportHandler = e.handleImport
 	return config
 }
