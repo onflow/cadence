@@ -217,7 +217,7 @@ func registerCommonBuiltinTypeBoundFunctions() {
 		if includeToStringFunction {
 			RegisterTypeBoundCommonFunction(
 				typeQualifier,
-				NewBoundNativeFunctionValue(
+				NewNativeFunctionValue(
 					sema.ToStringFunctionName,
 					sema.ToStringFunctionType,
 					func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
@@ -268,7 +268,7 @@ func registerBuiltinTypeBoundFunctions(
 var commonBuiltinTypeBoundFunctions = []NativeFunctionValue{
 
 	// `isInstance` function
-	NewBoundNativeFunctionValue(
+	NewNativeFunctionValue(
 		sema.IsInstanceFunctionName,
 		sema.IsInstanceFunctionType,
 		func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
@@ -284,7 +284,7 @@ var commonBuiltinTypeBoundFunctions = []NativeFunctionValue{
 	),
 
 	// `getType` function
-	NewBoundNativeFunctionValue(
+	NewNativeFunctionValue(
 		sema.GetTypeFunctionName,
 		sema.GetTypeFunctionType,
 		func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {

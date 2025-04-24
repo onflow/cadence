@@ -32,7 +32,7 @@ func init() {
 
 	RegisterTypeBoundFunction(
 		typeName,
-		NewBoundNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.MetaTypeIsSubtypeFunctionName,
 			sema.MetaTypeIsSubtypeFunctionType,
 			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {

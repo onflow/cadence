@@ -34,7 +34,7 @@ func init() {
 	// Account.StorageCapabilities.issue
 	RegisterTypeBoundFunction(
 		accountStorageCapabilitiesTypeName,
-		NewBoundNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeIssueFunctionName,
 			sema.Account_StorageCapabilitiesTypeIssueFunctionType,
 			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
@@ -63,7 +63,7 @@ func init() {
 	// Account.StorageCapabilities.issueWithType
 	RegisterTypeBoundFunction(
 		accountStorageCapabilitiesTypeName,
-		NewBoundNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionName,
 			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionType,
 			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
@@ -100,7 +100,7 @@ func init() {
 	// Account.StorageCapabilities.getController
 	RegisterTypeBoundFunction(
 		accountStorageCapabilitiesTypeName,
-		NewBoundNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeGetControllerFunctionName,
 			sema.Account_StorageCapabilitiesTypeGetControllerFunctionType,
 			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
@@ -127,7 +127,7 @@ func init() {
 	// Account.StorageCapabilities.getControllers
 	RegisterTypeBoundFunction(
 		accountStorageCapabilitiesTypeName,
-		NewBoundNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeGetControllersFunctionName,
 			sema.Account_StorageCapabilitiesTypeGetControllersFunctionType,
 			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
@@ -154,7 +154,7 @@ func init() {
 	// Account.StorageCapabilities.forEachController
 	RegisterTypeBoundFunction(
 		accountStorageCapabilitiesTypeName,
-		NewBoundNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeForEachControllerFunctionName,
 			sema.Account_StorageCapabilitiesTypeForEachControllerFunctionType,
 			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {

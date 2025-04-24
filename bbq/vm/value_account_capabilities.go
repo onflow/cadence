@@ -34,7 +34,7 @@ func init() {
 	// Account.Capabilities.get
 	RegisterTypeBoundFunction(
 		accountCapabilitiesTypeName,
-		NewBoundNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.Account_CapabilitiesTypeGetFunctionName,
 			sema.Account_CapabilitiesTypeGetFunctionType,
 			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
@@ -65,7 +65,7 @@ func init() {
 	// Account.Capabilities.borrow
 	RegisterTypeBoundFunction(
 		accountCapabilitiesTypeName,
-		NewBoundNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.Account_CapabilitiesTypeBorrowFunctionName,
 			sema.Account_CapabilitiesTypeBorrowFunctionType,
 			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
@@ -97,7 +97,7 @@ func init() {
 	// Account.Capabilities.publish
 	RegisterTypeBoundFunction(
 		accountCapabilitiesTypeName,
-		NewBoundNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.Account_CapabilitiesTypePublishFunctionName,
 			sema.Account_CapabilitiesTypePublishFunctionType,
 			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
@@ -134,7 +134,7 @@ func init() {
 	// Account.Capabilities.unpublish
 	RegisterTypeBoundFunction(
 		accountCapabilitiesTypeName,
-		NewBoundNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.Account_CapabilitiesTypeUnpublishFunctionName,
 			sema.Account_CapabilitiesTypeUnpublishFunctionType,
 			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
@@ -161,7 +161,7 @@ func init() {
 	// Account.Capabilities.exist
 	RegisterTypeBoundFunction(
 		accountCapabilitiesTypeName,
-		NewBoundNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.Account_CapabilitiesTypeExistsFunctionName,
 			sema.Account_CapabilitiesTypeExistsFunctionType,
 			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {

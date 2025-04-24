@@ -156,11 +156,10 @@ func (v CompiledFunctionValue) Invoke(invocation interpreter.Invocation) interpr
 type NativeFunction func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value
 
 type NativeFunctionValue struct {
-	Name           string
-	Function       NativeFunction
-	typeGetter     func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType
-	functionType   *sema.FunctionType
-	hasDerivedType bool
+	Name               string
+	Function           NativeFunction
+	functionTypeGetter func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType
+	functionType       *sema.FunctionType
 }
 
 func NewNativeFunctionValue(
@@ -175,28 +174,15 @@ func NewNativeFunctionValue(
 	}
 }
 
-func NewBoundNativeFunctionValue(
-	name string,
-	funcType *sema.FunctionType,
-	function NativeFunction,
-) NativeFunctionValue {
-	return NativeFunctionValue{
-		Name:         name,
-		Function:     function,
-		functionType: funcType,
-	}
-}
-
-func NewDerivedTypeBoundNativeFunctionValue(
+func NewNativeFunctionValueWithDerivedType(
 	name string,
 	typeGetter func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType,
 	function NativeFunction,
 ) NativeFunctionValue {
 	return NativeFunctionValue{
-		Name:           name,
-		Function:       function,
-		typeGetter:     typeGetter,
-		hasDerivedType: true,
+		Name:               name,
+		Function:           function,
+		functionTypeGetter: typeGetter,
 	}
 }
 
@@ -206,10 +192,6 @@ var _ FunctionValue = NativeFunctionValue{}
 func (NativeFunctionValue) IsValue() {}
 
 func (v NativeFunctionValue) IsFunctionValue() {}
-
-func (v NativeFunctionValue) HasDerivedType() bool {
-	return v.hasDerivedType
-}
 
 func (v NativeFunctionValue) StaticType(context interpreter.ValueStaticTypeContext) bbq.StaticType {
 	return interpreter.NewFunctionStaticType(
@@ -299,20 +281,24 @@ func (v NativeFunctionValue) IsImportable(
 }
 
 func (v NativeFunctionValue) FunctionType(interpreter.TypeConverter) *sema.FunctionType {
-	if v.functionType == nil {
+	if v.functionTypeGetter != nil {
 		// For native functions where the type is NOT pre-known,
 		// This method should never be invoked.
-		// Such functions must always be wrapped with a `*BoundFunctionPointerValue`.
+		// Such functions must always be wrapped with a `BoundFunctionPointerValue`.
 		panic(errors.NewUnreachableError())
 	}
 	return v.functionType
 }
 
 func (v NativeFunctionValue) DerivedFunctionType(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
-	if v.typeGetter == nil {
+	if v.functionTypeGetter == nil {
 		panic(errors.NewUnreachableError())
 	}
-	return v.typeGetter(receiver, context)
+	return v.functionTypeGetter(receiver, context)
+}
+
+func (v NativeFunctionValue) HasDerivedType() bool {
+	return v.functionTypeGetter != nil
 }
 
 func (v NativeFunctionValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
@@ -446,10 +432,11 @@ func (v *BoundFunctionPointerValue) IsImportable(
 
 func (v *BoundFunctionPointerValue) FunctionType(context interpreter.TypeConverter) *sema.FunctionType {
 	if v.functionType == nil {
-		if v.HasDerivedType() {
-			v.functionType = v.Method.DerivedFunctionType(v.Receiver, context)
+		method := v.Method
+		if method.HasDerivedType() {
+			v.functionType = method.DerivedFunctionType(v.Receiver, context)
 		} else {
-			v.functionType = v.Method.FunctionType(context)
+			v.functionType = method.FunctionType(context)
 		}
 	}
 
