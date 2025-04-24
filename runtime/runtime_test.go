@@ -12425,3 +12425,91 @@ func TestRuntimeFunctionTypeConfusion(t *testing.T) {
 	var typeErr *sema.TypeMismatchError
 	require.ErrorAs(t, err, &typeErr)
 }
+
+func TestRuntimeInvokeContractFunctionImported(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntime()
+
+	addressValue := Address{
+		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+	}
+
+	contract1 := []byte(`
+        access(all) contract Test1 {
+			access(all) fun hello(): String {
+				return "Hello World!"
+			}
+        }
+    `)
+
+	contract2 := []byte(`
+        import Test1 from 0x01
+
+        access(all) contract Test2 {
+			access(all) fun hello(): String {
+				return Test1.hello()
+			}
+        }
+    `)
+
+	deploy1 := DeploymentTransaction("Test1", contract1)
+	deploy2 := DeploymentTransaction("Test2", contract2)
+
+	accountCodes := map[Location][]byte{}
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{addressValue}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	for _, deploy := range [][]byte{deploy1, deploy2} {
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deploy,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	}
+
+	result, err := runtime.InvokeContractFunction(
+		common.AddressLocation{
+			Address: addressValue,
+			Name:    "Test2",
+		},
+		"hello",
+		nil,
+		nil,
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		cadence.String("Hello World!"),
+		result,
+	)
+}
