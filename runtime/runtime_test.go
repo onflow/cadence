@@ -12437,9 +12437,9 @@ func TestRuntimeInvokeContractFunctionImported(t *testing.T) {
 	}
 
 	contract1 := []byte(`
-        access(all) contract Test1 {
+        access(all) contract interface Test1 {
 			access(all) fun hello(): String {
-				return "Hello World!"
+				post { result.length > 0 }
 			}
         }
     `)
@@ -12447,15 +12447,22 @@ func TestRuntimeInvokeContractFunctionImported(t *testing.T) {
 	contract2 := []byte(`
         import Test1 from 0x01
 
-        access(all) contract Test2 {
+        access(all) contract Test2: Test1 {
 			access(all) fun hello(): String {
-				return Test1.hello()
+				return "Hello World!"
 			}
         }
     `)
 
-	deploy1 := DeploymentTransaction("Test1", contract1)
-	deploy2 := DeploymentTransaction("Test2", contract2)
+	contract3 := []byte(`
+        import Test2 from 0x01
+
+        access(all) contract Test3 {
+			access(all) fun hello(): String {
+				return Test2.hello()
+			}
+        }
+    `)
 
 	accountCodes := map[Location][]byte{}
 
@@ -12479,10 +12486,26 @@ func TestRuntimeInvokeContractFunctionImported(t *testing.T) {
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
-	for _, deploy := range [][]byte{deploy1, deploy2} {
+	for _, deployment := range []struct {
+		name string
+		code []byte
+	}{
+		{
+			name: "Test1",
+			code: contract1,
+		},
+		{
+			name: "Test2",
+			code: contract2,
+		},
+		{
+			name: "Test3",
+			code: contract3,
+		},
+	} {
 		err := runtime.ExecuteTransaction(
 			Script{
-				Source: deploy,
+				Source: DeploymentTransaction(deployment.name, deployment.code),
 			},
 			Context{
 				Interface: runtimeInterface,
@@ -12495,7 +12518,7 @@ func TestRuntimeInvokeContractFunctionImported(t *testing.T) {
 	result, err := runtime.InvokeContractFunction(
 		common.AddressLocation{
 			Address: addressValue,
-			Name:    "Test2",
+			Name:    "Test3",
 		},
 		"hello",
 		nil,

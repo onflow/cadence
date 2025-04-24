@@ -122,19 +122,25 @@ func (e *vmEnvironment) newCompilerConfig() *compiler.Config {
 		LocationHandler: e.ResolveLocation,
 		ImportHandler:   e.handleImport,
 		ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
-			// TODO:
-			return nil, fmt.Errorf("cannot find elaboration for %s", location)
+			// TODO: load and compile the contract program only once, register desugared elaboration
+			program, err := e.loadProgram(location)
+			if err != nil {
+				panic(fmt.Errorf("failed to load elaboration for location %s: %w", location, err))
+			}
+			_, desugaredElaboration := e.compileProgram(program, location)
+			return desugaredElaboration, nil
 		},
 	}
 }
 
 func (e *vmEnvironment) handleImport(location common.Location) *bbq.InstructionProgram {
+	// TODO: load and compile the contract program only once, register desugared elaboration
 	program, err := e.loadProgram(location)
 	if err != nil {
 		panic(fmt.Errorf("failed to load program for location %s: %w", location, err))
 	}
-	// TODO: cache
-	return e.compileProgram(program, location)
+	compiledProgram, _ := e.compileProgram(program, location)
+	return compiledProgram
 }
 
 func (e *vmEnvironment) Configure(
@@ -282,13 +288,24 @@ func (e *vmEnvironment) loadProgram(location common.Location) (*interpreter.Prog
 	return program, nil
 }
 
-func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+func (e *vmEnvironment) loadElaboration(location common.Location) (*sema.Elaboration, error) {
 	program, err := e.loadProgram(location)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	elaboration := program.Elaboration
+	return program.Elaboration, nil
+}
+func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+	elaboration, err := e.loadElaboration(location)
+	if err != nil {
+		panic(fmt.Errorf(
+			"cannot load type %s: failed to load elaboration for location %s: %w",
+			typeID,
+			location,
+			err,
+		))
+	}
 
 	compositeType := elaboration.CompositeType(typeID)
 	if compositeType != nil {
@@ -316,15 +333,18 @@ func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.Ty
 func (e *vmEnvironment) compileProgram(
 	program *interpreter.Program,
 	location common.Location,
-) *bbq.InstructionProgram {
-
+) (
+	*bbq.InstructionProgram,
+	*compiler.DesugaredElaboration,
+) {
 	comp := compiler.NewInstructionCompilerWithConfig(
 		program,
 		location,
 		e.compilerConfig,
 	)
 
-	return comp.Compile()
+	compiledProgram := comp.Compile()
+	return compiledProgram, comp.DesugaredElaboration
 }
 
 func (e *vmEnvironment) newVM(

@@ -255,12 +255,14 @@ func (executor *contractFunctionExecutor) executeWithVM(
 
 	contractLocation := executor.contractLocation
 
+	// TODO: load and compile the contract program only once, register desugared elaboration
+
 	contractProgram, err := environment.loadProgram(contractLocation)
 	if err != nil {
 		return nil, err
 	}
 
-	compiledProgram := environment.compileProgram(contractProgram, contractLocation)
+	compiledProgram, _ := environment.compileProgram(contractProgram, contractLocation)
 
 	vm := environment.newVM(contractLocation, compiledProgram)
 
