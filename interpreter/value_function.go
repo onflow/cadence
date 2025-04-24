@@ -31,7 +31,7 @@ import (
 type FunctionValue interface {
 	Value
 	IsFunctionValue()
-	FunctionType() *sema.FunctionType
+	FunctionType(context TypeConverter) *sema.FunctionType
 	// invoke evaluates the function.
 	// Only used internally by the interpreter.
 	// Use Interpreter.InvokeFunctionValue if you want to invoke the function externally
@@ -113,7 +113,7 @@ func (*InterpretedFunctionValue) IsImportable(_ ValueImportableContext, _ Locati
 
 func (*InterpretedFunctionValue) IsFunctionValue() {}
 
-func (f *InterpretedFunctionValue) FunctionType() *sema.FunctionType {
+func (f *InterpretedFunctionValue) FunctionType(TypeConverter) *sema.FunctionType {
 	return f.Type
 }
 
@@ -247,7 +247,7 @@ func (*HostFunctionValue) IsImportable(_ ValueImportableContext, _ LocationRange
 
 func (*HostFunctionValue) IsFunctionValue() {}
 
-func (f *HostFunctionValue) FunctionType() *sema.FunctionType {
+func (f *HostFunctionValue) FunctionType(_ TypeConverter) *sema.FunctionType {
 	return f.Type
 }
 
@@ -428,8 +428,8 @@ func (BoundFunctionValue) IsImportable(_ ValueImportableContext, _ LocationRange
 
 func (BoundFunctionValue) IsFunctionValue() {}
 
-func (f BoundFunctionValue) FunctionType() *sema.FunctionType {
-	return f.Function.FunctionType()
+func (f BoundFunctionValue) FunctionType(context TypeConverter) *sema.FunctionType {
+	return f.Function.FunctionType(context)
 }
 
 func (f BoundFunctionValue) Invoke(invocation Invocation) Value {

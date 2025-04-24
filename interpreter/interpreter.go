@@ -4321,7 +4321,7 @@ func (interpreter *Interpreter) InvokeFunction(
 	invocationArgumentTypes []sema.Type,
 	locationRange LocationRange,
 ) Value {
-	fnType := fn.FunctionType()
+	fnType := fn.FunctionType(interpreter)
 	parameterTypes := fnType.ParameterTypes()
 	returnType := fnType.ReturnTypeAnnotation.Type
 

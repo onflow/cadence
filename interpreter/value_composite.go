@@ -1681,7 +1681,7 @@ func (v *CompositeValue) forEachAttachmentFunction(context FunctionCreationConte
 				panic(errors.NewUnreachableError())
 			}
 
-			functionValueType := functionValue.FunctionType()
+			functionValueType := functionValue.FunctionType(invocationContext)
 			parameterTypes := functionValueType.ParameterTypes()
 			returnType := functionValueType.ReturnTypeAnnotation.Type
 

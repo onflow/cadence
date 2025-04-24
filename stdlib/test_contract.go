@@ -349,7 +349,7 @@ func invokeMatcherTest(
 		))
 	}
 
-	functionType := funcValue.FunctionType()
+	functionType := funcValue.FunctionType(context)
 
 	testResult, err := interpreter.InvokeExternally(
 		context,
@@ -915,7 +915,7 @@ func newTestTypeExpectFailureFunction(
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				functionType := functionValue.FunctionType()
+				functionType := functionValue.FunctionType(invocationContext)
 
 				errorMessage, ok := invocation.Arguments[1].(*interpreter.StringValue)
 				if !ok {
@@ -1304,7 +1304,7 @@ func (t *TestContractType) NewTestContract(
 		testFramework.EmulatorBackend(),
 		interpreter.EmptyLocationRange,
 	)
-	returnType := constructor.FunctionType().ReturnTypeAnnotation.Type
+	returnType := constructor.FunctionType(inter).ReturnTypeAnnotation.Type
 	value, err := interpreter.InvokeFunctionValue(
 		inter,
 		constructor,
