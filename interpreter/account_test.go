@@ -147,7 +147,7 @@ type testAccountHandler struct {
 	updateAccountContractCode func(location common.AddressLocation, code []byte) error
 	recordContractUpdate      func(location common.AddressLocation, value *interpreter.CompositeValue)
 	contractUpdateRecorded    func(location common.AddressLocation) bool
-	interpretContract         func(
+	loadContractValue         func(
 		location common.AddressLocation,
 		program *interpreter.Program,
 		name string,
@@ -364,10 +364,10 @@ func (t *testAccountHandler) LoadContractValue(
 	*interpreter.CompositeValue,
 	error,
 ) {
-	if t.interpretContract == nil {
+	if t.loadContractValue == nil {
 		panic(errors.NewUnexpectedError("unexpected call to LoadContractValue"))
 	}
-	return t.interpretContract(
+	return t.loadContractValue(
 		location,
 		program,
 		name,

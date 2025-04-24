@@ -216,7 +216,7 @@ func interpreterFTTransfer(tb testing.TB) {
 		contractUpdateRecorded: func(location common.AddressLocation) bool {
 			return false
 		},
-		interpretContract: func(
+		loadContractValue: func(
 			location common.AddressLocation,
 			program *interpreter.Program,
 			name string,
