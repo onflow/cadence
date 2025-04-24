@@ -101,21 +101,28 @@ func (e *vmEnvironment) newVMConfig() *vm.Config {
 	config := vm.NewConfig(nil)
 	config.TypeLoader = e.loadType
 	config.Logger = e
+	config.ImportHandler = e.handleImport
 	return config
 }
 
 func (e *vmEnvironment) newCompilerConfig() *compiler.Config {
 	return &compiler.Config{
 		LocationHandler: e.ResolveLocation,
-		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
-			// TODO:
-			panic(errors.NewUnexpectedError("cannot import %s", location))
-		},
+		ImportHandler:   e.handleImport,
 		ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 			// TODO:
 			return nil, fmt.Errorf("cannot find elaboration for %s", location)
 		},
 	}
+}
+
+func (e *vmEnvironment) handleImport(location common.Location) *bbq.InstructionProgram {
+	program, err := e.loadProgram(location)
+	if err != nil {
+		panic(fmt.Errorf("failed to load program for location %s: %w", location, err))
+	}
+	// TODO: cache
+	return e.compileProgram(program, location)
 }
 
 func (e *vmEnvironment) Configure(
@@ -295,12 +302,12 @@ func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.Ty
 }
 
 func (e *vmEnvironment) compileProgram(
-	compiledProgram *interpreter.Program,
+	program *interpreter.Program,
 	location common.Location,
 ) *bbq.InstructionProgram {
 
 	comp := compiler.NewInstructionCompilerWithConfig(
-		compiledProgram,
+		program,
 		location,
 		e.compilerConfig,
 	)
