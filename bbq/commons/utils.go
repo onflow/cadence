@@ -47,6 +47,8 @@ func TypeQualifier(typ sema.Type) string {
 		return TypeQualifierArray
 	case *sema.DictionaryType:
 		return TypeQualifierDictionary
+	case *sema.FunctionType:
+		return TypeQualifierFunction
 	case *sema.OptionalType:
 		return TypeQualifier(typ.Type)
 	case *sema.ReferenceType:

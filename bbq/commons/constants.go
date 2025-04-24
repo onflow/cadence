@@ -38,4 +38,5 @@ const (
 
 	TypeQualifierArray      = "$Array"
 	TypeQualifierDictionary = "$Dictionary"
+	TypeQualifierFunction = "$Function"
 )

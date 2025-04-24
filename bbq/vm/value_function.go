@@ -30,8 +30,8 @@ import (
 
 type FunctionValue interface {
 	interpreter.FunctionValue
-	ParameterCount() int
 	HasDerivedType() bool
+	DerivedFunctionType(receiver Value, context interpreter.TypeConverter) *sema.FunctionType
 }
 
 type CompiledFunctionValue struct {
@@ -52,8 +52,8 @@ func (v CompiledFunctionValue) HasDerivedType() bool {
 	return false
 }
 
-func (v CompiledFunctionValue) ParameterCount() int {
-	return int(v.Function.ParameterCount)
+func (v CompiledFunctionValue) DerivedFunctionType(_ Value, context interpreter.TypeConverter) *sema.FunctionType {
+	return v.FunctionType(context)
 }
 
 func (v CompiledFunctionValue) StaticType(interpreter.ValueStaticTypeContext) bbq.StaticType {
@@ -140,7 +140,7 @@ func (v CompiledFunctionValue) IsImportable(_ interpreter.ValueImportableContext
 	return false
 }
 
-func (v CompiledFunctionValue) FunctionType() *sema.FunctionType {
+func (v CompiledFunctionValue) FunctionType(interpreter.TypeConverter) *sema.FunctionType {
 	return v.Type.Type
 }
 
@@ -158,7 +158,7 @@ type NativeFunction func(context *Context, typeArguments []bbq.StaticType, argum
 type NativeFunctionValue struct {
 	Name           string
 	Function       NativeFunction
-	typeGetter     func(receiver Value) *sema.FunctionType
+	typeGetter     func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType
 	functionType   *sema.FunctionType
 	hasDerivedType bool
 }
@@ -181,16 +181,15 @@ func NewBoundNativeFunctionValue(
 	function NativeFunction,
 ) NativeFunctionValue {
 	return NativeFunctionValue{
-		Name:           name,
-		Function:       function,
-		functionType:   funcType,
-		hasDerivedType: true,
+		Name:         name,
+		Function:     function,
+		functionType: funcType,
 	}
 }
 
 func NewDerivedTypeBoundNativeFunctionValue(
 	name string,
-	typeGetter func(receiver Value) *sema.FunctionType,
+	typeGetter func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType,
 	function NativeFunction,
 ) NativeFunctionValue {
 	return NativeFunctionValue{
@@ -212,19 +211,11 @@ func (v NativeFunctionValue) HasDerivedType() bool {
 	return v.hasDerivedType
 }
 
-// ParameterCount includes the actual parameters + receiver for type-bound functions.
-func (v NativeFunctionValue) ParameterCount() int {
-	typ := v.FunctionType()
-	parameterCount := len(typ.Parameters)
-	if v.hasDerivedType {
-		// +1 is for the receiver
-		return parameterCount + 1
-	}
-	return parameterCount
-}
-
-func (v NativeFunctionValue) StaticType(interpreter.ValueStaticTypeContext) bbq.StaticType {
-	return interpreter.NewFunctionStaticType(nil, v.FunctionType())
+func (v NativeFunctionValue) StaticType(context interpreter.ValueStaticTypeContext) bbq.StaticType {
+	return interpreter.NewFunctionStaticType(
+		nil,
+		v.FunctionType(context),
+	)
 }
 
 func (v NativeFunctionValue) Transfer(_ interpreter.ValueTransferContext,
@@ -239,7 +230,8 @@ func (v NativeFunctionValue) Transfer(_ interpreter.ValueTransferContext,
 }
 
 func (v NativeFunctionValue) String() string {
-	return v.FunctionType().String()
+	// TODO:
+	return v.Name
 }
 
 func (v NativeFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -306,14 +298,21 @@ func (v NativeFunctionValue) IsImportable(
 	return false
 }
 
-func (v NativeFunctionValue) FunctionType() *sema.FunctionType {
+func (v NativeFunctionValue) FunctionType(interpreter.TypeConverter) *sema.FunctionType {
 	if v.functionType == nil {
 		// For native functions where the type is NOT pre-known,
 		// This method should never be invoked.
-		// Such functions must always be wrapped with a `BoundFunctionPointerValue`.
+		// Such functions must always be wrapped with a `*BoundFunctionPointerValue`.
 		panic(errors.NewUnreachableError())
 	}
 	return v.functionType
+}
+
+func (v NativeFunctionValue) DerivedFunctionType(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
+	if v.typeGetter == nil {
+		panic(errors.NewUnreachableError())
+	}
+	return v.typeGetter(receiver, context)
 }
 
 func (v NativeFunctionValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
@@ -327,40 +326,46 @@ func (v NativeFunctionValue) Invoke(invocation interpreter.Invocation) interpret
 
 // BoundFunctionPointerValue is a function-pointer taken for an object-method.
 type BoundFunctionPointerValue struct {
-	Receiver interpreter.MemberAccessibleValue
-	Method   FunctionValue
+	Receiver     interpreter.MemberAccessibleValue
+	Method       FunctionValue
+	functionType *sema.FunctionType
 }
 
 func NewBoundFunctionPointerValue(
 	receiver interpreter.MemberAccessibleValue,
 	method FunctionValue,
 ) FunctionValue {
-	return BoundFunctionPointerValue{
+	return &BoundFunctionPointerValue{
 		Receiver: receiver,
 		Method:   method,
 	}
 }
 
-var _ Value = BoundFunctionPointerValue{}
-var _ FunctionValue = BoundFunctionPointerValue{}
+var _ Value = &BoundFunctionPointerValue{}
+var _ FunctionValue = &BoundFunctionPointerValue{}
 
-func (BoundFunctionPointerValue) IsValue() {}
+func (*BoundFunctionPointerValue) IsValue() {}
 
-func (v BoundFunctionPointerValue) IsFunctionValue() {}
+func (v *BoundFunctionPointerValue) IsFunctionValue() {}
 
-func (v BoundFunctionPointerValue) HasDerivedType() bool {
-	return false
+func (v *BoundFunctionPointerValue) HasDerivedType() bool {
+	return v.Method.HasDerivedType()
 }
 
-func (v BoundFunctionPointerValue) ParameterCount() int {
-	return v.Method.ParameterCount() - 1
+func (v *BoundFunctionPointerValue) DerivedFunctionType(_ Value, context interpreter.TypeConverter) *sema.FunctionType {
+	return v.FunctionType(context)
 }
 
-func (v BoundFunctionPointerValue) StaticType(context interpreter.ValueStaticTypeContext) bbq.StaticType {
-	return v.Method.StaticType(context)
+func (v *BoundFunctionPointerValue) StaticType(context interpreter.ValueStaticTypeContext) bbq.StaticType {
+	if v.functionType == nil {
+		// initialize `v.functionType` field
+		_ = v.FunctionType(context)
+	}
+
+	return interpreter.NewFunctionStaticType(context, v.functionType)
 }
 
-func (v BoundFunctionPointerValue) Transfer(_ interpreter.ValueTransferContext,
+func (v *BoundFunctionPointerValue) Transfer(_ interpreter.ValueTransferContext,
 	_ interpreter.LocationRange,
 	_ atree.Address,
 	_ bool,
@@ -371,15 +376,15 @@ func (v BoundFunctionPointerValue) Transfer(_ interpreter.ValueTransferContext,
 	return v
 }
 
-func (v BoundFunctionPointerValue) String() string {
+func (v *BoundFunctionPointerValue) String() string {
 	return v.Method.String()
 }
 
-func (v BoundFunctionPointerValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v *BoundFunctionPointerValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return interpreter.NonStorable{Value: v}, nil
 }
 
-func (v BoundFunctionPointerValue) Accept(
+func (v *BoundFunctionPointerValue) Accept(
 	_ interpreter.ValueVisitContext,
 	_ interpreter.Visitor,
 	_ interpreter.LocationRange,
@@ -388,7 +393,7 @@ func (v BoundFunctionPointerValue) Accept(
 	panic(errors.NewUnreachableError())
 }
 
-func (v BoundFunctionPointerValue) Walk(
+func (v *BoundFunctionPointerValue) Walk(
 	_ interpreter.ValueWalkContext,
 	_ func(interpreter.Value),
 	_ interpreter.LocationRange,
@@ -396,7 +401,7 @@ func (v BoundFunctionPointerValue) Walk(
 	// NO-OP
 }
 
-func (v BoundFunctionPointerValue) ConformsToStaticType(
+func (v *BoundFunctionPointerValue) ConformsToStaticType(
 	_ interpreter.ValueStaticTypeConformanceContext,
 	_ interpreter.LocationRange,
 	_ interpreter.TypeConformanceResults,
@@ -404,46 +409,54 @@ func (v BoundFunctionPointerValue) ConformsToStaticType(
 	return true
 }
 
-func (v BoundFunctionPointerValue) RecursiveString(_ interpreter.SeenReferences) string {
+func (v *BoundFunctionPointerValue) RecursiveString(_ interpreter.SeenReferences) string {
 	return v.String()
 }
 
-func (v BoundFunctionPointerValue) MeteredString(
+func (v *BoundFunctionPointerValue) MeteredString(
 	context interpreter.ValueStringContext,
-	seenreferences interpreter.SeenReferences,
+	seenReferences interpreter.SeenReferences,
 	locationRange interpreter.LocationRange,
 ) string {
-	return v.Method.MeteredString(context, seenreferences, locationRange)
+	return v.Method.MeteredString(context, seenReferences, locationRange)
 }
 
-func (v BoundFunctionPointerValue) IsResourceKinded(_ interpreter.ValueStaticTypeContext) bool {
+func (v *BoundFunctionPointerValue) IsResourceKinded(_ interpreter.ValueStaticTypeContext) bool {
 	return false
 }
 
-func (v BoundFunctionPointerValue) NeedsStoreTo(_ atree.Address) bool {
+func (v *BoundFunctionPointerValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v BoundFunctionPointerValue) DeepRemove(_ interpreter.ValueRemoveContext, _ bool) {
+func (v *BoundFunctionPointerValue) DeepRemove(_ interpreter.ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
-func (v BoundFunctionPointerValue) Clone(_ interpreter.ValueCloneContext) interpreter.Value {
+func (v *BoundFunctionPointerValue) Clone(_ interpreter.ValueCloneContext) interpreter.Value {
 	return v
 }
 
-func (v BoundFunctionPointerValue) IsImportable(
+func (v *BoundFunctionPointerValue) IsImportable(
 	_ interpreter.ValueImportableContext,
 	_ interpreter.LocationRange,
 ) bool {
 	return false
 }
 
-func (v BoundFunctionPointerValue) FunctionType() *sema.FunctionType {
-	return v.Method.FunctionType()
+func (v *BoundFunctionPointerValue) FunctionType(context interpreter.TypeConverter) *sema.FunctionType {
+	if v.functionType == nil {
+		if v.HasDerivedType() {
+			v.functionType = v.Method.DerivedFunctionType(v.Receiver, context)
+		} else {
+			v.functionType = v.Method.FunctionType(context)
+		}
+	}
+
+	return v.functionType
 }
 
-func (v BoundFunctionPointerValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
+func (v *BoundFunctionPointerValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
 	return invocation.InvocationContext.InvokeFunction(
 		v,
 		invocation.Arguments,

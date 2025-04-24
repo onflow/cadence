@@ -49,6 +49,7 @@ var builtinTypes = common.Concat[sema.Type](
 		&sema.ConstantSizedType{},
 		&sema.VariableSizedType{},
 		&sema.DictionaryType{},
+		&sema.FunctionType{},
 	},
 )
 

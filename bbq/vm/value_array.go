@@ -30,10 +30,12 @@ import (
 func init() {
 	RegisterTypeBoundFunction(
 		commons.TypeQualifierArray,
-		NewBoundNativeFunctionValue(
+		NewDerivedTypeBoundNativeFunctionValue(
 			sema.ArrayTypeAppendFunctionName,
-			// TODO:
-			sema.ArrayAppendFunctionType(sema.AnyType),
+			func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
+				elementType := arrayElementTypeFromValue(receiver, context)
+				return sema.ArrayAppendFunctionType(elementType)
+			},
 			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				value := arguments[receiverIndex]
 				array := value.(*interpreter.ArrayValue)
@@ -46,10 +48,12 @@ func init() {
 
 	RegisterTypeBoundFunction(
 		commons.TypeQualifierArray,
-		NewBoundNativeFunctionValue(
+		NewDerivedTypeBoundNativeFunctionValue(
 			sema.ArrayTypeAppendAllFunctionName,
-			// TODO:
-			sema.ArrayAppendAllFunctionType(sema.AnyType),
+			func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
+				elementType := arrayElementTypeFromValue(receiver, context)
+				return sema.ArrayAppendAllFunctionType(elementType)
+			},
 			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				value := arguments[receiverIndex]
 				array := value.(*interpreter.ArrayValue)
@@ -67,10 +71,12 @@ func init() {
 
 	RegisterTypeBoundFunction(
 		commons.TypeQualifierArray,
-		NewBoundNativeFunctionValue(
+		NewDerivedTypeBoundNativeFunctionValue(
 			sema.ArrayTypeConcatFunctionName,
-			// TODO:
-			sema.ArrayConcatFunctionType(sema.AnyType),
+			func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
+				elementType := arrayElementTypeFromValue(receiver, context)
+				return sema.ArrayConcatFunctionType(elementType)
+			},
 			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				value := arguments[receiverIndex]
 				array := value.(*interpreter.ArrayValue)
@@ -82,10 +88,12 @@ func init() {
 	)
 	RegisterTypeBoundFunction(
 		commons.TypeQualifierArray,
-		NewBoundNativeFunctionValue(
+		NewDerivedTypeBoundNativeFunctionValue(
 			sema.ArrayTypeInsertFunctionName,
-			// TODO:
-			sema.ArrayInsertFunctionType(sema.AnyType),
+			func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
+				elementType := arrayElementTypeFromValue(receiver, context)
+				return sema.ArrayInsertFunctionType(elementType)
+			},
 			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				value := arguments[receiverIndex]
 				array := value.(*interpreter.ArrayValue)
@@ -108,10 +116,12 @@ func init() {
 	)
 	RegisterTypeBoundFunction(
 		commons.TypeQualifierArray,
-		NewBoundNativeFunctionValue(
+		NewDerivedTypeBoundNativeFunctionValue(
 			sema.ArrayTypeRemoveFunctionName,
-			// TODO:
-			sema.ArrayRemoveFunctionType(sema.AnyType),
+			func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
+				elementType := arrayElementTypeFromValue(receiver, context)
+				return sema.ArrayRemoveFunctionType(elementType)
+			},
 			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				value := arguments[receiverIndex]
 				array := value.(*interpreter.ArrayValue)
@@ -131,10 +141,12 @@ func init() {
 
 	RegisterTypeBoundFunction(
 		commons.TypeQualifierArray,
-		NewBoundNativeFunctionValue(
+		NewDerivedTypeBoundNativeFunctionValue(
 			sema.ArrayTypeRemoveFirstFunctionName,
-			// TODO:
-			sema.ArrayRemoveFirstFunctionType(sema.AnyType),
+			func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
+				elementType := arrayElementTypeFromValue(receiver, context)
+				return sema.ArrayRemoveFirstFunctionType(elementType)
+			},
 			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				value := arguments[receiverIndex]
 				array := value.(*interpreter.ArrayValue)
@@ -145,10 +157,12 @@ func init() {
 
 	RegisterTypeBoundFunction(
 		commons.TypeQualifierArray,
-		NewBoundNativeFunctionValue(
+		NewDerivedTypeBoundNativeFunctionValue(
 			sema.ArrayTypeRemoveLastFunctionName,
-			// TODO:
-			sema.ArrayRemoveLastFunctionType(sema.AnyType),
+			func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
+				elementType := arrayElementTypeFromValue(receiver, context)
+				return sema.ArrayRemoveLastFunctionType(elementType)
+			},
 			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				value := arguments[receiverIndex]
 				array := value.(*interpreter.ArrayValue)
@@ -159,10 +173,12 @@ func init() {
 
 	RegisterTypeBoundFunction(
 		commons.TypeQualifierArray,
-		NewBoundNativeFunctionValue(
+		NewDerivedTypeBoundNativeFunctionValue(
 			sema.ArrayTypeFirstIndexFunctionName,
-			// TODO:
-			sema.ArrayFirstIndexFunctionType(sema.AnyType),
+			func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
+				elementType := arrayElementTypeFromValue(receiver, context)
+				return sema.ArrayFirstIndexFunctionType(elementType)
+			},
 			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				value := arguments[receiverIndex]
 				array := value.(*interpreter.ArrayValue)
@@ -174,10 +190,12 @@ func init() {
 
 	RegisterTypeBoundFunction(
 		commons.TypeQualifierArray,
-		NewBoundNativeFunctionValue(
+		NewDerivedTypeBoundNativeFunctionValue(
 			sema.ArrayTypeContainsFunctionName,
-			// TODO:
-			sema.ArrayContainsFunctionType(sema.AnyType),
+			func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
+				elementType := arrayElementTypeFromValue(receiver, context)
+				return sema.ArrayContainsFunctionType(elementType)
+			},
 			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				value := arguments[receiverIndex]
 				array := value.(*interpreter.ArrayValue)
@@ -189,10 +207,12 @@ func init() {
 
 	RegisterTypeBoundFunction(
 		commons.TypeQualifierArray,
-		NewBoundNativeFunctionValue(
+		NewDerivedTypeBoundNativeFunctionValue(
 			sema.ArrayTypeSliceFunctionName,
-			// TODO:
-			sema.ArraySliceFunctionType(sema.AnyType),
+			func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
+				elementType := arrayElementTypeFromValue(receiver, context)
+				return sema.ArraySliceFunctionType(elementType)
+			},
 			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				value := arguments[receiverIndex]
 				array := value.(*interpreter.ArrayValue)
@@ -208,26 +228,30 @@ func init() {
 		),
 	)
 
-	//RegisterTypeBoundFunction(
-	//	commons.TypeQualifierArray,
-	//	NewBoundNativeFunctionValue(
-	//		sema.ArrayTypeReverseFunctionName,
-	//		// TODO:
-	//		sema.ArrayReverseFunctionType(nil),
-	//		func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
-	//			value := arguments[receiverIndex]
-	//			array := value.(*interpreter.ArrayValue)
-	//			return array.Reverse(context, EmptyLocationRange)
-	//		},
-	//	),
-	//)
+	RegisterTypeBoundFunction(
+		commons.TypeQualifierArray,
+		NewDerivedTypeBoundNativeFunctionValue(
+			sema.ArrayTypeReverseFunctionName,
+			func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
+				arrayType := arrayTypeFromValue(receiver, context)
+				return sema.ArrayReverseFunctionType(arrayType)
+			},
+			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+				value := arguments[receiverIndex]
+				array := value.(*interpreter.ArrayValue)
+				return array.Reverse(context, EmptyLocationRange)
+			},
+		),
+	)
 
 	RegisterTypeBoundFunction(
 		commons.TypeQualifierArray,
-		NewBoundNativeFunctionValue(
+		NewDerivedTypeBoundNativeFunctionValue(
 			sema.ArrayTypeFilterFunctionName,
-			// TODO:
-			sema.ArrayFilterFunctionType(nil, sema.AnyType),
+			func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
+				elementType := arrayElementTypeFromValue(receiver, context)
+				return sema.ArrayFilterFunctionType(context, elementType)
+			},
 			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				value := arguments[receiverIndex]
 				array := value.(*interpreter.ArrayValue)
@@ -237,27 +261,31 @@ func init() {
 		),
 	)
 
-	//RegisterTypeBoundFunction(
-	//	commons.TypeQualifierArray,
-	//	NewBoundNativeFunctionValue(
-	//		sema.ArrayTypeMapFunctionName,
-	//		// TODO:
-	//		sema.ArrayMapFunctionType(nil, nil),
-	//		func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
-	//			value := arguments[receiverIndex]
-	//			array := value.(*interpreter.ArrayValue)
-	//			funcArgument := arguments[1].(FunctionValue)
-	//			return array.Map(context, EmptyLocationRange, funcArgument)
-	//		},
-	//	),
-	//)
+	RegisterTypeBoundFunction(
+		commons.TypeQualifierArray,
+		NewDerivedTypeBoundNativeFunctionValue(
+			sema.ArrayTypeMapFunctionName,
+			func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
+				arrayType := arrayTypeFromValue(receiver, context)
+				return sema.ArrayMapFunctionType(context, arrayType)
+			},
+			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+				value := arguments[receiverIndex]
+				array := value.(*interpreter.ArrayValue)
+				funcArgument := arguments[1].(FunctionValue)
+				return array.Map(context, EmptyLocationRange, funcArgument)
+			},
+		),
+	)
 
 	RegisterTypeBoundFunction(
 		commons.TypeQualifierArray,
-		NewBoundNativeFunctionValue(
+		NewDerivedTypeBoundNativeFunctionValue(
 			sema.ArrayTypeToVariableSizedFunctionName,
-			// TODO:
-			sema.ArrayToVariableSizedFunctionType(sema.AnyType),
+			func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
+				elementType := arrayElementTypeFromValue(receiver, context)
+				return sema.ArrayToVariableSizedFunctionType(elementType)
+			},
 			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				value := arguments[receiverIndex]
 				array := value.(*interpreter.ArrayValue)
@@ -268,10 +296,12 @@ func init() {
 
 	RegisterTypeBoundFunction(
 		commons.TypeQualifierArray,
-		NewBoundNativeFunctionValue(
+		NewDerivedTypeBoundNativeFunctionValue(
 			sema.ArrayTypeToConstantSizedFunctionName,
-			// TODO:
-			sema.ArrayToConstantSizedFunctionType(sema.AnyType),
+			func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
+				elementType := arrayElementTypeFromValue(receiver, context)
+				return sema.ArrayToConstantSizedFunctionType(elementType)
+			},
 			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				value := arguments[receiverIndex]
 				array := value.(*interpreter.ArrayValue)
@@ -284,4 +314,14 @@ func init() {
 			},
 		),
 	)
+}
+
+func arrayTypeFromValue(receiver Value, context interpreter.TypeConverter) sema.ArrayType {
+	return receiver.(*interpreter.ArrayValue).
+		SemaType(context)
+}
+
+func arrayElementTypeFromValue(receiver Value, context interpreter.TypeConverter) sema.Type {
+	return arrayTypeFromValue(receiver, context).
+		ElementType(false)
 }

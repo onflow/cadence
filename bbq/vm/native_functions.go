@@ -224,7 +224,13 @@ func registerCommonBuiltinTypeBoundFunctions() {
 						value := args[receiverIndex]
 
 						// TODO: memory metering
-						return interpreter.NewUnmeteredStringValue(value.String())
+						return interpreter.NewUnmeteredStringValue(
+							value.MeteredString(
+								context,
+								interpreter.SeenReferences{},
+								EmptyLocationRange,
+							),
+						)
 					},
 				),
 			)
@@ -234,6 +240,7 @@ func registerCommonBuiltinTypeBoundFunctions() {
 	derivedTypeQualifiers := []string{
 		commons.TypeQualifierArray,
 		commons.TypeQualifierDictionary,
+		commons.TypeQualifierFunction,
 		// TODO: add other types. e.g; Optional, etc
 	}
 

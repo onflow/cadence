@@ -636,7 +636,7 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	arguments := vm.peekN(explicitArgumentsCount)
 
 	// If the function is a pointer to an object-method, then the receiver is implicitly captured.
-	if boundFunction, isBoundFUnction := functionValue.(BoundFunctionPointerValue); isBoundFUnction {
+	if boundFunction, isBoundFUnction := functionValue.(*BoundFunctionPointerValue); isBoundFUnction {
 		functionValue = boundFunction.Method
 		receiver := unwrapReceiver(vm.context, boundFunction.Receiver)
 		arguments = append([]Value{receiver}, arguments...)
@@ -691,7 +691,7 @@ func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
 		vm.context,
 		EmptyLocationRange,
 		funcName,
-	).(BoundFunctionPointerValue)
+	).(*BoundFunctionPointerValue)
 
 	invokeFunction(
 		vm,

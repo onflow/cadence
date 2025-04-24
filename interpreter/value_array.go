@@ -1679,7 +1679,7 @@ func (v *ArrayValue) Filter(
 
 	argumentTypes := []sema.Type{elementType}
 
-	procedureFunctionType := procedure.FunctionType()
+	procedureFunctionType := procedure.FunctionType(context)
 	parameterTypes := procedureFunctionType.ParameterTypes()
 	returnType := procedureFunctionType.ReturnTypeAnnotation.Type
 
@@ -1763,7 +1763,7 @@ func (v *ArrayValue) Map(
 
 	argumentTypes := []sema.Type{elementType}
 
-	procedureFunctionType := procedure.FunctionType()
+	procedureFunctionType := procedure.FunctionType(context)
 	parameterTypes := procedureFunctionType.ParameterTypes()
 	returnType := procedureFunctionType.ReturnTypeAnnotation.Type
 

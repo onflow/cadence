@@ -7572,3 +7572,94 @@ func TestMethodsAsFunctionPointers(t *testing.T) {
 		assert.Equal(t, interpreter.BoolValue(false), result)
 	})
 }
+
+func TestArrayFunctions(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("append", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t, `
+            fun test(): Type {
+                var array: [UInt8] = [2, 5]
+                var append = array.append
+                return append.getType()
+            }
+        `,
+			"test",
+		)
+
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			interpreter.TypeValue{
+				Type: interpreter.FunctionStaticType{
+					Type: sema.ArrayAppendFunctionType(sema.UInt8Type),
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("variable sized reverse", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t, `
+            fun test(): Type {
+                var array: [UInt8] = [2, 5]
+                var reverse = array.reverse
+                return reverse.getType()
+            }
+        `,
+			"test",
+		)
+
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			interpreter.TypeValue{
+				Type: interpreter.FunctionStaticType{
+					Type: sema.ArrayReverseFunctionType(
+						sema.NewVariableSizedType(
+							nil,
+							sema.UInt8Type,
+						),
+					),
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("constant sized reverse", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t, `
+            fun test(): Type {
+                var array: [UInt8; 2] = [2, 5]
+                var reverse = array.reverse
+                return reverse.getType()
+            }
+        `,
+			"test",
+		)
+
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			interpreter.TypeValue{
+				Type: interpreter.FunctionStaticType{
+					Type: sema.ArrayReverseFunctionType(
+						sema.NewConstantSizedType(
+							nil,
+							sema.UInt8Type,
+							2,
+						),
+					),
+				},
+			},
+			result,
+		)
+	})
+}
