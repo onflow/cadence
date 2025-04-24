@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 )
 
@@ -69,8 +70,14 @@ func LinkGlobals(
 					contract.Name,
 				)
 
-				// TODO: remove this check. This shouldn't be nil ideally.
-				if !contract.IsInterface && context.ContractValueHandler != nil {
+				if !contract.IsInterface {
+					if context.ContractValueHandler == nil {
+						panic(errors.NewUnexpectedError(
+							"cannot link import %s, missing contract value handler",
+							location,
+						))
+					}
+
 					var contractValue interpreter.Value = context.ContractValueHandler(context.Config, location)
 
 					staticType := contractValue.StaticType(context)
