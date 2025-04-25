@@ -121,28 +121,8 @@ func (e *vmEnvironment) newCompilerConfig() *compiler.Config {
 	return &compiler.Config{
 		LocationHandler:     e.ResolveLocation,
 		ImportHandler:       e.importProgram,
-		ElaborationResolver: e.resolveElaboration,
+		ElaborationResolver: e.resolveDesugaredElaboration,
 	}
-}
-
-func (e *vmEnvironment) resolveElaboration(location common.Location) (*compiler.DesugaredElaboration, error) {
-	// TODO: load and compile the contract program only once, register desugared elaboration
-	program, err := e.loadProgram(location)
-	if err != nil {
-		panic(fmt.Errorf("failed to load elaboration for location %s: %w", location, err))
-	}
-	_, desugaredElaboration := e.compileProgram(program, location)
-	return desugaredElaboration, nil
-}
-
-func (e *vmEnvironment) importProgram(location common.Location) *bbq.InstructionProgram {
-	// TODO: load and compile the contract program only once, register desugared elaboration
-	program, err := e.loadProgram(location)
-	if err != nil {
-		panic(fmt.Errorf("failed to load program for location %s: %w", location, err))
-	}
-	compiledProgram, _ := e.compileProgram(program, location)
-	return compiledProgram
 }
 
 func (e *vmEnvironment) Configure(
@@ -298,6 +278,7 @@ func (e *vmEnvironment) loadElaboration(location common.Location) (*sema.Elabora
 
 	return program.Elaboration, nil
 }
+
 func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
 	elaboration, err := e.loadElaboration(location)
 	if err != nil {
@@ -347,6 +328,26 @@ func (e *vmEnvironment) compileProgram(
 
 	compiledProgram := comp.Compile()
 	return compiledProgram, comp.DesugaredElaboration
+}
+
+func (e *vmEnvironment) resolveDesugaredElaboration(location common.Location) (*compiler.DesugaredElaboration, error) {
+	// TODO: load and compile the contract program only once, register desugared elaboration
+	program, err := e.loadProgram(location)
+	if err != nil {
+		panic(fmt.Errorf("failed to load elaboration for location %s: %w", location, err))
+	}
+	_, desugaredElaboration := e.compileProgram(program, location)
+	return desugaredElaboration, nil
+}
+
+func (e *vmEnvironment) importProgram(location common.Location) *bbq.InstructionProgram {
+	// TODO: load and compile the contract program only once, register desugared elaboration
+	program, err := e.loadProgram(location)
+	if err != nil {
+		panic(fmt.Errorf("failed to load program for location %s: %w", location, err))
+	}
+	compiledProgram, _ := e.compileProgram(program, location)
+	return compiledProgram
 }
 
 func (e *vmEnvironment) newVM(
