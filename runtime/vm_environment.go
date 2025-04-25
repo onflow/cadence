@@ -101,26 +101,27 @@ func (e *vmEnvironment) newVMConfig() *vm.Config {
 	config := vm.NewConfig(nil)
 	config.TypeLoader = e.loadType
 	config.Logger = e
-	config.ContractValueHandler = func(conf *vm.Config, location common.Location) *interpreter.CompositeValue {
-		addressLocation, ok := location.(common.AddressLocation)
-		if !ok {
-			panic(fmt.Errorf("cannot get contract value for non-address location %T", location))
-		}
-
-		return loadContractValue(
-			vm.NewContext(conf),
-			addressLocation,
-			e.storage,
-		)
-	}
-	config.ImportHandler = e.handleImport
+	config.ContractValueHandler = e.loadContractValue
+	config.ImportHandler = e.importProgram
 	return config
 }
 
+func (e *vmEnvironment) loadContractValue(conf *vm.Config, location common.Location) *interpreter.CompositeValue {
+	addressLocation, ok := location.(common.AddressLocation)
+	if !ok {
+		panic(fmt.Errorf("cannot get contract value for non-address location %T", location))
+	}
+
+	return loadContractValue(
+		vm.NewContext(conf),
+		addressLocation,
+		e.storage,
+	)
+}
 func (e *vmEnvironment) newCompilerConfig() *compiler.Config {
 	return &compiler.Config{
 		LocationHandler: e.ResolveLocation,
-		ImportHandler:   e.handleImport,
+		ImportHandler:   e.importProgram,
 		ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 			// TODO: load and compile the contract program only once, register desugared elaboration
 			program, err := e.loadProgram(location)
@@ -133,7 +134,7 @@ func (e *vmEnvironment) newCompilerConfig() *compiler.Config {
 	}
 }
 
-func (e *vmEnvironment) handleImport(location common.Location) *bbq.InstructionProgram {
+func (e *vmEnvironment) importProgram(location common.Location) *bbq.InstructionProgram {
 	// TODO: load and compile the contract program only once, register desugared elaboration
 	program, err := e.loadProgram(location)
 	if err != nil {
@@ -165,7 +166,7 @@ func (e *vmEnvironment) Configure(
 func (e *vmEnvironment) DeclareValue(valueDeclaration stdlib.StandardLibraryValue, location common.Location) {
 	e.checkingEnvironment.declareValue(valueDeclaration, location)
 
-	// TODO: declare in compiler
+	// TODO: declare in compiler and VM
 }
 
 func (e *vmEnvironment) DeclareType(typeDeclaration stdlib.StandardLibraryType, location common.Location) {
