@@ -65,7 +65,7 @@ func registerFunction(functionName string, functionValue NativeFunctionValue) {
 
 func RegisterTypeBoundFunction(typeName string, functionValue NativeFunctionValue) {
 	// Update the name of the function to be type-qualified
-	qualifiedName := commons.TypeQualifiedName(typeName, functionValue.Name)
+	qualifiedName := commons.QualifiedName(typeName, functionValue.Name)
 	functionValue.Name = qualifiedName
 
 	RegisterFunction(functionValue)
@@ -75,7 +75,7 @@ func RegisterBuiltinTypeBoundFunction(typeName string, functionValue NativeFunct
 	// Here the function value is common for many types.
 	// Hence, do not update the function name to be type-qualified.
 	// Only the key in the map is type-qualified.
-	qualifiedName := commons.TypeQualifiedName(typeName, functionValue.Name)
+	qualifiedName := commons.QualifiedName(typeName, functionValue.Name)
 	registerFunction(qualifiedName, functionValue)
 }
 
@@ -209,8 +209,8 @@ func init() {
 }
 
 func registerCommonBuiltinTypeBoundFunctions() {
-	for _, builtinType := range sema.AllBuiltinTypes {
-		typeQualifier := string(builtinType.ID())
+	for _, builtinType := range commons.BuiltinTypes {
+		typeQualifier := commons.TypeQualifier(builtinType)
 		includeToStringFunction := sema.HasToStringFunction(builtinType)
 		registerBuiltinTypeBoundFunctions(typeQualifier)
 
@@ -229,16 +229,6 @@ func registerCommonBuiltinTypeBoundFunctions() {
 				),
 			)
 		}
-	}
-
-	derivedTypeQualifiers := []string{
-		commons.TypeQualifierArray,
-		commons.TypeQualifierDictionary,
-		// TODO: add other types. e.g; Optional, etc
-	}
-
-	for _, builtinType := range derivedTypeQualifiers {
-		registerBuiltinTypeBoundFunctions(builtinType)
 	}
 
 	for _, function := range commonBuiltinTypeBoundFunctions {
