@@ -278,8 +278,7 @@ func (executor *contractFunctionExecutor) executeWithVM(
 
 	staticType := contractValue.StaticType(context)
 	semaType := interpreter.MustConvertStaticToSemaType(staticType, context)
-	typeQualifier := commons.TypeQualifier(semaType)
-	qualifiedFuncName := commons.TypeQualifiedName(typeQualifier, executor.functionName)
+	qualifiedFuncName := commons.TypeQualifiedName(semaType, executor.functionName)
 
 	value, err := vm.Invoke(qualifiedFuncName, invocationArguments...)
 	if err != nil {

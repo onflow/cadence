@@ -139,7 +139,7 @@ func (e *vmEnvironment) Configure(
 	runtimeInterface Interface,
 	codesAndPrograms CodesAndPrograms,
 	storage *Storage,
-// TODO:
+	// TODO:
 	coverageReport *CoverageReport,
 ) {
 	clear(e.compiledPrograms)
