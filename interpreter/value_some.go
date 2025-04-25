@@ -347,8 +347,7 @@ func (v *SomeValue) Transfer(
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
-	preventTransfer map[atree.ValueID]struct {
-	},
+	preventTransfer map[atree.ValueID]struct{},
 	hasNoParentContainer bool,
 ) Value {
 	innerValue := v.value
