@@ -342,33 +342,28 @@ func (e *vmEnvironment) compileProgram(
 	return compiledProgram
 }
 
-func (e *vmEnvironment) resolveDesugaredElaboration(location common.Location) (*compiler.DesugaredElaboration, error) {
-	compiledProgram, ok := e.compiledPrograms[location]
-	if ok {
-		return compiledProgram.desugaredElaboration, nil
-	}
-
-	program, err := e.loadProgram(location)
-	if err != nil {
-		panic(fmt.Errorf("failed to load elaboration for location %s: %w", location, err))
-	}
-
-	compiledProgram = e.compileProgram(program, location)
-	return compiledProgram.desugaredElaboration, nil
-}
-
-func (e *vmEnvironment) importProgram(location common.Location) *bbq.InstructionProgram {
-	compiledProgram, ok := e.compiledPrograms[location]
-	if ok {
-		return compiledProgram.program
-	}
-
+func (e *vmEnvironment) loadAndCompileProgram(location common.Location) compiledProgram {
 	program, err := e.loadProgram(location)
 	if err != nil {
 		panic(fmt.Errorf("failed to load program for location %s: %w", location, err))
 	}
 
-	compiledProgram = e.compileProgram(program, location)
+	return e.compileProgram(program, location)
+}
+
+func (e *vmEnvironment) resolveDesugaredElaboration(location common.Location) (*compiler.DesugaredElaboration, error) {
+	compiledProgram, ok := e.compiledPrograms[location]
+	if !ok {
+		compiledProgram = e.loadAndCompileProgram(location)
+	}
+	return compiledProgram.desugaredElaboration, nil
+}
+
+func (e *vmEnvironment) importProgram(location common.Location) *bbq.InstructionProgram {
+	compiledProgram, ok := e.compiledPrograms[location]
+	if !ok {
+		compiledProgram = e.loadAndCompileProgram(location)
+	}
 	return compiledProgram.program
 }
 
