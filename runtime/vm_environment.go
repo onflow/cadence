@@ -119,18 +119,20 @@ func (e *vmEnvironment) loadContractValue(conf *vm.Config, location common.Locat
 }
 func (e *vmEnvironment) newCompilerConfig() *compiler.Config {
 	return &compiler.Config{
-		LocationHandler: e.ResolveLocation,
-		ImportHandler:   e.importProgram,
-		ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
-			// TODO: load and compile the contract program only once, register desugared elaboration
-			program, err := e.loadProgram(location)
-			if err != nil {
-				panic(fmt.Errorf("failed to load elaboration for location %s: %w", location, err))
-			}
-			_, desugaredElaboration := e.compileProgram(program, location)
-			return desugaredElaboration, nil
-		},
+		LocationHandler:     e.ResolveLocation,
+		ImportHandler:       e.importProgram,
+		ElaborationResolver: e.resolveElaboration,
 	}
+}
+
+func (e *vmEnvironment) resolveElaboration(location common.Location) (*compiler.DesugaredElaboration, error) {
+	// TODO: load and compile the contract program only once, register desugared elaboration
+	program, err := e.loadProgram(location)
+	if err != nil {
+		panic(fmt.Errorf("failed to load elaboration for location %s: %w", location, err))
+	}
+	_, desugaredElaboration := e.compileProgram(program, location)
+	return desugaredElaboration, nil
 }
 
 func (e *vmEnvironment) importProgram(location common.Location) *bbq.InstructionProgram {
