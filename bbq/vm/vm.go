@@ -32,7 +32,6 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/runtime"
 )
 
 type VM struct {
@@ -262,9 +261,8 @@ func (vm *VM) Invoke(name string, arguments ...Value) (v Value, err error) {
 			return
 		}
 
-		// TODO: pass proper location
-		codesAndPrograms := runtime.NewCodesAndPrograms()
-		err = runtime.GetWrappedError(recovered, nil, codesAndPrograms)
+		// TODO:
+		err, _ = recovered.(error)
 	}()
 
 	return vm.invoke(function, arguments)
@@ -316,9 +314,8 @@ func (vm *VM) ExecuteTransaction(transactionArgs []Value, signers ...Value) (err
 			return
 		}
 
-		// TODO: pass proper location
-		codesAndPrograms := runtime.NewCodesAndPrograms()
-		err = runtime.GetWrappedError(recovered, nil, codesAndPrograms)
+		// TODO:
+		err, _ = recovered.(error)
 	}()
 
 	// Create transaction value
@@ -873,6 +870,7 @@ func opTransfer(vm *VM, ins opcode.InstructionTransfer) {
 	valueType := transferredValue.StaticType(config)
 	// TODO: remove nil check after ensuring all implementations of Value.StaticType are implemented
 	if valueType != nil && !vm.context.IsSubType(valueType, targetType) {
+		// TODO: improve error
 		panic(errors.NewUnexpectedError(
 			"invalid transfer: expected '%s', found '%s'",
 			targetType,

@@ -44,7 +44,10 @@ func BenchmarkRecursionFib(b *testing.B) {
 	checker, err := ParseAndCheck(b, recursiveFib)
 	require.NoError(b, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	vmConfig := &vm.Config{}
@@ -73,7 +76,10 @@ func BenchmarkImperativeFib(b *testing.B) {
 	checker, err := ParseAndCheck(b, imperativeFib)
 	require.NoError(b, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	vmConfig := &vm.Config{}
@@ -115,7 +121,10 @@ func BenchmarkNewStruct(b *testing.B) {
 
 	value := interpreter.NewUnmeteredIntValueFromInt64(10)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	vmConfig := &vm.Config{}
@@ -150,7 +159,7 @@ func BenchmarkNewResource(b *testing.B) {
           }
           return <- r
       }
-  `)
+    `)
 	require.NoError(b, err)
 
 	b.ReportAllocs()
@@ -161,7 +170,10 @@ func BenchmarkNewResource(b *testing.B) {
 	scriptLocation := runtime_utils.NewScriptLocationGenerator()
 
 	for i := 0; i < b.N; i++ {
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{}
@@ -244,7 +256,10 @@ func BenchmarkContractImport(b *testing.B) {
 	)
 	require.NoError(b, err)
 
-	importCompiler := compiler.NewInstructionCompiler(importedChecker)
+	importCompiler := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(importedChecker),
+		importedChecker.Location,
+	)
 	importedProgram := importCompiler.Compile()
 
 	vmInstance := vm.NewVM(location, importedProgram, nil)
@@ -266,20 +281,21 @@ func BenchmarkContractImport(b *testing.B) {
 	value := interpreter.NewUnmeteredIntValueFromInt64(7)
 
 	for i := 0; i < b.N; i++ {
-		checker, err := ParseAndCheckWithOptions(b, `
-      import MyContract from 0x01
+		checker, err := ParseAndCheckWithOptions(b,
+			`
+              import MyContract from 0x01
 
-      fun test(count: Int): String {
-          var i = 0
-          var r = MyContract.Foo("Hello from Foo!")
-          while i < count {
-              i = i + 1
-              r = MyContract.Foo("Hello from Foo!")
-              r.sayHello(1)
-          }
-          return r.sayHello(1)
-      }
-  `,
+              fun test(count: Int): String {
+                  var i = 0
+                  var r = MyContract.Foo("Hello from Foo!")
+                  while i < count {
+                      i = i + 1
+                      r = MyContract.Foo("Hello from Foo!")
+                      r.sayHello(1)
+                  }
+                  return r.sayHello(1)
+              }
+            `,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
 					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
@@ -292,7 +308,10 @@ func BenchmarkContractImport(b *testing.B) {
 		)
 		require.NoError(b, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
 		}
@@ -313,52 +332,56 @@ func BenchmarkMethodCall(b *testing.B) {
 
 		importedChecker, err := ParseAndCheckWithOptions(b,
 			`
-      contract MyContract {
-          struct Foo: Greetings {
-              var id : String
+              contract MyContract {
+                  struct Foo: Greetings {
+                      var id : String
 
-              init(_ id: String) {
-                  self.id = id
+                      init(_ id: String) {
+                          self.id = id
+                      }
+
+                      fun sayHello(_ id: Int): String {
+                          return self.id
+                      }
+                  }
+
+                  struct interface Greetings {
+                      fun sayHello(_ id: Int): String
+                  }
+
+                  struct interface SomethingElse {
+                  }
               }
-
-              fun sayHello(_ id: Int): String {
-                  return self.id
-              }
-          }
-
-          struct interface Greetings {
-              fun sayHello(_ id: Int): String
-          }
-
-          struct interface SomethingElse {
-          }
-      }
-        `,
+            `,
 			ParseAndCheckOptions{
 				Location: location,
 			},
 		)
 		require.NoError(b, err)
 
-		importCompiler := compiler.NewInstructionCompiler(importedChecker)
+		importCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(importedChecker),
+			importedChecker.Location,
+		)
 		importedProgram := importCompiler.Compile()
 
 		vmInstance := vm.NewVM(location, importedProgram, nil)
 		importedContractValue, err := vmInstance.InitializeContract()
 		require.NoError(b, err)
 
-		checker, err := ParseAndCheckWithOptions(b, `
-        import MyContract from 0x01
+		checker, err := ParseAndCheckWithOptions(b,
+			`
+              import MyContract from 0x01
 
-        fun test(count: Int) {
-            var r: {MyContract.Greetings} = MyContract.Foo("Hello from Foo!")
-            var i = 0
-            while i < count {
-                i = i + 1
-                r.sayHello(1)
-            }
-        }`,
-
+              fun test(count: Int) {
+                  var r: {MyContract.Greetings} = MyContract.Foo("Hello from Foo!")
+                  var i = 0
+                  while i < count {
+                      i = i + 1
+                      r.sayHello(1)
+                  }
+              }
+            `,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
 					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
@@ -371,7 +394,10 @@ func BenchmarkMethodCall(b *testing.B) {
 		)
 		require.NoError(b, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
 		}
@@ -415,34 +441,37 @@ func BenchmarkMethodCall(b *testing.B) {
 
 		importedChecker, err := ParseAndCheckWithOptions(b,
 			`
-      contract MyContract {
-          struct Foo: Greetings {
-              var id : String
+              contract MyContract {
+                  struct Foo: Greetings {
+                      var id : String
 
-              init(_ id: String) {
-                  self.id = id
+                      init(_ id: String) {
+                          self.id = id
+                      }
+
+                      fun sayHello(_ id: Int): String {
+                          return self.id
+                      }
+                  }
+
+                  struct interface Greetings {
+                      fun sayHello(_ id: Int): String
+                  }
+
+                  struct interface SomethingElse {
+                  }
               }
-
-              fun sayHello(_ id: Int): String {
-                  return self.id
-              }
-          }
-
-          struct interface Greetings {
-              fun sayHello(_ id: Int): String
-          }
-
-          struct interface SomethingElse {
-          }
-      }
-        `,
+            `,
 			ParseAndCheckOptions{
 				Location: location,
 			},
 		)
 		require.NoError(b, err)
 
-		importCompiler := compiler.NewInstructionCompiler(importedChecker)
+		importCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(importedChecker),
+			importedChecker.Location,
+		)
 		importedProgram := importCompiler.Compile()
 
 		vmInstance := vm.NewVM(location, importedProgram, nil)
@@ -473,7 +502,10 @@ func BenchmarkMethodCall(b *testing.B) {
 		)
 		require.NoError(b, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
 		}

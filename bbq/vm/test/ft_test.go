@@ -30,7 +30,7 @@ import (
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/compiler"
-	. "github.com/onflow/cadence/bbq/test-utils"
+	. "github.com/onflow/cadence/bbq/test_utils"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
@@ -238,13 +238,7 @@ func compiledFTTransfer(tb testing.TB) {
 
 	vmConfig = prepareVMConfig(tb, vmConfig, compiledPrograms)
 
-	vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
-		imported, ok := compiledPrograms[location]
-		if !ok {
-			return nil
-		}
-		return imported.Program
-	}
+	vmConfig.ImportHandler = importHandler
 
 	contractValues := make(map[common.Location]*interpreter.CompositeValue)
 	vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {

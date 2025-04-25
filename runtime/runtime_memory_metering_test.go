@@ -261,8 +261,6 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 		largeInt := cadence.NewInt(0)
 		largeInt.Value = largeBigInt
 
-		fmt.Println(largeInt.String())
-
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source: []byte(script),

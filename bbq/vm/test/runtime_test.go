@@ -25,13 +25,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/bbq"
+	. "github.com/onflow/cadence/bbq/test_utils"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/test_utils/runtime_utils"
-
-	"github.com/onflow/cadence/bbq"
-	. "github.com/onflow/cadence/bbq/test-utils"
-	"github.com/onflow/cadence/bbq/vm"
 )
 
 func TestResourceLossViaSelfRugPull(t *testing.T) {

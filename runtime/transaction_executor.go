@@ -113,8 +113,19 @@ func (executor *transactionExecutor) preprocess() (err error) {
 
 	environment := context.Environment
 	if environment == nil {
+		if context.UseVM {
+			return errors.NewUnexpectedError("cannot execute transaction with the VM")
+		}
 		environment = NewBaseInterpreterEnvironment(executor.runtime.Config())
 	}
+
+	switch environment.(type) {
+	case *interpreterEnvironment:
+		break
+	default:
+		return errors.NewUnexpectedError("transactions can only be executed with the interpreter")
+	}
+
 	environment.Configure(
 		runtimeInterface,
 		codesAndPrograms,
