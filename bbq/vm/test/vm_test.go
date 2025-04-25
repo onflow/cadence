@@ -26,7 +26,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/ast"
-	. "github.com/onflow/cadence/bbq/test-utils"
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/commons"
+	"github.com/onflow/cadence/bbq/compiler"
+	. "github.com/onflow/cadence/bbq/test_utils"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -36,11 +40,6 @@ import (
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
-
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/commons"
-	"github.com/onflow/cadence/bbq/compiler"
-	"github.com/onflow/cadence/bbq/vm"
 )
 
 const recursiveFib = `
@@ -1554,12 +1553,20 @@ func TestNativeFunctions(t *testing.T) {
 		)
 		program := comp.Compile()
 
-		vmConfig := &vm.Config{}
+		var logged string
+		vmConfig := &vm.Config{
+			Logger: stdlib.FunctionLogger(func(message string, locationRange interpreter.LocationRange) error {
+				logged = message
+				return nil
+			}),
+		}
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		_, err = vmInstance.Invoke("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
+
+		assert.Equal(t, `"Hello, World!"`, logged)
 	})
 
 	t.Run("bound function", func(t *testing.T) {

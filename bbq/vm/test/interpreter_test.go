@@ -33,6 +33,8 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/bbq/commons"
+	. "github.com/onflow/cadence/bbq/test_utils"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/interpreter"
@@ -40,9 +42,6 @@ import (
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-
-	"github.com/onflow/cadence/bbq/commons"
-	. "github.com/onflow/cadence/bbq/test-utils"
 )
 
 type ParseCheckAndInterpretOptions struct {

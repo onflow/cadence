@@ -45,6 +45,17 @@ type Logger interface {
 	ProgramLog(message string, locationRange interpreter.LocationRange) error
 }
 
+type FunctionLogger func(
+	message string,
+	locationRange interpreter.LocationRange,
+) error
+
+var _ Logger = FunctionLogger(nil)
+
+func (f FunctionLogger) ProgramLog(message string, locationRange interpreter.LocationRange) error {
+	return f(message, locationRange)
+}
+
 func NewLogFunction(logger Logger) StandardLibraryValue {
 	return NewStandardLibraryStaticFunction(
 		"log",

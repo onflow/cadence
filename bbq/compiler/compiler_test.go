@@ -30,7 +30,7 @@ import (
 	"github.com/onflow/cadence/bbq/compiler"
 	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/bbq/opcode"
-	. "github.com/onflow/cadence/bbq/test-utils"
+	. "github.com/onflow/cadence/bbq/test_utils"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"

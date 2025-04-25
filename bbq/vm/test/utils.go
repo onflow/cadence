@@ -35,7 +35,7 @@ import (
 
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
-	. "github.com/onflow/cadence/bbq/test-utils"
+	. "github.com/onflow/cadence/bbq/test_utils"
 	"github.com/onflow/cadence/bbq/vm"
 )
 
@@ -90,8 +90,8 @@ type testAccountHandler struct {
 	)
 	updateAccountContractCode func(location common.AddressLocation, code []byte) error
 	recordContractUpdate      func(location common.AddressLocation, value *interpreter.CompositeValue)
-	contractUpdateRecorded func(location common.AddressLocation) bool
-	loadContractValue      func(
+	contractUpdateRecorded    func(location common.AddressLocation) bool
+	loadContractValue         func(
 		location common.AddressLocation,
 		program *interpreter.Program,
 		name string,
