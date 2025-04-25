@@ -19,7 +19,6 @@
 package compiler
 
 import (
-	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 
@@ -42,16 +41,6 @@ func NativeFunctions() map[string]*Global {
 	}
 	return funcs
 }
-
-var builtinTypes = common.Concat[sema.Type](
-	sema.AllBuiltinTypes,
-	[]sema.Type{
-		&sema.ConstantSizedType{},
-		&sema.VariableSizedType{},
-		&sema.DictionaryType{},
-		&sema.FunctionType{},
-	},
-)
 
 var stdlibFunctions = []string{
 	commons.LogFunctionName,
@@ -81,7 +70,7 @@ func init() {
 	// Because the native functions used by a program are also
 	// added to the imports section of the compiled program.
 	// Then the VM will link the imports (native functions) by the name.
-	for _, typ := range builtinTypes {
+	for _, typ := range commons.BuiltinTypes {
 		registerBoundFunctions(typ)
 	}
 
@@ -102,8 +91,7 @@ func init() {
 
 func registerBoundFunctions(typ sema.Type) {
 	for name := range typ.GetMembers() { //nolint:maprange
-		typeQualifier := commons.TypeQualifier(typ)
-		funcName := commons.TypeQualifiedName(typeQualifier, name)
+		funcName := commons.TypeQualifiedName(typ, name)
 		addNativeFunction(funcName)
 	}
 

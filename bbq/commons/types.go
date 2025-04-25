@@ -19,14 +19,33 @@
 package commons
 
 import (
-	"bytes"
-
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
 
-func TypeQualifiedName(typeName, functionName string) string {
+var BuiltinTypes = common.Concat[sema.Type](
+	sema.AllBuiltinTypes,
+	[]sema.Type{
+		&sema.ConstantSizedType{},
+		&sema.VariableSizedType{},
+		&sema.DictionaryType{},
+		&sema.FunctionType{},
+
+		// TODO: add other types. e.g; Optional, etc
+	},
+)
+
+func TypeQualifiedName(typ sema.Type, functionName string) string {
+	if typ == nil {
+		return functionName
+	}
+
+	typeQualifier := TypeQualifier(typ)
+	return typeQualifier + "." + functionName
+}
+
+func QualifiedName(typeName, functionName string) string {
 	if typeName == "" {
 		return functionName
 	}
@@ -43,8 +62,10 @@ func TypeQualifiedName(typeName, functionName string) string {
 // TODO: Maybe make this a method on the type
 func TypeQualifier(typ sema.Type) string {
 	switch typ := typ.(type) {
-	case sema.ArrayType:
-		return TypeQualifierArray
+	case *sema.ConstantSizedType:
+		return TypeQualifierArrayConstantSized
+	case *sema.VariableSizedType:
+		return TypeQualifierArrayVariableSized
 	case *sema.DictionaryType:
 		return TypeQualifierDictionary
 	case *sema.FunctionType:
@@ -61,21 +82,4 @@ func TypeQualifier(typ sema.Type) string {
 	default:
 		return typ.QualifiedString()
 	}
-}
-
-func LocationToBytes(location common.Location) ([]byte, error) {
-	var buf bytes.Buffer
-	enc := interpreter.CBOREncMode.NewStreamEncoder(&buf)
-
-	err := interpreter.EncodeLocation(enc, location)
-	if err != nil {
-		return nil, err
-	}
-
-	err = enc.Flush()
-	if err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
 }

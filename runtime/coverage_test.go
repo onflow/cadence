@@ -1706,7 +1706,7 @@ func TestRuntimeCoverageWithLocationFilter(t *testing.T) {
 			}
 		},
 	}
-	runtime := NewInterpreterRuntime(Config{
+	runtime := NewRuntime(Config{
 		CoverageReport: coverageReport,
 	})
 
@@ -1784,7 +1784,7 @@ func TestRuntimeCoverageWithNoStatements(t *testing.T) {
 	`)
 
 	coverageReport := NewCoverageReport()
-	runtime := NewInterpreterRuntime(Config{
+	runtime := NewRuntime(Config{
 		CoverageReport: coverageReport,
 	})
 
