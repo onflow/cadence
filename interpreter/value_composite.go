@@ -1145,8 +1145,7 @@ func (v *CompositeValue) Transfer(
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
-	preventTransfer map[atree.ValueID]struct {
-	},
+	preventTransfer map[atree.ValueID]struct{},
 	hasNoParentContainer bool,
 ) Value {
 
@@ -1584,7 +1583,7 @@ func (v *CompositeValue) SetNestedVariables(variables map[string]Variable) {
 }
 
 func NewEnumCaseValue(
-	interpreter *Interpreter,
+	context MemberAccessibleContext,
 	locationRange LocationRange,
 	enumType *sema.CompositeType,
 	rawValue NumberValue,
@@ -1599,7 +1598,7 @@ func NewEnumCaseValue(
 	}
 
 	v := NewCompositeValue(
-		interpreter,
+		context,
 		locationRange,
 		enumType.Location,
 		enumType.QualifiedIdentifier(),
