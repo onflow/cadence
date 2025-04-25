@@ -35,8 +35,7 @@ import (
 // that gets reconfigured by vmEnvironment.Configure
 type vmEnvironmentReconfigured struct {
 	Interface
-	storage        *Storage
-	coverageReport *CoverageReport
+	storage *Storage
 }
 
 type vmEnvironment struct {
@@ -148,12 +147,12 @@ func (e *vmEnvironment) Configure(
 	runtimeInterface Interface,
 	codesAndPrograms CodesAndPrograms,
 	storage *Storage,
+// TODO:
 	coverageReport *CoverageReport,
 ) {
 	e.Interface = runtimeInterface
 	e.storage = storage
 	e.vmConfig.SetStorage(storage)
-	e.coverageReport = coverageReport
 
 	e.checkingEnvironment.configure(
 		runtimeInterface,
