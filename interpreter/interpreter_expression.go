@@ -153,7 +153,7 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 	indexedType := indexExpressionTypes.IndexedType
 	indexingType := indexExpressionTypes.IndexingType
 
-	transferredIndexingValue := transferAndConvert(
+	transferredIndexingValue := TransferAndConvert(
 		interpreter,
 		interpreter.evalExpression(indexExpression.IndexingExpression),
 		indexingType,
@@ -969,7 +969,7 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 				Location:    interpreter.Location,
 				HasPosition: argumentExpression,
 			}
-			copies[i] = transferAndConvert(interpreter, argument, argumentType, elementType, locationRange)
+			copies[i] = TransferAndConvert(interpreter, argument, argumentType, elementType, locationRange)
 		}
 	}
 
@@ -1003,7 +1003,7 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 		entryType := entryTypes[i]
 		entry := expression.Entries[i]
 
-		key := transferAndConvert(
+		key := TransferAndConvert(
 			interpreter,
 			dictionaryEntryValues.Key,
 			entryType.KeyType,
@@ -1014,7 +1014,7 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 			},
 		)
 
-		value := transferAndConvert(
+		value := TransferAndConvert(
 			interpreter,
 			dictionaryEntryValues.Value,
 			entryType.ValueType,

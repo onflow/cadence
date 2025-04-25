@@ -22,8 +22,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/onflow/atree"
-
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/constant"
@@ -834,31 +832,19 @@ func getStringConstant(vm *VM, index uint16) string {
 func opTransfer(vm *VM, ins opcode.InstructionTransfer) {
 	typeIndex := ins.Type
 	targetType := vm.loadType(typeIndex)
+
+	context := vm.context
+
 	value := vm.peek()
+	valueType := value.StaticType(context)
 
-	config := vm.context
-
-	transferredValue := value.Transfer(
-		config,
+	transferredValue := interpreter.TransferAndConvert(
+		context,
+		value,
+		interpreter.MustConvertStaticToSemaType(valueType, context),
+		interpreter.MustConvertStaticToSemaType(targetType, context),
 		EmptyLocationRange,
-		atree.Address{},
-		false,
-		nil,
-		nil,
-
-		// TODO: Pass the correct flag here
-		false,
 	)
-
-	valueType := transferredValue.StaticType(config)
-	// TODO: remove nil check after ensuring all implementations of Value.StaticType are implemented
-	if valueType != nil && !vm.context.IsSubType(valueType, targetType) {
-		panic(errors.NewUnexpectedError(
-			"invalid transfer: expected '%s', found '%s'",
-			targetType,
-			valueType,
-		))
-	}
 
 	vm.replaceTop(transferredValue)
 }

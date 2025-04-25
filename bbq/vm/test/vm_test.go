@@ -350,7 +350,7 @@ func TestStructMethodCall(t *testing.T) {
 
 	t.Parallel()
 
-	checker, err := ParseAndCheck(t, `
+	result, err := CompileAndInvoke(t, `
       struct Foo {
           var id : String
 
@@ -367,19 +367,10 @@ func TestStructMethodCall(t *testing.T) {
           var r = Foo("Hello from Foo!")
           return r.sayHello(1)
       }
-    `)
+    `,
+		"test",
+	)
 	require.NoError(t, err)
-
-	comp := compiler.NewInstructionCompiler(checker)
-	program := comp.Compile()
-
-	vmConfig := &vm.Config{}
-	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-
-	result, err := vmInstance.Invoke("test")
-	require.NoError(t, err)
-	require.Equal(t, 0, vmInstance.StackSize())
-
 	require.Equal(t, interpreter.NewUnmeteredStringValue("Hello from Foo!"), result)
 }
 
@@ -446,6 +437,15 @@ func TestImport(t *testing.T) {
 	vmConfig := &vm.Config{
 		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
+		},
+		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+			elaboration := importedChecker.Elaboration
+			compositeType := elaboration.CompositeType(typeID)
+			if compositeType != nil {
+				return compositeType
+			}
+
+			return elaboration.InterfaceType(typeID)
 		},
 	}
 
@@ -2724,7 +2724,11 @@ func TestResource(t *testing.T) {
 	t.Run("new", func(t *testing.T) {
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
+		programs := map[common.Location]*CompiledProgram{}
+
+		program := ParseCheckAndCompile(
+			t,
+			`
             resource Foo {
                 var id : Int
 
@@ -2738,21 +2742,12 @@ func TestResource(t *testing.T) {
                 var r <- create Foo(5)
                 return <- r
             }
-        `)
-		require.NoError(t, err)
+        `,
+			TestLocation,
+			programs,
+		)
 
-		comp := compiler.NewInstructionCompiler(checker)
-		program := comp.Compile()
-
-		var uuid uint64
-
-		vmConfig := (&vm.Config{}).
-			WithInterpreterConfig(&interpreter.Config{
-				UUIDHandler: func() (uint64, error) {
-					uuid++
-					return uuid, nil
-				},
-			})
+		vmConfig := prepareVMConfig(t, nil, programs)
 
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
@@ -2777,7 +2772,9 @@ func TestResource(t *testing.T) {
 	t.Run("destroy", func(t *testing.T) {
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
+		_, err := CompileAndInvoke(
+			t,
+			`
             resource Foo {
                 var id : Int
 
@@ -2791,26 +2788,11 @@ func TestResource(t *testing.T) {
                 var r <- create Foo(5)
                 destroy r
             }
-        `)
+        `,
+			"test",
+		)
+
 		require.NoError(t, err)
-
-		comp := compiler.NewInstructionCompiler(checker)
-		program := comp.Compile()
-
-		var uuid uint64 = 42
-
-		vmConfig := (&vm.Config{}).
-			WithInterpreterConfig(&interpreter.Config{
-				UUIDHandler: func() (uint64, error) {
-					uuid++
-					return uuid, nil
-				},
-			})
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-
-		_, err = vmInstance.Invoke("test")
-		require.NoError(t, err)
-		require.Equal(t, 0, vmInstance.StackSize())
 	})
 }
 

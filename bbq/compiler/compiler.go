@@ -1291,8 +1291,11 @@ func (c *Compiler[_, _]) VisitArrayExpression(array *ast.ArrayExpression) (_ str
 		panic(errors.NewDefaultUserError("invalid array expression"))
 	}
 
+	elementExpectedType := arrayTypes.ArrayType.ElementType(false)
+
 	for _, expression := range array.Values {
 		c.compileExpression(expression)
+		c.emitTransfer(elementExpectedType)
 	}
 
 	c.codeGen.Emit(
@@ -1309,7 +1312,9 @@ func (c *Compiler[_, _]) VisitArrayExpression(array *ast.ArrayExpression) (_ str
 func (c *Compiler[_, _]) VisitDictionaryExpression(dictionary *ast.DictionaryExpression) (_ struct{}) {
 	dictionaryTypes := c.DesugaredElaboration.DictionaryExpressionTypes(dictionary)
 
-	typeIndex := c.getOrAddType(dictionaryTypes.DictionaryType)
+	dictionaryType := dictionaryTypes.DictionaryType
+
+	typeIndex := c.getOrAddType(dictionaryType)
 
 	size := len(dictionary.Entries)
 	if size >= math.MaxUint16 {
@@ -1318,14 +1323,16 @@ func (c *Compiler[_, _]) VisitDictionaryExpression(dictionary *ast.DictionaryExp
 
 	for _, entry := range dictionary.Entries {
 		c.compileExpression(entry.Key)
+		c.emitTransfer(dictionaryType.KeyType)
 		c.compileExpression(entry.Value)
+		c.emitTransfer(dictionaryType.ValueType)
 	}
 
 	c.codeGen.Emit(
 		opcode.InstructionNewDictionary{
 			Type:       typeIndex,
 			Size:       uint16(size),
-			IsResource: dictionaryTypes.DictionaryType.IsResourceType(),
+			IsResource: dictionaryType.IsResourceType(),
 		},
 	)
 
