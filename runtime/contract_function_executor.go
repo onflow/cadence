@@ -24,6 +24,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq/commons"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -45,6 +46,7 @@ type contractFunctionExecutor struct {
 	argumentTypes    []sema.Type
 	executeOnce      sync.Once
 	preprocessOnce   sync.Once
+	vm               *vm.VM
 }
 
 func newContractFunctionExecutor(
@@ -127,6 +129,19 @@ func (executor *contractFunctionExecutor) preprocess() (err error) {
 		context.CoverageReport,
 	)
 	executor.environment = environment
+
+	switch environment := environment.(type) {
+	case *interpreterEnvironment:
+		// NO-OP
+
+	case *vmEnvironment:
+		contractLocation := executor.contractLocation
+		program := environment.importProgram(contractLocation)
+		executor.vm = environment.newVM(contractLocation, program)
+
+	default:
+		panic(errors.NewUnexpectedError("unsupported environment: %T", environment))
+	}
 
 	return nil
 }
@@ -255,12 +270,7 @@ func (executor *contractFunctionExecutor) executeWithVM(
 
 	contractLocation := executor.contractLocation
 
-	// TODO: load and compile the contract program only once, register desugared elaboration
-	compiledProgram := environment.importProgram(contractLocation)
-
-	vm := environment.newVM(contractLocation, compiledProgram)
-
-	context := vm.Context()
+	context := executor.vm.Context()
 
 	contractValue := loadContractValue(
 		context,
@@ -280,7 +290,7 @@ func (executor *contractFunctionExecutor) executeWithVM(
 	semaType := interpreter.MustConvertStaticToSemaType(staticType, context)
 	qualifiedFuncName := commons.TypeQualifiedName(semaType, executor.functionName)
 
-	value, err := vm.Invoke(qualifiedFuncName, invocationArguments...)
+	value, err := executor.vm.Invoke(qualifiedFuncName, invocationArguments...)
 	if err != nil {
 		return nil, err
 	}
