@@ -31,11 +31,18 @@ import (
 	"github.com/onflow/cadence/stdlib"
 )
 
+type compiledPrograms map[common.Location]compiledProgram
+type compiledProgram struct {
+	program              *bbq.InstructionProgram
+	desugaredElaboration *compiler.DesugaredElaboration
+}
+
 // vmEnvironmentReconfigured is the portion of vmEnvironment
 // that gets reconfigured by vmEnvironment.Configure
 type vmEnvironmentReconfigured struct {
 	Interface
 	storage *Storage
+	compiledPrograms
 }
 
 type vmEnvironment struct {
@@ -71,6 +78,9 @@ var _ common.MemoryGauge = &vmEnvironment{}
 
 func newVMEnvironment(config Config) *vmEnvironment {
 	env := &vmEnvironment{
+		vmEnvironmentReconfigured: vmEnvironmentReconfigured{
+			compiledPrograms: make(compiledPrograms),
+		},
 		config:                        config,
 		checkingEnvironment:           newCheckingEnvironment(),
 		SimpleContractAdditionTracker: stdlib.NewSimpleContractAdditionTracker(),
@@ -129,9 +139,10 @@ func (e *vmEnvironment) Configure(
 	runtimeInterface Interface,
 	codesAndPrograms CodesAndPrograms,
 	storage *Storage,
-	// TODO:
+// TODO:
 	coverageReport *CoverageReport,
 ) {
+	clear(e.compiledPrograms)
 	e.Interface = runtimeInterface
 	e.storage = storage
 	e.vmConfig.SetStorage(storage)
@@ -316,38 +327,49 @@ func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.Ty
 func (e *vmEnvironment) compileProgram(
 	program *interpreter.Program,
 	location common.Location,
-) (
-	*bbq.InstructionProgram,
-	*compiler.DesugaredElaboration,
-) {
+) compiledProgram {
 	comp := compiler.NewInstructionCompilerWithConfig(
 		program,
 		location,
 		e.compilerConfig,
 	)
 
-	compiledProgram := comp.Compile()
-	return compiledProgram, comp.DesugaredElaboration
+	compiledProgram := compiledProgram{
+		program:              comp.Compile(),
+		desugaredElaboration: comp.DesugaredElaboration,
+	}
+	e.compiledPrograms[location] = compiledProgram
+	return compiledProgram
 }
 
 func (e *vmEnvironment) resolveDesugaredElaboration(location common.Location) (*compiler.DesugaredElaboration, error) {
-	// TODO: load and compile the contract program only once, register desugared elaboration
+	compiledProgram, ok := e.compiledPrograms[location]
+	if ok {
+		return compiledProgram.desugaredElaboration, nil
+	}
+
 	program, err := e.loadProgram(location)
 	if err != nil {
 		panic(fmt.Errorf("failed to load elaboration for location %s: %w", location, err))
 	}
-	_, desugaredElaboration := e.compileProgram(program, location)
-	return desugaredElaboration, nil
+
+	compiledProgram = e.compileProgram(program, location)
+	return compiledProgram.desugaredElaboration, nil
 }
 
 func (e *vmEnvironment) importProgram(location common.Location) *bbq.InstructionProgram {
-	// TODO: load and compile the contract program only once, register desugared elaboration
+	compiledProgram, ok := e.compiledPrograms[location]
+	if ok {
+		return compiledProgram.program
+	}
+
 	program, err := e.loadProgram(location)
 	if err != nil {
 		panic(fmt.Errorf("failed to load program for location %s: %w", location, err))
 	}
-	compiledProgram, _ := e.compileProgram(program, location)
-	return compiledProgram
+
+	compiledProgram = e.compileProgram(program, location)
+	return compiledProgram.program
 }
 
 func (e *vmEnvironment) newVM(
