@@ -21,7 +21,6 @@ package compiler
 import (
 	"math"
 	"math/big"
-	"strings"
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
@@ -172,7 +171,7 @@ func (c *Compiler[_, _]) findGlobal(name string) *Global {
 	// e.g: SomeContract.Foo() == Foo(), within `SomeContract`.
 	if !c.compositeTypeStack.isEmpty() {
 		enclosingContract := c.compositeTypeStack.bottom()
-		typeQualifiedName := commons.TypeQualifiedName(enclosingContract.GetIdentifier(), name)
+		typeQualifiedName := commons.TypeQualifiedName(enclosingContract, name)
 		global, ok = c.Globals[typeQualifiedName]
 		if ok {
 			return global
@@ -425,7 +424,7 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 
 	// Reserve globals for functions/types before visiting their implementations.
 	c.reserveGlobalVars(
-		"",
+		nil,
 		variableDeclarations,
 		nil,
 		functionDeclarations,
@@ -461,7 +460,7 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 }
 
 func (c *Compiler[_, _]) reserveGlobalVars(
-	compositeTypeName string,
+	enclosingType sema.CompositeKindedType,
 	variableDecls []*ast.VariableDeclaration,
 	specialFunctionDecls []*ast.SpecialFunctionDeclaration,
 	functionDecls []*ast.FunctionDeclaration,
@@ -478,30 +477,31 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 			common.DeclarationKindPrepare:
 			// Important: All special functions visited within `VisitSpecialFunctionDeclaration`
 			// must be also visited here. And must be visited only them. e.g: Don't visit inits.
-			funcName := commons.TypeQualifiedName(compositeTypeName, declaration.FunctionDeclaration.Identifier.Identifier)
+			funcName := commons.TypeQualifiedName(enclosingType, declaration.FunctionDeclaration.Identifier.Identifier)
 			c.addGlobal(funcName)
 		}
 	}
 
 	// Add natively provided methods as globals.
 	// Only do it for user-defined types (i.e: `compositeTypeName` is not empty).
-	if compositeTypeName != "" {
+	if enclosingType != nil {
 		for _, boundFunction := range commonBuiltinTypeBoundFunctions {
-			funcName := commons.TypeQualifiedName(compositeTypeName, boundFunction.name)
+			funcName := commons.TypeQualifiedName(enclosingType, boundFunction.name)
 			c.addGlobal(funcName)
 		}
 	}
 
 	for _, declaration := range functionDecls {
-		funcName := commons.TypeQualifiedName(compositeTypeName, declaration.Identifier.Identifier)
+		funcName := commons.TypeQualifiedName(enclosingType, declaration.Identifier.Identifier)
 		c.addGlobal(funcName)
 	}
 
 	for _, declaration := range compositeDecls {
-		qualifiedTypeName := commons.TypeQualifiedName(compositeTypeName, declaration.Identifier.Identifier)
+		compositeType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
 
 		// Reserve a global-var for the value-constructor.
-		c.addGlobal(qualifiedTypeName)
+		constructorName := commons.TypeQualifier(compositeType)
+		c.addGlobal(constructorName)
 
 		// For composite types other than contracts, global variables
 		// reserved by the type-name will be used for the init method.
@@ -518,7 +518,7 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 		members := declaration.Members
 
 		c.reserveGlobalVars(
-			qualifiedTypeName,
+			compositeType,
 			nil,
 			members.SpecialFunctions(),
 			members.Functions(),
@@ -529,12 +529,12 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 
 	for _, declaration := range interfaceDecls {
 		// Don't need a global-var for the value-constructor for interfaces
-		qualifiedTypeName := commons.TypeQualifiedName(compositeTypeName, declaration.Identifier.Identifier)
 
 		members := declaration.Members
+		interfaceType := c.DesugaredElaboration.InterfaceDeclarationType(declaration)
 
 		c.reserveGlobalVars(
-			qualifiedTypeName,
+			interfaceType,
 			nil,
 			members.SpecialFunctions(),
 			members.Functions(),
@@ -1417,12 +1417,14 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 			panic(errors.NewUnreachableError())
 		}
 
-		typeName := commons.TypeQualifier(memberInfo.AccessedType)
 		var funcName string
 
 		invocationType := memberInfo.Member.TypeAnnotation.Type.(*sema.FunctionType)
 		if invocationType.IsConstructor {
-			funcName = commons.TypeQualifiedName(typeName, invokedExpr.Identifier.Identifier)
+			funcName = commons.TypeQualifiedName(
+				memberInfo.AccessedType,
+				invokedExpr.Identifier.Identifier,
+			)
 
 			// Calling a type constructor must be invoked statically. e.g: `SomeContract.Foo()`.
 			// Compile arguments
@@ -1470,7 +1472,10 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 
 		} else {
 			// Load function value
-			funcName = commons.TypeQualifiedName(typeName, invokedExpr.Identifier.Identifier)
+			funcName = commons.TypeQualifiedName(
+				memberInfo.AccessedType,
+				invokedExpr.Identifier.Identifier,
+			)
 			c.emitVariableLoad(funcName)
 
 			c.codeGen.Emit(opcode.InstructionInvokeMethodStatic{
@@ -1889,9 +1894,10 @@ func (c *Compiler[_, _]) VisitSpecialFunctionDeclaration(declaration *ast.Specia
 }
 
 func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDeclaration) {
-	enclosingCompositeTypeName := c.enclosingCompositeTypeFullyQualifiedName()
 	enclosingType := c.compositeTypeStack.top()
 	kind := enclosingType.GetCompositeKind()
+
+	constructorName := commons.TypeQualifier(enclosingType)
 
 	var functionName string
 	if kind == common.CompositeKindContract {
@@ -1902,7 +1908,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	} else {
 		// Use the type name as the function name for initializer.
 		// So `x = Foo()` would directly call the init method.
-		functionName = enclosingCompositeTypeName
+		functionName = constructorName
 	}
 
 	parameterCount := 0
@@ -1960,7 +1966,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 
 		// Duplicate the top of stack and store it in both global variable and in `self`
 		c.codeGen.Emit(opcode.InstructionDup{})
-		global := c.findGlobal(enclosingCompositeTypeName)
+		global := c.findGlobal(constructorName)
 
 		c.codeGen.Emit(opcode.InstructionSetGlobal{
 			Global: global.Index,
@@ -1984,9 +1990,9 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 	previousFunction := c.currentFunction
 
 	var (
-		parameterCount  int
-		declareReceiver bool
-		functionName    string
+		parameterCount int
+		isObjectMethod bool
+		functionName   string
 	)
 
 	paramList := declaration.ParameterList
@@ -2000,17 +2006,17 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 
 	if previousFunction == nil {
 		// Global function or method
+		isObjectMethod = !c.compositeTypeStack.isEmpty()
 
-		declareReceiver = !c.compositeTypeStack.isEmpty()
+		var enclosingType sema.Type
+		if isObjectMethod {
+			enclosingType = c.compositeTypeStack.top()
 
-		functionName = commons.TypeQualifiedName(
-			c.enclosingCompositeTypeFullyQualifiedName(),
-			identifier,
-		)
-
-		if declareReceiver {
+			// Declare a receiver if this is an object method.
 			parameterCount++
 		}
+
+		functionName = commons.TypeQualifiedName(enclosingType, identifier)
 
 	} else {
 		innerFunctionLocal = c.currentFunction.declareLocal(identifier)
@@ -2039,7 +2045,7 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 		c.targetFunction(function)
 		defer c.targetFunction(previousFunction)
 
-		c.declareParameters(declaration.ParameterList, declareReceiver)
+		c.declareParameters(declaration.ParameterList, isObjectMethod)
 
 		c.compileFunctionBlock(
 			declaration.FunctionBlock,
@@ -2080,7 +2086,7 @@ func (c *Compiler[_, _]) VisitCompositeDeclaration(declaration *ast.CompositeDec
 	}
 
 	// Add the methods that are provided natively.
-	c.addBuiltinMethods()
+	c.addBuiltinMethods(compositeType)
 
 	for _, function := range declaration.Members.Functions() {
 		c.compileDeclaration(function)
@@ -2105,7 +2111,7 @@ func (c *Compiler[_, _]) VisitInterfaceDeclaration(declaration *ast.InterfaceDec
 	}()
 
 	// Add the methods that are provided natively.
-	c.addBuiltinMethods()
+	c.addBuiltinMethods(interfaceType)
 
 	for _, function := range declaration.Members.Functions() {
 		c.compileDeclaration(function)
@@ -2119,13 +2125,10 @@ func (c *Compiler[_, _]) VisitInterfaceDeclaration(declaration *ast.InterfaceDec
 	return
 }
 
-func (c *Compiler[_, _]) addBuiltinMethods() {
+func (c *Compiler[_, _]) addBuiltinMethods(typ sema.Type) {
 	for _, boundFunction := range commonBuiltinTypeBoundFunctions {
 		name := boundFunction.name
-		qualifiedName := commons.TypeQualifiedName(
-			c.enclosingCompositeTypeFullyQualifiedName(),
-			name,
-		)
+		qualifiedName := commons.TypeQualifiedName(typ, name)
 		c.addFunction(
 			name,
 			qualifiedName,
@@ -2294,22 +2297,6 @@ func (c *Compiler[_, T]) addCompiledType(ty sema.Type, data T) uint16 {
 	c.compiledTypes = append(c.compiledTypes, data)
 	c.types = append(c.types, ty)
 	return uint16(count)
-}
-
-func (c *Compiler[_, _]) enclosingCompositeTypeFullyQualifiedName() string {
-	if c.compositeTypeStack.isEmpty() {
-		return ""
-	}
-
-	var sb strings.Builder
-	for i, typ := range c.compositeTypeStack.elements {
-		if i > 0 {
-			sb.WriteRune('.')
-		}
-		sb.WriteString(typ.GetIdentifier())
-	}
-
-	return sb.String()
 }
 
 func (c *Compiler[E, T]) declareParameters(paramList *ast.ParameterList, declareReceiver bool) {

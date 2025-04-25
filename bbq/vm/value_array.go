@@ -29,7 +29,7 @@ import (
 
 func init() {
 	RegisterTypeBoundFunction(
-		commons.TypeQualifierArray,
+		commons.TypeQualifierArrayVariableSized,
 		NewBoundNativeFunctionValue(
 			sema.ArrayTypeAppendFunctionName,
 			// TODO:

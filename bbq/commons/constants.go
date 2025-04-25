@@ -36,6 +36,8 @@ const (
 
 	// Type qualifiers for built-in member functions
 
-	TypeQualifierArray      = "$Array"
-	TypeQualifierDictionary = "$Dictionary"
+	TypeQualifierArrayConstantSized = "$ArrayConstantSized"
+	TypeQualifierArrayVariableSized = "$ArrayVariableSized"
+	TypeQualifierDictionary         = "$Dictionary"
+	TypeQualifierFunction           = "$Function"
 )

@@ -234,8 +234,7 @@ func (c *Context) GetMethod(
 		location = locatedType.GetLocation()
 	}
 
-	typeQualifier := commons.TypeQualifier(semaType)
-	qualifiedFuncName := commons.TypeQualifiedName(typeQualifier, name)
+	qualifiedFuncName := commons.TypeQualifiedName(semaType, name)
 
 	method := c.lookupFunction(location, qualifiedFuncName)
 	if method == nil {
