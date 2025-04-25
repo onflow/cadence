@@ -5401,7 +5401,10 @@ func TestCompileTransferClosure(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 2)
@@ -5435,7 +5438,10 @@ func TestCompileTransferNil(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	require.Len(t, program.Functions, 1)
