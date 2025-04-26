@@ -72,7 +72,7 @@ func ReadSize(inp []byte, startIndex int) (isString bool, dataStartIndex, dataSi
 	firstByte := inp[startIndex]
 	startIndex++
 
-	// single character space - first byte holds the data itslef
+	// single character space - first byte holds the data itself
 	if firstByte <= ByteRangeEnd {
 		return true, startIndex - 1, 1, nil
 	}
