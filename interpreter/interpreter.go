@@ -1024,7 +1024,7 @@ func (interpreter *Interpreter) visitAssignment(
 
 	value := interpreter.evalExpression(valueExpression)
 
-	transferredValue := transferAndConvert(interpreter, value, valueType, targetType, locationRange)
+	transferredValue := TransferAndConvert(interpreter, value, valueType, targetType, locationRange)
 
 	targetGetterSetter.set(transferredValue)
 }
@@ -1877,7 +1877,7 @@ func (interpreter *Interpreter) ValueIsSubtypeOfSemaType(value Value, targetType
 	return IsSubTypeOfSemaType(interpreter, value.StaticType(interpreter), targetType)
 }
 
-func transferAndConvert(
+func TransferAndConvert(
 	context ValueConversionContext,
 	value Value,
 	valueType, targetType sema.Type,
@@ -4321,7 +4321,7 @@ func (interpreter *Interpreter) InvokeFunction(
 	invocationArgumentTypes []sema.Type,
 	locationRange LocationRange,
 ) Value {
-	fnType := fn.FunctionType()
+	fnType := fn.FunctionType(interpreter)
 	parameterTypes := fnType.ParameterTypes()
 	returnType := fnType.ReturnTypeAnnotation.Type
 

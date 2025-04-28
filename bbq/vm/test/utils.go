@@ -411,13 +411,14 @@ func CompileAndInvokeWithLogs(
 
 	vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
 		funcs := vm.NativeFunctions()
-		funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-			ParameterCount: len(stdlib.LogFunctionType.Parameters),
-			Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+		funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
+			commons.LogFunctionName,
+			stdlib.LogFunctionType,
+			func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 				logs = append(logs, arguments[0].String())
 				return interpreter.Void
 			},
-		}
+		)
 
 		return funcs
 	}

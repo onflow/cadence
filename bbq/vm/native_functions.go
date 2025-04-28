@@ -71,7 +71,7 @@ func RegisterTypeBoundFunction(typeName string, functionValue NativeFunctionValu
 	RegisterFunction(functionValue)
 }
 
-func RegisterBuiltinTypeBoundFunction(typeName string, functionValue NativeFunctionValue) {
+func RegisterTypeBoundCommonFunction(typeName string, functionValue NativeFunctionValue) {
 	// Here the function value is common for many types.
 	// Hence, do not update the function name to be type-qualified.
 	// Only the key in the map is type-qualified.
@@ -215,16 +215,22 @@ func registerCommonBuiltinTypeBoundFunctions() {
 		registerBuiltinTypeBoundFunctions(typeQualifier)
 
 		if includeToStringFunction {
-			RegisterBuiltinTypeBoundFunction(
+			RegisterTypeBoundCommonFunction(
 				typeQualifier,
-				NewBoundNativeFunctionValue(
+				NewNativeFunctionValue(
 					sema.ToStringFunctionName,
 					sema.ToStringFunctionType,
 					func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
 						value := args[receiverIndex]
 
 						// TODO: memory metering
-						return interpreter.NewUnmeteredStringValue(value.String())
+						return interpreter.NewUnmeteredStringValue(
+							value.MeteredString(
+								context,
+								interpreter.SeenReferences{},
+								EmptyLocationRange,
+							),
+						)
 					},
 				),
 			)
@@ -240,7 +246,7 @@ func registerBuiltinTypeBoundFunctions(
 	typeQualifier string,
 ) {
 	for _, boundFunction := range commonBuiltinTypeBoundFunctions {
-		RegisterBuiltinTypeBoundFunction(
+		RegisterTypeBoundCommonFunction(
 			typeQualifier,
 			boundFunction,
 		)
@@ -251,7 +257,7 @@ func registerBuiltinTypeBoundFunctions(
 var commonBuiltinTypeBoundFunctions = []NativeFunctionValue{
 
 	// `isInstance` function
-	NewBoundNativeFunctionValue(
+	NewNativeFunctionValue(
 		sema.IsInstanceFunctionName,
 		sema.IsInstanceFunctionType,
 		func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
@@ -267,7 +273,7 @@ var commonBuiltinTypeBoundFunctions = []NativeFunctionValue{
 	),
 
 	// `getType` function
-	NewBoundNativeFunctionValue(
+	NewNativeFunctionValue(
 		sema.GetTypeFunctionName,
 		sema.GetTypeFunctionType,
 		func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {

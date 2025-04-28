@@ -274,6 +274,8 @@
   operands:
     - name: "typeArgs"
       type: "typeIndices"
+    - name: "argCount"
+      type: "size"
   valueEffects:
     pop:
       - name: "arguments"
@@ -294,6 +296,8 @@
   operands:
     - name: "typeArgs"
       type: "typeIndices"
+    - name: "argCount"
+      type: "size"
   valueEffects:
     pop:
       - name: "arguments"

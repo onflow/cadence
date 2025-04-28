@@ -756,9 +756,12 @@ func newAccountKeysForEachFunction(
 			accountKeys,
 			functionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
+				invocationContext := invocation.InvocationContext
+				locationRange := invocation.LocationRange
+
 				fnValue, ok := invocation.Arguments[0].(interpreter.FunctionValue)
 
-				fnValueType := fnValue.FunctionType()
+				fnValueType := fnValue.FunctionType(invocationContext)
 				parameterTypes := fnValueType.ParameterTypes()
 				returnType := fnValueType.ReturnTypeAnnotation.Type
 
@@ -766,12 +769,9 @@ func newAccountKeysForEachFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				inter := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
 				liftKeyToValue := func(key *AccountKey) interpreter.Value {
 					return NewAccountKeyValue(
-						inter,
+						invocationContext,
 						locationRange,
 						key,
 						provider,
@@ -809,7 +809,7 @@ func newAccountKeysForEachFunction(
 					liftedKey := liftKeyToValue(accountKey)
 
 					res, err := interpreter.InvokeFunctionValue(
-						inter,
+						invocationContext,
 						fnValue,
 						[]interpreter.Value{liftedKey},
 						accountKeysForEachCallbackTypeParams,
@@ -2580,7 +2580,7 @@ func AccountStorageCapabilitiesForeachController(
 		panic(errors.NewUnreachableError())
 	}
 
-	functionValueType := functionValue.FunctionType()
+	functionValueType := functionValue.FunctionType(invocationContext)
 	parameterTypes := functionValueType.ParameterTypes()
 	returnType := functionValueType.ReturnTypeAnnotation.Type
 
@@ -4485,7 +4485,7 @@ func newAccountAccountCapabilitiesForEachControllerFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				functionValueType := functionValue.FunctionType()
+				functionValueType := functionValue.FunctionType(invocationContext)
 				parameterTypes := functionValueType.ParameterTypes()
 				returnType := functionValueType.ReturnTypeAnnotation.Type
 

@@ -2076,10 +2076,14 @@ type ArrayType interface {
 	isArrayType()
 }
 
+const ArrayTypeFirstIndexFunctionName = "firstIndex"
+
 const arrayTypeFirstIndexFunctionDocString = `
 Returns the index of the first element matching the given object in the array, nil if no match.
 Available if the array element type is not resource-kinded and equatable.
 `
+
+const ArrayTypeContainsFunctionName = "contains"
 
 const arrayTypeContainsFunctionDocString = `
 Returns true if the given object is in the array
@@ -2101,9 +2105,13 @@ const arrayTypeAppendAllFunctionDocString = `
 Adds all the elements from the given array to the end of the array
 `
 
+const ArrayTypeConcatFunctionName = "concat"
+
 const arrayTypeConcatFunctionDocString = `
 Returns a new array which contains the given array concatenated to the end of the original array, but does not modify the original array
 `
+
+const ArrayTypeInsertFunctionName = "insert"
 
 const arrayTypeInsertFunctionDocString = `
 Inserts the given element at the given index of the array.
@@ -2116,6 +2124,8 @@ The existing element at the supplied index is not overwritten.
 All the elements after the new inserted element are shifted to the right by one
 `
 
+const ArrayTypeRemoveFunctionName = "remove"
+
 const arrayTypeRemoveFunctionDocString = `
 Removes the element at the given index from the array and returns it.
 
@@ -2123,17 +2133,23 @@ The index must be within the bounds of the array.
 If the index is outside the bounds, the program aborts
 `
 
+const ArrayTypeRemoveFirstFunctionName = "removeFirst"
+
 const arrayTypeRemoveFirstFunctionDocString = `
 Removes the first element from the array and returns it.
 
 The array must not be empty. If the array is empty, the program aborts
 `
 
+const ArrayTypeRemoveLastFunctionName = "removeLast"
+
 const arrayTypeRemoveLastFunctionDocString = `
 Removes the last element from the array and returns it.
 
 The array must not be empty. If the array is empty, the program aborts
 `
+
+const ArrayTypeSliceFunctionName = "slice"
 
 const arrayTypeSliceFunctionDocString = `
 Returns a new variable-sized array containing the slice of the elements in the given array from start index ` + "`from`" + ` up to, but not including, the end index ` + "`upTo`" + `.
@@ -2444,7 +2460,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 			},
 		}
 
-		members["concat"] = MemberResolver{
+		members[ArrayTypeConcatFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
 			Resolve: func(
 				memoryGauge common.MemoryGauge,

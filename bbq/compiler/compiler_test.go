@@ -86,14 +86,14 @@ func TestCompileRecursionFib(t *testing.T) {
 			opcode.InstructionSubtract{},
 			opcode.InstructionTransfer{Type: intTypeIndex},
 			opcode.InstructionGetGlobal{Global: 0},
-			opcode.InstructionInvoke{},
+			opcode.InstructionInvoke{ArgCount: 1},
 			// fib(n - 2)
 			opcode.InstructionGetLocal{Local: 0},
 			opcode.InstructionGetConstant{Constant: 0},
 			opcode.InstructionSubtract{},
 			opcode.InstructionTransfer{Type: intTypeIndex},
 			opcode.InstructionGetGlobal{Global: 0},
-			opcode.InstructionInvoke{},
+			opcode.InstructionInvoke{ArgCount: 1},
 			opcode.InstructionAdd{},
 			// return
 			opcode.InstructionReturnValue{},
@@ -1112,7 +1112,7 @@ func TestCompileEmit(t *testing.T) {
 			opcode.InstructionGetLocal{Local: xIndex},
 			opcode.InstructionTransfer{Type: 1},
 			opcode.InstructionGetGlobal{Global: 1},
-			opcode.InstructionInvoke{},
+			opcode.InstructionInvoke{ArgCount: 1},
 			// emit
 			opcode.InstructionEmitEvent{Type: 2},
 
@@ -2333,7 +2333,7 @@ func TestCompileMethodInvocation(t *testing.T) {
 			[]opcode.Instruction{
 				// let foo = Foo()
 				opcode.InstructionGetGlobal{Global: initFuncIndex},
-				opcode.InstructionInvoke{TypeArgs: nil},
+				opcode.InstructionInvoke{ArgCount: 0, TypeArgs: nil},
 				opcode.InstructionTransfer{Type: 1},
 				opcode.InstructionSetLocal{Local: fooIndex},
 
@@ -2344,6 +2344,7 @@ func TestCompileMethodInvocation(t *testing.T) {
 				opcode.InstructionGetGlobal{Global: fFuncIndex},
 				opcode.InstructionInvokeMethodStatic{
 					TypeArgs: nil,
+					ArgCount: 2,
 				},
 				opcode.InstructionDrop{},
 
@@ -2775,6 +2776,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 			opcode.InstructionGetGlobal{Global: interfaceFunctionIndex}, // must be interface method's index
 			opcode.InstructionInvokeMethodStatic{
 				TypeArgs: nil,
+				ArgCount: 1,
 			},
 
 			// return
@@ -2869,7 +2871,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// panic("pre/post condition failed")
 				opcode.InstructionGetConstant{Constant: 1}, // error message
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
-				opcode.InstructionInvoke{},
+				opcode.InstructionInvoke{ArgCount: 1},
 
 				// Drop since it's a statement-expression
 				opcode.InstructionDrop{},
@@ -2943,7 +2945,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// panic("pre/post condition failed")
 				opcode.InstructionGetConstant{Constant: 2}, // error message
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
-				opcode.InstructionInvoke{},
+				opcode.InstructionInvoke{ArgCount: 1},
 
 				// Drop since it's a statement-expression
 				opcode.InstructionDrop{},
@@ -3019,7 +3021,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// panic("pre/post condition failed")
 				opcode.InstructionGetConstant{Constant: 0}, // error message
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
-				opcode.InstructionInvoke{},
+				opcode.InstructionInvoke{ArgCount: 1},
 
 				// Drop since it's a statement-expression
 				opcode.InstructionDrop{},
@@ -3146,7 +3148,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// panic("pre/post condition failed")
 				opcode.InstructionGetConstant{Constant: constPanicMessageIndex},
 				opcode.InstructionGetGlobal{Global: panicFunctionIndex},
-				opcode.InstructionInvoke{},
+				opcode.InstructionInvoke{ArgCount: 1},
 
 				// Drop since it's a statement-expression
 				opcode.InstructionDrop{},
@@ -3179,7 +3181,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// panic("pre/post condition failed")
 				opcode.InstructionGetConstant{Constant: constPanicMessageIndex},
 				opcode.InstructionGetGlobal{Global: panicFunctionIndex},
-				opcode.InstructionInvoke{},
+				opcode.InstructionInvoke{ArgCount: 1},
 
 				// Drop since it's a statement-expression
 				opcode.InstructionDrop{},
@@ -3323,7 +3325,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// panic("pre/post condition failed")
 				opcode.InstructionGetConstant{Constant: constPanicMessageIndex},
 				opcode.InstructionGetGlobal{Global: panicFunctionIndex},
-				opcode.InstructionInvoke{},
+				opcode.InstructionInvoke{ArgCount: 1},
 
 				// Drop since it's a statement-expression
 				opcode.InstructionDrop{},
@@ -3501,11 +3503,13 @@ func TestCompileFunctionConditions(t *testing.T) {
 			[]opcode.Instruction{
 				// A.TestStruct()
 				opcode.InstructionGetGlobal{Global: 9},
-				opcode.InstructionInvoke{},
+				opcode.InstructionInvoke{ArgCount: 0},
 
 				// A.TestStruct().test()
 				opcode.InstructionGetGlobal{Global: 10},
-				opcode.InstructionInvokeMethodStatic{},
+				opcode.InstructionInvokeMethodStatic{
+					ArgCount: 1,
+				},
 
 				// if !<condition>
 				// panic("pre/post condition failed")
@@ -3514,7 +3518,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				opcode.InstructionGetConstant{Constant: panicMessageIndex},
 				opcode.InstructionGetGlobal{Global: panicFunctionIndex},
-				opcode.InstructionInvoke{},
+				opcode.InstructionInvoke{ArgCount: 1},
 
 				// Drop since it's a statement-expression
 				opcode.InstructionDrop{},
@@ -4131,7 +4135,7 @@ func TestCompileTransaction(t *testing.T) {
 			// panic("pre/post condition failed")
 			opcode.InstructionGetConstant{Constant: constErrorMsgIndex},
 			opcode.InstructionGetGlobal{Global: panicFunctionIndex},
-			opcode.InstructionInvoke{},
+			opcode.InstructionInvoke{ArgCount: 1},
 
 			// Drop since it's a statement-expression
 			opcode.InstructionDrop{},
@@ -4155,7 +4159,7 @@ func TestCompileTransaction(t *testing.T) {
 			// panic("pre/post condition failed")
 			opcode.InstructionGetConstant{Constant: constErrorMsgIndex},
 			opcode.InstructionGetGlobal{Global: panicFunctionIndex},
-			opcode.InstructionInvoke{},
+			opcode.InstructionInvoke{ArgCount: 1},
 
 			// Drop since it's a statement-expression
 			opcode.InstructionDrop{},
@@ -4341,7 +4345,7 @@ func TestCompileReturns(t *testing.T) {
 				opcode.InstructionJumpIfFalse{Target: 8},
 				opcode.InstructionGetConstant{Constant: 0},
 				opcode.InstructionGetGlobal{Global: 1},
-				opcode.InstructionInvoke{},
+				opcode.InstructionInvoke{ArgCount: 1},
 				opcode.InstructionDrop{},
 
 				// return
@@ -4404,7 +4408,7 @@ func TestCompileReturns(t *testing.T) {
 				opcode.InstructionJumpIfFalse{Target: 15},
 				opcode.InstructionGetConstant{Constant: 1},
 				opcode.InstructionGetGlobal{Global: 1},
-				opcode.InstructionInvoke{},
+				opcode.InstructionInvoke{ArgCount: 1},
 				opcode.InstructionDrop{},
 
 				// return $_result
@@ -4443,7 +4447,7 @@ func TestCompileReturns(t *testing.T) {
 			[]opcode.Instruction{
 				// invoke `voidReturnFunc()`
 				opcode.InstructionGetGlobal{Global: 1},
-				opcode.InstructionInvoke{},
+				opcode.InstructionInvoke{ArgCount: 0},
 
 				// Drop the returning void value
 				opcode.InstructionDrop{},
@@ -4457,7 +4461,7 @@ func TestCompileReturns(t *testing.T) {
 				opcode.InstructionJumpIfFalse{Target: 11},
 				opcode.InstructionGetConstant{Constant: 0},
 				opcode.InstructionGetGlobal{Global: 2},
-				opcode.InstructionInvoke{},
+				opcode.InstructionInvoke{ArgCount: 1},
 				opcode.InstructionDrop{},
 
 				// return $_result
@@ -4513,7 +4517,7 @@ func TestCompileFunctionExpression(t *testing.T) {
 			opcode.InstructionGetLocal{Local: xIndex},
 			opcode.InstructionGetConstant{Constant: 2},
 			opcode.InstructionGetLocal{Local: addOneIndex},
-			opcode.InstructionInvoke{},
+			opcode.InstructionInvoke{ArgCount: 1},
 			opcode.InstructionAdd{},
 			opcode.InstructionReturnValue{},
 		},
@@ -4595,7 +4599,7 @@ func TestCompileInnerFunction(t *testing.T) {
 			opcode.InstructionGetLocal{Local: xIndex},
 			opcode.InstructionGetConstant{Constant: 2},
 			opcode.InstructionGetLocal{Local: addOneIndex},
-			opcode.InstructionInvoke{},
+			opcode.InstructionInvoke{ArgCount: 1},
 			opcode.InstructionAdd{},
 			opcode.InstructionReturnValue{},
 		},
@@ -4972,7 +4976,7 @@ func TestCompileRecursiveInnerFunction(t *testing.T) {
 			opcode.InstructionGetUpvalue{
 				Upvalue: innerUpvalueIndex,
 			},
-			opcode.InstructionInvoke{},
+			opcode.InstructionInvoke{ArgCount: 0},
 			opcode.InstructionDrop{},
 			opcode.InstructionReturn{},
 		},

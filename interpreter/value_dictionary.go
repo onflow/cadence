@@ -533,7 +533,7 @@ func (v *DictionaryValue) ForEachKey(
 
 	argumentTypes := []sema.Type{keyType}
 
-	procedureFunctionType := procedure.FunctionType()
+	procedureFunctionType := procedure.FunctionType(context)
 	parameterTypes := procedureFunctionType.ParameterTypes()
 	returnType := procedureFunctionType.ReturnTypeAnnotation.Type
 

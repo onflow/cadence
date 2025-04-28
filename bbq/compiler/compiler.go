@@ -1303,8 +1303,11 @@ func (c *Compiler[_, _]) VisitArrayExpression(array *ast.ArrayExpression) (_ str
 		panic(errors.NewDefaultUserError("invalid array expression"))
 	}
 
+	elementExpectedType := arrayTypes.ArrayType.ElementType(false)
+
 	for _, expression := range array.Values {
 		c.compileExpression(expression)
+		c.emitTransfer(elementExpectedType)
 	}
 
 	c.codeGen.Emit(
@@ -1321,7 +1324,9 @@ func (c *Compiler[_, _]) VisitArrayExpression(array *ast.ArrayExpression) (_ str
 func (c *Compiler[_, _]) VisitDictionaryExpression(dictionary *ast.DictionaryExpression) (_ struct{}) {
 	dictionaryTypes := c.DesugaredElaboration.DictionaryExpressionTypes(dictionary)
 
-	typeIndex := c.getOrAddType(dictionaryTypes.DictionaryType)
+	dictionaryType := dictionaryTypes.DictionaryType
+
+	typeIndex := c.getOrAddType(dictionaryType)
 
 	size := len(dictionary.Entries)
 	if size >= math.MaxUint16 {
@@ -1330,14 +1335,16 @@ func (c *Compiler[_, _]) VisitDictionaryExpression(dictionary *ast.DictionaryExp
 
 	for _, entry := range dictionary.Entries {
 		c.compileExpression(entry.Key)
+		c.emitTransfer(dictionaryType.KeyType)
 		c.compileExpression(entry.Value)
+		c.emitTransfer(dictionaryType.ValueType)
 	}
 
 	c.codeGen.Emit(
 		opcode.InstructionNewDictionary{
 			Type:       typeIndex,
 			Size:       uint16(size),
-			IsResource: dictionaryTypes.DictionaryType.IsResourceType(),
+			IsResource: dictionaryType.IsResourceType(),
 		},
 	)
 
@@ -1394,6 +1401,13 @@ func (c *Compiler[_, _]) emitVariableStore(name string) {
 func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExpression) (_ struct{}) {
 	// TODO: copy
 
+	invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(expression)
+
+	argumentCount := len(expression.Arguments)
+	if argumentCount >= math.MaxUint16 {
+		panic(errors.NewDefaultUserError("invalid number of arguments"))
+	}
+
 	switch invokedExpr := expression.InvokedExpression.(type) {
 	case *ast.IdentifierExpression:
 		// TODO: Does constructors need any special handling?
@@ -1403,12 +1417,15 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 		//}
 
 		// Compile arguments
-		c.compileArguments(expression)
+		c.compileArguments(expression.Arguments, invocationTypes)
 		// Load function value
 		c.emitVariableLoad(invokedExpr.Identifier.Identifier)
 
-		typeArgs := c.loadTypeArguments(expression)
-		c.codeGen.Emit(opcode.InstructionInvoke{TypeArgs: typeArgs})
+		typeArgs := c.loadTypeArguments(invocationTypes)
+		c.codeGen.Emit(opcode.InstructionInvoke{
+			TypeArgs: typeArgs,
+			ArgCount: uint16(argumentCount),
+		})
 
 	case *ast.MemberExpression:
 		memberInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(invokedExpr)
@@ -1428,12 +1445,15 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 
 			// Calling a type constructor must be invoked statically. e.g: `SomeContract.Foo()`.
 			// Compile arguments
-			c.compileArguments(expression)
+			c.compileArguments(expression.Arguments, invocationTypes)
 			// Load function value
 			c.emitVariableLoad(funcName)
 
-			typeArgs := c.loadTypeArguments(expression)
-			c.codeGen.Emit(opcode.InstructionInvoke{TypeArgs: typeArgs})
+			typeArgs := c.loadTypeArguments(invocationTypes)
+			c.codeGen.Emit(opcode.InstructionInvoke{
+				TypeArgs: typeArgs,
+				ArgCount: uint16(argumentCount),
+			})
 			return
 		}
 
@@ -1441,13 +1461,15 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 		c.compileExpression(invokedExpr.Expression)
 
 		// Compile arguments
-		c.compileArguments(expression)
+		c.compileArguments(expression.Arguments, invocationTypes)
 
-		typeArgs := c.loadTypeArguments(expression)
+		typeArgs := c.loadTypeArguments(invocationTypes)
 
 		// Invocations into the interface code, such as default functions and inherited conditions,
 		// that were synthetically added at the desugar phase, must be static calls.
 		isInterfaceInheritedFuncCall := c.DesugaredElaboration.IsInterfaceMethodStaticCall(expression)
+
+		argsCountWithReceiver := uint16(argumentCount) + 1
 
 		// Any invocation on restricted-types must be dynamic
 		if !isInterfaceInheritedFuncCall && isDynamicMethodInvocation(memberInfo.AccessedType) {
@@ -1456,17 +1478,12 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 				panic(errors.NewDefaultUserError("invalid function name"))
 			}
 
-			argumentCount := len(expression.Arguments)
-			if argumentCount >= math.MaxUint16 {
-				panic(errors.NewDefaultUserError("invalid number of arguments"))
-			}
-
 			funcNameConst := c.addStringConst(funcName)
 			c.codeGen.Emit(
 				opcode.InstructionInvokeMethodDynamic{
 					Name:     funcNameConst.index,
 					TypeArgs: typeArgs,
-					ArgCount: uint16(argumentCount),
+					ArgCount: argsCountWithReceiver,
 				},
 			)
 
@@ -1480,6 +1497,7 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 
 			c.codeGen.Emit(opcode.InstructionInvokeMethodStatic{
 				TypeArgs: typeArgs,
+				ArgCount: argsCountWithReceiver,
 			})
 		}
 	default:
@@ -1505,9 +1523,8 @@ func isDynamicMethodInvocation(accessedType sema.Type) bool {
 	}
 }
 
-func (c *Compiler[_, _]) compileArguments(expression *ast.InvocationExpression) {
-	invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(expression)
-	for index, argument := range expression.Arguments {
+func (c *Compiler[_, _]) compileArguments(arguments ast.Arguments, invocationTypes sema.InvocationExpressionTypes) {
+	for index, argument := range arguments {
 		c.compileExpression(argument.Expression)
 		c.emitTransfer(invocationTypes.ArgumentTypes[index])
 	}
@@ -1519,10 +1536,9 @@ func (c *Compiler[_, _]) compileArguments(expression *ast.InvocationExpression) 
 	//}
 }
 
-func (c *Compiler[_, _]) loadTypeArguments(expression *ast.InvocationExpression) []uint16 {
-	invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(expression)
-
-	typeArgsCount := invocationTypes.TypeArguments.Len()
+func (c *Compiler[_, _]) loadTypeArguments(invocationTypes sema.InvocationExpressionTypes) []uint16 {
+	typeArguments := invocationTypes.TypeArguments
+	typeArgsCount := typeArguments.Len()
 	if typeArgsCount >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid number of type arguments: %d", typeArgsCount))
 	}
@@ -1531,7 +1547,7 @@ func (c *Compiler[_, _]) loadTypeArguments(expression *ast.InvocationExpression)
 	if typeArgsCount > 0 {
 		typeArgs = make([]uint16, 0, typeArgsCount)
 
-		invocationTypes.TypeArguments.Foreach(func(key *sema.TypeParameter, typeParam sema.Type) {
+		typeArguments.Foreach(func(key *sema.TypeParameter, typeParam sema.Type) {
 			typeArgs = append(typeArgs, c.getOrAddType(typeParam))
 		})
 	}

@@ -87,7 +87,7 @@ func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatem
 		}
 
 		// NOTE: copy on return
-		value = transferAndConvert(interpreter, value, valueType, returnType, locationRange)
+		value = TransferAndConvert(interpreter, value, valueType, returnType, locationRange)
 	}
 
 	return ReturnResult{Value: value}
@@ -509,7 +509,7 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 		}
 	}
 
-	transferredValue := transferAndConvert(
+	transferredValue := TransferAndConvert(
 		interpreter,
 		result,
 		valueType,
@@ -599,10 +599,10 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) Stat
 	// and left value to right target
 
 	checkInvalidatedResourceOrResourceReference(rightValue, rightLocationRange, interpreter)
-	transferredRightValue := transferAndConvert(interpreter, rightValue, rightType, leftType, rightLocationRange)
+	transferredRightValue := TransferAndConvert(interpreter, rightValue, rightType, leftType, rightLocationRange)
 
 	checkInvalidatedResourceOrResourceReference(leftValue, leftLocationRange, interpreter)
-	transferredLeftValue := transferAndConvert(interpreter, leftValue, leftType, rightType, leftLocationRange)
+	transferredLeftValue := TransferAndConvert(interpreter, leftValue, leftType, rightType, leftLocationRange)
 
 	leftGetterSetter.set(transferredRightValue)
 	rightGetterSetter.set(transferredLeftValue)

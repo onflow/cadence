@@ -95,7 +95,7 @@ func invokeFunctionValue(
 
 			if i < parameterTypeCount {
 				parameterType := parameterTypes[i]
-				transferredArguments[i] = transferAndConvert(
+				transferredArguments[i] = TransferAndConvert(
 					context,
 					argument,
 					argumentType,
@@ -133,7 +133,7 @@ func invokeFunctionValue(
 
 	resultValue := function.Invoke(invocation)
 
-	functionReturnType := function.FunctionType().ReturnTypeAnnotation.Type
+	functionReturnType := function.FunctionType(context).ReturnTypeAnnotation.Type
 
 	// Only convert and box.
 	// No need to transfer, since transfer would happen later, when the return value gets assigned.

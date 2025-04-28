@@ -355,7 +355,7 @@ func TestStructMethodCall(t *testing.T) {
 
 	t.Parallel()
 
-	checker, err := ParseAndCheck(t, `
+	result, err := CompileAndInvoke(t, `
       struct Foo {
           var id : String
 
@@ -372,22 +372,10 @@ func TestStructMethodCall(t *testing.T) {
           var r = Foo("Hello from Foo!")
           return r.sayHello(1)
       }
-    `)
-	require.NoError(t, err)
-
-	comp := compiler.NewInstructionCompiler(
-		interpreter.ProgramFromChecker(checker),
-		checker.Location,
+    `,
+		"test",
 	)
-	program := comp.Compile()
-
-	vmConfig := &vm.Config{}
-	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-
-	result, err := vmInstance.Invoke("test")
 	require.NoError(t, err)
-	require.Equal(t, 0, vmInstance.StackSize())
-
 	require.Equal(t, interpreter.NewUnmeteredStringValue("Hello from Foo!"), result)
 }
 
@@ -460,6 +448,15 @@ func TestImport(t *testing.T) {
 	vmConfig := &vm.Config{
 		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
+		},
+		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+			elaboration := importedChecker.Elaboration
+			compositeType := elaboration.CompositeType(typeID)
+			if compositeType != nil {
+				return compositeType
+			}
+
+			return elaboration.InterfaceType(typeID)
 		},
 	}
 
@@ -1784,13 +1781,14 @@ func TestTransaction(t *testing.T) {
 
 		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
 			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(_ *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
+				commons.LogFunctionName,
+				stdlib.LogFunctionType,
+				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
-			}
+			)
 
 			return funcs
 		}
@@ -1878,13 +1876,14 @@ func TestTransaction(t *testing.T) {
 
 		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
 			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(_ *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
+				commons.LogFunctionName,
+				stdlib.LogFunctionType,
+				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
-			}
+			)
 
 			return funcs
 		}
@@ -1968,13 +1967,14 @@ func TestTransaction(t *testing.T) {
 
 		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
 			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(_ *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
+				commons.LogFunctionName,
+				stdlib.LogFunctionType,
+				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
-			}
+			)
 
 			return funcs
 		}
@@ -2063,13 +2063,14 @@ func TestTransaction(t *testing.T) {
 
 		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
 			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(_ *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
+				commons.LogFunctionName,
+				stdlib.LogFunctionType,
+				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
-			}
+			)
 
 			return funcs
 		}
@@ -2836,7 +2837,11 @@ func TestResource(t *testing.T) {
 	t.Run("new", func(t *testing.T) {
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
+		programs := map[common.Location]*CompiledProgram{}
+
+		program := ParseCheckAndCompile(
+			t,
+			`
             resource Foo {
                 var id : Int
 
@@ -2850,24 +2855,12 @@ func TestResource(t *testing.T) {
                 var r <- create Foo(5)
                 return <- r
             }
-        `)
-		require.NoError(t, err)
-
-		comp := compiler.NewInstructionCompiler(
-			interpreter.ProgramFromChecker(checker),
-			checker.Location,
+        `,
+			TestLocation,
+			programs,
 		)
-		program := comp.Compile()
 
-		var uuid uint64
-
-		vmConfig := (&vm.Config{}).
-			WithInterpreterConfig(&interpreter.Config{
-				UUIDHandler: func() (uint64, error) {
-					uuid++
-					return uuid, nil
-				},
-			})
+		vmConfig := prepareVMConfig(t, nil, programs)
 
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
@@ -2892,7 +2885,9 @@ func TestResource(t *testing.T) {
 	t.Run("destroy", func(t *testing.T) {
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
+		_, err := CompileAndInvoke(
+			t,
+			`
             resource Foo {
                 var id : Int
 
@@ -2906,29 +2901,11 @@ func TestResource(t *testing.T) {
                 var r <- create Foo(5)
                 destroy r
             }
-        `)
-		require.NoError(t, err)
-
-		comp := compiler.NewInstructionCompiler(
-			interpreter.ProgramFromChecker(checker),
-			checker.Location,
+        `,
+			"test",
 		)
-		program := comp.Compile()
 
-		var uuid uint64 = 42
-
-		vmConfig := (&vm.Config{}).
-			WithInterpreterConfig(&interpreter.Config{
-				UUIDHandler: func() (uint64, error) {
-					uuid++
-					return uuid, nil
-				},
-			})
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-
-		_, err = vmInstance.Invoke("test")
 		require.NoError(t, err)
-		require.Equal(t, 0, vmInstance.StackSize())
 	})
 }
 
@@ -3607,16 +3584,18 @@ func TestFunctionPreConditions(t *testing.T) {
 		config := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
 		config.NativeFunctionsProvider = func() map[string]vm.Value {
 			return map[string]vm.Value{
-				commons.LogFunctionName: vm.NativeFunctionValue{
-					ParameterCount: len(stdlib.LogFunctionType.Parameters),
-					Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+				commons.LogFunctionName: vm.NewNativeFunctionValue(
+					commons.LogFunctionName,
+					stdlib.LogFunctionType,
+					func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 						logs = append(logs, arguments[0].String())
 						return interpreter.Void
 					},
-				},
-				commons.PanicFunctionName: vm.NativeFunctionValue{
-					ParameterCount: len(stdlib.PanicFunctionType.Parameters),
-					Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+				),
+				commons.PanicFunctionName: vm.NewNativeFunctionValue(
+					commons.PanicFunctionName,
+					stdlib.PanicFunctionType,
+					func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 						messageValue, ok := arguments[0].(*interpreter.StringValue)
 						if !ok {
 							panic(errors.NewUnreachableError())
@@ -3626,7 +3605,7 @@ func TestFunctionPreConditions(t *testing.T) {
 							Message: messageValue.Str,
 						})
 					},
-				},
+				),
 			}
 		}
 
@@ -3693,13 +3672,14 @@ func TestFunctionPreConditions(t *testing.T) {
 
 		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
 			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
+				commons.LogFunctionName,
+				stdlib.LogFunctionType,
+				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
-			}
+			)
 
 			return funcs
 		}
@@ -4078,13 +4058,14 @@ func TestFunctionPostConditions(t *testing.T) {
 		config := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
 		config.NativeFunctionsProvider = func() map[string]vm.Value {
 			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
+				commons.LogFunctionName,
+				stdlib.LogFunctionType,
+				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
-			}
+			)
 
 			return funcs
 		}
@@ -4564,13 +4545,14 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 
 		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
 			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
+				commons.LogFunctionName,
+				stdlib.LogFunctionType,
+				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
-			}
+			)
 
 			return funcs
 		}
@@ -4658,13 +4640,14 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 
 		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
 			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
+				commons.LogFunctionName,
+				stdlib.LogFunctionType,
+				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
-			}
+			)
 
 			return funcs
 		}
@@ -4756,13 +4739,14 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 
 		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
 			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
+				commons.LogFunctionName,
+				stdlib.LogFunctionType,
+				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
-			}
+			)
 
 			return funcs
 		}
@@ -7416,13 +7400,14 @@ func TestInheritedConditions(t *testing.T) {
 		var logs []string
 		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
 			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NativeFunctionValue{
-				ParameterCount: len(stdlib.LogFunctionType.Parameters),
-				Function: func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
+				commons.LogFunctionName,
+				stdlib.LogFunctionType,
+				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					logs = append(logs, arguments[0].String())
 					return interpreter.Void
 				},
-			}
+			)
 
 			return funcs
 		}
@@ -7704,5 +7689,96 @@ func TestMethodsAsFunctionPointers(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, interpreter.BoolValue(false), result)
+	})
+}
+
+func TestArrayFunctions(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("append", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t, `
+            fun test(): Type {
+                var array: [UInt8] = [2, 5]
+                var append = array.append
+                return append.getType()
+            }
+        `,
+			"test",
+		)
+
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			interpreter.TypeValue{
+				Type: interpreter.FunctionStaticType{
+					Type: sema.ArrayAppendFunctionType(sema.UInt8Type),
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("variable sized reverse", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t, `
+            fun test(): Type {
+                var array: [UInt8] = [2, 5]
+                var reverse = array.reverse
+                return reverse.getType()
+            }
+        `,
+			"test",
+		)
+
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			interpreter.TypeValue{
+				Type: interpreter.FunctionStaticType{
+					Type: sema.ArrayReverseFunctionType(
+						sema.NewVariableSizedType(
+							nil,
+							sema.UInt8Type,
+						),
+					),
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("constant sized reverse", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t, `
+            fun test(): Type {
+                var array: [UInt8; 2] = [2, 5]
+                var reverse = array.reverse
+                return reverse.getType()
+            }
+        `,
+			"test",
+		)
+
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			interpreter.TypeValue{
+				Type: interpreter.FunctionStaticType{
+					Type: sema.ArrayReverseFunctionType(
+						sema.NewConstantSizedType(
+							nil,
+							sema.UInt8Type,
+							2,
+						),
+					),
+				},
+			},
+			result,
+		)
 	})
 }

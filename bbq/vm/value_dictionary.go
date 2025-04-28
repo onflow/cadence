@@ -31,7 +31,7 @@ func init() {
 
 	RegisterTypeBoundFunction(
 		commons.TypeQualifierDictionary,
-		NewBoundNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.DictionaryTypeRemoveFunctionName,
 			// TODO:
 			sema.DictionaryRemoveFunctionType(&sema.DictionaryType{

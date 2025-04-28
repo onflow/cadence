@@ -32,7 +32,7 @@ func init() {
 	// Capability.borrow
 	RegisterTypeBoundFunction(
 		typeName,
-		NewBoundNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.CapabilityTypeBorrowFunctionName,
 			// TODO: Should the borrow type need to be changed for each usage?
 			sema.CapabilityTypeBorrowFunctionType(nil),

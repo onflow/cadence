@@ -22,8 +22,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/onflow/atree"
-
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/constant"
@@ -627,12 +625,23 @@ func opGetIndex(vm *VM) {
 func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
 
-	value := vm.pop()
+	functionValue := vm.pop()
+
+	explicitArgumentsCount := int(ins.ArgCount)
+	arguments := vm.peekN(explicitArgumentsCount)
+
+	// If the function is a pointer to an object-method, then the receiver is implicitly captured.
+	if boundFunction, isBoundFUnction := functionValue.(*BoundFunctionPointerValue); isBoundFUnction {
+		functionValue = boundFunction.Method
+		receiver := unwrapReceiver(vm.context, boundFunction.Receiver)
+		arguments = append([]Value{receiver}, arguments...)
+	}
 
 	invokeFunction(
 		vm,
-		value,
-		false,
+		functionValue,
+		explicitArgumentsCount,
+		arguments,
 		typeArguments,
 	)
 }
@@ -640,12 +649,18 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 func opInvokeMethodStatic(vm *VM, ins opcode.InstructionInvokeMethodStatic) {
 	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
 
-	value := vm.pop()
+	functionValue := vm.pop()
+
+	explicitArgumentsCount := int(ins.ArgCount)
+	arguments := vm.peekN(explicitArgumentsCount)
+	receiver := arguments[receiverIndex]
+	arguments[receiverIndex] = unwrapReceiver(vm.context, receiver)
 
 	invokeFunction(
 		vm,
-		value,
-		true,
+		functionValue,
+		int(ins.ArgCount),
+		arguments,
 		typeArguments,
 	)
 }
@@ -657,25 +672,27 @@ func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
 	// Load type arguments
 	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
 
-	// Get receiver
-	argumentCount := int(ins.ArgCount)
-	receiver := getReceiver(vm, argumentCount)
-	memberAccessibleValue := receiver.(interpreter.MemberAccessibleValue)
+	explicitArgumentsCount := int(ins.ArgCount)
+	arguments := vm.peekN(explicitArgumentsCount)
+	receiver := arguments[receiverIndex]
+	arguments[receiverIndex] = unwrapReceiver(vm.context, receiver)
 
 	// Get function
 	nameIndex := ins.Name
 	funcName := getStringConstant(vm, nameIndex)
 
+	memberAccessibleValue := receiver.(interpreter.MemberAccessibleValue)
 	functionValue := memberAccessibleValue.GetMember(
 		vm.context,
 		EmptyLocationRange,
 		funcName,
-	)
+	).(*BoundFunctionPointerValue)
 
 	invokeFunction(
 		vm,
-		functionValue,
-		true,
+		functionValue.Method,
+		explicitArgumentsCount,
+		arguments,
 		typeArguments,
 	)
 }
@@ -683,42 +700,10 @@ func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
 func invokeFunction(
 	vm *VM,
 	functionValue Value,
-	hasExplicitReceiver bool,
+	explicitArgumentsCount int,
+	arguments []Value,
 	typeArguments []bbq.StaticType,
 ) {
-
-	var arguments []Value
-	var explicitArgumentsCount int
-
-	switch typedFunctionValue := functionValue.(type) {
-	case BoundFunctionPointerValue:
-		wrapper := typedFunctionValue
-		functionValue = wrapper.Method
-		explicitArgumentsCount = wrapper.ParameterCount
-
-		// If the function is a pointer to an object-method, then the receiver is implicitly captured.
-		// However, in `InvokeMethodDynamic` instruction, it is also explicitly provided as well.
-
-		if hasExplicitReceiver {
-			explicitArgumentsCount++
-			arguments = vm.peekN(explicitArgumentsCount)
-			receiver := arguments[receiverIndex]
-			arguments[receiverIndex] = unwrapReceiver(vm.context, receiver)
-		} else {
-			receiver := unwrapReceiver(vm.context, wrapper.Receiver)
-			arguments = append(arguments, receiver)
-			arguments = append(arguments, vm.peekN(explicitArgumentsCount)...)
-		}
-	case FunctionValue:
-		explicitArgumentsCount = typedFunctionValue.GetParameterCount()
-		arguments = vm.peekN(explicitArgumentsCount)
-		if hasExplicitReceiver {
-			receiver := arguments[receiverIndex]
-			arguments[receiverIndex] = unwrapReceiver(vm.context, receiver)
-		}
-	default:
-		panic(errors.NewUnreachableError())
-	}
 
 	switch functionValue := functionValue.(type) {
 	case CompiledFunctionValue:
@@ -748,13 +733,6 @@ func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
 		}
 	}
 	return typeArguments
-}
-
-func getReceiver(vm *VM, argumentCount int) Value {
-	stackHeight := len(vm.stack)
-	receiver := vm.stack[stackHeight-argumentCount-1]
-
-	return unwrapReceiver(vm.context, receiver)
 }
 
 func unwrapReceiver(context *Context, receiver Value) Value {
@@ -851,32 +829,19 @@ func getStringConstant(vm *VM, index uint16) string {
 func opTransfer(vm *VM, ins opcode.InstructionTransfer) {
 	typeIndex := ins.Type
 	targetType := vm.loadType(typeIndex)
+
+	context := vm.context
+
 	value := vm.peek()
+	valueType := value.StaticType(context)
 
-	config := vm.context
-
-	transferredValue := value.Transfer(
-		config,
+	transferredValue := interpreter.TransferAndConvert(
+		context,
+		value,
+		interpreter.MustConvertStaticToSemaType(valueType, context),
+		interpreter.MustConvertStaticToSemaType(targetType, context),
 		EmptyLocationRange,
-		atree.Address{},
-		false,
-		nil,
-		nil,
-
-		// TODO: Pass the correct flag here
-		false,
 	)
-
-	valueType := transferredValue.StaticType(config)
-	// TODO: remove nil check after ensuring all implementations of Value.StaticType are implemented
-	if valueType != nil && !vm.context.IsSubType(valueType, targetType) {
-		// TODO: improve error
-		panic(errors.NewUnexpectedError(
-			"invalid transfer: expected '%s', found '%s'",
-			targetType,
-			valueType,
-		))
-	}
 
 	vm.replaceTop(transferredValue)
 }

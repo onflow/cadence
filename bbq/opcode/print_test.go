@@ -47,14 +47,14 @@ func TestPrintRecursionFib(t *testing.T) {
 		byte(Subtract),
 		byte(Transfer), 0, 0,
 		byte(GetGlobal), 0, 0,
-		byte(Invoke), 0, 0,
+		byte(Invoke), 0, 0, 0, 0,
 		// fib(n - 2)
 		byte(GetLocal), 0, 0,
 		byte(GetConstant), 0, 0,
 		byte(Subtract),
 		byte(Transfer), 0, 0,
 		byte(GetGlobal), 0, 0,
-		byte(Invoke), 0, 0,
+		byte(Invoke), 0, 0, 0, 0,
 		// return sum
 		byte(Add),
 		byte(ReturnValue),
@@ -71,13 +71,13 @@ func TestPrintRecursionFib(t *testing.T) {
   8 |    Subtract |
   9 |    Transfer | type:0
  10 |   GetGlobal | global:0
- 11 |      Invoke | typeArgs:[]
+ 11 |      Invoke | typeArgs:[] argCount:0
  12 |    GetLocal | local:0
  13 | GetConstant | constant:0
  14 |    Subtract |
  15 |    Transfer | type:0
  16 |   GetGlobal | global:0
- 17 |      Invoke | typeArgs:[]
+ 17 |      Invoke | typeArgs:[] argCount:0
  18 |         Add |
  19 | ReturnValue |
 
@@ -183,11 +183,11 @@ func TestPrintInstruction(t *testing.T) {
 
 		`NewPath domain:PathDomainStorage identifier:5`: {byte(NewPath), 1, 0, 5},
 
-		"Invoke typeArgs:[772, 1286]": {
-			byte(Invoke), 0, 2, 3, 4, 5, 6,
+		"Invoke typeArgs:[772, 1286] argCount:1": {
+			byte(Invoke), 0, 2, 3, 4, 5, 6, 0, 1,
 		},
-		"InvokeMethodStatic typeArgs:[772, 1286]": {
-			byte(InvokeMethodStatic), 0, 2, 3, 4, 5, 6,
+		"InvokeMethodStatic typeArgs:[772, 1286] argCount:1": {
+			byte(InvokeMethodStatic), 0, 2, 3, 4, 5, 6, 0, 1,
 		},
 		`InvokeMethodDynamic name:1 typeArgs:[772, 1286] argCount:1800`: {
 			byte(InvokeMethodDynamic), 0, 1, 0, 2, 3, 4, 5, 6, 7, 8,

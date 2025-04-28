@@ -34,7 +34,7 @@ func init() {
 	// Account.Storage.save
 	RegisterTypeBoundFunction(
 		accountStorageTypeName,
-		NewBoundNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.Account_StorageTypeSaveFunctionName,
 			sema.Account_StorageTypeSaveFunctionType,
 			func(context *Context, typeArs []bbq.StaticType, args ...Value) Value {
@@ -57,7 +57,7 @@ func init() {
 	// Account.Storage.borrow
 	RegisterTypeBoundFunction(
 		accountStorageTypeName,
-		NewBoundNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.Account_StorageTypeBorrowFunctionName,
 			sema.Account_StorageTypeBorrowFunctionType,
 			func(context *Context, typeArgs []bbq.StaticType, args ...Value) Value {
@@ -83,7 +83,7 @@ func init() {
 	// Account.Storage.forEachPublic
 	RegisterTypeBoundFunction(
 		accountStorageTypeName,
-		NewBoundNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.Account_StorageTypeForEachPublicFunctionName,
 			sema.Account_StorageTypeForEachPublicFunctionType,
 			func(context *Context, typeArs []bbq.StaticType, args ...Value) Value {
@@ -108,7 +108,7 @@ func init() {
 	// Account.Storage.forEachStored
 	RegisterTypeBoundFunction(
 		accountStorageTypeName,
-		NewBoundNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.Account_StorageTypeForEachStoredFunctionName,
 			sema.Account_StorageTypeForEachPublicFunctionType,
 			func(context *Context, typeArs []bbq.StaticType, args ...Value) Value {
@@ -133,7 +133,7 @@ func init() {
 	// Account.Storage.type
 	RegisterTypeBoundFunction(
 		accountStorageTypeName,
-		NewBoundNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.Account_StorageTypeTypeFunctionName,
 			sema.Account_StorageTypeTypeFunctionType,
 			func(context *Context, typeArs []bbq.StaticType, args ...Value) Value {
@@ -155,7 +155,7 @@ func init() {
 	// Account.Storage.load
 	RegisterTypeBoundFunction(
 		accountStorageTypeName,
-		NewBoundNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.Account_StorageTypeLoadFunctionName,
 			sema.Account_StorageTypeLoadFunctionType,
 			func(context *Context, typeArgs []bbq.StaticType, args ...Value) Value {
@@ -182,7 +182,7 @@ func init() {
 	// Account.Storage.copy
 	RegisterTypeBoundFunction(
 		accountStorageTypeName,
-		NewBoundNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.Account_StorageTypeCopyFunctionName,
 			sema.Account_StorageTypeCopyFunctionType,
 			func(context *Context, typeArgs []bbq.StaticType, args ...Value) Value {
@@ -209,7 +209,7 @@ func init() {
 	// Account.Storage.check
 	RegisterTypeBoundFunction(
 		accountStorageTypeName,
-		NewBoundNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.Account_StorageTypeCheckFunctionName,
 			sema.Account_StorageTypeCheckFunctionType,
 			func(context *Context, typeArgs []bbq.StaticType, args ...Value) Value {
