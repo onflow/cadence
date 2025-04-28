@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/cadence/errors"
 )
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=PrimitiveAccess
+//go:generate stringer -type=PrimitiveAccess
 
 type Access interface {
 	isAccess()
