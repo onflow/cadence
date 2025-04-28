@@ -193,7 +193,7 @@ func (c *Context) GetValueOfVariable(name string) interpreter.Value {
 
 func (c *Context) GetLocation() common.Location {
 	//TODO
-	panic(errors.NewUnreachableError())
+	return nil
 }
 
 func (c *Context) CallStack() []interpreter.Invocation {
