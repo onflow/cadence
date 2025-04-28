@@ -30,8 +30,21 @@ import (
 
 type FunctionValue interface {
 	interpreter.FunctionValue
-	HasDerivedType() bool
-	DerivedFunctionType(receiver Value, context interpreter.TypeConverter) *sema.FunctionType
+
+	// HasGenericType returns whether this function has a derived-type.
+	// A function is said to have a derived-typed if the type of the function
+	// is dependent on the receiver.
+	// for e.g: `Integer.toBigEndianBytes()` functions type is always `fun(): [UInt8]`.
+	// Hence it does not have a derived type.
+	// On the other hand, `[T].append()` function's type is `fun(T): Void`,
+	// where the parameter type `T` always depends on the receiver's type.
+	// Hence, the array-append function is said to have a derived type.
+	HasGenericType() bool
+
+	// ResolvedFunctionType returns the resolved type of the function using the provided receiver value,
+	// if the function has a generic type. This would panic if the function is not a generic function.
+	// Use `HasGenericType` to determine whether this method should be called or not.
+	ResolvedFunctionType(receiver Value, context interpreter.TypeConverter) *sema.FunctionType
 }
 
 type CompiledFunctionValue struct {
@@ -48,11 +61,11 @@ func (CompiledFunctionValue) IsValue() {}
 
 func (v CompiledFunctionValue) IsFunctionValue() {}
 
-func (v CompiledFunctionValue) HasDerivedType() bool {
+func (v CompiledFunctionValue) HasGenericType() bool {
 	return false
 }
 
-func (v CompiledFunctionValue) DerivedFunctionType(_ Value, context interpreter.TypeConverter) *sema.FunctionType {
+func (v CompiledFunctionValue) ResolvedFunctionType(_ Value, context interpreter.TypeConverter) *sema.FunctionType {
 	return v.FunctionType(context)
 }
 
@@ -219,7 +232,7 @@ func (v NativeFunctionValue) Transfer(_ interpreter.ValueTransferContext,
 }
 
 func (v NativeFunctionValue) String() string {
-	if v.HasDerivedType() {
+	if v.HasGenericType() {
 		// If the type is not pre-known, just return the name.
 		return v.Name
 	}
@@ -265,7 +278,7 @@ func (v NativeFunctionValue) MeteredString(
 	_ interpreter.SeenReferences,
 	_ interpreter.LocationRange,
 ) string {
-	if v.HasDerivedType() {
+	if v.HasGenericType() {
 		// If the type is not pre-known, just return the name.
 		return v.Name
 	}
@@ -305,9 +318,9 @@ func (v NativeFunctionValue) FunctionType(interpreter.TypeConverter) *sema.Funct
 	return v.functionType
 }
 
-func (v NativeFunctionValue) DerivedFunctionType(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
+func (v NativeFunctionValue) ResolvedFunctionType(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
 	if v.functionTypeGetter == nil {
-		// DerivedFunctionType shouldn't get called for functions where the type is pre-know.
+		// ResolvedFunctionType shouldn't get called for functions where the type is pre-know.
 		panic(errors.NewUnreachableError())
 	}
 
@@ -316,7 +329,7 @@ func (v NativeFunctionValue) DerivedFunctionType(receiver Value, context interpr
 	return v.functionTypeGetter(receiver, context)
 }
 
-func (v NativeFunctionValue) HasDerivedType() bool {
+func (v NativeFunctionValue) HasGenericType() bool {
 	return v.functionTypeGetter != nil
 }
 
@@ -353,11 +366,11 @@ func (*BoundFunctionPointerValue) IsValue() {}
 
 func (v *BoundFunctionPointerValue) IsFunctionValue() {}
 
-func (v *BoundFunctionPointerValue) HasDerivedType() bool {
-	return v.Method.HasDerivedType()
+func (v *BoundFunctionPointerValue) HasGenericType() bool {
+	return v.Method.HasGenericType()
 }
 
-func (v *BoundFunctionPointerValue) DerivedFunctionType(_ Value, context interpreter.TypeConverter) *sema.FunctionType {
+func (v *BoundFunctionPointerValue) ResolvedFunctionType(_ Value, context interpreter.TypeConverter) *sema.FunctionType {
 	return v.FunctionType(context)
 }
 
@@ -462,8 +475,8 @@ func (v *BoundFunctionPointerValue) initializeFunctionType(context interpreter.T
 	method := v.Method
 	// The type of the native function could be either pre-known (e.g: `Integer.toBigEndianBytes()`),
 	// Or would needs to be derived based on the receiver (e.g: `[Int8].append()`).
-	if method.HasDerivedType() {
-		v.functionType = method.DerivedFunctionType(v.Receiver, context)
+	if method.HasGenericType() {
+		v.functionType = method.ResolvedFunctionType(v.Receiver, context)
 	} else {
 		v.functionType = method.FunctionType(context)
 	}
