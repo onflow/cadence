@@ -131,8 +131,7 @@ func (v *PublishedValue) Transfer(
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
-	preventTransfer map[atree.ValueID]struct {
-	},
+	preventTransfer map[atree.ValueID]struct{},
 	hasNoParentContainer bool,
 ) Value {
 	// NB: if the inner value of a PublishedValue can be a resource,
