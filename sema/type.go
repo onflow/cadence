@@ -6189,6 +6189,8 @@ func (t *DictionaryType) CheckInstantiated(pos ast.HasPosition, memoryGauge comm
 	t.ValueType.CheckInstantiated(pos, memoryGauge, report)
 }
 
+const DictionaryTypeContainsKeyFunctionName = "containsKey"
+
 const dictionaryTypeContainsKeyFunctionDocString = `
 Returns true if the given key is in the dictionary
 `
@@ -6201,6 +6203,8 @@ const dictionaryTypeKeysFieldDocString = `
 An array containing all keys of the dictionary
 `
 
+const DictionaryTypeForEachKeyFunctionName = "forEachKey"
+
 const dictionaryTypeForEachKeyFunctionDocString = `
 Iterate over each key in this dictionary, exiting early if the passed function returns false.
 This method is more performant than calling .keys and then iterating over the resulting array,
@@ -6212,6 +6216,8 @@ The order of iteration is undefined
 const dictionaryTypeValuesFieldDocString = `
 An array containing all values of the dictionary
 `
+
+const DictionaryTypeInsertFunctionName = "insert"
 
 const dictionaryTypeInsertFunctionDocString = `
 Inserts the given value into the dictionary under the given key.
@@ -6238,7 +6244,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 		t.memberResolvers = withBuiltinMembers(
 			t,
 			map[string]MemberResolver{
-				"containsKey": {
+				DictionaryTypeContainsKeyFunctionName: {
 					Kind: common.DeclarationKindFunction,
 					Resolve: func(
 						memoryGauge common.MemoryGauge,
@@ -6331,7 +6337,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 						)
 					},
 				},
-				"insert": {
+				DictionaryTypeInsertFunctionName: {
 					Kind: common.DeclarationKindFunction,
 					Resolve: func(
 						memoryGauge common.MemoryGauge,
@@ -6367,7 +6373,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 						)
 					},
 				},
-				"forEachKey": {
+				DictionaryTypeForEachKeyFunctionName: {
 					Kind: common.DeclarationKindFunction,
 					Resolve: func(
 						memoryGauge common.MemoryGauge,
