@@ -35,7 +35,7 @@ import (
 
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
-	. "github.com/onflow/cadence/bbq/test-utils"
+	. "github.com/onflow/cadence/bbq/test_utils"
 	"github.com/onflow/cadence/bbq/vm"
 )
 
@@ -91,7 +91,7 @@ type testAccountHandler struct {
 	updateAccountContractCode func(location common.AddressLocation, code []byte) error
 	recordContractUpdate      func(location common.AddressLocation, value *interpreter.CompositeValue)
 	contractUpdateRecorded    func(location common.AddressLocation) bool
-	interpretContract         func(
+	loadContractValue         func(
 		location common.AddressLocation,
 		program *interpreter.Program,
 		name string,
@@ -299,7 +299,7 @@ func (t *testAccountHandler) ContractUpdateRecorded(location common.AddressLocat
 	return t.contractUpdateRecorded(location)
 }
 
-func (t *testAccountHandler) InterpretContract(
+func (t *testAccountHandler) LoadContractValue(
 	location common.AddressLocation,
 	program *interpreter.Program,
 	name string,
@@ -308,10 +308,10 @@ func (t *testAccountHandler) InterpretContract(
 	*interpreter.CompositeValue,
 	error,
 ) {
-	if t.interpretContract == nil {
-		panic(errors.NewUnexpectedError("unexpected call to InterpretContract"))
+	if t.loadContractValue == nil {
+		panic(errors.NewUnexpectedError("unexpected call to LoadContractValue"))
 	}
-	return t.interpretContract(
+	return t.loadContractValue(
 		location,
 		program,
 		name,

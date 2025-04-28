@@ -89,11 +89,13 @@ var _ ast.StatementVisitor[struct{}] = &Compiler[any, any]{}
 var _ ast.ExpressionVisitor[struct{}] = &Compiler[any, any]{}
 
 func NewBytecodeCompiler(
-	checker *sema.Checker,
+	program *interpreter.Program,
+	location common.Location,
 	config *Config,
 ) *Compiler[byte, []byte] {
 	return newCompiler(
-		checker,
+		program,
+		location,
 		config,
 		&ByteCodeGen{},
 		&EncodedTypeGen{},
@@ -101,17 +103,24 @@ func NewBytecodeCompiler(
 }
 
 func NewInstructionCompiler(
-	checker *sema.Checker,
+	program *interpreter.Program,
+	location common.Location,
 ) *Compiler[opcode.Instruction, bbq.StaticType] {
-	return NewInstructionCompilerWithConfig(checker, &Config{})
+	return NewInstructionCompilerWithConfig(
+		program,
+		location,
+		&Config{},
+	)
 }
 
 func NewInstructionCompilerWithConfig(
-	checker *sema.Checker,
+	program *interpreter.Program,
+	location common.Location,
 	config *Config,
 ) *Compiler[opcode.Instruction, bbq.StaticType] {
 	return newCompiler(
-		checker,
+		program,
+		location,
 		config,
 		&InstructionCodeGen{},
 		&DecodedTypeGen{},
@@ -119,7 +128,8 @@ func NewInstructionCompilerWithConfig(
 }
 
 func newCompiler[E, T any](
-	checker *sema.Checker,
+	program *interpreter.Program,
+	location common.Location,
 	config *Config,
 	codeGen CodeGen[E],
 	typeGen TypeGen[T],
@@ -133,10 +143,10 @@ func newCompiler[E, T any](
 	}
 
 	return &Compiler[E, T]{
-		Program:              checker.Program,
-		DesugaredElaboration: NewDesugaredElaboration(checker.Elaboration),
+		Program:              program.Program,
+		DesugaredElaboration: NewDesugaredElaboration(program.Elaboration),
 		Config:               config,
-		location:             checker.Location,
+		location:             location,
 		Globals:              make(map[string]*Global),
 		importedGlobals:      globals,
 		typesInPool:          make(map[sema.TypeID]uint16),

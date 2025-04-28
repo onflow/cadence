@@ -1459,7 +1459,7 @@ type AccountContractAdditionHandler interface {
 		value *interpreter.CompositeValue,
 	)
 	ContractUpdateRecorded(location common.AddressLocation) bool
-	InterpretContract(
+	LoadContractValue(
 		location common.AddressLocation,
 		program *interpreter.Program,
 		name string,
@@ -2065,7 +2065,7 @@ func instantiateContract(
 	//
 	// If the contract is not the deployed contract, load it from storage.
 
-	return handler.InterpretContract(
+	return handler.LoadContractValue(
 		location,
 		program,
 		contractType.Identifier,

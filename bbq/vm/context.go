@@ -97,7 +97,11 @@ func (c *Context) SetAttachmentIteration(composite *interpreter.CompositeValue, 
 	return false
 }
 
-func (c *Context) ReadStored(storageAddress common.Address, domain common.StorageDomain, identifier interpreter.StorageMapKey) interpreter.Value {
+func (c *Context) ReadStored(
+	storageAddress common.Address,
+	domain common.StorageDomain,
+	identifier interpreter.StorageMapKey,
+) interpreter.Value {
 	accountStorage := c.storage.GetDomainStorageMap(
 		c,
 		storageAddress,
@@ -218,7 +222,7 @@ func (c *Context) GetResourceDestructionContextForLocation(location common.Locat
 func (c *Context) GetMethod(
 	value interpreter.MemberAccessibleValue,
 	name string,
-	locationRange interpreter.LocationRange,
+	_ interpreter.LocationRange,
 ) interpreter.FunctionValue {
 	staticType := value.StaticType(c)
 

@@ -367,8 +367,10 @@ func (e *interpreterEnvironment) newContractValueHandler() interpreter.ContractV
 
 		invocation := e.deployedContractConstructorInvocation
 
+		contractLocation := compositeType.Location
+
 		if invocation != nil {
-			if compositeType.Location == invocation.ContractType.Location &&
+			if contractLocation == invocation.ContractType.Location &&
 				compositeType.Identifier == invocation.ContractType.Identifier {
 
 				constructor := constructorGenerator(invocation.Address)
@@ -390,7 +392,11 @@ func (e *interpreterEnvironment) newContractValueHandler() interpreter.ContractV
 			}
 		}
 
-		return loadContractValue(inter, compositeType, e.storage)
+		if addressLocation, ok := contractLocation.(common.AddressLocation); ok {
+			return loadContractValue(inter, addressLocation, e.storage)
+		}
+
+		panic(errors.NewDefaultUserError("failed to load contract: %s", contractLocation))
 	}
 }
 
@@ -469,7 +475,7 @@ func (e *interpreterEnvironment) newOnInvokedFunctionReturnHandler() func(_ *int
 	}
 }
 
-func (e *interpreterEnvironment) InterpretContract(
+func (e *interpreterEnvironment) LoadContractValue(
 	location common.AddressLocation,
 	program *interpreter.Program,
 	name string,

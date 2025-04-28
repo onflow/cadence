@@ -26,7 +26,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/ast"
-	. "github.com/onflow/cadence/bbq/test-utils"
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/commons"
+	"github.com/onflow/cadence/bbq/compiler"
+	. "github.com/onflow/cadence/bbq/test_utils"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -36,11 +40,6 @@ import (
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
-
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/commons"
-	"github.com/onflow/cadence/bbq/compiler"
-	"github.com/onflow/cadence/bbq/vm"
 )
 
 const recursiveFib = `
@@ -64,7 +63,10 @@ func TestRecursionFib(t *testing.T) {
 	checker, err := ParseAndCheck(t, recursiveFib)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	vmConfig := &vm.Config{}
@@ -102,7 +104,10 @@ func TestImperativeFib(t *testing.T) {
 	checker, err := ParseAndCheck(t, imperativeFib)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	vmConfig := &vm.Config{}
@@ -403,7 +408,10 @@ func TestImport(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	subComp := compiler.NewInstructionCompiler(importedChecker)
+	subComp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(importedChecker),
+		importedChecker.Location,
+	)
 	importedProgram := subComp.Compile()
 
 	checker, err := ParseAndCheckWithOptions(t,
@@ -427,7 +435,10 @@ func TestImport(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	importCompiler := compiler.NewInstructionCompiler(checker)
+	importCompiler := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	importCompiler.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 		return importedProgram
 	}
@@ -498,7 +509,10 @@ func TestContractImport(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		importCompiler := compiler.NewInstructionCompiler(importedChecker)
+		importCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(importedChecker),
+			importedChecker.Location,
+		)
 		importedProgram := importCompiler.Compile()
 
 		vmInstance := vm.NewVM(importLocation, importedProgram, nil)
@@ -526,7 +540,10 @@ func TestContractImport(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
 		}
@@ -587,7 +604,10 @@ func TestContractImport(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		importCompiler := compiler.NewInstructionCompiler(importedChecker)
+		importCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(importedChecker),
+			importedChecker.Location,
+		)
 		importedProgram := importCompiler.Compile()
 
 		vmInstance := vm.NewVM(importLocation, importedProgram, nil)
@@ -614,7 +634,10 @@ func TestContractImport(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
 		}
@@ -678,7 +701,10 @@ func TestContractImport(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		fooCompiler := compiler.NewInstructionCompiler(fooChecker)
+		fooCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(fooChecker),
+			fooChecker.Location,
+		)
 		fooProgram := fooCompiler.Compile()
 
 		vmInstance := vm.NewVM(fooLocation, fooProgram, nil)
@@ -719,7 +745,10 @@ func TestContractImport(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		barCompiler := compiler.NewInstructionCompiler(barChecker)
+		barCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(barChecker),
+			barChecker.Location,
+		)
 		barCompiler.Config.LocationHandler = SingleIdentifierLocationResolver(t)
 		barCompiler.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 			require.Equal(t, fooLocation, location)
@@ -789,7 +818,10 @@ func TestContractImport(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		comp.Config.LocationHandler = SingleIdentifierLocationResolver(t)
 		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 			switch location {
@@ -887,7 +919,10 @@ func TestContractImport(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		fooCompiler := compiler.NewInstructionCompiler(fooChecker)
+		fooCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(fooChecker),
+			fooChecker.Location,
+		)
 		fooProgram := fooCompiler.Compile()
 
 		// Initialize Bar
@@ -924,7 +959,10 @@ func TestContractImport(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		barCompiler := compiler.NewInstructionCompiler(barChecker)
+		barCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(barChecker),
+			barChecker.Location,
+		)
 		barCompiler.Config.LocationHandler = SingleIdentifierLocationResolver(t)
 		barCompiler.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 			require.Equal(t, fooLocation, location)
@@ -990,7 +1028,10 @@ func TestContractImport(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		comp.Config.LocationHandler = SingleIdentifierLocationResolver(t)
 		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 			switch location {
@@ -1077,7 +1118,10 @@ func TestInitializeContract(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	program := comp.Compile()
 
 	vmConfig := &vm.Config{}
@@ -1116,7 +1160,10 @@ func TestContractAccessDuringInit(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{}
@@ -1151,7 +1198,10 @@ func TestContractAccessDuringInit(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{}
@@ -1186,7 +1236,10 @@ func TestFunctionOrder(t *testing.T) {
         `)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{}
@@ -1243,7 +1296,10 @@ func TestFunctionOrder(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{}
@@ -1282,7 +1338,10 @@ func TestContractField(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		importCompiler := compiler.NewInstructionCompiler(importedChecker)
+		importCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(importedChecker),
+			importedChecker.Location,
+		)
 		importedProgram := importCompiler.Compile()
 
 		vmInstance := vm.NewVM(importLocation, importedProgram, nil)
@@ -1310,7 +1369,8 @@ func TestContractField(t *testing.T) {
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompilerWithConfig(
-			checker,
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
 			&compiler.Config{
 				ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 					return importedProgram
@@ -1367,7 +1427,10 @@ func TestContractField(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		importCompiler := compiler.NewInstructionCompiler(importedChecker)
+		importCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(importedChecker),
+			importedChecker.Location,
+		)
 		importedProgram := importCompiler.Compile()
 
 		vmInstance := vm.NewVM(importLocation, importedProgram, nil)
@@ -1395,7 +1458,10 @@ func TestContractField(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
 		}
@@ -1478,15 +1544,26 @@ func TestNativeFunctions(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 
-		vmConfig := &vm.Config{}
+		var logged string
+		vmConfig := &vm.Config{
+			Logger: stdlib.FunctionLogger(func(message string, locationRange interpreter.LocationRange) error {
+				logged = message
+				return nil
+			}),
+		}
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		_, err = vmInstance.Invoke("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
+
+		assert.Equal(t, `"Hello, World!"`, logged)
 	})
 
 	t.Run("bound function", func(t *testing.T) {
@@ -1499,7 +1576,10 @@ func TestNativeFunctions(t *testing.T) {
         `)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{}
@@ -2083,7 +2163,10 @@ func TestInterfaceMethodCall(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		importCompiler := compiler.NewInstructionCompiler(importedChecker)
+		importCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(importedChecker),
+			importedChecker.Location,
+		)
 		importCompiler.Config.ElaborationResolver = func(location common.Location) (*compiler.DesugaredElaboration, error) {
 			if location == contractLocation {
 				return compiler.NewDesugaredElaboration(importedChecker.Elaboration), nil
@@ -2125,7 +2208,10 @@ func TestInterfaceMethodCall(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		comp.Config.LocationHandler = SingleIdentifierLocationResolver(t)
 		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
@@ -2185,7 +2271,10 @@ func TestInterfaceMethodCall(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		interfaceCompiler := compiler.NewInstructionCompiler(fooChecker)
+		interfaceCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(fooChecker),
+			fooChecker.Location,
+		)
 		fooProgram := interfaceCompiler.Compile()
 
 		interfaceVM := vm.NewVM(fooLocation, fooProgram, nil)
@@ -2217,7 +2306,10 @@ func TestInterfaceMethodCall(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		barCompiler := compiler.NewInstructionCompiler(barChecker)
+		barCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(barChecker),
+			barChecker.Location,
+		)
 		barProgram := barCompiler.Compile()
 
 		barVM := vm.NewVM(barLocation, barProgram, nil)
@@ -2280,7 +2372,10 @@ func TestInterfaceMethodCall(t *testing.T) {
 			}
 		}
 
-		bazCompiler := compiler.NewInstructionCompiler(bazChecker)
+		bazCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(bazChecker),
+			bazChecker.Location,
+		)
 		bazCompiler.Config.LocationHandler = SingleIdentifierLocationResolver(t)
 		bazCompiler.Config.ImportHandler = bazImportHandler
 		bazCompiler.Config.ElaborationResolver = func(location common.Location) (*compiler.DesugaredElaboration, error) {
@@ -2377,7 +2472,10 @@ func TestInterfaceMethodCall(t *testing.T) {
 			}
 		}
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		comp.Config.LocationHandler = SingleIdentifierLocationResolver(t)
 		comp.Config.ImportHandler = scriptImportHandler
 
@@ -2481,7 +2579,10 @@ func TestInterfaceMethodCall(t *testing.T) {
 			}
 		}
 
-		comp = compiler.NewInstructionCompiler(checker)
+		comp = compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		comp.Config.LocationHandler = SingleIdentifierLocationResolver(t)
 		comp.Config.ImportHandler = scriptImportHandler
 
@@ -2550,7 +2651,10 @@ func TestArrayLiteral(t *testing.T) {
         `)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{}
@@ -2588,7 +2692,10 @@ func TestArrayLiteral(t *testing.T) {
         `)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{}
@@ -2612,7 +2719,10 @@ func TestArrayLiteral(t *testing.T) {
         `)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{}
@@ -2646,7 +2756,10 @@ func TestDictionaryLiteral(t *testing.T) {
         `)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(checker)
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{}
@@ -5244,7 +5357,7 @@ func TestCompileOr(t *testing.T) {
                     }
 
                     fun test(): Int {
-                        if self.a() || self.b() { 
+                        if self.a() || self.b() {
                             return self.z + 10
                         } else {
                             return self.z + 20
@@ -5322,7 +5435,7 @@ func TestCompileAnd(t *testing.T) {
                     }
 
                     fun test(): Int {
-                        if self.a() && self.b() { 
+                        if self.a() && self.b() {
                             return self.z + 10
                         } else {
                             return self.z + 20
@@ -5920,7 +6033,10 @@ func TestContractAccount(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	importCompiler := compiler.NewInstructionCompiler(importedChecker)
+	importCompiler := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(importedChecker),
+		importedChecker.Location,
+	)
 	importedProgram := importCompiler.Compile()
 
 	vmInstance := vm.NewVM(importLocation, importedProgram, nil)
@@ -5947,7 +6063,10 @@ func TestContractAccount(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 		return importedProgram
 	}
@@ -6033,7 +6152,10 @@ func TestResourceOwner(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	importCompiler := compiler.NewInstructionCompiler(importedChecker)
+	importCompiler := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(importedChecker),
+		importedChecker.Location,
+	)
 	importedProgram := importCompiler.Compile()
 
 	vmInstance := vm.NewVM(importLocation, importedProgram, nil)
@@ -6060,7 +6182,10 @@ func TestResourceOwner(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 		return importedProgram
 	}
@@ -6155,7 +6280,10 @@ func TestResourceUUID(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	importCompiler := compiler.NewInstructionCompiler(importedChecker)
+	importCompiler := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(importedChecker),
+		importedChecker.Location,
+	)
 	importedProgram := importCompiler.Compile()
 
 	vmInstance := vm.NewVM(importLocation, importedProgram, nil)
@@ -6182,7 +6310,10 @@ func TestResourceUUID(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 		return importedProgram
 	}
@@ -6525,7 +6656,10 @@ func TestContractClosure(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	importCompiler := compiler.NewInstructionCompiler(importedChecker)
+	importCompiler := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(importedChecker),
+		importedChecker.Location,
+	)
 	importedProgram := importCompiler.Compile()
 
 	vmInstance := vm.NewVM(importLocation, importedProgram, nil)
@@ -6544,10 +6678,10 @@ func TestContractClosure(t *testing.T) {
               let counter2 = Counter.newCounter()
 
               if counter1() != 1 { panic("first count wrong") }
-              if counter1() != 2 { panic("second count wrong") } 
+              if counter1() != 2 { panic("second count wrong") }
               if counter2() != 1 { panic("third count wrong") }
               if counter2() != 2 { panic("fourth count wrong") }
-              if counter1() != 3 { panic("fifth count wrong") } 
+              if counter1() != 3 { panic("fifth count wrong") }
               if counter2() != 3 { panic("sixth count wrong") }
               if counter2() != 4 { panic("seventh count wrong") }
 
@@ -6569,7 +6703,10 @@ func TestContractClosure(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(checker)
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
 	comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 		return importedProgram
 	}

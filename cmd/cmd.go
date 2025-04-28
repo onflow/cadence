@@ -367,7 +367,7 @@ func (h *StandardLibraryHandler) ContractUpdateRecorded(_ common.AddressLocation
 	return false
 }
 
-func (*StandardLibraryHandler) InterpretContract(
+func (*StandardLibraryHandler) LoadContractValue(
 	_ common.AddressLocation,
 	_ *interpreter.Program,
 	_ string,
