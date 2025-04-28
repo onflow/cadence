@@ -156,10 +156,12 @@ func (v CompiledFunctionValue) Invoke(invocation interpreter.Invocation) interpr
 type NativeFunction func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value
 
 type NativeFunctionValue struct {
-	Name               string
-	Function           NativeFunction
-	functionTypeGetter func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType
+	Name     string
+	Function NativeFunction
+
+	// A function value can only have either one of `functionType` or `functionTypeGetter`.
 	functionType       *sema.FunctionType
+	functionTypeGetter func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType
 }
 
 func NewNativeFunctionValue(
@@ -194,9 +196,14 @@ func (NativeFunctionValue) IsValue() {}
 func (v NativeFunctionValue) IsFunctionValue() {}
 
 func (v NativeFunctionValue) StaticType(context interpreter.ValueStaticTypeContext) bbq.StaticType {
+	// Get the type using `self.FunctionType()`, which panics if the type needs to be derived.
+	// This is correct/expected, since this method (`StaticType`) should've never been called,
+	// if the function's type needs to be derived.
+	semaFunctionType := v.FunctionType(context)
+
 	return interpreter.NewFunctionStaticType(
 		nil,
-		v.FunctionType(context),
+		semaFunctionType,
 	)
 }
 
@@ -212,8 +219,12 @@ func (v NativeFunctionValue) Transfer(_ interpreter.ValueTransferContext,
 }
 
 func (v NativeFunctionValue) String() string {
-	// TODO:
-	return v.Name
+	if v.HasDerivedType() {
+		// If the type is not pre-known, just return the name.
+		return v.Name
+	}
+
+	return v.functionType.String()
 }
 
 func (v NativeFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -254,6 +265,11 @@ func (v NativeFunctionValue) MeteredString(
 	_ interpreter.SeenReferences,
 	_ interpreter.LocationRange,
 ) string {
+	if v.HasDerivedType() {
+		// If the type is not pre-known, just return the name.
+		return v.Name
+	}
+
 	return v.StaticType(context).MeteredString(context)
 }
 
@@ -282,8 +298,7 @@ func (v NativeFunctionValue) IsImportable(
 
 func (v NativeFunctionValue) FunctionType(interpreter.TypeConverter) *sema.FunctionType {
 	if v.functionTypeGetter != nil {
-		// For native functions where the type is NOT pre-known,
-		// This method should never be invoked.
+		// For native functions where the type is NOT pre-known, This method should never be invoked.
 		// Such functions must always be wrapped with a `BoundFunctionPointerValue`.
 		panic(errors.NewUnreachableError())
 	}
@@ -292,8 +307,12 @@ func (v NativeFunctionValue) FunctionType(interpreter.TypeConverter) *sema.Funct
 
 func (v NativeFunctionValue) DerivedFunctionType(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
 	if v.functionTypeGetter == nil {
+		// DerivedFunctionType shouldn't get called for functions where the type is pre-know.
 		panic(errors.NewUnreachableError())
 	}
+
+	// Important: Never store the result of the `functionTypeGetter`,
+	// because the `NativeFunctionValue` would be reused.
 	return v.functionTypeGetter(receiver, context)
 }
 
@@ -401,10 +420,11 @@ func (v *BoundFunctionPointerValue) RecursiveString(_ interpreter.SeenReferences
 
 func (v *BoundFunctionPointerValue) MeteredString(
 	context interpreter.ValueStringContext,
-	seenReferences interpreter.SeenReferences,
-	locationRange interpreter.LocationRange,
+	_ interpreter.SeenReferences,
+	_ interpreter.LocationRange,
 ) string {
-	return v.Method.MeteredString(context, seenReferences, locationRange)
+	functionType := v.StaticType(context)
+	return functionType.MeteredString(context)
 }
 
 func (v *BoundFunctionPointerValue) IsResourceKinded(_ interpreter.ValueStaticTypeContext) bool {
@@ -433,6 +453,8 @@ func (v *BoundFunctionPointerValue) IsImportable(
 func (v *BoundFunctionPointerValue) FunctionType(context interpreter.TypeConverter) *sema.FunctionType {
 	if v.functionType == nil {
 		method := v.Method
+		// The type of the native function could be either pre-known (e.g: `Integer.toBigEndianBytes()`),
+		// Or would needs to be derived based on the receiver (e.g: `[Int8].append()`).
 		if method.HasDerivedType() {
 			v.functionType = method.DerivedFunctionType(v.Receiver, context)
 		} else {
