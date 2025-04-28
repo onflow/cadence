@@ -25,7 +25,7 @@ import (
 	"github.com/onflow/cadence/errors"
 )
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=DeclarationKind
+//go:generate stringer -type=DeclarationKind
 
 type DeclarationKind uint
 

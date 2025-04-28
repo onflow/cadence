@@ -18,7 +18,7 @@
 
 package ast
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=precedence
+//go:generate stringer -type=precedence
 
 // precedence is the order of importance of expressions / operators.
 // NOTE: this enumeration does *NOT* influence parsing,

@@ -128,6 +128,7 @@ check-headers:
 
 .PHONY: generate
 generate:
+	go install golang.org/x/tools/cmd/stringer@v0.32.0
 	go generate -v ./...
 
 .PHONY: check-tidy
