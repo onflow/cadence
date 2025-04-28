@@ -364,7 +364,7 @@ func (v *BoundFunctionPointerValue) DerivedFunctionType(_ Value, context interpr
 func (v *BoundFunctionPointerValue) StaticType(context interpreter.ValueStaticTypeContext) bbq.StaticType {
 	if v.functionType == nil {
 		// initialize `v.functionType` field
-		_ = v.FunctionType(context)
+		v.initializeFunctionType(context)
 	}
 
 	return interpreter.NewFunctionStaticType(context, v.functionType)
@@ -452,17 +452,21 @@ func (v *BoundFunctionPointerValue) IsImportable(
 
 func (v *BoundFunctionPointerValue) FunctionType(context interpreter.TypeConverter) *sema.FunctionType {
 	if v.functionType == nil {
-		method := v.Method
-		// The type of the native function could be either pre-known (e.g: `Integer.toBigEndianBytes()`),
-		// Or would needs to be derived based on the receiver (e.g: `[Int8].append()`).
-		if method.HasDerivedType() {
-			v.functionType = method.DerivedFunctionType(v.Receiver, context)
-		} else {
-			v.functionType = method.FunctionType(context)
-		}
+		v.initializeFunctionType(context)
 	}
 
 	return v.functionType
+}
+
+func (v *BoundFunctionPointerValue) initializeFunctionType(context interpreter.TypeConverter) {
+	method := v.Method
+	// The type of the native function could be either pre-known (e.g: `Integer.toBigEndianBytes()`),
+	// Or would needs to be derived based on the receiver (e.g: `[Int8].append()`).
+	if method.HasDerivedType() {
+		v.functionType = method.DerivedFunctionType(v.Receiver, context)
+	} else {
+		v.functionType = method.FunctionType(context)
+	}
 }
 
 func (v *BoundFunctionPointerValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
