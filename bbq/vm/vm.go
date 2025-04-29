@@ -1131,12 +1131,24 @@ func (vm *VM) run() {
 		}()
 	}
 
+	entryPointCallStackSize := len(vm.callstack)
+
 	for {
 
 		callFrame := vm.callFrame
 
 		code := callFrame.function.Function.Code
-		if len(vm.callstack) == 0 ||
+
+		// VM can re-enter to the instruction-execution multiple times.
+		// e.g: Passing a compiled-function-pointer to a native function,
+		// and invoking it inside the native-function: VM will start executing
+		// this function similar to executing a method externally,
+		// but while still being in the middle of executing a different method.
+		// Thus, when returning, it should return to the place where the function call was initiated from.
+		// i.e: native code in this case.
+		// Therefore, return all the way (and do not continue to unwind and execute the parent call-stack)
+		// if it reached the current entry-point, when unwinding the stack.
+		if len(vm.callstack) < entryPointCallStackSize ||
 			int(vm.ip) >= len(code) {
 
 			return

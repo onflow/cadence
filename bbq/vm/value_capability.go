@@ -32,10 +32,13 @@ func init() {
 	// Capability.borrow
 	RegisterTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewNativeFunctionValueWithDerivedType(
 			sema.CapabilityTypeBorrowFunctionName,
-			// TODO: Should the borrow type need to be changed for each usage?
-			sema.CapabilityTypeBorrowFunctionType(nil),
+			func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
+				capability := receiver.(*interpreter.IDCapabilityValue)
+				borrowType := interpreter.MustConvertStaticToSemaType(capability.BorrowType, context).(*sema.ReferenceType)
+				return sema.CapabilityTypeBorrowFunctionType(borrowType)
+			},
 			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
 				capabilityValue := args[receiverIndex].(*interpreter.IDCapabilityValue)
 				capabilityID := capabilityValue.ID
