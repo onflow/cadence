@@ -262,3 +262,33 @@ func TestVM_dropN(t *testing.T) {
 		},
 	)
 }
+
+func TestVM_popN(t *testing.T) {
+	t.Parallel()
+
+	program := &bbq.InstructionProgram{}
+	vm := NewVM(nil, program, nil)
+
+	vm.push(interpreter.NewUnmeteredIntValueFromInt64(1))
+	vm.push(interpreter.NewUnmeteredIntValueFromInt64(2))
+	vm.push(interpreter.NewUnmeteredIntValueFromInt64(3))
+
+	popped := vm.popN(2)
+
+	// Assert popped values.
+	assert.Equal(t,
+		popped,
+		[]Value{
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+		},
+	)
+
+	// Assert the remaining values.
+	assert.Equal(t,
+		vm.stack,
+		[]Value{
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+		},
+	)
+}
