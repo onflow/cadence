@@ -60,47 +60,6 @@ func LinkGlobals(
 				linkedGlobalsCache,
 			)
 
-			// If the imported program is a contract,
-			// load the contract value and populate the global variable.
-			if importedProgram.Contract != nil {
-				contract := importedProgram.Contract
-				location := common.NewAddressLocation(
-					context.MemoryGauge,
-					common.MustBytesToAddress(contract.Address),
-					contract.Name,
-				)
-
-				if !contract.IsInterface {
-					if context.ContractValueHandler == nil {
-						panic(errors.NewUnexpectedError(
-							"cannot link import %s, missing contract value handler",
-							location,
-						))
-					}
-
-					var contractValue interpreter.Value = context.ContractValueHandler(context.Config, location)
-
-					staticType := contractValue.StaticType(context)
-					semaType, err := interpreter.ConvertStaticToSemaType(context, staticType)
-					if err != nil {
-						panic(err)
-					}
-
-					contractValue = interpreter.NewEphemeralReferenceValue(
-						context,
-						interpreter.UnauthorizedAccess,
-						contractValue,
-						semaType,
-						EmptyLocationRange,
-					)
-
-					// Update the globals - both the context and the mapping.
-					// Contract value is always at the zero-th index.
-					linkedGlobals.executable.Globals[0] = contractValue
-					linkedGlobals.indexedGlobals[contract.Name] = contractValue
-				}
-			}
-
 			linkedGlobalsCache[importLocation] = linkedGlobals
 		}
 
@@ -121,12 +80,15 @@ func LinkGlobals(
 	globals := make([]Value, 0, globalsLen)
 	indexedGlobals := make(map[string]Value, indexedGlobalsLen)
 
-	// If the current program is a contract, reserve a global variable for the contract value.
-	// The reserved position is always the zero-th index.
-	// This value will be populated either by the `init` method invocation of the contract,
-	// Or when this program is imported by another (loads the value from storage).
-	if program.Contract != nil && !program.Contract.IsInterface {
-		globals = append(globals, nil)
+	// If the imported program is a contract,
+	// load the contract value and populate the global variable.
+	contract := program.Contract
+	if contract != nil && !contract.IsInterface {
+		// Update the globals - both the context and the mapping.
+		// Contract value is always at the zero-th index.
+		contractValue := loadContractValue(contract, context)
+		globals = append(globals, contractValue)
+		indexedGlobals[contract.Name] = contractValue
 	}
 
 	for range program.Variables {
@@ -176,4 +138,35 @@ func LinkGlobals(
 		executable:     executable,
 		indexedGlobals: indexedGlobals,
 	}
+}
+
+func loadContractValue(contract *bbq.Contract, context *Context) Value {
+
+	if context.ContractValueHandler == nil {
+		panic(errors.NewUnexpectedError(
+			"missing contract value handler",
+		))
+	}
+
+	location := common.NewAddressLocation(
+		context.MemoryGauge,
+		common.MustBytesToAddress(contract.Address),
+		contract.Name,
+	)
+
+	var contractValue interpreter.Value = context.ContractValueHandler(context.Config, location)
+
+	staticType := contractValue.StaticType(context)
+	semaType, err := interpreter.ConvertStaticToSemaType(context, staticType)
+	if err != nil {
+		panic(err)
+	}
+
+	return interpreter.NewEphemeralReferenceValue(
+		context,
+		interpreter.UnauthorizedAccess,
+		contractValue,
+		semaType,
+		EmptyLocationRange,
+	)
 }
