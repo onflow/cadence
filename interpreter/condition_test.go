@@ -107,7 +107,7 @@ func TestInterpretFunctionPreEmitCondition(t *testing.T) {
 		},
 		common.ZeroAddress,
 	)
-	AssertValuesEqual(t, inter, expectedEvent, event.event)
+	AssertValuesEqual(t, inter, expectedEvent, event.Event)
 }
 
 func TestInterpretFunctionPostTestCondition(t *testing.T) {
@@ -183,7 +183,7 @@ func TestInterpretFunctionPostEmitCondition(t *testing.T) {
 		},
 		common.ZeroAddress,
 	)
-	AssertValuesEqual(t, inter, expectedEvent, event.event)
+	AssertValuesEqual(t, inter, expectedEvent, event.Event)
 }
 
 func TestInterpretFunctionWithResultAndPostTestConditionWithResult(t *testing.T) {
@@ -255,7 +255,7 @@ func TestInterpretFunctionWithResultAndPostEmitConditionWithResult(t *testing.T)
 		},
 		common.ZeroAddress,
 	)
-	AssertValuesEqual(t, inter, expectedEvent, event.event)
+	AssertValuesEqual(t, inter, expectedEvent, event.Event)
 }
 
 func TestInterpretFunctionWithoutResultAndPostTestConditionWithResult(t *testing.T) {
@@ -320,7 +320,7 @@ func TestInterpretFunctionWithoutResultAndPostEmitConditionWithResult(t *testing
 		},
 		common.ZeroAddress,
 	)
-	AssertValuesEqual(t, inter, expectedEvent, event.event)
+	AssertValuesEqual(t, inter, expectedEvent, event.Event)
 }
 
 func TestInterpretFunctionPostTestConditionWithBefore(t *testing.T) {
@@ -398,7 +398,7 @@ func TestInterpretFunctionPostEmitConditionWithBefore(t *testing.T) {
 		},
 		common.ZeroAddress,
 	)
-	AssertValuesEqual(t, inter, expectedEvent, event.event)
+	AssertValuesEqual(t, inter, expectedEvent, event.Event)
 }
 
 func TestInterpretFunctionPostConditionWithBeforeFailingPreTestCondition(t *testing.T) {
@@ -688,8 +688,8 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 							eventType *sema.CompositeType,
 						) error {
 							events = append(events, testEvent{
-								event:     event,
-								eventType: eventType,
+								Event:     event,
+								EventType: eventType,
 							})
 							return nil
 						},
@@ -745,7 +745,7 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 						},
 						common.ZeroAddress,
 					),
-					events[0].event,
+					events[0].Event,
 				)
 
 				AssertValuesEqual(t,
@@ -764,7 +764,7 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 						},
 						common.ZeroAddress,
 					),
-					events[1].event,
+					events[1].Event,
 				)
 			})
 
@@ -798,7 +798,7 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 						},
 						common.ZeroAddress,
 					),
-					events[0].event,
+					events[0].Event,
 				)
 			})
 		})
@@ -922,8 +922,8 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 						eventType *sema.CompositeType,
 					) error {
 						events = append(events, testEvent{
-							event:     event,
-							eventType: eventType,
+							Event:     event,
+							EventType: eventType,
 						})
 						return nil
 					}
