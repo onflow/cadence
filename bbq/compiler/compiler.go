@@ -1409,24 +1409,6 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 	}
 
 	switch invokedExpr := expression.InvokedExpression.(type) {
-	case *ast.IdentifierExpression:
-		// TODO: Does constructors need any special handling?
-		//typ := c.DesugaredElaboration.IdentifierInInvocationType(invokedExpr)
-		//invocationType := typ.(*sema.FunctionType)
-		//if invocationType.IsConstructor {
-		//}
-
-		// Compile arguments
-		c.compileArguments(expression.Arguments, invocationTypes)
-		// Load function value
-		c.emitVariableLoad(invokedExpr.Identifier.Identifier)
-
-		typeArgs := c.loadTypeArguments(invocationTypes)
-		c.codeGen.Emit(opcode.InstructionInvoke{
-			TypeArgs: typeArgs,
-			ArgCount: uint16(argumentCount),
-		})
-
 	case *ast.MemberExpression:
 		memberInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(invokedExpr)
 		if !ok {
@@ -1501,7 +1483,19 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 			})
 		}
 	default:
-		panic(errors.NewUnreachableError())
+		// For all other expressions, load/lookup the function,
+		// and invoke it.
+
+		// Compile arguments
+		c.compileArguments(expression.Arguments, invocationTypes)
+		// Load function value
+		c.compileExpression(invokedExpr)
+
+		typeArgs := c.loadTypeArguments(invocationTypes)
+		c.codeGen.Emit(opcode.InstructionInvoke{
+			TypeArgs: typeArgs,
+			ArgCount: uint16(argumentCount),
+		})
 	}
 
 	return
