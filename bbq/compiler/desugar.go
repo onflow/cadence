@@ -474,7 +474,7 @@ func (d *Desugar) desugarCondition(condition ast.Condition, inheritedFrom *sema.
 	// Therefore, add those transitive dependencies to the current compiling program.
 	// They will only be added to the final compiled program, if those are used in the code.
 	if inheritedFrom != nil {
-		elaboration, err := d.config.ElaborationResolver(inheritedFrom.Location)
+		elaboration, err := d.resolveElaboration(inheritedFrom.Location)
 		if err != nil {
 			panic(err)
 		}
@@ -664,6 +664,14 @@ func (d *Desugar) desugarCondition(condition ast.Condition, inheritedFrom *sema.
 	}
 }
 
+func (d *Desugar) resolveElaboration(location common.Location) (*DesugaredElaboration, error) {
+	if location == d.location {
+		return d.elaboration, nil
+	}
+
+	return d.config.ElaborationResolver(location)
+}
+
 func declaredContractType(containedType sema.ContainedType) sema.Type {
 	containerType := containedType.GetContainerType()
 	if containerType == nil {
@@ -759,7 +767,7 @@ func (d *Desugar) inheritedFunctionsWithConditions(compositeType sema.Conforming
 
 	compositeType.EffectiveInterfaceConformanceSet().ForEach(func(interfaceType *sema.InterfaceType) {
 
-		elaboration, err := d.config.ElaborationResolver(interfaceType.Location)
+		elaboration, err := d.resolveElaboration(interfaceType.Location)
 		if err != nil {
 			panic(err)
 		}
@@ -806,7 +814,7 @@ func (d *Desugar) inheritedDefaultFunctions(
 	for _, conformance := range compositeType.EffectiveInterfaceConformances() {
 		interfaceType := conformance.InterfaceType
 
-		elaboration, err := d.config.ElaborationResolver(interfaceType.Location)
+		elaboration, err := d.resolveElaboration(interfaceType.Location)
 		if err != nil {
 			panic(err)
 		}
