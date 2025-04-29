@@ -43,6 +43,7 @@ type ParseCheckAndInterpretOptions struct {
 
 type Invokable interface {
 	interpreter.ValueComparisonContext
+	interpreter.InvocationContext
 	Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error)
 }
 
@@ -74,7 +75,7 @@ func ParseCheckAndPrepare(t testing.TB, code string, compile bool) Invokable {
 	t.Helper()
 
 	if !compile {
-		return parseCheckAndInterpret(t, code)
+		return ParseCheckAndInterpret(t, code)
 	}
 
 	// TODO: Uncomment once the compiler branch is merged to master.
@@ -98,13 +99,13 @@ func ParseCheckAndPrepare(t testing.TB, code string, compile bool) Invokable {
 // Idea is to eventually use the below functions everywhere, and remove them from `misc_test.go`,
 // so that the `misc_test.go` would contain only tests.
 
-func parseCheckAndInterpret(t testing.TB, code string) *interpreter.Interpreter {
-	inter, err := parseCheckAndInterpretWithOptions(t, code, ParseCheckAndInterpretOptions{})
+func ParseCheckAndInterpret(t testing.TB, code string) *interpreter.Interpreter {
+	inter, err := ParseCheckAndInterpretWithOptions(t, code, ParseCheckAndInterpretOptions{})
 	require.NoError(t, err)
 	return inter
 }
 
-func parseCheckAndInterpretWithOptions(
+func ParseCheckAndInterpretWithOptions(
 	t testing.TB,
 	code string,
 	options ParseCheckAndInterpretOptions,
@@ -112,10 +113,10 @@ func parseCheckAndInterpretWithOptions(
 	inter *interpreter.Interpreter,
 	err error,
 ) {
-	return parseCheckAndInterpretWithOptionsAndMemoryMetering(t, code, options, nil)
+	return ParseCheckAndInterpretWithOptionsAndMemoryMetering(t, code, options, nil)
 }
 
-func parseCheckAndInterpretWithAtreeValidationsDisabled( // nolint:unused
+func ParseCheckAndInterpretWithAtreeValidationsDisabled(
 	t testing.TB,
 	code string,
 	options ParseCheckAndInterpretOptions,
@@ -132,7 +133,7 @@ func parseCheckAndInterpretWithAtreeValidationsDisabled( // nolint:unused
 	)
 }
 
-func parseCheckAndInterpretWithLogs( // nolint:unused
+func ParseCheckAndInterpretWithLogs(
 	tb testing.TB,
 	code string,
 ) (
@@ -174,7 +175,7 @@ func parseCheckAndInterpretWithLogs( // nolint:unused
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, logFunction)
 
-	result, err := parseCheckAndInterpretWithOptions(
+	result, err := ParseCheckAndInterpretWithOptions(
 		tb,
 		code,
 		ParseCheckAndInterpretOptions{
@@ -199,7 +200,7 @@ func parseCheckAndInterpretWithLogs( // nolint:unused
 	return result, getLogs, err
 }
 
-func parseCheckAndInterpretWithMemoryMetering( // nolint:unused
+func ParseCheckAndInterpretWithMemoryMetering(
 	t testing.TB,
 	code string,
 	memoryGauge common.MemoryGauge,
@@ -208,7 +209,7 @@ func parseCheckAndInterpretWithMemoryMetering( // nolint:unused
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
-	inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
+	inter, err := ParseCheckAndInterpretWithOptionsAndMemoryMetering(
 		t,
 		code,
 		ParseCheckAndInterpretOptions{
@@ -224,7 +225,7 @@ func parseCheckAndInterpretWithMemoryMetering( // nolint:unused
 	return inter
 }
 
-func parseCheckAndInterpretWithOptionsAndMemoryMetering(
+func ParseCheckAndInterpretWithOptionsAndMemoryMetering(
 	t testing.TB,
 	code string,
 	options ParseCheckAndInterpretOptions,
@@ -343,19 +344,19 @@ func parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
 	return inter, err
 }
 
-type testEvent struct { // nolint:unused
-	event     *interpreter.CompositeValue
-	eventType *sema.CompositeType
+type TestEvent struct {
+	Event     *interpreter.CompositeValue
+	EventType *sema.CompositeType
 }
 
-func parseCheckAndInterpretWithEvents(t *testing.T, code string) ( // nolint:unused
+func ParseCheckAndInterpretWithEvents(t *testing.T, code string) (
 	inter *interpreter.Interpreter,
-	getEvents func() []testEvent,
+	getEvents func() []TestEvent,
 	err error,
 ) {
-	var events []testEvent
+	var events []TestEvent
 
-	inter, err = parseCheckAndInterpretWithOptions(t,
+	inter, err = ParseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
 			Config: &interpreter.Config{
@@ -365,9 +366,9 @@ func parseCheckAndInterpretWithEvents(t *testing.T, code string) ( // nolint:unu
 					event *interpreter.CompositeValue,
 					eventType *sema.CompositeType,
 				) error {
-					events = append(events, testEvent{
-						event:     event,
-						eventType: eventType,
+					events = append(events, TestEvent{
+						Event:     event,
+						EventType: eventType,
 					})
 					return nil
 				},
@@ -378,7 +379,7 @@ func parseCheckAndInterpretWithEvents(t *testing.T, code string) ( // nolint:unu
 		return nil, nil, err
 	}
 
-	getEvents = func() []testEvent {
+	getEvents = func() []TestEvent {
 		return events
 	}
 	return inter, getEvents, nil

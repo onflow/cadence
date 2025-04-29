@@ -40,7 +40,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 	t.Run("simple array valid", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): [String] {
                 let names: [String] = ["foo", "bar"]
                 names[0] = "baz"
@@ -74,7 +74,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 	t.Run("simple array invalid", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test() {
                 let names: [AnyStruct] = ["foo", "bar"] as [String]
                 names[0] = 5
@@ -94,7 +94,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 	t.Run("nested array invalid", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test() {
                 let names: [[AnyStruct]] = [["foo", "bar"]] as [[String]]
                 names[0][0] = 5
@@ -114,7 +114,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 	t.Run("array append valid", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): [AnyStruct] {
                 let names: [AnyStruct] = ["foo", "bar"] as [String]
                 names.append("baz")
@@ -149,7 +149,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 	t.Run("array append invalid", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test() {
                 let names: [AnyStruct] = ["foo", "bar"] as [String]
                 names.append(5)
@@ -169,7 +169,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 	t.Run("array appendAll invalid", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test() {
                 let names: [AnyStruct] = ["foo", "bar"] as [String]
                 names.appendAll(["baz", 5] as [AnyStruct])
@@ -189,7 +189,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 	t.Run("array insert valid", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): [AnyStruct] {
                 let names: [AnyStruct] = ["foo", "bar"] as [String]
                 names.insert(at: 1, "baz")
@@ -224,7 +224,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 	t.Run("array insert invalid", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test() {
                 let names: [AnyStruct] = ["foo", "bar"] as [String]
                 names.insert(at: 1, 4)
@@ -284,7 +284,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 	t.Run("invalid update through reference", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test() {
                 let names: [AnyStruct] = ["foo", "bar"] as [String]
                 let namesRef = &names as auth(Mutate) &[AnyStruct]
@@ -358,7 +358,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 	t.Run("function mutation", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): [String] {
                 let array: [AnyStruct] = [nil, nil] as [(fun():String)?]
 
@@ -401,7 +401,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 	t.Run("bound function mutation", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct Foo {
                 fun foo(): String {
                     return "hello from foo"
@@ -524,7 +524,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 	t.Run("simple dictionary valid", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): {String: String} {
                 let names: {String: String} = {"foo": "bar"}
                 names["foo"] = "baz"
@@ -552,7 +552,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 	t.Run("simple dictionary invalid", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test() {
                 let names: {String: AnyStruct} = {"foo": "bar"} as {String: String}
                 names["foo"] = 5
@@ -583,7 +583,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 	t.Run("optional dictionary valid", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): {String: String?} {
                 let names: {String: String?} = {"foo": "bar"}
                 names["foo"] = nil
@@ -603,7 +603,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 	t.Run("dictionary insert valid", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): {String: AnyStruct} {
                 let names: {String: AnyStruct} = {"foo": "bar"} as {String: String}
                 names.insert(key: "foo", "baz")
@@ -631,7 +631,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 	t.Run("dictionary insert invalid", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test() {
                 let names: {String: AnyStruct} = {"foo": "bar"} as {String: String}
                 names.insert(key: "foo", 5)
@@ -651,7 +651,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 	t.Run("dictionary insert invalid key", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test() {
                 let names: {Path: AnyStruct} = {/public/path: "foo"} as {PublicPath: String}
                 names.insert(key: /private/path, "bar")
@@ -671,7 +671,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 	t.Run("invalid update through reference", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test() {
                 let names: {String: AnyStruct} = {"foo": "bar"} as {String: String}
                 let namesRef = &names as auth(Mutate) &{String: AnyStruct}
@@ -756,7 +756,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 	t.Run("function mutation", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
            fun test(): [String] {
                let dict: {String: AnyStruct} = {}
 
@@ -799,7 +799,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 	t.Run("bound function mutation", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
            struct Foo {
                fun foo(): String {
                    return "hello from foo"
@@ -921,7 +921,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct S {}
 
             fun test(owner: &Account) {
@@ -950,7 +950,7 @@ func TestInterpretContainerMutationAfterNilCoalescing(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(): String? {
           let xs: {UInt32: String}? = nil
           let ys: {UInt32: String} = xs ?? {}
@@ -1106,7 +1106,7 @@ func TestInterpretInnerContainerMutationWhileIteratingOuter(t *testing.T) {
 	t.Run("nested array, directly mutating inner", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): [String] {
                 let nestedArrays: [[String]] = [["foo", "bar"], ["apple", "orange"]]
                 for array in nestedArrays {
@@ -1142,7 +1142,7 @@ func TestInterpretInnerContainerMutationWhileIteratingOuter(t *testing.T) {
 	t.Run("nested array, mutating inner via outer", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): [String] {
                 let nestedArrays: [[String]] = [["foo", "bar"], ["apple", "orange"]]
                 for array in nestedArrays {
@@ -1176,7 +1176,7 @@ func TestInterpretInnerContainerMutationWhileIteratingOuter(t *testing.T) {
 	t.Run("dictionary inside array, mutating inner via outer", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): {String: String} {
                 let dictionaryArray: [{String: String}] = [{"name": "foo"}, {"name": "bar"}]
                 for dictionary in dictionaryArray {
@@ -1207,7 +1207,7 @@ func TestInterpretInnerContainerMutationWhileIteratingOuter(t *testing.T) {
 	t.Run("dictionary", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): {String: String} {
                 let nestedDictionary: {String: {String: String}} = {"a": {"name": "foo"}, "b": {"name": "bar"}}
                 nestedDictionary.forEachKey(fun (key: String): Bool {
