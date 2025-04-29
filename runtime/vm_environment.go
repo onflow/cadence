@@ -112,6 +112,9 @@ func (e *vmEnvironment) newVMConfig() *vm.Config {
 	config.Logger = e
 	config.ContractValueHandler = e.loadContractValue
 	config.ImportHandler = e.importProgram
+	config.WithInterpreterConfig(&interpreter.Config{
+		InjectedCompositeFieldsHandler: newInjectedCompositeFieldsHandler(e),
+	})
 	return config
 }
 
