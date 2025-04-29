@@ -206,6 +206,8 @@ func init() {
 
 	// Register type-bound functions that are common to many types.
 	registerCommonBuiltinTypeBoundFunctions()
+
+	registerAllSaturatingArithmeticFunctions()
 }
 
 func registerCommonBuiltinTypeBoundFunctions() {
@@ -286,3 +288,95 @@ var commonBuiltinTypeBoundFunctions = []NativeFunctionValue{
 }
 
 var IndexedCommonBuiltinTypeBoundFunctions = map[string]NativeFunctionValue{}
+
+func registerAllSaturatingArithmeticFunctions() {
+	for _, ty := range common.Concat(
+		sema.AllUnsignedFixedPointTypes,
+		sema.AllSignedFixedPointTypes,
+		sema.AllUnsignedIntegerTypes,
+		sema.AllSignedIntegerTypes,
+	) {
+		registerSaturatingArithmeticFunctions(ty.(sema.SaturatingArithmeticType))
+	}
+}
+
+func registerSaturatingArithmeticFunctions(t sema.SaturatingArithmeticType) {
+
+	register := func(
+		functionName string,
+		op func(context *Context, v, other interpreter.NumberValue) interpreter.NumberValue,
+	) {
+		RegisterTypeBoundFunction(
+			string(t.ID()),
+			NewNativeFunctionValue(
+				functionName,
+				sema.SaturatingArithmeticTypeFunctionTypes[t],
+				func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
+					v, ok := args[receiverIndex].(interpreter.NumberValue)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
+
+					other, ok := args[typeBoundFunctionArgumentOffset].(interpreter.NumberValue)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
+
+					return op(context, v, other)
+				},
+			),
+		)
+	}
+
+	if t.SupportsSaturatingAdd() {
+		register(
+			sema.NumericTypeSaturatingAddFunctionName,
+			func(context *Context, v, other interpreter.NumberValue) interpreter.NumberValue {
+				return v.SaturatingPlus(
+					context,
+					other,
+					EmptyLocationRange,
+				)
+			},
+		)
+	}
+
+	if t.SupportsSaturatingSubtract() {
+		register(
+			sema.NumericTypeSaturatingSubtractFunctionName,
+			func(context *Context, v, other interpreter.NumberValue) interpreter.NumberValue {
+				return v.SaturatingMinus(
+					context,
+					other,
+					EmptyLocationRange,
+				)
+			},
+		)
+	}
+
+	if t.SupportsSaturatingMultiply() {
+		register(
+			sema.NumericTypeSaturatingMultiplyFunctionName,
+			func(context *Context, v, other interpreter.NumberValue) interpreter.NumberValue {
+				return v.SaturatingMul(
+					context,
+					other,
+					EmptyLocationRange,
+				)
+			},
+		)
+	}
+
+	if t.SupportsSaturatingDivide() {
+		register(
+			sema.NumericTypeSaturatingDivideFunctionName,
+			func(context *Context, v, other interpreter.NumberValue) interpreter.NumberValue {
+				return v.SaturatingDiv(
+					context,
+					other,
+					EmptyLocationRange,
+				)
+			},
+		)
+	}
+}
