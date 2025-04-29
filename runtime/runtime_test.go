@@ -12458,9 +12458,14 @@ func TestRuntimeInvokeContractFunctionImported(t *testing.T) {
         import Test2 from 0x01
 
         access(all) contract Test3 {
+
 			access(all) fun hello(): String {
 				return Test2.hello()
 			}
+
+			access(all) fun getSelfAccountAddress(): Address {
+                return self.account.address
+            }
         }
     `)
 
@@ -12515,6 +12520,8 @@ func TestRuntimeInvokeContractFunctionImported(t *testing.T) {
 		require.NoError(t, err)
 	}
 
+	// Call hello
+
 	result, err := runtime.InvokeContractFunction(
 		common.AddressLocation{
 			Address: addressValue,
@@ -12533,6 +12540,29 @@ func TestRuntimeInvokeContractFunctionImported(t *testing.T) {
 
 	require.Equal(t,
 		cadence.String("Hello World!"),
+		result,
+	)
+
+	// Call getSelfAccountAddress
+
+	result, err = runtime.InvokeContractFunction(
+		common.AddressLocation{
+			Address: addressValue,
+			Name:    "Test3",
+		},
+		"getSelfAccountAddress",
+		nil,
+		nil,
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		cadence.Address(addressValue),
 		result,
 	)
 }
