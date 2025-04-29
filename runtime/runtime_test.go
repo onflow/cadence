@@ -12671,6 +12671,29 @@ func TestRuntimeInvokeContractFunctionImported(t *testing.T) {
 		result,
 	)
 
+	// Call getContractAccountAddress
+
+	result, err = runtime.InvokeContractFunction(
+		common.AddressLocation{
+			Address: addressValue,
+			Name:    "Test3",
+		},
+		"getContractAccountAddress",
+		nil,
+		nil,
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		cadence.Address(addressValue),
+		result,
+	)
+
 	// Call getAccountBalance
 
 	result, err = runtime.InvokeContractFunction(
