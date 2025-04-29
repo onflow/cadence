@@ -150,11 +150,26 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 	return inter, err
 }
 
-func newStringLocationHandler(tb testing.TB, address common.Address) sema.LocationHandlerFunc {
+func newSingleAddressOrStringLocationHandler(tb testing.TB, address common.Address) sema.LocationHandlerFunc {
 	return func(identifiers []ast.Identifier, location common.Location) ([]commons.ResolvedLocation, error) {
-		require.Empty(tb, identifiers)
-		require.IsType(tb, common.StringLocation(""), location)
-		name := string(location.(common.StringLocation))
+
+		var name string
+		switch location := location.(type) {
+		case common.AddressLocation:
+			name = location.Name
+
+		case common.StringLocation:
+			name = string(location)
+
+		default:
+			return nil, fmt.Errorf("cannot resolve location %s", location)
+		}
+
+		require.GreaterOrEqual(tb, 1, len(identifiers))
+		if len(identifiers) > 0 {
+			identifier := identifiers[0].Identifier
+			require.Equal(tb, name, identifier)
+		}
 
 		return []commons.ResolvedLocation{
 			{
@@ -256,7 +271,7 @@ func interpreterFTTransfer(tb testing.TB) {
 			}, nil
 		},
 		BaseValueActivationHandler: TestBaseValueActivation,
-		LocationHandler:            newStringLocationHandler(tb, contractsAddress),
+		LocationHandler:            newSingleAddressOrStringLocationHandler(tb, contractsAddress),
 	}
 
 	interConfig := &interpreter.Config{
@@ -607,7 +622,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 		OnGetSigningAccounts: func() ([]common.Address, error) {
 			return []common.Address{signerAccount}, nil
 		},
-		OnResolveLocation: newStringLocationHandler(b, contractsAddress),
+		OnResolveLocation: newSingleAddressOrStringLocationHandler(b, contractsAddress),
 		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},

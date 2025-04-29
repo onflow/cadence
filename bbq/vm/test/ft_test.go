@@ -69,16 +69,7 @@ func compiledFTTransfer(tb testing.TB) {
 	nextTransactionLocation := NewTransactionLocationGenerator()
 	nextScriptLocation := NewScriptLocationGenerator()
 
-	locationHandler := func(identifiers []ast.Identifier, location common.Location) ([]commons.ResolvedLocation, error) {
-		switch location.(type) {
-		case common.StringLocation:
-			return newStringLocationHandler(tb, contractsAddress)(identifiers, location)
-		case common.AddressLocation:
-			return NewSingleIdentifierLocationResolver(tb)(identifiers, location)
-		default:
-			panic(fmt.Errorf("unknown location type: %T", location))
-		}
-	}
+	locationHandler := newSingleAddressOrStringLocationHandler(tb, contractsAddress)
 
 	semaConfig := &sema.Config{
 		LocationHandler:            locationHandler,
