@@ -355,28 +355,60 @@ func TestStructMethodCall(t *testing.T) {
 
 	t.Parallel()
 
-	result, err := CompileAndInvoke(t, `
-      struct Foo {
-          var id : String
+	t.Run("method", func(t *testing.T) {
 
-          init(_ id: String) {
-              self.id = id
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t, `
+          struct Foo {
+              var id : String
+
+              init(_ id: String) {
+                  self.id = id
+              }
+
+              fun sayHello(_ id: Int): String {
+                  return self.id
+              }
           }
 
-          fun sayHello(_ id: Int): String {
-              return self.id
+          fun test(): String {
+              var r = Foo("Hello from Foo!")
+              return r.sayHello(1)
           }
-      }
+        `,
+			"test",
+		)
+		require.NoError(t, err)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("Hello from Foo!"), result)
+	})
 
-      fun test(): String {
-          var r = Foo("Hello from Foo!")
-          return r.sayHello(1)
-      }
-    `,
-		"test",
-	)
-	require.NoError(t, err)
-	require.Equal(t, interpreter.NewUnmeteredStringValue("Hello from Foo!"), result)
+	t.Run("function typed field", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t, `
+            struct Foo {
+                var sayHello: fun(): String
+
+                init(_ str: String) {
+                    self.sayHello = fun(): String {
+                        return str
+                    }
+                }
+            }
+
+            fun test(): String {
+                var r = Foo("Hello from Foo!")
+                return r.sayHello()
+            }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("Hello from Foo!"), result)
+	})
+
 }
 
 func TestImport(t *testing.T) {

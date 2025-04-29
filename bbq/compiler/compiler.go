@@ -1408,97 +1408,114 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 		panic(errors.NewDefaultUserError("invalid number of arguments"))
 	}
 
-	switch invokedExpr := expression.InvokedExpression.(type) {
-	case *ast.MemberExpression:
+	invokedExpr := expression.InvokedExpression
+
+	if invokedExpr, isMemberExpr := expression.InvokedExpression.(*ast.MemberExpression); isMemberExpr {
 		memberInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(invokedExpr)
 		if !ok {
-			// TODO: verify
 			panic(errors.NewUnreachableError())
 		}
 
-		var funcName string
-
-		invocationType := memberInfo.Member.TypeAnnotation.Type.(*sema.FunctionType)
-		if invocationType.IsConstructor {
-			funcName = commons.TypeQualifiedName(
-				memberInfo.AccessedType,
-				invokedExpr.Identifier.Identifier,
-			)
-
-			// Calling a type constructor must be invoked statically. e.g: `SomeContract.Foo()`.
-			// Compile arguments
-			c.compileArguments(expression.Arguments, invocationTypes)
-			// Load function value
-			c.emitVariableLoad(funcName)
-
-			typeArgs := c.loadTypeArguments(invocationTypes)
-			c.codeGen.Emit(opcode.InstructionInvoke{
-				TypeArgs: typeArgs,
-				ArgCount: uint16(argumentCount),
-			})
+		// If the member is a method or a constructor (i.e: not a field), compile it as a method-invocation.
+		// Otherwise, compile it as a normal function invocation.
+		if memberInfo.Member.DeclarationKind != common.DeclarationKindField {
+			c.compileMethodInvocation(expression, memberInfo, invokedExpr, invocationTypes, argumentCount)
 			return
 		}
+	}
 
-		// Receiver is loaded first. So 'self' is always the zero-th argument.
-		c.compileExpression(invokedExpr.Expression)
+	// For all other expressions, get/lookup the function and invoke it.
+	// For example, if the function is static function, it will load the function value from the globals.
+	// If the function is a result of executing another expression (e.g: result of another function call),
+	// then it will get the function-pointer value from the stack.
 
-		// Compile arguments
-		c.compileArguments(expression.Arguments, invocationTypes)
+	// Compile arguments
+	c.compileArguments(expression.Arguments, invocationTypes)
+	// Load function value
+	c.compileExpression(invokedExpr)
 
-		typeArgs := c.loadTypeArguments(invocationTypes)
+	typeArgs := c.loadTypeArguments(invocationTypes)
+	c.codeGen.Emit(opcode.InstructionInvoke{
+		TypeArgs: typeArgs,
+		ArgCount: uint16(argumentCount),
+	})
 
-		// Invocations into the interface code, such as default functions and inherited conditions,
-		// that were synthetically added at the desugar phase, must be static calls.
-		isInterfaceInheritedFuncCall := c.DesugaredElaboration.IsInterfaceMethodStaticCall(expression)
+	return
+}
 
-		argsCountWithReceiver := uint16(argumentCount) + 1
+func (c *Compiler[_, _]) compileMethodInvocation(
+	expression *ast.InvocationExpression,
+	memberInfo sema.MemberAccessInfo,
+	invokedExpr *ast.MemberExpression,
+	invocationTypes sema.InvocationExpressionTypes,
+	argumentCount int,
+) {
+	var funcName string
 
-		// Any invocation on restricted-types must be dynamic
-		if !isInterfaceInheritedFuncCall && isDynamicMethodInvocation(memberInfo.AccessedType) {
-			funcName = invokedExpr.Identifier.Identifier
-			if len(funcName) >= math.MaxUint16 {
-				panic(errors.NewDefaultUserError("invalid function name"))
-			}
+	invocationType := memberInfo.Member.TypeAnnotation.Type.(*sema.FunctionType)
+	if invocationType.IsConstructor {
+		funcName = commons.TypeQualifiedName(
+			memberInfo.AccessedType,
+			invokedExpr.Identifier.Identifier,
+		)
 
-			funcNameConst := c.addStringConst(funcName)
-			c.codeGen.Emit(
-				opcode.InstructionInvokeMethodDynamic{
-					Name:     funcNameConst.index,
-					TypeArgs: typeArgs,
-					ArgCount: argsCountWithReceiver,
-				},
-			)
-
-		} else {
-			// Load function value
-			funcName = commons.TypeQualifiedName(
-				memberInfo.AccessedType,
-				invokedExpr.Identifier.Identifier,
-			)
-			c.emitVariableLoad(funcName)
-
-			c.codeGen.Emit(opcode.InstructionInvokeMethodStatic{
-				TypeArgs: typeArgs,
-				ArgCount: argsCountWithReceiver,
-			})
-		}
-	default:
-		// For all other expressions, load/lookup the function,
-		// and invoke it.
-
+		// Calling a type constructor must be invoked statically. e.g: `SomeContract.Foo()`.
 		// Compile arguments
 		c.compileArguments(expression.Arguments, invocationTypes)
 		// Load function value
-		c.compileExpression(invokedExpr)
+		c.emitVariableLoad(funcName)
 
 		typeArgs := c.loadTypeArguments(invocationTypes)
 		c.codeGen.Emit(opcode.InstructionInvoke{
 			TypeArgs: typeArgs,
 			ArgCount: uint16(argumentCount),
 		})
+		return
 	}
 
-	return
+	// Receiver is loaded first. So 'self' is always the zero-th argument.
+	c.compileExpression(invokedExpr.Expression)
+
+	// Compile arguments
+	c.compileArguments(expression.Arguments, invocationTypes)
+
+	typeArgs := c.loadTypeArguments(invocationTypes)
+
+	// Invocations into the interface code, such as default functions and inherited conditions,
+	// that were synthetically added at the desugar phase, must be static calls.
+	isInterfaceInheritedFuncCall := c.DesugaredElaboration.IsInterfaceMethodStaticCall(expression)
+
+	argsCountWithReceiver := uint16(argumentCount) + 1
+
+	// Any invocation on restricted-types must be dynamic
+	if !isInterfaceInheritedFuncCall && isDynamicMethodInvocation(memberInfo.AccessedType) {
+		funcName = invokedExpr.Identifier.Identifier
+		if len(funcName) >= math.MaxUint16 {
+			panic(errors.NewDefaultUserError("invalid function name"))
+		}
+
+		funcNameConst := c.addStringConst(funcName)
+		c.codeGen.Emit(
+			opcode.InstructionInvokeMethodDynamic{
+				Name:     funcNameConst.index,
+				TypeArgs: typeArgs,
+				ArgCount: argsCountWithReceiver,
+			},
+		)
+
+	} else {
+		// Load function value
+		funcName = commons.TypeQualifiedName(
+			memberInfo.AccessedType,
+			invokedExpr.Identifier.Identifier,
+		)
+		c.emitVariableLoad(funcName)
+
+		c.codeGen.Emit(opcode.InstructionInvokeMethodStatic{
+			TypeArgs: typeArgs,
+			ArgCount: argsCountWithReceiver,
+		})
+	}
 }
 
 func isDynamicMethodInvocation(accessedType sema.Type) bool {
