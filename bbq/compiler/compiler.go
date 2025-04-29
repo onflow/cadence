@@ -1410,8 +1410,8 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 
 	invokedExpr := expression.InvokedExpression
 
-	if invokedExpr, isMemberExpr := expression.InvokedExpression.(*ast.MemberExpression); isMemberExpr {
-		memberInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(invokedExpr)
+	if memberExpression, isMemberExpr := expression.InvokedExpression.(*ast.MemberExpression); isMemberExpr {
+		memberInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(memberExpression)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
@@ -1419,7 +1419,13 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 		// If the member is a method or a constructor (i.e: not a field), compile it as a method-invocation.
 		// Otherwise, compile it as a normal function invocation.
 		if memberInfo.Member.DeclarationKind != common.DeclarationKindField {
-			c.compileMethodInvocation(expression, memberInfo, invokedExpr, invocationTypes, argumentCount)
+			c.compileMethodInvocation(
+				expression,
+				memberInfo,
+				memberExpression,
+				invocationTypes,
+				argumentCount,
+			)
 			return
 		}
 	}
@@ -1429,10 +1435,11 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 	// If the function is a result of executing another expression (e.g: result of another function call),
 	// then it will get the function-pointer value from the stack.
 
-	// Compile arguments
-	c.compileArguments(expression.Arguments, invocationTypes)
 	// Load function value
 	c.compileExpression(invokedExpr)
+
+	// Compile arguments
+	c.compileArguments(expression.Arguments, invocationTypes)
 
 	typeArgs := c.loadTypeArguments(invocationTypes)
 	c.codeGen.Emit(opcode.InstructionInvoke{
@@ -1460,24 +1467,21 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		)
 
 		// Calling a type constructor must be invoked statically. e.g: `SomeContract.Foo()`.
-		// Compile arguments
-		c.compileArguments(expression.Arguments, invocationTypes)
+
 		// Load function value
 		c.emitVariableLoad(funcName)
 
+		// Compile arguments
+		c.compileArguments(expression.Arguments, invocationTypes)
+
 		typeArgs := c.loadTypeArguments(invocationTypes)
+
 		c.codeGen.Emit(opcode.InstructionInvoke{
 			TypeArgs: typeArgs,
 			ArgCount: uint16(argumentCount),
 		})
 		return
 	}
-
-	// Receiver is loaded first. So 'self' is always the zero-th argument.
-	c.compileExpression(invokedExpr.Expression)
-
-	// Compile arguments
-	c.compileArguments(expression.Arguments, invocationTypes)
 
 	typeArgs := c.loadTypeArguments(invocationTypes)
 
@@ -1493,6 +1497,12 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		if len(funcName) >= math.MaxUint16 {
 			panic(errors.NewDefaultUserError("invalid function name"))
 		}
+
+		// Receiver is loaded first. So 'self' is always the zero-th argument.
+		c.compileExpression(invokedExpr.Expression)
+
+		// Compile arguments
+		c.compileArguments(expression.Arguments, invocationTypes)
 
 		funcNameConst := c.addStringConst(funcName)
 		c.codeGen.Emit(
@@ -1510,6 +1520,12 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 			invokedExpr.Identifier.Identifier,
 		)
 		c.emitVariableLoad(funcName)
+
+		// Receiver is loaded first. So 'self' is always the zero-th argument.
+		c.compileExpression(invokedExpr.Expression)
+
+		// Compile arguments
+		c.compileArguments(expression.Arguments, invocationTypes)
 
 		c.codeGen.Emit(opcode.InstructionInvokeMethodStatic{
 			TypeArgs: typeArgs,

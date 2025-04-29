@@ -165,6 +165,19 @@ func (vm *VM) peekN(count int) []Value {
 	return vm.stack[startIndex:]
 }
 
+func (vm *VM) popN(count int) []Value {
+	stackHeight := len(vm.stack)
+	startIndex := stackHeight - count
+	values := vm.stack[startIndex:]
+
+	for _, value := range vm.stack[startIndex:] {
+		vm.context.CheckInvalidatedResourceOrResourceReference(value, EmptyLocationRange)
+	}
+	vm.stack = vm.stack[:startIndex]
+
+	return values
+}
+
 func (vm *VM) peek() Value {
 	lastIndex := len(vm.stack) - 1
 	return vm.stack[lastIndex]
@@ -627,10 +640,11 @@ func opGetIndex(vm *VM) {
 func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
 
-	functionValue := vm.pop()
+	// Load arguments
+	arguments := vm.popN(int(ins.ArgCount))
 
-	explicitArgumentsCount := int(ins.ArgCount)
-	arguments := vm.peekN(explicitArgumentsCount)
+	// Load the invoked value
+	functionValue := vm.pop()
 
 	// If the function is a pointer to an object-method, then the receiver is implicitly captured.
 	if boundFunction, isBoundFUnction := functionValue.(*BoundFunctionPointerValue); isBoundFUnction {
@@ -642,7 +656,6 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	invokeFunction(
 		vm,
 		functionValue,
-		explicitArgumentsCount,
 		arguments,
 		typeArguments,
 	)
@@ -651,17 +664,17 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 func opInvokeMethodStatic(vm *VM, ins opcode.InstructionInvokeMethodStatic) {
 	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
 
-	functionValue := vm.pop()
-
-	explicitArgumentsCount := int(ins.ArgCount)
-	arguments := vm.peekN(explicitArgumentsCount)
+	// Load arguments
+	arguments := vm.popN(int(ins.ArgCount))
 	receiver := arguments[receiverIndex]
 	arguments[receiverIndex] = unwrapReceiver(vm.context, receiver)
+
+	// Load the invoked value
+	functionValue := vm.pop()
 
 	invokeFunction(
 		vm,
 		functionValue,
-		int(ins.ArgCount),
 		arguments,
 		typeArguments,
 	)
@@ -674,8 +687,8 @@ func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
 	// Load type arguments
 	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
 
-	explicitArgumentsCount := int(ins.ArgCount)
-	arguments := vm.peekN(explicitArgumentsCount)
+	// Load arguments
+	arguments := vm.popN(int(ins.ArgCount))
 	receiver := arguments[receiverIndex]
 	arguments[receiverIndex] = unwrapReceiver(vm.context, receiver)
 
@@ -683,6 +696,7 @@ func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
 	nameIndex := ins.Name
 	funcName := getStringConstant(vm, nameIndex)
 
+	// Load the invoked value
 	memberAccessibleValue := receiver.(interpreter.MemberAccessibleValue)
 	functionValue := memberAccessibleValue.GetMember(
 		vm.context,
@@ -693,7 +707,6 @@ func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
 	invokeFunction(
 		vm,
 		functionValue.Method,
-		explicitArgumentsCount,
 		arguments,
 		typeArguments,
 	)
@@ -702,7 +715,6 @@ func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
 func invokeFunction(
 	vm *VM,
 	functionValue Value,
-	explicitArgumentsCount int,
 	arguments []Value,
 	typeArguments []bbq.StaticType,
 ) {
@@ -710,11 +722,9 @@ func invokeFunction(
 	switch functionValue := functionValue.(type) {
 	case CompiledFunctionValue:
 		vm.pushCallFrame(functionValue, arguments)
-		vm.dropN(explicitArgumentsCount)
 
 	case NativeFunctionValue:
 		result := functionValue.Function(vm.context, typeArguments, arguments...)
-		vm.dropN(explicitArgumentsCount)
 		vm.push(result)
 
 	default:
