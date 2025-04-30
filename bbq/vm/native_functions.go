@@ -307,7 +307,7 @@ func registerSaturatingArithmeticFunctions(t sema.SaturatingArithmeticType) {
 		op func(context *Context, v, other interpreter.NumberValue) interpreter.NumberValue,
 	) {
 		RegisterTypeBoundFunction(
-			string(t.ID()),
+			commons.TypeQualifier(t),
 			NewNativeFunctionValue(
 				functionName,
 				sema.SaturatingArithmeticTypeFunctionTypes[t],
