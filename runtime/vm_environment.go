@@ -114,6 +114,8 @@ func (e *vmEnvironment) newVMConfig() *vm.Config {
 	config.ImportHandler = e.importProgram
 	config.WithInterpreterConfig(&interpreter.Config{
 		InjectedCompositeFieldsHandler: newInjectedCompositeFieldsHandler(e),
+		UUIDHandler:                    newUUIDHandler(&e.Interface),
+		AccountHandler:                 e.newAccountValue,
 	})
 	config.WithAccountHandler(e)
 	return config
