@@ -3474,6 +3474,34 @@ func TestInterpretStorageReferenceBoundFunction(t *testing.T) {
 			value,
 		)
 	})
+
+	t.Run("on a type-changed value", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, nil, `
+          fun test(): AnyStruct {
+              account.storage.save(["abc"] as [String], to: /storage/x)
+
+              let arrayRef = account.storage.borrow<auth(Mutate) &[AnyStruct]>(from: /storage/x)!
+
+              // Up-cast the function to return a super-type
+              var removeFunc = arrayRef.remove as! (fun(Int): AnyStruct)
+
+              // Replace with a new value with a different type
+              account.storage.load<[String]>(from:/storage/x)!
+              account.storage.save([123], to:/storage/x)
+
+              // Invoke the function pointer.
+              return removeFunc(0)
+          }
+        `, sema.Config{})
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
 }
 
 func TestInterpretCreatingCircularDependentResource(t *testing.T) {

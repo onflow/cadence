@@ -12841,7 +12841,7 @@ func TestRuntimeFunctionTypeConfusion(t *testing.T) {
               account.storage.save([account] as AnyStruct, to:/storage/x)
               var r = account.storage.borrow<auth(Mutate) &[&Account]>(from:/storage/x)!
               var f = r.remove 
-              var ff = f as! (fun(Int):auth(Storage) &Account)
+              var ff = f as! (fun(Int): auth(Storage) &Account)
               account.storage.load<AnyStruct>(from:/storage/x)
               let publicAccount = getAccount(account.address)
               account.storage.save([publicAccount] as AnyStruct, to:/storage/x)
