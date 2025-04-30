@@ -318,6 +318,7 @@ type CompositeKindedType interface {
 	Type
 	LocatedType
 	EntitlementSupportingType
+	ContainedType
 	GetCompositeKind() common.CompositeKind
 	GetIdentifier() string
 }
