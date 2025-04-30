@@ -380,6 +380,47 @@ func CompileAndInvoke(
 	)
 }
 
+func NativeFunctionsWithLogAndPanic(logs *[]string) vm.NativeFunctionsProvider {
+	return func() map[string]*vm.Variable {
+		funcs := vm.NativeFunctions()
+
+		logFunctionVariable := &interpreter.SimpleVariable{}
+		funcs[commons.LogFunctionName] = logFunctionVariable
+		logFunctionVariable.InitializeWithValue(
+			vm.NewNativeFunctionValue(
+				commons.LogFunctionName,
+				stdlib.LogFunctionType,
+				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+					message := arguments[0].String()
+					*logs = append(*logs, message)
+					return interpreter.Void
+				},
+			),
+		)
+
+		panicFunctionVariable := &interpreter.SimpleVariable{}
+		funcs[commons.PanicFunctionName] = panicFunctionVariable
+		panicFunctionVariable.InitializeWithValue(
+			vm.NewNativeFunctionValue(
+				commons.PanicFunctionName,
+				stdlib.PanicFunctionType,
+				func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+					messageValue, ok := arguments[0].(*interpreter.StringValue)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
+
+					panic(stdlib.PanicError{
+						Message: messageValue.Str,
+					})
+				},
+			),
+		)
+
+		return funcs
+	}
+}
+
 func CompileAndInvokeWithLogs(
 	t testing.TB,
 	code string,
@@ -409,19 +450,7 @@ func CompileAndInvokeWithLogs(
 	storage := interpreter.NewInMemoryStorage(nil)
 	vmConfig := vm.NewConfig(storage)
 
-	vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
-		funcs := vm.NativeFunctions()
-		funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
-			commons.LogFunctionName,
-			stdlib.LogFunctionType,
-			func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-				logs = append(logs, arguments[0].String())
-				return interpreter.Void
-			},
-		)
-
-		return funcs
-	}
+	vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 	result, err = CompileAndInvokeWithOptions(
 		t,

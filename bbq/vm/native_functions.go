@@ -39,12 +39,14 @@ var nativeFunctions = map[string]Value{}
 // It's always nil.
 var BuiltInLocation common.Location = nil
 
-type NativeFunctionsProvider func() map[string]Value
+type NativeFunctionsProvider func() map[string]*Variable
 
-func NativeFunctions() map[string]Value {
-	funcs := make(map[string]Value, len(nativeFunctions))
+func NativeFunctions() map[string]*Variable {
+	funcs := make(map[string]*Variable, len(nativeFunctions))
 	for name, value := range nativeFunctions { //nolint:maprange
-		funcs[name] = value
+		variable := &interpreter.SimpleVariable{}
+		variable.InitializeWithValue(value)
+		funcs[name] = variable
 	}
 	return funcs
 }

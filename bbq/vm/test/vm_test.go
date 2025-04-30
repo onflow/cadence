@@ -32,7 +32,6 @@ import (
 	. "github.com/onflow/cadence/bbq/test_utils"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
@@ -359,24 +358,25 @@ func TestStructMethodCall(t *testing.T) {
 
 		t.Parallel()
 
-		result, err := CompileAndInvoke(t, `
-          struct Foo {
-              var id : String
+		result, err := CompileAndInvoke(t,
+			`
+              struct Foo {
+                  var id : String
 
-              init(_ id: String) {
-                  self.id = id
+                  init(_ id: String) {
+                      self.id = id
+                  }
+
+                  fun sayHello(_ id: Int): String {
+                      return self.id
+                  }
               }
 
-              fun sayHello(_ id: Int): String {
-                  return self.id
+              fun test(): String {
+                  var r = Foo("Hello from Foo!")
+                  return r.sayHello(1)
               }
-          }
-
-          fun test(): String {
-              var r = Foo("Hello from Foo!")
-              return r.sayHello(1)
-          }
-        `,
+            `,
 			"test",
 		)
 		require.NoError(t, err)
@@ -387,21 +387,22 @@ func TestStructMethodCall(t *testing.T) {
 
 		t.Parallel()
 
-		result, err := CompileAndInvoke(t, `
-            struct Foo {
-                var sayHello: fun(): String
+		result, err := CompileAndInvoke(t,
+			`
+              struct Foo {
+                  var sayHello: fun(): String
 
-                init(_ str: String) {
-                    self.sayHello = fun(): String {
-                        return str
-                    }
-                }
-            }
+                  init(_ str: String) {
+                      self.sayHello = fun(): String {
+                          return str
+                      }
+                  }
+              }
 
-            fun test(): String {
-                var r = Foo("Hello from Foo!")
-                return r.sayHello()
-            }
+              fun test(): String {
+                  var r = Foo("Hello from Foo!")
+                  return r.sayHello()
+              }
             `,
 			"test",
 		)
@@ -1637,18 +1638,18 @@ func TestTransaction(t *testing.T) {
 		vmInstance := CompileAndPrepareToInvoke(
 			t,
 			`
-          transaction {
-              var a: String
+              transaction {
+                  var a: String
 
-              prepare() {
-                  self.a = "Hello!"
-              }
+                  prepare() {
+                      self.a = "Hello!"
+                  }
 
-              execute {
-                  self.a = "Hello again!"
+                  execute {
+                      self.a = "Hello again!"
+                  }
               }
-          }
-        `,
+            `,
 			CompilerAndVMOptions{
 				VMConfig: vmConfig,
 			},
@@ -1706,18 +1707,18 @@ func TestTransaction(t *testing.T) {
 		vmInstance := CompileAndPrepareToInvoke(
 			t,
 			`
-            transaction(param1: String, param2: String) {
-                var a: String
+                transaction(param1: String, param2: String) {
+                    var a: String
 
-                prepare() {
-                    self.a = param1
-                }
+                    prepare() {
+                        self.a = param1
+                    }
 
-                execute {
-                    self.a = param2
+                    execute {
+                        self.a = param2
+                    }
                 }
-            }
-        `,
+            `,
 			CompilerAndVMOptions{
 				VMConfig: vmConfig,
 			},
@@ -1810,19 +1811,7 @@ func TestTransaction(t *testing.T) {
 
 		var logs []string
 
-		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
-				commons.LogFunctionName,
-				stdlib.LogFunctionType,
-				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return interpreter.Void
-				},
-			)
-
-			return funcs
-		}
+		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		vmInstance := CompileAndPrepareToInvoke(t,
 			`
@@ -1905,19 +1894,7 @@ func TestTransaction(t *testing.T) {
 
 		var logs []string
 
-		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
-				commons.LogFunctionName,
-				stdlib.LogFunctionType,
-				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return interpreter.Void
-				},
-			)
-
-			return funcs
-		}
+		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		vmInstance := CompileAndPrepareToInvoke(t,
 			`
@@ -1996,19 +1973,7 @@ func TestTransaction(t *testing.T) {
 
 		var logs []string
 
-		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
-				commons.LogFunctionName,
-				stdlib.LogFunctionType,
-				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return interpreter.Void
-				},
-			)
-
-			return funcs
-		}
+		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		vmInstance := CompileAndPrepareToInvoke(t,
 			`
@@ -2092,19 +2057,7 @@ func TestTransaction(t *testing.T) {
 
 		var logs []string
 
-		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
-				commons.LogFunctionName,
-				stdlib.LogFunctionType,
-				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return interpreter.Void
-				},
-			)
-
-			return funcs
-		}
+		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		vmInstance := CompileAndPrepareToInvoke(t,
 			`
@@ -2873,20 +2826,20 @@ func TestResource(t *testing.T) {
 		program := ParseCheckAndCompile(
 			t,
 			`
-            resource Foo {
-                var id : Int
+                resource Foo {
+                    var id : Int
 
-                init(_ id: Int) {
-                    self.id = id
+                    init(_ id: Int) {
+                        self.id = id
+                    }
                 }
-            }
 
-            fun test(): @Foo {
-                var i = 0
-                var r <- create Foo(5)
-                return <- r
-            }
-        `,
+                fun test(): @Foo {
+                    var i = 0
+                    var r <- create Foo(5)
+                    return <- r
+                }
+            `,
 			TestLocation,
 			programs,
 		)
@@ -2919,20 +2872,20 @@ func TestResource(t *testing.T) {
 		_, err := CompileAndInvoke(
 			t,
 			`
-            resource Foo {
-                var id : Int
+                resource Foo {
+                    var id : Int
 
-                init(_ id: Int) {
-                    self.id = id
+                    init(_ id: Int) {
+                        self.id = id
+                    }
                 }
-            }
 
-            fun test() {
-                var i = 0
-                var r <- create Foo(5)
-                destroy r
-            }
-        `,
+                fun test() {
+                    var i = 0
+                    var r <- create Foo(5)
+                    destroy r
+                }
+            `,
 			"test",
 		)
 
@@ -3613,32 +3566,7 @@ func TestFunctionPreConditions(t *testing.T) {
 		var logs []string
 
 		config := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
-		config.NativeFunctionsProvider = func() map[string]vm.Value {
-			return map[string]vm.Value{
-				commons.LogFunctionName: vm.NewNativeFunctionValue(
-					commons.LogFunctionName,
-					stdlib.LogFunctionType,
-					func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-						logs = append(logs, arguments[0].String())
-						return interpreter.Void
-					},
-				),
-				commons.PanicFunctionName: vm.NewNativeFunctionValue(
-					commons.PanicFunctionName,
-					stdlib.PanicFunctionType,
-					func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-						messageValue, ok := arguments[0].(*interpreter.StringValue)
-						if !ok {
-							panic(errors.NewUnreachableError())
-						}
-
-						panic(stdlib.PanicError{
-							Message: messageValue.Str,
-						})
-					},
-				),
-			}
-		}
+		config.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		_, err := CompileAndInvokeWithOptions(
 			t,
@@ -3701,19 +3629,7 @@ func TestFunctionPreConditions(t *testing.T) {
 			return elaboration.InterfaceType(typeID)
 		}
 
-		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
-				commons.LogFunctionName,
-				stdlib.LogFunctionType,
-				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return interpreter.Void
-				},
-			)
-
-			return funcs
-		}
+		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
 		activation.DeclareValue(stdlib.PanicFunction)
@@ -4087,19 +4003,7 @@ func TestFunctionPostConditions(t *testing.T) {
 		var logs []string
 
 		config := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
-		config.NativeFunctionsProvider = func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
-				commons.LogFunctionName,
-				stdlib.LogFunctionType,
-				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return interpreter.Void
-				},
-			)
-
-			return funcs
-		}
+		config.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		_, err := CompileAndInvokeWithOptions(
 			t,
@@ -4574,19 +4478,7 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 		var logs []string
 		vmConfig := vm.NewConfig(storage)
 
-		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
-				commons.LogFunctionName,
-				stdlib.LogFunctionType,
-				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return interpreter.Void
-				},
-			)
-
-			return funcs
-		}
+		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		_, err := CompileAndInvokeWithOptions(t,
 			`
@@ -4669,19 +4561,7 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 		var logs []string
 		vmConfig := vm.NewConfig(storage)
 
-		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
-				commons.LogFunctionName,
-				stdlib.LogFunctionType,
-				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return interpreter.Void
-				},
-			)
-
-			return funcs
-		}
+		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		_, err := CompileAndInvokeWithOptions(t,
 			`
@@ -4768,19 +4648,7 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 		var logs []string
 		vmConfig := vm.NewConfig(storage)
 
-		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
-				commons.LogFunctionName,
-				stdlib.LogFunctionType,
-				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return interpreter.Void
-				},
-			)
-
-			return funcs
-		}
+		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		_, err := CompileAndInvokeWithOptions(t,
 			`
@@ -5523,10 +5391,10 @@ func TestCompileUnaryNot(t *testing.T) {
 
 		actual, err := CompileAndInvoke(t,
 			`
-            fun test(x: Bool): Bool {
-                return !x
-            }
-        `,
+              fun test(x: Bool): Bool {
+                  return !x
+              }
+            `,
 			"test",
 			argument,
 		)
@@ -7316,11 +7184,11 @@ func TestInheritedConditions(t *testing.T) {
 
 		bContract := fmt.Sprintf(
 			`
-            import A from %[1]s
+              import A from %[1]s
 
-            contract interface B: A {
-                resource interface VaultInterface: A.VaultSuperInterface {}
-            }
+              contract interface B: A {
+                  resource interface VaultInterface: A.VaultSuperInterface {}
+              }
             `,
 			contractsAddress.HexWithPrefix(),
 		)
@@ -7429,19 +7297,7 @@ func TestInheritedConditions(t *testing.T) {
 		}
 
 		var logs []string
-		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
-				commons.LogFunctionName,
-				stdlib.LogFunctionType,
-				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return interpreter.Void
-				},
-			)
-
-			return funcs
-		}
+		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		prepareVMConfig(t, vmConfig, programs)
 
@@ -7511,25 +7367,26 @@ func TestInheritedConditions(t *testing.T) {
 
 		// Deploy contract interface
 
-		bContract := fmt.Sprintf(`
-          import A from %[1]s
+		bContract := fmt.Sprintf(
+			`
+              import A from %[1]s
 
-          contract interface B {
+              contract interface B {
 
-              resource interface VaultInterface {
-                  var balance: Int
+                  resource interface VaultInterface {
+                      var balance: Int
 
-                  fun getBalance(): Int {
-                      // Call 'A.TestStruct()' which is only available to this contract interface.
-                      pre { self.test(A.TestStruct()) }
-                  }
+                      fun getBalance(): Int {
+                          // Call 'A.TestStruct()' which is only available to this contract interface.
+                          pre { self.test(A.TestStruct()) }
+                      }
 
-                  view fun test(_ a: A.TestStruct): Bool {
-                     return a.test()
+                      view fun test(_ a: A.TestStruct): Bool {
+                         return a.test()
+                      }
                   }
               }
-          }
-        `,
+            `,
 			contractsAddress.HexWithPrefix(),
 		)
 
@@ -7538,13 +7395,14 @@ func TestInheritedConditions(t *testing.T) {
 
 		// Deploy another intermediate contract interface
 
-		cContract := fmt.Sprintf(`
-          import B from %[1]s
+		cContract := fmt.Sprintf(
+			`
+              import B from %[1]s
 
-          contract interface C: B {
-              resource interface VaultIntermediateInterface: B.VaultInterface {}
-          }
-        `,
+              contract interface C: B {
+                  resource interface VaultIntermediateInterface: B.VaultInterface {}
+              }
+            `,
 			contractsAddress.HexWithPrefix(),
 		)
 
@@ -7632,18 +7490,18 @@ func TestMethodsAsFunctionPointers(t *testing.T) {
 		result, err := CompileAndInvoke(
 			t,
 			`
-            struct Test {
-                access(all) fun add(_ a: Int, _ b: Int): Int {
-                    return a + b
+                struct Test {
+                    access(all) fun add(_ a: Int, _ b: Int): Int {
+                        return a + b
+                    }
                 }
-            }
 
-            fun test(): Int {
-                let test = Test()
-                var add: (fun(Int, Int): Int) = test.add
-                return add( 1, 3)
-            }
-        `,
+                fun test(): Int {
+                    let test = Test()
+                    var add: (fun(Int, Int): Int) = test.add
+                    return add( 1, 3)
+                }
+            `,
 			"test",
 		)
 
@@ -7657,14 +7515,14 @@ func TestMethodsAsFunctionPointers(t *testing.T) {
 		result, err := CompileAndInvoke(
 			t,
 			`
-            struct Test {}
+                struct Test {}
 
-            fun test(): Bool {
-                let test = Test()
-                var isInstance = test.isInstance
-                return isInstance(Type<Test>())
-            }
-        `,
+                fun test(): Bool {
+                    let test = Test()
+                    var isInstance = test.isInstance
+                    return isInstance(Type<Test>())
+                }
+            `,
 			"test",
 		)
 
@@ -7678,24 +7536,24 @@ func TestMethodsAsFunctionPointers(t *testing.T) {
 		result, err := CompileAndInvoke(
 			t,
 			`
-            struct interface Interface {
-                access(all) fun add(_ a: Int, _ b: Int): Int {
-                    return a + b
+                struct interface Interface {
+                    access(all) fun add(_ a: Int, _ b: Int): Int {
+                        return a + b
+                    }
                 }
-            }
 
-            struct Test: Interface {
-                access(all) fun add(_ a: Int, _ b: Int): Int {
-                    return a + b
+                struct Test: Interface {
+                    access(all) fun add(_ a: Int, _ b: Int): Int {
+                        return a + b
+                    }
                 }
-            }
 
-            fun test(): Int {
-                let test: {Interface} = Test()
-                var add = test.add
-                return add( 1, 3)
-            }
-        `,
+                fun test(): Int {
+                    let test: {Interface} = Test()
+                    var add = test.add
+                    return add( 1, 3)
+                }
+            `,
 			"test",
 		)
 
@@ -7709,12 +7567,12 @@ func TestMethodsAsFunctionPointers(t *testing.T) {
 		result, err := CompileAndInvoke(
 			t,
 			`
-            fun test(): Bool {
-                let a: Int64 = 5
-                var isInstance = a.isInstance
-                return isInstance(Type<Int32>())
-            }
-        `,
+                fun test(): Bool {
+                    let a: Int64 = 5
+                    var isInstance = a.isInstance
+                    return isInstance(Type<Int32>())
+                }
+            `,
 			"test",
 		)
 
@@ -7730,13 +7588,14 @@ func TestArrayFunctions(t *testing.T) {
 	t.Run("append", func(t *testing.T) {
 		t.Parallel()
 
-		result, err := CompileAndInvoke(t, `
-            fun test(): Type {
-                var array: [UInt8] = [2, 5]
-                var append = array.append
-                return append.getType()
-            }
-        `,
+		result, err := CompileAndInvoke(t,
+			`
+                fun test(): Type {
+                    var array: [UInt8] = [2, 5]
+                    var append = array.append
+                    return append.getType()
+                }
+            `,
 			"test",
 		)
 
@@ -7755,13 +7614,14 @@ func TestArrayFunctions(t *testing.T) {
 	t.Run("variable sized reverse", func(t *testing.T) {
 		t.Parallel()
 
-		result, err := CompileAndInvoke(t, `
-            fun test(): Type {
-                var array: [UInt8] = [2, 5]
-                var reverse = array.reverse
-                return reverse.getType()
-            }
-        `,
+		result, err := CompileAndInvoke(t,
+			`
+                fun test(): Type {
+                    var array: [UInt8] = [2, 5]
+                    var reverse = array.reverse
+                    return reverse.getType()
+                }
+            `,
 			"test",
 		)
 
@@ -7785,13 +7645,14 @@ func TestArrayFunctions(t *testing.T) {
 	t.Run("constant sized reverse", func(t *testing.T) {
 		t.Parallel()
 
-		result, err := CompileAndInvoke(t, `
-            fun test(): Type {
-                var array: [UInt8; 2] = [2, 5]
-                var reverse = array.reverse
-                return reverse.getType()
-            }
-        `,
+		result, err := CompileAndInvoke(t,
+			`
+                fun test(): Type {
+                    var array: [UInt8; 2] = [2, 5]
+                    var reverse = array.reverse
+                    return reverse.getType()
+                }
+            `,
 			"test",
 		)
 

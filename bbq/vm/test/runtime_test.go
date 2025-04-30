@@ -25,12 +25,15 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/bbq"
 	. "github.com/onflow/cadence/bbq/test_utils"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/test_utils/runtime_utils"
+	"github.com/onflow/cadence/runtime"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
 )
 
 func TestResourceLossViaSelfRugPull(t *testing.T) {
@@ -173,7 +176,7 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 		}
 	}
 
-	txLocation := runtime_utils.NewTransactionLocationGenerator()
+	txLocation := NewTransactionLocationGenerator()
 
 	txVM := vm.NewVM(txLocation(), program, vmConfig)
 
@@ -449,4 +452,116 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 	//	RequireError(t, err)
 	//	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	//})
+}
+
+func TestFTContractInvocation(t *testing.T) {
+
+	t.Parallel()
+
+	contractsAddress := common.MustBytesToAddress([]byte{0x1})
+
+	accountCodes := map[common.Location][]byte{}
+
+	var events []cadence.Event
+
+	signerAccount := contractsAddress
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location common.Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]common.Address, error) {
+			return []common.Address{signerAccount}, nil
+		},
+		OnResolveLocation: newSingleAddressOrStringLocationHandler(t, contractsAddress),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(nil, b)
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	rt := NewTestInterpreterRuntime()
+
+	// Deploy contracts
+
+	for _, c := range []struct {
+		name string
+		code []byte
+	}{
+		{
+			name: "Burner",
+			code: []byte(realBurnerContract),
+		},
+		{
+			name: "ViewResolver",
+			code: []byte(realViewResolverContract),
+		},
+		{
+			name: "FungibleToken",
+			code: []byte(realFungibleTokenContract),
+		},
+		{
+			name: "NonFungibleToken",
+			code: []byte(realNonFungibleTokenContract),
+		},
+		{
+			name: "MetadataViews",
+			code: []byte(realMetadataViewsContract),
+		},
+		{
+			name: "FungibleTokenMetadataViews",
+			code: []byte(realFungibleTokenMetadataViewsContract),
+		},
+		{
+			name: "FlowToken",
+			code: []byte(realFlowContract),
+		},
+	} {
+		err := rt.ExecuteTransaction(
+			runtime.Script{
+				Source: DeploymentTransaction(
+					c.name,
+					c.code,
+				),
+			},
+			runtime.Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	}
+
+	// Invoke contract function
+
+	result, err := rt.InvokeContractFunction(
+		common.AddressLocation{
+			Address: contractsAddress,
+			Name:    "FlowToken",
+		},
+		"getLogoURI",
+		nil,
+		nil,
+		runtime.Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     true,
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t, cadence.String(""), result)
 }

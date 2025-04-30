@@ -32,7 +32,7 @@ type LinkedGlobals struct {
 	executable *ExecutableProgram
 
 	// globals defined in the program, indexed by name.
-	indexedGlobals map[string]Value
+	indexedGlobals map[string]*Variable
 }
 
 // LinkGlobals performs the linking of global functions and variables for a given program.
@@ -43,7 +43,7 @@ func LinkGlobals(
 	linkedGlobalsCache map[common.Location]LinkedGlobals,
 ) LinkedGlobals {
 
-	var importedGlobals []Value
+	var importedGlobals []*Variable
 
 	for _, programImport := range program.Imports {
 		importLocation := programImport.Location
@@ -59,47 +59,6 @@ func LinkGlobals(
 				context,
 				linkedGlobalsCache,
 			)
-
-			// If the imported program is a contract,
-			// load the contract value and populate the global variable.
-			if importedProgram.Contract != nil {
-				contract := importedProgram.Contract
-				location := common.NewAddressLocation(
-					context.MemoryGauge,
-					common.MustBytesToAddress(contract.Address),
-					contract.Name,
-				)
-
-				if !contract.IsInterface {
-					if context.ContractValueHandler == nil {
-						panic(errors.NewUnexpectedError(
-							"cannot link import %s, missing contract value handler",
-							location,
-						))
-					}
-
-					var contractValue interpreter.Value = context.ContractValueHandler(context.Config, location)
-
-					staticType := contractValue.StaticType(context)
-					semaType, err := interpreter.ConvertStaticToSemaType(context, staticType)
-					if err != nil {
-						panic(err)
-					}
-
-					contractValue = interpreter.NewEphemeralReferenceValue(
-						context,
-						interpreter.UnauthorizedAccess,
-						contractValue,
-						semaType,
-						EmptyLocationRange,
-					)
-
-					// Update the globals - both the context and the mapping.
-					// Contract value is always at the zero-th index.
-					linkedGlobals.executable.Globals[0] = contractValue
-					linkedGlobals.indexedGlobals[contract.Name] = contractValue
-				}
-			}
 
 			linkedGlobalsCache[importLocation] = linkedGlobals
 		}
@@ -118,19 +77,23 @@ func LinkGlobals(
 	globalsLen := len(program.Variables) + len(program.Functions) + len(importedGlobals) + 1
 	indexedGlobalsLen := len(program.Functions)
 
-	globals := make([]Value, 0, globalsLen)
-	indexedGlobals := make(map[string]Value, indexedGlobalsLen)
+	globals := make([]*Variable, 0, globalsLen)
+	indexedGlobals := make(map[string]*Variable, indexedGlobalsLen)
 
-	// If the current program is a contract, reserve a global variable for the contract value.
-	// The reserved position is always the zero-th index.
-	// This value will be populated either by the `init` method invocation of the contract,
-	// Or when this program is imported by another (loads the value from storage).
-	if program.Contract != nil && !program.Contract.IsInterface {
-		globals = append(globals, nil)
+	contract := program.Contract
+	if contract != nil && !contract.IsInterface {
+		// Update the globals - both the context and the mapping.
+		// Contract value is always at the zero-th index.
+		contractVariable := &interpreter.SimpleVariable{}
+		contractVariable.InitializeWithGetter(func() interpreter.Value {
+			return loadContractValue(contract, context)
+		})
+		globals = append(globals, contractVariable)
+		indexedGlobals[contract.Name] = contractVariable
 	}
 
 	for range program.Variables {
-		globals = append(globals, nil)
+		globals = append(globals, &interpreter.SimpleVariable{})
 	}
 
 	// Iterate through `program.Functions` to be deterministic.
@@ -160,8 +123,10 @@ func LinkGlobals(
 			}
 		}
 
-		globals = append(globals, value)
-		indexedGlobals[function.QualifiedName] = value
+		variable := &interpreter.SimpleVariable{}
+		variable.InitializeWithValue(value)
+		globals = append(globals, variable)
+		indexedGlobals[function.QualifiedName] = variable
 	}
 
 	// Globals of the current program are added first.
@@ -176,4 +141,35 @@ func LinkGlobals(
 		executable:     executable,
 		indexedGlobals: indexedGlobals,
 	}
+}
+
+func loadContractValue(contract *bbq.Contract, context *Context) Value {
+
+	if context.ContractValueHandler == nil {
+		panic(errors.NewUnexpectedError(
+			"missing contract value handler",
+		))
+	}
+
+	location := common.NewAddressLocation(
+		context.MemoryGauge,
+		common.MustBytesToAddress(contract.Address),
+		contract.Name,
+	)
+
+	var contractValue interpreter.Value = context.ContractValueHandler(context.Config, location)
+
+	staticType := contractValue.StaticType(context)
+	semaType, err := interpreter.ConvertStaticToSemaType(context, staticType)
+	if err != nil {
+		panic(err)
+	}
+
+	return interpreter.NewEphemeralReferenceValue(
+		context,
+		interpreter.UnauthorizedAccess,
+		contractValue,
+		semaType,
+		EmptyLocationRange,
+	)
 }
