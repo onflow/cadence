@@ -600,9 +600,11 @@ func testAccountWithErrorHandlerWithCompiler(
 
 		// TODO: Uncomment once the compiler branch is merged to master.
 		//vmConfig := &vm.Config{
-		//	NativeFunctionsProvider: func() map[string]interpreter.Value {
+		//	NativeFunctionsProvider: func() map[string]*vm.Variable {
 		//		funcs := vm.NativeFunctions()
-		//		funcs[accountValueDeclaration.Name] = accountValueDeclaration.Value
+		//		variable := &interpreter.SimpleVariable{}
+		//		variable.InitializeWithValue(accountValueDeclaration.Value)
+		//		funcs[accountValueDeclaration.Name] = variable
 		//		return funcs
 		//	},
 		//}
