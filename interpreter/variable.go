@@ -55,7 +55,7 @@ func (v *SimpleVariable) GetValue(ValueStaticTypeContext) Value {
 }
 
 func (v *SimpleVariable) SetValue(context ValueStaticTypeContext, locationRange LocationRange, value Value) {
-	existingValue := v.GetValue(context)
+	existingValue := v.value
 	if existingValue != nil {
 		checkResourceLoss(context, existingValue, locationRange)
 	}
