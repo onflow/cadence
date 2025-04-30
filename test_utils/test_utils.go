@@ -267,6 +267,43 @@ func ParseCheckAndPrepareWithOptions(
 	panic(errors.NewUnreachableError())
 }
 
+func ParseCheckAndPrepareWithEvents(tb testing.TB, code string, compile bool) (
+	invokable Invokable,
+	getEvents func() []TestEvent,
+	err error,
+) {
+	tb.Helper()
+
+	if !compile {
+		return ParseCheckAndInterpretWithEvents(tb, code)
+	}
+
+	var events []TestEvent
+	getEvents = func() []TestEvent {
+		return events
+	}
+
+	vmConfig := &vm.Config{}
+
+	vmConfig.OnEventEmitted = func(event *interpreter.CompositeValue, eventType *interpreter.CompositeStaticType) error {
+		events = append(events, TestEvent{
+			Event:     event,
+			EventType: interpreter.MustConvertStaticToSemaType(eventType, vmConfig).(*sema.CompositeType),
+		})
+		return nil
+	}
+
+	vmInstance := compilerUtils.CompileAndPrepareToInvoke(
+		tb,
+		code,
+		compilerUtils.CompilerAndVMOptions{
+			VMConfig: vmConfig,
+		},
+	)
+
+	return NewVMInvokable(vmInstance), getEvents, nil
+}
+
 // Below helper functions were copied as-is from `misc_test.go`.
 // Idea is to eventually use the below functions everywhere, and remove them from `misc_test.go`,
 // so that the `misc_test.go` would contain only tests.
