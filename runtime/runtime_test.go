@@ -12828,3 +12828,45 @@ func TestRuntimeInvokeContractFunctionImported(t *testing.T) {
 		events[0].FieldsMappedByName()["x"],
 	)
 }
+
+func TestRuntimeFunctionTypeConfusion(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntime()
+
+	transaction := []byte(`
+      transaction {
+          prepare(account: auth(Storage) &Account) {
+              account.storage.save([account] as AnyStruct, to:/storage/x)
+              var r = account.storage.borrow<auth(Mutate) &[&Account]>(from:/storage/x)!
+              var f = r.remove 
+              var ff = f as! (fun(Int):auth(Storage) &Account)
+              account.storage.load<AnyStruct>(from:/storage/x)
+              let publicAccount = getAccount(account.address)
+              account.storage.save([publicAccount] as AnyStruct, to:/storage/x)
+              destroy  ff(0).storage.load<@AnyResource>(from:/storage/flowTokenVault)
+          }
+      }
+    `)
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{{42}}, nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: transaction,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+}
