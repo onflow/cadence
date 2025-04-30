@@ -558,8 +558,7 @@ func TestFTContractInvocation(t *testing.T) {
 		runtime.Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO:
-			//UseVM:     true,
+			UseVM:     true,
 		},
 	)
 	require.NoError(t, err)
