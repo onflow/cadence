@@ -20,6 +20,7 @@ package interpreter_test
 
 import (
 	"fmt"
+	"github.com/onflow/cadence/test_utils"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -40,7 +41,7 @@ func TestInterpretFunctionPreTestCondition(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(x: Int): Int {
           pre {
               x == 0
@@ -53,10 +54,12 @@ func TestInterpretFunctionPreTestCondition(t *testing.T) {
 		"test",
 		interpreter.NewUnmeteredIntValueFromInt64(42),
 	)
-	RequireError(t, err)
 
-	var conditionErr interpreter.ConditionError
-	require.ErrorAs(t, err, &conditionErr)
+	assertConditionError(
+		t,
+		err,
+		ast.ConditionKindPre,
+	)
 
 	zero := interpreter.NewUnmeteredIntValueFromInt64(0)
 	value, err := inter.Invoke("test", zero)
@@ -69,7 +72,7 @@ func TestInterpretFunctionPreEmitCondition(t *testing.T) {
 
 	t.Parallel()
 
-	inter, getEvents, err := parseCheckAndInterpretWithEvents(t,
+	inter, getEvents, err := parseCheckAndPrepareWithEvents(t,
 		`
           event Foo(x: Int)
 
@@ -105,7 +108,7 @@ func TestInterpretFunctionPostTestCondition(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(x: Int): Int {
           post {
               y == 0
@@ -119,10 +122,12 @@ func TestInterpretFunctionPostTestCondition(t *testing.T) {
 		"test",
 		interpreter.NewUnmeteredIntValueFromInt64(42),
 	)
-	RequireError(t, err)
 
-	var conditionErr interpreter.ConditionError
-	require.ErrorAs(t, err, &conditionErr)
+	assertConditionError(
+		t,
+		err,
+		ast.ConditionKindPost,
+	)
 
 	zero := interpreter.NewUnmeteredIntValueFromInt64(0)
 	value, err := inter.Invoke("test", zero)
@@ -135,7 +140,7 @@ func TestInterpretFunctionPostEmitCondition(t *testing.T) {
 
 	t.Parallel()
 
-	inter, getEvents, err := parseCheckAndInterpretWithEvents(t,
+	inter, getEvents, err := parseCheckAndPrepareWithEvents(t,
 		`
           event Foo(y: Int)
 
@@ -172,7 +177,7 @@ func TestInterpretFunctionWithResultAndPostTestConditionWithResult(t *testing.T)
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(x: Int): Int {
           post {
               result == 0
@@ -185,10 +190,12 @@ func TestInterpretFunctionWithResultAndPostTestConditionWithResult(t *testing.T)
 		"test",
 		interpreter.NewUnmeteredIntValueFromInt64(42),
 	)
-	RequireError(t, err)
 
-	var conditionErr interpreter.ConditionError
-	require.ErrorAs(t, err, &conditionErr)
+	assertConditionError(
+		t,
+		err,
+		ast.ConditionKindPost,
+	)
 
 	zero := interpreter.NewUnmeteredIntValueFromInt64(0)
 	value, err := inter.Invoke("test", zero)
@@ -197,11 +204,65 @@ func TestInterpretFunctionWithResultAndPostTestConditionWithResult(t *testing.T)
 	AssertValuesEqual(t, inter, zero, value)
 }
 
+func assertConditionError(
+	t *testing.T,
+	err error,
+	conditionKind ast.ConditionKind,
+) {
+	RequireError(t, err)
+
+	if *compile {
+		var conditionErr stdlib.PanicError
+		require.ErrorAs(t, err, &conditionErr)
+		require.ErrorContains(t, err, "pre/post condition failed")
+		return
+	}
+
+	var conditionErr interpreter.ConditionError
+	require.ErrorAs(t, err, &conditionErr)
+
+	assert.Equal(t,
+		conditionKind,
+		conditionErr.ConditionKind,
+	)
+}
+
+func assertConditionErrorWithMessage(
+	t *testing.T,
+	err error,
+	conditionKind ast.ConditionKind,
+	message string,
+) {
+	RequireError(t, err)
+
+	if *compile {
+		var conditionErr stdlib.PanicError
+		require.ErrorAs(t, err, &conditionErr)
+		require.ErrorContains(t, err, message)
+		return
+	}
+
+	var conditionErr interpreter.ConditionError
+	require.ErrorAs(t, err, &conditionErr)
+
+	assert.Equal(
+		t,
+		conditionKind,
+		conditionErr.ConditionKind,
+	)
+
+	assert.Equal(
+		t,
+		message,
+		conditionErr.Message,
+	)
+}
+
 func TestInterpretFunctionWithResultAndPostEmitConditionWithResult(t *testing.T) {
 
 	t.Parallel()
 
-	inter, getEvents, err := parseCheckAndInterpretWithEvents(t, `
+	inter, getEvents, err := parseCheckAndPrepareWithEvents(t, `
           event Foo(x: Int)
 
           fun test(x: Int): Int {
@@ -235,7 +296,7 @@ func TestInterpretFunctionWithoutResultAndPostTestConditionWithResult(t *testing
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test() {
           post {
               result == 0
@@ -259,7 +320,7 @@ func TestInterpretFunctionWithoutResultAndPostEmitConditionWithResult(t *testing
 
 	t.Parallel()
 
-	inter, getEvents, err := parseCheckAndInterpretWithEvents(t, `
+	inter, getEvents, err := parseCheckAndPrepareWithEvents(t, `
       event Foo(x: Int)
 
       fun test() {
@@ -291,7 +352,7 @@ func TestInterpretFunctionPostTestConditionWithBefore(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       var x = 0
 
       fun test() {
@@ -320,7 +381,7 @@ func TestInterpretFunctionPostEmitConditionWithBefore(t *testing.T) {
 
 	t.Parallel()
 
-	inter, getEvents, err := parseCheckAndInterpretWithEvents(t, `
+	inter, getEvents, err := parseCheckAndPrepareWithEvents(t, `
       event Foo(x: Int, beforeX: Int)
 
       var x = 0
@@ -357,7 +418,7 @@ func TestInterpretFunctionPostConditionWithBeforeFailingPreTestCondition(t *test
 
 	t.Parallel()
 
-	inter, getEvents, err := parseCheckAndInterpretWithEvents(t, `
+	inter, getEvents, err := parseCheckAndPrepareWithEvents(t, `
       event Foo(x: Int)
 
       var x = 0
@@ -376,14 +437,11 @@ func TestInterpretFunctionPostConditionWithBeforeFailingPreTestCondition(t *test
 	require.NoError(t, err)
 
 	_, err = inter.Invoke("test")
-	RequireError(t, err)
 
-	var conditionErr interpreter.ConditionError
-	require.ErrorAs(t, err, &conditionErr)
-
-	assert.Equal(t,
+	assertConditionError(
+		t,
+		err,
 		ast.ConditionKindPre,
-		conditionErr.ConditionKind,
 	)
 
 	events := getEvents()
@@ -394,7 +452,7 @@ func TestInterpretFunctionPostConditionWithBeforeFailingPostTestCondition(t *tes
 
 	t.Parallel()
 
-	inter, getEvents, err := parseCheckAndInterpretWithEvents(t, `
+	inter, getEvents, err := parseCheckAndPrepareWithEvents(t, `
       event Foo(x: Int)
 
       var x = 0
@@ -413,14 +471,11 @@ func TestInterpretFunctionPostConditionWithBeforeFailingPostTestCondition(t *tes
 	require.NoError(t, err)
 
 	_, err = inter.Invoke("test")
-	RequireError(t, err)
 
-	var conditionErr interpreter.ConditionError
-	require.ErrorAs(t, err, &conditionErr)
-
-	assert.Equal(t,
+	assertConditionError(
+		t,
+		err,
 		ast.ConditionKindPost,
-		conditionErr.ConditionKind,
 	)
 
 	events := getEvents()
@@ -431,7 +486,7 @@ func TestInterpretFunctionPostConditionWithMessageUsingStringLiteral(t *testing.
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(x: Int): Int {
           post {
               y == 0: "y should be zero"
@@ -445,14 +500,12 @@ func TestInterpretFunctionPostConditionWithMessageUsingStringLiteral(t *testing.
 		"test",
 		interpreter.NewUnmeteredIntValueFromInt64(42),
 	)
-	RequireError(t, err)
 
-	var conditionErr interpreter.ConditionError
-	require.ErrorAs(t, err, &conditionErr)
-
-	assert.Equal(t,
+	assertConditionErrorWithMessage(
+		t,
+		err,
+		ast.ConditionKindPost,
 		"y should be zero",
-		conditionErr.Message,
 	)
 
 	zero := interpreter.NewUnmeteredIntValueFromInt64(0)
@@ -471,7 +524,7 @@ func TestInterpretFunctionPostConditionWithMessageUsingResult(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(x: Int): String {
           post {
               y == 0: result
@@ -485,14 +538,12 @@ func TestInterpretFunctionPostConditionWithMessageUsingResult(t *testing.T) {
 		"test",
 		interpreter.NewUnmeteredIntValueFromInt64(42),
 	)
-	RequireError(t, err)
 
-	var conditionErr interpreter.ConditionError
-	require.ErrorAs(t, err, &conditionErr)
-
-	assert.Equal(t,
+	assertConditionErrorWithMessage(
+		t,
+		err,
+		ast.ConditionKindPost,
 		"return value",
-		conditionErr.Message,
 	)
 
 	zero := interpreter.NewUnmeteredIntValueFromInt64(0)
@@ -511,7 +562,7 @@ func TestInterpretFunctionPostConditionWithMessageUsingBefore(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(x: String): String {
           post {
               1 == 2: before(x)
@@ -521,14 +572,12 @@ func TestInterpretFunctionPostConditionWithMessageUsingBefore(t *testing.T) {
     `)
 
 	_, err := inter.Invoke("test", interpreter.NewUnmeteredStringValue("parameter value"))
-	RequireError(t, err)
 
-	var conditionErr interpreter.ConditionError
-	require.ErrorAs(t, err, &conditionErr)
-
-	assert.Equal(t,
+	assertConditionErrorWithMessage(
+		t,
+		err,
+		ast.ConditionKindPost,
 		"parameter value",
-		conditionErr.Message,
 	)
 }
 
@@ -536,7 +585,7 @@ func TestInterpretFunctionPostConditionWithMessageUsingParameter(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(x: String): String {
           post {
               1 == 2: x
@@ -546,14 +595,12 @@ func TestInterpretFunctionPostConditionWithMessageUsingParameter(t *testing.T) {
     `)
 
 	_, err := inter.Invoke("test", interpreter.NewUnmeteredStringValue("parameter value"))
-	RequireError(t, err)
 
-	var conditionErr interpreter.ConditionError
-	require.ErrorAs(t, err, &conditionErr)
-
-	assert.Equal(t,
+	assertConditionErrorWithMessage(
+		t,
+		err,
+		ast.ConditionKindPost,
 		"parameter value",
-		conditionErr.Message,
 	)
 }
 
@@ -655,10 +702,13 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 				events = nil
 
 				_, err = inter.Invoke("callTest", interpreter.NewUnmeteredIntValueFromInt64(0))
-				RequireError(t, err)
 
-				var conditionErr interpreter.ConditionError
-				require.ErrorAs(t, err, &conditionErr)
+
+				assertConditionError(
+					t,
+					err,
+					ast.ConditionKindPre,
+				)
 
 				require.Len(t, events, 0)
 			})
@@ -920,9 +970,9 @@ func TestInterpretResourceInterfaceInitializerPreConditions(t *testing.T) {
 
 	t.Parallel()
 
-	newInterpreter := func(t *testing.T) (inter *interpreter.Interpreter, getEvents func() []testEvent) {
+	newInterpreter := func(t *testing.T) (invokable test_utils.Invokable, getEvents func() []testEvent) {
 		var err error
-		inter, getEvents, err = parseCheckAndInterpretWithEvents(t, `
+		invokable, getEvents, err = parseCheckAndPrepareWithEvents(t, `
 
           event InitPre(x: Int)
           event DestroyPre(x: Int)
@@ -962,21 +1012,13 @@ func TestInterpretResourceInterfaceInitializerPreConditions(t *testing.T) {
 
 		inter, getEvents := newInterpreter(t)
 		_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(1))
-		RequireError(t, err)
 
-		require.IsType(t,
-			interpreter.Error{},
+		assertConditionErrorWithMessage(
+			t,
 			err,
+			ast.ConditionKindPost,
+			"invalid init",
 		)
-		interpreterErr := err.(interpreter.Error)
-
-		require.IsType(t,
-			interpreter.ConditionError{},
-			interpreterErr.Err,
-		)
-		conditionError := interpreterErr.Err.(interpreter.ConditionError)
-
-		assert.Equal(t, "invalid init", conditionError.Message)
 
 		require.Len(t, getEvents(), 0)
 	})
@@ -996,9 +1038,9 @@ func TestInterpretFunctionPostConditionInInterface(t *testing.T) {
 
 	t.Parallel()
 
-	newInterpreter := func(t *testing.T) (inter *interpreter.Interpreter, getEvents func() []testEvent) {
+	newInterpreter := func(t *testing.T) (inter test_utils.Invokable, getEvents func() []testEvent) {
 		var err error
-		inter, getEvents, err = parseCheckAndInterpretWithEvents(t, `
+		inter, getEvents, err = parseCheckAndPrepareWithEvents(t, `
 
           event Status(on: Bool)
 
@@ -1066,15 +1108,11 @@ func TestInterpretFunctionPostConditionInInterface(t *testing.T) {
 		inter, getEvents := newInterpreter(t)
 
 		_, err := inter.Invoke("test2")
-		require.IsType(t,
-			interpreter.Error{},
-			err,
-		)
-		interpreterErr := err.(interpreter.Error)
 
-		require.IsType(t,
-			interpreter.ConditionError{},
-			interpreterErr.Err,
+		assertConditionError(
+			t,
+			err,
+			ast.ConditionKindPost,
 		)
 
 		require.Len(t, getEvents(), 0)
@@ -1085,9 +1123,9 @@ func TestInterpretFunctionPostConditionWithBeforeInInterface(t *testing.T) {
 
 	t.Parallel()
 
-	newInterpreter := func(t *testing.T) (inter *interpreter.Interpreter, getEvents func() []testEvent) {
+	newInterpreter := func(t *testing.T) (inter test_utils.Invokable, getEvents func() []testEvent) {
 		var err error
-		inter, getEvents, err = parseCheckAndInterpretWithEvents(t, `
+		inter, getEvents, err = parseCheckAndPrepareWithEvents(t, `
 
           event Status(on: Bool)
 
@@ -1156,15 +1194,11 @@ func TestInterpretFunctionPostConditionWithBeforeInInterface(t *testing.T) {
 		inter, getEvents := newInterpreter(t)
 
 		_, err := inter.Invoke("test2")
-		require.IsType(t,
-			interpreter.Error{},
-			err,
-		)
-		interpreterErr := err.(interpreter.Error)
 
-		require.IsType(t,
-			interpreter.ConditionError{},
-			interpreterErr.Err,
+		assertConditionError(
+			t,
+			err,
+			ast.ConditionKindPost,
 		)
 
 		require.Len(t, getEvents(), 0)

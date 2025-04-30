@@ -71,11 +71,11 @@ type Invokable interface {
 //	return
 //}
 
-func ParseCheckAndPrepare(t testing.TB, code string, compile bool) Invokable {
-	t.Helper()
+func ParseCheckAndPrepare(tb testing.TB, code string, compile bool) Invokable {
+	tb.Helper()
 
 	if !compile {
-		return ParseCheckAndInterpret(t, code)
+		return ParseCheckAndInterpret(tb, code)
 	}
 
 	// TODO: Uncomment once the compiler branch is merged to master.
@@ -93,6 +93,43 @@ func ParseCheckAndPrepare(t testing.TB, code string, compile bool) Invokable {
 	// Not supported for now
 	panic(errors.NewUnreachableError())
 
+}
+
+func ParseCheckAndPrepareWithEvents(tb testing.TB, code string, compile bool) (
+	invokable Invokable,
+	getEvents func() []TestEvent,
+	err error,
+) {
+	tb.Helper()
+
+	if !compile {
+		return ParseCheckAndInterpretWithEvents(tb, code)
+	}
+
+	var events []TestEvent
+	getEvents = func() []TestEvent {
+		return events
+	}
+
+	vmConfig := &vm.Config{}
+
+	vmConfig.OnEventEmitted = func(event *interpreter.CompositeValue, eventType *interpreter.CompositeStaticType) error {
+		events = append(events, TestEvent{
+			Event:     event,
+			EventType: interpreter.MustConvertStaticToSemaType(eventType, vmConfig).(*sema.CompositeType),
+		})
+		return nil
+	}
+
+	vmInstance := compilerUtils.CompileAndPrepareToInvoke(
+		tb,
+		code,
+		compilerUtils.CompilerAndVMOptions{
+			VMConfig: vmConfig,
+		},
+	)
+
+	return NewVMInvokable(vmInstance), getEvents, nil
 }
 
 // Below helper functions were copied as-is from `misc_test.go`.
@@ -349,14 +386,14 @@ type TestEvent struct {
 	EventFields []interpreter.Value
 }
 
-func ParseCheckAndInterpretWithEvents(t *testing.T, code string) (
+func ParseCheckAndInterpretWithEvents(tb testing.TB, code string) (
 	inter *interpreter.Interpreter,
 	getEvents func() []TestEvent,
 	err error,
 ) {
 	var events []TestEvent
 
-	inter, err = ParseCheckAndInterpretWithOptions(t,
+	inter, err = ParseCheckAndInterpretWithOptions(tb,
 		code,
 		ParseCheckAndInterpretOptions{
 			Config: &interpreter.Config{
