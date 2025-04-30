@@ -12459,6 +12459,8 @@ func TestRuntimeInvokeContractFunctionImported(t *testing.T) {
 
         access(all) contract Test3 {
 
+            access(all) resource R {}
+
 			access(all) fun hello(): String {
 				return Test2.hello()
 			}
@@ -12474,10 +12476,27 @@ func TestRuntimeInvokeContractFunctionImported(t *testing.T) {
 			access(all) fun getContractAccountAddress(): Address {
                 return Test3.account.address
             }
+
+            access(all) fun getResourceUUID(): UInt64 {
+                let r <- create R()
+                let uuid = r.uuid
+                destroy r
+                return uuid
+            }
+
+            access(all) fun getResourceOwner(): Address {
+                let r <- create R()
+                let path = /storage/r
+                self.account.storage.save(<- r, to: path)
+                let rRef = self.account.storage.borrow<&R>(from: path)!
+                return rRef.owner!.address
+            }
         }
     `)
 
 	accountCodes := map[Location][]byte{}
+
+	var uuid uint64
 
 	runtimeInterface := &TestRuntimeInterface{
 		Storage: NewTestLedger(nil, nil),
@@ -12497,6 +12516,10 @@ func TestRuntimeInvokeContractFunctionImported(t *testing.T) {
 		},
 		OnGetAccountBalance: func(_ Address) (uint64, error) {
 			return 0, nil
+		},
+		OnGenerateUUID: func() (uint64, error) {
+			uuid++
+			return uuid, nil
 		},
 	}
 
@@ -12620,6 +12643,52 @@ func TestRuntimeInvokeContractFunctionImported(t *testing.T) {
 
 	require.Equal(t,
 		cadence.UFix64(0),
+		result,
+	)
+
+	// Call getResourceUUID
+
+	result, err = runtime.InvokeContractFunction(
+		common.AddressLocation{
+			Address: addressValue,
+			Name:    "Test3",
+		},
+		"getResourceUUID",
+		nil,
+		nil,
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		cadence.UInt64(1),
+		result,
+	)
+
+	// Call getResourceOwner
+
+	result, err = runtime.InvokeContractFunction(
+		common.AddressLocation{
+			Address: addressValue,
+			Name:    "Test3",
+		},
+		"getResourceOwner",
+		nil,
+		nil,
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		cadence.Address(addressValue),
 		result,
 	)
 }
