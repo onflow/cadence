@@ -1025,11 +1025,22 @@ func (c *Compiler[_, _]) VisitEmitStatement(statement *ast.EmitStatement) (_ str
 	c.withConditionElaboration(
 		statement,
 		func() {
-			c.compileExpression(statement.InvocationExpression)
+			invocationExpression := statement.InvocationExpression
+			arguments := invocationExpression.Arguments
+			invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(invocationExpression)
+			c.compileArguments(arguments, invocationTypes)
+
+			argCount := len(arguments)
+			if argCount >= math.MaxUint16 {
+				panic(errors.NewDefaultUserError("invalid argument count"))
+			}
+
 			eventType := c.DesugaredElaboration.EmitStatementEventType(statement)
 			typeIndex := c.getOrAddType(eventType)
+
 			c.codeGen.Emit(opcode.InstructionEmitEvent{
-				Type: typeIndex,
+				Type:     typeIndex,
+				ArgCount: uint16(argCount),
 			})
 		},
 	)
@@ -1960,7 +1971,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		parameterCount = len(parameterList.Parameters)
 	}
 
-	if parameterCount > math.MaxUint16 {
+	if parameterCount >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid parameter count"))
 	}
 
