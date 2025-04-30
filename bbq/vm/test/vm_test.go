@@ -7894,3 +7894,24 @@ func TestInvocationExpressionEvaluationOrder(t *testing.T) {
 		)
 	})
 }
+
+func TestSaturatingArithmetic(t *testing.T) {
+
+	t.Parallel()
+
+	result, err := CompileAndInvoke(t,
+		`
+          fun test(): UFix64 {
+              return (1.0).saturatingSubtract(2.0)
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+
+	assert.Equal(
+		t,
+		interpreter.NewUnmeteredUFix64Value(0),
+		result,
+	)
+}
