@@ -34,6 +34,8 @@ import (
 	"github.com/onflow/cadence/interpreter"
 )
 
+type Variable = interpreter.SimpleVariable
+
 type VM struct {
 	stack  []Value
 	locals []Value
@@ -45,7 +47,7 @@ type VM struct {
 	ip      uint16
 
 	context            *Context
-	globals            map[string]Value
+	globals            map[string]*Variable
 	linkedGlobalsCache map[common.Location]LinkedGlobals
 }
 
@@ -263,10 +265,12 @@ func (vm *VM) popCallFrame() {
 }
 
 func (vm *VM) Invoke(name string, arguments ...Value) (v Value, err error) {
-	function, ok := vm.globals[name]
+	functionVariable, ok := vm.globals[name]
 	if !ok {
 		return nil, errors.NewDefaultUserError("unknown function '%s'", name)
 	}
+
+	function := functionVariable.GetValue(vm.context)
 
 	defer func() {
 		recovered := recover()
@@ -337,7 +341,8 @@ func (vm *VM) ExecuteTransaction(transactionArgs []Value, signers ...Value) (err
 		return err
 	}
 
-	if initializer, ok := vm.globals[commons.ProgramInitFunctionName]; ok {
+	if initializerVariable, ok := vm.globals[commons.ProgramInitFunctionName]; ok {
+		initializer := initializerVariable.GetValue(vm.context)
 		_, err = vm.invoke(initializer, transactionArgs)
 		if err != nil {
 			return err
@@ -349,7 +354,8 @@ func (vm *VM) ExecuteTransaction(transactionArgs []Value, signers ...Value) (err
 	prepareArgs = append(prepareArgs, signers...)
 
 	// Invoke 'prepare', if exists.
-	if prepare, ok := vm.globals[commons.TransactionPrepareFunctionName]; ok {
+	if prepareVariable, ok := vm.globals[commons.TransactionPrepareFunctionName]; ok {
+		prepare := prepareVariable.GetValue(vm.context)
 		_, err = vm.invoke(prepare, prepareArgs)
 		if err != nil {
 			return err
@@ -360,7 +366,8 @@ func (vm *VM) ExecuteTransaction(transactionArgs []Value, signers ...Value) (err
 
 	// Invoke 'execute', if exists.
 	executeArgs := []Value{transaction}
-	if execute, ok := vm.globals[commons.TransactionExecuteFunctionName]; ok {
+	if executeVariable, ok := vm.globals[commons.TransactionExecuteFunctionName]; ok {
+		execute := executeVariable.GetValue(vm.context)
 		_, err = vm.invoke(execute, executeArgs)
 		return err
 	}
@@ -604,15 +611,16 @@ func opSetUpvalue(vm *VM, ins opcode.InstructionSetUpvalue) {
 func opGetGlobal(vm *VM, ins opcode.InstructionGetGlobal) {
 	globalIndex := ins.Global
 	globals := vm.callFrame.function.Executable.Globals
-	value := globals[globalIndex]
-	vm.push(value)
+	variable := globals[globalIndex]
+	vm.push(variable.GetValue(vm.context))
 }
 
 func opSetGlobal(vm *VM, ins opcode.InstructionSetGlobal) {
 	globalIndex := ins.Global
 	globals := vm.callFrame.function.Executable.Globals
 	value := vm.pop()
-	globals[globalIndex] = value
+	global := globals[globalIndex]
+	global.SetValue(vm.context, EmptyLocationRange, value)
 }
 
 func opSetIndex(vm *VM) {
@@ -1605,8 +1613,9 @@ func (vm *VM) maybeLookupFunction(location common.Location, name string) Functio
 
 func (vm *VM) lookupFunction(location common.Location, name string) (FunctionValue, bool) {
 	// First check in current program.
-	value, ok := vm.globals[name]
+	global, ok := vm.globals[name]
 	if ok {
+		value := global.GetValue(vm.context)
 		return value.(FunctionValue), true
 	}
 
@@ -1627,11 +1636,12 @@ func (vm *VM) lookupFunction(location common.Location, name string) (FunctionVal
 		)
 	}
 
-	value, ok = linkedGlobals.indexedGlobals[name]
+	global, ok = linkedGlobals.indexedGlobals[name]
 	if !ok {
 		return nil, false
 	}
 
+	value := global.GetValue(vm.context)
 	return value.(FunctionValue), true
 }
 

@@ -32,7 +32,6 @@ import (
 	. "github.com/onflow/cadence/bbq/test_utils"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
@@ -1810,19 +1809,7 @@ func TestTransaction(t *testing.T) {
 
 		var logs []string
 
-		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
-				commons.LogFunctionName,
-				stdlib.LogFunctionType,
-				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return interpreter.Void
-				},
-			)
-
-			return funcs
-		}
+		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		vmInstance := CompileAndPrepareToInvoke(t,
 			`
@@ -1905,19 +1892,7 @@ func TestTransaction(t *testing.T) {
 
 		var logs []string
 
-		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
-				commons.LogFunctionName,
-				stdlib.LogFunctionType,
-				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return interpreter.Void
-				},
-			)
-
-			return funcs
-		}
+		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		vmInstance := CompileAndPrepareToInvoke(t,
 			`
@@ -1996,19 +1971,7 @@ func TestTransaction(t *testing.T) {
 
 		var logs []string
 
-		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
-				commons.LogFunctionName,
-				stdlib.LogFunctionType,
-				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return interpreter.Void
-				},
-			)
-
-			return funcs
-		}
+		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		vmInstance := CompileAndPrepareToInvoke(t,
 			`
@@ -2092,19 +2055,7 @@ func TestTransaction(t *testing.T) {
 
 		var logs []string
 
-		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
-				commons.LogFunctionName,
-				stdlib.LogFunctionType,
-				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return interpreter.Void
-				},
-			)
-
-			return funcs
-		}
+		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		vmInstance := CompileAndPrepareToInvoke(t,
 			`
@@ -3613,32 +3564,7 @@ func TestFunctionPreConditions(t *testing.T) {
 		var logs []string
 
 		config := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
-		config.NativeFunctionsProvider = func() map[string]vm.Value {
-			return map[string]vm.Value{
-				commons.LogFunctionName: vm.NewNativeFunctionValue(
-					commons.LogFunctionName,
-					stdlib.LogFunctionType,
-					func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-						logs = append(logs, arguments[0].String())
-						return interpreter.Void
-					},
-				),
-				commons.PanicFunctionName: vm.NewNativeFunctionValue(
-					commons.PanicFunctionName,
-					stdlib.PanicFunctionType,
-					func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-						messageValue, ok := arguments[0].(*interpreter.StringValue)
-						if !ok {
-							panic(errors.NewUnreachableError())
-						}
-
-						panic(stdlib.PanicError{
-							Message: messageValue.Str,
-						})
-					},
-				),
-			}
-		}
+		config.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		_, err := CompileAndInvokeWithOptions(
 			t,
@@ -3701,19 +3627,7 @@ func TestFunctionPreConditions(t *testing.T) {
 			return elaboration.InterfaceType(typeID)
 		}
 
-		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
-				commons.LogFunctionName,
-				stdlib.LogFunctionType,
-				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return interpreter.Void
-				},
-			)
-
-			return funcs
-		}
+		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
 		activation.DeclareValue(stdlib.PanicFunction)
@@ -4087,19 +4001,7 @@ func TestFunctionPostConditions(t *testing.T) {
 		var logs []string
 
 		config := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
-		config.NativeFunctionsProvider = func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
-				commons.LogFunctionName,
-				stdlib.LogFunctionType,
-				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return interpreter.Void
-				},
-			)
-
-			return funcs
-		}
+		config.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		_, err := CompileAndInvokeWithOptions(
 			t,
@@ -4574,19 +4476,7 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 		var logs []string
 		vmConfig := vm.NewConfig(storage)
 
-		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
-				commons.LogFunctionName,
-				stdlib.LogFunctionType,
-				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return interpreter.Void
-				},
-			)
-
-			return funcs
-		}
+		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		_, err := CompileAndInvokeWithOptions(t,
 			`
@@ -4669,19 +4559,7 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 		var logs []string
 		vmConfig := vm.NewConfig(storage)
 
-		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
-				commons.LogFunctionName,
-				stdlib.LogFunctionType,
-				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return interpreter.Void
-				},
-			)
-
-			return funcs
-		}
+		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		_, err := CompileAndInvokeWithOptions(t,
 			`
@@ -4768,19 +4646,7 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 		var logs []string
 		vmConfig := vm.NewConfig(storage)
 
-		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
-				commons.LogFunctionName,
-				stdlib.LogFunctionType,
-				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return interpreter.Void
-				},
-			)
-
-			return funcs
-		}
+		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		_, err := CompileAndInvokeWithOptions(t,
 			`
@@ -7429,19 +7295,7 @@ func TestInheritedConditions(t *testing.T) {
 		}
 
 		var logs []string
-		vmConfig.NativeFunctionsProvider = func() map[string]vm.Value {
-			funcs := vm.NativeFunctions()
-			funcs[commons.LogFunctionName] = vm.NewNativeFunctionValue(
-				commons.LogFunctionName,
-				stdlib.LogFunctionType,
-				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					logs = append(logs, arguments[0].String())
-					return interpreter.Void
-				},
-			)
-
-			return funcs
-		}
+		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		prepareVMConfig(t, vmConfig, programs)
 
