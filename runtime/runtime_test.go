@@ -12467,6 +12467,10 @@ func TestRuntimeInvokeContractFunctionImported(t *testing.T) {
                 return self.account.address
             }
 
+            access(all) fun getAccountBalance(): UFix64 {
+                return getAccount(0x1).balance
+            }
+
 			access(all) fun getContractAccountAddress(): Address {
                 return Test3.account.address
             }
@@ -12490,6 +12494,9 @@ func TestRuntimeInvokeContractFunctionImported(t *testing.T) {
 		},
 		OnEmitEvent: func(event cadence.Event) error {
 			return nil
+		},
+		OnGetAccountBalance: func(_ Address) (uint64, error) {
+			return 0, nil
 		},
 	}
 
@@ -12590,6 +12597,29 @@ func TestRuntimeInvokeContractFunctionImported(t *testing.T) {
 
 	require.Equal(t,
 		cadence.Address(addressValue),
+		result,
+	)
+
+	// Call getAccountBalance
+
+	result, err = runtime.InvokeContractFunction(
+		common.AddressLocation{
+			Address: addressValue,
+			Name:    "Test3",
+		},
+		"getAccountBalance",
+		nil,
+		nil,
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		cadence.UFix64(0),
 		result,
 	)
 }

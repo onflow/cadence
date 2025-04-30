@@ -115,6 +115,7 @@ func (e *vmEnvironment) newVMConfig() *vm.Config {
 	config.WithInterpreterConfig(&interpreter.Config{
 		InjectedCompositeFieldsHandler: newInjectedCompositeFieldsHandler(e),
 	})
+	config.WithAccountHandler(e)
 	return config
 }
 
