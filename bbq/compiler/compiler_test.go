@@ -5491,13 +5491,25 @@ func TestCompileArgument(t *testing.T) {
 		functions[0].Code,
 	)
 
+	const (
+		// fTypeIndex is the index of the type of function `f`, which is the first type
+		fTypeIndex = iota //nolint:unused
+		// testTypeIndex is the index of the type of function `test`, which is the second type
+		testTypeIndex
+		// xParameterTypeIndex is the index of the type of parameter `x`, which is the third type
+		xParameterTypeIndex
+	)
+
+	// xIndex is the index of the local variable `x`, which is the first local variable
+	const xIndex = 0
+
 	assert.Equal(t,
 		[]opcode.Instruction{
 			opcode.InstructionGetConstant{},
-			opcode.InstructionSetLocal{Local: 0},
+			opcode.InstructionSetLocal{Local: xIndex},
 			opcode.InstructionGetGlobal{Global: 0},
-			opcode.InstructionGetLocal{Local: 0},
-			opcode.InstructionTransfer{Type: 2},
+			opcode.InstructionGetLocal{Local: xIndex},
+			opcode.InstructionTransfer{Type: xParameterTypeIndex},
 			opcode.InstructionInvoke{ArgCount: 1},
 			opcode.InstructionDrop{},
 			opcode.InstructionReturn{},
