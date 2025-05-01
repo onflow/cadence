@@ -538,10 +538,10 @@ func (checker *Checker) checkInvocation(
 	checker.Elaboration.SetInvocationExpressionTypes(
 		invocationExpression,
 		InvocationExpressionTypes{
-			TypeArguments:      typeArguments,
-			TypeParameterTypes: parameterTypes,
-			ReturnType:         returnType,
-			ArgumentTypes:      argumentTypes,
+			TypeArguments:  typeArguments,
+			ParameterTypes: parameterTypes,
+			ReturnType:     returnType,
+			ArgumentTypes:  argumentTypes,
 		},
 	)
 
