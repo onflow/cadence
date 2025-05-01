@@ -113,14 +113,6 @@ func ParseCheckAndPrepareWithEvents(tb testing.TB, code string, compile bool) (
 
 	vmConfig := &vm.Config{}
 
-	vmConfig.OnEventEmitted = func(event *interpreter.CompositeValue, eventType *interpreter.CompositeStaticType) error {
-		events = append(events, TestEvent{
-			Event:     event,
-			EventType: interpreter.MustConvertStaticToSemaType(eventType, vmConfig).(*sema.CompositeType),
-		})
-		return nil
-	}
-
 	vmInstance := compilerUtils.CompileAndPrepareToInvoke(
 		tb,
 		code,
@@ -129,7 +121,48 @@ func ParseCheckAndPrepareWithEvents(tb testing.TB, code string, compile bool) (
 		},
 	)
 
+	vmConfig.OnEventEmitted = func(eventValues []interpreter.Value, eventType *interpreter.CompositeStaticType) error {
+		eventSemaType, eventValue := eventTypeAndValue(
+			vmInstance.Context(),
+			eventType,
+			eventValues,
+		)
+
+		events = append(events, TestEvent{
+			Event:     eventValue,
+			EventType: eventSemaType,
+		})
+		return nil
+	}
+
 	return NewVMInvokable(vmInstance), getEvents, nil
+}
+
+func eventTypeAndValue(
+	context *vm.Context,
+	eventType *interpreter.CompositeStaticType,
+	eventValues []interpreter.Value,
+) (*sema.CompositeType, *interpreter.CompositeValue) {
+	eventSemaType := interpreter.MustConvertStaticToSemaType(eventType, context).(*sema.CompositeType)
+
+	var fields []interpreter.CompositeField
+	for index, value := range eventValues {
+		fields = append(fields, interpreter.CompositeField{
+			Value: value,
+			Name:  eventSemaType.Fields[index],
+		})
+	}
+
+	event := interpreter.NewCompositeValue(
+		context,
+		interpreter.EmptyLocationRange,
+		eventType.Location,
+		eventType.QualifiedIdentifier,
+		eventSemaType.Kind,
+		fields,
+		common.ZeroAddress,
+	)
+	return eventSemaType, event
 }
 
 func ParseCheckAndPrepareWithOptions(
@@ -151,11 +184,6 @@ func ParseCheckAndPrepareWithOptions(
 
 	vmConfig.WithDebugEnabled()
 
-	vmConfig.OnEventEmitted = func(event *interpreter.CompositeValue, eventType *interpreter.CompositeStaticType) error {
-		eventSemaType := interpreter.MustConvertStaticToSemaType(eventType, vmConfig).(*sema.CompositeType)
-		return options.Config.OnEventEmitted(nil, interpreter.EmptyLocationRange, event, eventSemaType)
-	}
-
 	var parseAndCheckOptions *sema_utils.ParseAndCheckOptions
 	if options.CheckerConfig != nil {
 		parseAndCheckOptions = &sema_utils.ParseAndCheckOptions{
@@ -173,6 +201,21 @@ func ParseCheckAndPrepareWithOptions(
 			},
 		},
 	)
+
+	vmConfig.OnEventEmitted = func(eventValues []interpreter.Value, eventType *interpreter.CompositeStaticType) error {
+		eventSemaType, eventValue := eventTypeAndValue(
+			vmInstance.Context(),
+			eventType,
+			eventValues,
+		)
+
+		return options.Config.OnEventEmitted(
+			nil,
+			interpreter.EmptyLocationRange,
+			eventValue,
+			eventSemaType,
+		)
+	}
 
 	return NewVMInvokable(vmInstance), nil
 }
