@@ -233,6 +233,7 @@ func assertConditionErrorWithMessage(
 	conditionKind ast.ConditionKind,
 	message string,
 ) {
+	require.NoError(t, err)
 	RequireError(t, err)
 
 	if *compile {
