@@ -5495,7 +5495,7 @@ func TestCompileArgument(t *testing.T) {
 		// fTypeIndex is the index of the type of function `f`, which is the first type
 		fTypeIndex = iota //nolint:unused
 		// testTypeIndex is the index of the type of function `test`, which is the second type
-		testTypeIndex
+		testTypeIndex //nolint:unused
 		// xParameterTypeIndex is the index of the type of parameter `x`, which is the third type
 		xParameterTypeIndex
 	)
