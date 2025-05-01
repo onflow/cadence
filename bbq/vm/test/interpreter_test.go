@@ -333,10 +333,10 @@ func interpreterFTTransfer(tb testing.TB) {
 			)
 		},
 		OnEventEmitted: func(
-			_ *interpreter.Interpreter,
+			_ interpreter.ValueExportContext,
 			_ interpreter.LocationRange,
-			_ *interpreter.CompositeValue,
 			_ *sema.CompositeType,
+			_ []interpreter.Value,
 		) error {
 			// NO-OP
 			return nil

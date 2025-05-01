@@ -25,29 +25,6 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-func emitEventValue(
-	context interpreter.ValueExportContext,
-	locationRange interpreter.LocationRange,
-	eventType *sema.CompositeType,
-	event *interpreter.CompositeValue,
-	emitEvent func(cadence.Event) error,
-) {
-	fields := make([]interpreter.Value, len(eventType.ConstructorParameters))
-
-	for i, parameter := range eventType.ConstructorParameters {
-		value := event.GetField(context, parameter.Identifier)
-		fields[i] = value
-	}
-
-	EmitEventFields(
-		context,
-		locationRange,
-		eventType,
-		fields,
-		emitEvent,
-	)
-}
-
 func EmitEventFields(
 	context interpreter.ValueExportContext,
 	locationRange interpreter.LocationRange,

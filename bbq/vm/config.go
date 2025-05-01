@@ -27,12 +27,6 @@ import (
 	"github.com/onflow/cadence/stdlib"
 )
 
-// OnEventEmittedFunc is a function that is triggered when an event is emitted by the program.
-type OnEventEmittedFunc func(
-	eventValues []interpreter.Value,
-	eventType *interpreter.CompositeStaticType,
-) error
-
 // Config contains the VM configurations that is safe to be re-used across VMs/executions.
 // It does not hold data specific to a single execution. i.e: No state is maintained.
 type Config struct {
@@ -48,8 +42,6 @@ type Config struct {
 
 	accountHandler stdlib.AccountHandler
 	TypeLoader     func(location common.Location, typeID interpreter.TypeID) sema.ContainedType
-	// OnEventEmitted is triggered when an event is emitted by the program
-	OnEventEmitted OnEventEmittedFunc
 
 	debugEnabled bool
 }
@@ -255,21 +247,28 @@ func (c *Config) GetCapabilityCheckHandler() interpreter.CapabilityCheckHandlerF
 	return c.interpreterConfig.CapabilityCheckHandler
 }
 
-func (c *Config) EmitEventValue(
-	event *interpreter.CompositeValue,
-	eventType *sema.CompositeType,
-	locationRange interpreter.LocationRange,
-) {
-	//TODO
-}
-
 func (c *Config) EmitEvent(
 	context interpreter.ValueExportContext,
 	locationRange interpreter.LocationRange,
 	eventType *sema.CompositeType,
-	values []interpreter.Value,
+	eventFields []Value,
 ) {
-	//TODO
+	onEventEmitted := c.interpreterConfig.OnEventEmitted
+	if onEventEmitted == nil {
+		panic(interpreter.EventEmissionUnavailableError{
+			LocationRange: locationRange,
+		})
+	}
+
+	err := onEventEmitted(
+		context,
+		locationRange,
+		eventType,
+		eventFields,
+	)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (c *Config) ProgramLog(message string, locationRange interpreter.LocationRange) error {

@@ -362,8 +362,12 @@ func (interpreter *Interpreter) visitForStatementBody(
 	return nil, false
 }
 
-func (interpreter *Interpreter) EmitEventValue(event *CompositeValue, eventType *sema.CompositeType, locationRange LocationRange) {
-
+func (interpreter *Interpreter) EmitEvent(
+	context ValueExportContext,
+	locationRange LocationRange,
+	eventType *sema.CompositeType,
+	eventFields []Value,
+) {
 	config := interpreter.SharedState.Config
 
 	onEventEmitted := config.OnEventEmitted
@@ -373,7 +377,12 @@ func (interpreter *Interpreter) EmitEventValue(event *CompositeValue, eventType 
 		})
 	}
 
-	err := onEventEmitted(interpreter, locationRange, event, eventType)
+	err := onEventEmitted(
+		context,
+		locationRange,
+		eventType,
+		eventFields,
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -393,9 +402,35 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 		HasPosition: statement,
 	}
 
-	interpreter.EmitEventValue(event, eventType, locationRange)
+	eventFields := extractEventFields(interpreter, event, eventType)
+
+	interpreter.EmitEvent(
+		interpreter,
+		locationRange,
+		eventType,
+		eventFields,
+	)
 
 	return nil
+}
+
+func extractEventFields(
+	gauge common.MemoryGauge,
+	event *CompositeValue, eventType *sema.CompositeType) []Value {
+
+	count := len(eventType.ConstructorParameters)
+	if count == 0 {
+		return nil
+	}
+
+	eventFields := make([]Value, count)
+
+	for i, parameter := range eventType.ConstructorParameters {
+		value := event.GetField(gauge, parameter.Identifier)
+		eventFields[i] = value
+	}
+
+	return eventFields
 }
 
 func (interpreter *Interpreter) VisitRemoveStatement(removeStatement *ast.RemoveStatement) StatementResult {

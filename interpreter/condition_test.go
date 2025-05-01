@@ -93,21 +93,12 @@ func TestInterpretFunctionPreEmitCondition(t *testing.T) {
 	require.Len(t, events, 1)
 	event := events[0]
 
-	expectedEvent := interpreter.NewCompositeValue(
-		inter,
-		interpreter.EmptyLocationRange,
-		inter.Location,
-		"Foo",
-		common.CompositeKindEvent,
-		[]interpreter.CompositeField{
-			{
-				Name:  "x",
-				Value: answer,
-			},
+	assert.Equal(t,
+		[]interpreter.Value{
+			answer,
 		},
-		common.ZeroAddress,
+		event.EventFields,
 	)
-	AssertValuesEqual(t, inter, expectedEvent, event.Event)
 }
 
 func TestInterpretFunctionPostTestCondition(t *testing.T) {
@@ -169,21 +160,12 @@ func TestInterpretFunctionPostEmitCondition(t *testing.T) {
 	require.Len(t, events, 1)
 	event := events[0]
 
-	expectedEvent := interpreter.NewCompositeValue(
-		inter,
-		interpreter.EmptyLocationRange,
-		inter.Location,
-		"Foo",
-		common.CompositeKindEvent,
-		[]interpreter.CompositeField{
-			{
-				Name:  "y",
-				Value: answer,
-			},
+	assert.Equal(t,
+		[]interpreter.Value{
+			answer,
 		},
-		common.ZeroAddress,
+		event.EventFields,
 	)
-	AssertValuesEqual(t, inter, expectedEvent, event.Event)
 }
 
 func TestInterpretFunctionWithResultAndPostTestConditionWithResult(t *testing.T) {
@@ -241,21 +223,12 @@ func TestInterpretFunctionWithResultAndPostEmitConditionWithResult(t *testing.T)
 	require.Len(t, events, 1)
 	event := events[0]
 
-	expectedEvent := interpreter.NewCompositeValue(
-		inter,
-		interpreter.EmptyLocationRange,
-		inter.Location,
-		"Foo",
-		common.CompositeKindEvent,
-		[]interpreter.CompositeField{
-			{
-				Name:  "x",
-				Value: answer,
-			},
+	assert.Equal(t,
+		[]interpreter.Value{
+			answer,
 		},
-		common.ZeroAddress,
+		event.EventFields,
 	)
-	AssertValuesEqual(t, inter, expectedEvent, event.Event)
 }
 
 func TestInterpretFunctionWithoutResultAndPostTestConditionWithResult(t *testing.T) {
@@ -306,21 +279,12 @@ func TestInterpretFunctionWithoutResultAndPostEmitConditionWithResult(t *testing
 	event := events[0]
 
 	answer := interpreter.NewUnmeteredIntValueFromInt64(42)
-	expectedEvent := interpreter.NewCompositeValue(
-		inter,
-		interpreter.EmptyLocationRange,
-		inter.Location,
-		"Foo",
-		common.CompositeKindEvent,
-		[]interpreter.CompositeField{
-			{
-				Name:  "x",
-				Value: answer,
-			},
+	assert.Equal(t,
+		[]interpreter.Value{
+			answer,
 		},
-		common.ZeroAddress,
+		event.EventFields,
 	)
-	AssertValuesEqual(t, inter, expectedEvent, event.Event)
 }
 
 func TestInterpretFunctionPostTestConditionWithBefore(t *testing.T) {
@@ -380,25 +344,13 @@ func TestInterpretFunctionPostEmitConditionWithBefore(t *testing.T) {
 	require.Len(t, events, 1)
 	event := events[0]
 
-	expectedEvent := interpreter.NewCompositeValue(
-		inter,
-		interpreter.EmptyLocationRange,
-		inter.Location,
-		"Foo",
-		common.CompositeKindEvent,
-		[]interpreter.CompositeField{
-			{
-				Name:  "x",
-				Value: interpreter.NewUnmeteredIntValueFromInt64(1),
-			},
-			{
-				Name:  "beforeX",
-				Value: interpreter.NewUnmeteredIntValueFromInt64(0),
-			},
+	assert.Equal(t,
+		[]interpreter.Value{
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+			interpreter.NewUnmeteredIntValueFromInt64(0),
 		},
-		common.ZeroAddress,
+		event.EventFields,
 	)
-	AssertValuesEqual(t, inter, expectedEvent, event.Event)
 }
 
 func TestInterpretFunctionPostConditionWithBeforeFailingPreTestCondition(t *testing.T) {
@@ -647,8 +599,8 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
                       event InterX(x: Int)
                       event ImplX(x: Int)
 
-                      access(all) %[1]s interface Test {
-                          access(all) fun test(x: Int): Int {
+                      %[1]s interface Test {
+                          fun test(x: Int): Int {
                               pre {
                                   x > 0: "x must be positive"
                                   emit InterX(x: x)
@@ -656,8 +608,8 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
                           }
                       }
 
-                      access(all) %[1]s TestImpl: Test {
-                          access(all) fun test(x: Int): Int {
+                      %[1]s TestImpl: Test {
+                          fun test(x: Int): Int {
                               pre {
                                   x < 2: "x must be smaller than 2"
                                   emit ImplX(x: x)
@@ -666,7 +618,7 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
                           }
                       }
 
-                      access(all) fun callTest(x: Int): Int {
+                      fun callTest(x: Int): Int {
                           %[2]s
                           let res = %[3]s.test(x: x)
                           %[4]s
@@ -682,14 +634,14 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 					Config: &interpreter.Config{
 						ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 						OnEventEmitted: func(
-							_ *interpreter.Interpreter,
+							_ interpreter.ValueExportContext,
 							_ interpreter.LocationRange,
-							event *interpreter.CompositeValue,
 							eventType *sema.CompositeType,
+							eventFields []interpreter.Value,
 						) error {
 							events = append(events, testEvent{
-								Event:     event,
-								EventType: eventType,
+								EventType:   eventType,
+								EventFields: eventFields,
 							})
 							return nil
 						},
@@ -729,42 +681,28 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 
 				require.Len(t, events, 2)
 
-				AssertValuesEqual(t,
-					inter,
-					interpreter.NewCompositeValue(
-						inter,
-						interpreter.EmptyLocationRange,
-						inter.Location,
-						"InterX",
-						common.CompositeKindEvent,
-						[]interpreter.CompositeField{
-							{
-								Name:  "x",
-								Value: value,
-							},
-						},
-						common.ZeroAddress,
-					),
-					events[0].Event,
+				assert.Equal(t,
+					inter.Location.TypeID(nil, "InterX"),
+					events[0].EventType.ID(),
 				)
 
-				AssertValuesEqual(t,
-					inter,
-					interpreter.NewCompositeValue(
-						inter,
-						interpreter.EmptyLocationRange,
-						inter.Location,
-						"ImplX",
-						common.CompositeKindEvent,
-						[]interpreter.CompositeField{
-							{
-								Name:  "x",
-								Value: value,
-							},
-						},
-						common.ZeroAddress,
-					),
-					events[1].Event,
+				assert.Equal(t,
+					[]interpreter.Value{
+						value,
+					},
+					events[0].EventFields,
+				)
+
+				assert.Equal(t,
+					inter.Location.TypeID(nil, "ImplX"),
+					events[1].EventType.ID(),
+				)
+
+				assert.Equal(t,
+					[]interpreter.Value{
+						value,
+					},
+					events[1].EventFields,
 				)
 			})
 
@@ -782,23 +720,16 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 
 				require.Len(t, events, 1)
 
-				AssertValuesEqual(t,
-					inter,
-					interpreter.NewCompositeValue(
-						inter,
-						interpreter.EmptyLocationRange,
-						inter.Location,
-						"InterX",
-						common.CompositeKindEvent,
-						[]interpreter.CompositeField{
-							{
-								Name:  "x",
-								Value: value,
-							},
-						},
-						common.ZeroAddress,
-					),
-					events[0].Event,
+				assert.Equal(t,
+					inter.Location.TypeID(nil, "InterX"),
+					events[0].EventType.ID(),
+				)
+
+				assert.Equal(t,
+					[]interpreter.Value{
+						value,
+					},
+					events[0].EventFields,
 				)
 			})
 		})
@@ -834,7 +765,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 					if compositeKind == common.CompositeKindContract {
 						// use the contract singleton, so it is loaded
 						testFunction = `
-					       access(all) fun test() {
+					       fun test() {
 					            TestImpl.NoOpFunc()
 					       }
                         `
@@ -844,7 +775,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 						testFunction =
 							fmt.Sprintf(
 								`
-					               access(all) fun test(x: Int): %[1]s%[2]s {
+					               fun test(x: Int): %[1]s%[2]s {
 					                   return %[3]s %[4]s TestImpl%[5]s
 					               }
                                 `,
@@ -862,7 +793,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
                                  access(all)
                                  event Foo(x: Int)
 
-					             access(all) %[1]s interface Test {
+					             %[1]s interface Test {
 					                 init(x: Int) {
 					                     pre {
 					                         x > 0: "x must be positive"
@@ -871,7 +802,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 					                 }
 					             }
 
-					             access(all) %[1]s TestImpl: Test {
+					             %[1]s TestImpl: Test {
 					                 init(x: Int) {
 					                     pre {
 					                         x < 2: "x must be smaller than 2"
@@ -879,7 +810,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 					                     }
 					                 }
 
-					                 access(all) fun NoOpFunc() {}
+					                 fun NoOpFunc() {}
 					             }
 
 					             %[2]s
@@ -916,14 +847,14 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 					}
 
 					onEventEmitted := func(
-						_ *interpreter.Interpreter,
+						_ interpreter.ValueExportContext,
 						_ interpreter.LocationRange,
-						event *interpreter.CompositeValue,
 						eventType *sema.CompositeType,
+						eventFields []interpreter.Value,
 					) error {
 						events = append(events, testEvent{
-							Event:     event,
-							EventType: eventType,
+							EventType:   eventType,
+							EventFields: eventFields,
 						})
 						return nil
 					}
