@@ -58,10 +58,10 @@ type getterSetter struct {
 
 // OnEventEmittedFunc is a function that is triggered when an event is emitted by the program.
 type OnEventEmittedFunc func(
-	inter *Interpreter,
+	context ValueExportContext,
 	locationRange LocationRange,
-	event *CompositeValue,
 	eventType *sema.CompositeType,
+	eventFields []Value,
 ) error
 
 // OnStatementFunc is a function that is triggered when a statement is about to be executed.

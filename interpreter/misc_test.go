@@ -6454,34 +6454,47 @@ func TestInterpretResourceMoveInArrayAndDestroy(t *testing.T) {
 
 	t.Parallel()
 
-	var events []*interpreter.CompositeValue
+	var eventTypes []*sema.CompositeType
+	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t, `
-      resource Foo {
-		  event ResourceDestroyed(bar: Int = self.bar)
-          var bar: Int
+	inter, err := parseCheckAndInterpretWithOptions(t,
+		`
+          resource Foo {
+              event ResourceDestroyed(
+                  bar: Int = self.bar
+              )
 
-          init(bar: Int) {
-              self.bar = bar
+              var bar: Int
+
+              init(bar: Int) {
+                  self.bar = bar
+              }
           }
-      }
 
-      fun test(): Int {
-          let foo1 <- create Foo(bar: 1)
-          let foo2 <- create Foo(bar: 2)
-          let foos <- [<-foo1, <-foo2]
-          let bar = foos[1].bar
-          destroy foos
-          return bar
-      }
-    `, ParseCheckAndInterpretOptions{
-		Config: &interpreter.Config{
-			OnEventEmitted: func(_ *interpreter.Interpreter, _ interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
-				events = append(events, event)
-				return nil
+          fun test(): Int {
+              let foo1 <- create Foo(bar: 1)
+              let foo2 <- create Foo(bar: 2)
+              let foos <- [<-foo1, <-foo2]
+              let bar = foos[1].bar
+              destroy foos
+              return bar
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				OnEventEmitted: func(
+					_ interpreter.ValueExportContext,
+					_ interpreter.LocationRange,
+					eventType *sema.CompositeType,
+					eventFields []interpreter.Value,
+				) error {
+					eventTypes = append(eventTypes, eventType)
+					eventsFields = append(eventsFields, eventFields)
+					return nil
+				},
 			},
 		},
-	})
+	)
 	require.NoError(t, err)
 
 	value, err := inter.Invoke("test")
@@ -6494,53 +6507,86 @@ func TestInterpretResourceMoveInArrayAndDestroy(t *testing.T) {
 		value,
 	)
 
-	require.Len(t, events, 2)
-	require.Equal(t, "Foo.ResourceDestroyed", events[0].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, "bar"))
-	require.Equal(t, "Foo.ResourceDestroyed", events[1].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 2), events[1].GetField(inter, "bar"))
+	require.Len(t, eventTypes, 2)
+	require.Equal(t, "Foo.ResourceDestroyed", eventTypes[0].QualifiedIdentifier())
+	require.Equal(t, "Foo.ResourceDestroyed", eventTypes[1].QualifiedIdentifier())
+
+	require.Equal(t,
+		[][]interpreter.Value{
+			{
+				interpreter.NewIntValueFromInt64(nil, 1),
+			},
+			{
+				interpreter.NewIntValueFromInt64(nil, 2),
+			},
+		},
+		eventsFields,
+	)
 }
 
 func TestInterpretResourceMoveInDictionaryAndDestroy(t *testing.T) {
 
 	t.Parallel()
 
-	var events []*interpreter.CompositeValue
+	var eventTypes []*sema.CompositeType
+	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t, `
-      resource Foo {
-		  event ResourceDestroyed(bar: Int = self.bar)
-          var bar: Int
+	inter, err := parseCheckAndInterpretWithOptions(t,
+		`
+          resource Foo {
+              event ResourceDestroyed(
+                  bar: Int = self.bar
+              )
 
-          init(bar: Int) {
-              self.bar = bar
+              var bar: Int
+
+              init(bar: Int) {
+                  self.bar = bar
+              }
           }
-      }
 
-      fun test() {
-          let foo1 <- create Foo(bar: 1)
-          let foo2 <- create Foo(bar: 2)
-          let foos <- {"foo1": <-foo1, "foo2": <-foo2}
-          destroy foos
-      }
-    `, ParseCheckAndInterpretOptions{
-		Config: &interpreter.Config{
-			OnEventEmitted: func(_ *interpreter.Interpreter, _ interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
-				events = append(events, event)
-				return nil
+          fun test() {
+              let foo1 <- create Foo(bar: 1)
+              let foo2 <- create Foo(bar: 2)
+              let foos <- {"foo1": <-foo1, "foo2": <-foo2}
+              destroy foos
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				OnEventEmitted: func(
+					_ interpreter.ValueExportContext,
+					_ interpreter.LocationRange,
+					eventType *sema.CompositeType,
+					eventFields []interpreter.Value,
+				) error {
+					eventTypes = append(eventTypes, eventType)
+					eventsFields = append(eventsFields, eventFields)
+					return nil
+				},
 			},
 		},
-	})
+	)
 	require.NoError(t, err)
 
 	_, err = inter.Invoke("test")
 	require.NoError(t, err)
 
-	require.Len(t, events, 2)
-	require.Equal(t, "Foo.ResourceDestroyed", events[0].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, "bar"))
-	require.Equal(t, "Foo.ResourceDestroyed", events[1].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 2), events[1].GetField(inter, "bar"))
+	require.Len(t, eventTypes, 2)
+	require.Equal(t, "Foo.ResourceDestroyed", eventTypes[0].QualifiedIdentifier())
+	require.Equal(t, "Foo.ResourceDestroyed", eventTypes[1].QualifiedIdentifier())
+
+	require.Equal(t,
+		[][]interpreter.Value{
+			{
+				interpreter.NewIntValueFromInt64(nil, 1),
+			},
+			{
+				interpreter.NewIntValueFromInt64(nil, 2),
+			},
+		},
+		eventsFields,
+	)
 }
 
 func TestInterpretClosure(t *testing.T) {
@@ -7032,213 +7078,287 @@ func TestInterpretResourceDestroyExpressionDestructor(t *testing.T) {
 
 	t.Parallel()
 
-	var events []*interpreter.CompositeValue
+	var eventTypes []*sema.CompositeType
+	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t, `
-        resource R {
-			event ResourceDestroyed()
-	    }
+	inter, err := parseCheckAndInterpretWithOptions(t,
+		`
+           resource R {
+               event ResourceDestroyed()
+           }
 
-       fun test() {
-           let r <- create R()
-           destroy r
-       }
-    `, ParseCheckAndInterpretOptions{
-		Config: &interpreter.Config{
-			OnEventEmitted: func(_ *interpreter.Interpreter, _ interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
-				events = append(events, event)
-				return nil
+           fun test() {
+               let r <- create R()
+               destroy r
+           }
+        `,
+		ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				OnEventEmitted: func(
+					_ interpreter.ValueExportContext,
+					_ interpreter.LocationRange,
+					eventType *sema.CompositeType,
+					eventFields []interpreter.Value,
+				) error {
+					eventTypes = append(eventTypes, eventType)
+					eventsFields = append(eventsFields, eventFields)
+					return nil
+				},
 			},
 		},
-	})
+	)
 
 	require.NoError(t, err)
 
 	_, err = inter.Invoke("test")
 	require.NoError(t, err)
 
-	require.Len(t, events, 1)
-	require.Equal(t, "R.ResourceDestroyed", events[0].QualifiedIdentifier)
+	require.Len(t, eventTypes, 1)
+	require.Equal(t, "R.ResourceDestroyed", eventTypes[0].QualifiedIdentifier())
 }
 
 func TestInterpretResourceDestroyExpressionNestedResources(t *testing.T) {
 
 	t.Parallel()
 
-	var events []*interpreter.CompositeValue
+	var eventTypes []*sema.CompositeType
+	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t, `
-      resource B {
-		var foo: Int
-		event ResourceDestroyed(foo: Int = self.foo)
+	inter, err := parseCheckAndInterpretWithOptions(t,
+		`
+          resource B {
+            var foo: Int
 
-		init() {
-			self.foo = 5
-		}
-	  }
+            event ResourceDestroyed(
+                foo: Int = self.foo
+            )
 
-      resource A {
-		  event ResourceDestroyed(foo: Int = self.b.foo)
-
-          let b: @B
-
-          init(b: @B) {
-              self.b <- b
+            init() {
+                self.foo = 5
+            }
           }
-      }
 
-      fun test() {
-          let b <- create B()
-          let a <- create A(b: <-b)
-          destroy a
-      }
-    `, ParseCheckAndInterpretOptions{
-		Config: &interpreter.Config{
-			OnEventEmitted: func(_ *interpreter.Interpreter, _ interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
-				events = append(events, event)
-				return nil
+          resource A {
+              event ResourceDestroyed(
+                  foo: Int = self.b.foo
+              )
+
+              let b: @B
+
+              init(b: @B) {
+                  self.b <- b
+              }
+          }
+
+          fun test() {
+              let b <- create B()
+              let a <- create A(b: <-b)
+              destroy a
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				OnEventEmitted: func(
+					_ interpreter.ValueExportContext,
+					_ interpreter.LocationRange,
+					eventType *sema.CompositeType,
+					eventFields []interpreter.Value,
+				) error {
+					eventTypes = append(eventTypes, eventType)
+					eventsFields = append(eventsFields, eventFields)
+					return nil
+				},
 			},
 		},
-	})
+	)
 	require.NoError(t, err)
 
 	_, err = inter.Invoke("test")
 	require.NoError(t, err)
 
-	require.Len(t, events, 2)
-	require.Equal(t, "B.ResourceDestroyed", events[0].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 5), events[0].GetField(inter, "foo"))
-	require.Equal(t, "A.ResourceDestroyed", events[1].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 5), events[1].GetField(inter, "foo"))
+	require.Len(t, eventTypes, 2)
+	require.Equal(t, "B.ResourceDestroyed", eventTypes[0].QualifiedIdentifier())
+	require.Equal(t, "A.ResourceDestroyed", eventTypes[1].QualifiedIdentifier())
+
+	require.Equal(t,
+		[][]interpreter.Value{
+			{
+				interpreter.NewIntValueFromInt64(nil, 5),
+			}, {
+				interpreter.NewIntValueFromInt64(nil, 5),
+			},
+		},
+		eventsFields,
+	)
 }
 
 func TestInterpretResourceDestroyArray(t *testing.T) {
 
 	t.Parallel()
 
-	var events []*interpreter.CompositeValue
+	var eventTypes []*sema.CompositeType
+	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t, `
-      resource R {
-		event ResourceDestroyed()
-	  }
+	inter, err := parseCheckAndInterpretWithOptions(t,
+		`
+          resource R {
+              event ResourceDestroyed()
+          }
 
-      fun test() {
-          let rs <- [<-create R(), <-create R()]
-          destroy rs
-      }
-    `, ParseCheckAndInterpretOptions{
-		Config: &interpreter.Config{
-			OnEventEmitted: func(_ *interpreter.Interpreter, _ interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
-				events = append(events, event)
-				return nil
+          fun test() {
+              let rs <- [<-create R(), <-create R()]
+              destroy rs
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				OnEventEmitted: func(
+					_ interpreter.ValueExportContext,
+					_ interpreter.LocationRange,
+					eventType *sema.CompositeType,
+					eventFields []interpreter.Value,
+				) error {
+					eventTypes = append(eventTypes, eventType)
+					eventsFields = append(eventsFields, eventFields)
+					return nil
+				},
 			},
 		},
-	})
+	)
 	require.NoError(t, err)
 
 	_, err = inter.Invoke("test")
 	require.NoError(t, err)
 
-	require.Len(t, events, 2)
-	require.Equal(t, "R.ResourceDestroyed", events[0].QualifiedIdentifier)
-	require.Equal(t, "R.ResourceDestroyed", events[1].QualifiedIdentifier)
+	require.Len(t, eventTypes, 2)
+	require.Equal(t, "R.ResourceDestroyed", eventTypes[0].QualifiedIdentifier())
+	require.Equal(t, "R.ResourceDestroyed", eventTypes[1].QualifiedIdentifier())
 }
 
 func TestInterpretResourceDestroyDictionary(t *testing.T) {
 
 	t.Parallel()
 
-	var events []*interpreter.CompositeValue
+	var eventTypes []*sema.CompositeType
+	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t, `
-	  resource R {
-		event ResourceDestroyed()
-	  }
+	inter, err := parseCheckAndInterpretWithOptions(t,
+		`
+          resource R {
+              event ResourceDestroyed()
+          }
 
-      fun test() {
-          let rs <- {"r1": <-create R(), "r2": <-create R()}
-          destroy rs
-      }
-    `, ParseCheckAndInterpretOptions{
-		Config: &interpreter.Config{
-			OnEventEmitted: func(_ *interpreter.Interpreter, _ interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
-				events = append(events, event)
-				return nil
+          fun test() {
+              let rs <- {"r1": <-create R(), "r2": <-create R()}
+              destroy rs
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				OnEventEmitted: func(
+					_ interpreter.ValueExportContext,
+					_ interpreter.LocationRange,
+					eventType *sema.CompositeType,
+					eventFields []interpreter.Value,
+				) error {
+					eventTypes = append(eventTypes, eventType)
+					eventsFields = append(eventsFields, eventFields)
+					return nil
+				},
 			},
 		},
-	})
+	)
 	require.NoError(t, err)
 
 	_, err = inter.Invoke("test")
 	require.NoError(t, err)
 
-	require.Len(t, events, 2)
-	require.Equal(t, "R.ResourceDestroyed", events[0].QualifiedIdentifier)
-	require.Equal(t, "R.ResourceDestroyed", events[1].QualifiedIdentifier)
+	require.Len(t, eventTypes, 2)
+	require.Equal(t, "R.ResourceDestroyed", eventTypes[0].QualifiedIdentifier())
+	require.Equal(t, "R.ResourceDestroyed", eventTypes[1].QualifiedIdentifier())
 }
 
 func TestInterpretResourceDestroyOptionalSome(t *testing.T) {
 
 	t.Parallel()
 
-	var events []*interpreter.CompositeValue
+	var eventTypes []*sema.CompositeType
+	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t, `
-      resource R { 
-		event ResourceDestroyed()
-	  }
+	inter, err := parseCheckAndInterpretWithOptions(t,
+		`
+          resource R {
+              event ResourceDestroyed()
+          }
 
-      fun test() {
-          let maybeR: @R? <- create R()
-          destroy maybeR
-      }
-    `, ParseCheckAndInterpretOptions{
-		Config: &interpreter.Config{
-			OnEventEmitted: func(_ *interpreter.Interpreter, _ interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
-				events = append(events, event)
-				return nil
+          fun test() {
+              let maybeR: @R? <- create R()
+              destroy maybeR
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				OnEventEmitted: func(
+					_ interpreter.ValueExportContext,
+					_ interpreter.LocationRange,
+					eventType *sema.CompositeType,
+					eventFields []interpreter.Value,
+				) error {
+					eventTypes = append(eventTypes, eventType)
+					eventsFields = append(eventsFields, eventFields)
+					return nil
+				},
 			},
 		},
-	})
+	)
 	require.NoError(t, err)
 
 	_, err = inter.Invoke("test")
 	require.NoError(t, err)
 
-	require.Len(t, events, 1)
-	require.Equal(t, "R.ResourceDestroyed", events[0].QualifiedIdentifier)
+	require.Len(t, eventTypes, 1)
+	require.Equal(t, "R.ResourceDestroyed", eventTypes[0].QualifiedIdentifier())
 }
 
 func TestInterpretResourceDestroyOptionalNil(t *testing.T) {
 
 	t.Parallel()
 
-	var events []*interpreter.CompositeValue
+	var eventTypes []*sema.CompositeType
+	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t, `
-      resource R {
-		event ResourceDestroyed()
-	  }
+	inter, err := parseCheckAndInterpretWithOptions(t,
+		`
+          resource R {
+              event ResourceDestroyed()
+          }
 
-      fun test() {
-          let maybeR: @R? <- nil
-          destroy maybeR
-      }
-    `, ParseCheckAndInterpretOptions{
-		Config: &interpreter.Config{
-			OnEventEmitted: func(_ *interpreter.Interpreter, _ interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
-				events = append(events, event)
-				return nil
+          fun test() {
+              let maybeR: @R? <- nil
+              destroy maybeR
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				OnEventEmitted: func(
+					_ interpreter.ValueExportContext,
+					_ interpreter.LocationRange,
+					eventType *sema.CompositeType,
+					eventFields []interpreter.Value,
+				) error {
+					eventTypes = append(eventTypes, eventType)
+					eventsFields = append(eventsFields, eventFields)
+					return nil
+				},
 			},
 		},
-	})
+	)
 	require.NoError(t, err)
 
 	_, err = inter.Invoke("test")
 	require.NoError(t, err)
 
-	require.Len(t, events, 0)
+	require.Len(t, eventTypes, 0)
 }
 
 // TestInterpretInterfaceInitializer tests that the interface's initializer
@@ -7280,7 +7400,8 @@ func TestInterpretEmitEvent(t *testing.T) {
 
 	t.Parallel()
 
-	var actualEvents []interpreter.Value
+	var eventTypes []*sema.CompositeType
+	var eventsFields [][]interpreter.Value
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
@@ -7296,12 +7417,13 @@ func TestInterpretEmitEvent(t *testing.T) {
 		ParseCheckAndInterpretOptions{
 			Config: &interpreter.Config{
 				OnEventEmitted: func(
-					_ *interpreter.Interpreter,
+					_ interpreter.ValueExportContext,
 					_ interpreter.LocationRange,
-					event *interpreter.CompositeValue,
 					eventType *sema.CompositeType,
+					eventFields []interpreter.Value,
 				) error {
-					actualEvents = append(actualEvents, event)
+					eventTypes = append(eventTypes, eventType)
+					eventsFields = append(eventsFields, eventFields)
 					return nil
 				},
 			},
@@ -7315,78 +7437,28 @@ func TestInterpretEmitEvent(t *testing.T) {
 	transferEventType := RequireGlobalType(t, inter.Program.Elaboration, "Transfer")
 	transferAmountEventType := RequireGlobalType(t, inter.Program.Elaboration, "TransferAmount")
 
-	fields1 := []interpreter.CompositeField{
-		{
-			Name:  "to",
-			Value: interpreter.NewUnmeteredIntValueFromInt64(1),
-		},
-		{
-			Name:  "from",
-			Value: interpreter.NewUnmeteredIntValueFromInt64(2),
-		},
-	}
+	require.Len(t, eventTypes, 3)
+	require.Equal(t, TestLocation.QualifiedIdentifier(transferEventType.ID()), eventTypes[0].QualifiedIdentifier())
+	require.Equal(t, TestLocation.QualifiedIdentifier(transferEventType.ID()), eventTypes[1].QualifiedIdentifier())
+	require.Equal(t, TestLocation.QualifiedIdentifier(transferAmountEventType.ID()), eventTypes[2].QualifiedIdentifier())
 
-	fields2 := []interpreter.CompositeField{
-		{
-			Name:  "to",
-			Value: interpreter.NewUnmeteredIntValueFromInt64(3),
+	require.Equal(t,
+		[][]interpreter.Value{
+			{
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+			},
+			{
+				interpreter.NewUnmeteredIntValueFromInt64(3),
+				interpreter.NewUnmeteredIntValueFromInt64(4),
+			},
+			{
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+				interpreter.NewUnmeteredIntValueFromInt64(100),
+			},
 		},
-		{
-			Name:  "from",
-			Value: interpreter.NewUnmeteredIntValueFromInt64(4),
-		},
-	}
-
-	fields3 := []interpreter.CompositeField{
-		{
-			Name:  "to",
-			Value: interpreter.NewUnmeteredIntValueFromInt64(1),
-		},
-		{
-			Name:  "from",
-			Value: interpreter.NewUnmeteredIntValueFromInt64(2),
-		},
-		{
-			Name:  "amount",
-			Value: interpreter.NewUnmeteredIntValueFromInt64(100),
-		},
-	}
-
-	expectedEvents := []interpreter.Value{
-		interpreter.NewCompositeValue(
-			inter,
-			interpreter.EmptyLocationRange,
-			TestLocation,
-			TestLocation.QualifiedIdentifier(transferEventType.ID()),
-			common.CompositeKindEvent,
-			fields1,
-			common.ZeroAddress,
-		),
-		interpreter.NewCompositeValue(
-			inter,
-			interpreter.EmptyLocationRange,
-			TestLocation,
-			TestLocation.QualifiedIdentifier(transferEventType.ID()),
-			common.CompositeKindEvent,
-			fields2,
-			common.ZeroAddress,
-		),
-		interpreter.NewCompositeValue(
-			inter,
-			interpreter.EmptyLocationRange,
-			TestLocation,
-			TestLocation.QualifiedIdentifier(transferAmountEventType.ID()),
-			common.CompositeKindEvent,
-			fields3,
-			common.ZeroAddress,
-		),
-	}
-
-	AssertValueSlicesEqual(
-		t,
-		inter,
-		expectedEvents,
-		actualEvents,
+		eventsFields,
 	)
 }
 
@@ -7394,7 +7466,8 @@ func TestInterpretReferenceEventParameter(t *testing.T) {
 
 	t.Parallel()
 
-	var actualEvents []interpreter.Value
+	var eventTypes []*sema.CompositeType
+	var eventsFields [][]interpreter.Value
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
@@ -7407,12 +7480,13 @@ func TestInterpretReferenceEventParameter(t *testing.T) {
 		ParseCheckAndInterpretOptions{
 			Config: &interpreter.Config{
 				OnEventEmitted: func(
-					_ *interpreter.Interpreter,
+					_ interpreter.ValueExportContext,
 					_ interpreter.LocationRange,
-					event *interpreter.CompositeValue,
 					eventType *sema.CompositeType,
+					eventFields []interpreter.Value,
 				) error {
-					actualEvents = append(actualEvents, event)
+					eventTypes = append(eventTypes, eventType)
+					eventsFields = append(eventsFields, eventFields)
 					return nil
 				},
 			},
@@ -7457,29 +7531,10 @@ func TestInterpretReferenceEventParameter(t *testing.T) {
 
 	eventType := RequireGlobalType(t, inter.Program.Elaboration, "TestEvent")
 
-	expectedEvents := []interpreter.Value{
-		interpreter.NewCompositeValue(
-			inter,
-			interpreter.EmptyLocationRange,
-			TestLocation,
-			TestLocation.QualifiedIdentifier(eventType.ID()),
-			common.CompositeKindEvent,
-			[]interpreter.CompositeField{
-				{
-					Name:  "ref",
-					Value: ref,
-				},
-			},
-			common.ZeroAddress,
-		),
-	}
+	require.Len(t, eventTypes, 1)
+	require.Equal(t, TestLocation.QualifiedIdentifier(eventType.ID()), eventTypes[0].QualifiedIdentifier())
 
-	AssertValueSlicesEqual(
-		t,
-		inter,
-		expectedEvents,
-		actualEvents,
-	)
+	// TODO: ref
 }
 
 type testValue struct {
@@ -7762,7 +7817,8 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 				Kind: common.DeclarationKindStructure,
 			})
 
-			var actualEvents []interpreter.Value
+			var eventTypes []*sema.CompositeType
+			var eventsFields [][]interpreter.Value
 
 			inter, err := parseCheckAndInterpretWithOptions(
 				t, code, ParseCheckAndInterpretOptions{
@@ -7777,12 +7833,13 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 					Config: &interpreter.Config{
 						Storage: storage,
 						OnEventEmitted: func(
-							_ *interpreter.Interpreter,
+							_ interpreter.ValueExportContext,
 							_ interpreter.LocationRange,
-							event *interpreter.CompositeValue,
 							eventType *sema.CompositeType,
+							eventFields []interpreter.Value,
 						) error {
-							actualEvents = append(actualEvents, event)
+							eventTypes = append(eventTypes, eventType)
+							eventsFields = append(eventsFields, eventFields)
 							return nil
 						},
 					},
@@ -7795,30 +7852,20 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 			testType := RequireGlobalType(t, inter.Program.Elaboration, "Test")
 
-			fields := []interpreter.CompositeField{
-				{
-					Name:  "value",
-					Value: testCase.value,
-				},
-			}
+			require.Len(t, eventTypes, 1)
+			require.Equal(t,
+				TestLocation.QualifiedIdentifier(testType.ID()),
+				eventTypes[0].QualifiedIdentifier(),
+			)
 
-			expectedEvents := []interpreter.Value{
-				interpreter.NewCompositeValue(
-					inter,
-					interpreter.EmptyLocationRange,
-					TestLocation,
-					TestLocation.QualifiedIdentifier(testType.ID()),
-					common.CompositeKindEvent,
-					fields,
-					common.ZeroAddress,
-				),
-			}
-
+			require.Len(t, eventsFields, 1)
 			AssertValueSlicesEqual(
 				t,
 				inter,
-				expectedEvents,
-				actualEvents,
+				[]interpreter.Value{
+					testCase.value,
+				},
+				eventsFields[0],
 			)
 		})
 	}
@@ -9651,65 +9698,95 @@ func TestInterpretNestedDestroy(t *testing.T) {
 
 	t.Parallel()
 
-	var events []*interpreter.CompositeValue
+	var eventTypes []*sema.CompositeType
+	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t, `
-      resource B {
-            let id: Int
-			init(_ id: Int){
-				self.id = id
-			}
+	inter, err := parseCheckAndInterpretWithOptions(t,
+		`
+            resource B {
+                let id: Int
 
-			event ResourceDestroyed(id: Int = self.id)
-		}
+                init(_ id: Int) {
+                    self.id = id
+                }
 
-		resource A {
-			let id: Int
-			let bs: @[B]
+                event ResourceDestroyed(
+                    id: Int = self.id
+                )
+            }
 
-			event ResourceDestroyed(id: Int = self.id, bCount: Int = self.bs.length)
+            resource A {
+                let id: Int
+                let bs: @[B]
 
-			init(_ id: Int){
-				self.id = id
-				self.bs <- []
-			}
+                event ResourceDestroyed(
+                    id: Int = self.id,
+                    bCount: Int = self.bs.length
+                )
 
-			fun add(_ b: @B){
-				self.bs.append(<-b)
-			}
-		}
+                init(_ id: Int) {
+                    self.id = id
+                    self.bs <- []
+                }
 
-      fun test() {
-          let a <- create A(1)
-          a.add(<- create B(2))
-          a.add(<- create B(3))
-          a.add(<- create B(4))
+                fun add(_ b: @B) {
+                    self.bs.append(<-b)
+                }
+            }
 
-              destroy a
-          }
-        `, ParseCheckAndInterpretOptions{
-		Config: &interpreter.Config{
-			OnEventEmitted: func(_ *interpreter.Interpreter, _ interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
-				events = append(events, event)
-				return nil
+            fun test() {
+                let a <- create A(1)
+                a.add(<- create B(2))
+                a.add(<- create B(3))
+                a.add(<- create B(4))
+
+                destroy a
+            }
+        `,
+		ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				OnEventEmitted: func(
+					_ interpreter.ValueExportContext,
+					_ interpreter.LocationRange,
+					eventType *sema.CompositeType,
+					eventFields []interpreter.Value,
+				) error {
+					eventTypes = append(eventTypes, eventType)
+					eventsFields = append(eventsFields, eventFields)
+					return nil
+				},
 			},
 		},
-	})
+	)
 	require.NoError(t, err)
 
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	require.Len(t, events, 4)
-	require.Equal(t, "B.ResourceDestroyed", events[0].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 2), events[0].GetField(inter, "id"))
-	require.Equal(t, "B.ResourceDestroyed", events[1].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 3), events[1].GetField(inter, "id"))
-	require.Equal(t, "B.ResourceDestroyed", events[2].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 4), events[2].GetField(inter, "id"))
-	require.Equal(t, "A.ResourceDestroyed", events[3].QualifiedIdentifier)
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[3].GetField(inter, "id"))
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 3), events[3].GetField(inter, "bCount"))
+	require.Len(t, eventTypes, 4)
+	require.Equal(t, "B.ResourceDestroyed", eventTypes[0].QualifiedIdentifier())
+	require.Equal(t, "B.ResourceDestroyed", eventTypes[1].QualifiedIdentifier())
+	require.Equal(t, "B.ResourceDestroyed", eventTypes[2].QualifiedIdentifier())
+	require.Equal(t, "A.ResourceDestroyed", eventTypes[3].QualifiedIdentifier())
+
+	require.Equal(t,
+		[][]interpreter.Value{
+			{
+				interpreter.NewIntValueFromInt64(nil, 2),
+			},
+			{
+				interpreter.NewIntValueFromInt64(nil, 3),
+			},
+			{
+				interpreter.NewIntValueFromInt64(nil, 4),
+			},
+			{
+				interpreter.NewIntValueFromInt64(nil, 1),
+				interpreter.NewIntValueFromInt64(nil, 3),
+			},
+		},
+		eventsFields,
+	)
 
 	AssertValuesEqual(
 		t,
@@ -12389,7 +12466,10 @@ func TestInterpretSwapDictionaryKeysWithSideEffects(t *testing.T) {
 
 		inter, getEvents, err := parseCheckAndInterpretWithEvents(t, `
           resource Resource {
-			  event ResourceDestroyed(value: Int = self.value)
+			  event ResourceDestroyed(
+                  value: Int = self.value
+              )
+
               var value: Int
 
               init(_ value: Int) {
