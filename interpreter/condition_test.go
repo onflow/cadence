@@ -251,6 +251,7 @@ func assertConditionErrorWithMessage(
 	conditionKind ast.ConditionKind,
 	message string,
 ) {
+	require.NoError(t, err)
 	RequireError(t, err)
 
 	if *compile {
@@ -688,7 +689,7 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 
 			var events []testEvent
 
-			inter, err := parseCheckAndInterpretWithOptions(t,
+			inter, err := parseCheckAndPrepareWithOptions(t,
 				fmt.Sprintf(
 					`
                       event InterX(x: Int)
@@ -752,10 +753,11 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 				_, err = inter.Invoke("callTest", interpreter.NewUnmeteredIntValueFromInt64(0))
 
 
-				assertConditionError(
+				assertConditionErrorWithMessage(
 					t,
 					err,
 					ast.ConditionKindPre,
+					"x must be positive",
 				)
 
 				require.Len(t, events, 0)
@@ -825,10 +827,13 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 				value := interpreter.NewUnmeteredIntValueFromInt64(2)
 
 				_, err = inter.Invoke("callTest", value)
-				RequireError(t, err)
 
-				var conditionErr interpreter.ConditionError
-				require.ErrorAs(t, err, &conditionErr)
+				assertConditionErrorWithMessage(
+					t,
+					err,
+					ast.ConditionKindPre,
+					"x must be smaller than 2",
+				)
 
 				require.Len(t, events, 1)
 

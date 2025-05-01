@@ -19,6 +19,7 @@
 package test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -518,7 +519,7 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 	const resolve = false
 	const colorize = false
 	printer := bbq.NewInstructionsProgramPrinter(resolve, colorize)
-	_ = printer.PrintProgram(program)
+	fmt.Println(printer.PrintProgram(program))
 
 	vmConfig := prepareVMConfig(t, options.VMConfig, programs)
 

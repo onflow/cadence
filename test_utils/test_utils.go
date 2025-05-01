@@ -33,6 +33,7 @@ import (
 	"github.com/onflow/cadence/stdlib"
 	"github.com/onflow/cadence/test_utils/sema_utils"
 
+	. "github.com/onflow/cadence/bbq/test_utils"
 	"github.com/onflow/cadence/bbq/vm"
 	compilerUtils "github.com/onflow/cadence/bbq/vm/test"
 )
@@ -127,6 +128,51 @@ func ParseCheckAndPrepareWithEvents(tb testing.TB, code string, compile bool) (
 	)
 
 	return NewVMInvokable(vmInstance), getEvents, nil
+}
+
+func ParseCheckAndPrepareWithOptions(
+	tb testing.TB,
+	code string,
+	options ParseCheckAndInterpretOptions,
+	compile bool,
+) (
+	invokable Invokable,
+	err error,
+) {
+	tb.Helper()
+
+	if !compile {
+		return ParseCheckAndInterpretWithOptions(tb, code, options)
+	}
+
+	vmConfig := &vm.Config{}
+
+	vmConfig.WithDebugEnabled()
+
+	vmConfig.OnEventEmitted = func(event *interpreter.CompositeValue, eventType *interpreter.CompositeStaticType) error {
+		eventSemaType := interpreter.MustConvertStaticToSemaType(eventType, vmConfig).(*sema.CompositeType)
+		return options.Config.OnEventEmitted(nil, interpreter.EmptyLocationRange, event, eventSemaType)
+	}
+
+	var parseAndCheckOptions *sema_utils.ParseAndCheckOptions
+	if options.CheckerConfig != nil {
+		parseAndCheckOptions = &sema_utils.ParseAndCheckOptions{
+			Config: options.CheckerConfig,
+		}
+	}
+
+	vmInstance := compilerUtils.CompileAndPrepareToInvoke(
+		tb,
+		code,
+		compilerUtils.CompilerAndVMOptions{
+			VMConfig: vmConfig,
+			ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+				ParseAndCheckOptions: parseAndCheckOptions,
+			},
+		},
+	)
+
+	return NewVMInvokable(vmInstance), nil
 }
 
 // Below helper functions were copied as-is from `misc_test.go`.
