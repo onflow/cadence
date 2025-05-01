@@ -12459,6 +12459,8 @@ func TestRuntimeInvokeContractFunctionImported(t *testing.T) {
 
         access(all) contract Test3 {
 
+            access(all) event Answer(x: Int)
+
             access(all) resource R {}
 
 			access(all) fun hello(): String {
@@ -12491,10 +12493,16 @@ func TestRuntimeInvokeContractFunctionImported(t *testing.T) {
                 let rRef = self.account.storage.borrow<&R>(from: path)!
                 return rRef.owner!.address
             }
+
+            access(all) fun emitAnswer() {
+                emit Answer(x: 42)
+            }
         }
     `)
 
 	accountCodes := map[Location][]byte{}
+
+	var events []cadence.Event
 
 	var uuid uint64
 
@@ -12512,6 +12520,7 @@ func TestRuntimeInvokeContractFunctionImported(t *testing.T) {
 			return nil
 		},
 		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
 			return nil
 		},
 		OnGetAccountBalance: func(_ Address) (uint64, error) {
@@ -12690,5 +12699,35 @@ func TestRuntimeInvokeContractFunctionImported(t *testing.T) {
 	require.Equal(t,
 		cadence.Address(addressValue),
 		result,
+	)
+
+	// Call emitAnswer
+
+	events = events[:0]
+
+	_, err = runtime.InvokeContractFunction(
+		common.AddressLocation{
+			Address: addressValue,
+			Name:    "Test3",
+		},
+		"emitAnswer",
+		nil,
+		nil,
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	require.Len(t, events, 1)
+	require.Equal(t,
+		"A.0000000000000001.Test3.Answer",
+		events[0].EventType.ID(),
+	)
+	require.Equal(t,
+		cadence.NewInt(42),
+		events[0].FieldsMappedByName()["x"],
 	)
 }
