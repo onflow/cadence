@@ -162,13 +162,15 @@ func (vm *VM) pop3() (Value, Value, Value) {
 	return value1, value2, value3
 }
 
-// peekN Returns N elements on the top of the stack.
-// Important: Returned slice must be immediately copied,
-// since the backed array (i.e: stack) is re-used.
 func (vm *VM) peekN(count int) []Value {
 	stackHeight := len(vm.stack)
 	startIndex := stackHeight - count
-	return vm.stack[startIndex:]
+
+	// Make a copy, since the slice can get mutated, since the stack is reused.
+	values := make([]interpreter.Value, count)
+	copy(values, vm.stack[startIndex:])
+
+	return values
 }
 
 func (vm *VM) popN(count int) []Value {
