@@ -740,7 +740,7 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 				require.Len(t, events, 2)
 
 				assert.Equal(t,
-					inter.Location.TypeID(nil, "InterX"),
+					TestLocation.TypeID(nil, "InterX"),
 					events[0].EventType.ID(),
 				)
 
@@ -752,7 +752,7 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 				)
 
 				assert.Equal(t,
-					inter.Location.TypeID(nil, "ImplX"),
+					TestLocation.TypeID(nil, "ImplX"),
 					events[1].EventType.ID(),
 				)
 
@@ -782,7 +782,7 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 				require.Len(t, events, 1)
 
 				assert.Equal(t,
-					inter.Location.TypeID(nil, "InterX"),
+					TestLocation.TypeID(nil, "InterX"),
 					events[0].EventType.ID(),
 				)
 

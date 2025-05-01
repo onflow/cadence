@@ -518,7 +518,7 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 		programs,
 	)
 
-	vmConfig := prepareVMConfig(t, options.VMConfig, programs)
+	vmConfig := PrepareVMConfig(t, options.VMConfig, programs)
 
 	vmConfig.WithDebugEnabled()
 
@@ -582,7 +582,7 @@ func compileAndInvokeWithOptionsAndPrograms(
 		programs,
 	)
 
-	vmConfig := prepareVMConfig(
+	vmConfig := PrepareVMConfig(
 		t,
 		options.VMConfig,
 		programs,
@@ -604,7 +604,7 @@ func compileAndInvokeWithOptionsAndPrograms(
 	return result, err
 }
 
-func prepareVMConfig(
+func PrepareVMConfig(
 	tb testing.TB,
 	config *vm.Config,
 	programs CompiledPrograms,

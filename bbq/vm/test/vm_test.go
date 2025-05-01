@@ -2844,7 +2844,7 @@ func TestResource(t *testing.T) {
 			programs,
 		)
 
-		vmConfig := prepareVMConfig(t, nil, programs)
+		vmConfig := PrepareVMConfig(t, nil, programs)
 
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
@@ -7368,7 +7368,7 @@ func TestInheritedConditions(t *testing.T) {
 		var logs []string
 		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
-		prepareVMConfig(t, vmConfig, programs)
+		PrepareVMConfig(t, vmConfig, programs)
 
 		contractsAddress := common.MustBytesToAddress([]byte{0x1})
 
