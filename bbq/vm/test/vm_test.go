@@ -6936,9 +6936,9 @@ func TestEmitInContract(t *testing.T) {
 		require.NoError(t, err)
 		contractValues[cLocation] = cContractValue
 
-		// Run transaction
+		// Run script
 
-		tx := fmt.Sprintf(
+		code := fmt.Sprintf(
 			`
               import C from %[1]s
 
@@ -6953,41 +6953,44 @@ func TestEmitInContract(t *testing.T) {
 		)
 
 		eventEmitted := false
-		vmConfig.WithInterpreterConfig(&interpreter.Config{
-			OnEventEmitted: func(
-				context interpreter.ValueExportContext,
-				locationRange interpreter.LocationRange,
-				eventType *sema.CompositeType,
-				eventFields []interpreter.Value,
-			) error {
-				require.False(t, eventEmitted)
-				eventEmitted = true
+		vmConfig.WithInterpreterConfig(
+			&interpreter.Config{
+				OnEventEmitted: func(
+					context interpreter.ValueExportContext,
+					locationRange interpreter.LocationRange,
+					eventType *sema.CompositeType,
+					eventFields []interpreter.Value,
+				) error {
+					require.False(t, eventEmitted)
+					eventEmitted = true
 
-				assert.Equal(t,
-					cLocation.TypeID(nil, "C.TestEvent"),
-					eventType.ID(),
-				)
+					assert.Equal(t,
+						cLocation.TypeID(nil, "C.TestEvent"),
+						eventType.ID(),
+					)
 
-				assert.Equal(t,
-					[]interpreter.Value{},
-					eventFields,
-				)
+					assert.Equal(t,
+						[]interpreter.Value{},
+						eventFields,
+					)
 
-				return nil
+					return nil
+				},
 			},
-		})
+		)
 
 		require.False(t, eventEmitted)
 
-		result, err := compileAndInvokeWithOptionsAndPrograms(
+		result, err := CompileAndInvokeWithOptions(
 			t,
-			tx,
+			code,
 			"main",
 			CompilerAndVMOptions{
 				VMConfig: vmConfig,
+				Programs: programs,
 			},
-			programs,
 		)
+
 		require.NoError(t, err)
 
 		require.True(t, eventEmitted)
@@ -7147,14 +7150,14 @@ func TestInheritedConditions(t *testing.T) {
 
 		require.False(t, eventEmitted)
 
-		result, err := compileAndInvokeWithOptionsAndPrograms(
+		result, err := CompileAndInvokeWithOptions(
 			t,
 			tx,
 			"main",
 			CompilerAndVMOptions{
 				VMConfig: vmConfig,
+				Programs: programs,
 			},
-			programs,
 		)
 		require.NoError(t, err)
 

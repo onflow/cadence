@@ -499,6 +499,12 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 	for _, declaration := range compositeDecls {
 		compositeType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
 
+		// Members of event types are skipped from compiling (see `VisitCompositeDeclaration`).
+		// Hence also skip from reserving global variables for them.
+		if compositeType.Kind == common.CompositeKindEvent {
+			continue
+		}
+
 		// Reserve a global-var for the value-constructor.
 		constructorName := commons.TypeQualifier(compositeType)
 		c.addGlobal(constructorName)
@@ -2120,6 +2126,12 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 
 func (c *Compiler[_, _]) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) (_ struct{}) {
 	compositeType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
+
+	// Event declarations have no members
+	if compositeType.Kind == common.CompositeKindEvent {
+		return
+	}
+
 	c.compositeTypeStack.push(compositeType)
 	defer func() {
 		c.compositeTypeStack.pop()
