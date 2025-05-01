@@ -32,6 +32,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
 )
 
 type Variable = interpreter.SimpleVariable
@@ -1317,21 +1318,20 @@ func (vm *VM) run() {
 }
 
 func opEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
-	// Load arguments
-	eventValues := vm.popN(int(ins.ArgCount))
-
-	onEventEmitted := vm.context.OnEventEmitted
-	if onEventEmitted == nil {
-		return
-	}
+	context := vm.context
 
 	typeIndex := ins.Type
-	eventType := vm.loadType(typeIndex).(*interpreter.CompositeStaticType)
+	eventStaticType := vm.loadType(typeIndex).(*interpreter.CompositeStaticType)
+	eventSemaType := interpreter.MustConvertStaticToSemaType(eventStaticType, context).(*sema.CompositeType)
 
-	err := onEventEmitted(eventValues, eventType)
-	if err != nil {
-		panic(err)
-	}
+	eventFields := vm.popN(int(ins.ArgCount))
+
+	context.EmitEvent(
+		context,
+		EmptyLocationRange,
+		eventSemaType,
+		eventFields,
+	)
 }
 
 func opNewClosure(vm *VM, ins opcode.InstructionNewClosure) {
