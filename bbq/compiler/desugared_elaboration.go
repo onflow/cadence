@@ -370,3 +370,7 @@ func (e *DesugaredElaboration) AllImportDeclarationsResolvedLocations() map[*ast
 func (e *DesugaredElaboration) OriginalElaboration() *sema.Elaboration {
 	return e.elaboration
 }
+
+func (e *DesugaredElaboration) StringExpressionType(expression *ast.StringExpression) sema.Type {
+	return e.elaboration.StringExpressionType(expression)
+}

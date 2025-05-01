@@ -29,6 +29,7 @@ type Kind uint8
 const (
 	Unknown Kind = iota
 	String
+	Character
 	Address
 	_
 	_
@@ -89,6 +90,8 @@ func FromSemaType(ty sema.Type) Kind {
 	switch ty {
 	case sema.StringType:
 		return String
+	case sema.CharacterType:
+		return Character
 
 	case sema.TheAddressType:
 		return Address

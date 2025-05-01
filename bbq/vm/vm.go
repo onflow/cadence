@@ -1153,11 +1153,16 @@ func (vm *VM) run() {
 	if vm.context.debugEnabled {
 		defer func() {
 			if r := recover(); r != nil {
-				printInstructionError(
-					vm.callFrame.function.Function,
-					int(vm.ip),
-					r,
-				)
+				switch r.(type) {
+				case errors.UserError, errors.ExternalError:
+					// do nothing
+				default:
+					printInstructionError(
+						vm.callFrame.function.Function,
+						int(vm.ip),
+						r,
+					)
+				}
 				panic(r)
 			}
 		}()
@@ -1394,6 +1399,9 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 	switch c.Kind {
 	case constant.String:
 		value = interpreter.NewUnmeteredStringValue(string(c.Data))
+
+	case constant.Character:
+		value = interpreter.NewUnmeteredCharacterValue(string(c.Data))
 
 	case constant.Int:
 		// TODO: support larger integers
