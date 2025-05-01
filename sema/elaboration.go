@@ -68,10 +68,10 @@ type AssignmentStatementTypes struct {
 }
 
 type InvocationExpressionTypes struct {
-	ReturnType         Type
-	TypeArguments      *TypeParameterTypeOrderedMap
-	ArgumentTypes      []Type
-	TypeParameterTypes []Type
+	ReturnType     Type
+	TypeArguments  *TypeParameterTypeOrderedMap
+	ArgumentTypes  []Type
+	ParameterTypes []Type
 }
 
 type ArrayExpressionTypes struct {
