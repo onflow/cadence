@@ -4767,9 +4767,16 @@ func TestEmit(t *testing.T) {
 	var eventEmitted bool
 
 	vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
-	vmConfig.OnEventEmitted = func(event *interpreter.CompositeValue, eventType *interpreter.CompositeStaticType) error {
+	vmConfig.OnEventEmitted = func(eventValues []interpreter.Value, eventType *interpreter.CompositeStaticType) error {
 		require.False(t, eventEmitted)
 		eventEmitted = true
+
+		assert.Equal(t,
+			[]interpreter.Value{
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+			},
+			eventValues,
+		)
 
 		assert.Equal(t,
 			TestLocation.TypeID(nil, "Inc"),
@@ -6933,9 +6940,14 @@ func TestEmitInContract(t *testing.T) {
 		txLocation := NewTransactionLocationGenerator()
 
 		eventEmitted := false
-		vmConfig.OnEventEmitted = func(event *interpreter.CompositeValue, eventType *interpreter.CompositeStaticType) error {
+		vmConfig.OnEventEmitted = func(eventValues []interpreter.Value, eventType *interpreter.CompositeStaticType) error {
 			require.False(t, eventEmitted)
 			eventEmitted = true
+
+			assert.Equal(t,
+				[]interpreter.Value{},
+				eventValues,
+			)
 
 			assert.Equal(t,
 				cLocation.TypeID(nil, "C.TestEvent"),
@@ -7086,9 +7098,14 @@ func TestInheritedConditions(t *testing.T) {
 		txLocation := NewTransactionLocationGenerator()
 
 		eventEmitted := false
-		vmConfig.OnEventEmitted = func(event *interpreter.CompositeValue, eventType *interpreter.CompositeStaticType) error {
+		vmConfig.OnEventEmitted = func(eventValues []interpreter.Value, eventType *interpreter.CompositeStaticType) error {
 			require.False(t, eventEmitted)
 			eventEmitted = true
+
+			assert.Equal(t,
+				[]interpreter.Value{},
+				eventValues,
+			)
 
 			assert.Equal(t,
 				cLocation.TypeID(nil, "B.TestEvent"),
@@ -7251,9 +7268,14 @@ func TestInheritedConditions(t *testing.T) {
 		txLocation := NewTransactionLocationGenerator()
 
 		eventEmitted := false
-		vmConfig.OnEventEmitted = func(event *interpreter.CompositeValue, eventType *interpreter.CompositeStaticType) error {
+		vmConfig.OnEventEmitted = func(eventValues []interpreter.Value, eventType *interpreter.CompositeStaticType) error {
 			require.False(t, eventEmitted)
 			eventEmitted = true
+
+			assert.Equal(t,
+				[]interpreter.Value{},
+				eventValues,
+			)
 
 			assert.Equal(t,
 				cLocation.TypeID(nil, "A.TestEvent"),

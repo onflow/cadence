@@ -1108,13 +1108,14 @@ func TestCompileEmit(t *testing.T) {
 
 	assert.Equal(t,
 		[]opcode.Instruction{
-			// Inc(val: x)
-			opcode.InstructionGetGlobal{Global: 1},
+			// x
 			opcode.InstructionGetLocal{Local: xIndex},
 			opcode.InstructionTransfer{Type: 1},
-			opcode.InstructionInvoke{ArgCount: 1},
 			// emit
-			opcode.InstructionEmitEvent{Type: 2},
+			opcode.InstructionEmitEvent{
+				Type:     2,
+				ArgCount: 1,
+			},
 
 			opcode.InstructionReturn{},
 		},
