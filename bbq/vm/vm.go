@@ -165,21 +165,13 @@ func (vm *VM) pop3() (Value, Value, Value) {
 func (vm *VM) peekN(count int) []Value {
 	stackHeight := len(vm.stack)
 	startIndex := stackHeight - count
-
-	// Make a copy, since the slice can get mutated, since the stack is reused.
-	values := make([]interpreter.Value, count)
-	copy(values, vm.stack[startIndex:])
-
-	return values
+	return vm.stack[startIndex:]
 }
 
 func (vm *VM) popN(count int) []Value {
 	stackHeight := len(vm.stack)
 	startIndex := stackHeight - count
-
-	// Make a copy, since the slice can get mutated, since the stack is reused.
-	values := make([]interpreter.Value, count)
-	copy(values, vm.stack[startIndex:])
+	values := vm.stack[startIndex:]
 
 	for _, value := range values {
 		vm.context.CheckInvalidatedResourceOrResourceReference(value, EmptyLocationRange)
@@ -1340,11 +1332,15 @@ func opEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
 
 	eventFields := vm.popN(int(ins.ArgCount))
 
+	// Make a copy, since the slice can get mutated, since the stack is reused.
+	fields := make([]interpreter.Value, len(eventFields))
+	copy(fields, eventFields)
+
 	context.EmitEvent(
 		context,
 		EmptyLocationRange,
 		eventSemaType,
-		eventFields,
+		fields,
 	)
 }
 
