@@ -20,7 +20,6 @@ package interpreter_test
 
 import (
 	"fmt"
-	"github.com/onflow/cadence/test_utils"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -32,6 +31,7 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
+	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
@@ -233,7 +233,6 @@ func assertConditionErrorWithMessage(
 	conditionKind ast.ConditionKind,
 	message string,
 ) {
-	require.NoError(t, err)
 	RequireError(t, err)
 
 	if *compile {
@@ -353,7 +352,7 @@ func TestInterpretFunctionPostTestConditionWithBefore(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndPrepare(t, `
+	inter := parseCheckAndInterpret(t, `
       var x = 0
 
       fun test() {
@@ -382,7 +381,7 @@ func TestInterpretFunctionPostEmitConditionWithBefore(t *testing.T) {
 
 	t.Parallel()
 
-	inter, getEvents, err := parseCheckAndPrepareWithEvents(t, `
+	inter, getEvents, err := parseCheckAndInterpretWithEvents(t, `
       event Foo(x: Int, beforeX: Int)
 
       var x = 0
@@ -419,7 +418,7 @@ func TestInterpretFunctionPostConditionWithBeforeFailingPreTestCondition(t *test
 
 	t.Parallel()
 
-	inter, getEvents, err := parseCheckAndPrepareWithEvents(t, `
+	inter, getEvents, err := parseCheckAndInterpretWithEvents(t, `
       event Foo(x: Int)
 
       var x = 0
@@ -439,10 +438,14 @@ func TestInterpretFunctionPostConditionWithBeforeFailingPreTestCondition(t *test
 
 	_, err = inter.Invoke("test")
 
-	assertConditionError(
-		t,
-		err,
+	RequireError(t, err)
+
+	var conditionErr interpreter.ConditionError
+	require.ErrorAs(t, err, &conditionErr)
+
+	assert.Equal(t,
 		ast.ConditionKindPre,
+		conditionErr.ConditionKind,
 	)
 
 	events := getEvents()
@@ -453,7 +456,7 @@ func TestInterpretFunctionPostConditionWithBeforeFailingPostTestCondition(t *tes
 
 	t.Parallel()
 
-	inter, getEvents, err := parseCheckAndPrepareWithEvents(t, `
+	inter, getEvents, err := parseCheckAndInterpretWithEvents(t, `
       event Foo(x: Int)
 
       var x = 0
@@ -473,10 +476,14 @@ func TestInterpretFunctionPostConditionWithBeforeFailingPostTestCondition(t *tes
 
 	_, err = inter.Invoke("test")
 
-	assertConditionError(
-		t,
-		err,
+	RequireError(t, err)
+
+	var conditionErr interpreter.ConditionError
+	require.ErrorAs(t, err, &conditionErr)
+
+	assert.Equal(t,
 		ast.ConditionKindPost,
+		conditionErr.ConditionKind,
 	)
 
 	events := getEvents()
@@ -703,7 +710,6 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 				events = nil
 
 				_, err = inter.Invoke("callTest", interpreter.NewUnmeteredIntValueFromInt64(0))
-
 
 				assertConditionErrorWithMessage(
 					t,
@@ -1021,7 +1027,7 @@ func TestInterpretResourceInterfaceInitializerPreConditions(t *testing.T) {
 		assertConditionErrorWithMessage(
 			t,
 			err,
-			ast.ConditionKindPost,
+			ast.ConditionKindPre,
 			"invalid init",
 		)
 
