@@ -2120,6 +2120,12 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 
 func (c *Compiler[_, _]) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) (_ struct{}) {
 	compositeType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
+
+	// Event declarations have no members
+	if compositeType.Kind == common.CompositeKindEvent {
+		return
+	}
+
 	c.compositeTypeStack.push(compositeType)
 	defer func() {
 		c.compositeTypeStack.pop()
