@@ -3030,12 +3030,14 @@ func TestDefaultFunctions(t *testing.T) {
 		}
 
 		var uuid uint64 = 42
-		vmConfig.WithInterpreterConfig(&interpreter.Config{
-			UUIDHandler: func() (uint64, error) {
-				uuid++
-				return uuid, nil
+		vmConfig.WithInterpreterConfig(
+			&interpreter.Config{
+				UUIDHandler: func() (uint64, error) {
+					uuid++
+					return uuid, nil
+				},
 			},
-		})
+		)
 
 		contractsAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -3161,12 +3163,14 @@ func TestDefaultFunctions(t *testing.T) {
 		}
 
 		var uuid uint64 = 42
-		vmConfig.WithInterpreterConfig(&interpreter.Config{
-			UUIDHandler: func() (uint64, error) {
-				uuid++
-				return uuid, nil
+		vmConfig.WithInterpreterConfig(
+			&interpreter.Config{
+				UUIDHandler: func() (uint64, error) {
+					uuid++
+					return uuid, nil
+				},
 			},
-		})
+		)
 
 		contractsAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -3294,12 +3298,14 @@ func TestDefaultFunctions(t *testing.T) {
 		}
 
 		var uuid uint64 = 42
-		vmConfig.WithInterpreterConfig(&interpreter.Config{
-			UUIDHandler: func() (uint64, error) {
-				uuid++
-				return uuid, nil
+		vmConfig.WithInterpreterConfig(
+			&interpreter.Config{
+				UUIDHandler: func() (uint64, error) {
+					uuid++
+					return uuid, nil
+				},
 			},
-		})
+		)
 
 		contractsAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -4767,24 +4773,33 @@ func TestEmit(t *testing.T) {
 	var eventEmitted bool
 
 	vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
-	vmConfig.OnEventEmitted = func(eventValues []interpreter.Value, eventType *interpreter.CompositeStaticType) error {
-		require.False(t, eventEmitted)
-		eventEmitted = true
+	vmConfig.WithInterpreterConfig(
+		&interpreter.Config{
+			OnEventEmitted: func(
+				context interpreter.ValueExportContext,
+				locationRange interpreter.LocationRange,
+				eventType *sema.CompositeType,
+				eventFields []interpreter.Value,
+			) error {
+				require.False(t, eventEmitted)
+				eventEmitted = true
 
-		assert.Equal(t,
-			[]interpreter.Value{
-				interpreter.NewUnmeteredIntValueFromInt64(1),
+				assert.Equal(t,
+					[]interpreter.Value{
+						interpreter.NewUnmeteredIntValueFromInt64(1),
+					},
+					eventFields,
+				)
+
+				assert.Equal(t,
+					TestLocation.TypeID(nil, "Inc"),
+					eventType.ID(),
+				)
+
+				return nil
 			},
-			eventValues,
-		)
-
-		assert.Equal(t,
-			TestLocation.TypeID(nil, "Inc"),
-			eventType.ID(),
-		)
-
-		return nil
-	}
+		},
+	)
 
 	_, err := CompileAndInvokeWithOptions(t,
 		`
@@ -6938,22 +6953,31 @@ func TestEmitInContract(t *testing.T) {
 		)
 
 		eventEmitted := false
-		vmConfig.OnEventEmitted = func(eventValues []interpreter.Value, eventType *interpreter.CompositeStaticType) error {
-			require.False(t, eventEmitted)
-			eventEmitted = true
+		vmConfig.WithInterpreterConfig(
+			&interpreter.Config{
+				OnEventEmitted: func(
+					context interpreter.ValueExportContext,
+					locationRange interpreter.LocationRange,
+					eventType *sema.CompositeType,
+					eventFields []interpreter.Value,
+				) error {
+					require.False(t, eventEmitted)
+					eventEmitted = true
 
-			assert.Equal(t,
-				[]interpreter.Value{},
-				eventValues,
-			)
+					assert.Equal(t,
+						cLocation.TypeID(nil, "C.TestEvent"),
+						eventType.ID(),
+					)
 
-			assert.Equal(t,
-				cLocation.TypeID(nil, "C.TestEvent"),
-				eventType.ID(),
-			)
+					assert.Equal(t,
+						[]interpreter.Value{},
+						eventFields,
+					)
 
-			return nil
-		}
+					return nil
+				},
+			},
+		)
 
 		require.False(t, eventEmitted)
 
@@ -7097,35 +7121,45 @@ func TestInheritedConditions(t *testing.T) {
 			contractsAddress.HexWithPrefix(),
 		)
 
-		txLocation := NewTransactionLocationGenerator()
-
 		eventEmitted := false
-		vmConfig.OnEventEmitted = func(eventValues []interpreter.Value, eventType *interpreter.CompositeStaticType) error {
-			require.False(t, eventEmitted)
-			eventEmitted = true
+		vmConfig.WithInterpreterConfig(
+			&interpreter.Config{
+				OnEventEmitted: func(
+					context interpreter.ValueExportContext,
+					locationRange interpreter.LocationRange,
+					eventType *sema.CompositeType,
+					eventFields []interpreter.Value,
+				) error {
+					require.False(t, eventEmitted)
+					eventEmitted = true
 
-			assert.Equal(t,
-				[]interpreter.Value{},
-				eventValues,
-			)
+					assert.Equal(t,
+						cLocation.TypeID(nil, "B.TestEvent"),
+						eventType.ID(),
+					)
 
-			assert.Equal(t,
-				cLocation.TypeID(nil, "B.TestEvent"),
-				eventType.ID(),
-			)
+					assert.Equal(t,
+						[]interpreter.Value{},
+						eventFields,
+					)
 
-			return nil
-		}
-
-		txProgram := ParseCheckAndCompile(t, tx, txLocation(), programs)
-		txVM := vm.NewVM(txLocation(), txProgram, vmConfig)
+					return nil
+				},
+			},
+		)
 
 		require.False(t, eventEmitted)
 
-		result, err := txVM.Invoke("main")
-
+		result, err := CompileAndInvokeWithOptions(
+			t,
+			tx,
+			"main",
+			CompilerAndVMOptions{
+				VMConfig: vmConfig,
+				Programs: programs,
+			},
+		)
 		require.NoError(t, err)
-		require.Equal(t, 0, txVM.StackSize())
 
 		require.True(t, eventEmitted)
 		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(10), result)
@@ -7166,12 +7200,14 @@ func TestInheritedConditions(t *testing.T) {
 		}
 
 		var uuid uint64 = 42
-		vmConfig.WithInterpreterConfig(&interpreter.Config{
-			UUIDHandler: func() (uint64, error) {
-				uuid++
-				return uuid, nil
+		vmConfig.WithInterpreterConfig(
+			&interpreter.Config{
+				UUIDHandler: func() (uint64, error) {
+					uuid++
+					return uuid, nil
+				},
 			},
-		})
+		)
 
 		contractsAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -7267,35 +7303,44 @@ func TestInheritedConditions(t *testing.T) {
 			contractsAddress.HexWithPrefix(),
 		)
 
-		txLocation := NewTransactionLocationGenerator()
-
 		eventEmitted := false
-		vmConfig.OnEventEmitted = func(eventValues []interpreter.Value, eventType *interpreter.CompositeStaticType) error {
-			require.False(t, eventEmitted)
-			eventEmitted = true
+		vmConfig.WithInterpreterConfig(
+			&interpreter.Config{
+				OnEventEmitted: func(
+					context interpreter.ValueExportContext,
+					locationRange interpreter.LocationRange,
+					eventType *sema.CompositeType,
+					eventFields []interpreter.Value,
+				) error {
+					require.False(t, eventEmitted)
+					eventEmitted = true
 
-			assert.Equal(t,
-				[]interpreter.Value{},
-				eventValues,
-			)
+					assert.Equal(t,
+						cLocation.TypeID(nil, "A.TestEvent"),
+						eventType.ID(),
+					)
 
-			assert.Equal(t,
-				cLocation.TypeID(nil, "A.TestEvent"),
-				eventType.ID(),
-			)
+					assert.Equal(t,
+						[]interpreter.Value{},
+						eventFields,
+					)
 
-			return nil
-		}
-
-		txProgram := ParseCheckAndCompile(t, tx, txLocation(), programs)
-		txVM := vm.NewVM(txLocation(), txProgram, vmConfig)
-
+					return nil
+				},
+			},
+		)
 		require.False(t, eventEmitted)
 
-		result, err := txVM.Invoke("main")
-
+		result, err := compileAndInvokeWithOptionsAndPrograms(
+			t,
+			tx,
+			"main",
+			CompilerAndVMOptions{
+				VMConfig: vmConfig,
+			},
+			programs,
+		)
 		require.NoError(t, err)
-		require.Equal(t, 0, txVM.StackSize())
 
 		require.True(t, eventEmitted)
 		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(10), result)

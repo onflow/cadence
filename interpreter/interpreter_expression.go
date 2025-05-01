@@ -1199,7 +1199,7 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 
 	typeParameterTypes := invocationExpressionTypes.TypeArguments
 	argumentTypes := invocationExpressionTypes.ArgumentTypes
-	parameterTypes := invocationExpressionTypes.TypeParameterTypes
+	parameterTypes := invocationExpressionTypes.ParameterTypes
 	returnType := invocationExpressionTypes.ReturnType
 
 	// add the implicit argument to the end of the argument list, if it exists

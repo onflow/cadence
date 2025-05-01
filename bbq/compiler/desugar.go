@@ -465,6 +465,9 @@ var panicFuncInvocationTypes = sema.InvocationExpressionTypes{
 	ArgumentTypes: []sema.Type{
 		sema.StringType,
 	},
+	ParameterTypes: []sema.Type{
+		sema.StringType,
+	},
 }
 
 func (d *Desugar) desugarCondition(condition ast.Condition, inheritedFrom *sema.InterfaceType) ast.Statement {
@@ -1073,9 +1076,23 @@ func (d *Desugar) interfaceDelegationMethodCall(
 		panic(errors.NewUnreachableError())
 	}
 
+	parameterTypes := funcType.ParameterTypes()
+
 	invocationTypes := sema.InvocationExpressionTypes{
-		ReturnType:    funcType.ReturnTypeAnnotation.Type,
-		ArgumentTypes: funcType.ParameterTypes(),
+		ReturnType:     funcType.ReturnTypeAnnotation.Type,
+		ParameterTypes: parameterTypes,
+		// The argument types are the same as the parameter types.
+		// We are simply performing a delegation invocation, inside the synthetic-wrapper function we created.
+		// For example:
+		//
+		//    fun defaultFunc(a1: T1, a2: T2): R {
+		//        return Interface.defaultFunc(a1, a2)
+		//    }
+		//
+		// Where `defaultFunc` wrapper is created using the same parameter types as `Interface.defaultFunc`.
+		// So the argument types to the invocation of `Interface.defaultFunc` are the same
+		// as the parameter types of `defaultFunc`/`Interface.defaultFunc`.
+		ArgumentTypes: parameterTypes,
 	}
 
 	memberAccessInfo := sema.MemberAccessInfo{

@@ -405,16 +405,24 @@ func (*StandardLibraryHandler) BLSAggregateSignatures(_ [][]byte) ([]byte, error
 
 func (h *StandardLibraryHandler) NewOnEventEmittedHandler() interpreter.OnEventEmittedFunc {
 	return func(
-		inter *interpreter.Interpreter,
+		_ interpreter.ValueExportContext,
 		locationRange interpreter.LocationRange,
-		event *interpreter.CompositeValue,
-		_ *sema.CompositeType,
+		eventType *sema.CompositeType,
+		eventFields []interpreter.Value,
 	) error {
 		fmt.Printf(
-			"EVENT @ %s: %s\n",
+			"EVENT @ %s: %s(",
 			formatLocationRange(locationRange),
-			event.String(),
+			eventType.ID(),
 		)
+		for i, field := range eventFields {
+			if i > 0 {
+				fmt.Print(", ")
+			}
+			fmt.Print(field)
+		}
+		fmt.Println(")")
+
 		return nil
 	}
 }

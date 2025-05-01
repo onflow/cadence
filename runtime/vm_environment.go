@@ -116,6 +116,7 @@ func (e *vmEnvironment) newVMConfig() *vm.Config {
 		InjectedCompositeFieldsHandler: newInjectedCompositeFieldsHandler(e),
 		UUIDHandler:                    newUUIDHandler(&e.Interface),
 		AccountHandler:                 e.newAccountValue,
+		OnEventEmitted:                 newOnEventEmittedHandler(&e.Interface),
 	})
 	config.WithAccountHandler(e)
 	return config

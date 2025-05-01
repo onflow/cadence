@@ -468,8 +468,8 @@ func parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
 }
 
 type TestEvent struct {
-	Event     *interpreter.CompositeValue
-	EventType *sema.CompositeType
+	EventType   *sema.CompositeType
+	EventFields []interpreter.Value
 }
 
 func ParseCheckAndInterpretWithEvents(tb testing.TB, code string) (
@@ -484,15 +484,18 @@ func ParseCheckAndInterpretWithEvents(tb testing.TB, code string) (
 		ParseCheckAndInterpretOptions{
 			Config: &interpreter.Config{
 				OnEventEmitted: func(
-					_ *interpreter.Interpreter,
+					_ interpreter.ValueExportContext,
 					_ interpreter.LocationRange,
-					event *interpreter.CompositeValue,
 					eventType *sema.CompositeType,
+					eventFields []interpreter.Value,
 				) error {
-					events = append(events, TestEvent{
-						Event:     event,
-						EventType: eventType,
-					})
+					events = append(
+						events,
+						TestEvent{
+							EventType:   eventType,
+							EventFields: eventFields,
+						},
+					)
 					return nil
 				},
 			},
