@@ -5458,3 +5458,79 @@ func TestCompileTransferNil(t *testing.T) {
 		functions[0].Code,
 	)
 }
+
+func TestCompileArgument(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun f(_ x: Int?) {}
+
+      fun test() {
+          let x = 1
+          f(x)
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	require.Len(t, program.Functions, 2)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionReturn{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionGetConstant{},
+			opcode.InstructionSetLocal{Local: 0},
+			opcode.InstructionGetGlobal{Global: 0},
+			opcode.InstructionGetLocal{Local: 0},
+			opcode.InstructionTransfer{Type: 2},
+			opcode.InstructionInvoke{ArgCount: 1},
+			opcode.InstructionDrop{},
+			opcode.InstructionReturn{},
+		},
+		functions[1].Code,
+	)
+
+	assert.Equal(t,
+		[]bbq.StaticType{
+			interpreter.FunctionStaticType{
+				Type: sema.NewSimpleFunctionType(
+					sema.FunctionPurityImpure,
+					[]sema.Parameter{
+						{
+							Label:      sema.ArgumentLabelNotRequired,
+							Identifier: "x",
+							TypeAnnotation: sema.NewTypeAnnotation(
+								sema.NewOptionalType(nil, sema.IntType),
+							),
+						},
+					},
+					sema.VoidTypeAnnotation,
+				),
+			},
+			interpreter.FunctionStaticType{
+				Type: sema.NewSimpleFunctionType(
+					sema.FunctionPurityImpure,
+					[]sema.Parameter{},
+					sema.VoidTypeAnnotation,
+				),
+			},
+			interpreter.NewOptionalStaticType(nil, interpreter.PrimitiveStaticTypeInt),
+		},
+		program.Types,
+	)
+}

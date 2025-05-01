@@ -465,6 +465,9 @@ var panicFuncInvocationTypes = sema.InvocationExpressionTypes{
 	ArgumentTypes: []sema.Type{
 		sema.StringType,
 	},
+	ParameterTypes: []sema.Type{
+		sema.StringType,
+	},
 }
 
 func (d *Desugar) desugarCondition(condition ast.Condition, inheritedFrom *sema.InterfaceType) ast.Statement {
@@ -1044,8 +1047,10 @@ func (d *Desugar) interfaceDelegationMethodCall(
 	}
 
 	invocationTypes := sema.InvocationExpressionTypes{
-		ReturnType:    funcType.ReturnTypeAnnotation.Type,
-		ArgumentTypes: funcType.ParameterTypes(),
+		ReturnType: funcType.ReturnTypeAnnotation.Type,
+		// TODO:
+		ArgumentTypes:  funcType.ParameterTypes(),
+		ParameterTypes: funcType.ParameterTypes(),
 	}
 
 	memberAccessInfo := sema.MemberAccessInfo{
