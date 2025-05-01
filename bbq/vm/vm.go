@@ -1299,7 +1299,7 @@ func (vm *VM) run() {
 		case opcode.InstructionUnwrap:
 			opUnwrap(vm)
 		case opcode.InstructionEmitEvent:
-			onEmitEvent(vm, ins)
+			opEmitEvent(vm, ins)
 		case opcode.InstructionIterator:
 			opIterator(vm)
 		case opcode.InstructionIteratorHasNext:
@@ -1316,7 +1316,7 @@ func (vm *VM) run() {
 	}
 }
 
-func onEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
+func opEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
 	// Load arguments
 	eventValues := vm.popN(int(ins.ArgCount))
 
