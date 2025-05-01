@@ -99,8 +99,8 @@ func TestPrintResolved(t *testing.T) {
 		InstructionGetConstant{Constant: 0},
 		InstructionGetConstant{Constant: 1},
 
-		InstructionEmitEvent{Type: 0},
-		InstructionEmitEvent{Type: 1},
+		InstructionEmitEvent{Type: 0, ArgCount: 1},
+		InstructionEmitEvent{Type: 1, ArgCount: 2},
 
 		InstructionNewClosure{
 			Function: 0,
@@ -114,8 +114,8 @@ func TestPrintResolved(t *testing.T) {
 
 	const expected = ` 0 | GetConstant | constant:"foo"
  1 | GetConstant | constant:1(Int)
- 2 |   EmitEvent | type:"Int"
- 3 |   EmitEvent | type:"[String]"
+ 2 |   EmitEvent | type:"Int" argCount:1
+ 3 |   EmitEvent | type:"[String]" argCount:2
  4 |  NewClosure | function:bar upvalues:[]
  5 |  NewClosure | function:baz upvalues:[]
 
@@ -245,7 +245,7 @@ func TestPrintInstruction(t *testing.T) {
 		"IteratorHasNext": {byte(IteratorHasNext)},
 		"IteratorNext":    {byte(IteratorNext)},
 
-		"EmitEvent type:258": {byte(EmitEvent), 1, 2},
+		"EmitEvent type:258 argCount:772": {byte(EmitEvent), 1, 2, 3, 4},
 	}
 
 	// Check if there is any opcode that is not tested

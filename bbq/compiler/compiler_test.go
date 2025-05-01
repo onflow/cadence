@@ -1090,35 +1090,28 @@ func TestCompileEmit(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 4)
+	require.Len(t, program.Functions, 1)
 
 	functions := comp.ExportFunctions()
 	require.Equal(t, len(program.Functions), len(functions))
-
-	var testFunction bbq.Function[opcode.Instruction]
-	for _, f := range functions {
-		if f.QualifiedName == "test" {
-			testFunction = f
-		}
-	}
-	require.NotNil(t, testFunction.Code)
 
 	// xIndex is the index of the parameter `x`, which is the first parameter
 	const xIndex = 0
 
 	assert.Equal(t,
 		[]opcode.Instruction{
-			// Inc(val: x)
-			opcode.InstructionGetGlobal{Global: 1},
+			// x
 			opcode.InstructionGetLocal{Local: xIndex},
 			opcode.InstructionTransfer{Type: 1},
-			opcode.InstructionInvoke{ArgCount: 1},
 			// emit
-			opcode.InstructionEmitEvent{Type: 2},
+			opcode.InstructionEmitEvent{
+				Type:     2,
+				ArgCount: 1,
+			},
 
 			opcode.InstructionReturn{},
 		},
-		testFunction.Code,
+		functions[0].Code,
 	)
 
 	assert.Empty(t, program.Constants)

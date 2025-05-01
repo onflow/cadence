@@ -1299,7 +1299,7 @@ func (vm *VM) run() {
 		case opcode.InstructionUnwrap:
 			opUnwrap(vm)
 		case opcode.InstructionEmitEvent:
-			onEmitEvent(vm, ins)
+			opEmitEvent(vm, ins)
 		case opcode.InstructionIterator:
 			opIterator(vm)
 		case opcode.InstructionIteratorHasNext:
@@ -1316,8 +1316,9 @@ func (vm *VM) run() {
 	}
 }
 
-func onEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
-	eventValue := vm.pop().(*interpreter.CompositeValue)
+func opEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
+	// Load arguments
+	eventValues := vm.popN(int(ins.ArgCount))
 
 	onEventEmitted := vm.context.OnEventEmitted
 	if onEventEmitted == nil {
@@ -1327,7 +1328,7 @@ func onEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
 	typeIndex := ins.Type
 	eventType := vm.loadType(typeIndex).(*interpreter.CompositeStaticType)
 
-	err := onEventEmitted(eventValue, eventType)
+	err := onEventEmitted(eventValues, eventType)
 	if err != nil {
 		panic(err)
 	}

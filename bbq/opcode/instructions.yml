@@ -818,11 +818,13 @@
 
 - name: "emitEvent"
   description:
-    Pops an event off the stack and then emits it.
+    Pops arguments of the stack and then emits an event with the given type with them.
   operands:
     - name: "type"
       type: "typeIndex"
+    - name: "argCount"
+      type: "size"
   valueEffects:
     pop:
-      - name: "event"
-        type: "value"
+      - name: "arguments"
+        # TODO: count

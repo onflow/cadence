@@ -364,6 +364,7 @@ func (t *testAccountHandler) IsContractBeingAdded(common.AddressLocation) bool {
 type CompilerAndVMOptions struct {
 	ParseCheckAndCompileOptions
 	VMConfig *vm.Config
+	Programs map[common.Location]*CompiledProgram
 }
 
 func CompileAndInvoke(
@@ -495,7 +496,10 @@ func CompileAndInvokeWithOptions(
 }
 
 func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMOptions) *vm.VM {
-	programs := map[common.Location]*CompiledProgram{}
+	programs := options.Programs
+	if programs == nil {
+		programs = map[common.Location]*CompiledProgram{}
+	}
 
 	var location common.Location
 	parseAndCheckOptions := options.ParseAndCheckOptions
@@ -515,17 +519,9 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 		programs,
 	)
 
-	// Ensure the program can be printed
-	const resolve = false
-	const colorize = false
-	printer := bbq.NewInstructionsProgramPrinter(resolve, colorize)
-	fmt.Println(printer.PrintProgram(program))
-
 	vmConfig := prepareVMConfig(t, options.VMConfig, programs)
 
-	if vmConfig.TypeLoader == nil {
-		vmConfig.TypeLoader = typeLoader(t, programs)
-	}
+	vmConfig.WithDebugEnabled()
 
 	programVM := vm.NewVM(
 		location,

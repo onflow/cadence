@@ -2227,9 +2227,10 @@ func (i InstructionIteratorNext) Encode(code *[]byte) {
 
 // InstructionEmitEvent
 //
-// Pops an event off the stack and then emits it.
+// Pops arguments of the stack and then emits an event with the given type with them.
 type InstructionEmitEvent struct {
-	Type uint16
+	Type     uint16
+	ArgCount uint16
 }
 
 var _ Instruction = InstructionEmitEvent{}
@@ -2248,6 +2249,8 @@ func (i InstructionEmitEvent) String() string {
 func (i InstructionEmitEvent) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "type", i.Type, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "argCount", i.ArgCount, colorize)
 }
 
 func (i InstructionEmitEvent) ResolvedOperandsString(sb *strings.Builder,
@@ -2257,15 +2260,19 @@ func (i InstructionEmitEvent) ResolvedOperandsString(sb *strings.Builder,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "argCount", i.ArgCount, colorize)
 }
 
 func (i InstructionEmitEvent) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 	emitUint16(code, i.Type)
+	emitUint16(code, i.ArgCount)
 }
 
 func DecodeEmitEvent(ip *uint16, code []byte) (i InstructionEmitEvent) {
 	i.Type = decodeUint16(ip, code)
+	i.ArgCount = decodeUint16(ip, code)
 	return i
 }
 

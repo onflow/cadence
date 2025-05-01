@@ -29,7 +29,7 @@ import (
 
 // OnEventEmittedFunc is a function that is triggered when an event is emitted by the program.
 type OnEventEmittedFunc func(
-	event *interpreter.CompositeValue,
+	eventValues []interpreter.Value,
 	eventType *interpreter.CompositeStaticType,
 ) error
 
