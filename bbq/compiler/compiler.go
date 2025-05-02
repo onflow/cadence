@@ -45,15 +45,16 @@ type Compiler[E, T any] struct {
 
 	compositeTypeStack *Stack[sema.CompositeKindedType]
 
-	functions           []*function[E]
-	constants           []*Constant
-	Globals             map[string]*Global
-	importedGlobals     map[string]*Global
-	usedImportedGlobals []*Global
-	controlFlows        []controlFlow
-	currentControlFlow  *controlFlow
-	returns             []returns
-	currentReturn       *returns
+	functions             []*function[E]
+	globalVariableGetters []*function[E]
+	constants             []*Constant
+	Globals               map[string]*Global
+	importedGlobals       map[string]*Global
+	usedImportedGlobals   []*Global
+	controlFlows          []controlFlow
+	currentControlFlow    *controlFlow
+	returns               []returns
+	currentReturn         *returns
 
 	types         []sema.Type
 	compiledTypes []T
@@ -237,7 +238,37 @@ func (c *Compiler[E, T]) addFunction(
 	parameterCount uint16,
 	functionType *sema.FunctionType,
 ) *function[E] {
+	function := c.newFunction(
+		name,
+		qualifiedName,
+		parameterCount,
+		functionType,
+	)
+	c.functions = append(c.functions, function)
+	return function
+}
 
+func (c *Compiler[E, T]) addGlobalVariableGetter(
+	name string,
+	qualifiedName string,
+	functionType *sema.FunctionType,
+) *function[E] {
+	function := c.newFunction(
+		name,
+		qualifiedName,
+		0,
+		functionType,
+	)
+	c.globalVariableGetters = append(c.globalVariableGetters, function)
+	return function
+}
+
+func (c *Compiler[E, T]) newFunction(
+	name string,
+	qualifiedName string,
+	parameterCount uint16,
+	functionType *sema.FunctionType,
+) *function[E] {
 	functionTypeIndex := c.getOrAddType(functionType)
 
 	function := newFunction[E](
@@ -247,8 +278,6 @@ func (c *Compiler[E, T]) addFunction(
 		parameterCount,
 		functionTypeIndex,
 	)
-	c.functions = append(c.functions, function)
-
 	return function
 }
 
@@ -441,6 +470,9 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 	)
 
 	// Compile declarations
+	for _, declaration := range variableDeclarations {
+		c.compileDeclaration(declaration)
+	}
 	for _, declaration := range functionDeclarations {
 		c.compileDeclaration(declaration)
 	}
@@ -455,7 +487,7 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 	constants := c.exportConstants()
 	types := c.exportTypes()
 	imports := c.exportImports()
-	variables := c.exportVariables(variableDeclarations)
+	variables := c.exportVariables()
 
 	return &bbq.Program[E, T]{
 		Functions: functions,
@@ -600,47 +632,52 @@ func (c *Compiler[_, _]) exportImports() []bbq.Import {
 	return exportedImports
 }
 
-func (c *Compiler[E, T]) ExportFunctions() []bbq.Function[E] {
-	var functions []bbq.Function[E]
+func (c *Compiler[E, _]) ExportFunctions() []bbq.Function[E] {
+	var exportedFunctions []bbq.Function[E]
 
 	count := len(c.functions)
 	if count > 0 {
-		functions = make([]bbq.Function[E], 0, count)
+		exportedFunctions = make([]bbq.Function[E], 0, count)
 		for _, function := range c.functions {
-			functions = append(
-				functions,
-				bbq.Function[E]{
-					Name:           function.name,
-					QualifiedName:  function.qualifiedName,
-					Code:           function.code,
-					LocalCount:     function.localCount,
-					ParameterCount: function.parameterCount,
-					TypeIndex:      function.typeIndex,
-				},
+			exportedFunctions = append(
+				exportedFunctions,
+				c.newBBQFunction(function),
 			)
 		}
 	}
-
-	return functions
+	return exportedFunctions
 }
 
-func (c *Compiler[_, _]) exportVariables(variableDecls []*ast.VariableDeclaration) []bbq.Variable {
-	var variables []bbq.Variable
+func (c *Compiler[E, _]) newBBQFunction(function *function[E]) bbq.Function[E] {
+	return bbq.Function[E]{
+		Name:           function.name,
+		QualifiedName:  function.qualifiedName,
+		Code:           function.code,
+		LocalCount:     function.localCount,
+		ParameterCount: function.parameterCount,
+		TypeIndex:      function.typeIndex,
+	}
+}
 
-	count := len(c.functions)
+func (c *Compiler[E, _]) exportVariables() []bbq.Variable[E] {
+	var exportedFunctions []bbq.Variable[E]
+
+	count := len(c.globalVariableGetters)
 	if count > 0 {
-		variables = make([]bbq.Variable, 0, count)
-		for _, varDecl := range variableDecls {
-			variables = append(
-				variables,
-				bbq.Variable{
-					Name: varDecl.Identifier.Identifier,
-				},
-			)
+		exportedFunctions = make([]bbq.Variable[E], 0, count)
+
+		for _, getter := range c.globalVariableGetters {
+			bbqFunction := c.newBBQFunction(getter)
+			variable := bbq.Variable[E]{
+				Name:   getter.name,
+				Getter: bbqFunction,
+			}
+
+			exportedFunctions = append(exportedFunctions, variable)
 		}
 	}
 
-	return variables
+	return exportedFunctions
 }
 
 func (c *Compiler[_, _]) contractType() (contractType sema.CompositeKindedType) {
@@ -1105,6 +1142,43 @@ func (c *Compiler[_, _]) VisitSwitchStatement(statement *ast.SwitchStatement) (_
 }
 
 func (c *Compiler[_, _]) VisitVariableDeclaration(declaration *ast.VariableDeclaration) (_ struct{}) {
+
+	variableName := declaration.Identifier.Identifier
+
+	variable, isGlobalVar := c.DesugaredElaboration.elaboration.GetGlobalValue(variableName)
+
+	if isGlobalVar {
+		if declaration.Value == nil {
+			return
+		}
+
+		variableGetterFunctionType := sema.NewSimpleFunctionType(
+			sema.FunctionPurityImpure,
+			nil,
+			sema.NewTypeAnnotation(variable.Type),
+		)
+
+		variableGetter := c.addGlobalVariableGetter(
+			variableName,
+			variableName,
+			variableGetterFunctionType,
+		)
+
+		func() {
+			previousFunction := c.currentFunction
+			c.targetFunction(variableGetter)
+			defer c.targetFunction(previousFunction)
+
+			// No parameters
+			//c.declareParameters(declaration.ParameterList, isObjectMethod)
+
+			c.compileExpression(declaration.Value)
+			c.codeGen.Emit(opcode.InstructionReturnValue{})
+		}()
+
+		return
+	}
+
 	// Some variable declarations can be coming from inherited before-statements.
 	// If so, use the corresponding elaboration.
 	c.withConditionElaboration(declaration, func() {

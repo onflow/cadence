@@ -7845,3 +7845,111 @@ func TestSaturatingArithmetic(t *testing.T) {
 		result,
 	)
 }
+
+func TestGlobalVariables(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+              var a = 5
+
+              fun test(): Int {
+                  return a
+              }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(5),
+			result,
+		)
+	})
+
+	t.Run("referenced another var", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+              var a = 5
+              var b = a
+
+              fun test(): Int {
+                  return b
+              }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(5),
+			result,
+		)
+	})
+
+	t.Run("update referenced var before first use", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+              var a = 5
+              var b = a
+
+              fun test(): Int {
+                  // Update 'a' before getting 'b' for the first time.
+                  a = 8
+
+                  // Get 'b' for the fist time.
+                  return b
+              }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(8),
+			result,
+		)
+	})
+
+	t.Run("update referenced var after first use", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+              var a = 5
+              var b = a
+
+              fun test(): Int {
+                  // Use 'b' to get the value once.
+                  var c = b
+
+                  // Update 'a' before getting 'b' for the first time.
+                  a = 8
+
+                  // Get 'b' for a second time.
+                  // Should return the initial value.
+                  return b
+              }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(5),
+			result,
+		)
+	})
+}

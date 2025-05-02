@@ -20,6 +20,7 @@ package vm
 
 import (
 	"fmt"
+	"github.com/onflow/cadence/bbq/opcode"
 
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
@@ -92,8 +93,22 @@ func LinkGlobals(
 		indexedGlobals[contract.Name] = contractVariable
 	}
 
-	for range program.Variables {
-		globals = append(globals, &interpreter.SimpleVariable{})
+	for _, variable := range program.Variables {
+		function := &variable.Getter
+		valueGetter := compiledFunctionValue(executable, function)
+
+		simpleVariable := &interpreter.SimpleVariable{}
+		simpleVariable.InitializeWithGetter(func() interpreter.Value {
+			return context.InvokeFunction(
+				valueGetter,
+				nil,
+				nil,
+				EmptyLocationRange,
+			)
+		})
+
+		globals = append(globals, simpleVariable)
+		indexedGlobals[variable.Name] = simpleVariable
 	}
 
 	// Iterate through `program.Functions` to be deterministic.
@@ -114,13 +129,7 @@ func LinkGlobals(
 			// Look-up using the unqualified name, in the common-builtin functions.
 			value = IndexedCommonBuiltinTypeBoundFunctions[function.Name]
 		} else {
-			funcStaticType := getTypeFromExecutable[interpreter.FunctionStaticType](executable, function.TypeIndex)
-
-			value = CompiledFunctionValue{
-				Function:   function,
-				Executable: executable,
-				Type:       funcStaticType,
-			}
+			value = compiledFunctionValue(executable, function)
 		}
 
 		variable := &interpreter.SimpleVariable{}
@@ -140,6 +149,19 @@ func LinkGlobals(
 	return LinkedGlobals{
 		executable:     executable,
 		indexedGlobals: indexedGlobals,
+	}
+}
+
+func compiledFunctionValue(
+	executable *ExecutableProgram,
+	function *bbq.Function[opcode.Instruction],
+) FunctionValue {
+	funcStaticType := getTypeFromExecutable[interpreter.FunctionStaticType](executable, function.TypeIndex)
+
+	return CompiledFunctionValue{
+		Function:   function,
+		Executable: executable,
+		Type:       funcStaticType,
 	}
 }
 

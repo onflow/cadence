@@ -75,6 +75,16 @@ func (p *ProgramPrinter[E, T]) PrintProgram(program *Program[E, T]) string {
 	p.printConstantPool(program.Constants)
 	p.printTypePool(program.Types)
 
+	for _, variable := range program.Variables {
+		p.printFunction(
+			variable.Getter,
+			program.Constants,
+			program.Types,
+			nil,
+		)
+		p.stringBuilder.WriteRune('\n')
+	}
+
 	var functionNames []string
 	if len(program.Functions) > 0 {
 		functionNames = make([]string, 0, len(program.Functions))

@@ -28,7 +28,7 @@ type Program[E, T any] struct {
 	Imports   []Import
 	Functions []Function[E]
 	Constants []constant.Constant
-	Variables []Variable
+	Variables []Variable[E]
 	Types     []T
 }
 
