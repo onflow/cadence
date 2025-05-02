@@ -76,8 +76,12 @@ func (p *ProgramPrinter[E, T]) PrintProgram(program *Program[E, T]) string {
 	p.printTypePool(program.Types)
 
 	for _, variable := range program.Variables {
+		if variable.Getter == nil {
+			continue
+		}
+
 		p.printFunction(
-			variable.Getter,
+			*variable.Getter,
 			program.Constants,
 			program.Types,
 			nil,

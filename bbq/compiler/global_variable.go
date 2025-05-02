@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-package bbq
+package compiler
 
-type Variable[E any] struct {
+type globalVariable[E any] struct {
 	Name   string
-	Getter *Function[E]
+	Getter *function[E]
 }

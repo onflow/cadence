@@ -45,16 +45,16 @@ type Compiler[E, T any] struct {
 
 	compositeTypeStack *Stack[sema.CompositeKindedType]
 
-	functions             []*function[E]
-	globalVariableGetters []*function[E]
-	constants             []*Constant
-	Globals               map[string]*Global
-	importedGlobals       map[string]*Global
-	usedImportedGlobals   []*Global
-	controlFlows          []controlFlow
-	currentControlFlow    *controlFlow
-	returns               []returns
-	currentReturn         *returns
+	functions           []*function[E]
+	globalVariables     []*globalVariable[E]
+	constants           []*Constant
+	Globals             map[string]*Global
+	importedGlobals     map[string]*Global
+	usedImportedGlobals []*Global
+	controlFlows        []controlFlow
+	currentControlFlow  *controlFlow
+	returns             []returns
+	currentReturn       *returns
 
 	types         []sema.Type
 	compiledTypes []T
@@ -72,6 +72,8 @@ type Compiler[E, T any] struct {
 	// Cache alike for compiledTypes and constants in the pool.
 	typesInPool     map[sema.TypeID]uint16
 	constantsInPool map[constantsCacheKey]*Constant
+
+	globalVariablesSet map[string]struct{}
 
 	// TODO: initialize
 	memoryGauge common.MemoryGauge
@@ -152,6 +154,7 @@ func newCompiler[E, T any](
 		importedGlobals:      globals,
 		typesInPool:          make(map[sema.TypeID]uint16),
 		constantsInPool:      make(map[constantsCacheKey]*Constant),
+		globalVariablesSet:   make(map[string]struct{}),
 		compositeTypeStack: &Stack[sema.CompositeKindedType]{
 			elements: make([]sema.CompositeKindedType, 0),
 		},
@@ -248,19 +251,37 @@ func (c *Compiler[E, T]) addFunction(
 	return function
 }
 
-func (c *Compiler[E, T]) addGlobalVariableGetter(
+func (c *Compiler[E, T]) addGlobalVariableWithGetter(
 	name string,
-	qualifiedName string,
 	functionType *sema.FunctionType,
-) *function[E] {
+) *globalVariable[E] {
 	function := c.newFunction(
 		name,
-		qualifiedName,
+		name,
 		0,
 		functionType,
 	)
-	c.globalVariableGetters = append(c.globalVariableGetters, function)
-	return function
+
+	globalVariable := &globalVariable[E]{
+		Name:   name,
+		Getter: function,
+	}
+
+	c.globalVariables = append(c.globalVariables, globalVariable)
+
+	return globalVariable
+}
+
+func (c *Compiler[E, T]) addGlobalVariable(
+	name string,
+) *globalVariable[E] {
+	globalVariable := &globalVariable[E]{
+		Name: name,
+	}
+
+	c.globalVariables = append(c.globalVariables, globalVariable)
+
+	return globalVariable
 }
 
 func (c *Compiler[E, T]) newFunction(
@@ -487,7 +508,7 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 	constants := c.exportConstants()
 	types := c.exportTypes()
 	imports := c.exportImports()
-	variables := c.exportVariables()
+	variables := c.exportGlobalVariables()
 
 	return &bbq.Program[E, T]{
 		Functions: functions,
@@ -508,7 +529,9 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 	interfaceDecls []*ast.InterfaceDeclaration,
 ) {
 	for _, declaration := range variableDecls {
-		c.addGlobal(declaration.Identifier.Identifier)
+		variableName := declaration.Identifier.Identifier
+		c.addGlobal(variableName)
+		c.globalVariablesSet[variableName] = struct{}{}
 	}
 
 	for _, declaration := range specialFunctionDecls {
@@ -633,19 +656,19 @@ func (c *Compiler[_, _]) exportImports() []bbq.Import {
 }
 
 func (c *Compiler[E, _]) ExportFunctions() []bbq.Function[E] {
-	var exportedFunctions []bbq.Function[E]
+	var functions []bbq.Function[E]
 
 	count := len(c.functions)
 	if count > 0 {
-		exportedFunctions = make([]bbq.Function[E], 0, count)
+		functions = make([]bbq.Function[E], 0, count)
 		for _, function := range c.functions {
-			exportedFunctions = append(
-				exportedFunctions,
+			functions = append(
+				functions,
 				c.newBBQFunction(function),
 			)
 		}
 	}
-	return exportedFunctions
+	return functions
 }
 
 func (c *Compiler[E, _]) newBBQFunction(function *function[E]) bbq.Function[E] {
@@ -659,25 +682,34 @@ func (c *Compiler[E, _]) newBBQFunction(function *function[E]) bbq.Function[E] {
 	}
 }
 
-func (c *Compiler[E, _]) exportVariables() []bbq.Variable[E] {
-	var exportedFunctions []bbq.Variable[E]
+func (c *Compiler[E, _]) exportGlobalVariables() []bbq.Variable[E] {
+	var globalVariables []bbq.Variable[E]
 
-	count := len(c.globalVariableGetters)
+	count := len(c.globalVariables)
 	if count > 0 {
-		exportedFunctions = make([]bbq.Variable[E], 0, count)
+		globalVariables = make([]bbq.Variable[E], 0, count)
 
-		for _, getter := range c.globalVariableGetters {
-			bbqFunction := c.newBBQFunction(getter)
-			variable := bbq.Variable[E]{
-				Name:   getter.name,
-				Getter: bbqFunction,
+		for _, variable := range c.globalVariables {
+			var getter *bbq.Function[E]
+
+			// Some globals variables may not have inlined initial values.
+			// e.g: Transaction parameters are converted global variables,
+			// where the values are being set in the transaction initializer.
+			if variable.Getter != nil {
+				function := c.newBBQFunction(variable.Getter)
+				getter = &function
 			}
 
-			exportedFunctions = append(exportedFunctions, variable)
+			variable := bbq.Variable[E]{
+				Name:   variable.Name,
+				Getter: getter,
+			}
+
+			globalVariables = append(globalVariables, variable)
 		}
 	}
 
-	return exportedFunctions
+	return globalVariables
 }
 
 func (c *Compiler[_, _]) contractType() (contractType sema.CompositeKindedType) {
@@ -1145,28 +1177,30 @@ func (c *Compiler[_, _]) VisitVariableDeclaration(declaration *ast.VariableDecla
 
 	variableName := declaration.Identifier.Identifier
 
-	variable, isGlobalVar := c.DesugaredElaboration.elaboration.GetGlobalValue(variableName)
+	_, isGlobalVar := c.globalVariablesSet[variableName]
 
 	if isGlobalVar {
 		if declaration.Value == nil {
+			c.addGlobalVariable(variableName)
 			return
 		}
+
+		varDeclTypes := c.DesugaredElaboration.VariableDeclarationTypes(declaration)
 
 		variableGetterFunctionType := sema.NewSimpleFunctionType(
 			sema.FunctionPurityImpure,
 			nil,
-			sema.NewTypeAnnotation(variable.Type),
+			sema.NewTypeAnnotation(varDeclTypes.TargetType),
 		)
 
-		variableGetter := c.addGlobalVariableGetter(
-			variableName,
+		globalVariable := c.addGlobalVariableWithGetter(
 			variableName,
 			variableGetterFunctionType,
 		)
 
 		func() {
 			previousFunction := c.currentFunction
-			c.targetFunction(variableGetter)
+			c.targetFunction(globalVariable.Getter)
 			defer c.targetFunction(previousFunction)
 
 			// No parameters

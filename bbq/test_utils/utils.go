@@ -134,7 +134,7 @@ func ParseCheckAndCompileCodeWithOptions(
 	const colorize = false
 	printer := bbq.NewInstructionsProgramPrinter(resolve, colorize)
 
-	fmt.Println(printer.PrintProgram(program))
+	_ = printer.PrintProgram(program)
 
 	// Replace the original elaboration with the extended one.
 	// Desugared elaboration is not needed during the compilation of the same program,

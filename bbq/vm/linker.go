@@ -20,9 +20,9 @@ package vm
 
 import (
 	"fmt"
-	"github.com/onflow/cadence/bbq/opcode"
 
 	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -94,18 +94,22 @@ func LinkGlobals(
 	}
 
 	for _, variable := range program.Variables {
-		function := &variable.Getter
-		valueGetter := compiledFunctionValue(executable, function)
-
 		simpleVariable := &interpreter.SimpleVariable{}
-		simpleVariable.InitializeWithGetter(func() interpreter.Value {
-			return context.InvokeFunction(
-				valueGetter,
-				nil,
-				nil,
-				EmptyLocationRange,
-			)
-		})
+
+		// Some globals variables may not have initial values.
+		// e.g: Transaction parameters are converted global variables,
+		// where the values are being set in the transaction initializer.
+		if variable.Getter != nil {
+			valueGetter := functionValueFromBBQFunction(executable, variable.Getter)
+			simpleVariable.InitializeWithGetter(func() interpreter.Value {
+				return context.InvokeFunction(
+					valueGetter,
+					nil,
+					nil,
+					EmptyLocationRange,
+				)
+			})
+		}
 
 		globals = append(globals, simpleVariable)
 		indexedGlobals[variable.Name] = simpleVariable
@@ -113,7 +117,6 @@ func LinkGlobals(
 
 	// Iterate through `program.Functions` to be deterministic.
 	// Order of globals must be same as index set at `Compiler.addGlobal()`.
-	// TODO: include non-function globals
 	for i := range program.Functions {
 		function := &program.Functions[i]
 
@@ -129,7 +132,7 @@ func LinkGlobals(
 			// Look-up using the unqualified name, in the common-builtin functions.
 			value = IndexedCommonBuiltinTypeBoundFunctions[function.Name]
 		} else {
-			value = compiledFunctionValue(executable, function)
+			value = functionValueFromBBQFunction(executable, function)
 		}
 
 		variable := &interpreter.SimpleVariable{}
@@ -152,7 +155,7 @@ func LinkGlobals(
 	}
 }
 
-func compiledFunctionValue(
+func functionValueFromBBQFunction(
 	executable *ExecutableProgram,
 	function *bbq.Function[opcode.Instruction],
 ) FunctionValue {
