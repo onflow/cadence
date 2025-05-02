@@ -3500,7 +3500,9 @@ func TestInterpretStorageReferenceBoundFunction(t *testing.T) {
         `, sema.Config{})
 
 		_, err := inter.Invoke("test")
-		require.NoError(t, err)
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.DereferenceError{})
 	})
 }
 

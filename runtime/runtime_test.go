@@ -12868,5 +12868,7 @@ func TestRuntimeFunctionTypeConfusion(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	require.NoError(t, err)
+	RequireError(t, err)
+
+	require.ErrorAs(t, err, &interpreter.DereferenceError{})
 }
