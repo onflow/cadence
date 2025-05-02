@@ -257,16 +257,16 @@ func newOnMeterComputation(i *Interface) interpreter.OnMeterComputationFunc {
 
 func newOnEventEmittedHandler(i *Interface) interpreter.OnEventEmittedFunc {
 	return func(
-		inter *interpreter.Interpreter,
+		context interpreter.ValueExportContext,
 		locationRange interpreter.LocationRange,
-		eventValue *interpreter.CompositeValue,
 		eventType *sema.CompositeType,
+		eventFields []interpreter.Value,
 	) error {
-		emitEventValue(
-			inter,
+		EmitEventFields(
+			context,
 			locationRange,
 			eventType,
-			eventValue,
+			eventFields,
 			(*i).EmitEvent,
 		)
 

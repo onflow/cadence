@@ -581,7 +581,7 @@ access(all) fun main(account: Address): UFix64 {
 }
 `
 
-func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
+func testRuntimeFungibleTokenTransfer(tb testing.TB, useVM bool) {
 
 	runtime := NewTestInterpreterRuntime()
 
@@ -603,7 +603,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAccount}, nil
 		},
-		OnResolveLocation: NewSingleIdentifierLocationResolver(b),
+		OnResolveLocation: NewSingleIdentifierLocationResolver(tb),
 		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
@@ -620,7 +620,11 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 		},
 	}
 
-	environment := NewBaseInterpreterEnvironment(Config{})
+	var environment Environment = NewBaseInterpreterEnvironment(Config{})
+	// TODO: Uncomment once the compiler branch is merged to master.
+	//if useVM {
+	//	environment = NewBaseVMEnvironment(Config{})
+	//}
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
@@ -637,9 +641,10 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 			Interface:   runtimeInterface,
 			Location:    nextTransactionLocation(),
 			Environment: environment,
+			UseVM:       useVM,
 		},
 	)
-	require.NoError(b, err)
+	require.NoError(tb, err)
 
 	// Deploy Flow Token contract
 
@@ -651,9 +656,10 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 			Interface:   runtimeInterface,
 			Location:    nextTransactionLocation(),
 			Environment: environment,
+			UseVM:       useVM,
 		},
 	)
-	require.NoError(b, err)
+	require.NoError(tb, err)
 
 	// Setup both user accounts for Flow Token
 
@@ -672,15 +678,16 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 				Interface:   runtimeInterface,
 				Location:    nextTransactionLocation(),
 				Environment: environment,
+				UseVM:       useVM,
 			},
 		)
-		require.NoError(b, err)
+		require.NoError(tb, err)
 	}
 
 	// Mint 1000 FLOW to sender
 
 	mintAmount, err := cadence.NewUFix64("100000000000.0")
-	require.NoError(b, err)
+	require.NoError(tb, err)
 
 	mintAmountValue := interpreter.NewUnmeteredUFix64Value(uint64(mintAmount))
 
@@ -698,21 +705,37 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 			Interface:   runtimeInterface,
 			Location:    nextTransactionLocation(),
 			Environment: environment,
+			UseVM:       useVM,
 		},
 	)
-	require.NoError(b, err)
+	require.NoError(tb, err)
 
 	// Benchmark sending tokens from sender to receiver
 
 	sendAmount, err := cadence.NewUFix64("0.00000001")
-	require.NoError(b, err)
+	require.NoError(tb, err)
 
 	signerAccount = senderAddress
 
-	b.ReportAllocs()
-	b.ResetTimer()
+	var transferCount int
 
-	for i := 0; i < b.N; i++ {
+	loop := func() bool {
+		return transferCount == 0
+	}
+
+	b, _ := tb.(*testing.B)
+
+	if b != nil {
+
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		loop = func() bool {
+			return transferCount < b.N
+		}
+	}
+
+	for loop() {
 
 		err = runtime.ExecuteTransaction(
 			Script{
@@ -726,18 +749,23 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 				Interface:   runtimeInterface,
 				Location:    nextTransactionLocation(),
 				Environment: environment,
+				UseVM:       useVM,
 			},
 		)
-		require.NoError(b, err)
+		require.NoError(tb, err)
+
+		transferCount++
 	}
 
-	b.StopTimer()
+	if b != nil {
+		b.StopTimer()
+	}
 
 	// Run validation scripts
 
 	sum := interpreter.NewUnmeteredUFix64ValueWithInteger(0, interpreter.EmptyLocationRange)
 
-	inter := NewTestInterpreter(b)
+	inter := NewTestInterpreter(tb)
 
 	nextScriptLocation := NewScriptLocationGenerator()
 
@@ -757,18 +785,19 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 				Interface:   runtimeInterface,
 				Location:    nextScriptLocation(),
 				Environment: environment,
+				UseVM:       useVM,
 			},
 		)
-		require.NoError(b, err)
+		require.NoError(tb, err)
 
 		value := interpreter.NewUnmeteredUFix64Value(uint64(result.(cadence.UFix64)))
 
-		require.True(b, bool(value.Less(inter, mintAmountValue, interpreter.EmptyLocationRange)))
+		require.True(tb, bool(value.Less(inter, mintAmountValue, interpreter.EmptyLocationRange)))
 
 		sum = sum.Plus(inter, value, interpreter.EmptyLocationRange).(interpreter.UFix64Value)
 	}
 
-	RequireValuesEqual(b, nil, mintAmountValue, sum)
+	RequireValuesEqual(tb, nil, mintAmountValue, sum)
 }
 
 const oldExampleToken = `
@@ -915,6 +944,24 @@ func isFungibleTokenContract(program *ast.Program, fungibleTokenAddress common.A
 
 	return true
 }
+
+func TestRuntimeFungibleTokenTransferInterpreter(t *testing.T) {
+	testRuntimeFungibleTokenTransfer(t, false)
+}
+
+// TODO:
+//func TestRuntimeFungibleTokenTransferVM(t *testing.T) {
+//	testRuntimeFungibleTokenTransfer(t, true)
+//}
+
+func BenchmarkRuntimeFungibleTokenTransferInterpreter(b *testing.B) {
+	testRuntimeFungibleTokenTransfer(b, false)
+}
+
+// TODO:
+//func BenchmarkRuntimeFungibleTokenTransferVM(b *testing.B) {
+//	testRuntimeFungibleTokenTransfer(b, false)
+//}
 
 func getField(declaration *ast.CompositeDeclaration, name string) *ast.FieldDeclaration {
 	for _, fieldDeclaration := range declaration.Members.Fields() {

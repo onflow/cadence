@@ -772,11 +772,15 @@ func exportEvent(
 
 func exportFunctionValue(
 	v interpreter.FunctionValue,
-	gauge common.MemoryGauge,
+	context interpreter.TypeConverter,
 ) cadence.Function {
 	return cadence.NewMeteredFunction(
-		gauge,
-		ExportMeteredType(gauge, v.FunctionType(), map[sema.TypeID]cadence.Type{}).(*cadence.FunctionType),
+		context,
+		ExportMeteredType(
+			context,
+			v.FunctionType(context),
+			map[sema.TypeID]cadence.Type{},
+		).(*cadence.FunctionType),
 	)
 }
 

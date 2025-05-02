@@ -408,7 +408,12 @@ type ValueWalkContext interface {
 var _ ValueWalkContext = &Interpreter{}
 
 type EventContext interface {
-	EmitEventValue(event *CompositeValue, eventType *sema.CompositeType, locationRange LocationRange)
+	EmitEvent(
+		context ValueExportContext,
+		locationRange LocationRange,
+		eventType *sema.CompositeType,
+		eventFields []Value,
+	)
 }
 
 var _ EventContext = &Interpreter{}

@@ -1215,7 +1215,7 @@ func TestInterpretNestedReferenceMemberAccess(t *testing.T) {
 	t.Run("indexing", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R {}
 
             fun test() {
@@ -1233,7 +1233,7 @@ func TestInterpretNestedReferenceMemberAccess(t *testing.T) {
 	t.Run("field", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R {}
 
             struct Container {
@@ -1259,7 +1259,7 @@ func TestInterpretNestedReferenceMemberAccess(t *testing.T) {
 	t.Run("referenceArray", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 
             entitlement E
 

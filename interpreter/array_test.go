@@ -33,10 +33,9 @@ func TestInterpretArrayFunctionEntitlements(t *testing.T) {
 	t.Run("mutable reference", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
-            let array: [String] = ["foo", "bar"]
-
+		inter := parseCheckAndPrepare(t, `
             fun test() {
+                let array: [String] = ["foo", "bar"]
                 var arrayRef = &array as auth(Mutate) &[String]
 
                 // Public functions
@@ -64,10 +63,9 @@ func TestInterpretArrayFunctionEntitlements(t *testing.T) {
 	t.Run("non auth reference", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
-            let array: [String] = ["foo", "bar"]
-
+		inter := parseCheckAndPrepare(t, `
             fun test() {
+                let array: [String] = ["foo", "bar"]
                 var arrayRef = &array as &[String]
 
                 // Public functions
@@ -85,10 +83,9 @@ func TestInterpretArrayFunctionEntitlements(t *testing.T) {
 	t.Run("insert reference", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
-            let array: [String] = ["foo", "bar"]
-
+		inter := parseCheckAndPrepare(t, `
             fun test() {
+                let array: [String] = ["foo", "bar"]
                 var arrayRef = &array as auth(Insert) &[String]
 
                 // Public functions
@@ -111,10 +108,9 @@ func TestInterpretArrayFunctionEntitlements(t *testing.T) {
 	t.Run("remove reference", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
-            let array: [String] = ["foo", "bar", "baz"]
-
+		inter := parseCheckAndPrepare(t, `
             fun test() {
+                let array: [String] = ["foo", "bar", "baz"]
                 var arrayRef = &array as auth(Remove) &[String]
 
                 // Public functions
@@ -139,7 +135,7 @@ func TestCheckArrayReferenceTypeInferenceWithDowncasting(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
 		entitlement E
 		entitlement F 
 		entitlement G
@@ -155,5 +151,6 @@ func TestCheckArrayReferenceTypeInferenceWithDowncasting(t *testing.T) {
 	`)
 
 	_, err := inter.Invoke("test")
+	require.Error(t, err)
 	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 }

@@ -141,7 +141,7 @@ type testAccountHandler struct {
 	updateAccountContractCode func(location common.AddressLocation, code []byte) error
 	recordContractUpdate      func(location common.AddressLocation, value *interpreter.CompositeValue)
 	contractUpdateRecorded    func(location common.AddressLocation) bool
-	interpretContract         func(
+	loadContractValue         func(
 		location common.AddressLocation,
 		program *interpreter.Program,
 		name string,
@@ -349,7 +349,7 @@ func (t *testAccountHandler) ContractUpdateRecorded(location common.AddressLocat
 	return t.contractUpdateRecorded(location)
 }
 
-func (t *testAccountHandler) InterpretContract(
+func (t *testAccountHandler) LoadContractValue(
 	location common.AddressLocation,
 	program *interpreter.Program,
 	name string,
@@ -358,10 +358,10 @@ func (t *testAccountHandler) InterpretContract(
 	*interpreter.CompositeValue,
 	error,
 ) {
-	if t.interpretContract == nil {
-		panic(errors.NewUnexpectedError("unexpected call to InterpretContract"))
+	if t.loadContractValue == nil {
+		panic(errors.NewUnexpectedError("unexpected call to LoadContractValue"))
 	}
-	return t.interpretContract(
+	return t.loadContractValue(
 		location,
 		program,
 		name,
@@ -597,10 +597,14 @@ func testAccountWithErrorHandlerWithCompiler(
 	var storage interpreter.Storage
 
 	if compilerEnabled && *compile {
+
+		// TODO: Uncomment once the compiler branch is merged to master.
 		//vmConfig := &vm.Config{
-		//	NativeFunctionsProvider: func() map[string]interpreter.Value {
+		//	NativeFunctionsProvider: func() map[string]*vm.Variable {
 		//		funcs := vm.NativeFunctions()
-		//		funcs[accountValueDeclaration.Name] = accountValueDeclaration.Value
+		//		variable := &interpreter.SimpleVariable{}
+		//		variable.InitializeWithValue(accountValueDeclaration.Value)
+		//		funcs[accountValueDeclaration.Name] = variable
 		//		return funcs
 		//	},
 		//}
@@ -609,31 +613,33 @@ func testAccountWithErrorHandlerWithCompiler(
 		//	t,
 		//	code,
 		//	compilerUtils.CompilerAndVMOptions{
-		//		ParseAndCheckOptions: &sema_utils.ParseAndCheckOptions{
-		//			Config: &sema.Config{
-		//				LocationHandler: runtime_utils.NewSingleIdentifierLocationResolver(t),
-		//				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-		//					return baseValueActivation
+		//		ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+		//			ParseAndCheckOptions: &ParseAndCheckOptions{
+		//				Config: &sema.Config{
+		//					LocationHandler: NewSingleIdentifierLocationResolver(t),
+		//					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+		//						return baseValueActivation
+		//					},
+		//				},
+		//			},
+		//			CompilerConfig: &compiler.Config{
+		//				BuiltinGlobalsProvider: func() map[string]*compiler.Global {
+		//					builtins := compiler.NativeFunctions()
+		//					for _, valueDeclaration := range valueDeclarations {
+		//						name := valueDeclaration.Name
+		//						builtins[name] = &compiler.Global{
+		//							Name: name,
+		//						}
+		//					}
+		//					return builtins
 		//				},
 		//			},
 		//		},
 		//		VMConfig: vmConfig,
-		//		CompilerConfig: &compiler.Config{
-		//			BuiltinGlobalsProvider: func() map[string]*compiler.Global {
-		//				builtins := compiler.NativeFunctions()
-		//				for _, valueDeclaration := range valueDeclarations {
-		//					name := valueDeclaration.Name
-		//					builtins[name] = &compiler.Global{
-		//						Name: name,
-		//					}
-		//				}
-		//				return builtins
-		//			},
-		//		},
 		//	},
 		//)
 		//
-		//invokable = test_utils.NewVMInvokable(vmInstance, vmConfig)
+		//invokable = test_utils.NewVMInvokable(vmInstance)
 		//storage = vmConfig.Storage()
 
 		// Not supported for now

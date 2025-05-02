@@ -58,10 +58,10 @@ type getterSetter struct {
 
 // OnEventEmittedFunc is a function that is triggered when an event is emitted by the program.
 type OnEventEmittedFunc func(
-	inter *Interpreter,
+	context ValueExportContext,
 	locationRange LocationRange,
-	event *CompositeValue,
 	eventType *sema.CompositeType,
+	eventFields []Value,
 ) error
 
 // OnStatementFunc is a function that is triggered when a statement is about to be executed.
@@ -1024,7 +1024,7 @@ func (interpreter *Interpreter) visitAssignment(
 
 	value := interpreter.evalExpression(valueExpression)
 
-	transferredValue := transferAndConvert(interpreter, value, valueType, targetType, locationRange)
+	transferredValue := TransferAndConvert(interpreter, value, valueType, targetType, locationRange)
 
 	targetGetterSetter.set(transferredValue)
 }
@@ -1877,7 +1877,7 @@ func (interpreter *Interpreter) ValueIsSubtypeOfSemaType(value Value, targetType
 	return IsSubTypeOfSemaType(interpreter, value.StaticType(interpreter), targetType)
 }
 
-func transferAndConvert(
+func TransferAndConvert(
 	context ValueConversionContext,
 	value Value,
 	valueType, targetType sema.Type,
@@ -3612,11 +3612,26 @@ func referenceTypeFunction(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
+	invocationContext := invocation.InvocationContext
+	locationRange := invocation.LocationRange
+
+	return ConstructReferenceStaticType(
+		invocationContext,
+		entitlementValues,
+		locationRange,
+		typeValue,
+	)
+}
+
+func ConstructReferenceStaticType(
+	invocationContext InvocationContext,
+	entitlementValues *ArrayValue,
+	locationRange LocationRange,
+	typeValue TypeValue,
+) Value {
 	authorization := UnauthorizedAccess
 	errInIteration := false
 	entitlementsCount := entitlementValues.Count()
-
-	invocationContext := invocation.InvocationContext
 
 	if entitlementsCount > 0 {
 		authorization = NewEntitlementSetAuthorization(
@@ -3642,7 +3657,7 @@ func referenceTypeFunction(invocation Invocation) Value {
 						return true
 					},
 					false,
-					invocation.LocationRange,
+					locationRange,
 				)
 				return entitlements
 			},
@@ -3656,11 +3671,11 @@ func referenceTypeFunction(invocation Invocation) Value {
 	}
 
 	return NewSomeValueNonCopying(
-		invocation.InvocationContext,
+		invocationContext,
 		NewTypeValue(
-			invocation.InvocationContext,
+			invocationContext,
 			NewReferenceStaticType(
-				invocation.InvocationContext,
+				invocationContext,
 				authorization,
 				typeValue.Type,
 			),
@@ -4306,7 +4321,7 @@ func (interpreter *Interpreter) InvokeFunction(
 	invocationArgumentTypes []sema.Type,
 	locationRange LocationRange,
 ) Value {
-	fnType := fn.FunctionType()
+	fnType := fn.FunctionType(interpreter)
 	parameterTypes := fnType.ParameterTypes()
 	returnType := fnType.ReturnTypeAnnotation.Type
 
@@ -5210,28 +5225,31 @@ func isInstanceFunction(context FunctionCreationContext, self Value) FunctionVal
 		self,
 		sema.IsInstanceFunctionType,
 		func(self Value, invocation Invocation) Value {
-			interpreter := invocation.InvocationContext
+			invocationContext := invocation.InvocationContext
 
 			firstArgument := invocation.Arguments[0]
 			typeValue, ok := firstArgument.(TypeValue)
-
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
-			staticType := typeValue.Type
-
-			// Values are never instances of unknown types
-			if staticType == nil {
-				return FalseValue
-			}
-
-			// NOTE: not invocation.Self, as that is only set for composite values
-			selfType := self.StaticType(interpreter)
-			return BoolValue(
-				IsSubType(interpreter, selfType, staticType),
-			)
+			return IsInstance(invocationContext, self, typeValue)
 		},
+	)
+}
+
+func IsInstance(invocationContext InvocationContext, self Value, typeValue TypeValue) Value {
+	staticType := typeValue.Type
+
+	// Values are never instances of unknown types
+	if staticType == nil {
+		return FalseValue
+	}
+
+	// NOTE: not invocation.Self, as that is only set for composite values
+	selfType := self.StaticType(invocationContext)
+	return BoolValue(
+		IsSubType(invocationContext, selfType, staticType),
 	)
 }
 
@@ -5241,11 +5259,15 @@ func getTypeFunction(context FunctionCreationContext, self Value) FunctionValue 
 		self,
 		sema.GetTypeFunctionType,
 		func(self Value, invocation Invocation) Value {
-			interpreter := invocation.InvocationContext
-			staticType := self.StaticType(interpreter)
-			return NewTypeValue(interpreter, staticType)
+			invocationContext := invocation.InvocationContext
+			return ValueGetType(invocationContext, self)
 		},
 	)
+}
+
+func ValueGetType(context InvocationContext, self Value) Value {
+	staticType := self.StaticType(context)
+	return NewTypeValue(context, staticType)
 }
 
 func setMember(

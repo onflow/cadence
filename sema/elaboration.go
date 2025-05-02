@@ -68,10 +68,10 @@ type AssignmentStatementTypes struct {
 }
 
 type InvocationExpressionTypes struct {
-	ReturnType         Type
-	TypeArguments      *TypeParameterTypeOrderedMap
-	ArgumentTypes      []Type
-	TypeParameterTypes []Type
+	ReturnType     Type
+	TypeArguments  *TypeParameterTypeOrderedMap
+	ArgumentTypes  []Type
+	ParameterTypes []Type
 }
 
 type ArrayExpressionTypes struct {
@@ -869,6 +869,10 @@ func (e *Elaboration) SetImportDeclarationsResolvedLocations(
 		e.importDeclarationsResolvedLocations = map[*ast.ImportDeclaration][]ResolvedLocation{}
 	}
 	e.importDeclarationsResolvedLocations[declaration] = locations
+}
+
+func (e *Elaboration) AllImportDeclarationsResolvedLocations() map[*ast.ImportDeclaration][]ResolvedLocation {
+	return e.importDeclarationsResolvedLocations
 }
 
 func (e *Elaboration) ReferenceExpressionBorrowType(expression *ast.ReferenceExpression) Type {

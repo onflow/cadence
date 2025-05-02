@@ -533,7 +533,7 @@ func (v *DictionaryValue) ForEachKey(
 
 	argumentTypes := []sema.Type{keyType}
 
-	procedureFunctionType := procedure.FunctionType()
+	procedureFunctionType := procedure.FunctionType(context)
 	parameterTypes := procedureFunctionType.ParameterTypes()
 	returnType := procedureFunctionType.ReturnTypeAnnotation.Type
 
@@ -812,7 +812,7 @@ func (v *DictionaryValue) GetMethod(
 	name string,
 ) FunctionValue {
 	switch name {
-	case "remove":
+	case sema.DictionaryTypeRemoveFunctionName:
 		return NewBoundHostFunctionValue(
 			context,
 			v,
@@ -830,7 +830,7 @@ func (v *DictionaryValue) GetMethod(
 			},
 		)
 
-	case "insert":
+	case sema.DictionaryTypeInsertFunctionName:
 		return NewBoundHostFunctionValue(
 			context,
 			v,
@@ -850,7 +850,7 @@ func (v *DictionaryValue) GetMethod(
 			},
 		)
 
-	case "containsKey":
+	case sema.DictionaryTypeContainsKeyFunctionName:
 		return NewBoundHostFunctionValue(
 			context,
 			v,
@@ -865,7 +865,7 @@ func (v *DictionaryValue) GetMethod(
 				)
 			},
 		)
-	case "forEachKey":
+	case sema.DictionaryTypeForEachKeyFunctionName:
 		return NewBoundHostFunctionValue(
 			context,
 			v,

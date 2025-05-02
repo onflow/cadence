@@ -22,6 +22,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"flag"
 	"fmt"
 	"math/big"
 	mrand "math/rand"
@@ -47,6 +48,8 @@ import (
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
+
+var compile = flag.Bool("compile", false, "Run tests using the compiler")
 
 func TestRuntimeImport(t *testing.T) {
 
@@ -2835,84 +2838,101 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
-
 	addressValue := Address{
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
 	}
 
-	contract := []byte(`
-        access(all) contract Test {
-            access(all) fun hello() {
-                log("Hello World!")
-            }
-            access(all) fun helloArg(_ arg: String) {
-                log("Hello ".concat(arg))
-            }
-            access(all) fun helloMultiArg(arg1: String, arg2: Int, arg3: Address) {
-                log("Hello ".concat(arg1).concat(" ").concat(arg2.toString()).concat(" from ").concat(arg3.toString()))
-            }
-            access(all) fun helloReturn(_ arg: String): String {
-                log("Hello return!")
-                return arg
-            }
-            access(all) fun helloAuthAcc(account: &Account) {
-                log("Hello ".concat(account.address.toString()))
-            }
-            access(all) fun helloPublicAcc(account: &Account) {
-                log("Hello access(all) ".concat(account.address.toString()))
-            }
-        }
-    `)
+	newRuntime := func(testing *testing.T) (Runtime, Interface, func() []string, func() common.TransactionLocation) {
+		runtime := NewTestInterpreterRuntime()
 
-	deploy := DeploymentTransaction("Test", contract)
+		contract := []byte(`
+            access(all) contract Test {
 
-	var accountCode []byte
-	var loggedMessage string
+                access(all) fun hello() {
+                    log("Hello World!")
+                }
 
-	storage := NewTestLedger(nil, nil)
+                access(all) fun helloArg(_ arg: String) {
+                    log("Hello ".concat(arg))
+                }
 
-	runtimeInterface := &TestRuntimeInterface{
-		Storage: storage,
-		OnGetCode: func(_ Location) (bytes []byte, err error) {
-			return accountCode, nil
-		},
-		OnGetSigningAccounts: func() ([]Address, error) {
-			return []Address{addressValue}, nil
-		},
-		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
-		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
-			return accountCode, nil
-		},
-		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
-			accountCode = code
-			return nil
-		},
-		OnEmitEvent: func(event cadence.Event) error {
-			return nil
-		},
-		OnProgramLog: func(message string) {
-			loggedMessage = message
-		},
+                access(all) fun helloMultiArg(arg1: String, arg2: Int, arg3: Address) {
+                    log("Hello ".concat(arg1).concat(" ").concat(arg2.toString()).concat(" from ").concat(arg3.toString()))
+                }
+
+                access(all) fun helloReturn(_ arg: String): String {
+                    log("Hello return!")
+                    return arg
+                }
+
+                access(all) fun helloAuthAcc(account: &Account) {
+                    log("Hello ".concat(account.address.toString()))
+                }
+
+                access(all) fun helloPublicAcc(account: &Account) {
+                    log("Hello access(all) ".concat(account.address.toString()))
+                }
+            }
+        `)
+
+		deploy := DeploymentTransaction("Test", contract)
+
+		var accountCode []byte
+		var loggedMessages []string
+
+		getLoggedMessaged := func() []string {
+			return loggedMessages
+		}
+
+		storage := NewTestLedger(nil, nil)
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: storage,
+			OnGetCode: func(_ Location) (bytes []byte, err error) {
+				return accountCode, nil
+			},
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{addressValue}, nil
+			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+				return accountCode, nil
+			},
+			OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+				accountCode = code
+				return nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				return nil
+			},
+			OnProgramLog: func(message string) {
+				loggedMessages = append(loggedMessages, message)
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deploy,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		assert.NotNil(t, accountCode)
+
+		return runtime, runtimeInterface, getLoggedMessaged, nextTransactionLocation
 	}
 
-	nextTransactionLocation := NewTransactionLocationGenerator()
-
-	err := runtime.ExecuteTransaction(
-		Script{
-			Source: deploy,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
-
-	assert.NotNil(t, accountCode)
-
 	t.Run("simple function", func(t *testing.T) {
-		_, err = runtime.InvokeContractFunction(
+		t.Parallel()
+
+		rt, interf, getLoggedMessages, nextTransactionLocation := newRuntime(t)
+		_, err := rt.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
 				Name:    "Test",
@@ -2921,17 +2941,26 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			nil,
 			nil,
 			Context{
-				Interface: runtimeInterface,
+				Interface: interf,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, `"Hello World!"`, loggedMessage)
+		assert.Equal(t,
+			[]string{
+				`"Hello World!"`,
+			},
+			getLoggedMessages(),
+		)
 	})
 
 	t.Run("function with parameter", func(t *testing.T) {
-		_, err = runtime.InvokeContractFunction(
+		t.Parallel()
+
+		rt, interf, getLoggedMessages, nextTransactionLocation := newRuntime(t)
+		_, err := rt.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
 				Name:    "Test",
@@ -2944,17 +2973,26 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				sema.StringType,
 			},
 			Context{
-				Interface: runtimeInterface,
+				Interface: interf,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, `"Hello there!"`, loggedMessage)
+		assert.Equal(t,
+			[]string{
+				`"Hello there!"`,
+			},
+			getLoggedMessages(),
+		)
 	})
 
 	t.Run("function with return type", func(t *testing.T) {
-		_, err = runtime.InvokeContractFunction(
+		t.Parallel()
+
+		rt, interf, getLoggedMessages, nextTransactionLocation := newRuntime(t)
+		_, err := rt.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
 				Name:    "Test",
@@ -2967,18 +3005,26 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				sema.StringType,
 			},
 			Context{
-				Interface: runtimeInterface,
+				Interface: interf,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, `"Hello return!"`, loggedMessage)
+		assert.Equal(t,
+			[]string{
+				`"Hello return!"`,
+			},
+			getLoggedMessages(),
+		)
 	})
 
 	t.Run("function with multiple arguments", func(t *testing.T) {
+		t.Parallel()
 
-		_, err = runtime.InvokeContractFunction(
+		rt, interf, getLoggedMessages, nextTransactionLocation := newRuntime(t)
+		_, err := rt.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
 				Name:    "Test",
@@ -2995,17 +3041,26 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				sema.TheAddressType,
 			},
 			Context{
-				Interface: runtimeInterface,
+				Interface: interf,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, `"Hello number 42 from 0x0000000000000001"`, loggedMessage)
+		assert.Equal(t,
+			[]string{
+				`"Hello number 42 from 0x0000000000000001"`,
+			},
+			getLoggedMessages(),
+		)
 	})
 
 	t.Run("function with not enough arguments panics", func(t *testing.T) {
-		_, err = runtime.InvokeContractFunction(
+		t.Parallel()
+
+		rt, interf, _, nextTransactionLocation := newRuntime(t)
+		_, err := rt.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
 				Name:    "Test",
@@ -3020,8 +3075,9 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				sema.IntType,
 			},
 			Context{
-				Interface: runtimeInterface,
+				Interface: interf,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -3031,7 +3087,10 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 	})
 
 	t.Run("function with incorrect argument type errors", func(t *testing.T) {
-		_, err = runtime.InvokeContractFunction(
+		t.Parallel()
+
+		rt, interf, _, nextTransactionLocation := newRuntime(t)
+		_, err := rt.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
 				Name:    "Test",
@@ -3044,17 +3103,26 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				sema.IntType,
 			},
 			Context{
-				Interface: runtimeInterface,
+				Interface: interf,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
+		if *compile {
+			require.ErrorContains(t, err, "invalid transfer: expected 'String', found 'Int'")
+		} else {
+			require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
+		}
+
 	})
 
 	t.Run("function with un-importable argument errors and error propagates (ID capability)", func(t *testing.T) {
-		_, err = runtime.InvokeContractFunction(
+		t.Parallel()
+
+		rt, interf, _, nextTransactionLocation := newRuntime(t)
+		_, err := rt.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
 				Name:    "Test",
@@ -3071,8 +3139,9 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				&sema.CapabilityType{},
 			},
 			Context{
-				Interface: runtimeInterface,
+				Interface: interf,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		RequireError(t, err)
@@ -3081,7 +3150,10 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 	})
 
 	t.Run("function with un-importable argument errors and error propagates (ID capability)", func(t *testing.T) {
-		_, err = runtime.InvokeContractFunction(
+		t.Parallel()
+
+		rt, interf, _, nextTransactionLocation := newRuntime(t)
+		_, err := rt.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
 				Name:    "Test",
@@ -3098,8 +3170,9 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				&sema.CapabilityType{},
 			},
 			Context{
-				Interface: runtimeInterface,
+				Interface: interf,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		RequireError(t, err)
@@ -3108,7 +3181,10 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 	})
 
 	t.Run("function with auth account works", func(t *testing.T) {
-		_, err = runtime.InvokeContractFunction(
+		t.Parallel()
+
+		rt, interf, getLoggedMessages, nextTransactionLocation := newRuntime(t)
+		_, err := rt.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
 				Name:    "Test",
@@ -3121,16 +3197,25 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				sema.FullyEntitledAccountReferenceType,
 			},
 			Context{
-				Interface: runtimeInterface,
+				Interface: interf,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, `"Hello 0x0000000000000001"`, loggedMessage)
+		assert.Equal(t,
+			[]string{
+				`"Hello 0x0000000000000001"`,
+			},
+			getLoggedMessages(),
+		)
 	})
 	t.Run("function with public account works", func(t *testing.T) {
-		_, err = runtime.InvokeContractFunction(
+		t.Parallel()
+
+		rt, interf, getLoggedMessages, nextTransactionLocation := newRuntime(t)
+		_, err := rt.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
 				Name:    "Test",
@@ -3143,13 +3228,19 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				sema.AccountReferenceType,
 			},
 			Context{
-				Interface: runtimeInterface,
+				Interface: interf,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, `"Hello access(all) 0x0000000000000001"`, loggedMessage)
+		assert.Equal(t,
+			[]string{
+				`"Hello access(all) 0x0000000000000001"`,
+			},
+			getLoggedMessages(),
+		)
 	})
 }
 
@@ -12333,4 +12424,310 @@ func TestRuntimeFunctionTypeConfusion(t *testing.T) {
 
 	var typeErr *sema.TypeMismatchError
 	require.ErrorAs(t, err, &typeErr)
+}
+
+func TestRuntimeInvokeContractFunctionImported(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntime()
+
+	addressValue := Address{
+		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+	}
+
+	contract1 := []byte(`
+        access(all) contract interface Test1 {
+			access(all) fun hello(): String {
+				post { result.length > 0 }
+			}
+        }
+    `)
+
+	contract2 := []byte(`
+        import Test1 from 0x01
+
+        access(all) contract Test2: Test1 {
+			access(all) fun hello(): String {
+				return "Hello World!"
+			}
+        }
+    `)
+
+	contract3 := []byte(`
+        import Test2 from 0x01
+
+        access(all) contract Test3 {
+
+            access(all) event Answer(x: Int)
+
+            access(all) resource R {}
+
+			access(all) fun hello(): String {
+				return Test2.hello()
+			}
+
+			access(all) fun getSelfAccountAddress(): Address {
+                return self.account.address
+            }
+
+            access(all) fun getAccountBalance(): UFix64 {
+                return getAccount(0x1).balance
+            }
+
+			access(all) fun getContractAccountAddress(): Address {
+                return Test3.account.address
+            }
+
+            access(all) fun getResourceUUID(): UInt64 {
+                let r <- create R()
+                let uuid = r.uuid
+                destroy r
+                return uuid
+            }
+
+            access(all) fun getResourceOwner(): Address {
+                let r <- create R()
+                let path = /storage/r
+                self.account.storage.save(<- r, to: path)
+                let rRef = self.account.storage.borrow<&R>(from: path)!
+                return rRef.owner!.address
+            }
+
+            access(all) fun emitAnswer() {
+                emit Answer(x: 42)
+            }
+        }
+    `)
+
+	accountCodes := map[Location][]byte{}
+
+	var events []cadence.Event
+
+	var uuid uint64
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{addressValue}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		OnGetAccountBalance: func(_ Address) (uint64, error) {
+			return 0, nil
+		},
+		OnGenerateUUID: func() (uint64, error) {
+			uuid++
+			return uuid, nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	for _, deployment := range []struct {
+		name string
+		code []byte
+	}{
+		{
+			name: "Test1",
+			code: contract1,
+		},
+		{
+			name: "Test2",
+			code: contract2,
+		},
+		{
+			name: "Test3",
+			code: contract3,
+		},
+	} {
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: DeploymentTransaction(deployment.name, deployment.code),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	}
+
+	// Call hello
+
+	result, err := runtime.InvokeContractFunction(
+		common.AddressLocation{
+			Address: addressValue,
+			Name:    "Test3",
+		},
+		"hello",
+		nil,
+		nil,
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		cadence.String("Hello World!"),
+		result,
+	)
+
+	// Call getSelfAccountAddress
+
+	result, err = runtime.InvokeContractFunction(
+		common.AddressLocation{
+			Address: addressValue,
+			Name:    "Test3",
+		},
+		"getSelfAccountAddress",
+		nil,
+		nil,
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		cadence.Address(addressValue),
+		result,
+	)
+
+	// Call getContractAccountAddress
+
+	result, err = runtime.InvokeContractFunction(
+		common.AddressLocation{
+			Address: addressValue,
+			Name:    "Test3",
+		},
+		"getContractAccountAddress",
+		nil,
+		nil,
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		cadence.Address(addressValue),
+		result,
+	)
+
+	// Call getAccountBalance
+
+	result, err = runtime.InvokeContractFunction(
+		common.AddressLocation{
+			Address: addressValue,
+			Name:    "Test3",
+		},
+		"getAccountBalance",
+		nil,
+		nil,
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		cadence.UFix64(0),
+		result,
+	)
+
+	// Call getResourceUUID
+
+	result, err = runtime.InvokeContractFunction(
+		common.AddressLocation{
+			Address: addressValue,
+			Name:    "Test3",
+		},
+		"getResourceUUID",
+		nil,
+		nil,
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		cadence.UInt64(1),
+		result,
+	)
+
+	// Call getResourceOwner
+
+	result, err = runtime.InvokeContractFunction(
+		common.AddressLocation{
+			Address: addressValue,
+			Name:    "Test3",
+		},
+		"getResourceOwner",
+		nil,
+		nil,
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		cadence.Address(addressValue),
+		result,
+	)
+
+	// Call emitAnswer
+
+	events = events[:0]
+
+	_, err = runtime.InvokeContractFunction(
+		common.AddressLocation{
+			Address: addressValue,
+			Name:    "Test3",
+		},
+		"emitAnswer",
+		nil,
+		nil,
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	require.Len(t, events, 1)
+	require.Equal(t,
+		"A.0000000000000001.Test3.Answer",
+		events[0].EventType.ID(),
+	)
+	require.Equal(t,
+		cadence.NewInt(42),
+		events[0].FieldsMappedByName()["x"],
+	)
 }

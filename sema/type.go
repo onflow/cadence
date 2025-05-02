@@ -623,7 +623,7 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 
 	// All number types, addresses, and path types have a `toString` function
 
-	if IsSubType(ty, NumberType) || IsSubType(ty, TheAddressType) || IsSubType(ty, PathType) {
+	if HasToStringFunction(ty) {
 
 		members[ToStringFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
@@ -661,6 +661,10 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 	}
 
 	return members
+}
+
+func HasToStringFunction(ty Type) bool {
+	return IsSubType(ty, NumberType) || IsSubType(ty, TheAddressType) || IsSubType(ty, PathType)
 }
 
 // OptionalType represents the optional variant of another type
@@ -2072,10 +2076,14 @@ type ArrayType interface {
 	isArrayType()
 }
 
+const ArrayTypeFirstIndexFunctionName = "firstIndex"
+
 const arrayTypeFirstIndexFunctionDocString = `
 Returns the index of the first element matching the given object in the array, nil if no match.
 Available if the array element type is not resource-kinded and equatable.
 `
+
+const ArrayTypeContainsFunctionName = "contains"
 
 const arrayTypeContainsFunctionDocString = `
 Returns true if the given object is in the array
@@ -2085,17 +2093,25 @@ const arrayTypeLengthFieldDocString = `
 Returns the number of elements in the array
 `
 
+const ArrayTypeAppendFunctionName = "append"
+
 const arrayTypeAppendFunctionDocString = `
 Adds the given element to the end of the array
 `
+
+const ArrayTypeAppendAllFunctionName = "appendAll"
 
 const arrayTypeAppendAllFunctionDocString = `
 Adds all the elements from the given array to the end of the array
 `
 
+const ArrayTypeConcatFunctionName = "concat"
+
 const arrayTypeConcatFunctionDocString = `
 Returns a new array which contains the given array concatenated to the end of the original array, but does not modify the original array
 `
+
+const ArrayTypeInsertFunctionName = "insert"
 
 const arrayTypeInsertFunctionDocString = `
 Inserts the given element at the given index of the array.
@@ -2108,6 +2124,8 @@ The existing element at the supplied index is not overwritten.
 All the elements after the new inserted element are shifted to the right by one
 `
 
+const ArrayTypeRemoveFunctionName = "remove"
+
 const arrayTypeRemoveFunctionDocString = `
 Removes the element at the given index from the array and returns it.
 
@@ -2115,17 +2133,23 @@ The index must be within the bounds of the array.
 If the index is outside the bounds, the program aborts
 `
 
+const ArrayTypeRemoveFirstFunctionName = "removeFirst"
+
 const arrayTypeRemoveFirstFunctionDocString = `
 Removes the first element from the array and returns it.
 
 The array must not be empty. If the array is empty, the program aborts
 `
 
+const ArrayTypeRemoveLastFunctionName = "removeLast"
+
 const arrayTypeRemoveLastFunctionDocString = `
 Removes the last element from the array and returns it.
 
 The array must not be empty. If the array is empty, the program aborts
 `
+
+const ArrayTypeSliceFunctionName = "slice"
 
 const arrayTypeSliceFunctionDocString = `
 Returns a new variable-sized array containing the slice of the elements in the given array from start index ` + "`from`" + ` up to, but not including, the end index ` + "`upTo`" + `.
@@ -2384,7 +2408,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 	if _, ok := arrayType.(*VariableSizedType); ok {
 
-		members["append"] = MemberResolver{
+		members[ArrayTypeAppendFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
 			Resolve: func(
 				memoryGauge common.MemoryGauge,
@@ -2404,7 +2428,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 			},
 		}
 
-		members["appendAll"] = MemberResolver{
+		members[ArrayTypeAppendAllFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
 			Resolve: func(
 				memoryGauge common.MemoryGauge,
@@ -2436,7 +2460,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 			},
 		}
 
-		members["concat"] = MemberResolver{
+		members[ArrayTypeConcatFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
 			Resolve: func(
 				memoryGauge common.MemoryGauge,
@@ -4138,45 +4162,45 @@ type TypeArgumentsCheck func(
 // the types available in programs
 var BaseTypeActivation = NewVariableActivation(nil)
 
+var AllBuiltinTypes = common.Concat(
+	AllNumberTypes,
+	[]Type{
+		MetaType,
+		VoidType,
+		AnyStructType,
+		AnyStructAttachmentType,
+		AnyResourceType,
+		AnyResourceAttachmentType,
+		NeverType,
+		BoolType,
+		CharacterType,
+		StringType,
+		TheAddressType,
+		AccountType,
+		PathType,
+		StoragePathType,
+		CapabilityPathType,
+		PrivatePathType,
+		PublicPathType,
+		&CapabilityType{},
+		DeployedContractType,
+		BlockType,
+		AccountKeyType,
+		PublicKeyType,
+		SignatureAlgorithmType,
+		HashAlgorithmType,
+		StorageCapabilityControllerType,
+		AccountCapabilityControllerType,
+		DeploymentResultType,
+		HashableStructType,
+		&InclusiveRangeType{},
+		StructStringerType,
+	},
+)
+
 func init() {
 
-	types := common.Concat(
-		AllNumberTypes,
-		[]Type{
-			MetaType,
-			VoidType,
-			AnyStructType,
-			AnyStructAttachmentType,
-			AnyResourceType,
-			AnyResourceAttachmentType,
-			NeverType,
-			BoolType,
-			CharacterType,
-			StringType,
-			TheAddressType,
-			AccountType,
-			PathType,
-			StoragePathType,
-			CapabilityPathType,
-			PrivatePathType,
-			PublicPathType,
-			&CapabilityType{},
-			DeployedContractType,
-			BlockType,
-			AccountKeyType,
-			PublicKeyType,
-			SignatureAlgorithmType,
-			HashAlgorithmType,
-			StorageCapabilityControllerType,
-			AccountCapabilityControllerType,
-			DeploymentResultType,
-			HashableStructType,
-			&InclusiveRangeType{},
-			StructStringerType,
-		},
-	)
-
-	for _, ty := range types {
+	for _, ty := range AllBuiltinTypes {
 		addToBaseActivation(ty)
 	}
 
@@ -6165,6 +6189,8 @@ func (t *DictionaryType) CheckInstantiated(pos ast.HasPosition, memoryGauge comm
 	t.ValueType.CheckInstantiated(pos, memoryGauge, report)
 }
 
+const DictionaryTypeContainsKeyFunctionName = "containsKey"
+
 const dictionaryTypeContainsKeyFunctionDocString = `
 Returns true if the given key is in the dictionary
 `
@@ -6176,6 +6202,8 @@ The number of entries in the dictionary
 const dictionaryTypeKeysFieldDocString = `
 An array containing all keys of the dictionary
 `
+
+const DictionaryTypeForEachKeyFunctionName = "forEachKey"
 
 const dictionaryTypeForEachKeyFunctionDocString = `
 Iterate over each key in this dictionary, exiting early if the passed function returns false.
@@ -6189,11 +6217,15 @@ const dictionaryTypeValuesFieldDocString = `
 An array containing all values of the dictionary
 `
 
+const DictionaryTypeInsertFunctionName = "insert"
+
 const dictionaryTypeInsertFunctionDocString = `
 Inserts the given value into the dictionary under the given key.
 
 Returns the previous value as an optional if the dictionary contained the key, or nil if the dictionary did not contain the key
 `
+
+const DictionaryTypeRemoveFunctionName = "remove"
 
 const dictionaryTypeRemoveFunctionDocString = `
 Removes the value for the given key from the dictionary.
@@ -6212,7 +6244,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 		t.memberResolvers = withBuiltinMembers(
 			t,
 			map[string]MemberResolver{
-				"containsKey": {
+				DictionaryTypeContainsKeyFunctionName: {
 					Kind: common.DeclarationKindFunction,
 					Resolve: func(
 						memoryGauge common.MemoryGauge,
@@ -6305,7 +6337,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 						)
 					},
 				},
-				"insert": {
+				DictionaryTypeInsertFunctionName: {
 					Kind: common.DeclarationKindFunction,
 					Resolve: func(
 						memoryGauge common.MemoryGauge,
@@ -6323,7 +6355,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 						)
 					},
 				},
-				"remove": {
+				DictionaryTypeRemoveFunctionName: {
 					Kind: common.DeclarationKindFunction,
 					Resolve: func(
 						memoryGauge common.MemoryGauge,
@@ -6341,7 +6373,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 						)
 					},
 				},
-				"forEachKey": {
+				DictionaryTypeForEachKeyFunctionName: {
 					Kind: common.DeclarationKindFunction,
 					Resolve: func(
 						memoryGauge common.MemoryGauge,

@@ -28,7 +28,6 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
-
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 )
 
@@ -40,7 +39,7 @@ func TestInterpretEntitledReferenceRuntimeTypes(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R {}
 
             fun test(): Bool {
@@ -63,7 +62,7 @@ func TestInterpretEntitledReferenceRuntimeTypes(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
 
             resource R {}
@@ -88,7 +87,7 @@ func TestInterpretEntitledReferenceRuntimeTypes(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
 
             resource R {}
@@ -113,7 +112,7 @@ func TestInterpretEntitledReferenceRuntimeTypes(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           entitlement X
 
           resource R {}
@@ -138,7 +137,7 @@ func TestInterpretEntitledReferenceRuntimeTypes(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement Y
 
@@ -163,7 +162,7 @@ func TestInterpretEntitledReferenceRuntimeTypes(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
 
             resource R {}
@@ -188,7 +187,7 @@ func TestInterpretEntitledReferenceRuntimeTypes(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement Y
 
@@ -214,7 +213,7 @@ func TestInterpretEntitledReferenceRuntimeTypes(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement Y
 
@@ -244,7 +243,7 @@ func TestInterpretEntitledReferenceRuntimeTypes(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement Y
 
@@ -272,7 +271,7 @@ func TestInterpretEntitledReferenceRuntimeTypes(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement Y
 
@@ -302,7 +301,7 @@ func TestInterpretEntitledReferenceRuntimeTypes(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement Y
 
@@ -332,7 +331,7 @@ func TestInterpretEntitledReferenceRuntimeTypes(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement Y
 
@@ -362,7 +361,7 @@ func TestInterpretEntitledReferenceRuntimeTypes(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement Y
 
@@ -395,7 +394,7 @@ func TestInterpretEntitledReferences(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil,
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil,
 			`
               entitlement X
               entitlement Y
@@ -429,7 +428,7 @@ func TestInterpretEntitledReferences(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
 
             access(all) fun test(): Bool {
@@ -459,7 +458,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement Y
 
@@ -486,7 +485,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement Y
 
@@ -513,7 +512,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement Y
 
@@ -540,7 +539,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement Y
 
@@ -567,7 +566,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement Y
 
@@ -593,7 +592,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement Y
 
@@ -620,7 +619,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement Y
 
@@ -647,7 +646,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement Y
 
@@ -675,7 +674,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource interface RI {}
 
             resource R: RI {}
@@ -707,7 +706,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement E
             entitlement F
 
@@ -736,7 +735,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement Y
 
@@ -779,7 +778,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
 
             fun test(capX: Capability<auth(X) &Int>): Capability {
@@ -817,7 +816,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
 
             fun test(): Bool {
@@ -842,7 +841,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
 
             fun test(): Bool {
@@ -868,7 +867,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
 
             fun test(): Bool {
@@ -893,7 +892,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
 
             fun test(): Bool {
@@ -918,7 +917,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
 
             fun test(): Bool {
@@ -943,7 +942,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
 
             fun test(): Bool {
@@ -968,7 +967,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
 
             fun test(): Bool {
@@ -993,7 +992,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
 
             fun test(): Bool {
@@ -1018,7 +1017,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
 
             fun test(): Bool {
@@ -1048,7 +1047,7 @@ func TestInterpretEntitledResult(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           entitlement X
           entitlement Y
 
@@ -1085,7 +1084,7 @@ func TestInterpretEntitledResult(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		invokable := parseCheckAndPrepare(t, `
           entitlement X
           entitlement Y
 
@@ -1107,11 +1106,17 @@ func TestInterpretEntitledResult(t *testing.T) {
           }
         `)
 
-		_, err := inter.Invoke("test")
+		_, err := invokable.Invoke("test")
 		RequireError(t, err)
 
+		// TODO: Uncomment once the compiler branch is merged to master.
+		//if _, compiled := invokable.(*test_utils.VMInvokable); compiled {
+		//	var panicError stdlib.PanicError
+		//	require.ErrorAs(t, err, &panicError)
+		//} else {
 		var conditionError interpreter.ConditionError
 		require.ErrorAs(t, err, &conditionError)
+		//}
 	})
 }
 
@@ -1122,7 +1127,7 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           entitlement X
           entitlement Y
 
@@ -1169,7 +1174,7 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           entitlement X
           entitlement Y
           entitlement E
@@ -1220,7 +1225,7 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           entitlement X
           entitlement Y
           entitlement E
@@ -1270,7 +1275,7 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           entitlement X
           entitlement Y
           entitlement E
@@ -1305,7 +1310,7 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         entitlement X
         entitlement Y
         entitlement E
@@ -1357,7 +1362,7 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil,
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil,
 			`
               entitlement X
               entitlement Y
@@ -2128,7 +2133,7 @@ func TestInterpretBuiltinEntitlements(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         struct S {
             access(Mutate) fun foo() {}
             access(Insert) fun bar() {}

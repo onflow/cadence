@@ -176,7 +176,7 @@ func (v *SomeValue) GetMethod(
 					panic(errors.NewUnreachableError())
 				}
 
-				transformFunctionType := transformFunction.FunctionType()
+				transformFunctionType := transformFunction.FunctionType(invocationContext)
 				parameterTypes := transformFunctionType.ParameterTypes()
 				returnType := transformFunctionType.ReturnTypeAnnotation.Type
 
