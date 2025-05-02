@@ -620,12 +620,10 @@ func testRuntimeFungibleTokenTransfer(tb testing.TB, useVM bool) {
 		},
 	}
 
-	var environment Environment
+	var environment Environment = NewBaseInterpreterEnvironment(Config{})
 	// TODO: Uncomment once the compiler branch is merged to master.
 	//if useVM {
 	//	environment = NewBaseVMEnvironment(Config{})
-	//} else {
-	environment = NewBaseInterpreterEnvironment(Config{})
 	//}
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
