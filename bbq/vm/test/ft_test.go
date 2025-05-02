@@ -227,7 +227,7 @@ func compiledFTTransfer(tb testing.TB) {
 		WithAccountHandler(accountHandler).
 		WithInterpreterConfig(interConfig)
 
-	vmConfig = prepareVMConfig(tb, vmConfig, compiledPrograms)
+	vmConfig = PrepareVMConfig(tb, vmConfig, compiledPrograms)
 
 	vmConfig.ImportHandler = importHandler
 

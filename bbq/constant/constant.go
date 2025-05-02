@@ -45,6 +45,9 @@ func (c Constant) String() string {
 	case String:
 		v = string(data)
 
+	case Character:
+		v = string(data)
+
 	case Int:
 		// TODO: support larger integers
 		v, _, err = leb128.ReadInt64(data)

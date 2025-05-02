@@ -574,7 +574,17 @@ func (d *Desugar) desugarCondition(condition ast.Condition, inheritedFrom *sema.
 			return emitStmt
 		}
 
-		// If the condition is inherited, then re-write
+		// Get the contract in which the event was declared.
+		eventType := d.elaboration.EmitStatementEventType(emitStmt)
+		declaredContract := declaredContractType(eventType)
+
+		// If the event is not declared in a contract, then it's a local type (e.g: in a script).
+		// Ne need to change anything in that case.
+		if declaredContract == nil {
+			return emitStmt
+		}
+
+		// Otherwise, if the condition is inherited from a contract, then re-write
 		// the emit statement to be type-qualified.
 		// i.e: `emit Event()` will be re-written as `emit Contract.Event()`.
 		// Otherwise, the compiler can't find the symbol.
@@ -590,11 +600,6 @@ func (d *Desugar) desugarCondition(condition ast.Condition, inheritedFrom *sema.
 		invocationTypes := d.elaboration.InvocationExpressionTypes(eventConstructorInvocation)
 
 		pos := eventConstructorInvocation.StartPosition()
-
-		// Get the contract in which the event was declared.
-		// This is guaranteed, since events can only be declared in contracts.
-		eventType := d.elaboration.EmitStatementEventType(emitStmt)
-		declaredContract := declaredContractType(eventType).(sema.CompositeKindedType)
 
 		memberExpression := ast.NewMemberExpression(
 			d.memoryGauge,
@@ -675,25 +680,34 @@ func (d *Desugar) resolveElaboration(location common.Location) (*DesugaredElabor
 	return d.config.ElaborationResolver(location)
 }
 
-func declaredContractType(containedType sema.ContainedType) sema.Type {
-	containerType := containedType.GetContainerType()
-	if containerType == nil {
-		return containedType
+func declaredContractType(compositeKindedType sema.CompositeKindedType) sema.CompositeKindedType {
+	if compositeKindedType.GetCompositeKind() == common.CompositeKindContract {
+		return compositeKindedType
 	}
 
-	return declaredContractType(containerType.(sema.ContainedType))
+	containerType := compositeKindedType.GetContainerType()
+	if containerType == nil {
+		return nil
+	}
+
+	return declaredContractType(containerType.(sema.CompositeKindedType))
 }
 
 func (d *Desugar) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) ast.Declaration {
-	desugaredDecl := d.desugarDeclaration(declaration.FunctionDeclaration).(*ast.FunctionDeclaration)
-	if desugaredDecl == declaration.FunctionDeclaration {
+	desugaredDecl := d.desugarDeclaration(declaration.FunctionDeclaration)
+	if desugaredDecl == nil {
+		return nil
+	}
+
+	desugaredFunctionDecl := desugaredDecl.(*ast.FunctionDeclaration)
+	if desugaredFunctionDecl == declaration.FunctionDeclaration {
 		return declaration
 	}
 
 	return ast.NewSpecialFunctionDeclaration(
 		d.memoryGauge,
 		declaration.Kind,
-		desugaredDecl,
+		desugaredFunctionDecl,
 	)
 }
 
@@ -768,35 +782,51 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 func (d *Desugar) inheritedFunctionsWithConditions(compositeType sema.ConformingType) map[string][]*inheritedFunction {
 	inheritedFunctions := make(map[string][]*inheritedFunction)
 
-	compositeType.EffectiveInterfaceConformanceSet().ForEach(func(interfaceType *sema.InterfaceType) {
+	addInheritedFunction := func(
+		functionDecl *ast.FunctionDeclaration,
+		elaboration *DesugaredElaboration,
+		interfaceType *sema.InterfaceType,
+	) {
+		if !functionDecl.FunctionBlock.HasConditions() {
+			return
+		}
 
+		name := functionDecl.Identifier.Identifier
+		funcs := inheritedFunctions[name]
+
+		postConditions := functionDecl.FunctionBlock.PostConditions
+		var rewrittenConditions sema.PostConditionsRewrite
+		if postConditions != nil {
+			rewrittenConditions = elaboration.PostConditionsRewrite(postConditions)
+		}
+
+		funcs = append(funcs, &inheritedFunction{
+			interfaceType:       interfaceType,
+			functionDecl:        functionDecl,
+			rewrittenConditions: rewrittenConditions,
+			elaboration:         elaboration,
+		})
+		inheritedFunctions[name] = funcs
+	}
+
+	compositeType.EffectiveInterfaceConformanceSet().ForEach(func(interfaceType *sema.InterfaceType) {
 		elaboration, err := d.resolveElaboration(interfaceType.Location)
 		if err != nil {
 			panic(err)
 		}
 
 		interfaceDecl := elaboration.InterfaceTypeDeclaration(interfaceType)
-		functions := interfaceDecl.Members.FunctionsByIdentifier()
 
-		for name, functionDecl := range functions { // nolint:maprange
-			if !functionDecl.FunctionBlock.HasConditions() {
-				continue
-			}
-			funcs := inheritedFunctions[name]
+		functions := interfaceDecl.Members.Functions()
+		for _, functionDecl := range functions {
+			addInheritedFunction(functionDecl, elaboration, interfaceType)
+		}
 
-			postConditions := functionDecl.FunctionBlock.PostConditions
-			var rewrittenConditions sema.PostConditionsRewrite
-			if postConditions != nil {
-				rewrittenConditions = elaboration.PostConditionsRewrite(postConditions)
-			}
-
-			funcs = append(funcs, &inheritedFunction{
-				interfaceType:       interfaceType,
-				functionDecl:        functionDecl,
-				rewrittenConditions: rewrittenConditions,
-				elaboration:         elaboration,
-			})
-			inheritedFunctions[name] = funcs
+		// Special functions (e.g: initializer can also have conditions)
+		specialFunctions := interfaceDecl.Members.SpecialFunctions()
+		for _, specialFunctionDecl := range specialFunctions {
+			functionDecl := specialFunctionDecl.FunctionDeclaration
+			addInheritedFunction(functionDecl, elaboration, interfaceType)
 		}
 	})
 

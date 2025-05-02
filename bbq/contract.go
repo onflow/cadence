@@ -19,7 +19,6 @@
 package bbq
 
 type Contract struct {
-	Name        string
-	Address     []byte
-	IsInterface bool
+	Name    string
+	Address []byte
 }

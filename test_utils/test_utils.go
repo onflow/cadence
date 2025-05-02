@@ -33,6 +33,7 @@ import (
 	"github.com/onflow/cadence/stdlib"
 	"github.com/onflow/cadence/test_utils/sema_utils"
 
+	. "github.com/onflow/cadence/bbq/test_utils"
 	"github.com/onflow/cadence/bbq/vm"
 	compilerUtils "github.com/onflow/cadence/bbq/vm/test"
 )
@@ -73,16 +74,16 @@ func (v *VMInvokable) Invoke(functionName string, arguments ...interpreter.Value
 	return
 }
 
-func ParseCheckAndPrepare(t testing.TB, code string, compile bool) Invokable {
-	t.Helper()
+func ParseCheckAndPrepare(tb testing.TB, code string, compile bool) Invokable {
+	tb.Helper()
 
 	if !compile {
-		return ParseCheckAndInterpret(t, code)
+		return ParseCheckAndInterpret(tb, code)
 	}
 
 	vmConfig := &vm.Config{}
 	vmInstance := compilerUtils.CompileAndPrepareToInvoke(
-		t,
+		tb,
 		code,
 		compilerUtils.CompilerAndVMOptions{
 			VMConfig: vmConfig,
@@ -90,6 +91,102 @@ func ParseCheckAndPrepare(t testing.TB, code string, compile bool) Invokable {
 	)
 
 	return NewVMInvokable(vmInstance)
+}
+
+func ParseCheckAndPrepareWithEvents(tb testing.TB, code string, compile bool) (
+	invokable Invokable,
+	getEvents func() []TestEvent,
+	err error,
+) {
+	tb.Helper()
+
+	var events []TestEvent
+	getEvents = func() []TestEvent {
+		return events
+	}
+
+	interpreterConfig := &interpreter.Config{
+		OnEventEmitted: func(
+			_ interpreter.ValueExportContext,
+			_ interpreter.LocationRange,
+			eventType *sema.CompositeType,
+			eventFields []interpreter.Value,
+		) error {
+			events = append(
+				events,
+				TestEvent{
+					EventType:   eventType,
+					EventFields: eventFields,
+				},
+			)
+			return nil
+		},
+	}
+
+	if !compile {
+		invokable, err = ParseCheckAndInterpretWithOptions(
+			tb,
+			code,
+			ParseCheckAndInterpretOptions{
+				Config: interpreterConfig,
+			},
+		)
+		return invokable, getEvents, err
+	}
+
+	vmConfig := (&vm.Config{}).
+		WithInterpreterConfig(interpreterConfig).
+		WithDebugEnabled()
+
+	vmInstance := compilerUtils.CompileAndPrepareToInvoke(
+		tb,
+		code,
+		compilerUtils.CompilerAndVMOptions{
+			VMConfig: vmConfig,
+		},
+	)
+
+	return NewVMInvokable(vmInstance), getEvents, nil
+}
+
+func ParseCheckAndPrepareWithOptions(
+	tb testing.TB,
+	code string,
+	options ParseCheckAndInterpretOptions,
+	compile bool,
+) (
+	invokable Invokable,
+	err error,
+) {
+	tb.Helper()
+
+	if !compile {
+		return ParseCheckAndInterpretWithOptions(tb, code, options)
+	}
+
+	vmConfig := (&vm.Config{}).
+		WithInterpreterConfig(options.Config).
+		WithDebugEnabled()
+
+	var parseAndCheckOptions *sema_utils.ParseAndCheckOptions
+	if options.CheckerConfig != nil {
+		parseAndCheckOptions = &sema_utils.ParseAndCheckOptions{
+			Config: options.CheckerConfig,
+		}
+	}
+
+	vmInstance := compilerUtils.CompileAndPrepareToInvoke(
+		tb,
+		code,
+		compilerUtils.CompilerAndVMOptions{
+			VMConfig: vmConfig,
+			ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+				ParseAndCheckOptions: parseAndCheckOptions,
+			},
+		},
+	)
+
+	return NewVMInvokable(vmInstance), nil
 }
 
 // Below helper functions were copied as-is from `misc_test.go`.
@@ -346,14 +443,14 @@ type TestEvent struct {
 	EventFields []interpreter.Value
 }
 
-func ParseCheckAndInterpretWithEvents(t *testing.T, code string) (
+func ParseCheckAndInterpretWithEvents(tb testing.TB, code string) (
 	inter *interpreter.Interpreter,
 	getEvents func() []TestEvent,
 	err error,
 ) {
 	var events []TestEvent
 
-	inter, err = ParseCheckAndInterpretWithOptions(t,
+	inter, err = ParseCheckAndInterpretWithOptions(tb,
 		code,
 		ParseCheckAndInterpretOptions{
 			Config: &interpreter.Config{

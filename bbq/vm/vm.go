@@ -173,9 +173,10 @@ func (vm *VM) popN(count int) []Value {
 	startIndex := stackHeight - count
 	values := vm.stack[startIndex:]
 
-	for _, value := range vm.stack[startIndex:] {
+	for _, value := range values {
 		vm.context.CheckInvalidatedResourceOrResourceReference(value, EmptyLocationRange)
 	}
+
 	vm.stack = vm.stack[:startIndex]
 
 	return values
@@ -1154,11 +1155,16 @@ func (vm *VM) run() {
 	if vm.context.debugEnabled {
 		defer func() {
 			if r := recover(); r != nil {
-				printInstructionError(
-					vm.callFrame.function.Function,
-					int(vm.ip),
-					r,
-				)
+				switch r.(type) {
+				case errors.UserError, errors.ExternalError:
+					// do nothing
+				default:
+					printInstructionError(
+						vm.callFrame.function.Function,
+						int(vm.ip),
+						r,
+					)
+				}
 				panic(r)
 			}
 		}()
@@ -1326,11 +1332,15 @@ func opEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
 
 	eventFields := vm.popN(int(ins.ArgCount))
 
+	// Make a copy, since the slice can get mutated, since the stack is reused.
+	fields := make([]interpreter.Value, len(eventFields))
+	copy(fields, eventFields)
+
 	context.EmitEvent(
 		context,
 		EmptyLocationRange,
 		eventSemaType,
-		eventFields,
+		fields,
 	)
 }
 
@@ -1394,6 +1404,9 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 	switch c.Kind {
 	case constant.String:
 		value = interpreter.NewUnmeteredStringValue(string(c.Data))
+
+	case constant.Character:
+		value = interpreter.NewUnmeteredCharacterValue(string(c.Data))
 
 	case constant.Int:
 		// TODO: support larger integers

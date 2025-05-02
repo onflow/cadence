@@ -38,6 +38,27 @@ func parseCheckAndPrepare(tb testing.TB, code string) test_utils.Invokable {
 	return test_utils.ParseCheckAndPrepare(tb, code, *compile)
 }
 
+func parseCheckAndPrepareWithEvents(tb testing.TB, code string) (
+	invokable test_utils.Invokable,
+	getEvents func() []test_utils.TestEvent,
+	err error,
+) {
+	tb.Helper()
+	return test_utils.ParseCheckAndPrepareWithEvents(tb, code, *compile)
+}
+
+func parseCheckAndPrepareWithOptions(
+	tb testing.TB,
+	code string,
+	options ParseCheckAndInterpretOptions,
+) (
+	invokable test_utils.Invokable,
+	err error,
+) {
+	tb.Helper()
+	return test_utils.ParseCheckAndPrepareWithOptions(tb, code, options, *compile)
+}
+
 func TestInterpreterOptionalBoxing(t *testing.T) {
 
 	t.Parallel()

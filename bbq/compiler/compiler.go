@@ -301,6 +301,14 @@ func (c *Compiler[_, _]) addStringConst(str string) *Constant {
 	return c.addConstant(constant.String, []byte(str))
 }
 
+func (c *Compiler[_, _]) emitCharacterConst(str string) {
+	c.emitGetConstant(c.addCharacterConst(str))
+}
+
+func (c *Compiler[_, _]) addCharacterConst(str string) *Constant {
+	return c.addConstant(constant.Character, []byte(str))
+}
+
 func (c *Compiler[_, _]) emitIntConst(i int64) {
 	c.emitGetConstant(c.addIntConst(i))
 }
@@ -415,7 +423,7 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 		c.compileDeclaration(declaration)
 	}
 
-	contract, _ := c.exportContract()
+	contract := c.exportContract()
 
 	compositeDeclarations := c.Program.CompositeDeclarations()
 	variableDeclarations := c.Program.VariableDeclarations()
@@ -636,41 +644,40 @@ func (c *Compiler[_, _]) exportVariables(variableDecls []*ast.VariableDeclaratio
 }
 
 func (c *Compiler[_, _]) contractType() (contractType sema.CompositeKindedType) {
-	contractDecl := c.Program.SoleContractDeclaration()
-	if contractDecl != nil {
-		contractType = c.DesugaredElaboration.CompositeDeclarationType(contractDecl)
-		return
-	}
-
-	interfaceDecl := c.Program.SoleContractInterfaceDeclaration()
-	if interfaceDecl != nil {
-		contractType = c.DesugaredElaboration.InterfaceDeclarationType(interfaceDecl)
-		return
+	// In tests, there can be contracts along with functions.
+	// TODO: Is it needed to handle having more than one contract?
+	compositeDeclarations := c.Program.CompositeDeclarations()
+	for _, declaration := range compositeDeclarations {
+		if declaration.Kind() == common.CompositeKindContract {
+			return c.DesugaredElaboration.CompositeDeclarationType(declaration)
+		}
 	}
 
 	return nil
 }
 
-func (c *Compiler[_, _]) exportContract() (*bbq.Contract, sema.CompositeKindedType) {
+func (c *Compiler[_, _]) exportContract() *bbq.Contract {
 	var location common.Location
 	var name string
 
 	contractType := c.contractType()
 	if contractType == nil {
-		return nil, nil
+		return nil
 	}
-
-	_, isInterface := contractType.(*sema.InterfaceType)
 
 	location = contractType.GetLocation()
 	name = contractType.GetIdentifier()
 
-	addressLocation := location.(common.AddressLocation)
+	var addressBytes []byte
+	addressLocation, ok := location.(common.AddressLocation)
+	if ok {
+		addressBytes = addressLocation.Address.Bytes()
+	}
+
 	return &bbq.Contract{
-		Name:        name,
-		Address:     addressLocation.Address[:],
-		IsInterface: isInterface,
-	}, contractType
+		Name:    name,
+		Address: addressBytes,
+	}
 }
 
 func (c *Compiler[_, _]) compileDeclaration(declaration ast.Declaration) {
@@ -1855,7 +1862,17 @@ func (c *Compiler[_, _]) VisitFunctionExpression(expression *ast.FunctionExpress
 }
 
 func (c *Compiler[_, _]) VisitStringExpression(expression *ast.StringExpression) (_ struct{}) {
-	c.emitStringConst(expression.Value)
+	stringType := c.DesugaredElaboration.StringExpressionType(expression)
+
+	switch stringType {
+	case sema.CharacterType:
+		c.emitCharacterConst(expression.Value)
+	case sema.StringType:
+		c.emitStringConst(expression.Value)
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
 	return
 }
 
@@ -2230,7 +2247,7 @@ func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclarati
 		// Add a global variable for the imported contract value.
 		contractDecl := importedProgram.Contract
 		isContract := contractDecl != nil
-		if isContract && !contractDecl.IsInterface {
+		if isContract {
 			c.addImportedGlobal(location.Location, contractDecl.Name)
 		}
 
@@ -2288,8 +2305,10 @@ func (c *Compiler[_, _]) VisitAttachExpression(_ *ast.AttachExpression) (_ struc
 
 func (c *Compiler[_, _]) emitTransfer(targetType sema.Type) {
 
+	lastInstruction := c.codeGen.LastInstruction()
+
 	// Optimization: We can omit the transfer in some cases
-	switch lastInstruction := c.codeGen.LastInstruction().(type) {
+	switch lastInstruction := lastInstruction.(type) {
 	case opcode.InstructionGetConstant:
 		// If the last instruction is a constant load of the same type,
 		// then the transfer is not needed.

@@ -10,33 +10,34 @@ func _() {
 	var x [1]struct{}
 	_ = x[Unknown-0]
 	_ = x[String-1]
-	_ = x[Address-2]
-	_ = x[Int-7]
-	_ = x[Int8-8]
-	_ = x[Int16-9]
-	_ = x[Int32-10]
-	_ = x[Int64-11]
-	_ = x[Int128-12]
-	_ = x[Int256-13]
-	_ = x[UInt-15]
-	_ = x[UInt8-16]
-	_ = x[UInt16-17]
-	_ = x[UInt32-18]
-	_ = x[UInt64-19]
-	_ = x[UInt128-20]
-	_ = x[UInt256-21]
-	_ = x[Word8-24]
-	_ = x[Word16-25]
-	_ = x[Word32-26]
-	_ = x[Word64-27]
-	_ = x[Word128-28]
-	_ = x[Word256-29]
-	_ = x[Fix64-35]
-	_ = x[UFix64-43]
+	_ = x[Character-2]
+	_ = x[Address-3]
+	_ = x[Int-8]
+	_ = x[Int8-9]
+	_ = x[Int16-10]
+	_ = x[Int32-11]
+	_ = x[Int64-12]
+	_ = x[Int128-13]
+	_ = x[Int256-14]
+	_ = x[UInt-16]
+	_ = x[UInt8-17]
+	_ = x[UInt16-18]
+	_ = x[UInt32-19]
+	_ = x[UInt64-20]
+	_ = x[UInt128-21]
+	_ = x[UInt256-22]
+	_ = x[Word8-25]
+	_ = x[Word16-26]
+	_ = x[Word32-27]
+	_ = x[Word64-28]
+	_ = x[Word128-29]
+	_ = x[Word256-30]
+	_ = x[Fix64-36]
+	_ = x[UFix64-44]
 }
 
 const (
-	_Kind_name_0 = "UnknownStringAddress"
+	_Kind_name_0 = "UnknownStringCharacterAddress"
 	_Kind_name_1 = "IntInt8Int16Int32Int64Int128Int256"
 	_Kind_name_2 = "UIntUInt8UInt16UInt32UInt64UInt128UInt256"
 	_Kind_name_3 = "Word8Word16Word32Word64Word128Word256"
@@ -45,7 +46,7 @@ const (
 )
 
 var (
-	_Kind_index_0 = [...]uint8{0, 7, 13, 20}
+	_Kind_index_0 = [...]uint8{0, 7, 13, 22, 29}
 	_Kind_index_1 = [...]uint8{0, 3, 7, 12, 17, 22, 28, 34}
 	_Kind_index_2 = [...]uint8{0, 4, 9, 15, 21, 27, 34, 41}
 	_Kind_index_3 = [...]uint8{0, 5, 11, 17, 23, 30, 37}
@@ -53,20 +54,20 @@ var (
 
 func (i Kind) String() string {
 	switch {
-	case i <= 2:
+	case i <= 3:
 		return _Kind_name_0[_Kind_index_0[i]:_Kind_index_0[i+1]]
-	case 7 <= i && i <= 13:
-		i -= 7
+	case 8 <= i && i <= 14:
+		i -= 8
 		return _Kind_name_1[_Kind_index_1[i]:_Kind_index_1[i+1]]
-	case 15 <= i && i <= 21:
-		i -= 15
+	case 16 <= i && i <= 22:
+		i -= 16
 		return _Kind_name_2[_Kind_index_2[i]:_Kind_index_2[i+1]]
-	case 24 <= i && i <= 29:
-		i -= 24
+	case 25 <= i && i <= 30:
+		i -= 25
 		return _Kind_name_3[_Kind_index_3[i]:_Kind_index_3[i+1]]
-	case i == 35:
+	case i == 36:
 		return _Kind_name_4
-	case i == 43:
+	case i == 44:
 		return _Kind_name_5
 	default:
 		return "Kind(" + strconv.FormatInt(int64(i), 10) + ")"
