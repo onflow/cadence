@@ -23,8 +23,6 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/ast"
-	"github.com/onflow/cadence/bbq/commons"
-	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -46,7 +44,8 @@ type contractFunctionExecutor struct {
 	argumentTypes    []sema.Type
 	executeOnce      sync.Once
 	preprocessOnce   sync.Once
-	vm               *vm.VM
+	// TODO: Uncomment once the compiler branch is merged to master.
+	//vm               *vm.VM
 }
 
 func newContractFunctionExecutor(
@@ -116,11 +115,12 @@ func (executor *contractFunctionExecutor) preprocess() (err error) {
 
 	environment := context.Environment
 	if environment == nil {
-		if context.UseVM {
-			environment = NewBaseVMEnvironment(executor.runtime.Config())
-		} else {
-			environment = NewBaseInterpreterEnvironment(executor.runtime.Config())
-		}
+		// TODO: Uncomment once the compiler branch is merged to master.
+		//if context.UseVM {
+		//	//environment = NewBaseVMEnvironment(executor.runtime.Config())
+		//} else {
+		environment = NewBaseInterpreterEnvironment(executor.runtime.Config())
+		//}
 	}
 	environment.Configure(
 		runtimeInterface,
@@ -134,10 +134,11 @@ func (executor *contractFunctionExecutor) preprocess() (err error) {
 	case *interpreterEnvironment:
 		// NO-OP
 
-	case *vmEnvironment:
-		contractLocation := executor.contractLocation
-		program := environment.importProgram(contractLocation)
-		executor.vm = environment.newVM(contractLocation, program)
+	// TODO: Uncomment once the compiler branch is merged to master.
+	//case *vmEnvironment:
+	//	contractLocation := executor.contractLocation
+	//	program := environment.importProgram(contractLocation)
+	//	executor.vm = environment.newVM(contractLocation, program)
 
 	default:
 		panic(errors.NewUnexpectedError("unsupported environment: %T", environment))
@@ -171,12 +172,13 @@ func (executor *contractFunctionExecutor) execute() (val cadence.Value, err erro
 		}
 		return value, nil
 
-	case *vmEnvironment:
-		value, err := executor.executeWithVM(environment)
-		if err != nil {
-			return nil, newError(err, executor.context.Location, codesAndPrograms)
-		}
-		return value, nil
+	// TODO: Uncomment once the compiler branch is merged to master.
+	//case *vmEnvironment:
+	//	value, err := executor.executeWithVM(environment)
+	//	if err != nil {
+	//		return nil, newError(err, executor.context.Location, codesAndPrograms)
+	//	}
+	//	return value, nil
 
 	default:
 		panic(errors.NewUnexpectedError("unsupported environment: %T", environment))
@@ -264,51 +266,52 @@ func (executor *contractFunctionExecutor) executeWithInterpreter(
 	return exportedValue, nil
 }
 
-func (executor *contractFunctionExecutor) executeWithVM(
-	environment *vmEnvironment,
-) (val cadence.Value, err error) {
-
-	contractLocation := executor.contractLocation
-
-	context := executor.vm.Context()
-
-	contractValue := loadContractValue(
-		context,
-		contractLocation,
-		environment.storage,
-	)
-
-	// receiver + arguments
-	invocationArguments := make([]interpreter.Value, 0, 1+len(executor.arguments))
-	invocationArguments = append(invocationArguments, contractValue)
-	invocationArguments, err = executor.appendArguments(context, invocationArguments)
-	if err != nil {
-		return nil, err
-	}
-
-	staticType := contractValue.StaticType(context)
-	semaType := interpreter.MustConvertStaticToSemaType(staticType, context)
-	qualifiedFuncName := commons.TypeQualifiedName(semaType, executor.functionName)
-
-	value, err := executor.vm.Invoke(qualifiedFuncName, invocationArguments...)
-	if err != nil {
-		return nil, err
-	}
-
-	// Write back all stored values, which were actually just cached, back into storage
-	err = environment.commitStorage(context)
-	if err != nil {
-		return nil, err
-	}
-
-	var exportedValue cadence.Value
-	exportedValue, err = ExportValue(value, context, interpreter.EmptyLocationRange)
-	if err != nil {
-		return nil, err
-	}
-
-	return exportedValue, nil
-}
+// TODO: Uncomment once the compiler branch is merged to master.
+//func (executor *contractFunctionExecutor) executeWithVM(
+//	environment *vmEnvironment,
+//) (val cadence.Value, err error) {
+//
+//	contractLocation := executor.contractLocation
+//
+//	context := executor.vm.Context()
+//
+//	contractValue := loadContractValue(
+//		context,
+//		contractLocation,
+//		environment.storage,
+//	)
+//
+//	// receiver + arguments
+//	invocationArguments := make([]interpreter.Value, 0, 1+len(executor.arguments))
+//	invocationArguments = append(invocationArguments, contractValue)
+//	invocationArguments, err = executor.appendArguments(context, invocationArguments)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	staticType := contractValue.StaticType(context)
+//	semaType := interpreter.MustConvertStaticToSemaType(staticType, context)
+//	qualifiedFuncName := commons.TypeQualifiedName(semaType, executor.functionName)
+//
+//	value, err := executor.vm.Invoke(qualifiedFuncName, invocationArguments...)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	// Write back all stored values, which were actually just cached, back into storage
+//	err = environment.commitStorage(context)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	var exportedValue cadence.Value
+//	exportedValue, err = ExportValue(value, context, interpreter.EmptyLocationRange)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	return exportedValue, nil
+//}
 
 type ArgumentConversionContext interface {
 	interpreter.AccountCreationContext
