@@ -7952,4 +7952,31 @@ func TestGlobalVariables(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("overridden local var", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+              var a = 5
+
+              fun test(): Int {
+                  var a = 8
+                  return getGlobalA()
+              }
+
+              fun getGlobalA(): Int {
+                  return a
+              }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(5),
+			result,
+		)
+	})
 }

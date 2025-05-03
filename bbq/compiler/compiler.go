@@ -73,8 +73,6 @@ type Compiler[E, T any] struct {
 	typesInPool     map[sema.TypeID]uint16
 	constantsInPool map[constantsCacheKey]*Constant
 
-	globalVariablesSet map[string]struct{}
-
 	// TODO: initialize
 	memoryGauge common.MemoryGauge
 
@@ -154,7 +152,6 @@ func newCompiler[E, T any](
 		importedGlobals:      globals,
 		typesInPool:          make(map[sema.TypeID]uint16),
 		constantsInPool:      make(map[constantsCacheKey]*Constant),
-		globalVariablesSet:   make(map[string]struct{}),
 		compositeTypeStack: &Stack[sema.CompositeKindedType]{
 			elements: make([]sema.CompositeKindedType, 0),
 		},
@@ -531,7 +528,6 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 	for _, declaration := range variableDecls {
 		variableName := declaration.Identifier.Identifier
 		c.addGlobal(variableName)
-		c.globalVariablesSet[variableName] = struct{}{}
 	}
 
 	for _, declaration := range specialFunctionDecls {
@@ -1177,7 +1173,7 @@ func (c *Compiler[_, _]) VisitVariableDeclaration(declaration *ast.VariableDecla
 
 	variableName := declaration.Identifier.Identifier
 
-	_, isGlobalVar := c.globalVariablesSet[variableName]
+	isGlobalVar := c.currentFunction == nil
 
 	if isGlobalVar {
 		if declaration.Value == nil {
