@@ -1174,38 +1174,8 @@ func (c *Compiler[_, _]) VisitVariableDeclaration(declaration *ast.VariableDecla
 	variableName := declaration.Identifier.Identifier
 
 	isGlobalVar := c.currentFunction == nil
-
 	if isGlobalVar {
-		if declaration.Value == nil {
-			c.addGlobalVariable(variableName)
-			return
-		}
-
-		varDeclTypes := c.DesugaredElaboration.VariableDeclarationTypes(declaration)
-
-		variableGetterFunctionType := sema.NewSimpleFunctionType(
-			sema.FunctionPurityImpure,
-			nil,
-			sema.NewTypeAnnotation(varDeclTypes.TargetType),
-		)
-
-		globalVariable := c.addGlobalVariableWithGetter(
-			variableName,
-			variableGetterFunctionType,
-		)
-
-		func() {
-			previousFunction := c.currentFunction
-			c.targetFunction(globalVariable.Getter)
-			defer c.targetFunction(previousFunction)
-
-			// No parameters
-			//c.declareParameters(declaration.ParameterList, isObjectMethod)
-
-			c.compileExpression(declaration.Value)
-			c.codeGen.Emit(opcode.InstructionReturnValue{})
-		}()
-
+		c.compileGlobalVariable(declaration, variableName)
 		return
 	}
 
@@ -1233,6 +1203,38 @@ func (c *Compiler[_, _]) VisitVariableDeclaration(declaration *ast.VariableDecla
 	})
 
 	return
+}
+
+func (c *Compiler[_, _]) compileGlobalVariable(declaration *ast.VariableDeclaration, variableName string) {
+	if declaration.Value == nil {
+		c.addGlobalVariable(variableName)
+		return
+	}
+
+	varDeclTypes := c.DesugaredElaboration.VariableDeclarationTypes(declaration)
+
+	variableGetterFunctionType := sema.NewSimpleFunctionType(
+		sema.FunctionPurityImpure,
+		nil,
+		sema.NewTypeAnnotation(varDeclTypes.TargetType),
+	)
+
+	globalVariable := c.addGlobalVariableWithGetter(
+		variableName,
+		variableGetterFunctionType,
+	)
+
+	func() {
+		previousFunction := c.currentFunction
+		c.targetFunction(globalVariable.Getter)
+		defer c.targetFunction(previousFunction)
+
+		// No parameters
+
+		// Compile function body
+		c.compileExpression(declaration.Value)
+		c.codeGen.Emit(opcode.InstructionReturnValue{})
+	}()
 }
 
 func (c *Compiler[_, _]) emitDeclareLocal(name string) *local {

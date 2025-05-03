@@ -7904,7 +7904,7 @@ func TestGlobalVariables(t *testing.T) {
               var b = a
 
               fun test(): Int {
-                  // Update 'a' before getting 'b' for the first time.
+                  // Update 'a' before getting 'b'.
                   a = 8
 
                   // Get 'b' for the fist time.
@@ -7917,7 +7917,7 @@ func TestGlobalVariables(t *testing.T) {
 
 		assert.Equal(
 			t,
-			interpreter.NewUnmeteredIntValueFromInt64(8),
+			interpreter.NewUnmeteredIntValueFromInt64(5),
 			result,
 		)
 	})
