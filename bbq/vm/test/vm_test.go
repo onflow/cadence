@@ -7979,4 +7979,56 @@ func TestGlobalVariables(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("forward references", func(t *testing.T) {
+		t.Parallel()
+
+		result, err, logs := CompileAndInvokeWithLogs(t,
+			`
+              var a = initializeA()
+              var b = initializeB()
+
+              fun test(): Int {
+                  log("invoked test")
+                  return a
+              }
+
+              fun initializeA(): Int {
+                  log("invoked initializeA")
+
+                  // Indirect forward reference to b
+                  var c = b
+
+                  log("exiting initializeA")
+                  return 5
+              }
+
+              fun initializeB(): Int {
+                  log("invoked initializeB")
+                  return 5
+              }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(5),
+			result,
+		)
+
+		assert.Equal(
+			t,
+			[]string{
+				// Variables must be initialized before calling the function test.
+				`"invoked initializeA"`,
+				`"invoked initializeB"`,
+				`"exiting initializeA"`,
+
+				`"invoked test"`,
+			},
+			logs,
+		)
+	})
 }

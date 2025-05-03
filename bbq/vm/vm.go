@@ -107,6 +107,8 @@ func NewVM(
 
 	vm.globals = linkedGlobals.indexedGlobals
 
+	vm.initializeGlobalVariables(program)
+
 	return vm
 }
 
@@ -1668,6 +1670,13 @@ func (vm *VM) Reset() {
 	vm.locals = vm.locals[:0]
 	vm.callstack = vm.callstack[:0]
 	vm.ipStack = vm.ipStack[:0]
+}
+
+func (vm *VM) initializeGlobalVariables(program *bbq.InstructionProgram) {
+	for _, variable := range program.Variables {
+		// Get the values to ensure they are initialized.
+		_ = vm.globals[variable.Name].GetValue(vm.context)
+	}
 }
 
 func printInstructionError(
