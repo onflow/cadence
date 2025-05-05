@@ -352,7 +352,7 @@ func TestInterpretFunctionPostTestConditionWithBefore(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       var x = 0
 
       fun test() {
@@ -381,7 +381,7 @@ func TestInterpretFunctionPostEmitConditionWithBefore(t *testing.T) {
 
 	t.Parallel()
 
-	inter, getEvents, err := parseCheckAndInterpretWithEvents(t, `
+	inter, getEvents, err := parseCheckAndPrepareWithEvents(t, `
       event Foo(x: Int, beforeX: Int)
 
       var x = 0
@@ -418,7 +418,7 @@ func TestInterpretFunctionPostConditionWithBeforeFailingPreTestCondition(t *test
 
 	t.Parallel()
 
-	inter, getEvents, err := parseCheckAndInterpretWithEvents(t, `
+	inter, getEvents, err := parseCheckAndPrepareWithEvents(t, `
       event Foo(x: Int)
 
       var x = 0
@@ -438,14 +438,10 @@ func TestInterpretFunctionPostConditionWithBeforeFailingPreTestCondition(t *test
 
 	_, err = inter.Invoke("test")
 
-	RequireError(t, err)
-
-	var conditionErr interpreter.ConditionError
-	require.ErrorAs(t, err, &conditionErr)
-
-	assert.Equal(t,
+	assertConditionError(
+		t,
+		err,
 		ast.ConditionKindPre,
-		conditionErr.ConditionKind,
 	)
 
 	events := getEvents()
@@ -456,7 +452,7 @@ func TestInterpretFunctionPostConditionWithBeforeFailingPostTestCondition(t *tes
 
 	t.Parallel()
 
-	inter, getEvents, err := parseCheckAndInterpretWithEvents(t, `
+	inter, getEvents, err := parseCheckAndPrepareWithEvents(t, `
       event Foo(x: Int)
 
       var x = 0
@@ -476,14 +472,10 @@ func TestInterpretFunctionPostConditionWithBeforeFailingPostTestCondition(t *tes
 
 	_, err = inter.Invoke("test")
 
-	RequireError(t, err)
-
-	var conditionErr interpreter.ConditionError
-	require.ErrorAs(t, err, &conditionErr)
-
-	assert.Equal(t,
+	assertConditionError(
+		t,
+		err,
 		ast.ConditionKindPost,
-		conditionErr.ConditionKind,
 	)
 
 	events := getEvents()
@@ -1222,7 +1214,7 @@ func TestInterpretIsInstanceCheckInPreCondition(t *testing.T) {
 
 	test := func(condition string) {
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			fmt.Sprintf(
 				`
                    contract interface CI {
@@ -1327,7 +1319,7 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, valueDeclaration)
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           resource R {}
 

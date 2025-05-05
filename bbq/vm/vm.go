@@ -271,7 +271,9 @@ func (vm *VM) popCallFrame() {
 func (vm *VM) Invoke(name string, arguments ...Value) (v Value, err error) {
 	functionVariable, ok := vm.globals[name]
 	if !ok {
-		return nil, errors.NewDefaultUserError("unknown function '%s'", name)
+		return nil, UnknownFunctionError{
+			name: name,
+		}
 	}
 
 	function := functionVariable.GetValue(vm.context)
@@ -836,9 +838,8 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 
 	fieldValue := memberAccessibleValue.GetMember(vm.context, EmptyLocationRange, fieldName)
 	if fieldValue == nil {
-		panic(MissingMemberValueError{
-			Parent: memberAccessibleValue,
-			Name:   fieldName,
+		panic(interpreter.UseBeforeInitializationError{
+			Name: fieldName,
 		})
 	}
 
@@ -956,8 +957,6 @@ func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 }
 
 func castValueAndValueType(context *Context, targetType bbq.StaticType, value Value) (Value, bbq.StaticType) {
-	valueType := value.StaticType(context)
-
 	// if the value itself has a mapped entitlement type in its authorization
 	// (e.g. if it is a reference to `self` or `base`  in an attachment function with mapped access)
 	// substitution must also be performed on its entitlements
@@ -972,13 +971,15 @@ func castValueAndValueType(context *Context, targetType bbq.StaticType, value Va
 	//valueSemaType := interpreter.SubstituteMappedEntitlements(interpreter.MustSemaTypeOfValue(value))
 	//valueType = ConvertSemaToStaticType(interpreter, valueSemaType)
 
-	// If the target is anystruct or anyresource we want to preserve optionals
+	// If the target is `AnyStruct` or `AnyResource` we want to preserve optionals
 	unboxedExpectedType := UnwrapOptionalType(targetType)
 	if !(unboxedExpectedType == interpreter.PrimitiveStaticTypeAnyStruct ||
 		unboxedExpectedType == interpreter.PrimitiveStaticTypeAnyResource) {
 		// otherwise dynamic cast now always unboxes optionals
 		value = interpreter.Unbox(value)
 	}
+
+	valueType := value.StaticType(context)
 
 	return value, valueType
 }
@@ -1677,6 +1678,10 @@ func (vm *VM) initializeGlobalVariables(program *bbq.InstructionProgram) {
 		// Get the values to ensure they are initialized.
 		_ = vm.globals[variable.Name].GetValue(vm.context)
 	}
+}
+
+func (vm *VM) Global(name string) Value {
+	return vm.globals[name].GetValue(vm.context)
 }
 
 func printInstructionError(

@@ -749,7 +749,11 @@ func (c *Compiler[_, _]) compileDeclaration(declaration ast.Declaration) {
 	ast.AcceptDeclaration[struct{}](declaration, c)
 }
 
-func (c *Compiler[_, _]) compileBlock(block *ast.Block, enclosingDeclKind common.DeclarationKind) {
+func (c *Compiler[_, _]) compileBlock(
+	block *ast.Block,
+	enclosingDeclKind common.DeclarationKind,
+	returnType sema.Type,
+) {
 	locals := c.currentFunction.locals
 	locals.PushNewWithCurrent()
 	defer locals.Pop()
@@ -789,7 +793,7 @@ func (c *Compiler[_, _]) compileBlock(block *ast.Block, enclosingDeclKind common
 				c.codeGen.Emit(opcode.InstructionReturn{})
 			} else {
 				c.emitGetLocal(local.index)
-				c.codeGen.Emit(opcode.InstructionReturnValue{})
+				c.emitTransferAndReturnValue(returnType)
 			}
 		} else if needsSyntheticReturn(block.Statements) {
 			// If there are no post conditions,
@@ -824,7 +828,11 @@ func (c *Compiler[_, _]) shouldPatchReturns(enclosingDeclKind common.Declaration
 	}
 }
 
-func (c *Compiler[_, _]) compileFunctionBlock(functionBlock *ast.FunctionBlock, functionDeclKind common.DeclarationKind) {
+func (c *Compiler[_, _]) compileFunctionBlock(
+	functionBlock *ast.FunctionBlock,
+	functionDeclKind common.DeclarationKind,
+	returnType sema.Type,
+) {
 	if functionBlock == nil {
 		return
 	}
@@ -847,7 +855,11 @@ func (c *Compiler[_, _]) compileFunctionBlock(functionBlock *ast.FunctionBlock, 
 		c.postConditionsIndex = prevPostConditionIndex
 	}()
 
-	c.compileBlock(functionBlock.Block, functionDeclKind)
+	c.compileBlock(
+		functionBlock.Block,
+		functionDeclKind,
+		returnType,
+	)
 }
 
 func (c *Compiler[_, _]) compileStatement(statement ast.Statement) {
@@ -899,7 +911,8 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 		} else {
 			// (1.b)
 			// If there are no post conditions, return then-and-there.
-			c.codeGen.Emit(opcode.InstructionReturnValue{})
+			returnTypes := c.DesugaredElaboration.ReturnStatementTypes(statement)
+			c.emitTransferAndReturnValue(returnTypes.ReturnType)
 		}
 	} else {
 		if c.hasPostConditions() {
@@ -993,7 +1006,11 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 			panic(errors.NewUnreachableError())
 		}
 
-		c.compileBlock(statement.Then, common.DeclarationKindUnknown)
+		c.compileBlock(
+			statement.Then,
+			common.DeclarationKindUnknown,
+			nil,
+		)
 
 		if additionalThenScope {
 			c.currentFunction.locals.Pop()
@@ -1003,7 +1020,11 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 		if elseBlock != nil {
 			thenJump := c.emitUndefinedJump()
 			c.patchJump(elseJump)
-			c.compileBlock(elseBlock, common.DeclarationKindUnknown)
+			c.compileBlock(
+				elseBlock,
+				common.DeclarationKindUnknown,
+				nil,
+			)
 			c.patchJump(thenJump)
 		} else {
 			c.patchJump(elseJump)
@@ -1022,7 +1043,11 @@ func (c *Compiler[_, _]) VisitWhileStatement(statement *ast.WhileStatement) (_ s
 	endJump := c.emitUndefinedJumpIfFalse()
 
 	// Compile the body
-	c.compileBlock(statement.Block, common.DeclarationKindUnknown)
+	c.compileBlock(
+		statement.Block,
+		common.DeclarationKindUnknown,
+		nil,
+	)
 	// Repeat, jump back to the test
 	c.emitJump(testOffset)
 
@@ -1088,7 +1113,11 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 	c.emitDeclareLocal(statement.Identifier.Identifier)
 
 	// Compile the for-loop body.
-	c.compileBlock(statement.Block, common.DeclarationKindUnknown)
+	c.compileBlock(
+		statement.Block,
+		common.DeclarationKindUnknown,
+		nil,
+	)
 
 	// Jump back to the loop test. i.e: `hasNext()`
 	c.emitJump(testOffset)
@@ -1233,8 +1262,13 @@ func (c *Compiler[_, _]) compileGlobalVariable(declaration *ast.VariableDeclarat
 
 		// Compile function body
 		c.compileExpression(declaration.Value)
-		c.codeGen.Emit(opcode.InstructionReturnValue{})
+		c.emitTransferAndReturnValue(varDeclTypes.TargetType)
 	}()
+}
+
+func (c *Compiler[_, _]) emitTransferAndReturnValue(returnType sema.Type) {
+	c.emitTransfer(returnType)
+	c.codeGen.Emit(opcode.InstructionReturnValue{})
 }
 
 func (c *Compiler[_, _]) emitDeclareLocal(name string) *local {
@@ -1959,6 +1993,7 @@ func (c *Compiler[_, _]) VisitFunctionExpression(expression *ast.FunctionExpress
 		c.compileFunctionBlock(
 			expression.FunctionBlock,
 			common.DeclarationKindUnknown,
+			functionType.ReturnTypeAnnotation.Type,
 		)
 	}()
 
@@ -2162,10 +2197,15 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	c.compileFunctionBlock(
 		declaration.FunctionDeclaration.FunctionBlock,
 		declaration.Kind,
+
+		// The return type of the initializer is the type itself.
+		enclosingType,
 	)
 
 	// Constructor should return the created the struct. i.e: return `self`
 	c.emitGetLocal(self.index)
+
+	// No need to transfer, since the type is same as the constructed value, for initializers.
 	c.codeGen.Emit(opcode.InstructionReturnValue{})
 }
 
@@ -2233,6 +2273,7 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 		c.compileFunctionBlock(
 			declaration.FunctionBlock,
 			declaration.DeclarationKind(),
+			functionType.ReturnTypeAnnotation.Type,
 		)
 	}()
 

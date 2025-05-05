@@ -33,6 +33,7 @@ import (
 	"github.com/onflow/cadence/stdlib"
 	"github.com/onflow/cadence/test_utils/sema_utils"
 
+	"github.com/onflow/cadence/bbq/compiler"
 	. "github.com/onflow/cadence/bbq/test_utils"
 	"github.com/onflow/cadence/bbq/vm"
 	compilerUtils "github.com/onflow/cadence/bbq/vm/test"
@@ -48,6 +49,7 @@ type Invokable interface {
 	interpreter.ValueComparisonContext
 	interpreter.InvocationContext
 	Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error)
+	GetGlobal(name string) interpreter.Value
 }
 
 type VMInvokable struct {
@@ -72,6 +74,14 @@ func (v *VMInvokable) Invoke(functionName string, arguments ...interpreter.Value
 	v.vmInstance.Reset()
 
 	return
+}
+
+func (v *VMInvokable) GetGlobal(name string) interpreter.Value {
+	return v.vmInstance.Global(name)
+}
+
+func (v *VMInvokable) InitializeContract(arguments ...interpreter.Value) (*interpreter.CompositeValue, error) {
+	return v.vmInstance.InitializeContract(arguments...)
 }
 
 func ParseCheckAndPrepare(tb testing.TB, code string, compile bool) Invokable {
@@ -168,6 +178,63 @@ func ParseCheckAndPrepareWithOptions(
 		WithInterpreterConfig(options.Config).
 		WithDebugEnabled()
 
+	var compilerConfig *compiler.Config
+
+	// If there are builtin functions provided externally (e.g: for tests),
+	// then convert them to corresponding functions in compiler and in vm.
+	if options.Config.BaseActivationHandler != nil {
+		activation := options.Config.BaseActivationHandler(nil)
+		providedBuiltinFunctions := activation.FunctionValues()
+
+		vmConfig.NativeFunctionsProvider = func() map[string]*vm.Variable {
+			funcs := vm.NativeFunctions()
+
+			// Convert the externally provided `interpreter.HostFunction`s into `vm.NativeFunction`s.
+			for name, functionVariable := range providedBuiltinFunctions { //nolint:maprange
+				variable := &interpreter.SimpleVariable{}
+				funcs[name] = variable
+
+				variable.InitializeWithValue(
+					vm.NewNativeFunctionValue(
+						name,
+						stdlib.LogFunctionType,
+						func(context *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+							value := functionVariable.GetValue(context)
+							functionValue := value.(*interpreter.HostFunctionValue)
+							invocation := interpreter.NewInvocation(
+								context,
+								nil,
+								nil,
+								arguments,
+								nil,
+								// TODO: provide these if they are needed for tests.
+								nil,
+								interpreter.EmptyLocationRange,
+							)
+							return functionValue.Function(invocation)
+						},
+					),
+				)
+			}
+
+			return funcs
+		}
+
+		// Register externally provided functions as globals in compiler.
+		compilerConfig = &compiler.Config{
+			BuiltinGlobalsProvider: func() map[string]*compiler.Global {
+				globals := compiler.NativeFunctions()
+				for name := range providedBuiltinFunctions { //nolint:maprange
+					globals[name] = &compiler.Global{
+						Name: name,
+					}
+				}
+
+				return globals
+			},
+		}
+	}
+
 	var parseAndCheckOptions *sema_utils.ParseAndCheckOptions
 	if options.CheckerConfig != nil {
 		parseAndCheckOptions = &sema_utils.ParseAndCheckOptions{
@@ -182,6 +249,7 @@ func ParseCheckAndPrepareWithOptions(
 			VMConfig: vmConfig,
 			ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
 				ParseAndCheckOptions: parseAndCheckOptions,
+				CompilerConfig:       compilerConfig,
 			},
 		},
 	)
