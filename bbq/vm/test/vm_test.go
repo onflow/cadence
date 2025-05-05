@@ -8031,4 +8031,82 @@ func TestGlobalVariables(t *testing.T) {
 			logs,
 		)
 	})
+
+	t.Run("initialization on program start", func(t *testing.T) {
+		t.Parallel()
+
+		var logs []string
+
+		activation := sema.NewVariableActivation(sema.BaseValueActivation)
+		activation.DeclareValue(stdlib.PanicFunction)
+		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
+			commons.LogFunctionName,
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityView,
+				[]sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: sema.AnyStructTypeAnnotation,
+					},
+				},
+				sema.VoidTypeAnnotation,
+			),
+			"",
+			nil,
+		))
+
+		storage := interpreter.NewInMemoryStorage(nil)
+		vmConfig := vm.NewConfig(storage)
+
+		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+
+		// Only prepare, do not invoke anything.
+
+		_ = CompileAndPrepareToInvoke(t,
+			`
+              var a = initializeA()
+              var b = initializeB()
+
+              fun initializeA(): Int {
+                  log("invoked initializeA")
+
+                  // Indirect forward reference to b
+                  var c = b
+
+                  log("exiting initializeA")
+                  return 5
+              }
+
+              fun initializeB(): Int {
+                  log("invoked initializeB")
+                  return 5
+              }
+            `,
+			CompilerAndVMOptions{
+				VMConfig: vmConfig,
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						Config: &sema.Config{
+							LocationHandler: SingleIdentifierLocationResolver(t),
+							BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+								return activation
+							},
+						},
+					},
+				},
+			},
+		)
+
+		assert.Equal(
+			t,
+			[]string{
+				// Variables must be initialized before calling the function test.
+				`"invoked initializeA"`,
+				`"invoked initializeB"`,
+				`"exiting initializeA"`,
+			},
+			logs,
+		)
+	})
 }
