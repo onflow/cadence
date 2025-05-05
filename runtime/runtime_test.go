@@ -12335,8 +12335,7 @@ func TestRuntimeFunctionTypeConfusion(t *testing.T) {
 	require.ErrorAs(t, err, &typeErr)
 }
 
-func TestRuntimeFunctionTypeConfusion(t *testing.T) {
-
+func TestRuntimeStorageReferenceBoundFunctionConfusion(t *testing.T) {
 	t.Parallel()
 
 	runtime := NewTestInterpreterRuntime()
