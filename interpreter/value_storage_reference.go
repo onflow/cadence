@@ -487,6 +487,13 @@ func (v *StorageReferenceValue) BorrowType() sema.Type {
 }
 
 func (v *StorageReferenceValue) Iterator(context ValueStaticTypeContext, locationRange LocationRange) ValueIterator {
-	//TODO implement me
-	panic("implement me")
+	referencedValue := v.mustReferencedValue(context, locationRange)
+	referencedIterable, ok := referencedValue.(IterableValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	return &ReferenceValueIterator{
+		iterator: referencedIterable.Iterator(context, locationRange),
+	}
 }

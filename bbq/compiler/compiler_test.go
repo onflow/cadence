@@ -3638,12 +3638,13 @@ func TestForLoop(t *testing.T) {
 				opcode.InstructionIteratorHasNext{},
 
 				// If false, then jump to the end of the loop
-				opcode.InstructionJumpIfFalse{Target: 10},
+				opcode.InstructionJumpIfFalse{Target: 11},
 
 				// If true, get the next element and store in local var.
 				// var e = iterator.next()
 				opcode.InstructionGetLocal{Local: iteratorVarIndex},
 				opcode.InstructionIteratorNext{},
+				opcode.InstructionTransfer{Type:1},
 				opcode.InstructionSetLocal{Local: elementVarIndex},
 
 				// Jump to the beginning (condition) of the loop.
@@ -3699,7 +3700,7 @@ func TestForLoop(t *testing.T) {
 				opcode.InstructionIteratorHasNext{},
 
 				// If false, then jump to the end of the loop
-				opcode.InstructionJumpIfFalse{Target: 16},
+				opcode.InstructionJumpIfFalse{Target: 17},
 
 				// If true:
 
@@ -3713,6 +3714,7 @@ func TestForLoop(t *testing.T) {
 				// var e = iterator.next()
 				opcode.InstructionGetLocal{Local: iteratorVarIndex},
 				opcode.InstructionIteratorNext{},
+				opcode.InstructionTransfer{Type:1},
 				opcode.InstructionSetLocal{Local: elementVarIndex},
 
 				// Jump to the beginning (condition) of the loop.
@@ -3773,12 +3775,13 @@ func TestForLoop(t *testing.T) {
 				opcode.InstructionIteratorHasNext{},
 
 				// If false, then jump to the end of the loop
-				opcode.InstructionJumpIfFalse{Target: 17},
+				opcode.InstructionJumpIfFalse{Target: 18},
 
 				// If true, get the next element and store in local var.
 				// var e = iterator.next()
 				opcode.InstructionGetLocal{Local: iteratorVarIndex},
 				opcode.InstructionIteratorNext{},
+				opcode.InstructionTransfer{Type:1},
 				opcode.InstructionSetLocal{Local: e1Index},
 
 				// var e = e

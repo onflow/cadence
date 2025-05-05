@@ -374,3 +374,7 @@ func (e *DesugaredElaboration) OriginalElaboration() *sema.Elaboration {
 func (e *DesugaredElaboration) StringExpressionType(expression *ast.StringExpression) sema.Type {
 	return e.elaboration.StringExpressionType(expression)
 }
+
+func (e *DesugaredElaboration) ForStatementType(statement *ast.ForStatement) (types sema.ForStatementTypes) {
+	return e.elaboration.ForStatementType(statement)
+}
