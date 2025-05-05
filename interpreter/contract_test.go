@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"github.com/onflow/cadence/test_utils"
 	"testing"
 
 	"github.com/stretchr/testify/require"
