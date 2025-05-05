@@ -20,7 +20,6 @@ package interpreter
 
 import (
 	"github.com/onflow/atree"
-
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
