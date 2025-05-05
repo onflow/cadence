@@ -191,7 +191,7 @@ func ParseCheckAndPrepareWithOptions(
 			funcs := vm.NativeFunctions()
 
 			// Convert the externally provided `interpreter.HostFunction`s into `vm.NativeFunction`s.
-			for name, functionVariable := range providedBuiltinFunctions {
+			for name, functionVariable := range providedBuiltinFunctions { //nolint:maprange
 				variable := &interpreter.SimpleVariable{}
 				funcs[name] = variable
 
@@ -225,7 +225,7 @@ func ParseCheckAndPrepareWithOptions(
 		compilerConfig = &compiler.Config{
 			BuiltinGlobalsProvider: func() map[string]*compiler.Global {
 				globals := compiler.NativeFunctions()
-				for name, _ := range providedBuiltinFunctions {
+				for name := range providedBuiltinFunctions { //nolint:maprange
 					globals[name] = &compiler.Global{
 						Name: name,
 					}
