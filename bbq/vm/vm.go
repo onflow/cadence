@@ -839,7 +839,7 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 	fieldValue := memberAccessibleValue.GetMember(vm.context, EmptyLocationRange, fieldName)
 	if fieldValue == nil {
 		panic(interpreter.UseBeforeInitializationError{
-			Name:   fieldName,
+			Name: fieldName,
 		})
 	}
 
