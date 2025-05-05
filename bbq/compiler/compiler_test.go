@@ -3644,7 +3644,7 @@ func TestForLoop(t *testing.T) {
 				// var e = iterator.next()
 				opcode.InstructionGetLocal{Local: iteratorVarIndex},
 				opcode.InstructionIteratorNext{},
-				opcode.InstructionTransfer{Type:1},
+				opcode.InstructionTransfer{Type: 1},
 				opcode.InstructionSetLocal{Local: elementVarIndex},
 
 				// Jump to the beginning (condition) of the loop.
@@ -3714,7 +3714,7 @@ func TestForLoop(t *testing.T) {
 				// var e = iterator.next()
 				opcode.InstructionGetLocal{Local: iteratorVarIndex},
 				opcode.InstructionIteratorNext{},
-				opcode.InstructionTransfer{Type:1},
+				opcode.InstructionTransfer{Type: 1},
 				opcode.InstructionSetLocal{Local: elementVarIndex},
 
 				// Jump to the beginning (condition) of the loop.
@@ -3781,7 +3781,7 @@ func TestForLoop(t *testing.T) {
 				// var e = iterator.next()
 				opcode.InstructionGetLocal{Local: iteratorVarIndex},
 				opcode.InstructionIteratorNext{},
-				opcode.InstructionTransfer{Type:1},
+				opcode.InstructionTransfer{Type: 1},
 				opcode.InstructionSetLocal{Local: e1Index},
 
 				// var e = e

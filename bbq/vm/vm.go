@@ -1092,7 +1092,7 @@ func opIteratorHasNext(vm *VM) {
 	vm.push(interpreter.BoolValue(iterator.HasNext()))
 }
 
-func opIteratorNext(vm *VM, ins opcode.InstructionIteratorNext) {
+func opIteratorNext(vm *VM) {
 	value := vm.pop()
 	iterator := value.(*IteratorWrapperValue)
 	element := iterator.Next(vm.context, EmptyLocationRange)
@@ -1301,7 +1301,7 @@ func (vm *VM) run() {
 		case opcode.InstructionIteratorHasNext:
 			opIteratorHasNext(vm)
 		case opcode.InstructionIteratorNext:
-			opIteratorNext(vm, ins)
+			opIteratorNext(vm)
 		case opcode.InstructionDeref:
 			opDeref(vm)
 		case opcode.InstructionNewClosure:
