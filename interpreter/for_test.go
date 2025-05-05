@@ -38,7 +38,7 @@ func TestInterpretForStatement(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        fun test(): Int {
            var sum = 0
            for y in [1, 2, 3, 4] {
@@ -63,7 +63,7 @@ func TestInterpretForStatementWithIndex(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        fun test(): Int {
            var sum = 0
            for x, y in [1, 2, 3, 4] {
@@ -88,7 +88,7 @@ func TestInterpretForStatementWithStoredIndex(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        fun test(): Int {
            let arr: [Int] = []
            for x, y in [1, 2, 3, 4] {
@@ -117,7 +117,7 @@ func TestInterpretForStatementWithReturn(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        fun test(): Int {
            for x in [1, 2, 3, 4, 5] {
                if x > 3 {
@@ -143,7 +143,7 @@ func TestInterpretForStatementWithContinue(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        fun test(): [Int] {
            var xs: [Int] = []
            for x in [1, 2, 3, 4, 5] {
@@ -177,7 +177,7 @@ func TestInterpretForStatementWithBreak(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        fun test(): Int {
            var y = 0
            for x in [1, 2, 3, 4] {
@@ -205,7 +205,7 @@ func TestInterpretForStatementEmpty(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        fun test(): Bool {
            var x = false
            for y in [] {
@@ -232,7 +232,7 @@ func TestInterpretForString(t *testing.T) {
 
 	t.Run("basic", func(t *testing.T) {
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): [Character] {
                 let characters: [Character] = []
                 let hello = "👪❤️"
@@ -265,7 +265,7 @@ func TestInterpretForString(t *testing.T) {
 
 	t.Run("return", func(t *testing.T) {
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): [Character] {
                 let characters: [Character] = []
                 let hello = "abc"
@@ -298,7 +298,7 @@ func TestInterpretForString(t *testing.T) {
 
 	t.Run("break", func(t *testing.T) {
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): [Character] {
                 let characters: [Character] = []
                 let hello = "abc"
@@ -335,6 +335,7 @@ func TestInterpretForStatementCapturing(t *testing.T) {
 
 	t.Parallel()
 
+	// TODO: Use compiler (parseCheckAndPrepare)
 	inter := parseCheckAndInterpret(t, `
        fun test(): [Int] {
            let fs: [fun(): Int] = []
@@ -377,7 +378,7 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 	t.Run("Primitive array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun main() {
                 let array = ["Hello", "World", "Foo", "Bar"]
                 let arrayRef = &array as &[String]
@@ -395,7 +396,7 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 	t.Run("Struct array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct Foo{}
 
             fun main() {
@@ -415,7 +416,7 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 	t.Run("Resource array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource Foo{}
 
             fun main() {
@@ -437,7 +438,7 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 	t.Run("Moved resource array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource Foo{}
 
             fun main() {
@@ -465,7 +466,7 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 	t.Run("Auth ref", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct Foo{}
 
             fun main() {
@@ -485,7 +486,7 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 	t.Run("Optional array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct Foo{}
 
             fun main() {
@@ -505,7 +506,7 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 	t.Run("Nil array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct Foo{}
 
             fun main() {
@@ -525,7 +526,7 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 	t.Run("Reference array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct Foo{}
 
             fun main() {
@@ -546,6 +547,7 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 	t.Run("Mutating reference to resource array", func(t *testing.T) {
 		t.Parallel()
 
+		// TODO: Use compiler (need mutation-while-iterating validation)
 		inter := parseCheckAndInterpret(t, `
             resource Foo{
                 fun sayHello() {}
@@ -578,6 +580,7 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 	t.Run("Mutating reference to struct array", func(t *testing.T) {
 		t.Parallel()
 
+		// TODO: Use compiler (need mutation-while-iterating validation)
 		inter := parseCheckAndInterpret(t, `
             struct Foo{
                 fun sayHello() {}
@@ -605,7 +608,7 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 	t.Run("String ref", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun main(): [Character] {
                 let s = "Hello"
                 let sRef = &s as &String
@@ -645,7 +648,7 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 	t.Run("Resource array, use after loop", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource Foo{
                 fun bar() {}
             }

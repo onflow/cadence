@@ -858,7 +858,7 @@ func (v *StringValue) ConformsToStaticType(
 }
 
 func (v *StringValue) Iterator(_ ValueStaticTypeContext, _ LocationRange) ValueIterator {
-	return StringValueIterator{
+	return &StringValueIterator{
 		graphemes: uniseg.NewGraphemes(v.Str),
 	}
 }
@@ -1091,20 +1091,27 @@ func (v *StringValue) count(reporter ComputationReporter, locationRange Location
 
 type StringValueIterator struct {
 	graphemes *uniseg.Graphemes
+	hasNext   *bool
 }
 
-var _ ValueIterator = StringValueIterator{}
+var _ ValueIterator = &StringValueIterator{}
 
-func (i StringValueIterator) Next(_ ValueIteratorContext, _ LocationRange) Value {
-	if !i.graphemes.Next() {
+func (i *StringValueIterator) Next(_ ValueIteratorContext, _ LocationRange) Value {
+	if !i.HasNext() {
 		return nil
 	}
+
+	i.hasNext = nil
 	return NewUnmeteredCharacterValue(i.graphemes.Str())
 }
 
-func (i StringValueIterator) HasNext() bool {
-	// TODO: Not implemented yet
-	panic(errors.NewUnreachableError())
+func (i *StringValueIterator) HasNext() bool {
+	if i.hasNext == nil {
+		hasNext := i.graphemes.Next()
+		i.hasNext = &hasNext
+	}
+
+	return *i.hasNext
 }
 
 func stringFunctionEncodeHex(invocation Invocation) Value {

@@ -20,8 +20,8 @@ package interpreter
 
 import (
 	"github.com/onflow/atree"
-
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 )
 
@@ -348,6 +348,26 @@ func (v *EphemeralReferenceValue) BorrowType() sema.Type {
 }
 
 func (v *EphemeralReferenceValue) Iterator(context ValueStaticTypeContext, locationRange LocationRange) ValueIterator {
-	//TODO implement me
-	panic("implement me")
+	referencedIterable, ok := v.Value.(IterableValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	return &ReferenceValueIterator{
+		iterator: referencedIterable.Iterator(context, locationRange),
+	}
+}
+
+type ReferenceValueIterator struct {
+	iterator ValueIterator
+}
+
+var _ ValueIterator = &ReferenceValueIterator{}
+
+func (i *ReferenceValueIterator) Next(context ValueIteratorContext, locationRange LocationRange) Value {
+	return i.iterator.Next(context, locationRange)
+}
+
+func (i *ReferenceValueIterator) HasNext() bool {
+	return i.iterator.HasNext()
 }
