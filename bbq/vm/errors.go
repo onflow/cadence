@@ -22,7 +22,6 @@ import (
 	"fmt"
 
 	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/interpreter"
 )
 
 type LinkerError struct {
@@ -39,22 +38,6 @@ func (l LinkerError) Error() string {
 	return l.Message
 }
 
-type MissingMemberValueError struct {
-	Parent interpreter.MemberAccessibleValue
-	Name   string
-}
-
-var _ error = MissingMemberValueError{}
-var _ errors.InternalError = MissingMemberValueError{}
-
-func (l MissingMemberValueError) IsInternalError() {
-}
-
-func (l MissingMemberValueError) Error() string {
-	return fmt.Sprintf("cannot find member: `%s` in `%T`", l.Name, l.Parent)
-
-}
-
 // ForceNilError
 type ForceNilError struct{}
 
@@ -64,4 +47,17 @@ func (ForceNilError) IsUserError() {}
 
 func (e ForceNilError) Error() string {
 	return "unexpectedly found nil while forcing an Optional value"
+}
+
+// UnknownFunctionError
+type UnknownFunctionError struct {
+	name string
+}
+
+var _ errors.UserError = UnknownFunctionError{}
+
+func (UnknownFunctionError) IsUserError() {}
+
+func (e UnknownFunctionError) Error() string {
+	return fmt.Sprintf("unknown function `%s`", e.name)
 }
