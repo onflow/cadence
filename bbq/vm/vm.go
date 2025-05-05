@@ -957,8 +957,6 @@ func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 }
 
 func castValueAndValueType(context *Context, targetType bbq.StaticType, value Value) (Value, bbq.StaticType) {
-	valueType := value.StaticType(context)
-
 	// if the value itself has a mapped entitlement type in its authorization
 	// (e.g. if it is a reference to `self` or `base`  in an attachment function with mapped access)
 	// substitution must also be performed on its entitlements
@@ -973,13 +971,15 @@ func castValueAndValueType(context *Context, targetType bbq.StaticType, value Va
 	//valueSemaType := interpreter.SubstituteMappedEntitlements(interpreter.MustSemaTypeOfValue(value))
 	//valueType = ConvertSemaToStaticType(interpreter, valueSemaType)
 
-	// If the target is anystruct or anyresource we want to preserve optionals
+	// If the target is `AnyStruct` or `AnyResource` we want to preserve optionals
 	unboxedExpectedType := UnwrapOptionalType(targetType)
 	if !(unboxedExpectedType == interpreter.PrimitiveStaticTypeAnyStruct ||
 		unboxedExpectedType == interpreter.PrimitiveStaticTypeAnyResource) {
 		// otherwise dynamic cast now always unboxes optionals
 		value = interpreter.Unbox(value)
 	}
+
+	valueType := value.StaticType(context)
 
 	return value, valueType
 }

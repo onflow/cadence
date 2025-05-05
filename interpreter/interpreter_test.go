@@ -31,7 +31,7 @@ import (
 	"github.com/onflow/cadence/test_utils"
 )
 
-var compile = flag.Bool("compile", false, "Run tests using the compiler")
+var compile = flag.Bool("compile", true, "Run tests using the compiler")
 
 func parseCheckAndPrepare(tb testing.TB, code string) test_utils.Invokable {
 	tb.Helper()
