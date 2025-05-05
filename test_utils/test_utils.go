@@ -45,6 +45,7 @@ type Invokable interface {
 	interpreter.ValueComparisonContext
 	interpreter.InvocationContext
 	Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error)
+	GetGlobal(name string) interpreter.Value
 }
 
 //type VMInvokable struct {
@@ -70,6 +71,14 @@ type Invokable interface {
 //
 //	return
 //}
+
+func (v *VMInvokable) GetGlobal(name string) interpreter.Value {
+	return v.vmInstance.Global(name)
+}
+
+func (v *VMInvokable) InitializeContract(arguments ...interpreter.Value) (*interpreter.CompositeValue, error) {
+	return v.vmInstance.InitializeContract(arguments...)
+}
 
 func ParseCheckAndPrepare(tb testing.TB, code string, compile bool) Invokable {
 	tb.Helper()
