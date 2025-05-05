@@ -12829,7 +12829,7 @@ func TestRuntimeInvokeContractFunctionImported(t *testing.T) {
 	)
 }
 
-func TestRuntimeFunctionTypeConfusion(t *testing.T) {
+func TestRuntimeStorageReferenceBoundFunctionConfusion(t *testing.T) {
 
 	t.Parallel()
 
