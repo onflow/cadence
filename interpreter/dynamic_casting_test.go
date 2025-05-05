@@ -113,14 +113,14 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 									t,
 									inter,
 									test.expected,
-									inter.Globals.Get("x").GetValue(inter),
+									inter.GetGlobal("x"),
 								)
 
 								AssertValuesEqual(
 									t,
 									inter,
 									test.expected,
-									inter.Globals.Get("y").GetValue(inter),
+									inter.GetGlobal("y"),
 								)
 
 								AssertValuesEqual(
@@ -129,7 +129,7 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 									interpreter.NewUnmeteredSomeValueNonCopying(
 										test.expected,
 									),
-									inter.Globals.Get("z").GetValue(inter),
+									inter.GetGlobal("z"),
 								)
 							})
 						}
@@ -201,7 +201,7 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 
 					t.Run(fmt.Sprintf("valid: from %s to %s", fromType, targetType), func(t *testing.T) {
 
-						inter := parseCheckAndInterpret(t,
+						inter := parseCheckAndPrepare(t,
 							fmt.Sprintf(
 								`
                                   fun f() {}
@@ -219,7 +219,7 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 							t,
 							inter,
 							interpreter.Void,
-							inter.Globals.Get("x").GetValue(inter),
+							inter.GetGlobal("x"),
 						)
 
 						AssertValuesEqual(
@@ -228,7 +228,7 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 							interpreter.NewUnmeteredSomeValueNonCopying(
 								interpreter.Void,
 							),
-							inter.Globals.Get("y").GetValue(inter),
+							inter.GetGlobal("y"),
 						)
 					})
 				}
@@ -241,7 +241,7 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 
 					t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
 
-						inter := parseCheckAndInterpret(t,
+						inter := parseCheckAndPrepare(t,
 							fmt.Sprintf(
 								`
                                   fun f() {}
@@ -297,7 +297,7 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 
 					t.Run(fmt.Sprintf("valid: from %s to %s", fromType, targetType), func(t *testing.T) {
 
-						inter := parseCheckAndInterpret(t,
+						inter := parseCheckAndPrepare(t,
 							fmt.Sprintf(
 								`
                                   let x: %[1]s = "test"
@@ -313,7 +313,7 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 							t,
 							inter,
 							interpreter.NewUnmeteredStringValue("test"),
-							inter.Globals.Get("x").GetValue(inter),
+							inter.GetGlobal("x"),
 						)
 
 						AssertValuesEqual(
@@ -322,7 +322,7 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 							interpreter.NewUnmeteredSomeValueNonCopying(
 								interpreter.NewUnmeteredStringValue("test"),
 							),
-							inter.Globals.Get("y").GetValue(inter),
+							inter.GetGlobal("y"),
 						)
 					})
 				}
@@ -335,7 +335,7 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 
 					t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
 
-						inter := parseCheckAndInterpret(t,
+						inter := parseCheckAndPrepare(t,
 							fmt.Sprintf(
 								`
                                   fun test(): %[2]s? {
@@ -390,7 +390,7 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 
 					t.Run(fmt.Sprintf("valid: from %s to %s", fromType, targetType), func(t *testing.T) {
 
-						inter := parseCheckAndInterpret(t,
+						inter := parseCheckAndPrepare(t,
 							fmt.Sprintf(
 								`
                                   let x: %[1]s = true
@@ -406,7 +406,7 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 							t,
 							inter,
 							interpreter.TrueValue,
-							inter.Globals.Get("x").GetValue(inter),
+							inter.GetGlobal("x"),
 						)
 
 						AssertValuesEqual(
@@ -415,7 +415,7 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 							interpreter.NewUnmeteredSomeValueNonCopying(
 								interpreter.TrueValue,
 							),
-							inter.Globals.Get("y").GetValue(inter),
+							inter.GetGlobal("y"),
 						)
 					})
 				}
@@ -428,7 +428,7 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 
 					t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
 
-						inter := parseCheckAndInterpret(t,
+						inter := parseCheckAndPrepare(t,
 							fmt.Sprintf(
 								`
                                   fun test(): %[2]s? {
@@ -483,7 +483,7 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 
 					t.Run(fmt.Sprintf("valid: from %s to %s", fromType, targetType), func(t *testing.T) {
 
-						inter := parseCheckAndInterpret(t,
+						inter := parseCheckAndPrepare(t,
 							fmt.Sprintf(
 								`
                                   let x: Address = 0x1
@@ -503,7 +503,7 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 							t,
 							inter,
 							addressValue,
-							inter.Globals.Get("y").GetValue(inter),
+							inter.GetGlobal("y"),
 						)
 
 						AssertValuesEqual(
@@ -512,7 +512,7 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 							interpreter.NewUnmeteredSomeValueNonCopying(
 								addressValue,
 							),
-							inter.Globals.Get("z").GetValue(inter),
+							inter.GetGlobal("z"),
 						)
 					})
 				}
@@ -526,7 +526,7 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 
 					t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
 
-						inter := parseCheckAndInterpret(t,
+						inter := parseCheckAndPrepare(t,
 							fmt.Sprintf(
 								`
                                   fun test(): %[2]s? {
@@ -581,7 +581,7 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 
 					t.Run(fmt.Sprintf("valid: from %s to %s", fromType, targetType), func(t *testing.T) {
 
-						inter := parseCheckAndInterpret(t,
+						inter := parseCheckAndPrepare(t,
 							fmt.Sprintf(
 								`
                                   struct S {}
@@ -597,24 +597,24 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 
 						assert.IsType(t,
 							&interpreter.CompositeValue{},
-							inter.Globals.Get("x").GetValue(inter),
+							inter.GetGlobal("x"),
 						)
 
 						require.IsType(t,
 							&interpreter.SomeValue{},
-							inter.Globals.Get("y").GetValue(inter),
+							inter.GetGlobal("y"),
 						)
 
 						require.IsType(t,
 							&interpreter.CompositeValue{},
-							inter.Globals.Get("y").GetValue(inter).(*interpreter.SomeValue).InnerValue(),
+							inter.GetGlobal("y").(*interpreter.SomeValue).InnerValue(),
 						)
 					})
 				}
 
 				t.Run(fmt.Sprintf("invalid: from %s to T", fromType), func(t *testing.T) {
 
-					inter := parseCheckAndInterpret(t,
+					inter := parseCheckAndPrepare(t,
 						fmt.Sprintf(
 							`
                               struct S {}
@@ -658,7 +658,7 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 
 					t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
 
-						inter := parseCheckAndInterpret(t,
+						inter := parseCheckAndPrepare(t,
 							fmt.Sprintf(
 								`
                                   struct S {}
@@ -735,7 +735,7 @@ func returnResourceCasted(fromType, targetType string, operation ast.Operation) 
 }
 
 func testResourceCastValid(t *testing.T, types, fromType string, targetType string, operation ast.Operation) {
-	inter := parseCheckAndInterpret(t,
+	inter := parseCheckAndPrepare(t,
 		types+returnResourceCasted(
 			fromType,
 			targetType,
@@ -772,7 +772,7 @@ func testResourceCastValid(t *testing.T, types, fromType string, targetType stri
 }
 
 func testResourceCastInvalid(t *testing.T, types, fromType, targetType string, operation ast.Operation) {
-	inter := parseCheckAndInterpret(t,
+	inter := parseCheckAndPrepare(t,
 		types+returnResourceCasted(
 			fromType,
 			targetType,
@@ -880,7 +880,7 @@ func returnStructCasted(fromType, targetType string, operation ast.Operation) st
 }
 
 func testStructCastValid(t *testing.T, types, fromType string, targetType string, operation ast.Operation) {
-	inter := parseCheckAndInterpret(t,
+	inter := parseCheckAndPrepare(t,
 		types+returnStructCasted(
 			fromType,
 			targetType,
@@ -917,7 +917,7 @@ func testStructCastValid(t *testing.T, types, fromType string, targetType string
 }
 
 func testStructCastInvalid(t *testing.T, types, fromType, targetType string, operation ast.Operation) {
-	inter := parseCheckAndInterpret(t,
+	inter := parseCheckAndPrepare(t,
 		types+returnStructCasted(
 			fromType,
 			targetType,
@@ -1069,7 +1069,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 
 					t.Run(fmt.Sprintf("valid: from %s to %s", fromType, targetType), func(t *testing.T) {
 
-						inter := parseCheckAndInterpret(t,
+						inter := parseCheckAndPrepare(t,
 							fmt.Sprintf(
 								`
                                   let x: Int? = 42
@@ -1090,7 +1090,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 							t,
 							inter,
 							expectedValue,
-							inter.Globals.Get("y").GetValue(inter),
+							inter.GetGlobal("y"),
 						)
 
 						if targetType == sema.AnyStructType && !returnsOptional {
@@ -1099,7 +1099,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 								t,
 								inter,
 								expectedValue,
-								inter.Globals.Get("z").GetValue(inter),
+								inter.GetGlobal("z"),
 							)
 
 						} else {
@@ -1109,7 +1109,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 								interpreter.NewUnmeteredSomeValueNonCopying(
 									expectedValue,
 								),
-								inter.Globals.Get("z").GetValue(inter),
+								inter.GetGlobal("z"),
 							)
 						}
 
@@ -1124,7 +1124,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 
 					t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
 
-						inter := parseCheckAndInterpret(t,
+						inter := parseCheckAndPrepare(t,
 							fmt.Sprintf(
 								`
                                   fun test(): %[2]s? {
@@ -1179,7 +1179,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 
 					t.Run(fmt.Sprintf("valid: from %s to %s", fromType, targetType), func(t *testing.T) {
 
-						inter := parseCheckAndInterpret(t,
+						inter := parseCheckAndPrepare(t,
 							fmt.Sprintf(
 								`
                                   let x: [Int] = [42]
@@ -1196,7 +1196,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 							interpreter.NewUnmeteredIntValueFromInt64(42),
 						}
 
-						yValue := inter.Globals.Get("y").GetValue(inter)
+						yValue := inter.GetGlobal("y")
 						require.IsType(t, yValue, &interpreter.ArrayValue{})
 						yArray := yValue.(*interpreter.ArrayValue)
 
@@ -1207,7 +1207,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 							ArrayElements(inter, yArray),
 						)
 
-						zValue := inter.Globals.Get("z").GetValue(inter)
+						zValue := inter.GetGlobal("z")
 						require.IsType(t, zValue, &interpreter.SomeValue{})
 						zSome := zValue.(*interpreter.SomeValue)
 
@@ -1232,7 +1232,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 
 					t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
 
-						inter := parseCheckAndInterpret(t,
+						inter := parseCheckAndPrepare(t,
 							fmt.Sprintf(
 								`
 		                          fun test(): [%[2]s]? {
@@ -1267,7 +1267,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 
 			t.Run("invalid upcast", func(t *testing.T) {
 
-				inter := parseCheckAndInterpret(t,
+				inter := parseCheckAndPrepare(t,
 					fmt.Sprintf(
 						`
 		                  fun test(): [Int]? {
@@ -1300,7 +1300,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 	}
 
 	t.Run("[AnyStruct] to [Int]", func(t *testing.T) {
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 		    fun test(): [Int] {
 		        let x: [AnyStruct] = [1, 2, 3]
 		        return x as! [Int]
@@ -1339,7 +1339,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 
 					t.Run(fmt.Sprintf("valid: from %s to %s", fromType, targetType), func(t *testing.T) {
 
-						inter := parseCheckAndInterpret(t,
+						inter := parseCheckAndPrepare(t,
 							fmt.Sprintf(
 								`
                                   let x: {String: Int} = {"test": 42}
@@ -1367,7 +1367,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 							t,
 							inter,
 							expectedDictionary,
-							inter.Globals.Get("y").GetValue(inter),
+							inter.GetGlobal("y"),
 						)
 
 						AssertValuesEqual(
@@ -1376,7 +1376,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 							interpreter.NewUnmeteredSomeValueNonCopying(
 								expectedDictionary,
 							),
-							inter.Globals.Get("z").GetValue(inter),
+							inter.GetGlobal("z"),
 						)
 					})
 				}
@@ -1389,7 +1389,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 
 					t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
 
-						inter := parseCheckAndInterpret(t,
+						inter := parseCheckAndPrepare(t,
 							fmt.Sprintf(
 								`
 	                              fun test(): {String: %[2]s}? {
@@ -1425,7 +1425,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 
 			t.Run("invalid upcast", func(t *testing.T) {
 
-				inter := parseCheckAndInterpret(t,
+				inter := parseCheckAndPrepare(t,
 					fmt.Sprintf(
 						`
 		                  fun test(): {Int: String}? {
@@ -2245,7 +2245,7 @@ func returnReferenceCasted(fromType, targetType string, operation ast.Operation,
 }
 
 func testReferenceCastValid(t *testing.T, types, fromType, targetType string, operation ast.Operation, isResource bool) {
-	inter := parseCheckAndInterpret(t,
+	inter := parseCheckAndPrepare(t,
 		types+returnReferenceCasted(
 			fromType,
 			targetType,
@@ -2301,7 +2301,7 @@ func testReferenceCastValid(t *testing.T, types, fromType, targetType string, op
 }
 
 func testReferenceCastInvalid(t *testing.T, types, fromType, targetType string, operation ast.Operation, isResource bool) {
-	inter := parseCheckAndInterpret(t,
+	inter := parseCheckAndPrepare(t,
 		types+returnReferenceCasted(
 			fromType,
 			targetType,
@@ -3480,7 +3480,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 									t,
 									inter,
 									capabilityValue,
-									inter.Globals.Get("x").GetValue(inter),
+									inter.GetGlobal("x"),
 								)
 
 								AssertValuesEqual(
@@ -3489,7 +3489,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 									interpreter.NewUnmeteredSomeValueNonCopying(
 										capabilityValue,
 									),
-									inter.Globals.Get("y").GetValue(inter),
+									inter.GetGlobal("y"),
 								)
 							})
 						}
@@ -3559,7 +3559,7 @@ func TestInterpretDynamicCastingResourceConstructor(t *testing.T) {
 	t.Parallel()
 
 	for operation, returnsOptional := range dynamicCastingOperations {
-		inter := parseCheckAndInterpret(t,
+		inter := parseCheckAndPrepare(t,
 			fmt.Sprintf(`
                   resource R {}
 
@@ -3588,7 +3588,7 @@ func TestInterpretDynamicCastingFunctionType(t *testing.T) {
 	t.Run("function casting", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): String {
                 let x: AnyStruct = foo
                 let y = x as! fun(String):String
@@ -3609,7 +3609,7 @@ func TestInterpretDynamicCastingFunctionType(t *testing.T) {
 	t.Run("param contravariance", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): String {
                 let x = foo as fun(String):String
                 return x("hello")
@@ -3628,7 +3628,7 @@ func TestInterpretDynamicCastingFunctionType(t *testing.T) {
 	t.Run("param contravariance negative", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): String {
                  let x = foo as! fun(AnyStruct):String
                  return x("hello")
@@ -3648,7 +3648,7 @@ func TestInterpretDynamicCastingFunctionType(t *testing.T) {
 	t.Run("return type covariance", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): AnyStruct {
                 let x = foo as! fun(String):AnyStruct
                 return x("hello")
@@ -3667,7 +3667,7 @@ func TestInterpretDynamicCastingFunctionType(t *testing.T) {
 	t.Run("return type covariance negative", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): String {
                 let x = foo as! fun(String):String
                 return x("hello")
@@ -3687,7 +3687,7 @@ func TestInterpretDynamicCastingFunctionType(t *testing.T) {
 	t.Run("bound function casting", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): String {
                 let x = foo()
                 let y: AnyStruct = x.bar
@@ -3727,7 +3727,7 @@ func TestInterpretDynamicCastingReferenceCasting(t *testing.T) {
             struct bar: foo {}
         `
 
-		inter := parseCheckAndInterpret(t, code)
+		inter := parseCheckAndPrepare(t, code)
 
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -3748,7 +3748,7 @@ func TestInterpretDynamicCastingReferenceCasting(t *testing.T) {
             struct bar: foo {}
         `
 
-		inter := parseCheckAndInterpret(t, code)
+		inter := parseCheckAndPrepare(t, code)
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
@@ -3771,7 +3771,7 @@ func TestInterpretDynamicCastingReferenceCasting(t *testing.T) {
             struct bar: foo {}
         `
 
-		inter := parseCheckAndInterpret(t, code)
+		inter := parseCheckAndPrepare(t, code)
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
@@ -3877,13 +3877,13 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 			let y: Int? = x as? Int
 		`
 
-		inter := parseCheckAndInterpret(t, code)
+		inter := parseCheckAndPrepare(t, code)
 
 		AssertValuesEqual(
 			t,
 			inter,
 			interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewUnmeteredIntValueFromInt64(42)),
-			inter.Globals.Get("y").GetValue(inter),
+			inter.GetGlobal("y"),
 		)
 	})
 
@@ -3895,13 +3895,13 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 			let y: Int = x as! Int
 		`
 
-		inter := parseCheckAndInterpret(t, code)
+		inter := parseCheckAndPrepare(t, code)
 
 		AssertValuesEqual(
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(42),
-			inter.Globals.Get("y").GetValue(inter),
+			inter.GetGlobal("y"),
 		)
 	})
 
@@ -3913,13 +3913,13 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 			let y: Int = x as! Int
 		`
 
-		inter := parseCheckAndInterpret(t, code)
+		inter := parseCheckAndPrepare(t, code)
 
 		AssertValuesEqual(
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(42),
-			inter.Globals.Get("y").GetValue(inter),
+			inter.GetGlobal("y"),
 		)
 	})
 
@@ -3931,13 +3931,13 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 			let y: Int? = x as? Int
 		`
 
-		inter := parseCheckAndInterpret(t, code)
+		inter := parseCheckAndPrepare(t, code)
 
 		AssertValuesEqual(
 			t,
 			inter,
 			interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewUnmeteredIntValueFromInt64(42)),
-			inter.Globals.Get("y").GetValue(inter),
+			inter.GetGlobal("y"),
 		)
 	})
 
@@ -3949,13 +3949,13 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 			let y: Int? = x as? Int
 		`
 
-		inter := parseCheckAndInterpret(t, code)
+		inter := parseCheckAndPrepare(t, code)
 
 		AssertValuesEqual(
 			t,
 			inter,
 			interpreter.Nil,
-			inter.Globals.Get("y").GetValue(inter),
+			inter.GetGlobal("y"),
 		)
 	})
 
@@ -3969,7 +3969,7 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 			}
         `
 
-		inter := parseCheckAndInterpret(t, code)
+		inter := parseCheckAndPrepare(t, code)
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
@@ -3988,7 +3988,7 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 			}
         `
 
-		inter := parseCheckAndInterpret(t, code)
+		inter := parseCheckAndPrepare(t, code)
 
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -4003,7 +4003,7 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 			let y: Int?? = x as? Int?
 		`
 
-		inter := parseCheckAndInterpret(t, code)
+		inter := parseCheckAndPrepare(t, code)
 
 		AssertValuesEqual(
 			t,
@@ -4013,7 +4013,7 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 					interpreter.NewUnmeteredIntValueFromInt64(42),
 				),
 			),
-			inter.Globals.Get("y").GetValue(inter),
+			inter.GetGlobal("y"),
 		)
 	})
 
@@ -4025,7 +4025,7 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 			let y: Int? = x as! Int?
 		`
 
-		inter := parseCheckAndInterpret(t, code)
+		inter := parseCheckAndPrepare(t, code)
 
 		AssertValuesEqual(
 			t,
@@ -4033,7 +4033,7 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewUnmeteredIntValueFromInt64(42),
 			),
-			inter.Globals.Get("y").GetValue(inter),
+			inter.GetGlobal("y"),
 		)
 	})
 
@@ -4045,7 +4045,7 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 			let y: Int?? = x as! Int??
 		`
 
-		inter := parseCheckAndInterpret(t, code)
+		inter := parseCheckAndPrepare(t, code)
 
 		AssertValuesEqual(
 			t,
@@ -4055,7 +4055,7 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 					interpreter.NewUnmeteredIntValueFromInt64(42),
 				),
 			),
-			inter.Globals.Get("y").GetValue(inter),
+			inter.GetGlobal("y"),
 		)
 	})
 
@@ -4067,7 +4067,7 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 			let y: Int??? = x as? Int??
 		`
 
-		inter := parseCheckAndInterpret(t, code)
+		inter := parseCheckAndPrepare(t, code)
 
 		AssertValuesEqual(
 			t,
@@ -4079,7 +4079,7 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 					),
 				),
 			),
-			inter.Globals.Get("y").GetValue(inter),
+			inter.GetGlobal("y"),
 		)
 	})
 
@@ -4093,9 +4093,9 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 			let y: @AnyResource <- x as! @AnyResource
 		`
 
-		inter := parseCheckAndInterpret(t, code)
+		inter := parseCheckAndPrepare(t, code)
 
-		value := inter.Globals.Get("y").GetValue(inter)
+		value := inter.GetGlobal("y")
 
 		require.IsType(t,
 			&interpreter.SomeValue{},
@@ -4118,9 +4118,9 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 			let y: @R <- x as! @R
 		`
 
-		inter := parseCheckAndInterpret(t, code)
+		inter := parseCheckAndPrepare(t, code)
 
-		value := inter.Globals.Get("y").GetValue(inter)
+		value := inter.GetGlobal("y")
 
 		require.IsType(t,
 			&interpreter.CompositeValue{},
@@ -4138,7 +4138,8 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 
 				let x: @R? <- create R() 
 				
-				if let z <- x as? @R {
+				if let y <- x as? @R {
+					var z: @R <- y
 					return <-z
 				} else {
 					destroy x
@@ -4148,7 +4149,7 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 
 		`
 
-		inter := parseCheckAndInterpret(t, code)
+		inter := parseCheckAndPrepare(t, code)
 
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -4184,7 +4185,7 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 
 		`
 
-		inter := parseCheckAndInterpret(t, code)
+		inter := parseCheckAndPrepare(t, code)
 
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -4208,7 +4209,7 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 			let y: AnyStruct??? = x as! AnyStruct??
 		`
 
-		inter := parseCheckAndInterpret(t, code)
+		inter := parseCheckAndPrepare(t, code)
 
 		AssertValuesEqual(
 			t,
@@ -4220,7 +4221,7 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 					),
 				),
 			),
-			inter.Globals.Get("y").GetValue(inter),
+			inter.GetGlobal("y"),
 		)
 	})
 
@@ -4232,7 +4233,7 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 			let y: AnyStruct = x as! AnyStruct??
 		`
 
-		inter := parseCheckAndInterpret(t, code)
+		inter := parseCheckAndPrepare(t, code)
 
 		AssertValuesEqual(
 			t,
@@ -4244,7 +4245,7 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 					),
 				),
 			),
-			inter.Globals.Get("y").GetValue(inter),
+			inter.GetGlobal("y"),
 		)
 	})
 
@@ -4256,7 +4257,7 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 			let y: Int? = x as! Int?
 		`
 
-		inter := parseCheckAndInterpret(t, code)
+		inter := parseCheckAndPrepare(t, code)
 
 		AssertValuesEqual(
 			t,
@@ -4264,7 +4265,7 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewUnmeteredIntValueFromInt64(42),
 			),
-			inter.Globals.Get("y").GetValue(inter),
+			inter.GetGlobal("y"),
 		)
 	})
 }
