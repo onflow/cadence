@@ -1444,24 +1444,49 @@ func TestCompileAssignGlobal(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
+	functions := program.Functions
 
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	const (
+		xIndex = iota
+	)
+
+	// `test` function
+
+	require.Len(t, functions, 1)
+	require.Equal(t, len(functions), len(functions))
 
 	assert.Equal(t,
 		[]opcode.Instruction{
 			// x = 1
-			opcode.InstructionGetConstant{Constant: 0},
-			opcode.InstructionSetGlobal{Global: 0},
+			opcode.InstructionGetConstant{Constant: 1},
+			opcode.InstructionSetGlobal{Global: xIndex},
 
 			opcode.InstructionReturn{},
 		},
 		functions[0].Code,
 	)
 
+	// global var `x` initializer
+	variables := program.Variables
+	require.Len(t, variables, 1)
+	require.Equal(t, len(variables), len(variables))
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// return 0
+			opcode.InstructionGetConstant{Constant: 0},
+			opcode.InstructionReturnValue{},
+		},
+		variables[xIndex].Getter.Code,
+	)
+
+	// Constants
 	assert.Equal(t,
 		[]constant.Constant{
+			{
+				Data: []byte{0x0},
+				Kind: constant.Int,
+			},
 			{
 				Data: []byte{0x1},
 				Kind: constant.Int,

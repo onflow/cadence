@@ -18,6 +18,7 @@
 
 package bbq
 
-type Variable struct {
-	Name string
+type Variable[E any] struct {
+	Name   string
+	Getter *Function[E]
 }

@@ -7845,3 +7845,268 @@ func TestSaturatingArithmetic(t *testing.T) {
 		result,
 	)
 }
+
+func TestGlobalVariables(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+              var a = 5
+
+              fun test(): Int {
+                  return a
+              }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(5),
+			result,
+		)
+	})
+
+	t.Run("referenced another var", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+              var a = 5
+              var b = a
+
+              fun test(): Int {
+                  return b
+              }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(5),
+			result,
+		)
+	})
+
+	t.Run("update referenced var before first use", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+              var a = 5
+              var b = a
+
+              fun test(): Int {
+                  // Update 'a' before getting 'b'.
+                  a = 8
+
+                  // Get 'b' for the fist time.
+                  return b
+              }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(5),
+			result,
+		)
+	})
+
+	t.Run("update referenced var after first use", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+              var a = 5
+              var b = a
+
+              fun test(): Int {
+                  // Use 'b' to get the value once.
+                  var c = b
+
+                  // Update 'a' before getting 'b' for the first time.
+                  a = 8
+
+                  // Get 'b' for a second time.
+                  // Should return the initial value.
+                  return b
+              }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(5),
+			result,
+		)
+	})
+
+	t.Run("overridden local var", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+              var a = 5
+
+              fun test(): Int {
+                  var a = 8
+                  return getGlobalA()
+              }
+
+              fun getGlobalA(): Int {
+                  return a
+              }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(5),
+			result,
+		)
+	})
+
+	t.Run("forward references", func(t *testing.T) {
+		t.Parallel()
+
+		result, err, logs := CompileAndInvokeWithLogs(t,
+			`
+              var a = initializeA()
+              var b = initializeB()
+
+              fun test(): Int {
+                  log("invoked test")
+                  return a
+              }
+
+              fun initializeA(): Int {
+                  log("invoked initializeA")
+
+                  // Indirect forward reference to b
+                  var c = b
+
+                  log("exiting initializeA")
+                  return 5
+              }
+
+              fun initializeB(): Int {
+                  log("invoked initializeB")
+                  return 5
+              }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(5),
+			result,
+		)
+
+		assert.Equal(
+			t,
+			[]string{
+				// Variables must be initialized before calling the function test.
+				`"invoked initializeA"`,
+				`"invoked initializeB"`,
+				`"exiting initializeA"`,
+
+				`"invoked test"`,
+			},
+			logs,
+		)
+	})
+
+	t.Run("initialization on program start", func(t *testing.T) {
+		t.Parallel()
+
+		var logs []string
+
+		activation := sema.NewVariableActivation(sema.BaseValueActivation)
+		activation.DeclareValue(stdlib.PanicFunction)
+		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
+			commons.LogFunctionName,
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityView,
+				[]sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: sema.AnyStructTypeAnnotation,
+					},
+				},
+				sema.VoidTypeAnnotation,
+			),
+			"",
+			nil,
+		))
+
+		storage := interpreter.NewInMemoryStorage(nil)
+		vmConfig := vm.NewConfig(storage)
+
+		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+
+		// Only prepare, do not invoke anything.
+
+		_ = CompileAndPrepareToInvoke(t,
+			`
+              var a = initializeA()
+              var b = initializeB()
+
+              fun initializeA(): Int {
+                  log("invoked initializeA")
+
+                  // Indirect forward reference to b
+                  var c = b
+
+                  log("exiting initializeA")
+                  return 5
+              }
+
+              fun initializeB(): Int {
+                  log("invoked initializeB")
+                  return 5
+              }
+            `,
+			CompilerAndVMOptions{
+				VMConfig: vmConfig,
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						Config: &sema.Config{
+							LocationHandler: SingleIdentifierLocationResolver(t),
+							BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+								return activation
+							},
+						},
+					},
+				},
+			},
+		)
+
+		assert.Equal(
+			t,
+			[]string{
+				// Variables must be initialized before calling the function test.
+				`"invoked initializeA"`,
+				`"invoked initializeB"`,
+				`"exiting initializeA"`,
+			},
+			logs,
+		)
+	})
+}

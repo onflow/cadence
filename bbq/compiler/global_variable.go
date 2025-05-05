@@ -16,20 +16,9 @@
  * limitations under the License.
  */
 
-package bbq
+package compiler
 
-import (
-	"github.com/onflow/cadence/bbq/constant"
-	"github.com/onflow/cadence/bbq/opcode"
-)
-
-type Program[E, T any] struct {
-	Contract  *Contract
-	Imports   []Import
-	Functions []Function[E]
-	Constants []constant.Constant
-	Variables []Variable[E]
-	Types     []T
+type globalVariable[E any] struct {
+	Name   string
+	Getter *function[E]
 }
-
-type InstructionProgram = Program[opcode.Instruction, StaticType]

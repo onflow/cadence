@@ -1214,7 +1214,7 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 		for index, parameter := range transaction.ParameterList.Parameters {
 			// Create global variables
 			// i.e: `var a: Type`
-			field := ast.NewVariableDeclaration(
+			variableDecl := ast.NewVariableDeclaration(
 				d.memoryGauge,
 				ast.AccessSelf,
 				false,
@@ -1228,7 +1228,7 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 				"",
 			)
 
-			varDeclarations = append(varDeclarations, field)
+			varDeclarations = append(varDeclarations, variableDecl)
 
 			// Create assignment from param to global var.
 			// i.e: `a = $param_a`
