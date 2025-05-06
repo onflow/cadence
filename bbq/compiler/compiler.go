@@ -478,10 +478,9 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 	interfaceDeclarations := c.Program.InterfaceDeclarations()
 
 	// Reserve globals for functions/types before visiting their implementations.
-	c.reserveGlobalVars(
-		nil,
+	c.reserveGlobals(
+		contract,
 		variableDeclarations,
-		nil,
 		functionDeclarations,
 		compositeDeclarations,
 		interfaceDeclarations,
@@ -515,6 +514,29 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 		Contract:  contract,
 		Variables: variables,
 	}
+}
+
+func (c *Compiler[_, _]) reserveGlobals(
+	contract *bbq.Contract,
+	variableDecls []*ast.VariableDeclaration,
+	functionDecls []*ast.FunctionDeclaration,
+	compositeDecls []*ast.CompositeDeclaration,
+	interfaceDecls []*ast.InterfaceDeclaration,
+) {
+	// Reserve a global for the contract value before everything.
+	// Contract value must be always at the zero-th index.
+	if contract != nil {
+		c.addGlobal(contract.Name)
+	}
+
+	c.reserveGlobalVars(
+		nil,
+		variableDecls,
+		nil,
+		functionDecls,
+		compositeDecls,
+		interfaceDecls,
+	)
 }
 
 func (c *Compiler[_, _]) reserveGlobalVars(
@@ -564,18 +586,18 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 			continue
 		}
 
-		// Reserve a global-var for the value-constructor.
-		constructorName := commons.TypeQualifier(compositeType)
-		c.addGlobal(constructorName)
-
 		// For composite types other than contracts, global variables
 		// reserved by the type-name will be used for the init method.
 		// For contracts, global variables reserved by the type-name
-		// will be used for the contract value.
+		// will be used for the contract value (already reserved before getting here).
 		// Hence, reserve a separate global var for contract inits.
 		if declaration.CompositeKind == common.CompositeKindContract {
 			// TODO: handle name clash?!
 			c.addGlobal(commons.InitFunctionName)
+		} else {
+			// Reserve a global-var for the value-constructor.
+			constructorName := commons.TypeQualifier(compositeType)
+			c.addGlobal(constructorName)
 		}
 
 		// Define globals for functions before visiting function bodies.

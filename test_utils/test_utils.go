@@ -246,6 +246,18 @@ func ParseCheckAndPrepareWithOptions(
 		},
 	)
 
+	var contractValue *interpreter.CompositeValue
+
+	vmConfig.ContractValueHandler = func(conf *vm.Config, location common.Location) *interpreter.CompositeValue {
+		if contractValue == nil {
+			var err error
+			contractValue, err = vmInstance.InitializeContract()
+			require.NoError(tb, err)
+		}
+
+		return contractValue
+	}
+
 	elaboration := programs[parseAndCheckOptions.Location].DesugaredElaboration
 
 	return NewVMInvokable(vmInstance, elaboration), nil
