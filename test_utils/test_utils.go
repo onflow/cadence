@@ -32,6 +32,7 @@ import (
 	"github.com/onflow/cadence/pretty"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 	"github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -71,14 +72,18 @@ type Invokable interface {
 //
 //	return
 //}
-
-func (v *VMInvokable) GetGlobal(name string) interpreter.Value {
-	return v.vmInstance.Global(name)
-}
-
-func (v *VMInvokable) InitializeContract(arguments ...interpreter.Value) (*interpreter.CompositeValue, error) {
-	return v.vmInstance.InitializeContract(arguments...)
-}
+//
+//func (v *VMInvokable) GetGlobal(name string) interpreter.Value {
+//	return v.vmInstance.Global(name)
+//}
+//
+//func (v *VMInvokable) GetGlobalType(name string) (*sema.Variable, bool) {
+//	return v.elaboration.GetGlobalType(name)
+//}
+//
+//func (v *VMInvokable) InitializeContract(arguments ...interpreter.Value) (*interpreter.CompositeValue, error) {
+//	return v.vmInstance.InitializeContract(arguments...)
+//}
 
 func ParseCheckAndPrepare(tb testing.TB, code string, compile bool) Invokable {
 	tb.Helper()
@@ -87,21 +92,13 @@ func ParseCheckAndPrepare(tb testing.TB, code string, compile bool) Invokable {
 		return ParseCheckAndInterpret(tb, code)
 	}
 
-	// TODO: Uncomment once the compiler branch is merged to master.
-	//vmConfig := &vm.Config{}
-	//vmInstance := compilerUtils.CompileAndPrepareToInvoke(
-	//	t,
-	//	code,
-	//	compilerUtils.CompilerAndVMOptions{
-	//		VMConfig: vmConfig,
-	//	},
-	//)
+	//invokable, err := ParseCheckAndPrepareWithOptions(tb, code, ParseCheckAndInterpretOptions{}, compile)
+	//require.NoError(tb, err)
 	//
-	//return NewVMInvokable(vmInstance)
+	//return invokable
 
 	// Not supported for now
 	panic(errors.NewUnreachableError())
-
 }
 
 func ParseCheckAndPrepareWithEvents(tb testing.TB, code string, compile bool) (
@@ -134,30 +131,23 @@ func ParseCheckAndPrepareWithEvents(tb testing.TB, code string, compile bool) (
 		},
 	}
 
+	parseCheckAndInterpretOptions := ParseCheckAndInterpretOptions{
+		Config: interpreterConfig,
+	}
+
 	if !compile {
 		invokable, err = ParseCheckAndInterpretWithOptions(
 			tb,
 			code,
-			ParseCheckAndInterpretOptions{
-				Config: interpreterConfig,
-			},
+			parseCheckAndInterpretOptions,
 		)
 		return invokable, getEvents, err
 	}
 
-	vmConfig := (&vm.Config{}).
-		WithInterpreterConfig(interpreterConfig).
-		WithDebugEnabled()
+	invokable, err = ParseCheckAndPrepareWithOptions(tb, code, parseCheckAndInterpretOptions, compile)
+	require.NoError(tb, err)
 
-	vmInstance := compilerUtils.CompileAndPrepareToInvoke(
-		tb,
-		code,
-		compilerUtils.CompilerAndVMOptions{
-			VMConfig: vmConfig,
-		},
-	)
-
-	return NewVMInvokable(vmInstance), getEvents, nil
+	return invokable, getEvents, err
 }
 
 func ParseCheckAndPrepareWithOptions(
@@ -175,15 +165,17 @@ func ParseCheckAndPrepareWithOptions(
 		return ParseCheckAndInterpretWithOptions(tb, code, options)
 	}
 
+	interpreterConfig := options.Config
+
 	vmConfig := (&vm.Config{}).
-		WithInterpreterConfig(options.Config).
+		WithInterpreterConfig(interpreterConfig).
 		WithDebugEnabled()
 
 	var compilerConfig *compiler.Config
 
 	// If there are builtin functions provided externally (e.g: for tests),
 	// then convert them to corresponding functions in compiler and in vm.
-	if options.Config.BaseActivationHandler != nil {
+	if interpreterConfig != nil && interpreterConfig.BaseActivationHandler != nil {
 		activation := options.Config.BaseActivationHandler(nil)
 		providedBuiltinFunctions := activation.FunctionValues()
 
@@ -236,12 +228,11 @@ func ParseCheckAndPrepareWithOptions(
 		}
 	}
 
-	var parseAndCheckOptions *sema_utils.ParseAndCheckOptions
-	if options.CheckerConfig != nil {
-		parseAndCheckOptions = &sema_utils.ParseAndCheckOptions{
-			Config: options.CheckerConfig,
-		}
+	parseAndCheckOptions := &sema_utils.ParseAndCheckOptions{
+		Config: options.CheckerConfig,
 	}
+
+	programs := map[common.Location]*CompiledProgram{}
 
 	vmInstance := compilerUtils.CompileAndPrepareToInvoke(
 		tb,
@@ -252,10 +243,13 @@ func ParseCheckAndPrepareWithOptions(
 				ParseAndCheckOptions: parseAndCheckOptions,
 				CompilerConfig:       compilerConfig,
 			},
+			Programs: programs,
 		},
 	)
 
-	return NewVMInvokable(vmInstance), nil
+	elaboration := programs[parseAndCheckOptions.Location].DesugaredElaboration
+
+	return NewVMInvokable(vmInstance, elaboration), nil
 }
 
 // Below helper functions were copied as-is from `misc_test.go`.

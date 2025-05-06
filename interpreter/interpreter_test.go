@@ -29,17 +29,18 @@ import (
 	. "github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/test_utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 var compile = flag.Bool("compile", false, "Run tests using the compiler")
 
-func parseCheckAndPrepare(tb testing.TB, code string) test_utils.Invokable {
+func parseCheckAndPrepare(tb testing.TB, code string) Invokable {
 	tb.Helper()
 	return test_utils.ParseCheckAndPrepare(tb, code, *compile)
 }
 
 func parseCheckAndPrepareWithEvents(tb testing.TB, code string) (
-	invokable test_utils.Invokable,
+	invokable Invokable,
 	getEvents func() []test_utils.TestEvent,
 	err error,
 ) {
@@ -52,7 +53,7 @@ func parseCheckAndPrepareWithOptions(
 	code string,
 	options ParseCheckAndInterpretOptions,
 ) (
-	invokable test_utils.Invokable,
+	invokable Invokable,
 	err error,
 ) {
 	tb.Helper()
