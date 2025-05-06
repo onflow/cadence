@@ -634,7 +634,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		address := common.Address{0x1}
 
-		rType := RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
+		rType := RequireGlobalType(t, inter, "R").(*sema.CompositeType)
 
 		array := interpreter.NewArrayValue(
 			inter,
@@ -739,7 +739,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
             }
         `)
 
-		rType := RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
+		rType := RequireGlobalType(t, inter, "R").(*sema.CompositeType)
 
 		// Resource array in account 0x01
 
@@ -840,7 +840,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		address := common.Address{0x1}
 
-		rType := RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
+		rType := RequireGlobalType(t, inter, "R").(*sema.CompositeType)
 
 		array := interpreter.NewArrayValue(
 			inter,
@@ -966,7 +966,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		address := common.Address{0x1}
 
-		rType := RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
+		rType := RequireGlobalType(t, inter, "R").(*sema.CompositeType)
 
 		array := interpreter.NewArrayValue(
 			inter,
@@ -3220,7 +3220,7 @@ func TestInterpretHostFunctionReferenceInvalidation(t *testing.T) {
 		result, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		sType := RequireGlobalType(t, inter.Program.Elaboration, "S").(*sema.CompositeType)
+		sType := RequireGlobalType(t, inter, "S").(*sema.CompositeType)
 
 		expectedResult := interpreter.NewArrayValue(
 			inter,
@@ -3293,7 +3293,7 @@ func TestInterpretHostFunctionReferenceInvalidation(t *testing.T) {
 		result, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		sType := RequireGlobalType(t, inter.Program.Elaboration, "S").(*sema.CompositeType)
+		sType := RequireGlobalType(t, inter, "S").(*sema.CompositeType)
 
 		expectedResult := interpreter.NewTypeValue(
 			inter,

@@ -24,16 +24,31 @@ import (
 
 	"github.com/k0kubun/pp"
 	"github.com/kr/pretty"
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/ast"
-	"github.com/onflow/cadence/errors"
-
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
 )
 
 func init() {
 	pp.ColoringEnabled = false
+}
+
+type Invokable interface {
+	interpreter.ValueComparisonContext
+	interpreter.InvocationContext
+	Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error)
+	GetGlobal(name string) interpreter.Value
+
+	GlobalTypeGetter
+}
+
+type GlobalTypeGetter interface {
+	GetGlobalType(name string) (*sema.Variable, bool)
 }
 
 // TestLocation is used as the default location for programs in tests.

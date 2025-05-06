@@ -31,7 +31,6 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
@@ -973,7 +972,7 @@ func TestInterpretResourceInterfaceInitializerPreConditions(t *testing.T) {
 
 	t.Parallel()
 
-	newInterpreter := func(t *testing.T) (invokable test_utils.Invokable, getEvents func() []testEvent) {
+	newInterpreter := func(t *testing.T) (invokable Invokable, getEvents func() []testEvent) {
 		var err error
 		invokable, getEvents, err = parseCheckAndPrepareWithEvents(t, `
 
@@ -1041,7 +1040,7 @@ func TestInterpretFunctionPostConditionInInterface(t *testing.T) {
 
 	t.Parallel()
 
-	newInterpreter := func(t *testing.T) (inter test_utils.Invokable, getEvents func() []testEvent) {
+	newInterpreter := func(t *testing.T) (inter Invokable, getEvents func() []testEvent) {
 		var err error
 		inter, getEvents, err = parseCheckAndPrepareWithEvents(t, `
 
@@ -1126,7 +1125,7 @@ func TestInterpretFunctionPostConditionWithBeforeInInterface(t *testing.T) {
 
 	t.Parallel()
 
-	newInterpreter := func(t *testing.T) (inter test_utils.Invokable, getEvents func() []testEvent) {
+	newInterpreter := func(t *testing.T) (inter Invokable, getEvents func() []testEvent) {
 		var err error
 		inter, getEvents, err = parseCheckAndPrepareWithEvents(t, `
 

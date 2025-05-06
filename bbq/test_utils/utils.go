@@ -181,7 +181,9 @@ func parseAndCheckWithOptions(
 
 	parseAndCheckOptions.Location = location
 
-	if parseAndCheckOptions.Config.ImportHandler == nil {
+	semaConfig := parseAndCheckOptions.Config
+
+	if semaConfig != nil && semaConfig.ImportHandler == nil {
 		parseAndCheckOptions.Config.ImportHandler = func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
 			imported, ok := programs[location]
 			if !ok {
