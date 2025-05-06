@@ -34,9 +34,6 @@ func TestInterpretIfStatement(t *testing.T) {
 
 	t.Parallel()
 
-	// Note: compiler can't run programs with unreachable-statement errors,
-	// since type information if not available for such un-checked statements.
-	// Thus, a different version of the same test, without the errors is available below.
 	t.Run("with errors", func(t *testing.T) {
 		t.Parallel()
 
@@ -116,6 +113,11 @@ func TestInterpretIfStatement(t *testing.T) {
 			})
 		}
 	})
+
+	// Note: compiler can't run programs with unreachable-statement errors
+	// (i.e: when type checking is skipped for some part of the code),
+	// because the compiler relies on the type information produced by the checker.
+	// Thus, test the same scenario as above, but with a slight modification to not produce errors.
 
 	t.Run("without errors", func(t *testing.T) {
 		t.Parallel()

@@ -84,6 +84,9 @@ type Invokable interface {
 //func (v *VMInvokable) InitializeContract(arguments ...interpreter.Value) (*interpreter.CompositeValue, error) {
 //	return v.vmInstance.InitializeContract(arguments...)
 //}
+//func (v *VMInvokable) InitializeContract(contractName string, arguments ...interpreter.Value) (*interpreter.CompositeValue, error) {
+//	return v.vmInstance.InitializeContract(contractName, arguments...)
+//}
 
 func ParseCheckAndPrepare(tb testing.TB, code string, compile bool) Invokable {
 	tb.Helper()
@@ -247,18 +250,6 @@ func ParseCheckAndPrepareWithOptions(
 			Programs: programs,
 		},
 	)
-
-	var contractValue *interpreter.CompositeValue
-
-	vmConfig.ContractValueHandler = func(conf *vm.Config, location common.Location) *interpreter.CompositeValue {
-		if contractValue == nil {
-			var err error
-			contractValue, err = vmInstance.InitializeContract()
-			require.NoError(tb, err)
-		}
-
-		return contractValue
-	}
 
 	elaboration := programs[parseAndCheckOptions.Location].DesugaredElaboration
 
