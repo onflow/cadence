@@ -242,6 +242,7 @@ func ParseCheckAndPrepareWithOptions(
 			ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
 				ParseAndCheckOptions: parseAndCheckOptions,
 				CompilerConfig:       compilerConfig,
+				CheckerErrorHandler:  options.HandleCheckerError,
 			},
 			Programs: programs,
 		},
