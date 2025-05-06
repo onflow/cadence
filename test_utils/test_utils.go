@@ -176,7 +176,7 @@ func ParseCheckAndPrepareWithOptions(
 	// If there are builtin functions provided externally (e.g: for tests),
 	// then convert them to corresponding functions in compiler and in vm.
 	if interpreterConfig != nil && interpreterConfig.BaseActivationHandler != nil {
-		activation := options.Config.BaseActivationHandler(nil)
+		activation := interpreterConfig.BaseActivationHandler(nil)
 		providedBuiltinFunctions := activation.FunctionValues()
 
 		vmConfig.NativeFunctionsProvider = func() map[string]*vm.Variable {
