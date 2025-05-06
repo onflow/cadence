@@ -82,6 +82,9 @@ type ParseCheckAndInterpretOptions struct {
 //func (v *VMInvokable) InitializeContract(arguments ...interpreter.Value) (*interpreter.CompositeValue, error) {
 //	return v.vmInstance.InitializeContract(arguments...)
 //}
+//func (v *VMInvokable) InitializeContract(contractName string, arguments ...interpreter.Value) (*interpreter.CompositeValue, error) {
+//	return v.vmInstance.InitializeContract(contractName, arguments...)
+//}
 
 func ParseCheckAndPrepare(tb testing.TB, code string, compile bool) Invokable {
 	tb.Helper()
