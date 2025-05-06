@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"github.com/onflow/cadence/ast"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -40,7 +41,7 @@ func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 
           struct interface IA {
               fun test(): Int {
@@ -70,7 +71,7 @@ func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct interface IA {
                 let x: Int
                 fun getX(): Int {
@@ -125,7 +126,7 @@ func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 
           struct interface I {
               fun test(): Int {
@@ -159,7 +160,7 @@ func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           struct A {
               var bar: Int
               init() {
@@ -203,7 +204,7 @@ func TestInterpretInterfaceDefaultImplementationWhenOverridden(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 
           struct interface IA {
               fun test(): Int {
@@ -241,7 +242,7 @@ func TestInterpretInterfaceInheritance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct interface A {
                 let x: Int
 
@@ -281,7 +282,7 @@ func TestInterpretInterfaceInheritance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource interface A {
                 let x: Int
 
@@ -323,7 +324,7 @@ func TestInterpretInterfaceInheritance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct interface A {
                 access(all) fun test(): Int
             }
@@ -357,7 +358,7 @@ func TestInterpretInterfaceInheritance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct interface A {
                 access(all) fun test(): Int {
                     return 3
@@ -387,7 +388,7 @@ func TestInterpretInterfaceInheritance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct interface A {
                 access(all) fun test(): Int {
                     return 3
@@ -424,7 +425,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct interface A {
                 access(all) fun test(_ a: Int): Int {
                     pre { a > 10 }
@@ -457,14 +458,19 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		// Implementation should satisfy inherited conditions
 		_, err = inter.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(5))
 		RequireError(t, err)
-		assert.ErrorAs(t, err, &interpreter.ConditionError{})
+
+		assertConditionError(
+			t,
+			err,
+			ast.ConditionKindPre,
+		)
 	})
 
 	t.Run("condition in child", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct interface A {
                 access(all) fun test(_ a: Int): Int
             }
@@ -497,14 +503,18 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		// Implementation should satisfy inherited conditions
 		_, err = inter.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(5))
 		RequireError(t, err)
-		assert.ErrorAs(t, err, &interpreter.ConditionError{})
+		assertConditionError(
+			t,
+			err,
+			ast.ConditionKindPre,
+		)
 	})
 
 	t.Run("conditions in both", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct interface A {
                 access(all) fun test(_ a: Int): Int {
                     pre { a < 20 }
@@ -540,18 +550,26 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		_, err = inter.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(5))
 		RequireError(t, err)
-		assert.ErrorAs(t, err, &interpreter.ConditionError{})
+		assertConditionError(
+			t,
+			err,
+			ast.ConditionKindPre,
+		)
 
 		_, err = inter.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(25))
 		RequireError(t, err)
-		assert.ErrorAs(t, err, &interpreter.ConditionError{})
+		assertConditionError(
+			t,
+			err,
+			ast.ConditionKindPre,
+		)
 	})
 
 	t.Run("conditions from two paths", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct interface A {
                 access(all) fun test(_ a: Int): Int {
                     pre { a < 20 }
@@ -589,11 +607,19 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		_, err = inter.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(5))
 		RequireError(t, err)
-		assert.ErrorAs(t, err, &interpreter.ConditionError{})
+		assertConditionError(
+			t,
+			err,
+			ast.ConditionKindPre,
+		)
 
 		_, err = inter.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(25))
 		RequireError(t, err)
-		assert.ErrorAs(t, err, &interpreter.ConditionError{})
+		assertConditionError(
+			t,
+			err,
+			ast.ConditionKindPre,
+		)
 	})
 
 	t.Run("pre conditions order", func(t *testing.T) {
@@ -639,7 +665,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		//    / \ /
 		//   E   F
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             struct A: B {
                 access(all) fun test() {
                     pre { print("A") }
@@ -751,7 +777,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		//    / \ /
 		//   E   F
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             struct A: B {
                 access(all) fun test() {
                     post { print("A") }
@@ -853,7 +879,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             contract interface A {
                 struct interface Nested {
                     access(all) fun test(): Int {
@@ -915,7 +941,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             access(all) resource interface A {
                 access(all) fun get(): Int {
                    pre {
@@ -953,7 +979,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             access(all) resource interface A {
                 access(all) fun get(): Int {
                    post {
@@ -991,7 +1017,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             access(all) struct interface A {
                 access(all) fun get(): Int {
                    post { true }
@@ -1027,7 +1053,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             access(all) struct interface A {
                 access(all) fun get(): Int {
                     return 4
@@ -1172,7 +1198,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
             }
         `
 
-		inter, err := parseCheckAndInterpretWithOptions(
+		inter, err := parseCheckAndPrepareWithOptions(
 			t,
 			code,
 			ParseCheckAndInterpretOptions{
@@ -1269,7 +1295,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
             }
         `
 
-		inter, err := parseCheckAndInterpretWithOptions(
+		inter, err := parseCheckAndPrepareWithOptions(
 			t,
 			code,
 			ParseCheckAndInterpretOptions{
@@ -1364,7 +1390,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
             }
         `
 
-		inter, err := parseCheckAndInterpretWithOptions(
+		inter, err := parseCheckAndPrepareWithOptions(
 			t,
 			code,
 			ParseCheckAndInterpretOptions{
@@ -1385,7 +1411,11 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		_, err = inter.Invoke("main")
 		RequireError(t, err)
-		assert.ErrorAs(t, err, &interpreter.ConditionError{})
+		assertConditionError(
+			t,
+			err,
+			ast.ConditionKindPre,
+		)
 
 		require.Equal(
 			t,
@@ -1460,7 +1490,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
             }
         `
 
-		inter, err := parseCheckAndInterpretWithOptions(
+		inter, err := parseCheckAndPrepareWithOptions(
 			t,
 			code,
 			ParseCheckAndInterpretOptions{
@@ -1498,7 +1528,7 @@ func TestInterpretNestedInterfaceCast(t *testing.T) {
 
 	t.Parallel()
 
-	inter, err := parseCheckAndInterpretWithOptions(t, `
+	inter, err := parseCheckAndPrepareWithOptions(t, `
 	access(all) contract C {
 		access(all) resource interface TopInterface {}
 		access(all) resource interface MiddleInterface: TopInterface {}
