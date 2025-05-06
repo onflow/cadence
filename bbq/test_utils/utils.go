@@ -86,7 +86,8 @@ type CompiledProgram struct {
 
 type ParseCheckAndCompileOptions struct {
 	*ParseAndCheckOptions
-	CompilerConfig *compiler.Config
+	CompilerConfig      *compiler.Config
+	CheckerErrorHandler func(error)
 }
 
 func ParseCheckAndCompile(
@@ -116,6 +117,7 @@ func ParseCheckAndCompileCodeWithOptions(
 		code,
 		location,
 		options.ParseAndCheckOptions,
+		options.CheckerErrorHandler,
 		programs,
 	)
 	programs[location] = &CompiledProgram{
@@ -149,20 +151,12 @@ func ParseCheckAndCompileCodeWithOptions(
 	return program
 }
 
-func parseAndCheck( // nolint:unused
-	t testing.TB,
-	code string,
-	location common.Location,
-	programs map[common.Location]*CompiledProgram,
-) *sema.Checker {
-	return parseAndCheckWithOptions(t, code, location, nil, programs)
-}
-
 func parseAndCheckWithOptions(
 	t testing.TB,
 	code string,
 	location common.Location,
 	options *ParseAndCheckOptions,
+	checkerErrorHandler func(error),
 	programs map[common.Location]*CompiledProgram,
 ) *sema.Checker {
 
@@ -203,7 +197,13 @@ func parseAndCheckWithOptions(
 		code,
 		parseAndCheckOptions,
 	)
-	require.NoError(t, err)
+
+	if checkerErrorHandler != nil {
+		checkerErrorHandler(err)
+	} else {
+		require.NoError(t, err)
+	}
+
 	return checker
 }
 
