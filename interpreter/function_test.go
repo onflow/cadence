@@ -40,7 +40,7 @@ func TestInterpretResultVariable(t *testing.T) {
 	t.Run("resource type, resource value", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             access(all) resource R {
                 access(all) let id: UInt8
                 init() {
@@ -73,7 +73,7 @@ func TestInterpretResultVariable(t *testing.T) {
 	t.Run("optional resource type, resource value", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             access(all) resource R {
                 access(all) let id: UInt8
                 init() {
@@ -111,7 +111,7 @@ func TestInterpretResultVariable(t *testing.T) {
 	t.Run("optional resource type, nil value", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             access(all) resource R {
                 access(all) let id: UInt8
                 init() {
@@ -135,7 +135,7 @@ func TestInterpretResultVariable(t *testing.T) {
 	t.Run("any resource type, optional value", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             access(all) resource R {
                 access(all) let id: UInt8
                 init() {
@@ -297,7 +297,7 @@ func TestInterpretFunctionSubtyping(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         struct T {
             var bar: UInt8
             init() {
