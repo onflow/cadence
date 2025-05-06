@@ -20,6 +20,7 @@ package test
 
 import (
 	"fmt"
+	"github.com/onflow/cadence/bbq/opcode"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -547,9 +548,12 @@ func TestContractImport(t *testing.T) {
 		)
 		importedProgram := importCompiler.Compile()
 
-		vmInstance := vm.NewVM(importLocation, importedProgram, nil)
-		importedContractValue, err := vmInstance.InitializeContract()
-		require.NoError(t, err)
+		vmInstance, importedContractValue := initializeContract(
+			t,
+			importLocation,
+			importedProgram,
+			nil,
+		)
 
 		checker, err := ParseAndCheckWithOptions(t,
 			`
@@ -642,9 +646,12 @@ func TestContractImport(t *testing.T) {
 		)
 		importedProgram := importCompiler.Compile()
 
-		vmInstance := vm.NewVM(importLocation, importedProgram, nil)
-		importedContractValue, err := vmInstance.InitializeContract()
-		require.NoError(t, err)
+		vmInstance, importedContractValue := initializeContract(
+			t,
+			importLocation,
+			importedProgram,
+			nil,
+		)
 
 		checker, err := ParseAndCheckWithOptions(t,
 			`
@@ -739,9 +746,12 @@ func TestContractImport(t *testing.T) {
 		)
 		fooProgram := fooCompiler.Compile()
 
-		vmInstance := vm.NewVM(fooLocation, fooProgram, nil)
-		fooContractValue, err := vmInstance.InitializeContract()
-		require.NoError(t, err)
+		_, fooContractValue := initializeContract(
+			t,
+			fooLocation,
+			fooProgram,
+			nil,
+		)
 
 		// Initialize Bar
 
@@ -811,9 +821,12 @@ func TestContractImport(t *testing.T) {
 			},
 		}
 
-		vmInstance = vm.NewVM(barLocation, barProgram, vmConfig)
-		barContractValue, err := vmInstance.InitializeContract()
-		require.NoError(t, err)
+		vmInstance, barContractValue := initializeContract(
+			t,
+			barLocation,
+			barProgram,
+			vmConfig,
+		)
 
 		// Compile and run main program
 
@@ -1021,9 +1034,12 @@ func TestContractImport(t *testing.T) {
 			},
 		}
 
-		vmInstance := vm.NewVM(barLocation, barProgram, vmConfig)
-		barContractValue, err := vmInstance.InitializeContract()
-		require.NoError(t, err)
+		_, barContractValue := initializeContract(
+			t,
+			barLocation,
+			barProgram,
+			vmConfig,
+		)
 
 		// Compile and run main program
 
@@ -1120,7 +1136,7 @@ func TestContractImport(t *testing.T) {
 			},
 		}
 
-		vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
@@ -1157,8 +1173,12 @@ func TestInitializeContract(t *testing.T) {
 	program := comp.Compile()
 
 	vmConfig := &vm.Config{}
-	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-	contractValue, err := vmInstance.InitializeContract()
+	vmInstance, contractValue := initializeContract(
+		t,
+		scriptLocation(),
+		program,
+		vmConfig,
+	)
 	require.NoError(t, err)
 
 	fieldValue := contractValue.GetMember(vmInstance.Context(), vm.EmptyLocationRange, "status")
@@ -1199,9 +1219,12 @@ func TestContractAccessDuringInit(t *testing.T) {
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{}
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-		contractValue, err := vmInstance.InitializeContract()
-		require.NoError(t, err)
+		vmInstance, contractValue := initializeContract(
+			t,
+			scriptLocation(),
+			program,
+			vmConfig,
+		)
 
 		fieldValue := contractValue.GetMember(vmInstance.Context(), vm.EmptyLocationRange, "status")
 		assert.Equal(t, interpreter.NewUnmeteredStringValue("PENDING"), fieldValue)
@@ -1237,13 +1260,34 @@ func TestContractAccessDuringInit(t *testing.T) {
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{}
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-		contractValue, err := vmInstance.InitializeContract()
-		require.NoError(t, err)
+		vmInstance, contractValue := initializeContract(
+			t,
+			scriptLocation(),
+			program,
+			vmConfig,
+		)
 
 		fieldValue := contractValue.GetMember(vmInstance.Context(), vm.EmptyLocationRange, "status")
 		assert.Equal(t, interpreter.NewUnmeteredStringValue("PENDING"), fieldValue)
 	})
+}
+
+func initializeContract(
+	tb testing.TB,
+	location common.Location,
+	program *bbq.Program[opcode.Instruction, bbq.StaticType],
+	vmConfig *vm.Config,
+) (*vm.VM, *interpreter.CompositeValue) {
+	vmInstance := vm.NewVM(location, program, vmConfig)
+
+	// Assume only one contract per program
+	require.True(tb, len(program.Contracts) > 0)
+	contract := program.Contracts[0]
+
+	contractValue, err := vmInstance.InitializeContract(contract.Name)
+	require.NoError(tb, err)
+
+	return vmInstance, contractValue
 }
 
 func TestFunctionOrder(t *testing.T) {
@@ -1335,13 +1379,15 @@ func TestFunctionOrder(t *testing.T) {
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{}
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-
-		result, err := vmInstance.Invoke("init")
-		require.NoError(t, err)
+		vmInstance, contractValue := initializeContract(
+			t,
+			scriptLocation(),
+			program,
+			vmConfig,
+		)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.IsType(t, &interpreter.CompositeValue{}, result)
+		require.IsType(t, &interpreter.CompositeValue{}, contractValue)
 	})
 }
 
@@ -1376,9 +1422,12 @@ func TestContractField(t *testing.T) {
 		)
 		importedProgram := importCompiler.Compile()
 
-		vmInstance := vm.NewVM(importLocation, importedProgram, nil)
-		importedContractValue, err := vmInstance.InitializeContract()
-		require.NoError(t, err)
+		vmInstance, importedContractValue := initializeContract(
+			t,
+			importLocation,
+			importedProgram,
+			nil,
+		)
 
 		checker, err := ParseAndCheckWithOptions(t,
 			`
@@ -1465,9 +1514,12 @@ func TestContractField(t *testing.T) {
 		)
 		importedProgram := importCompiler.Compile()
 
-		vmInstance := vm.NewVM(importLocation, importedProgram, nil)
-		importedContractValue, err := vmInstance.InitializeContract()
-		require.NoError(t, err)
+		vmInstance, importedContractValue := initializeContract(
+			t,
+			importLocation,
+			importedProgram,
+			nil,
+		)
 
 		checker, err := ParseAndCheckWithOptions(t,
 			`
@@ -2161,9 +2213,12 @@ func TestInterfaceMethodCall(t *testing.T) {
 
 		importedProgram := importCompiler.Compile()
 
-		vmInstance := vm.NewVM(contractLocation, importedProgram, nil)
-		importedContractValue, err := vmInstance.InitializeContract()
-		require.NoError(t, err)
+		vmInstance, importedContractValue := initializeContract(
+			t,
+			contractLocation,
+			importedProgram,
+			nil,
+		)
 
 		checker, err := ParseAndCheckWithOptions(t,
 			`
@@ -2261,9 +2316,12 @@ func TestInterfaceMethodCall(t *testing.T) {
 		)
 		fooProgram := interfaceCompiler.Compile()
 
-		interfaceVM := vm.NewVM(fooLocation, fooProgram, nil)
-		fooContractValue, err := interfaceVM.InitializeContract()
-		require.NoError(t, err)
+		_, fooContractValue := initializeContract(
+			t,
+			fooLocation,
+			fooProgram,
+			nil,
+		)
 
 		// Deploy the imported `Bar` program
 
@@ -2296,9 +2354,12 @@ func TestInterfaceMethodCall(t *testing.T) {
 		)
 		barProgram := barCompiler.Compile()
 
-		barVM := vm.NewVM(barLocation, barProgram, nil)
-		barContractValue, err := barVM.InitializeContract()
-		require.NoError(t, err)
+		_, barContractValue := initializeContract(
+			t,
+			barLocation,
+			barProgram,
+			nil,
+		)
 
 		// Define the implementation
 
@@ -2375,7 +2436,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 
 		bazProgram := bazCompiler.Compile()
 
-		implProgramvmConfig := &vm.Config{
+		implProgramVMConfig := &vm.Config{
 			ImportHandler: bazImportHandler,
 			ContractValueHandler: func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
 				switch location {
@@ -2410,9 +2471,12 @@ func TestInterfaceMethodCall(t *testing.T) {
 			},
 		}
 
-		bazVM := vm.NewVM(bazLocation, bazProgram, implProgramvmConfig)
-		bazContractValue, err := bazVM.InitializeContract()
-		require.NoError(t, err)
+		_, bazContractValue := initializeContract(
+			t,
+			bazLocation,
+			bazProgram,
+			implProgramVMConfig,
+		)
 
 		// Get `Bar.GreetingsImpl` value
 
@@ -3094,10 +3158,12 @@ func TestDefaultFunctions(t *testing.T) {
 
 		fooProgram := ParseCheckAndCompile(t, fooContract, fooLocation, programs)
 
-		fooVM := vm.NewVM(fooLocation, fooProgram, vmConfig)
-
-		fooContractValue, err := fooVM.InitializeContract()
-		require.NoError(t, err)
+		_, fooContractValue := initializeContract(
+			t,
+			fooLocation,
+			fooProgram,
+			vmConfig,
+		)
 		contractValues[fooLocation] = fooContractValue
 
 		// Run transaction
@@ -3219,10 +3285,12 @@ func TestDefaultFunctions(t *testing.T) {
 
 		fooProgram := ParseCheckAndCompile(t, fooContract, fooLocation, programs)
 
-		fooVM := vm.NewVM(fooLocation, fooProgram, vmConfig)
-
-		fooContractValue, err := fooVM.InitializeContract()
-		require.NoError(t, err)
+		_, fooContractValue := initializeContract(
+			t,
+			fooLocation,
+			fooProgram,
+			vmConfig,
+		)
 		contractValues[fooLocation] = fooContractValue
 
 		// Run transaction
@@ -3360,10 +3428,12 @@ func TestDefaultFunctions(t *testing.T) {
 
 		fooProgram := ParseCheckAndCompile(t, fooContract, fooLocation, programs)
 
-		fooVM := vm.NewVM(fooLocation, fooProgram, vmConfig)
-
-		fooContractValue, err := fooVM.InitializeContract()
-		require.NoError(t, err)
+		_, fooContractValue := initializeContract(
+			t,
+			fooLocation,
+			fooProgram,
+			vmConfig,
+		)
 		contractValues[fooLocation] = fooContractValue
 
 		// Run transaction
@@ -3764,10 +3834,12 @@ func TestFunctionPreConditions(t *testing.T) {
 			programs,
 		)
 
-		fooVM := vm.NewVM(fooLocation, fooProgram, vmConfig)
-
-		fooContractValue, err := fooVM.InitializeContract()
-		require.NoError(t, err)
+		_, fooContractValue := initializeContract(
+			t,
+			fooLocation,
+			fooProgram,
+			vmConfig,
+		)
 		contractValues[fooLocation] = fooContractValue
 
 		// Run script
@@ -3797,7 +3869,7 @@ func TestFunctionPreConditions(t *testing.T) {
 
 		location := common.ScriptLocation{0x1}
 
-		_, err = compileAndInvokeWithOptionsAndPrograms(
+		_, err := compileAndInvokeWithOptionsAndPrograms(
 			t,
 			code,
 			"main",
@@ -5960,9 +6032,12 @@ func TestContractAccount(t *testing.T) {
 	)
 	importedProgram := importCompiler.Compile()
 
-	vmInstance := vm.NewVM(importLocation, importedProgram, nil)
-	importedContractValue, err := vmInstance.InitializeContract()
-	require.NoError(t, err)
+	vmInstance, importedContractValue := initializeContract(
+		t,
+		importLocation,
+		importedProgram,
+		nil,
+	)
 
 	checker, err := ParseAndCheckWithOptions(t,
 		`
@@ -6079,9 +6154,12 @@ func TestResourceOwner(t *testing.T) {
 	)
 	importedProgram := importCompiler.Compile()
 
-	vmInstance := vm.NewVM(importLocation, importedProgram, nil)
-	importedContractValue, err := vmInstance.InitializeContract()
-	require.NoError(t, err)
+	vmInstance, importedContractValue := initializeContract(
+		t,
+		importLocation,
+		importedProgram,
+		nil,
+	)
 
 	checker, err := ParseAndCheckWithOptions(t,
 		`
@@ -6207,9 +6285,12 @@ func TestResourceUUID(t *testing.T) {
 	)
 	importedProgram := importCompiler.Compile()
 
-	vmInstance := vm.NewVM(importLocation, importedProgram, nil)
-	importedContractValue, err := vmInstance.InitializeContract()
-	require.NoError(t, err)
+	vmInstance, importedContractValue := initializeContract(
+		t,
+		importLocation,
+		importedProgram,
+		nil,
+	)
 
 	checker, err := ParseAndCheckWithOptions(t,
 		`
@@ -6583,9 +6664,12 @@ func TestContractClosure(t *testing.T) {
 	)
 	importedProgram := importCompiler.Compile()
 
-	vmInstance := vm.NewVM(importLocation, importedProgram, nil)
-	importedContractValue, err := vmInstance.InitializeContract()
-	require.NoError(t, err)
+	vmInstance, importedContractValue := initializeContract(
+		t,
+		importLocation,
+		importedProgram,
+		nil,
+	)
 
 	activation := sema.NewVariableActivation(sema.BaseValueActivation)
 	activation.DeclareValue(stdlib.PanicFunction)
@@ -6925,15 +7009,16 @@ func TestEmitInContract(t *testing.T) {
                 fun createVault(balance: Int): @Vault {
                     return <- create Vault(balance: balance)
                 }
-            }
-        `
+            }`
 
 		cProgram := ParseCheckAndCompile(t, cContract, cLocation, programs)
 
-		cVM := vm.NewVM(cLocation, cProgram, vmConfig)
-
-		cContractValue, err := cVM.InitializeContract()
-		require.NoError(t, err)
+		_, cContractValue := initializeContract(
+			t,
+			cLocation,
+			cProgram,
+			vmConfig,
+		)
 		contractValues[cLocation] = cContractValue
 
 		// Run script
@@ -7099,10 +7184,12 @@ func TestInheritedConditions(t *testing.T) {
 
 		cProgram := ParseCheckAndCompile(t, cContract, cLocation, programs)
 
-		cVM := vm.NewVM(cLocation, cProgram, vmConfig)
-
-		cContractValue, err := cVM.InitializeContract()
-		require.NoError(t, err)
+		_, cContractValue := initializeContract(
+			t,
+			cLocation,
+			cProgram,
+			vmConfig,
+		)
 		contractValues[cLocation] = cContractValue
 
 		// Run transaction
@@ -7281,10 +7368,12 @@ func TestInheritedConditions(t *testing.T) {
 
 		cProgram := ParseCheckAndCompile(t, cContract, cLocation, programs)
 
-		cVM := vm.NewVM(cLocation, cProgram, vmConfig)
-
-		cContractValue, err := cVM.InitializeContract()
-		require.NoError(t, err)
+		_, cContractValue := initializeContract(
+			t,
+			cLocation,
+			cProgram,
+			vmConfig,
+		)
 		contractValues[cLocation] = cContractValue
 
 		// Run transaction
@@ -7428,10 +7517,12 @@ func TestInheritedConditions(t *testing.T) {
 			programs,
 		)
 
-		aVM := vm.NewVM(aLocation, aProgram, vmConfig)
-
-		aContractValue, err := aVM.InitializeContract()
-		require.NoError(t, err)
+		_, aContractValue := initializeContract(
+			t,
+			aLocation,
+			aProgram,
+			vmConfig,
+		)
 		contractValues[aLocation] = aContractValue
 
 		// Deploy contract interface
@@ -7510,11 +7601,13 @@ func TestInheritedConditions(t *testing.T) {
 
 		dProgram := ParseCheckAndCompile(t, dContract, dLocation, programs)
 
-		dVM := vm.NewVM(dLocation, dProgram, vmConfig)
-
-		cContractValue, err := dVM.InitializeContract()
-		require.NoError(t, err)
-		contractValues[dLocation] = cContractValue
+		_, dContractValue := initializeContract(
+			t,
+			dLocation,
+			dProgram,
+			vmConfig,
+		)
+		contractValues[dLocation] = dContractValue
 
 		// Run transaction
 

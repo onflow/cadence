@@ -244,14 +244,13 @@ func compiledFTTransfer(tb testing.TB) {
 		flowTokenLocation,
 	} {
 		compiledProgram := compiledPrograms[location]
-		contractVM := vm.NewVM(
+		_, contractValue := initializeContract(
+			tb,
 			location,
 			compiledProgram.Program,
 			vmConfig,
 		)
 
-		contractValue, err := contractVM.InitializeContract()
-		require.NoError(tb, err)
 		contractValues[location] = contractValue
 	}
 

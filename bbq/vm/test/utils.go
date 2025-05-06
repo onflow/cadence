@@ -531,6 +531,21 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 		program,
 		vmConfig,
 	)
+
+	if vmConfig.ContractValueHandler == nil {
+		var contractValue *interpreter.CompositeValue
+		vmConfig.ContractValueHandler = func(conf *vm.Config, location common.Location) *interpreter.CompositeValue {
+			if contractValue == nil {
+				var err error
+				// Assume only one contract per program
+				require.True(t, len(program.Contracts) == 1)
+				contractValue, err = programVM.InitializeContract(program.Contracts[0].Name)
+				require.NoError(t, err)
+			}
+			return contractValue
+		}
+	}
+
 	return programVM
 }
 

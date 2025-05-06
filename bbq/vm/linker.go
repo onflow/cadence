@@ -81,8 +81,7 @@ func LinkGlobals(
 	globals := make([]*Variable, 0, globalsLen)
 	indexedGlobals := make(map[string]*Variable, indexedGlobalsLen)
 
-	contract := program.Contract
-	if contract != nil {
+	for _, contract := range program.Contracts {
 		// Update the globals - both the context and the mapping.
 		// Contract value is always at the zero-th index.
 		contractVariable := &interpreter.SimpleVariable{}

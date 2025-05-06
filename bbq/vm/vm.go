@@ -314,8 +314,9 @@ func (vm *VM) invoke(function Value, arguments []Value) (Value, error) {
 	return vm.pop(), nil
 }
 
-func (vm *VM) InitializeContract(arguments ...Value) (*interpreter.CompositeValue, error) {
-	value, err := vm.Invoke(commons.InitFunctionName, arguments...)
+func (vm *VM) InitializeContract(contractName string, arguments ...Value) (*interpreter.CompositeValue, error) {
+	contractInitializer := commons.QualifiedName(contractName, commons.InitFunctionName)
+	value, err := vm.Invoke(contractInitializer, arguments...)
 	if err != nil {
 		return nil, err
 	}
