@@ -602,6 +602,7 @@ func testAccountWithErrorHandlerWithCompiler(
 
 	if compilerEnabled && *compile {
 
+		// TODO: Uncomment once the compiler branch is merged to master.
 		//vmConfig := &vm.Config{
 		//	BuiltinGlobalsProvider: func() map[string]*vm.Variable {
 		//		funcs := vm.NativeFunctions()
