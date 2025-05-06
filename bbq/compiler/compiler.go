@@ -1108,6 +1108,22 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 	c.emitGetLocal(iteratorLocalIndex)
 	c.codeGen.Emit(opcode.InstructionIteratorNext{})
 
+	forStmtTypes := c.DesugaredElaboration.ForStatementType(statement)
+	loopVarType := forStmtTypes.ValueVariableType
+	_, isResultReference := sema.MaybeReferenceType(loopVarType)
+
+	if isResultReference {
+		index := c.getOrAddType(loopVarType)
+		c.codeGen.Emit(opcode.InstructionNewRef{
+			Type:       index,
+			IsImplicit: true,
+		})
+
+		// If a reference is taken to the value, then do not transfer.
+	} else {
+		c.emitTransfer(loopVarType)
+	}
+
 	// Store it (next entry) in a local var.
 	// `<entry> = iterator.next()`
 	c.emitDeclareLocal(statement.Identifier.Identifier)

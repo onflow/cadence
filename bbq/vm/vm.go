@@ -22,8 +22,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/onflow/atree"
-
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/constant"
@@ -1098,18 +1096,6 @@ func opIteratorNext(vm *VM) {
 	value := vm.pop()
 	iterator := value.(*IteratorWrapperValue)
 	element := iterator.Next(vm.context, EmptyLocationRange)
-
-	// Transfer the elements before pass onto the loop-body.
-	element = element.Transfer(
-		vm.context,
-		EmptyLocationRange,
-		atree.Address{},
-		false,
-		nil,
-		nil,
-		false, // value has a parent container because it is from iterator.
-	)
-
 	vm.push(element)
 }
 
