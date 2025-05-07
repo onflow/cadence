@@ -34,7 +34,7 @@ func init() {
 		typeName,
 		NewNativeFunctionValueWithDerivedType(
 			sema.CapabilityTypeBorrowFunctionName,
-			func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
+			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				capability := receiver.(*interpreter.IDCapabilityValue)
 				borrowType := interpreter.MustConvertStaticToSemaType(capability.BorrowType, context).(*sema.ReferenceType)
 				return sema.CapabilityTypeBorrowFunctionType(borrowType)

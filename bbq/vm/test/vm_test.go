@@ -5695,7 +5695,7 @@ func TestCompileForce(t *testing.T) {
 			interpreter.Nil,
 		)
 		require.Error(t, err)
-		assert.ErrorIs(t, err, vm.ForceNilError{})
+		assert.ErrorIs(t, err, interpreter.ForceNilError{})
 	})
 
 	t.Run("nil, AnyStruct", func(t *testing.T) {
@@ -5712,7 +5712,7 @@ func TestCompileForce(t *testing.T) {
 			interpreter.Nil,
 		)
 		require.Error(t, err)
-		assert.ErrorIs(t, err, vm.ForceNilError{})
+		assert.ErrorIs(t, err, interpreter.ForceNilError{})
 	})
 
 	t.Run("non-optional", func(t *testing.T) {

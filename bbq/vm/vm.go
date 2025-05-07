@@ -292,7 +292,9 @@ func (vm *VM) Invoke(name string, arguments ...Value) (v Value, err error) {
 func (vm *VM) invoke(function Value, arguments []Value) (Value, error) {
 	functionValue, ok := function.(CompiledFunctionValue)
 	if !ok {
-		return nil, errors.NewDefaultUserError("not invocable")
+		return nil, interpreter.NotInvokableError{
+			Value: function,
+		}
 	}
 
 	if len(arguments) != int(functionValue.Function.ParameterCount) {
@@ -536,29 +538,29 @@ func opBitwiseRightShift(vm *VM) {
 
 func opLess(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(interpreter.NumberValue)
-	rightNumber := right.(interpreter.NumberValue)
+	leftNumber := left.(interpreter.ComparableValue)
+	rightNumber := right.(interpreter.ComparableValue)
 	vm.replaceTop(leftNumber.Less(vm.context, rightNumber, EmptyLocationRange))
 }
 
 func opLessOrEqual(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(interpreter.NumberValue)
-	rightNumber := right.(interpreter.NumberValue)
+	leftNumber := left.(interpreter.ComparableValue)
+	rightNumber := right.(interpreter.ComparableValue)
 	vm.replaceTop(leftNumber.LessEqual(vm.context, rightNumber, EmptyLocationRange))
 }
 
 func opGreater(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(interpreter.NumberValue)
-	rightNumber := right.(interpreter.NumberValue)
+	leftNumber := left.(interpreter.ComparableValue)
+	rightNumber := right.(interpreter.ComparableValue)
 	vm.replaceTop(leftNumber.Greater(vm.context, rightNumber, EmptyLocationRange))
 }
 
 func opGreaterOrEqual(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(interpreter.NumberValue)
-	rightNumber := right.(interpreter.NumberValue)
+	leftNumber := left.(interpreter.ComparableValue)
+	rightNumber := right.(interpreter.ComparableValue)
 	vm.replaceTop(leftNumber.GreaterEqual(vm.context, rightNumber, EmptyLocationRange))
 }
 
@@ -662,7 +664,7 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	// If the function is a pointer to an object-method, then the receiver is implicitly captured.
 	if boundFunction, isBoundFUnction := functionValue.(*BoundFunctionPointerValue); isBoundFUnction {
 		functionValue = boundFunction.Method
-		receiver := unwrapReceiver(vm.context, boundFunction.Receiver)
+		receiver := maybeDereference(vm.context, boundFunction.Receiver)
 		arguments = append([]Value{receiver}, arguments...)
 	}
 
@@ -680,7 +682,7 @@ func opInvokeMethodStatic(vm *VM, ins opcode.InstructionInvokeMethodStatic) {
 	// Load arguments
 	arguments := vm.popN(int(ins.ArgCount))
 	receiver := arguments[receiverIndex]
-	arguments[receiverIndex] = unwrapReceiver(vm.context, receiver)
+	arguments[receiverIndex] = maybeDereference(vm.context, receiver)
 
 	// Load the invoked value
 	functionValue := vm.pop()
@@ -703,7 +705,7 @@ func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
 	// Load arguments
 	arguments := vm.popN(int(ins.ArgCount))
 	receiver := arguments[receiverIndex]
-	arguments[receiverIndex] = unwrapReceiver(vm.context, receiver)
+	arguments[receiverIndex] = maybeDereference(vm.context, receiver)
 
 	// Get function
 	nameIndex := ins.Name
@@ -760,23 +762,19 @@ func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
 	return typeArguments
 }
 
-func unwrapReceiver(context *Context, receiver Value) Value {
-	for {
-		switch typedReceiver := receiver.(type) {
-		case *interpreter.SomeValue:
-			receiver = typedReceiver.InnerValue()
-		case *interpreter.EphemeralReferenceValue:
-			receiver = typedReceiver.Value
-		case *interpreter.StorageReferenceValue:
-			referencedValue := typedReceiver.ReferencedValue(
-				context,
-				EmptyLocationRange,
-				true,
-			)
-			receiver = *referencedValue
-		default:
-			return receiver
-		}
+func maybeDereference(context *Context, value Value) Value {
+	switch typedValue := value.(type) {
+	case *interpreter.EphemeralReferenceValue:
+		return typedValue.Value
+	case *interpreter.StorageReferenceValue:
+		referencedValue := typedValue.ReferencedValue(
+			context,
+			EmptyLocationRange,
+			true,
+		)
+		return *referencedValue
+	default:
+		return value
 	}
 }
 
@@ -989,22 +987,24 @@ func opNil(vm *VM) {
 
 func opEqual(vm *VM) {
 	left, right := vm.peekPop()
-	result := left.(interpreter.EquatableValue).Equal(
+	result := interpreter.TestValueEqual(
 		vm.context,
 		EmptyLocationRange,
+		left,
 		right,
 	)
-	vm.replaceTop(interpreter.BoolValue(result))
+	vm.replaceTop(result)
 }
 
 func opNotEqual(vm *VM) {
 	left, right := vm.peekPop()
-	result := !left.(interpreter.EquatableValue).Equal(
+	result := !interpreter.TestValueEqual(
 		vm.context,
 		EmptyLocationRange,
+		left,
 		right,
 	)
-	vm.replaceTop(interpreter.BoolValue(result))
+	vm.replaceTop(result)
 }
 
 func opNot(vm *VM) {
@@ -1018,7 +1018,7 @@ func opUnwrap(vm *VM) {
 	case *interpreter.SomeValue:
 		vm.replaceTop(value.InnerValue())
 	case interpreter.NilValue:
-		panic(ForceNilError{})
+		panic(interpreter.ForceNilError{})
 	default:
 		// Non-optional. Leave as is.
 	}

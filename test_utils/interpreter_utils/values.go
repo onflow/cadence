@@ -107,12 +107,12 @@ func ArrayElements(gauge common.MemoryGauge, array *interpreter.ArrayValue) []in
 	return result
 }
 
-func DictionaryKeyValues(inter *interpreter.Interpreter, dict *interpreter.DictionaryValue) []interpreter.Value {
+func DictionaryKeyValues(context interpreter.ContainerMutationContext, dict *interpreter.DictionaryValue) []interpreter.Value {
 	count := dict.Count() * 2
 	result := make([]interpreter.Value, count)
 	i := 0
 	dict.Iterate(
-		inter,
+		context,
 		interpreter.EmptyLocationRange,
 		func(key, value interpreter.Value) (resume bool) {
 			result[i*2] = key
@@ -135,7 +135,7 @@ type DictionaryEntry[K, V any] struct {
 // If a conversion fails, then this function returns (nil, false).
 // Useful in contexts when Cadence values need to be extracted into their go counterparts.
 func DictionaryEntries[K, V any](
-	inter *interpreter.Interpreter,
+	context interpreter.ContainerMutationContext,
 	dict *interpreter.DictionaryValue,
 	fromKey func(interpreter.Value) (K, bool),
 	fromVal func(interpreter.Value) (V, bool),
@@ -147,7 +147,7 @@ func DictionaryEntries[K, V any](
 	iterStatus := true
 	idx := 0
 	dict.Iterate(
-		inter,
+		context,
 		interpreter.EmptyLocationRange,
 		func(rawKey, rawValue interpreter.Value) (resume bool) {
 			key, ok := fromKey(rawKey)

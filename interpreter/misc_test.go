@@ -31,6 +31,7 @@ import (
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/interpreter"
@@ -117,7 +118,7 @@ func TestInterpretConstantAndVariableDeclarations(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         let x = 1
         let y = true
         let z = 1 + 2
@@ -130,28 +131,28 @@ func TestInterpretConstantAndVariableDeclarations(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(1),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.TrueValue,
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(3),
-		inter.Globals.Get("z").GetValue(inter),
+		inter.GetGlobal("z"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.TrueValue,
-		inter.Globals.Get("a").GetValue(inter),
+		inter.GetGlobal("a"),
 	)
 
 	AssertValuesEqual(
@@ -167,14 +168,14 @@ func TestInterpretConstantAndVariableDeclarations(t *testing.T) {
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 		),
-		inter.Globals.Get("b").GetValue(inter),
+		inter.GetGlobal("b"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredStringValue("123"),
-		inter.Globals.Get("s").GetValue(inter),
+		inter.GetGlobal("s"),
 	)
 }
 
@@ -182,7 +183,7 @@ func TestInterpretDeclarations(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         fun test(): Int {
             return 42
         }
@@ -203,17 +204,22 @@ func TestInterpretInvalidUnknownDeclarationInvocation(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, ``)
+	inter := parseCheckAndPrepare(t, ``)
 
 	_, err := inter.Invoke("test")
-	assert.IsType(t, interpreter.NotDeclaredError{}, err)
+
+	if *compile {
+		assert.IsType(t, vm.UnknownFunctionError{}, err)
+	} else {
+		assert.IsType(t, interpreter.NotDeclaredError{}, err)
+	}
 }
 
 func TestInterpretInvalidNonFunctionDeclarationInvocation(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        let test = 1
    `)
 
@@ -225,7 +231,7 @@ func TestInterpretLexicalScope(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        let x = 10
 
        fun f(): Int {
@@ -244,7 +250,7 @@ func TestInterpretLexicalScope(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(10),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 
 	value, err := inter.Invoke("f")
@@ -272,7 +278,7 @@ func TestInterpretFunctionSideEffects(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        var value = 0
 
        fun test(_ newValue: Int) {
@@ -296,7 +302,7 @@ func TestInterpretFunctionSideEffects(t *testing.T) {
 		t,
 		inter,
 		newValue,
-		inter.Globals.Get("value").GetValue(inter),
+		inter.GetGlobal("value"),
 	)
 }
 
@@ -304,7 +310,7 @@ func TestInterpretNoHoisting(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        let x = 2
 
        fun test(): Int {
@@ -330,7 +336,7 @@ func TestInterpretNoHoisting(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 }
 
@@ -338,7 +344,7 @@ func TestInterpretFunctionExpressionsAndScope(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        let x = 10
 
        // check first-class functions and scope inside them
@@ -349,14 +355,14 @@ func TestInterpretFunctionExpressionsAndScope(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(10),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(42),
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 }
 
@@ -364,7 +370,7 @@ func TestInterpretVariableAssignment(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        fun test(): Int {
            var x = 2
            x = 3
@@ -387,7 +393,7 @@ func TestInterpretGlobalVariableAssignment(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        var x = 2
 
        fun test(): Int {
@@ -400,7 +406,7 @@ func TestInterpretGlobalVariableAssignment(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 
 	value, err := inter.Invoke("test")
@@ -417,7 +423,7 @@ func TestInterpretGlobalVariableAssignment(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(3),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 }
 
@@ -425,7 +431,7 @@ func TestInterpretConstantRedeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        let x = 2
 
        fun test(): Int {
@@ -438,7 +444,7 @@ func TestInterpretConstantRedeclaration(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 
 	value, err := inter.Invoke("test")
@@ -456,7 +462,7 @@ func TestInterpretParameters(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        fun returnA(a: Int, b: Int): Int {
            return a
        }
@@ -493,7 +499,7 @@ func TestInterpretArrayEquality(t *testing.T) {
 
 			code := fmt.Sprintf("fun test(): Bool { \n %s \n }", innerCode)
 
-			inter := parseCheckAndInterpret(t, code)
+			inter := parseCheckAndPrepare(t, code)
 			res, err := inter.Invoke("test")
 
 			require.NoError(t, err)
@@ -552,7 +558,7 @@ func TestInterpretArrayIndexing(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        fun test(): Int {
            let z = [0, 3]
            return z[1]
@@ -613,7 +619,7 @@ func TestInterpretArrayIndexingAssignment(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        let z = [0, 3]
 
        fun test() {
@@ -624,7 +630,7 @@ func TestInterpretArrayIndexingAssignment(t *testing.T) {
 	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	actualArray := inter.Globals.Get("z").GetValue(inter)
+	actualArray := inter.GetGlobal("z")
 
 	expectedArray := interpreter.NewArrayValue(
 		inter,
@@ -688,7 +694,7 @@ func TestInterpretStringIndexing(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let a = "abc"
       let x = a[0]
       let y = a[1]
@@ -699,19 +705,19 @@ func TestInterpretStringIndexing(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredCharacterValue("a"),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredCharacterValue("b"),
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredCharacterValue("c"),
-		inter.Globals.Get("z").GetValue(inter),
+		inter.GetGlobal("z"),
 	)
 }
 
@@ -758,7 +764,7 @@ func TestInterpretStringIndexingUnicode(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun testUnicodeA(): Character {
           let a = "caf\u{E9}"
           return a[3]
@@ -954,7 +960,7 @@ func TestInterpretReturnWithoutExpression(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        fun returnNothing() {
            return
        }
@@ -1007,7 +1013,7 @@ func TestInterpretEqualOperator(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun testIntegersUnequal(): Bool {
           return 5 == 3
       }
@@ -1096,7 +1102,7 @@ func TestInterpretUnequalOperator(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun testIntegersUnequal(): Bool {
           return 5 != 3
       }
@@ -1148,7 +1154,7 @@ func TestInterpretLessOperator(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun testIntegersGreater(): Bool {
           return 5 < 3
       }
@@ -1185,7 +1191,7 @@ func TestInterpretLessEqualOperator(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun testIntegersGreater(): Bool {
           return 5 <= 3
       }
@@ -1222,7 +1228,7 @@ func TestInterpretGreaterOperator(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun testIntegersGreater(): Bool {
           return 5 > 3
       }
@@ -1259,7 +1265,7 @@ func TestInterpretGreaterEqualOperator(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun testIntegersGreater(): Bool {
           return 5 >= 3
       }
@@ -1296,7 +1302,7 @@ func TestInterpretOrOperator(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun testTrueTrue(): Bool {
           return true || true
       }
@@ -1338,7 +1344,7 @@ func TestInterpretOrOperatorShortCircuitLeftSuccess(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       var x = false
       var y = false
 
@@ -1359,21 +1365,21 @@ func TestInterpretOrOperatorShortCircuitLeftSuccess(t *testing.T) {
 		t,
 		inter,
 		interpreter.TrueValue,
-		inter.Globals.Get("test").GetValue(inter),
+		inter.GetGlobal("test"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.TrueValue,
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.FalseValue,
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 }
 
@@ -1381,7 +1387,7 @@ func TestInterpretOrOperatorShortCircuitLeftFailure(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       var x = false
       var y = false
 
@@ -1402,21 +1408,21 @@ func TestInterpretOrOperatorShortCircuitLeftFailure(t *testing.T) {
 		t,
 		inter,
 		interpreter.TrueValue,
-		inter.Globals.Get("test").GetValue(inter),
+		inter.GetGlobal("test"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.TrueValue,
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.TrueValue,
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 }
 
@@ -1424,7 +1430,7 @@ func TestInterpretAndOperator(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun testTrueTrue(): Bool {
           return true && true
       }
@@ -1466,7 +1472,7 @@ func TestInterpretAndOperatorShortCircuitLeftSuccess(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       var x = false
       var y = false
 
@@ -1487,21 +1493,21 @@ func TestInterpretAndOperatorShortCircuitLeftSuccess(t *testing.T) {
 		t,
 		inter,
 		interpreter.TrueValue,
-		inter.Globals.Get("test").GetValue(inter),
+		inter.GetGlobal("test"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.TrueValue,
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.TrueValue,
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 }
 
@@ -1509,7 +1515,7 @@ func TestInterpretAndOperatorShortCircuitLeftFailure(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       var x = false
       var y = false
 
@@ -1530,21 +1536,21 @@ func TestInterpretAndOperatorShortCircuitLeftFailure(t *testing.T) {
 		t,
 		inter,
 		interpreter.FalseValue,
-		inter.Globals.Get("test").GetValue(inter),
+		inter.GetGlobal("test"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.TrueValue,
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.FalseValue,
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 }
 
@@ -1552,7 +1558,7 @@ func TestInterpretExpressionStatement(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        var x = 0
 
        fun incX() {
@@ -1569,7 +1575,7 @@ func TestInterpretExpressionStatement(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(0),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 
 	value, err := inter.Invoke("test")
@@ -1586,7 +1592,7 @@ func TestInterpretExpressionStatement(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 }
 
@@ -1594,7 +1600,7 @@ func TestInterpretConditionalOperator(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        fun testTrue(): Int {
            return true ? 2 : 3
        }
@@ -1629,7 +1635,7 @@ func TestInterpretFunctionBindingInFunction(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun foo(): AnyStruct {
           return foo
       }
@@ -1647,7 +1653,7 @@ func TestInterpretRecursionFib(t *testing.T) {
 	// to the function inside the function and that the arguments
 	// of the function calls are evaluated in the call-site scope
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        fun fib(_ n: Int): Int {
            if n < 2 {
               return n
@@ -1674,7 +1680,7 @@ func TestInterpretRecursionFactorial(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         fun factorial(_ n: Int): Int {
             if n < 1 {
                return 1
@@ -1702,7 +1708,7 @@ func TestInterpretUnaryIntegerNegation(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x = -2
       let y = -(-2)
     `)
@@ -1711,14 +1717,14 @@ func TestInterpretUnaryIntegerNegation(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(-2),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 }
 
@@ -1726,7 +1732,7 @@ func TestInterpretUnaryBooleanNegation(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let a = !true
       let b = !(!true)
       let c = !false
@@ -1737,28 +1743,28 @@ func TestInterpretUnaryBooleanNegation(t *testing.T) {
 		t,
 		inter,
 		interpreter.FalseValue,
-		inter.Globals.Get("a").GetValue(inter),
+		inter.GetGlobal("a"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.TrueValue,
-		inter.Globals.Get("b").GetValue(inter),
+		inter.GetGlobal("b"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.TrueValue,
-		inter.Globals.Get("c").GetValue(inter),
+		inter.GetGlobal("c"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.FalseValue,
-		inter.Globals.Get("d").GetValue(inter),
+		inter.GetGlobal("d"),
 	)
 }
 
@@ -1842,7 +1848,7 @@ func TestInterpretHostFunction(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(3),
-		inter.Globals.Get("a").GetValue(inter),
+		inter.GetGlobal("a"),
 	)
 }
 
@@ -2122,7 +2128,7 @@ func TestInterpretStructureSelfUseInInitializer(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
 
       struct Test {
 
@@ -2151,7 +2157,7 @@ func TestInterpretStructureConstructorUseInInitializerAndFunction(t *testing.T) 
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
 
       struct Test {
 
@@ -2194,7 +2200,7 @@ func TestInterpretStructureSelfUseInFunction(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
 
       struct Test {
 
@@ -2223,7 +2229,7 @@ func TestInterpretStructureConstructorUseInFunction(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       struct Test {
 
           fun test() {
@@ -2251,7 +2257,7 @@ func TestInterpretStructureDeclarationWithField(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
 
       struct Test {
           var test: Int
@@ -2281,7 +2287,7 @@ func TestInterpretStructureDeclarationWithFunction(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       var value = 0
 
       struct Test {
@@ -2310,14 +2316,14 @@ func TestInterpretStructureDeclarationWithFunction(t *testing.T) {
 
 	AssertValuesEqual(
 		t,
-		inter, newValue, inter.Globals.Get("value").GetValue(inter))
+		inter, newValue, inter.GetGlobal("value"))
 }
 
 func TestInterpretStructureFunctionCall(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       struct Test {
           fun foo(): Int {
               return 42
@@ -2335,7 +2341,7 @@ func TestInterpretStructureFunctionCall(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(42),
-		inter.Globals.Get("value").GetValue(inter),
+		inter.GetGlobal("value"),
 	)
 }
 
@@ -2343,7 +2349,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       struct Test {
           var foo: Int
 
@@ -2367,7 +2373,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
       }
     `)
 
-	test := inter.Globals.Get("test").GetValue(inter).(*interpreter.CompositeValue)
+	test := inter.GetGlobal("test").(*interpreter.CompositeValue)
 
 	AssertValuesEqual(
 		t,
@@ -2398,7 +2404,7 @@ func TestInterpretStructureInitializesConstant(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       struct Test {
           let foo: Int
 
@@ -2410,7 +2416,7 @@ func TestInterpretStructureInitializesConstant(t *testing.T) {
       let test = Test()
     `)
 
-	actual := inter.Globals.Get("test").GetValue(inter).(*interpreter.CompositeValue).
+	actual := inter.GetGlobal("test").(*interpreter.CompositeValue).
 		GetMember(inter, interpreter.EmptyLocationRange, "foo")
 	AssertValuesEqual(
 		t,
@@ -2424,7 +2430,7 @@ func TestInterpretStructureFunctionMutatesSelf(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       struct Test {
           var foo: Int
 
@@ -2460,7 +2466,7 @@ func TestInterpretStructCopyOnDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       struct Cat {
           var wasFed: Bool
 
@@ -2501,7 +2507,7 @@ func TestInterpretStructCopyOnDeclarationModifiedWithStructFunction(t *testing.T
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       struct Cat {
           var wasFed: Bool
 
@@ -2546,7 +2552,7 @@ func TestInterpretStructCopyOnIdentifierAssignment(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       struct Cat {
           var wasFed: Bool
 
@@ -2588,7 +2594,7 @@ func TestInterpretStructCopyOnIndexingAssignment(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       struct Cat {
           var wasFed: Bool
 
@@ -2630,7 +2636,7 @@ func TestInterpretStructCopyOnMemberAssignment(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       struct Cat {
           var wasFed: Bool
 
@@ -2679,7 +2685,7 @@ func TestInterpretStructCopyOnPassing(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       struct Cat {
           var wasFed: Bool
 
@@ -2714,7 +2720,7 @@ func TestInterpretArrayCopy(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
 
       fun change(_ numbers: [Int]): [Int] {
           numbers[0] = 1
@@ -2755,7 +2761,7 @@ func TestInterpretStructCopyInArray(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       struct Foo {
           var bar: Int
           init(bar: Int) {
@@ -2797,7 +2803,7 @@ func TestInterpretMutuallyRecursiveFunctions(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun isEven(_ n: Int): Bool {
           if n == 0 {
               return true
@@ -2840,7 +2846,7 @@ func TestInterpretUseBeforeDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       var tests = 0
 
       fun test(): Test {
@@ -2858,7 +2864,7 @@ func TestInterpretUseBeforeDeclaration(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(0),
-		inter.Globals.Get("tests").GetValue(inter),
+		inter.GetGlobal("tests"),
 	)
 
 	value, err := inter.Invoke("test")
@@ -2873,7 +2879,7 @@ func TestInterpretUseBeforeDeclaration(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(1),
-		inter.Globals.Get("tests").GetValue(inter),
+		inter.GetGlobal("tests"),
 	)
 
 	value, err = inter.Invoke("test")
@@ -2888,7 +2894,7 @@ func TestInterpretUseBeforeDeclaration(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
-		inter.Globals.Get("tests").GetValue(inter),
+		inter.GetGlobal("tests"),
 	)
 }
 
@@ -2896,7 +2902,7 @@ func TestInterpretOptionalVariableDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x: Int?? = 2
     `)
 
@@ -2908,7 +2914,7 @@ func TestInterpretOptionalVariableDeclaration(t *testing.T) {
 				interpreter.NewUnmeteredIntValueFromInt64(2),
 			),
 		),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 }
 
@@ -2916,7 +2922,7 @@ func TestInterpretOptionalParameterInvokedExternal(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(x: Int??): Int?? {
           return x
       }
@@ -2944,7 +2950,7 @@ func TestInterpretOptionalParameterInvokedInternal(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun testActual(x: Int??): Int?? {
           return x
       }
@@ -2973,7 +2979,7 @@ func TestInterpretOptionalReturn(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(x: Int): Int?? {
           return x
       }
@@ -2998,7 +3004,7 @@ func TestInterpretOptionalAssignment(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       var x: Int?? = 1
 
       fun test() {
@@ -3024,7 +3030,7 @@ func TestInterpretOptionalAssignment(t *testing.T) {
 				interpreter.NewUnmeteredIntValueFromInt64(2),
 			),
 		),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 }
 
@@ -3032,7 +3038,7 @@ func TestInterpretNil(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
      let x: Int? = nil
    `)
 
@@ -3040,7 +3046,7 @@ func TestInterpretNil(t *testing.T) {
 		t,
 		inter,
 		interpreter.Nil,
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 }
 
@@ -3048,7 +3054,7 @@ func TestInterpretOptionalNestingNil(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
      let x: Int?? = nil
    `)
 
@@ -3056,7 +3062,7 @@ func TestInterpretOptionalNestingNil(t *testing.T) {
 		t,
 		inter,
 		interpreter.Nil,
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 }
 
@@ -3064,7 +3070,7 @@ func TestInterpretNilReturnValue(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
      fun test(): Int?? {
          return nil
      }
@@ -3085,7 +3091,7 @@ func TestInterpretSomeReturnValue(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
      fun test(): Int? {
          let x: Int? = 1
          return x
@@ -3109,7 +3115,7 @@ func TestInterpretSomeReturnValueFromDictionary(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
      fun test(): Int? {
          let foo: {String: Int} = {"a": 1}
          return foo["a"]
@@ -3133,7 +3139,7 @@ func TestInterpretNilCoalescingNilIntToOptional(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let one = 1
       let none: Int? = nil
       let x: Int? = none ?? one
@@ -3145,7 +3151,7 @@ func TestInterpretNilCoalescingNilIntToOptional(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 		),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 }
 
@@ -3153,7 +3159,7 @@ func TestInterpretNilCoalescingNilIntToOptionals(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let one = 1
       let none: Int?? = nil
       let x: Int? = none ?? one
@@ -3165,7 +3171,7 @@ func TestInterpretNilCoalescingNilIntToOptionals(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 		),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 }
 
@@ -3173,7 +3179,7 @@ func TestInterpretNilCoalescingNilIntToOptionalNilLiteral(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let one = 1
       let x: Int? = nil ?? one
     `)
@@ -3184,7 +3190,7 @@ func TestInterpretNilCoalescingNilIntToOptionalNilLiteral(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 		),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 }
 
@@ -3192,7 +3198,7 @@ func TestInterpretNilCoalescingRightSubtype(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x: Int? = nil ?? nil
     `)
 
@@ -3200,7 +3206,7 @@ func TestInterpretNilCoalescingRightSubtype(t *testing.T) {
 		t,
 		inter,
 		interpreter.Nil,
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 }
 
@@ -3208,7 +3214,7 @@ func TestInterpretNilCoalescingNilInt(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let one = 1
       let none: Int? = nil
       let x: Int = none ?? one
@@ -3218,7 +3224,7 @@ func TestInterpretNilCoalescingNilInt(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(1),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 }
 
@@ -3226,7 +3232,7 @@ func TestInterpretNilCoalescingNilLiteralInt(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let one = 1
       let x: Int = nil ?? one
     `)
@@ -3235,7 +3241,7 @@ func TestInterpretNilCoalescingNilLiteralInt(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(1),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 }
 
@@ -3243,7 +3249,7 @@ func TestInterpretNilCoalescingShortCircuitLeftSuccess(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       var x = false
       var y = false
 
@@ -3264,21 +3270,21 @@ func TestInterpretNilCoalescingShortCircuitLeftSuccess(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(1),
-		inter.Globals.Get("test").GetValue(inter),
+		inter.GetGlobal("test"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.TrueValue,
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.FalseValue,
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 }
 
@@ -3286,7 +3292,7 @@ func TestInterpretNilCoalescingShortCircuitLeftFailure(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       var x = false
       var y = false
 
@@ -3307,21 +3313,21 @@ func TestInterpretNilCoalescingShortCircuitLeftFailure(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
-		inter.Globals.Get("test").GetValue(inter),
+		inter.GetGlobal("test"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.TrueValue,
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.TrueValue,
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 }
 
@@ -3329,7 +3335,7 @@ func TestInterpretNilCoalescingOptionalAnyStructNil(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x: AnyStruct? = nil
       let y = x ?? true
     `)
@@ -3338,7 +3344,7 @@ func TestInterpretNilCoalescingOptionalAnyStructNil(t *testing.T) {
 		t,
 		inter,
 		interpreter.TrueValue,
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 }
 
@@ -3346,7 +3352,7 @@ func TestInterpretNilCoalescingOptionalAnyStructSome(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x: AnyStruct? = 2
       let y = x ?? true
     `)
@@ -3355,7 +3361,7 @@ func TestInterpretNilCoalescingOptionalAnyStructSome(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 }
 
@@ -3363,7 +3369,7 @@ func TestInterpretNilCoalescingOptionalRightHandSide(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x: Int? = 1
       let y: Int? = 2
       let z = x ?? y
@@ -3375,7 +3381,7 @@ func TestInterpretNilCoalescingOptionalRightHandSide(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 		),
-		inter.Globals.Get("z").GetValue(inter),
+		inter.GetGlobal("z"),
 	)
 }
 
@@ -3383,7 +3389,7 @@ func TestInterpretNilCoalescingBothOptional(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
      let x: Int?? = 1
      let y: Int? = 2
      let z = x ?? y
@@ -3395,7 +3401,7 @@ func TestInterpretNilCoalescingBothOptional(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 		),
-		inter.Globals.Get("z").GetValue(inter),
+		inter.GetGlobal("z"),
 	)
 }
 
@@ -3403,7 +3409,7 @@ func TestInterpretNilCoalescingBothOptionalLeftNil(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
      let x: Int?? = nil
      let y: Int? = 2
      let z = x ?? y
@@ -3415,7 +3421,7 @@ func TestInterpretNilCoalescingBothOptionalLeftNil(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 		),
-		inter.Globals.Get("z").GetValue(inter),
+		inter.GetGlobal("z"),
 	)
 }
 
@@ -3423,7 +3429,7 @@ func TestInterpretNilsComparison(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x = nil == nil
    `)
 
@@ -3431,7 +3437,7 @@ func TestInterpretNilsComparison(t *testing.T) {
 		t,
 		inter,
 		interpreter.TrueValue,
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 }
 
@@ -3439,7 +3445,7 @@ func TestInterpretNonOptionalNilComparison(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x: Int = 1
       let y = x == nil
       let z = nil == x
@@ -3449,14 +3455,14 @@ func TestInterpretNonOptionalNilComparison(t *testing.T) {
 		t,
 		inter,
 		interpreter.FalseValue,
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.FalseValue,
-		inter.Globals.Get("z").GetValue(inter),
+		inter.GetGlobal("z"),
 	)
 }
 
@@ -3464,7 +3470,7 @@ func TestInterpretOptionalNilComparison(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
      let x: Int? = 1
      let y = x == nil
    `)
@@ -3473,7 +3479,7 @@ func TestInterpretOptionalNilComparison(t *testing.T) {
 		t,
 		inter,
 		interpreter.FalseValue,
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 }
 
@@ -3481,7 +3487,7 @@ func TestInterpretNestedOptionalNilComparison(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x: Int?? = 1
       let y = x == nil
     `)
@@ -3490,7 +3496,7 @@ func TestInterpretNestedOptionalNilComparison(t *testing.T) {
 		t,
 		inter,
 		interpreter.FalseValue,
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 }
 
@@ -3498,7 +3504,7 @@ func TestInterpretOptionalNilComparisonSwapped(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x: Int? = 1
       let y = nil == x
     `)
@@ -3507,7 +3513,7 @@ func TestInterpretOptionalNilComparisonSwapped(t *testing.T) {
 		t,
 		inter,
 		interpreter.FalseValue,
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 }
 
@@ -3515,7 +3521,7 @@ func TestInterpretNestedOptionalNilComparisonSwapped(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x: Int?? = 1
       let y = nil == x
     `)
@@ -3524,7 +3530,7 @@ func TestInterpretNestedOptionalNilComparisonSwapped(t *testing.T) {
 		t,
 		inter,
 		interpreter.FalseValue,
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 }
 
@@ -3532,7 +3538,7 @@ func TestInterpretNestedOptionalComparisonNils(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x: Int? = nil
       let y: Int?? = nil
       let z = x == y
@@ -3542,7 +3548,7 @@ func TestInterpretNestedOptionalComparisonNils(t *testing.T) {
 		t,
 		inter,
 		interpreter.TrueValue,
-		inter.Globals.Get("z").GetValue(inter),
+		inter.GetGlobal("z"),
 	)
 }
 
@@ -3550,7 +3556,7 @@ func TestInterpretNestedOptionalComparisonValues(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x: Int? = 2
       let y: Int?? = 2
       let z = x == y
@@ -3560,7 +3566,7 @@ func TestInterpretNestedOptionalComparisonValues(t *testing.T) {
 		t,
 		inter,
 		interpreter.TrueValue,
-		inter.Globals.Get("z").GetValue(inter),
+		inter.GetGlobal("z"),
 	)
 }
 
@@ -3568,7 +3574,7 @@ func TestInterpretNestedOptionalComparisonMixed(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x: Int? = 2
       let y: Int?? = nil
       let z = x == y
@@ -3578,7 +3584,7 @@ func TestInterpretNestedOptionalComparisonMixed(t *testing.T) {
 		t,
 		inter,
 		interpreter.FalseValue,
-		inter.Globals.Get("z").GetValue(inter),
+		inter.GetGlobal("z"),
 	)
 }
 
@@ -3586,7 +3592,7 @@ func TestInterpretOptionalSomeValueComparison(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
      let x: Int? = 1
      let y = x == 1
    `)
@@ -3595,7 +3601,7 @@ func TestInterpretOptionalSomeValueComparison(t *testing.T) {
 		t,
 		inter,
 		interpreter.TrueValue,
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 }
 
@@ -3603,7 +3609,7 @@ func TestInterpretOptionalNilValueComparison(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
      let x: Int? = nil
      let y = x == 1
    `)
@@ -3612,7 +3618,7 @@ func TestInterpretOptionalNilValueComparison(t *testing.T) {
 		t,
 		inter,
 		interpreter.FalseValue,
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 }
 
@@ -3637,7 +3643,7 @@ func TestInterpretOptionalMap(t *testing.T) {
 			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewUnmeteredStringValue("42"),
 			),
-			inter.Globals.Get("result").GetValue(inter),
+			inter.GetGlobal("result"),
 		)
 	})
 
@@ -3656,7 +3662,7 @@ func TestInterpretOptionalMap(t *testing.T) {
 			t,
 			inter,
 			interpreter.Nil,
-			inter.Globals.Get("result").GetValue(inter),
+			inter.GetGlobal("result"),
 		)
 	})
 
@@ -3763,14 +3769,14 @@ func TestInterpretCompositeNilEquality(t *testing.T) {
 				t,
 				inter,
 				interpreter.FalseValue,
-				inter.Globals.Get("y").GetValue(inter),
+				inter.GetGlobal("y"),
 			)
 
 			AssertValuesEqual(
 				t,
 				inter,
 				interpreter.FalseValue,
-				inter.Globals.Get("z").GetValue(inter),
+				inter.GetGlobal("z"),
 			)
 		})
 	}
@@ -3805,7 +3811,7 @@ func TestInterpretInterfaceConformanceNoRequirements(t *testing.T) {
 
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       access(all) %[1]s interface Test {}
@@ -3825,7 +3831,7 @@ func TestInterpretInterfaceConformanceNoRequirements(t *testing.T) {
 
 			assert.IsType(t,
 				&interpreter.CompositeValue{},
-				inter.Globals.Get("test").GetValue(inter),
+				inter.GetGlobal("test"),
 			)
 		})
 	}
@@ -3905,7 +3911,7 @@ func TestInterpretInterfaceFieldUse(t *testing.T) {
 				t,
 				inter,
 				interpreter.NewUnmeteredIntValueFromInt64(1),
-				inter.Globals.Get("x").GetValue(inter),
+				inter.GetGlobal("x"),
 			)
 		})
 	}
@@ -3973,7 +3979,7 @@ func TestInterpretInterfaceFunctionUse(t *testing.T) {
 				t,
 				inter,
 				interpreter.NewUnmeteredIntValueFromInt64(2),
-				inter.Globals.Get("val").GetValue(inter),
+				inter.GetGlobal("val"),
 			)
 		})
 	}
@@ -4220,7 +4226,7 @@ func TestInterpretDictionary(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x = {"a": 1, "b": 2}
     `)
 
@@ -4235,7 +4241,7 @@ func TestInterpretDictionary(t *testing.T) {
 		interpreter.NewUnmeteredStringValue("b"), interpreter.NewUnmeteredIntValueFromInt64(2),
 	)
 
-	actualDict := inter.Globals.Get("x").GetValue(inter)
+	actualDict := inter.GetGlobal("x")
 
 	AssertValuesEqual(
 		t,
@@ -4249,7 +4255,7 @@ func TestInterpretDictionaryInsertionOrder(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x = {"c": 3, "a": 1, "b": 2}
     `)
 
@@ -4265,7 +4271,7 @@ func TestInterpretDictionaryInsertionOrder(t *testing.T) {
 		interpreter.NewUnmeteredStringValue("b"), interpreter.NewUnmeteredIntValueFromInt64(2),
 	)
 
-	actualDict := inter.Globals.Get("x").GetValue(inter)
+	actualDict := inter.GetGlobal("x")
 
 	AssertValuesEqual(
 		t,
@@ -4279,7 +4285,7 @@ func TestInterpretDictionaryIndexingString(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x = {"abc": 1, "def": 2}
       let a = x["abc"]
       let b = x["def"]
@@ -4292,7 +4298,7 @@ func TestInterpretDictionaryIndexingString(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 		),
-		inter.Globals.Get("a").GetValue(inter),
+		inter.GetGlobal("a"),
 	)
 
 	AssertValuesEqual(
@@ -4301,14 +4307,14 @@ func TestInterpretDictionaryIndexingString(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 		),
-		inter.Globals.Get("b").GetValue(inter),
+		inter.GetGlobal("b"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.Nil,
-		inter.Globals.Get("c").GetValue(inter),
+		inter.GetGlobal("c"),
 	)
 }
 
@@ -4316,7 +4322,7 @@ func TestInterpretDictionaryIndexingBool(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x = {true: 1, false: 2}
       let a = x[true]
       let b = x[false]
@@ -4328,7 +4334,7 @@ func TestInterpretDictionaryIndexingBool(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 		),
-		inter.Globals.Get("a").GetValue(inter),
+		inter.GetGlobal("a"),
 	)
 
 	AssertValuesEqual(
@@ -4337,7 +4343,7 @@ func TestInterpretDictionaryIndexingBool(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 		),
-		inter.Globals.Get("b").GetValue(inter),
+		inter.GetGlobal("b"),
 	)
 }
 
@@ -4345,7 +4351,7 @@ func TestInterpretDictionaryIndexingInt(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x = {23: "a", 42: "b"}
       let a = x[23]
       let b = x[42]
@@ -4358,7 +4364,7 @@ func TestInterpretDictionaryIndexingInt(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredStringValue("a"),
 		),
-		inter.Globals.Get("a").GetValue(inter),
+		inter.GetGlobal("a"),
 	)
 
 	AssertValuesEqual(
@@ -4367,14 +4373,14 @@ func TestInterpretDictionaryIndexingInt(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredStringValue("b"),
 		),
-		inter.Globals.Get("b").GetValue(inter),
+		inter.GetGlobal("b"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.Nil,
-		inter.Globals.Get("c").GetValue(inter),
+		inter.GetGlobal("c"),
 	)
 }
 
@@ -4382,7 +4388,7 @@ func TestInterpretDictionaryIndexingType(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       struct TestStruct {}
       resource TestResource {}
 
@@ -4405,39 +4411,39 @@ func TestInterpretDictionaryIndexingType(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredStringValue("a"),
 		),
-		inter.Globals.Get("a").GetValue(inter),
+		inter.GetGlobal("a"),
 	)
 
 	assert.Equal(t,
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredStringValue("b"),
 		),
-		inter.Globals.Get("b").GetValue(inter),
+		inter.GetGlobal("b"),
 	)
 
 	assert.Equal(t,
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredStringValue("c"),
 		),
-		inter.Globals.Get("c").GetValue(inter),
+		inter.GetGlobal("c"),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("d").GetValue(inter),
+		inter.GetGlobal("d"),
 	)
 
 	// types need to match exactly, subtypes won't cut it
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("e").GetValue(inter),
+		inter.GetGlobal("e"),
 	)
 
 	assert.Equal(t,
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredStringValue("f"),
 		),
-		inter.Globals.Get("f").GetValue(inter),
+		inter.GetGlobal("f"),
 	)
 }
 
@@ -4445,7 +4451,7 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x = {"abc": 42}
       fun test() {
           x["abc"] = 23
@@ -4462,7 +4468,7 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 		value,
 	)
 
-	actualValue := inter.Globals.Get("x").GetValue(inter)
+	actualValue := inter.GetGlobal("x")
 	actualDict := actualValue.(*interpreter.DictionaryValue)
 
 	newValue := actualDict.GetKey(
@@ -4493,7 +4499,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x = {"def": 42}
       fun test() {
           x["abc"] = 23
@@ -4521,7 +4527,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 		interpreter.NewUnmeteredStringValue("abc"), interpreter.NewUnmeteredIntValueFromInt64(23),
 	)
 
-	actualDict := inter.Globals.Get("x").GetValue(inter).(*interpreter.DictionaryValue)
+	actualDict := inter.GetGlobal("x").(*interpreter.DictionaryValue)
 
 	AssertValuesEqual(
 		t,
@@ -4560,7 +4566,7 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x = {"def": 42, "abc": 23}
       fun test() {
           x["def"] = nil
@@ -4587,7 +4593,7 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 		interpreter.NewUnmeteredStringValue("abc"), interpreter.NewUnmeteredIntValueFromInt64(23),
 	)
 
-	actualDict := inter.Globals.Get("x").GetValue(inter).(*interpreter.DictionaryValue)
+	actualDict := inter.GetGlobal("x").(*interpreter.DictionaryValue)
 
 	RequireValuesEqual(
 		t,
@@ -4629,7 +4635,7 @@ func TestInterpretDictionaryEquality(t *testing.T) {
 
 			code := fmt.Sprintf("fun test(): Bool { \n %s \n }", innerCode)
 
-			inter := parseCheckAndInterpret(t, code)
+			inter := parseCheckAndPrepare(t, code)
 			res, err := inter.Invoke("test")
 
 			require.NoError(t, err)
@@ -4736,7 +4742,7 @@ func TestInterpretComparison(t *testing.T) {
 
 			code := fmt.Sprintf("fun test(): Bool { \n %s \n }", innerCode)
 
-			inter := parseCheckAndInterpret(t, code)
+			inter := parseCheckAndPrepare(t, code)
 			res, err := inter.Invoke("test")
 
 			require.NoError(t, err)
@@ -4810,7 +4816,7 @@ func TestInterpretOptionalAnyStruct(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x: AnyStruct? = 42
     `)
 
@@ -4820,7 +4826,7 @@ func TestInterpretOptionalAnyStruct(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(42),
 		),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 }
 
@@ -4828,7 +4834,7 @@ func TestInterpretOptionalAnyStructFailableCasting(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x: AnyStruct? = 42
       let y = (x ?? 23) as? Int
     `)
@@ -4839,7 +4845,7 @@ func TestInterpretOptionalAnyStructFailableCasting(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(42),
 		),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 
 	AssertValuesEqual(
@@ -4848,7 +4854,7 @@ func TestInterpretOptionalAnyStructFailableCasting(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(42),
 		),
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 }
 
@@ -4856,7 +4862,7 @@ func TestInterpretOptionalAnyStructFailableCastingInt(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x: AnyStruct? = 23
       let y = x ?? 42
       let z = y as? Int
@@ -4868,14 +4874,14 @@ func TestInterpretOptionalAnyStructFailableCastingInt(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(23),
 		),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(23),
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 
 	AssertValuesEqual(
@@ -4884,7 +4890,7 @@ func TestInterpretOptionalAnyStructFailableCastingInt(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(23),
 		),
-		inter.Globals.Get("z").GetValue(inter),
+		inter.GetGlobal("z"),
 	)
 }
 
@@ -4892,7 +4898,7 @@ func TestInterpretOptionalAnyStructFailableCastingNil(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x: AnyStruct? = nil
       let y = x ?? 42
       let z = y as? Int
@@ -4902,14 +4908,14 @@ func TestInterpretOptionalAnyStructFailableCastingNil(t *testing.T) {
 		t,
 		inter,
 		interpreter.Nil,
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(42),
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 
 	AssertValuesEqual(
@@ -4918,7 +4924,7 @@ func TestInterpretOptionalAnyStructFailableCastingNil(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(42),
 		),
-		inter.Globals.Get("z").GetValue(inter),
+		inter.GetGlobal("z"),
 	)
 }
 
@@ -4930,7 +4936,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           resource interface RI {}
 
           resource R: RI {}
@@ -5159,7 +5165,7 @@ func TestInterpretArrayLength(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let y = [1, 2, 3].length
     `)
 
@@ -5167,7 +5173,7 @@ func TestInterpretArrayLength(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(3),
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 }
 
@@ -5175,7 +5181,7 @@ func TestInterpretStringLength(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x = "cafe\u{301}".length
       let y = x
       let z = "\u{1F3F3}\u{FE0F}\u{200D}\u{1F308}".length
@@ -5185,19 +5191,19 @@ func TestInterpretStringLength(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(4),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(4),
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(1),
-		inter.Globals.Get("z").GetValue(inter),
+		inter.GetGlobal("z"),
 	)
 }
 
@@ -5255,7 +5261,7 @@ func TestInterpretStructureFunctionBindingOutside(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         struct X {
             fun foo(): X {
                 return self
@@ -5282,7 +5288,7 @@ func TestInterpretArrayAppend(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let xs = [1, 2, 3]
 
       fun test() {
@@ -5293,7 +5299,7 @@ func TestInterpretArrayAppend(t *testing.T) {
 	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	actualArray := inter.Globals.Get("xs").GetValue(inter)
+	actualArray := inter.GetGlobal("xs")
 
 	arrayValue := actualArray.(*interpreter.ArrayValue)
 	AssertValueSlicesEqual(
@@ -5313,7 +5319,7 @@ func TestInterpretArrayAppendBound(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(): [Int] {
           let x = [1, 2, 3]
           let y = x.append
@@ -5343,7 +5349,7 @@ func TestInterpretArrayAppendAll(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(): [Int] {
           let a = [1, 2]
           a.appendAll([3, 4])
@@ -5372,7 +5378,7 @@ func TestInterpretArrayAppendAllBound(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(): [Int] {
           let a = [1, 2]
           let b = a.appendAll
@@ -5402,7 +5408,7 @@ func TestInterpretArrayConcat(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(): [Int] {
           let a = [1, 2]
           return a.concat([3, 4])
@@ -5430,7 +5436,7 @@ func TestInterpretArrayConcatBound(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(): [Int] {
           let a = [1, 2]
           let b = a.concat
@@ -5459,7 +5465,7 @@ func TestInterpretArrayConcatDoesNotModifyOriginalArray(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(): [Int] {
           let a = [1, 2]
           a.concat([3, 4])
@@ -5527,7 +5533,7 @@ func TestInterpretArrayInsert(t *testing.T) {
 
 		t.Run(testCase.name, func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t, `
+			inter := parseCheckAndPrepare(t, `
               let x = [1, 2, 3]
 
               fun test(_ index: Int) {
@@ -5538,7 +5544,7 @@ func TestInterpretArrayInsert(t *testing.T) {
 			_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(int64(testCase.index)))
 			require.NoError(t, err)
 
-			actualArray := inter.Globals.Get("x").GetValue(inter)
+			actualArray := inter.GetGlobal("x")
 
 			require.IsType(t, &interpreter.ArrayValue{}, actualArray)
 
@@ -5596,12 +5602,12 @@ func TestInterpretArrayRemove(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x = [1, 2, 3]
       let y = x.remove(at: 1)
     `)
 
-	value := inter.Globals.Get("x").GetValue(inter)
+	value := inter.GetGlobal("x")
 
 	arrayValue := value.(*interpreter.ArrayValue)
 	AssertValueSlicesEqual(
@@ -5618,7 +5624,7 @@ func TestInterpretArrayRemove(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 }
 
@@ -5666,12 +5672,12 @@ func TestInterpretArrayRemoveFirst(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x = [1, 2, 3]
       let y = x.removeFirst()
     `)
 
-	value := inter.Globals.Get("x").GetValue(inter)
+	value := inter.GetGlobal("x")
 
 	arrayValue := value.(*interpreter.ArrayValue)
 	AssertValueSlicesEqual(
@@ -5688,7 +5694,7 @@ func TestInterpretArrayRemoveFirst(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(1),
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 }
 
@@ -5726,12 +5732,12 @@ func TestInterpretArrayRemoveLast(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
           let x = [1, 2, 3]
           let y = x.removeLast()
     `)
 
-	value := inter.Globals.Get("x").GetValue(inter)
+	value := inter.GetGlobal("x")
 
 	arrayValue := value.(*interpreter.ArrayValue)
 
@@ -5749,7 +5755,7 @@ func TestInterpretArrayRemoveLast(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(3),
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 }
 
@@ -5885,6 +5891,7 @@ func TestInterpretArraySlicing(t *testing.T) {
 
 			t.Parallel()
 
+			// TODO: Enable test: require location info for assertions.
 			inter := parseCheckAndInterpret(t,
 				fmt.Sprintf(
 					`
@@ -5909,11 +5916,6 @@ func TestInterpretArraySlicing(t *testing.T) {
 					fmt.Sprint(value),
 				)
 			} else {
-				require.IsType(t,
-					interpreter.Error{},
-					err,
-				)
-
 				test.checkError(t, err)
 			}
 		})
@@ -5928,7 +5930,7 @@ func TestInterpretArrayContains(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun doesContain(): Bool {
           let a = [1, 2]
           return a.contains(1)
@@ -5965,7 +5967,7 @@ func TestInterpretDictionaryContainsKey(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun doesContainKey(): Bool {
           let x = {
               1: "one",
@@ -6008,7 +6010,7 @@ func TestInterpretStringConcat(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(): String {
           let a = "abc"
           return a.concat("def")
@@ -6030,7 +6032,7 @@ func TestInterpretStringConcatBound(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(): String {
           let a = "abc"
           let b = a.concat
@@ -6053,12 +6055,12 @@ func TestInterpretDictionaryRemove(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let xs = {"abc": 1, "def": 2}
       let removed = xs.remove(key: "abc")
     `)
 
-	actualValue := inter.Globals.Get("xs").GetValue(inter)
+	actualValue := inter.GetGlobal("xs")
 
 	require.IsType(t, actualValue, &interpreter.DictionaryValue{})
 	actualDict := actualValue.(*interpreter.DictionaryValue)
@@ -6079,7 +6081,7 @@ func TestInterpretDictionaryRemove(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 		),
-		inter.Globals.Get("removed").GetValue(inter),
+		inter.GetGlobal("removed"),
 	)
 }
 
@@ -6087,12 +6089,12 @@ func TestInterpretDictionaryInsert(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let xs = {"abc": 1, "def": 2}
       let inserted = xs.insert(key: "abc", 3)
     `)
 
-	actualValue := inter.Globals.Get("xs").GetValue(inter)
+	actualValue := inter.GetGlobal("xs")
 
 	require.IsType(t, actualValue, &interpreter.DictionaryValue{})
 	actualDict := actualValue.(*interpreter.DictionaryValue)
@@ -6115,7 +6117,7 @@ func TestInterpretDictionaryInsert(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 		),
-		inter.Globals.Get("inserted").GetValue(inter),
+		inter.GetGlobal("inserted"),
 	)
 }
 
@@ -6123,7 +6125,7 @@ func TestInterpretDictionaryKeys(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(): [String] {
           let dict = {"def": 2, "abc": 1}
           dict.insert(key: "a", 3)
@@ -6163,7 +6165,7 @@ func TestInterpretDictionaryForEachKey(t *testing.T) {
 			{100, 10},
 			{100, 0},
 		}
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			fun testForEachKey(n: Int, stopIter: Int): {Int: Int} {
 				var dict: {Int:Int} = {}
 				var counts: {Int:Int} = {}
@@ -6281,7 +6283,7 @@ func TestInterpretDictionaryValues(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(): [Int] {
           let dict = {"def": 2, "abc": 1}
           dict.insert(key: "a", 3)
@@ -6360,7 +6362,7 @@ func TestInterpretDictionaryKeyTypes(t *testing.T) {
 				interpreter.NewUnmeteredSomeValueNonCopying(
 					interpreter.NewUnmeteredStringValue("test"),
 				),
-				inter.Globals.Get("v").GetValue(inter),
+				inter.GetGlobal("v"),
 			)
 		})
 	}
@@ -6380,7 +6382,7 @@ func TestInterpretPathToString(t *testing.T) {
 
 	for ty, val := range tests {
 		t.Run(ty, func(t *testing.T) {
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                            let x: %s = %s
@@ -6392,7 +6394,7 @@ func TestInterpretPathToString(t *testing.T) {
 
 			assert.Equal(t,
 				interpreter.NewUnmeteredStringValue(val),
-				inter.Globals.Get("y").GetValue(inter),
+				inter.GetGlobal("y"),
 			)
 		})
 	}
@@ -6402,7 +6404,7 @@ func TestInterpretIndirectDestroy(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       resource X {}
 
       fun test() {
@@ -6426,7 +6428,7 @@ func TestInterpretUnaryMove(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       resource X {}
 
       fun foo(x: @X): @X {
@@ -6596,7 +6598,7 @@ func TestInterpretClosure(t *testing.T) {
 	// Create a closure that increments and returns
 	// a variable each time it is invoked.
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         fun makeCounter(): fun(): Int {
             var count = 0
             return fun (): Int {
@@ -6642,7 +6644,7 @@ func TestInterpretClosure(t *testing.T) {
 func TestInterpretClosureScopingFunctionExpression(t *testing.T) {
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         fun test(a: Int): Int {
             let bar = fun(b: Int): Int {
                 return a + b
@@ -6668,7 +6670,7 @@ func TestInterpretClosureScopingFunctionExpression(t *testing.T) {
 func TestInterpretClosureScopingInnerFunction(t *testing.T) {
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         fun test(a: Int): Int {
             fun bar(b: Int): Int {
                 return a + b
@@ -6694,7 +6696,7 @@ func TestInterpretClosureScopingInnerFunction(t *testing.T) {
 func TestInterpretClosureScopingFunctionExpressionParameterConfusion(t *testing.T) {
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         fun foo(a: Int) {
             fun() {}
         }
@@ -6720,7 +6722,7 @@ func TestInterpretClosureScopingFunctionExpressionParameterConfusion(t *testing.
 func TestInterpretClosureScopingInnerFunctionParameterConfusion(t *testing.T) {
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         fun foo(a: Int) {
             let f = fun() {}
         }
@@ -6746,7 +6748,7 @@ func TestInterpretClosureScopingInnerFunctionParameterConfusion(t *testing.T) {
 func TestInterpretClosureScopingFunctionExpressionInCall(t *testing.T) {
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         fun foo() {
             fun() {}
         }
@@ -6772,7 +6774,7 @@ func TestInterpretClosureScopingFunctionExpressionInCall(t *testing.T) {
 func TestInterpretClosureScopingInnerFunctionInCall(t *testing.T) {
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         fun foo() {
             let f = fun() {}
         }
@@ -6798,7 +6800,7 @@ func TestInterpretClosureScopingInnerFunctionInCall(t *testing.T) {
 func TestInterpretAssignmentAfterClosureFunctionExpression(t *testing.T) {
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         fun test(): Int {
             var a = 1
             let bar = fun(b: Int): Int {
@@ -6823,7 +6825,7 @@ func TestInterpretAssignmentAfterClosureFunctionExpression(t *testing.T) {
 func TestInterpretAssignmentAfterClosureInnerFunction(t *testing.T) {
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         fun test(): Int {
             var a = 1
             fun bar(b: Int): Int {
@@ -7009,7 +7011,7 @@ func TestInterpretResourceDestroyExpressionNoDestructor(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        resource R {}
 
        fun test() {
@@ -7918,7 +7920,7 @@ func TestInterpretReferenceExpression(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       resource R {
           access(all) let x: Int
 
@@ -7951,7 +7953,7 @@ func TestInterpretReferenceUse(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       access(all) resource R {
           access(all) var x: Int
 
@@ -8007,7 +8009,7 @@ func TestInterpretReferenceUseAccess(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       access(all) resource R {
           access(all) var x: Int
 
@@ -8059,6 +8061,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 
 	t.Parallel()
 
+	// TODO: Enable test: Need var-decl second value.
 	inter := parseCheckAndInterpret(t, `
       resource R {
           let id: Int
@@ -8139,7 +8142,7 @@ func TestInterpretCastingIntLiteralToInt8(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x = 42 as Int8
     `)
 
@@ -8147,7 +8150,7 @@ func TestInterpretCastingIntLiteralToInt8(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredInt8Value(42),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 }
 
@@ -8155,7 +8158,7 @@ func TestInterpretCastingIntLiteralToAnyStruct(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x = 42 as AnyStruct
     `)
 
@@ -8163,7 +8166,7 @@ func TestInterpretCastingIntLiteralToAnyStruct(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(42),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 }
 
@@ -8171,7 +8174,7 @@ func TestInterpretCastingIntLiteralToOptional(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x = 42 as Int?
     `)
 
@@ -8179,7 +8182,7 @@ func TestInterpretCastingIntLiteralToOptional(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewUnmeteredIntValueFromInt64(42)),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 }
 
@@ -8187,7 +8190,7 @@ func TestInterpretCastingResourceToAnyResource(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       resource R {}
 
       fun test(): @AnyResource {
@@ -8232,7 +8235,7 @@ func TestInterpretOptionalChainingFieldRead(t *testing.T) {
 		t,
 		inter,
 		interpreter.Nil,
-		inter.Globals.Get("x1").GetValue(inter),
+		inter.GetGlobal("x1"),
 	)
 
 	AssertValuesEqual(
@@ -8241,7 +8244,7 @@ func TestInterpretOptionalChainingFieldRead(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(42),
 		),
-		inter.Globals.Get("x2").GetValue(inter),
+		inter.GetGlobal("x2"),
 	)
 }
 
@@ -8269,17 +8272,17 @@ func TestInterpretOptionalChainingFunctionRead(t *testing.T) {
 		t,
 		inter,
 		interpreter.Nil,
-		inter.Globals.Get("x1").GetValue(inter),
+		inter.GetGlobal("x1"),
 	)
 
 	require.IsType(t,
 		&interpreter.SomeValue{},
-		inter.Globals.Get("x2").GetValue(inter),
+		inter.GetGlobal("x2"),
 	)
 
 	assert.IsType(t,
 		interpreter.BoundFunctionValue{},
-		inter.Globals.Get("x2").GetValue(inter).(*interpreter.SomeValue).InnerValue(),
+		inter.GetGlobal("x2").(*interpreter.SomeValue).InnerValue(),
 	)
 }
 
@@ -8307,7 +8310,7 @@ func TestInterpretOptionalChainingFunctionCall(t *testing.T) {
 		t,
 		inter,
 		interpreter.Nil,
-		inter.Globals.Get("x1").GetValue(inter),
+		inter.GetGlobal("x1"),
 	)
 
 	AssertValuesEqual(
@@ -8316,7 +8319,7 @@ func TestInterpretOptionalChainingFunctionCall(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(42),
 		),
-		inter.Globals.Get("x2").GetValue(inter),
+		inter.GetGlobal("x2"),
 	)
 }
 
@@ -8362,7 +8365,7 @@ func TestInterpretOptionalChainingFieldReadAndNilCoalescing(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(42),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 }
 
@@ -8406,7 +8409,7 @@ func TestInterpretOptionalChainingFunctionCallAndNilCoalescing(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(42),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 }
 
@@ -8450,14 +8453,14 @@ func TestInterpretOptionalChainingArgumentEvaluation(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(nil, 2),
-		inter.Globals.Get("a").GetValue(inter),
+		inter.GetGlobal("a"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(nil, 1),
-		inter.Globals.Get("b").GetValue(inter),
+		inter.GetGlobal("b"),
 	)
 }
 
@@ -8492,8 +8495,8 @@ func TestInterpretCompositeDeclarationNestedTypeScopingOuterInner(t *testing.T) 
 	)
 	require.NoError(t, err)
 
-	x1 := inter.Globals.Get("x1").GetValue(inter)
-	x2 := inter.Globals.Get("x2").GetValue(inter)
+	x1 := inter.GetGlobal("x1")
+	x2 := inter.GetGlobal("x2")
 
 	require.IsType(t,
 		&interpreter.CompositeValue{},
@@ -8537,7 +8540,7 @@ func TestInterpretCompositeDeclarationNestedConstructor(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	x := inter.Globals.Get("x").GetValue(inter)
+	x := inter.GetGlobal("x")
 
 	require.IsType(t,
 		&interpreter.CompositeValue{},
@@ -8608,14 +8611,14 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 			t,
 			inter,
 			addressValue,
-			inter.Globals.Get("address1").GetValue(inter),
+			inter.GetGlobal("address1"),
 		)
 
 		AssertValuesEqual(
 			t,
 			inter,
 			addressValue,
-			inter.Globals.Get("address2").GetValue(inter),
+			inter.GetGlobal("address2"),
 		)
 	})
 
@@ -8758,7 +8761,7 @@ func TestInterpretContractUseInNestedDeclaration(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	i := inter.Globals.Get("C").GetValue(inter).(interpreter.MemberAccessibleValue).
+	i := inter.GetGlobal("C").(interpreter.MemberAccessibleValue).
 		GetMember(inter, interpreter.EmptyLocationRange, "i")
 
 	require.IsType(t,
@@ -8771,7 +8774,7 @@ func TestInterpretNonStorageReference(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t,
+	inter := parseCheckAndPrepare(t,
 		`
           resource NFT {
               var id: Int
@@ -8813,7 +8816,7 @@ func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t,
+	inter := parseCheckAndPrepare(t,
 		`
           resource Foo {
               let name: String
@@ -8861,7 +8864,7 @@ func TestInterpretFix64(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t,
+	inter := parseCheckAndPrepare(t,
 		`
           let a = 789.00123010
           let b = 1234.056
@@ -8873,21 +8876,21 @@ func TestInterpretFix64(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredUFix64Value(78_900_123_010),
-		inter.Globals.Get("a").GetValue(inter),
+		inter.GetGlobal("a"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredUFix64Value(123_405_600_000),
-		inter.Globals.Get("b").GetValue(inter),
+		inter.GetGlobal("b"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredFix64Value(-1_234_500_678_900),
-		inter.Globals.Get("c").GetValue(inter),
+		inter.GetGlobal("c"),
 	)
 }
 
@@ -8895,7 +8898,7 @@ func TestInterpretFix64Mul(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t,
+	inter := parseCheckAndPrepare(t,
 		`
           let a = Fix64(1.1) * -1.1
         `,
@@ -8905,7 +8908,7 @@ func TestInterpretFix64Mul(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredFix64Value(-121000000),
-		inter.Globals.Get("a").GetValue(inter),
+		inter.GetGlobal("a"),
 	)
 }
 
@@ -9047,7 +9050,7 @@ func TestInterpretOptionalChainingOptionalFieldRead(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       struct Test {
           let x: Int?
 
@@ -9066,7 +9069,7 @@ func TestInterpretOptionalChainingOptionalFieldRead(t *testing.T) {
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 		),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 }
 
@@ -9078,7 +9081,7 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           struct S {
               var name: String
               init(name: String) {
@@ -9304,7 +9307,7 @@ func TestInterpretForce(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let x: Int? = 1
           let y = x!
         `)
@@ -9315,14 +9318,14 @@ func TestInterpretForce(t *testing.T) {
 			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewUnmeteredIntValueFromInt64(1),
 			),
-			inter.Globals.Get("x").GetValue(inter),
+			inter.GetGlobal("x"),
 		)
 
 		AssertValuesEqual(
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(1),
-			inter.Globals.Get("y").GetValue(inter),
+			inter.GetGlobal("y"),
 		)
 	})
 
@@ -9330,7 +9333,7 @@ func TestInterpretForce(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let x: Int? = 1
           let y: AnyStruct = x
           let z = y!
@@ -9340,7 +9343,7 @@ func TestInterpretForce(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(1),
-			inter.Globals.Get("z").GetValue(inter),
+			inter.GetGlobal("z"),
 		)
 	})
 
@@ -9348,7 +9351,7 @@ func TestInterpretForce(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let x: Int? = nil
 
           fun test(): Int {
@@ -9366,7 +9369,7 @@ func TestInterpretForce(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let x: Int? = nil
 
           fun test(): AnyStruct {
@@ -9385,7 +9388,7 @@ func TestInterpretForce(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let x: Int = 1
           let y = x!
         `)
@@ -9394,7 +9397,7 @@ func TestInterpretForce(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(1),
-			inter.Globals.Get("y").GetValue(inter),
+			inter.GetGlobal("y"),
 		)
 	})
 
@@ -9402,7 +9405,7 @@ func TestInterpretForce(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let x: Int = 1
           let y: AnyStruct = x
           let z = y!
@@ -9412,7 +9415,7 @@ func TestInterpretForce(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(1),
-			inter.Globals.Get("y").GetValue(inter),
+			inter.GetGlobal("y"),
 		)
 	})
 }
@@ -9592,7 +9595,7 @@ func TestInterpretCountDigits256(t *testing.T) {
 
 			assert.Equal(t,
 				bigInt,
-				inter.Globals.Get("number").GetValue(inter).(interpreter.BigNumberValue).ToBigInt(nil),
+				inter.GetGlobal("number").(interpreter.BigNumberValue).ToBigInt(nil),
 			)
 
 			expected := interpreter.NewUnmeteredUInt8Value(uint8(test.Count))
@@ -9603,7 +9606,7 @@ func TestInterpretCountDigits256(t *testing.T) {
 					t,
 					inter,
 					expected,
-					inter.Globals.Get(variableName).GetValue(inter),
+					inter.GetGlobal(variableName),
 				)
 			}
 		})
@@ -9638,7 +9641,7 @@ func TestInterpretFailableCastingCompositeTypeConfusion(t *testing.T) {
 		t,
 		inter,
 		interpreter.Nil,
-		inter.Globals.Get("s").GetValue(inter),
+		inter.GetGlobal("s"),
 	)
 }
 
@@ -9750,7 +9753,7 @@ func TestInterpretInternalAssignment(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        struct S {
            access(self) let xs: {String: Int}
 
@@ -9878,7 +9881,7 @@ func TestInterpretCopyOnReturn(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t,
+	inter := parseCheckAndPrepare(t,
 		`
           let xs: {String: String} = {}
 
@@ -9913,7 +9916,7 @@ func TestInterpretCopyOnReturn(t *testing.T) {
 
 func BenchmarkInterpretRecursionFib(b *testing.B) {
 
-	inter := parseCheckAndInterpret(b, `
+	inter := parseCheckAndPrepare(b, `
        fun fib(_ n: Int): Int {
            if n < 2 {
               return n
@@ -9942,7 +9945,7 @@ func TestInterpretMissingMember(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t,
+	inter := parseCheckAndPrepare(t,
 		`
           struct X {
               let y: Int
@@ -9962,7 +9965,7 @@ func TestInterpretMissingMember(t *testing.T) {
 	)
 
 	// Remove field `y`
-	compositeValue := inter.Globals.Get("x").GetValue(inter).(*interpreter.CompositeValue)
+	compositeValue := inter.GetGlobal("x").(*interpreter.CompositeValue)
 	compositeValue.RemoveField(inter, interpreter.EmptyLocationRange, "y")
 
 	_, err := inter.Invoke("test")
@@ -10008,12 +10011,12 @@ func TestInterpretHostFunctionStaticType(t *testing.T) {
 	t.Run("toString function", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             let x = 5
             let y = x.toString
         `)
 
-		value := inter.Globals.Get("y").GetValue(inter)
+		value := inter.GetGlobal("y")
 		assert.Equal(
 			t,
 			interpreter.ConvertSemaToStaticType(nil, sema.ToStringFunctionType),
@@ -10024,12 +10027,12 @@ func TestInterpretHostFunctionStaticType(t *testing.T) {
 	t.Run("Type function", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             let x = Type
             let y = x<Int8>()
         `)
 
-		value := inter.Globals.Get("x").GetValue(inter)
+		value := inter.GetGlobal("x")
 		assert.Equal(
 			t,
 			interpreter.ConvertSemaToStaticType(
@@ -10045,7 +10048,7 @@ func TestInterpretHostFunctionStaticType(t *testing.T) {
 			value.StaticType(inter),
 		)
 
-		value = inter.Globals.Get("y").GetValue(inter)
+		value = inter.GetGlobal("y")
 		assert.Equal(
 			t,
 			interpreter.PrimitiveStaticTypeMetaType,
@@ -10060,7 +10063,7 @@ func TestInterpretHostFunctionStaticType(t *testing.T) {
 	t.Run("toString function", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             let a: Int8 = 5
             let b: Fix64 = 4.0
 
@@ -10071,14 +10074,14 @@ func TestInterpretHostFunctionStaticType(t *testing.T) {
 		// Both `x` and `y` are two functions that returns a string.
 		// Hence, their types are equal. i.e: Receivers shouldn't matter.
 
-		xValue := inter.Globals.Get("x").GetValue(inter)
+		xValue := inter.GetGlobal("x")
 		assert.Equal(
 			t,
 			interpreter.ConvertSemaToStaticType(nil, sema.ToStringFunctionType),
 			xValue.StaticType(inter),
 		)
 
-		yValue := inter.Globals.Get("y").GetValue(inter)
+		yValue := inter.GetGlobal("y")
 		assert.Equal(
 			t,
 			interpreter.ConvertSemaToStaticType(nil, sema.ToStringFunctionType),
@@ -10096,7 +10099,7 @@ func TestInterpretArrayTypeInference(t *testing.T) {
 	t.Run("anystruct with empty array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): Type {
                 let x: AnyStruct = []
                 return x.getType()
@@ -10121,7 +10124,7 @@ func TestInterpretArrayTypeInference(t *testing.T) {
 	t.Run("anystruct with numeric array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): Type {
                 let x: AnyStruct = [1, 2, 3]
                 return x.getType()
@@ -10148,7 +10151,7 @@ func TestInterpretArrayFirstIndex(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let xs = [1, 2, 3]
 
       fun test(): Int? {
@@ -10173,7 +10176,7 @@ func TestInterpretArrayFirstIndexDoesNotExist(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let xs = [1, 2, 3]
 
       fun test(): Int? {
@@ -10195,7 +10198,7 @@ func TestInterpretArrayFirstIndexDoesNotExist(t *testing.T) {
 func TestInterpretArrayReverse(t *testing.T) {
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
 		let xs = [1, 2, 3, 100, 200]
 		let ys = [100, 467, 297, 23]
 		let xs_fixed: [Int; 5] = [1, 2, 3, 100, 200]
@@ -10432,28 +10435,28 @@ func TestInterpretArrayFilter(t *testing.T) {
 
 	runValidCase := func(
 		t *testing.T,
-		inter *interpreter.Interpreter,
+		invokable Invokable,
 		filterFuncName,
 		originalFuncName string,
 		filteredArray, originalArray *interpreter.ArrayValue,
 	) {
-		val, err := inter.Invoke(filterFuncName)
+		val, err := invokable.Invoke(filterFuncName)
 		require.NoError(t, err)
 
 		AssertValuesEqual(
 			t,
-			inter,
+			invokable,
 			filteredArray,
 			val,
 		)
 
-		origVal, err := inter.Invoke(originalFuncName)
+		origVal, err := invokable.Invoke(originalFuncName)
 		require.NoError(t, err)
 
 		// Original array remains unchanged
 		AssertValuesEqual(
 			t,
-			inter,
+			invokable,
 			originalArray,
 			origVal,
 		)
@@ -10462,7 +10465,7 @@ func TestInterpretArrayFilter(t *testing.T) {
 	t.Run("with variable sized empty array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			let emptyVals: [Int] = []
 
 			let onlyEven =
@@ -10500,7 +10503,7 @@ func TestInterpretArrayFilter(t *testing.T) {
 	t.Run("with variable sized array of integer", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			let xs = [1, 2, 3, 100, 201]
 
 			let onlyEven =
@@ -10550,7 +10553,7 @@ func TestInterpretArrayFilter(t *testing.T) {
 	t.Run("with variable sized array of struct", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct TestStruct {
 
                 var test: Int
@@ -10617,7 +10620,7 @@ func TestInterpretArrayFilter(t *testing.T) {
 	t.Run("with fixed sized empty array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			let emptyVals_fixed: [Int; 0] = []
 
 			let onlyEven =
@@ -10661,7 +10664,7 @@ func TestInterpretArrayFilter(t *testing.T) {
 	t.Run("with fixed sized array of integer", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			let xs_fixed: [Int; 5] = [1, 2, 3, 100, 201]
 
 			let onlyEven =
@@ -10712,7 +10715,7 @@ func TestInterpretArrayFilter(t *testing.T) {
 	t.Run("with fixed sized array of struct", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			struct TestStruct {
 
 				var test: Int
@@ -10820,28 +10823,28 @@ func TestInterpretArrayMap(t *testing.T) {
 
 	runValidCase := func(
 		t *testing.T,
-		inter *interpreter.Interpreter,
+		invokable Invokable,
 		mapFuncName,
 		originalFuncName string,
 		mappedArray, originalArray *interpreter.ArrayValue,
 	) {
-		val, err := inter.Invoke(mapFuncName)
+		val, err := invokable.Invoke(mapFuncName)
 		require.NoError(t, err)
 
 		AssertValuesEqual(
 			t,
-			inter,
+			invokable,
 			mappedArray,
 			val,
 		)
 
-		origVal, err := inter.Invoke(originalFuncName)
+		origVal, err := invokable.Invoke(originalFuncName)
 		require.NoError(t, err)
 
 		// Original array remains unchanged
 		AssertValuesEqual(
 			t,
-			inter,
+			invokable,
 			originalArray,
 			origVal,
 		)
@@ -10850,7 +10853,7 @@ func TestInterpretArrayMap(t *testing.T) {
 	t.Run("with variable sized empty array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			let emptyVals: [Int] = []
 
 			let plusTen =
@@ -10888,7 +10891,7 @@ func TestInterpretArrayMap(t *testing.T) {
 	t.Run("with variable sized array of integer to Int16", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			let xs = [1, 2, 3, 100, 201]
 
 			let plusTen =
@@ -10941,7 +10944,7 @@ func TestInterpretArrayMap(t *testing.T) {
 	t.Run("with variable sized array of struct to Int", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			struct TestStruct {
 				var test: Int
 
@@ -11003,7 +11006,7 @@ func TestInterpretArrayMap(t *testing.T) {
 	t.Run("with variable sized array of int to struct", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			struct TestStruct {
 				var test: Int
 
@@ -11065,7 +11068,7 @@ func TestInterpretArrayMap(t *testing.T) {
 	t.Run("with fixed sized empty array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			let emptyVals_fixed: [Int; 0] = []
 
 			let trueForEven =
@@ -11110,7 +11113,7 @@ func TestInterpretArrayMap(t *testing.T) {
 	t.Run("with fixed sized array of integer to Int16", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			let xs_fixed: [Int; 5] = [1, 2, 3, 100, 201]
 
 			let plusTen =
@@ -11165,7 +11168,7 @@ func TestInterpretArrayMap(t *testing.T) {
 	t.Run("with fixed sized array of struct to Int", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			struct TestStruct {
 				var test: Int
 
@@ -11228,7 +11231,7 @@ func TestInterpretArrayMap(t *testing.T) {
 	t.Run("with fixed sized array of Int to Struct", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			struct TestStruct {
 				var test: Int
 
@@ -11291,7 +11294,7 @@ func TestInterpretArrayMap(t *testing.T) {
 	t.Run("box and convert argument", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           struct S {
               fun map(f: fun(AnyStruct): String): String {
                   return "S.map"
@@ -11342,7 +11345,7 @@ func TestInterpretArrayToVariableSized(t *testing.T) {
 
 	runValidCase := func(
 		t *testing.T,
-		inter *interpreter.Interpreter,
+		inter Invokable,
 		expectedArray *interpreter.ArrayValue,
 	) {
 		val, err := inter.Invoke("test")
@@ -11359,7 +11362,7 @@ func TestInterpretArrayToVariableSized(t *testing.T) {
 	t.Run("with empty array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			let emptyVals_fixed: [Int; 0] = []
 
 			fun test(): [Int] {
@@ -11384,7 +11387,7 @@ func TestInterpretArrayToVariableSized(t *testing.T) {
 	t.Run("with integer array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			let xs_fixed: [Int; 5] = [1, 2, 3, 100, 201]
 
 			fun test(): [Int] {
@@ -11414,7 +11417,7 @@ func TestInterpretArrayToVariableSized(t *testing.T) {
 	t.Run("with string array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			let xs_fixed: [String; 2] = ["abc", "def"]
 
 			fun test(): [String] {
@@ -11441,7 +11444,7 @@ func TestInterpretArrayToVariableSized(t *testing.T) {
 	t.Run("with array of struct", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			struct TestStruct {
 				var test: Int
 
@@ -11529,15 +11532,15 @@ func TestInterpretArrayToConstantSized(t *testing.T) {
 
 	runValidCase := func(
 		t *testing.T,
-		inter *interpreter.Interpreter,
+		invokable Invokable,
 		expectedArray interpreter.Value,
 	) {
-		val, err := inter.Invoke("test")
+		val, err := invokable.Invoke("test")
 		require.NoError(t, err)
 
 		AssertValuesEqual(
 			t,
-			inter,
+			invokable,
 			expectedArray,
 			val,
 		)
@@ -11546,7 +11549,7 @@ func TestInterpretArrayToConstantSized(t *testing.T) {
 	t.Run("with empty array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			let emptyVals: [Int] = []
 
 			fun test(): [Int;0] {
@@ -11573,7 +11576,7 @@ func TestInterpretArrayToConstantSized(t *testing.T) {
 	t.Run("with integer array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			let xs: [Int] = [1, 2, 3, 100, 201]
 
 			fun test(): [Int; 5]? {
@@ -11607,7 +11610,7 @@ func TestInterpretArrayToConstantSized(t *testing.T) {
 	t.Run("with string array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			let xs: [String] = ["abc", "def"]
 
 			fun test(): [String; 2]? {
@@ -11638,7 +11641,7 @@ func TestInterpretArrayToConstantSized(t *testing.T) {
 	t.Run("with wrong size", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			let xs: [Int] = [1, 2, 3, 100, 201]
 
 			fun test(): [Int; 4]? {
@@ -11656,7 +11659,7 @@ func TestInterpretArrayToConstantSized(t *testing.T) {
 	t.Run("with array of struct", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			struct TestStruct {
 				var test: Int
 
@@ -11788,11 +11791,11 @@ func TestInterpretCastingBoxing(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let a = (1 as? Int?!)?.getType()
         `)
 
-		variable := inter.Globals.Get("a")
+		variable := inter.GetGlobal("a")
 		require.NotNil(t, variable)
 
 		require.Equal(
@@ -11802,7 +11805,7 @@ func TestInterpretCastingBoxing(t *testing.T) {
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
 			),
-			variable.GetValue(inter),
+			variable,
 		)
 	})
 
@@ -11810,11 +11813,11 @@ func TestInterpretCastingBoxing(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let a = (1 as! Int?)?.getType()
         `)
 
-		variable := inter.Globals.Get("a")
+		variable := inter.GetGlobal("a")
 		require.NotNil(t, variable)
 
 		require.Equal(
@@ -11824,7 +11827,7 @@ func TestInterpretCastingBoxing(t *testing.T) {
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
 			),
-			variable.GetValue(inter),
+			variable,
 		)
 	})
 
@@ -11832,11 +11835,11 @@ func TestInterpretCastingBoxing(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let a = (1 as Int?)?.getType()
         `)
 
-		variable := inter.Globals.Get("a")
+		variable := inter.GetGlobal("a")
 		require.NotNil(t, variable)
 
 		require.Equal(
@@ -11846,7 +11849,7 @@ func TestInterpretCastingBoxing(t *testing.T) {
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
 			),
-			variable.GetValue(inter),
+			variable,
 		)
 	})
 }
@@ -11881,7 +11884,7 @@ func TestInterpretNilCoalesceReference(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	variable := inter.Globals.Get("ref")
+	variable := inter.GetGlobal("ref")
 	require.NotNil(t, variable)
 
 	require.Equal(
@@ -11891,7 +11894,7 @@ func TestInterpretNilCoalesceReference(t *testing.T) {
 			BorrowedType:  sema.IntType,
 			Authorization: interpreter.UnauthorizedAccess,
 		},
-		variable.GetValue(inter),
+		variable,
 	)
 }
 
@@ -11939,7 +11942,7 @@ func TestInterpretDictionaryDuplicateKey(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 
           struct S {}
 
@@ -11958,7 +11961,7 @@ func TestInterpretDictionaryDuplicateKey(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 
           resource R {}
 
@@ -11980,7 +11983,7 @@ func TestInterpretDictionaryDuplicateKey(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 
           resource R {}
 
@@ -12164,7 +12167,7 @@ func TestInterpretConditionsWrapperFunctionType(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           struct interface SI {
               fun test(x: Int) {
                   pre { true }
@@ -12477,7 +12480,7 @@ func TestInterpretOptionalAddressInConditional(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(ok: Bool): Address? {
          return ok ? 0x1 : nil
       }
@@ -12512,13 +12515,13 @@ func TestInterpretStringTemplates(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(123),
-			inter.Globals.Get("x").GetValue(inter),
+			inter.GetGlobal("x"),
 		)
 		AssertValuesEqual(
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("x = 123"),
-			inter.Globals.Get("y").GetValue(inter),
+			inter.GetGlobal("y"),
 		)
 	})
 
@@ -12535,7 +12538,7 @@ func TestInterpretStringTemplates(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("abc and 123.32100000"),
-			inter.Globals.Get("z").GetValue(inter),
+			inter.GetGlobal("z"),
 		)
 	})
 
@@ -12552,7 +12555,7 @@ func TestInterpretStringTemplates(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("([{}])"),
-			inter.Globals.Get("z").GetValue(inter),
+			inter.GetGlobal("z"),
 		)
 	})
 
@@ -12568,7 +12571,7 @@ func TestInterpretStringTemplates(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("false"),
-			inter.Globals.Get("y").GetValue(inter),
+			inter.GetGlobal("y"),
 		)
 	})
 
@@ -12587,7 +12590,7 @@ func TestInterpretStringTemplates(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("4"),
-			inter.Globals.Get("x").GetValue(inter),
+			inter.GetGlobal("x"),
 		)
 	})
 
@@ -12603,7 +12606,7 @@ func TestInterpretStringTemplates(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("file at /public/foo"),
-			inter.Globals.Get("x").GetValue(inter),
+			inter.GetGlobal("x"),
 		)
 	})
 
@@ -12621,7 +12624,7 @@ func TestInterpretStringTemplates(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("CAN"),
-			inter.Globals.Get("x").GetValue(inter),
+			inter.GetGlobal("x"),
 		)
 	})
 
@@ -12639,7 +12642,7 @@ func TestInterpretStringTemplates(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("4"),
-			inter.Globals.Get("x").GetValue(inter),
+			inter.GetGlobal("x"),
 		)
 	})
 
@@ -12655,7 +12658,7 @@ func TestInterpretStringTemplates(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("bar"),
-			inter.Globals.Get("x").GetValue(inter),
+			inter.GetGlobal("x"),
 		)
 	})
 
@@ -12670,7 +12673,7 @@ func TestInterpretStringTemplates(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("true"),
-			inter.Globals.Get("x").GetValue(inter),
+			inter.GetGlobal("x"),
 		)
 	})
 }
