@@ -292,7 +292,9 @@ func (vm *VM) Invoke(name string, arguments ...Value) (v Value, err error) {
 func (vm *VM) invoke(function Value, arguments []Value) (Value, error) {
 	functionValue, ok := function.(CompiledFunctionValue)
 	if !ok {
-		return nil, errors.NewDefaultUserError("not invocable")
+		return nil, interpreter.NotInvokableError{
+			Value: function,
+		}
 	}
 
 	if len(arguments) != int(functionValue.Function.ParameterCount) {
@@ -989,22 +991,24 @@ func opNil(vm *VM) {
 
 func opEqual(vm *VM) {
 	left, right := vm.peekPop()
-	result := left.(interpreter.EquatableValue).Equal(
+	result := interpreter.TestValueEqual(
 		vm.context,
 		EmptyLocationRange,
+		left,
 		right,
 	)
-	vm.replaceTop(interpreter.BoolValue(result))
+	vm.replaceTop(result)
 }
 
 func opNotEqual(vm *VM) {
 	left, right := vm.peekPop()
-	result := !left.(interpreter.EquatableValue).Equal(
+	result := !interpreter.TestValueEqual(
 		vm.context,
 		EmptyLocationRange,
+		left,
 		right,
 	)
-	vm.replaceTop(interpreter.BoolValue(result))
+	vm.replaceTop(result)
 }
 
 func opNot(vm *VM) {
