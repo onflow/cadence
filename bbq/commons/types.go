@@ -31,8 +31,9 @@ var BuiltinTypes = common.Concat[sema.Type](
 		&sema.VariableSizedType{},
 		&sema.DictionaryType{},
 		&sema.FunctionType{},
+		&sema.OptionalType{},
 
-		// TODO: add other types. e.g; Optional, etc
+		// TODO: add other types.
 	},
 )
 
@@ -71,7 +72,7 @@ func TypeQualifier(typ sema.Type) string {
 	case *sema.FunctionType:
 		return TypeQualifierFunction
 	case *sema.OptionalType:
-		return TypeQualifier(typ.Type)
+		return TypeQualifierOptional
 	case *sema.ReferenceType:
 		return TypeQualifier(typ.Type)
 	case *sema.IntersectionType:

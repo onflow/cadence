@@ -664,7 +664,7 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	// If the function is a pointer to an object-method, then the receiver is implicitly captured.
 	if boundFunction, isBoundFUnction := functionValue.(*BoundFunctionPointerValue); isBoundFUnction {
 		functionValue = boundFunction.Method
-		receiver := unwrapReceiver(vm.context, boundFunction.Receiver)
+		receiver := maybeDereference(vm.context, boundFunction.Receiver)
 		arguments = append([]Value{receiver}, arguments...)
 	}
 
@@ -682,7 +682,7 @@ func opInvokeMethodStatic(vm *VM, ins opcode.InstructionInvokeMethodStatic) {
 	// Load arguments
 	arguments := vm.popN(int(ins.ArgCount))
 	receiver := arguments[receiverIndex]
-	arguments[receiverIndex] = unwrapReceiver(vm.context, receiver)
+	arguments[receiverIndex] = maybeDereference(vm.context, receiver)
 
 	// Load the invoked value
 	functionValue := vm.pop()
@@ -705,7 +705,7 @@ func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
 	// Load arguments
 	arguments := vm.popN(int(ins.ArgCount))
 	receiver := arguments[receiverIndex]
-	arguments[receiverIndex] = unwrapReceiver(vm.context, receiver)
+	arguments[receiverIndex] = maybeDereference(vm.context, receiver)
 
 	// Get function
 	nameIndex := ins.Name
@@ -762,23 +762,19 @@ func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
 	return typeArguments
 }
 
-func unwrapReceiver(context *Context, receiver Value) Value {
-	for {
-		switch typedReceiver := receiver.(type) {
-		case *interpreter.SomeValue:
-			receiver = typedReceiver.InnerValue()
-		case *interpreter.EphemeralReferenceValue:
-			receiver = typedReceiver.Value
-		case *interpreter.StorageReferenceValue:
-			referencedValue := typedReceiver.ReferencedValue(
-				context,
-				EmptyLocationRange,
-				true,
-			)
-			receiver = *referencedValue
-		default:
-			return receiver
-		}
+func maybeDereference(context *Context, value Value) Value {
+	switch typedValue := value.(type) {
+	case *interpreter.EphemeralReferenceValue:
+		return typedValue.Value
+	case *interpreter.StorageReferenceValue:
+		referencedValue := typedValue.ReferencedValue(
+			context,
+			EmptyLocationRange,
+			true,
+		)
+		return *referencedValue
+	default:
+		return value
 	}
 }
 

@@ -1694,11 +1694,12 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 			panic(errors.NewDefaultUserError("invalid function name"))
 		}
 
-		// Receiver is loaded first. So 'self' is always the zero-th argument.
-		c.compileExpression(invokedExpr.Expression)
-
-		// Compile arguments
-		c.compileArguments(expression.Arguments, invocationTypes)
+		c.compileMethodInvocationArguments(
+			invokedExpr,
+			expression.Arguments,
+			memberInfo,
+			invocationTypes,
+		)
 
 		funcNameConst := c.addStringConst(funcName)
 		c.codeGen.Emit(
@@ -1717,17 +1718,36 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		)
 		c.emitVariableLoad(funcName)
 
-		// Receiver is loaded first. So 'self' is always the zero-th argument.
-		c.compileExpression(invokedExpr.Expression)
-
-		// Compile arguments
-		c.compileArguments(expression.Arguments, invocationTypes)
+		c.compileMethodInvocationArguments(
+			invokedExpr,
+			expression.Arguments,
+			memberInfo,
+			invocationTypes,
+		)
 
 		c.codeGen.Emit(opcode.InstructionInvokeMethodStatic{
 			TypeArgs: typeArgs,
 			ArgCount: argsCountWithReceiver,
 		})
 	}
+}
+
+func (c *Compiler[_, _]) compileMethodInvocationArguments(
+	invokedExpr *ast.MemberExpression,
+	arguments ast. Arguments,
+	memberInfo sema.MemberAccessInfo,
+	invocationTypes sema.InvocationExpressionTypes,
+) {
+	// Receiver is loaded first. So 'self' is always the zero-th argument.
+	c.compileExpression(invokedExpr.Expression)
+
+	// Unwrap the target, if the member access is via optional chaining.
+	if memberInfo.IsOptional {
+		c.codeGen.Emit(opcode.InstructionUnwrap{})
+	}
+
+	// Compile arguments
+	c.compileArguments(arguments, invocationTypes)
 }
 
 func isDynamicMethodInvocation(accessedType sema.Type) bool {

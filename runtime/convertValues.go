@@ -772,7 +772,7 @@ func exportEvent(
 
 func exportFunctionValue(
 	v interpreter.FunctionValue,
-	context interpreter.TypeConverter,
+	context interpreter.ValueStaticTypeContext,
 ) cadence.Function {
 	return cadence.NewMeteredFunction(
 		context,
