@@ -12690,7 +12690,7 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 
 		newInter := func() Invokable {
 
-			inter, err := parseCheckAndInterpretWithOptions(t,
+			inter, err := parseCheckAndPrepareWithOptions(t,
 				code,
 				ParseCheckAndInterpretOptions{
 					Config: &interpreter.Config{
