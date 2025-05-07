@@ -98,15 +98,6 @@ type OnResourceOwnerChangeFunc func(
 	newOwner common.Address,
 )
 
-// OnMeterComputationFunc is a function that is called when some computation is about to happen.
-// intensity captures the intensity of the computation and can be set using input sizes
-// complexity of computation given input sizes, or any other factors that could help the upper levels
-// to differentiate same kind of computation with different level (and time) of execution.
-type OnMeterComputationFunc func(
-	compKind common.ComputationKind,
-	intensity uint,
-)
-
 // CapabilityBorrowHandlerFunc is a function that is used to borrow ID capabilities.
 type CapabilityBorrowHandlerFunc func(
 	context BorrowCapabilityControllerContext,
@@ -261,6 +252,7 @@ type Interpreter struct {
 }
 
 var _ common.MemoryGauge = &Interpreter{}
+var _ common.ComputationGauge = &Interpreter{}
 var _ ast.DeclarationVisitor[StatementResult] = &Interpreter{}
 var _ ast.StatementVisitor[StatementResult] = &Interpreter{}
 var _ ast.ExpressionVisitor[Value] = &Interpreter{}
@@ -5122,14 +5114,10 @@ func (interpreter *Interpreter) GetInterfaceType(
 }
 
 func (interpreter *Interpreter) reportLoopIteration(pos ast.HasPosition) {
-	config := interpreter.SharedState.Config
 
-	onMeterComputation := config.OnMeterComputation
-	if onMeterComputation != nil {
-		onMeterComputation(common.ComputationKindLoop, 1)
-	}
+	common.UseComputation(interpreter, common.LoopComputationUsage)
 
-	onLoopIteration := config.OnLoopIteration
+	onLoopIteration := interpreter.SharedState.Config.OnLoopIteration
 	if onLoopIteration != nil {
 		line := pos.StartPosition().Line
 		onLoopIteration(interpreter, line)
@@ -5137,37 +5125,22 @@ func (interpreter *Interpreter) reportLoopIteration(pos ast.HasPosition) {
 }
 
 func (interpreter *Interpreter) reportFunctionInvocation() {
-	config := interpreter.SharedState.Config
 
-	onMeterComputation := config.OnMeterComputation
-	if onMeterComputation != nil {
-		onMeterComputation(common.ComputationKindFunctionInvocation, 1)
-	}
+	common.UseComputation(interpreter, common.FunctionInvocationComputationUsage)
 
-	onFunctionInvocation := config.OnFunctionInvocation
+	onFunctionInvocation := interpreter.SharedState.Config.OnFunctionInvocation
 	if onFunctionInvocation != nil {
 		onFunctionInvocation(interpreter)
 	}
 }
 
 func (interpreter *Interpreter) reportInvokedFunctionReturn() {
-	config := interpreter.SharedState.Config
-
-	onInvokedFunctionReturn := config.OnInvokedFunctionReturn
+	onInvokedFunctionReturn := interpreter.SharedState.Config.OnInvokedFunctionReturn
 	if onInvokedFunctionReturn == nil {
 		return
 	}
 
 	onInvokedFunctionReturn(interpreter)
-}
-
-func (interpreter *Interpreter) ReportComputation(compKind common.ComputationKind, intensity uint) {
-	config := interpreter.SharedState.Config
-
-	onMeterComputation := config.OnMeterComputation
-	if onMeterComputation != nil {
-		onMeterComputation(compKind, intensity)
-	}
 }
 
 func getAccessOfMember(context ValueStaticTypeContext, self Value, identifier string) sema.Access {
@@ -5682,6 +5655,15 @@ func (interpreter *Interpreter) MeterMemory(usage common.MemoryUsage) error {
 	if interpreter != nil {
 		config := interpreter.SharedState.Config
 		common.UseMemory(config.MemoryGauge, usage)
+	}
+	return nil
+}
+
+// MeterComputation delegates the computation usage to the interpreter's computation gauge, if any.
+func (interpreter *Interpreter) MeterComputation(usage common.ComputationUsage) error {
+	if interpreter != nil {
+		config := interpreter.SharedState.Config
+		common.UseComputation(config.ComputationGauge, usage)
 	}
 	return nil
 }

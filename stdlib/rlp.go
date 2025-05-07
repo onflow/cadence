@@ -48,22 +48,30 @@ const rlpErrMsgInputContainsExtraBytes = "input data is expected to be RLP-encod
 var rlpDecodeStringFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
 	RLPTypeDecodeStringFunctionType,
 	func(invocation interpreter.Invocation) interpreter.Value {
+		context := invocation.InvocationContext
+		locationRange := invocation.LocationRange
+
 		input, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
 
-		invocation.InvocationContext.ReportComputation(common.ComputationKindSTDLIBRLPDecodeString, uint(input.Count()))
-
-		locationRange := invocation.LocationRange
-
-		convertedInput, err := interpreter.ByteArrayValueToByteSlice(invocation.InvocationContext, input, locationRange)
+		convertedInput, err := interpreter.ByteArrayValueToByteSlice(context, input, locationRange)
 		if err != nil {
 			panic(RLPDecodeStringError{
 				Msg:           err.Error(),
 				LocationRange: locationRange,
 			})
 		}
+
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindSTDLIBRLPDecodeString,
+				Intensity: uint64(input.Count()),
+			},
+		)
+
 		output, bytesRead, err := rlp.DecodeString(convertedInput, 0)
 		if err != nil {
 			panic(RLPDecodeStringError{
@@ -71,13 +79,15 @@ var rlpDecodeStringFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
 				LocationRange: locationRange,
 			})
 		}
+
 		if bytesRead != len(convertedInput) {
 			panic(RLPDecodeStringError{
 				Msg:           rlpErrMsgInputContainsExtraBytes,
 				LocationRange: locationRange,
 			})
 		}
-		return interpreter.ByteSliceToByteArrayValue(invocation.InvocationContext, output)
+
+		return interpreter.ByteSliceToByteArrayValue(context, output)
 	},
 )
 
@@ -98,22 +108,29 @@ func (e RLPDecodeListError) Error() string {
 var rlpDecodeListFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
 	RLPTypeDecodeListFunctionType,
 	func(invocation interpreter.Invocation) interpreter.Value {
+		context := invocation.InvocationContext
+		locationRange := invocation.LocationRange
+
 		input, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
 
-		invocation.InvocationContext.ReportComputation(common.ComputationKindSTDLIBRLPDecodeList, uint(input.Count()))
-
-		locationRange := invocation.LocationRange
-
-		convertedInput, err := interpreter.ByteArrayValueToByteSlice(invocation.InvocationContext, input, locationRange)
+		convertedInput, err := interpreter.ByteArrayValueToByteSlice(context, input, locationRange)
 		if err != nil {
 			panic(RLPDecodeListError{
 				Msg:           err.Error(),
 				LocationRange: locationRange,
 			})
 		}
+
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindSTDLIBRLPDecodeList,
+				Intensity: uint64(input.Count()),
+			},
+		)
 
 		output, bytesRead, err := rlp.DecodeList(convertedInput, 0)
 
@@ -133,14 +150,14 @@ var rlpDecodeListFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
 
 		values := make([]interpreter.Value, len(output))
 		for i, b := range output {
-			values[i] = interpreter.ByteSliceToByteArrayValue(invocation.InvocationContext, b)
+			values[i] = interpreter.ByteSliceToByteArrayValue(context, b)
 		}
 
 		return interpreter.NewArrayValue(
-			invocation.InvocationContext,
+			context,
 			locationRange,
 			interpreter.NewVariableSizedStaticType(
-				invocation.InvocationContext,
+				context,
 				interpreter.ByteArrayStaticType,
 			),
 			common.ZeroAddress,

@@ -436,6 +436,11 @@ func (n NoOpReferenceCreationContext) MeterMemory(usage common.MemoryUsage) erro
 	return nil
 }
 
+func (n NoOpReferenceCreationContext) MeterComputation(usage common.ComputationUsage) error {
+	// NO-OP
+	return nil
+}
+
 func (n NoOpReferenceCreationContext) ReadStored(storageAddress common.Address, domain common.StorageDomain, identifier interpreter.StorageMapKey) interpreter.Value {
 	// NO-OP
 	return nil

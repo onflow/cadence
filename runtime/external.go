@@ -51,9 +51,9 @@ func (e ExternalInterface) MeterMemory(usage common.MemoryUsage) (err error) {
 	return
 }
 
-func (e ExternalInterface) MeterComputation(operationType common.ComputationKind, intensity uint) (err error) {
+func (e ExternalInterface) MeterComputation(usage common.ComputationUsage) (err error) {
 	errors.WrapPanic(func() {
-		err = e.Interface.MeterComputation(operationType, intensity)
+		err = e.Interface.MeterComputation(usage)
 	})
 	if err != nil {
 		err = interpreter.WrappedExternalError(err)

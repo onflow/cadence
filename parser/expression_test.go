@@ -326,9 +326,9 @@ func TestParseAdvancedExpression(t *testing.T) {
 
 		_, errs := ParseExpression(gauge, []byte("1 < 2"), Config{})
 		require.Len(t, errs, 1)
-		require.IsType(t, errors.MemoryError{}, errs[0])
+		require.IsType(t, errors.MemoryMeteringError{}, errs[0])
 
-		fatalError, _ := errs[0].(errors.MemoryError)
+		fatalError, _ := errs[0].(errors.MemoryMeteringError)
 		var expectedError limitingMemoryGaugeError
 		assert.ErrorAs(t, fatalError, &expectedError)
 	})
@@ -342,9 +342,9 @@ func TestParseAdvancedExpression(t *testing.T) {
 
 		_, errs := ParseExpression(gauge, []byte("1 < 2 > 3"), Config{})
 		require.Len(t, errs, 1)
-		require.IsType(t, errors.MemoryError{}, errs[0])
+		require.IsType(t, errors.MemoryMeteringError{}, errs[0])
 
-		fatalError, _ := errs[0].(errors.MemoryError)
+		fatalError, _ := errs[0].(errors.MemoryMeteringError)
 		var expectedError limitingMemoryGaugeError
 		assert.ErrorAs(t, fatalError, &expectedError)
 	})

@@ -1019,8 +1019,8 @@ func TestRuntimeMemoryMeteringErrors(t *testing.T) {
 		require.IsType(t, Error{}, err)
 		runtimeError := err.(Error)
 
-		require.IsType(t, errors.MemoryError{}, runtimeError.Err)
-		fatalError := runtimeError.Err.(errors.MemoryError)
+		require.IsType(t, errors.MemoryMeteringError{}, runtimeError.Err)
+		fatalError := runtimeError.Err.(errors.MemoryMeteringError)
 
 		assert.Contains(t, fatalError.Error(), "memory limit exceeded")
 	})

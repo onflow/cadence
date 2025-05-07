@@ -112,7 +112,7 @@ var _ ReferenceTracker = &Interpreter{}
 type ValueTransferContext interface {
 	StorageContext
 	ReferenceTracker
-	ComputationReporter
+	common.ComputationGauge
 	Tracer
 
 	OnResourceOwnerChange(
@@ -148,12 +148,6 @@ var _ ValueCreationContext = &Interpreter{}
 type ValueRemoveContext = ValueTransferContext
 
 var _ ValueRemoveContext = &Interpreter{}
-
-type ComputationReporter interface {
-	ReportComputation(compKind common.ComputationKind, intensity uint)
-}
-
-var _ ComputationReporter = &Interpreter{}
 
 type ContainerMutationContext interface {
 	ValueTransferContext
@@ -367,8 +361,7 @@ type CapabilityHandlers interface {
 var _ CapabilityHandlers = &Interpreter{}
 
 type StringValueFunctionContext interface {
-	common.MemoryGauge
-	ComputationReporter
+	common.Gauge
 }
 
 var _ StringValueFunctionContext = &Interpreter{}
@@ -543,6 +536,10 @@ func (ctx NoOpStringContext) MeterMemory(_ common.MemoryUsage) error {
 	return nil
 }
 
+func (ctx NoOpStringContext) MeterComputation(_ common.ComputationUsage) error {
+	panic(errors.NewUnreachableError())
+}
+
 func (ctx NoOpStringContext) WithMutationPrevention(_ atree.ValueID, f func()) {
 	f()
 }
@@ -604,10 +601,6 @@ func (ctx NoOpStringContext) ClearReferencedResourceKindedValues(_ atree.ValueID
 }
 
 func (ctx NoOpStringContext) ReferencedResourceKindedValues(_ atree.ValueID) map[*EphemeralReferenceValue]struct{} {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportComputation(_ common.ComputationKind, _ uint) {
 	panic(errors.NewUnreachableError())
 }
 

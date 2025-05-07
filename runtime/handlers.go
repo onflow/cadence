@@ -213,15 +213,6 @@ func newResourceOwnerChangedHandler(i *Interface) interpreter.OnResourceOwnerCha
 	}
 }
 
-func newOnMeterComputation(i *Interface) interpreter.OnMeterComputationFunc {
-	return func(compKind common.ComputationKind, intensity uint) {
-		err := (*i).MeterComputation(compKind, intensity)
-		if err != nil {
-			panic(err)
-		}
-	}
-}
-
 func newOnEventEmittedHandler(i *Interface) interpreter.OnEventEmittedFunc {
 	return func(
 		context interpreter.ValueExportContext,

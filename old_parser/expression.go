@@ -574,7 +574,7 @@ func defineLessThanOrTypeArgumentsExpression() {
 				defer func() {
 					err := recover()
 					// MemoryError should abort parsing
-					_, ok := err.(errors.MemoryError)
+					_, ok := err.(errors.MemoryMeteringError)
 					if ok {
 						panic(err)
 					}
