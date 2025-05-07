@@ -333,10 +333,7 @@ func (d *Desugar) desugarPreConditions(
 
 	desugaredConditions := make([]ast.Statement, 0)
 
-	// Current function has an implementations only if it:
-	// 1) Is not an inherited function (i.e: implementation must not be an inherited one), AND
-	// 2) The function has statements.
-	functionHasImpl := !d.isInheritedFunction && funcBlock.HasStatements()
+	functionHasImpl := d.functionHasImplementation(funcBlock)
 
 	// Desugar inherited pre-conditions
 	inheritedFuncs := d.inheritedFuncsWithConditions[enclosingFuncName]
@@ -381,6 +378,13 @@ func (d *Desugar) desugarPreConditions(
 	return nil
 }
 
+func (d *Desugar) functionHasImplementation(funcBlock *ast.FunctionBlock) bool {
+	// Current function has an implementations only if it:
+	// 1) Is not an inherited function (i.e: implementation must not be an inherited one), AND
+	// 2) The function has statements.
+	return !d.isInheritedFunction && funcBlock.HasStatements()
+}
+
 func (d *Desugar) desugarPostConditions(
 	enclosingFuncName string,
 	funcBlock *ast.FunctionBlock,
@@ -406,10 +410,7 @@ func (d *Desugar) desugarPostConditions(
 		}
 	}
 
-	// Current function has an implementations only if it:
-	// 1) Is not an inherited function (i.e: implementation must not be an inherited one), AND
-	// 2) The function has statements.
-	functionHasImpl := !d.isInheritedFunction && funcBlock.HasStatements()
+	functionHasImpl := d.functionHasImplementation(funcBlock)
 
 	// Desugar inherited post-conditions
 	inheritedFuncs, ok := d.inheritedFuncsWithConditions[enclosingFuncName]

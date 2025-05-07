@@ -2349,24 +2349,30 @@ func (c *Compiler[_, _]) VisitCompositeDeclaration(declaration *ast.CompositeDec
 	}
 
 	// Visit members.
+	c.compileCompositeMembers(compositeType, declaration.Members)
+
+	return
+}
+
+func (c *Compiler[_, _]) compileCompositeMembers(
+	compositeKindedType sema.CompositeKindedType,
+	members *ast.Members,
+) {
+
 	// Important: Must be visited in the same order as the globals were reserved in `reserveGlobalVars`.
 
 	// Add the methods that are provided natively.
-	c.addBuiltinMethods(compositeType)
+	c.addBuiltinMethods(compositeKindedType)
 
-	for _, function := range declaration.Members.Functions() {
+	for _, function := range members.Functions() {
 		c.compileDeclaration(function)
 	}
-	for _, nestedTypes := range declaration.Members.Composites() {
-		c.compileDeclaration(nestedTypes)
+	for _, nestedType := range members.Composites() {
+		c.compileDeclaration(nestedType)
 	}
-	for _, nestedTypes := range declaration.Members.Interfaces() {
-		c.compileDeclaration(nestedTypes)
+	for _, nestedType := range members.Interfaces() {
+		c.compileDeclaration(nestedType)
 	}
-
-	// TODO:
-
-	return
 }
 
 func (c *Compiler[_, _]) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) (_ struct{}) {
@@ -2377,20 +2383,8 @@ func (c *Compiler[_, _]) VisitInterfaceDeclaration(declaration *ast.InterfaceDec
 	}()
 
 	// Visit members.
-	// Important: Must be visited in the same order as the globals were reserved in `reserveGlobalVars`.
+	c.compileCompositeMembers(interfaceType, declaration.Members)
 
-	// Add the methods that are provided natively.
-	c.addBuiltinMethods(interfaceType)
-
-	for _, function := range declaration.Members.Functions() {
-		c.compileDeclaration(function)
-	}
-	for _, nestedTypes := range declaration.Members.Composites() {
-		c.compileDeclaration(nestedTypes)
-	}
-	for _, nestedTypes := range declaration.Members.Interfaces() {
-		c.compileDeclaration(nestedTypes)
-	}
 	return
 }
 
