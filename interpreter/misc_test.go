@@ -2076,7 +2076,7 @@ func TestInterpretCompositeDeclaration(t *testing.T) {
 
 			t.Parallel()
 
-			inter, err := parseCheckAndInterpretWithOptions(t,
+			inter, err := parseCheckAndPrepareWithOptions(t,
 				fmt.Sprintf(
 					`
                        access(all) %[1]s Test {}
@@ -5002,7 +5002,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 
 		t.Parallel()
 
-		var inter *interpreter.Interpreter
+		var inter Invokable
 
 		getType := func(name string) sema.Type {
 			variable, ok := inter.GetGlobalType(name)
@@ -5074,7 +5074,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		storage := newUnmeteredInMemoryStorage()
 
 		var err error
-		inter, err = parseCheckAndInterpretWithOptions(t,
+		inter, err = parseCheckAndPrepareWithOptions(t,
 			`
 	              resource interface RI {}
 
@@ -6459,7 +6459,7 @@ func TestInterpretResourceMoveInArrayAndDestroy(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           resource Foo {
               event ResourceDestroyed(
@@ -6533,7 +6533,7 @@ func TestInterpretResourceMoveInDictionaryAndDestroy(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           resource Foo {
               event ResourceDestroyed(
@@ -7031,7 +7031,7 @@ func TestInterpretResourceDestroyExpressionDestructor(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
            resource R {
                event ResourceDestroyed()
@@ -7074,7 +7074,7 @@ func TestInterpretResourceDestroyExpressionNestedResources(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           resource B {
             var foo: Int
@@ -7149,7 +7149,7 @@ func TestInterpretResourceDestroyArray(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           resource R {
               event ResourceDestroyed()
@@ -7192,7 +7192,7 @@ func TestInterpretResourceDestroyDictionary(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           resource R {
               event ResourceDestroyed()
@@ -7235,7 +7235,7 @@ func TestInterpretResourceDestroyOptionalSome(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           resource R {
               event ResourceDestroyed()
@@ -7277,7 +7277,7 @@ func TestInterpretResourceDestroyOptionalNil(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           resource R {
               event ResourceDestroyed()
@@ -7353,7 +7353,7 @@ func TestInterpretEmitEvent(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           event Transfer(to: Int, from: Int)
           event TransferAmount(to: Int, from: Int, amount: Int)
@@ -7419,7 +7419,7 @@ func TestInterpretReferenceEventParameter(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           event TestEvent(ref: &[{Int: String}])
 
@@ -8333,7 +8333,7 @@ func TestInterpretOptionalChainingFieldReadAndNilCoalescing(t *testing.T) {
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           struct Test {
               let x: Int
@@ -8379,7 +8379,7 @@ func TestInterpretOptionalChainingFunctionCallAndNilCoalescing(t *testing.T) {
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           struct Test {
               fun x(): Int {
@@ -8523,7 +8523,7 @@ func TestInterpretCompositeDeclarationNestedConstructor(t *testing.T) {
 
 	t.Parallel()
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           access(all) contract Test {
 
@@ -8734,7 +8734,7 @@ func TestInterpretContractUseInNestedDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	inter, err := parseCheckAndInterpretWithOptions(t, `
+	inter, err := parseCheckAndPrepareWithOptions(t, `
           access(all) contract C {
 
               access(all) var i: Int
@@ -9424,7 +9424,7 @@ func TestInterpretEphemeralReferenceToOptional(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := parseCheckAndInterpretWithOptions(t,
+	_, err := parseCheckAndPrepareWithOptions(t,
 		`
           contract C {
 
@@ -9467,7 +9467,7 @@ func TestInterpretNestedDeclarationOrder(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := parseCheckAndInterpretWithOptions(t,
+		_, err := parseCheckAndPrepareWithOptions(t,
 			`
               access(all) contract Test {
 
@@ -9501,7 +9501,7 @@ func TestInterpretNestedDeclarationOrder(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := parseCheckAndInterpretWithOptions(t,
+		_, err := parseCheckAndPrepareWithOptions(t,
 			`
               access(all) contract Test {
 
@@ -9617,7 +9617,7 @@ func TestInterpretFailableCastingCompositeTypeConfusion(t *testing.T) {
 
 	t.Parallel()
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           contract A {
               struct S {}
@@ -9652,7 +9652,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
             resource B {
                 let id: Int
@@ -10781,7 +10781,7 @@ func TestInterpretArrayFilter(t *testing.T) {
 	t.Run("box and convert argument", func(t *testing.T) {
 		t.Parallel()
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
               struct S {
                   fun map(f: fun(AnyStruct): String): Bool {
                       return true
@@ -11864,7 +11864,7 @@ func TestInterpretNilCoalesceReference(t *testing.T) {
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           let xs = {"a": 2}
           let ref = &xs["a"] as &Int? ?? panic("no a")
@@ -11908,7 +11908,7 @@ func TestInterpretNilCoalesceAnyResourceAndPanic(t *testing.T) {
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
-	_, err := parseCheckAndInterpretWithOptions(t,
+	_, err := parseCheckAndPrepareWithOptions(t,
 		`
           resource R {}
 
@@ -12688,7 +12688,7 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 
 		ledger := NewTestLedger(nil, nil)
 
-		newInter := func() *interpreter.Interpreter {
+		newInter := func() Invokable {
 
 			inter, err := parseCheckAndInterpretWithOptions(t,
 				code,
