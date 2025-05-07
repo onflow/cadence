@@ -175,8 +175,7 @@ func init() {
 				value := arguments[receiverIndex]
 				array := value.(*interpreter.ArrayValue)
 				otherArray := arguments[1].(*interpreter.ArrayValue)
-				array.Concat(context, EmptyLocationRange, otherArray)
-				return interpreter.Void
+				return array.Concat(context, EmptyLocationRange, otherArray)
 			},
 		),
 	)
@@ -301,7 +300,7 @@ func init() {
 			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				value := arguments[receiverIndex]
 				array := value.(*interpreter.ArrayValue)
-				constantSizedArrayType := typeArguments[1].(*interpreter.ConstantSizedStaticType)
+				constantSizedArrayType := typeArguments[0].(*interpreter.ConstantSizedStaticType)
 				return array.ToConstantSized(
 					context,
 					EmptyLocationRange,
