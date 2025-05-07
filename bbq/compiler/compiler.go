@@ -1712,8 +1712,12 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 
 	} else {
 		// Load function value
+		accessedType := memberInfo.AccessedType
+		if memberInfo.IsOptional {
+			accessedType = sema.UnwrapOptionalType(accessedType)
+		}
 		funcName = commons.TypeQualifiedName(
-			memberInfo.AccessedType,
+			accessedType,
 			invokedExpr.Identifier.Identifier,
 		)
 		c.emitVariableLoad(funcName)
