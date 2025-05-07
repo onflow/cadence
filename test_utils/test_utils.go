@@ -163,7 +163,12 @@ func ParseCheckAndPrepareWithOptions(
 
 	interpreterConfig := options.Config
 
-	vmConfig := (&vm.Config{}).
+	var storage interpreter.Storage
+	if interpreterConfig != nil {
+		storage = interpreterConfig.Storage
+	}
+
+	vmConfig := vm.NewConfig(storage).
 		WithInterpreterConfig(interpreterConfig).
 		WithDebugEnabled()
 
