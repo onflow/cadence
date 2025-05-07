@@ -2486,6 +2486,10 @@ func (c *Compiler[_, _]) emitTransfer(targetType sema.Type) {
 
 	lastInstruction := c.codeGen.LastInstruction()
 
+	// TODO: Revisit the below logic: last instruction may not always be the
+	//  actually executed last instruction, in case where branching is present.
+	//  e.g: conditional-expression
+
 	// Optimization: We can omit the transfer in some cases
 	switch lastInstruction := lastInstruction.(type) {
 	case opcode.InstructionGetConstant:
@@ -2524,10 +2528,13 @@ func (c *Compiler[_, _]) emitTransfer(targetType sema.Type) {
 			}
 		}
 
-	case opcode.InstructionNil:
-		// If the last instruction is a nil load,
-		// then the transfer is not needed.
-		return
+		// TODO: Cannot always skip a transfer after a nil.
+		//  e.g: conditional-expression (var a: Int? = condition ? 123 : nil)
+		//  Here last instruction can be `123` constant-load, depending on the execution.
+		//case opcode.InstructionNil:
+		//	// If the last instruction is a nil load,
+		//	// then the transfer is not needed.
+		//	return
 	}
 
 	typeIndex := c.getOrAddType(targetType)

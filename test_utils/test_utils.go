@@ -89,10 +89,6 @@ func (v *VMInvokable) InitializeContract(contractName string, arguments ...inter
 func ParseCheckAndPrepare(tb testing.TB, code string, compile bool) Invokable {
 	tb.Helper()
 
-	if !compile {
-		return ParseCheckAndInterpret(tb, code)
-	}
-
 	invokable, err := ParseCheckAndPrepareWithOptions(tb, code, ParseCheckAndInterpretOptions{}, compile)
 	require.NoError(tb, err)
 

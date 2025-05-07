@@ -5517,7 +5517,7 @@ func TestCompileTransferNil(t *testing.T) {
 		[]opcode.Instruction{
 			// let x: Int? = nil
 			opcode.InstructionNil{},
-			// NOTE: *no* transfer
+			opcode.InstructionTransfer{Type: 1},
 			opcode.InstructionSetLocal{Local: 0},
 			// return
 			opcode.InstructionReturn{},
