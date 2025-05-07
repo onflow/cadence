@@ -368,7 +368,6 @@ func BenchmarkMethodCall(b *testing.B) {
 		)
 		importedProgram := importCompiler.Compile()
 
-
 		_, importedContractValue := initializeContract(
 			b,
 			location,
@@ -480,7 +479,6 @@ func BenchmarkMethodCall(b *testing.B) {
 			importedChecker.Location,
 		)
 		importedProgram := importCompiler.Compile()
-
 
 		_, importedContractValue := initializeContract(
 			b,

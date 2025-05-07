@@ -20,7 +20,6 @@ package test
 
 import (
 	"fmt"
-	"github.com/onflow/cadence/bbq/opcode"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -30,6 +29,7 @@ import (
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/compiler"
+	"github.com/onflow/cadence/bbq/opcode"
 	. "github.com/onflow/cadence/bbq/test_utils"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
@@ -548,7 +548,7 @@ func TestContractImport(t *testing.T) {
 		)
 		importedProgram := importCompiler.Compile()
 
-		vmInstance, importedContractValue := initializeContract(
+		_, importedContractValue := initializeContract(
 			t,
 			importLocation,
 			importedProgram,
@@ -604,7 +604,7 @@ func TestContractImport(t *testing.T) {
 			},
 		}
 
-		vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
@@ -646,7 +646,7 @@ func TestContractImport(t *testing.T) {
 		)
 		importedProgram := importCompiler.Compile()
 
-		vmInstance, importedContractValue := initializeContract(
+		_, importedContractValue := initializeContract(
 			t,
 			importLocation,
 			importedProgram,
@@ -701,7 +701,7 @@ func TestContractImport(t *testing.T) {
 			},
 		}
 
-		vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
@@ -821,7 +821,7 @@ func TestContractImport(t *testing.T) {
 			},
 		}
 
-		vmInstance, barContractValue := initializeContract(
+		_, barContractValue := initializeContract(
 			t,
 			barLocation,
 			barProgram,
@@ -927,7 +927,7 @@ func TestContractImport(t *testing.T) {
 			},
 		}
 
-		vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
@@ -1422,7 +1422,7 @@ func TestContractField(t *testing.T) {
 		)
 		importedProgram := importCompiler.Compile()
 
-		vmInstance, importedContractValue := initializeContract(
+		_, importedContractValue := initializeContract(
 			t,
 			importLocation,
 			importedProgram,
@@ -1479,7 +1479,7 @@ func TestContractField(t *testing.T) {
 			},
 		}
 
-		vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
@@ -1514,7 +1514,7 @@ func TestContractField(t *testing.T) {
 		)
 		importedProgram := importCompiler.Compile()
 
-		vmInstance, importedContractValue := initializeContract(
+		_, importedContractValue := initializeContract(
 			t,
 			importLocation,
 			importedProgram,
@@ -1570,7 +1570,7 @@ func TestContractField(t *testing.T) {
 			},
 		}
 
-		vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
@@ -2213,7 +2213,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 
 		importedProgram := importCompiler.Compile()
 
-		vmInstance, importedContractValue := initializeContract(
+		_, importedContractValue := initializeContract(
 			t,
 			contractLocation,
 			importedProgram,
@@ -2276,7 +2276,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 			},
 		}
 
-		vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 		result, err := vmInstance.Invoke("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
@@ -6032,7 +6032,7 @@ func TestContractAccount(t *testing.T) {
 	)
 	importedProgram := importCompiler.Compile()
 
-	vmInstance, importedContractValue := initializeContract(
+	_, importedContractValue := initializeContract(
 		t,
 		importLocation,
 		importedProgram,
@@ -6109,7 +6109,7 @@ func TestContractAccount(t *testing.T) {
 		},
 	})
 
-	vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
+	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 	result, err := vmInstance.Invoke("test")
 	require.NoError(t, err)
@@ -6154,7 +6154,7 @@ func TestResourceOwner(t *testing.T) {
 	)
 	importedProgram := importCompiler.Compile()
 
-	vmInstance, importedContractValue := initializeContract(
+	_, importedContractValue := initializeContract(
 		t,
 		importLocation,
 		importedProgram,
@@ -6241,7 +6241,7 @@ func TestResourceOwner(t *testing.T) {
 		},
 	})
 
-	vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
+	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 	result, err := vmInstance.Invoke("test")
 	require.NoError(t, err)
@@ -6285,7 +6285,7 @@ func TestResourceUUID(t *testing.T) {
 	)
 	importedProgram := importCompiler.Compile()
 
-	vmInstance, importedContractValue := initializeContract(
+	_, importedContractValue := initializeContract(
 		t,
 		importLocation,
 		importedProgram,
@@ -6350,7 +6350,7 @@ func TestResourceUUID(t *testing.T) {
 		},
 	})
 
-	vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
+	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 	result, err := vmInstance.Invoke("test")
 	require.NoError(t, err)
@@ -6664,7 +6664,7 @@ func TestContractClosure(t *testing.T) {
 	)
 	importedProgram := importCompiler.Compile()
 
-	vmInstance, importedContractValue := initializeContract(
+	_, importedContractValue := initializeContract(
 		t,
 		importLocation,
 		importedProgram,
@@ -6736,7 +6736,7 @@ func TestContractClosure(t *testing.T) {
 		},
 	}
 
-	vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
+	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 	result, err := vmInstance.Invoke("test")
 	require.NoError(t, err)
