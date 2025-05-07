@@ -145,8 +145,8 @@ func init() {
 		NewNativeFunctionValueWithDerivedType(
 			sema.ArrayTypeAppendAllFunctionName,
 			func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
-				elementType := arrayElementTypeFromValue(receiver, context)
-				return sema.ArrayAppendAllFunctionType(elementType)
+				arrayType := arrayTypeFromValue(receiver, context)
+				return sema.ArrayAppendAllFunctionType(arrayType)
 			},
 			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				value := arguments[receiverIndex]
@@ -168,8 +168,8 @@ func init() {
 		NewNativeFunctionValueWithDerivedType(
 			sema.ArrayTypeConcatFunctionName,
 			func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
-				elementType := arrayElementTypeFromValue(receiver, context)
-				return sema.ArrayConcatFunctionType(elementType)
+				arrayType := arrayTypeFromValue(receiver, context)
+				return sema.ArrayConcatFunctionType(arrayType)
 			},
 			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				value := arguments[receiverIndex]

@@ -1022,7 +1022,7 @@ func opUnwrap(vm *VM) {
 	case *interpreter.SomeValue:
 		vm.replaceTop(value.InnerValue())
 	case interpreter.NilValue:
-		panic(ForceNilError{})
+		panic(interpreter.ForceNilError{})
 	default:
 		// Non-optional. Leave as is.
 	}
