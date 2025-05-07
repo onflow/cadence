@@ -20,8 +20,6 @@ package runtime
 
 import (
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/interpreter"
 )
 
 func getLocationCodeFromInterface(
@@ -32,16 +30,9 @@ func getLocationCodeFromInterface(
 	err error,
 ) {
 	if addressLocation, ok := location.(common.AddressLocation); ok {
-		errors.WrapPanic(func() {
-			code, err = i.GetAccountContractCode(addressLocation)
-		})
+		code, err = i.GetAccountContractCode(addressLocation)
 	} else {
-		errors.WrapPanic(func() {
-			code, err = i.GetCode(location)
-		})
-	}
-	if err != nil {
-		err = interpreter.WrappedExternalError(err)
+		code, err = i.GetCode(location)
 	}
 	return
 }

@@ -175,14 +175,11 @@ func getBlockAtHeight(
 	exists bool,
 ) {
 	var err error
-	errors.WrapPanic(func() {
-		block, exists, err = provider.GetBlockAtHeight(height)
-	})
+	block, exists, err = provider.GetBlockAtHeight(height)
 	if err != nil {
-		panic(interpreter.WrappedExternalError(err))
+		panic(err)
 	}
-
-	return block, exists
+	return
 }
 
 type CurrentBlockProvider interface {
@@ -198,13 +195,9 @@ func NewGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibraryVa
 		getCurrentBlockFunctionDocString,
 		func(invocation interpreter.Invocation) interpreter.Value {
 
-			var height uint64
-			var err error
-			errors.WrapPanic(func() {
-				height, err = provider.GetCurrentBlockHeight()
-			})
+			height, err := provider.GetCurrentBlockHeight()
 			if err != nil {
-				panic(interpreter.WrappedExternalError(err))
+				panic(err)
 			}
 
 			block, exists := getBlockAtHeight(

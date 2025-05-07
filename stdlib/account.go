@@ -155,11 +155,9 @@ func NewAccountConstructor(creator AccountCreator) StandardLibraryValue {
 				inter,
 				func() (address common.Address) {
 					var err error
-					errors.WrapPanic(func() {
-						address, err = creator.CreateAccount(payerAddress)
-					})
+					address, err = creator.CreateAccount(payerAddress)
 					if err != nil {
-						panic(interpreter.WrappedExternalError(err))
+						panic(err)
 					}
 
 					return
@@ -462,16 +460,13 @@ func newAccountBalanceGetFunction(
 	address := addressValue.ToAddress()
 
 	return func() interpreter.UFix64Value {
-		return interpreter.NewUFix64Value(gauge, func() (balance uint64) {
-			var err error
-			errors.WrapPanic(func() {
-				balance, err = provider.GetAccountBalance(address)
-			})
+		return interpreter.NewUFix64Value(gauge, func() uint64 {
+			balance, err := provider.GetAccountBalance(address)
 			if err != nil {
-				panic(interpreter.WrappedExternalError(err))
+				panic(err)
 			}
 
-			return
+			return balance
 		})
 	}
 }
@@ -491,16 +486,13 @@ func newAccountAvailableBalanceGetFunction(
 	address := addressValue.ToAddress()
 
 	return func() interpreter.UFix64Value {
-		return interpreter.NewUFix64Value(gauge, func() (balance uint64) {
-			var err error
-			errors.WrapPanic(func() {
-				balance, err = provider.GetAccountAvailableBalance(address)
-			})
+		return interpreter.NewUFix64Value(gauge, func() uint64 {
+			balance, err := provider.GetAccountAvailableBalance(address)
 			if err != nil {
-				panic(interpreter.WrappedExternalError(err))
+				panic(err)
 			}
 
-			return
+			return balance
 		})
 	}
 }
@@ -531,12 +523,9 @@ func newStorageUsedGetFunction(
 		return interpreter.NewUInt64Value(
 			context,
 			func() uint64 {
-				var capacity uint64
-				errors.WrapPanic(func() {
-					capacity, err = provider.GetStorageUsed(address)
-				})
+				capacity, err := provider.GetStorageUsed(address)
 				if err != nil {
-					panic(interpreter.WrappedExternalError(err))
+					panic(err)
 				}
 				return capacity
 			},
@@ -570,12 +559,9 @@ func newStorageCapacityGetFunction(
 		return interpreter.NewUInt64Value(
 			context,
 			func() uint64 {
-				var capacity uint64
-				errors.WrapPanic(func() {
-					capacity, err = provider.GetStorageCapacity(address)
-				})
+				capacity, err := provider.GetStorageCapacity(address)
 				if err != nil {
-					panic(interpreter.WrappedExternalError(err))
+					panic(err)
 				}
 				return capacity
 			},
@@ -632,12 +618,9 @@ func newAccountKeysAddFunction(
 
 				weight := weightValue.ToInt(locationRange)
 
-				var accountKey *AccountKey
-				errors.WrapPanic(func() {
-					accountKey, err = handler.AddAccountKey(address, publicKey, hashAlgo, weight)
-				})
+				accountKey, err := handler.AddAccountKey(address, publicKey, hashAlgo, weight)
 				if err != nil {
-					panic(interpreter.WrappedExternalError(err))
+					panic(err)
 				}
 
 				handler.EmitEvent(
@@ -705,14 +688,9 @@ func newAccountKeysGetFunction(
 				locationRange := invocation.LocationRange
 				index := indexValue.ToUint32(locationRange)
 
-				var err error
-				var accountKey *AccountKey
-				errors.WrapPanic(func() {
-					accountKey, err = provider.GetAccountKey(address, index)
-				})
-
+				accountKey, err := provider.GetAccountKey(address, index)
 				if err != nil {
-					panic(interpreter.WrappedExternalError(err))
+					panic(err)
 				}
 
 				// Here it is expected the host function to return a nil key, if a key is not found at the given index.
@@ -778,25 +756,16 @@ func newAccountKeysForEachFunction(
 					)
 				}
 
-				var count uint32
-				var err error
-
-				errors.WrapPanic(func() {
-					count, err = provider.AccountKeysCount(address)
-				})
-
+				count, err := provider.AccountKeysCount(address)
 				if err != nil {
-					panic(interpreter.WrappedExternalError(err))
+					panic(err)
 				}
 
-				var accountKey *AccountKey
-
 				for index := uint32(0); index < count; index++ {
-					errors.WrapPanic(func() {
-						accountKey, err = provider.GetAccountKey(address, index)
-					})
+
+					accountKey, err := provider.GetAccountKey(address, index)
 					if err != nil {
-						panic(interpreter.WrappedExternalError(err))
+						panic(err)
 					}
 
 					// Here it is expected the host function to return a nil key, if a key is not found at the given index.
@@ -850,13 +819,11 @@ func newAccountKeysCountGetter(
 			var count uint32
 			var err error
 
-			errors.WrapPanic(func() {
-				count, err = provider.AccountKeysCount(address)
-			})
+			count, err = provider.AccountKeysCount(address)
 			if err != nil {
 				// The provider might not be able to fetch the number of account keys
 				// e.g. when the account does not exist
-				panic(interpreter.WrappedExternalError(err))
+				panic(err)
 			}
 
 			return uint64(count)
@@ -896,13 +863,9 @@ func newAccountKeysRevokeFunction(
 				locationRange := invocation.LocationRange
 				index := indexValue.ToUint32(locationRange)
 
-				var err error
-				var accountKey *AccountKey
-				errors.WrapPanic(func() {
-					accountKey, err = handler.RevokeAccountKey(address, index)
-				})
+				accountKey, err := handler.RevokeAccountKey(address, index)
 				if err != nil {
-					panic(interpreter.WrappedExternalError(err))
+					panic(err)
 				}
 
 				// Here it is expected the host function to return a nil key, if a key is not found at the given index.
@@ -1209,13 +1172,9 @@ func newAccountContractsGetNamesFunction(
 		context interpreter.MemberAccessibleContext,
 		locationRange interpreter.LocationRange,
 	) *interpreter.ArrayValue {
-		var names []string
-		var err error
-		errors.WrapPanic(func() {
-			names, err = provider.GetAccountContractNames(address)
-		})
+		names, err := provider.GetAccountContractNames(address)
 		if err != nil {
-			panic(interpreter.WrappedExternalError(err))
+			panic(err)
 		}
 
 		values := make([]interpreter.Value, len(names))
@@ -1276,13 +1235,9 @@ func newAccountContractsGetFunction(
 				name := nameValue.Str
 				location := common.NewAddressLocation(invocation.InvocationContext, address, name)
 
-				var code []byte
-				var err error
-				errors.WrapPanic(func() {
-					code, err = provider.GetAccountContractCode(location)
-				})
+				code, err := provider.GetAccountContractCode(location)
 				if err != nil {
-					panic(interpreter.WrappedExternalError(err))
+					panic(err)
 				}
 
 				if len(code) > 0 {
@@ -1350,13 +1305,9 @@ func newAccountContractsBorrowFunction(
 
 				// Check if the contract exists
 
-				var code []byte
-				var err error
-				errors.WrapPanic(func() {
-					code, err = handler.GetAccountContractCode(location)
-				})
+				code, err := handler.GetAccountContractCode(location)
 				if err != nil {
-					panic(interpreter.WrappedExternalError(err))
+					panic(err)
 				}
 				if len(code) == 0 {
 					return interpreter.Nil
@@ -1955,11 +1906,9 @@ func updateAccountContractCode(
 	}
 
 	// NOTE: only update account code if contract instantiation succeeded
-	errors.WrapPanic(func() {
-		err = handler.UpdateAccountContractCode(location, code)
-	})
+	err = handler.UpdateAccountContractCode(location, code)
 	if err != nil {
-		return interpreter.WrappedExternalError(err)
+		return err
 	}
 
 	if createContract {
@@ -2112,13 +2061,9 @@ func newAccountContractsRemoveFunction(
 
 				// Get the current code
 
-				var code []byte
-				var err error
-				errors.WrapPanic(func() {
-					code, err = handler.GetAccountContractCode(location)
-				})
+				code, err := handler.GetAccountContractCode(location)
 				if err != nil {
-					panic(interpreter.WrappedExternalError(err))
+					panic(err)
 				}
 
 				// Only remove the contract code, remove the contract value, and emit an event,
@@ -2142,11 +2087,9 @@ func newAccountContractsRemoveFunction(
 						})
 					}
 
-					errors.WrapPanic(func() {
-						err = handler.RemoveAccountContractCode(location)
-					})
+					err = handler.RemoveAccountContractCode(location)
 					if err != nil {
-						panic(interpreter.WrappedExternalError(err))
+						panic(err)
 					}
 
 					// NOTE: the contract recording function delays the write
@@ -2860,13 +2803,9 @@ func IssueStorageCapabilityController(
 
 	// Create and write StorageCapabilityController
 
-	var capabilityID uint64
-	var err error
-	errors.WrapPanic(func() {
-		capabilityID, err = handler.GenerateAccountID(address)
-	})
+	capabilityID, err := handler.GenerateAccountID(address)
 	if err != nil {
-		panic(interpreter.WrappedExternalError(err))
+		panic(err)
 	}
 	if capabilityID == 0 {
 		panic(errors.NewUnexpectedError("invalid zero account ID"))
@@ -3039,13 +2978,9 @@ func IssueAccountCapabilityController(
 ) interpreter.UInt64Value {
 	// Create and write AccountCapabilityController
 
-	var capabilityID uint64
-	var err error
-	errors.WrapPanic(func() {
-		capabilityID, err = handler.GenerateAccountID(address)
-	})
+	capabilityID, err := handler.GenerateAccountID(address)
 	if err != nil {
-		panic(interpreter.WrappedExternalError(err))
+		panic(err)
 	}
 	if capabilityID == 0 {
 		panic(errors.NewUnexpectedError("invalid zero account ID"))
