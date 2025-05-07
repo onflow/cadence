@@ -82,8 +82,8 @@ func (v *VMInvokable) GetGlobalType(name string) (*sema.Variable, bool) {
 	return v.elaboration.GetGlobalType(name)
 }
 
-func (v *VMInvokable) InitializeContract(arguments ...interpreter.Value) (*interpreter.CompositeValue, error) {
-	return v.vmInstance.InitializeContract(arguments...)
+func (v *VMInvokable) InitializeContract(contractName string, arguments ...interpreter.Value) (*interpreter.CompositeValue, error) {
+	return v.vmInstance.InitializeContract(contractName, arguments...)
 }
 
 func ParseCheckAndPrepare(tb testing.TB, code string, compile bool) Invokable {
@@ -240,6 +240,7 @@ func ParseCheckAndPrepareWithOptions(
 			ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
 				ParseAndCheckOptions: parseAndCheckOptions,
 				CompilerConfig:       compilerConfig,
+				CheckerErrorHandler:  options.HandleCheckerError,
 			},
 			Programs: programs,
 		},

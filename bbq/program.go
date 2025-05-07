@@ -24,7 +24,7 @@ import (
 )
 
 type Program[E, T any] struct {
-	Contract  *Contract
+	Contracts []*Contract
 	Imports   []Import
 	Functions []Function[E]
 	Constants []constant.Constant

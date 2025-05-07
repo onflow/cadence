@@ -34,8 +34,11 @@ func TestInterpretIfStatement(t *testing.T) {
 
 	t.Parallel()
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
-		`
+	t.Run("with errors", func(t *testing.T) {
+		t.Parallel()
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
            access(all) fun testTrue(): Int {
                if true {
                    return 2
@@ -80,42 +83,117 @@ func TestInterpretIfStatement(t *testing.T) {
                }
            }
         `,
-		ParseCheckAndInterpretOptions{
-			HandleCheckerError: func(err error) {
-				errs := RequireCheckerErrors(t, err, 2)
+			ParseCheckAndInterpretOptions{
+				HandleCheckerError: func(err error) {
+					errs := RequireCheckerErrors(t, err, 2)
 
-				assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
-				assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
+					assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+					assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
+				},
 			},
-		},
-	)
-	require.NoError(t, err)
+		)
+		require.NoError(t, err)
 
-	for name, expected := range map[string]int64{
-		"testTrue":   2,
-		"testFalse":  3,
-		"testNoElse": 2,
-		"testElseIf": 3,
-	} {
-		t.Run(name, func(t *testing.T) {
-			value, err := inter.Invoke(name)
-			require.NoError(t, err)
+		for name, expected := range map[string]int64{
+			"testTrue":   2,
+			"testFalse":  3,
+			"testNoElse": 2,
+			"testElseIf": 3,
+		} {
+			t.Run(name, func(t *testing.T) {
+				value, err := inter.Invoke(name)
+				require.NoError(t, err)
 
-			AssertValuesEqual(
-				t,
-				inter,
-				interpreter.NewUnmeteredIntValueFromInt64(expected),
-				value,
-			)
-		})
-	}
+				AssertValuesEqual(
+					t,
+					inter,
+					interpreter.NewUnmeteredIntValueFromInt64(expected),
+					value,
+				)
+			})
+		}
+	})
+
+	// Note: compiler can't run programs with unreachable-statement errors
+	// (i.e: when type checking is skipped for some part of the code),
+	// because the compiler relies on the type information produced by the checker.
+	// Thus, test the same scenario as above, but with a slight modification to not produce errors.
+
+	t.Run("without errors", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t,
+			`
+           access(all) fun testTrue(): Int {
+               if true {
+                   return 2
+               } else {
+                   return 3
+               }
+           }
+
+           access(all) fun testFalse(): Int {
+               if false {
+                   return 2
+               } else {
+                   return 3
+               }
+           }
+
+           access(all) fun testNoElse(): Int {
+               if true {
+                   return 2
+               }
+               return 3
+           }
+
+           access(all) fun testElseIf(): Int {
+               if false {
+                   return 2
+               } else if true {
+                   return 3
+               }
+               return 4
+           }
+           
+           access(all) fun testElseIfElse(): Int {
+               if false {
+                   return 2
+               } else if false {
+                   return 3
+               } else {
+                   return 4
+               }
+           }
+        `,
+		)
+
+		for name, expected := range map[string]int64{
+			"testTrue":   2,
+			"testFalse":  3,
+			"testNoElse": 2,
+			"testElseIf": 3,
+		} {
+			t.Run(name, func(t *testing.T) {
+				value, err := inter.Invoke(name)
+				require.NoError(t, err)
+
+				AssertValuesEqual(
+					t,
+					inter,
+					interpreter.NewUnmeteredIntValueFromInt64(expected),
+					value,
+				)
+			})
+		}
+	})
 }
 
 func TestInterpretIfStatementTestWithDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       var branch = 0
 
       fun test(x: Int?): Int {
@@ -145,7 +223,7 @@ func TestInterpretIfStatementTestWithDeclaration(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(1),
-			inter.Globals.Get("branch").GetValue(inter),
+			inter.GetGlobal("branch"),
 		)
 	})
 
@@ -162,7 +240,7 @@ func TestInterpretIfStatementTestWithDeclaration(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(2),
-			inter.Globals.Get("branch").GetValue(inter),
+			inter.GetGlobal("branch"),
 		)
 	})
 }
@@ -171,7 +249,7 @@ func TestInterpretIfStatementTestWithDeclarationAndElse(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       var branch = 0
 
       fun test(x: Int?): Int {
@@ -200,7 +278,7 @@ func TestInterpretIfStatementTestWithDeclarationAndElse(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(1),
-			inter.Globals.Get("branch").GetValue(inter),
+			inter.GetGlobal("branch"),
 		)
 	})
 
@@ -217,7 +295,7 @@ func TestInterpretIfStatementTestWithDeclarationAndElse(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(2),
-			inter.Globals.Get("branch").GetValue(inter),
+			inter.GetGlobal("branch"),
 		)
 
 	})
@@ -227,7 +305,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionals(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       var branch = 0
 
       fun test(x: Int??): Int? {
@@ -259,7 +337,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionals(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(1),
-			inter.Globals.Get("branch").GetValue(inter),
+			inter.GetGlobal("branch"),
 		)
 	})
 
@@ -279,7 +357,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionals(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(2),
-			inter.Globals.Get("branch").GetValue(inter),
+			inter.GetGlobal("branch"),
 		)
 	})
 }
@@ -288,7 +366,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionalsExplicitAnnotatio
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       var branch = 0
 
       fun test(x: Int??): Int? {
@@ -320,7 +398,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionalsExplicitAnnotatio
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(1),
-			inter.Globals.Get("branch").GetValue(inter),
+			inter.GetGlobal("branch"),
 		)
 
 	})
@@ -340,7 +418,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionalsExplicitAnnotatio
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(2),
-			inter.Globals.Get("branch").GetValue(inter),
+			inter.GetGlobal("branch"),
 		)
 	})
 }

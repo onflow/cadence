@@ -262,9 +262,12 @@ func BenchmarkContractImport(b *testing.B) {
 	)
 	importedProgram := importCompiler.Compile()
 
-	vmInstance := vm.NewVM(location, importedProgram, nil)
-	importedContractValue, err := vmInstance.InitializeContract()
-	require.NoError(b, err)
+	_, importedContractValue := initializeContract(
+		b,
+		location,
+		importedProgram,
+		nil,
+	)
 
 	vmConfig := &vm.Config{
 		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
@@ -365,9 +368,12 @@ func BenchmarkMethodCall(b *testing.B) {
 		)
 		importedProgram := importCompiler.Compile()
 
-		vmInstance := vm.NewVM(location, importedProgram, nil)
-		importedContractValue, err := vmInstance.InitializeContract()
-		require.NoError(b, err)
+		_, importedContractValue := initializeContract(
+			b,
+			location,
+			importedProgram,
+			nil,
+		)
 
 		checker, err := ParseAndCheckWithOptions(b,
 			`
@@ -430,7 +436,7 @@ func BenchmarkMethodCall(b *testing.B) {
 		b.ReportAllocs()
 
 		for i := 0; i < b.N; i++ {
-			vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
+			vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 			_, err := vmInstance.Invoke("test", value)
 			require.NoError(b, err)
 		}
@@ -474,9 +480,12 @@ func BenchmarkMethodCall(b *testing.B) {
 		)
 		importedProgram := importCompiler.Compile()
 
-		vmInstance := vm.NewVM(location, importedProgram, nil)
-		importedContractValue, err := vmInstance.InitializeContract()
-		require.NoError(b, err)
+		_, importedContractValue := initializeContract(
+			b,
+			location,
+			importedProgram,
+			nil,
+		)
 
 		checker, err := ParseAndCheckWithOptions(b, `
         import MyContract from 0x01
@@ -523,7 +532,7 @@ func BenchmarkMethodCall(b *testing.B) {
 
 		scriptLocation := runtime_utils.NewScriptLocationGenerator()
 
-		vmInstance = vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		value := interpreter.NewUnmeteredIntValueFromInt64(10)
 

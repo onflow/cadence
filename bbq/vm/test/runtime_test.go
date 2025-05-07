@@ -92,14 +92,12 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 
 	config := vm.NewConfig(storage)
 
-	barVM := vm.NewVM(
+	_, barContractValue := initializeContract(
+		t,
 		barLocation,
 		barProgram,
 		config,
 	)
-
-	barContractValue, err := barVM.InitializeContract()
-	require.NoError(t, err)
 
 	// --------- Execute Transaction ------------
 
@@ -181,7 +179,7 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 	txVM := vm.NewVM(txLocation(), program, vmConfig)
 
 	authorizer := vm.NewAuthAccountReferenceValue(txVM.Context(), accountHandler, authorizerAddress)
-	err = txVM.ExecuteTransaction(nil, authorizer)
+	err := txVM.ExecuteTransaction(nil, authorizer)
 	require.NoError(t, err)
 	require.Equal(t, 0, txVM.StackSize())
 }

@@ -470,7 +470,7 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 		c.compileDeclaration(declaration)
 	}
 
-	contract := c.exportContract()
+	contracts := c.exportContracts()
 
 	compositeDeclarations := c.Program.CompositeDeclarations()
 	variableDeclarations := c.Program.VariableDeclarations()
@@ -478,10 +478,9 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 	interfaceDeclarations := c.Program.InterfaceDeclarations()
 
 	// Reserve globals for functions/types before visiting their implementations.
-	c.reserveGlobalVars(
-		nil,
+	c.reserveGlobals(
+		contracts,
 		variableDeclarations,
-		nil,
 		functionDeclarations,
 		compositeDeclarations,
 		interfaceDeclarations,
@@ -512,9 +511,32 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 		Constants: constants,
 		Types:     types,
 		Imports:   imports,
-		Contract:  contract,
+		Contracts: contracts,
 		Variables: variables,
 	}
+}
+
+func (c *Compiler[_, _]) reserveGlobals(
+	contract []*bbq.Contract,
+	variableDecls []*ast.VariableDeclaration,
+	functionDecls []*ast.FunctionDeclaration,
+	compositeDecls []*ast.CompositeDeclaration,
+	interfaceDecls []*ast.InterfaceDeclaration,
+) {
+	// Reserve globals for the contract values before everything.
+	// Contract values must be always start at the zero-th index.
+	for _, contract := range contract {
+		c.addGlobal(contract.Name)
+	}
+
+	c.reserveGlobalVars(
+		nil,
+		variableDecls,
+		nil,
+		functionDecls,
+		compositeDecls,
+		interfaceDecls,
+	)
 }
 
 func (c *Compiler[_, _]) reserveGlobalVars(
@@ -564,18 +586,18 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 			continue
 		}
 
-		// Reserve a global-var for the value-constructor.
-		constructorName := commons.TypeQualifier(compositeType)
-		c.addGlobal(constructorName)
-
 		// For composite types other than contracts, global variables
 		// reserved by the type-name will be used for the init method.
 		// For contracts, global variables reserved by the type-name
-		// will be used for the contract value.
+		// will be used for the contract value (already reserved before getting here).
 		// Hence, reserve a separate global var for contract inits.
 		if declaration.CompositeKind == common.CompositeKindContract {
-			// TODO: handle name clash?!
-			c.addGlobal(commons.InitFunctionName)
+			qualifiedName := commons.TypeQualifiedName(compositeType, commons.InitFunctionName)
+			c.addGlobal(qualifiedName)
+		} else {
+			// Reserve a global-var for the value-constructor.
+			constructorName := commons.TypeQualifier(compositeType)
+			c.addGlobal(constructorName)
 		}
 
 		// Define globals for functions before visiting function bodies.
@@ -708,41 +730,35 @@ func (c *Compiler[E, _]) exportGlobalVariables() []bbq.Variable[E] {
 	return globalVariables
 }
 
-func (c *Compiler[_, _]) contractType() (contractType sema.CompositeKindedType) {
-	// In tests, there can be contracts along with functions.
-	// TODO: Is it needed to handle having more than one contract?
+func (c *Compiler[_, _]) exportContracts() []*bbq.Contract {
+	contracts := make([]*bbq.Contract, 0)
 	compositeDeclarations := c.Program.CompositeDeclarations()
+
 	for _, declaration := range compositeDeclarations {
-		if declaration.Kind() == common.CompositeKindContract {
-			return c.DesugaredElaboration.CompositeDeclarationType(declaration)
+		if declaration.Kind() != common.CompositeKindContract {
+			continue
 		}
+
+		contractType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
+		location := contractType.GetLocation()
+		name := contractType.GetIdentifier()
+
+		var addressBytes []byte
+		addressLocation, ok := location.(common.AddressLocation)
+		if ok {
+			addressBytes = addressLocation.Address.Bytes()
+		}
+
+		contracts = append(
+			contracts,
+			&bbq.Contract{
+				Name:    name,
+				Address: addressBytes,
+			},
+		)
 	}
 
-	return nil
-}
-
-func (c *Compiler[_, _]) exportContract() *bbq.Contract {
-	var location common.Location
-	var name string
-
-	contractType := c.contractType()
-	if contractType == nil {
-		return nil
-	}
-
-	location = contractType.GetLocation()
-	name = contractType.GetIdentifier()
-
-	var addressBytes []byte
-	addressLocation, ok := location.(common.AddressLocation)
-	if ok {
-		addressBytes = addressLocation.Address.Bytes()
-	}
-
-	return &bbq.Contract{
-		Name:    name,
-		Address: addressBytes,
-	}
+	return contracts
 }
 
 func (c *Compiler[_, _]) compileDeclaration(declaration ast.Declaration) {
@@ -2131,18 +2147,19 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	enclosingType := c.compositeTypeStack.top()
 	kind := enclosingType.GetCompositeKind()
 
-	constructorName := commons.TypeQualifier(enclosingType)
+	typeName := commons.TypeQualifier(enclosingType)
 
 	var functionName string
 	if kind == common.CompositeKindContract {
 		// For contracts, add the initializer as `init()`.
 		// A global variable with the same name as contract is separately added.
 		// The VM will load the contract and assign to that global variable during imports resolution.
-		functionName = declaration.DeclarationIdentifier().Identifier
+		identifier := declaration.DeclarationIdentifier().Identifier
+		functionName = commons.QualifiedName(typeName, identifier)
 	} else {
 		// Use the type name as the function name for initializer.
 		// So `x = Foo()` would directly call the init method.
-		functionName = constructorName
+		functionName = typeName
 	}
 
 	parameterCount := 0
@@ -2200,7 +2217,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 
 		// Duplicate the top of stack and store it in both global variable and in `self`
 		c.codeGen.Emit(opcode.InstructionDup{})
-		global := c.findGlobal(constructorName)
+		global := c.findGlobal(typeName)
 
 		c.codeGen.Emit(opcode.InstructionSetGlobal{
 			Global: global.Index,
@@ -2331,22 +2348,31 @@ func (c *Compiler[_, _]) VisitCompositeDeclaration(declaration *ast.CompositeDec
 		c.generateEmptyInit()
 	}
 
-	// Add the methods that are provided natively.
-	c.addBuiltinMethods(compositeType)
-
-	for _, function := range declaration.Members.Functions() {
-		c.compileDeclaration(function)
-	}
-	for _, nestedTypes := range declaration.Members.Interfaces() {
-		c.compileDeclaration(nestedTypes)
-	}
-	for _, nestedTypes := range declaration.Members.Composites() {
-		c.compileDeclaration(nestedTypes)
-	}
-
-	// TODO:
+	// Visit members.
+	c.compileCompositeMembers(compositeType, declaration.Members)
 
 	return
+}
+
+func (c *Compiler[_, _]) compileCompositeMembers(
+	compositeKindedType sema.CompositeKindedType,
+	members *ast.Members,
+) {
+
+	// Important: Must be visited in the same order as the globals were reserved in `reserveGlobalVars`.
+
+	// Add the methods that are provided natively.
+	c.addBuiltinMethods(compositeKindedType)
+
+	for _, function := range members.Functions() {
+		c.compileDeclaration(function)
+	}
+	for _, nestedType := range members.Composites() {
+		c.compileDeclaration(nestedType)
+	}
+	for _, nestedType := range members.Interfaces() {
+		c.compileDeclaration(nestedType)
+	}
 }
 
 func (c *Compiler[_, _]) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) (_ struct{}) {
@@ -2356,18 +2382,9 @@ func (c *Compiler[_, _]) VisitInterfaceDeclaration(declaration *ast.InterfaceDec
 		c.compositeTypeStack.pop()
 	}()
 
-	// Add the methods that are provided natively.
-	c.addBuiltinMethods(interfaceType)
+	// Visit members.
+	c.compileCompositeMembers(interfaceType, declaration.Members)
 
-	for _, function := range declaration.Members.Functions() {
-		c.compileDeclaration(function)
-	}
-	for _, nestedTypes := range declaration.Members.Interfaces() {
-		c.compileDeclaration(nestedTypes)
-	}
-	for _, nestedTypes := range declaration.Members.Composites() {
-		c.compileDeclaration(nestedTypes)
-	}
 	return
 }
 
@@ -2408,23 +2425,22 @@ func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclarati
 		importedProgram := c.Config.ImportHandler(location.Location)
 
 		// Add a global variable for the imported contract value.
-		contractDecl := importedProgram.Contract
-		isContract := contractDecl != nil
-		if isContract {
-			c.addImportedGlobal(location.Location, contractDecl.Name)
+		contracts := importedProgram.Contracts
+		for _, contract := range contracts {
+			c.addImportedGlobal(location.Location, contract.Name)
 		}
 
 		for _, function := range importedProgram.Functions {
 			name := function.QualifiedName
 
-			// Skip the contract initializer.
-			// It should never be able to invoked within the code.
-			if isContract && name == commons.InitFunctionName {
-				continue
-			}
+			//// TODO: Skip the contract initializer.
+			//// It should never be able to invoked within the code.
+			//if isContract && name == commons.InitFunctionName {
+			//	continue
+			//}
 
 			// TODO: Filter-in only public functions
-			c.addImportedGlobal(location.Location, function.QualifiedName)
+			c.addImportedGlobal(location.Location, name)
 		}
 	}
 
