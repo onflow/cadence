@@ -91,17 +91,10 @@ type Invokable interface {
 func ParseCheckAndPrepare(tb testing.TB, code string, compile bool) Invokable {
 	tb.Helper()
 
-	if !compile {
-		return ParseCheckAndInterpret(tb, code)
-	}
+	invokable, err := ParseCheckAndPrepareWithOptions(tb, code, ParseCheckAndInterpretOptions{}, compile)
+	require.NoError(tb, err)
 
-	//invokable, err := ParseCheckAndPrepareWithOptions(tb, code, ParseCheckAndInterpretOptions{}, compile)
-	//require.NoError(tb, err)
-	//
-	//return invokable
-
-	// Not supported for now
-	panic(errors.NewUnreachableError())
+	return invokable
 }
 
 func ParseCheckAndPrepareWithEvents(tb testing.TB, code string, compile bool) (
