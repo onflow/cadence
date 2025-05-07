@@ -34,10 +34,8 @@ func init() {
 		NewNativeFunctionValueWithDerivedType(
 			sema.OptionalTypeMapFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
-				innerValueType := interpreter.MustConvertStaticToSemaType(
-					receiver.StaticType(context),
-					context,
-				)
+				optionalValue := receiver.(interpreter.OptionalValue)
+				innerValueType := optionalValue.InnerValueType(context)
 
 				return sema.OptionalTypeMapFunctionType(
 					innerValueType,
@@ -46,11 +44,7 @@ func init() {
 			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				value := arguments[receiverIndex]
 				optionalValue := value.(interpreter.OptionalValue)
-
-				innerValueType := interpreter.MustConvertStaticToSemaType(
-					value.StaticType(context),
-					context,
-				)
+				innerValueType := optionalValue.InnerValueType(context)
 
 				transformFunction := arguments[1].(FunctionValue)
 

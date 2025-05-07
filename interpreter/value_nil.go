@@ -92,7 +92,7 @@ func (v NilValue) MeteredString(context ValueStringContext, _ SeenReferences, _ 
 // nilValueMapFunction is created only once per interpreter.
 // Hence, no need to meter, as it's a constant.
 var nilValueMapFunction = NewUnmeteredStaticHostFunctionValue(
-	sema.OptionalTypeMapFunctionType(sema.NeverType),
+	sema.OptionalTypeMapFunctionType(NilOptionalValue.InnerValueType(nil)),
 	func(invocation Invocation) Value {
 		return Nil
 	},
@@ -189,6 +189,10 @@ func (NilValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (NilValue) isInvalidatedResource(context ValueStaticTypeContext) bool {
+func (NilValue) isInvalidatedResource(_ ValueStaticTypeContext) bool {
 	return false
+}
+
+func (v NilValue) InnerValueType(_ ValueStaticTypeContext) sema.Type {
+	return sema.NeverType
 }

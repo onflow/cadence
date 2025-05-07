@@ -1734,7 +1734,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 
 func (c *Compiler[_, _]) compileMethodInvocationArguments(
 	invokedExpr *ast.MemberExpression,
-	arguments ast. Arguments,
+	arguments ast.Arguments,
 	memberInfo sema.MemberAccessInfo,
 	invocationTypes sema.InvocationExpressionTypes,
 ) {

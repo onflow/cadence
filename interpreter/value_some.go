@@ -157,10 +157,7 @@ func (v *SomeValue) GetMethod(
 ) FunctionValue {
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
-		innerValueType := MustConvertStaticToSemaType(
-			v.value.StaticType(context),
-			context,
-		)
+		innerValueType := v.InnerValueType(context)
 		return NewBoundHostFunctionValue(
 			context,
 			v,
@@ -219,6 +216,13 @@ func OptionalValueMapFunction(
 				locationRange,
 			)
 		},
+	)
+}
+
+func (v *SomeValue) InnerValueType(context ValueStaticTypeContext) sema.Type {
+	return MustConvertStaticToSemaType(
+		v.value.StaticType(context),
+		context,
 	)
 }
 
