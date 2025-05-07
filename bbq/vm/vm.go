@@ -538,29 +538,29 @@ func opBitwiseRightShift(vm *VM) {
 
 func opLess(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(interpreter.NumberValue)
-	rightNumber := right.(interpreter.NumberValue)
+	leftNumber := left.(interpreter.ComparableValue)
+	rightNumber := right.(interpreter.ComparableValue)
 	vm.replaceTop(leftNumber.Less(vm.context, rightNumber, EmptyLocationRange))
 }
 
 func opLessOrEqual(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(interpreter.NumberValue)
-	rightNumber := right.(interpreter.NumberValue)
+	leftNumber := left.(interpreter.ComparableValue)
+	rightNumber := right.(interpreter.ComparableValue)
 	vm.replaceTop(leftNumber.LessEqual(vm.context, rightNumber, EmptyLocationRange))
 }
 
 func opGreater(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(interpreter.NumberValue)
-	rightNumber := right.(interpreter.NumberValue)
+	leftNumber := left.(interpreter.ComparableValue)
+	rightNumber := right.(interpreter.ComparableValue)
 	vm.replaceTop(leftNumber.Greater(vm.context, rightNumber, EmptyLocationRange))
 }
 
 func opGreaterOrEqual(vm *VM) {
 	left, right := vm.peekPop()
-	leftNumber := left.(interpreter.NumberValue)
-	rightNumber := right.(interpreter.NumberValue)
+	leftNumber := left.(interpreter.ComparableValue)
+	rightNumber := right.(interpreter.ComparableValue)
 	vm.replaceTop(leftNumber.GreaterEqual(vm.context, rightNumber, EmptyLocationRange))
 }
 
