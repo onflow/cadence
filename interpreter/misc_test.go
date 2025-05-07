@@ -4999,7 +4999,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		var inter *interpreter.Interpreter
 
 		getType := func(name string) sema.Type {
-			variable, ok := inter.Program.Elaboration.GetGlobalType(name)
+			variable, ok := inter.GetGlobalType(name)
 			require.True(t, ok, "missing global type %s", name)
 			return variable.Type
 		}
@@ -7382,8 +7382,8 @@ func TestInterpretEmitEvent(t *testing.T) {
 	_, err = inter.Invoke("test")
 	require.NoError(t, err)
 
-	transferEventType := RequireGlobalType(t, inter.Program.Elaboration, "Transfer")
-	transferAmountEventType := RequireGlobalType(t, inter.Program.Elaboration, "TransferAmount")
+	transferEventType := RequireGlobalType(t, inter, "Transfer")
+	transferAmountEventType := RequireGlobalType(t, inter, "TransferAmount")
 
 	require.Len(t, eventTypes, 3)
 	require.Equal(t, TestLocation.QualifiedIdentifier(transferEventType.ID()), eventTypes[0].QualifiedIdentifier())
@@ -7477,7 +7477,7 @@ func TestInterpretReferenceEventParameter(t *testing.T) {
 	_, err = inter.Invoke("test", ref)
 	require.NoError(t, err)
 
-	eventType := RequireGlobalType(t, inter.Program.Elaboration, "TestEvent")
+	eventType := RequireGlobalType(t, inter, "TestEvent")
 
 	require.Len(t, eventTypes, 1)
 	require.Equal(t, TestLocation.QualifiedIdentifier(eventType.ID()), eventTypes[0].QualifiedIdentifier())
@@ -7798,7 +7798,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			_, err = inter.Invoke("test")
 			require.NoError(t, err)
 
-			testType := RequireGlobalType(t, inter.Program.Elaboration, "Test")
+			testType := RequireGlobalType(t, inter, "Test")
 
 			require.Len(t, eventTypes, 1)
 			require.Equal(t,

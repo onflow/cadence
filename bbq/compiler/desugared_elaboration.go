@@ -378,3 +378,7 @@ func (e *DesugaredElaboration) StringExpressionType(expression *ast.StringExpres
 func (e *DesugaredElaboration) ForStatementType(statement *ast.ForStatement) (types sema.ForStatementTypes) {
 	return e.elaboration.ForStatementType(statement)
 }
+
+func (e *DesugaredElaboration) GetGlobalType(name string) (*sema.Variable, bool) {
+	return e.elaboration.GetGlobalType(name)
+}

@@ -6019,3 +6019,7 @@ func (interpreter *Interpreter) GetMethod(value MemberAccessibleValue, name stri
 func (interpreter *Interpreter) GetGlobal(name string) Value {
 	return interpreter.Globals.Get(name).GetValue(interpreter)
 }
+
+func (interpreter *Interpreter) GetGlobalType(name string) (*sema.Variable, bool) {
+	return interpreter.Program.Elaboration.GetGlobalType(name)
+}

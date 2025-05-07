@@ -502,12 +502,16 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 
 	var location common.Location
 	parseAndCheckOptions := options.ParseAndCheckOptions
+
 	if parseAndCheckOptions != nil {
 		location = parseAndCheckOptions.Location
 	}
 
 	if location == nil {
 		location = TestLocation
+		if parseAndCheckOptions != nil {
+			parseAndCheckOptions.Location = location
+		}
 	}
 
 	program := ParseCheckAndCompileCodeWithOptions(
