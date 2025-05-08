@@ -148,20 +148,25 @@ var rlpDecodeListFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
 			})
 		}
 
-		values := make([]interpreter.Value, len(output))
-		for i, b := range output {
-			values[i] = interpreter.ByteSliceToByteArrayValue(context, b)
-		}
+		outputLength := len(output)
 
-		return interpreter.NewArrayValue(
+		var index int
+		return interpreter.NewArrayValueWithIterator(
 			context,
-			locationRange,
 			interpreter.NewVariableSizedStaticType(
 				context,
 				interpreter.ByteArrayStaticType,
 			),
 			common.ZeroAddress,
-			values...,
+			uint64(outputLength),
+			func() interpreter.Value {
+				if index >= outputLength {
+					return nil
+				}
+				result := interpreter.ByteSliceToByteArrayValue(context, output[index])
+				index++
+				return result
+			},
 		)
 	},
 )
