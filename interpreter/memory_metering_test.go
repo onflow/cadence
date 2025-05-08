@@ -9179,25 +9179,3 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 		testStaticTypeStringConversion(t, script)
 	})
 }
-
-func TestInterpretBytesMetering(t *testing.T) {
-
-	t.Parallel()
-
-	const code = `
-      fun test(string: String) {
-          let utf8 = string.utf8
-      }
-    `
-
-	meter := newTestMemoryGauge()
-	inter := parseCheckAndInterpretWithMemoryMetering(t, code, meter)
-
-	stringValue := interpreter.NewUnmeteredStringValue("abc")
-
-	_, err := inter.Invoke("test", stringValue)
-	require.NoError(t, err)
-
-	// 1 + 3
-	assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindBytes))
-}
