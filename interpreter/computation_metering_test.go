@@ -893,6 +893,116 @@ func TestInterpretComputationMeteringString(t *testing.T) {
 	})
 }
 
+func TestInterpretComputationMeteringRLP(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("decodeString", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(stdlib.RLPContract)
+
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, stdlib.RLPContract)
+
+		storage := newUnmeteredInMemoryStorage()
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+             fun test() {
+                 // "dog"
+                 RLP.decodeString([0x83, 0x64, 0x6f, 0x67])
+             }
+           `,
+			ParseCheckAndInterpretOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 4},
+				{Kind: common.ComputationKindSTDLIBRLPDecodeString, Intensity: 4},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("decodeList", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(stdlib.RLPContract)
+
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, stdlib.RLPContract)
+
+		storage := newUnmeteredInMemoryStorage()
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+             fun test() {
+                 // [['a']]
+                 RLP.decodeList([193, 65])
+             }
+           `,
+			ParseCheckAndInterpretOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 2},
+				{Kind: common.ComputationKindSTDLIBRLPDecodeList, Intensity: 2},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+	})
+}
+
 func TestInterpretComputationMeteringIntegerParsing(t *testing.T) {
 
 	t.Parallel()
