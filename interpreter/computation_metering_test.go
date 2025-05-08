@@ -50,10 +50,9 @@ func (g *testComputationGauge) MeterComputation(usage common.ComputationUsage) e
 	}
 	g.meter[usage.Kind] += usage.Intensity
 
-	if g.kindSet != nil {
-		if _, ok := g.kindSet[usage.Kind]; ok {
-			g.usages = append(g.usages, usage)
-		}
+	_, ok := g.kindSet[usage.Kind]
+	if g.kindSet == nil || ok {
+		g.usages = append(g.usages, usage)
 	}
 
 	return nil

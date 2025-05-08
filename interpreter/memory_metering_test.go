@@ -58,10 +58,9 @@ func (g *testMemoryGauge) MeterMemory(usage common.MemoryUsage) error {
 	}
 	g.meter[usage.Kind] += usage.Amount
 
-	if g.kindSet != nil {
-		if _, ok := g.kindSet[usage.Kind]; ok {
-			g.usages = append(g.usages, usage)
-		}
+	_, ok := g.kindSet[usage.Kind]
+	if g.kindSet == nil || ok {
+		g.usages = append(g.usages, usage)
 	}
 
 	return nil
