@@ -62,16 +62,11 @@ func importValidatedArguments(
 		argument := arguments[parameterIndex]
 
 		exportedParameterType := ExportMeteredType(context, parameterType, map[sema.TypeID]cadence.Type{})
-		var value cadence.Value
-		var err error
 
-		errors.WrapPanic(func() {
-			value, err = decoder.DecodeArgument(
-				argument,
-				exportedParameterType,
-			)
-		})
-
+		value, err := decoder.DecodeArgument(
+			argument,
+			exportedParameterType,
+		)
 		if err != nil {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: parameterIndex,

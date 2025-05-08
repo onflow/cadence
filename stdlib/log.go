@@ -19,7 +19,6 @@
 package stdlib
 
 import (
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -73,12 +72,9 @@ func Log(
 ) interpreter.Value {
 	message := value.MeteredString(context, interpreter.SeenReferences{}, locationRange)
 
-	var err error
-	errors.WrapPanic(func() {
-		err = logger.ProgramLog(message, locationRange)
-	})
+	err := logger.ProgramLog(message, locationRange)
 	if err != nil {
-		panic(interpreter.WrappedExternalError(err))
+		panic(err)
 	}
 
 	return interpreter.Void

@@ -154,12 +154,9 @@ func hash(
 
 	hashAlgorithm := NewHashAlgorithmFromValue(context, locationRange, hashAlgorithmValue)
 
-	var result []byte
-	errors.WrapPanic(func() {
-		result, err = hasher.Hash(data, tag, hashAlgorithm)
-	})
+	result, err := hasher.Hash(data, tag, hashAlgorithm)
 	if err != nil {
-		panic(interpreter.WrappedExternalError(err))
+		panic(err)
 	}
 	return interpreter.ByteSliceToByteArrayValue(context, result)
 }

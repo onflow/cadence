@@ -23,7 +23,6 @@ import (
 
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/interpreter"
 )
 
 // readSlabIndexFromRegister returns register value as atree.SlabIndex.
@@ -36,13 +35,9 @@ func readSlabIndexFromRegister(
 	address common.Address,
 	key []byte,
 ) (atree.SlabIndex, bool, error) {
-	var data []byte
-	var err error
-	errors.WrapPanic(func() {
-		data, err = ledger.GetValue(address[:], key)
-	})
+	data, err := ledger.GetValue(address[:], key)
 	if err != nil {
-		return atree.SlabIndex{}, false, interpreter.WrappedExternalError(err)
+		return atree.SlabIndex{}, false, err
 	}
 
 	dataLength := len(data)
@@ -71,16 +66,14 @@ func writeSlabIndexToRegister(
 	key []byte,
 	slabIndex atree.SlabIndex,
 ) error {
-	var err error
-	errors.WrapPanic(func() {
-		err = ledger.SetValue(
-			address[:],
-			key,
-			slabIndex[:],
-		)
-	})
+
+	err := ledger.SetValue(
+		address[:],
+		key,
+		slabIndex[:],
+	)
 	if err != nil {
-		return interpreter.WrappedExternalError(err)
+		return err
 	}
 	return nil
 }

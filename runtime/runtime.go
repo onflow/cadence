@@ -172,6 +172,11 @@ func (r *runtime) NewScriptExecutor(
 	script Script,
 	context Context,
 ) Executor {
+
+	context.Interface = ExternalInterface{
+		Interface: context.Interface,
+	}
+
 	return newScriptExecutor(r, script, context)
 }
 
@@ -190,6 +195,11 @@ func (r *runtime) NewContractFunctionExecutor(
 	argumentTypes []sema.Type,
 	context Context,
 ) Executor {
+
+	context.Interface = ExternalInterface{
+		Interface: context.Interface,
+	}
+
 	return newContractFunctionExecutor(
 		r,
 		contractLocation,
@@ -217,6 +227,11 @@ func (r *runtime) InvokeContractFunction(
 }
 
 func (r *runtime) NewTransactionExecutor(script Script, context Context) Executor {
+
+	context.Interface = ExternalInterface{
+		Interface: context.Interface,
+	}
+
 	return newTransactionExecutor(r, script, context)
 }
 
@@ -299,6 +314,11 @@ func (r *runtime) ParseAndCheckProgram(
 	if environment == nil {
 		environment = NewBaseInterpreterEnvironment(r.defaultConfig)
 	}
+
+	context.Interface = ExternalInterface{
+		Interface: context.Interface,
+	}
+
 	environment.Configure(
 		context.Interface,
 		codesAndPrograms,
@@ -323,6 +343,10 @@ func (r *runtime) Storage(context Context) (*Storage, *interpreter.Interpreter, 
 	location := context.Location
 
 	codesAndPrograms := NewCodesAndPrograms()
+
+	context.Interface = ExternalInterface{
+		Interface: context.Interface,
+	}
 
 	runtimeInterface := context.Interface
 
@@ -380,6 +404,10 @@ func (r *runtime) ReadStored(
 		location,
 		codesAndPrograms,
 	)
+
+	context.Interface = ExternalInterface{
+		Interface: context.Interface,
+	}
 
 	_, inter, err := r.Storage(context)
 	if err != nil {
