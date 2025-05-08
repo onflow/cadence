@@ -26,6 +26,7 @@ import (
 
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 type computationGaugeFunc func(usage common.ComputationUsage) error
@@ -358,4 +359,431 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
 
 		assert.Equal(t, uint64(58), computationMeteredValues[common.ComputationKindLoop])
 	})
+}
+
+func TestInterpretComputationMeteringStatements(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("function statements", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge(
+			common.ComputationKindStatement,
+		)
+
+		storage := newUnmeteredInMemoryStorage()
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+              fun a() {
+                  true
+                  true
+                  true
+              }
+
+              fun b() {
+                  true
+                  true
+                  a()
+                  true
+                  true
+              }
+
+              fun c() {
+                  true
+                  b()
+                  true
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("c")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("pre and post conditions", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge(
+			common.ComputationKindStatement,
+		)
+
+		storage := newUnmeteredInMemoryStorage()
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+              fun test() {
+                  pre { true}
+                  post { true }
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("global declarations", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge(
+			common.ComputationKindStatement,
+		)
+
+		storage := newUnmeteredInMemoryStorage()
+		_, err := parseCheckAndInterpretWithOptions(t, `
+              let x = 1 + 2
+              let y = 3 * 4
+            `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+	})
+}
+
+func TestInterpretComputationMeteringLoopIteration(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("while", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge(
+			common.ComputationKindStatement,
+			common.ComputationKindLoop,
+		)
+
+		storage := newUnmeteredInMemoryStorage()
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+              fun test() {
+                  var i = 1
+                  while i <= 3 {
+                      i = i + 1
+                  }
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				// statement before loop
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+
+				// test expression
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				// statement in loop body
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+
+				// test expression
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				// statement in loop body
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+
+				// test expression
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				// statement in loop body
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+
+				// test expression
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("for", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge(
+			common.ComputationKindLoop,
+		)
+
+		storage := newUnmeteredInMemoryStorage()
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+              fun test() {
+                  for n in [1, 2, 3] {}
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				// loop iterations
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+	})
+}
+
+func TestInterpretComputationMeteringFunctionInvocation(t *testing.T) {
+
+	t.Parallel()
+
+	computationGauge := newTestComputationGauge(
+		common.ComputationKindStatement,
+		common.ComputationKindFunctionInvocation,
+	)
+
+	storage := newUnmeteredInMemoryStorage()
+	inter, err := parseCheckAndInterpretWithOptions(t,
+		`
+          fun a() {
+              true
+          }
+
+          fun b() {
+              true
+              a()
+              true
+          }
+
+          fun c() {
+              true
+              true
+              b()
+              true
+              true
+          }
+
+          fun d() {
+              true
+              true
+              true
+              c()
+              true
+              true
+              true
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				Storage:          storage,
+				ComputationGauge: computationGauge,
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("d")
+	require.NoError(t, err)
+
+	AssertEqualWithDiff(t,
+		[]common.ComputationUsage{
+			// start of d
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			// c()
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+			// start of c
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			// b()
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+			// start of b
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			// a()
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+			// a
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			// rest of b
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			// rest of c
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			// rest of d
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+		},
+		computationGauge.usages,
+	)
+}
+
+func TestInterpretComputationMeteringIntegerParsing(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("big int", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		storage := newUnmeteredInMemoryStorage()
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+              fun test() {
+                  Int.fromString("100000")
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindBigIntParse, Intensity: 6},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("signed", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		storage := newUnmeteredInMemoryStorage()
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+              fun test() {
+                  Int8.fromString("42")
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindIntParse, Intensity: 2},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("unsigned", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		storage := newUnmeteredInMemoryStorage()
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+              fun test() {
+                  UInt8.fromString("42")
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindUintParse, Intensity: 2},
+			},
+			computationGauge.usages,
+		)
+	})
+
 }
