@@ -1711,9 +1711,16 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		)
 
 	} else {
-		// Load function value
+		// If the function is accessed via optional-chaining,
+		// then the target type is the inner type of the optional.
+		accessedType := memberInfo.AccessedType
+		if memberInfo.IsOptional {
+			accessedType = sema.UnwrapOptionalType(accessedType)
+		}
+
+		// Load function value.
 		funcName = commons.TypeQualifiedName(
-			memberInfo.AccessedType,
+			accessedType,
 			invokedExpr.Identifier.Identifier,
 		)
 		c.emitVariableLoad(funcName)
