@@ -6848,6 +6848,42 @@ func TestInterpretMemoryMeteringString(t *testing.T) {
 		// 1 + 4 (max UTF8 encoding)
 		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindStringValue))
 	})
+
+	t.Run("length", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            fun main() {
+                let x = "abc".length
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindStringValue))
+	})
+
+	t.Run("decodeHex", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            fun main() {
+                let x = "0D15EA5E".decodeHex()
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindStringValue))
+	})
 }
 
 func TestInterpretMemoryMeteringCharacter(t *testing.T) {
