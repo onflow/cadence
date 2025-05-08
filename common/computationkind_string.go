@@ -22,6 +22,11 @@ func _() {
 	_ = x[ComputationKindTransferDictionaryValue-1041]
 	_ = x[ComputationKindDestroyDictionaryValue-1042]
 	_ = x[ComputationKindEncodeValue-1080]
+	_ = x[ComputationKindUintParse-1082]
+	_ = x[ComputationKindIntParse-1083]
+	_ = x[ComputationKindBigIntParse-1084]
+	_ = x[ComputationKindUfixParse-1085]
+	_ = x[ComputationKindFixParse-1086]
 	_ = x[ComputationKindSTDLIBPanic-1100]
 	_ = x[ComputationKindSTDLIBAssert-1101]
 	_ = x[ComputationKindSTDLIBRevertibleRandom-1102]
@@ -36,8 +41,9 @@ const (
 	_ComputationKind_name_3 = "CreateArrayValueTransferArrayValueDestroyArrayValue"
 	_ComputationKind_name_4 = "CreateDictionaryValueTransferDictionaryValueDestroyDictionaryValue"
 	_ComputationKind_name_5 = "EncodeValue"
-	_ComputationKind_name_6 = "STDLIBPanicSTDLIBAssertSTDLIBRevertibleRandom"
-	_ComputationKind_name_7 = "STDLIBRLPDecodeStringSTDLIBRLPDecodeList"
+	_ComputationKind_name_6 = "UintParseIntParseBigIntParseUfixParseFixParse"
+	_ComputationKind_name_7 = "STDLIBPanicSTDLIBAssertSTDLIBRevertibleRandom"
+	_ComputationKind_name_8 = "STDLIBRLPDecodeStringSTDLIBRLPDecodeList"
 )
 
 var (
@@ -45,8 +51,9 @@ var (
 	_ComputationKind_index_2 = [...]uint8{0, 20, 42, 63}
 	_ComputationKind_index_3 = [...]uint8{0, 16, 34, 51}
 	_ComputationKind_index_4 = [...]uint8{0, 21, 44, 66}
-	_ComputationKind_index_6 = [...]uint8{0, 11, 23, 45}
-	_ComputationKind_index_7 = [...]uint8{0, 21, 40}
+	_ComputationKind_index_6 = [...]uint8{0, 9, 17, 28, 37, 45}
+	_ComputationKind_index_7 = [...]uint8{0, 11, 23, 45}
+	_ComputationKind_index_8 = [...]uint8{0, 21, 40}
 )
 
 func (i ComputationKind) String() string {
@@ -67,12 +74,15 @@ func (i ComputationKind) String() string {
 		return _ComputationKind_name_4[_ComputationKind_index_4[i]:_ComputationKind_index_4[i+1]]
 	case i == 1080:
 		return _ComputationKind_name_5
+	case 1082 <= i && i <= 1086:
+		i -= 1082
+		return _ComputationKind_name_6[_ComputationKind_index_6[i]:_ComputationKind_index_6[i+1]]
 	case 1100 <= i && i <= 1102:
 		i -= 1100
-		return _ComputationKind_name_6[_ComputationKind_index_6[i]:_ComputationKind_index_6[i+1]]
+		return _ComputationKind_name_7[_ComputationKind_index_7[i]:_ComputationKind_index_7[i+1]]
 	case 1108 <= i && i <= 1109:
 		i -= 1108
-		return _ComputationKind_name_7[_ComputationKind_index_7[i]:_ComputationKind_index_7[i+1]]
+		return _ComputationKind_name_8[_ComputationKind_index_8[i]:_ComputationKind_index_8[i+1]]
 	default:
 		return "ComputationKind(" + strconv.FormatInt(int64(i), 10) + ")"
 	}

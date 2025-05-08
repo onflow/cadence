@@ -111,11 +111,11 @@ const (
 	_
 	ComputationKindEncodeValue
 	_
-	_
-	_
-	_
-	_
-	_
+	ComputationKindUintParse
+	ComputationKindIntParse
+	ComputationKindBigIntParse
+	ComputationKindUfixParse
+	ComputationKindFixParse
 	_
 	_
 	_

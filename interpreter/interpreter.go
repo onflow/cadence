@@ -2749,7 +2749,7 @@ type fromStringFunctionValue struct {
 }
 
 // a function that attempts to create a Cadence value from a string, e.g. parsing a number from a string
-type stringValueParser func(common.MemoryGauge, string) OptionalValue
+type stringValueParser func(common.Gauge, string) OptionalValue
 
 func newFromStringFunction(ty sema.Type, parser stringValueParser) fromStringFunctionValue {
 	functionType := sema.FromStringFunctionType(ty)
@@ -2780,16 +2780,24 @@ func unsignedIntValueParser[ValueType Value, IntType any](
 	toValue func(common.MemoryGauge, func() IntType) ValueType,
 	fromUInt64 func(uint64) IntType,
 ) stringValueParser {
-	return func(memoryGauge common.MemoryGauge, input string) OptionalValue {
+	return func(gauge common.Gauge, input string) OptionalValue {
+		common.UseComputation(
+			gauge,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindUintParse,
+				Intensity: uint64(len(input)),
+			},
+		)
+
 		val, err := strconv.ParseUint(input, 10, bitSize)
 		if err != nil {
 			return NilOptionalValue
 		}
 
-		converted := toValue(memoryGauge, func() IntType {
+		converted := toValue(gauge, func() IntType {
 			return fromUInt64(val)
 		})
-		return NewSomeValueNonCopying(memoryGauge, converted)
+		return NewSomeValueNonCopying(gauge, converted)
 	}
 }
 
@@ -2802,26 +2810,43 @@ func signedIntValueParser[ValueType Value, IntType any](
 	fromInt64 func(int64) IntType,
 ) stringValueParser {
 
-	return func(memoryGauge common.MemoryGauge, input string) OptionalValue {
+	return func(gauge common.Gauge, input string) OptionalValue {
+		common.UseComputation(
+			gauge,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindIntParse,
+				Intensity: uint64(len(input)),
+			},
+		)
+
 		val, err := strconv.ParseInt(input, 10, bitSize)
 		if err != nil {
 			return NilOptionalValue
 		}
 
-		converted := toValue(memoryGauge, func() IntType {
+		converted := toValue(gauge, func() IntType {
 			return fromInt64(val)
 		})
-		return NewSomeValueNonCopying(memoryGauge, converted)
+		return NewSomeValueNonCopying(gauge, converted)
 	}
 }
 
 // No need to use metered constructors for values represented by big.Ints,
 // since estimation is more granular than fixed-size types.
 func bigIntValueParser(convert func(*big.Int) (Value, bool)) stringValueParser {
-	return func(memoryGauge common.MemoryGauge, input string) OptionalValue {
+	return func(gauge common.Gauge, input string) OptionalValue {
+
 		literalKind := common.IntegerLiteralKindDecimal
 		estimatedSize := common.OverEstimateBigIntFromString(input, literalKind)
-		common.UseMemory(memoryGauge, common.NewBigIntMemoryUsage(estimatedSize))
+		common.UseMemory(gauge, common.NewBigIntMemoryUsage(estimatedSize))
+
+		common.UseComputation(
+			gauge,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindBigIntParse,
+				Intensity: uint64(len(input)),
+			},
+		)
 
 		val, ok := new(big.Int).SetString(input, literalKind.Base())
 		if !ok {
@@ -2833,7 +2858,7 @@ func bigIntValueParser(convert func(*big.Int) (Value, bool)) stringValueParser {
 		if !ok {
 			return NilOptionalValue
 		}
-		return NewSomeValueNonCopying(memoryGauge, converted)
+		return NewSomeValueNonCopying(gauge, converted)
 	}
 }
 
@@ -2918,24 +2943,46 @@ var fromStringFunctionValues = func() map[string]fromStringFunctionValue {
 		})),
 
 		// fixed-points
-		newFromStringFunction(sema.Fix64Type, func(memoryGauge common.MemoryGauge, input string) OptionalValue {
-			n, err := fixedpoint.ParseFix64(input)
-			if err != nil {
-				return NilOptionalValue
-			}
+		newFromStringFunction(
+			sema.Fix64Type,
+			func(gauge common.Gauge, input string) OptionalValue {
+				common.UseComputation(
+					gauge,
+					common.ComputationUsage{
+						Kind:      common.ComputationKindFixParse,
+						Intensity: uint64(len(input)),
+					},
+				)
 
-			val := NewFix64Value(memoryGauge, n.Int64)
-			return NewSomeValueNonCopying(memoryGauge, val)
+				n, err := fixedpoint.ParseFix64(input)
+				if err != nil {
+					return NilOptionalValue
+				}
 
-		}),
-		newFromStringFunction(sema.UFix64Type, func(memoryGauge common.MemoryGauge, input string) OptionalValue {
-			n, err := fixedpoint.ParseUFix64(input)
-			if err != nil {
-				return NilOptionalValue
-			}
-			val := NewUFix64Value(memoryGauge, n.Uint64)
-			return NewSomeValueNonCopying(memoryGauge, val)
-		}),
+				val := NewFix64Value(gauge, n.Int64)
+				return NewSomeValueNonCopying(gauge, val)
+
+			},
+		),
+		newFromStringFunction(
+			sema.UFix64Type,
+			func(gauge common.Gauge, input string) OptionalValue {
+				common.UseComputation(
+					gauge,
+					common.ComputationUsage{
+						Kind:      common.ComputationKindUfixParse,
+						Intensity: uint64(len(input)),
+					},
+				)
+
+				n, err := fixedpoint.ParseUFix64(input)
+				if err != nil {
+					return NilOptionalValue
+				}
+				val := NewUFix64Value(gauge, n.Uint64)
+				return NewSomeValueNonCopying(gauge, val)
+			},
+		),
 	}
 
 	values := make(map[string]fromStringFunctionValue, len(declarations))
