@@ -53,6 +53,9 @@ type testMemoryGauge struct {
 var _ common.MemoryGauge = &testMemoryGauge{}
 
 func (g *testMemoryGauge) MeterMemory(usage common.MemoryUsage) error {
+	if g.meter == nil {
+		g.meter = make(map[common.MemoryKind]uint64)
+	}
 	g.meter[usage.Kind] += usage.Amount
 
 	if g.kindSet != nil {

@@ -45,6 +45,9 @@ type testComputationGauge struct {
 var _ common.ComputationGauge = &testComputationGauge{}
 
 func (g *testComputationGauge) MeterComputation(usage common.ComputationUsage) error {
+	if g.meter == nil {
+		g.meter = make(map[common.ComputationKind]uint64)
+	}
 	g.meter[usage.Kind] += usage.Intensity
 
 	if g.kindSet != nil {
