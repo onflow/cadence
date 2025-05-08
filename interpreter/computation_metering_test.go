@@ -36,7 +36,48 @@ func (f computationGaugeFunc) MeterComputation(usage common.ComputationUsage) er
 	return f(usage)
 }
 
-func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
+type testComputationGauge struct {
+	meter   map[common.ComputationKind]uint64
+	kindSet map[common.ComputationKind]struct{}
+	usages  []common.ComputationUsage
+}
+
+var _ common.ComputationGauge = &testComputationGauge{}
+
+func (g *testComputationGauge) MeterComputation(usage common.ComputationUsage) error {
+	g.meter[usage.Kind] += usage.Intensity
+
+	if g.kindSet != nil {
+		if _, ok := g.kindSet[usage.Kind]; ok {
+			g.usages = append(g.usages, usage)
+		}
+	}
+
+	return nil
+}
+
+func (g *testComputationGauge) getComputation(kind common.ComputationKind) uint64 {
+	return g.meter[kind]
+}
+
+func newTestComputationGauge(
+	kinds ...common.ComputationKind,
+) *testComputationGauge {
+
+	var kindSet map[common.ComputationKind]struct{}
+	if len(kinds) > 0 {
+		kindSet = make(map[common.ComputationKind]struct{}, len(kinds))
+		for _, kind := range kinds {
+			kindSet[kind] = struct{}{}
+		}
+	}
+
+	return &testComputationGauge{
+		kindSet: kindSet,
+	}
+}
+
+func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 
 	t.Parallel()
 
@@ -182,7 +223,7 @@ func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretStdlibComputationMetering(t *testing.T) {
+func TestInterpretComputationMeteringStdlib(t *testing.T) {
 
 	t.Parallel()
 
