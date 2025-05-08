@@ -246,3 +246,10 @@ func (c *Context) GetMethod(
 		method,
 	)
 }
+
+func (c *Context) GetFunction(
+	location common.Location,
+	name string,
+) interpreter.FunctionValue {
+	return c.lookupFunction(location, name)
+}

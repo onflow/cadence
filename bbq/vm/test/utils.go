@@ -526,27 +526,35 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 
 	vmConfig.WithDebugEnabled()
 
+	if vmConfig.ContractValueHandler == nil {
+		// TODO: generalize this
+		if len(program.Contracts) == 1 {
+			vmConfig.ContractValueHandler = contractValueHandler(program.Contracts[0].Name)
+		}
+	}
+
 	programVM := vm.NewVM(
 		location,
 		program,
 		vmConfig,
 	)
 
-	if vmConfig.ContractValueHandler == nil {
-		var contractValue *interpreter.CompositeValue
-		vmConfig.ContractValueHandler = func(conf *vm.Config, location common.Location) *interpreter.CompositeValue {
-			if contractValue == nil {
-				var err error
-				// Assume only one contract per program
-				require.True(t, len(program.Contracts) == 1)
-				contractValue, err = programVM.InitializeContract(program.Contracts[0].Name)
-				require.NoError(t, err)
-			}
-			return contractValue
-		}
-	}
-
 	return programVM
+}
+
+func contractValueHandler(contractName string, arguments ...vm.Value) vm.ContractValueHandler {
+	return func(context *vm.Context, location common.Location) *interpreter.CompositeValue {
+		contractInitializerName := commons.QualifiedName(contractName, commons.InitFunctionName)
+		contractInitializer := context.GetFunction(location, contractInitializerName)
+		result := context.InvokeFunction(
+			contractInitializer,
+			arguments,
+			nil,
+			interpreter.EmptyLocationRange,
+		)
+
+		return result.(*interpreter.CompositeValue)
+	}
 }
 
 func typeLoader(

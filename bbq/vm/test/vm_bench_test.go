@@ -273,7 +273,7 @@ func BenchmarkContractImport(b *testing.B) {
 		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
 		},
-		ContractValueHandler: func(_ *vm.Config, _ common.Location) *interpreter.CompositeValue {
+		ContractValueHandler: func(_ *vm.Context, _ common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		},
 	}
@@ -414,7 +414,7 @@ func BenchmarkMethodCall(b *testing.B) {
 			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 				return importedProgram
 			},
-			ContractValueHandler: func(_ *vm.Config, _ common.Location) *interpreter.CompositeValue {
+			ContractValueHandler: func(_ *vm.Context, _ common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
 			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
@@ -525,7 +525,7 @@ func BenchmarkMethodCall(b *testing.B) {
 			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 				return importedProgram
 			},
-			ContractValueHandler: func(_ *vm.Config, _ common.Location) *interpreter.CompositeValue {
+			ContractValueHandler: func(_ *vm.Context, _ common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
 		}

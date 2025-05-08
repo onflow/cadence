@@ -232,7 +232,10 @@ func compiledFTTransfer(tb testing.TB) {
 	vmConfig.ImportHandler = importHandler
 
 	contractValues := make(map[common.Location]*interpreter.CompositeValue)
-	vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+	vmConfig.ContractValueHandler = func(
+		_ *vm.Context,
+		location common.Location,
+	) *interpreter.CompositeValue {
 		return contractValues[location]
 	}
 
