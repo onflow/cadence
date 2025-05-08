@@ -7316,7 +7316,7 @@ func TestInterpretInterfaceInitializer(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       struct interface I {
           init(a a1: Bool) {
               pre { a1 }
@@ -7333,15 +7333,11 @@ func TestInterpretInterfaceInitializer(t *testing.T) {
     `)
 
 	_, err := inter.Invoke("test")
-	require.IsType(t,
-		interpreter.Error{},
-		err,
-	)
-	interpreterErr := err.(interpreter.Error)
 
-	require.IsType(t,
-		interpreter.ConditionError{},
-		interpreterErr.Err,
+	assertConditionError(
+		t,
+		err,
+		ast.ConditionKindPre,
 	)
 }
 
