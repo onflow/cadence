@@ -1715,11 +1715,12 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 			panic(errors.NewDefaultUserError("invalid function name"))
 		}
 
-		// Receiver is loaded first. So 'self' is always the zero-th argument.
-		c.compileExpression(invokedExpr.Expression)
-
-		// Compile arguments
-		c.compileArguments(expression.Arguments, invocationTypes)
+		c.compileMethodInvocationArguments(
+			invokedExpr,
+			expression.Arguments,
+			memberInfo,
+			invocationTypes,
+		)
 
 		funcNameConst := c.addStringConst(funcName)
 		c.codeGen.Emit(
@@ -1731,24 +1732,53 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		)
 
 	} else {
-		// Load function value
+		// If the function is accessed via optional-chaining,
+		// then the target type is the inner type of the optional.
+		accessedType := memberInfo.AccessedType
+		if memberInfo.IsOptional {
+			accessedType = sema.UnwrapOptionalType(accessedType)
+		}
+
+		// Load function value.
 		funcName = commons.TypeQualifiedName(
-			memberInfo.AccessedType,
+			accessedType,
 			invokedExpr.Identifier.Identifier,
 		)
 		c.emitVariableLoad(funcName)
 
-		// Receiver is loaded first. So 'self' is always the zero-th argument.
-		c.compileExpression(invokedExpr.Expression)
-
-		// Compile arguments
-		c.compileArguments(expression.Arguments, invocationTypes)
+		c.compileMethodInvocationArguments(
+			invokedExpr,
+			expression.Arguments,
+			memberInfo,
+			invocationTypes,
+		)
 
 		c.codeGen.Emit(opcode.InstructionInvokeMethodStatic{
 			TypeArgs: typeArgs,
 			ArgCount: argsCountWithReceiver,
 		})
 	}
+}
+
+func (c *Compiler[_, _]) compileMethodInvocationArguments(
+	invokedExpr *ast.MemberExpression,
+	arguments ast.Arguments,
+	memberInfo sema.MemberAccessInfo,
+	invocationTypes sema.InvocationExpressionTypes,
+) {
+	// Receiver is loaded first. So 'self' is always the zero-th argument.
+	c.compileExpression(invokedExpr.Expression)
+
+	// Unwrap the target, if the member access is via optional chaining.
+	if memberInfo.IsOptional {
+		c.codeGen.Emit(opcode.InstructionUnwrap{})
+
+		// TODO: Implement the remaining parts of optional-chaining.
+		// e.g: early returning with nil, if the target is nil.
+	}
+
+	// Compile arguments
+	c.compileArguments(arguments, invocationTypes)
 }
 
 func isDynamicMethodInvocation(accessedType sema.Type) bool {
@@ -2505,51 +2535,56 @@ func (c *Compiler[_, _]) VisitAttachExpression(_ *ast.AttachExpression) (_ struc
 
 func (c *Compiler[_, _]) emitTransfer(targetType sema.Type) {
 
-	lastInstruction := c.codeGen.LastInstruction()
+	//lastInstruction := c.codeGen.LastInstruction()
+
+	// TODO: Revisit the below logic: last instruction may not always be the
+	//  actually executed last instruction, in case where branching is present.
+	//  e.g: conditional-expression (var a: Int? = condition ? 123 : nil)
+	//  Here last instruction can be `123` constant-load, depending on the execution.
 
 	// Optimization: We can omit the transfer in some cases
-	switch lastInstruction := lastInstruction.(type) {
-	case opcode.InstructionGetConstant:
-		// If the last instruction is a constant load of the same type,
-		// then the transfer is not needed.
-		targetConstantKind := constant.FromSemaType(targetType)
-		constantIndex := lastInstruction.Constant
-		c := c.constants[constantIndex]
-		if c.kind == targetConstantKind {
-			return
-		}
-
-	case opcode.InstructionNewPath:
-		// If the last instruction is a path creation of the same type,
-		// then the transfer is not needed.
-		switch lastInstruction.Domain {
-		case common.PathDomainPublic:
-			if targetType == sema.PublicPathType {
-				return
-			}
-
-		case common.PathDomainStorage:
-			if targetType == sema.StoragePathType {
-				return
-			}
-		}
-
-	case opcode.InstructionNewClosure:
-		// If the last instruction is a closure creation of the same type,
-		// then the transfer is not needed.
-		function := c.functions[lastInstruction.Function]
-		functionSourceType := c.types[function.typeIndex].(*sema.FunctionType)
-		if functionTargetType, ok := targetType.(*sema.FunctionType); ok {
-			if functionSourceType.Equal(functionTargetType) {
-				return
-			}
-		}
-
-	case opcode.InstructionNil:
-		// If the last instruction is a nil load,
-		// then the transfer is not needed.
-		return
-	}
+	//switch lastInstruction := lastInstruction.(type) {
+	//case opcode.InstructionGetConstant:
+	//	// If the last instruction is a constant load of the same type,
+	//	// then the transfer is not needed.
+	//	targetConstantKind := constant.FromSemaType(targetType)
+	//	constantIndex := lastInstruction.Constant
+	//	c := c.constants[constantIndex]
+	//	if c.kind == targetConstantKind {
+	//		return
+	//	}
+	//
+	//case opcode.InstructionNewPath:
+	//	// If the last instruction is a path creation of the same type,
+	//	// then the transfer is not needed.
+	//	switch lastInstruction.Domain {
+	//	case common.PathDomainPublic:
+	//		if targetType == sema.PublicPathType {
+	//			return
+	//		}
+	//
+	//	case common.PathDomainStorage:
+	//		if targetType == sema.StoragePathType {
+	//			return
+	//		}
+	//	}
+	//
+	//case opcode.InstructionNewClosure:
+	//	// If the last instruction is a closure creation of the same type,
+	//	// then the transfer is not needed.
+	//	function := c.functions[lastInstruction.Function]
+	//	functionSourceType := c.types[function.typeIndex].(*sema.FunctionType)
+	//	if functionTargetType, ok := targetType.(*sema.FunctionType); ok {
+	//		if functionSourceType.Equal(functionTargetType) {
+	//			return
+	//		}
+	//	}
+	//
+	//case opcode.InstructionNil:
+	//	// If the last instruction is a nil load,
+	//	// then the transfer is not needed.
+	//	return
+	//}
 
 	typeIndex := c.getOrAddType(targetType)
 	c.codeGen.Emit(opcode.InstructionTransfer{

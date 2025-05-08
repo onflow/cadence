@@ -44,7 +44,7 @@ type FunctionValue interface {
 	// ResolvedFunctionType returns the resolved type of the function using the provided receiver value,
 	// if the function has a generic type. This would panic if the function is not a generic function.
 	// Use `HasGenericType` to determine whether this method should be called or not.
-	ResolvedFunctionType(receiver Value, context interpreter.TypeConverter) *sema.FunctionType
+	ResolvedFunctionType(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType
 }
 
 type CompiledFunctionValue struct {
@@ -65,7 +65,7 @@ func (v CompiledFunctionValue) HasGenericType() bool {
 	return false
 }
 
-func (v CompiledFunctionValue) ResolvedFunctionType(_ Value, context interpreter.TypeConverter) *sema.FunctionType {
+func (v CompiledFunctionValue) ResolvedFunctionType(_ Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 	return v.FunctionType(context)
 }
 
@@ -153,7 +153,7 @@ func (v CompiledFunctionValue) IsImportable(_ interpreter.ValueImportableContext
 	return false
 }
 
-func (v CompiledFunctionValue) FunctionType(interpreter.TypeConverter) *sema.FunctionType {
+func (v CompiledFunctionValue) FunctionType(interpreter.ValueStaticTypeContext) *sema.FunctionType {
 	return v.Type.Type
 }
 
@@ -174,7 +174,7 @@ type NativeFunctionValue struct {
 
 	// A function value can only have either one of `functionType` or `functionTypeGetter`.
 	functionType       *sema.FunctionType
-	functionTypeGetter func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType
+	functionTypeGetter func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType
 }
 
 func NewNativeFunctionValue(
@@ -191,7 +191,7 @@ func NewNativeFunctionValue(
 
 func NewNativeFunctionValueWithDerivedType(
 	name string,
-	typeGetter func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType,
+	typeGetter func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType,
 	function NativeFunction,
 ) NativeFunctionValue {
 	return NativeFunctionValue{
@@ -309,7 +309,7 @@ func (v NativeFunctionValue) IsImportable(
 	return false
 }
 
-func (v NativeFunctionValue) FunctionType(interpreter.TypeConverter) *sema.FunctionType {
+func (v NativeFunctionValue) FunctionType(interpreter.ValueStaticTypeContext) *sema.FunctionType {
 	if v.functionTypeGetter != nil {
 		// For native functions where the type is NOT pre-known, This method should never be invoked.
 		// Such functions must always be wrapped with a `BoundFunctionPointerValue`.
@@ -318,7 +318,7 @@ func (v NativeFunctionValue) FunctionType(interpreter.TypeConverter) *sema.Funct
 	return v.functionType
 }
 
-func (v NativeFunctionValue) ResolvedFunctionType(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
+func (v NativeFunctionValue) ResolvedFunctionType(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 	if v.functionTypeGetter == nil {
 		// ResolvedFunctionType shouldn't get called for functions where the type is pre-know.
 		panic(errors.NewUnreachableError())
@@ -370,7 +370,7 @@ func (v *BoundFunctionPointerValue) HasGenericType() bool {
 	return v.Method.HasGenericType()
 }
 
-func (v *BoundFunctionPointerValue) ResolvedFunctionType(_ Value, context interpreter.TypeConverter) *sema.FunctionType {
+func (v *BoundFunctionPointerValue) ResolvedFunctionType(_ Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 	return v.FunctionType(context)
 }
 
@@ -463,7 +463,7 @@ func (v *BoundFunctionPointerValue) IsImportable(
 	return false
 }
 
-func (v *BoundFunctionPointerValue) FunctionType(context interpreter.TypeConverter) *sema.FunctionType {
+func (v *BoundFunctionPointerValue) FunctionType(context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 	if v.functionType == nil {
 		v.initializeFunctionType(context)
 	}
@@ -471,7 +471,7 @@ func (v *BoundFunctionPointerValue) FunctionType(context interpreter.TypeConvert
 	return v.functionType
 }
 
-func (v *BoundFunctionPointerValue) initializeFunctionType(context interpreter.TypeConverter) {
+func (v *BoundFunctionPointerValue) initializeFunctionType(context interpreter.ValueStaticTypeContext) {
 	method := v.Method
 	// The type of the native function could be either pre-known (e.g: `Integer.toBigEndianBytes()`),
 	// Or would needs to be derived based on the receiver (e.g: `[Int8].append()`).

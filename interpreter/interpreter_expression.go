@@ -557,10 +557,26 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		return interpreter.testComparison(leftValue, rightValue(), expression)
 
 	case ast.OperationEqual:
-		return interpreter.testEqual(leftValue, rightValue(), expression)
+		return TestValueEqual(
+			interpreter,
+			LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: expression,
+			},
+			leftValue,
+			rightValue(),
+		)
 
 	case ast.OperationNotEqual:
-		return !interpreter.testEqual(leftValue, rightValue(), expression)
+		return !TestValueEqual(
+			interpreter,
+			LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: expression,
+			},
+			leftValue,
+			rightValue(),
+		)
 
 	case ast.OperationOr:
 		// interpret the left-hand side
@@ -630,7 +646,11 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 	})
 }
 
-func (interpreter *Interpreter) testEqual(left, right Value, expression *ast.BinaryExpression) BoolValue {
+func TestValueEqual(
+	context ValueComparisonContext,
+	locationRange LocationRange,
+	left, right Value,
+) BoolValue {
 	left = Unbox(left)
 
 	right = Unbox(right)
@@ -642,11 +662,8 @@ func (interpreter *Interpreter) testEqual(left, right Value, expression *ast.Bin
 
 	return BoolValue(
 		leftEquatable.Equal(
-			interpreter,
-			LocationRange{
-				Location:    interpreter.Location,
-				HasPosition: expression,
-			},
+			context,
+			locationRange,
 			right,
 		),
 	)

@@ -152,15 +152,12 @@ func (v *SomeValue) GetMember(context MemberAccessibleContext, locationRange Loc
 
 func (v *SomeValue) GetMethod(
 	context MemberAccessibleContext,
-	locationRange LocationRange,
+	_ LocationRange,
 	name string,
 ) FunctionValue {
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
-		innerValueType := MustConvertStaticToSemaType(
-			v.value.StaticType(context),
-			context,
-		)
+		innerValueType := v.InnerValueType(context)
 		return NewBoundHostFunctionValue(
 			context,
 			v,
@@ -177,30 +174,56 @@ func (v *SomeValue) GetMethod(
 				}
 
 				transformFunctionType := transformFunction.FunctionType(invocationContext)
-				parameterTypes := transformFunctionType.ParameterTypes()
-				returnType := transformFunctionType.ReturnTypeAnnotation.Type
 
-				return v.fmap(
+				return OptionalValueMapFunction(
 					invocationContext,
-					func(v Value) Value {
-						return invokeFunctionValue(
-							invocationContext,
-							transformFunction,
-							[]Value{v},
-							nil,
-							[]sema.Type{innerValueType},
-							parameterTypes,
-							returnType,
-							invocation.TypeParameterTypes,
-							locationRange,
-						)
-					},
+					v,
+					transformFunctionType,
+					transformFunction,
+					innerValueType,
+					locationRange,
 				)
 			},
 		)
 	}
 
 	return nil
+}
+
+func OptionalValueMapFunction(
+	invocationContext InvocationContext,
+	optionalValue OptionalValue,
+	transformFunctionType *sema.FunctionType,
+	transformFunction FunctionValue,
+	innerValueType sema.Type,
+	locationRange LocationRange,
+) Value {
+	parameterTypes := transformFunctionType.ParameterTypes()
+	returnType := transformFunctionType.ReturnTypeAnnotation.Type
+
+	return optionalValue.fmap(
+		invocationContext,
+		func(v Value) Value {
+			return invokeFunctionValue(
+				invocationContext,
+				transformFunction,
+				[]Value{v},
+				nil,
+				[]sema.Type{innerValueType},
+				parameterTypes,
+				returnType,
+				nil,
+				locationRange,
+			)
+		},
+	)
+}
+
+func (v *SomeValue) InnerValueType(context ValueStaticTypeContext) sema.Type {
+	return MustConvertStaticToSemaType(
+		v.value.StaticType(context),
+		context,
+	)
 }
 
 func (v *SomeValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {

@@ -89,10 +89,6 @@ func (v *VMInvokable) InitializeContract(contractName string, arguments ...inter
 func ParseCheckAndPrepare(tb testing.TB, code string, compile bool) Invokable {
 	tb.Helper()
 
-	if !compile {
-		return ParseCheckAndInterpret(tb, code)
-	}
-
 	invokable, err := ParseCheckAndPrepareWithOptions(tb, code, ParseCheckAndInterpretOptions{}, compile)
 	require.NoError(tb, err)
 
@@ -165,7 +161,12 @@ func ParseCheckAndPrepareWithOptions(
 
 	interpreterConfig := options.Config
 
-	vmConfig := (&vm.Config{}).
+	var storage interpreter.Storage
+	if interpreterConfig != nil {
+		storage = interpreterConfig.Storage
+	}
+
+	vmConfig := vm.NewConfig(storage).
 		WithInterpreterConfig(interpreterConfig).
 		WithDebugEnabled()
 

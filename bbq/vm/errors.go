@@ -38,17 +38,6 @@ func (l LinkerError) Error() string {
 	return l.Message
 }
 
-// ForceNilError
-type ForceNilError struct{}
-
-var _ errors.UserError = ForceNilError{}
-
-func (ForceNilError) IsUserError() {}
-
-func (e ForceNilError) Error() string {
-	return "unexpectedly found nil while forcing an Optional value"
-}
-
 // UnknownFunctionError
 type UnknownFunctionError struct {
 	name string

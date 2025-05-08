@@ -40,4 +40,5 @@ const (
 	TypeQualifierArrayVariableSized = "$ArrayVariableSized"
 	TypeQualifierDictionary         = "$Dictionary"
 	TypeQualifierFunction           = "$Function"
+	TypeQualifierOptional           = "$Optional"
 )

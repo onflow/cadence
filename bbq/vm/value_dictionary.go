@@ -33,7 +33,7 @@ func init() {
 		commons.TypeQualifierDictionary,
 		NewNativeFunctionValueWithDerivedType(
 			sema.DictionaryTypeRemoveFunctionName,
-			func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
+			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				dictionaryType := dictionaryType(receiver, context)
 				return sema.DictionaryRemoveFunctionType(dictionaryType)
 			},
@@ -50,7 +50,7 @@ func init() {
 		commons.TypeQualifierDictionary,
 		NewNativeFunctionValueWithDerivedType(
 			sema.DictionaryTypeInsertFunctionName,
-			func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
+			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				dictionaryType := dictionaryType(receiver, context)
 				return sema.DictionaryInsertFunctionType(dictionaryType)
 			},
@@ -74,7 +74,7 @@ func init() {
 		commons.TypeQualifierDictionary,
 		NewNativeFunctionValueWithDerivedType(
 			sema.DictionaryTypeContainsKeyFunctionName,
-			func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
+			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				dictionaryType := dictionaryType(receiver, context)
 				return sema.DictionaryContainsKeyFunctionType(dictionaryType)
 			},
@@ -95,7 +95,7 @@ func init() {
 		commons.TypeQualifierDictionary,
 		NewNativeFunctionValueWithDerivedType(
 			sema.DictionaryTypeForEachKeyFunctionName,
-			func(receiver Value, context interpreter.TypeConverter) *sema.FunctionType {
+			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				dictionaryValue := receiver.(*interpreter.DictionaryValue)
 				dictionaryType := dictionaryValue.SemaType(context)
 				return sema.DictionaryRemoveFunctionType(dictionaryType)
@@ -116,7 +116,7 @@ func init() {
 	)
 }
 
-func dictionaryType(receiver Value, context interpreter.TypeConverter) *sema.DictionaryType {
+func dictionaryType(receiver Value, context interpreter.ValueStaticTypeContext) *sema.DictionaryType {
 	dictionaryValue := receiver.(*interpreter.DictionaryValue)
 	dictionaryType := dictionaryValue.SemaType(context)
 	return dictionaryType
