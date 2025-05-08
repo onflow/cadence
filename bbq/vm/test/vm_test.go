@@ -4323,7 +4323,6 @@ func TestFunctionPostConditions(t *testing.T) {
 		assert.ErrorContains(t, err, "pre/post condition failed")
 	})
 
-
 	t.Run("inherited with different param names", func(t *testing.T) {
 
 		t.Parallel()
