@@ -467,7 +467,7 @@ func (v *ArrayValue) Concat(context ValueTransferContext, locationRange Location
 	)
 }
 
-func (v *ArrayValue) GetKey(context ValueComparisonContext, locationRange LocationRange, key Value) Value {
+func (v *ArrayValue) GetKey(context ContainerReadContext, locationRange LocationRange, key Value) Value {
 	index := key.(NumberValue).ToInt(locationRange)
 	return v.Get(context, locationRange, index)
 }
@@ -2047,7 +2047,7 @@ func NewArrayIterator(gauge common.MemoryGauge, v *ArrayValue) ValueIterator {
 	}
 }
 
-func (i *ArrayIterator) HasNext() bool {
+func (i *ArrayIterator) HasNext(_ ValueIteratorContext) bool {
 	if i.next != nil {
 		return true
 	}

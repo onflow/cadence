@@ -4198,7 +4198,7 @@ func TestStringIsGraphemeBoundaryStart(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 			str := NewUnmeteredStringValue(s)
-			assert.Equal(t, expected, str.IsGraphemeBoundaryStart(i))
+			assert.Equal(t, expected, str.IsGraphemeBoundaryStart(nil, i))
 		})
 	}
 
@@ -4239,7 +4239,7 @@ func TestStringIsGraphemeBoundaryEnd(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 			str := NewUnmeteredStringValue(s)
-			assert.Equal(t, expected, str.IsGraphemeBoundaryEnd(i))
+			assert.Equal(t, expected, str.IsGraphemeBoundaryEnd(nil, i))
 		})
 	}
 

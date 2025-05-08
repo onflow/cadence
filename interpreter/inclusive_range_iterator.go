@@ -84,7 +84,7 @@ func (i *InclusiveRangeIterator) Next(context ValueIteratorContext, locationRang
 	return valueToReturn
 }
 
-func (i *InclusiveRangeIterator) HasNext() bool {
+func (i *InclusiveRangeIterator) HasNext(_ ValueIteratorContext) bool {
 	// TODO: Not implemented yet
 	panic(errors.NewUnreachableError())
 }

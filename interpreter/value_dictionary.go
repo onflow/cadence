@@ -596,7 +596,7 @@ func (v *DictionaryValue) Get(
 	return MustConvertStoredValue(context, storedValue), true
 }
 
-func (v *DictionaryValue) GetKey(context ValueComparisonContext, locationRange LocationRange, keyValue Value) Value {
+func (v *DictionaryValue) GetKey(context ContainerReadContext, locationRange LocationRange, keyValue Value) Value {
 	value, ok := v.Get(context, locationRange, keyValue)
 	if ok {
 		return NewSomeValueNonCopying(context, value)

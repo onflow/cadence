@@ -24,8 +24,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
@@ -331,7 +334,7 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(6), computationMeteredValues[common.ComputationKindLoop])
+		assert.Equal(t, uint64(6), computationMeteredValues[common.ComputationKindStringToLower])
 	})
 
 	t.Run("string split", func(t *testing.T) {
@@ -678,6 +681,216 @@ func TestInterpretComputationMeteringFunctionInvocation(t *testing.T) {
 		},
 		computationGauge.usages,
 	)
+}
+
+
+func TestInterpretComputationMeteringString(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("get", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		storage := newUnmeteredInMemoryStorage()
+		_, err := parseCheckAndInterpretWithOptions(t,
+			`
+             let x = "abc"[2]
+           `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				// TODO: optimize
+				// length (bounds check)
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				//
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 3},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("length", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		storage := newUnmeteredInMemoryStorage()
+		_, err := parseCheckAndInterpretWithOptions(t,
+			`
+             let x = "abc".length
+           `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("toLower", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		storage := newUnmeteredInMemoryStorage()
+		_, err := parseCheckAndInterpretWithOptions(t,
+			`
+             let x = "abc".toLower()
+           `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStringToLower, Intensity: 3},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("slice", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		storage := newUnmeteredInMemoryStorage()
+		_, err := parseCheckAndInterpretWithOptions(t,
+			`
+             let x = "abcd".slice(from: 1, upTo: 3)
+           `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 3},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("decodeHex", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		storage := newUnmeteredInMemoryStorage()
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+             fun test() {
+                 "0D15EA5E".decodeHex()
+             }
+           `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStringDecodeHex, Intensity: 8},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("iteration", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		storage := newUnmeteredInMemoryStorage()
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+             fun test() {
+                 for n in "abc" {}
+             }
+           `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				// loop iterations
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+	})
 }
 
 func TestInterpretComputationMeteringIntegerParsing(t *testing.T) {

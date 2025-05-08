@@ -174,7 +174,7 @@ func (v *EphemeralReferenceValue) SetMember(context ValueTransferContext, locati
 	return setMember(context, v.Value, locationRange, name, value)
 }
 
-func (v *EphemeralReferenceValue) GetKey(context ValueComparisonContext, locationRange LocationRange, key Value) Value {
+func (v *EphemeralReferenceValue) GetKey(context ContainerReadContext, locationRange LocationRange, key Value) Value {
 	return v.Value.(ValueIndexableValue).
 		GetKey(context, locationRange, key)
 }
@@ -369,6 +369,6 @@ func (i *ReferenceValueIterator) Next(context ValueIteratorContext, locationRang
 	return i.iterator.Next(context, locationRange)
 }
 
-func (i *ReferenceValueIterator) HasNext() bool {
-	return i.iterator.HasNext()
+func (i *ReferenceValueIterator) HasNext(context ValueIteratorContext) bool {
+	return i.iterator.HasNext(context)
 }

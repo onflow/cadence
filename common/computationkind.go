@@ -84,9 +84,9 @@ const (
 	_
 	_
 	_
-	_
-	_
-	_
+	ComputationKindStringToLower
+	ComputationKindStringDecodeHex
+	ComputationKindGraphemesIteration
 	_
 	_
 	_

@@ -254,7 +254,7 @@ func (v *StorageReferenceValue) SetMember(context ValueTransferContext, location
 	)
 }
 
-func (v *StorageReferenceValue) GetKey(context ValueComparisonContext, locationRange LocationRange, key Value) Value {
+func (v *StorageReferenceValue) GetKey(context ContainerReadContext, locationRange LocationRange, key Value) Value {
 	self := v.mustReferencedValue(context, locationRange)
 
 	return self.(ValueIndexableValue).

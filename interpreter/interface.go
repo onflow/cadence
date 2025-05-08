@@ -149,6 +149,11 @@ type ValueRemoveContext = ValueTransferContext
 
 var _ ValueRemoveContext = &Interpreter{}
 
+type ContainerReadContext interface {
+	common.ComputationGauge
+	ValueComparisonContext
+}
+
 type ContainerMutationContext interface {
 	ValueTransferContext
 }
