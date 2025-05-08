@@ -43,10 +43,11 @@ type Desugar struct {
 	config                 *Config
 	enclosingInterfaceType *sema.InterfaceType
 
-	modifiedDeclarations         []ast.Declaration
-	inheritedFuncsWithConditions map[string][]*inheritedFunction
-	postConditionIndices         map[*ast.FunctionBlock]int
-	isInheritedFunction          bool
+	modifiedDeclarations           []ast.Declaration
+	inheritedFuncsWithConditions   map[string][]*inheritedFunction
+	postConditionIndices           map[*ast.FunctionBlock]int
+	inheritedConditionParamBinding map[ast.Statement]map[string]string
+	isInheritedFunction            bool
 
 	importsSet map[common.Location]struct{}
 	newImports []ast.Declaration
@@ -70,18 +71,25 @@ func NewDesugar(
 	location common.Location,
 ) *Desugar {
 	return &Desugar{
-		memoryGauge:                  memoryGauge,
-		config:                       compilerConfig,
-		elaboration:                  elaboration,
-		program:                      program,
-		location:                     location,
-		importsSet:                   map[common.Location]struct{}{},
-		inheritedFuncsWithConditions: map[string][]*inheritedFunction{},
-		postConditionIndices:         map[*ast.FunctionBlock]int{},
+		memoryGauge:                    memoryGauge,
+		config:                         compilerConfig,
+		elaboration:                    elaboration,
+		program:                        program,
+		location:                       location,
+		importsSet:                     map[common.Location]struct{}{},
+		inheritedFuncsWithConditions:   map[string][]*inheritedFunction{},
+		postConditionIndices:           map[*ast.FunctionBlock]int{},
+		inheritedConditionParamBinding: map[ast.Statement]map[string]string{},
 	}
 }
 
-func (d *Desugar) Run() (program *ast.Program, postConditionIndices map[*ast.FunctionBlock]int) {
+type DesugaredProgram struct {
+	program                        *ast.Program
+	postConditionIndices           map[*ast.FunctionBlock]int
+	inheritedConditionParamBinding map[ast.Statement]map[string]string
+}
+
+func (d *Desugar) Run() DesugaredProgram {
 	declarations := d.program.Declarations()
 	for _, declaration := range declarations {
 		modifiedDeclaration := d.desugarDeclaration(declaration)
@@ -92,11 +100,15 @@ func (d *Desugar) Run() (program *ast.Program, postConditionIndices map[*ast.Fun
 
 	d.modifiedDeclarations = append(d.newImports, d.modifiedDeclarations...)
 
-	program = ast.NewProgram(d.memoryGauge, d.modifiedDeclarations)
+	program := ast.NewProgram(d.memoryGauge, d.modifiedDeclarations)
 
 	//fmt.Println(ast.Prettier(program))
 
-	return program, d.postConditionIndices
+	return DesugaredProgram{
+		program:                        program,
+		postConditionIndices:           d.postConditionIndices,
+		inheritedConditionParamBinding: d.inheritedConditionParamBinding,
+	}
 }
 
 func (d *Desugar) desugarDeclaration(declaration ast.Declaration) ast.Declaration {
@@ -113,11 +125,11 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration,
 
 	preConditions := d.desugarPreConditions(
 		funcName,
-		funcBlock,
+		declaration,
 	)
 	postConditions, beforeStatements := d.desugarPostConditions(
 		funcName,
-		funcBlock,
+		declaration,
 	)
 
 	modifiedStatements := make([]ast.Statement, 0)
@@ -328,11 +340,12 @@ func (d *Desugar) tempResultIdentifierExpr(pos ast.Position) *ast.IdentifierExpr
 
 func (d *Desugar) desugarPreConditions(
 	enclosingFuncName string,
-	funcBlock *ast.FunctionBlock,
+	functionDecl *ast.FunctionDeclaration,
 ) []ast.Statement {
 
 	desugaredConditions := make([]ast.Statement, 0)
 
+	funcBlock := functionDecl.FunctionBlock
 	functionHasImpl := d.functionHasImplementation(funcBlock)
 
 	// Desugar inherited pre-conditions
@@ -353,7 +366,11 @@ func (d *Desugar) desugarPreConditions(
 
 		// If the inherited function has pre-conditions, then include them as well by copying them over.
 		for _, condition := range inheritedPreConditions.Conditions {
-			desugaredCondition := d.desugarInheritedCondition(condition, inheritedFunc)
+			desugaredCondition := d.desugarInheritedCondition(
+				condition,
+				functionDecl.ParameterList,
+				inheritedFunc,
+			)
 			desugaredConditions = append(desugaredConditions, desugaredCondition)
 		}
 	}
@@ -387,11 +404,12 @@ func (d *Desugar) functionHasImplementation(funcBlock *ast.FunctionBlock) bool {
 
 func (d *Desugar) desugarPostConditions(
 	enclosingFuncName string,
-	funcBlock *ast.FunctionBlock,
+	functionDecl *ast.FunctionDeclaration,
 ) (desugaredConditions []ast.Statement, beforeStatements []ast.Statement) {
 
 	desugaredConditions = make([]ast.Statement, 0)
 
+	funcBlock := functionDecl.FunctionBlock
 	var conditions *ast.Conditions
 	if funcBlock != nil {
 		conditions = funcBlock.PostConditions
@@ -446,7 +464,11 @@ func (d *Desugar) desugarPostConditions(
 			}
 
 			for _, condition := range inheritedFunc.rewrittenConditions.RewrittenPostConditions {
-				desugaredCondition := d.desugarInheritedCondition(condition, inheritedFunc)
+				desugaredCondition := d.desugarInheritedCondition(
+					condition,
+					functionDecl.ParameterList,
+					inheritedFunc,
+				)
 				desugaredConditions = append(desugaredConditions, desugaredCondition)
 			}
 
@@ -465,7 +487,11 @@ func (d *Desugar) desugarPostConditions(
 	return nil, nil
 }
 
-func (d *Desugar) desugarInheritedCondition(condition ast.Condition, inheritedFunc *inheritedFunction) ast.Statement {
+func (d *Desugar) desugarInheritedCondition(
+	condition ast.Condition,
+	functionParams *ast.ParameterList,
+	inheritedFunc *inheritedFunction,
+) ast.Statement {
 	// When desugaring inherited functions, use their corresponding elaboration.
 	prevElaboration := d.elaboration
 	d.elaboration = inheritedFunc.elaboration
@@ -476,6 +502,20 @@ func (d *Desugar) desugarInheritedCondition(condition ast.Condition, inheritedFu
 	// Elaboration to be used by the condition must be set in the current elaboration.
 	// (Not in the inherited function's elaboration)
 	d.elaboration.conditionsElaborations[desugaredCondition] = inheritedFunc.elaboration
+
+	if len(functionParams.Parameters) > 0 {
+		paramBinding := make(map[string]string)
+
+		inheritedFunctionParams := inheritedFunc.functionDecl.ParameterList
+		for i, parameter := range inheritedFunctionParams.Parameters {
+			currentFunctionParamName := functionParams.Parameters[i].Identifier.Identifier
+			inheritedFunctionParamName := parameter.Identifier.Identifier
+			paramBinding[inheritedFunctionParamName] = currentFunctionParamName
+		}
+
+		d.inheritedConditionParamBinding[desugaredCondition] = paramBinding
+	}
+
 	return desugaredCondition
 }
 

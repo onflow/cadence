@@ -3566,6 +3566,86 @@ func TestFunctionPreConditions(t *testing.T) {
 		assert.ErrorContains(t, err, "a must be larger than 10")
 	})
 
+	t.Run("inherited with different param names", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := CompileAndInvoke(t,
+			`
+              struct interface A {
+                  fun test(a x: Int): Int {
+                      pre { x > 10: "a must be larger than 10" }
+                  }
+              }
+
+              struct interface B: A {
+                  fun test(a y: Int): Int
+              }
+
+              struct C: B {
+                  fun test(a z: Int): Int {
+                      return z + 3
+                  }
+              }
+
+              fun main(_ a: Int): Int {
+                  let c = C()
+                  return c.test(a: a)
+              }
+            `,
+			"main",
+			interpreter.NewUnmeteredIntValueFromInt64(4),
+		)
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "a must be larger than 10")
+	})
+
+	t.Run("inherited with different param names, conflict with local vars", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := CompileAndInvoke(t,
+			`
+              struct interface A {
+                  fun test(a x: Int): Int {
+                      pre { x > 10: "a must be larger than 10" }
+                  }
+              }
+
+              struct interface B: A {
+                  fun test(a y: Int): Int
+              }
+
+              // Just a global declaration with conflicting names 'x'
+              fun x() {}
+
+              struct C: B {
+                  fun test(a z: Int): Int {
+                      // condition is inherited as:
+                      //    'pre { x > 10: "a must be larger than 10" }'
+                      // Referring to 'x', instead of 'z'.
+
+                      // Just another local variable with conflicting names 'x'
+                      var x = 45
+
+                      return z + 3
+                  }
+              }
+
+              fun main(_ a: Int): Int {
+                  let c = C()
+                  return c.test(a: a)
+              }
+            `,
+			"main",
+			interpreter.NewUnmeteredIntValueFromInt64(4),
+		)
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "a must be larger than 10")
+	})
+
 	t.Run("pre conditions order", func(t *testing.T) {
 
 		t.Parallel()
@@ -4241,6 +4321,42 @@ func TestFunctionPostConditions(t *testing.T) {
 
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "pre/post condition failed")
+	})
+
+
+	t.Run("inherited with different param names", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := CompileAndInvoke(t,
+			`
+              struct interface A {
+                  fun test(a x: Int): Int {
+                      post { x > 10: "a must be larger than 10" }
+                  }
+              }
+
+              struct interface B: A {
+                  fun test(a y: Int): Int
+              }
+
+              struct C: B {
+                  fun test(a z: Int): Int {
+                      return z + 3
+                  }
+              }
+
+              fun main(_ a: Int): Int {
+                  let c = C()
+                  return c.test(a: a)
+              }
+            `,
+			"main",
+			interpreter.NewUnmeteredIntValueFromInt64(4),
+		)
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "a must be larger than 10")
 	})
 }
 
