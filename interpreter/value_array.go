@@ -88,7 +88,13 @@ func NewArrayValueWithIterator(
 	countOverestimate uint64,
 	values func() Value,
 ) *ArrayValue {
-	context.ReportComputation(common.ComputationKindCreateArrayValue, 1)
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindCreateArrayValue,
+			Intensity: 1,
+		},
+	)
 
 	var v *ArrayValue
 
@@ -341,7 +347,13 @@ func (v *ArrayValue) IsStaleResource(context ValueStaticTypeContext) bool {
 
 func (v *ArrayValue) Destroy(context ResourceDestructionContext, locationRange LocationRange) {
 
-	context.ReportComputation(common.ComputationKindDestroyArrayValue, 1)
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindDestroyArrayValue,
+			Intensity: 1,
+		},
+	)
 
 	if context.TracingEnabled() {
 		startTime := time.Now()
@@ -411,7 +423,10 @@ func (v *ArrayValue) Concat(context ValueTransferContext, locationRange Location
 		func() Value {
 
 			// Meter computation for iterating the two arrays.
-			context.ReportComputation(common.ComputationKindLoop, 1)
+			common.UseComputation(
+				context,
+				common.LoopComputationUsage,
+			)
 
 			var value Value
 
@@ -1302,9 +1317,12 @@ func (v *ArrayValue) Transfer(
 	hasNoParentContainer bool,
 ) Value {
 
-	context.ReportComputation(
-		common.ComputationKindTransferArrayValue,
-		uint(v.Count()),
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindTransferArrayValue,
+			Intensity: uint64(v.Count()),
+		},
 	)
 
 	if context.TracingEnabled() {
@@ -1604,7 +1622,7 @@ func (v *ArrayValue) Slice(
 		func() Value {
 
 			// Meter computation for iterating the array.
-			context.ReportComputation(common.ComputationKindLoop, 1)
+			common.UseComputation(context, common.LoopComputationUsage)
 
 			atreeValue, err := iterator.Next()
 			if err != nil {
@@ -1651,7 +1669,10 @@ func (v *ArrayValue) Reverse(
 			}
 
 			// Meter computation for iterating the array.
-			context.ReportComputation(common.ComputationKindLoop, 1)
+			common.UseComputation(
+				context,
+				common.LoopComputationUsage,
+			)
 
 			value := v.Get(context, locationRange, index)
 			index--
@@ -1700,7 +1721,10 @@ func (v *ArrayValue) Filter(
 
 			for {
 				// Meter computation for iterating the array.
-				context.ReportComputation(common.ComputationKindLoop, 1)
+				common.UseComputation(
+					context,
+					common.LoopComputationUsage,
+				)
 
 				atreeValue, err := iterator.Next()
 				if err != nil {
@@ -1800,7 +1824,10 @@ func (v *ArrayValue) Map(
 		func() Value {
 
 			// Meter computation for iterating the array.
-			context.ReportComputation(common.ComputationKindLoop, 1)
+			common.UseComputation(
+				context,
+				common.LoopComputationUsage,
+			)
 
 			atreeValue, err := iterator.Next()
 			if err != nil {
@@ -1881,7 +1908,10 @@ func (v *ArrayValue) ToVariableSized(
 		func() Value {
 
 			// Meter computation for iterating the array.
-			context.ReportComputation(common.ComputationKindLoop, 1)
+			common.UseComputation(
+				context,
+				common.LoopComputationUsage,
+			)
 
 			atreeValue, err := iterator.Next()
 			if err != nil {
@@ -1950,7 +1980,10 @@ func (v *ArrayValue) ToConstantSized(
 		func() Value {
 
 			// Meter computation for iterating the array.
-			context.ReportComputation(common.ComputationKindLoop, 1)
+			common.UseComputation(
+				context,
+				common.LoopComputationUsage,
+			)
 
 			atreeValue, err := iterator.Next()
 			if err != nil {

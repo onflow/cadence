@@ -235,7 +235,13 @@ func (v *StringValue) Concat(context StringValueFunctionContext, other *StringVa
 	memoryUsage := common.NewStringMemoryUsage(newLength)
 
 	// Meter computation as if the two strings were iterated.
-	context.ReportComputation(common.ComputationKindLoop, uint(newLength))
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindLoop,
+			Intensity: uint64(newLength),
+		},
+	)
 
 	return NewStringValue(
 		context,
@@ -574,10 +580,16 @@ func (v *StringValue) Length() int {
 	return v.length
 }
 
-func (v *StringValue) ToLower(interpreter StringValueFunctionContext) *StringValue {
+func (v *StringValue) ToLower(context StringValueFunctionContext) *StringValue {
 
 	// Meter computation as if the string was iterated.
-	interpreter.ReportComputation(common.ComputationKindLoop, uint(len(v.Str)))
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindLoop,
+			Intensity: uint64(len(v.Str)),
+		},
+	)
 
 	// Over-estimate resulting string length,
 	// as an uppercase character may be converted to several lower-case characters, e.g İ => [i, ̇]
@@ -595,7 +607,7 @@ func (v *StringValue) ToLower(interpreter StringValueFunctionContext) *StringVal
 	memoryUsage := common.NewStringMemoryUsage(lengthEstimate)
 
 	return NewStringValue(
-		interpreter,
+		context,
 		memoryUsage,
 		func() string {
 			return strings.ToLower(v.Str)
@@ -622,7 +634,10 @@ func (v *StringValue) Split(context ArrayCreationContext, locationRange Location
 		uint64(count),
 		func() Value {
 
-			context.ReportComputation(common.ComputationKindLoop, 1)
+			common.UseComputation(
+				context,
+				common.LoopComputationUsage,
+			)
 
 			if partIndex >= count {
 				return nil
@@ -709,8 +724,13 @@ func (v *StringValue) ReplaceAll(
 	memoryUsage := common.NewStringMemoryUsage(newByteLength)
 
 	// Meter computation as if the string was iterated.
-	context.ReportComputation(common.ComputationKindLoop, uint(len(v.Str)))
-
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindLoop,
+			Intensity: uint64(len(v.Str)),
+		},
+	)
 	remaining := v
 
 	return NewStringValue(
@@ -981,7 +1001,7 @@ func (v *StringValue) IndexOf(context StringValueFunctionContext, other *StringV
 	return NewIntValueFromInt64(context, int64(index))
 }
 
-func (v *StringValue) indexOf(reporter ComputationReporter, other *StringValue) (characterIndex int, byteOffset int) {
+func (v *StringValue) indexOf(gauge common.ComputationGauge, other *StringValue) (characterIndex int, byteOffset int) {
 
 	if len(other.Str) == 0 {
 		return 0, 0
@@ -998,7 +1018,13 @@ func (v *StringValue) indexOf(reporter ComputationReporter, other *StringValue) 
 
 	// Meter computation as if the string was iterated.
 	// This is a conservative over-estimation.
-	reporter.ReportComputation(common.ComputationKindLoop, uint(len(v.Str)*len(other.Str)))
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindLoop,
+			Intensity: uint64(len(v.Str) * len(other.Str)),
+		},
+	)
 
 	v.prepareGraphemes()
 
@@ -1062,19 +1088,25 @@ func (v *StringValue) Count(context StringValueFunctionContext, locationRange Lo
 	return NewIntValueFromInt64(context, int64(index))
 }
 
-func (v *StringValue) count(reporter ComputationReporter, locationRange LocationRange, other *StringValue) int {
+func (v *StringValue) count(gauge common.ComputationGauge, locationRange LocationRange, other *StringValue) int {
 	if other.Length() == 0 {
 		return 1 + v.Length()
 	}
 
 	// Meter computation as if the string was iterated.
-	reporter.ReportComputation(common.ComputationKindLoop, uint(len(v.Str)))
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindLoop,
+			Intensity: uint64(len(v.Str)),
+		},
+	)
 
 	remaining := v
 	count := 0
 
 	for {
-		index, _ := remaining.indexOf(reporter, other)
+		index, _ := remaining.indexOf(gauge, other)
 		if index == -1 {
 			return count
 		}
@@ -1220,7 +1252,10 @@ func stringFunctionJoin(invocation Invocation) Value {
 		func(element Value) (resume bool) {
 
 			// Meter computation for iterating the array.
-			inter.ReportComputation(common.ComputationKindLoop, 1)
+			common.UseComputation(
+				inter,
+				common.LoopComputationUsage,
+			)
 
 			// Add separator
 			if !first {
