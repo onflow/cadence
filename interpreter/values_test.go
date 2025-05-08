@@ -40,7 +40,6 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
@@ -216,10 +215,10 @@ func withoutAtreeStorageValidationEnabled[T any](inter Invokable, f func() T) T 
 		config.AtreeStorageValidationEnabled = original
 		return result
 
-	case *test_utils.VMInvokable:
-		// TODO: VM still does not support atree/storage validation.
-		// Skip it here once implemented.
-		return f()
+	//case *test_utils.VMInvokable:
+	//	// TODO: VM still does not support atree/storage validation.
+	//	// Skip it here once implemented.
+	//	return f()
 
 	default:
 		panic(fmt.Errorf("unsupported invokable type %T", inter))

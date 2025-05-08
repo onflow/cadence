@@ -31,7 +31,6 @@ import (
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
-	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/interpreter"
@@ -208,11 +207,11 @@ func TestInterpretInvalidUnknownDeclarationInvocation(t *testing.T) {
 
 	_, err := inter.Invoke("test")
 
-	if *compile {
-		assert.IsType(t, vm.UnknownFunctionError{}, err)
-	} else {
-		assert.IsType(t, interpreter.NotDeclaredError{}, err)
-	}
+	//if *compile {
+	//	assert.IsType(t, vm.UnknownFunctionError{}, err)
+	//} else {
+	assert.IsType(t, interpreter.NotDeclaredError{}, err)
+	//}
 }
 
 func TestInterpretInvalidNonFunctionDeclarationInvocation(t *testing.T) {

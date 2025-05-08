@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
@@ -129,7 +128,7 @@ func TestInterpretContractUseBeforeInitializationComplete(t *testing.T) {
 
 		t.Parallel()
 
-		invokable, err := parseCheckAndPrepareWithOptions(t,
+		_, err := parseCheckAndPrepareWithOptions(t,
 			`
               contract C {
 
@@ -156,10 +155,10 @@ func TestInterpretContractUseBeforeInitializationComplete(t *testing.T) {
 			},
 		)
 
-		// Explicitly initialize the contract, if it's the VM.
-		if vmInvokable, ok := invokable.(*test_utils.VMInvokable); ok {
-			_, err = vmInvokable.InitializeContract("C")
-		}
+		// TODO: Explicitly initialize the contract, if it's the VM.
+		//if vmInvokable, ok := invokable.(*test_utils.VMInvokable); ok {
+		//	_, err = vmInvokable.InitializeContract("C")
+		//}
 
 		RequireError(t, err)
 
