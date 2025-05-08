@@ -31,7 +31,6 @@ import (
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
-	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/interpreter"

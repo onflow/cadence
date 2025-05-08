@@ -40,7 +40,6 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
