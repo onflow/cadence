@@ -236,6 +236,8 @@ func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.Switch
 func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatement) StatementResult {
 
 	for {
+		// The first test expression has already been metered,
+		// because the while statement itself was metered
 
 		value, ok := interpreter.evalExpression(statement.Test).(BoolValue)
 		if !ok || !bool(value) {
@@ -256,6 +258,9 @@ func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatemen
 		case ReturnResult:
 			return result
 		}
+
+		// Meter next test expression
+		common.UseComputation(interpreter, common.StatementComputationUsage)
 	}
 }
 

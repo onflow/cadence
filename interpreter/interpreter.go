@@ -669,6 +669,8 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
 			var variable Variable
 
 			variable = NewVariableWithGetter(interpreter, func() Value {
+				common.UseComputation(interpreter, common.StatementComputationUsage)
+
 				result := interpreter.visitVariableDeclaration(declaration, false)
 
 				// Global variables are lazily loaded. Therefore, start resource tracking also
