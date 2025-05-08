@@ -257,6 +257,10 @@ const (
 	MemoryKindOrderedMapEntryList
 	MemoryKindOrderedMapEntry
 
+	// iterators
+	MemoryKindArrayIterator
+	MemoryKindDictionaryKeyIterator
+
 	// Placeholder kind to allow consistent indexing
 	// this should always be the last kind
 	MemoryKindLast

@@ -399,47 +399,8 @@ func (v *DictionaryValue) iterate(
 	context.WithMutationPrevention(v.ValueID(), iterate)
 }
 
-type DictionaryKeyIterator struct {
-	mapIterator atree.MapIterator
-}
-
-func (i DictionaryKeyIterator) NextKeyUnconverted() atree.Value {
-	atreeValue, err := i.mapIterator.NextKey()
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
-	return atreeValue
-}
-
-func (i DictionaryKeyIterator) NextKey(gauge common.MemoryGauge) Value {
-	atreeValue := i.NextKeyUnconverted()
-	if atreeValue == nil {
-		return nil
-	}
-	return MustConvertStoredValue(gauge, atreeValue)
-}
-
-func (i DictionaryKeyIterator) Next(gauge common.MemoryGauge) (Value, Value) {
-	atreeKeyValue, atreeValue, err := i.mapIterator.Next()
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
-	if atreeKeyValue == nil {
-		return nil, nil
-	}
-	return MustConvertStoredValue(gauge, atreeKeyValue),
-		MustConvertStoredValue(gauge, atreeValue)
-}
-
-func (v *DictionaryValue) Iterator() DictionaryKeyIterator {
-	mapIterator, err := v.dictionary.ReadOnlyIterator()
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
-
-	return DictionaryKeyIterator{
-		mapIterator: mapIterator,
-	}
+func (v *DictionaryValue) Iterator(gauge common.MemoryGauge) DictionaryKeyIterator {
+	return NewDictionaryKeyIterator(gauge, v)
 }
 
 func (v *DictionaryValue) Walk(context ValueWalkContext, walkChild func(Value), locationRange LocationRange) {
@@ -827,7 +788,7 @@ func (v *DictionaryValue) GetMember(context MemberAccessibleContext, locationRan
 
 func (v *DictionaryValue) GetMethod(
 	context MemberAccessibleContext,
-	locationRange LocationRange,
+	_ LocationRange,
 	name string,
 ) FunctionValue {
 	switch name {
@@ -1603,4 +1564,58 @@ func (v *DictionaryValue) SetType(staticType *DictionaryStaticType) {
 
 func (v *DictionaryValue) Inlined() bool {
 	return v.dictionary.Inlined()
+}
+
+// DictionaryKeyIterator
+
+type DictionaryKeyIterator struct {
+	mapIterator atree.MapIterator
+}
+
+func NewDictionaryKeyIterator(gauge common.MemoryGauge, v *DictionaryValue) DictionaryKeyIterator {
+
+	common.UseMemory(
+		gauge,
+		common.MemoryUsage{
+			Kind:   common.MemoryKindDictionaryKeyIterator,
+			Amount: 1,
+		},
+	)
+
+	mapIterator, err := v.dictionary.ReadOnlyIterator()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+
+	return DictionaryKeyIterator{
+		mapIterator: mapIterator,
+	}
+}
+
+func (i DictionaryKeyIterator) NextKeyUnconverted() atree.Value {
+	atreeValue, err := i.mapIterator.NextKey()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+	return atreeValue
+}
+
+func (i DictionaryKeyIterator) NextKey(gauge common.MemoryGauge) Value {
+	atreeValue := i.NextKeyUnconverted()
+	if atreeValue == nil {
+		return nil
+	}
+	return MustConvertStoredValue(gauge, atreeValue)
+}
+
+func (i DictionaryKeyIterator) Next(gauge common.MemoryGauge) (Value, Value) {
+	atreeKeyValue, atreeValue, err := i.mapIterator.Next()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+	if atreeKeyValue == nil {
+		return nil, nil
+	}
+	return MustConvertStoredValue(gauge, atreeKeyValue),
+		MustConvertStoredValue(gauge, atreeValue)
 }

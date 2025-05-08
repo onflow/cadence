@@ -285,14 +285,8 @@ func (v *ArrayValue) iterate(
 	context.WithMutationPrevention(v.ValueID(), iterate)
 }
 
-func (v *ArrayValue) Iterator(_ ValueStaticTypeContext, _ LocationRange) ValueIterator {
-	arrayIterator, err := v.array.Iterator()
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
-	return &ArrayIterator{
-		atreeIterator: arrayIterator,
-	}
+func (v *ArrayValue) Iterator(context ValueStaticTypeContext, _ LocationRange) ValueIterator {
+	return NewArrayIterator(context, v)
 }
 
 func (v *ArrayValue) Walk(
@@ -2033,6 +2027,25 @@ type ArrayIterator struct {
 }
 
 var _ ValueIterator = &ArrayIterator{}
+
+func NewArrayIterator(gauge common.MemoryGauge, v *ArrayValue) ValueIterator {
+	common.UseMemory(
+		gauge,
+		common.MemoryUsage{
+			Kind:   common.MemoryKindArrayIterator,
+			Amount: 1,
+		},
+	)
+
+	arrayIterator, err := v.array.Iterator()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+
+	return &ArrayIterator{
+		atreeIterator: arrayIterator,
+	}
+}
 
 func (i *ArrayIterator) HasNext() bool {
 	if i.next != nil {
