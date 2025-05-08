@@ -35,7 +35,7 @@ func TestInterpretContractUseBeforeInitializationComplete(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := parseCheckAndInterpretWithOptions(t,
+		_, err := parseCheckAndPrepareWithOptions(t,
 			`
               contract C {
 
@@ -66,7 +66,7 @@ func TestInterpretContractUseBeforeInitializationComplete(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := parseCheckAndInterpretWithOptions(t,
+		_, err := parseCheckAndPrepareWithOptions(t,
 			`
               contract C {
 
@@ -97,7 +97,7 @@ func TestInterpretContractUseBeforeInitializationComplete(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := parseCheckAndInterpretWithOptions(t,
+		_, err := parseCheckAndPrepareWithOptions(t,
 			`
               contract C {
 
@@ -128,7 +128,7 @@ func TestInterpretContractUseBeforeInitializationComplete(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := parseCheckAndInterpretWithOptions(t,
+		_, err := parseCheckAndPrepareWithOptions(t,
 			`
               contract C {
 
@@ -154,6 +154,12 @@ func TestInterpretContractUseBeforeInitializationComplete(t *testing.T) {
 				},
 			},
 		)
+
+		// TODO: Explicitly initialize the contract, if it's the VM.
+		//if vmInvokable, ok := invokable.(*test_utils.VMInvokable); ok {
+		//	_, err = vmInvokable.InitializeContract("C")
+		//}
+
 		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.UseBeforeInitializationError{})

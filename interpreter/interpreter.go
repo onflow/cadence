@@ -5997,3 +5997,11 @@ func (interpreter *Interpreter) StorageMutatedDuringIteration() bool {
 func (interpreter *Interpreter) GetMethod(value MemberAccessibleValue, name string, locationRange LocationRange) FunctionValue {
 	return value.GetMethod(interpreter, locationRange, name)
 }
+
+func (interpreter *Interpreter) GetGlobal(name string) Value {
+	return interpreter.Globals.Get(name).GetValue(interpreter)
+}
+
+func (interpreter *Interpreter) GetGlobalType(name string) (*sema.Variable, bool) {
+	return interpreter.Program.Elaboration.GetGlobalType(name)
+}

@@ -205,13 +205,24 @@ func importValue(t *testing.T, inter *interpreter.Interpreter, value cadence.Val
 	}
 }
 
-func withoutAtreeStorageValidationEnabled[T any](inter *interpreter.Interpreter, f func() T) T {
-	config := inter.SharedState.Config
-	original := config.AtreeStorageValidationEnabled
-	config.AtreeStorageValidationEnabled = false
-	result := f()
-	config.AtreeStorageValidationEnabled = original
-	return result
+func withoutAtreeStorageValidationEnabled[T any](inter Invokable, f func() T) T {
+	switch inter := inter.(type) {
+	case *interpreter.Interpreter:
+		config := inter.SharedState.Config
+		original := config.AtreeStorageValidationEnabled
+		config.AtreeStorageValidationEnabled = false
+		result := f()
+		config.AtreeStorageValidationEnabled = original
+		return result
+
+	//case *test_utils.VMInvokable:
+	//	// TODO: VM still does not support atree/storage validation.
+	//	// Skip it here once implemented.
+	//	return f()
+
+	default:
+		panic(fmt.Errorf("unsupported invokable type %T", inter))
+	}
 }
 
 func TestInterpretSmokeRandomDictionaryOperations(t *testing.T) {

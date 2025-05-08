@@ -36,7 +36,7 @@ func TestInterpretForwardReferenceCall(t *testing.T) {
 
 		t.Parallel()
 
-		_ = parseCheckAndInterpret(t,
+		_ = parseCheckAndPrepare(t,
 			`
               let s = S()
 
@@ -48,7 +48,7 @@ func TestInterpretForwardReferenceCall(t *testing.T) {
 
 		t.Parallel()
 
-		_ = parseCheckAndInterpret(t,
+		_ = parseCheckAndPrepare(t,
 			`
               let g = f()
 
@@ -63,7 +63,7 @@ func TestInterpretForwardReferenceCall(t *testing.T) {
 		// Here, x has a forward reference to y,
 		// through f and g
 
-		_ = parseCheckAndInterpret(t,
+		_ = parseCheckAndPrepare(t,
 			`
               fun f(): Int {
                   return g()
@@ -84,7 +84,7 @@ func TestInterpretShadowingInFunction(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
 	  fun foo(): Int {
           var x = 1
           fun bar() {

@@ -397,7 +397,7 @@ func TestInterpretResourceConstructionThroughIndirectImport(t *testing.T) {
 	require.ErrorAs(t, err, &resourceConstructionError)
 
 	assert.Equal(t,
-		RequireGlobalType(t, importedChecker.Elaboration, "R"),
+		RequireGlobalType(t, subInterpreter, "R"),
 		resourceConstructionError.CompositeType,
 	)
 }

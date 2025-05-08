@@ -32,6 +32,7 @@ import (
 	"github.com/onflow/cadence/pretty"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 	"github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -39,12 +40,6 @@ type ParseCheckAndInterpretOptions struct {
 	Config             *interpreter.Config
 	CheckerConfig      *sema.Config
 	HandleCheckerError func(error)
-}
-
-type Invokable interface {
-	interpreter.ValueComparisonContext
-	interpreter.InvocationContext
-	Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error)
 }
 
 //type VMInvokable struct {
@@ -70,29 +65,189 @@ type Invokable interface {
 //
 //	return
 //}
+//
+//func (v *VMInvokable) GetGlobal(name string) interpreter.Value {
+//	return v.vmInstance.Global(name)
+//}
+//
+//func (v *VMInvokable) GetGlobalType(name string) (*sema.Variable, bool) {
+//	return v.elaboration.GetGlobalType(name)
+//}
+//
+//func (v *VMInvokable) InitializeContract(arguments ...interpreter.Value) (*interpreter.CompositeValue, error) {
+//	return v.vmInstance.InitializeContract(arguments...)
+//}
+//func (v *VMInvokable) InitializeContract(contractName string, arguments ...interpreter.Value) (*interpreter.CompositeValue, error) {
+//	return v.vmInstance.InitializeContract(contractName, arguments...)
+//}
 
-func ParseCheckAndPrepare(t testing.TB, code string, compile bool) Invokable {
-	t.Helper()
+func ParseCheckAndPrepare(tb testing.TB, code string, compile bool) Invokable {
+	tb.Helper()
 
-	if !compile {
-		return ParseCheckAndInterpret(t, code)
+	invokable, err := ParseCheckAndPrepareWithOptions(tb, code, ParseCheckAndInterpretOptions{}, compile)
+	require.NoError(tb, err)
+
+	return invokable
+}
+
+func ParseCheckAndPrepareWithEvents(tb testing.TB, code string, compile bool) (
+	invokable Invokable,
+	getEvents func() []TestEvent,
+	err error,
+) {
+	tb.Helper()
+
+	var events []TestEvent
+	getEvents = func() []TestEvent {
+		return events
 	}
 
-	// TODO: Uncomment once the compiler branch is merged to master.
-	//vmConfig := &vm.Config{}
+	interpreterConfig := &interpreter.Config{
+		OnEventEmitted: func(
+			_ interpreter.ValueExportContext,
+			_ interpreter.LocationRange,
+			eventType *sema.CompositeType,
+			eventFields []interpreter.Value,
+		) error {
+			events = append(
+				events,
+				TestEvent{
+					EventType:   eventType,
+					EventFields: eventFields,
+				},
+			)
+			return nil
+		},
+	}
+
+	parseCheckAndInterpretOptions := ParseCheckAndInterpretOptions{
+		Config: interpreterConfig,
+	}
+
+	if !compile {
+		invokable, err = ParseCheckAndInterpretWithOptions(
+			tb,
+			code,
+			parseCheckAndInterpretOptions,
+		)
+		return invokable, getEvents, err
+	}
+
+	invokable, err = ParseCheckAndPrepareWithOptions(tb, code, parseCheckAndInterpretOptions, compile)
+	require.NoError(tb, err)
+
+	return invokable, getEvents, err
+}
+
+func ParseCheckAndPrepareWithOptions(
+	tb testing.TB,
+	code string,
+	options ParseCheckAndInterpretOptions,
+	compile bool,
+) (
+	invokable Invokable,
+	err error,
+) {
+	tb.Helper()
+
+	if !compile {
+		return ParseCheckAndInterpretWithOptions(tb, code, options)
+	}
+
+	//interpreterConfig := options.Config
+	//
+	//var storage interpreter.Storage
+	//if interpreterConfig != nil {
+	//	storage = interpreterConfig.Storage
+	//}
+	//
+	//vmConfig := vm.NewConfig(storage).
+	//	WithInterpreterConfig(interpreterConfig).
+	//	WithDebugEnabled()
+	//
+	//var compilerConfig *compiler.Config
+	//
+	//// If there are builtin functions provided externally (e.g: for tests),
+	//// then convert them to corresponding functions in compiler and in vm.
+	//if interpreterConfig != nil && interpreterConfig.BaseActivationHandler != nil {
+	//	activation := interpreterConfig.BaseActivationHandler(nil)
+	//	providedBuiltinFunctions := activation.FunctionValues()
+	//
+	//	vmConfig.NativeFunctionsProvider = func() map[string]*vm.Variable {
+	//		funcs := vm.NativeFunctions()
+	//
+	//		// Convert the externally provided `interpreter.HostFunction`s into `vm.NativeFunction`s.
+	//		for name, functionVariable := range providedBuiltinFunctions { //nolint:maprange
+	//			variable := &interpreter.SimpleVariable{}
+	//			funcs[name] = variable
+	//
+	//			variable.InitializeWithValue(
+	//				vm.NewNativeFunctionValue(
+	//					name,
+	//					stdlib.LogFunctionType,
+	//					func(context *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+	//						value := functionVariable.GetValue(context)
+	//						functionValue := value.(*interpreter.HostFunctionValue)
+	//						invocation := interpreter.NewInvocation(
+	//							context,
+	//							nil,
+	//							nil,
+	//							arguments,
+	//							nil,
+	//							// TODO: provide these if they are needed for tests.
+	//							nil,
+	//							interpreter.EmptyLocationRange,
+	//						)
+	//						return functionValue.Function(invocation)
+	//					},
+	//				),
+	//			)
+	//		}
+	//
+	//		return funcs
+	//	}
+	//
+	//	// Register externally provided functions as globals in compiler.
+	//	compilerConfig = &compiler.Config{
+	//		BuiltinGlobalsProvider: func() map[string]*compiler.Global {
+	//			globals := compiler.NativeFunctions()
+	//			for name := range providedBuiltinFunctions { //nolint:maprange
+	//				globals[name] = &compiler.Global{
+	//					Name: name,
+	//				}
+	//			}
+	//
+	//			return globals
+	//		},
+	//	}
+	//}
+	//
+	//parseAndCheckOptions := &sema_utils.ParseAndCheckOptions{
+	//	Config: options.CheckerConfig,
+	//}
+	//
+	//programs := map[common.Location]*CompiledProgram{}
+	//
 	//vmInstance := compilerUtils.CompileAndPrepareToInvoke(
-	//	t,
+	//	tb,
 	//	code,
 	//	compilerUtils.CompilerAndVMOptions{
 	//		VMConfig: vmConfig,
+	//		ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+	//			ParseAndCheckOptions: parseAndCheckOptions,
+	//			CompilerConfig:       compilerConfig,
+	//			CheckerErrorHandler:  options.HandleCheckerError,
+	//		},
+	//		Programs: programs,
 	//	},
 	//)
 	//
-	//return NewVMInvokable(vmInstance)
+	//elaboration := programs[parseAndCheckOptions.Location].DesugaredElaboration
+	//
+	//return NewVMInvokable(vmInstance, elaboration), nil
 
-	// Not supported for now
+	// Unsupported for now
 	panic(errors.NewUnreachableError())
-
 }
 
 // Below helper functions were copied as-is from `misc_test.go`.
@@ -349,14 +504,14 @@ type TestEvent struct {
 	EventFields []interpreter.Value
 }
 
-func ParseCheckAndInterpretWithEvents(t *testing.T, code string) (
+func ParseCheckAndInterpretWithEvents(tb testing.TB, code string) (
 	inter *interpreter.Interpreter,
 	getEvents func() []TestEvent,
 	err error,
 ) {
 	var events []TestEvent
 
-	inter, err = ParseCheckAndInterpretWithOptions(t,
+	inter, err = ParseCheckAndInterpretWithOptions(tb,
 		code,
 		ParseCheckAndInterpretOptions{
 			Config: &interpreter.Config{

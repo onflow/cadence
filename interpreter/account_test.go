@@ -33,7 +33,6 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 )
@@ -52,7 +51,7 @@ func testAccount(
 	code string,
 	checkerConfig sema.Config,
 ) (
-	test_utils.Invokable,
+	Invokable,
 	func() map[storageKey]interpreter.Value,
 ) {
 	return testAccountWithErrorHandler(
@@ -74,7 +73,7 @@ func testAccountWithCompilerEnabled(
 	code string,
 	checkerConfig sema.Config,
 ) (
-	test_utils.Invokable,
+	Invokable,
 	func() map[storageKey]interpreter.Value,
 ) {
 	return testAccountWithErrorHandlerWithCompiler(
@@ -513,7 +512,7 @@ func testAccountWithErrorHandler(
 	code string,
 	checkerConfig sema.Config,
 	checkerErrorHandler func(error),
-) (test_utils.Invokable, func() map[storageKey]interpreter.Value) {
+) (Invokable, func() map[storageKey]interpreter.Value) {
 	return testAccountWithErrorHandlerWithCompiler(
 		t,
 		address,
@@ -535,7 +534,7 @@ func testAccountWithErrorHandlerWithCompiler(
 	checkerConfig sema.Config,
 	checkerErrorHandler func(error),
 	compilerEnabled bool,
-) (test_utils.Invokable, func() map[storageKey]interpreter.Value) {
+) (Invokable, func() map[storageKey]interpreter.Value) {
 
 	account := stdlib.NewAccountValue(nil, handler, address)
 
@@ -598,11 +597,10 @@ func testAccountWithErrorHandlerWithCompiler(
 		interpreter.Declare(baseActivation, valueDeclaration)
 	}
 
-	var invokable test_utils.Invokable
+	var invokable Invokable
 	var storage interpreter.Storage
 
 	if compilerEnabled && *compile {
-
 		// TODO: Uncomment once the compiler branch is merged to master.
 		//vmConfig := &vm.Config{
 		//	NativeFunctionsProvider: func() map[string]*vm.Variable {
@@ -614,19 +612,22 @@ func testAccountWithErrorHandlerWithCompiler(
 		//	},
 		//}
 		//
+		//programs := map[common.Location]*CompiledProgram{}
+		//parseAndCheckOptions := &ParseAndCheckOptions{
+		//	Config: &sema.Config{
+		//		LocationHandler: NewSingleIdentifierLocationResolver(t),
+		//		BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+		//			return baseValueActivation
+		//		},
+		//	},
+		//}
+		//
 		//vmInstance := compilerUtils.CompileAndPrepareToInvoke(
 		//	t,
 		//	code,
 		//	compilerUtils.CompilerAndVMOptions{
 		//		ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
-		//			ParseAndCheckOptions: &ParseAndCheckOptions{
-		//				Config: &sema.Config{
-		//					LocationHandler: NewSingleIdentifierLocationResolver(t),
-		//					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-		//						return baseValueActivation
-		//					},
-		//				},
-		//			},
+		//			ParseAndCheckOptions: parseAndCheckOptions,
 		//			CompilerConfig: &compiler.Config{
 		//				BuiltinGlobalsProvider: func() map[string]*compiler.Global {
 		//					builtins := compiler.NativeFunctions()
@@ -641,15 +642,21 @@ func testAccountWithErrorHandlerWithCompiler(
 		//			},
 		//		},
 		//		VMConfig: vmConfig,
+		//		Programs: programs,
 		//	},
 		//)
 		//
-		//invokable = test_utils.NewVMInvokable(vmInstance)
+		//vmConfig.WithInterpreterConfig(&interpreter.Config{
+		//	UUIDHandler: uuidHandler,
+		//})
+		//
+		//elaboration := programs[parseAndCheckOptions.Location].DesugaredElaboration
+		//
+		//invokable = test_utils.NewVMInvokable(vmInstance, elaboration)
 		//storage = vmConfig.Storage()
 
 		// Not supported for now
 		panic(errors.NewUnreachableError())
-
 	} else {
 
 		inter, err := parseCheckAndInterpretWithOptions(t,

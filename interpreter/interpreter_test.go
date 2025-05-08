@@ -29,13 +29,35 @@ import (
 	. "github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/test_utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 var compile = flag.Bool("compile", false, "Run tests using the compiler")
 
-func parseCheckAndPrepare(tb testing.TB, code string) test_utils.Invokable {
+func parseCheckAndPrepare(tb testing.TB, code string) Invokable {
 	tb.Helper()
 	return test_utils.ParseCheckAndPrepare(tb, code, *compile)
+}
+
+func parseCheckAndPrepareWithEvents(tb testing.TB, code string) (
+	invokable Invokable,
+	getEvents func() []test_utils.TestEvent,
+	err error,
+) {
+	tb.Helper()
+	return test_utils.ParseCheckAndPrepareWithEvents(tb, code, *compile)
+}
+
+func parseCheckAndPrepareWithOptions(
+	tb testing.TB,
+	code string,
+	options ParseCheckAndInterpretOptions,
+) (
+	invokable Invokable,
+	err error,
+) {
+	tb.Helper()
+	return test_utils.ParseCheckAndPrepareWithOptions(tb, code, options, *compile)
 }
 
 func TestInterpreterOptionalBoxing(t *testing.T) {

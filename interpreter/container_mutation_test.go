@@ -245,7 +245,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             let names: [AnyStruct] = ["foo", "bar"] as [String]
 
             fun test(): [AnyStruct] {
@@ -260,7 +260,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 
 		// Check original array
 
-		namesVal := inter.Globals.Get("names").GetValue(inter)
+		namesVal := inter.GetGlobal("names")
 		require.IsType(t, &interpreter.ArrayValue{}, namesVal)
 		namesValArray := namesVal.(*interpreter.ArrayValue)
 
