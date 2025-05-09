@@ -142,4 +142,6 @@ const (
 	// RLP
 	ComputationKindSTDLIBRLPDecodeString
 	ComputationKindSTDLIBRLPDecodeList
+	// CCF
+	ComputationKindSTDLIBCCFEncode
 )
