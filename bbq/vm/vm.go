@@ -125,7 +125,7 @@ func (vm *VM) pop() Value {
 	vm.stack[lastIndex] = nil
 	vm.stack = vm.stack[:lastIndex]
 
-	vm.context.CheckInvalidatedResourceOrResourceReference(value, EmptyLocationRange)
+	interpreter.CheckInvalidatedResourceOrResourceReference(value, EmptyLocationRange, vm.context)
 
 	return value
 }
@@ -139,8 +139,8 @@ func (vm *VM) pop2() (Value, Value) {
 	vm.stack[lastIndex-1], vm.stack[lastIndex] = nil, nil
 	vm.stack = vm.stack[:lastIndex-1]
 
-	vm.context.CheckInvalidatedResourceOrResourceReference(value1, EmptyLocationRange)
-	vm.context.CheckInvalidatedResourceOrResourceReference(value2, EmptyLocationRange)
+	interpreter.CheckInvalidatedResourceOrResourceReference(value1, EmptyLocationRange, vm.context)
+	interpreter.CheckInvalidatedResourceOrResourceReference(value2, EmptyLocationRange, vm.context)
 
 	return value1, value2
 }
@@ -154,9 +154,9 @@ func (vm *VM) pop3() (Value, Value, Value) {
 	vm.stack[lastIndex-2], vm.stack[lastIndex-1], vm.stack[lastIndex] = nil, nil, nil
 	vm.stack = vm.stack[:lastIndex-2]
 
-	vm.context.CheckInvalidatedResourceOrResourceReference(value1, EmptyLocationRange)
-	vm.context.CheckInvalidatedResourceOrResourceReference(value2, EmptyLocationRange)
-	vm.context.CheckInvalidatedResourceOrResourceReference(value3, EmptyLocationRange)
+	interpreter.CheckInvalidatedResourceOrResourceReference(value1, EmptyLocationRange, vm.context)
+	interpreter.CheckInvalidatedResourceOrResourceReference(value2, EmptyLocationRange, vm.context)
+	interpreter.CheckInvalidatedResourceOrResourceReference(value3, EmptyLocationRange, vm.context)
 
 	return value1, value2, value3
 }
@@ -164,7 +164,13 @@ func (vm *VM) pop3() (Value, Value, Value) {
 func (vm *VM) peekN(count int) []Value {
 	stackHeight := len(vm.stack)
 	startIndex := stackHeight - count
-	return vm.stack[startIndex:]
+	values := vm.stack[startIndex:]
+
+	for _, value := range values {
+		interpreter.CheckInvalidatedResourceOrResourceReference(value, EmptyLocationRange, vm.context)
+	}
+
+	return values
 }
 
 func (vm *VM) popN(count int) []Value {
@@ -173,7 +179,7 @@ func (vm *VM) popN(count int) []Value {
 	values := vm.stack[startIndex:]
 
 	for _, value := range values {
-		vm.context.CheckInvalidatedResourceOrResourceReference(value, EmptyLocationRange)
+		interpreter.CheckInvalidatedResourceOrResourceReference(value, EmptyLocationRange, vm.context)
 	}
 
 	vm.stack = vm.stack[:startIndex]
@@ -183,15 +189,14 @@ func (vm *VM) popN(count int) []Value {
 
 func (vm *VM) peek() Value {
 	lastIndex := len(vm.stack) - 1
-	return vm.stack[lastIndex]
+	value := vm.stack[lastIndex]
+	interpreter.CheckInvalidatedResourceOrResourceReference(value, EmptyLocationRange, vm.context)
+	return value
 }
 
 func (vm *VM) dropN(count int) {
 	stackHeight := len(vm.stack)
 	startIndex := stackHeight - count
-	for _, value := range vm.stack[startIndex:] {
-		vm.context.CheckInvalidatedResourceOrResourceReference(value, EmptyLocationRange)
-	}
 	clear(vm.stack[startIndex:])
 	vm.stack = vm.stack[:startIndex]
 }
@@ -674,7 +679,7 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	// If the function is a pointer to an object-method, then the receiver is implicitly captured.
 	if boundFunction, isBoundFUnction := functionValue.(*BoundFunctionPointerValue); isBoundFUnction {
 		functionValue = boundFunction.Method
-		receiver := maybeDereference(vm.context, boundFunction.Receiver)
+		receiver := boundFunction.Receiver(vm.context)
 		arguments = append([]Value{receiver}, arguments...)
 	}
 
@@ -778,7 +783,7 @@ func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
 	return typeArguments
 }
 
-func maybeDereference(context *Context, value Value) Value {
+func maybeDereference(context interpreter.ValueStaticTypeContext, value Value) Value {
 	switch typedValue := value.(type) {
 	case *interpreter.EphemeralReferenceValue:
 		return typedValue.Value

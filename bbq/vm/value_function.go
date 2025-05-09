@@ -340,18 +340,41 @@ func (v NativeFunctionValue) Invoke(invocation interpreter.Invocation) interpret
 
 // BoundFunctionPointerValue is a function-pointer taken for an object-method.
 type BoundFunctionPointerValue struct {
-	Receiver     interpreter.MemberAccessibleValue
+	receiverReference   interpreter.ReferenceValue
+	receiverIsReference bool
+
 	Method       FunctionValue
 	functionType *sema.FunctionType
 }
 
 func NewBoundFunctionPointerValue(
+	context interpreter.ReferenceCreationContext,
 	receiver interpreter.MemberAccessibleValue,
 	method FunctionValue,
 ) FunctionValue {
+
+	// Since 'self' work as an implicit reference, create an explicit one and hold it.
+	// This reference is later used to check the validity of the referenced value/resource.
+	// For attachments, 'self' is already a reference. So no need to create a reference again.
+
+	receiverRef, receiverIsRef := (receiver).(interpreter.ReferenceValue)
+	if !receiverIsRef {
+		semaType := interpreter.MustSemaTypeOfValue(receiver, context)
+		// Create an unauthorized reference. The purpose of it is only to track and invalidate resource moves,
+		// it is not directly exposed to the users
+		receiverRef = interpreter.NewEphemeralReferenceValue(
+			context,
+			interpreter.UnauthorizedAccess,
+			receiver,
+			semaType,
+			EmptyLocationRange,
+		)
+	}
+
 	return &BoundFunctionPointerValue{
-		Receiver: receiver,
-		Method:   method,
+		Method:              method,
+		receiverReference:   receiverRef,
+		receiverIsReference: receiverIsRef,
 	}
 }
 
@@ -472,7 +495,10 @@ func (v *BoundFunctionPointerValue) initializeFunctionType(context interpreter.V
 	// The type of the native function could be either pre-known (e.g: `Integer.toBigEndianBytes()`),
 	// Or would needs to be derived based on the receiver (e.g: `[Int8].append()`).
 	if method.HasGenericType() {
-		v.functionType = method.ResolvedFunctionType(v.Receiver, context)
+		v.functionType = method.ResolvedFunctionType(
+			v.Receiver(context),
+			context,
+		)
 	} else {
 		v.functionType = method.FunctionType(context)
 	}
@@ -480,11 +506,21 @@ func (v *BoundFunctionPointerValue) initializeFunctionType(context interpreter.V
 
 func (v *BoundFunctionPointerValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
 	arguments := make([]Value, 0, len(invocation.Arguments)+1)
-	arguments = append(arguments, v.Receiver)
+	arguments = append(arguments, v.Receiver(invocation.InvocationContext))
 	arguments = append(arguments, invocation.Arguments...)
 
 	return invocation.InvocationContext.InvokeFunction(
 		v,
 		arguments,
 	)
+}
+
+func (v *BoundFunctionPointerValue) Receiver(context interpreter.ValueStaticTypeContext) Value {
+	receiver := interpreter.GetReceiver(
+		v.receiverReference,
+		v.receiverIsReference,
+		context,
+		EmptyLocationRange,
+	)
+	return maybeDereference(context, receiver)
 }
