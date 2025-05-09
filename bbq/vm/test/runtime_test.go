@@ -164,7 +164,7 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 
 	vmConfig := vm.NewConfig(storage)
 	vmConfig.ImportHandler = importHandler
-	vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+	vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 		switch location {
 		case barLocation:
 			return barContractValue

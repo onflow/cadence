@@ -122,14 +122,17 @@ func (e *vmEnvironment) newVMConfig() *vm.Config {
 	return config
 }
 
-func (e *vmEnvironment) loadContractValue(conf *vm.Config, location common.Location) *interpreter.CompositeValue {
+func (e *vmEnvironment) loadContractValue(
+	context *vm.Context,
+	location common.Location,
+) *interpreter.CompositeValue {
 	addressLocation, ok := location.(common.AddressLocation)
 	if !ok {
 		panic(fmt.Errorf("cannot get contract value for non-address location %T", location))
 	}
 
 	return loadContractValue(
-		vm.NewContext(conf),
+		context,
 		addressLocation,
 		e.storage,
 	)

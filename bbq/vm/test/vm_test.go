@@ -590,7 +590,7 @@ func TestContractImport(t *testing.T) {
 			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 				return importedProgram
 			},
-			ContractValueHandler: func(*vm.Config, common.Location) *interpreter.CompositeValue {
+			ContractValueHandler: func(*vm.Context, common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
 			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
@@ -687,7 +687,7 @@ func TestContractImport(t *testing.T) {
 			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 				return importedProgram
 			},
-			ContractValueHandler: func(*vm.Config, common.Location) *interpreter.CompositeValue {
+			ContractValueHandler: func(*vm.Context, common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
 			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
@@ -804,7 +804,7 @@ func TestContractImport(t *testing.T) {
 				require.Equal(t, fooLocation, location)
 				return fooProgram
 			},
-			ContractValueHandler: func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+			ContractValueHandler: func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 				require.Equal(t, fooLocation, location)
 				return fooContractValue
 			},
@@ -894,7 +894,7 @@ func TestContractImport(t *testing.T) {
 					return nil
 				}
 			},
-			ContractValueHandler: func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+			ContractValueHandler: func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 				switch location {
 				case fooLocation:
 					return fooContractValue
@@ -1107,7 +1107,7 @@ func TestContractImport(t *testing.T) {
 					return nil
 				}
 			},
-			ContractValueHandler: func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+			ContractValueHandler: func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 				switch location {
 				case barLocation:
 					return barContractValue
@@ -1465,7 +1465,7 @@ func TestContractField(t *testing.T) {
 			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 				return importedProgram
 			},
-			ContractValueHandler: func(_ *vm.Config, _ common.Location) *interpreter.CompositeValue {
+			ContractValueHandler: func(_ *vm.Context, _ common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
 			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
@@ -1556,7 +1556,7 @@ func TestContractField(t *testing.T) {
 			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 				return importedProgram
 			},
-			ContractValueHandler: func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+			ContractValueHandler: func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
 			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
@@ -2262,7 +2262,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 				return importedProgram
 			},
-			ContractValueHandler: func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+			ContractValueHandler: func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
 			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
@@ -2438,7 +2438,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 
 		implProgramVMConfig := &vm.Config{
 			ImportHandler: bazImportHandler,
-			ContractValueHandler: func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+			ContractValueHandler: func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 				switch location {
 				case fooLocation:
 					return fooContractValue
@@ -2531,7 +2531,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 
 		vmConfig := &vm.Config{
 			ImportHandler: scriptImportHandler,
-			ContractValueHandler: func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+			ContractValueHandler: func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 				switch location {
 				case barLocation:
 					return barContractValue
@@ -2638,7 +2638,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 
 		vmConfig = &vm.Config{
 			ImportHandler: scriptImportHandler,
-			ContractValueHandler: func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+			ContractValueHandler: func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 				switch location {
 				case fooLocation:
 					return fooContractValue
@@ -3076,7 +3076,7 @@ func TestDefaultFunctions(t *testing.T) {
 			}
 			return program.Program
 		}
-		vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+		vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 			contractValue, ok := contractValues[location]
 			if !ok {
 				assert.FailNow(t, "invalid location")
@@ -3211,7 +3211,7 @@ func TestDefaultFunctions(t *testing.T) {
 			}
 			return program.Program
 		}
-		vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+		vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 			contractValue, ok := contractValues[location]
 			if !ok {
 				assert.FailNow(t, "invalid location")
@@ -3348,7 +3348,7 @@ func TestDefaultFunctions(t *testing.T) {
 			}
 			return program.Program
 		}
-		vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+		vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 			contractValue, ok := contractValues[location]
 			if !ok {
 				assert.FailNow(t, "invalid location")
@@ -3688,7 +3688,7 @@ func TestFunctionPreConditions(t *testing.T) {
 			}
 			return program.Program
 		}
-		vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+		vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 			contractValue, ok := contractValues[location]
 			if !ok {
 				assert.FailNow(t, "invalid location")
@@ -6075,7 +6075,7 @@ func TestContractAccount(t *testing.T) {
 		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
 		},
-		ContractValueHandler: func(*vm.Config, common.Location) *interpreter.CompositeValue {
+		ContractValueHandler: func(*vm.Context, common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		},
 		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
@@ -6199,7 +6199,7 @@ func TestResourceOwner(t *testing.T) {
 		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
 		},
-		ContractValueHandler: func(*vm.Config, common.Location) *interpreter.CompositeValue {
+		ContractValueHandler: func(*vm.Context, common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		},
 		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
@@ -6328,7 +6328,7 @@ func TestResourceUUID(t *testing.T) {
 		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
 		},
-		ContractValueHandler: func(*vm.Config, common.Location) *interpreter.CompositeValue {
+		ContractValueHandler: func(*vm.Context, common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		},
 		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
@@ -6722,7 +6722,7 @@ func TestContractClosure(t *testing.T) {
 		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
 		},
-		ContractValueHandler: func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+		ContractValueHandler: func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		},
 		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
@@ -6957,7 +6957,7 @@ func TestEmitInContract(t *testing.T) {
 			}
 			return program.Program
 		}
-		vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+		vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 			contractValue, ok := contractValues[location]
 			if !ok {
 				assert.FailNow(t, "invalid location")
@@ -7104,7 +7104,7 @@ func TestInheritedConditions(t *testing.T) {
 			}
 			return program.Program
 		}
-		vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+		vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 			contractValue, ok := contractValues[location]
 			if !ok {
 				assert.FailNow(t, "invalid location")
@@ -7269,7 +7269,7 @@ func TestInheritedConditions(t *testing.T) {
 			}
 			return program.Program
 		}
-		vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+		vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 			contractValue, ok := contractValues[location]
 			if !ok {
 				assert.FailNow(t, "invalid location")
@@ -7446,7 +7446,7 @@ func TestInheritedConditions(t *testing.T) {
 
 		vmConfig := vm.NewConfig(storage)
 
-		vmConfig.ContractValueHandler = func(_ *vm.Config, location common.Location) *interpreter.CompositeValue {
+		vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 			contractValue, ok := contractValues[location]
 			if !ok {
 				assert.FailNow(t, "invalid location")

@@ -181,7 +181,7 @@ func loadContractValue(contract *bbq.Contract, context *Context) Value {
 		contract.Name,
 	)
 
-	var contractValue interpreter.Value = context.ContractValueHandler(context.Config, location)
+	var contractValue interpreter.Value = context.ContractValueHandler(context, location)
 
 	staticType := contractValue.StaticType(context)
 	semaType, err := interpreter.ConvertStaticToSemaType(context, staticType)

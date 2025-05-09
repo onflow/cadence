@@ -236,7 +236,7 @@ func (c *Context) GetMethod(
 
 	qualifiedFuncName := commons.TypeQualifiedName(semaType, name)
 
-	method := c.lookupFunction(location, qualifiedFuncName)
+	method := c.GetFunction(location, qualifiedFuncName)
 	if method == nil {
 		return nil
 	}
@@ -245,4 +245,11 @@ func (c *Context) GetMethod(
 		value,
 		method,
 	)
+}
+
+func (c *Context) GetFunction(
+	location common.Location,
+	name string,
+) FunctionValue {
+	return c.lookupFunction(location, name)
 }

@@ -28,19 +28,19 @@ import (
 // TODO: Refactor and re-use the tracing from the interpreter.
 type Tracer struct{}
 
-func (ctx Tracer) TracingEnabled() bool {
+func (t Tracer) TracingEnabled() bool {
 	return false
 }
 
-func (ctx Tracer) ReportArrayValueDeepRemoveTrace(_ string, _ int, _ time.Duration) {
+func (t Tracer) ReportArrayValueDeepRemoveTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx Tracer) ReportArrayValueTransferTrace(_ string, _ int, _ time.Duration) {
+func (t Tracer) ReportArrayValueTransferTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx Tracer) ReportArrayValueConstructTrace(_ string, _ int, _ time.Duration) {
+func (t Tracer) ReportArrayValueConstructTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -52,19 +52,19 @@ func (c *Context) ReportArrayValueConformsToStaticTypeTrace(_ string, _ int, _ t
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx Tracer) ReportDictionaryValueTransferTrace(_ string, _ int, _ time.Duration) {
+func (t Tracer) ReportDictionaryValueTransferTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx Tracer) ReportDictionaryValueDeepRemoveTrace(_ string, _ int, _ time.Duration) {
+func (t Tracer) ReportDictionaryValueDeepRemoveTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx Tracer) ReportCompositeValueDeepRemoveTrace(_ string, _ string, _ string, _ time.Duration) {
+func (t Tracer) ReportCompositeValueDeepRemoveTrace(_ string, _ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx Tracer) ReportDictionaryValueGetMemberTrace(_ string, _ int, _ string, _ time.Duration) {
+func (t Tracer) ReportDictionaryValueGetMemberTrace(_ string, _ int, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -80,34 +80,34 @@ func (c *Context) ReportDictionaryValueConformsToStaticTypeTrace(_ string, _ int
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx Tracer) ReportCompositeValueTransferTrace(_ string, _ string, _ string, _ time.Duration) {
+func (t Tracer) ReportCompositeValueTransferTrace(_ string, _ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx Tracer) ReportCompositeValueSetMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
+func (t Tracer) ReportCompositeValueSetMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx Tracer) ReportCompositeValueGetMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
+func (t Tracer) ReportCompositeValueGetMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx Tracer) ReportCompositeValueConstructTrace(_ string, _ string, _ string, _ time.Duration) {
+func (t Tracer) ReportCompositeValueConstructTrace(_ string, _ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Context) ReportCompositeValueDestroyTrace(_ string, _ string, _ string, _ time.Duration) {
+func (t Tracer) ReportCompositeValueDestroyTrace(_ string, _ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Context) ReportCompositeValueConformsToStaticTypeTrace(_ string, _ string, _ string, _ time.Duration) {
+func (t Tracer) ReportCompositeValueConformsToStaticTypeTrace(_ string, _ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Context) ReportCompositeValueRemoveMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
+func (t Tracer) ReportCompositeValueRemoveMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx Tracer) ReportDomainStorageMapDeepRemoveTrace(_ string, _ int, _ time.Duration) {
+func (t Tracer) ReportDomainStorageMapDeepRemoveTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }

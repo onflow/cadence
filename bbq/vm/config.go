@@ -290,4 +290,7 @@ func (c *Config) SetStorage(storage interpreter.Storage) {
 	c.storage = storage
 }
 
-type ContractValueHandler func(conf *Config, location common.Location) *interpreter.CompositeValue
+type ContractValueHandler func(
+	context *Context,
+	location common.Location,
+) *interpreter.CompositeValue
