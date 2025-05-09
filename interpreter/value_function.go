@@ -352,17 +352,7 @@ func NewBoundFunctionValue(
 	base *EphemeralReferenceValue,
 ) BoundFunctionValue {
 
-	// Since 'self' work as an implicit reference, create an explicit one and hold it.
-	// This reference is later used to check the validity of the referenced value/resource.
-	// For attachments, 'self' is already a reference. So no need to create a reference again.
-
-	selfRef, selfIsRef := (*self).(ReferenceValue)
-	if !selfIsRef {
-		semaType := MustSemaTypeOfValue(*self, context)
-		// Create an unauthorized reference. The purpose of it is only to track and invalidate resource moves,
-		// it is not directly exposed to the users
-		selfRef = NewEphemeralReferenceValue(context, UnauthorizedAccess, *self, semaType, EmptyLocationRange)
-	}
+	selfRef, selfIsRef := ReceiverReference(context, *self)
 
 	return NewBoundFunctionValueFromSelfReference(
 		context,
@@ -371,6 +361,21 @@ func NewBoundFunctionValue(
 		selfIsRef,
 		base,
 	)
+}
+
+func ReceiverReference(context ReferenceCreationContext, receiver Value) (ReferenceValue, bool) {
+	// Since 'self' work as an implicit reference, create an explicit one and hold it.
+	// This reference is later used to check the validity of the referenced value/resource.
+	// For attachments, 'self' is already a reference. So no need to create a reference again.
+
+	selfRef, selfIsRef := receiver.(ReferenceValue)
+	if !selfIsRef {
+		semaType := MustSemaTypeOfValue(receiver, context)
+		// Create an unauthorized reference. The purpose of it is only to track and invalidate resource moves,
+		// it is not directly exposed to the users
+		selfRef = NewEphemeralReferenceValue(context, UnauthorizedAccess, receiver, semaType, EmptyLocationRange)
+	}
+	return selfRef, selfIsRef
 }
 
 func NewBoundFunctionValueFromSelfReference(
