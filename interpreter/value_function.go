@@ -352,17 +352,7 @@ func NewBoundFunctionValue(
 	base *EphemeralReferenceValue,
 ) BoundFunctionValue {
 
-	// Since 'self' work as an implicit reference, create an explicit one and hold it.
-	// This reference is later used to check the validity of the referenced value/resource.
-	// For attachments, 'self' is already a reference. So no need to create a reference again.
-
-	selfRef, selfIsRef := (*self).(ReferenceValue)
-	if !selfIsRef {
-		semaType := MustSemaTypeOfValue(*self, context)
-		// Create an unauthorized reference. The purpose of it is only to track and invalidate resource moves,
-		// it is not directly exposed to the users
-		selfRef = NewEphemeralReferenceValue(context, UnauthorizedAccess, *self, semaType, EmptyLocationRange)
-	}
+	selfRef, selfIsRef := ReceiverReference(context, *self)
 
 	return NewBoundFunctionValueFromSelfReference(
 		context,
@@ -371,6 +361,21 @@ func NewBoundFunctionValue(
 		selfIsRef,
 		base,
 	)
+}
+
+func ReceiverReference(context ReferenceCreationContext, receiver Value) (ReferenceValue, bool) {
+	// Since 'self' work as an implicit reference, create an explicit one and hold it.
+	// This reference is later used to check the validity of the referenced value/resource.
+	// For attachments, 'self' is already a reference. So no need to create a reference again.
+
+	selfRef, selfIsRef := receiver.(ReferenceValue)
+	if !selfIsRef {
+		semaType := MustSemaTypeOfValue(receiver, context)
+		// Create an unauthorized reference. The purpose of it is only to track and invalidate resource moves,
+		// it is not directly exposed to the users
+		selfRef = NewEphemeralReferenceValue(context, UnauthorizedAccess, receiver, semaType, EmptyLocationRange)
+	}
+	return selfRef, selfIsRef
 }
 
 func NewBoundFunctionValueFromSelfReference(
@@ -443,30 +448,49 @@ func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 	// then pass the reference as-is to the invocation.
 	// Otherwise, always dereference, at the time of the invocation.
 
-	if f.selfIsReference {
-		var self Value = f.SelfReference
-		invocation.Self = &self
+	receiver := GetReceiver(
+		f.SelfReference,
+		f.selfIsReference,
+		inter,
+		locationRange,
+	)
+	invocation.Self = receiver
+
+	return f.Function.Invoke(invocation)
+}
+
+func GetReceiver(
+	receiverReference ReferenceValue,
+	receiverIsReference bool,
+	context ValueStaticTypeContext,
+	locationRange LocationRange,
+) *Value {
+	var receiver *Value
+
+	if receiverIsReference {
+		var receiverValue Value = receiverReference
+		receiver = &receiverValue
 	} else {
-		invocation.Self = f.SelfReference.ReferencedValue(
-			inter,
+		receiver = receiverReference.ReferencedValue(
+			context,
 			EmptyLocationRange,
 			true,
 		)
 	}
 
-	if _, isStorageRef := f.SelfReference.(*StorageReferenceValue); isStorageRef {
+	if _, isStorageRef := receiverReference.(*StorageReferenceValue); isStorageRef {
 		// `storageRef.ReferencedValue` above already checks for the type validity, if it's not nil.
 		// If nil, that means the value has been moved out of storage.
-		if invocation.Self == nil {
+		if receiver == nil {
 			panic(ReferencedValueChangedError{
 				LocationRange: locationRange,
 			})
 		}
 	} else {
-		checkInvalidatedResourceOrResourceReference(f.SelfReference, locationRange, inter)
+		CheckInvalidatedResourceOrResourceReference(receiverReference, locationRange, context)
 	}
 
-	return f.Function.Invoke(invocation)
+	return receiver
 }
 
 func (f BoundFunctionValue) ConformsToStaticType(

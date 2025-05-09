@@ -21,6 +21,7 @@ package interpreter
 import (
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 )
 
@@ -33,21 +34,37 @@ type ReferenceValue interface {
 }
 
 func DereferenceValue(
-	inter *Interpreter,
+	context ValueTransferContext,
 	locationRange LocationRange,
-	referenceValue ReferenceValue,
+	value Value,
 ) Value {
-	referencedValue := *referenceValue.ReferencedValue(inter, locationRange, true)
+	if _, ok := value.(NilValue); ok {
+		return Nil
+	}
+
+	var isOptional bool
+
+	if someValue, ok := value.(*SomeValue); ok {
+		isOptional = true
+		value = someValue.InnerValue()
+	}
+
+	referenceValue, ok := value.(ReferenceValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	referencedValue := *referenceValue.ReferencedValue(context, locationRange, true)
 
 	// Defensive check: ensure that the referenced value is not a resource
-	if referencedValue.IsResourceKinded(inter) {
+	if referencedValue.IsResourceKinded(context) {
 		panic(ResourceReferenceDereferenceError{
 			LocationRange: locationRange,
 		})
 	}
 
-	return referencedValue.Transfer(
-		inter,
+	transferredDereferencedValue := referencedValue.Transfer(
+		context,
 		locationRange,
 		atree.Address{},
 		false,
@@ -55,4 +72,10 @@ func DereferenceValue(
 		nil,
 		false,
 	)
+
+	if isOptional {
+		return NewSomeValueNonCopying(context, transferredDereferencedValue)
+	} else {
+		return transferredDereferencedValue
+	}
 }

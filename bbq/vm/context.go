@@ -240,6 +240,7 @@ func (c *Context) GetMethod(
 	}
 
 	return NewBoundFunctionPointerValue(
+		c,
 		value,
 		method,
 	)

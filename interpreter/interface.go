@@ -103,7 +103,6 @@ var _ StorageContext = &Interpreter{}
 type ReferenceTracker interface {
 	ClearReferencedResourceKindedValues(valueID atree.ValueID)
 	ReferencedResourceKindedValues(valueID atree.ValueID) map[*EphemeralReferenceValue]struct{}
-	CheckInvalidatedResourceOrResourceReference(value Value, locationRange LocationRange)
 	MaybeTrackReferencedResourceKindedValue(ref *EphemeralReferenceValue)
 }
 

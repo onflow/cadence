@@ -42,43 +42,6 @@ func (c *Context) MaybeTrackReferencedResourceKindedValue(referenceValue *interp
 	values[referenceValue] = struct{}{}
 }
 
-func (c *Context) CheckInvalidatedResourceOrResourceReference(
-	value Value,
-	locationRange interpreter.LocationRange,
-) {
-
-	switch value := value.(type) {
-	case *interpreter.SomeValue:
-		c.CheckInvalidatedResourceOrResourceReference(value.InnerValue(), locationRange)
-
-	// TODO:
-	//case ResourceKindedValue:
-	//	if value.isInvalidatedResource(interpreter) {
-	//		panic(InvalidatedResourceError{
-	//			LocationRange: LocationRange{
-	//				Location:    interpreter.Location,
-	//				HasPosition: hasPosition,
-	//			},
-	//		})
-	//	}
-	case *interpreter.EphemeralReferenceValue:
-		if value.Value == nil {
-			panic(interpreter.InvalidatedResourceReferenceError{
-				//LocationRange: interpreter.LocationRange{
-				//	Location:    interpreter.Location,
-				//	HasPosition: hasPosition,
-				//},
-			})
-		} else {
-			// If the value is there, check whether the referenced value is an invalidated one.
-			// This step is not really needed, since reference tracking is supposed to clear the
-			// `value.Value` if the referenced-value was moved/deleted.
-			// However, have this as a second layer of defensive.
-			c.CheckInvalidatedResourceOrResourceReference(value.Value, locationRange)
-		}
-	}
-}
-
 func (c *Context) ClearReferencedResourceKindedValues(valueID atree.ValueID) {
 	delete(c.referencedResourceKindedValues, valueID)
 }

@@ -99,11 +99,11 @@ func (interpreter *Interpreter) typeIndexExpressionGetterSetter(
 	return getterSetter{
 		target: target,
 		get: func(_ bool) Value {
-			checkInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
+			CheckInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
 			return target.GetTypeKey(interpreter, locationRange, attachmentType)
 		},
 		set: func(_ Value) {
-			checkInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
+			CheckInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
 			// writing to composites with indexing syntax is not supported
 			panic(errors.NewUnreachableError())
 		},
@@ -198,14 +198,14 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 
 	if isNestedResourceMove {
 		get = func(_ bool) Value {
-			checkInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
+			CheckInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
 			value := target.RemoveKey(interpreter, locationRange, transferredIndexingValue)
 			target.InsertKey(interpreter, locationRange, transferredIndexingValue, placeholder)
 			return value
 		}
 	} else {
 		get = func(_ bool) Value {
-			checkInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
+			CheckInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
 			value := target.GetKey(interpreter, locationRange, transferredIndexingValue)
 
 			// If the indexing value is a reference, then return a reference for the resulting value.
@@ -217,7 +217,7 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 		target: target,
 		get:    get,
 		set: func(value Value) {
-			checkInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
+			CheckInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
 			target.SetKey(interpreter, locationRange, transferredIndexingValue, value)
 		},
 	}
@@ -325,7 +325,7 @@ func (interpreter *Interpreter) checkMemberAccess(
 	locationRange LocationRange,
 ) {
 
-	checkInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
+	CheckInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
 
 	memberInfo, _ := interpreter.Program.Elaboration.MemberExpressionMemberAccessInfo(memberExpression)
 	expectedType := memberInfo.AccessedType
@@ -400,7 +400,7 @@ func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value 
 		Location:    interpreter.Location,
 		HasPosition: expression,
 	}
-	checkInvalidatedResourceOrResourceReference(
+	CheckInvalidatedResourceOrResourceReference(
 		result,
 		locationRange,
 		interpreter,
@@ -408,7 +408,7 @@ func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value 
 	return result
 }
 
-func checkInvalidatedResourceOrResourceReference(
+func CheckInvalidatedResourceOrResourceReference(
 	value Value,
 	locationRange LocationRange,
 	context ValueStaticTypeContext,
@@ -437,7 +437,7 @@ func checkInvalidatedResourceOrResourceReference(
 			// This step is not really needed, since reference tracking is supposed to clear the
 			// `value.Value` if the referenced-value was moved/deleted.
 			// However, have this as a second layer of defensive.
-			checkInvalidatedResourceOrResourceReference(
+			CheckInvalidatedResourceOrResourceReference(
 				value.Value,
 				locationRange,
 				context,
@@ -750,33 +750,12 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 		)
 
 	case ast.OperationMul:
-
-		if _, ok := value.(NilValue); ok {
-			return Nil
-		}
-
 		locationRange := LocationRange{
 			Location:    interpreter.Location,
 			HasPosition: expression,
 		}
-		var isOptional bool
 
-		if someValue, ok := value.(*SomeValue); ok {
-			isOptional = true
-			value = someValue.InnerValue()
-		}
-
-		referenceValue, ok := value.(ReferenceValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		dereferencedValue := DereferenceValue(interpreter, locationRange, referenceValue)
-		if isOptional {
-			return NewSomeValueNonCopying(interpreter, dereferencedValue)
-		} else {
-			return dereferencedValue
-		}
+		return DereferenceValue(interpreter, locationRange, value)
 
 	case ast.OperationMove:
 		interpreter.invalidateResource(value)
