@@ -5990,10 +5990,6 @@ func (interpreter *Interpreter) TracingEnabled() bool {
 	return interpreter.SharedState.Config.TracingEnabled
 }
 
-func (interpreter *Interpreter) CheckInvalidatedResourceOrResourceReference(value Value, locationRange LocationRange) {
-	checkInvalidatedResourceOrResourceReference(value, locationRange, interpreter)
-}
-
 func (interpreter *Interpreter) IsTypeInfoRecovered(location common.Location) bool {
 	elaboration := interpreter.getElaboration(location)
 	if elaboration == nil {

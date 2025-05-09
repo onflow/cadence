@@ -37,7 +37,7 @@ func TestInterpretResourceReferenceInstanceOf(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         resource R {}
 
         fun test(): Bool {
@@ -64,7 +64,7 @@ func TestInterpretResourceReferenceFieldComparison(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         resource R {
             let n: Int
             init() {
@@ -100,7 +100,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           struct S1 {
               access(all) fun getSecret(): Int {
                   return 0
@@ -135,7 +135,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           struct S1 {
               access(all) fun getSecret(): Int {
                   return 0
@@ -169,7 +169,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
          struct S1 {
              var value: Int
 
@@ -208,7 +208,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
          struct S1 {
              var value: Int
 
@@ -246,7 +246,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           struct S1 {
               var value: Int
 
@@ -290,7 +290,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           struct S1 {
               var value: Int
 
@@ -332,7 +332,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           struct S1 {}
 
           struct S2 {}
@@ -360,7 +360,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           fun f1(): Int {
               return 0
           }
@@ -390,7 +390,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           fun f(_ value: [UInt8]) {}
 
           fun test() {
@@ -443,14 +443,14 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           resource R {}
 
           let r: @R? <- create R()
           let ref = &r as &R?
         `)
 
-		value := inter.Globals.Get("ref").GetValue(inter)
+		value := inter.GetGlobal("ref")
 		require.IsType(t, &interpreter.SomeValue{}, value)
 
 		innerValue := value.(*interpreter.SomeValue).InnerValue()
@@ -461,14 +461,14 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           struct S {}
 
           let s: S? = S()
           let ref = &s as &S?
         `)
 
-		value := inter.Globals.Get("ref").GetValue(inter)
+		value := inter.GetGlobal("ref")
 		require.IsType(t, &interpreter.SomeValue{}, value)
 
 		innerValue := value.(*interpreter.SomeValue).InnerValue()
@@ -479,12 +479,12 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let i: Int? = 1
           let ref = &i as &Int?
         `)
 
-		value := inter.Globals.Get("ref").GetValue(inter)
+		value := inter.GetGlobal("ref")
 		require.IsType(t, &interpreter.SomeValue{}, value)
 
 		innerValue := value.(*interpreter.SomeValue).InnerValue()
@@ -495,12 +495,12 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let i: Int? = 1
           let ref = &i as &Int?
         `)
 
-		value := inter.Globals.Get("ref").GetValue(inter)
+		value := inter.GetGlobal("ref")
 		require.IsType(t, &interpreter.SomeValue{}, value)
 
 		innerValue := value.(*interpreter.SomeValue).InnerValue()
@@ -511,12 +511,12 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let i: Int? = nil
           let ref = &i as &Int?
         `)
 
-		value := inter.Globals.Get("ref").GetValue(inter)
+		value := inter.GetGlobal("ref")
 		require.IsType(t, interpreter.Nil, value)
 	})
 }
@@ -603,7 +603,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R {
                 access(all) var id: Int
 
@@ -712,7 +712,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R {
                 access(all) var id: Int
 
@@ -802,7 +802,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R {
                 access(all) var id: Int
 
@@ -1020,7 +1020,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(
+		inter := parseCheckAndPrepare(
 			t,
 			`
             access(all) fun test() {
@@ -1065,7 +1065,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(
+		inter := parseCheckAndPrepare(
 			t,
 			`
             access(all) fun test() {
@@ -1109,7 +1109,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(
+		inter := parseCheckAndPrepare(
 			t,
 			`
             resource R {
@@ -1148,7 +1148,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(
+		inter := parseCheckAndPrepare(
 			t,
 			`
             resource R {
@@ -1186,7 +1186,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 	t.Run("nested resource in composite", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource Foo {
                 let id: UInt8  // non resource typed field
                 let bar: @Bar   // resource typed field
@@ -1240,7 +1240,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 	t.Run("nested resource in dictionary", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource Foo {}
 
             fun main() {
@@ -1273,7 +1273,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 	t.Run("nested resource in array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource Foo {}
 
             fun main() {
@@ -1306,7 +1306,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 	t.Run("nested optional resource", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource Foo {
                 let optionalBar: @Bar?
                 init() {
@@ -1351,7 +1351,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 	t.Run("reference created by field access", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource Foo {
                 let bar: @Bar
                 init() {
@@ -1397,7 +1397,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 	t.Run("reference created by index access", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource Foo {
                 let id: UInt8
                 init() {
@@ -1436,7 +1436,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 	t.Run("reference created by field and index access", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
              resource Foo {
                 let bar: @Bar
                 init() {
@@ -1482,7 +1482,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 	t.Run("downcasted reference", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
              resource Foo {
                 let id: UInt8
                 init() {
@@ -1565,7 +1565,7 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(
+		inter := parseCheckAndPrepare(
 			t,
 			`
             access(all) fun test() {
@@ -1609,7 +1609,7 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 func TestInterpretReferenceTrackingOnInvocation(t *testing.T) {
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       access(all) resource Foo {
 
           access(all) let id: UInt8
@@ -1654,7 +1654,7 @@ func TestInterpretInvalidReferenceToOptionalConfusion(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       struct S {
          fun foo() {}
       }
@@ -1681,7 +1681,7 @@ func TestInterpretReferenceToOptional(t *testing.T) {
 	t.Run("nil in AnyStruct", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun main(): &AnyStruct {
                 let y: AnyStruct = nil
                 return &y
@@ -1696,7 +1696,7 @@ func TestInterpretReferenceToOptional(t *testing.T) {
 	t.Run("nil in optional", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun main(): &Int? {
                 let y: Int? = nil
                 return &y
@@ -1719,7 +1719,7 @@ func TestInterpretReferenceToOptional(t *testing.T) {
 func TestInterpretInvalidatedReferenceToOptional(t *testing.T) {
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         resource Foo {}
 
         fun main(): AnyStruct {
@@ -1775,7 +1775,7 @@ func TestInterpretReferenceToReference(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun main() {
                 let x = &1 as &Int as AnyStruct
                 let y = &x as &AnyStruct
@@ -1815,7 +1815,7 @@ func TestInterpretReferenceToReference(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun main() {
                 let x = &1 as &Int as AnyStruct?
                 let y = &x as &AnyStruct?
@@ -1856,7 +1856,7 @@ func TestInterpretReferenceToReference(t *testing.T) {
 	t.Run("nested optional reference as AnyStruct", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun main() {
                 var array: [Foo] = []
                 var optionalArrayRef: (&[Foo])? = &array as &[Foo]
@@ -1879,7 +1879,7 @@ func TestInterpretDereference(t *testing.T) {
 	runTestCase := func(
 		t *testing.T,
 		name, code string,
-		expectedValueFunc func(*interpreter.Interpreter) interpreter.Value,
+		expectedValueFunc func() interpreter.Value,
 	) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -1892,7 +1892,7 @@ func TestInterpretDereference(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				expectedValueFunc(inter),
+				expectedValueFunc(),
 				value,
 			)
 		})
@@ -1946,7 +1946,7 @@ func TestInterpretDereference(t *testing.T) {
                     `,
 					integerType,
 				),
-				func(_ *interpreter.Interpreter) interpreter.Value {
+				func() interpreter.Value {
 					return expectedValues[integerType]
 				},
 			)
@@ -1983,7 +1983,7 @@ func TestInterpretDereference(t *testing.T) {
                     `,
 					fixedPointType,
 				),
-				func(_ *interpreter.Interpreter) interpreter.Value {
+				func() interpreter.Value {
 					return expectedValues[fixedPointType]
 				},
 			)
@@ -2004,12 +2004,12 @@ func TestInterpretDereference(t *testing.T) {
 			typString := typ.QualifiedString()
 
 			createArrayValue := func(
-				inter *interpreter.Interpreter,
+				context interpreter.ArrayCreationContext,
 				innerStaticType interpreter.StaticType,
 				values ...interpreter.Value,
 			) interpreter.Value {
 				return interpreter.NewArrayValue(
-					inter,
+					context,
 					interpreter.EmptyLocationRange,
 					&interpreter.VariableSizedStaticType{
 						Type: innerStaticType,
@@ -2401,7 +2401,7 @@ func TestInterpretDereference(t *testing.T) {
 					t,
 					inter,
 					expectedOriginalValue,
-					inter.Globals.Get("originalArray").GetValue(inter),
+					inter.GetGlobal("originalArray"),
 				)
 			})
 		}
@@ -2421,12 +2421,12 @@ func TestInterpretDereference(t *testing.T) {
 			typString := typ.QualifiedString()
 
 			createArrayValue := func(
-				inter *interpreter.Interpreter,
+				context interpreter.ArrayCreationContext,
 				innerStaticType interpreter.StaticType,
 				values ...interpreter.Value,
 			) interpreter.Value {
 				return interpreter.NewArrayValue(
-					inter,
+					context,
 					interpreter.EmptyLocationRange,
 					&interpreter.ConstantSizedStaticType{
 						Type: innerStaticType,
@@ -2796,7 +2796,7 @@ func TestInterpretDereference(t *testing.T) {
 					t,
 					inter,
 					expectedOriginalValue,
-					inter.Globals.Get("originalArray").GetValue(inter),
+					inter.GetGlobal("originalArray"),
 				)
 			})
 		}
@@ -2806,7 +2806,7 @@ func TestInterpretDereference(t *testing.T) {
 		t.Parallel()
 
 		t.Run("{Int: String}", func(t *testing.T) {
-			inter := parseCheckAndInterpret(
+			inter := parseCheckAndPrepare(
 				t,
 				`
                     fun main(): {Int: String} {
@@ -2840,7 +2840,7 @@ func TestInterpretDereference(t *testing.T) {
 		})
 
 		t.Run("{Int: [String]}", func(t *testing.T) {
-			inter := parseCheckAndInterpret(
+			inter := parseCheckAndPrepare(
 				t,
 				`
                     fun main(): {Int: [String]} {
@@ -2906,7 +2906,7 @@ func TestInterpretDereference(t *testing.T) {
                     return *x
                 }
             `,
-			func(_ *interpreter.Interpreter) interpreter.Value {
+			func() interpreter.Value {
 				return interpreter.NewUnmeteredCharacterValue("S")
 			},
 		)
@@ -2925,7 +2925,7 @@ func TestInterpretDereference(t *testing.T) {
                     return *x
                 }
             `,
-			func(_ *interpreter.Interpreter) interpreter.Value {
+			func() interpreter.Value {
 				return interpreter.NewUnmeteredStringValue("STxy")
 			},
 		)
@@ -2941,7 +2941,7 @@ func TestInterpretDereference(t *testing.T) {
                 return *x
             }
         `,
-		func(_ *interpreter.Interpreter) interpreter.Value {
+		func() interpreter.Value {
 			return interpreter.BoolValue(true)
 		},
 	)
@@ -2959,7 +2959,7 @@ func TestInterpretDereference(t *testing.T) {
                 return *x
             }
         `,
-		func(_ *interpreter.Interpreter) interpreter.Value {
+		func() interpreter.Value {
 			return interpreter.NewAddressValue(nil, address)
 		},
 	)
@@ -2977,7 +2977,7 @@ func TestInterpretDereference(t *testing.T) {
                     return *x
                 }
             `,
-			func(_ *interpreter.Interpreter) interpreter.Value {
+			func() interpreter.Value {
 				return interpreter.NewUnmeteredPathValue(common.PathDomainPrivate, "temp")
 			},
 		)
@@ -2992,7 +2992,7 @@ func TestInterpretDereference(t *testing.T) {
                     return *x
                 }
             `,
-			func(_ *interpreter.Interpreter) interpreter.Value {
+			func() interpreter.Value {
 				return interpreter.NewUnmeteredPathValue(common.PathDomainPublic, "temp")
 			},
 		)
@@ -3010,7 +3010,7 @@ func TestInterpretDereference(t *testing.T) {
                   return *ref
               }
             `,
-			func(_ *interpreter.Interpreter) interpreter.Value {
+			func() interpreter.Value {
 				return interpreter.Nil
 			},
 		)
@@ -3024,7 +3024,7 @@ func TestInterpretDereference(t *testing.T) {
                   return *ref
               }
             `,
-			func(_ *interpreter.Interpreter) interpreter.Value {
+			func() interpreter.Value {
 				return interpreter.NewUnmeteredSomeValueNonCopying(
 					interpreter.NewIntValueFromInt64(nil, 42),
 				)
@@ -3106,7 +3106,7 @@ func TestInterpretOptionalReference(t *testing.T) {
 
 	t.Run("present", func(t *testing.T) {
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           fun present(): &Int {
               let x: Int? = 1
               let y = &x as &Int?
@@ -3131,7 +3131,7 @@ func TestInterpretOptionalReference(t *testing.T) {
 	t.Run("absent", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           fun absent(): &Int {
               let x: Int? = nil
               let y = &x as &Int?
@@ -3149,7 +3149,7 @@ func TestInterpretOptionalReference(t *testing.T) {
 	t.Run("nested optional reference", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun main() {
                 var dict: {String: Foo?} = {}
                 var ref: (&Foo)?? = &dict["foo"] as &Foo??
@@ -3170,7 +3170,7 @@ func TestInterpretHostFunctionReferenceInvalidation(t *testing.T) {
 	t.Run("resource array host function", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun main() {
                 var array: @[R] <- []
                 var arrayRef: auth(Mutate) &[R] = &array as auth(Mutate) &[R]
@@ -3197,7 +3197,7 @@ func TestInterpretHostFunctionReferenceInvalidation(t *testing.T) {
 	t.Run("struct array host function", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun main(): [S] {
                 var array: [S] = []
                 var arrayRef: auth(Mutate) &[S] = &array as auth(Mutate) &[S]
@@ -3246,7 +3246,7 @@ func TestInterpretHostFunctionReferenceInvalidation(t *testing.T) {
 	t.Run("resource dictionary host function", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun main() {
                 var dictionary: @{String:R} <- {}
                 var dictionaryRef: auth(Mutate) &{String:R} = &dictionary as auth(Mutate) &{String:R}
@@ -3273,7 +3273,7 @@ func TestInterpretHostFunctionReferenceInvalidation(t *testing.T) {
 	t.Run("struct host function", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun main(): Type {
                 var s = S()
 
@@ -3449,7 +3449,7 @@ func TestInterpretCreatingCircularDependentResource(t *testing.T) {
 	t.Run("resource container field", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             access(all) resource A {
                 access(mapping Identity) var b: @[B]
                 init() {
@@ -3480,7 +3480,7 @@ func TestInterpretCreatingCircularDependentResource(t *testing.T) {
 	t.Run("resource field", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             access(all) resource A {
                 access(self) var b: @B?
                 init() {

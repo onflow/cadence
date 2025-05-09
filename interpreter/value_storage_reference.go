@@ -450,7 +450,7 @@ func forEachReference(
 		// The loop dereference the reference once, and hold onto that referenced-value.
 		// But the reference could get invalidated during the iteration, making that referenced-value invalid.
 		// So check the validity of the reference, before each iteration.
-		checkInvalidatedResourceOrResourceReference(reference, locationRange, context)
+		CheckInvalidatedResourceOrResourceReference(reference, locationRange, context)
 
 		if isResultReference {
 			value = getReferenceValue(

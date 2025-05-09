@@ -443,30 +443,48 @@ func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 	// then pass the reference as-is to the invocation.
 	// Otherwise, always dereference, at the time of the invocation.
 
-	if f.selfIsReference {
-		var self Value = f.SelfReference
-		invocation.Self = &self
+	receiver := GetReceiver(
+		f.SelfReference,
+		f.selfIsReference,
+		inter,
+		locationRange,
+	)
+	invocation.Self = &receiver
+
+	return f.Function.Invoke(invocation)
+}
+
+func GetReceiver(
+	receiverReference ReferenceValue,
+	receiverIsReference bool,
+	context ValueStaticTypeContext,
+	locationRange LocationRange,
+) Value {
+	var receiver Value
+
+	if receiverIsReference {
+		receiver = receiverReference
 	} else {
-		invocation.Self = f.SelfReference.ReferencedValue(
-			inter,
+		receiver = *receiverReference.ReferencedValue(
+			context,
 			EmptyLocationRange,
 			true,
 		)
 	}
 
-	if _, isStorageRef := f.SelfReference.(*StorageReferenceValue); isStorageRef {
+	if _, isStorageRef := receiverReference.(*StorageReferenceValue); isStorageRef {
 		// `storageRef.ReferencedValue` above already checks for the type validity, if it's not nil.
 		// If nil, that means the value has been moved out of storage.
-		if invocation.Self == nil {
+		if receiver == nil {
 			panic(ReferencedValueChangedError{
 				LocationRange: locationRange,
 			})
 		}
 	} else {
-		checkInvalidatedResourceOrResourceReference(f.SelfReference, locationRange, inter)
+		CheckInvalidatedResourceOrResourceReference(receiverReference, locationRange, context)
 	}
 
-	return f.Function.Invoke(invocation)
+	return receiver
 }
 
 func (f BoundFunctionValue) ConformsToStaticType(

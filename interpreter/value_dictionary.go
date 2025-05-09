@@ -381,8 +381,8 @@ func (v *DictionaryValue) iterate(
 			keyValue := MustConvertStoredValue(context, key)
 			valueValue := MustConvertStoredValue(context, value)
 
-			checkInvalidatedResourceOrResourceReference(keyValue, locationRange, context)
-			checkInvalidatedResourceOrResourceReference(valueValue, locationRange, context)
+			CheckInvalidatedResourceOrResourceReference(keyValue, locationRange, context)
+			CheckInvalidatedResourceOrResourceReference(valueValue, locationRange, context)
 
 			resume = f(
 				keyValue,
