@@ -755,7 +755,6 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 			HasPosition: expression,
 		}
 
-
 		return DereferenceValue(interpreter, locationRange, value)
 
 	case ast.OperationMove:
