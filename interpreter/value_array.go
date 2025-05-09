@@ -1442,19 +1442,21 @@ func (v *ArrayValue) Transfer(
 			},
 		)
 
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeArrayReadIteration,
+				Intensity: uint64(count),
+			},
+		)
+
 		array, err = atree.NewArrayFromBatchData(
 			context.Storage(),
 			address,
 			v.array.Type(),
 			func() (atree.Value, error) {
 
-				common.UseComputation(
-					context,
-					common.ComputationUsage{
-						Kind:      common.ComputationKindAtreeArrayReadIteration,
-						Intensity: 1,
-					},
-				)
+				// Computation was already metered above
 
 				value, err := iterator.Next()
 				if err != nil {
@@ -1691,20 +1693,24 @@ func (v *ArrayValue) Slice(
 		panic(errors.NewExternalError(err))
 	}
 
+	newCount := uint64(toIndex - fromIndex)
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeArrayReadIteration,
+			Intensity: newCount,
+		},
+	)
+
 	return NewArrayValueWithIterator(
 		context,
 		NewVariableSizedStaticType(context, v.Type.ElementType()),
 		common.ZeroAddress,
-		uint64(toIndex-fromIndex),
+		newCount,
 		func() Value {
 
-			common.UseComputation(
-				context,
-				common.ComputationUsage{
-					Kind:      common.ComputationKindAtreeArrayReadIteration,
-					Intensity: 1,
-				},
-			)
+			// Computation was already metered above
 
 			atreeValue, err := iterator.Next()
 			if err != nil {
@@ -1860,6 +1866,7 @@ func (v *ArrayValue) Map(
 	locationRange LocationRange,
 	procedure FunctionValue,
 ) Value {
+	count := v.Count()
 
 	elementType := v.semaType.ElementType(false)
 
@@ -1882,7 +1889,7 @@ func (v *ArrayValue) Map(
 		returnArrayStaticType = NewConstantSizedStaticType(
 			context,
 			returnStaticType,
-			int64(v.Count()),
+			int64(count),
 		)
 	default:
 		panic(errors.NewUnreachableError())
@@ -1894,20 +1901,22 @@ func (v *ArrayValue) Map(
 		panic(errors.NewExternalError(err))
 	}
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeArrayReadIteration,
+			Intensity: uint64(count),
+		},
+	)
+
 	return NewArrayValueWithIterator(
 		context,
 		returnArrayStaticType,
 		common.ZeroAddress,
-		uint64(v.Count()),
+		uint64(count),
 		func() Value {
 
-			common.UseComputation(
-				context,
-				common.ComputationUsage{
-					Kind:      common.ComputationKindAtreeArrayReadIteration,
-					Intensity: 1,
-				},
-			)
+			// Computation was already metered above
 
 			atreeValue, err := iterator.Next()
 			if err != nil {
@@ -1959,6 +1968,7 @@ func (v *ArrayValue) ToVariableSized(
 	context ArrayCreationContext,
 	locationRange LocationRange,
 ) Value {
+	count := v.Count()
 
 	// Convert the constant-sized array type to a variable-sized array type.
 
@@ -1980,20 +1990,22 @@ func (v *ArrayValue) ToVariableSized(
 		panic(errors.NewExternalError(err))
 	}
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeArrayReadIteration,
+			Intensity: uint64(count),
+		},
+	)
+
 	return NewArrayValueWithIterator(
 		context,
 		variableSizedType,
 		common.ZeroAddress,
-		uint64(v.Count()),
+		uint64(count),
 		func() Value {
 
-			common.UseComputation(
-				context,
-				common.ComputationUsage{
-					Kind:      common.ComputationKindAtreeArrayReadIteration,
-					Intensity: 1,
-				},
-			)
+			// Computation was already metered above
 
 			atreeValue, err := iterator.Next()
 			if err != nil {
@@ -2054,6 +2066,14 @@ func (v *ArrayValue) ToConstantSized(
 		panic(errors.NewExternalError(err))
 	}
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeArrayReadIteration,
+			Intensity: uint64(count),
+		},
+	)
+
 	constantSizedArray := NewArrayValueWithIterator(
 		context,
 		constantSizedType,
@@ -2061,13 +2081,7 @@ func (v *ArrayValue) ToConstantSized(
 		uint64(count),
 		func() Value {
 
-			common.UseComputation(
-				context,
-				common.ComputationUsage{
-					Kind:      common.ComputationKindAtreeArrayReadIteration,
-					Intensity: 1,
-				},
-			)
+			// Computation was already metered above
 
 			atreeValue, err := iterator.Next()
 			if err != nil {
