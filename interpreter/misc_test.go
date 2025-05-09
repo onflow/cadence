@@ -6246,7 +6246,7 @@ func TestInterpretDictionaryForEachKey(t *testing.T) {
 	t.Run("box and convert argument", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           fun test(): String? {
               let dict = {"answer": 42}
               var res: String? = nil
@@ -9808,7 +9808,7 @@ func TestInterpretInternalAssignment(t *testing.T) {
 	)
 }
 
-func TestInterpretVoidReturn_(t *testing.T) {
+func TestInterpretVoidReturn(t *testing.T) {
 	t.Parallel()
 
 	labelNamed := func(s string) string {
