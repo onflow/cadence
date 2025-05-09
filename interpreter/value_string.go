@@ -1165,15 +1165,6 @@ func (v *StringValue) count(gauge common.Gauge, locationRange LocationRange, oth
 		return 1 + v.Length(gauge)
 	}
 
-	// Meter computation as if the string was iterated.
-	common.UseComputation(
-		gauge,
-		common.ComputationUsage{
-			Kind:      common.ComputationKindLoop,
-			Intensity: uint64(len(v.Str)),
-		},
-	)
-
 	remaining := v
 	count := 0
 

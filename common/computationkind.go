@@ -238,7 +238,7 @@ const (
 	ComputationKindAtreeArrayAppend
 	ComputationKindAtreeArrayInsert
 	ComputationKindAtreeArrayRemove
-	_
+	ComputationKindAtreeArrayReadIteration
 	_
 	_
 	_
@@ -257,4 +257,5 @@ const (
 	ComputationKindAtreeMapGet
 	ComputationKindAtreeMapSet
 	ComputationKindAtreeMapRemove
+	ComputationKindAtreeMapReadIteration
 )

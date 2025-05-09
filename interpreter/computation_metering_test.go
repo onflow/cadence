@@ -32,14 +32,6 @@ import (
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
-type computationGaugeFunc func(usage common.ComputationUsage) error
-
-var _ common.ComputationGauge = computationGaugeFunc(nil)
-
-func (f computationGaugeFunc) MeterComputation(usage common.ComputationUsage) error {
-	return f(usage)
-}
-
 type testComputationGauge struct {
 	meter   map[common.ComputationKind]uint64
 	kindSet map[common.ComputationKind]struct{}
@@ -90,7 +82,7 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 	t.Run("reverse", func(t *testing.T) {
 		t.Parallel()
 
-		computationMeteredValues := make(map[common.ComputationKind]uint64)
+		computationGauge := newTestComputationGauge()
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun main() {
@@ -99,10 +91,7 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
-					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
-						computationMeteredValues[usage.Kind] += usage.Intensity
-						return nil
-					}),
+					ComputationGauge: computationGauge,
 				},
 			},
 		)
@@ -111,13 +100,40 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(3), computationMeteredValues[common.ComputationKindLoop])
+		assert.Equal(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArrayGet, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayGet, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayGet, Intensity: 1},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
 	})
 
 	t.Run("map", func(t *testing.T) {
 		t.Parallel()
 
-		computationMeteredValues := make(map[common.ComputationKind]uint64)
+		computationGauge := newTestComputationGauge()
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun main() {
@@ -129,10 +145,7 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
-					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
-						computationMeteredValues[usage.Kind] += usage.Intensity
-						return nil
-					}),
+					ComputationGauge: computationGauge,
 				},
 			},
 		)
@@ -141,13 +154,50 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(5), computationMeteredValues[common.ComputationKindLoop])
+		assert.Equal(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 4},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 4},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
 	})
 
 	t.Run("filter", func(t *testing.T) {
 		t.Parallel()
 
-		computationMeteredValues := make(map[common.ComputationKind]uint64)
+		computationGauge := newTestComputationGauge()
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun main() {
@@ -159,10 +209,7 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
-					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
-						computationMeteredValues[usage.Kind] += usage.Intensity
-						return nil
-					}),
+					ComputationGauge: computationGauge,
 				},
 			},
 		)
@@ -171,13 +218,52 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(6), computationMeteredValues[common.ComputationKindLoop])
+		assert.Equal(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 5},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 5},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 5},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 5},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 2},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
 	})
 
 	t.Run("slice", func(t *testing.T) {
 		t.Parallel()
 
-		computationMeteredValues := make(map[common.ComputationKind]uint64)
+		computationGauge := newTestComputationGauge()
+
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun main() {
                 let x = [1, 2, 3, 4, 5, 6]
@@ -185,10 +271,7 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
-					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
-						computationMeteredValues[usage.Kind] += usage.Intensity
-						return nil
-					}),
+					ComputationGauge: computationGauge,
 				},
 			},
 		)
@@ -197,13 +280,45 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(4), computationMeteredValues[common.ComputationKindLoop])
+		assert.Equal(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 6},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 6},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 6},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
 	})
 
 	t.Run("concat", func(t *testing.T) {
 		t.Parallel()
 
-		computationMeteredValues := make(map[common.ComputationKind]uint64)
+		computationGauge := newTestComputationGauge()
+
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun main() {
                 let x = [1, 2, 3]
@@ -211,10 +326,7 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
-					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
-						computationMeteredValues[usage.Kind] += usage.Intensity
-						return nil
-					}),
+					ComputationGauge: computationGauge,
 				},
 			},
 		)
@@ -225,7 +337,43 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 
 		// Computation is (arrayLength +1). It's an overestimate.
 		// The last one is for checking the end of array.
-		assert.Equal(t, uint64(7), computationMeteredValues[common.ComputationKindLoop])
+		assert.Equal(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 6},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 6},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 6},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 6},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
 	})
 }
 
@@ -236,7 +384,7 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
 	t.Run("string join", func(t *testing.T) {
 		t.Parallel()
 
-		computationMeteredValues := make(map[common.ComputationKind]uint64)
+		computationGauge := newTestComputationGauge()
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun main() {
@@ -244,10 +392,7 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
-					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
-						computationMeteredValues[usage.Kind] += usage.Intensity
-						return nil
-					}),
+					ComputationGauge: computationGauge,
 				},
 			},
 		)
@@ -256,13 +401,36 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(4), computationMeteredValues[common.ComputationKindLoop])
+		assert.Equal(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 4},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
 	})
 
 	t.Run("string concat", func(t *testing.T) {
 		t.Parallel()
 
-		computationMeteredValues := make(map[common.ComputationKind]uint64)
+		computationGauge := newTestComputationGauge()
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun main() {
@@ -270,10 +438,7 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
-					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
-						computationMeteredValues[usage.Kind] += usage.Intensity
-						return nil
-					}),
+					ComputationGauge: computationGauge,
 				},
 			},
 		)
@@ -282,13 +447,20 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(10), computationMeteredValues[common.ComputationKindLoop])
+		assert.Equal(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 10},
+			},
+			computationGauge.usages,
+		)
 	})
 
 	t.Run("string replace all", func(t *testing.T) {
 		t.Parallel()
 
-		computationMeteredValues := make(map[common.ComputationKind]uint64)
+		computationGauge := newTestComputationGauge()
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun main() {
@@ -296,10 +468,7 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
-					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
-						computationMeteredValues[usage.Kind] += usage.Intensity
-						return nil
-					}),
+					ComputationGauge: computationGauge,
 				},
 			},
 		)
@@ -308,13 +477,84 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(55), computationMeteredValues[common.ComputationKindLoop])
+		assert.Equal(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 8},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 8},
+				{Kind: common.ComputationKindLoop, Intensity: 7},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 7},
+				{Kind: common.ComputationKindLoop, Intensity: 4},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 4},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 8},
+				{Kind: common.ComputationKindLoop, Intensity: 8},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 8},
+				{Kind: common.ComputationKindLoop, Intensity: 7},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 7},
+				{Kind: common.ComputationKindLoop, Intensity: 4},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 4},
+			},
+			computationGauge.usages,
+		)
 	})
 
 	t.Run("string to lower", func(t *testing.T) {
 		t.Parallel()
 
-		computationMeteredValues := make(map[common.ComputationKind]uint64)
+		computationGauge := newTestComputationGauge()
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun main() {
@@ -322,10 +562,7 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
-					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
-						computationMeteredValues[usage.Kind] += usage.Intensity
-						return nil
-					}),
+					ComputationGauge: computationGauge,
 				},
 			},
 		)
@@ -334,13 +571,20 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(6), computationMeteredValues[common.ComputationKindStringToLower])
+		assert.Equal(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStringToLower, Intensity: 6},
+			},
+			computationGauge.usages,
+		)
 	})
 
 	t.Run("string split", func(t *testing.T) {
 		t.Parallel()
 
-		computationMeteredValues := make(map[common.ComputationKind]uint64)
+		computationGauge := newTestComputationGauge()
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun main() {
@@ -348,10 +592,7 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
-					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
-						computationMeteredValues[usage.Kind] += usage.Intensity
-						return nil
-					}),
+					ComputationGauge: computationGauge,
 				},
 			},
 		)
@@ -360,7 +601,107 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(58), computationMeteredValues[common.ComputationKindLoop])
+		assert.Equal(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 10},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 10},
+				{Kind: common.ComputationKindLoop, Intensity: 6},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 6},
+				{Kind: common.ComputationKindLoop, Intensity: 4},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 4},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 5},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 10},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 3},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 10},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 6},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 6},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 4},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 2},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 4},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 5},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 5},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
 	})
 }
 
@@ -683,6 +1024,494 @@ func TestInterpretComputationMeteringFunctionInvocation(t *testing.T) {
 	)
 }
 
+func TestInterpretComputationMeteringArray(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("construction and transfer", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		storage := newUnmeteredInMemoryStorage()
+		_, err := parseCheckAndInterpretWithOptions(t,
+			`
+             let x = [1, 2, 3]
+           `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("destruction", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		storage := newUnmeteredInMemoryStorage()
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+             resource R {}
+
+             fun test() {
+                 let x: @[R?] <- [nil]
+                 destroy x
+             }
+           `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 1},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindDestroyArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("get", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		storage := newUnmeteredInMemoryStorage()
+		_, err := parseCheckAndInterpretWithOptions(t,
+			`
+             let x = [1, 2, 3][1]
+           `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArrayGet, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("set", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		storage := newUnmeteredInMemoryStorage()
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+             fun test() {
+                 let x = [1]
+                 x[0] = 2
+             }
+           `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 1},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArraySet, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("append", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		storage := newUnmeteredInMemoryStorage()
+		_, err := parseCheckAndInterpretWithOptions(t,
+			`
+             let x = [1, 2, 3].append(4)
+           `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayAppend, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("insert", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		storage := newUnmeteredInMemoryStorage()
+		_, err := parseCheckAndInterpretWithOptions(t,
+			`
+             let x = [1, 2, 3].insert(at: 1, 1)
+           `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayInsert, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("remove", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		storage := newUnmeteredInMemoryStorage()
+		_, err := parseCheckAndInterpretWithOptions(t,
+			`
+             let x = [1, 2, 3].remove(at: 1)
+           `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayRemove, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("contains", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		storage := newUnmeteredInMemoryStorage()
+		_, err := parseCheckAndInterpretWithOptions(t,
+			`
+             let x = [1, 2, 3].contains(4)
+           `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("appendAll", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		storage := newUnmeteredInMemoryStorage()
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+             fun test() {
+                 [1, 2, 3].appendAll([4, 5])
+             }
+           `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 2},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayAppend, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayAppend, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("firstIndex", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		storage := newUnmeteredInMemoryStorage()
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+             fun test() {
+                 ["a", "b", "c"].firstIndex(of: "b")
+             }
+           `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("concat", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		storage := newUnmeteredInMemoryStorage()
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+             fun test() {
+                 ["a", "b", "c"].concat(["d", "e"])
+             }
+           `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 2},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 5},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 5},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("slice", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		storage := newUnmeteredInMemoryStorage()
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+             fun test() {
+                 ["a", "b", "c", "d"].slice(from: 1, upTo: 3)
+             }
+           `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("iteration", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		storage := newUnmeteredInMemoryStorage()
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+             fun test() {
+                 for n in [1, 2, 3] {}
+             }
+           `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+	})
+
+}
 
 func TestInterpretComputationMeteringString(t *testing.T) {
 
@@ -945,6 +1774,15 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 4},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
 				{Kind: common.ComputationKindSTDLIBRLPDecodeString, Intensity: 4},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
@@ -1000,6 +1838,11 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 2},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
 				{Kind: common.ComputationKindSTDLIBRLPDecodeList, Intensity: 2},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 1},
