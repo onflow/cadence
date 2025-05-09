@@ -749,7 +749,7 @@ func invokeFunction(
 	typeArguments []bbq.StaticType,
 ) {
 
-	// Handle all function types in a single methods, so this can be re-used everywhere.
+	// Handle all function types in a single place, so this can be re-used everywhere.
 
 	if boundFunction, ok := functionValue.(*BoundFunctionPointerValue); ok {
 		functionValue = boundFunction.Method
