@@ -449,7 +449,7 @@ func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 		inter,
 		locationRange,
 	)
-	invocation.Self = &receiver
+	invocation.Self = receiver
 
 	return f.Function.Invoke(invocation)
 }
@@ -459,13 +459,14 @@ func GetReceiver(
 	receiverIsReference bool,
 	context ValueStaticTypeContext,
 	locationRange LocationRange,
-) Value {
-	var receiver Value
+) *Value {
+	var receiver *Value
 
 	if receiverIsReference {
-		receiver = receiverReference
+		var receiverValue Value = receiverReference
+		receiver = &receiverValue
 	} else {
-		receiver = *receiverReference.ReferencedValue(
+		receiver = receiverReference.ReferencedValue(
 			context,
 			EmptyLocationRange,
 			true,

@@ -1121,43 +1121,9 @@ func opIteratorNext(vm *VM) {
 	vm.push(element)
 }
 
-func deref(vm *VM, value Value) Value {
-	if _, ok := value.(interpreter.NilValue); ok {
-		return interpreter.Nil
-	}
-
-	var isOptional bool
-
-	if someValue, ok := value.(*interpreter.SomeValue); ok {
-		isOptional = true
-		value = someValue.InnerValue()
-	}
-
-	referenceValue, ok := value.(interpreter.ReferenceValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	// TODO: port and use interpreter.DereferenceValue
-	dereferencedValue := *referenceValue.ReferencedValue(
-		vm.context,
-		EmptyLocationRange,
-		true,
-	)
-
-	if isOptional {
-		return interpreter.NewSomeValueNonCopying(
-			vm.context.MemoryGauge,
-			dereferencedValue,
-		)
-	} else {
-		return dereferencedValue
-	}
-}
-
 func opDeref(vm *VM) {
 	value := vm.pop()
-	dereferenced := deref(vm, value)
+	dereferenced := interpreter.DereferenceValue(vm.context, EmptyLocationRange, value)
 	vm.push(dereferenced)
 }
 

@@ -522,5 +522,5 @@ func (v *BoundFunctionPointerValue) Receiver(context interpreter.ValueStaticType
 		context,
 		EmptyLocationRange,
 	)
-	return maybeDereference(context, receiver)
+	return maybeDereference(context, *receiver)
 }
