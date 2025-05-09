@@ -204,8 +204,6 @@ func (c *Context) CallStack() []interpreter.Invocation {
 func (c *Context) InvokeFunction(
 	fn interpreter.FunctionValue,
 	arguments []interpreter.Value,
-	_ []sema.Type,
-	_ interpreter.LocationRange,
 ) interpreter.Value {
 	result, err := c.invokeFunction(fn, arguments)
 	if err != nil {

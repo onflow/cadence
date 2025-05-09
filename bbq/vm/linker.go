@@ -104,8 +104,6 @@ func LinkGlobals(
 				return context.InvokeFunction(
 					valueGetter,
 					nil,
-					nil,
-					EmptyLocationRange,
 				)
 			})
 		}

@@ -486,7 +486,7 @@ func CompileAndInvokeWithOptions(
 
 	programVM := CompileAndPrepareToInvoke(t, code, options)
 
-	result, err := programVM.Invoke(funcName, arguments...)
+	result, err := programVM.InvokeExternally(funcName, arguments...)
 	if err == nil {
 		require.Equal(t, 0, programVM.StackSize())
 	}
@@ -549,8 +549,6 @@ func contractValueHandler(contractName string, arguments ...vm.Value) vm.Contrac
 		result := context.InvokeFunction(
 			contractInitializer,
 			arguments,
-			nil,
-			interpreter.EmptyLocationRange,
 		)
 
 		return result.(*interpreter.CompositeValue)
@@ -623,7 +621,7 @@ func compileAndInvokeWithOptionsAndPrograms(
 		vmConfig,
 	)
 
-	result, err := programVM.Invoke(funcName, arguments...)
+	result, err := programVM.InvokeExternally(funcName, arguments...)
 	if err == nil {
 		require.Equal(t, 0, programVM.StackSize())
 	}

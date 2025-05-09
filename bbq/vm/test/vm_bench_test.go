@@ -60,7 +60,7 @@ func BenchmarkRecursionFib(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 
-		result, err := vmInstance.Invoke(
+		result, err := vmInstance.InvokeExternally(
 			"fib",
 			interpreter.NewUnmeteredIntValueFromInt64(14),
 		)
@@ -91,7 +91,7 @@ func BenchmarkImperativeFib(b *testing.B) {
 	var value vm.Value = interpreter.NewUnmeteredIntValueFromInt64(14)
 
 	for i := 0; i < b.N; i++ {
-		_, err := vmInstance.Invoke("fib", value)
+		_, err := vmInstance.InvokeExternally("fib", value)
 		require.NoError(b, err)
 	}
 }
@@ -134,7 +134,7 @@ func BenchmarkNewStruct(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, err := vmInstance.Invoke("test", value)
+		_, err := vmInstance.InvokeExternally("test", value)
 		require.NoError(b, err)
 	}
 }
@@ -178,7 +178,7 @@ func BenchmarkNewResource(b *testing.B) {
 
 		vmConfig := &vm.Config{}
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-		_, err := vmInstance.Invoke("test", value)
+		_, err := vmInstance.InvokeExternally("test", value)
 		require.NoError(b, err)
 	}
 }
@@ -323,7 +323,7 @@ func BenchmarkContractImport(b *testing.B) {
 		scriptLocation := runtime_utils.NewScriptLocationGenerator()
 
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-		_, err = vmInstance.Invoke("test", value)
+		_, err = vmInstance.InvokeExternally("test", value)
 		require.NoError(b, err)
 	}
 }
@@ -437,7 +437,7 @@ func BenchmarkMethodCall(b *testing.B) {
 
 		for i := 0; i < b.N; i++ {
 			vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-			_, err := vmInstance.Invoke("test", value)
+			_, err := vmInstance.InvokeExternally("test", value)
 			require.NoError(b, err)
 		}
 	})
@@ -540,7 +540,7 @@ func BenchmarkMethodCall(b *testing.B) {
 		b.ReportAllocs()
 
 		for i := 0; i < b.N; i++ {
-			_, err := vmInstance.Invoke("test", value)
+			_, err := vmInstance.InvokeExternally("test", value)
 			require.NoError(b, err)
 		}
 	})

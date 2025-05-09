@@ -65,7 +65,7 @@ func NewVMInvokable(
 }
 
 func (v *VMInvokable) Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error) {
-	value, err = v.vmInstance.Invoke(functionName, arguments...)
+	value, err = v.vmInstance.InvokeExternally(functionName, arguments...)
 
 	// Reset the VM after a function invocation,
 	// so the same vm can be re-used for subsequent invocation.
