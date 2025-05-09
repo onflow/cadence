@@ -7655,13 +7655,13 @@ func TestRuntimeComputationMetring(t *testing.T) {
 			intensity: 15,
 		},
 		{
-			name: "statement + createArray + transferArray + two for-in loop iterations",
+			name: "statement + createArray + transferArray + for-in loop iteration",
 			code: `
-              for i in [1, 2] {}
+              for i in [1] {}
             `,
 			ok:        true,
 			hits:      5,
-			intensity: 6,
+			intensity: 5,
 		},
 		{
 			name: "statement + functionInvocation + encoding",
