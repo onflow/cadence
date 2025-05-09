@@ -357,19 +357,7 @@ func NewBoundFunctionPointerValue(
 	// This reference is later used to check the validity of the referenced value/resource.
 	// For attachments, 'self' is already a reference. So no need to create a reference again.
 
-	receiverRef, receiverIsRef := (receiver).(interpreter.ReferenceValue)
-	if !receiverIsRef {
-		semaType := interpreter.MustSemaTypeOfValue(receiver, context)
-		// Create an unauthorized reference. The purpose of it is only to track and invalidate resource moves,
-		// it is not directly exposed to the users
-		receiverRef = interpreter.NewEphemeralReferenceValue(
-			context,
-			interpreter.UnauthorizedAccess,
-			receiver,
-			semaType,
-			EmptyLocationRange,
-		)
-	}
+	receiverRef, receiverIsRef := interpreter.ReceiverReference(context, receiver)
 
 	return &BoundFunctionPointerValue{
 		Method:              method,
