@@ -87,7 +87,7 @@ func NewArrayValueWithIterator(
 	address common.Address,
 	countOverestimate uint64,
 	values func() Value,
-) *ArrayValue {
+) (v *ArrayValue) {
 	common.UseComputation(
 		context,
 		common.ComputationUsage{
@@ -95,8 +95,6 @@ func NewArrayValueWithIterator(
 			Intensity: 1,
 		},
 	)
-
-	var v *ArrayValue
 
 	if context.TracingEnabled() {
 		startTime := time.Now()
@@ -119,23 +117,34 @@ func NewArrayValueWithIterator(
 		}()
 	}
 
-	constructor := func() *atree.Array {
-		array, err := atree.NewArrayFromBatchData(
-			context.Storage(),
-			atree.Address(address),
-			arrayType,
-			func() (atree.Value, error) {
-				return values(), nil
-			},
-		)
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
-		return array
-	}
-	// must assign to v here for tracing to work properly
-	v = newArrayValueFromConstructor(context, arrayType, countOverestimate, constructor)
-	return v
+	return newArrayValueFromConstructor(
+		context,
+		arrayType,
+		countOverestimate,
+		func() *atree.Array {
+
+			common.UseComputation(
+				context,
+				common.ComputationUsage{
+					Kind:      common.ComputationKindAtreeArrayBatchConstruction,
+					Intensity: countOverestimate,
+				},
+			)
+
+			array, err := atree.NewArrayFromBatchData(
+				context.Storage(),
+				atree.Address(address),
+				arrayType,
+				func() (atree.Value, error) {
+					return values(), nil
+				},
+			)
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+			return array
+		},
+	)
 }
 
 func ArrayElementSize(staticType ArrayStaticType) uint {
@@ -1311,11 +1320,13 @@ func (v *ArrayValue) Transfer(
 	hasNoParentContainer bool,
 ) Value {
 
+	count := v.Count()
+
 	common.UseComputation(
 		context,
 		common.ComputationUsage{
 			Kind:      common.ComputationKindTransferArrayValue,
-			Intensity: uint64(v.Count()),
+			Intensity: uint64(count),
 		},
 	)
 
@@ -1323,7 +1334,6 @@ func (v *ArrayValue) Transfer(
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
-		count := v.Count()
 
 		defer func() {
 			context.ReportArrayValueTransferTrace(
@@ -1367,6 +1377,14 @@ func (v *ArrayValue) Transfer(
 		common.UseMemory(context, elementUsage)
 		common.UseMemory(context, dataSlabs)
 		common.UseMemory(context, metaDataSlabs)
+
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeArrayBatchConstruction,
+				Intensity: uint64(count),
+			},
+		)
 
 		array, err = atree.NewArrayFromBatchData(
 			context.Storage(),

@@ -152,7 +152,7 @@ func newDictionaryValueWithIterator(
 	seed uint64,
 	address common.Address,
 	values func() (Value, Value),
-) *DictionaryValue {
+) (v *DictionaryValue) {
 
 	common.UseComputation(
 		context,
@@ -161,8 +161,6 @@ func newDictionaryValueWithIterator(
 			Intensity: 1,
 		},
 	)
-
-	var v *DictionaryValue
 
 	if context.TracingEnabled() {
 		startTime := time.Now()
@@ -185,30 +183,39 @@ func newDictionaryValueWithIterator(
 		}()
 	}
 
-	constructor := func() *atree.OrderedMap {
-		orderedMap, err := atree.NewMapFromBatchData(
-			context.Storage(),
-			atree.Address(address),
-			atree.NewDefaultDigesterBuilder(),
-			staticType,
-			newValueComparator(context, locationRange),
-			newHashInputProvider(context, locationRange),
-			seed,
-			func() (atree.Value, atree.Value, error) {
-				key, value := values()
-				return key, value, nil
-			},
-		)
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
-		return orderedMap
-	}
+	return newDictionaryValueFromConstructor(
+		context,
+		staticType,
+		count,
+		func() *atree.OrderedMap {
 
-	// values are added to the dictionary after creation, not here
-	v = newDictionaryValueFromConstructor(context, staticType, count, constructor)
+			common.UseComputation(
+				context,
+				common.ComputationUsage{
+					Kind:      common.ComputationKindAtreeMapBatchConstruction,
+					Intensity: count,
+				},
+			)
 
-	return v
+			orderedMap, err := atree.NewMapFromBatchData(
+				context.Storage(),
+				atree.Address(address),
+				atree.NewDefaultDigesterBuilder(),
+				staticType,
+				newValueComparator(context, locationRange),
+				newHashInputProvider(context, locationRange),
+				seed,
+				func() (atree.Value, atree.Value, error) {
+					key, value := values()
+					return key, value, nil
+				},
+			)
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+			return orderedMap
+		},
+	)
 }
 
 func newDictionaryValueFromConstructor(
@@ -1261,11 +1268,13 @@ func (v *DictionaryValue) Transfer(
 	hasNoParentContainer bool,
 ) Value {
 
+	count := v.Count()
+
 	common.UseComputation(
 		context,
 		common.ComputationUsage{
 			Kind:      common.ComputationKindTransferDictionaryValue,
-			Intensity: uint64(v.Count()),
+			Intensity: uint64(count),
 		},
 	)
 
@@ -1273,7 +1282,6 @@ func (v *DictionaryValue) Transfer(
 		startTime := time.Now()
 
 		typeInfo := v.Type.String()
-		count := v.Count()
 
 		defer func() {
 			context.ReportDictionaryValueTransferTrace(
@@ -1328,6 +1336,14 @@ func (v *DictionaryValue) Transfer(
 			v.elementSize,
 		)
 		common.UseMemory(context, elementMemoryUse)
+
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapBatchConstruction,
+				Intensity: uint64(count),
+			},
+		)
 
 		dictionary, err = atree.NewMapFromBatchData(
 			context.Storage(),

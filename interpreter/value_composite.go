@@ -1163,11 +1163,13 @@ func (v *CompositeValue) Transfer(
 	hasNoParentContainer bool,
 ) Value {
 
+	count := v.FieldCount()
+
 	common.UseComputation(
 		context,
 		common.ComputationUsage{
 			Kind:      common.ComputationKindTransferCompositeValue,
-			Intensity: uint64(v.FieldCount()),
+			Intensity: uint64(count),
 		},
 	)
 
@@ -1232,6 +1234,14 @@ func (v *CompositeValue) Transfer(
 
 		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(elementCount, 0)
 		common.UseMemory(context, elementMemoryUse)
+
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapBatchConstruction,
+				Intensity: uint64(count),
+			},
+		)
 
 		dictionary, err = atree.NewMapFromBatchData(
 			context.Storage(),
