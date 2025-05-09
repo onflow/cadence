@@ -192,7 +192,7 @@ func ParseTokenStream[T any](
 		return result, p.errors
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	if !p.current.Is(lexer.TokenEOF) {
 		p.reportSyntaxError("unexpected token: %s", p.current.Type)
@@ -279,7 +279,7 @@ func (p *parser) next() {
 // It skips whitespace, including newlines, and comments
 func (p *parser) nextSemanticToken() {
 	p.next()
-	p.skipSpaceAndComments()
+	p.skipSpace()
 }
 
 func (p *parser) mustOne(tokenType lexer.TokenType) (lexer.Token, error) {
@@ -429,31 +429,20 @@ func (p *parser) replayBuffered() error {
 	return nil
 }
 
-type triviaOptions struct {
-	skipNewlines    bool
-	parseDocStrings bool
+type skipSpaceOptions struct {
+	skipNewlines bool
 }
 
-// skipSpaceAndComments skips whitespace, including newlines, and comments
-func (p *parser) skipSpaceAndComments() (containsNewline bool) {
-	containsNewline, _ = p.parseTrivia(triviaOptions{
+// skipSpace skips whitespace, including newlines, and comments
+func (p *parser) skipSpace() (containsNewline bool) {
+	containsNewline = p.skipSpaceWithOptions(skipSpaceOptions{
 		skipNewlines: true,
 	})
 	return
 }
 
-var blockCommentDocStringPrefix = []byte("/**")
-var lineCommentDocStringPrefix = []byte("///")
-
-func (p *parser) parseTrivia(options triviaOptions) (containsNewline bool, docString string) {
-	var docStringBuilder strings.Builder
-	defer func() {
-		if options.parseDocStrings {
-			docString = docStringBuilder.String()
-		}
-	}()
-
-	var atEnd, insideLineDocString bool
+func (p *parser) skipSpaceWithOptions(options skipSpaceOptions) (containsNewline bool) {
+	var atEnd bool
 
 	for !atEnd {
 		switch p.current.Type {
@@ -470,43 +459,6 @@ func (p *parser) parseTrivia(options triviaOptions) (containsNewline bool, docSt
 
 			if containsNewline && !options.skipNewlines {
 				return
-			}
-
-			p.next()
-
-		case lexer.TokenBlockCommentStart:
-			commentStartOffset := p.current.StartPos.Offset
-			endToken, ok := p.parseBlockComment()
-
-			if ok && options.parseDocStrings {
-				commentEndOffset := endToken.EndPos.Offset
-
-				contentWithPrefix := p.tokens.Input()[commentStartOffset : commentEndOffset-1]
-
-				insideLineDocString = false
-				docStringBuilder.Reset()
-				if bytes.HasPrefix(contentWithPrefix, blockCommentDocStringPrefix) {
-					// Strip prefix (`/**`)
-					docStringBuilder.Write(contentWithPrefix[len(blockCommentDocStringPrefix):])
-				}
-			}
-
-		case lexer.TokenLineComment:
-			if options.parseDocStrings {
-				comment := p.currentTokenSource()
-				if bytes.HasPrefix(comment, lineCommentDocStringPrefix) {
-					if insideLineDocString {
-						docStringBuilder.WriteByte('\n')
-					} else {
-						insideLineDocString = true
-						docStringBuilder.Reset()
-					}
-					// Strip prefix
-					docStringBuilder.Write(comment[len(lineCommentDocStringPrefix):])
-				} else {
-					insideLineDocString = false
-					docStringBuilder.Reset()
-				}
 			}
 
 			p.next()
@@ -672,7 +624,7 @@ func ParseArgumentList(
 		memoryGauge,
 		input,
 		func(p *parser) (ast.Arguments, error) {
-			p.skipSpaceAndComments()
+			p.skipSpace()
 
 			_, err := p.mustOne(lexer.TokenParenOpen)
 			if err != nil {

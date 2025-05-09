@@ -32,9 +32,8 @@ import (
 
 func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []ast.Declaration, err error) {
 	for {
-		_, docString := p.parseTrivia(triviaOptions{
-			skipNewlines:    true,
-			parseDocStrings: true,
+		p.skipSpaceWithOptions(skipSpaceOptions{
+			skipNewlines: true,
 		})
 
 		switch p.current.Type {
@@ -48,7 +47,7 @@ func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []
 
 		default:
 			var declaration ast.Declaration
-			declaration, err = parseDeclaration(p, docString)
+			declaration, err = parseDeclaration(p)
 			if err != nil {
 				return
 			}
@@ -62,7 +61,8 @@ func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []
 	}
 }
 
-func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
+func parseDeclaration(p *parser) (ast.Declaration, error) {
+	var startComments []*ast.Comment
 
 	var access ast.Access = ast.AccessNotSpecified
 	var accessPos *ast.Position
@@ -77,7 +77,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 	nativeModifierEnabled := p.config.NativeModifierEnabled
 
 	for {
-		p.skipSpaceAndComments()
+		p.skipSpace()
 
 		switch p.current.Type {
 		case lexer.TokenPragma:
@@ -101,7 +101,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for variable")
 				}
-				return parseVariableDeclaration(p, access, accessPos, docString)
+				return parseVariableDeclaration(p, access, accessPos)
 
 			case KeywordFun:
 				return parseFunctionDeclaration(
@@ -113,7 +113,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 					purityPos,
 					staticPos,
 					nativePos,
-					docString,
+					startComments,
 				)
 
 			case KeywordImport:
@@ -134,7 +134,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for event")
 				}
-				return parseEventDeclaration(p, access, accessPos, docString)
+				return parseEventDeclaration(p, access, accessPos, startComments)
 
 			case KeywordStruct:
 				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindStructure)
@@ -144,7 +144,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for struct")
 				}
-				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
+				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, startComments)
 
 			case KeywordResource:
 				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindResource)
@@ -154,7 +154,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for resource")
 				}
-				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
+				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, startComments)
 
 			case KeywordEntitlement:
 				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindEntitlement)
@@ -164,14 +164,14 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for entitlement")
 				}
-				return parseEntitlementOrMappingDeclaration(p, access, accessPos, docString)
+				return parseEntitlementOrMappingDeclaration(p, access, accessPos, startComments)
 
 			case KeywordAttachment:
 				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindAttachment)
 				if err != nil {
 					return nil, err
 				}
-				return parseAttachmentDeclaration(p, access, accessPos, docString)
+				return parseAttachmentDeclaration(p, access, accessPos, startComments)
 
 			case KeywordContract:
 				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindContract)
@@ -181,7 +181,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for contract")
 				}
-				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
+				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, startComments)
 
 			case KeywordEnum:
 				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindEnum)
@@ -191,7 +191,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for enum")
 				}
-				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
+				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, startComments)
 
 			case KeywordTransaction:
 				err := rejectAllModifiers(p, access, accessPos, staticPos, nativePos, common.DeclarationKindTransaction)
@@ -202,7 +202,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for transaction")
 				}
 
-				return parseTransactionDeclaration(p, docString)
+				return parseTransactionDeclaration(p, startComments)
 
 			case KeywordView:
 				if purity != ast.FunctionPurityUnspecified {
@@ -238,7 +238,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				pos := p.current.StartPos
 				accessPos = &pos
 				var err error
-				access, err = parseAccess(p)
+				access, startComments, err = parseAccess(p)
 				if err != nil {
 					return nil, err
 				}
@@ -373,7 +373,7 @@ func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
 	if err != nil {
 		return nil, err
 	}
-	p.skipSpaceAndComments()
+	p.skipSpace()
 	entitlements := []*ast.NominalType{firstTy}
 	var separator lexer.TokenType
 
@@ -420,22 +420,22 @@ func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
 //	    : 'access(self)'
 //	    | 'access(all)' ( '(' 'set' ')' )?
 //	    | 'access' '(' ( 'self' | 'contract' | 'account' | 'all' | entitlementList ) ')'
-func parseAccess(p *parser) (ast.Access, error) {
-
+func parseAccess(p *parser) (ast.Access, []*ast.Comment, error) {
 	switch string(p.currentTokenSource()) {
 	case KeywordAccess:
+		accessTokenComments := p.current.Comments.PackToList()
 		// Skip the `access` keyword
 		p.nextSemanticToken()
 
 		_, err := p.mustOne(lexer.TokenParenOpen)
 		if err != nil {
-			return ast.AccessNotSpecified, err
+			return ast.AccessNotSpecified, accessTokenComments, err
 		}
 
-		p.skipSpaceAndComments()
+		p.skipSpace()
 
 		if !p.current.Is(lexer.TokenIdentifier) {
-			return ast.AccessNotSpecified, p.syntaxError(
+			return ast.AccessNotSpecified, accessTokenComments, p.syntaxError(
 				"expected keyword %s, got %s",
 				enumeratedAccessModifierKeywords,
 				p.current.Type,
@@ -474,29 +474,29 @@ func parseAccess(p *parser) (ast.Access, error) {
 
 			entitlementMapName, err := parseNominalType(p, lowestBindingPower)
 			if err != nil {
-				return ast.AccessNotSpecified, err
+				return ast.AccessNotSpecified, accessTokenComments, err
 			}
 			access = ast.NewMappedAccess(entitlementMapName, keywordPos)
 
-			p.skipSpaceAndComments()
+			p.skipSpace()
 
 		default:
 			entitlements, err := parseEntitlementList(p)
 			if err != nil {
-				return ast.AccessNotSpecified, err
+				return ast.AccessNotSpecified, accessTokenComments, err
 			}
 			access = ast.NewEntitlementAccess(entitlements)
 		}
 
 		_, err = p.mustOne(lexer.TokenParenClose)
 		if err != nil {
-			return ast.AccessNotSpecified, err
+			return ast.AccessNotSpecified, accessTokenComments, err
 		}
 
-		return access, nil
+		return access, accessTokenComments, nil
 
 	default:
-		return ast.AccessNotSpecified, errors.NewUnreachableError()
+		return ast.AccessNotSpecified, nil, errors.NewUnreachableError()
 	}
 }
 
@@ -512,10 +512,10 @@ func parseVariableDeclaration(
 	p *parser,
 	access ast.Access,
 	accessPos *ast.Position,
-	docString string,
 ) (*ast.VariableDeclaration, error) {
 
-	startPos := p.current.StartPos
+	startToken := p.current
+	startPos := startToken.StartPos
 	if accessPos != nil {
 		startPos = *accessPos
 	}
@@ -524,6 +524,8 @@ func parseVariableDeclaration(
 
 	// Skip the `let` or `var` keyword
 	p.nextSemanticToken()
+
+	identifierToken := p.current
 
 	identifier, err := p.nonReservedIdentifier("after start of variable declaration")
 	if err != nil {
@@ -545,7 +547,9 @@ func parseVariableDeclaration(
 		}
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
+
+	transferToken := p.current
 	transfer := parseTransfer(p)
 	if transfer == nil {
 		return nil, p.syntaxError("expected transfer")
@@ -556,7 +560,7 @@ func parseVariableDeclaration(
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	secondTransfer := parseTransfer(p)
 	var secondValue ast.Expression
@@ -578,7 +582,12 @@ func parseVariableDeclaration(
 		startPos,
 		secondTransfer,
 		secondValue,
-		docString,
+		ast.Comments{
+			Leading: append(
+				append(startToken.PackToList(), identifierToken.PackToList()...),
+				transferToken.PackToList()...,
+			),
+		},
 	)
 
 	castingExpression, leftIsCasting := value.(*ast.CastingExpression)
@@ -649,17 +658,19 @@ func parsePragmaDeclaration(p *parser) (*ast.PragmaDeclaration, error) {
 //	    ( string | hexadecimalLiteral | identifier )
 func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 
-	startPosition := p.current.StartPos
+	startToken := p.current
 
 	var identifiers []ast.Identifier
 
 	var location common.Location
 	var locationPos ast.Position
 	var endPos ast.Position
+	var trailingComments []*ast.Comment
 
 	parseStringOrAddressLocation := func() {
 		locationPos = p.current.StartPos
 		endPos = p.current.EndPos
+		trailingComments = p.current.Comments.Trailing
 
 		switch p.current.Type {
 		case lexer.TokenString:
@@ -678,10 +689,11 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 		p.next()
 	}
 
-	setIdentifierLocation := func(identifier ast.Identifier) {
+	setIdentifierLocation := func(identifier ast.Identifier, identifierToken lexer.Token) {
 		location = common.IdentifierLocation(identifier.Identifier)
 		locationPos = identifier.Pos
 		endPos = identifier.EndPosition(p.memoryGauge)
+		trailingComments = identifierToken.Comments.Trailing
 	}
 
 	parseLocation := func() error {
@@ -691,7 +703,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 
 		case lexer.TokenIdentifier:
 			identifier := p.tokenToIdentifier(p.current)
-			setIdentifierLocation(identifier)
+			setIdentifierLocation(identifier, p.current)
 			p.next()
 
 		default:
@@ -778,7 +790,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 		return nil
 	}
 
-	maybeParseFromIdentifier := func(identifier ast.Identifier) error {
+	maybeParseFromIdentifier := func(identifier ast.Identifier, identifierToken lexer.Token) error {
 		// The current identifier is maybe the `from` keyword,
 		// in which case the given (previous) identifier was
 		// an imported identifier and not the import location.
@@ -796,7 +808,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 				return err
 			}
 		} else {
-			setIdentifierLocation(identifier)
+			setIdentifierLocation(identifier, identifierToken)
 		}
 
 		return nil
@@ -810,6 +822,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 		parseStringOrAddressLocation()
 
 	case lexer.TokenIdentifier:
+		identifierToken := p.current
 		identifier := p.tokenToIdentifier(p.current)
 		// Skip the identifier
 		p.nextSemanticToken()
@@ -824,13 +837,13 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 				return nil, err
 			}
 		case lexer.TokenIdentifier:
-			err := maybeParseFromIdentifier(identifier)
+			err := maybeParseFromIdentifier(identifier, identifierToken)
 			if err != nil {
 				return nil, err
 			}
 		case lexer.TokenEOF:
 			// The previous identifier is the identifier location
-			setIdentifierLocation(identifier)
+			setIdentifierLocation(identifier, identifierToken)
 
 		default:
 			return nil, p.syntaxError(
@@ -857,10 +870,14 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 		location,
 		ast.NewRange(
 			p.memoryGauge,
-			startPosition,
+			startToken.StartPos,
 			endPos,
 		),
 		locationPos,
+		ast.Comments{
+			Leading:  startToken.Comments.PackToList(),
+			Trailing: trailingComments,
+		},
 	), nil
 }
 
@@ -926,10 +943,10 @@ func parseEventDeclaration(
 	p *parser,
 	access ast.Access,
 	accessPos *ast.Position,
-	docString string,
+	startComments []*ast.Comment,
 ) (*ast.CompositeDeclaration, error) {
-
-	startPos := p.current.StartPos
+	startToken := p.current
+	startPos := startToken.StartPos
 	if accessPos != nil {
 		startPos = *accessPos
 	}
@@ -977,6 +994,10 @@ func parseEventDeclaration(
 		},
 	)
 
+	var leadingComments []*ast.Comment
+	leadingComments = append(leadingComments, startComments...)
+	leadingComments = append(leadingComments, startToken.Comments.Leading...)
+
 	return ast.NewCompositeDeclaration(
 		p.memoryGauge,
 		access,
@@ -984,12 +1005,14 @@ func parseEventDeclaration(
 		identifier,
 		nil,
 		members,
-		docString,
 		ast.NewRange(
 			p.memoryGauge,
 			startPos,
 			parameterList.EndPos,
 		),
+		ast.Comments{
+			Leading: leadingComments,
+		},
 	), nil
 }
 
@@ -1028,9 +1051,8 @@ func parseFieldWithVariableKind(
 	accessPos *ast.Position,
 	staticPos *ast.Position,
 	nativePos *ast.Position,
-	docString string,
+	startComments []*ast.Comment,
 ) (*ast.FieldDeclaration, error) {
-
 	startPos := ast.EarliestPosition(p.current.StartPos, accessPos, staticPos, nativePos)
 
 	var variableKind ast.VariableKind
@@ -1060,7 +1082,7 @@ func parseFieldWithVariableKind(
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	typeAnnotation, err := parseTypeAnnotation(p)
 	if err != nil {
@@ -1075,12 +1097,14 @@ func parseFieldWithVariableKind(
 		variableKind,
 		identifier,
 		typeAnnotation,
-		docString,
 		ast.NewRange(
 			p.memoryGauge,
 			startPos,
 			typeAnnotation.EndPosition(p.memoryGauge),
 		),
+		ast.Comments{
+			Leading: startComments,
+		},
 	), nil
 }
 
@@ -1100,14 +1124,14 @@ func parseEntitlementMapping(p *parser, docString string) (*ast.EntitlementMapRe
 		)
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	_, err = p.mustOne(lexer.TokenRightArrow)
 	if err != nil {
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	outputType, err := parseType(p, lowestBindingPower)
 	if err != nil {
@@ -1122,7 +1146,7 @@ func parseEntitlementMapping(p *parser, docString string) (*ast.EntitlementMapRe
 		)
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	return ast.NewEntitlementMapRelation(p.memoryGauge, inputNominalType, outputNominalType), nil
 }
@@ -1132,9 +1156,10 @@ func parseEntitlementMappingsAndInclusions(p *parser, endTokenType lexer.TokenTy
 	var elements []ast.EntitlementMapElement
 
 	for {
-		_, docString := p.parseTrivia(triviaOptions{
-			skipNewlines:    true,
-			parseDocStrings: true,
+		// TODO(preserve-comments): Compute doc string
+		var docString string
+		p.skipSpaceWithOptions(skipSpaceOptions{
+			skipNewlines: true,
 		})
 
 		switch p.current.Type {
@@ -1159,7 +1184,7 @@ func parseEntitlementMappingsAndInclusions(p *parser, endTokenType lexer.TokenTy
 					)
 				}
 
-				p.skipSpaceAndComments()
+				p.skipSpace()
 				elements = append(elements, outputNominalType)
 			} else {
 				mapping, err := parseEntitlementMapping(p, docString)
@@ -1183,9 +1208,10 @@ func parseEntitlementOrMappingDeclaration(
 	p *parser,
 	access ast.Access,
 	accessPos *ast.Position,
-	docString string,
+	startComments []*ast.Comment,
 ) (ast.Declaration, error) {
-	startPos := p.current.StartPos
+	startToken := p.current
+	startPos := startToken.StartPos
 	if accessPos != nil {
 		startPos = *accessPos
 	}
@@ -1220,6 +1246,10 @@ func parseEntitlementOrMappingDeclaration(
 	}
 	p.nextSemanticToken()
 
+	var leadingComments []*ast.Comment
+	leadingComments = append(leadingComments, startComments...)
+	leadingComments = append(leadingComments, startToken.Comments.Leading...)
+
 	if isMapping {
 		_, err = p.mustOne(lexer.TokenBraceOpen)
 		if err != nil {
@@ -1230,7 +1260,7 @@ func parseEntitlementOrMappingDeclaration(
 			return nil, err
 		}
 
-		p.skipSpaceAndComments()
+		p.skipSpace()
 
 		endToken, err := p.mustOne(lexer.TokenBraceClose)
 		if err != nil {
@@ -1247,8 +1277,10 @@ func parseEntitlementOrMappingDeclaration(
 			access,
 			identifier,
 			elements,
-			docString,
 			declarationRange,
+			ast.Comments{
+				Leading: leadingComments,
+			},
 		), nil
 	} else {
 		declarationRange := ast.NewRange(
@@ -1261,8 +1293,10 @@ func parseEntitlementOrMappingDeclaration(
 			p.memoryGauge,
 			access,
 			identifier,
-			docString,
 			declarationRange,
+			ast.Comments{
+				Leading: leadingComments,
+			},
 		), nil
 	}
 }
@@ -1288,7 +1322,7 @@ func parseConformances(p *parser) ([]*ast.NominalType, error) {
 		}
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 	return conformances, nil
 }
 
@@ -1305,10 +1339,11 @@ func parseCompositeOrInterfaceDeclaration(
 	p *parser,
 	access ast.Access,
 	accessPos *ast.Position,
-	docString string,
+	startComments []*ast.Comment,
 ) (ast.Declaration, error) {
 
-	startPos := p.current.StartPos
+	startToken := p.current
+	startPos := startToken.StartPos
 	if accessPos != nil {
 		startPos = *accessPos
 	}
@@ -1322,7 +1357,7 @@ func parseCompositeOrInterfaceDeclaration(
 	var identifier ast.Identifier
 
 	for {
-		p.skipSpaceAndComments()
+		p.skipSpace()
 		if !p.current.Is(lexer.TokenIdentifier) {
 			return nil, p.syntaxError(
 				"expected %s, got %s",
@@ -1358,7 +1393,7 @@ func parseCompositeOrInterfaceDeclaration(
 		}
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	conformances, err := parseConformances(p)
 	if err != nil {
@@ -1375,7 +1410,7 @@ func parseCompositeOrInterfaceDeclaration(
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	endToken, err := p.mustOne(lexer.TokenBraceClose)
 	if err != nil {
@@ -1388,6 +1423,10 @@ func parseCompositeOrInterfaceDeclaration(
 		endToken.EndPos,
 	)
 
+	var leadingComments []*ast.Comment
+	leadingComments = append(leadingComments, startComments...)
+	leadingComments = append(leadingComments, startToken.Comments.Leading...)
+
 	if isInterface {
 		return ast.NewInterfaceDeclaration(
 			p.memoryGauge,
@@ -1396,8 +1435,10 @@ func parseCompositeOrInterfaceDeclaration(
 			identifier,
 			conformances,
 			members,
-			docString,
 			declarationRange,
+			ast.Comments{
+				Leading: leadingComments,
+			},
 		), nil
 	} else {
 		return ast.NewCompositeDeclaration(
@@ -1407,8 +1448,10 @@ func parseCompositeOrInterfaceDeclaration(
 			identifier,
 			conformances,
 			members,
-			docString,
 			declarationRange,
+			ast.Comments{
+				Leading: leadingComments,
+			},
 		), nil
 	}
 }
@@ -1417,9 +1460,11 @@ func parseAttachmentDeclaration(
 	p *parser,
 	access ast.Access,
 	accessPos *ast.Position,
-	docString string,
+	startComments []*ast.Comment,
 ) (ast.Declaration, error) {
-	startPos := p.current.StartPos
+
+	startToken := p.current
+	startPos := startToken.StartPos
 	if accessPos != nil {
 		startPos = *accessPos
 	}
@@ -1432,7 +1477,7 @@ func parseAttachmentDeclaration(
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordFor) {
 		return nil, p.syntaxError(
@@ -1464,7 +1509,7 @@ func parseAttachmentDeclaration(
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	conformances, err := parseConformances(p)
 	if err != nil {
@@ -1476,14 +1521,14 @@ func parseAttachmentDeclaration(
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	members, err := parseMembersAndNestedDeclarations(p, lexer.TokenBraceClose)
 	if err != nil {
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	endToken, err := p.mustOne(lexer.TokenBraceClose)
 	if err != nil {
@@ -1496,6 +1541,10 @@ func parseAttachmentDeclaration(
 		endToken.EndPos,
 	)
 
+	var leadingComments []*ast.Comment
+	leadingComments = append(leadingComments, startComments...)
+	leadingComments = append(leadingComments, startToken.Comments.Leading...)
+
 	return ast.NewAttachmentDeclaration(
 		p.memoryGauge,
 		access,
@@ -1503,8 +1552,10 @@ func parseAttachmentDeclaration(
 		baseNominalType,
 		conformances,
 		members,
-		docString,
 		declarationRange,
+		ast.Comments{
+			Leading: leadingComments,
+		},
 	), nil
 }
 
@@ -1517,9 +1568,8 @@ func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) 
 	var declarations []ast.Declaration
 
 	for {
-		_, docString := p.parseTrivia(triviaOptions{
-			skipNewlines:    true,
-			parseDocStrings: true,
+		p.skipSpaceWithOptions(skipSpaceOptions{
+			skipNewlines: true,
 		})
 
 		switch p.current.Type {
@@ -1532,7 +1582,7 @@ func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) 
 			return ast.NewMembers(p.memoryGauge, declarations), nil
 
 		default:
-			memberOrNestedDeclaration, err := parseMemberOrNestedDeclaration(p, docString)
+			memberOrNestedDeclaration, err := parseMemberOrNestedDeclaration(p)
 			if err != nil {
 				return nil, err
 			}
@@ -1557,7 +1607,8 @@ func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) 
 //	                          | eventDeclaration
 //	                          | enumCase
 //	                          | pragmaDeclaration
-func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaration, error) {
+func parseMemberOrNestedDeclaration(p *parser) (ast.Declaration, error) {
+	var startComments []*ast.Comment
 
 	const functionBlockIsOptional = true
 
@@ -1576,7 +1627,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 	nativeModifierEnabled := p.config.NativeModifierEnabled
 
 	for {
-		p.skipSpaceAndComments()
+		p.skipSpace()
 
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
@@ -1602,7 +1653,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 					accessPos,
 					staticPos,
 					nativePos,
-					docString,
+					startComments,
 				)
 
 			case KeywordCase:
@@ -1613,7 +1664,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				if err != nil {
 					return nil, err
 				}
-				return parseEnumCase(p, access, accessPos, docString)
+				return parseEnumCase(p, access, accessPos)
 
 			case KeywordFun:
 				return parseFunctionDeclaration(
@@ -1625,7 +1676,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 					purityPos,
 					staticPos,
 					nativePos,
-					docString,
+					startComments,
 				)
 
 			case KeywordEvent:
@@ -1636,7 +1687,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				if err != nil {
 					return nil, err
 				}
-				return parseEventDeclaration(p, access, accessPos, docString)
+				return parseEventDeclaration(p, access, accessPos, startComments)
 
 			case KeywordStruct:
 				if purity != ast.FunctionPurityUnspecified {
@@ -1646,7 +1697,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				if err != nil {
 					return nil, err
 				}
-				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
+				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, startComments)
 
 			case KeywordResource:
 				if purity != ast.FunctionPurityUnspecified {
@@ -1656,7 +1707,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				if err != nil {
 					return nil, err
 				}
-				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
+				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, startComments)
 
 			case KeywordContract:
 				if purity != ast.FunctionPurityUnspecified {
@@ -1666,7 +1717,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				if err != nil {
 					return nil, err
 				}
-				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
+				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, startComments)
 
 			case KeywordEntitlement:
 				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindEntitlement)
@@ -1676,7 +1727,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for entitlement")
 				}
-				return parseEntitlementOrMappingDeclaration(p, access, accessPos, docString)
+				return parseEntitlementOrMappingDeclaration(p, access, accessPos, startComments)
 
 			case KeywordEnum:
 				if purity != ast.FunctionPurityUnspecified {
@@ -1686,10 +1737,10 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				if err != nil {
 					return nil, err
 				}
-				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
+				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, startComments)
 
 			case KeywordAttachment:
-				return parseAttachmentDeclaration(p, access, accessPos, docString)
+				return parseAttachmentDeclaration(p, access, accessPos, startComments)
 
 			case KeywordView:
 				if purity != ast.FunctionPurityUnspecified {
@@ -1724,7 +1775,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				pos := p.current.StartPos
 				accessPos = &pos
 				var err error
-				access, err = parseAccess(p)
+				access, startComments, err = parseAccess(p)
 				if err != nil {
 					return nil, err
 				}
@@ -1801,7 +1852,6 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				staticPos,
 				nativePos,
 				identifier,
-				docString,
 			)
 
 		case lexer.TokenParenOpen:
@@ -1809,7 +1859,6 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				return nil, p.syntaxError("unexpected %s", p.current.Type)
 			}
 
-			identifier := p.tokenToIdentifier(*previousIdentifierToken)
 			return parseSpecialFunctionDeclaration(
 				p,
 				functionBlockIsOptional,
@@ -1819,8 +1868,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				purityPos,
 				staticPos,
 				nativePos,
-				identifier,
-				docString,
+				*previousIdentifierToken,
 			)
 		}
 
@@ -1864,9 +1912,7 @@ func parseFieldDeclarationWithoutVariableKind(
 	staticPos *ast.Position,
 	nativePos *ast.Position,
 	identifier ast.Identifier,
-	docString string,
 ) (*ast.FieldDeclaration, error) {
-
 	startPos := ast.EarliestPosition(identifier.Pos, accessPos, staticPos, nativePos)
 
 	_, err := p.mustOne(lexer.TokenColon)
@@ -1874,7 +1920,7 @@ func parseFieldDeclarationWithoutVariableKind(
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	typeAnnotation, err := parseTypeAnnotation(p)
 	if err != nil {
@@ -1889,12 +1935,12 @@ func parseFieldDeclarationWithoutVariableKind(
 		ast.VariableKindNotSpecified,
 		identifier,
 		typeAnnotation,
-		docString,
 		ast.NewRange(
 			p.memoryGauge,
 			startPos,
 			typeAnnotation.EndPosition(p.memoryGauge),
 		),
+		ast.Comments{},
 	), nil
 }
 
@@ -1907,10 +1953,10 @@ func parseSpecialFunctionDeclaration(
 	purityPos *ast.Position,
 	staticPos *ast.Position,
 	nativePos *ast.Position,
-	identifier ast.Identifier,
-	docString string,
+	identifierToken lexer.Token,
 ) (*ast.SpecialFunctionDeclaration, error) {
 
+	identifier := p.tokenToIdentifier(identifierToken)
 	startPos := ast.EarliestPosition(identifier.Pos, accessPos, purityPos, staticPos, nativePos)
 
 	parameterList, returnTypeAnnotation, functionBlock, err :=
@@ -1949,7 +1995,7 @@ func parseSpecialFunctionDeclaration(
 	return ast.NewSpecialFunctionDeclaration(
 		p.memoryGauge,
 		declarationKind,
-		ast.NewFunctionDeclaration(
+		ast.NewFunctionDeclarationWithComments(
 			p.memoryGauge,
 			access,
 			purity,
@@ -1961,7 +2007,9 @@ func parseSpecialFunctionDeclaration(
 			nil,
 			functionBlock,
 			startPos,
-			docString,
+			ast.Comments{
+				Leading: identifierToken.Leading,
+			},
 		),
 	), nil
 }
@@ -1973,8 +2021,9 @@ func parseEnumCase(
 	p *parser,
 	access ast.Access,
 	accessPos *ast.Position,
-	docString string,
 ) (*ast.EnumCaseDeclaration, error) {
+	// TODO(preserve-comments): Implement
+	var docString string
 
 	startPos := p.current.StartPos
 	if accessPos != nil {

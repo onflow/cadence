@@ -18,6 +18,7 @@
 
 package parser
 
+// TODO(merge): Do we need this file?
 import (
 	"github.com/onflow/cadence/parser/lexer"
 )

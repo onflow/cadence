@@ -1771,7 +1771,7 @@ func parseIntegerLiteral(p *parser, literal, text []byte, kind common.IntegerLit
 		value = new(big.Int)
 	}
 
-	return ast.NewIntegerExpression(p.memoryGauge, literal, value, base, tokenRange)
+	return ast.NewIntegerExpression(p.memoryGauge, literal, value, base, tokenRange, ast.Comments{})
 }
 
 func parseFixedPointPart(gauge common.MemoryGauge, part string) (integer *big.Int, scale uint) {

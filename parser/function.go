@@ -34,8 +34,10 @@ func parsePurityAnnotation(p *parser) ast.FunctionPurity {
 
 func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterList, error) {
 	var parameters []*ast.Parameter
+	var endToken lexer.Token
+	var comments ast.Comments
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	if !p.current.Is(lexer.TokenParenOpen) {
 		return nil, p.syntaxError(
@@ -45,17 +47,15 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 		)
 	}
 
-	startPos := p.current.StartPos
+	startToken := p.current
 	// Skip the opening paren
 	p.next()
-
-	var endPos ast.Position
 
 	expectParameter := true
 
 	atEnd := false
 	for !atEnd {
-		p.skipSpaceAndComments()
+		p.skipSpace()
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
 			if !expectParameter {
@@ -83,7 +83,7 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 			expectParameter = true
 
 		case lexer.TokenParenClose:
-			endPos = p.current.EndPos
+			endToken = p.current
 			// Skip the closing paren
 			p.next()
 			atEnd = true
@@ -109,21 +109,43 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 		}
 	}
 
+	if len(parameters) == 0 {
+		comments.Leading = append(
+			comments.Leading,
+			startToken.Comments.PackToList()...,
+		)
+	} else {
+		comments.Leading = append(
+			comments.Leading,
+			startToken.Comments.Leading...,
+		)
+
+		var patched []*ast.Comment
+		patched = append(patched, startToken.Comments.Trailing...)
+		patched = append(patched, parameters[0].Comments.Leading...)
+		parameters[0].Comments.Leading = patched
+	}
+	comments.Trailing = append(
+		comments.Trailing,
+		endToken.Comments.PackToList()...,
+	)
+
 	return ast.NewParameterList(
 		p.memoryGauge,
 		parameters,
 		ast.NewRange(
 			p.memoryGauge,
-			startPos,
-			endPos,
+			startToken.StartPos,
+			endToken.EndPos,
 		),
+		comments,
 	), nil
 }
 
 func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, error) {
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
-	startPos := p.current.StartPos
+	startToken := p.current
 
 	argumentLabel := ""
 	identifier, err := p.nonReservedIdentifier("for argument label or parameter name")
@@ -150,11 +172,12 @@ func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, erro
 		p.nextSemanticToken()
 	}
 
-	if !p.current.Is(lexer.TokenColon) {
+	colonToken := p.current
+	if !colonToken.Is(lexer.TokenColon) {
 		return nil, p.syntaxError(
 			"expected %s after parameter name, got %s",
 			lexer.TokenColon,
-			p.current.Type,
+			colonToken.Type,
 		)
 	}
 
@@ -167,7 +190,7 @@ func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, erro
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	var defaultArgument ast.Expression
 
@@ -197,14 +220,20 @@ func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, erro
 		identifier,
 		typeAnnotation,
 		defaultArgument,
-		startPos,
+		startToken.StartPos,
+		ast.Comments{
+			Leading: append(
+				startToken.Comments.PackToList(),
+				colonToken.Comments.PackToList()...,
+			),
+		},
 	), nil
 }
 
 func parseTypeParameterList(p *parser) (*ast.TypeParameterList, error) {
 	var typeParameters []*ast.TypeParameter
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	if !p.current.Is(lexer.TokenLess) {
 		return nil, nil
@@ -220,7 +249,7 @@ func parseTypeParameterList(p *parser) (*ast.TypeParameterList, error) {
 
 	atEnd := false
 	for !atEnd {
-		p.skipSpaceAndComments()
+		p.skipSpace()
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
 			if !expectTypeParameter {
@@ -286,7 +315,7 @@ func parseTypeParameterList(p *parser) (*ast.TypeParameterList, error) {
 }
 
 func parseTypeParameter(p *parser) (*ast.TypeParameter, error) {
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	if !p.current.Is(lexer.TokenIdentifier) {
 		return nil, p.syntaxError(
@@ -326,10 +355,10 @@ func parseFunctionDeclaration(
 	purityPos *ast.Position,
 	staticPos *ast.Position,
 	nativePos *ast.Position,
-	docString string,
+	startComments []*ast.Comment,
 ) (*ast.FunctionDeclaration, error) {
-
-	startPos := ast.EarliestPosition(p.current.StartPos, accessPos, purityPos, staticPos, nativePos)
+	startToken := p.current
+	startPos := ast.EarliestPosition(startToken.StartPos, accessPos, purityPos, staticPos, nativePos)
 
 	// Skip the `fun` keyword
 	p.nextSemanticToken()
@@ -360,7 +389,11 @@ func parseFunctionDeclaration(
 		return nil, err
 	}
 
-	return ast.NewFunctionDeclaration(
+	var leadingComments []*ast.Comment
+	leadingComments = append(leadingComments, startComments...)
+	leadingComments = append(leadingComments, startToken.Comments.Leading...)
+
+	return ast.NewFunctionDeclarationWithComments(
 		p.memoryGauge,
 		access,
 		purity,
@@ -372,7 +405,9 @@ func parseFunctionDeclaration(
 		returnTypeAnnotation,
 		functionBlock,
 		startPos,
-		docString,
+		ast.Comments{
+			Leading: leadingComments,
+		},
 	), nil
 }
 
@@ -396,7 +431,7 @@ func parseFunctionParameterListAndRest(
 
 	current := p.current
 	cursor := p.tokens.Cursor()
-	p.skipSpaceAndComments()
+	p.skipSpace()
 	if p.current.Is(lexer.TokenColon) {
 		// Skip the colon
 		p.nextSemanticToken()
@@ -415,7 +450,7 @@ func parseFunctionParameterListAndRest(
 	if functionBlockIsOptional {
 		current = p.current
 		cursor := p.tokens.Cursor()
-		p.skipSpaceAndComments()
+		p.skipSpace()
 		if !p.current.Is(lexer.TokenBraceOpen) {
 			p.tokens.Revert(cursor)
 			p.current = current

@@ -1029,7 +1029,7 @@ func (checker *Checker) declareContractValue(
 		_, err := checker.valueActivations.declare(variableDeclaration{
 			identifier: declaration.Identifier.Identifier,
 			ty:         compositeType,
-			docString:  declaration.DocString,
+			docString:  declaration.DeclarationDocString(),
 			// NOTE: contracts are always public
 			access:     PrimitiveAccess(ast.AccessAll),
 			kind:       common.DeclarationKindContract,
@@ -1101,7 +1101,7 @@ func (checker *Checker) declareEnumConstructor(
 	_, err := checker.valueActivations.declare(variableDeclaration{
 		identifier: declaration.Identifier.Identifier,
 		ty:         constructorType,
-		docString:  declaration.DocString,
+		docString:  declaration.DeclarationDocString(),
 		// NOTE: enums are always public
 		access:         PrimitiveAccess(ast.AccessAll),
 		kind:           common.DeclarationKindEnum,
@@ -1906,7 +1906,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 				TypeAnnotation:    fieldTypeAnnotation,
 				VariableKind:      ast.VariableKindConstant,
 				ArgumentLabels:    argumentLabels,
-				DocString:         function.DocString,
+				DocString:         function.DeclarationDocString(),
 				HasImplementation: hasImplementation,
 				HasConditions:     hasConditions,
 			})
