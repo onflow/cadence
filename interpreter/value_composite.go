@@ -1167,7 +1167,7 @@ func (v *CompositeValue) Transfer(
 		context,
 		common.ComputationUsage{
 			Kind:      common.ComputationKindTransferCompositeValue,
-			Intensity: 1,
+			Intensity: uint64(v.FieldCount()),
 		},
 	)
 
