@@ -542,7 +542,7 @@ func (ctx NoOpStringContext) MeterMemory(_ common.MemoryUsage) error {
 }
 
 func (ctx NoOpStringContext) MeterComputation(_ common.ComputationUsage) error {
-	panic(errors.NewUnreachableError())
+	return nil
 }
 
 func (ctx NoOpStringContext) WithMutationPrevention(_ atree.ValueID, f func()) {
