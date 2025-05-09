@@ -492,7 +492,7 @@ func (v *ArrayValue) handleIndexOutOfBoundsError(err error, index int, locationR
 	}
 }
 
-func (v *ArrayValue) Get(gauge common.MemoryGauge, locationRange LocationRange, index int) Value {
+func (v *ArrayValue) Get(gauge common.Gauge, locationRange LocationRange, index int) Value {
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Get function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -504,6 +504,13 @@ func (v *ArrayValue) Get(gauge common.MemoryGauge, locationRange LocationRange, 
 			LocationRange: locationRange,
 		})
 	}
+
+	common.UseComputation(
+		gauge, common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeArrayGet,
+			Intensity: 1,
+		},
+	)
 
 	storedValue, err := v.array.Get(uint64(index))
 	if err != nil {
@@ -549,6 +556,14 @@ func (v *ArrayValue) Set(context ContainerMutationContext, locationRange Locatio
 			v.ValueID(): {},
 		},
 		true, // standalone element doesn't have a parent container yet.
+	)
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeArraySet,
+			Intensity: 1,
+		},
 	)
 
 	existingStorable, err := v.array.Set(uint64(index), element)
@@ -633,6 +648,14 @@ func (v *ArrayValue) Append(context ValueTransferContext, locationRange Location
 		true, // standalone element doesn't have a parent container yet.
 	)
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeArrayAppend,
+			Intensity: 1,
+		},
+	)
+
 	err := v.array.Append(element)
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -685,6 +708,14 @@ func (v *ArrayValue) InsertWithoutTransfer(
 	common.UseMemory(context, dataSlabs)
 	common.UseMemory(context, metaDataSlabs)
 	common.UseMemory(context, common.AtreeArrayElementOverhead)
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeArrayInsert,
+			Intensity: 1,
+		},
+	)
 
 	err := v.array.Insert(uint64(index), element)
 	if err != nil {
@@ -747,6 +778,14 @@ func (v *ArrayValue) RemoveWithoutTransfer(
 			LocationRange: locationRange,
 		})
 	}
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeArrayRemove,
+			Intensity: 1,
+		},
+	)
 
 	storable, err := v.array.Remove(uint64(index))
 	if err != nil {

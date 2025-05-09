@@ -163,7 +163,7 @@ type MemberAccessibleValue interface {
 }
 
 type ValueComparisonContext interface {
-	common.MemoryGauge
+	common.Gauge
 	ValueStaticTypeContext
 }
 

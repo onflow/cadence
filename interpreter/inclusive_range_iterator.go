@@ -37,7 +37,7 @@ type InclusiveRangeIterator struct {
 var _ ValueIterator = &InclusiveRangeIterator{}
 
 type InclusiveRangeIteratorContext interface {
-	common.MemoryGauge
+	common.Gauge
 	NumberValueArithmeticContext
 }
 

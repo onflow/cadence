@@ -230,8 +230,27 @@ const (
 	_
 	_
 	_
-	// atree
+	// atree array
+	_
 	ComputationKindAtreeArrayBatchConstruction
+	ComputationKindAtreeArrayGet
+	ComputationKindAtreeArraySet
+	ComputationKindAtreeArrayAppend
+	ComputationKindAtreeArrayInsert
+	ComputationKindAtreeArrayRemove
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
 	ComputationKindAtreeMapConstruction
 	ComputationKindAtreeMapBatchConstruction
 )

@@ -98,7 +98,7 @@ func AssertValuesEqual(t testing.TB, context interpreter.ValueComparisonContext,
 	return true
 }
 
-func ArrayElements(gauge common.MemoryGauge, array *interpreter.ArrayValue) []interpreter.Value {
+func ArrayElements(gauge common.Gauge, array *interpreter.ArrayValue) []interpreter.Value {
 	count := array.Count()
 	result := make([]interpreter.Value, count)
 	for i := 0; i < count; i++ {

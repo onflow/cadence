@@ -70,7 +70,7 @@ type StorageWriter interface {
 var _ StorageWriter = &Interpreter{}
 
 type ValueStaticTypeContext interface {
-	common.MemoryGauge
+	common.Gauge
 	StorageReader
 	TypeConverter
 	IsTypeInfoRecovered(location common.Location) bool
