@@ -409,7 +409,7 @@ func (v UInt64Value) Equal(_ ValueComparisonContext, _ LocationRange, other Valu
 // HashInput returns a byte slice containing:
 // - HashInputTypeUInt64 (1 byte)
 // - uint64 value encoded in big-endian (8 bytes)
-func (v UInt64Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
+func (v UInt64Value) HashInput(_ common.Gauge, _ LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeUInt64)
 	binary.BigEndian.PutUint64(scratch[1:], uint64(v))
 	return scratch[:9]

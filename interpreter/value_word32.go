@@ -288,7 +288,7 @@ func (v Word32Value) Equal(_ ValueComparisonContext, _ LocationRange, other Valu
 // HashInput returns a byte slice containing:
 // - HashInputTypeWord32 (1 byte)
 // - uint32 value encoded in big-endian (4 bytes)
-func (v Word32Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
+func (v Word32Value) HashInput(_ common.Gauge, _ LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeWord32)
 	binary.BigEndian.PutUint32(scratch[1:], uint32(v))
 	return scratch[:5]

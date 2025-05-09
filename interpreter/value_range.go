@@ -224,9 +224,9 @@ func rangeContains(
 	return BoolValue(result)
 }
 
-func getFieldAsIntegerValue(memoryGauge common.MemoryGauge, rangeValue *CompositeValue, name string) IntegerValue {
+func getFieldAsIntegerValue(gauge common.Gauge, rangeValue *CompositeValue, name string) IntegerValue {
 	return convertAndAssertIntegerValue(
-		rangeValue.GetField(memoryGauge, name),
+		rangeValue.GetField(gauge, name),
 	)
 }
 

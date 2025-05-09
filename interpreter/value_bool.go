@@ -120,7 +120,7 @@ func (v BoolValue) GreaterEqual(_ ValueComparisonContext, other ComparableValue,
 // HashInput returns a byte slice containing:
 // - HashInputTypeBool (1 byte)
 // - 1/0 (1 byte)
-func (v BoolValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
+func (v BoolValue) HashInput(_ common.Gauge, _ LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeBool)
 	if v {
 		scratch[1] = 1

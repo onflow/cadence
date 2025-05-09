@@ -253,4 +253,8 @@ const (
 	_
 	ComputationKindAtreeMapConstruction
 	ComputationKindAtreeMapBatchConstruction
+	ComputationKindAtreeMapHas
+	ComputationKindAtreeMapGet
+	ComputationKindAtreeMapSet
+	ComputationKindAtreeMapRemove
 )

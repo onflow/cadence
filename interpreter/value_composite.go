@@ -656,6 +656,14 @@ func (v *CompositeValue) RemoveMember(
 		}()
 	}
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapRemove,
+			Intensity: 1,
+		},
+	)
+
 	// No need to clean up storable for passed-in key value,
 	// as atree never calls Storable()
 	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
@@ -722,6 +730,14 @@ func (v *CompositeValue) SetMemberWithoutTransfer(
 			)
 		}()
 	}
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapSet,
+			Intensity: 1,
+		},
+	)
 
 	existingStorable, err := v.dictionary.Set(
 		StringAtreeValueComparator,
@@ -859,7 +875,16 @@ func formatComposite(
 	return format.Composite(typeId, preparedFields)
 }
 
-func (v *CompositeValue) GetField(memoryGauge common.MemoryGauge, name string) Value {
+func (v *CompositeValue) GetField(gauge common.Gauge, name string) Value {
+
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapGet,
+			Intensity: 1,
+		},
+	)
+
 	storedValue, err := v.dictionary.Get(
 		StringAtreeValueComparator,
 		StringAtreeValueHashInput,
@@ -873,7 +898,7 @@ func (v *CompositeValue) GetField(memoryGauge common.MemoryGauge, name string) V
 		panic(errors.NewExternalError(err))
 	}
 
-	return MustConvertStoredValue(memoryGauge, storedValue)
+	return MustConvertStoredValue(gauge, storedValue)
 }
 
 func (v *CompositeValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
@@ -920,13 +945,13 @@ func (v *CompositeValue) Equal(context ValueComparisonContext, locationRange Loc
 // - HashInputTypeEnum (1 byte)
 // - type id (n bytes)
 // - hash input of raw value field name (n bytes)
-func (v *CompositeValue) HashInput(memoryGauge common.MemoryGauge, locationRange LocationRange, scratch []byte) []byte {
+func (v *CompositeValue) HashInput(gauge common.Gauge, locationRange LocationRange, scratch []byte) []byte {
 	if v.Kind == common.CompositeKindEnum {
 		typeID := v.TypeID()
 
-		rawValue := v.GetField(memoryGauge, sema.EnumRawValueFieldName)
+		rawValue := v.GetField(gauge, sema.EnumRawValueFieldName)
 		rawValueHashInput := rawValue.(HashableValue).
-			HashInput(memoryGauge, locationRange, scratch)
+			HashInput(gauge, locationRange, scratch)
 
 		length := 1 + len(typeID) + len(rawValueHashInput)
 		if length <= len(scratch) {
@@ -1587,6 +1612,14 @@ func (v *CompositeValue) RemoveField(
 	locationRange LocationRange,
 	name string,
 ) {
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapRemove,
+			Intensity: 1,
+		},
+	)
 
 	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
 		StringAtreeValueComparator,

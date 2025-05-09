@@ -180,7 +180,7 @@ func (v PathValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value)
 // - HashInputTypePath (1 byte)
 // - domain (1 byte)
 // - identifier (n bytes)
-func (v PathValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
+func (v PathValue) HashInput(_ common.Gauge, _ LocationRange, scratch []byte) []byte {
 	length := 1 + 1 + len(v.Identifier)
 	var buffer []byte
 	if length <= len(scratch) {

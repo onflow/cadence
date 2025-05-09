@@ -467,7 +467,7 @@ func (v Int16Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value
 // HashInput returns a byte slice containing:
 // - HashInputTypeInt16 (1 byte)
 // - int16 value encoded in big-endian (2 bytes)
-func (v Int16Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
+func (v Int16Value) HashInput(_ common.Gauge, _ LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeInt16)
 	binary.BigEndian.PutUint16(scratch[1:], uint16(v))
 	return scratch[:3]

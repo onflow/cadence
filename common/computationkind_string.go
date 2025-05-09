@@ -43,9 +43,13 @@ func _() {
 	_ = x[ComputationKindAtreeArrayRemove-1206]
 	_ = x[ComputationKindAtreeMapConstruction-1220]
 	_ = x[ComputationKindAtreeMapBatchConstruction-1221]
+	_ = x[ComputationKindAtreeMapHas-1222]
+	_ = x[ComputationKindAtreeMapGet-1223]
+	_ = x[ComputationKindAtreeMapSet-1224]
+	_ = x[ComputationKindAtreeMapRemove-1225]
 }
 
-const _ComputationKind_name = "UnknownStatementLoopFunctionInvocationCreateCompositeValueTransferCompositeValueDestroyCompositeValueCreateArrayValueTransferArrayValueDestroyArrayValueCreateDictionaryValueTransferDictionaryValueDestroyDictionaryValueStringToLowerStringDecodeHexGraphemesIterationEncodeValueUintParseIntParseBigIntParseUfixParseFixParseSTDLIBPanicSTDLIBAssertSTDLIBRevertibleRandomSTDLIBRLPDecodeStringSTDLIBRLPDecodeListAtreeArrayBatchConstructionAtreeArrayGetAtreeArraySetAtreeArrayAppendAtreeArrayInsertAtreeArrayRemoveAtreeMapConstructionAtreeMapBatchConstruction"
+const _ComputationKind_name = "UnknownStatementLoopFunctionInvocationCreateCompositeValueTransferCompositeValueDestroyCompositeValueCreateArrayValueTransferArrayValueDestroyArrayValueCreateDictionaryValueTransferDictionaryValueDestroyDictionaryValueStringToLowerStringDecodeHexGraphemesIterationEncodeValueUintParseIntParseBigIntParseUfixParseFixParseSTDLIBPanicSTDLIBAssertSTDLIBRevertibleRandomSTDLIBRLPDecodeStringSTDLIBRLPDecodeListAtreeArrayBatchConstructionAtreeArrayGetAtreeArraySetAtreeArrayAppendAtreeArrayInsertAtreeArrayRemoveAtreeMapConstructionAtreeMapBatchConstructionAtreeMapHasAtreeMapGetAtreeMapSetAtreeMapRemove"
 
 var _ComputationKind_map = map[ComputationKind]string{
 	0:    _ComputationKind_name[0:7],
@@ -83,6 +87,10 @@ var _ComputationKind_map = map[ComputationKind]string{
 	1206: _ComputationKind_name[490:506],
 	1220: _ComputationKind_name[506:526],
 	1221: _ComputationKind_name[526:551],
+	1222: _ComputationKind_name[551:562],
+	1223: _ComputationKind_name[562:573],
+	1224: _ComputationKind_name[573:584],
+	1225: _ComputationKind_name[584:598],
 }
 
 func (i ComputationKind) String() string {

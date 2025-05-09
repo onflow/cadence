@@ -149,7 +149,7 @@ func (v CharacterValue) GreaterEqual(_ ValueComparisonContext, other ComparableV
 	return v.Str >= otherChar.Str
 }
 
-func (v CharacterValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
+func (v CharacterValue) HashInput(_ common.Gauge, _ LocationRange, scratch []byte) []byte {
 	s := []byte(v.Str)
 	length := 1 + len(s)
 	var buffer []byte
@@ -231,7 +231,7 @@ func (v CharacterValue) GetMember(context MemberAccessibleContext, locationRange
 
 func (v CharacterValue) GetMethod(
 	context MemberAccessibleContext,
-	locationRange LocationRange,
+	_ LocationRange,
 	name string,
 ) FunctionValue {
 	switch name {

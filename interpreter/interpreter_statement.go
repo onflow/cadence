@@ -417,7 +417,7 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 }
 
 func extractEventFields(
-	gauge common.MemoryGauge,
+	gauge common.Gauge,
 	event *CompositeValue, eventType *sema.CompositeType) []Value {
 
 	count := len(eventType.ConstructorParameters)

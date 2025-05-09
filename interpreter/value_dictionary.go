@@ -576,6 +576,14 @@ func (v *DictionaryValue) ContainsKey(
 	valueComparator := newValueComparator(context, locationRange)
 	hashInputProvider := newHashInputProvider(context, locationRange)
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapHas,
+			Intensity: 1,
+		},
+	)
+
 	exists, err := v.dictionary.Has(
 		valueComparator,
 		hashInputProvider,
@@ -595,6 +603,14 @@ func (v *DictionaryValue) Get(
 
 	valueComparator := newValueComparator(context, locationRange)
 	hashInputProvider := newHashInputProvider(context, locationRange)
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapGet,
+			Intensity: 1,
+		},
+	)
 
 	storedValue, err := v.dictionary.Get(
 		valueComparator,
@@ -922,6 +938,14 @@ func (v *DictionaryValue) RemoveWithoutTransfer(
 	valueComparator := newValueComparator(context, locationRange)
 	hashInputProvider := newHashInputProvider(context, locationRange)
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapRemove,
+			Intensity: 1,
+		},
+	)
+
 	// No need to clean up storable for passed-in key value,
 	// as atree never calls Storable()
 	var err error
@@ -1000,6 +1024,14 @@ func (v *DictionaryValue) InsertWithoutTransfer(
 
 	valueComparator := newValueComparator(context, locationRange)
 	hashInputProvider := newHashInputProvider(context, locationRange)
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapSet,
+			Intensity: 1,
+		},
+	)
 
 	// atree only calls Storable() on keyValue if needed,
 	// i.e., if the key is a new key
