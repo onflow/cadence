@@ -920,6 +920,14 @@ func (v *CompositeValue) Equal(context ValueComparisonContext, locationRange Loc
 	}
 
 	for {
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapReadIteration,
+				Intensity: 1,
+			},
+		)
+
 		key, value, err := iterator.Next()
 		if err != nil {
 			panic(errors.NewExternalError(err))
@@ -1277,6 +1285,14 @@ func (v *CompositeValue) Transfer(
 			},
 		)
 
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapReadIteration,
+				Intensity: uint64(count),
+			},
+		)
+
 		dictionary, err = atree.NewMapFromBatchData(
 			context.Storage(),
 			address,
@@ -1286,6 +1302,8 @@ func (v *CompositeValue) Transfer(
 			StringAtreeValueHashInput,
 			v.dictionary.Seed(),
 			func() (atree.Value, atree.Value, error) {
+
+				// Computation was already metered above
 
 				atreeKey, atreeValue, err := iterator.Next()
 				if err != nil {
@@ -1505,6 +1523,7 @@ func (v *CompositeValue) GetOwner() common.Address {
 // ForEachFieldName iterates over all field names of the composite value.
 // It does NOT iterate over computed fields and functions!
 func (v *CompositeValue) ForEachFieldName(
+	gauge common.ComputationGauge,
 	f func(fieldName string) (resume bool),
 ) {
 	iterate := func(fn atree.MapElementIterationFunc) error {
@@ -1517,14 +1536,24 @@ func (v *CompositeValue) ForEachFieldName(
 			fn,
 		)
 	}
-	v.forEachFieldName(iterate, f)
+	v.forEachFieldName(gauge, iterate, f)
 }
 
 func (v *CompositeValue) forEachFieldName(
+	gauge common.ComputationGauge,
 	atreeIterate func(fn atree.MapElementIterationFunc) error,
 	f func(fieldName string) (resume bool),
 ) {
 	err := atreeIterate(func(key atree.Value) (resume bool, err error) {
+
+		common.UseComputation(
+			gauge,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapReadIteration,
+				Intensity: 1,
+			},
+		)
+
 		resume = f(
 			string(key.(StringAtreeValue)),
 		)

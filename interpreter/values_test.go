@@ -3667,6 +3667,7 @@ func TestInterpretSmokeRandomNestedCompositeOperations(t *testing.T) {
 		fieldNames := make([]string, 0, fieldCount)
 
 		actualNestedComposite.ForEachFieldName(
+			inter,
 			func(name string) (resume bool) {
 				fieldNames = append(fieldNames, name)
 				return true
@@ -3793,6 +3794,7 @@ func TestInterpretSmokeRandomNestedCompositeOperations(t *testing.T) {
 		fieldNames := make([]string, 0, fieldCount)
 
 		actualNestedComposite.ForEachFieldName(
+			inter,
 			func(name string) (resume bool) {
 
 				fieldNames = append(fieldNames, name)

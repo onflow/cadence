@@ -1529,6 +1529,184 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 
 }
 
+
+func TestInterpretComputationMeteringComposite(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("construction and transfer", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		storage := newUnmeteredInMemoryStorage()
+		_, err := parseCheckAndInterpretWithOptions(t,
+			`
+              struct S {
+                  let x: Int
+
+                  init() {
+                      self.x = 1
+                  }
+              }
+
+              let s = S()
+            `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateCompositeValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+				{Kind: common.ComputationKindTransferCompositeValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapBatchConstruction, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapReadIteration, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("destruction", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		storage := newUnmeteredInMemoryStorage()
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+              resource R {}
+
+              fun test() {
+                  let x <- create R()
+                  destroy x
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateCompositeValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+				{Kind: common.ComputationKindTransferCompositeValue, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindDestroyCompositeValue, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("get", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		storage := newUnmeteredInMemoryStorage()
+		_, err := parseCheckAndInterpretWithOptions(t,
+			`
+              struct S {
+                  let x: Int
+
+                  init() {
+                      self.x = 1
+                  }
+              }
+
+              let x = S().x
+            `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateCompositeValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapGet, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("set", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		storage := newUnmeteredInMemoryStorage()
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+              struct S {
+                  let x: Int
+
+                  init() {
+                      self.x = 1
+                  }
+              }
+
+              fun test() {
+                  S()
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateCompositeValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+	})
+
+}
+
 func TestInterpretComputationMeteringString(t *testing.T) {
 
 	t.Parallel()
