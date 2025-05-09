@@ -669,7 +669,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		t.Parallel()
 
-		inter, err := parseCheckAndInterpretWithOptions(
+		inter, err := parseCheckAndPrepareWithOptions(
 			t,
 			`
             resource R {
@@ -911,7 +911,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		t.Parallel()
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             resource R {
                 access(all) var id: Int
 
@@ -1752,7 +1752,7 @@ func TestInterpretReferenceToReference(t *testing.T) {
 
 		t.Parallel()
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun main() {
                 let x = &1 as &Int
                 let y = &x as & &Int
@@ -1792,7 +1792,7 @@ func TestInterpretReferenceToReference(t *testing.T) {
 
 		t.Parallel()
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun main() {
                 let x: (&Int)? = &1 as &Int
                 let y: (&(&Int))? = &x 
@@ -3038,7 +3038,7 @@ func TestInterpretDereference(t *testing.T) {
 		t.Run("direct", func(t *testing.T) {
 			t.Parallel()
 
-			inter, err := parseCheckAndInterpretWithOptions(t,
+			inter, err := parseCheckAndPrepareWithOptions(t,
 				`
                   resource R {}
 
@@ -3069,7 +3069,7 @@ func TestInterpretDereference(t *testing.T) {
 		t.Run("array", func(t *testing.T) {
 			t.Parallel()
 
-			inter, err := parseCheckAndInterpretWithOptions(t,
+			inter, err := parseCheckAndPrepareWithOptions(t,
 				`
                   resource R {}
 
