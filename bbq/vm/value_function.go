@@ -161,8 +161,6 @@ func (v CompiledFunctionValue) Invoke(invocation interpreter.Invocation) interpr
 	return invocation.InvocationContext.InvokeFunction(
 		v,
 		invocation.Arguments,
-		invocation.ArgumentTypes,
-		invocation.LocationRange,
 	)
 }
 
@@ -337,8 +335,6 @@ func (v NativeFunctionValue) Invoke(invocation interpreter.Invocation) interpret
 	return invocation.InvocationContext.InvokeFunction(
 		v,
 		invocation.Arguments,
-		invocation.ArgumentTypes,
-		invocation.LocationRange,
 	)
 }
 
@@ -483,10 +479,12 @@ func (v *BoundFunctionPointerValue) initializeFunctionType(context interpreter.V
 }
 
 func (v *BoundFunctionPointerValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
+	arguments := make([]Value, 0, len(invocation.Arguments)+1)
+	arguments = append(arguments, v.Receiver)
+	arguments = append(arguments, invocation.Arguments...)
+
 	return invocation.InvocationContext.InvokeFunction(
 		v,
-		invocation.Arguments,
-		invocation.ArgumentTypes,
-		invocation.LocationRange,
+		arguments,
 	)
 }

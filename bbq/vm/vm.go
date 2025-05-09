@@ -90,8 +90,7 @@ func NewVM(
 	}
 
 	// Delegate the function invocations to the vm.
-	// TODO: Fix: this should also be able to call native functions.
-	context.invokeFunction = vm.invoke
+	context.invokeFunction = vm.invokeExternally
 
 	context.lookupFunction = vm.maybeLookupFunction
 
@@ -266,7 +265,7 @@ func (vm *VM) popCallFrame() {
 	}
 }
 
-func (vm *VM) Invoke(name string, arguments ...Value) (v Value, err error) {
+func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err error) {
 	functionVariable, ok := vm.globals[name]
 	if !ok {
 		return nil, UnknownFunctionError{
@@ -286,10 +285,10 @@ func (vm *VM) Invoke(name string, arguments ...Value) (v Value, err error) {
 		err, _ = recovered.(error)
 	}()
 
-	return vm.invoke(function, arguments)
+	return vm.validateAndInvokeExternally(function, arguments)
 }
 
-func (vm *VM) invoke(function Value, arguments []Value) (Value, error) {
+func (vm *VM) validateAndInvokeExternally(function Value, arguments []Value) (Value, error) {
 	functionValue, ok := function.(CompiledFunctionValue)
 	if !ok {
 		return nil, interpreter.NotInvokableError{
@@ -297,15 +296,26 @@ func (vm *VM) invoke(function Value, arguments []Value) (Value, error) {
 		}
 	}
 
-	if len(arguments) != int(functionValue.Function.ParameterCount) {
+	paramCount := functionValue.Function.ParameterCount
+
+	if len(arguments) != int(paramCount) {
 		return nil, errors.NewDefaultUserError(
 			"wrong number of arguments: expected %d, found %d",
-			functionValue.Function.ParameterCount,
+			paramCount,
 			len(arguments),
 		)
 	}
 
-	vm.pushCallFrame(functionValue, arguments)
+	return vm.invokeExternally(functionValue, arguments)
+}
+
+func (vm *VM) invokeExternally(functionValue Value, arguments []Value) (Value, error) {
+	invokeFunction(
+		vm,
+		functionValue,
+		arguments,
+		nil,
+	)
 
 	vm.run()
 
@@ -318,7 +328,7 @@ func (vm *VM) invoke(function Value, arguments []Value) (Value, error) {
 
 func (vm *VM) InitializeContract(contractName string, arguments ...Value) (*interpreter.CompositeValue, error) {
 	contractInitializer := commons.QualifiedName(contractName, commons.InitFunctionName)
-	value, err := vm.Invoke(contractInitializer, arguments...)
+	value, err := vm.InvokeExternally(contractInitializer, arguments...)
 	if err != nil {
 		return nil, err
 	}
@@ -343,14 +353,14 @@ func (vm *VM) ExecuteTransaction(transactionArgs []Value, signers ...Value) (err
 	}()
 
 	// Create transaction value
-	transaction, err := vm.Invoke(commons.TransactionWrapperCompositeName)
+	transaction, err := vm.InvokeExternally(commons.TransactionWrapperCompositeName)
 	if err != nil {
 		return err
 	}
 
 	if initializerVariable, ok := vm.globals[commons.ProgramInitFunctionName]; ok {
 		initializer := initializerVariable.GetValue(vm.context)
-		_, err = vm.invoke(initializer, transactionArgs)
+		_, err = vm.validateAndInvokeExternally(initializer, transactionArgs)
 		if err != nil {
 			return err
 		}
@@ -363,7 +373,7 @@ func (vm *VM) ExecuteTransaction(transactionArgs []Value, signers ...Value) (err
 	// Invoke 'prepare', if exists.
 	if prepareVariable, ok := vm.globals[commons.TransactionPrepareFunctionName]; ok {
 		prepare := prepareVariable.GetValue(vm.context)
-		_, err = vm.invoke(prepare, prepareArgs)
+		_, err = vm.validateAndInvokeExternally(prepare, prepareArgs)
 		if err != nil {
 			return err
 		}
@@ -375,7 +385,7 @@ func (vm *VM) ExecuteTransaction(transactionArgs []Value, signers ...Value) (err
 	executeArgs := []Value{transaction}
 	if executeVariable, ok := vm.globals[commons.TransactionExecuteFunctionName]; ok {
 		execute := executeVariable.GetValue(vm.context)
-		_, err = vm.invoke(execute, executeArgs)
+		_, err = vm.validateAndInvokeExternally(execute, executeArgs)
 		return err
 	}
 
@@ -717,11 +727,11 @@ func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
 		vm.context,
 		EmptyLocationRange,
 		funcName,
-	).(*BoundFunctionPointerValue)
+	)
 
 	invokeFunction(
 		vm,
-		functionValue.Method,
+		functionValue,
 		arguments,
 		typeArguments,
 	)
@@ -733,6 +743,12 @@ func invokeFunction(
 	arguments []Value,
 	typeArguments []bbq.StaticType,
 ) {
+
+	// Handle all function types in a single place, so this can be re-used everywhere.
+
+	if boundFunction, ok := functionValue.(*BoundFunctionPointerValue); ok {
+		functionValue = boundFunction.Method
+	}
 
 	switch functionValue := functionValue.(type) {
 	case CompiledFunctionValue:

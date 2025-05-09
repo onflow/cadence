@@ -72,7 +72,7 @@ func TestRecursionFib(t *testing.T) {
 	vmConfig := &vm.Config{}
 	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
-	result, err := vmInstance.Invoke(
+	result, err := vmInstance.InvokeExternally(
 		"fib",
 		interpreter.NewUnmeteredIntValueFromInt64(23),
 	)
@@ -113,7 +113,7 @@ func TestImperativeFib(t *testing.T) {
 	vmConfig := &vm.Config{}
 	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
-	result, err := vmInstance.Invoke(
+	result, err := vmInstance.InvokeExternally(
 		"fib",
 		interpreter.NewUnmeteredIntValueFromInt64(7),
 	)
@@ -333,7 +333,7 @@ func TestNewStruct(t *testing.T) {
 		},
 	)
 
-	result, err := vmInstance.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(10))
+	result, err := vmInstance.InvokeExternally("test", interpreter.NewUnmeteredIntValueFromInt64(10))
 	require.NoError(t, err)
 	require.Equal(t, 0, vmInstance.StackSize())
 
@@ -495,7 +495,7 @@ func TestImport(t *testing.T) {
 
 	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
-	result, err := vmInstance.Invoke("test")
+	result, err := vmInstance.InvokeExternally("test")
 	require.NoError(t, err)
 	require.Equal(t, 0, vmInstance.StackSize())
 
@@ -606,7 +606,7 @@ func TestContractImport(t *testing.T) {
 
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
-		result, err := vmInstance.Invoke("test")
+		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -703,7 +703,7 @@ func TestContractImport(t *testing.T) {
 
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
-		result, err := vmInstance.Invoke("test")
+		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -929,7 +929,7 @@ func TestContractImport(t *testing.T) {
 
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
-		result, err := vmInstance.Invoke("test")
+		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1138,7 +1138,7 @@ func TestContractImport(t *testing.T) {
 
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
-		result, err := vmInstance.Invoke("test")
+		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1321,7 +1321,7 @@ func TestFunctionOrder(t *testing.T) {
 		vmConfig := &vm.Config{}
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
-		result, err := vmInstance.Invoke("test")
+		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1480,7 +1480,7 @@ func TestContractField(t *testing.T) {
 		}
 
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-		result, err := vmInstance.Invoke("test")
+		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1572,7 +1572,7 @@ func TestContractField(t *testing.T) {
 
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
-		result, err := vmInstance.Invoke("test")
+		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1643,7 +1643,7 @@ func TestNativeFunctions(t *testing.T) {
 		}
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
-		_, err = vmInstance.Invoke("test")
+		_, err = vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1669,7 +1669,7 @@ func TestNativeFunctions(t *testing.T) {
 		vmConfig := &vm.Config{}
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
-		result, err := vmInstance.Invoke("test")
+		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1715,7 +1715,7 @@ func TestTransaction(t *testing.T) {
 
 		// Rerun the same again using internal functions, to get the access to the transaction value.
 
-		transaction, err := vmInstance.Invoke(commons.TransactionWrapperCompositeName)
+		transaction, err := vmInstance.InvokeExternally(commons.TransactionWrapperCompositeName)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1726,7 +1726,7 @@ func TestTransaction(t *testing.T) {
 		assert.Nil(t, compositeValue.GetMember(vmContext, vm.EmptyLocationRange, "a"))
 
 		// Invoke 'prepare'
-		_, err = vmInstance.Invoke(commons.TransactionPrepareFunctionName, transaction)
+		_, err = vmInstance.InvokeExternally(commons.TransactionPrepareFunctionName, transaction)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1738,7 +1738,7 @@ func TestTransaction(t *testing.T) {
 		)
 
 		// Invoke 'execute'
-		_, err = vmInstance.Invoke(commons.TransactionExecuteFunctionName, transaction)
+		_, err = vmInstance.InvokeExternally(commons.TransactionExecuteFunctionName, transaction)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1789,7 +1789,7 @@ func TestTransaction(t *testing.T) {
 
 		// Rerun the same again using internal functions, to get the access to the transaction value.
 
-		transaction, err := vmInstance.Invoke(commons.TransactionWrapperCompositeName)
+		transaction, err := vmInstance.InvokeExternally(commons.TransactionWrapperCompositeName)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1800,7 +1800,7 @@ func TestTransaction(t *testing.T) {
 		assert.Nil(t, compositeValue.GetMember(vmContext, vm.EmptyLocationRange, "a"))
 
 		// Invoke 'prepare'
-		_, err = vmInstance.Invoke(commons.TransactionPrepareFunctionName, transaction)
+		_, err = vmInstance.InvokeExternally(commons.TransactionPrepareFunctionName, transaction)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1812,7 +1812,7 @@ func TestTransaction(t *testing.T) {
 		)
 
 		// Invoke 'execute'
-		_, err = vmInstance.Invoke(commons.TransactionExecuteFunctionName, transaction)
+		_, err = vmInstance.InvokeExternally(commons.TransactionExecuteFunctionName, transaction)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -2277,7 +2277,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 		}
 
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-		result, err := vmInstance.Invoke("test")
+		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -2564,7 +2564,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 		}
 
 		scriptVM := vm.NewVM(scriptLocation(), program, vmConfig)
-		implValue, err := scriptVM.Invoke("test")
+		implValue, err := scriptVM.InvokeExternally("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, scriptVM.StackSize())
 
@@ -2677,7 +2677,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 
 		scriptVM = vm.NewVM(scriptLocation(), program, vmConfig)
 
-		result, err := scriptVM.Invoke("test", implValue)
+		result, err := scriptVM.InvokeExternally("test", implValue)
 		require.NoError(t, err)
 		require.Equal(t, 0, scriptVM.StackSize())
 
@@ -2710,7 +2710,7 @@ func TestArrayLiteral(t *testing.T) {
 
 		vmContext := vmInstance.Context()
 
-		result, err := vmInstance.Invoke("test")
+		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -2749,7 +2749,7 @@ func TestArrayLiteral(t *testing.T) {
 		vmConfig := &vm.Config{}
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
-		result, err := vmInstance.Invoke("test")
+		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(5), result)
@@ -2777,7 +2777,7 @@ func TestArrayLiteral(t *testing.T) {
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 		vmContext := vmInstance.Context()
 
-		result, err := vmInstance.Invoke("test")
+		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -2814,7 +2814,7 @@ func TestDictionaryLiteral(t *testing.T) {
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 		vmContext := vmInstance.Context()
 
-		result, err := vmInstance.Invoke("test")
+		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -2914,7 +2914,7 @@ func TestResource(t *testing.T) {
 
 		vmContext := vmInstance.Context()
 
-		result, err := vmInstance.Invoke("test")
+		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -3188,7 +3188,7 @@ func TestDefaultFunctions(t *testing.T) {
 		txProgram := ParseCheckAndCompile(t, tx, txLocation(), programs)
 		txVM := vm.NewVM(txLocation(), txProgram, vmConfig)
 
-		result, err := txVM.Invoke("main")
+		result, err := txVM.InvokeExternally("main")
 		require.NoError(t, err)
 		require.Equal(t, 0, txVM.StackSize())
 		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(7), result)
@@ -3314,7 +3314,7 @@ func TestDefaultFunctions(t *testing.T) {
 		txProgram := ParseCheckAndCompile(t, tx, txLocation(), programs)
 		txVM := vm.NewVM(txLocation(), txProgram, vmConfig)
 
-		result, err := txVM.Invoke("main")
+		result, err := txVM.InvokeExternally("main")
 		require.NoError(t, err)
 		require.Equal(t, 0, txVM.StackSize())
 		require.Equal(t, interpreter.NewUnmeteredStringValue("Hello from HelloInterface"), result)
@@ -3457,7 +3457,7 @@ func TestDefaultFunctions(t *testing.T) {
 		txProgram := ParseCheckAndCompile(t, tx, txLocation(), programs)
 		txVM := vm.NewVM(txLocation(), txProgram, vmConfig)
 
-		result, err := txVM.Invoke("main")
+		result, err := txVM.InvokeExternally("main")
 		require.NoError(t, err)
 		require.Equal(t, 0, txVM.StackSize())
 		require.Equal(t, interpreter.NewUnmeteredStringValue("Hello from Hello"), result)
@@ -6226,7 +6226,7 @@ func TestContractAccount(t *testing.T) {
 
 	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
-	result, err := vmInstance.Invoke("test")
+	result, err := vmInstance.InvokeExternally("test")
 	require.NoError(t, err)
 	require.Equal(t, 0, vmInstance.StackSize())
 
@@ -6358,7 +6358,7 @@ func TestResourceOwner(t *testing.T) {
 
 	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
-	result, err := vmInstance.Invoke("test")
+	result, err := vmInstance.InvokeExternally("test")
 	require.NoError(t, err)
 	require.Equal(t, 0, vmInstance.StackSize())
 
@@ -6467,7 +6467,7 @@ func TestResourceUUID(t *testing.T) {
 
 	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
-	result, err := vmInstance.Invoke("test")
+	result, err := vmInstance.InvokeExternally("test")
 	require.NoError(t, err)
 	require.Equal(t, 0, vmInstance.StackSize())
 
@@ -6853,7 +6853,7 @@ func TestContractClosure(t *testing.T) {
 
 	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
-	result, err := vmInstance.Invoke("test")
+	result, err := vmInstance.InvokeExternally("test")
 	require.NoError(t, err)
 	require.Equal(t, 0, vmInstance.StackSize())
 	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(9), result)
@@ -7744,7 +7744,7 @@ func TestInheritedConditions(t *testing.T) {
 		txProgram := ParseCheckAndCompile(t, tx, txLocation(), programs)
 
 		txVM := vm.NewVM(txLocation(), txProgram, vmConfig)
-		result, err := txVM.Invoke("main")
+		result, err := txVM.InvokeExternally("main")
 		require.NoError(t, err)
 
 		require.Equal(t, 0, txVM.StackSize())

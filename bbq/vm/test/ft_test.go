@@ -404,7 +404,7 @@ func compiledFTTransfer(tb testing.TB) {
 		validationScriptVM := vm.NewVM(scriptLocation, program, vmConfig)
 
 		addressValue := interpreter.AddressValue(address)
-		result, err := validationScriptVM.Invoke("main", addressValue)
+		result, err := validationScriptVM.InvokeExternally("main", addressValue)
 		require.NoError(tb, err)
 		require.Equal(tb, 0, validationScriptVM.StackSize())
 
