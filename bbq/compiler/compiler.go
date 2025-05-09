@@ -66,6 +66,12 @@ type Compiler[E, T any] struct {
 	// Then the compiler uses these indices to patch the jumps for return statements.
 	postConditionsIndices map[*ast.FunctionBlock]int
 
+	// inheritedConditionParamBindings keeps a mapping between the parameter names
+	// of an interface-function and the parameter names of its-implementation,
+	// for each inherited condition.
+	inheritedConditionParamBindings       map[ast.Statement]map[string]string
+	currentInheritedConditionParamBinding map[string]string
+
 	// postConditionsIndex is the statement-index of the post-conditions for the current function.
 	postConditionsIndex int
 
@@ -464,7 +470,12 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 		c.DesugaredElaboration,
 		c.location,
 	)
-	c.Program, c.postConditionsIndices = desugar.Run()
+
+	desugaredProgram := desugar.Run()
+
+	c.Program = desugaredProgram.program
+	c.postConditionsIndices = desugaredProgram.postConditionIndices
+	c.inheritedConditionParamBindings = desugaredProgram.inheritedConditionParamBinding
 
 	for _, declaration := range c.Program.ImportDeclarations() {
 		c.compileDeclaration(declaration)
@@ -980,7 +991,7 @@ func (c *Compiler[_, _]) VisitContinueStatement(_ *ast.ContinueStatement) (_ str
 func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{}) {
 	// If-statements can be coming from inherited conditions.
 	// If so, use the corresponding elaboration.
-	c.withConditionElaboration(statement, func() {
+	c.compilePotentiallyInheritedCode(statement, func() {
 		var (
 			elseJump            int
 			additionalThenScope bool
@@ -1161,7 +1172,7 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 func (c *Compiler[_, _]) VisitEmitStatement(statement *ast.EmitStatement) (_ struct{}) {
 	// Emit statements can be coming from inherited conditions.
 	// If so, use the corresponding elaboration.
-	c.withConditionElaboration(
+	c.compilePotentiallyInheritedCode(
 		statement,
 		func() {
 			invocationExpression := statement.InvocationExpression
@@ -1242,7 +1253,7 @@ func (c *Compiler[_, _]) VisitVariableDeclaration(declaration *ast.VariableDecla
 
 	// Some variable declarations can be coming from inherited before-statements.
 	// If so, use the corresponding elaboration.
-	c.withConditionElaboration(declaration, func() {
+	c.compilePotentiallyInheritedCode(declaration, func() {
 
 		// TODO: second value
 
@@ -1553,6 +1564,16 @@ func (c *Compiler[_, _]) VisitIdentifierExpression(expression *ast.IdentifierExp
 }
 
 func (c *Compiler[_, _]) emitVariableLoad(name string) {
+
+	if c.currentInheritedConditionParamBinding != nil {
+		// If the current compiling code is an inherited code, then bind
+		// the inherited parameter names to the implementation's parameter names.
+		mappedName, ok := c.currentInheritedConditionParamBinding[name]
+		if ok {
+			name = mappedName
+		}
+	}
+
 	local := c.currentFunction.findLocal(name)
 	if local != nil {
 		c.emitGetLocal(local.index)
@@ -2621,13 +2642,18 @@ func (c *Compiler[_, _]) generateEmptyInit() {
 	c.VisitSpecialFunctionDeclaration(emptyInitializer)
 }
 
-func (c *Compiler[_, _]) withConditionElaboration(statement ast.Statement, f func()) {
+func (c *Compiler[_, _]) compilePotentiallyInheritedCode(statement ast.Statement, f func()) {
 	stmtElaboration, ok := c.DesugaredElaboration.conditionsElaborations[statement]
 	if ok {
 		prevElaboration := c.DesugaredElaboration
 		c.DesugaredElaboration = stmtElaboration
+
+		preIsInheritedCode := c.currentInheritedConditionParamBinding
+		c.currentInheritedConditionParamBinding = c.inheritedConditionParamBindings[statement]
+
 		defer func() {
 			c.DesugaredElaboration = prevElaboration
+			c.currentInheritedConditionParamBinding = preIsInheritedCode
 		}()
 	}
 	f()
