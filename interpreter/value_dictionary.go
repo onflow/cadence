@@ -321,6 +321,15 @@ func (v *DictionaryValue) iterateKeys(
 ) {
 	iterate := func() {
 		err := atreeIterate(func(key atree.Value) (resume bool, err error) {
+
+			common.UseComputation(
+				interpreter,
+				common.ComputationUsage{
+					Kind:      common.ComputationKindAtreeMapReadIteration,
+					Intensity: 1,
+				},
+			)
+
 			// atree.OrderedMap iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value
 
@@ -344,9 +353,7 @@ func (v *DictionaryValue) IterateReadOnly(
 	f func(key, value Value) (resume bool),
 ) {
 	iterate := func(fn atree.MapEntryIterationFunc) error {
-		return v.dictionary.IterateReadOnly(
-			fn,
-		)
+		return v.dictionary.IterateReadOnly(fn)
 	}
 	v.iterate(interpreter, iterate, f, locationRange)
 }
@@ -391,6 +398,14 @@ func (v *DictionaryValue) iterate(
 ) {
 	iterate := func() {
 		err := atreeIterate(func(key, value atree.Value) (resume bool, err error) {
+			common.UseComputation(
+				context,
+				common.ComputationUsage{
+					Kind:      common.ComputationKindAtreeMapReadIteration,
+					Intensity: 1,
+				},
+			)
+
 			// atree.OrderedMap iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value
 
@@ -536,6 +551,15 @@ func (v *DictionaryValue) ForEachKey(
 	iterate := func() {
 		err := v.dictionary.IterateReadOnlyKeys(
 			func(item atree.Value) (bool, error) {
+
+				common.UseComputation(
+					context,
+					common.ComputationUsage{
+						Kind:      common.ComputationKindAtreeMapReadIteration,
+						Intensity: 1,
+					},
+				)
+
 				key := MustConvertStoredValue(context, item)
 
 				result := invokeFunctionValue(
@@ -750,11 +774,21 @@ func (v *DictionaryValue) GetMember(context MemberAccessibleContext, locationRan
 			panic(errors.NewExternalError(err))
 		}
 
+		count := v.dictionary.Count()
+
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapReadIteration,
+				Intensity: count,
+			},
+		)
+
 		return NewArrayValueWithIterator(
 			context,
 			NewVariableSizedStaticType(context, v.Type.KeyType),
 			common.ZeroAddress,
-			v.dictionary.Count(),
+			count,
 			func() Value {
 
 				key, err := iterator.NextKey()
@@ -786,11 +820,21 @@ func (v *DictionaryValue) GetMember(context MemberAccessibleContext, locationRan
 			panic(errors.NewExternalError(err))
 		}
 
+		count := v.dictionary.Count()
+
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapReadIteration,
+				Intensity: count,
+			},
+		)
+
 		return NewArrayValueWithIterator(
 			context,
 			NewVariableSizedStaticType(context, v.Type.ValueType),
 			common.ZeroAddress,
-			v.dictionary.Count(),
+			count,
 			func() Value {
 
 				value, err := iterator.NextValue()
@@ -1185,7 +1229,17 @@ func (v *DictionaryValue) ConformsToStaticType(
 		panic(errors.NewExternalError(err))
 	}
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapReadIteration,
+			Intensity: uint64(count),
+		},
+	)
+
 	for {
+		// Computation was already metered above
+
 		key, value, err := iterator.Next()
 		if err != nil {
 			panic(errors.NewExternalError(err))
@@ -1239,7 +1293,9 @@ func (v *DictionaryValue) Equal(context ValueComparisonContext, locationRange Lo
 		return false
 	}
 
-	if v.Count() != otherDictionary.Count() {
+	count := v.Count()
+
+	if count != otherDictionary.Count() {
 		return false
 	}
 
@@ -1252,7 +1308,17 @@ func (v *DictionaryValue) Equal(context ValueComparisonContext, locationRange Lo
 		panic(errors.NewExternalError(err))
 	}
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapReadIteration,
+			Intensity: uint64(count),
+		},
+	)
+
 	for {
+		// Computation was already metered above
+
 		key, value, err := iterator.Next()
 		if err != nil {
 			panic(errors.NewExternalError(err))
@@ -1377,6 +1443,14 @@ func (v *DictionaryValue) Transfer(
 			v.elementSize,
 		)
 		common.UseMemory(context, elementMemoryUse)
+
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapReadIteration,
+				Intensity: uint64(count),
+			},
+		)
 
 		common.UseComputation(
 			context,
@@ -1649,7 +1723,16 @@ func NewDictionaryKeyIterator(gauge common.MemoryGauge, v *DictionaryValue) Dict
 	}
 }
 
-func (i DictionaryKeyIterator) NextKeyUnconverted() atree.Value {
+func (i DictionaryKeyIterator) NextKeyUnconverted(gauge common.ComputationGauge) atree.Value {
+
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapReadIteration,
+			Intensity: 1,
+		},
+	)
+
 	atreeValue, err := i.mapIterator.NextKey()
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -1657,15 +1740,24 @@ func (i DictionaryKeyIterator) NextKeyUnconverted() atree.Value {
 	return atreeValue
 }
 
-func (i DictionaryKeyIterator) NextKey(gauge common.MemoryGauge) Value {
-	atreeValue := i.NextKeyUnconverted()
+func (i DictionaryKeyIterator) NextKey(gauge common.Gauge) Value {
+	atreeValue := i.NextKeyUnconverted(gauge)
 	if atreeValue == nil {
 		return nil
 	}
 	return MustConvertStoredValue(gauge, atreeValue)
 }
 
-func (i DictionaryKeyIterator) Next(gauge common.MemoryGauge) (Value, Value) {
+func (i DictionaryKeyIterator) Next(gauge common.Gauge) (Value, Value) {
+
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapReadIteration,
+			Intensity: 1,
+		},
+	)
+
 	atreeKeyValue, atreeValue, err := i.mapIterator.Next()
 	if err != nil {
 		panic(errors.NewExternalError(err))
