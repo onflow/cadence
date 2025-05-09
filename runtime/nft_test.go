@@ -81,7 +81,7 @@ access(all) contract interface NonFungibleToken {
         access(all) fun borrowNFT(id: UInt64): &{NFT}
     }
 
-    // Requirement for the the concrete resource type
+    // Requirement for the concrete resource type
     // to be declared in the implementing contract
     //
     access(all) resource interface Collection: Provider, Receiver, CollectionPublic {
@@ -350,7 +350,7 @@ access(all) contract TopShot: NonFungibleToken {
             pre {
                 TopShot.playDatas[playID] != nil: "Cannot add the Play to Set: Play doesn't exist"
                 !self.locked: "Cannot add the play to the Set after the set has been locked"
-                self.numberMintedPerPlay[playID] == nil: "The play has already beed added to the set"
+                self.numberMintedPerPlay[playID] == nil: "The play has already been added to the set"
             }
 
             // Add the play to the array of plays
@@ -615,7 +615,7 @@ access(all) contract TopShot: NonFungibleToken {
             self.ownedNFTs <- {}
         }
 
-        // withdraw removes an Moment from the collection and moves it to the caller
+        // withdraw removes a Moment from the collection and moves it to the caller
         access(all) fun withdraw(withdrawID: UInt64): @{NonFungibleToken.NFT} {
             let token <- self.ownedNFTs.remove(key: withdrawID)
                 ?? panic("Cannot withdraw: Moment does not exist in the collection")
@@ -828,7 +828,7 @@ access(all) contract TopShot: NonFungibleToken {
     }
 
     // isSetLocked returns a boolean that indicates if a set
-    //             is locked. If an set is locked,
+    //             is locked. If a set is locked,
     //             new plays can no longer be added to it,
     //             but moments can still be minted from plays
     //             that are currently in it.
