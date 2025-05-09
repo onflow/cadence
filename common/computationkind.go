@@ -27,8 +27,7 @@ type ComputationKind uint
 const ComputationKindRangeStart = 1000
 
 const (
-	ComputationKindUnknown ComputationKind = 0
-	// interpreter - base
+	ComputationKindUnknown   ComputationKind = 0
 	ComputationKindStatement ComputationKind = ComputationKindRangeStart + iota
 	ComputationKindLoop
 	ComputationKindFunctionInvocation
@@ -38,7 +37,6 @@ const (
 	_
 	_
 	_
-	// interpreter value operations
 	ComputationKindCreateCompositeValue
 	ComputationKindTransferCompositeValue
 	ComputationKindDestroyCompositeValue
@@ -129,7 +127,7 @@ const (
 	_
 	_
 	_
-	// stdlibs computation kinds
+	// stdlib
 	//
 	ComputationKindSTDLIBPanic
 	ComputationKindSTDLIBAssert
@@ -232,6 +230,8 @@ const (
 	_
 	_
 	_
+	// atree
 	ComputationKindAtreeArrayBatchConstruction
+	ComputationKindAtreeMapConstruction
 	ComputationKindAtreeMapBatchConstruction
 )

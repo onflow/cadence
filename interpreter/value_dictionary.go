@@ -101,6 +101,15 @@ func NewDictionaryValueWithAddress(
 	}
 
 	constructor := func() *atree.OrderedMap {
+
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapConstruction,
+				Intensity: 1,
+			},
+		)
+
 		dictionary, err := atree.NewMap(
 			context.Storage(),
 			atree.Address(address),
