@@ -3629,7 +3629,7 @@ func TestInterpretOptionalMap(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let one: Int? = 42
           let result = one.map(fun (v: Int): String {
               return v.toString()
@@ -3650,7 +3650,7 @@ func TestInterpretOptionalMap(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let none: Int? = nil
           let result = none.map(fun (v: Int): String {
               return v.toString()
@@ -3669,7 +3669,7 @@ func TestInterpretOptionalMap(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           struct S {
               fun map(f: fun(AnyStruct): String): String {
                   return "S.map"
@@ -5219,7 +5219,7 @@ func TestInterpretStructureFunctionBindingInside(t *testing.T) {
 	//        return bar()
 	//   }
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         struct X {
             fun foo(): AnyStruct {
                 return self.bar

@@ -45,19 +45,24 @@ type ParseCheckAndInterpretOptions struct {
 //type VMInvokable struct {
 //	vmInstance *vm.VM
 //	*vm.Context
+//	elaboration *compiler.DesugaredElaboration
 //}
 //
 //var _ Invokable = &VMInvokable{}
 //
-//func NewVMInvokable(vmInstance *vm.VM) *VMInvokable {
+//func NewVMInvokable(
+//	vmInstance *vm.VM,
+//	elaboration *compiler.DesugaredElaboration,
+//) *VMInvokable {
 //	return &VMInvokable{
-//		vmInstance: vmInstance,
-//		Context:    vmInstance.Context(),
+//		vmInstance:  vmInstance,
+//		Context:     vmInstance.Context(),
+//		elaboration: elaboration,
 //	}
 //}
 //
 //func (v *VMInvokable) Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error) {
-//	value, err = v.vmInstance.Invoke(functionName, arguments...)
+//	value, err = v.vmInstance.InvokeExternally(functionName, arguments...)
 //
 //	// Reset the VM after a function invocation,
 //	// so the same vm can be re-used for subsequent invocation.

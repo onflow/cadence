@@ -449,8 +449,6 @@ type InvocationContext interface {
 	InvokeFunction(
 		fn FunctionValue,
 		arguments []Value,
-		invocationArgumentTypes []sema.Type,
-		locationRange LocationRange,
 	) Value
 }
 
