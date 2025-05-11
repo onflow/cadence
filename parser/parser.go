@@ -19,9 +19,7 @@
 package parser
 
 import (
-	"bytes"
 	"os"
-	"strings"
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"

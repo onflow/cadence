@@ -88,7 +88,7 @@ return // After return
 `)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.ReturnStatement{
 					Range: ast.Range{
@@ -117,7 +117,7 @@ return ; // After return
 `)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.ReturnStatement{
 					Range: ast.Range{
@@ -177,7 +177,7 @@ return 1 // After return
 `)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.ReturnStatement{
 					Expression: &ast.IntegerExpression{

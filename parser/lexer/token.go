@@ -41,3 +41,8 @@ func (t Token) Is(ty TokenType) bool {
 func (t Token) Source(input []byte) []byte {
 	return t.Range.Source(input)
 }
+
+func (t Token) Equal(other Token) bool {
+	// ignore comments, since they should not be treated as source code
+	return t.Type == other.Type && t.Range == other.Range && t.SpaceOrError == other.SpaceOrError
+}

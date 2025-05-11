@@ -1167,7 +1167,7 @@ func defineStringExpression() {
 				literal = p.tokenSource(curToken)
 
 				// remove quotation marks if they exist
-				if curToken == startToken {
+				if curToken.Equal(startToken) {
 					literal = literal[1:]
 				}
 

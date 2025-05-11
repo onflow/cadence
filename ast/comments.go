@@ -2,7 +2,7 @@ package ast
 
 import (
 	"bytes"
-	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/common"
 	"strings"
 )
 

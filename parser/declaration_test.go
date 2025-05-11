@@ -83,7 +83,7 @@ var x = /* Before 1 */ 1 // After 1
 `)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.VariableDeclaration{
 					Access:     ast.AccessNotSpecified,
@@ -532,7 +532,7 @@ func TestParseParameterList(t *testing.T) {
 @Int /* After type */ )`)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.ParameterList{
 				Parameters: []*ast.Parameter{
 					{
@@ -683,7 +683,7 @@ c /* After c identifier */ : Int // After param c
 )`)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			&ast.ParameterList{
 				Parameters: []*ast.Parameter{
 					{
@@ -2342,7 +2342,7 @@ func TestParseImportDeclaration(t *testing.T) {
 import "foo" /* After foo */`)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.ImportDeclaration{
 					Identifiers: nil,
@@ -2749,7 +2749,7 @@ event E() // After E
 `)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.CompositeDeclaration{
 					Access:        ast.AccessNotSpecified,
@@ -2936,7 +2936,7 @@ event E() // After E
 )`)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.CompositeDeclaration{
 					Members: ast.NewUnmeteredMembers(
@@ -4021,7 +4021,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.CompositeDeclaration{
 					Members: ast.NewUnmeteredMembers(
@@ -4594,7 +4594,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
     access(all) attachment E for S {}`)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.AttachmentDeclaration{
 					Access: ast.AccessAll,
@@ -5180,7 +5180,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 access(all) struct interface S { }`)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.InterfaceDeclaration{
 					Access:        ast.AccessAll,
@@ -5794,7 +5794,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 		result, errs := testParseProgram(code)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.TransactionDeclaration{
 					Fields:         nil,
@@ -9721,7 +9721,7 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 			access(all) entitlement ABC`)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.EntitlementDeclaration{
 					Access: ast.AccessAll,
@@ -10104,7 +10104,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 			access(all) entitlement mapping M { }`)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.EntitlementMappingDeclaration{
 					Access: ast.AccessAll,
