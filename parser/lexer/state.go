@@ -277,6 +277,8 @@ func numberState(l *lexer) stateFn {
 	return rootState
 }
 
+// Space must be preserved alongside the new comment structs,
+// since some parsing code depends on it.
 type Space struct {
 	ContainsNewline bool
 }

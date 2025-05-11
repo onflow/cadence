@@ -29,6 +29,8 @@ const EOF rune = -1
 const (
 	TokenError TokenType = iota
 	TokenEOF
+	// TokenSpace must be preserved alongside the new comment structs,
+	// since some parsing code depends on it.
 	TokenSpace
 	TokenBinaryIntegerLiteral
 	TokenOctalIntegerLiteral
