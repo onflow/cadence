@@ -2146,6 +2146,8 @@ func TestParseBlockComment(t *testing.T) {
 
 		t.Parallel()
 
+		// TODO(preserve-comments): Extracting comments from operator tokens is a bit difficult,
+		// 	so let's handle this later as it seems a pretty edge case location to add comments.
 		result, errs := testParseExpression(" 1/*test  foo*/+/* bar  */ 2  ")
 		require.Empty(t, errs)
 
