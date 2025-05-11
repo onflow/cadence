@@ -2160,6 +2160,11 @@ func TestParseBlockComment(t *testing.T) {
 						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
 					},
+					Comments: ast.Comments{
+						Trailing: []*ast.Comment{
+							ast.NewComment(nil, []byte("/*test  foo*/")),
+						},
+					},
 				},
 				Right: &ast.IntegerExpression{
 					PositiveLiteral: []byte("2"),
@@ -2168,6 +2173,11 @@ func TestParseBlockComment(t *testing.T) {
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 27, Offset: 27},
 						EndPos:   ast.Position{Line: 1, Column: 27, Offset: 27},
+					},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("/* bar  */")),
+						},
 					},
 				},
 			},
@@ -3012,6 +3022,12 @@ func TestParseLineComment(t *testing.T) {
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 2, Column: 1, Offset: 28},
 					EndPos:   ast.Position{Line: 2, Column: 1, Offset: 28},
+				},
+				Comments: ast.Comments{
+					Leading: []*ast.Comment{
+						ast.NewComment(nil, []byte("//// // this is a comment")),
+					},
+					Trailing: nil,
 				},
 			},
 			Right: &ast.IntegerExpression{

@@ -40,6 +40,7 @@ func NewBlock(memoryGauge common.MemoryGauge, statements []Statement, astRange R
 	return &Block{
 		Statements: statements,
 		Range:      astRange,
+		Comments:   comments,
 	}
 }
 

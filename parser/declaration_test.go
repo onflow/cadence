@@ -2762,9 +2762,6 @@ event E() // After E
 						Leading: []*ast.Comment{
 							ast.NewComment(nil, []byte("// Before E")),
 						},
-						Trailing: []*ast.Comment{
-							ast.NewComment(nil, []byte("// After E")),
-						},
 					},
 					Members: ast.NewUnmeteredMembers(
 						[]ast.Declaration{
@@ -2776,6 +2773,11 @@ event E() // After E
 										Range: ast.Range{
 											StartPos: ast.Position{Offset: 20, Line: 3, Column: 7},
 											EndPos:   ast.Position{Offset: 21, Line: 3, Column: 8},
+										},
+										Comments: ast.Comments{
+											Trailing: []*ast.Comment{
+												ast.NewComment(nil, []byte("// After E")),
+											},
 										},
 									},
 									StartPos: ast.Position{Offset: 20, Line: 3, Column: 7},

@@ -1012,20 +1012,13 @@ func TestParseComments(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("special function declaration", func(t *testing.T) {
+	t.Run("event declaration", func(t *testing.T) {
 		res, errs := ParseDeclarations(
 			nil,
 			[]byte(`
 /// Before MyEvent
 event MyEvent() // After MyEvent
-/// Before prepare
-prepare() {} // After prepare
-/// Before pre
-pre {} // After pre
-/// Before execute
-execute {} // After execute
-/// Before post
-post {} // After post
+/// Ignored
 `),
 			Config{},
 		)
@@ -1033,13 +1026,19 @@ post {} // After post
 		assert.Empty(t, errs)
 		assert.NotNil(t, res)
 
-		event, ok := res[0].(*ast.SpecialFunctionDeclaration)
+		event, ok := res[0].(*ast.CompositeDeclaration)
 		assert.True(t, ok)
 		assert.Equal(t, ast.Comments{
-			Leading:  []*ast.Comment{ast.NewComment(nil, []byte("/// Before MyEvent"))},
+			Leading: []*ast.Comment{ast.NewComment(nil, []byte("/// Before MyEvent"))},
+		}, event.Comments)
+		assert.Equal(t, " Before MyEvent", event.DeclarationDocString())
+
+		decl, ok := event.Members.Declarations()[0].(*ast.SpecialFunctionDeclaration)
+		assert.True(t, ok)
+		assert.Equal(t, ast.Comments{
 			Trailing: []*ast.Comment{ast.NewComment(nil, []byte("// After MyEvent"))},
-		}, event.FunctionDeclaration.Comments)
-		assert.Equal(t, " Before MyEvent", event.FunctionDeclaration.DeclarationDocString())
+		}, decl.FunctionDeclaration.ParameterList.Comments)
+		assert.Equal(t, "", decl.DeclarationDocString())
 
 	})
 
