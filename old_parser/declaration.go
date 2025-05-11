@@ -1052,8 +1052,8 @@ func parseCompositeOrInterfaceDeclaration(
 			identifier,
 			[]*ast.NominalType{},
 			members,
-			docString,
 			declarationRange,
+			ast.Comments{},
 		), nil
 	} else {
 		return ast.NewCompositeDeclaration(
@@ -1155,8 +1155,8 @@ func parseAttachmentDeclaration(
 		baseNominalType,
 		conformances,
 		members,
-		docString,
 		declarationRange,
+		ast.Comments{},
 	), nil
 }
 
