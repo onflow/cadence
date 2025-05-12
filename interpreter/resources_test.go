@@ -94,7 +94,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R2 {
                 let value: String
 
@@ -141,7 +141,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R2 {
                 let value: String
 
@@ -191,7 +191,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R2 {
                 let value: String
 
@@ -238,7 +238,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R2 {
                 let value: String
 
@@ -1852,7 +1852,7 @@ func TestInterpreterResourcePreCondition(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       resource S {}
 
       struct interface Receiver {
@@ -1882,7 +1882,7 @@ func TestInterpreterResourcePostCondition(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       resource S {}
 
       struct interface Receiver {
@@ -1914,7 +1914,7 @@ func TestInterpreterResourcePreAndPostCondition(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       resource S {}
 
       struct interface Receiver {
@@ -1955,7 +1955,7 @@ func TestInterpreterResourceConditionAdditionalParam(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       resource S {}
 
       struct interface Receiver {
@@ -1994,7 +1994,7 @@ func TestInterpreterResourceDoubleWrappedPreCondition(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       resource S {}
 
       struct interface A {
@@ -2035,7 +2035,7 @@ func TestInterpreterResourceDoubleWrappedPostCondition(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       resource S {}
 
       struct interface A {
@@ -2196,7 +2196,7 @@ func TestInterpretResourceFunctionReferenceValidity(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         access(all) resource Vault {
             access(all) fun foo(_ ref: &Vault): &Vault {
                 return ref
@@ -2247,7 +2247,7 @@ func TestInterpretResourceFunctionResourceFunctionValidity(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         access(all) resource Vault {
             access(all) fun foo(_ dummy: Bool): Bool {
                 return dummy
@@ -2290,7 +2290,7 @@ func TestInterpretImplicitDestruction(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 
             resource R {}
 
@@ -3144,7 +3144,7 @@ func TestInterpretResourceLoss(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R {
                 event ResourceDestroyed()
             }
@@ -3505,7 +3505,7 @@ func TestInterpretResourceReferenceInvalidation(t *testing.T) {
 	t.Run("simple use after invalidation", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			resource R {
 				fun zombieFunction() {}
 			}
@@ -3530,7 +3530,7 @@ func TestInterpretResourceReferenceInvalidation(t *testing.T) {
 	t.Run("incomplete optional indirection", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			resource R {
 				fun zombieFunction() {}
 			}
@@ -3562,7 +3562,7 @@ func TestInterpretResourceReferenceInvalidation(t *testing.T) {
 	t.Run("optional indirection", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			resource R {
 				fun zombieFunction() {}
 			}
