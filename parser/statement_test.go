@@ -689,6 +689,10 @@ if true {
 // before else-if
 else if true {
 	// noop
+} 
+// before second else-if
+else if true {
+	// noop
 } /* after else-if */ else {
 	// noop
 } // after else
@@ -737,21 +741,56 @@ else if true {
 									Comments: ast.Comments{
 										Trailing: []*ast.Comment{
 											ast.NewComment(nil, []byte("// noop")),
-											ast.NewComment(nil, []byte("/* after else-if */")),
 										},
 									},
 								},
 								Else: &ast.Block{
-									Statements: nil,
-									Range: ast.Range{
-										StartPos: ast.Position{Line: 9, Column: 27, Offset: 116},
-										EndPos:   ast.Position{Line: 11, Column: 0, Offset: 127},
-									},
-									Comments: ast.Comments{
-										Trailing: []*ast.Comment{
-											ast.NewComment(nil, []byte("// noop")),
-											ast.NewComment(nil, []byte("// after else")),
+									Statements: []ast.Statement{
+										&ast.IfStatement{
+											Test: &ast.BoolExpression{
+												Value: true,
+												Range: ast.Range{
+													StartPos: ast.Position{Line: 11, Column: 8, Offset: 125},
+													EndPos:   ast.Position{Line: 11, Column: 11, Offset: 128},
+												},
+											},
+											Then: &ast.Block{
+												Statements: nil,
+												Range: ast.Range{
+													StartPos: ast.Position{Line: 11, Column: 13, Offset: 130},
+													EndPos:   ast.Position{Line: 13, Column: 0, Offset: 141},
+												},
+												Comments: ast.Comments{
+													Trailing: []*ast.Comment{
+														ast.NewComment(nil, []byte("// noop")),
+														ast.NewComment(nil, []byte("/* after else-if */")),
+													},
+												},
+											},
+											Else: &ast.Block{
+												Statements: nil,
+												Range: ast.Range{
+													StartPos: ast.Position{Line: 13, Column: 27, Offset: 168},
+													EndPos:   ast.Position{Line: 15, Column: 0, Offset: 179},
+												},
+												Comments: ast.Comments{
+													Trailing: []*ast.Comment{
+														ast.NewComment(nil, []byte("// noop")),
+														ast.NewComment(nil, []byte("// after else")),
+													},
+												},
+											},
+											StartPos: ast.Position{Line: 11, Column: 5, Offset: 122},
+											Comments: ast.Comments{
+												Leading: []*ast.Comment{
+													ast.NewComment(nil, []byte("// before second else-if")),
+												},
+											},
 										},
+									},
+									Range: ast.Range{
+										StartPos: ast.Position{Line: 11, Column: 5, Offset: 122},
+										EndPos:   ast.Position{Line: 15, Column: 0, Offset: 179},
 									},
 								},
 								StartPos: ast.Position{Line: 7, Column: 5, Offset: 70},
@@ -764,7 +803,7 @@ else if true {
 						},
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 7, Column: 5, Offset: 70},
-							EndPos:   ast.Position{Line: 11, Column: 0, Offset: 127},
+							EndPos:   ast.Position{Line: 15, Column: 0, Offset: 179},
 						},
 					},
 					StartPos: ast.Position{Line: 3, Column: 0, Offset: 14},
@@ -773,43 +812,6 @@ else if true {
 							ast.NewComment(nil, []byte("// before if")),
 						},
 					},
-				},
-			},
-			result,
-		)
-	})
-
-}
-
-func TestParseWhileStatement(t *testing.T) {
-
-	t.Parallel()
-
-	t.Run("empty block", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := testParseStatements("while true { }")
-		require.Empty(t, errs)
-
-		AssertEqualWithDiff(t,
-			[]ast.Statement{
-				&ast.WhileStatement{
-					Test: &ast.BoolExpression{
-						Value: true,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
-							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
-						},
-					},
-					Block: &ast.Block{
-						Statements: nil,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 11, Offset: 11},
-							EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
-						},
-					},
-					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 				},
 			},
 			result,

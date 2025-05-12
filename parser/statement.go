@@ -347,12 +347,17 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 		if p.isToken(p.current, lexer.TokenIdentifier, KeywordElse) {
 			elseToken := p.current
 			p.nextSemanticToken()
-			p.current.Comments.Leading = elseToken.Comments.PackToList()
+
+			// the parser ignores the `else` token,
+			// so the simplest solution is to attach the comments to the (next) `if` token
+			leadingComments := elseToken.Comments.PackToList()
+			leadingComments = append(leadingComments, p.current.Comments.Leading...)
+			p.current.Comments.Leading = leadingComments
+
 			if p.isToken(p.current, lexer.TokenIdentifier, KeywordIf) {
 				parseNested = true
 			} else {
 				elseBlock, err = parseBlock(p)
-				// TODO(preserve-comments): Update test case with line comments before last else
 				if err != nil {
 					return nil, err
 				}
