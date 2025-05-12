@@ -70,6 +70,9 @@ func TypeQualifier(typ sema.Type) string {
 	case *sema.DictionaryType:
 		return TypeQualifierDictionary
 	case *sema.FunctionType:
+		if typ.IsConstructor {
+			return TypeQualifier(typ.ReturnTypeAnnotation.Type)
+		}
 		return TypeQualifierFunction
 	case *sema.OptionalType:
 		return TypeQualifierOptional

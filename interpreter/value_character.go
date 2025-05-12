@@ -241,22 +241,29 @@ func (v CharacterValue) GetMethod(
 			v,
 			sema.ToStringFunctionType,
 			func(v CharacterValue, invocation Invocation) Value {
-				interpreter := invocation.InvocationContext
+				invocationContext := invocation.InvocationContext
 
-				memoryUsage := common.NewStringMemoryUsage(len(v.Str))
-
-				return NewStringValue(
-					interpreter,
-					memoryUsage,
-					func() string {
-						return v.Str
-					},
-				)
+				return CharacterToString(invocationContext, v)
 			},
 		)
 	}
 
 	return nil
+}
+
+func CharacterToString(
+	invocationContext InvocationContext,
+	v CharacterValue,
+) Value {
+	memoryUsage := common.NewStringMemoryUsage(len(v.Str))
+
+	return NewStringValue(
+		invocationContext,
+		memoryUsage,
+		func() string {
+			return v.Str
+		},
+	)
 }
 
 func (CharacterValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {

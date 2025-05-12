@@ -421,6 +421,8 @@ var StringFunctionType = func() *FunctionType {
 		StringTypeAnnotation,
 	)
 
+	functionType.IsConstructor = true
+
 	addMember := func(member *Member) {
 		if functionType.Members == nil {
 			functionType.Members = &StringMemberOrderedMap{}

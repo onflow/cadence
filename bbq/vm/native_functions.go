@@ -206,6 +206,18 @@ func init() {
 		)
 	}
 
+	// Value constructors
+
+	RegisterFunction(
+		NewNativeFunctionValue(
+			sema.StringType.String(),
+			sema.StringFunctionType,
+			func(_ *Context, _ []bbq.StaticType, _ ...Value) Value {
+				return interpreter.EmptyString
+			},
+		),
+	)
+
 	// Register type-bound functions that are common to many types.
 	registerCommonBuiltinTypeBoundFunctions()
 
@@ -227,14 +239,21 @@ func registerCommonBuiltinTypeBoundFunctions() {
 					func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
 						value := args[receiverIndex]
 
-						// TODO: memory metering
-						return interpreter.NewUnmeteredStringValue(
-							value.MeteredString(
-								context,
-								interpreter.SeenReferences{},
-								EmptyLocationRange,
-							),
-						)
+						// TODO: Maybe introduce a new interface, and call the function of that interface.
+
+						switch value := value.(type) {
+						case interpreter.CharacterValue:
+							return interpreter.CharacterToString(context, value)
+						default:
+							// TODO: memory metering
+							return interpreter.NewUnmeteredStringValue(
+								value.MeteredString(
+									context,
+									interpreter.SeenReferences{},
+									EmptyLocationRange,
+								),
+							)
+						}
 					},
 				),
 			)
