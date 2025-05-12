@@ -21,7 +21,6 @@ package vm
 import (
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -29,25 +28,20 @@ import (
 // members
 
 func init() {
-	typeName := commons.TypeQualifier(sema.MetaType)
+
+	typeName := commons.TypeQualifier(sema.TheAddressType)
 
 	RegisterTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValue(
-			sema.MetaTypeIsSubtypeFunctionName,
-			sema.MetaTypeIsSubtypeFunctionType,
+			sema.ToStringFunctionName,
+			sema.ToStringFunctionType,
 			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
-				typeValue := arguments[receiverIndex].(interpreter.TypeValue)
-
-				otherTypeValue, ok := arguments[typeBoundFunctionArgumentOffset].(interpreter.TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return interpreter.MetaTypeIsSubType(
+				address := arguments[receiverIndex].(interpreter.AddressValue)
+				return interpreter.AddressValueToStringFunction(
 					context,
-					typeValue,
-					otherTypeValue,
+					address,
+					EmptyLocationRange,
 				)
 			},
 		),

@@ -20,6 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -29,7 +30,7 @@ import (
 // members
 
 func init() {
-	accountStorageCapabilitiesTypeName := sema.Account_StorageCapabilitiesType.QualifiedIdentifier()
+	accountStorageCapabilitiesTypeName := commons.TypeQualifier(sema.Account_StorageCapabilitiesType)
 
 	// Account.StorageCapabilities.issue
 	RegisterTypeBoundFunction(

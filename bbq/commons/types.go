@@ -70,6 +70,11 @@ func TypeQualifier(typ sema.Type) string {
 	case *sema.DictionaryType:
 		return TypeQualifierDictionary
 	case *sema.FunctionType:
+		// This is only applicable for types that also has a constructor with the same name.
+		// e.g: `String` type has the `String()` constructor as well as the type on which
+		// functions can be called (`String.Join()`).
+		// Thus, if a constructor function is used as a type-qualifier,
+		// then used the actual type associated with it (i.e: the return type).
 		if typ.IsConstructor {
 			return TypeQualifier(typ.ReturnTypeAnnotation.Type)
 		}

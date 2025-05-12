@@ -669,7 +669,9 @@ func HasToStringFunction(ty Type) bool {
 	case CharacterType:
 		return true
 	default:
-		return IsSubType(ty, NumberType) || IsSubType(ty, TheAddressType) || IsSubType(ty, PathType)
+		return IsSubType(ty, NumberType) ||
+			IsSubType(ty, TheAddressType) ||
+			IsSubType(ty, PathType)
 	}
 }
 

@@ -227,37 +227,7 @@ func init() {
 func registerCommonBuiltinTypeBoundFunctions() {
 	for _, builtinType := range commons.BuiltinTypes {
 		typeQualifier := commons.TypeQualifier(builtinType)
-		includeToStringFunction := sema.HasToStringFunction(builtinType)
 		registerBuiltinTypeBoundFunctions(typeQualifier)
-
-		if includeToStringFunction {
-			RegisterTypeBoundCommonFunction(
-				typeQualifier,
-				NewNativeFunctionValue(
-					sema.ToStringFunctionName,
-					sema.ToStringFunctionType,
-					func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
-						value := args[receiverIndex]
-
-						// TODO: Maybe introduce a new interface, and call the function of that interface.
-
-						switch value := value.(type) {
-						case interpreter.CharacterValue:
-							return interpreter.CharacterToString(context, value)
-						default:
-							// TODO: memory metering
-							return interpreter.NewUnmeteredStringValue(
-								value.MeteredString(
-									context,
-									interpreter.SeenReferences{},
-									EmptyLocationRange,
-								),
-							)
-						}
-					},
-				),
-			)
-		}
 	}
 
 	for _, function := range commonBuiltinTypeBoundFunctions {

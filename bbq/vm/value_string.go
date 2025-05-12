@@ -20,6 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -27,7 +28,7 @@ import (
 // members
 
 func init() {
-	typeName := interpreter.PrimitiveStaticTypeString.String()
+	typeName := commons.TypeQualifier(sema.StringType)
 
 	// Methods on `String` value.
 
@@ -230,9 +231,4 @@ func init() {
 			},
 		),
 	)
-
-	// String constructor
-
-
-
 }

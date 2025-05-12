@@ -173,19 +173,13 @@ func (v AddressValue) GetMethod(
 			v,
 			sema.ToStringFunctionType,
 			func(v AddressValue, invocation Invocation) Value {
-				interpreter := invocation.InvocationContext
+				invocationContext := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
-				memoryUsage := common.NewStringMemoryUsage(
-					safeMul(common.AddressLength, 2, locationRange),
-				)
-
-				return NewStringValue(
-					interpreter,
-					memoryUsage,
-					func() string {
-						return v.String()
-					},
+				return AddressValueToStringFunction(
+					invocationContext,
+					v,
+					locationRange,
 				)
 			},
 		)
@@ -204,6 +198,22 @@ func (v AddressValue) GetMethod(
 	}
 
 	return nil
+}
+
+func AddressValueToStringFunction(
+	invocationContext InvocationContext,
+	v AddressValue,
+	locationRange LocationRange,
+) Value {
+	memoryUsage := common.NewStringMemoryUsage(
+		safeMul(common.AddressLength, 2, locationRange),
+	)
+
+	return NewStringValue(
+		invocationContext,
+		memoryUsage,
+		v.String,
+	)
 }
 
 func (AddressValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {

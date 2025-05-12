@@ -21,7 +21,6 @@ package vm
 import (
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -29,27 +28,31 @@ import (
 // members
 
 func init() {
-	typeName := commons.TypeQualifier(sema.MetaType)
 
-	RegisterTypeBoundFunction(
-		typeName,
-		NewNativeFunctionValue(
-			sema.MetaTypeIsSubtypeFunctionName,
-			sema.MetaTypeIsSubtypeFunctionType,
-			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
-				typeValue := arguments[receiverIndex].(interpreter.TypeValue)
+	for _, pathType := range []sema.Type{
+		sema.PathType,
+		sema.StoragePathType,
+		sema.CapabilityPathType,
+		sema.PublicPathType,
+		sema.PrivatePathType,
+	} {
+		typeName := commons.TypeQualifier(pathType)
 
-				otherTypeValue, ok := arguments[typeBoundFunctionArgumentOffset].(interpreter.TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
+		RegisterTypeBoundFunction(
+			typeName,
+			NewNativeFunctionValue(
+				sema.ToStringFunctionName,
+				sema.ToStringFunctionType,
+				func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+					address := arguments[receiverIndex].(interpreter.PathValue)
+					return interpreter.PathValueToStringFunction(
+						context,
+						address,
+						EmptyLocationRange,
+					)
+				},
+			),
+		)
 
-				return interpreter.MetaTypeIsSubType(
-					context,
-					typeValue,
-					otherTypeValue,
-				)
-			},
-		),
-	)
+	}
 }
