@@ -54,10 +54,6 @@ func (g *testComputationGauge) MeterComputation(usage common.ComputationUsage) e
 	return nil
 }
 
-func (g *testComputationGauge) getComputation(kind common.ComputationKind) uint64 {
-	return g.meter[kind]
-}
-
 func newTestComputationGauge(
 	kinds ...common.ComputationKind,
 ) *testComputationGauge {
