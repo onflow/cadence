@@ -1519,7 +1519,7 @@ func (v *CompositeValue) forEachField(
 ) {
 	err := atreeIterate(func(key atree.Value, atreeValue atree.Value) (resume bool, err error) {
 		value := MustConvertStoredValue(context, atreeValue)
-		checkInvalidatedResourceOrResourceReference(value, locationRange, context)
+		CheckInvalidatedResourceOrResourceReference(value, locationRange, context)
 
 		resume = f(
 			string(key.(StringAtreeValue)),
@@ -1786,7 +1786,7 @@ func forEachAttachment(
 
 	for {
 		// Check that the implicit composite reference was not invalidated during iteration
-		checkInvalidatedResourceOrResourceReference(compositeReference, locationRange, context)
+		CheckInvalidatedResourceOrResourceReference(compositeReference, locationRange, context)
 		key, value, err := iterator.Next()
 		if err != nil {
 			panic(errors.NewExternalError(err))

@@ -252,7 +252,7 @@ func (v *ArrayValue) iterate(
 			// atree.Array iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value
 			elementValue := MustConvertStoredValue(context, element)
-			checkInvalidatedResourceOrResourceReference(elementValue, locationRange, context)
+			CheckInvalidatedResourceOrResourceReference(elementValue, locationRange, context)
 
 			if transferElements {
 				// Each element must be transferred before passing onto the function.
