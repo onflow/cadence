@@ -85,7 +85,7 @@ const (
 	ComputationKindStringToLower
 	ComputationKindStringDecodeHex
 	ComputationKindGraphemesIteration
-	_
+	ComputationKindStringComparison
 	_
 	_
 	_
@@ -108,7 +108,7 @@ const (
 	_
 	_
 	ComputationKindEncodeValue
-	_
+	ComputationKindWordSliceComparison
 	ComputationKindUintParse
 	ComputationKindIntParse
 	ComputationKindBigIntParse

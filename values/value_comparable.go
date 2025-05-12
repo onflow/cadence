@@ -18,10 +18,12 @@
 
 package values
 
+import "github.com/onflow/cadence/common"
+
 type ComparableValue[T Value] interface {
 	EquatableValue
-	Less(other T) bool
-	LessEqual(other T) bool
-	Greater(other T) bool
-	GreaterEqual(other T) bool
+	Less(gauge common.Gauge, other T) bool
+	LessEqual(gauge common.Gauge, other T) bool
+	Greater(gauge common.Gauge, other T) bool
+	GreaterEqual(gauge common.Gauge, other T) bool
 }

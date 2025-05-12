@@ -166,14 +166,25 @@ func (v PathValue) ConformsToStaticType(
 	return true
 }
 
-func (v PathValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
+func (v PathValue) Equal(context ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherPath, ok := other.(PathValue)
 	if !ok {
 		return false
 	}
 
-	return otherPath.Identifier == v.Identifier &&
-		otherPath.Domain == v.Domain
+	if otherPath.Domain != v.Domain {
+		return false
+	}
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindStringComparison,
+			Intensity: uint64(minStringLength(v.Identifier, otherPath.Identifier)),
+		},
+	)
+
+	return otherPath.Identifier == v.Identifier
 }
 
 // HashInput returns a byte slice containing:

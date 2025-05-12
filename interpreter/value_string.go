@@ -155,16 +155,29 @@ func (v *StringValue) MeteredString(context ValueStringContext, _ SeenReferences
 	return v.String()
 }
 
-func (v *StringValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
+func (v *StringValue) meterComparison(gauge common.ComputationGauge, o *StringValue) {
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindStringComparison,
+			Intensity: uint64(minStringLength(v.Str, o.Str)),
+		},
+	)
+}
+
+func (v *StringValue) Equal(context ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		return false
 	}
+
+	v.meterComparison(context, otherString)
+
 	return v.Str == otherString.Str
 }
 
 func (v *StringValue) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
-	otherString, ok := other.(*StringValue)
+	o, ok := other.(*StringValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationLess,
@@ -174,11 +187,13 @@ func (v *StringValue) Less(context ValueComparisonContext, other ComparableValue
 		})
 	}
 
-	return v.Str < otherString.Str
+	v.meterComparison(context, o)
+
+	return v.Str < o.Str
 }
 
 func (v *StringValue) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
-	otherString, ok := other.(*StringValue)
+	o, ok := other.(*StringValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationLessEqual,
@@ -188,11 +203,13 @@ func (v *StringValue) LessEqual(context ValueComparisonContext, other Comparable
 		})
 	}
 
-	return v.Str <= otherString.Str
+	v.meterComparison(context, o)
+
+	return v.Str <= o.Str
 }
 
 func (v *StringValue) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
-	otherString, ok := other.(*StringValue)
+	o, ok := other.(*StringValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationGreater,
@@ -202,11 +219,13 @@ func (v *StringValue) Greater(context ValueComparisonContext, other ComparableVa
 		})
 	}
 
-	return v.Str > otherString.Str
+	v.meterComparison(context, o)
+
+	return v.Str > o.Str
 }
 
 func (v *StringValue) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
-	otherString, ok := other.(*StringValue)
+	o, ok := other.(*StringValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation:     ast.OperationGreaterEqual,
@@ -216,7 +235,9 @@ func (v *StringValue) GreaterEqual(context ValueComparisonContext, other Compara
 		})
 	}
 
-	return v.Str >= otherString.Str
+	v.meterComparison(context, o)
+
+	return v.Str >= o.Str
 }
 
 // HashInput returns a byte slice containing:

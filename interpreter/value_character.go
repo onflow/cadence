@@ -109,43 +109,75 @@ func (v CharacterValue) MeteredString(context ValueStringContext, _ SeenReferenc
 	return v.String()
 }
 
-func (v CharacterValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
+func minStringLength(s1, s2 string) int {
+	if len(s1) > len(s2) {
+		return len(s1)
+	}
+	return len(s2)
+}
+
+func (v CharacterValue) meterComparison(gauge common.ComputationGauge, o CharacterValue) {
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindStringComparison,
+			Intensity: uint64(minStringLength(v.Str, o.Str)),
+		},
+	)
+}
+
+func (v CharacterValue) Equal(context ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		return false
 	}
+
+	v.meterComparison(context, otherChar)
+
 	return v.Str == otherChar.Str
 }
 
-func (v CharacterValue) Less(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) Less(context ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
+
+	v.meterComparison(context, otherChar)
+
 	return v.Str < otherChar.Str
 }
 
-func (v CharacterValue) LessEqual(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) LessEqual(context ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
+
+	v.meterComparison(context, otherChar)
+
 	return v.Str <= otherChar.Str
 }
 
-func (v CharacterValue) Greater(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) Greater(context ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
+
+	v.meterComparison(context, otherChar)
+
 	return v.Str > otherChar.Str
 }
 
-func (v CharacterValue) GreaterEqual(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) GreaterEqual(context ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
+
+	v.meterComparison(context, otherChar)
+
 	return v.Str >= otherChar.Str
 }
 

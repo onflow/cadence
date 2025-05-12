@@ -217,27 +217,28 @@ func (v UFix64Value) Mod(gauge common.MemoryGauge, other UFix64Value) (UFix64Val
 	return v.Minus(gauge, subtrahend)
 }
 
-func (v UFix64Value) Less(other UFix64Value) bool {
+func (v UFix64Value) Less(_ common.Gauge, other UFix64Value) bool {
 	return v < other
 }
 
-func (v UFix64Value) LessEqual(other UFix64Value) bool {
+func (v UFix64Value) LessEqual(_ common.Gauge, other UFix64Value) bool {
 	return v <= other
 }
 
-func (v UFix64Value) Greater(other UFix64Value) bool {
+func (v UFix64Value) Greater(_ common.Gauge, other UFix64Value) bool {
 	return v > other
 }
 
-func (v UFix64Value) GreaterEqual(other UFix64Value) bool {
+func (v UFix64Value) GreaterEqual(_ common.Gauge, other UFix64Value) bool {
 	return v >= other
 }
 
-func (v UFix64Value) Equal(other Value) bool {
+func (v UFix64Value) Equal(_ common.Gauge, other Value) bool {
 	otherUFix64, ok := other.(UFix64Value)
 	if !ok {
 		return false
 	}
+
 	return v == otherUFix64
 }
 

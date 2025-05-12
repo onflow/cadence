@@ -60,16 +60,16 @@ func (v BoolValue) Negate(_ *Interpreter) BoolValue {
 	return BoolValue(values.BoolValue(v).Negate())
 }
 
-func (v BoolValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
+func (v BoolValue) Equal(context ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherBool, ok := other.(BoolValue)
 	if !ok {
 		return false
 	}
 	return values.BoolValue(v).
-		Equal(values.BoolValue(otherBool))
+		Equal(context, values.BoolValue(otherBool))
 }
 
-func (v BoolValue) Less(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v BoolValue) Less(context ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -77,11 +77,11 @@ func (v BoolValue) Less(_ ValueComparisonContext, other ComparableValue, _ Locat
 
 	return BoolValue(
 		values.BoolValue(v).
-			Less(values.BoolValue(o)),
+			Less(context, values.BoolValue(o)),
 	)
 }
 
-func (v BoolValue) LessEqual(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v BoolValue) LessEqual(context ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -89,11 +89,11 @@ func (v BoolValue) LessEqual(_ ValueComparisonContext, other ComparableValue, _ 
 
 	return BoolValue(
 		values.BoolValue(v).
-			LessEqual(values.BoolValue(o)),
+			LessEqual(context, values.BoolValue(o)),
 	)
 }
 
-func (v BoolValue) Greater(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v BoolValue) Greater(context ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -101,11 +101,11 @@ func (v BoolValue) Greater(_ ValueComparisonContext, other ComparableValue, _ Lo
 
 	return BoolValue(
 		values.BoolValue(v).
-			Greater(values.BoolValue(o)),
+			Greater(context, values.BoolValue(o)),
 	)
 }
 
-func (v BoolValue) GreaterEqual(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v BoolValue) GreaterEqual(context ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -113,7 +113,7 @@ func (v BoolValue) GreaterEqual(_ ValueComparisonContext, other ComparableValue,
 
 	return BoolValue(
 		values.BoolValue(v).
-			GreaterEqual(values.BoolValue(o)),
+			GreaterEqual(context, values.BoolValue(o)),
 	)
 }
 
