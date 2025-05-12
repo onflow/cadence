@@ -791,7 +791,7 @@ func (v *StringValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct {
-	},
+},
 	_ bool,
 ) Value {
 	if remove {
@@ -1152,15 +1152,29 @@ func stringFunctionEncodeHex(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	inter := invocation.InvocationContext
+	invocationContext := invocation.InvocationContext
+	locationRange := invocation.LocationRange
+
+	return StringFunctionEncodeHex(
+		invocationContext,
+		argument,
+		locationRange,
+	)
+}
+
+func StringFunctionEncodeHex(
+	invocationContext InvocationContext,
+	argument *ArrayValue,
+	locationRange LocationRange,
+) Value {
 	memoryUsage := common.NewStringMemoryUsage(
-		safeMul(argument.Count(), 2, invocation.LocationRange),
+		safeMul(argument.Count(), 2, locationRange),
 	)
 	return NewStringValue(
-		inter,
+		invocationContext,
 		memoryUsage,
 		func() string {
-			bytes, _ := ByteArrayValueToByteSlice(inter, argument, invocation.LocationRange)
+			bytes, _ := ByteArrayValueToByteSlice(invocationContext, argument, locationRange)
 			return hex.EncodeToString(bytes)
 		},
 	)
@@ -1172,9 +1186,23 @@ func stringFunctionFromUtf8(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	inter := invocation.InvocationContext
+	invocationContext := invocation.InvocationContext
+	locationRange := invocation.LocationRange
+
+	return StringFunctionFromUtf8(
+		invocationContext,
+		argument,
+		locationRange,
+	)
+}
+
+func StringFunctionFromUtf8(
+	invocationContext InvocationContext,
+	argument *ArrayValue,
+	locationRange LocationRange,
+) Value {
 	// naively read the entire byte array before validating
-	buf, err := ByteArrayValueToByteSlice(inter, argument, invocation.LocationRange)
+	buf, err := ByteArrayValueToByteSlice(invocationContext, argument, locationRange)
 
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -1187,8 +1215,8 @@ func stringFunctionFromUtf8(invocation Invocation) Value {
 	memoryUsage := common.NewStringMemoryUsage(len(buf))
 
 	return NewSomeValueNonCopying(
-		inter,
-		NewStringValue(inter, memoryUsage, func() string {
+		invocationContext,
+		NewStringValue(invocationContext, memoryUsage, func() string {
 			return string(buf)
 		}),
 	)
@@ -1200,19 +1228,32 @@ func stringFunctionFromCharacters(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	inter := invocation.InvocationContext
+	invocationContext := invocation.InvocationContext
+	locationRange := invocation.LocationRange
 
+	return StringFunctionFromCharacters(
+		invocationContext,
+		argument,
+		locationRange,
+	)
+}
+
+func StringFunctionFromCharacters(
+	invocationContext InvocationContext,
+	argument *ArrayValue,
+	locationRange LocationRange,
+) Value {
 	// NewStringMemoryUsage already accounts for empty string.
-	common.UseMemory(inter, common.NewStringMemoryUsage(0))
+	common.UseMemory(invocationContext, common.NewStringMemoryUsage(0))
 	var builder strings.Builder
 
 	argument.Iterate(
-		inter,
+		invocationContext,
 		func(element Value) (resume bool) {
 			character := element.(CharacterValue)
 			// Construct directly instead of using NewStringMemoryUsage to avoid
 			// having to decrement by 1 due to double counting of empty string.
-			common.UseMemory(inter,
+			common.UseMemory(invocationContext,
 				common.MemoryUsage{
 					Kind:   common.MemoryKindStringValue,
 					Amount: uint64(len(character.Str)),
@@ -1223,7 +1264,7 @@ func stringFunctionFromCharacters(invocation Invocation) Value {
 			return true
 		},
 		false,
-		invocation.LocationRange,
+		locationRange,
 	)
 
 	return NewUnmeteredStringValue(builder.String())
@@ -1235,27 +1276,41 @@ func stringFunctionJoin(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	inter := invocation.InvocationContext
-
-	switch stringArray.Count() {
-	case 0:
-		return EmptyString
-	case 1:
-		return stringArray.Get(inter, invocation.LocationRange, 0)
-	}
+	invocationContext := invocation.InvocationContext
 
 	separator, ok := invocation.Arguments[1].(*StringValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
+	return StringFunctionJoin(
+		invocationContext,
+		stringArray,
+		separator,
+		invocation.LocationRange,
+	)
+}
+
+func StringFunctionJoin(
+	context InvocationContext,
+	stringArray *ArrayValue,
+	separator *StringValue,
+	locationRange LocationRange,
+) Value {
+	switch stringArray.Count() {
+	case 0:
+		return EmptyString
+	case 1:
+		return stringArray.Get(context, locationRange, 0)
+	}
+
 	// NewStringMemoryUsage already accounts for empty string.
-	common.UseMemory(inter, common.NewStringMemoryUsage(0))
+	common.UseMemory(context, common.NewStringMemoryUsage(0))
 	var builder strings.Builder
 	first := true
 
 	stringArray.Iterate(
-		inter,
+		context,
 		func(element Value) (resume bool) {
 
 			// Meter computation for iterating the array.
@@ -1268,7 +1323,7 @@ func stringFunctionJoin(invocation Invocation) Value {
 			if !first {
 				// Construct directly instead of using NewStringMemoryUsage to avoid
 				// having to decrement by 1 due to double counting of empty string.
-				common.UseMemory(inter,
+				common.UseMemory(context,
 					common.MemoryUsage{
 						Kind:   common.MemoryKindStringValue,
 						Amount: uint64(len(separator.Str)),
@@ -1285,7 +1340,7 @@ func stringFunctionJoin(invocation Invocation) Value {
 
 			// Construct directly instead of using NewStringMemoryUsage to avoid
 			// having to decrement by 1 due to double counting of empty string.
-			common.UseMemory(inter,
+			common.UseMemory(context,
 				common.MemoryUsage{
 					Kind:   common.MemoryKindStringValue,
 					Amount: uint64(len(str.Str)),
@@ -1296,7 +1351,7 @@ func stringFunctionJoin(invocation Invocation) Value {
 			return true
 		},
 		false,
-		invocation.LocationRange,
+		locationRange,
 	)
 
 	return NewUnmeteredStringValue(builder.String())

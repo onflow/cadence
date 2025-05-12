@@ -665,7 +665,12 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 }
 
 func HasToStringFunction(ty Type) bool {
-	return IsSubType(ty, NumberType) || IsSubType(ty, TheAddressType) || IsSubType(ty, PathType)
+	switch ty {
+	case CharacterType:
+		return true
+	default:
+		return IsSubType(ty, NumberType) || IsSubType(ty, TheAddressType) || IsSubType(ty, PathType)
+	}
 }
 
 // OptionalType represents the optional variant of another type
