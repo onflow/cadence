@@ -243,7 +243,7 @@ func (v CharacterValue) GetMethod(
 			func(v CharacterValue, invocation Invocation) Value {
 				invocationContext := invocation.InvocationContext
 
-				return CharacterToString(invocationContext, v)
+				return CharacterValueToString(invocationContext, v)
 			},
 		)
 	}
@@ -251,14 +251,14 @@ func (v CharacterValue) GetMethod(
 	return nil
 }
 
-func CharacterToString(
-	invocationContext InvocationContext,
+func CharacterValueToString(
+	memoryGauge common.MemoryGauge,
 	v CharacterValue,
-) Value {
+) *StringValue {
 	memoryUsage := common.NewStringMemoryUsage(len(v.Str))
 
 	return NewStringValue(
-		invocationContext,
+		memoryGauge,
 		memoryUsage,
 		func() string {
 			return v.Str
