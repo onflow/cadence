@@ -308,7 +308,7 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 	var ifStatements []*ast.IfStatement
 
 	for {
-		startPos := p.current.StartPos
+		startToken := p.current
 		p.nextSemanticToken()
 
 		var variableDeclaration *ast.VariableDeclaration
@@ -345,11 +345,14 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 
 		p.skipSpace()
 		if p.isToken(p.current, lexer.TokenIdentifier, KeywordElse) {
+			elseToken := p.current
 			p.nextSemanticToken()
+			p.current.Comments.Leading = elseToken.Comments.PackToList()
 			if p.isToken(p.current, lexer.TokenIdentifier, KeywordIf) {
 				parseNested = true
 			} else {
 				elseBlock, err = parseBlock(p)
+				// TODO(preserve-comments): Update test case with line comments before last else
 				if err != nil {
 					return nil, err
 				}
@@ -371,7 +374,10 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 			test,
 			thenBlock,
 			elseBlock,
-			startPos,
+			startToken.StartPos,
+			ast.Comments{
+				Leading: startToken.Comments.PackToList(),
+			},
 		)
 
 		if variableDeclaration != nil {

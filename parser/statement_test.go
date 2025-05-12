@@ -677,6 +677,108 @@ func TestParseIfStatement(t *testing.T) {
 		)
 	})
 
+	t.Run("empty then, if-else, else, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseStatements(`
+// before if
+if true {
+	// noop
+} // after if
+// before else-if
+else if true {
+	// noop
+} /* after else-if */ else {
+	// noop
+} // after else
+`)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.IfStatement{
+					Test: &ast.BoolExpression{
+						Value: true,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 3, Column: 3, Offset: 17},
+							EndPos:   ast.Position{Line: 3, Column: 6, Offset: 20},
+						},
+					},
+					Then: &ast.Block{
+						Statements: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 3, Column: 8, Offset: 22},
+							EndPos:   ast.Position{Line: 5, Column: 0, Offset: 33},
+						},
+						Comments: ast.Comments{
+							Trailing: []*ast.Comment{
+								ast.NewComment(nil, []byte("// noop")),
+								ast.NewComment(nil, []byte("// after if")),
+							},
+						},
+					},
+					Else: &ast.Block{
+						Statements: []ast.Statement{
+							&ast.IfStatement{
+								Test: &ast.BoolExpression{
+									Value: true,
+									Range: ast.Range{
+										StartPos: ast.Position{Line: 7, Column: 8, Offset: 73},
+										EndPos:   ast.Position{Line: 7, Column: 11, Offset: 76},
+									},
+								},
+								Then: &ast.Block{
+									Statements: nil,
+									Range: ast.Range{
+										StartPos: ast.Position{Line: 7, Column: 13, Offset: 78},
+										EndPos:   ast.Position{Line: 9, Column: 0, Offset: 89},
+									},
+									Comments: ast.Comments{
+										Trailing: []*ast.Comment{
+											ast.NewComment(nil, []byte("// noop")),
+											ast.NewComment(nil, []byte("/* after else-if */")),
+										},
+									},
+								},
+								Else: &ast.Block{
+									Statements: nil,
+									Range: ast.Range{
+										StartPos: ast.Position{Line: 9, Column: 27, Offset: 116},
+										EndPos:   ast.Position{Line: 11, Column: 0, Offset: 127},
+									},
+									Comments: ast.Comments{
+										Trailing: []*ast.Comment{
+											ast.NewComment(nil, []byte("// noop")),
+											ast.NewComment(nil, []byte("// after else")),
+										},
+									},
+								},
+								StartPos: ast.Position{Line: 7, Column: 5, Offset: 70},
+								Comments: ast.Comments{
+									Leading: []*ast.Comment{
+										ast.NewComment(nil, []byte("// before else-if")),
+									},
+								},
+							},
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 7, Column: 5, Offset: 70},
+							EndPos:   ast.Position{Line: 11, Column: 0, Offset: 127},
+						},
+					},
+					StartPos: ast.Position{Line: 3, Column: 0, Offset: 14},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// before if")),
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
 }
 
 func TestParseWhileStatement(t *testing.T) {

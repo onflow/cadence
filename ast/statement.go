@@ -209,6 +209,8 @@ type IfStatement struct {
 	Then     *Block
 	Else     *Block
 	StartPos Position `json:"-"`
+	// Comments.Leading comments that appear before `if` keyword
+	Comments Comments
 }
 
 var _ Element = &IfStatement{}
@@ -220,6 +222,7 @@ func NewIfStatement(
 	thenBlock *Block,
 	elseBlock *Block,
 	startPos Position,
+	comments Comments,
 ) *IfStatement {
 	common.UseMemory(gauge, common.IfStatementMemoryUsage)
 	return &IfStatement{
@@ -227,6 +230,7 @@ func NewIfStatement(
 		Then:     thenBlock,
 		Else:     elseBlock,
 		StartPos: startPos,
+		Comments: comments,
 	}
 }
 
