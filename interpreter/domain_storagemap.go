@@ -34,8 +34,20 @@ type DomainStorageMap struct {
 }
 
 // NewDomainStorageMap creates new domain storage map for given address.
-func NewDomainStorageMap(memoryGauge common.MemoryGauge, storage atree.SlabStorage, address atree.Address) *DomainStorageMap {
-	common.UseMemory(memoryGauge, common.StorageMapMemoryUsage)
+func NewDomainStorageMap(
+	gauge common.Gauge,
+	storage atree.SlabStorage,
+	address atree.Address,
+) *DomainStorageMap {
+	common.UseMemory(gauge, common.StorageMapMemoryUsage)
+
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapConstruction,
+			Intensity: 1,
+		},
+	)
 
 	orderedMap, err := atree.NewMap(
 		storage,
@@ -56,7 +68,21 @@ func NewDomainStorageMap(memoryGauge common.MemoryGauge, storage atree.SlabStora
 // This function is only used with legacy domain registers for unmigrated accounts.
 // For migrated accounts, NewDomainStorageMapWithAtreeValue() is used to load
 // domain storage map as an element of AccountStorageMap.
-func NewDomainStorageMapWithRootID(storage atree.SlabStorage, slabID atree.SlabID) *DomainStorageMap {
+func NewDomainStorageMapWithRootID(
+	gauge common.Gauge,
+	storage atree.SlabStorage,
+	slabID atree.SlabID,
+) *DomainStorageMap {
+	common.UseMemory(gauge, common.StorageMapMemoryUsage)
+
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapConstruction,
+			Intensity: 1,
+		},
+	)
+
 	orderedMap, err := atree.NewMapWithRootID(
 		storage,
 		slabID,
@@ -110,7 +136,16 @@ func NewDomainStorageMapWithAtreeValue(value atree.Value) *DomainStorageMap {
 }
 
 // ValueExists returns true if the given key exists in the storage map.
-func (s *DomainStorageMap) ValueExists(key StorageMapKey) bool {
+func (s *DomainStorageMap) ValueExists(gauge common.ComputationGauge, key StorageMapKey) bool {
+
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapHas,
+			Intensity: s.orderedMap.Count(),
+		},
+	)
+
 	exists, err := s.orderedMap.Has(
 		key.AtreeValueCompare,
 		key.AtreeValueHashInput,
@@ -125,7 +160,16 @@ func (s *DomainStorageMap) ValueExists(key StorageMapKey) bool {
 
 // ReadValue returns the value for the given key.
 // Returns nil if the key does not exist.
-func (s *DomainStorageMap) ReadValue(gauge common.MemoryGauge, key StorageMapKey) Value {
+func (s *DomainStorageMap) ReadValue(gauge common.Gauge, key StorageMapKey) Value {
+
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapGet,
+			Intensity: 1,
+		},
+	)
+
 	storedValue, err := s.orderedMap.Get(
 		key.AtreeValueCompare,
 		key.AtreeValueHashInput,
@@ -160,6 +204,14 @@ func (s *DomainStorageMap) WriteValue(context ValueTransferContext, key StorageM
 func (s *DomainStorageMap) SetValue(context ValueTransferContext, key StorageMapKey, value atree.Value) (existed bool) {
 	context.RecordStorageMutation()
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapSet,
+			Intensity: 1,
+		},
+	)
+
 	existingStorable, err := s.orderedMap.Set(
 		key.AtreeValueCompare,
 		key.AtreeValueHashInput,
@@ -186,6 +238,14 @@ func (s *DomainStorageMap) SetValue(context ValueTransferContext, key StorageMap
 // RemoveValue removes a value in the storage map, if it exists.
 func (s *DomainStorageMap) RemoveValue(context ValueRemoveContext, key StorageMapKey) (existed bool) {
 	context.RecordStorageMutation()
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapRemove,
+			Intensity: 1,
+		},
+	)
 
 	existingKeyStorable, existingValueStorable, err := s.orderedMap.Remove(
 		key.AtreeValueCompare,
@@ -287,7 +347,7 @@ func (s *DomainStorageMap) Inlined() bool {
 
 // Iterator returns an iterator (StorageMapIterator),
 // which allows iterating over the keys and values of the storage map
-func (s *DomainStorageMap) Iterator(gauge common.MemoryGauge) DomainStorageMapIterator {
+func (s *DomainStorageMap) Iterator() DomainStorageMapIterator {
 	mapIterator, err := s.orderedMap.Iterator(
 		StorageMapKeyAtreeValueComparator,
 		StorageMapKeyAtreeValueHashInput,
@@ -297,7 +357,6 @@ func (s *DomainStorageMap) Iterator(gauge common.MemoryGauge) DomainStorageMapIt
 	}
 
 	return DomainStorageMapIterator{
-		gauge:       gauge,
 		mapIterator: mapIterator,
 		storage:     s.orderedMap.Storage,
 	}
@@ -305,14 +364,22 @@ func (s *DomainStorageMap) Iterator(gauge common.MemoryGauge) DomainStorageMapIt
 
 // DomainStorageMapIterator is an iterator over DomainStorageMap
 type DomainStorageMapIterator struct {
-	gauge       common.MemoryGauge
 	mapIterator atree.MapIterator
 	storage     atree.SlabStorage
 }
 
 // Next returns the next key and value of the storage map iterator.
 // If there is no further key-value pair, (nil, nil) is returned.
-func (i DomainStorageMapIterator) Next() (atree.Value, Value) {
+func (i DomainStorageMapIterator) Next(gauge common.Gauge) (atree.Value, Value) {
+
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapReadIteration,
+			Intensity: 1,
+		},
+	)
+
 	k, v, err := i.mapIterator.Next()
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -325,14 +392,23 @@ func (i DomainStorageMapIterator) Next() (atree.Value, Value) {
 	// NOTE: Key is just an atree.Value, not an interpreter.Value,
 	// so do not need (can) convert
 
-	value := MustConvertStoredValue(i.gauge, v)
+	value := MustConvertStoredValue(gauge, v)
 
 	return k, value
 }
 
 // NextKey returns the next key of the storage map iterator.
 // If there is no further key, "" is returned.
-func (i DomainStorageMapIterator) NextKey() atree.Value {
+func (i DomainStorageMapIterator) NextKey(gauge common.Gauge) atree.Value {
+
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapReadIteration,
+			Intensity: 1,
+		},
+	)
+
 	k, err := i.mapIterator.NextKey()
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -343,7 +419,16 @@ func (i DomainStorageMapIterator) NextKey() atree.Value {
 
 // NextValue returns the next value in the storage map iterator.
 // If there is no further value, nil is returned.
-func (i DomainStorageMapIterator) NextValue() Value {
+func (i DomainStorageMapIterator) NextValue(gauge common.Gauge) Value {
+
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapReadIteration,
+			Intensity: 1,
+		},
+	)
+
 	v, err := i.mapIterator.NextValue()
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -353,5 +438,5 @@ func (i DomainStorageMapIterator) NextValue() Value {
 		return nil
 	}
 
-	return MustConvertStoredValue(i.gauge, v)
+	return MustConvertStoredValue(gauge, v)
 }

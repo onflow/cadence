@@ -34,11 +34,19 @@ type AccountStorageMap struct {
 
 // NewAccountStorageMap creates account storage map.
 func NewAccountStorageMap(
-	memoryGauge common.MemoryGauge,
+	gauge common.Gauge,
 	storage atree.SlabStorage,
 	address atree.Address,
 ) *AccountStorageMap {
-	common.UseMemory(memoryGauge, common.StorageMapMemoryUsage)
+	common.UseMemory(gauge, common.StorageMapMemoryUsage)
+
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapConstruction,
+			Intensity: 1,
+		},
+	)
 
 	orderedMap, err := atree.NewMap(
 		storage,
@@ -57,9 +65,12 @@ func NewAccountStorageMap(
 
 // NewAccountStorageMapWithRootID loads existing account storage map with given atree SlabID.
 func NewAccountStorageMapWithRootID(
+	gauge common.Gauge,
 	storage atree.SlabStorage,
 	slabID atree.SlabID,
 ) *AccountStorageMap {
+	common.UseMemory(gauge, common.StorageMapMemoryUsage)
+
 	orderedMap, err := atree.NewMapWithRootID(
 		storage,
 		slabID,
@@ -75,8 +86,16 @@ func NewAccountStorageMapWithRootID(
 }
 
 // DomainExists returns true if the given domain exists in the account storage map.
-func (s *AccountStorageMap) DomainExists(domain common.StorageDomain) bool {
+func (s *AccountStorageMap) DomainExists(gauge common.ComputationGauge, domain common.StorageDomain) bool {
 	key := Uint64StorageMapKey(domain)
+
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapHas,
+			Intensity: s.orderedMap.Count(),
+		},
+	)
 
 	exists, err := s.orderedMap.Has(
 		key.AtreeValueCompare,
@@ -94,12 +113,20 @@ func (s *AccountStorageMap) DomainExists(domain common.StorageDomain) bool {
 // If createIfNotExists is true and domain doesn't exist, new domain storage map
 // is created and inserted into account storage map with given domain as key.
 func (s *AccountStorageMap) GetDomain(
-	gauge common.MemoryGauge,
+	gauge common.Gauge,
 	storageMutationTracker StorageMutationTracker,
 	domain common.StorageDomain,
 	createIfNotExists bool,
 ) *DomainStorageMap {
 	key := Uint64StorageMapKey(domain)
+
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapGet,
+			Intensity: 1,
+		},
+	)
 
 	storedValue, err := s.orderedMap.Get(
 		key.AtreeValueCompare,
@@ -127,7 +154,7 @@ func (s *AccountStorageMap) GetDomain(
 
 // NewDomain creates new domain storage map and inserts it to AccountStorageMap with given domain as key.
 func (s *AccountStorageMap) NewDomain(
-	gauge common.MemoryGauge,
+	gauge common.Gauge,
 	storageMutationTracker StorageMutationTracker,
 	domain common.StorageDomain,
 ) *DomainStorageMap {
@@ -136,6 +163,14 @@ func (s *AccountStorageMap) NewDomain(
 	domainStorageMap := NewDomainStorageMap(gauge, s.orderedMap.Storage, s.orderedMap.Address())
 
 	key := Uint64StorageMapKey(domain)
+
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapSet,
+			Intensity: 1,
+		},
+	)
 
 	existingStorable, err := s.orderedMap.Set(
 		key.AtreeValueCompare,
@@ -183,6 +218,14 @@ func (s *AccountStorageMap) setDomain(
 
 	key := Uint64StorageMapKey(domain)
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapSet,
+			Intensity: s.orderedMap.Count(),
+		},
+	)
+
 	existingValueStorable, err := s.orderedMap.Set(
 		key.AtreeValueCompare,
 		key.AtreeValueHashInput,
@@ -219,6 +262,14 @@ func (s *AccountStorageMap) removeDomain(context ValueTransferContext, domain co
 	context.RecordStorageMutation()
 
 	key := Uint64StorageMapKey(domain)
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapRemove,
+			Intensity: 1,
+		},
+	)
 
 	existingKeyStorable, existingValueStorable, err := s.orderedMap.Remove(
 		key.AtreeValueCompare,
@@ -269,12 +320,23 @@ func (s *AccountStorageMap) Count() uint64 {
 }
 
 // Domains returns a set of domains in account storage map
-func (s *AccountStorageMap) Domains() map[common.StorageDomain]struct{} {
+func (s *AccountStorageMap) Domains(gauge common.Gauge) map[common.StorageDomain]struct{} {
+
 	domains := make(map[common.StorageDomain]struct{})
+
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapReadIteration,
+			Intensity: s.orderedMap.Count(),
+		},
+	)
 
 	iterator := s.Iterator()
 
 	for {
+		// Computation was already metered above
+
 		k, err := iterator.mapIterator.NextKey()
 		if err != nil {
 			panic(errors.NewExternalError(err))
@@ -316,7 +378,16 @@ type AccountStorageMapIterator struct {
 
 // Next returns the next domain and domain storage map.
 // If there is no more domain, (common.StorageDomainUnknown, nil) is returned.
-func (i *AccountStorageMapIterator) Next() (common.StorageDomain, *DomainStorageMap) {
+func (i *AccountStorageMapIterator) Next(gauge common.ComputationGauge) (common.StorageDomain, *DomainStorageMap) {
+
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapReadIteration,
+			Intensity: 1,
+		},
+	)
+
 	k, v, err := i.mapIterator.Next()
 	if err != nil {
 		panic(errors.NewExternalError(err))

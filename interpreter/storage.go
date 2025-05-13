@@ -172,22 +172,22 @@ func (k StorageKey) IsLess(o StorageKey) bool {
 type InMemoryStorage struct {
 	*atree.BasicSlabStorage
 	DomainStorageMaps map[StorageDomainKey]*DomainStorageMap
-	memoryGauge       common.MemoryGauge
+	gauge             common.Gauge
 }
 
 var _ Storage = InMemoryStorage{}
 
-func NewInMemoryStorage(memoryGauge common.MemoryGauge) InMemoryStorage {
+func NewInMemoryStorage(gauge common.Gauge) InMemoryStorage {
 	decodeStorable := func(
 		decoder *cbor.StreamDecoder,
 		storableSlabStorageID atree.SlabID,
 		inlinedExtraData []atree.ExtraData,
 	) (atree.Storable, error) {
-		return DecodeStorable(decoder, storableSlabStorageID, inlinedExtraData, memoryGauge)
+		return DecodeStorable(decoder, storableSlabStorageID, inlinedExtraData, gauge)
 	}
 
 	decodeTypeInfo := func(decoder *cbor.StreamDecoder) (atree.TypeInfo, error) {
-		return DecodeTypeInfo(decoder, memoryGauge)
+		return DecodeTypeInfo(decoder, gauge)
 	}
 
 	slabStorage := atree.NewBasicSlabStorage(
@@ -200,7 +200,7 @@ func NewInMemoryStorage(memoryGauge common.MemoryGauge) InMemoryStorage {
 	return InMemoryStorage{
 		BasicSlabStorage:  slabStorage,
 		DomainStorageMaps: make(map[StorageDomainKey]*DomainStorageMap),
-		memoryGauge:       memoryGauge,
+		gauge:             gauge,
 	}
 }
 
@@ -212,10 +212,10 @@ func (i InMemoryStorage) GetDomainStorageMap(
 ) (
 	domainStorageMap *DomainStorageMap,
 ) {
-	key := NewStorageDomainKey(i.memoryGauge, address, domain)
+	key := NewStorageDomainKey(i.gauge, address, domain)
 	domainStorageMap = i.DomainStorageMaps[key]
 	if domainStorageMap == nil && createIfNotExists {
-		domainStorageMap = NewDomainStorageMap(i.memoryGauge, i, atree.Address(address))
+		domainStorageMap = NewDomainStorageMap(i.gauge, i, atree.Address(address))
 		i.DomainStorageMaps[key] = domainStorageMap
 	}
 	return domainStorageMap

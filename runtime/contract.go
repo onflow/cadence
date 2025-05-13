@@ -26,7 +26,7 @@ import (
 
 type contractLoader interface {
 	interpreter.StorageMutationTracker
-	common.MemoryGauge
+	common.Gauge
 }
 
 func loadContractValue(

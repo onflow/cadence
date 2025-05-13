@@ -98,21 +98,21 @@ func NewPersistentSlabStorage(
 
 func NewStorage(
 	ledger atree.Ledger,
-	memoryGauge common.MemoryGauge,
+	gauge common.Gauge,
 	config StorageConfig,
 ) *Storage {
-	persistentSlabStorage := NewPersistentSlabStorage(ledger, memoryGauge)
+	persistentSlabStorage := NewPersistentSlabStorage(ledger, gauge)
 
 	accountStorage := NewAccountStorage(
 		ledger,
 		persistentSlabStorage,
-		memoryGauge,
+		gauge,
 	)
 
 	return &Storage{
 		Ledger:                ledger,
 		PersistentSlabStorage: persistentSlabStorage,
-		memoryGauge:           memoryGauge,
+		memoryGauge:           gauge,
 		Config:                config,
 		AccountStorage:        accountStorage,
 	}

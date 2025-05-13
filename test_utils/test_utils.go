@@ -358,7 +358,7 @@ func ParseCheckAndInterpretWithLogs(
 func ParseCheckAndInterpretWithMemoryMetering(
 	t testing.TB,
 	code string,
-	memoryGauge common.MemoryGauge,
+	gauge common.Gauge,
 ) *interpreter.Interpreter {
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -374,7 +374,7 @@ func ParseCheckAndInterpretWithMemoryMetering(
 				},
 			},
 		},
-		memoryGauge,
+		gauge,
 	)
 	require.NoError(t, err)
 	return inter
@@ -384,7 +384,7 @@ func ParseCheckAndInterpretWithOptionsAndMemoryMetering(
 	t testing.TB,
 	code string,
 	options ParseCheckAndInterpretOptions,
-	memoryGauge common.MemoryGauge,
+	gauge common.Gauge,
 ) (
 	inter *interpreter.Interpreter,
 	err error,
@@ -392,13 +392,13 @@ func ParseCheckAndInterpretWithOptionsAndMemoryMetering(
 
 	// Atree validation should be disabled for memory metering tests.
 	// Otherwise, validation may also affect the memory consumption.
-	enableAtreeValidations := memoryGauge == nil
+	enableAtreeValidations := gauge == nil
 
 	return parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
 		t,
 		code,
 		options,
-		memoryGauge,
+		gauge,
 		enableAtreeValidations,
 	)
 }
@@ -407,7 +407,7 @@ func parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
 	t testing.TB,
 	code string,
 	options ParseCheckAndInterpretOptions,
-	memoryGauge common.MemoryGauge,
+	gauge common.Gauge,
 	enableAtreeValidations bool,
 ) (
 	inter *interpreter.Interpreter,
@@ -419,7 +419,7 @@ func parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
 		sema_utils.ParseAndCheckOptions{
 			Config: options.CheckerConfig,
 		},
-		memoryGauge,
+		gauge,
 	)
 
 	if options.HandleCheckerError != nil {
@@ -458,11 +458,16 @@ func parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
 		}
 	}
 	if config.Storage == nil {
-		config.Storage = interpreter.NewInMemoryStorage(memoryGauge)
+		config.Storage = interpreter.NewInMemoryStorage(gauge)
 	}
 
-	if memoryGauge != nil && config.MemoryGauge == nil {
-		config.MemoryGauge = memoryGauge
+	if gauge != nil {
+		if config.MemoryGauge == nil {
+			config.MemoryGauge = gauge
+		}
+		if config.ComputationGauge == nil {
+			config.ComputationGauge = gauge
+		}
 	}
 
 	inter, err = interpreter.NewInterpreter(

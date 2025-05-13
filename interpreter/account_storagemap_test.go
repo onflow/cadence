@@ -57,7 +57,7 @@ func TestAccountStorageMapDomainExists(t *testing.T) {
 		require.Equal(t, uint64(0), accountStorageMap.Count())
 
 		for _, domain := range common.AllStorageDomains {
-			exist := accountStorageMap.DomainExists(domain)
+			exist := accountStorageMap.DomainExists(nil, domain)
 			require.False(t, exist)
 		}
 
@@ -95,7 +95,7 @@ func TestAccountStorageMapDomainExists(t *testing.T) {
 
 		// Check if domain exists
 		for _, domain := range common.AllStorageDomains {
-			exist := accountStorageMap.DomainExists(domain)
+			exist := accountStorageMap.DomainExists(nil, domain)
 			require.Equal(t, slices.Contains(existingDomains, domain), exist)
 		}
 
@@ -542,7 +542,7 @@ func TestAccountStorageMapIterator(t *testing.T) {
 
 		// Test calling Next() twice on empty account storage map.
 		for range 2 {
-			domain, domainStorageMap := iterator.Next()
+			domain, domainStorageMap := iterator.Next(nil)
 			require.Empty(t, domain)
 			require.Nil(t, domainStorageMap)
 		}
@@ -588,7 +588,7 @@ func TestAccountStorageMapIterator(t *testing.T) {
 
 		domainCount := 0
 		for {
-			domain, domainStorageMap := iterator.Next()
+			domain, domainStorageMap := iterator.Next(nil)
 			if domain == common.StorageDomainUnknown {
 				break
 			}
@@ -602,7 +602,7 @@ func TestAccountStorageMapIterator(t *testing.T) {
 		}
 
 		// Test calling Next() after iterator reaches the end.
-		domain, domainStorageMap := iterator.Next()
+		domain, domainStorageMap := iterator.Next(nil)
 		require.Equal(t, common.StorageDomainUnknown, domain)
 		require.Nil(t, domainStorageMap)
 
@@ -633,7 +633,7 @@ func TestAccountStorageMapDomains(t *testing.T) {
 		require.NotNil(t, accountStorageMap)
 		require.Equal(t, uint64(0), accountStorageMap.Count())
 
-		domains := accountStorageMap.Domains()
+		domains := accountStorageMap.Domains(nil)
 		require.Equal(t, 0, len(domains))
 
 		CheckAtreeStorageHealth(t, storage, []atree.SlabID{accountStorageMap.SlabID()})
@@ -666,7 +666,7 @@ func TestAccountStorageMapDomains(t *testing.T) {
 		const count = 10
 		accountStorageMap, _ := createAccountStorageMap(storage, inter, address, existingDomains, count, random)
 
-		domains := accountStorageMap.Domains()
+		domains := accountStorageMap.Domains(nil)
 		require.Equal(t, len(existingDomains), len(domains))
 
 		for _, domain := range existingDomains {
@@ -830,7 +830,7 @@ func checkAccountStorageMapDataWithRawData(
 
 	inter := NewTestInterpreterWithStorage(tb, storage)
 
-	loadedAccountStorageMap := interpreter.NewAccountStorageMapWithRootID(storage, rootSlabID)
+	loadedAccountStorageMap := interpreter.NewAccountStorageMapWithRootID(nil, storage, rootSlabID)
 	require.Equal(tb, uint64(len(expectedAccountValues)), loadedAccountStorageMap.Count())
 	require.Equal(tb, rootSlabID, loadedAccountStorageMap.SlabID())
 
@@ -851,7 +851,7 @@ func checkAccountStorageMapData(
 	domainCount := 0
 	iter := accountStorageMap.Iterator()
 	for {
-		domain, domainStorageMap := iter.Next()
+		domain, domainStorageMap := iter.Next(nil)
 		if domain == common.StorageDomainUnknown {
 			break
 		}
@@ -877,9 +877,9 @@ func checkDomainStorageMapData(
 	require.Equal(tb, uint64(len(expectedDomainValues)), domainStorageMap.Count())
 
 	count := 0
-	iter := domainStorageMap.Iterator(nil)
+	iter := domainStorageMap.Iterator()
 	for {
-		k, v := iter.Next()
+		k, v := iter.Next(nil)
 		if k == nil {
 			break
 		}

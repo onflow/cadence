@@ -2720,7 +2720,7 @@ func StoredValueExists(
 	if accountStorage == nil {
 		return false
 	}
-	return accountStorage.ValueExists(identifier)
+	return accountStorage.ValueExists(context, identifier)
 }
 
 func (interpreter *Interpreter) ReadStored(
@@ -4169,13 +4169,13 @@ func domainPaths(context StorageContext, address common.Address, domain common.P
 	if storageMap == nil {
 		return []Value{}
 	}
-	iterator := storageMap.Iterator(context)
+	iterator := storageMap.Iterator()
 	var paths []Value
 
 	count := storageMap.Count()
 	if count > 0 {
 		paths = make([]Value, 0, count)
-		for key := iterator.NextKey(); key != nil; key = iterator.NextKey() {
+		for key := iterator.NextKey(context); key != nil; key = iterator.NextKey(context) {
 			// TODO: unfortunately, the iterator only returns an atree.Value, not a StorageMapKey
 			identifier := string(key.(StringAtreeValue))
 			path := NewPathValue(context, domain, identifier)
@@ -4288,7 +4288,7 @@ func AccountStorageIterate(
 		// if nothing is stored, no iteration is required
 		return Void
 	}
-	storageIterator := storageMap.Iterator(invocationContext)
+	storageIterator := storageMap.Iterator()
 
 	inIteration := invocationContext.InStorageIteration()
 	invocationContext.SetInStorageIteration(true)
@@ -4296,7 +4296,7 @@ func AccountStorageIterate(
 		invocationContext.SetInStorageIteration(inIteration)
 	}()
 
-	for key, value := storageIterator.Next(); key != nil && value != nil; key, value = storageIterator.Next() {
+	for key, value := storageIterator.Next(invocationContext); key != nil && value != nil; key, value = storageIterator.Next(invocationContext) {
 
 		staticType := value.StaticType(invocationContext)
 

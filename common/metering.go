@@ -74,6 +74,20 @@ func NewCombinedGauge(
 	}
 }
 
+func (g CombinedGauge) MeterMemory(usage MemoryUsage) error {
+	if g.MemoryGauge == nil {
+		return nil
+	}
+	return g.MemoryGauge.MeterMemory(usage)
+}
+
+func (g CombinedGauge) MeterComputation(usage ComputationUsage) error {
+	if g.ComputationGauge == nil {
+		return nil
+	}
+	return g.ComputationGauge.MeterComputation(usage)
+}
+
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
 	if gauge == nil || usage.Amount == 0 {
 		return

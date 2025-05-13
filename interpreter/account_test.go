@@ -685,9 +685,9 @@ func testAccountWithErrorHandlerWithCompiler(
 		accountValues := make(map[storageKey]interpreter.Value)
 
 		for storageMapKey, accountStorage := range storage.(interpreter.InMemoryStorage).DomainStorageMaps {
-			iterator := accountStorage.Iterator(invokable)
+			iterator := accountStorage.Iterator()
 			for {
-				key, value := iterator.Next()
+				key, value := iterator.Next(invokable)
 				if key == nil {
 					break
 				}

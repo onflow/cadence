@@ -31,7 +31,7 @@ import (
 type AccountStorage struct {
 	ledger      atree.Ledger
 	slabStorage atree.SlabStorage
-	memoryGauge common.MemoryGauge
+	gauge       common.Gauge
 
 	// cachedAccountStorageMaps is a cache of account storage maps.
 	cachedAccountStorageMaps map[common.Address]*interpreter.AccountStorageMap
@@ -44,12 +44,12 @@ type AccountStorage struct {
 func NewAccountStorage(
 	ledger atree.Ledger,
 	slabStorage atree.SlabStorage,
-	memoryGauge common.MemoryGauge,
+	gauge common.Gauge,
 ) *AccountStorage {
 	return &AccountStorage{
 		ledger:      ledger,
 		slabStorage: slabStorage,
-		memoryGauge: memoryGauge,
+		gauge:       gauge,
 	}
 }
 
@@ -69,7 +69,7 @@ func (s *AccountStorage) GetDomainStorageMap(
 
 	if accountStorageMap != nil {
 		domainStorageMap = accountStorageMap.GetDomain(
-			s.memoryGauge,
+			s.gauge,
 			storageMutationTracker,
 			domain,
 			createIfNotExists,
@@ -107,6 +107,7 @@ func (s *AccountStorage) getAccountStorageMap(
 
 	var err error
 	accountStorageMap, err = getAccountStorageMapFromRegister(
+		s.gauge,
 		s.ledger,
 		s.slabStorage,
 		address,
@@ -133,7 +134,7 @@ func (s *AccountStorage) storeNewAccountStorageMap(
 ) *interpreter.AccountStorageMap {
 
 	accountStorageMap := interpreter.NewAccountStorageMap(
-		s.memoryGauge,
+		s.gauge,
 		s.slabStorage,
 		atree.Address(address),
 	)
@@ -262,6 +263,7 @@ func readAccountStorageSlabIndexFromRegister(
 }
 
 func getAccountStorageMapFromRegister(
+	gauge common.Gauge,
 	ledger atree.Ledger,
 	slabStorage atree.SlabStorage,
 	address common.Address,
@@ -285,7 +287,7 @@ func getAccountStorageMapFromRegister(
 		slabIndex,
 	)
 
-	return interpreter.NewAccountStorageMapWithRootID(slabStorage, slabID), nil
+	return interpreter.NewAccountStorageMapWithRootID(gauge, slabStorage, slabID), nil
 }
 
 func (s *AccountStorage) cachedRootSlabIDs() []atree.SlabID {

@@ -7719,14 +7719,14 @@ func checkAccountStorageMapData(
 		atree.Address(address[:]),
 		atree.SlabIndex(accountStorageMapSlabIndex[:]),
 	)
-	accountStorageMap := interpreter.NewAccountStorageMapWithRootID(storage, accountSlabID)
+	accountStorageMap := interpreter.NewAccountStorageMapWithRootID(nil, storage, accountSlabID)
 	require.NotNil(tb, accountStorageMap)
 	require.Equal(tb, uint64(len(expectedAccountValues)), accountStorageMap.Count())
 
 	domainCount := 0
 	iter := accountStorageMap.Iterator()
 	for {
-		domain, domainStorageMap := iter.Next()
+		domain, domainStorageMap := iter.Next(nil)
 		if domain == common.StorageDomainUnknown {
 			break
 		}
