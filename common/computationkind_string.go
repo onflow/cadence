@@ -44,6 +44,7 @@ func _() {
 	_ = x[ComputationKindAtreeArrayInsert-1205]
 	_ = x[ComputationKindAtreeArrayRemove-1206]
 	_ = x[ComputationKindAtreeArrayReadIteration-1207]
+	_ = x[ComputationKindAtreeArrayPopIteration-1208]
 	_ = x[ComputationKindAtreeMapConstruction-1220]
 	_ = x[ComputationKindAtreeMapBatchConstruction-1221]
 	_ = x[ComputationKindAtreeMapHas-1222]
@@ -51,9 +52,10 @@ func _() {
 	_ = x[ComputationKindAtreeMapSet-1224]
 	_ = x[ComputationKindAtreeMapRemove-1225]
 	_ = x[ComputationKindAtreeMapReadIteration-1226]
+	_ = x[ComputationKindAtreeMapPopIteration-1227]
 }
 
-const _ComputationKind_name = "UnknownStatementLoopFunctionInvocationCreateCompositeValueTransferCompositeValueDestroyCompositeValueCreateArrayValueTransferArrayValueDestroyArrayValueCreateDictionaryValueTransferDictionaryValueDestroyDictionaryValueStringToLowerStringDecodeHexGraphemesIterationStringComparisonEncodeValueWordSliceComparisonUintParseIntParseBigIntParseUfixParseFixParseSTDLIBPanicSTDLIBAssertSTDLIBRevertibleRandomSTDLIBRLPDecodeStringSTDLIBRLPDecodeListAtreeArrayBatchConstructionAtreeArrayGetAtreeArraySetAtreeArrayAppendAtreeArrayInsertAtreeArrayRemoveAtreeArrayReadIterationAtreeMapConstructionAtreeMapBatchConstructionAtreeMapHasAtreeMapGetAtreeMapSetAtreeMapRemoveAtreeMapReadIteration"
+const _ComputationKind_name = "UnknownStatementLoopFunctionInvocationCreateCompositeValueTransferCompositeValueDestroyCompositeValueCreateArrayValueTransferArrayValueDestroyArrayValueCreateDictionaryValueTransferDictionaryValueDestroyDictionaryValueStringToLowerStringDecodeHexGraphemesIterationStringComparisonEncodeValueWordSliceComparisonUintParseIntParseBigIntParseUfixParseFixParseSTDLIBPanicSTDLIBAssertSTDLIBRevertibleRandomSTDLIBRLPDecodeStringSTDLIBRLPDecodeListAtreeArrayBatchConstructionAtreeArrayGetAtreeArraySetAtreeArrayAppendAtreeArrayInsertAtreeArrayRemoveAtreeArrayReadIterationAtreeArrayPopIterationAtreeMapConstructionAtreeMapBatchConstructionAtreeMapHasAtreeMapGetAtreeMapSetAtreeMapRemoveAtreeMapReadIterationAtreeMapPopIteration"
 
 var _ComputationKind_map = map[ComputationKind]string{
 	0:    _ComputationKind_name[0:7],
@@ -92,13 +94,15 @@ var _ComputationKind_map = map[ComputationKind]string{
 	1205: _ComputationKind_name[509:525],
 	1206: _ComputationKind_name[525:541],
 	1207: _ComputationKind_name[541:564],
-	1220: _ComputationKind_name[564:584],
-	1221: _ComputationKind_name[584:609],
-	1222: _ComputationKind_name[609:620],
-	1223: _ComputationKind_name[620:631],
-	1224: _ComputationKind_name[631:642],
-	1225: _ComputationKind_name[642:656],
-	1226: _ComputationKind_name[656:677],
+	1208: _ComputationKind_name[564:586],
+	1220: _ComputationKind_name[586:606],
+	1221: _ComputationKind_name[606:631],
+	1222: _ComputationKind_name[631:642],
+	1223: _ComputationKind_name[642:653],
+	1224: _ComputationKind_name[653:664],
+	1225: _ComputationKind_name[664:678],
+	1226: _ComputationKind_name[678:699],
+	1227: _ComputationKind_name[699:719],
 }
 
 func (i ComputationKind) String() string {

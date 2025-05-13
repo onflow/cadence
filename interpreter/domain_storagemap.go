@@ -305,6 +305,14 @@ func (s *DomainStorageMap) DeepRemove(context ValueRemoveContext, hasNoParentCon
 
 	storage := s.orderedMap.Storage
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapPopIteration,
+			Intensity: s.orderedMap.Count(),
+		},
+	)
+
 	err := s.orderedMap.PopIterate(func(keyStorable atree.Storable, valueStorable atree.Storable) {
 		// Key
 

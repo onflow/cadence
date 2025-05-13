@@ -1485,6 +1485,15 @@ func (v *ArrayValue) Transfer(
 		}
 
 		if remove {
+
+			common.UseComputation(
+				context,
+				common.ComputationUsage{
+					Kind:      common.ComputationKindAtreeArrayPopIteration,
+					Intensity: v.array.Count(),
+				},
+			)
+
 			err = v.array.PopIterate(func(storable atree.Storable) {
 				RemoveReferencedSlab(context, storable)
 			})
@@ -1594,6 +1603,14 @@ func (v *ArrayValue) DeepRemove(context ValueRemoveContext, hasNoParentContainer
 	// Remove nested values and storables
 
 	storage := v.array.Storage
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeArrayPopIteration,
+			Intensity: v.array.Count(),
+		},
+	)
 
 	err := v.array.PopIterate(func(storable atree.Storable) {
 		value := StoredValue(context, storable, storage)

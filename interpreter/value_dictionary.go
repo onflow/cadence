@@ -1508,6 +1508,14 @@ func (v *DictionaryValue) Transfer(
 		}
 
 		if remove {
+			common.UseComputation(
+				context,
+				common.ComputationUsage{
+					Kind:      common.ComputationKindAtreeMapPopIteration,
+					Intensity: v.dictionary.Count(),
+				},
+			)
+
 			err = v.dictionary.PopIterate(func(keyStorable atree.Storable, valueStorable atree.Storable) {
 				RemoveReferencedSlab(context, keyStorable)
 				RemoveReferencedSlab(context, valueStorable)
@@ -1628,6 +1636,14 @@ func (v *DictionaryValue) DeepRemove(context ValueRemoveContext, hasNoParentCont
 	// Remove nested values and storables
 
 	storage := v.dictionary.Storage
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapPopIteration,
+			Intensity: v.dictionary.Count(),
+		},
+	)
 
 	err := v.dictionary.PopIterate(func(keyStorable atree.Storable, valueStorable atree.Storable) {
 

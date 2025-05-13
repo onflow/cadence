@@ -239,7 +239,7 @@ const (
 	ComputationKindAtreeArrayInsert
 	ComputationKindAtreeArrayRemove
 	ComputationKindAtreeArrayReadIteration
-	_
+	ComputationKindAtreeArrayPopIteration
 	_
 	_
 	_
@@ -258,4 +258,5 @@ const (
 	ComputationKindAtreeMapSet
 	ComputationKindAtreeMapRemove
 	ComputationKindAtreeMapReadIteration
+	ComputationKindAtreeMapPopIteration
 )
