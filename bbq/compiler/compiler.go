@@ -1942,16 +1942,8 @@ func (c *Compiler[_, _]) VisitUnaryExpression(expression *ast.UnaryExpression) (
 		c.codeGen.Emit(opcode.InstructionDeref{})
 
 	case ast.OperationMove:
-		expressionTypes := c.DesugaredElaboration.elaboration.ExpressionTypes(expression)
-
-		// Transfer to the expected type.
-		// However, target type may not always present (e.g: `var v2 <- v1`).
-		// In that case, use the actual type of the expression.
-		targetType := expressionTypes.ExpectedType
-		if targetType == nil {
-			targetType = expressionTypes.ActualType
-		}
-
+		// Transfer to the target type.
+		targetType := c.DesugaredElaboration.MoveExpressionTypes(expression)
 		typeIndex := c.getOrAddType(targetType)
 		c.codeGen.Emit(opcode.InstructionTransfer{
 			Type: typeIndex,
