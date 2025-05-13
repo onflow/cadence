@@ -184,6 +184,11 @@ func (v UIntValue) Plus(context NumberValueArithmeticContext, other NumberValue,
 		})
 	}
 
+	common.UseComputation(
+		context,
+		common.NewBigIntsWordSliceOperation(v.BigInt, o.BigInt),
+	)
+
 	return NewUIntValueFromBigInt(
 		context,
 		common.NewPlusBigIntMemoryUsage(v.BigInt, o.BigInt),
@@ -221,6 +226,11 @@ func (v UIntValue) Minus(context NumberValueArithmeticContext, other NumberValue
 		})
 	}
 
+	common.UseComputation(
+		context,
+		common.NewBigIntsWordSliceOperation(v.BigInt, o.BigInt),
+	)
+
 	return NewUIntValueFromBigInt(
 		context,
 		common.NewMinusBigIntMemoryUsage(v.BigInt, o.BigInt),
@@ -249,6 +259,11 @@ func (v UIntValue) SaturatingMinus(context NumberValueArithmeticContext, other N
 		})
 	}
 
+	common.UseComputation(
+		context,
+		common.NewBigIntsWordSliceOperation(v.BigInt, o.BigInt),
+	)
+
 	return NewUIntValueFromBigInt(
 		context,
 		common.NewMinusBigIntMemoryUsage(v.BigInt, o.BigInt),
@@ -274,6 +289,11 @@ func (v UIntValue) Mod(context NumberValueArithmeticContext, other NumberValue, 
 			LocationRange: locationRange,
 		})
 	}
+
+	common.UseComputation(
+		context,
+		common.NewBigIntsWordSliceOperation(v.BigInt, o.BigInt),
+	)
 
 	return NewUIntValueFromBigInt(
 		context,
@@ -302,6 +322,11 @@ func (v UIntValue) Mul(context NumberValueArithmeticContext, other NumberValue, 
 			LocationRange: locationRange,
 		})
 	}
+
+	common.UseComputation(
+		context,
+		common.NewBigIntsWordSliceOperation(v.BigInt, o.BigInt),
+	)
 
 	return NewUIntValueFromBigInt(
 		context,
@@ -340,6 +365,11 @@ func (v UIntValue) Div(context NumberValueArithmeticContext, other NumberValue, 
 		})
 	}
 
+	common.UseComputation(
+		context,
+		common.NewBigIntsWordSliceOperation(v.BigInt, o.BigInt),
+	)
+
 	return NewUIntValueFromBigInt(
 		context,
 		common.NewDivBigIntMemoryUsage(v.BigInt, o.BigInt),
@@ -372,20 +402,10 @@ func (v UIntValue) SaturatingDiv(context NumberValueArithmeticContext, other Num
 	return v.Div(context, other, locationRange)
 }
 
-func minSliceLength[T []U, U any](a, b T) int {
-	if len(a) < len(b) {
-		return len(a)
-	}
-	return len(b)
-}
-
 func (v UIntValue) compare(context ValueComparisonContext, o UIntValue) int {
 	common.UseComputation(
 		context,
-		common.ComputationUsage{
-			Kind:      common.ComputationKindWordSliceComparison,
-			Intensity: uint64(minSliceLength(v.BigInt.Bits(), o.BigInt.Bits())),
-		},
+		common.NewBigIntsWordSliceOperation(v.BigInt, o.BigInt),
 	)
 
 	return v.BigInt.Cmp(o.BigInt)
@@ -486,6 +506,11 @@ func (v UIntValue) BitwiseOr(context ValueStaticTypeContext, other IntegerValue,
 		})
 	}
 
+	common.UseComputation(
+		context,
+		common.NewBigIntsWordSliceOperation(v.BigInt, o.BigInt),
+	)
+
 	return NewUIntValueFromBigInt(
 		context,
 		common.NewBitwiseOrBigIntMemoryUsage(v.BigInt, o.BigInt),
@@ -507,6 +532,11 @@ func (v UIntValue) BitwiseXor(context ValueStaticTypeContext, other IntegerValue
 		})
 	}
 
+	common.UseComputation(
+		context,
+		common.NewBigIntsWordSliceOperation(v.BigInt, o.BigInt),
+	)
+
 	return NewUIntValueFromBigInt(
 		context,
 		common.NewBitwiseXorBigIntMemoryUsage(v.BigInt, o.BigInt),
@@ -527,6 +557,11 @@ func (v UIntValue) BitwiseAnd(context ValueStaticTypeContext, other IntegerValue
 			LocationRange: locationRange,
 		})
 	}
+
+	common.UseComputation(
+		context,
+		common.NewBigIntsWordSliceOperation(v.BigInt, o.BigInt),
+	)
 
 	return NewUIntValueFromBigInt(
 		context,

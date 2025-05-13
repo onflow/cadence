@@ -23,15 +23,15 @@ import "github.com/onflow/cadence/common"
 type NumberValue[T Value] interface {
 	ComparableValue[T]
 	ToInt() (int, error)
-	Negate(gauge common.MemoryGauge) T
-	Plus(gauge common.MemoryGauge, other T) (T, error)
-	SaturatingPlus(gauge common.MemoryGauge, other T) (T, error)
-	Minus(gauge common.MemoryGauge, other T) (T, error)
-	SaturatingMinus(gauge common.MemoryGauge, other T) (T, error)
-	Mod(gauge common.MemoryGauge, other T) (T, error)
-	Mul(gauge common.MemoryGauge, other T) (T, error)
-	SaturatingMul(gauge common.MemoryGauge, other T) (T, error)
-	Div(gauge common.MemoryGauge, other T) (T, error)
-	SaturatingDiv(gauge common.MemoryGauge, other T) (T, error)
+	Negate(gauge common.Gauge) T
+	Plus(gauge common.Gauge, other T) (T, error)
+	SaturatingPlus(gauge common.Gauge, other T) (T, error)
+	Minus(gauge common.Gauge, other T) (T, error)
+	SaturatingMinus(gauge common.Gauge, other T) (T, error)
+	Mod(gauge common.Gauge, other T) (T, error)
+	Mul(gauge common.Gauge, other T) (T, error)
+	SaturatingMul(gauge common.Gauge, other T) (T, error)
+	Div(gauge common.Gauge, other T) (T, error)
+	SaturatingDiv(gauge common.Gauge, other T) (T, error)
 	ToBigEndianBytes() []byte
 }

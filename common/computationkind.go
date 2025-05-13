@@ -108,7 +108,7 @@ const (
 	_
 	_
 	ComputationKindEncodeValue
-	ComputationKindWordSliceComparison
+	ComputationKindWordSliceOperation
 	ComputationKindUintParse
 	ComputationKindIntParse
 	ComputationKindBigIntParse
