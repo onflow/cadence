@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/constant"
@@ -964,8 +965,9 @@ func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 		valueSemaType := interpreter.MustConvertStaticToSemaType(valueType, vm.context)
 
 		panic(interpreter.ForceCastTypeMismatchError{
-			ExpectedType: targetSemaType,
-			ActualType:   valueSemaType,
+			ExpectedType:  targetSemaType,
+			ActualType:    valueSemaType,
+			LocationRange: vm.LocationRange(),
 		})
 	}
 
@@ -1658,6 +1660,21 @@ func (vm *VM) Global(name string) Value {
 	return vm.globals[name].GetValue(vm.context)
 }
 
+// LocationRange returns the location of the currently executing instruction.
+// This is an expensive operation and must be only used on-demand.
+func (vm *VM) LocationRange() interpreter.LocationRange {
+	currentFunction := vm.callFrame.function
+	lineNumbers := currentFunction.Function.LineNumbers
+	position := lineNumbers.GetSourcePosition(vm.ip)
+
+	return interpreter.LocationRange{
+		Location: currentFunction.Executable.Location,
+		HasPosition: Positioned{
+			StartPos: position,
+		},
+	}
+}
+
 func printInstructionError(
 	function *bbq.Function[opcode.Instruction],
 	instructionIndex int,
@@ -1677,4 +1694,19 @@ func printInstructionError(
 	}
 
 	fmt.Println(builder.String())
+}
+
+type Positioned struct {
+	StartPos ast.Position
+	EndPos   ast.Position
+}
+
+var _ ast.HasPosition = Positioned{}
+
+func (p Positioned) StartPosition() ast.Position {
+	return p.StartPos
+}
+
+func (p Positioned) EndPosition(_ common.MemoryGauge) ast.Position {
+	return p.EndPos
 }

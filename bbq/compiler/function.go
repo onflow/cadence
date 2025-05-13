@@ -22,6 +22,7 @@ import (
 	"math"
 
 	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/errors"
 )
@@ -37,6 +38,7 @@ type function[E any] struct {
 	upvalues       []opcode.Upvalue
 	upvalueIndices map[opcode.Upvalue]uint16
 	typeIndex      uint16
+	lineNumbers    bbq.LineNumberTable
 }
 
 func newFunction[E any](
