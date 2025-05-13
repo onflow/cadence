@@ -20,6 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -29,7 +30,7 @@ import (
 // members
 
 func init() {
-	accountCapabilitiesTypeName := sema.Account_CapabilitiesType.QualifiedIdentifier()
+	accountCapabilitiesTypeName := commons.TypeQualifier(sema.Account_CapabilitiesType)
 
 	// Account.Capabilities.get
 	RegisterTypeBoundFunction(

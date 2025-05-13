@@ -65,6 +65,13 @@ var commonBuiltinTypeBoundFunctions = []builtinFunction{
 	},
 }
 
+var valueConstructorFunctions = []builtinFunction{
+	{
+		name: sema.StringType.Name,
+		typ:  sema.StringFunctionType,
+	},
+}
+
 func init() {
 	// Here the order isn't really important.
 	// Because the native functions used by a program are also
@@ -72,6 +79,14 @@ func init() {
 	// Then the VM will link the imports (native functions) by the name.
 	for _, typ := range commons.BuiltinTypes {
 		registerBoundFunctions(typ)
+	}
+
+	for _, constructor := range valueConstructorFunctions {
+		// Register the constructor. e.g: `String()`
+		addNativeFunction(constructor.name)
+
+		// Register the members of the constructor/type. e.g: `String.Join()`
+		registerBoundFunctions(constructor.typ)
 	}
 
 	for _, funcName := range stdlibFunctions {

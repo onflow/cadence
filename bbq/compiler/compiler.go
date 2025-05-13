@@ -1731,21 +1731,37 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 			},
 		)
 
+		return
+
+	}
+
+	// If the function is accessed via optional-chaining,
+	// then the target type is the inner type of the optional.
+	accessedType := memberInfo.AccessedType
+	if memberInfo.IsOptional {
+		accessedType = sema.UnwrapOptionalType(accessedType)
+	}
+
+	// Load function value.
+	funcName = commons.TypeQualifiedName(
+		accessedType,
+		invokedExpr.Identifier.Identifier,
+	)
+	c.emitVariableLoad(funcName)
+
+	// An invocation can be either a method of a value (e.g: `"someString".Concat("otherString")`),
+	// or a function on a type (e.g: `String.Join(["someString", "otherString"], "separator")`).
+	if isFunctionOnType(accessedType) {
+		// Compile as static-function call.
+		// No receiver is loaded.
+		c.compileArguments(expression.Arguments, invocationTypes)
+		c.codeGen.Emit(opcode.InstructionInvoke{
+			TypeArgs: typeArgs,
+			ArgCount: uint16(argumentCount),
+		})
 	} else {
-		// If the function is accessed via optional-chaining,
-		// then the target type is the inner type of the optional.
-		accessedType := memberInfo.AccessedType
-		if memberInfo.IsOptional {
-			accessedType = sema.UnwrapOptionalType(accessedType)
-		}
-
-		// Load function value.
-		funcName = commons.TypeQualifiedName(
-			accessedType,
-			invokedExpr.Identifier.Identifier,
-		)
-		c.emitVariableLoad(funcName)
-
+		// Compile as object-method call.
+		// First argument is the receiver.
 		c.compileMethodInvocationArguments(
 			invokedExpr,
 			expression.Arguments,
@@ -1758,6 +1774,11 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 			ArgCount: argsCountWithReceiver,
 		})
 	}
+}
+
+func isFunctionOnType(accessedType sema.Type) bool {
+	funcType, ok := accessedType.(*sema.FunctionType)
+	return ok && funcType.IsConstructor
 }
 
 func (c *Compiler[_, _]) compileMethodInvocationArguments(
