@@ -3228,8 +3228,19 @@ func TestInterpretPreConditionResourceMove(t *testing.T) {
 
 	_, err = inter.Invoke("main")
 	RequireError(t, err)
-	var invalidatedResourceError *interpreter.InvalidatedResourceError
-	require.ErrorAs(t, err, &invalidatedResourceError)
+
+	// In the compiler/vm, arguments are evaluated all at once, and checked in a second pass (when taken out of the stack),
+	// whereas in the interpreter, each argument is evaluated and checked individually.
+	// Hence in the vm, by the time `&r as &AnyResource`s result is checked for invalidated resources,
+	// the resource move `<- r` had already happened.
+	// Therefore, in the vm, it fails early at the function-invocation: `consume(&r as &AnyResource, <- r)`.
+	if *compile {
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
+	} else {
+		var invalidatedResourceError *interpreter.InvalidatedResourceError
+		require.ErrorAs(t, err, &invalidatedResourceError)
+	}
 }
 
 func TestInterpretResourceSelfSwap(t *testing.T) {
