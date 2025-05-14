@@ -604,7 +604,7 @@ func testAccountWithErrorHandlerWithCompiler(
 
 	if compilerEnabled && *compile {
 		vmConfig := &vm.Config{
-			NativeFunctionsProvider: func() map[string]*vm.Variable {
+			BuiltinGlobalsProvider: func() map[string]*vm.Variable {
 				funcs := vm.NativeFunctions()
 				variable := &interpreter.SimpleVariable{}
 				variable.InitializeWithValue(accountValueDeclaration.Value)

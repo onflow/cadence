@@ -178,7 +178,7 @@ func ParseCheckAndPrepareWithOptions(
 		baseActivation := interpreterConfig.BaseActivationHandler(nil)
 		baseActivationVariables := baseActivation.ValuesInFunction()
 
-		vmConfig.NativeFunctionsProvider = func() map[string]*vm.Variable {
+		vmConfig.BuiltinGlobalsProvider = func() map[string]*vm.Variable {
 			funcs := vm.NativeFunctions()
 
 			// Convert the externally provided `interpreter.HostFunctionValue`s into `vm.NativeFunctionValue`s.
