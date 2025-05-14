@@ -26,6 +26,7 @@ type Function[E any] struct {
 	TypeParameterCount uint16
 	LocalCount         uint16
 	TypeIndex          uint16
+	LineNumbers        LineNumberTable
 }
 
 func (f Function[E]) IsAnonymous() bool {

@@ -5062,6 +5062,16 @@ func TestCasting(t *testing.T) {
 			interpreter.ForceCastTypeMismatchError{
 				ExpectedType: sema.IntType,
 				ActualType:   sema.BoolType,
+				LocationRange: interpreter.LocationRange{
+					Location: TestLocation,
+					HasPosition: vm.Positioned{
+						StartPos: ast.Position{
+							Offset: 70,
+							Line:   3,
+							Column: 25,
+						},
+					},
+				},
 			},
 		)
 	})

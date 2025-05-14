@@ -3974,7 +3974,19 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		assert.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+		var forceCastTypeMismatchError interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		startPos := forceCastTypeMismatchError.LocationRange.StartPosition()
+		assert.Equal(
+			t,
+			ast.Position{
+				Offset: 56,
+				Line:   4,
+				Column: 17,
+			},
+			startPos,
+		)
 	})
 
 	t.Run("string as!", func(t *testing.T) {

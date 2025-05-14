@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/compiler"
@@ -5693,5 +5694,141 @@ func TestCompileArgument(t *testing.T) {
 			interpreter.NewOptionalStaticType(nil, interpreter.PrimitiveStaticTypeInt),
 		},
 		program.Types,
+	)
+}
+
+func TestCompileLineNumberInfo(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun test(array: [Int], index: Int, value: Int) {
+          array[index] = value + value
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
+
+	testFunction := functions[0]
+
+	const (
+		arrayIndex = iota
+		indexIndex
+		valueIndex
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionGetLocal{Local: arrayIndex},
+			opcode.InstructionGetLocal{Local: indexIndex},
+			opcode.InstructionGetLocal{Local: valueIndex},
+			opcode.InstructionGetLocal{Local: valueIndex},
+			opcode.InstructionAdd{},
+			opcode.InstructionTransfer{Type: 1},
+			opcode.InstructionSetIndex{},
+			opcode.InstructionReturn{},
+		},
+		testFunction.Code,
+	)
+
+	assert.Equal(t,
+		[]bbq.PositionInfo{
+			// opcode.InstructionGetLocal{Local: arrayIndex}
+			{
+				InstructionIndex: 0,
+				Position: ast.Position{
+					Offset: 66,
+					Line:   3,
+					Column: 10,
+				},
+			},
+
+			// opcode.InstructionGetLocal{Local: indexIndex}
+			{
+				InstructionIndex: 1,
+				Position: ast.Position{
+					Offset: 72,
+					Line:   3,
+					Column: 16,
+				},
+			},
+
+			// opcode.InstructionGetLocal{Local: valueIndex}
+			{
+				InstructionIndex: 2,
+				Position: ast.Position{
+					Offset: 81,
+					Line:   3,
+					Column: 25,
+				},
+			},
+
+			// opcode.InstructionGetLocal{Local: valueIndex}
+			{
+				InstructionIndex: 3,
+				Position: ast.Position{
+					Offset: 89,
+					Line:   3,
+					Column: 33,
+				},
+			},
+
+			// opcode.InstructionAdd{},
+			{
+				InstructionIndex: 4,
+				Position: ast.Position{
+					Offset: 81,
+					Line:   3,
+					Column: 25,
+				},
+			},
+
+			// opcode.InstructionTransfer{Type: 1}
+			// opcode.InstructionSetIndex{}
+			{
+				InstructionIndex: 5,
+				Position: ast.Position{
+					Offset: 66,
+					Line:   3,
+					Column: 10,
+				},
+			},
+
+			// opcode.InstructionReturn{}
+			// This has a position same as the function declaration,
+			// since this is an injected return.
+			{
+				InstructionIndex: 7,
+				Position: ast.Position{
+					Offset: 7,
+					Line:   2,
+					Column: 6,
+				},
+			},
+		},
+		testFunction.LineNumbers.Positions,
+	)
+
+	// Get position for `opcode.InstructionSetIndex{}`
+	// Must point to start of LHS.
+	pos := testFunction.LineNumbers.GetSourcePosition(6)
+	assert.Equal(
+		t,
+		ast.Position{
+			Offset: 66,
+			Line:   3,
+			Column: 10,
+		},
+		pos,
 	)
 }
