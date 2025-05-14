@@ -673,7 +673,7 @@ func (Unauthorized) String() string {
 	return "Unauthorized"
 }
 
-func (a Unauthorized) MeteredString(_ common.MemoryGauge) string {
+func (t Unauthorized) MeteredString(_ common.MemoryGauge) string {
 	return "Unauthorized"
 }
 
