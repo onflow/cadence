@@ -33,6 +33,68 @@ import (
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
+func parseCheckAndPrepareWithConditionLogs(
+	t *testing.T,
+	code string,
+) (
+	invokable Invokable,
+	getLogs func() []string,
+	err error,
+) {
+	conditionLogFunctionType := sema.NewSimpleFunctionType(
+		sema.FunctionPurityView,
+		[]sema.Parameter{
+			{
+				Label:          sema.ArgumentLabelNotRequired,
+				Identifier:     "value",
+				TypeAnnotation: sema.AnyStructTypeAnnotation,
+			},
+		},
+		sema.BoolTypeAnnotation,
+	)
+
+	var logs []string
+
+	valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
+		"conditionLog",
+		conditionLogFunctionType,
+		"",
+		func(invocation interpreter.Invocation) interpreter.Value {
+			value := invocation.Arguments[0]
+			logs = append(logs, value.String())
+			return interpreter.TrueValue
+		},
+	)
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(valueDeclaration)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, valueDeclaration)
+
+	invokable, err = parseCheckAndPrepareWithOptions(t,
+		code,
+		ParseCheckAndInterpretOptions{
+			CheckerConfig: &sema.Config{
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
+			},
+			Config: &interpreter.Config{
+				BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
+			},
+		},
+	)
+
+	getLogs = func() []string {
+		return logs
+	}
+
+	return invokable, getLogs, err
+}
+
 func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
 
 	t.Parallel()
@@ -74,6 +136,7 @@ func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
 		inter := parseCheckAndPrepare(t, `
             struct interface IA {
                 let x: Int
+
                 fun getX(): Int {
                     return self.x
                 }
@@ -81,6 +144,7 @@ func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
 
             struct Foo: IA {
                 let x: Int
+
                 init() {
                     self.x = 123
                 }
@@ -88,12 +152,13 @@ func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
 
             struct Bar: IA {
                 let x: Int
+
                 init() {
                     self.x = 456
                 }
             }
 
-            fun test(): [Int;2] {
+            fun test(): [Int; 2] {
                 let foo = Foo()
                 let bar = Bar()
 
@@ -130,20 +195,20 @@ func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
 
           struct interface I {
               fun test(): Int {
-				return 3
-			  }
+                return 3
+              }
           }
 
           struct interface J: I {}
 
-		  struct S: J {}
+          struct S: J {}
 
-		  fun foo(_ s: {J}): Int {
-			return s.test()
-		  }
+          fun foo(_ s: {J}): Int {
+              return s.test()
+          }
 
           fun main(): Int {
-			return foo(S())
+              return foo(S())
           }
         `)
 
@@ -163,6 +228,7 @@ func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
 		inter := parseCheckAndPrepare(t, `
           struct A {
               var bar: Int
+
               init() {
                   self.bar = 4
               }
@@ -263,7 +329,7 @@ func TestInterpretInterfaceInheritance(t *testing.T) {
                 }
             }
 
-            access(all) fun main(): Int {
+            fun main(): Int {
                 let c = C()
                 return c.test()
             }
@@ -303,7 +369,7 @@ func TestInterpretInterfaceInheritance(t *testing.T) {
                 }
             }
 
-            access(all) fun main(): Int {
+            fun main(): Int {
                 let c <- create C()
                 let x = c.test()
                 destroy c
@@ -326,11 +392,11 @@ func TestInterpretInterfaceInheritance(t *testing.T) {
 
 		inter := parseCheckAndPrepare(t, `
             struct interface A {
-                access(all) fun test(): Int
+                fun test(): Int
             }
 
             struct interface B: A {
-                access(all) fun test(): Int
+                fun test(): Int
             }
 
             struct C: B {
@@ -339,7 +405,7 @@ func TestInterpretInterfaceInheritance(t *testing.T) {
                 }
             }
 
-            access(all) fun main(): Int {
+            fun main(): Int {
                 let c = C()
                 return c.test()
             }
@@ -360,7 +426,7 @@ func TestInterpretInterfaceInheritance(t *testing.T) {
 
 		inter := parseCheckAndPrepare(t, `
             struct interface A {
-                access(all) fun test(): Int {
+                fun test(): Int {
                     return 3
                 }
             }
@@ -369,7 +435,7 @@ func TestInterpretInterfaceInheritance(t *testing.T) {
 
             struct C: B {}
 
-            access(all) fun main(): Int {
+            fun main(): Int {
                 let c = C()
                 return c.test()
             }
@@ -390,7 +456,7 @@ func TestInterpretInterfaceInheritance(t *testing.T) {
 
 		inter := parseCheckAndPrepare(t, `
             struct interface A {
-                access(all) fun test(): Int {
+                fun test(): Int {
                     return 3
                 }
             }
@@ -401,7 +467,7 @@ func TestInterpretInterfaceInheritance(t *testing.T) {
 
             struct D: B, C {}
 
-            access(all) fun main(): Int {
+            fun main(): Int {
                 let d = D()
                 return d.test()
             }
@@ -427,13 +493,13 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		inter := parseCheckAndPrepare(t, `
             struct interface A {
-                access(all) fun test(_ a: Int): Int {
+                fun test(_ a: Int): Int {
                     pre { a > 10 }
                 }
             }
 
             struct interface B: A {
-                access(all) fun test(_ a: Int): Int
+                fun test(_ a: Int): Int
             }
 
             struct C: B {
@@ -442,7 +508,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
                 }
             }
 
-            access(all) fun main(_ a: Int): Int {
+            fun main(_ a: Int): Int {
                 let c = C()
                 return c.test(a)
             }
@@ -472,11 +538,11 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		inter := parseCheckAndPrepare(t, `
             struct interface A {
-                access(all) fun test(_ a: Int): Int
+                fun test(_ a: Int): Int
             }
 
             struct interface B: A {
-                access(all) fun test(_ a: Int): Int {
+                fun test(_ a: Int): Int {
                     pre { a > 10 }
                 }
             }
@@ -487,7 +553,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
                 }
             }
 
-            access(all) fun main(_ a: Int): Int {
+            fun main(_ a: Int): Int {
                 let c = C()
                 return c.test(a)
             }
@@ -516,13 +582,13 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		inter := parseCheckAndPrepare(t, `
             struct interface A {
-                access(all) fun test(_ a: Int): Int {
+                fun test(_ a: Int): Int {
                     pre { a < 20 }
                 }
             }
 
             struct interface B: A {
-                access(all) fun test(_ a: Int): Int {
+                fun test(_ a: Int): Int {
                     pre { a > 10 }
                 }
             }
@@ -533,7 +599,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
                 }
             }
 
-            access(all) fun main(_ a: Int): Int {
+            fun main(_ a: Int): Int {
                 let c = C()
                 return c.test(a)
             }
@@ -571,13 +637,13 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		inter := parseCheckAndPrepare(t, `
             struct interface A {
-                access(all) fun test(_ a: Int): Int {
+                fun test(_ a: Int): Int {
                     pre { a < 20 }
                 }
             }
 
             struct interface B {
-                access(all) fun test(_ a: Int): Int {
+                fun test(_ a: Int): Int {
                     pre { a > 10 }
                 }
             }
@@ -590,7 +656,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
                 }
             }
 
-            access(all) fun main(_ a: Int): Int {
+            fun main(_ a: Int): Int {
                 let d = D()
                 return d.test(a)
             }
@@ -626,35 +692,6 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		t.Parallel()
 
-		logFunctionType := sema.NewSimpleFunctionType(
-			sema.FunctionPurityView,
-			[]sema.Parameter{
-				{
-					Label:          sema.ArgumentLabelNotRequired,
-					Identifier:     "value",
-					TypeAnnotation: sema.AnyStructTypeAnnotation,
-				},
-			},
-			sema.VoidTypeAnnotation,
-		)
-
-		var logs []string
-		valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
-			"log",
-			logFunctionType,
-			"",
-			func(invocation interpreter.Invocation) interpreter.Value {
-				msg := invocation.Arguments[0].(*interpreter.StringValue).Str
-				logs = append(logs, msg)
-				return interpreter.Void
-			},
-		)
-
-		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseValueActivation.DeclareValue(valueDeclaration)
-		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-		interpreter.Declare(baseActivation, valueDeclaration)
-
 		// Inheritance hierarchy is as follows:
 		//
 		//       A (concrete type)
@@ -665,65 +702,48 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		//    / \ /
 		//   E   F
 
-		inter, err := parseCheckAndPrepareWithOptions(t, `
-            struct A: B {
-                access(all) fun test() {
-                    pre { print("A") }
-                }
-            }
+		inter, getLogs, err := parseCheckAndPrepareWithConditionLogs(t, `
+          struct A: B {
+              fun test() {
+                  pre { conditionLog("A") }
+              }
+          }
 
-            struct interface B: C, D {
-                access(all) fun test() {
-                    pre { print("B") }
-                }
-            }
+          struct interface B: C, D {
+              fun test() {
+                  pre { conditionLog("B") }
+              }
+          }
 
-            struct interface C: E, F {
-                access(all) fun test() {
-                    pre { print("C") }
-                }
-            }
+          struct interface C: E, F {
+              fun test() {
+                  pre { conditionLog("C") }
+              }
+          }
 
-            struct interface D: F {
-                access(all) fun test() {
-                    pre { print("D") }
-                }
-            }
+          struct interface D: F {
+              fun test() {
+                  pre { conditionLog("D") }
+              }
+          }
 
-            struct interface E {
-                access(all) fun test() {
-                    pre { print("E") }
-                }
-            }
+          struct interface E {
+              fun test() {
+                  pre { conditionLog("E") }
+              }
+          }
 
-            struct interface F {
-                access(all) fun test() {
-                    pre { print("F") }
-                }
-            }
+          struct interface F {
+              fun test() {
+                  pre { conditionLog("F") }
+              }
+          }
 
-            access(all) view fun print(_ msg: String): Bool {
-                log(msg)
-                return true
-            }
-
-            access(all) fun main() {
-                let a = A()
-                a.test()
-            }`,
-			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
-					},
-				},
-				Config: &interpreter.Config{
-					BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
-						return baseActivation
-					},
-				},
-			},
-		)
+          fun main() {
+              let a = A()
+              a.test()
+          }
+        `)
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("main")
@@ -731,41 +751,15 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		// The pre-conditions of the interfaces are executed first, with depth-first pre-order traversal.
 		// The pre-condition of the concrete type is executed at the end, after the interfaces.
-		assert.Equal(t, []string{"B", "C", "E", "F", "D", "A"}, logs)
+		assert.Equal(t,
+			[]string{`"B"`, `"C"`, `"E"`, `"F"`, `"D"`, `"A"`},
+			getLogs(),
+		)
 	})
 
 	t.Run("post conditions order", func(t *testing.T) {
 
 		t.Parallel()
-
-		myLogFunctionType := sema.NewSimpleFunctionType(
-			sema.FunctionPurityView,
-			[]sema.Parameter{
-				{
-					Label:          sema.ArgumentLabelNotRequired,
-					Identifier:     "value",
-					TypeAnnotation: sema.AnyStructTypeAnnotation,
-				},
-			},
-			sema.VoidTypeAnnotation,
-		)
-
-		var logs []string
-		valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
-			"myLog",
-			myLogFunctionType,
-			"",
-			func(invocation interpreter.Invocation) interpreter.Value {
-				msg := invocation.Arguments[0].(*interpreter.StringValue).Str
-				logs = append(logs, msg)
-				return interpreter.Void
-			},
-		)
-
-		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseValueActivation.DeclareValue(valueDeclaration)
-		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-		interpreter.Declare(baseActivation, valueDeclaration)
 
 		// Inheritance hierarchy is as follows:
 		//
@@ -777,65 +771,48 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		//    / \ /
 		//   E   F
 
-		inter, err := parseCheckAndPrepareWithOptions(t, `
-            struct A: B {
-                access(all) fun test() {
-                    post { print("A") }
-                }
-            }
+		inter, getLogs, err := parseCheckAndPrepareWithConditionLogs(t, `
+          struct A: B {
+              fun test() {
+                  post { conditionLog("A") }
+              }
+          }
 
-            struct interface B: C, D {
-                access(all) fun test() {
-                    post { print("B") }
-                }
-            }
+          struct interface B: C, D {
+              fun test() {
+                  post { conditionLog("B") }
+              }
+          }
 
-            struct interface C: E, F {
-                access(all) fun test() {
-                    post { print("C") }
-                }
-            }
+          struct interface C: E, F {
+              fun test() {
+                  post { conditionLog("C") }
+              }
+          }
 
-            struct interface D: F {
-                access(all) fun test() {
-                    post { print("D") }
-                }
-            }
+          struct interface D: F {
+              fun test() {
+                  post { conditionLog("D") }
+              }
+          }
 
-            struct interface E {
-                access(all) fun test() {
-                    post { print("E") }
-                }
-            }
+          struct interface E {
+              fun test() {
+                  post { conditionLog("E") }
+              }
+          }
 
-            struct interface F {
-                access(all) fun test() {
-                    post { print("F") }
-                }
-            }
+          struct interface F {
+              fun test() {
+                  post { conditionLog("F") }
+              }
+          }
 
-            access(all) view fun print(_ msg: String): Bool {
-                myLog(msg)
-                return true
-            }
-
-            access(all) fun main() {
-                let a = A()
-                a.test()
-            }`,
-			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
-					},
-				},
-				Config: &interpreter.Config{
-					BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
-						return baseActivation
-					},
-				},
-			},
-		)
+          fun main() {
+              let a = A()
+              a.test()
+          }
+        `)
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("main")
@@ -843,98 +820,56 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		// The post-condition of the concrete type is executed first, before the interfaces.
 		// The post-conditions of the interfaces are executed after that, with the reversed depth-first pre-order.
-		assert.Equal(t, []string{"A", "D", "F", "E", "C", "B"}, logs)
+		assert.Equal(t,
+			[]string{`"A"`, `"D"`, `"F"`, `"E"`, `"C"`, `"B"`},
+			getLogs(),
+		)
 	})
 
 	t.Run("nested resource interface unrelated", func(t *testing.T) {
 
 		t.Parallel()
 
-		logFunctionType := sema.NewSimpleFunctionType(
-			sema.FunctionPurityView,
-			[]sema.Parameter{
-				{
-					Label:          sema.ArgumentLabelNotRequired,
-					Identifier:     "value",
-					TypeAnnotation: sema.AnyStructTypeAnnotation,
-				},
-			},
-			sema.VoidTypeAnnotation,
-		)
+		inter, getLogs, err := parseCheckAndPrepareWithConditionLogs(t, `
+          contract interface A {
+              struct interface Nested {
+                  fun test(): Int {
+                      post { conditionLog("A") }
+                  }
+              }
+          }
 
-		var logs []string
-		valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
-			"log",
-			logFunctionType,
-			"",
-			func(invocation interpreter.Invocation) interpreter.Value {
-				msg := invocation.Arguments[0].(*interpreter.StringValue).Str
-				logs = append(logs, msg)
-				return interpreter.Void
-			},
-		)
+          contract interface B: A {
+              struct interface Nested {
+                  fun test(): String {
+                      post { conditionLog("B") }
+                  }
+              }
+          }
 
-		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseValueActivation.DeclareValue(valueDeclaration)
-		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-		interpreter.Declare(baseActivation, valueDeclaration)
+          contract C {
+              struct Nested: B.Nested {
+                  fun test(): String {
+                      return "C"
+                  }
+              }
+          }
 
-		inter, err := parseCheckAndPrepareWithOptions(t, `
-            contract interface A {
-                struct interface Nested {
-                    access(all) fun test(): Int {
-                        post { print("A") }
-                    }
-                }
-            }
-
-            contract interface B: A {
-                struct interface Nested {
-                    access(all) fun test(): String {
-                        post { print("B") }
-                    }
-                }
-            }
-            
-            contract C {
-                struct Nested: B.Nested {
-                    fun test(): String {
-                        return "C"
-                    }
-                }
-            }
-
-            access(all) view fun print(_ msg: String): Bool {
-                log(msg)
-                return true
-            }
-
-            access(all) fun main() {
-                let n = C.Nested()
-                n.test()
-            }
-        `,
-			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
-					},
-				},
-				Config: &interpreter.Config{
-					BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
-						return baseActivation
-					},
-					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
-				},
-			},
-		)
+          fun main() {
+              let n = C.Nested()
+              n.test()
+          }
+        `)
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
 		// A.Nested and B.Nested are two distinct separate functions
-		assert.Equal(t, []string{"B"}, logs)
+		assert.Equal(t,
+			[]string{`"B"`},
+			getLogs(),
+		)
 	})
 
 	t.Run("pre condition in parent, default impl in child", func(t *testing.T) {
@@ -942,23 +877,23 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndPrepare(t, `
-            access(all) resource interface A {
-                access(all) fun get(): Int {
+            resource interface A {
+                fun get(): Int {
                    pre {
                        true
                    }
                 }
             }
 
-            access(all) resource interface B: A {
-                access(all) fun get(): Int {
+            resource interface B: A {
+                fun get(): Int {
                     return 4
                 }
             }
 
-            access(all) resource R: B {}
+            resource R: B {}
 
-            access(all) fun main(): Int {
+            fun main(): Int {
                 let r <- create R()
                 let value = r.get()
                 destroy r
@@ -980,23 +915,23 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndPrepare(t, `
-            access(all) resource interface A {
-                access(all) fun get(): Int {
+            resource interface A {
+                fun get(): Int {
                    post {
                        true
                    }
                 }
             }
 
-            access(all) resource interface B: A {
-                access(all) fun get(): Int {
+            resource interface B: A {
+                fun get(): Int {
                     return 4
                 }
             }
 
-            access(all) resource R: B {}
+            resource R: B {}
 
-            access(all) fun main(): Int {
+            fun main(): Int {
                 let r <- create R()
                 let value = r.get()
                 destroy r
@@ -1018,23 +953,23 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndPrepare(t, `
-            access(all) struct interface A {
-                access(all) fun get(): Int {
+            struct interface A {
+                fun get(): Int {
                    post { true }
                 }
             }
 
-            access(all) struct interface B {
-                access(all) fun get(): Int {
+            struct interface B {
+                fun get(): Int {
                     return 4
                 }
             }
 
             struct interface C: A, B {}
 
-            access(all) struct S: C {}
+            struct S: C {}
 
-            access(all) fun main(): Int {
+            fun main(): Int {
                 let s = S()
                 return s.get()
             }
@@ -1054,23 +989,23 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndPrepare(t, `
-            access(all) struct interface A {
-                access(all) fun get(): Int {
+            struct interface A {
+                fun get(): Int {
                     return 4
                 }
             }
 
-            access(all) struct interface B {
-                access(all) fun get(): Int {
+            struct interface B {
+                fun get(): Int {
                    post { true }
                 }
             }
 
             struct interface C: A, B {}
 
-            access(all) struct S: C {}
+            struct S: C {}
 
-            access(all) fun main(): Int {
+            fun main(): Int {
                 let s = S()
                 return s.get()
             }
@@ -1089,39 +1024,39 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		t.Parallel()
 
-		inter, getLogs, err := parseCheckAndInterpretWithLogs(t, `
-            access(all) resource interface I1 {
-                access(all) let s: String
+		inter, getLogs, err := parseCheckAndPrepareWithConditionLogs(t, `
+          resource interface I1 {
+              let s: String
 
-                access(all) fun echo(_ s: String): String {
-                    post {
-                        result == self.s: "result must match stored input, got: ".concat(result)
-                    }
-                }
-            }
+              fun echo(_ s: String): String {
+                  post {
+                      result == self.s: "result must match stored input, got: ".concat(result)
+                  }
+              }
+          }
 
-            access(all) resource interface I2: I1 {
-                access(all) let s: String
+          resource interface I2: I1 {
+              let s: String
 
-                access(all) fun echo(_ s: String): String {
-                    log(s)
-                    return self.s
-                }
-            }
+              fun echo(_ s: String): String {
+                  conditionLog(s)
+                  return self.s
+              }
+          }
 
-            access(all) resource R: I2 {
-                access(all) let s: String
+          resource R: I2 {
+              let s: String
 
-                init() {
-                    self.s = "hello"
-                }
-            }
+              init() {
+                  self.s = "hello"
+              }
+          }
 
-            access(all) fun main() {
-                let r <- create R()
-                r.echo("hello")
-                destroy r
-            }
+          fun main() {
+              let r <- create R()
+              r.echo("hello")
+              destroy r
+          }
         `)
 		require.NoError(t, err)
 
@@ -1130,91 +1065,32 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		logs := getLogs()
 		require.Len(t, logs, 1)
-		assert.Equal(t, "\"hello\"", logs[0])
+		assert.Equal(t, `"hello"`, logs[0])
 	})
 
 	t.Run("default and conditions in parent, more conditions in child", func(t *testing.T) {
 
 		t.Parallel()
 
-		var logs []string
+		inter, getLogs, err := parseCheckAndPrepareWithConditionLogs(t, `
+          struct interface Foo {
+              fun test() {
+                  pre {
+                       conditionLog("invoked Foo.test() pre-condition")
+                  }
+                  post {
+                       conditionLog("invoked Foo.test() post-condition")
+                  }
+                  conditionLog("invoked Foo.test()")
+              }
+          }
 
-		logFunction := stdlib.NewStandardLibraryStaticFunction(
-			"log",
-			&sema.FunctionType{
-				Parameters: []sema.Parameter{
-					{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
-					},
-				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					sema.VoidType,
-				),
-				Purity: sema.FunctionPurityView,
-			},
-			``,
-			func(invocation interpreter.Invocation) interpreter.Value {
-				message := invocation.Arguments[0].MeteredString(
-					invocation.InvocationContext,
-					interpreter.SeenReferences{},
-					invocation.LocationRange,
-				)
-				logs = append(logs, message)
-				return interpreter.Void
-			},
-		)
+          struct Test: Foo {}
 
-		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseValueActivation.DeclareValue(logFunction)
-
-		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-		interpreter.Declare(baseActivation, logFunction)
-
-		code := `
-            struct interface Foo {
-                fun test() {
-                    pre {
-                         printMessage("invoked Foo.test() pre-condition")
-                    }
-                    post {
-                         printMessage("invoked Foo.test() post-condition")
-                    }
-                    printMessage("invoked Foo.test()")
-                }
-            }
-
-            struct Test: Foo {
-            }
-
-            view fun printMessage(_ msg: String): Bool {
-                log(msg)
-                return true
-            }
-
-            fun main() {
-               Test().test()
-            }
-        `
-
-		inter, err := parseCheckAndPrepareWithOptions(
-			t,
-			code,
-			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
-					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
-						return baseActivation
-					},
-				},
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
-					},
-				},
-				HandleCheckerError: nil,
-			},
-		)
+          fun main() {
+             Test().test()
+          }
+        `)
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("main")
@@ -1226,7 +1102,8 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 				`"invoked Foo.test() pre-condition"`,
 				`"invoked Foo.test()"`,
 				`"invoked Foo.test() post-condition"`,
-			}, logs,
+			},
+			getLogs(),
 		)
 	})
 
@@ -1234,84 +1111,33 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		t.Parallel()
 
-		var logs []string
+		inter, getLogs, err := parseCheckAndPrepareWithConditionLogs(t, `
+          resource interface I {
+              fun foo() {
+                  pre {
+                      conditionLog("interface pre-condition 1")
+                      true == false
+                      conditionLog("interface pre-condition 3")
+                  }
+                  conditionLog("interface body")
+              }
+          }
 
-		logFunction := stdlib.NewStandardLibraryStaticFunction(
-			"log",
-			sema.NewSimpleFunctionType(
-				sema.FunctionPurityView,
-				[]sema.Parameter{
-					{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
-					},
-				},
-				sema.BoolTypeAnnotation,
-			),
-			``,
-			func(invocation interpreter.Invocation) interpreter.Value {
-				message := invocation.Arguments[0].MeteredString(
-					invocation.InvocationContext,
-					interpreter.SeenReferences{},
-					invocation.LocationRange,
-				)
-				logs = append(logs, message)
-				return interpreter.TrueValue
-			},
-		)
+          resource R: I {
+              fun foo() {
+                  conditionLog("implementation body")
+              }
 
-		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseValueActivation.DeclareValue(logFunction)
+              init() {
+                  self.foo()
+              }
+          }
 
-		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-		interpreter.Declare(baseActivation, logFunction)
-
-		code := `
-            resource interface I {
-                fun foo() {
-                    pre {
-                        log("interface pre-condition 1")
-                        true == false
-                        log("interface pre-condition 3")
-                    }
-                    log("interface body")
-                }
-            }
-
-            resource R: I {
-                fun foo() {
-                    log("implementation body")
-                }
-
-                init() {
-                    self.foo()
-                }
-            }
-
-            fun main() {
-                let r <- create R()
-                destroy r
-            }
-        `
-
-		inter, err := parseCheckAndPrepareWithOptions(
-			t,
-			code,
-			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
-					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
-						return baseActivation
-					},
-				},
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
-					},
-				},
-				HandleCheckerError: nil,
-			},
-		)
+          fun main() {
+              let r <- create R()
+              destroy r
+          }
+        `)
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("main")
@@ -1322,7 +1148,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 			[]string{
 				`"implementation body"`,
 			},
-			logs,
+			getLogs(),
 		)
 	})
 
@@ -1330,83 +1156,32 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		t.Parallel()
 
-		var logs []string
+		inter, getLogs, err := parseCheckAndPrepareWithConditionLogs(t, `
+          resource interface I {
+              fun foo() {
+                  pre {
+                      conditionLog("interface pre-condition 1")
+                      true == false
+                      conditionLog("interface pre-condition 3")
+                  }
+              }
+          }
 
-		logFunction := stdlib.NewStandardLibraryStaticFunction(
-			"log",
-			sema.NewSimpleFunctionType(
-				sema.FunctionPurityView,
-				[]sema.Parameter{
-					{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
-					},
-				},
-				sema.BoolTypeAnnotation,
-			),
-			``,
-			func(invocation interpreter.Invocation) interpreter.Value {
-				message := invocation.Arguments[0].MeteredString(
-					invocation.InvocationContext,
-					interpreter.SeenReferences{},
-					invocation.LocationRange,
-				)
-				logs = append(logs, message)
-				return interpreter.TrueValue
-			},
-		)
+          resource R: I {
+              fun foo() {
+                  conditionLog("implementation body")
+              }
 
-		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseValueActivation.DeclareValue(logFunction)
+              init() {
+                  self.foo()
+              }
+          }
 
-		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-		interpreter.Declare(baseActivation, logFunction)
-
-		code := `
-            resource interface I {
-                fun foo() {
-                    pre {
-                        log("interface pre-condition 1")
-                        true == false
-                        log("interface pre-condition 3")
-                    }
-                }
-            }
-
-            resource R: I {
-                fun foo() {
-                    log("implementation body")
-                }
-
-                init() {
-                    self.foo()
-                }
-            }
-
-            fun main() {
-                let r <- create R()
-                destroy r
-            }
-        `
-
-		inter, err := parseCheckAndPrepareWithOptions(
-			t,
-			code,
-			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
-					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
-						return baseActivation
-					},
-				},
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
-					},
-				},
-				HandleCheckerError: nil,
-			},
-		)
+          fun main() {
+              let r <- create R()
+              destroy r
+          }
+        `)
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("main")
@@ -1422,7 +1197,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 			[]string{
 				`"interface pre-condition 1"`,
 			},
-			logs,
+			getLogs(),
 		)
 	})
 
@@ -1430,83 +1205,32 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		t.Parallel()
 
-		var logs []string
+		inter, getLogs, err := parseCheckAndPrepareWithConditionLogs(t, `
+          resource interface I {
+              fun foo() {
+                  pre {
+                      conditionLog("interface pre-condition 1")
+                      true
+                      conditionLog("interface pre-condition 3")
+                  }
+              }
+          }
 
-		logFunction := stdlib.NewStandardLibraryStaticFunction(
-			"log",
-			sema.NewSimpleFunctionType(
-				sema.FunctionPurityView,
-				[]sema.Parameter{
-					{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
-					},
-				},
-				sema.BoolTypeAnnotation,
-			),
-			``,
-			func(invocation interpreter.Invocation) interpreter.Value {
-				message := invocation.Arguments[0].MeteredString(
-					invocation.InvocationContext,
-					interpreter.SeenReferences{},
-					invocation.LocationRange,
-				)
-				logs = append(logs, message)
-				return interpreter.TrueValue
-			},
-		)
+          resource R: I {
+              fun foo() {
+                  conditionLog("implementation body")
+              }
 
-		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseValueActivation.DeclareValue(logFunction)
+              init() {
+                  self.foo()
+              }
+          }
 
-		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-		interpreter.Declare(baseActivation, logFunction)
-
-		code := `
-            resource interface I {
-                fun foo() {
-                    pre {
-                        log("interface pre-condition 1")
-                        true
-                        log("interface pre-condition 3")
-                    }
-                }
-            }
-
-            resource R: I {
-                fun foo() {
-                    log("implementation body")
-                }
-
-                init() {
-                    self.foo()
-                }
-            }
-
-            fun main() {
-                let r <- create R()
-                destroy r
-            }
-        `
-
-		inter, err := parseCheckAndPrepareWithOptions(
-			t,
-			code,
-			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
-					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
-						return baseActivation
-					},
-				},
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
-					},
-				},
-				HandleCheckerError: nil,
-			},
-		)
+          fun main() {
+              let r <- create R()
+              destroy r
+          }
+        `)
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("main")
@@ -1519,7 +1243,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 				`"interface pre-condition 3"`,
 				`"implementation body"`,
 			},
-			logs,
+			getLogs(),
 		)
 	})
 }
@@ -1528,22 +1252,23 @@ func TestInterpretNestedInterfaceCast(t *testing.T) {
 
 	t.Parallel()
 
-	inter, err := parseCheckAndPrepareWithOptions(t, `
-	access(all) contract C {
-		access(all) resource interface TopInterface {}
-		access(all) resource interface MiddleInterface: TopInterface {}
-		access(all) resource ConcreteResource: MiddleInterface {}
-	 
-		access(all) fun createMiddleInterface(): @{MiddleInterface} {
-			return <-create ConcreteResource()
-		}
-	 }
+	inter, err := parseCheckAndPrepareWithOptions(t,
+		`
+          contract C {
+             resource interface TopInterface {}
+             resource interface MiddleInterface: TopInterface {}
+             resource ConcreteResource: MiddleInterface {}
 
-	 access(all) fun main() {
-		let x <- C.createMiddleInterface()
-		let y <- x as! @{C.TopInterface}
-		destroy y
-	 }
+             fun createMiddleInterface(): @{MiddleInterface} {
+                 return <-create ConcreteResource()
+             }
+          }
+
+          fun main() {
+             let x <- C.createMiddleInterface()
+             let y <- x as! @{C.TopInterface}
+             destroy y
+          }
         `,
 		ParseCheckAndInterpretOptions{
 			CheckerConfig: &sema.Config{},
