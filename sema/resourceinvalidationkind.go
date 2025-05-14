@@ -35,8 +35,8 @@ const (
 	ResourceInvalidationKindDestroyPotential
 )
 
-func (k ResourceInvalidationKind) DetailedNoun() string {
-	switch k {
+func (i ResourceInvalidationKind) DetailedNoun() string {
+	switch i {
 	case ResourceInvalidationKindMoveDefinite:
 		return "definite move"
 	case ResourceInvalidationKindMoveTemporary:
@@ -69,8 +69,8 @@ func (i ResourceInvalidationKind) CoarseNoun() string {
 	panic(errors.NewUnreachableError())
 }
 
-func (k ResourceInvalidationKind) IsDefinite() bool {
-	switch k {
+func (i ResourceInvalidationKind) IsDefinite() bool {
+	switch i {
 	case ResourceInvalidationKindMoveDefinite,
 		ResourceInvalidationKindDestroyDefinite:
 
@@ -87,19 +87,19 @@ func (k ResourceInvalidationKind) IsDefinite() bool {
 	panic(errors.NewUnreachableError())
 }
 
-func (k ResourceInvalidationKind) AsPotential() ResourceInvalidationKind {
-	switch k {
+func (i ResourceInvalidationKind) AsPotential() ResourceInvalidationKind {
+	switch i {
 	case ResourceInvalidationKindMoveDefinite:
 		return ResourceInvalidationKindMovePotential
 	case ResourceInvalidationKindDestroyDefinite:
 		return ResourceInvalidationKindDestroyPotential
 	}
 
-	return k
+	return i
 }
 
-func (k ResourceInvalidationKind) CoarsePassiveVerb() string {
-	switch k {
+func (i ResourceInvalidationKind) CoarsePassiveVerb() string {
+	switch i {
 	case ResourceInvalidationKindMoveDefinite,
 		ResourceInvalidationKindMoveTemporary,
 		ResourceInvalidationKindMovePotential:

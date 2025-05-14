@@ -171,37 +171,37 @@ func NewMappedAccess(
 	}
 }
 
-func (t *MappedAccess) StartPosition() Position {
-	return t.StartPos
+func (a *MappedAccess) StartPosition() Position {
+	return a.StartPos
 }
 
-func (t *MappedAccess) EndPosition(memoryGauge common.MemoryGauge) Position {
-	return t.EntitlementMap.EndPosition(memoryGauge)
+func (a *MappedAccess) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return a.EntitlementMap.EndPosition(memoryGauge)
 }
 
-func (e *MappedAccess) String() string {
+func (a *MappedAccess) String() string {
 	var str strings.Builder
 	str.WriteString("mapping ")
-	str.WriteString(e.EntitlementMap.String())
+	str.WriteString(a.EntitlementMap.String())
 	return str.String()
 }
 
-func (e *MappedAccess) Keyword() string {
+func (a *MappedAccess) Keyword() string {
 	var str strings.Builder
 	str.WriteString("access(")
-	str.WriteString(e.String())
+	str.WriteString(a.String())
 	str.WriteString(")")
 	return str.String()
 }
 
-func (e *MappedAccess) MarshalJSON() ([]byte, error) {
+func (a *MappedAccess) MarshalJSON() ([]byte, error) {
 	type Alias MappedAccess
 	return json.Marshal(&struct {
 		*Alias
 		Range
 	}{
-		Range: NewUnmeteredRangeFromPositioned(e),
-		Alias: (*Alias)(e),
+		Range: NewUnmeteredRangeFromPositioned(a),
+		Alias: (*Alias)(a),
 	})
 }
 

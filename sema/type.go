@@ -501,11 +501,11 @@ const FromStringFunctionName = "fromString"
 func FromStringFunctionDocstring(ty Type) string {
 
 	builder := new(strings.Builder)
-	builder.WriteString(
-		fmt.Sprintf(
-			"Attempts to parse %s from a string. Returns `nil` on overflow or invalid input. Whitespace or invalid digits will return a nil value.\n",
-			ty.String(),
-		))
+	_, _ = fmt.Fprintf(
+		builder,
+		"Attempts to parse %s from a string. Returns `nil` on overflow or invalid input. Whitespace or invalid digits will return a nil value.\n",
+		ty.String(),
+	)
 
 	if IsSameTypeKind(ty, FixedPointType) {
 		builder.WriteString(
@@ -5187,7 +5187,7 @@ func (t *CompositeType) isTypeIndexableType() bool {
 }
 
 func (t *CompositeType) TypeIndexingElementType(indexingType Type, _ func() ast.Range) (Type, error) {
-	var access Access = UnauthorizedAccess
+	var access = UnauthorizedAccess
 	switch attachment := indexingType.(type) {
 	case *CompositeType:
 		// when accessed on an owned value, the produced attachment reference is entitled to all the
@@ -7125,7 +7125,7 @@ func (t *ReferenceType) TypeIndexingElementType(indexingType Type, _ func() ast.
 		return nil, nil
 	}
 
-	var access Access = UnauthorizedAccess
+	var access = UnauthorizedAccess
 	switch indexingType.(type) {
 	case *CompositeType:
 		// attachment access on a composite reference yields a reference to the attachment entitled to the same
@@ -8469,7 +8469,7 @@ func (t *IntersectionType) isTypeIndexableType() bool {
 }
 
 func (t *IntersectionType) TypeIndexingElementType(indexingType Type, _ func() ast.Range) (Type, error) {
-	var access Access = UnauthorizedAccess
+	var access = UnauthorizedAccess
 	switch attachment := indexingType.(type) {
 	case *CompositeType:
 		// when accessed on an owned value, the produced attachment reference is entitled to all the

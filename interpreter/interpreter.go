@@ -1138,13 +1138,15 @@ func (interpreter *Interpreter) declareCompositeValue(
 	}
 }
 
-func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
+func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	declaration ast.CompositeLikeDeclaration,
 	lexicalScope *VariableActivation,
 ) (
 	scope *VariableActivation,
 	variable Variable,
 ) {
+	declarationInterpreter := interpreter
+
 	identifier := declaration.DeclarationIdentifier().Identifier
 	// NOTE: find *or* declare, as the function might have not been pre-declared (e.g. in the REPL)
 	variable = declarationInterpreter.findOrDeclareVariable(identifier)
