@@ -181,18 +181,23 @@ func ParseCheckAndPrepareWithOptions(
 		vmConfig.NativeFunctionsProvider = func() map[string]*vm.Variable {
 			funcs := vm.NativeFunctions()
 
-			// Convert the externally provided `interpreter.HostFunction`s into `vm.NativeFunction`s.
+			// Convert the externally provided `interpreter.HostFunctionValue`s into `vm.NativeFunctionValue`s.
 			for name, functionVariable := range providedBuiltinFunctions { //nolint:maprange
+
+				value := functionVariable.GetValue(nil)
+				functionValue, ok := value.(*interpreter.HostFunctionValue)
+				if !ok {
+					continue
+				}
+
 				variable := &interpreter.SimpleVariable{}
 				funcs[name] = variable
 
 				variable.InitializeWithValue(
 					vm.NewNativeFunctionValue(
 						name,
-						stdlib.LogFunctionType,
+						functionValue.Type,
 						func(context *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-							value := functionVariable.GetValue(context)
-							functionValue := value.(*interpreter.HostFunctionValue)
 							invocation := interpreter.NewInvocation(
 								context,
 								nil,
@@ -217,6 +222,9 @@ func ParseCheckAndPrepareWithOptions(
 			BuiltinGlobalsProvider: func() map[string]*compiler.Global {
 				globals := compiler.NativeFunctions()
 				for name := range providedBuiltinFunctions { //nolint:maprange
+					if globals[name] != nil {
+						continue
+					}
 					globals[name] = &compiler.Global{
 						Name: name,
 					}
