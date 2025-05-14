@@ -179,22 +179,20 @@ func ParseCheckAndPrepareWithOptions(
 	//	baseActivationVariables := baseActivation.ValuesInFunction()
 	//
 	//	vmConfig.BuiltinGlobalsProvider = func() map[string]*vm.Variable {
-	//		funcs := vm.NativeFunctions()
+	//		builtinGlobals := vm.NativeFunctions()
 	//
+	//		// Add the given built-in values.
 	//		// Convert the externally provided `interpreter.HostFunctionValue`s into `vm.NativeFunctionValue`s.
-	//		for name, functionVariable := range providedBuiltinFunctions { //nolint:maprange
+	//		for name, variable := range baseActivationVariables { //nolint:maprange
 	//
-	//			value := functionVariable.GetValue(nil)
-	//			functionValue, ok := value.(*interpreter.HostFunctionValue)
-	//			if !ok {
+	//			if builtinGlobals[name] != nil {
 	//				continue
 	//			}
 	//
-	//			variable := &interpreter.SimpleVariable{}
-	//			funcs[name] = variable
+	//			value := variable.GetValue(nil)
 	//
-	//			variable.InitializeWithValue(
-	//				vm.NewNativeFunctionValue(
+	//			if functionValue, ok := value.(*interpreter.HostFunctionValue); ok {
+	//				value = vm.NewNativeFunctionValue(
 	//					name,
 	//					functionValue.Type,
 	//					func(context *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
@@ -210,18 +208,24 @@ func ParseCheckAndPrepareWithOptions(
 	//						)
 	//						return functionValue.Function(invocation)
 	//					},
-	//				),
-	//			)
+	//				)
+	//
+	//			}
+	//
+	//			vmVariable := &vm.Variable{}
+	//			vmVariable.InitializeWithValue(value)
+	//
+	//			builtinGlobals[name] = vmVariable
 	//		}
 	//
-	//		return funcs
+	//		return builtinGlobals
 	//	}
 	//
-	//	// Register externally provided functions as globals in compiler.
+	//	// Register externally provided globals in compiler.
 	//	compilerConfig = &compiler.Config{
 	//		BuiltinGlobalsProvider: func() map[string]*compiler.Global {
 	//			globals := compiler.NativeFunctions()
-	//			for name := range providedBuiltinFunctions { //nolint:maprange
+	//			for name := range baseActivationVariables { //nolint:maprange
 	//				if globals[name] != nil {
 	//					continue
 	//				}
