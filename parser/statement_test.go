@@ -2124,6 +2124,89 @@ func TestParseWhileStatementInFunctionDeclaration(t *testing.T) {
 	)
 }
 
+func TestParseReturnBreakContinueWithComments(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+	    // Before return
+        return // After return
+		// Before return semicolon
+        return /* After return, before semicolon */ ; // After semicolon
+		// Before break
+        break // After break
+		// Before continue
+        continue // After continue
+	`
+	result, errs := testParseStatements(code)
+	require.Empty(t, errs)
+
+	AssertEqualWithDiff(t,
+		[]ast.Statement{
+			&ast.ReturnStatement{
+				Expression: nil,
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 31, Line: 3, Column: 8},
+					EndPos:   ast.Position{Offset: 36, Line: 3, Column: 13},
+				},
+				Comments: ast.Comments{
+					Leading: []*ast.Comment{
+						ast.NewComment(nil, []byte("// Before return")),
+					},
+					Trailing: []*ast.Comment{
+						ast.NewComment(nil, []byte("// After return")),
+					},
+				},
+			},
+			&ast.ReturnStatement{
+				Expression: nil,
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 91, Line: 5, Column: 8},
+					EndPos:   ast.Position{Offset: 96, Line: 5, Column: 13},
+				},
+				Comments: ast.Comments{
+					Leading: []*ast.Comment{
+						ast.NewComment(nil, []byte("// Before return semicolon")),
+						ast.NewComment(nil, []byte("/* After return, before semicolon */")),
+					},
+					Trailing: []*ast.Comment{
+						ast.NewComment(nil, []byte("// After semicolon")),
+					},
+				},
+			},
+			&ast.BreakStatement{
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 182, Line: 7, Column: 8},
+					EndPos:   ast.Position{Offset: 186, Line: 7, Column: 12},
+				},
+				Comments: ast.Comments{
+					Leading: []*ast.Comment{
+						ast.NewComment(nil, []byte("// Before break")),
+					},
+					Trailing: []*ast.Comment{
+						ast.NewComment(nil, []byte("// After break")),
+					},
+				},
+			},
+			&ast.ContinueStatement{
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 232, Line: 9, Column: 8},
+					EndPos:   ast.Position{Offset: 239, Line: 9, Column: 15},
+				},
+				Comments: ast.Comments{
+					Leading: []*ast.Comment{
+						ast.NewComment(nil, []byte("// Before continue")),
+					},
+					Trailing: []*ast.Comment{
+						ast.NewComment(nil, []byte("// After continue")),
+					},
+				},
+			},
+		},
+		result,
+	)
+}
+
 func TestParseForStatementInFunctionDeclaration(t *testing.T) {
 
 	t.Parallel()

@@ -247,7 +247,7 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(
 }
 
 func parseReturnStatement(p *parser) (*ast.ReturnStatement, error) {
-	var endToken lexer.Token
+	var endToken *lexer.Token
 	startToken := p.current
 	tokenRange := startToken.Range
 	endPosition := tokenRange.EndPos
@@ -261,7 +261,7 @@ func parseReturnStatement(p *parser) (*ast.ReturnStatement, error) {
 	var err error
 	switch p.current.Type {
 	case lexer.TokenEOF, lexer.TokenSemicolon, lexer.TokenBraceClose:
-		endToken = p.current
+		endToken = &p.current
 		break
 	default:
 		if !sawNewLine {
@@ -274,6 +274,14 @@ func parseReturnStatement(p *parser) (*ast.ReturnStatement, error) {
 		}
 	}
 
+	comments := ast.Comments{}
+	if endToken == nil {
+		comments = startToken.Comments
+	} else {
+		comments.Leading = startToken.Comments.PackToList()
+		comments.Trailing = endToken.Comments.PackToList()
+	}
+
 	return ast.NewReturnStatement(
 		p.memoryGauge,
 		expression,
@@ -282,25 +290,22 @@ func parseReturnStatement(p *parser) (*ast.ReturnStatement, error) {
 			tokenRange.StartPos,
 			endPosition,
 		),
-		ast.Comments{
-			Leading:  startToken.Comments.PackToList(),
-			Trailing: endToken.Comments.PackToList(),
-		},
+		comments,
 	), nil
 }
 
 func parseBreakStatement(p *parser) *ast.BreakStatement {
-	tokenRange := p.current.Range
+	breakToken := p.current
 	p.next()
 
-	return ast.NewBreakStatement(p.memoryGauge, tokenRange)
+	return ast.NewBreakStatement(p.memoryGauge, breakToken.Range, breakToken.Comments)
 }
 
 func parseContinueStatement(p *parser) *ast.ContinueStatement {
-	tokenRange := p.current.Range
+	continueToken := p.current
 	p.next()
 
-	return ast.NewContinueStatement(p.memoryGauge, tokenRange)
+	return ast.NewContinueStatement(p.memoryGauge, continueToken.Range, continueToken.Comments)
 }
 
 func parseIfStatement(p *parser) (*ast.IfStatement, error) {

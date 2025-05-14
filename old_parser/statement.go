@@ -258,14 +258,14 @@ func parseBreakStatement(p *parser) *ast.BreakStatement {
 	tokenRange := p.current.Range
 	p.next()
 
-	return ast.NewBreakStatement(p.memoryGauge, tokenRange)
+	return ast.NewBreakStatement(p.memoryGauge, tokenRange, ast.Comments{})
 }
 
 func parseContinueStatement(p *parser) *ast.ContinueStatement {
 	tokenRange := p.current.Range
 	p.next()
 
-	return ast.NewContinueStatement(p.memoryGauge, tokenRange)
+	return ast.NewContinueStatement(p.memoryGauge, tokenRange, ast.Comments{})
 }
 
 func parseIfStatement(p *parser) (*ast.IfStatement, error) {
@@ -337,6 +337,7 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 			thenBlock,
 			elseBlock,
 			startPos,
+			ast.Comments{},
 		)
 
 		if variableDeclaration != nil {

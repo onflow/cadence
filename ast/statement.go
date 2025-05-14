@@ -104,15 +104,17 @@ func (s *ReturnStatement) MarshalJSON() ([]byte, error) {
 
 type BreakStatement struct {
 	Range
+	Comments
 }
 
 var _ Element = &BreakStatement{}
 var _ Statement = &BreakStatement{}
 
-func NewBreakStatement(gauge common.MemoryGauge, tokenRange Range) *BreakStatement {
+func NewBreakStatement(gauge common.MemoryGauge, tokenRange Range, comments Comments) *BreakStatement {
 	common.UseMemory(gauge, common.BreakStatementMemoryUsage)
 	return &BreakStatement{
-		Range: tokenRange,
+		Range:    tokenRange,
+		Comments: comments,
 	}
 }
 
@@ -151,15 +153,17 @@ func (s *BreakStatement) MarshalJSON() ([]byte, error) {
 
 type ContinueStatement struct {
 	Range
+	Comments
 }
 
 var _ Element = &ContinueStatement{}
 var _ Statement = &ContinueStatement{}
 
-func NewContinueStatement(gauge common.MemoryGauge, tokenRange Range) *ContinueStatement {
+func NewContinueStatement(gauge common.MemoryGauge, tokenRange Range, comments Comments) *ContinueStatement {
 	common.UseMemory(gauge, common.ContinueStatementMemoryUsage)
 	return &ContinueStatement{
-		Range: tokenRange,
+		Range:    tokenRange,
+		Comments: comments,
 	}
 }
 
