@@ -26,15 +26,15 @@ import "github.com/onflow/cadence/ast"
 // i.e: If multiple consecutive instructions were emitted for the same source-code position,
 // then only the first instruction of that instruction-set would be available in the table.
 type LineNumberTable struct {
-	positions []PositionInfo
+	Positions []PositionInfo
 }
 
 func (t *LineNumberTable) AddPositionInfo(bytecodeIndex uint16, position ast.Position) {
-	t.positions = append(
-		t.positions,
+	t.Positions = append(
+		t.Positions,
 		PositionInfo{
-			instructionIndex: bytecodeIndex,
-			position:         position,
+			InstructionIndex: bytecodeIndex,
+			Position:         position,
 		},
 	)
 }
@@ -42,17 +42,17 @@ func (t *LineNumberTable) AddPositionInfo(bytecodeIndex uint16, position ast.Pos
 func (t *LineNumberTable) GetSourcePosition(instructionIndex uint16) ast.Position {
 	var lastChangedPosition ast.Position
 
-	for _, positionInfo := range t.positions {
-		if instructionIndex < positionInfo.instructionIndex {
+	for _, positionInfo := range t.Positions {
+		if instructionIndex < positionInfo.InstructionIndex {
 			break
 		}
-		lastChangedPosition = positionInfo.position
+		lastChangedPosition = positionInfo.Position
 	}
 
 	return lastChangedPosition
 }
 
 type PositionInfo struct {
-	instructionIndex uint16
-	position         ast.Position
+	InstructionIndex uint16
+	Position         ast.Position
 }

@@ -464,18 +464,46 @@ func (c *Compiler[_, _]) popReturns() {
 }
 
 func (c *Compiler[_, _]) compileDeclaration(declaration ast.Declaration) {
-	c.currentPosition = declaration.StartPosition()
-	ast.AcceptDeclaration[struct{}](declaration, c)
+	c.compileWithPositionInfo(
+		declaration,
+		func() {
+			ast.AcceptDeclaration[struct{}](declaration, c)
+		},
+	)
 }
 
 func (c *Compiler[_, _]) compileStatement(statement ast.Statement) {
-	c.currentPosition = statement.StartPosition()
-	ast.AcceptStatement[struct{}](statement, c)
+	c.compileWithPositionInfo(
+		statement,
+		func() {
+			ast.AcceptStatement[struct{}](statement, c)
+		},
+	)
 }
 
 func (c *Compiler[_, _]) compileExpression(expression ast.Expression) {
-	c.currentPosition = expression.StartPosition()
-	ast.AcceptExpression[struct{}](expression, c)
+	c.compileWithPositionInfo(
+		expression,
+		func() {
+			ast.AcceptExpression[struct{}](expression, c)
+		},
+	)
+}
+
+func (c *Compiler[_, _]) compileWithPositionInfo(
+	hasPosition ast.HasPosition,
+	compile func(),
+) {
+	prevCurrentPosition := c.currentPosition
+	prevLastChangedPosition := c.lastChangedPosition
+
+	c.currentPosition = hasPosition.StartPosition()
+	defer func() {
+		c.currentPosition = prevCurrentPosition
+		c.lastChangedPosition = prevLastChangedPosition
+	}()
+
+	compile()
 }
 
 func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {

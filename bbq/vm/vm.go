@@ -1665,7 +1665,11 @@ func (vm *VM) Global(name string) Value {
 func (vm *VM) LocationRange() interpreter.LocationRange {
 	currentFunction := vm.callFrame.function
 	lineNumbers := currentFunction.Function.LineNumbers
-	position := lineNumbers.GetSourcePosition(vm.ip)
+
+	// `vm.ip` always points to the next instruction.
+	lastInstructionIndex := vm.ip - 1
+
+	position := lineNumbers.GetSourcePosition(lastInstructionIndex)
 
 	return interpreter.LocationRange{
 		Location: currentFunction.Executable.Location,
