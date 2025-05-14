@@ -738,7 +738,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		t.Parallel()
 
-		logFunctionType := sema.NewSimpleFunctionType(
+		myLogFunctionType := sema.NewSimpleFunctionType(
 			sema.FunctionPurityView,
 			[]sema.Parameter{
 				{
@@ -752,8 +752,8 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		var logs []string
 		valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
-			"log",
-			logFunctionType,
+			"myLog",
+			myLogFunctionType,
 			"",
 			func(invocation interpreter.Invocation) interpreter.Value {
 				msg := invocation.Arguments[0].(*interpreter.StringValue).Str
@@ -815,7 +815,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
             }
 
             access(all) view fun print(_ msg: String): Bool {
-                log(msg)
+                myLog(msg)
                 return true
             }
 
