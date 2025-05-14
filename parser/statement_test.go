@@ -1707,6 +1707,132 @@ func TestParseSwitchStatement(t *testing.T) {
 		)
 	})
 
+	t.Run("two cases, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseStatements(`
+			// Before switch
+			switch x { 
+				// Before first case
+				case true : // After first case
+					true
+				// Before default case
+				default : /* After default case */ false
+			} // After switch
+`)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.SwitchStatement{
+					Expression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "x",
+							Pos:        ast.Position{Line: 3, Column: 10, Offset: 31},
+						},
+					},
+					Cases: []*ast.SwitchCase{
+						{
+							Expression: &ast.BoolExpression{
+								Value: true,
+								Range: ast.Range{
+									StartPos: ast.Position{
+										Offset: 70,
+										Line:   5,
+										Column: 9,
+									},
+									EndPos: ast.Position{
+										Offset: 73,
+										Line:   5,
+										Column: 12,
+									},
+								},
+							},
+							Statements: []ast.Statement{
+								&ast.ExpressionStatement{
+									Expression: &ast.BoolExpression{
+										Value: true,
+										Range: ast.Range{
+											StartPos: ast.Position{
+												Offset: 102,
+												Line:   6,
+												Column: 5,
+											},
+											EndPos: ast.Position{
+												Offset: 105,
+												Line:   6,
+												Column: 8,
+											},
+										},
+									},
+								},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 5, Column: 4, Offset: 65},
+								EndPos:   ast.Position{Line: 6, Column: 8, Offset: 105},
+							},
+							Comments: ast.Comments{
+								Leading: []*ast.Comment{
+									ast.NewComment(nil, []byte("// Before first case")),
+								},
+								Trailing: []*ast.Comment{
+									ast.NewComment(nil, []byte("// After first case")),
+								},
+							},
+						},
+						{
+							Statements: []ast.Statement{
+								&ast.ExpressionStatement{
+									Expression: &ast.BoolExpression{
+										Value: false,
+										Range: ast.Range{
+											StartPos: ast.Position{
+												Offset: 173,
+												Line:   8,
+												Column: 39,
+											},
+											EndPos: ast.Position{
+												Offset: 177,
+												Line:   8,
+												Column: 43,
+											},
+										},
+									},
+								},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 8, Column: 4, Offset: 138},
+								EndPos:   ast.Position{Line: 8, Column: 43, Offset: 177},
+							},
+							Comments: ast.Comments{
+								Leading: []*ast.Comment{
+									ast.NewComment(nil, []byte("// Before default case")),
+								},
+								Trailing: []*ast.Comment{
+									ast.NewComment(nil, []byte("/* After default case */")),
+								},
+							},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 3, Column: 3, Offset: 24},
+						EndPos:   ast.Position{Line: 9, Column: 3, Offset: 182},
+					},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before switch")),
+						},
+						Trailing: []*ast.Comment{
+							ast.NewComment(nil, []byte("// After switch")),
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
 	t.Run("Invalid identifiers in switch cases", func(t *testing.T) {
 		code := "switch 1 {AAAAA: break; case 3: break; default: break}"
 		_, errs := testParseStatements(code)

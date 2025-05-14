@@ -703,7 +703,7 @@ func parseEmitStatement(p *parser) (*ast.EmitStatement, error) {
 
 func parseSwitchStatement(p *parser) (*ast.SwitchStatement, error) {
 
-	startPos := p.current.StartPos
+	startToken := p.current
 
 	// Skip the `switch` keyword
 	p.next()
@@ -734,9 +734,13 @@ func parseSwitchStatement(p *parser) (*ast.SwitchStatement, error) {
 		cases,
 		ast.NewRange(
 			p.memoryGauge,
-			startPos,
+			startToken.StartPos,
 			endToken.EndPos,
 		),
+		ast.Comments{
+			Leading:  startToken.Comments.PackToList(),
+			Trailing: endToken.Comments.PackToList(),
+		},
 	), nil
 }
 
@@ -796,7 +800,7 @@ func parseSwitchCases(p *parser) (cases []*ast.SwitchCase, err error) {
 //	           | `default` `:` statements
 func parseSwitchCase(p *parser, hasExpression bool) (*ast.SwitchCase, error) {
 
-	startPos := p.current.StartPos
+	startToken := p.current
 
 	// Skip the keyword
 	p.next()
@@ -813,7 +817,7 @@ func parseSwitchCase(p *parser, hasExpression bool) (*ast.SwitchCase, error) {
 		p.skipSpace()
 	}
 
-	colonPos := p.current.StartPos
+	colonToken := p.current
 
 	if !p.current.Is(lexer.TokenColon) {
 		p.reportSyntaxError(
@@ -846,22 +850,27 @@ func parseSwitchCase(p *parser, hasExpression bool) (*ast.SwitchCase, error) {
 		return nil, err
 	}
 
-	endPos := colonPos
+	endPos := colonToken.StartPos
 
 	if len(statements) > 0 {
 		lastStatementIndex := len(statements) - 1
 		endPos = statements[lastStatementIndex].EndPosition(p.memoryGauge)
 	}
 
-	return &ast.SwitchCase{
-		Expression: expression,
-		Statements: statements,
-		Range: ast.NewRange(
+	return ast.NewSwitchCase(
+		p.memoryGauge,
+		expression,
+		statements,
+		ast.NewRange(
 			p.memoryGauge,
-			startPos,
+			startToken.StartPos,
 			endPos,
 		),
-	}, nil
+		ast.Comments{
+			Leading:  startToken.Comments.PackToList(),
+			Trailing: colonToken.Comments.PackToList(),
+		},
+	), nil
 }
 
 func parseRemoveStatement(

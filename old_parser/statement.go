@@ -656,6 +656,7 @@ func parseSwitchStatement(p *parser) (*ast.SwitchStatement, error) {
 			startPos,
 			endToken.EndPos,
 		),
+		ast.Comments{},
 	), nil
 }
 

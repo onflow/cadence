@@ -761,6 +761,7 @@ type SwitchStatement struct {
 	Expression Expression
 	Cases      []*SwitchCase
 	Range
+	Comments
 }
 
 var _ Element = &SwitchStatement{}
@@ -771,12 +772,14 @@ func NewSwitchStatement(
 	expression Expression,
 	cases []*SwitchCase,
 	stmtRange Range,
+	comments Comments,
 ) *SwitchStatement {
 	common.UseMemory(gauge, common.SwitchStatementMemoryUsage)
 	return &SwitchStatement{
 		Expression: expression,
 		Cases:      cases,
 		Range:      stmtRange,
+		Comments:   comments,
 	}
 }
 
@@ -855,6 +858,22 @@ type SwitchCase struct {
 	Expression Expression
 	Statements []Statement
 	Range
+	Comments
+}
+
+func NewSwitchCase(
+	_ common.MemoryGauge,
+	expression Expression,
+	statements []Statement,
+	r Range,
+	comments Comments,
+) *SwitchCase {
+	return &SwitchCase{
+		Expression: expression,
+		Statements: statements,
+		Range:      r,
+		Comments:   comments,
+	}
 }
 
 func (s *SwitchCase) MarshalJSON() ([]byte, error) {
