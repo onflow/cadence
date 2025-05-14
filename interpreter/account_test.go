@@ -601,9 +601,8 @@ func testAccountWithErrorHandlerWithCompiler(
 	var storage interpreter.Storage
 
 	if compilerEnabled && *compile {
-		// TODO: Uncomment once the compiler branch is merged to master.
 		//vmConfig := &vm.Config{
-		//	NativeFunctionsProvider: func() map[string]*vm.Variable {
+		//	BuiltinGlobalsProvider: func() map[string]*vm.Variable {
 		//		funcs := vm.NativeFunctions()
 		//		variable := &interpreter.SimpleVariable{}
 		//		variable.InitializeWithValue(accountValueDeclaration.Value)
@@ -645,6 +644,12 @@ func testAccountWithErrorHandlerWithCompiler(
 		//		Programs: programs,
 		//	},
 		//)
+		//
+		//var uuid uint64
+		//uuidHandler := func() (uint64, error) {
+		//	uuid++
+		//	return uuid, nil
+		//}
 		//
 		//vmConfig.WithInterpreterConfig(&interpreter.Config{
 		//	UUIDHandler: uuidHandler,
