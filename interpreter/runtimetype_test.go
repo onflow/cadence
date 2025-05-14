@@ -33,7 +33,7 @@ func TestInterpretOptionalType(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let a = OptionalType(Type<String>())
       let b = OptionalType(Type<Int>()) 
 
@@ -50,7 +50,7 @@ func TestInterpretOptionalType(t *testing.T) {
 				Type: interpreter.PrimitiveStaticTypeString,
 			},
 		},
-		inter.Globals.Get("a").GetValue(inter),
+		inter.GetGlobal("a"),
 	)
 
 	assert.Equal(t,
@@ -59,7 +59,7 @@ func TestInterpretOptionalType(t *testing.T) {
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
-		inter.Globals.Get("b").GetValue(inter),
+		inter.GetGlobal("b"),
 	)
 
 	assert.Equal(t,
@@ -68,7 +68,7 @@ func TestInterpretOptionalType(t *testing.T) {
 				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "R"),
 			},
 		},
-		inter.Globals.Get("c").GetValue(inter),
+		inter.GetGlobal("c"),
 	)
 
 	assert.Equal(t,
@@ -79,12 +79,12 @@ func TestInterpretOptionalType(t *testing.T) {
 				},
 			},
 		},
-		inter.Globals.Get("d").GetValue(inter),
+		inter.GetGlobal("d"),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(inter),
-		inter.Globals.Get("e").GetValue(inter),
+		inter.GetGlobal("a"),
+		inter.GetGlobal("e"),
 	)
 }
 
@@ -92,7 +92,7 @@ func TestInterpretVariableSizedArrayType(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let a = VariableSizedArrayType(Type<String>())
       let b = VariableSizedArrayType(Type<Int>()) 
 
@@ -109,7 +109,7 @@ func TestInterpretVariableSizedArrayType(t *testing.T) {
 				Type: interpreter.PrimitiveStaticTypeString,
 			},
 		},
-		inter.Globals.Get("a").GetValue(inter),
+		inter.GetGlobal("a"),
 	)
 
 	assert.Equal(t,
@@ -118,7 +118,7 @@ func TestInterpretVariableSizedArrayType(t *testing.T) {
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
-		inter.Globals.Get("b").GetValue(inter),
+		inter.GetGlobal("b"),
 	)
 
 	assert.Equal(t,
@@ -127,7 +127,7 @@ func TestInterpretVariableSizedArrayType(t *testing.T) {
 				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "R"),
 			},
 		},
-		inter.Globals.Get("c").GetValue(inter),
+		inter.GetGlobal("c"),
 	)
 
 	assert.Equal(t,
@@ -138,11 +138,11 @@ func TestInterpretVariableSizedArrayType(t *testing.T) {
 				},
 			},
 		},
-		inter.Globals.Get("d").GetValue(inter),
+		inter.GetGlobal("d"),
 	)
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(inter),
-		inter.Globals.Get("e").GetValue(inter),
+		inter.GetGlobal("a"),
+		inter.GetGlobal("e"),
 	)
 }
 
@@ -150,7 +150,7 @@ func TestInterpretConstantSizedArrayType(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let a = ConstantSizedArrayType(type: Type<String>(), size: 10)
       let b = ConstantSizedArrayType(type: Type<Int>(), size: 5) 
 
@@ -168,7 +168,7 @@ func TestInterpretConstantSizedArrayType(t *testing.T) {
 				Size: int64(10),
 			},
 		},
-		inter.Globals.Get("a").GetValue(inter),
+		inter.GetGlobal("a"),
 	)
 
 	assert.Equal(t,
@@ -178,7 +178,7 @@ func TestInterpretConstantSizedArrayType(t *testing.T) {
 				Size: int64(5),
 			},
 		},
-		inter.Globals.Get("b").GetValue(inter),
+		inter.GetGlobal("b"),
 	)
 
 	assert.Equal(t,
@@ -188,7 +188,7 @@ func TestInterpretConstantSizedArrayType(t *testing.T) {
 				Size: int64(400),
 			},
 		},
-		inter.Globals.Get("c").GetValue(inter),
+		inter.GetGlobal("c"),
 	)
 
 	assert.Equal(t,
@@ -201,12 +201,12 @@ func TestInterpretConstantSizedArrayType(t *testing.T) {
 				Size: int64(6),
 			},
 		},
-		inter.Globals.Get("d").GetValue(inter),
+		inter.GetGlobal("d"),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(inter),
-		inter.Globals.Get("e").GetValue(inter),
+		inter.GetGlobal("a"),
+		inter.GetGlobal("e"),
 	)
 }
 
@@ -214,7 +214,7 @@ func TestInterpretDictionaryType(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let a = DictionaryType(key: Type<String>(), value: Type<Int>())!
       let b = DictionaryType(key: Type<Int>(), value: Type<String>())!
 
@@ -234,7 +234,7 @@ func TestInterpretDictionaryType(t *testing.T) {
 				ValueType: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
-		inter.Globals.Get("a").GetValue(inter),
+		inter.GetGlobal("a"),
 	)
 
 	assert.Equal(t,
@@ -244,7 +244,7 @@ func TestInterpretDictionaryType(t *testing.T) {
 				ValueType: interpreter.PrimitiveStaticTypeString,
 			},
 		},
-		inter.Globals.Get("b").GetValue(inter),
+		inter.GetGlobal("b"),
 	)
 
 	assert.Equal(t,
@@ -254,7 +254,7 @@ func TestInterpretDictionaryType(t *testing.T) {
 				KeyType:   interpreter.PrimitiveStaticTypeInt,
 			},
 		},
-		inter.Globals.Get("c").GetValue(inter),
+		inter.GetGlobal("c"),
 	)
 
 	assert.Equal(t,
@@ -267,17 +267,17 @@ func TestInterpretDictionaryType(t *testing.T) {
 				KeyType: interpreter.PrimitiveStaticTypeBool,
 			},
 		},
-		inter.Globals.Get("d").GetValue(inter),
+		inter.GetGlobal("d"),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(inter),
-		inter.Globals.Get("e").GetValue(inter),
+		inter.GetGlobal("a"),
+		inter.GetGlobal("e"),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("f").GetValue(inter),
+		inter.GetGlobal("f"),
 	)
 }
 
@@ -285,7 +285,7 @@ func TestInterpretCompositeType(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       resource R {}
       struct S {}
       struct interface B {}
@@ -307,50 +307,50 @@ func TestInterpretCompositeType(t *testing.T) {
 		interpreter.TypeValue{
 			Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "R"),
 		},
-		inter.Globals.Get("a").GetValue(inter),
+		inter.GetGlobal("a"),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "S"),
 		},
-		inter.Globals.Get("b").GetValue(inter),
+		inter.GetGlobal("b"),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("c").GetValue(inter),
+		inter.GetGlobal("c"),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("d").GetValue(inter),
+		inter.GetGlobal("d"),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(inter),
-		inter.Globals.Get("e").GetValue(inter),
+		inter.GetGlobal("a"),
+		inter.GetGlobal("e"),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "F"),
 		},
-		inter.Globals.Get("f").GetValue(inter),
+		inter.GetGlobal("f"),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, nil, "PublicKey"),
 		},
-		inter.Globals.Get("g").GetValue(inter),
+		inter.GetGlobal("g"),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, nil, "HashAlgorithm"),
 		},
-		inter.Globals.Get("h").GetValue(inter),
+		inter.GetGlobal("h"),
 	)
 }
 
@@ -379,7 +379,7 @@ func TestInterpretFunctionType(t *testing.T) {
 				},
 			},
 		},
-		inter.Globals.Get("a").GetValue(inter),
+		inter.GetGlobal("a"),
 	)
 
 	assert.Equal(t,
@@ -394,7 +394,7 @@ func TestInterpretFunctionType(t *testing.T) {
 				},
 			},
 		},
-		inter.Globals.Get("b").GetValue(inter),
+		inter.GetGlobal("b"),
 	)
 
 	assert.Equal(t,
@@ -405,12 +405,12 @@ func TestInterpretFunctionType(t *testing.T) {
 				},
 			},
 		},
-		inter.Globals.Get("c").GetValue(inter),
+		inter.GetGlobal("c"),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(inter),
-		inter.Globals.Get("d").GetValue(inter),
+		inter.GetGlobal("a"),
+		inter.GetGlobal("d"),
 	)
 }
 
@@ -418,7 +418,7 @@ func TestInterpretReferenceType(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       resource R {}
       struct S {}
 	  entitlement X
@@ -442,7 +442,7 @@ func TestInterpretReferenceType(t *testing.T) {
 				),
 			},
 		},
-		inter.Globals.Get("a").GetValue(inter),
+		inter.GetGlobal("a"),
 	)
 
 	assert.Equal(t,
@@ -452,7 +452,7 @@ func TestInterpretReferenceType(t *testing.T) {
 				Authorization:  interpreter.UnauthorizedAccess,
 			},
 		},
-		inter.Globals.Get("b").GetValue(inter),
+		inter.GetGlobal("b"),
 	)
 
 	assert.Equal(t,
@@ -467,17 +467,17 @@ func TestInterpretReferenceType(t *testing.T) {
 				),
 			},
 		},
-		inter.Globals.Get("c").GetValue(inter),
+		inter.GetGlobal("c"),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(inter),
-		inter.Globals.Get("d").GetValue(inter),
+		inter.GetGlobal("a"),
+		inter.GetGlobal("d"),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("e").GetValue(inter),
+		inter.GetGlobal("e"),
 	)
 }
 
@@ -485,7 +485,7 @@ func TestInterpretIntersectionType(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       resource interface R {}
       struct interface S {}
       resource A : R {}
@@ -517,12 +517,12 @@ func TestInterpretIntersectionType(t *testing.T) {
 				},
 			},
 		},
-		inter.Globals.Get("a").GetValue(inter),
+		inter.GetGlobal("a"),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("c").GetValue(inter),
+		inter.GetGlobal("c"),
 	)
 
 	assert.Equal(t,
@@ -533,12 +533,12 @@ func TestInterpretIntersectionType(t *testing.T) {
 				},
 			},
 		},
-		inter.Globals.Get("b").GetValue(inter),
+		inter.GetGlobal("b"),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("j").GetValue(inter),
+		inter.GetGlobal("j"),
 	)
 
 	assert.Equal(t,
@@ -550,22 +550,22 @@ func TestInterpretIntersectionType(t *testing.T) {
 				},
 			},
 		},
-		inter.Globals.Get("k").GetValue(inter),
+		inter.GetGlobal("k"),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("f").GetValue(inter),
+		inter.GetGlobal("f"),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(inter),
-		inter.Globals.Get("h").GetValue(inter),
+		inter.GetGlobal("a"),
+		inter.GetGlobal("h"),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("b").GetValue(inter),
-		inter.Globals.Get("i").GetValue(inter),
+		inter.GetGlobal("b"),
+		inter.GetGlobal("i"),
 	)
 }
 
@@ -573,7 +573,7 @@ func TestInterpretCapabilityType(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let a = CapabilityType(Type<&String>())!
       let b = CapabilityType(Type<&Int>())!
 
@@ -593,7 +593,7 @@ func TestInterpretCapabilityType(t *testing.T) {
 				},
 			},
 		},
-		inter.Globals.Get("a").GetValue(inter),
+		inter.GetGlobal("a"),
 	)
 
 	assert.Equal(t,
@@ -605,7 +605,7 @@ func TestInterpretCapabilityType(t *testing.T) {
 				},
 			},
 		},
-		inter.Globals.Get("b").GetValue(inter),
+		inter.GetGlobal("b"),
 	)
 
 	assert.Equal(t,
@@ -617,17 +617,17 @@ func TestInterpretCapabilityType(t *testing.T) {
 				},
 			},
 		},
-		inter.Globals.Get("c").GetValue(inter),
+		inter.GetGlobal("c"),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("d").GetValue(inter),
+		inter.GetGlobal("d"),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(inter),
-		inter.Globals.Get("e").GetValue(inter),
+		inter.GetGlobal("a"),
+		inter.GetGlobal("e"),
 	)
 }
 
@@ -652,26 +652,26 @@ func TestInterpretInclusiveRangeType(t *testing.T) {
 				ElementType: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
-		inter.Globals.Get("a").GetValue(inter),
+		inter.GetGlobal("a"),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("b").GetValue(inter),
+		inter.GetGlobal("b"),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("c").GetValue(inter),
+		inter.GetGlobal("c"),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("d").GetValue(inter),
+		inter.GetGlobal("d"),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(inter),
-		inter.Globals.Get("e").GetValue(inter),
+		inter.GetGlobal("a"),
+		inter.GetGlobal("e"),
 	)
 }
