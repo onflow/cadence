@@ -84,6 +84,7 @@ func parseCheckAndPrepareWithConditionLogs(
 				BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
 					return baseActivation
 				},
+				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 			},
 		},
 	)
