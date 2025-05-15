@@ -826,5 +826,6 @@ func parseRemoveStatement(
 		attachmentNominalType,
 		attached,
 		startPos,
+		ast.Comments{},
 	), nil
 }

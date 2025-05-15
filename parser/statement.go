@@ -885,7 +885,7 @@ func parseRemoveStatement(
 	p *parser,
 ) (*ast.RemoveStatement, error) {
 
-	startPos := p.current.StartPos
+	startToken := p.current
 	p.next()
 	p.skipSpace()
 
@@ -904,8 +904,11 @@ func parseRemoveStatement(
 
 	p.skipSpace()
 
+	var fromToken lexer.Token
 	// check and skip `from` keyword
-	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordFrom) {
+	if p.isToken(p.current, lexer.TokenIdentifier, KeywordFrom) {
+		fromToken = p.current
+	} else {
 		p.reportSyntaxError(
 			"expected from keyword, got %s",
 			p.current.Type,
@@ -918,10 +921,15 @@ func parseRemoveStatement(
 		return nil, err
 	}
 
+	leadingComments := startToken.Comments.PackToList()
+	leadingComments = append(leadingComments, fromToken.Comments.PackToList()...)
 	return ast.NewRemoveStatement(
 		p.memoryGauge,
 		attachmentNominalType,
 		attached,
-		startPos,
+		startToken.StartPos,
+		ast.Comments{
+			Leading: leadingComments,
+		},
 	), nil
 }

@@ -298,6 +298,7 @@ type RemoveStatement struct {
 	Attachment *NominalType
 	Value      Expression
 	StartPos   Position `json:"-"`
+	Comments
 }
 
 var _ Element = &RemoveStatement{}
@@ -308,6 +309,7 @@ func NewRemoveStatement(
 	attachment *NominalType,
 	value Expression,
 	startPos Position,
+	comments Comments,
 ) *RemoveStatement {
 	common.UseMemory(gauge, common.RemoveStatementMemoryUsage)
 
@@ -315,6 +317,7 @@ func NewRemoveStatement(
 		Attachment: attachment,
 		Value:      value,
 		StartPos:   startPos,
+		Comments:   comments,
 	}
 }
 

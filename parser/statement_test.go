@@ -1450,16 +1450,56 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 					Attachment: &ast.NominalType{
 						Identifier: ast.Identifier{
 							Identifier: "A",
-							Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+							Pos:        ast.Position{Line: 3, Column: 7, Offset: 25},
 						},
 					},
 					Value: &ast.IdentifierExpression{
 						Identifier: ast.Identifier{
 							Identifier: "b",
-							Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
+							Pos:        ast.Position{Line: 5, Column: 5, Offset: 47},
 						},
 					},
-					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					StartPos: ast.Position{Line: 3, Column: 0, Offset: 18},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("basic, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseStatements(`
+// Before remove
+remove A
+// Before from
+from b
+`)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.RemoveStatement{
+					Attachment: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "A",
+							Pos:        ast.Position{Line: 3, Column: 7, Offset: 25},
+						},
+					},
+					Value: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "b",
+							Pos:        ast.Position{Line: 5, Column: 5, Offset: 47},
+						},
+					},
+					StartPos: ast.Position{Line: 3, Column: 0, Offset: 18},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before remove")),
+							ast.NewComment(nil, []byte("// Before from")),
+						},
+					},
 				},
 			},
 			result,
