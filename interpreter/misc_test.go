@@ -3629,7 +3629,7 @@ func TestInterpretOptionalMap(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let one: Int? = 42
           let result = one.map(fun (v: Int): String {
               return v.toString()
@@ -3650,7 +3650,7 @@ func TestInterpretOptionalMap(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let none: Int? = nil
           let result = none.map(fun (v: Int): String {
               return v.toString()
@@ -3669,7 +3669,7 @@ func TestInterpretOptionalMap(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           struct S {
               fun map(f: fun(AnyStruct): String): String {
                   return "S.map"
@@ -5219,7 +5219,7 @@ func TestInterpretStructureFunctionBindingInside(t *testing.T) {
 	//        return bar()
 	//   }
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         struct X {
             fun foo(): AnyStruct {
                 return self.bar
@@ -6246,7 +6246,7 @@ func TestInterpretDictionaryForEachKey(t *testing.T) {
 	t.Run("box and convert argument", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           fun test(): String? {
               let dict = {"answer": 42}
               var res: String? = nil
@@ -7316,7 +7316,7 @@ func TestInterpretInterfaceInitializer(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       struct interface I {
           init(a a1: Bool) {
               pre { a1 }
@@ -7333,15 +7333,11 @@ func TestInterpretInterfaceInitializer(t *testing.T) {
     `)
 
 	_, err := inter.Invoke("test")
-	require.IsType(t,
-		interpreter.Error{},
-		err,
-	)
-	interpreterErr := err.(interpreter.Error)
 
-	require.IsType(t,
-		interpreter.ConditionError{},
-		interpreterErr.Err,
+	assertConditionError(
+		t,
+		err,
+		ast.ConditionKindPre,
 	)
 }
 
@@ -9812,7 +9808,7 @@ func TestInterpretInternalAssignment(t *testing.T) {
 	)
 }
 
-func TestInterpretVoidReturn_(t *testing.T) {
+func TestInterpretVoidReturn(t *testing.T) {
 	t.Parallel()
 
 	labelNamed := func(s string) string {

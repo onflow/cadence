@@ -293,7 +293,7 @@ func (executor *contractFunctionExecutor) executeWithInterpreter(
 //	semaType := interpreter.MustConvertStaticToSemaType(staticType, context)
 //	qualifiedFuncName := commons.TypeQualifiedName(semaType, executor.functionName)
 //
-//	value, err := executor.vm.Invoke(qualifiedFuncName, invocationArguments...)
+//	value, err := executor.vm.InvokeExternally(qualifiedFuncName, invocationArguments...)
 //	if err != nil {
 //		return nil, err
 //	}

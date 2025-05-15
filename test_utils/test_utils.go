@@ -45,19 +45,24 @@ type ParseCheckAndInterpretOptions struct {
 //type VMInvokable struct {
 //	vmInstance *vm.VM
 //	*vm.Context
+//	elaboration *compiler.DesugaredElaboration
 //}
 //
 //var _ Invokable = &VMInvokable{}
 //
-//func NewVMInvokable(vmInstance *vm.VM) *VMInvokable {
+//func NewVMInvokable(
+//	vmInstance *vm.VM,
+//	elaboration *compiler.DesugaredElaboration,
+//) *VMInvokable {
 //	return &VMInvokable{
-//		vmInstance: vmInstance,
-//		Context:    vmInstance.Context(),
+//		vmInstance:  vmInstance,
+//		Context:     vmInstance.Context(),
+//		elaboration: elaboration,
 //	}
 //}
 //
 //func (v *VMInvokable) Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error) {
-//	value, err = v.vmInstance.Invoke(functionName, arguments...)
+//	value, err = v.vmInstance.InvokeExternally(functionName, arguments...)
 //
 //	// Reset the VM after a function invocation,
 //	// so the same vm can be re-used for subsequent invocation.
@@ -170,24 +175,27 @@ func ParseCheckAndPrepareWithOptions(
 	//// If there are builtin functions provided externally (e.g: for tests),
 	//// then convert them to corresponding functions in compiler and in vm.
 	//if interpreterConfig != nil && interpreterConfig.BaseActivationHandler != nil {
-	//	activation := interpreterConfig.BaseActivationHandler(nil)
-	//	providedBuiltinFunctions := activation.FunctionValues()
+	//	baseActivation := interpreterConfig.BaseActivationHandler(nil)
+	//	baseActivationVariables := baseActivation.ValuesInFunction()
 	//
-	//	vmConfig.NativeFunctionsProvider = func() map[string]*vm.Variable {
-	//		funcs := vm.NativeFunctions()
+	//	vmConfig.BuiltinGlobalsProvider = func() map[string]*vm.Variable {
+	//		builtinGlobals := vm.NativeFunctions()
 	//
-	//		// Convert the externally provided `interpreter.HostFunction`s into `vm.NativeFunction`s.
-	//		for name, functionVariable := range providedBuiltinFunctions { //nolint:maprange
-	//			variable := &interpreter.SimpleVariable{}
-	//			funcs[name] = variable
+	//		// Add the given built-in values.
+	//		// Convert the externally provided `interpreter.HostFunctionValue`s into `vm.NativeFunctionValue`s.
+	//		for name, variable := range baseActivationVariables { //nolint:maprange
 	//
-	//			variable.InitializeWithValue(
-	//				vm.NewNativeFunctionValue(
+	//			if builtinGlobals[name] != nil {
+	//				continue
+	//			}
+	//
+	//			value := variable.GetValue(nil)
+	//
+	//			if functionValue, ok := value.(*interpreter.HostFunctionValue); ok {
+	//				value = vm.NewNativeFunctionValue(
 	//					name,
-	//					stdlib.LogFunctionType,
+	//					functionValue.Type,
 	//					func(context *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-	//						value := functionVariable.GetValue(context)
-	//						functionValue := value.(*interpreter.HostFunctionValue)
 	//						invocation := interpreter.NewInvocation(
 	//							context,
 	//							nil,
@@ -200,18 +208,27 @@ func ParseCheckAndPrepareWithOptions(
 	//						)
 	//						return functionValue.Function(invocation)
 	//					},
-	//				),
-	//			)
+	//				)
+	//
+	//			}
+	//
+	//			vmVariable := &vm.Variable{}
+	//			vmVariable.InitializeWithValue(value)
+	//
+	//			builtinGlobals[name] = vmVariable
 	//		}
 	//
-	//		return funcs
+	//		return builtinGlobals
 	//	}
 	//
-	//	// Register externally provided functions as globals in compiler.
+	//	// Register externally provided globals in compiler.
 	//	compilerConfig = &compiler.Config{
 	//		BuiltinGlobalsProvider: func() map[string]*compiler.Global {
 	//			globals := compiler.NativeFunctions()
-	//			for name := range providedBuiltinFunctions { //nolint:maprange
+	//			for name := range baseActivationVariables { //nolint:maprange
+	//				if globals[name] != nil {
+	//					continue
+	//				}
 	//				globals[name] = &compiler.Global{
 	//					Name: name,
 	//				}

@@ -42,7 +42,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
            let result = Type<Int>() == Type<Int>()
         `)
 
@@ -50,7 +50,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.TrueValue,
-			inter.Globals.Get("result").GetValue(inter),
+			inter.GetGlobal("result"),
 		)
 	})
 
@@ -58,7 +58,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
            let result = Type<Int>() == Type<String>()
         `)
 
@@ -66,7 +66,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.FalseValue,
-			inter.Globals.Get("result").GetValue(inter),
+			inter.GetGlobal("result"),
 		)
 	})
 
@@ -74,7 +74,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
            let result = Type<Int>() == Type<Int?>()
         `)
 
@@ -82,7 +82,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.FalseValue,
-			inter.Globals.Get("result").GetValue(inter),
+			inter.GetGlobal("result"),
 		)
 	})
 
@@ -90,7 +90,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
            let result = Type<&Int>() == Type<&Int>()
         `)
 
@@ -98,7 +98,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.TrueValue,
-			inter.Globals.Get("result").GetValue(inter),
+			inter.GetGlobal("result"),
 		)
 	})
 
@@ -106,7 +106,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
            let result = Type<&Int>() == Type<&String>()
         `)
 
@@ -114,7 +114,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.FalseValue,
-			inter.Globals.Get("result").GetValue(inter),
+			inter.GetGlobal("result"),
 		)
 	})
 
@@ -137,7 +137,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
               let result = Type<Int>() == unknownType
             `,
@@ -160,7 +160,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.FalseValue,
-			inter.Globals.Get("result").GetValue(inter),
+			inter.GetGlobal("result"),
 		)
 	})
 
@@ -197,7 +197,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			interpreter.Declare(baseActivation, valueDeclaration)
 		}
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
               let result = unknownType1 == unknownType2
             `,
@@ -220,7 +220,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.FalseValue,
-			inter.Globals.Get("result").GetValue(inter),
+			inter.GetGlobal("result"),
 		)
 	})
 }
@@ -233,7 +233,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let type = Type<[Int]>()
           let identifier = type.identifier
         `)
@@ -242,7 +242,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("[Int]"),
-			inter.Globals.Get("identifier").GetValue(inter),
+			inter.GetGlobal("identifier"),
 		)
 	})
 
@@ -250,7 +250,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           struct S {}
 
           let type = Type<S>()
@@ -261,7 +261,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("S.test.S"),
-			inter.Globals.Get("identifier").GetValue(inter),
+			inter.GetGlobal("identifier"),
 		)
 	})
 
@@ -290,7 +290,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			interpreter.Declare(baseActivation, valueDeclaration)
 		}
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
               let identifier = unknownType.identifier
             `,
@@ -313,7 +313,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue(""),
-			inter.Globals.Get("identifier").GetValue(inter),
+			inter.GetGlobal("identifier"),
 		)
 	})
 
@@ -323,7 +323,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 
 		// TypeValue.GetMember for `identifier` should not load the program
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
            fun test(_ type: Type): String {
                return type.identifier
            }
@@ -451,25 +451,28 @@ func TestInterpretIsInstance(t *testing.T) {
 
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
-			inter, err := parseCheckAndInterpretWithOptions(t, testCase.code, ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+			inter, err := parseCheckAndPrepareWithOptions(t,
+				testCase.code,
+				ParseCheckAndInterpretOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+					},
+					Config: &interpreter.Config{
+						BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+							return baseActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
-					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
-						return baseActivation
-					},
-				},
-			})
+			)
 			require.NoError(t, err)
 
 			AssertValuesEqual(
 				t,
 				inter,
 				interpreter.BoolValue(testCase.result),
-				inter.Globals.Get("result").GetValue(inter),
+				inter.GetGlobal("result"),
 			)
 		})
 	}
@@ -595,23 +598,26 @@ func TestInterpretMetaTypeIsSubtype(t *testing.T) {
 
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
-			inter, err := parseCheckAndInterpretWithOptions(t, testCase.code, ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+			inter, err := parseCheckAndPrepareWithOptions(t,
+				testCase.code,
+				ParseCheckAndInterpretOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+					},
+					Config: &interpreter.Config{
+						BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+							return baseActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
-					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
-						return baseActivation
-					},
-				},
-			})
+			)
 			require.NoError(t, err)
 
 			assert.Equal(t,
 				interpreter.BoolValue(testCase.result),
-				inter.Globals.Get("result").GetValue(inter),
+				inter.GetGlobal("result"),
 			)
 		})
 	}
@@ -867,7 +873,7 @@ func TestInterpretMetaTypeHashInput(t *testing.T) {
 
 	// TypeValue.HashInput should not load the program
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        fun test(_ type: Type) {
            {type: 1}
        }
@@ -946,7 +952,7 @@ func TestInterpretMetaTypeIsRecovered(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let type = Type<Int>()
           let isRecovered = type.isRecovered
         `)
@@ -955,7 +961,7 @@ func TestInterpretMetaTypeIsRecovered(t *testing.T) {
 			t,
 			inter,
 			interpreter.FalseValue,
-			inter.Globals.Get("isRecovered").GetValue(inter),
+			inter.GetGlobal("isRecovered"),
 		)
 	})
 
@@ -963,7 +969,7 @@ func TestInterpretMetaTypeIsRecovered(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           struct S {}
 
           let type = Type<S>()
@@ -974,7 +980,7 @@ func TestInterpretMetaTypeIsRecovered(t *testing.T) {
 			t,
 			inter,
 			interpreter.FalseValue,
-			inter.Globals.Get("isRecovered").GetValue(inter),
+			inter.GetGlobal("isRecovered"),
 		)
 	})
 
@@ -1003,7 +1009,7 @@ func TestInterpretMetaTypeIsRecovered(t *testing.T) {
 			interpreter.Declare(baseActivation, valueDeclaration)
 		}
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
 	         let isRecovered = unknownType.isRecovered
 	       `,
@@ -1026,7 +1032,7 @@ func TestInterpretMetaTypeIsRecovered(t *testing.T) {
 			t,
 			inter,
 			interpreter.FalseValue,
-			inter.Globals.Get("isRecovered").GetValue(inter),
+			inter.GetGlobal("isRecovered"),
 		)
 	})
 
@@ -1098,7 +1104,7 @@ func TestInterpretMetaTypeAddress(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let type = Type<Int>()
           let address = type.address
         `)
@@ -1107,7 +1113,7 @@ func TestInterpretMetaTypeAddress(t *testing.T) {
 			t,
 			inter,
 			interpreter.Nil,
-			inter.Globals.Get("address").GetValue(inter),
+			inter.GetGlobal("address"),
 		)
 	})
 
@@ -1219,7 +1225,7 @@ func TestInterpretMetaTypeAddress(t *testing.T) {
 			interpreter.Declare(baseActivation, valueDeclaration)
 		}
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
 	         let address = unknownType.address
 	       `,
@@ -1242,7 +1248,7 @@ func TestInterpretMetaTypeAddress(t *testing.T) {
 			t,
 			inter,
 			interpreter.Nil,
-			inter.Globals.Get("address").GetValue(inter),
+			inter.GetGlobal("address"),
 		)
 	})
 }
@@ -1255,7 +1261,7 @@ func TestInterpretMetaTypeContractName(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let type = Type<Int>()
           let contractName = type.contractName
         `)
@@ -1264,7 +1270,7 @@ func TestInterpretMetaTypeContractName(t *testing.T) {
 			t,
 			inter,
 			interpreter.Nil,
-			inter.Globals.Get("contractName").GetValue(inter),
+			inter.GetGlobal("contractName"),
 		)
 	})
 
@@ -1406,7 +1412,7 @@ func TestInterpretMetaTypeContractName(t *testing.T) {
 			interpreter.Declare(baseActivation, valueDeclaration)
 		}
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
 	         let contractName = unknownType.contractName
 	       `,
@@ -1429,7 +1435,7 @@ func TestInterpretMetaTypeContractName(t *testing.T) {
 			t,
 			inter,
 			interpreter.Nil,
-			inter.Globals.Get("contractName").GetValue(inter),
+			inter.GetGlobal("contractName"),
 		)
 	})
 }

@@ -4350,7 +4350,8 @@ func AccountStorageIterate(
 		arguments := []Value{pathValue, runtimeType}
 		invocationArgumentTypes := []sema.Type{pathType, sema.MetaType}
 
-		result := invocationContext.InvokeFunction(
+		result := invokeIteratorFunction(
+			invocationContext,
 			fn,
 			arguments,
 			invocationArgumentTypes,
@@ -4386,17 +4387,28 @@ func AccountStorageIterate(
 }
 
 func (interpreter *Interpreter) InvokeFunction(
+	_ FunctionValue,
+	_ []Value,
+) Value {
+	// Interpreter's function values shouldn't/doesn't use `InvocationContext.InvokeFunction`.
+	// They directly use the methods of `Interpreter`.
+	// This indirection is only needed in VM.
+	panic(errors.NewUnreachableError())
+}
+
+func invokeIteratorFunction(
+	context InvocationContext,
 	fn FunctionValue,
 	arguments []Value,
 	invocationArgumentTypes []sema.Type,
 	locationRange LocationRange,
 ) Value {
-	fnType := fn.FunctionType(interpreter)
+	fnType := fn.FunctionType(context)
 	parameterTypes := fnType.ParameterTypes()
 	returnType := fnType.ReturnTypeAnnotation.Type
 
 	result := invokeFunctionValue(
-		interpreter,
+		context,
 		fn,
 		arguments,
 		nil,
@@ -5976,10 +5988,6 @@ func (interpreter *Interpreter) OnResourceOwnerChange(resource *CompositeValue, 
 
 func (interpreter *Interpreter) TracingEnabled() bool {
 	return interpreter.SharedState.Config.TracingEnabled
-}
-
-func (interpreter *Interpreter) CheckInvalidatedResourceOrResourceReference(value Value, locationRange LocationRange) {
-	checkInvalidatedResourceOrResourceReference(value, locationRange, interpreter)
 }
 
 func (interpreter *Interpreter) IsTypeInfoRecovered(location common.Location) bool {

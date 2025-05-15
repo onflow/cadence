@@ -103,7 +103,6 @@ var _ StorageContext = &Interpreter{}
 type ReferenceTracker interface {
 	ClearReferencedResourceKindedValues(valueID atree.ValueID)
 	ReferencedResourceKindedValues(valueID atree.ValueID) map[*EphemeralReferenceValue]struct{}
-	CheckInvalidatedResourceOrResourceReference(value Value, locationRange LocationRange)
 	MaybeTrackReferencedResourceKindedValue(ref *EphemeralReferenceValue)
 }
 
@@ -449,8 +448,6 @@ type InvocationContext interface {
 	InvokeFunction(
 		fn FunctionValue,
 		arguments []Value,
-		invocationArgumentTypes []sema.Type,
-		locationRange LocationRange,
 	) Value
 }
 
