@@ -5743,76 +5743,137 @@ func TestCompileLineNumberInfo(t *testing.T) {
 
 	assert.Equal(t,
 		[]bbq.PositionInfo{
-			// opcode.InstructionGetLocal{Local: arrayIndex}
+			// Load variable `array`.
+			// Opcodes:
+			//   opcode.InstructionGetLocal{Local: arrayIndex}
 			{
 				InstructionIndex: 0,
-				Position: ast.Position{
-					Offset: 66,
-					Line:   3,
-					Column: 10,
+				Position: bbq.Position{
+					StartPos: ast.Position{
+						Offset: 66,
+						Line:   3,
+						Column: 10,
+					},
+					EndPos: ast.Position{
+						Offset: 70,
+						Line:   3,
+						Column: 14,
+					},
 				},
 			},
 
-			// opcode.InstructionGetLocal{Local: indexIndex}
+			// Load variable `index`.
+			// Opcodes:
+			//  opcode.InstructionGetLocal{Local: indexIndex}
 			{
 				InstructionIndex: 1,
-				Position: ast.Position{
-					Offset: 72,
-					Line:   3,
-					Column: 16,
+				Position: bbq.Position{
+					StartPos: ast.Position{
+						Offset: 72,
+						Line:   3,
+						Column: 16,
+					},
+					EndPos: ast.Position{
+						Offset: 76,
+						Line:   3,
+						Column: 20,
+					},
 				},
 			},
 
-			// opcode.InstructionGetLocal{Local: valueIndex}
+			// Load variable `value`.
+			// Opcodes:
+			//   opcode.InstructionGetLocal{Local: valueIndex}
 			{
 				InstructionIndex: 2,
-				Position: ast.Position{
-					Offset: 81,
-					Line:   3,
-					Column: 25,
+				Position: bbq.Position{
+					StartPos: ast.Position{
+						Offset: 81,
+						Line:   3,
+						Column: 25,
+					},
+					EndPos: ast.Position{
+						Offset: 85,
+						Line:   3,
+						Column: 29,
+					},
 				},
 			},
 
-			// opcode.InstructionGetLocal{Local: valueIndex}
+			// Load variable `value`.
+			// Opcodes:
+			//   opcode.InstructionGetLocal{Local: valueIndex}
 			{
 				InstructionIndex: 3,
-				Position: ast.Position{
-					Offset: 89,
-					Line:   3,
-					Column: 33,
+				Position: bbq.Position{
+					StartPos: ast.Position{
+						Offset: 89,
+						Line:   3,
+						Column: 33,
+					},
+					EndPos: ast.Position{
+						Offset: 93,
+						Line:   3,
+						Column: 37,
+					},
 				},
 			},
 
-			// opcode.InstructionAdd{},
+			// Addition `value + value`.
+			// Opcodes:
+			//   opcode.InstructionAdd{},
 			{
 				InstructionIndex: 4,
-				Position: ast.Position{
-					Offset: 81,
-					Line:   3,
-					Column: 25,
+				Position: bbq.Position{
+					StartPos: ast.Position{
+						Offset: 81,
+						Line:   3,
+						Column: 25,
+					},
+					EndPos: ast.Position{
+						Offset: 93,
+						Line:   3,
+						Column: 37,
+					},
 				},
 			},
 
-			// opcode.InstructionTransfer{Type: 1}
-			// opcode.InstructionSetIndex{}
+			// Assignment to array index: `array[index] = value + value`.
+			// Opcodes:
+			//   opcode.InstructionTransfer{Type: 1}
+			//   opcode.InstructionSetIndex{}
 			{
 				InstructionIndex: 5,
-				Position: ast.Position{
-					Offset: 66,
-					Line:   3,
-					Column: 10,
+				Position: bbq.Position{
+					StartPos: ast.Position{
+						Offset: 66,
+						Line:   3,
+						Column: 10,
+					},
+					EndPos: ast.Position{
+						Offset: 93,
+						Line:   3,
+						Column: 37,
+					},
 				},
 			},
 
-			// opcode.InstructionReturn{}
 			// This has a position same as the function declaration,
 			// since this is an injected return.
+			// opcode.InstructionReturn{}
 			{
 				InstructionIndex: 7,
-				Position: ast.Position{
-					Offset: 7,
-					Line:   2,
-					Column: 6,
+				Position: bbq.Position{
+					StartPos: ast.Position{
+						Offset: 7,
+						Line:   2,
+						Column: 6,
+					},
+					EndPos: ast.Position{
+						Offset: 101,
+						Line:   4,
+						Column: 6,
+					},
 				},
 			},
 		},
@@ -5820,14 +5881,21 @@ func TestCompileLineNumberInfo(t *testing.T) {
 	)
 
 	// Get position for `opcode.InstructionSetIndex{}`
-	// Must point to start of LHS.
+	// Position must start at the start of LHS.
 	pos := testFunction.LineNumbers.GetSourcePosition(6)
 	assert.Equal(
 		t,
-		ast.Position{
-			Offset: 66,
-			Line:   3,
-			Column: 10,
+		bbq.Position{
+			StartPos: ast.Position{
+				Offset: 66,
+				Line:   3,
+				Column: 10,
+			},
+			EndPos: ast.Position{
+				Offset: 93,
+				Line:   3,
+				Column: 37,
+			},
 		},
 		pos,
 	)
