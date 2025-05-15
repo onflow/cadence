@@ -791,7 +791,7 @@ func (v *StringValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct {
-},
+	},
 	_ bool,
 ) Value {
 	if remove {
@@ -1315,7 +1315,7 @@ func StringFunctionJoin(
 
 			// Meter computation for iterating the array.
 			common.UseComputation(
-				inter,
+				context,
 				common.LoopComputationUsage,
 			)
 

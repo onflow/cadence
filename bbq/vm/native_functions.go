@@ -176,10 +176,10 @@ func init() {
 			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 				entitlementValues := arguments[0].(*interpreter.ArrayValue)
 				typeValue := arguments[1].(interpreter.TypeValue)
-				return interpreter.ConstructReferenceStaticType(
+				return interpreter.ConstructReferenceTypeValue(
 					context,
-					entitlementValues,
 					EmptyLocationRange,
+					entitlementValues,
 					typeValue,
 				)
 			},

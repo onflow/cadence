@@ -31,6 +31,7 @@ import (
 // It does not hold data specific to a single execution. i.e: No state is maintained.
 type Config struct {
 	common.MemoryGauge
+	common.ComputationGauge
 	commons.ImportHandler
 	ContractValueHandler
 	BuiltinGlobalsProvider
@@ -207,8 +208,12 @@ func (c *Config) GetEntitlementMapType(typeID interpreter.TypeID) (*sema.Entitle
 	}
 }
 
-func (c *Config) ReportComputation(compKind common.ComputationKind, intensity uint) {
-	//TODO
+func (c *Config) MeterComputation(usage common.ComputationUsage) error {
+	if c.ComputationGauge == nil {
+		return nil
+	}
+
+	return c.ComputationGauge.MeterComputation(usage)
 }
 
 func (c *Config) InjectedCompositeFieldsHandler() interpreter.InjectedCompositeFieldsHandlerFunc {
