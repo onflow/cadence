@@ -493,11 +493,13 @@ func (v *BoundFunctionPointerValue) initializeFunctionType(context interpreter.V
 }
 
 func (v *BoundFunctionPointerValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
-	arguments := make([]Value, 0, len(invocation.Arguments)+1)
-	arguments = append(arguments, v.Receiver(invocation.InvocationContext))
+	context := invocation.InvocationContext
+
+	arguments := make([]Value, 0, 1+len(invocation.Arguments))
+	arguments = append(arguments, v.Receiver(context))
 	arguments = append(arguments, invocation.Arguments...)
 
-	return invocation.InvocationContext.InvokeFunction(
+	return context.InvokeFunction(
 		v,
 		arguments,
 	)

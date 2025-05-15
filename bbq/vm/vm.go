@@ -279,7 +279,42 @@ func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err er
 		}
 	}
 
+	defer func() {
+		recovered := recover()
+		if recovered == nil {
+			return
+		}
+
+		// TODO:
+		err, _ = recovered.(error)
+	}()
+
 	function := functionVariable.GetValue(vm.context)
+
+	functionValue, ok := function.(FunctionValue)
+	if !ok {
+		return nil, interpreter.NotInvokableError{
+			Value: function,
+		}
+	}
+
+	return vm.validateAndInvokeExternally(functionValue, arguments)
+}
+
+func (vm *VM) InvokeMethodExternally(
+	name string,
+	receiver interpreter.MemberAccessibleValue,
+	arguments ...Value,
+) (
+	v Value,
+	err error,
+) {
+	functionVariable, ok := vm.globals[name]
+	if !ok {
+		return nil, UnknownFunctionError{
+			name: name,
+		}
+	}
 
 	defer func() {
 		recovered := recover()
@@ -291,28 +326,42 @@ func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err er
 		err, _ = recovered.(error)
 	}()
 
-	return vm.validateAndInvokeExternally(function, arguments)
-}
+	context := vm.context
 
-func (vm *VM) validateAndInvokeExternally(function Value, arguments []Value) (Value, error) {
-	functionValue, ok := function.(CompiledFunctionValue)
+	function := functionVariable.GetValue(context)
+
+	functionValue, ok := function.(FunctionValue)
 	if !ok {
 		return nil, interpreter.NotInvokableError{
 			Value: function,
 		}
 	}
 
-	paramCount := functionValue.Function.ParameterCount
+	boundFunction := NewBoundFunctionPointerValue(context, receiver, functionValue)
 
-	if len(arguments) != int(paramCount) {
-		return nil, errors.NewDefaultUserError(
-			"wrong number of arguments: expected %d, found %d",
-			paramCount,
-			len(arguments),
-		)
+	return vm.validateAndInvokeExternally(boundFunction, arguments)
+}
+
+func (vm *VM) validateAndInvokeExternally(functionValue FunctionValue, arguments []Value) (Value, error) {
+	context := vm.context
+
+	functionType := functionValue.FunctionType(context)
+
+	preparedArguments, err := interpreter.PrepareExternalInvocationArguments(
+		context,
+		functionType,
+		arguments,
+	)
+	if err != nil {
+		return nil, err
 	}
 
-	return vm.invokeExternally(functionValue, arguments)
+	if boundFunction, ok := functionValue.(*BoundFunctionPointerValue); ok {
+		receiver := boundFunction.Receiver(vm.context)
+		preparedArguments = append([]Value{receiver}, preparedArguments...)
+	}
+
+	return vm.invokeExternally(functionValue, preparedArguments)
 }
 
 func (vm *VM) invokeExternally(functionValue Value, arguments []Value) (Value, error) {
@@ -347,7 +396,7 @@ func (vm *VM) InitializeContract(contractName string, arguments ...Value) (*inte
 	return contractValue, nil
 }
 
-func (vm *VM) ExecuteTransaction(transactionArgs []Value, signers ...Value) (err error) {
+func (vm *VM) InvokeTransaction(arguments []Value, signers ...Value) (err error) {
 	defer func() {
 		recovered := recover()
 		if recovered == nil {
@@ -359,39 +408,119 @@ func (vm *VM) ExecuteTransaction(transactionArgs []Value, signers ...Value) (err
 	}()
 
 	// Create transaction value
-	transaction, err := vm.InvokeExternally(commons.TransactionWrapperCompositeName)
+	transaction, err := vm.InvokeTransactionWrapper()
 	if err != nil {
 		return err
 	}
 
-	if initializerVariable, ok := vm.globals[commons.ProgramInitFunctionName]; ok {
-		initializer := initializerVariable.GetValue(vm.context)
-		_, err = vm.validateAndInvokeExternally(initializer, transactionArgs)
-		if err != nil {
-			return err
-		}
+	err = vm.InvokeTransactionInit(arguments)
+	if err != nil {
+		return err
 	}
 
-	prepareArgs := make([]Value, 0, len(signers)+1)
-	prepareArgs = append(prepareArgs, transaction)
-	prepareArgs = append(prepareArgs, signers...)
-
 	// Invoke 'prepare', if exists.
-	if prepareVariable, ok := vm.globals[commons.TransactionPrepareFunctionName]; ok {
-		prepare := prepareVariable.GetValue(vm.context)
-		_, err = vm.validateAndInvokeExternally(prepare, prepareArgs)
-		if err != nil {
-			return err
-		}
+	err = vm.InvokeTransactionPrepare(transaction, signers)
+	if err != nil {
+		return err
 	}
 
 	// TODO: Invoke pre/post conditions
 
 	// Invoke 'execute', if exists.
-	executeArgs := []Value{transaction}
-	if executeVariable, ok := vm.globals[commons.TransactionExecuteFunctionName]; ok {
-		execute := executeVariable.GetValue(vm.context)
-		_, err = vm.validateAndInvokeExternally(execute, executeArgs)
+	err = vm.InvokeTransactionExecute(transaction)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (vm *VM) InvokeTransactionWrapper() (*interpreter.CompositeValue, error) {
+	wrapperResult, err := vm.InvokeExternally(commons.TransactionWrapperCompositeName)
+	if err != nil {
+		return nil, err
+	}
+
+	transaction := wrapperResult.(*interpreter.CompositeValue)
+
+	return transaction, nil
+}
+
+func (vm *VM) InvokeTransactionInit(transactionArgs []Value) error {
+	context := vm.context
+	globals := vm.globals
+
+	initializerVariable, ok := globals[commons.ProgramInitFunctionName]
+	if !ok {
+		if len(transactionArgs) > 0 {
+			return interpreter.ArgumentCountError{
+				ParameterCount: 0,
+				ArgumentCount:  len(transactionArgs),
+			}
+		}
+
+		return nil
+	}
+
+	initializer := initializerVariable.GetValue(context).(FunctionValue)
+
+	_, err := vm.validateAndInvokeExternally(initializer, transactionArgs)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.CompositeValue, signers []Value) error {
+	context := vm.context
+
+	prepareVariable, ok := vm.globals[commons.TransactionPrepareFunctionName]
+	if !ok {
+		if len(signers) > 0 {
+			return interpreter.ArgumentCountError{
+				ParameterCount: 0,
+				ArgumentCount:  len(signers),
+			}
+		}
+
+		return nil
+	}
+
+	prepareValue := prepareVariable.GetValue(context)
+	prepareFunction := prepareValue.(FunctionValue)
+	boundPrepareFunction := NewBoundFunctionPointerValue(
+		context,
+		transaction,
+		prepareFunction,
+	)
+
+	_, err := vm.validateAndInvokeExternally(boundPrepareFunction, signers)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (vm *VM) InvokeTransactionExecute(transaction *interpreter.CompositeValue) error {
+	context := vm.context
+
+	executeVariable, ok := vm.globals[commons.TransactionExecuteFunctionName]
+	if !ok {
+		return nil
+	}
+
+	executeValue := executeVariable.GetValue(context)
+	executeFunction := executeValue.(FunctionValue)
+	boundExecuteFunction := NewBoundFunctionPointerValue(
+		context,
+		transaction,
+		executeFunction,
+	)
+
+	_, err := vm.validateAndInvokeExternally(boundExecuteFunction, nil)
+	if err != nil {
 		return err
 	}
 

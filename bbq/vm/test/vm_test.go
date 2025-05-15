@@ -1709,24 +1709,21 @@ func TestTransaction(t *testing.T) {
 
 		vmContext := vmInstance.Context()
 
-		err := vmInstance.ExecuteTransaction(nil)
+		err := vmInstance.InvokeTransaction(nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
 		// Rerun the same again using internal functions, to get the access to the transaction value.
 
-		transaction, err := vmInstance.InvokeExternally(commons.TransactionWrapperCompositeName)
+		transaction, err := vmInstance.InvokeTransactionWrapper()
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.IsType(t, &interpreter.CompositeValue{}, transaction)
-		compositeValue := transaction.(*interpreter.CompositeValue)
-
 		// At the beginning, 'a' is uninitialized
-		assert.Nil(t, compositeValue.GetMember(vmContext, vm.EmptyLocationRange, "a"))
+		assert.Nil(t, transaction.GetMember(vmContext, vm.EmptyLocationRange, "a"))
 
 		// Invoke 'prepare'
-		_, err = vmInstance.InvokeExternally(commons.TransactionPrepareFunctionName, transaction)
+		err = vmInstance.InvokeTransactionPrepare(transaction, nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1734,11 +1731,11 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("Hello!"),
-			compositeValue.GetMember(vmContext, vm.EmptyLocationRange, "a"),
+			transaction.GetMember(vmContext, vm.EmptyLocationRange, "a"),
 		)
 
 		// Invoke 'execute'
-		_, err = vmInstance.InvokeExternally(commons.TransactionExecuteFunctionName, transaction)
+		err = vmInstance.InvokeTransactionExecute(transaction)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1746,7 +1743,7 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("Hello again!"),
-			compositeValue.GetMember(vmContext, vm.EmptyLocationRange, "a"),
+			transaction.GetMember(vmContext, vm.EmptyLocationRange, "a"),
 		)
 	})
 
@@ -1783,24 +1780,21 @@ func TestTransaction(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("Hello again!"),
 		}
 
-		err := vmInstance.ExecuteTransaction(args)
+		err := vmInstance.InvokeTransaction(args)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
 		// Rerun the same again using internal functions, to get the access to the transaction value.
 
-		transaction, err := vmInstance.InvokeExternally(commons.TransactionWrapperCompositeName)
+		transaction, err := vmInstance.InvokeTransactionWrapper()
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.IsType(t, &interpreter.CompositeValue{}, transaction)
-		compositeValue := transaction.(*interpreter.CompositeValue)
-
 		// At the beginning, 'a' is uninitialized
-		assert.Nil(t, compositeValue.GetMember(vmContext, vm.EmptyLocationRange, "a"))
+		assert.Nil(t, transaction.GetMember(vmContext, vm.EmptyLocationRange, "a"))
 
 		// Invoke 'prepare'
-		_, err = vmInstance.InvokeExternally(commons.TransactionPrepareFunctionName, transaction)
+		err = vmInstance.InvokeTransactionPrepare(transaction, nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1808,11 +1802,11 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("Hello!"),
-			compositeValue.GetMember(vmContext, vm.EmptyLocationRange, "a"),
+			transaction.GetMember(vmContext, vm.EmptyLocationRange, "a"),
 		)
 
 		// Invoke 'execute'
-		_, err = vmInstance.InvokeExternally(commons.TransactionExecuteFunctionName, transaction)
+		err = vmInstance.InvokeTransactionExecute(transaction)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1820,7 +1814,7 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("Hello again!"),
-			compositeValue.GetMember(vmContext, vm.EmptyLocationRange, "a"),
+			transaction.GetMember(vmContext, vm.EmptyLocationRange, "a"),
 		)
 	})
 
@@ -1900,7 +1894,7 @@ func TestTransaction(t *testing.T) {
 			},
 		)
 
-		err := vmInstance.ExecuteTransaction(nil)
+		err := vmInstance.InvokeTransaction(nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1979,7 +1973,7 @@ func TestTransaction(t *testing.T) {
 			},
 		)
 
-		err := vmInstance.ExecuteTransaction(nil)
+		err := vmInstance.InvokeTransaction(nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -2063,7 +2057,7 @@ func TestTransaction(t *testing.T) {
 			},
 		)
 
-		err := vmInstance.ExecuteTransaction(nil)
+		err := vmInstance.InvokeTransaction(nil)
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "pre/post condition failed")
 
@@ -2148,7 +2142,7 @@ func TestTransaction(t *testing.T) {
 			},
 		)
 
-		err := vmInstance.ExecuteTransaction(nil)
+		err := vmInstance.InvokeTransaction(nil)
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "pre/post condition failed")
 
