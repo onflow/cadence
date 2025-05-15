@@ -1315,7 +1315,7 @@ func StringFunctionJoin(
 
 			// Meter computation for iterating the array.
 			common.UseComputation(
-				inter,
+				context,
 				common.LoopComputationUsage,
 			)
 
