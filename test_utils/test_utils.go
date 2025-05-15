@@ -244,7 +244,9 @@ func ParseCheckAndPrepareWithOptions(
 		Config: options.CheckerConfig,
 	}
 
-	programs := map[common.Location]*CompiledProgram{}
+	programs := CompiledPrograms{}
+
+	vmConfig.TypeLoader = compilerUtils.CompiledProgramsTypeLoader(programs)
 
 	vmInstance := compilerUtils.CompileAndPrepareToInvoke(
 		tb,

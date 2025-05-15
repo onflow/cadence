@@ -555,13 +555,14 @@ func contractValueHandler(contractName string, arguments ...vm.Value) vm.Contrac
 	}
 }
 
-func typeLoader(
-	tb testing.TB,
+func CompiledProgramsTypeLoader(
 	programs CompiledPrograms,
 ) func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
 	return func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
 		program, ok := programs[location]
-		require.True(tb, ok, "cannot find elaboration for %s", location)
+		if !ok {
+			return nil
+		}
 
 		elaboration := program.DesugaredElaboration
 
@@ -659,7 +660,7 @@ func PrepareVMConfig(
 	}
 
 	if config.TypeLoader == nil {
-		config.TypeLoader = typeLoader(tb, programs)
+		config.TypeLoader = CompiledProgramsTypeLoader(programs)
 	}
 
 	if config.ImportHandler == nil {
