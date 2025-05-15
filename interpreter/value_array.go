@@ -481,7 +481,7 @@ func (v *ArrayValue) GetKey(context ValueComparisonContext, locationRange Locati
 func (v *ArrayValue) handleIndexOutOfBoundsError(err error, index int, locationRange LocationRange) {
 	var indexOutOfBoundsError *atree.IndexOutOfBoundsError
 	if goerrors.As(err, &indexOutOfBoundsError) {
-		panic(ArrayIndexOutOfBoundsError{
+		panic(&ArrayIndexOutOfBoundsError{
 			Index:         index,
 			Size:          v.Count(),
 			LocationRange: locationRange,
@@ -495,7 +495,7 @@ func (v *ArrayValue) Get(gauge common.MemoryGauge, locationRange LocationRange, 
 	// atree's Array.Get function will check the upper bound and report an atree.IndexOutOfBoundsError
 
 	if index < 0 {
-		panic(ArrayIndexOutOfBoundsError{
+		panic(&ArrayIndexOutOfBoundsError{
 			Index:         index,
 			Size:          v.Count(),
 			LocationRange: locationRange,
@@ -525,7 +525,7 @@ func (v *ArrayValue) Set(context ContainerMutationContext, locationRange Locatio
 	// atree's Array.Set function will check the upper bound and report an atree.IndexOutOfBoundsError
 
 	if index < 0 {
-		panic(ArrayIndexOutOfBoundsError{
+		panic(&ArrayIndexOutOfBoundsError{
 			Index:         index,
 			Size:          v.Count(),
 			LocationRange: locationRange,
@@ -666,7 +666,7 @@ func (v *ArrayValue) InsertWithoutTransfer(
 	// atree's Array.Insert function will check the upper bound and report an atree.IndexOutOfBoundsError
 
 	if index < 0 {
-		panic(ArrayIndexOutOfBoundsError{
+		panic(&ArrayIndexOutOfBoundsError{
 			Index:         index,
 			Size:          v.Count(),
 			LocationRange: locationRange,
@@ -738,7 +738,7 @@ func (v *ArrayValue) RemoveWithoutTransfer(
 	// atree's Array.Remove function will check the upper bound and report an atree.IndexOutOfBoundsError
 
 	if index < 0 {
-		panic(ArrayIndexOutOfBoundsError{
+		panic(&ArrayIndexOutOfBoundsError{
 			Index:         index,
 			Size:          v.Count(),
 			LocationRange: locationRange,

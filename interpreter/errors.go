@@ -51,6 +51,10 @@ func (e *unsupportedOperation) Error() string {
 	)
 }
 
+type HasLocationRange interface {
+	SetLocationRange(locationRange LocationRange)
+}
+
 // Error is the containing type for all errors produced by the interpreter.
 type Error struct {
 	Err        error
@@ -500,16 +504,21 @@ type ArrayIndexOutOfBoundsError struct {
 	Size  int
 }
 
-var _ errors.UserError = ArrayIndexOutOfBoundsError{}
+var _ errors.UserError = &ArrayIndexOutOfBoundsError{}
+var _ HasLocationRange = &ArrayIndexOutOfBoundsError{}
 
-func (ArrayIndexOutOfBoundsError) IsUserError() {}
+func (*ArrayIndexOutOfBoundsError) IsUserError() {}
 
-func (e ArrayIndexOutOfBoundsError) Error() string {
+func (e *ArrayIndexOutOfBoundsError) Error() string {
 	return fmt.Sprintf(
 		"array index out of bounds: %d, but size is %d",
 		e.Index,
 		e.Size,
 	)
+}
+
+func (e *ArrayIndexOutOfBoundsError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // ArraySliceIndicesError
