@@ -1149,6 +1149,42 @@ func TestParseEmit(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("simple, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseStatements(`
+// Before emit 1
+/* Before emit 2 */ emit T()
+`)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.EmitStatement{
+					InvocationExpression: &ast.InvocationExpression{
+						InvokedExpression: &ast.IdentifierExpression{
+							Identifier: ast.Identifier{
+								Identifier: "T",
+								Pos:        ast.Position{Line: 3, Column: 25, Offset: 43},
+							},
+						},
+						ArgumentsStartPos: ast.Position{Line: 3, Column: 26, Offset: 44},
+						EndPos:            ast.Position{Line: 3, Column: 27, Offset: 45},
+					},
+					StartPos: ast.Position{Line: 3, Column: 20, Offset: 38},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before emit 1")),
+							ast.NewComment(nil, []byte("/* Before emit 2 */")),
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
 }
 
 func TestParseFunctionStatementOrExpression(t *testing.T) {

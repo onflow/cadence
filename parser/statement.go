@@ -698,7 +698,7 @@ func parseCondition(p *parser) (ast.Condition, error) {
 }
 
 func parseEmitStatement(p *parser) (*ast.EmitStatement, error) {
-	startPos := p.current.StartPos
+	startToken := p.current
 	p.next()
 
 	invocation, err := parseNominalTypeInvocationRemainder(p)
@@ -706,7 +706,14 @@ func parseEmitStatement(p *parser) (*ast.EmitStatement, error) {
 		return nil, err
 	}
 
-	return ast.NewEmitStatement(p.memoryGauge, invocation, startPos), nil
+	return ast.NewEmitStatement(
+		p.memoryGauge,
+		invocation,
+		startToken.StartPos,
+		ast.Comments{
+			Leading: startToken.Comments.PackToList(),
+		},
+	), nil
 }
 
 func parseSwitchStatement(p *parser) (*ast.SwitchStatement, error) {

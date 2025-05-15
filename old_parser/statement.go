@@ -617,7 +617,7 @@ func parseEmitStatement(p *parser) (*ast.EmitStatement, error) {
 		return nil, err
 	}
 
-	return ast.NewEmitStatement(p.memoryGauge, invocation, startPos), nil
+	return ast.NewEmitStatement(p.memoryGauge, invocation, startPos, ast.Comments{}), nil
 }
 
 func parseSwitchStatement(p *parser) (*ast.SwitchStatement, error) {

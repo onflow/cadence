@@ -498,6 +498,7 @@ func (s *ForStatement) MarshalJSON() ([]byte, error) {
 type EmitStatement struct {
 	InvocationExpression *InvocationExpression
 	StartPos             Position `json:"-"`
+	Comments
 }
 
 var _ Element = &EmitStatement{}
@@ -507,11 +508,13 @@ func NewEmitStatement(
 	gauge common.MemoryGauge,
 	invocation *InvocationExpression,
 	startPos Position,
+	comments Comments,
 ) *EmitStatement {
 	common.UseMemory(gauge, common.EmitStatementMemoryUsage)
 	return &EmitStatement{
 		InvocationExpression: invocation,
 		StartPos:             startPos,
+		Comments:             comments,
 	}
 }
 
