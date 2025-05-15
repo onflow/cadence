@@ -38,11 +38,11 @@ func TestInterpretTransactions(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("NoPrepareFunction", func(t *testing.T) {
+	t.Run("no prepare", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           transaction {
             execute {
               let x = 1 + 2
@@ -50,15 +50,15 @@ func TestInterpretTransactions(t *testing.T) {
           }
         `)
 
-		err := inter.InvokeTransaction(0)
+		err := inter.InvokeTransaction(nil)
 		assert.NoError(t, err)
 	})
 
-	t.Run("SetTransactionField", func(t *testing.T) {
+	t.Run("prepare sets field", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           transaction {
 
             var x: Int
@@ -73,11 +73,11 @@ func TestInterpretTransactions(t *testing.T) {
           }
         `)
 
-		err := inter.InvokeTransaction(0)
+		err := inter.InvokeTransaction(nil)
 		assert.NoError(t, err)
 	})
 
-	t.Run("PreConditions", func(t *testing.T) {
+	t.Run("succeeding pre-condition", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -96,11 +96,11 @@ func TestInterpretTransactions(t *testing.T) {
           }
         `)
 
-		err := inter.InvokeTransaction(0)
+		err := inter.InvokeTransaction(nil)
 		assert.NoError(t, err)
 	})
 
-	t.Run("FailingPreConditions", func(t *testing.T) {
+	t.Run("failing pre-condition", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -119,7 +119,7 @@ func TestInterpretTransactions(t *testing.T) {
           }
         `)
 
-		err := inter.InvokeTransaction(0)
+		err := inter.InvokeTransaction(nil)
 		RequireError(t, err)
 
 		var conditionErr interpreter.ConditionError
@@ -131,7 +131,7 @@ func TestInterpretTransactions(t *testing.T) {
 		)
 	})
 
-	t.Run("PostConditions", func(t *testing.T) {
+	t.Run("succeeding post-condition", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -154,11 +154,11 @@ func TestInterpretTransactions(t *testing.T) {
           }
         `)
 
-		err := inter.InvokeTransaction(0)
+		err := inter.InvokeTransaction(nil)
 		assert.NoError(t, err)
 	})
 
-	t.Run("FailingPostConditions", func(t *testing.T) {
+	t.Run("failing post-condition", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -181,7 +181,7 @@ func TestInterpretTransactions(t *testing.T) {
           }
         `)
 
-		err := inter.InvokeTransaction(0)
+		err := inter.InvokeTransaction(nil)
 		RequireError(t, err)
 
 		var conditionErr interpreter.ConditionError
@@ -193,60 +193,72 @@ func TestInterpretTransactions(t *testing.T) {
 		)
 	})
 
-	t.Run("MultipleTransactions", func(t *testing.T) {
+	t.Run("too few signers", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
-          transaction {
-            execute {
-              let x = 1 + 2
-            }
-          }
-
-          transaction {
-            execute {
-              let y = 3 + 4
-            }
-          }
-        `)
-
-		// first transaction
-		err := inter.InvokeTransaction(0)
-		assert.NoError(t, err)
-
-		// second transaction
-		err = inter.InvokeTransaction(1)
-		assert.NoError(t, err)
-
-		// third transaction is not declared
-		err = inter.InvokeTransaction(2)
-		assert.IsType(t, interpreter.TransactionNotDeclaredError{}, err)
-	})
-
-	t.Run("TooFewArguments", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           transaction {
             prepare(signer: &Account) {}
           }
         `)
 
-		err := inter.InvokeTransaction(0)
+		signer := stdlib.NewAccountReferenceValue(
+			inter,
+			nil,
+			interpreter.AddressValue{1},
+			interpreter.UnauthorizedAccess,
+			interpreter.EmptyLocationRange,
+		)
+
+		err := inter.InvokeTransaction(nil)
 		assert.IsType(t, interpreter.ArgumentCountError{}, err)
+
+		err = inter.InvokeTransaction(nil, signer)
+		assert.NoError(t, err)
 	})
 
-	t.Run("TooManyArguments", func(t *testing.T) {
+	t.Run("too many signers, no prepare", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           transaction {
             execute {}
           }
+        `)
 
+		signer1 := stdlib.NewAccountReferenceValue(
+			inter,
+			nil,
+			interpreter.AddressValue{1},
+			interpreter.UnauthorizedAccess,
+			interpreter.EmptyLocationRange,
+		)
+
+		signer2 := stdlib.NewAccountReferenceValue(
+			inter,
+			nil,
+			interpreter.AddressValue{2},
+			interpreter.UnauthorizedAccess,
+			interpreter.EmptyLocationRange,
+		)
+
+		err := inter.InvokeTransaction(nil)
+		assert.NoError(t, err)
+
+		err = inter.InvokeTransaction(nil, signer1)
+		assert.IsType(t, interpreter.ArgumentCountError{}, err)
+
+		err = inter.InvokeTransaction(nil, signer1, signer2)
+		assert.IsType(t, interpreter.ArgumentCountError{}, err)
+	})
+
+	t.Run("too many signers, prepare requires one", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
           transaction {
             prepare(signer: &Account) {}
 
@@ -270,20 +282,18 @@ func TestInterpretTransactions(t *testing.T) {
 			interpreter.EmptyLocationRange,
 		)
 
-		// first transaction
-		err := inter.InvokeTransaction(0, signer1)
-		assert.IsType(t, interpreter.ArgumentCountError{}, err)
+		err := inter.InvokeTransaction(nil, signer1)
+		require.NoError(t, err)
 
-		// second transaction
-		err = inter.InvokeTransaction(0, signer1, signer2)
+		err = inter.InvokeTransaction(nil, signer1, signer2)
 		assert.IsType(t, interpreter.ArgumentCountError{}, err)
 	})
 
-	t.Run("Parameters", func(t *testing.T) {
+	t.Run("parameters", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let values: [AnyStruct] = []
 
           transaction(x: Int, y: Bool) {
@@ -303,7 +313,7 @@ func TestInterpretTransactions(t *testing.T) {
 
 		address := common.MustBytesToAddress([]byte{0x1})
 
-		account := stdlib.NewAccountReferenceValue(
+		signer := stdlib.NewAccountReferenceValue(
 			NoOpFunctionCreationContext{},
 			nil,
 			interpreter.AddressValue(address),
@@ -311,14 +321,10 @@ func TestInterpretTransactions(t *testing.T) {
 			interpreter.EmptyLocationRange,
 		)
 
-		prepareArguments := []interpreter.Value{account}
-
-		arguments = append(arguments, prepareArguments...)
-
-		err := inter.InvokeTransaction(0, arguments...)
+		err := inter.InvokeTransaction(arguments, signer)
 		require.NoError(t, err)
 
-		values := inter.Globals.Get("values").GetValue(inter)
+		values := inter.GetGlobal("values")
 
 		require.IsType(t, &interpreter.ArrayValue{}, values)
 
@@ -334,46 +340,42 @@ func TestInterpretTransactions(t *testing.T) {
 		)
 	})
 
-	t.Run("Enum", func(t *testing.T) {
+	t.Run("enum", func(t *testing.T) {
 
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-			access(all)
-			enum Alpha: Int {
-				access(all)
-				case A
+            enum Alpha: Int {
+                case A
+                case B
+            }
 
-				access(all)
-				case B
-			}
+            let a = Alpha.A
+            let b = Alpha.B
 
-			let a = Alpha.A
-			let b = Alpha.B
+            let values: [AnyStruct] = []
 
-			let values: [AnyStruct] = []
+            transaction(x: Alpha) {
 
-			transaction(x: Alpha) {
-
-				prepare(signer: &Account) {
-					values.append(signer.address)
-					values.append(x)
-					if x == Alpha.A {
-						values.append(Alpha.B)
-					} else {
-						values.append(-1) 
-					}
-				}
-			}
+                prepare(signer: &Account) {
+                    values.append(signer.address)
+                    values.append(x)
+                    if x == Alpha.A {
+                        values.append(Alpha.B)
+                    } else {
+                        values.append(-1)
+                    }
+                }
+            }
         `)
 
 		arguments := []interpreter.Value{
-			inter.Globals.Get("a").GetValue(inter),
+			inter.GetGlobal("a"),
 		}
 
 		address := common.MustBytesToAddress([]byte{0x1})
 
-		account := stdlib.NewAccountReferenceValue(
+		signer := stdlib.NewAccountReferenceValue(
 			NoOpFunctionCreationContext{},
 			nil,
 			interpreter.AddressValue(address),
@@ -381,14 +383,10 @@ func TestInterpretTransactions(t *testing.T) {
 			interpreter.EmptyLocationRange,
 		)
 
-		prepareArguments := []interpreter.Value{account}
-
-		arguments = append(arguments, prepareArguments...)
-
-		err := inter.InvokeTransaction(0, arguments...)
+		err := inter.InvokeTransaction(arguments, signer)
 		require.NoError(t, err)
 
-		values := inter.Globals.Get("values").GetValue(inter)
+		values := inter.GetGlobal("values")
 
 		require.IsType(t, &interpreter.ArrayValue{}, values)
 
@@ -397,56 +395,66 @@ func TestInterpretTransactions(t *testing.T) {
 			inter,
 			[]interpreter.Value{
 				interpreter.AddressValue(address),
-				inter.Globals.Get("a").GetValue(inter),
-				inter.Globals.Get("b").GetValue(inter),
+				inter.GetGlobal("a"),
+				inter.GetGlobal("b"),
 			},
 			ArrayElements(inter, values.(*interpreter.ArrayValue)),
 		)
 	})
 }
 
-func TestRuntimeInvalidTransferInExecute(t *testing.T) {
+func TestInterpretInvalidTransferInExecute(t *testing.T) {
 
 	t.Parallel()
 
-	inter, _ := parseCheckAndInterpretWithOptions(t, `
-		access(all) resource Dummy {}
+	inter, _ := parseCheckAndInterpretWithOptions(t,
+		`
+          resource Dummy {}
 
-		transaction {
-			var vaults: @[AnyResource]
-			var account: auth(Storage) &Account
+          transaction {
+              var vaults: @[AnyResource]
+              var account: auth(Storage) &Account
 
-			prepare(account: auth(Storage) &Account) {
-				self.vaults <- [<-create Dummy(), <-create Dummy()]
-				self.account = account
-			}
+              prepare(account: auth(Storage) &Account) {
+                  self.vaults <- [<-create Dummy(), <-create Dummy()]
+                  self.account = account
+              }
 
-			execute {
-				let x = fun(): @[AnyResource] {
-					var x <- self.vaults <- [<-create Dummy()]
-					return <-x
-				}
+              execute {
+                  let x = fun(): @[AnyResource] {
+                      var x <- self.vaults <- [<-create Dummy()]
+                      return <-x
+                  }
 
-				var t <-  self.vaults[0] <- self.vaults 
-				destroy t
-				self.account.storage.save(<- x(), to: /storage/x42)
-			}
-		}
-	`, ParseCheckAndInterpretOptions{
-		HandleCheckerError: func(err error) {
-			errs := RequireCheckerErrors(t, err, 3)
-			require.IsType(t, &sema.ResourceCapturingError{}, errs[0])
-			require.IsType(t, &sema.ResourceCapturingError{}, errs[1])
-			require.IsType(t, &sema.ResourceCapturingError{}, errs[2])
+                  var t <-  self.vaults[0] <- self.vaults
+                  destroy t
+                  self.account.storage.save(<- x(), to: /storage/x42)
+              }
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(err error) {
+				errs := RequireCheckerErrors(t, err, 3)
+				require.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+				require.IsType(t, &sema.ResourceCapturingError{}, errs[1])
+				require.IsType(t, &sema.ResourceCapturingError{}, errs[2])
+			},
 		},
-	})
+	)
 
-	signer1 := stdlib.NewAccountReferenceValue(inter, nil, interpreter.AddressValue{1}, interpreter.UnauthorizedAccess, interpreter.EmptyLocationRange)
-	err := inter.InvokeTransaction(0, signer1)
+	signer1 := stdlib.NewAccountReferenceValue(
+		inter,
+		nil,
+		interpreter.AddressValue{1},
+		interpreter.UnauthorizedAccess,
+		interpreter.EmptyLocationRange,
+	)
+
+	err := inter.InvokeTransaction(nil, signer1)
 	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 }
 
-func TestRuntimeInvalidRecursiveTransferInExecute(t *testing.T) {
+func TestInterpretInvalidRecursiveTransferInExecute(t *testing.T) {
 
 	t.Parallel()
 
@@ -455,20 +463,20 @@ func TestRuntimeInvalidRecursiveTransferInExecute(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-			transaction {
-				var arr: @[AnyResource]
+            transaction {
+                var arr: @[AnyResource]
 
-				prepare() {
-					self.arr <- []
-				}
+                prepare() {
+                    self.arr <- []
+                }
 
-				execute {
-					self.arr.append(<-self.arr)
-				}
-			}
-		`)
+                execute {
+                    self.arr.append(<-self.arr)
+                }
+            }
+        `)
 
-		err := inter.InvokeTransaction(0)
+		err := inter.InvokeTransaction(nil)
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
@@ -477,20 +485,20 @@ func TestRuntimeInvalidRecursiveTransferInExecute(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-			transaction {
-				var dict: @{String: AnyResource}
+            transaction {
+                var dict: @{String: AnyResource}
 
-				prepare() {
-					self.dict <- {}
-				}
+                prepare() {
+                    self.dict <- {}
+                }
 
-				execute {
-					destroy self.dict.insert(key: "", <-self.dict)
-				}
-			}
-		`)
+                execute {
+                    destroy self.dict.insert(key: "", <-self.dict)
+                }
+            }
+        `)
 
-		err := inter.InvokeTransaction(0)
+		err := inter.InvokeTransaction(nil)
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
@@ -499,26 +507,26 @@ func TestRuntimeInvalidRecursiveTransferInExecute(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-			resource R {
-				fun foo(_ r: @R) {
-					destroy r
-				}
-			}
+            resource R {
+                fun foo(_ r: @R) {
+                    destroy r
+                }
+            }
 
-			transaction {
-				var r: @R
+            transaction {
+                var r: @R
 
-				prepare() {
-					self.r <- create R()
-				}
+                prepare() {
+                    self.r <- create R()
+                }
 
-				execute {
-					self.r.foo(<-self.r) 
-				}
-			}
-		`)
+                execute {
+                    self.r.foo(<-self.r)
+                }
+            }
+        `)
 
-		err := inter.InvokeTransaction(0)
+		err := inter.InvokeTransaction(nil)
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 }
