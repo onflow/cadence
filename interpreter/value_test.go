@@ -63,19 +63,20 @@ var testCompositeValueType = &sema.CompositeType{
 func getMeterCompFuncWithExpectedKinds(
 	t *testing.T,
 	kinds []common.ComputationKind,
-	intensities []uint,
-) OnMeterComputationFunc {
+	intensities []uint64,
+) computationGaugeFunc {
 	if len(kinds) != len(intensities) {
 		t.Fatal("size of kinds doesn't match size of intensities")
 	}
 	expectedCompKindsIndex := 0
-	return func(compKind common.ComputationKind, intensity uint) {
+	return func(usage common.ComputationUsage) error {
 		if expectedCompKindsIndex >= len(kinds) {
 			t.Fatal("received an extra meterComputation call")
 		}
-		assert.Equal(t, kinds[expectedCompKindsIndex], compKind)
-		assert.Equal(t, intensities[expectedCompKindsIndex], intensity)
+		assert.Equal(t, kinds[expectedCompKindsIndex], usage.Kind)
+		assert.Equal(t, intensities[expectedCompKindsIndex], usage.Intensity)
 		expectedCompKindsIndex++
+		return nil
 	}
 }
 
@@ -141,7 +142,7 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 		TestLocation,
 		&Config{
 			Storage: storage,
-			OnMeterComputation: getMeterCompFuncWithExpectedKinds(t,
+			ComputationGauge: getMeterCompFuncWithExpectedKinds(t,
 				[]common.ComputationKind{
 					common.ComputationKindCreateCompositeValue,
 					common.ComputationKindCreateArrayValue,
@@ -149,7 +150,7 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 					common.ComputationKindTransferArrayValue,
 					common.ComputationKindTransferCompositeValue,
 				},
-				[]uint{1, 1, 1, 1, 1},
+				[]uint64{1, 1, 1, 1, 1},
 			),
 		},
 	)
@@ -534,7 +535,7 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 		TestLocation,
 		&Config{
 			Storage: storage,
-			OnMeterComputation: getMeterCompFuncWithExpectedKinds(t,
+			ComputationGauge: getMeterCompFuncWithExpectedKinds(t,
 				[]common.ComputationKind{
 					common.ComputationKindCreateCompositeValue,
 					common.ComputationKindCreateDictionaryValue,
@@ -542,7 +543,7 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 					common.ComputationKindTransferDictionaryValue,
 					common.ComputationKindTransferCompositeValue,
 				},
-				[]uint{1, 1, 1, 1, 1},
+				[]uint64{1, 1, 1, 1, 1},
 			),
 		},
 	)

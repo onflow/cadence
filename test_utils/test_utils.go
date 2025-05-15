@@ -45,6 +45,7 @@ type ParseCheckAndInterpretOptions struct {
 	CheckerConfig      *sema.Config
 	HandleCheckerError func(error)
 }
+
 type VMInvokable struct {
 	vmInstance *vm.VM
 	*vm.Context

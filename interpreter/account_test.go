@@ -37,7 +37,6 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
@@ -438,6 +437,11 @@ func (n NoOpReferenceCreationContext) MaybeTrackReferencedResourceKindedValue(re
 }
 
 func (n NoOpReferenceCreationContext) MeterMemory(usage common.MemoryUsage) error {
+	// NO-OP
+	return nil
+}
+
+func (n NoOpReferenceCreationContext) MeterComputation(usage common.ComputationUsage) error {
 	// NO-OP
 	return nil
 }

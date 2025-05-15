@@ -117,7 +117,7 @@ func NewCompositeValueWithStaticType(
 }
 
 func NewCompositeValue(
-	ctx MemberAccessibleContext,
+	context MemberAccessibleContext,
 	locationRange LocationRange,
 	location common.Location,
 	qualifiedIdentifier string,
@@ -126,11 +126,17 @@ func NewCompositeValue(
 	address common.Address,
 ) *CompositeValue {
 
-	ctx.ReportComputation(common.ComputationKindCreateCompositeValue, 1)
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindCreateCompositeValue,
+			Intensity: 1,
+		},
+	)
 
 	var v *CompositeValue
 
-	if ctx.TracingEnabled() {
+	if context.TracingEnabled() {
 		startTime := time.Now()
 
 		defer func() {
@@ -144,7 +150,7 @@ func NewCompositeValue(
 			typeID := string(v.TypeID())
 			kind := v.Kind.String()
 
-			ctx.ReportCompositeValueConstructTrace(
+			context.ReportCompositeValueConstructTrace(
 				owner,
 				typeID,
 				kind,
@@ -155,11 +161,11 @@ func NewCompositeValue(
 
 	constructor := func() *atree.OrderedMap {
 		dictionary, err := atree.NewMap(
-			ctx.Storage(),
+			context.Storage(),
 			atree.Address(address),
 			atree.NewDefaultDigesterBuilder(),
 			NewCompositeTypeInfo(
-				ctx,
+				context,
 				location,
 				qualifiedIdentifier,
 				kind,
@@ -172,17 +178,17 @@ func NewCompositeValue(
 	}
 
 	typeInfo := NewCompositeTypeInfo(
-		ctx,
+		context,
 		location,
 		qualifiedIdentifier,
 		kind,
 	)
 
-	v = newCompositeValueFromConstructor(ctx, uint64(len(fields)), typeInfo, constructor)
+	v = newCompositeValueFromConstructor(context, uint64(len(fields)), typeInfo, constructor)
 
 	for _, field := range fields {
 		v.SetMember(
-			ctx,
+			context,
 			locationRange,
 			field.Name,
 			field.Value,
@@ -331,7 +337,13 @@ func (v *CompositeValue) defaultDestroyEventConstructors() (constructors []Funct
 
 func (v *CompositeValue) Destroy(context ResourceDestructionContext, locationRange LocationRange) {
 
-	context.ReportComputation(common.ComputationKindDestroyCompositeValue, 1)
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindDestroyCompositeValue,
+			Intensity: 1,
+		},
+	)
 
 	if context.TracingEnabled() {
 		startTime := time.Now()
@@ -1151,7 +1163,13 @@ func (v *CompositeValue) Transfer(
 	hasNoParentContainer bool,
 ) Value {
 
-	context.ReportComputation(common.ComputationKindTransferCompositeValue, 1)
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindTransferCompositeValue,
+			Intensity: 1,
+		},
+	)
 
 	if context.TracingEnabled() {
 		startTime := time.Now()

@@ -64,7 +64,13 @@ func NewDictionaryValueWithAddress(
 	keysAndValues ...Value,
 ) *DictionaryValue {
 
-	context.ReportComputation(common.ComputationKindCreateDictionaryValue, 1)
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindCreateDictionaryValue,
+			Intensity: 1,
+		},
+	)
 
 	var v *DictionaryValue
 
@@ -147,7 +153,14 @@ func newDictionaryValueWithIterator(
 	address common.Address,
 	values func() (Value, Value),
 ) *DictionaryValue {
-	context.ReportComputation(common.ComputationKindCreateDictionaryValue, 1)
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindCreateDictionaryValue,
+			Intensity: 1,
+		},
+	)
 
 	var v *DictionaryValue
 
@@ -480,7 +493,13 @@ func (v *DictionaryValue) IsStaleResource(context ValueStaticTypeContext) bool {
 
 func (v *DictionaryValue) Destroy(context ResourceDestructionContext, locationRange LocationRange) {
 
-	context.ReportComputation(common.ComputationKindDestroyDictionaryValue, 1)
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindDestroyDictionaryValue,
+			Intensity: 1,
+		},
+	)
 
 	if context.TracingEnabled() {
 		startTime := time.Now()
@@ -1281,9 +1300,12 @@ func (v *DictionaryValue) Transfer(
 	hasNoParentContainer bool,
 ) Value {
 
-	context.ReportComputation(
-		common.ComputationKindTransferDictionaryValue,
-		uint(v.Count()),
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindTransferDictionaryValue,
+			Intensity: uint64(v.Count()),
+		},
 	)
 
 	if context.TracingEnabled() {
