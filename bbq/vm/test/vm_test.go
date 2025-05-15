@@ -4535,7 +4535,7 @@ func TestDefaultFunctionsWithConditions(t *testing.T) {
 	t.Run("default in parent, conditions in child", func(t *testing.T) {
 		t.Parallel()
 
-		_, err, logs := CompileAndInvokeWithLogs(t,
+		_, logs, err := CompileAndInvokeWithLogs(t,
 			`
               struct interface Foo {
                   fun test(_ a: Int) {
@@ -4584,7 +4584,7 @@ func TestDefaultFunctionsWithConditions(t *testing.T) {
 	t.Run("default and conditions in parent, more conditions in child", func(t *testing.T) {
 		t.Parallel()
 
-		_, err, logs := CompileAndInvokeWithLogs(t,
+		_, logs, err := CompileAndInvokeWithLogs(t,
 			`
               struct interface Foo {
                   fun test(_ a: Int) {
@@ -5997,7 +5997,7 @@ func TestReturnStatements(t *testing.T) {
 	t.Run("conditional return with post condition", func(t *testing.T) {
 		t.Parallel()
 
-		actual, err, logs := CompileAndInvokeWithLogs(t,
+		actual, logs, err := CompileAndInvokeWithLogs(t,
 			`
               fun test(a: Bool): Int {
                   post {
@@ -6045,7 +6045,7 @@ func TestReturnStatements(t *testing.T) {
 	t.Run("conditional return with post condition in initializer", func(t *testing.T) {
 		t.Parallel()
 
-		actual, err, logs := CompileAndInvokeWithLogs(t,
+		actual, logs, err := CompileAndInvokeWithLogs(t,
 			`
               struct Foo {
                   var i: Int
@@ -7969,7 +7969,7 @@ func TestInvocationExpressionEvaluationOrder(t *testing.T) {
 	t.Run("static function", func(t *testing.T) {
 		t.Parallel()
 
-		_, err, logs := CompileAndInvokeWithLogs(t,
+		_, logs, err := CompileAndInvokeWithLogs(t,
 			`
               fun test() {
                   getFunction()(getArgument())
@@ -8005,7 +8005,7 @@ func TestInvocationExpressionEvaluationOrder(t *testing.T) {
 	t.Run("object method", func(t *testing.T) {
 		t.Parallel()
 
-		_, err, logs := CompileAndInvokeWithLogs(t,
+		_, logs, err := CompileAndInvokeWithLogs(t,
 			`
               fun test() {
                   getReceiver().method(getArgument())
@@ -8201,7 +8201,7 @@ func TestGlobalVariables(t *testing.T) {
 	t.Run("forward references", func(t *testing.T) {
 		t.Parallel()
 
-		result, err, logs := CompileAndInvokeWithLogs(t,
+		result, logs, err := CompileAndInvokeWithLogs(t,
 			`
               var a = initializeA()
               var b = initializeB()
