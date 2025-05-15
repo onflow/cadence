@@ -324,6 +324,7 @@ type WhileStatement struct {
 	Test     Expression
 	Block    *Block
 	StartPos Position `json:"-"`
+	Comments
 }
 
 var _ Element = &WhileStatement{}
@@ -334,12 +335,14 @@ func NewWhileStatement(
 	expression Expression,
 	block *Block,
 	startPos Position,
+	comments Comments,
 ) *WhileStatement {
 	common.UseMemory(gauge, common.WhileStatementMemoryUsage)
 	return &WhileStatement{
 		Test:     expression,
 		Block:    block,
 		StartPos: startPos,
+		Comments: comments,
 	}
 }
 

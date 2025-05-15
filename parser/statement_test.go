@@ -2166,11 +2166,12 @@ func TestParseIfStatementNoElse(t *testing.T) {
 	)
 }
 
-func TestParseWhileStatementInFunctionDeclaration(t *testing.T) {
+func TestParseWhileStatement(t *testing.T) {
 
 	t.Parallel()
 
-	const code = `
+	t.Run("while in function, comments", func(t *testing.T) {
+		const code = `
 	    fun test() {
             while true {
               return
@@ -2179,75 +2180,122 @@ func TestParseWhileStatementInFunctionDeclaration(t *testing.T) {
             }
         }
 	`
-	result, errs := testParseProgram(code)
-	require.Empty(t, errs)
+		result, errs := testParseProgram(code)
+		require.Empty(t, errs)
 
-	AssertEqualWithDiff(t,
-		[]ast.Declaration{
-			&ast.FunctionDeclaration{
-				Access: ast.AccessNotSpecified,
-				Identifier: ast.Identifier{
-					Identifier: "test",
-					Pos:        ast.Position{Offset: 10, Line: 2, Column: 9},
-				},
-				ParameterList: &ast.ParameterList{
-					Range: ast.Range{
-						StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
-						EndPos:   ast.Position{Offset: 15, Line: 2, Column: 14},
+		AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
+					Identifier: ast.Identifier{
+						Identifier: "test",
+						Pos:        ast.Position{Offset: 10, Line: 2, Column: 9},
 					},
-				},
-				FunctionBlock: &ast.FunctionBlock{
-					Block: &ast.Block{
-						Statements: []ast.Statement{
-							&ast.WhileStatement{
-								Test: &ast.BoolExpression{
-									Value: true,
-									Range: ast.Range{
-										StartPos: ast.Position{Offset: 37, Line: 3, Column: 18},
-										EndPos:   ast.Position{Offset: 40, Line: 3, Column: 21},
+					ParameterList: &ast.ParameterList{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
+							EndPos:   ast.Position{Offset: 15, Line: 2, Column: 14},
+						},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Statements: []ast.Statement{
+								&ast.WhileStatement{
+									Test: &ast.BoolExpression{
+										Value: true,
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 37, Line: 3, Column: 18},
+											EndPos:   ast.Position{Offset: 40, Line: 3, Column: 21},
+										},
 									},
+									Block: &ast.Block{
+										Statements: []ast.Statement{
+											&ast.ReturnStatement{
+												Expression: nil,
+												Range: ast.Range{
+													StartPos: ast.Position{Offset: 58, Line: 4, Column: 14},
+													EndPos:   ast.Position{Offset: 63, Line: 4, Column: 19},
+												},
+											},
+											&ast.BreakStatement{
+												Range: ast.Range{
+													StartPos: ast.Position{Offset: 79, Line: 5, Column: 14},
+													EndPos:   ast.Position{Offset: 83, Line: 5, Column: 18},
+												},
+											},
+											&ast.ContinueStatement{
+												Range: ast.Range{
+													StartPos: ast.Position{Offset: 99, Line: 6, Column: 14},
+													EndPos:   ast.Position{Offset: 106, Line: 6, Column: 21},
+												},
+											},
+										},
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 42, Line: 3, Column: 23},
+											EndPos:   ast.Position{Offset: 120, Line: 7, Column: 12},
+										},
+									},
+									StartPos: ast.Position{Offset: 31, Line: 3, Column: 12},
 								},
-								Block: &ast.Block{
-									Statements: []ast.Statement{
-										&ast.ReturnStatement{
-											Expression: nil,
-											Range: ast.Range{
-												StartPos: ast.Position{Offset: 58, Line: 4, Column: 14},
-												EndPos:   ast.Position{Offset: 63, Line: 4, Column: 19},
-											},
-										},
-										&ast.BreakStatement{
-											Range: ast.Range{
-												StartPos: ast.Position{Offset: 79, Line: 5, Column: 14},
-												EndPos:   ast.Position{Offset: 83, Line: 5, Column: 18},
-											},
-										},
-										&ast.ContinueStatement{
-											Range: ast.Range{
-												StartPos: ast.Position{Offset: 99, Line: 6, Column: 14},
-												EndPos:   ast.Position{Offset: 106, Line: 6, Column: 21},
-											},
-										},
-									},
-									Range: ast.Range{
-										StartPos: ast.Position{Offset: 42, Line: 3, Column: 23},
-										EndPos:   ast.Position{Offset: 120, Line: 7, Column: 12},
-									},
-								},
-								StartPos: ast.Position{Offset: 31, Line: 3, Column: 12},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
+								EndPos:   ast.Position{Offset: 130, Line: 8, Column: 8},
 							},
 						},
+					},
+					StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
+				},
+			},
+			result.Declarations(),
+		)
+	})
+
+	t.Run("while, comments", func(t *testing.T) {
+		const code = `
+		// before while
+	    while true { 
+			// ignore
+		} // after while
+	`
+		result, errs := testParseStatements(code)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.WhileStatement{
+					Test: &ast.BoolExpression{
+						Value: true,
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
-							EndPos:   ast.Position{Offset: 130, Line: 8, Column: 8},
+							StartPos: ast.Position{Offset: 30, Line: 3, Column: 11},
+							EndPos:   ast.Position{Offset: 33, Line: 3, Column: 14},
+						},
+					},
+					Block: &ast.Block{
+						Statements: []ast.Statement{},
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 35, Line: 3, Column: 16},
+							EndPos:   ast.Position{Offset: 53, Line: 5, Column: 2},
+						},
+						Comments: ast.Comments{
+							Trailing: []*ast.Comment{
+								ast.NewComment(nil, []byte("// ignore")),
+								ast.NewComment(nil, []byte("// after while")),
+							},
+						},
+					},
+					StartPos: ast.Position{Offset: 24, Line: 3, Column: 5},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// before while")),
 						},
 					},
 				},
-				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
 			},
-		},
-		result.Declarations(),
-	)
+			result,
+		)
+	})
+
 }
 
 func TestParseReturnBreakContinueWithComments(t *testing.T) {

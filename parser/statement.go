@@ -421,7 +421,7 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 
 func parseWhileStatement(p *parser) (*ast.WhileStatement, error) {
 
-	startPos := p.current.StartPos
+	startToken := p.current
 	p.next()
 
 	expression, err := parseExpression(p, lowestBindingPower)
@@ -434,7 +434,15 @@ func parseWhileStatement(p *parser) (*ast.WhileStatement, error) {
 		return nil, err
 	}
 
-	return ast.NewWhileStatement(p.memoryGauge, expression, block, startPos), nil
+	return ast.NewWhileStatement(
+		p.memoryGauge,
+		expression,
+		block,
+		startToken.StartPos,
+		ast.Comments{
+			Leading: startToken.Comments.PackToList(),
+		},
+	), nil
 }
 
 func parseForStatement(p *parser) (*ast.ForStatement, error) {

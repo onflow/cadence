@@ -384,7 +384,7 @@ func parseWhileStatement(p *parser) (*ast.WhileStatement, error) {
 		return nil, err
 	}
 
-	return ast.NewWhileStatement(p.memoryGauge, expression, block, startPos), nil
+	return ast.NewWhileStatement(p.memoryGauge, expression, block, startPos, ast.Comments{}), nil
 }
 
 func parseForStatement(p *parser) (*ast.ForStatement, error) {
