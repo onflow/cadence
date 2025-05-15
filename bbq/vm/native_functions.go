@@ -154,7 +154,6 @@ func init() {
 	)
 
 	// Type constructors
-	// TODO: add the remaining type constructor functions
 
 	RegisterFunction(
 		NewNativeFunctionValue(
@@ -171,17 +170,160 @@ func init() {
 
 	RegisterFunction(
 		NewNativeFunctionValue(
+			sema.OptionalTypeFunctionName,
+			sema.OptionalTypeFunctionType,
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+
+				typeValue := arguments[0].(interpreter.TypeValue)
+
+				return interpreter.ConstructOptionalTypeValue(context, typeValue)
+			},
+		),
+	)
+
+	RegisterFunction(
+		NewNativeFunctionValue(
+			sema.VariableSizedArrayTypeFunctionName,
+			sema.VariableSizedArrayTypeFunctionType,
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+
+				typeValue := arguments[0].(interpreter.TypeValue)
+
+				return interpreter.ConstructVariableSizedArrayTypeValue(
+					context,
+					typeValue,
+				)
+			},
+		),
+	)
+
+	RegisterFunction(
+		NewNativeFunctionValue(
+			sema.ConstantSizedArrayTypeFunctionName,
+			sema.ConstantSizedArrayTypeFunctionType,
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+
+				typeValue := arguments[0].(interpreter.TypeValue)
+				sizeValue := arguments[1].(interpreter.IntValue)
+
+				return interpreter.ConstructConstantSizedArrayTypeValue(
+					context,
+					EmptyLocationRange,
+					typeValue,
+					sizeValue,
+				)
+			},
+		),
+	)
+
+	RegisterFunction(
+		NewNativeFunctionValue(
+			sema.DictionaryTypeFunctionName,
+			sema.DictionaryTypeFunctionType,
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+
+				keyTypeValue := arguments[0].(interpreter.TypeValue)
+				valueTypeValue := arguments[1].(interpreter.TypeValue)
+
+				return interpreter.ConstructDictionaryTypeValue(
+					context,
+					keyTypeValue,
+					valueTypeValue,
+				)
+			},
+		),
+	)
+
+	RegisterFunction(
+		NewNativeFunctionValue(
+			sema.CompositeTypeFunctionName,
+			sema.CompositeTypeFunctionType,
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+
+				typeIDValue := arguments[0].(*interpreter.StringValue)
+
+				return interpreter.ConstructCompositeTypeValue(context, typeIDValue)
+			},
+		),
+	)
+
+	RegisterFunction(
+		NewNativeFunctionValue(
+			sema.FunctionTypeFunctionName,
+			sema.FunctionTypeFunctionType,
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+
+				parameterTypeValues := arguments[0].(*interpreter.ArrayValue)
+				returnTypeValue := arguments[1].(interpreter.TypeValue)
+
+				return interpreter.ConstructFunctionTypeValue(
+					context,
+					EmptyLocationRange,
+					parameterTypeValues,
+					returnTypeValue,
+				)
+			},
+		),
+	)
+
+	RegisterFunction(
+		NewNativeFunctionValue(
 			sema.ReferenceTypeFunctionName,
 			sema.ReferenceTypeFunctionType,
-			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+
 				entitlementValues := arguments[0].(*interpreter.ArrayValue)
 				typeValue := arguments[1].(interpreter.TypeValue)
+
 				return interpreter.ConstructReferenceTypeValue(
 					context,
 					EmptyLocationRange,
 					entitlementValues,
 					typeValue,
 				)
+			},
+		),
+	)
+
+	RegisterFunction(
+		NewNativeFunctionValue(
+			sema.IntersectionTypeFunctionName,
+			sema.IntersectionTypeFunctionType,
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+
+				intersectionIDs := arguments[0].(*interpreter.ArrayValue)
+
+				return interpreter.ConstructIntersectionTypeValue(
+					context,
+					EmptyLocationRange,
+					intersectionIDs,
+				)
+			},
+		),
+	)
+
+	RegisterFunction(
+		NewNativeFunctionValue(
+			sema.CapabilityTypeFunctionName,
+			sema.CapabilityTypeFunctionType,
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+
+				typeValue := arguments[0].(interpreter.TypeValue)
+
+				return interpreter.ConstructCapabilityTypeValue(context, typeValue)
+			},
+		),
+	)
+
+	RegisterFunction(
+		NewNativeFunctionValue(
+			sema.InclusiveRangeTypeFunctionName,
+			sema.InclusiveRangeTypeFunctionType,
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+
+				typeValue := arguments[0].(interpreter.TypeValue)
+
+				return interpreter.ConstructInclusiveRangeTypeValue(context, typeValue)
 			},
 		),
 	)
