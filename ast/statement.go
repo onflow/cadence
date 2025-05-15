@@ -403,6 +403,7 @@ type ForStatement struct {
 	Block      *Block
 	Identifier Identifier
 	StartPos   Position `json:"-"`
+	Comments
 }
 
 var _ Element = &ForStatement{}
@@ -415,6 +416,7 @@ func NewForStatement(
 	block *Block,
 	expression Expression,
 	startPos Position,
+	comments Comments,
 ) *ForStatement {
 	common.UseMemory(gauge, common.ForStatementMemoryUsage)
 
@@ -424,6 +426,7 @@ func NewForStatement(
 		Block:      block,
 		Value:      expression,
 		StartPos:   startPos,
+		Comments:   comments,
 	}
 }
 

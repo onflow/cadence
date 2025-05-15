@@ -506,10 +506,11 @@ func (p *parser) nonReservedIdentifier(errMsgContext string) (ast.Identifier, er
 }
 
 func (p *parser) tokenToIdentifier(token lexer.Token) ast.Identifier {
-	return ast.NewIdentifier(
+	return ast.NewIdentifierWithComments(
 		p.memoryGauge,
 		string(p.tokenSource(token)),
 		token.StartPos,
+		token.Comments,
 	)
 }
 

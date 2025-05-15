@@ -1034,6 +1034,57 @@ func TestParseForStatement(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("empty block, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseStatements(`
+// Before for
+for /* after for */ x /* before in */ in /* after in */ y { }
+`)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.ForStatement{
+					Identifier: ast.Identifier{
+						Identifier: "x",
+						Pos:        ast.Position{Line: 3, Column: 20, Offset: 35},
+						Comments: ast.Comments{
+							Trailing: []*ast.Comment{
+								ast.NewComment(nil, []byte("/* before in */")),
+							},
+						},
+					},
+					Value: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "y",
+							Pos:        ast.Position{Line: 3, Column: 56, Offset: 71},
+						},
+					},
+					Block: &ast.Block{
+						Statements: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 3, Column: 58, Offset: 73},
+							EndPos:   ast.Position{Line: 3, Column: 60, Offset: 75},
+						},
+					},
+					StartPos: ast.Position{Line: 3, Column: 0, Offset: 15},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before for")),
+							ast.NewComment(nil, []byte("/* after for */")),
+						},
+						Trailing: []*ast.Comment{
+							ast.NewComment(nil, []byte("/* after in */")),
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
 }
 
 func TestParseForStatementIndexBinding(t *testing.T) {

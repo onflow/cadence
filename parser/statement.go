@@ -447,7 +447,7 @@ func parseWhileStatement(p *parser) (*ast.WhileStatement, error) {
 
 func parseForStatement(p *parser) (*ast.ForStatement, error) {
 
-	startPos := p.current.StartPos
+	startToken := p.current
 	p.nextSemanticToken()
 
 	if p.isToken(p.current, lexer.TokenIdentifier, KeywordIn) {
@@ -481,7 +481,10 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 		identifier = firstValue
 	}
 
-	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordIn) {
+	var inToken lexer.Token
+	if p.isToken(p.current, lexer.TokenIdentifier, KeywordIn) {
+		inToken = p.current
+	} else {
 		p.reportSyntaxError(
 			"expected keyword %q, got %s",
 			KeywordIn,
@@ -507,7 +510,11 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 		index,
 		block,
 		expression,
-		startPos,
+		startToken.StartPos,
+		ast.Comments{
+			Leading:  startToken.Comments.PackToList(),
+			Trailing: inToken.Comments.PackToList(),
+		},
 	), nil
 }
 

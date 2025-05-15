@@ -450,6 +450,7 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 		block,
 		expression,
 		startPos,
+		ast.Comments{},
 	), nil
 }
 
