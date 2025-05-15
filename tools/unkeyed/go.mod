@@ -1,13 +1,15 @@
 module github.com/onflow/cadence/tools/unkeyed
 
-go 1.23
+go 1.23.0
+
+toolchain go1.24.2
 
 require (
-	golang.org/x/exp/typeparams v0.0.0-20241108190413-2d47ceb2692f
-	golang.org/x/tools v0.28.0
+	golang.org/x/exp/typeparams v0.0.0-20250210185358-939b2ce775ac
+	golang.org/x/tools v0.32.0
 )
 
 require (
-	golang.org/x/mod v0.22.0 // indirect
-	golang.org/x/sync v0.10.0 // indirect
+	golang.org/x/mod v0.24.0 // indirect
+	golang.org/x/sync v0.13.0 // indirect
 )

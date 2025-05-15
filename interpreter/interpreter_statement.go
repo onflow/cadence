@@ -36,12 +36,9 @@ func (interpreter *Interpreter) evalStatement(statement ast.Statement) Statement
 
 	interpreter.statement = statement
 
-	config := interpreter.SharedState.Config
+	common.UseComputation(interpreter, common.StatementComputationUsage)
 
-	onMeterComputation := config.OnMeterComputation
-	if onMeterComputation != nil {
-		onMeterComputation(common.ComputationKindStatement, 1)
-	}
+	config := interpreter.SharedState.Config
 
 	debugger := config.Debugger
 	if debugger != nil {

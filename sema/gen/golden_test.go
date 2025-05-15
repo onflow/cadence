@@ -29,7 +29,6 @@ import (
 	_ "github.com/onflow/cadence/sema/gen/testdata/composite_type_pragma"
 	"github.com/onflow/cadence/sema/gen/testdata/constructor"
 	"github.com/onflow/cadence/sema/gen/testdata/contract"
-	_ "github.com/onflow/cadence/sema/gen/testdata/contract"
 	_ "github.com/onflow/cadence/sema/gen/testdata/docstrings"
 	_ "github.com/onflow/cadence/sema/gen/testdata/entitlement"
 	_ "github.com/onflow/cadence/sema/gen/testdata/equatable"

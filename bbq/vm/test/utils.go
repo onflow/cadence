@@ -427,7 +427,11 @@ func CompileAndInvokeWithLogs(
 	code string,
 	funcName string,
 	arguments ...vm.Value,
-) (result vm.Value, err error, logs []string) {
+) (
+	result vm.Value,
+	logs []string,
+	err error,
+) {
 
 	activation := sema.NewVariableActivation(sema.BaseValueActivation)
 	activation.DeclareValue(stdlib.PanicFunction)

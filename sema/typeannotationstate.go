@@ -18,7 +18,7 @@
 
 package sema
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=TypeAnnotationState
+//go:generate stringer -type=TypeAnnotationState
 
 type TypeAnnotationState uint
 

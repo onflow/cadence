@@ -98,15 +98,6 @@ type OnResourceOwnerChangeFunc func(
 	newOwner common.Address,
 )
 
-// OnMeterComputationFunc is a function that is called when some computation is about to happen.
-// intensity captures the intensity of the computation and can be set using input sizes
-// complexity of computation given input sizes, or any other factors that could help the upper levels
-// to differentiate same kind of computation with different level (and time) of execution.
-type OnMeterComputationFunc func(
-	compKind common.ComputationKind,
-	intensity uint,
-)
-
 // CapabilityBorrowHandlerFunc is a function that is used to borrow ID capabilities.
 type CapabilityBorrowHandlerFunc func(
 	context BorrowCapabilityControllerContext,
@@ -261,6 +252,7 @@ type Interpreter struct {
 }
 
 var _ common.MemoryGauge = &Interpreter{}
+var _ common.ComputationGauge = &Interpreter{}
 var _ ast.DeclarationVisitor[StatementResult] = &Interpreter{}
 var _ ast.StatementVisitor[StatementResult] = &Interpreter{}
 var _ ast.ExpressionVisitor[Value] = &Interpreter{}
@@ -1146,13 +1138,15 @@ func (interpreter *Interpreter) declareCompositeValue(
 	}
 }
 
-func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
+func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	declaration ast.CompositeLikeDeclaration,
 	lexicalScope *VariableActivation,
 ) (
 	scope *VariableActivation,
 	variable Variable,
 ) {
+	declarationInterpreter := interpreter
+
 	identifier := declaration.DeclarationIdentifier().Identifier
 	// NOTE: find *or* declare, as the function might have not been pre-declared (e.g. in the REPL)
 	variable = declarationInterpreter.findOrDeclareVariable(identifier)
@@ -3514,86 +3508,67 @@ func init() {
 			panic(fmt.Sprintf("missing fromBigEndianBytes implementation for number type: %s", numberType))
 		}
 	}
+}
 
-	// We assign this here because it depends on the interpreter, so this breaks the initialization cycle
-
-	// All of the following methods are static functions.
-	defineBaseValue(
-		BaseActivation,
-		sema.DictionaryTypeFunctionName,
-		NewUnmeteredStaticHostFunctionValue(
-			sema.DictionaryTypeFunctionType,
-			dictionaryTypeFunction,
-		))
-
-	defineBaseValue(
-		BaseActivation,
-		sema.CompositeTypeFunctionName,
-		NewUnmeteredStaticHostFunctionValue(
-			sema.CompositeTypeFunctionType,
-			compositeTypeFunction,
-		),
-	)
-
-	defineBaseValue(
-		BaseActivation,
-		sema.ReferenceTypeFunctionName,
-		NewUnmeteredStaticHostFunctionValue(
-			sema.ReferenceTypeFunctionType,
-			referenceTypeFunction,
-		),
-	)
-
-	defineBaseValue(
-		BaseActivation,
-		sema.FunctionTypeFunctionName,
-		NewUnmeteredStaticHostFunctionValue(
-			sema.FunctionTypeFunctionType,
-			functionTypeFunction,
-		),
-	)
-
-	defineBaseValue(
-		BaseActivation,
-		sema.IntersectionTypeFunctionName,
-		NewUnmeteredStaticHostFunctionValue(
-			sema.IntersectionTypeFunctionType,
-			intersectionTypeFunction,
+func ConstructOptionalTypeValue(context InvocationContext, typeValue TypeValue) Value {
+	return NewTypeValue(
+		context,
+		NewOptionalStaticType(
+			context,
+			typeValue.Type,
 		),
 	)
 }
 
-func dictionaryTypeFunction(invocation Invocation) Value {
-	inter := invocation.InvocationContext
+func ConstructVariableSizedArrayTypeValue(context InvocationContext, typeValue TypeValue) TypeValue {
+	return NewTypeValue(
+		context,
+		NewVariableSizedStaticType(
+			context,
+			typeValue.Type,
+		),
+	)
+}
 
-	keyTypeValue, ok := invocation.Arguments[0].(TypeValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
+func ConstructConstantSizedArrayTypeValue(
+	context InvocationContext,
+	locationRange LocationRange,
+	typeValue TypeValue,
+	sizeValue IntValue,
+) TypeValue {
+	return NewTypeValue(
+		context,
+		NewConstantSizedStaticType(
+			context,
+			typeValue.Type,
+			int64(sizeValue.ToInt(locationRange)),
+		),
+	)
+}
 
-	valueTypeValue, ok := invocation.Arguments[1].(TypeValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
+func ConstructDictionaryTypeValue(
+	context InvocationContext,
+	keyTypeValue TypeValue,
+	valueTypeValue TypeValue,
+) Value {
 	keyType := keyTypeValue.Type
 	valueType := valueTypeValue.Type
 
 	// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
 	if keyType == nil ||
 		!sema.IsSubType(
-			MustConvertStaticToSemaType(keyType, inter),
+			MustConvertStaticToSemaType(keyType, context),
 			sema.HashableStructType,
 		) {
 		return Nil
 	}
 
 	return NewSomeValueNonCopying(
-		inter,
+		context,
 		NewTypeValue(
-			inter,
+			context,
 			NewDictionaryStaticType(
-				inter,
+				context,
 				keyType,
 				valueType,
 			),
@@ -3601,32 +3576,71 @@ func dictionaryTypeFunction(invocation Invocation) Value {
 	)
 }
 
-func referenceTypeFunction(invocation Invocation) Value {
-	entitlementValues, ok := invocation.Arguments[0].(*ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
+func ConstructCompositeTypeValue(
+	context InvocationContext,
+	typeIDValue *StringValue,
+) Value {
+	typeID := typeIDValue.Str
+
+	composite, err := lookupComposite(context, typeID)
+	if err != nil {
+		return Nil
 	}
 
-	typeValue, ok := invocation.Arguments[1].(TypeValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	invocationContext := invocation.InvocationContext
-	locationRange := invocation.LocationRange
-
-	return ConstructReferenceStaticType(
-		invocationContext,
-		entitlementValues,
-		locationRange,
-		typeValue,
+	return NewSomeValueNonCopying(
+		context,
+		NewTypeValue(
+			context,
+			ConvertSemaToStaticType(context, composite),
+		),
 	)
 }
 
-func ConstructReferenceStaticType(
+func ConstructFunctionTypeValue(
 	invocationContext InvocationContext,
-	entitlementValues *ArrayValue,
 	locationRange LocationRange,
+	parameterTypeValues *ArrayValue,
+	returnTypeValue TypeValue,
+) Value {
+	returnType := MustConvertStaticToSemaType(returnTypeValue.Type, invocationContext)
+
+	var parameterTypes []sema.Parameter
+	parameterCount := parameterTypeValues.Count()
+	if parameterCount > 0 {
+		parameterTypes = make([]sema.Parameter, 0, parameterCount)
+		parameterTypeValues.Iterate(
+			invocationContext,
+			func(param Value) bool {
+				semaType := MustConvertStaticToSemaType(param.(TypeValue).Type, invocationContext)
+				parameterTypes = append(
+					parameterTypes,
+					sema.Parameter{
+						TypeAnnotation: sema.NewTypeAnnotation(semaType),
+					},
+				)
+
+				// Continue iteration
+				return true
+			},
+			false,
+			locationRange,
+		)
+	}
+	functionStaticType := NewFunctionStaticType(
+		invocationContext,
+		sema.NewSimpleFunctionType(
+			sema.FunctionPurityImpure,
+			parameterTypes,
+			sema.NewTypeAnnotation(returnType),
+		),
+	)
+	return NewUnmeteredTypeValue(functionStaticType)
+}
+
+func ConstructReferenceTypeValue(
+	invocationContext InvocationContext,
+	locationRange LocationRange,
+	entitlementValues *ArrayValue,
 	typeValue TypeValue,
 ) Value {
 	authorization := UnauthorizedAccess
@@ -3683,81 +3697,11 @@ func ConstructReferenceStaticType(
 	)
 }
 
-func compositeTypeFunction(invocation Invocation) Value {
-	typeIDValue, ok := invocation.Arguments[0].(*StringValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	typeID := typeIDValue.Str
-
-	composite, err := lookupComposite(invocation.InvocationContext, typeID)
-	if err != nil {
-		return Nil
-	}
-
-	return NewSomeValueNonCopying(
-		invocation.InvocationContext,
-		NewTypeValue(
-			invocation.InvocationContext,
-			ConvertSemaToStaticType(invocation.InvocationContext, composite),
-		),
-	)
-}
-
-func functionTypeFunction(invocation Invocation) Value {
-	interpreter := invocation.InvocationContext
-
-	parameters, ok := invocation.Arguments[0].(*ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	typeValue, ok := invocation.Arguments[1].(TypeValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	returnType := MustConvertStaticToSemaType(typeValue.Type, interpreter)
-
-	var parameterTypes []sema.Parameter
-	parameterCount := parameters.Count()
-	if parameterCount > 0 {
-		parameterTypes = make([]sema.Parameter, 0, parameterCount)
-		parameters.Iterate(
-			interpreter,
-			func(param Value) bool {
-				semaType := MustConvertStaticToSemaType(param.(TypeValue).Type, interpreter)
-				parameterTypes = append(
-					parameterTypes,
-					sema.Parameter{
-						TypeAnnotation: sema.NewTypeAnnotation(semaType),
-					},
-				)
-
-				// Continue iteration
-				return true
-			},
-			false,
-			invocation.LocationRange,
-		)
-	}
-	functionStaticType := NewFunctionStaticType(
-		interpreter,
-		sema.NewSimpleFunctionType(
-			sema.FunctionPurityImpure,
-			parameterTypes,
-			sema.NewTypeAnnotation(returnType),
-		),
-	)
-	return NewUnmeteredTypeValue(functionStaticType)
-}
-
-func intersectionTypeFunction(invocation Invocation) Value {
-	intersectionIDs, ok := invocation.Arguments[0].(*ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
+func ConstructIntersectionTypeValue(
+	context InvocationContext,
+	locationRange LocationRange,
+	intersectionIDs *ArrayValue,
+) Value {
 	var staticIntersections []*InterfaceStaticType
 	var semaIntersections []*sema.InterfaceType
 
@@ -3768,14 +3712,14 @@ func intersectionTypeFunction(invocation Invocation) Value {
 
 		var invalidIntersectionID bool
 		intersectionIDs.Iterate(
-			invocation.InvocationContext,
+			context,
 			func(typeID Value) bool {
 				typeIDValue, ok := typeID.(*StringValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
-				intersectedInterface, err := lookupInterface(invocation.InvocationContext, typeIDValue.Str)
+				intersectedInterface, err := lookupInterface(context, typeIDValue.Str)
 				if err != nil {
 					invalidIntersectionID = true
 					return true
@@ -3783,7 +3727,7 @@ func intersectionTypeFunction(invocation Invocation) Value {
 
 				staticIntersections = append(
 					staticIntersections,
-					ConvertSemaToStaticType(invocation.InvocationContext, intersectedInterface).(*InterfaceStaticType),
+					ConvertSemaToStaticType(context, intersectedInterface).(*InterfaceStaticType),
 				)
 				semaIntersections = append(semaIntersections, intersectedInterface)
 
@@ -3791,7 +3735,7 @@ func intersectionTypeFunction(invocation Invocation) Value {
 				return true
 			},
 			false,
-			invocation.LocationRange,
+			locationRange,
 		)
 
 		// If there are any invalid interfaces,
@@ -3803,7 +3747,7 @@ func intersectionTypeFunction(invocation Invocation) Value {
 
 	var invalidIntersectionType bool
 	sema.CheckIntersectionType(
-		invocation.InvocationContext,
+		context,
 		semaIntersections,
 		func(_ func(*ast.IntersectionType) error) {
 			invalidIntersectionType = true
@@ -3817,12 +3761,62 @@ func intersectionTypeFunction(invocation Invocation) Value {
 	}
 
 	return NewSomeValueNonCopying(
-		invocation.InvocationContext,
+		context,
 		NewTypeValue(
-			invocation.InvocationContext,
+			context,
 			NewIntersectionStaticType(
-				invocation.InvocationContext,
+				context,
 				staticIntersections,
+			),
+		),
+	)
+}
+
+func ConstructCapabilityTypeValue(
+	context InvocationContext,
+	typeValue TypeValue,
+) Value {
+
+	ty := typeValue.Type
+
+	// Capabilities must hold references
+	_, ok := ty.(*ReferenceStaticType)
+	if !ok {
+		return Nil
+	}
+
+	return NewSomeValueNonCopying(
+		context,
+		NewTypeValue(
+			context,
+			NewCapabilityStaticType(
+				context,
+				ty,
+			),
+		),
+	)
+}
+
+func ConstructInclusiveRangeTypeValue(
+	context InvocationContext,
+	typeValue TypeValue,
+) Value {
+
+	ty := typeValue.Type
+
+	// InclusiveRanges must hold integers
+	elemSemaTy := MustConvertStaticToSemaType(ty, context)
+	if !sema.IsSameTypeKind(elemSemaTy, sema.IntegerType) {
+		return Nil
+	}
+
+	return NewSomeValueNonCopying(
+		context,
+		NewTypeValue(
+			context,
+			NewInclusiveRangeStaticType(
+				context,
+				ty,
 			),
 		),
 	)
@@ -3830,7 +3824,6 @@ func intersectionTypeFunction(invocation Invocation) Value {
 
 func defineBaseFunctions(activation *VariableActivation) {
 	defineConverterFunctions(activation)
-	defineTypeFunction(activation)
 	defineRuntimeTypeConstructorFunctions(activation)
 	defineStringFunction(activation)
 }
@@ -3902,59 +3895,72 @@ func defineConverterFunctions(activation *VariableActivation) {
 }
 
 type runtimeTypeConstructor struct {
-	converter *HostFunctionValue
-	name      string
+	name        string
+	constructor *HostFunctionValue
 }
 
 // Constructor functions are stateless functions. Hence they can be re-used across interpreters.
 // They are also static functions.
 var runtimeTypeConstructors = []runtimeTypeConstructor{
 	{
+		name: sema.MetaTypeName,
+		constructor: NewUnmeteredStaticHostFunctionValue(
+			sema.MetaTypeFunctionType,
+			func(invocation Invocation) Value {
+				context := invocation.InvocationContext
+
+				typeParameterPair := invocation.TypeParameterTypes.Oldest()
+				if typeParameterPair == nil {
+					panic(errors.NewUnreachableError())
+				}
+
+				ty := typeParameterPair.Value
+
+				staticType := ConvertSemaToStaticType(context, ty)
+				return NewTypeValue(context, staticType)
+			},
+		),
+	},
+	{
 		name: sema.OptionalTypeFunctionName,
-		converter: NewUnmeteredStaticHostFunctionValue(
+		constructor: NewUnmeteredStaticHostFunctionValue(
 			sema.OptionalTypeFunctionType,
 			func(invocation Invocation) Value {
+				context := invocation.InvocationContext
+
 				typeValue, ok := invocation.Arguments[0].(TypeValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
-				return NewTypeValue(
-					invocation.InvocationContext,
-					NewOptionalStaticType(
-						invocation.InvocationContext,
-						typeValue.Type,
-					),
-				)
+				return ConstructOptionalTypeValue(context, typeValue)
 			},
 		),
 	},
 	{
 		name: sema.VariableSizedArrayTypeFunctionName,
-		converter: NewUnmeteredStaticHostFunctionValue(
+		constructor: NewUnmeteredStaticHostFunctionValue(
 			sema.VariableSizedArrayTypeFunctionType,
 			func(invocation Invocation) Value {
+				context := invocation.InvocationContext
+
 				typeValue, ok := invocation.Arguments[0].(TypeValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
-				return NewTypeValue(
-					invocation.InvocationContext,
-					//nolint:gosimple
-					NewVariableSizedStaticType(
-						invocation.InvocationContext,
-						typeValue.Type,
-					),
-				)
+				return ConstructVariableSizedArrayTypeValue(context, typeValue)
 			},
 		),
 	},
 	{
 		name: sema.ConstantSizedArrayTypeFunctionName,
-		converter: NewUnmeteredStaticHostFunctionValue(
+		constructor: NewUnmeteredStaticHostFunctionValue(
 			sema.ConstantSizedArrayTypeFunctionType,
 			func(invocation Invocation) Value {
+				context := invocation.InvocationContext
+				locationRange := invocation.LocationRange
+
 				typeValue, ok := invocation.Arguments[0].(TypeValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -3965,76 +3971,161 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 					panic(errors.NewUnreachableError())
 				}
 
-				return NewTypeValue(
-					invocation.InvocationContext,
-					NewConstantSizedStaticType(
-						invocation.InvocationContext,
-						typeValue.Type,
-						int64(sizeValue.ToInt(invocation.LocationRange)),
-					),
+				return ConstructConstantSizedArrayTypeValue(
+					context,
+					locationRange,
+					typeValue,
+					sizeValue,
+				)
+			},
+		),
+	},
+	{
+		name: sema.DictionaryTypeFunctionName,
+		constructor: NewUnmeteredStaticHostFunctionValue(
+			sema.DictionaryTypeFunctionType,
+			func(invocation Invocation) Value {
+				context := invocation.InvocationContext
+
+				keyTypeValue, ok := invocation.Arguments[0].(TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				valueTypeValue, ok := invocation.Arguments[1].(TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return ConstructDictionaryTypeValue(
+					context,
+					keyTypeValue,
+					valueTypeValue,
+				)
+			},
+		),
+	},
+	{
+		name: sema.CompositeTypeFunctionName,
+		constructor: NewUnmeteredStaticHostFunctionValue(
+			sema.CompositeTypeFunctionType,
+			func(invocation Invocation) Value {
+				context := invocation.InvocationContext
+
+				typeIDValue, ok := invocation.Arguments[0].(*StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return ConstructCompositeTypeValue(context, typeIDValue)
+			},
+		),
+	},
+	{
+		name: sema.FunctionTypeFunctionName,
+		constructor: NewUnmeteredStaticHostFunctionValue(
+			sema.FunctionTypeFunctionType,
+			func(invocation Invocation) Value {
+				interpreter := invocation.InvocationContext
+				locationRange := invocation.LocationRange
+
+				parameterTypeValues, ok := invocation.Arguments[0].(*ArrayValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				returnTypeValue, ok := invocation.Arguments[1].(TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return ConstructFunctionTypeValue(
+					interpreter,
+					locationRange,
+					parameterTypeValues,
+					returnTypeValue,
+				)
+			},
+		),
+	},
+
+	{
+		name: sema.ReferenceTypeFunctionName,
+		constructor: NewUnmeteredStaticHostFunctionValue(
+			sema.ReferenceTypeFunctionType,
+			func(invocation Invocation) Value {
+				invocationContext := invocation.InvocationContext
+				locationRange := invocation.LocationRange
+
+				entitlementValues, ok := invocation.Arguments[0].(*ArrayValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				typeValue, ok := invocation.Arguments[1].(TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return ConstructReferenceTypeValue(
+					invocationContext,
+					locationRange,
+					entitlementValues,
+					typeValue,
+				)
+			},
+		),
+	},
+	{
+		name: sema.IntersectionTypeFunctionName,
+		constructor: NewUnmeteredStaticHostFunctionValue(
+			sema.IntersectionTypeFunctionType,
+			func(invocation Invocation) Value {
+				context := invocation.InvocationContext
+				locationRange := invocation.LocationRange
+
+				intersectionIDs, ok := invocation.Arguments[0].(*ArrayValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return ConstructIntersectionTypeValue(
+					context,
+					locationRange,
+					intersectionIDs,
 				)
 			},
 		),
 	},
 	{
 		name: sema.CapabilityTypeFunctionName,
-		converter: NewUnmeteredStaticHostFunctionValue(
+		constructor: NewUnmeteredStaticHostFunctionValue(
 			sema.CapabilityTypeFunctionType,
 			func(invocation Invocation) Value {
+				context := invocation.InvocationContext
+
 				typeValue, ok := invocation.Arguments[0].(TypeValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
-				ty := typeValue.Type
-				// Capabilities must hold references
-				_, ok = ty.(*ReferenceStaticType)
-				if !ok {
-					return Nil
-				}
-
-				return NewSomeValueNonCopying(
-					invocation.InvocationContext,
-					NewTypeValue(
-						invocation.InvocationContext,
-						NewCapabilityStaticType(
-							invocation.InvocationContext,
-							ty,
-						),
-					),
-				)
+				return ConstructCapabilityTypeValue(context, typeValue)
 			},
 		),
 	},
 	{
 		name: sema.InclusiveRangeTypeFunctionName,
-		converter: NewUnmeteredStaticHostFunctionValue(
+		constructor: NewUnmeteredStaticHostFunctionValue(
 			sema.InclusiveRangeTypeFunctionType,
 			func(invocation Invocation) Value {
+				context := invocation.InvocationContext
+
 				typeValue, ok := invocation.Arguments[0].(TypeValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
-				inter := invocation.InvocationContext
-
-				ty := typeValue.Type
-				// InclusiveRanges must hold integers
-				elemSemaTy := MustConvertStaticToSemaType(ty, inter)
-				if !sema.IsSameTypeKind(elemSemaTy, sema.IntegerType) {
-					return Nil
-				}
-
-				return NewSomeValueNonCopying(
-					inter,
-					NewTypeValue(
-						inter,
-						NewInclusiveRangeStaticType(
-							inter,
-							ty,
-						),
-					),
-				)
+				return ConstructInclusiveRangeTypeValue(context, typeValue)
 			},
 		),
 	},
@@ -4042,29 +4133,8 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 
 func defineRuntimeTypeConstructorFunctions(activation *VariableActivation) {
 	for _, constructorFunc := range runtimeTypeConstructors {
-		defineBaseValue(activation, constructorFunc.name, constructorFunc.converter)
+		defineBaseValue(activation, constructorFunc.name, constructorFunc.constructor)
 	}
-}
-
-// typeFunction is the `Type` function. It is stateless, hence it can be re-used across interpreters.
-// It's also a static function.
-var typeFunction = NewUnmeteredStaticHostFunctionValue(
-	sema.MetaTypeFunctionType,
-	func(invocation Invocation) Value {
-		typeParameterPair := invocation.TypeParameterTypes.Oldest()
-		if typeParameterPair == nil {
-			panic(errors.NewUnreachableError())
-		}
-
-		ty := typeParameterPair.Value
-
-		staticType := ConvertSemaToStaticType(invocation.InvocationContext, ty)
-		return NewTypeValue(invocation.InvocationContext, staticType)
-	},
-)
-
-func defineTypeFunction(activation *VariableActivation) {
-	defineBaseValue(activation, sema.MetaTypeName, typeFunction)
 }
 
 func defineBaseValue(activation *VariableActivation, name string, value Value) {
@@ -5134,14 +5204,10 @@ func (interpreter *Interpreter) GetInterfaceType(
 }
 
 func (interpreter *Interpreter) reportLoopIteration(pos ast.HasPosition) {
-	config := interpreter.SharedState.Config
 
-	onMeterComputation := config.OnMeterComputation
-	if onMeterComputation != nil {
-		onMeterComputation(common.ComputationKindLoop, 1)
-	}
+	common.UseComputation(interpreter, common.LoopComputationUsage)
 
-	onLoopIteration := config.OnLoopIteration
+	onLoopIteration := interpreter.SharedState.Config.OnLoopIteration
 	if onLoopIteration != nil {
 		line := pos.StartPosition().Line
 		onLoopIteration(interpreter, line)
@@ -5149,37 +5215,22 @@ func (interpreter *Interpreter) reportLoopIteration(pos ast.HasPosition) {
 }
 
 func (interpreter *Interpreter) reportFunctionInvocation() {
-	config := interpreter.SharedState.Config
 
-	onMeterComputation := config.OnMeterComputation
-	if onMeterComputation != nil {
-		onMeterComputation(common.ComputationKindFunctionInvocation, 1)
-	}
+	common.UseComputation(interpreter, common.FunctionInvocationComputationUsage)
 
-	onFunctionInvocation := config.OnFunctionInvocation
+	onFunctionInvocation := interpreter.SharedState.Config.OnFunctionInvocation
 	if onFunctionInvocation != nil {
 		onFunctionInvocation(interpreter)
 	}
 }
 
 func (interpreter *Interpreter) reportInvokedFunctionReturn() {
-	config := interpreter.SharedState.Config
-
-	onInvokedFunctionReturn := config.OnInvokedFunctionReturn
+	onInvokedFunctionReturn := interpreter.SharedState.Config.OnInvokedFunctionReturn
 	if onInvokedFunctionReturn == nil {
 		return
 	}
 
 	onInvokedFunctionReturn(interpreter)
-}
-
-func (interpreter *Interpreter) ReportComputation(compKind common.ComputationKind, intensity uint) {
-	config := interpreter.SharedState.Config
-
-	onMeterComputation := config.OnMeterComputation
-	if onMeterComputation != nil {
-		onMeterComputation(compKind, intensity)
-	}
 }
 
 func getAccessOfMember(context ValueStaticTypeContext, self Value, identifier string) sema.Access {
@@ -5694,6 +5745,15 @@ func (interpreter *Interpreter) MeterMemory(usage common.MemoryUsage) error {
 	if interpreter != nil {
 		config := interpreter.SharedState.Config
 		common.UseMemory(config.MemoryGauge, usage)
+	}
+	return nil
+}
+
+// MeterComputation delegates the computation usage to the interpreter's computation gauge, if any.
+func (interpreter *Interpreter) MeterComputation(usage common.ComputationUsage) error {
+	if interpreter != nil {
+		config := interpreter.SharedState.Config
+		common.UseComputation(config.ComputationGauge, usage)
 	}
 	return nil
 }

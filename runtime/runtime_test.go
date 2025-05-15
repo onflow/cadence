@@ -7618,10 +7618,10 @@ func TestRuntimeComputationMetring(t *testing.T) {
 		code      string
 		ok        bool
 		hits      uint
-		intensity uint
+		intensity uint64
 	}
 
-	compLimit := uint(6)
+	hitLimit := uint(6)
 
 	tests := []test{
 		{
@@ -7630,7 +7630,7 @@ func TestRuntimeComputationMetring(t *testing.T) {
               while true {}
             `,
 			ok:        false,
-			hits:      compLimit,
+			hits:      hitLimit,
 			intensity: 6,
 		},
 		{
@@ -7642,7 +7642,7 @@ func TestRuntimeComputationMetring(t *testing.T) {
               }
             `,
 			ok:        false,
-			hits:      compLimit,
+			hits:      hitLimit,
 			intensity: 6,
 		},
 		{
@@ -7651,7 +7651,7 @@ func TestRuntimeComputationMetring(t *testing.T) {
               for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] {}
             `,
 			ok:        false,
-			hits:      compLimit,
+			hits:      hitLimit,
 			intensity: 6,
 		},
 		{
@@ -7693,13 +7693,17 @@ func TestRuntimeComputationMetring(t *testing.T) {
 
 			runtime := NewTestInterpreterRuntime()
 
-			compErr := errors.New("computation exceeded limit")
-			var hits, totalIntensity uint
-			meterComputationFunc := func(kind common.ComputationKind, intensity uint) error {
+			var hits uint
+			var totalIntensity uint64
+
+			meterComputationFunc := func(usage common.ComputationUsage) error {
 				hits++
-				totalIntensity += intensity
-				if hits >= compLimit {
-					return compErr
+				totalIntensity += usage.Intensity
+				if hits >= hitLimit {
+					return computationHitsExceededError{
+						hits:     hits,
+						hitLimit: hitLimit,
+					}
 				}
 				return nil
 			}
@@ -7730,9 +7734,8 @@ func TestRuntimeComputationMetring(t *testing.T) {
 			} else {
 				RequireError(t, err)
 
-				var executionErr Error
-				require.ErrorAs(t, err, &executionErr)
-				require.ErrorAs(t, err.(Error).Unwrap(), &compErr)
+				var compHitsExceededErr computationHitsExceededError
+				require.ErrorAs(t, err, &compHitsExceededErr)
 			}
 
 			assert.Equal(t, testCase.hits, hits)
@@ -7817,7 +7820,8 @@ func assertRuntimeErrorIsExternalError(t *testing.T, err error) {
 	require.ErrorAs(t, err, &runtimeError)
 
 	innerError := runtimeError.Unwrap()
-	require.ErrorAs(t, innerError, &runtimeErrors.ExternalError{})
+	var externalErr runtimeErrors.ExternalError
+	require.ErrorAs(t, innerError, &externalErr)
 }
 
 func BenchmarkRuntimeScriptNoop(b *testing.B) {
@@ -8695,6 +8699,17 @@ func TestRuntimeReturnDestroyedOptional(t *testing.T) {
 	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
 
+type computationHitsExceededError struct {
+	hits     uint
+	hitLimit uint
+}
+
+var _ error = computationHitsExceededError{}
+
+func (e computationHitsExceededError) Error() string {
+	return fmt.Sprintf("computation hits exceeded limit: %d >= %d", e.hits, e.hitLimit)
+}
+
 func TestRuntimeComputationMeteringError(t *testing.T) {
 
 	t.Parallel()
@@ -8714,7 +8729,7 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
-			OnMeterComputation: func(compKind common.ComputationKind, intensity uint) error {
+			OnMeterComputation: func(_ common.ComputationUsage) error {
 				return fmt.Errorf("computation limit exceeded")
 			},
 		}
@@ -8749,7 +8764,7 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
-			OnMeterComputation: func(compKind common.ComputationKind, intensity uint) error {
+			OnMeterComputation: func(usage common.ComputationUsage) error {
 				panic(fmt.Errorf("computation limit exceeded"))
 			},
 		}
@@ -8784,7 +8799,7 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
-			OnMeterComputation: func(compKind common.ComputationKind, intensity uint) error {
+			OnMeterComputation: func(usage common.ComputationUsage) error {
 				// Cause a runtime error
 				var x any = "hello"
 				_ = x.(int)
@@ -8812,16 +8827,17 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            access(all) fun foo() {}
+            access(all) event Foo()
 
             access(all) fun main() {
-                foo()
+                emit Foo()
             }
         `)
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
-			OnMeterComputation: func(compKind common.ComputationKind, intensity uint) (err error) {
+			OnEmitEvent: func(event cadence.Event) (err error) {
+
 				// Cause a runtime error. Catch it and return.
 				var x any = "hello"
 				defer func() {

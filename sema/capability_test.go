@@ -133,7 +133,7 @@ func TestCheckCapability_borrow(t *testing.T) {
 				xType := RequireGlobalType(t, checker.Elaboration, "X").(*sema.EntitlementType)
 				rValueType := RequireGlobalValue(t, checker.Elaboration, "r")
 
-				var access sema.Access = sema.UnauthorizedAccess
+				var access = sema.UnauthorizedAccess
 				if !auth.Equal(sema.UnauthorizedAccess) {
 					access = sema.NewEntitlementSetAccess([]*sema.EntitlementType{xType}, sema.Conjunction)
 				}
@@ -171,7 +171,7 @@ func TestCheckCapability_borrow(t *testing.T) {
 				xType := RequireGlobalType(t, checker.Elaboration, "X").(*sema.EntitlementType)
 				rValueType := RequireGlobalValue(t, checker.Elaboration, "r")
 
-				var access sema.Access = sema.UnauthorizedAccess
+				var access = sema.UnauthorizedAccess
 				if !auth.Equal(sema.UnauthorizedAccess) {
 					access = sema.NewEntitlementSetAccess([]*sema.EntitlementType{xType}, sema.Conjunction)
 				}
@@ -209,7 +209,7 @@ func TestCheckCapability_borrow(t *testing.T) {
 				xType := RequireGlobalType(t, checker.Elaboration, "X").(*sema.EntitlementType)
 				sValueType := RequireGlobalValue(t, checker.Elaboration, "s")
 
-				var access sema.Access = sema.UnauthorizedAccess
+				var access = sema.UnauthorizedAccess
 				if !auth.Equal(sema.UnauthorizedAccess) {
 					access = sema.NewEntitlementSetAccess([]*sema.EntitlementType{xType}, sema.Conjunction)
 				}
@@ -247,7 +247,7 @@ func TestCheckCapability_borrow(t *testing.T) {
 				xType := RequireGlobalType(t, checker.Elaboration, "X").(*sema.EntitlementType)
 				sValueType := RequireGlobalValue(t, checker.Elaboration, "s")
 
-				var access sema.Access = sema.UnauthorizedAccess
+				var access = sema.UnauthorizedAccess
 				if !auth.Equal(sema.UnauthorizedAccess) {
 					access = sema.NewEntitlementSetAccess([]*sema.EntitlementType{xType}, sema.Conjunction)
 				}

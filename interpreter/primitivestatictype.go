@@ -28,7 +28,7 @@ import (
 	"github.com/onflow/cadence/values"
 )
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=PrimitiveStaticType -trimprefix=PrimitiveStaticType
+//go:generate stringer -type=PrimitiveStaticType -trimprefix=PrimitiveStaticType
 
 // PrimitiveStaticType
 
