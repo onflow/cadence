@@ -381,7 +381,7 @@ func CompileAndInvoke(
 	)
 }
 
-func NativeFunctionsWithLogAndPanic(logs *[]string) vm.NativeFunctionsProvider {
+func NativeFunctionsWithLogAndPanic(logs *[]string) vm.BuiltinGlobalsProvider {
 	return func() map[string]*vm.Variable {
 		funcs := vm.NativeFunctions()
 
@@ -451,7 +451,7 @@ func CompileAndInvokeWithLogs(
 	storage := interpreter.NewInMemoryStorage(nil)
 	vmConfig := vm.NewConfig(storage)
 
-	vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+	vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 	result, err = CompileAndInvokeWithOptions(
 		t,

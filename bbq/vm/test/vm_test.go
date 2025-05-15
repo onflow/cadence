@@ -1863,7 +1863,7 @@ func TestTransaction(t *testing.T) {
 
 		var logs []string
 
-		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		vmInstance := CompileAndPrepareToInvoke(t,
 			`
@@ -1946,7 +1946,7 @@ func TestTransaction(t *testing.T) {
 
 		var logs []string
 
-		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		vmInstance := CompileAndPrepareToInvoke(t,
 			`
@@ -2025,7 +2025,7 @@ func TestTransaction(t *testing.T) {
 
 		var logs []string
 
-		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		vmInstance := CompileAndPrepareToInvoke(t,
 			`
@@ -2109,7 +2109,7 @@ func TestTransaction(t *testing.T) {
 
 		var logs []string
 
-		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		vmInstance := CompileAndPrepareToInvoke(t,
 			`
@@ -3722,7 +3722,7 @@ func TestFunctionPreConditions(t *testing.T) {
 		var logs []string
 
 		config := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
-		config.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		config.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		_, err := CompileAndInvokeWithOptions(
 			t,
@@ -3785,7 +3785,7 @@ func TestFunctionPreConditions(t *testing.T) {
 			return elaboration.InterfaceType(typeID)
 		}
 
-		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
 		activation.DeclareValue(stdlib.PanicFunction)
@@ -4161,7 +4161,7 @@ func TestFunctionPostConditions(t *testing.T) {
 		var logs []string
 
 		config := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
-		config.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		config.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		_, err := CompileAndInvokeWithOptions(
 			t,
@@ -4671,7 +4671,7 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 		var logs []string
 		vmConfig := vm.NewConfig(storage)
 
-		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		_, err := CompileAndInvokeWithOptions(t,
 			`
@@ -4754,7 +4754,7 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 		var logs []string
 		vmConfig := vm.NewConfig(storage)
 
-		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		_, err := CompileAndInvokeWithOptions(t,
 			`
@@ -4841,7 +4841,7 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 		var logs []string
 		vmConfig := vm.NewConfig(storage)
 
-		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		_, err := CompileAndInvokeWithOptions(t,
 			`
@@ -7580,7 +7580,7 @@ func TestInheritedConditions(t *testing.T) {
 		}
 
 		var logs []string
-		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		PrepareVMConfig(t, vmConfig, programs)
 
@@ -8277,7 +8277,7 @@ func TestGlobalVariables(t *testing.T) {
 		storage := interpreter.NewInMemoryStorage(nil)
 		vmConfig := vm.NewConfig(storage)
 
-		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		// Only prepare, do not invoke anything.
 

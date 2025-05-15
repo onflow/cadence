@@ -67,8 +67,8 @@ func NewVM(
 		context.storage = interpreter.NewInMemoryStorage(nil)
 	}
 
-	if context.NativeFunctionsProvider == nil {
-		context.NativeFunctionsProvider = NativeFunctions
+	if context.BuiltinGlobalsProvider == nil {
+		context.BuiltinGlobalsProvider = NativeFunctions
 	}
 
 	if context.referencedResourceKindedValues == nil {
@@ -81,7 +81,7 @@ func NewVM(
 			// It is NOT safe to re-use native functions map here because,
 			// once put into the cache, it will be updated by adding the
 			// globals of the current program.
-			indexedGlobals: context.NativeFunctionsProvider(),
+			indexedGlobals: context.BuiltinGlobalsProvider(),
 		},
 	}
 

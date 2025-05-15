@@ -33,7 +33,7 @@ type Config struct {
 	common.MemoryGauge
 	commons.ImportHandler
 	ContractValueHandler
-	NativeFunctionsProvider
+	BuiltinGlobalsProvider
 	Tracer
 	stdlib.Logger
 

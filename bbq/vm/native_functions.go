@@ -39,7 +39,7 @@ var nativeFunctions = map[string]Value{}
 // It's always nil.
 var BuiltInLocation common.Location = nil
 
-type NativeFunctionsProvider func() map[string]*Variable
+type BuiltinGlobalsProvider func() map[string]*Variable
 
 func NativeFunctions() map[string]*Variable {
 	funcs := make(map[string]*Variable, len(nativeFunctions))
