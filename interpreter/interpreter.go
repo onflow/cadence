@@ -518,24 +518,28 @@ func InvokeFunction(errorHandler ErrorHandler, function FunctionValue, invocatio
 	return
 }
 
-func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value) (err error) {
+func (interpreter *Interpreter) InvokeTransaction(arguments []Value, signers ...Value) (err error) {
 
 	// recover internal panics and return them as an error
 	defer interpreter.RecoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
-	if index >= len(interpreter.Transactions) {
-		return TransactionNotDeclaredError{Index: index}
-	}
+	const transactionIndex = 0
 
-	functionValue := interpreter.Transactions[index]
+	functionValue := interpreter.Transactions[transactionIndex]
 
-	transactionType := interpreter.Program.Elaboration.TransactionTypes[index]
+	transactionType := interpreter.Program.Elaboration.TransactionTypes[transactionIndex]
 	functionType := transactionType.EntryPointFunctionType()
 
-	_, err = InvokeExternally(interpreter, functionValue, functionType, arguments)
-	return err
+	_, err = InvokeExternally(
+		interpreter,
+		functionValue,
+		functionType,
+		common.Concat(arguments, signers),
+	)
+
+	return
 }
 
 func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
