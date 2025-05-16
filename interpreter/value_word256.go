@@ -573,7 +573,7 @@ func (Word256Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string,
 }
 
 func (v Word256Value) ToBigEndianBytes() []byte {
-	return values.UnsignedBigIntToBigEndianBytes(v.BigInt)
+	return values.UnsignedBigIntToSizedBigEndianBytes(v.BigInt, sema.Word256TypeSize)
 }
 
 func (v Word256Value) ConformsToStaticType(
