@@ -37,7 +37,7 @@ func TestInterpretNegativeZeroFixedPoint(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       let x = -0.42
     `)
 
@@ -45,7 +45,7 @@ func TestInterpretNegativeZeroFixedPoint(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredFix64Value(-42000000),
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 }
 
@@ -76,7 +76,7 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 
 		t.Run(fixedPointType, func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       let x: %[1]s = 1.23
@@ -91,21 +91,21 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 				t,
 				inter,
 				value,
-				inter.Globals.Get("x").GetValue(inter),
+				inter.GetGlobal("x"),
 			)
 
 			AssertValuesEqual(
 				t,
 				inter,
 				value,
-				inter.Globals.Get("y").GetValue(inter),
+				inter.GetGlobal("y"),
 			)
 
 			AssertValuesEqual(
 				t,
 				inter,
 				interpreter.TrueValue,
-				inter.Globals.Get("z").GetValue(inter),
+				inter.GetGlobal("z"),
 			)
 
 		})
@@ -145,7 +145,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 			t.Run(testName, func(t *testing.T) {
 
-				inter := parseCheckAndInterpret(t,
+				inter := parseCheckAndPrepare(t,
 					fmt.Sprintf(
 						`
                           let x: %[1]s = 50.0
@@ -160,14 +160,14 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					t,
 					inter,
 					fixedPointValue,
-					inter.Globals.Get("x").GetValue(inter),
+					inter.GetGlobal("x"),
 				)
 
 				AssertValuesEqual(
 					t,
 					inter,
 					integerValue,
-					inter.Globals.Get("y").GetValue(inter),
+					inter.GetGlobal("y"),
 				)
 			})
 		}
@@ -191,7 +191,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					value,
 				)
 
-				inter := parseCheckAndInterpret(t, code)
+				inter := parseCheckAndPrepare(t, code)
 
 				expected := interpreter.NewUnmeteredUFix64Value(value * sema.Fix64Factor)
 
@@ -199,14 +199,14 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					t,
 					inter,
 					expected,
-					inter.Globals.Get("x").GetValue(inter),
+					inter.GetGlobal("x"),
 				)
 
 				AssertValuesEqual(
 					t,
 					inter,
 					expected,
-					inter.Globals.Get("y").GetValue(inter),
+					inter.GetGlobal("y"),
 				)
 			})
 		}
@@ -231,7 +231,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					value,
 				)
 
-				inter := parseCheckAndInterpret(t, code)
+				inter := parseCheckAndPrepare(t, code)
 
 				expected := interpreter.NewUnmeteredFix64Value(value * sema.Fix64Factor)
 
@@ -239,14 +239,14 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					t,
 					inter,
 					expected,
-					inter.Globals.Get("x").GetValue(inter),
+					inter.GetGlobal("x"),
 				)
 
 				AssertValuesEqual(
 					t,
 					inter,
 					expected,
-					inter.Globals.Get("y").GetValue(inter),
+					inter.GetGlobal("y"),
 				)
 			})
 		}
@@ -266,20 +266,20 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					value,
 				)
 
-				inter := parseCheckAndInterpret(t, code)
+				inter := parseCheckAndPrepare(t, code)
 
 				AssertValuesEqual(
 					t,
 					inter,
 					interpreter.NewUnmeteredFix64Value(value*sema.Fix64Factor),
-					inter.Globals.Get("x").GetValue(inter),
+					inter.GetGlobal("x"),
 				)
 
 				AssertValuesEqual(
 					t,
 					inter,
 					interpreter.NewUnmeteredUFix64Value(uint64(value*sema.Fix64Factor)),
-					inter.Globals.Get("y").GetValue(inter),
+					inter.GetGlobal("y"),
 				)
 			})
 		}
@@ -299,20 +299,20 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					value,
 				)
 
-				inter := parseCheckAndInterpret(t, code)
+				inter := parseCheckAndPrepare(t, code)
 
 				AssertValuesEqual(
 					t,
 					inter,
 					interpreter.NewUnmeteredUFix64Value(uint64(value*sema.Fix64Factor)),
-					inter.Globals.Get("x").GetValue(inter),
+					inter.GetGlobal("x"),
 				)
 
 				AssertValuesEqual(
 					t,
 					inter,
 					interpreter.NewUnmeteredFix64Value(value*sema.Fix64Factor),
-					inter.Globals.Get("y").GetValue(inter),
+					inter.GetGlobal("y"),
 				)
 			})
 		}
@@ -320,7 +320,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 	t.Run("invalid negative Fix64 to UFix64", func(t *testing.T) {
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 		  fun test(): UFix64 {
 		      let x: Fix64 = -1.0
 		      return UFix64(x)
@@ -335,7 +335,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 	t.Run("invalid UFix64 > max Fix64 int to Fix64", func(t *testing.T) {
 
-		inter := parseCheckAndInterpret(t,
+		inter := parseCheckAndPrepare(t,
 			fmt.Sprintf(
 				`
 		          fun test(): Fix64 {
@@ -359,7 +359,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 			t.Run(integerType.String(), func(t *testing.T) {
 
-				inter := parseCheckAndInterpret(t,
+				inter := parseCheckAndPrepare(t,
 					fmt.Sprintf(
 						`
 	                     fun test(): UFix64 {
@@ -373,11 +373,6 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				_, err := inter.Invoke("test")
 				RequireError(t, err)
-
-				require.IsType(t,
-					interpreter.Error{},
-					err,
-				)
 
 				require.ErrorAs(t, err, &interpreter.UnderflowError{})
 			})
@@ -401,7 +396,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 			t.Run(integerType.String(), func(t *testing.T) {
 
-				inter := parseCheckAndInterpret(t,
+				inter := parseCheckAndPrepare(t,
 					fmt.Sprintf(
 						`
 	                     fun test(): UFix64 {
@@ -438,7 +433,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 			t.Run(integerType.String(), func(t *testing.T) {
 
-				inter := parseCheckAndInterpret(t,
+				inter := parseCheckAndPrepare(t,
 					fmt.Sprintf(
 						`
 	                     fun test(): UFix64 {
@@ -475,7 +470,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 			t.Run(integerType.String(), func(t *testing.T) {
 
-				inter := parseCheckAndInterpret(t,
+				inter := parseCheckAndPrepare(t,
 					fmt.Sprintf(
 						`
 	                     fun test(): Fix64 {
@@ -512,7 +507,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 			t.Run(integerType.String(), func(t *testing.T) {
 
-				inter := parseCheckAndInterpret(t,
+				inter := parseCheckAndPrepare(t,
 					fmt.Sprintf(
 						`
 	                     fun test(): Fix64 {
