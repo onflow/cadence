@@ -5227,14 +5227,6 @@ func TestIntegers(t *testing.T) {
 		sema.AllUnsignedIntegerTypes,
 		sema.AllSignedIntegerTypes,
 	) {
-		// TODO:
-		switch integerType {
-		case sema.Int128Type, sema.Int256Type,
-			sema.UInt128Type, sema.UInt256Type,
-			sema.Word128Type, sema.Word256Type:
-			continue
-		}
-
 		test(integerType)
 	}
 }
@@ -5329,12 +5321,12 @@ func TestForLoop(t *testing.T) {
 		result, err := CompileAndInvoke(t,
 			`
                 fun test(): String {
-                    var array = [5, 6, 7, 8]
+                    var array = ["a", "b", "c", "d"]
                     var keys = ""
                     var values = ""
                     for i, e in array {
                         keys = keys.concat(i.toString())
-                        values = values.concat(e.toString())
+                        values = values.concat(e)
                     }
 
                     return keys.concat("_").concat(values)
@@ -5343,7 +5335,7 @@ func TestForLoop(t *testing.T) {
 			"test",
 		)
 		require.NoError(t, err)
-		assert.Equal(t, interpreter.NewUnmeteredStringValue("0123_5678"), result)
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("0123_abcd"), result)
 	})
 
 	t.Run("array loop scoping", func(t *testing.T) {

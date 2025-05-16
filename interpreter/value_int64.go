@@ -51,6 +51,17 @@ func NewUnmeteredInt64Value(value int64) Int64Value {
 	return Int64Value(value)
 }
 
+func NewInt64ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
+	return NewInt64Value(
+		gauge,
+		func() int64 {
+			bytes := padWithZeroes(b, 8)
+			val := binary.BigEndian.Uint64(bytes)
+			return int64(val)
+		},
+	)
+}
+
 var _ Value = Int64Value(0)
 var _ atree.Storable = Int64Value(0)
 var _ NumberValue = Int64Value(0)

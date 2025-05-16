@@ -50,6 +50,16 @@ func NewUnmeteredInt8Value(value int8) Int8Value {
 	return Int8Value(value)
 }
 
+func NewInt8ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Int8Value {
+	return NewInt8Value(
+		gauge,
+		func() int8 {
+			bytes := padWithZeroes(b, 1)
+			return int8(bytes[0])
+		},
+	)
+}
+
 var _ Value = Int8Value(0)
 var _ atree.Storable = Int8Value(0)
 var _ NumberValue = Int8Value(0)

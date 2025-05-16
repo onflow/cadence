@@ -59,6 +59,17 @@ func NewUnmeteredWord16Value(value uint16) Word16Value {
 	return Word16Value(value)
 }
 
+func NewWord16ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
+	return NewWord16Value(
+		gauge,
+		func() uint16 {
+			bytes := padWithZeroes(b, 2)
+			val := binary.BigEndian.Uint16(bytes)
+			return val
+		},
+	)
+}
+
 func (Word16Value) IsValue() {}
 
 func (v Word16Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {

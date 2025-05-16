@@ -59,6 +59,17 @@ func NewUnmeteredWord32Value(value uint32) Word32Value {
 	return Word32Value(value)
 }
 
+func NewWord32ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
+	return NewWord32Value(
+		gauge,
+		func() uint32 {
+			bytes := padWithZeroes(b, 4)
+			val := binary.BigEndian.Uint32(bytes)
+			return val
+		},
+	)
+}
+
 func (Word32Value) IsValue() {}
 
 func (v Word32Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {

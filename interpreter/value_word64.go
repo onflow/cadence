@@ -61,6 +61,17 @@ func NewUnmeteredWord64Value(value uint64) Word64Value {
 	return Word64Value(value)
 }
 
+func NewWord64ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
+	return NewWord64Value(
+		gauge,
+		func() uint64 {
+			bytes := padWithZeroes(b, 8)
+			val := binary.BigEndian.Uint64(bytes)
+			return val
+		},
+	)
+}
+
 // NOTE: important, do *NOT* remove:
 // Word64 values > math.MaxInt64 overflow int.
 // Implementing BigNumberValue ensures conversion functions

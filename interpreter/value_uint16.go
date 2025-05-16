@@ -58,6 +58,17 @@ func NewUnmeteredUInt16Value(value uint16) UInt16Value {
 	return UInt16Value(value)
 }
 
+func NewUInt16ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) UInt16Value {
+	return NewUInt16Value(
+		gauge,
+		func() uint16 {
+			bytes := padWithZeroes(b, 2)
+			val := binary.BigEndian.Uint16(bytes)
+			return val
+		},
+	)
+}
+
 func (UInt16Value) IsValue() {}
 
 func (v UInt16Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {

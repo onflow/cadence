@@ -67,6 +67,14 @@ func NewUnmeteredIntValueFromBigInt(value *big.Int) IntValue {
 	}
 }
 
+func NewIntValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
+	bi := values.BigEndianBytesToSignedBigInt(b)
+	memoryUsage := common.NewBigIntMemoryUsage(
+		common.BigIntByteLength(bi),
+	)
+	return NewIntValueFromBigInt(gauge, memoryUsage, func() *big.Int { return bi })
+}
+
 func ConvertInt(memoryGauge common.MemoryGauge, value Value, locationRange LocationRange) IntValue {
 	switch value := value.(type) {
 	case BigNumberValue:

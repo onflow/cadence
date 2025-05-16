@@ -69,7 +69,7 @@ type Int128Value struct {
 	BigInt *big.Int
 }
 
-func NewInt128ValueFromUint64(memoryGauge common.MemoryGauge, value int64) Int128Value {
+func NewInt128ValueFromInt64(memoryGauge common.MemoryGauge, value int64) Int128Value {
 	return NewInt128ValueFromBigInt(
 		memoryGauge,
 		func() *big.Int {
@@ -94,6 +94,15 @@ func NewUnmeteredInt128ValueFromBigInt(value *big.Int) Int128Value {
 	return Int128Value{
 		BigInt: value,
 	}
+}
+
+func NewInt128ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Int128Value {
+	return NewInt128ValueFromBigInt(
+		gauge,
+		func() *big.Int {
+			return values.BigEndianBytesToSignedBigInt(b)
+		},
+	)
 }
 
 var _ Value = Int128Value{}
@@ -690,7 +699,7 @@ func (v Int128Value) BitwiseLeftShift(context ValueStaticTypeContext, other Inte
 		})
 	}
 	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 128 {
-		return NewInt128ValueFromUint64(context, 0)
+		return NewInt128ValueFromInt64(context, 0)
 	}
 
 	// The maximum shift value at this point is 127, which may lead to an
@@ -726,7 +735,7 @@ func (v Int128Value) BitwiseRightShift(context ValueStaticTypeContext, other Int
 		})
 	}
 	if !o.BigInt.IsUint64() {
-		return NewInt128ValueFromUint64(context, 0)
+		return NewInt128ValueFromInt64(context, 0)
 	}
 
 	valueGetter := func() *big.Int {

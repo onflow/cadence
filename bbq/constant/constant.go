@@ -19,11 +19,11 @@
 package constant
 
 import (
+	"bytes"
 	"fmt"
 
-	"github.com/onflow/cadence/bbq/leb128"
-	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
 )
 
 type Constant struct {
@@ -34,132 +34,92 @@ type Constant struct {
 func (c Constant) String() string {
 	// TODO: duplicate of `VM.initializeConstant()`
 	kind := c.Kind
-	data := c.Data
 
-	var (
-		v   any
-		err error
-	)
+	// Prevent unintentional mutation of the original data
+	data := bytes.Clone(c.Data)
+
+	var value any
 
 	switch kind {
+
 	case String:
-		v = string(data)
+		value = interpreter.NewUnmeteredStringValue(string(data))
 
 	case Character:
-		v = string(data)
+		value = interpreter.NewUnmeteredCharacterValue(string(data))
 
 	case Int:
-		// TODO: support larger integers
-		v, _, err = leb128.ReadInt64(data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Int constant: %s", err))
-		}
+		value = interpreter.NewIntValueFromBigEndianBytes(nil, data)
 
 	case Int8:
-		v, _, err = leb128.ReadInt32(data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Int8 constant: %s", err))
-		}
+		value = interpreter.NewInt8ValueFromBigEndianBytes(nil, data)
 
 	case Int16:
-		v, _, err = leb128.ReadInt32(data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Int16 constant: %s", err))
-		}
+		value = interpreter.NewInt16ValueFromBigEndianBytes(nil, data)
 
 	case Int32:
-		v, _, err = leb128.ReadInt32(data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Int32 constant: %s", err))
-		}
+		value = interpreter.NewInt32ValueFromBigEndianBytes(nil, data)
 
 	case Int64:
-		v, _, err = leb128.ReadInt64(data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Int64 constant: %s", err))
-		}
+		value = interpreter.NewInt64ValueFromBigEndianBytes(nil, data)
+
+	case Int128:
+		value = interpreter.NewInt128ValueFromBigEndianBytes(nil, data)
+
+	case Int256:
+		value = interpreter.NewInt256ValueFromBigEndianBytes(nil, data)
 
 	case UInt:
-		// TODO: support larger integers
-		v, _, err = leb128.ReadUint64(data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read UInt constant: %s", err))
-		}
+		value = interpreter.NewUIntValueFromBigEndianBytes(nil, data)
 
 	case UInt8:
-		v, _, err = leb128.ReadUint32(data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read UInt8 constant: %s", err))
-		}
+		value = interpreter.NewUInt8ValueFromBigEndianBytes(nil, data)
 
 	case UInt16:
-		v, _, err = leb128.ReadUint32(data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read UInt16 constant: %s", err))
-		}
+		value = interpreter.NewUInt16ValueFromBigEndianBytes(nil, data)
 
 	case UInt32:
-		v, _, err = leb128.ReadUint32(data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read UInt32 constant: %s", err))
-		}
+		value = interpreter.NewUInt32ValueFromBigEndianBytes(nil, data)
 
 	case UInt64:
-		v, _, err = leb128.ReadUint64(data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read UInt64 constant: %s", err))
-		}
+		value = interpreter.NewUInt64ValueFromBigEndianBytes(nil, data)
+
+	case UInt128:
+		value = interpreter.NewUInt128ValueFromBigEndianBytes(nil, data)
+
+	case UInt256:
+		value = interpreter.NewUInt256ValueFromBigEndianBytes(nil, data)
 
 	case Word8:
-		v, _, err = leb128.ReadUint32(data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Word8 constant: %s", err))
-		}
+		value = interpreter.NewWord8ValueFromBigEndianBytes(nil, data)
 
 	case Word16:
-		v, _, err = leb128.ReadUint32(data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Word16 constant: %s", err))
-		}
+		value = interpreter.NewWord16ValueFromBigEndianBytes(nil, data)
 
 	case Word32:
-		v, _, err = leb128.ReadUint32(data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Word32 constant: %s", err))
-		}
+		value = interpreter.NewWord32ValueFromBigEndianBytes(nil, data)
 
 	case Word64:
-		v, _, err = leb128.ReadUint64(data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Word64 constant: %s", err))
-		}
+		value = interpreter.NewWord64ValueFromBigEndianBytes(nil, data)
+
+	case Word128:
+		value = interpreter.NewWord128ValueFromBigEndianBytes(nil, data)
+
+	case Word256:
+		value = interpreter.NewWord256ValueFromBigEndianBytes(nil, data)
 
 	case Fix64:
-		v, _, err = leb128.ReadInt64(data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Fix64 constant: %s", err))
-		}
+		value = interpreter.NewFix64ValueFromBigEndianBytes(nil, data)
 
 	case UFix64:
-		v, _, err = leb128.ReadUint64(data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read UFix64 constant: %s", err))
-		}
+		value = interpreter.NewUFix64ValueFromBigEndianBytes(nil, data)
 
 	case Address:
-		v = common.MustBytesToAddress(data)
-
-	// TODO:
-	// case constantkind.Int128:
-	// case constantkind.Int256:
-	// case constantkind.UInt128:
-	// case constantkind.UInt256:
-	// case constantkind.Word128:
-	// case constantkind.Word256:
+		value = interpreter.NewUnmeteredAddressValueFromBytes(data)
 
 	default:
 		panic(errors.NewUnexpectedError("unsupported constant kind: %s", kind))
 	}
 
-	return fmt.Sprint(v)
+	return fmt.Sprint(value)
 }
