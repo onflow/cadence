@@ -75,6 +75,16 @@ func (v *VMInvokable) Invoke(functionName string, arguments ...interpreter.Value
 	return
 }
 
+func (v *VMInvokable) InvokeTransaction(arguments []interpreter.Value, signers ...interpreter.Value) (err error) {
+	err = v.vmInstance.InvokeTransaction(arguments, signers...)
+
+	// Reset the VM after a function invocation,
+	// so the same vm can be re-used for subsequent invocation.
+	v.vmInstance.Reset()
+
+	return
+}
+
 func (v *VMInvokable) GetGlobal(name string) interpreter.Value {
 	return v.vmInstance.Global(name)
 }

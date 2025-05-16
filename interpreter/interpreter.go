@@ -426,7 +426,37 @@ func InvokeExternally(
 	result Value,
 	err error,
 ) {
+	preparedArguments, err := PrepareExternalInvocationArguments(context, functionType, arguments)
+	if err != nil {
+		return nil, err
+	}
 
+	var self *Value
+	var base *EphemeralReferenceValue
+	if boundFunc, ok := functionValue.(BoundFunctionValue); ok {
+		self = boundFunc.SelfReference.ReferencedValue(
+			context,
+			EmptyLocationRange,
+			true,
+		)
+		base = boundFunc.Base
+	}
+
+	// NOTE: can't fill argument types, as they are unknown
+	invocation := NewInvocation(
+		context,
+		self,
+		base,
+		preparedArguments,
+		nil,
+		nil,
+		EmptyLocationRange,
+	)
+
+	return functionValue.Invoke(invocation), nil
+}
+
+func PrepareExternalInvocationArguments(context InvocationContext, functionType *sema.FunctionType, arguments []Value) ([]Value, error) {
 	// ensures the invocation's argument count matches the function's parameter count
 
 	parameters := functionType.Parameters
@@ -451,8 +481,6 @@ func InvokeExternally(
 		}
 	}
 
-	locationRange := EmptyLocationRange
-
 	var preparedArguments []Value
 	if argumentCount > 0 {
 		preparedArguments = make([]Value, argumentCount)
@@ -460,33 +488,11 @@ func InvokeExternally(
 			parameterType := parameters[i].TypeAnnotation.Type
 
 			// converts the argument into the parameter type declared by the function
-			preparedArguments[i] = ConvertAndBox(context, locationRange, argument, nil, parameterType)
+			preparedArguments[i] = ConvertAndBox(context, EmptyLocationRange, argument, nil, parameterType)
 		}
 	}
 
-	var self *Value
-	var base *EphemeralReferenceValue
-	if boundFunc, ok := functionValue.(BoundFunctionValue); ok {
-		self = boundFunc.SelfReference.ReferencedValue(
-			context,
-			EmptyLocationRange,
-			true,
-		)
-		base = boundFunc.Base
-	}
-
-	// NOTE: can't fill argument types, as they are unknown
-	invocation := NewInvocation(
-		context,
-		self,
-		base,
-		preparedArguments,
-		nil,
-		nil,
-		locationRange,
-	)
-
-	return functionValue.Invoke(invocation), nil
+	return preparedArguments, nil
 }
 
 // Invoke invokes a global function with the given arguments
@@ -512,24 +518,28 @@ func InvokeFunction(errorHandler ErrorHandler, function FunctionValue, invocatio
 	return
 }
 
-func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value) (err error) {
+func (interpreter *Interpreter) InvokeTransaction(arguments []Value, signers ...Value) (err error) {
 
 	// recover internal panics and return them as an error
 	defer interpreter.RecoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
-	if index >= len(interpreter.Transactions) {
-		return TransactionNotDeclaredError{Index: index}
-	}
+	const transactionIndex = 0
 
-	functionValue := interpreter.Transactions[index]
+	functionValue := interpreter.Transactions[transactionIndex]
 
-	transactionType := interpreter.Program.Elaboration.TransactionTypes[index]
+	transactionType := interpreter.Program.Elaboration.TransactionTypes[transactionIndex]
 	functionType := transactionType.EntryPointFunctionType()
 
-	_, err = InvokeExternally(interpreter, functionValue, functionType, arguments)
-	return err
+	_, err = InvokeExternally(
+		interpreter,
+		functionValue,
+		functionType,
+		common.Concat(arguments, signers),
+	)
+
+	return
 }
 
 func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
