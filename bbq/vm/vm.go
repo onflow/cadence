@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/constant"
@@ -1260,9 +1259,13 @@ func opDeref(vm *VM) {
 
 func (vm *VM) run() {
 
-	if vm.context.debugEnabled {
-		defer func() {
-			if r := recover(); r != nil {
+	defer func() {
+		if r := recover(); r != nil {
+			if locatedError, ok := r.(interpreter.HasLocationRange); ok {
+				locatedError.SetLocationRange(vm.LocationRange())
+			}
+
+			if vm.context.debugEnabled {
 				switch r.(type) {
 				case errors.UserError, errors.ExternalError:
 					// do nothing
@@ -1273,10 +1276,11 @@ func (vm *VM) run() {
 						r,
 					)
 				}
-				panic(r)
 			}
-		}()
-	}
+
+			panic(r)
+		}
+	}()
 
 	entryPointCallStackSize := len(vm.callstack)
 
@@ -1801,10 +1805,8 @@ func (vm *VM) LocationRange() interpreter.LocationRange {
 	position := lineNumbers.GetSourcePosition(lastInstructionIndex)
 
 	return interpreter.LocationRange{
-		Location: currentFunction.Executable.Location,
-		HasPosition: Positioned{
-			StartPos: position,
-		},
+		Location:    currentFunction.Executable.Location,
+		HasPosition: position,
 	}
 }
 
@@ -1827,19 +1829,4 @@ func printInstructionError(
 	}
 
 	fmt.Println(builder.String())
-}
-
-type Positioned struct {
-	StartPos ast.Position
-	EndPos   ast.Position
-}
-
-var _ ast.HasPosition = Positioned{}
-
-func (p Positioned) StartPosition() ast.Position {
-	return p.StartPos
-}
-
-func (p Positioned) EndPosition(_ common.MemoryGauge) ast.Position {
-	return p.EndPos
 }

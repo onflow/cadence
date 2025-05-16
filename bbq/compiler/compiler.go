@@ -75,8 +75,8 @@ type Compiler[E, T any] struct {
 	// postConditionsIndex is the statement-index of the post-conditions for the current function.
 	postConditionsIndex int
 
-	lastChangedPosition ast.Position
-	currentPosition     ast.Position
+	lastChangedPosition bbq.Position
+	currentPosition     bbq.Position
 
 	// Cache alike for compiledTypes and constants in the pool.
 	typesInPool     map[sema.TypeID]uint16
@@ -495,12 +495,13 @@ func (c *Compiler[_, _]) compileWithPositionInfo(
 	compile func(),
 ) {
 	prevCurrentPosition := c.currentPosition
-	prevLastChangedPosition := c.lastChangedPosition
+	c.currentPosition = bbq.Position{
+		StartPos: hasPosition.StartPosition(),
+		EndPos:   hasPosition.EndPosition(c.memoryGauge),
+	}
 
-	c.currentPosition = hasPosition.StartPosition()
 	defer func() {
 		c.currentPosition = prevCurrentPosition
-		c.lastChangedPosition = prevLastChangedPosition
 	}()
 
 	compile()
@@ -2731,7 +2732,7 @@ func (c *Compiler[E, _]) emit(instruction opcode.Instruction) {
 
 	// If the line number info changed since the last recorded position info,
 	// Then add the current instruction's position info.
-	if c.lastChangedPosition.Offset != c.currentPosition.Offset {
+	if c.lastChangedPosition != c.currentPosition {
 		c.currentFunction.lineNumbers.AddPositionInfo(
 			uint16(instructionIndex),
 			c.currentPosition,

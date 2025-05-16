@@ -18,7 +18,10 @@
 
 package bbq
 
-import "github.com/onflow/cadence/ast"
+import (
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
+)
 
 // LineNumberTable holds the instruction-index to source-position mapping.
 // It only maintains an entry for an instruction only if the position info
@@ -29,7 +32,7 @@ type LineNumberTable struct {
 	Positions []PositionInfo
 }
 
-func (t *LineNumberTable) AddPositionInfo(bytecodeIndex uint16, position ast.Position) {
+func (t *LineNumberTable) AddPositionInfo(bytecodeIndex uint16, position Position) {
 	t.Positions = append(
 		t.Positions,
 		PositionInfo{
@@ -39,8 +42,8 @@ func (t *LineNumberTable) AddPositionInfo(bytecodeIndex uint16, position ast.Pos
 	)
 }
 
-func (t *LineNumberTable) GetSourcePosition(instructionIndex uint16) ast.Position {
-	var lastChangedPosition ast.Position
+func (t *LineNumberTable) GetSourcePosition(instructionIndex uint16) Position {
+	var lastChangedPosition Position
 
 	for _, positionInfo := range t.Positions {
 		if instructionIndex < positionInfo.InstructionIndex {
@@ -52,7 +55,22 @@ func (t *LineNumberTable) GetSourcePosition(instructionIndex uint16) ast.Positio
 	return lastChangedPosition
 }
 
+type Position struct {
+	StartPos ast.Position
+	EndPos   ast.Position
+}
+
+var _ ast.HasPosition = Position{}
+
+func (p Position) StartPosition() ast.Position {
+	return p.StartPos
+}
+
+func (p Position) EndPosition(_ common.MemoryGauge) ast.Position {
+	return p.EndPos
+}
+
 type PositionInfo struct {
 	InstructionIndex uint16
-	Position         ast.Position
+	Position         Position
 }
