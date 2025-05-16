@@ -97,7 +97,7 @@ func FromSemaType(ty sema.Type) Kind {
 		return Address
 
 	// Int*
-	case sema.IntType, sema.IntegerType:
+	case sema.IntType, sema.IntegerType, sema.SignedIntegerType:
 		return Int
 	case sema.Int8Type:
 		return Int8
@@ -125,7 +125,7 @@ func FromSemaType(ty sema.Type) Kind {
 		return UInt64
 	case sema.UInt128Type:
 		return UInt128
-	case sema.UInt256Type:
+	case sema.UInt256Type, sema.FixedSizeUnsignedIntegerType:
 		return UInt256
 
 	// Word*
