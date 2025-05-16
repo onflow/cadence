@@ -51,6 +51,17 @@ func NewUnmeteredInt16Value(value int16) Int16Value {
 	return Int16Value(value)
 }
 
+func NewInt16ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Int16Value {
+	return NewInt16Value(
+		gauge,
+		func() int16 {
+			bytes := padWithZeroes(b, 2)
+			val := binary.BigEndian.Uint16(bytes)
+			return int16(val)
+		},
+	)
+}
+
 var _ Value = Int16Value(0)
 var _ atree.Storable = Int16Value(0)
 var _ NumberValue = Int16Value(0)

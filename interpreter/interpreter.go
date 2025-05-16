@@ -19,7 +19,6 @@
 package interpreter
 
 import (
-	"encoding/binary"
 	goErrors "errors"
 	"fmt"
 	"math"
@@ -41,7 +40,6 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/values"
 )
 
 type getterSetter struct {
@@ -2992,12 +2990,12 @@ func padWithZeroes(b []byte, expectedLen int) []byte {
 }
 
 // a function that attempts to create a Number from a big-endian bytes.
-type bigEndianBytesConverter func(common.MemoryGauge, []byte) Value
+type bigEndianBytesConverter[T Value] func(common.MemoryGauge, []byte) T
 
-func newFromBigEndianBytesFunction(
+func newFromBigEndianBytesFunction[T Value](
 	ty sema.Type,
-	byteLength int,
-	converter bigEndianBytesConverter,
+	byteLength uint,
+	converter bigEndianBytesConverter[T],
 ) fromBigEndianBytesFunctionValue {
 	functionType := sema.FromBigEndianBytesFunctionType(ty)
 
@@ -3017,7 +3015,7 @@ func newFromBigEndianBytesFunction(
 			}
 
 			// overflow
-			if byteLength != 0 && len(bytes) > byteLength {
+			if byteLength != 0 && uint(len(bytes)) > byteLength {
 				return Nil
 			}
 
@@ -3032,148 +3030,37 @@ func newFromBigEndianBytesFunction(
 
 var fromBigEndianBytesFunctionValues = func() map[string]fromBigEndianBytesFunctionValue {
 	declarations := []fromBigEndianBytesFunctionValue{
-		// signed int values
-		newFromBigEndianBytesFunction(sema.Int8Type, 1, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewInt8Value(gauge, func() int8 {
-				bytes := padWithZeroes(b, 1)
-				return int8(bytes[0])
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.Int16Type, 2, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewInt16Value(gauge, func() int16 {
-				bytes := padWithZeroes(b, 2)
-				val := binary.BigEndian.Uint16(bytes)
-				return int16(val)
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.Int32Type, 4, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewInt32Value(gauge, func() int32 {
-				bytes := padWithZeroes(b, 4)
-				val := binary.BigEndian.Uint32(bytes)
-				return int32(val)
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.Int64Type, 8, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewInt64Value(gauge, func() int64 {
-				bytes := padWithZeroes(b, 8)
-				val := binary.BigEndian.Uint64(bytes)
-				return int64(val)
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.Int128Type, 16, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewInt128ValueFromBigInt(gauge, func() *big.Int {
-				bi := values.BigEndianBytesToSignedBigInt(b)
-				return bi
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.Int256Type, 32, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewInt256ValueFromBigInt(gauge, func() *big.Int {
-				bi := values.BigEndianBytesToSignedBigInt(b)
-				return bi
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.IntType, 0, func(gauge common.MemoryGauge, b []byte) Value {
-			bi := values.BigEndianBytesToSignedBigInt(b)
-			memoryUsage := common.NewBigIntMemoryUsage(
-				common.BigIntByteLength(bi),
-			)
-			return NewIntValueFromBigInt(gauge, memoryUsage, func() *big.Int { return bi })
-		}),
+		// Int*
+		newFromBigEndianBytesFunction(sema.Int8Type, sema.Int8TypeSize, NewInt8ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.Int16Type, sema.Int16TypeSize, NewInt16ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.Int32Type, sema.Int32TypeSize, NewInt32ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.Int64Type, sema.Int64TypeSize, NewInt64ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.Int128Type, sema.Int128TypeSize, NewInt128ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.Int256Type, sema.Int256TypeSize, NewInt256ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.IntType, 0, NewIntValueFromBigEndianBytes),
 
-		// unsigned int values
-		newFromBigEndianBytesFunction(sema.UInt8Type, 1, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewUInt8Value(gauge, func() uint8 { return b[0] })
-		}),
-		newFromBigEndianBytesFunction(sema.UInt16Type, 2, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewUInt16Value(gauge, func() uint16 {
-				bytes := padWithZeroes(b, 2)
-				val := binary.BigEndian.Uint16(bytes)
-				return val
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.UInt32Type, 4, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewUInt32Value(gauge, func() uint32 {
-				bytes := padWithZeroes(b, 4)
-				val := binary.BigEndian.Uint32(bytes)
-				return val
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.UInt64Type, 8, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewUInt64Value(gauge, func() uint64 {
-				bytes := padWithZeroes(b, 8)
-				val := binary.BigEndian.Uint64(bytes)
-				return val
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.UInt128Type, 16, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewUInt128ValueFromBigInt(gauge, func() *big.Int {
-				return values.BigEndianBytesToUnsignedBigInt(b)
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.UInt256Type, 32, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewUInt256ValueFromBigInt(gauge, func() *big.Int {
-				return values.BigEndianBytesToUnsignedBigInt(b)
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.UIntType, 0, func(gauge common.MemoryGauge, b []byte) Value {
-			bi := values.BigEndianBytesToUnsignedBigInt(b)
-			memoryUsage := common.NewBigIntMemoryUsage(
-				common.BigIntByteLength(bi),
-			)
-			return NewUIntValueFromBigInt(gauge, memoryUsage, func() *big.Int { return bi })
-		}),
+		// UInt*
+		newFromBigEndianBytesFunction(sema.UInt8Type, sema.UInt8TypeSize, NewUInt8ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.UInt16Type, sema.UInt16TypeSize, NewUInt16ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.UInt32Type, sema.UInt32TypeSize, NewUInt32ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.UInt64Type, sema.UInt64TypeSize, NewUInt64ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.UInt128Type, sema.UInt128TypeSize, NewUInt128ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.UInt256Type, sema.UInt256TypeSize, NewUInt256ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.UIntType, 0, NewUIntValueFromBigEndianBytes),
 
-		// machine-sized word types
-		newFromBigEndianBytesFunction(sema.Word8Type, 1, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewWord8Value(gauge, func() uint8 { return b[0] })
-		}),
-		newFromBigEndianBytesFunction(sema.Word16Type, 2, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewWord16Value(gauge, func() uint16 {
-				bytes := padWithZeroes(b, 2)
-				val := binary.BigEndian.Uint16(bytes)
-				return val
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.Word32Type, 4, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewWord32Value(gauge, func() uint32 {
-				bytes := padWithZeroes(b, 4)
-				val := binary.BigEndian.Uint32(bytes)
-				return val
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.Word64Type, 8, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewWord64Value(gauge, func() uint64 {
-				bytes := padWithZeroes(b, 8)
-				val := binary.BigEndian.Uint64(bytes)
-				return val
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.Word128Type, 16, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewWord128ValueFromBigInt(gauge, func() *big.Int {
-				return values.BigEndianBytesToUnsignedBigInt(b)
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.Word256Type, 32, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewWord256ValueFromBigInt(gauge, func() *big.Int {
-				return values.BigEndianBytesToUnsignedBigInt(b)
-			})
-		}),
+		// Word*
+		newFromBigEndianBytesFunction(sema.Word8Type, sema.Word8TypeSize, NewWord8ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.Word16Type, sema.Word16TypeSize, NewWord16ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.Word32Type, sema.Word32TypeSize, NewWord32ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.Word64Type, sema.Word64TypeSize, NewWord64ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.Word128Type, sema.Word128TypeSize, NewWord128ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.Word256Type, sema.Word256TypeSize, NewWord256ValueFromBigEndianBytes),
 
-		// fixed-points
-		newFromBigEndianBytesFunction(sema.Fix64Type, 8, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewFix64Value(gauge, func() int64 {
-				bytes := padWithZeroes(b, 8)
-				val := binary.BigEndian.Uint64(bytes)
-				return int64(val)
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.UFix64Type, 8, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewUFix64Value(gauge, func() uint64 {
-				bytes := padWithZeroes(b, 8)
-				val := binary.BigEndian.Uint64(bytes)
-				return val
-			})
-		}),
+		// Fix*
+		newFromBigEndianBytesFunction(sema.Fix64Type, sema.Fix64TypeSize, NewFix64ValueFromBigEndianBytes),
+
+		// UFix*
+		newFromBigEndianBytesFunction(sema.UFix64Type, sema.UFix64TypeSize, NewUFix64ValueFromBigEndianBytes),
 	}
 
 	values := make(map[string]fromBigEndianBytesFunctionValue, len(declarations))

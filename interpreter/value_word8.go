@@ -58,6 +58,16 @@ func NewUnmeteredWord8Value(value uint8) Word8Value {
 	return Word8Value(value)
 }
 
+func NewWord8ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Word8Value {
+	return NewWord8Value(
+		gauge,
+		func() uint8 {
+			bytes := padWithZeroes(b, 1)
+			return bytes[0]
+		},
+	)
+}
+
 func (Word8Value) IsValue() {}
 
 func (v Word8Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {

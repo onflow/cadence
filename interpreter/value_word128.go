@@ -38,11 +38,11 @@ type Word128Value struct {
 	BigInt *big.Int
 }
 
-func NewWord128ValueFromUint64(memoryGauge common.MemoryGauge, value int64) Word128Value {
+func NewWord128ValueFromUint64(memoryGauge common.MemoryGauge, value uint64) Word128Value {
 	return NewWord128ValueFromBigInt(
 		memoryGauge,
 		func() *big.Int {
-			return new(big.Int).SetInt64(value)
+			return new(big.Int).SetUint64(value)
 		},
 	)
 }
@@ -63,6 +63,15 @@ func NewUnmeteredWord128ValueFromBigInt(value *big.Int) Word128Value {
 	return Word128Value{
 		BigInt: value,
 	}
+}
+
+func NewWord128ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
+	return NewWord128ValueFromBigInt(
+		gauge,
+		func() *big.Int {
+			return values.BigEndianBytesToUnsignedBigInt(b)
+		},
+	)
 }
 
 var _ Value = Word128Value{}
