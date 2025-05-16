@@ -203,7 +203,13 @@ func (vm *VM) dropN(count int) {
 
 func (vm *VM) peekPop() (Value, Value) {
 	lastIndex := len(vm.stack) - 1
-	return vm.stack[lastIndex-1], vm.pop()
+	peekedValue := vm.stack[lastIndex-1]
+	poppedValue := vm.pop()
+
+	interpreter.CheckInvalidatedResourceOrResourceReference(peekedValue, EmptyLocationRange, vm.context)
+	interpreter.CheckInvalidatedResourceOrResourceReference(poppedValue, EmptyLocationRange, vm.context)
+
+	return peekedValue, poppedValue
 }
 
 func (vm *VM) replaceTop(value Value) {

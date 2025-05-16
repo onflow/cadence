@@ -155,7 +155,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 
 	t.Run("no-implicit fallthrough", func(t *testing.T) {
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           fun test(_ x: Int): [String] {
               let results: [String] = []
               switch x {

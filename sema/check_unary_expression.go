@@ -137,6 +137,16 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) Ty
 			ResourceInvalidationKindMoveDefinite,
 		)
 
+		// Store the target type in the elaboration.
+		// Target type is the expected type of the expression.
+		// However, it may not always be present (e.g: `var v2 <- v1`).
+		// In that case, use the actual type of the expression as the target type.
+		targetType := expectedType
+		if targetType == nil {
+			targetType = valueType
+		}
+		checker.Elaboration.SetMoveExpressionTypes(expression, targetType)
+
 		return valueType
 	}
 
