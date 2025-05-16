@@ -115,7 +115,7 @@ func (IntValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 func (v IntValue) ToInt(locationRange LocationRange) int {
 	result, err := v.IntValue.ToInt()
 	if _, ok := err.(values.OverflowError); ok {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	}
@@ -124,7 +124,7 @@ func (v IntValue) ToInt(locationRange LocationRange) int {
 
 func (v IntValue) ToUint32(locationRange LocationRange) uint32 {
 	if !v.BigInt.IsUint64() {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	}
@@ -132,7 +132,7 @@ func (v IntValue) ToUint32(locationRange LocationRange) uint32 {
 	result := v.BigInt.Uint64()
 
 	if result > math.MaxUint32 {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	}

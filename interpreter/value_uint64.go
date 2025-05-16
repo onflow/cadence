@@ -103,7 +103,7 @@ func (v UInt64Value) MeteredString(context ValueStringContext, _ SeenReferences,
 
 func (v UInt64Value) ToInt(locationRange LocationRange) int {
 	if v > math.MaxInt64 {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	}
@@ -146,7 +146,7 @@ func (v UInt64Value) Plus(context NumberValueArithmeticContext, other NumberValu
 			result, err := values.SafeAddUint64(uint64(v), uint64(o))
 			if err != nil {
 				if _, ok := err.(values.OverflowError); ok {
-					panic(OverflowError{
+					panic(&OverflowError{
 						LocationRange: locationRange,
 					})
 				}
@@ -270,7 +270,7 @@ func (v UInt64Value) Mul(context NumberValueArithmeticContext, other NumberValue
 		context,
 		func() uint64 {
 			if (v > 0) && (o > 0) && (v > (math.MaxUint64 / o)) {
-				panic(OverflowError{
+				panic(&OverflowError{
 					LocationRange: locationRange,
 				})
 			}

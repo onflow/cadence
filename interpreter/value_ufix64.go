@@ -46,7 +46,7 @@ func NewUFix64ValueWithInteger(gauge common.MemoryGauge, constructor func() uint
 	})
 	if err != nil {
 		if _, ok := err.(values.OverflowError); ok {
-			panic(OverflowError{
+			panic(&OverflowError{
 				LocationRange: locationRange,
 			})
 		}
@@ -61,7 +61,7 @@ func NewUnmeteredUFix64ValueWithInteger(integer uint64, locationRange LocationRa
 	ufix64Value, err := values.NewUnmeteredUFix64ValueWithInteger(integer)
 	if err != nil {
 		if _, ok := err.(values.OverflowError); ok {
-			panic(OverflowError{
+			panic(&OverflowError{
 				LocationRange: locationRange,
 			})
 		}
@@ -123,7 +123,7 @@ func ConvertUFix64(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 			// allows us to call `v.UInt64()` safely.
 
 			if !v.IsUint64() {
-				panic(OverflowError{
+				panic(&OverflowError{
 					LocationRange: locationRange,
 				})
 			}

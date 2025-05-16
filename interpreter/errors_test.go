@@ -48,7 +48,7 @@ func TestErrorOutputIncludesLocationRage(t *testing.T) {
 	require.Equal(t,
 		Error{
 			Location: TestLocation,
-			Err: DereferenceError{
+			Err: &DereferenceError{
 				Cause: "the value being referenced has been destroyed or moved",
 				LocationRange: LocationRange{
 					Location: TestLocation,

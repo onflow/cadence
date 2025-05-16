@@ -101,7 +101,7 @@ func (v Int8Value) ToInt(_ LocationRange) int {
 func (v Int8Value) Negate(context NumberValueArithmeticContext, locationRange LocationRange) NumberValue {
 	// INT32-C
 	if v == math.MinInt8 {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	}
@@ -126,7 +126,7 @@ func (v Int8Value) Plus(context NumberValueArithmeticContext, other NumberValue,
 
 	// INT32-C
 	if (o > 0) && (v > (math.MaxInt8 - o)) {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	} else if (o < 0) && (v < (math.MinInt8 - o)) {
@@ -179,7 +179,7 @@ func (v Int8Value) Minus(context NumberValueArithmeticContext, other NumberValue
 
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt8 + o)) {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	} else if (o < 0) && (v > (math.MaxInt8 + o)) {
@@ -260,7 +260,7 @@ func (v Int8Value) Mul(context NumberValueArithmeticContext, other NumberValue, 
 		if o > 0 {
 			// positive * positive = positive. overflow?
 			if v > (math.MaxInt8 / o) {
-				panic(OverflowError{
+				panic(&OverflowError{
 					LocationRange: locationRange,
 				})
 			}
@@ -283,7 +283,7 @@ func (v Int8Value) Mul(context NumberValueArithmeticContext, other NumberValue, 
 		} else {
 			// negative * negative = positive. overflow?
 			if (v != 0) && (o < (math.MaxInt8 / v)) {
-				panic(OverflowError{
+				panic(&OverflowError{
 					LocationRange: locationRange,
 				})
 			}
@@ -360,7 +360,7 @@ func (v Int8Value) Div(context NumberValueArithmeticContext, other NumberValue, 
 			LocationRange: locationRange,
 		})
 	} else if (v == math.MinInt8) && (o == -1) {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	}
@@ -479,7 +479,7 @@ func ConvertInt8(memoryGauge common.MemoryGauge, value Value, locationRange Loca
 		case BigNumberValue:
 			v := value.ToBigInt(memoryGauge)
 			if v.Cmp(sema.Int8TypeMaxInt) > 0 {
-				panic(OverflowError{
+				panic(&OverflowError{
 					LocationRange: locationRange,
 				})
 			} else if v.Cmp(sema.Int8TypeMinInt) < 0 {
@@ -492,7 +492,7 @@ func ConvertInt8(memoryGauge common.MemoryGauge, value Value, locationRange Loca
 		case NumberValue:
 			v := value.ToInt(locationRange)
 			if v > math.MaxInt8 {
-				panic(OverflowError{
+				panic(&OverflowError{
 					LocationRange: locationRange,
 				})
 			} else if v < math.MinInt8 {

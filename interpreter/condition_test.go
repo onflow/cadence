@@ -796,9 +796,9 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 		err    error
 		events int
 	}{
-		0: {interpreter.ConditionError{}, 0},
+		0: {&interpreter.ConditionError{}, 0},
 		1: {nil, 2},
-		2: {interpreter.ConditionError{}, 1},
+		2: {&interpreter.ConditionError{}, 1},
 	}
 
 	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {

@@ -946,7 +946,7 @@ func (interpreter *Interpreter) visitCondition(condition ast.Condition, kind ast
 			message = messageValue.(*StringValue).Str
 		}
 
-		panic(ConditionError{
+		panic(&ConditionError{
 			ConditionKind: kind,
 			Message:       message,
 			LocationRange: LocationRange{
