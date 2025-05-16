@@ -60,7 +60,7 @@ func TestInterpretEquality(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, capabilityValueDeclaration)
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
               let maybeCapNonNil: Capability? = cap
               let maybeCapNil: Capability? = nil
@@ -86,14 +86,14 @@ func TestInterpretEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.TrueValue,
-			inter.Globals.Get("res1").GetValue(inter),
+			inter.GetGlobal("res1"),
 		)
 
 		AssertValuesEqual(
 			t,
 			inter,
 			interpreter.TrueValue,
-			inter.Globals.Get("res2").GetValue(inter),
+			inter.GetGlobal("res2"),
 		)
 	})
 
@@ -101,7 +101,7 @@ func TestInterpretEquality(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 		  fun func() {}
 
           let maybeFuncNonNil: (fun(): Void)? = func
@@ -114,14 +114,14 @@ func TestInterpretEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.TrueValue,
-			inter.Globals.Get("res1").GetValue(inter),
+			inter.GetGlobal("res1"),
 		)
 
 		AssertValuesEqual(
 			t,
 			inter,
 			interpreter.TrueValue,
-			inter.Globals.Get("res2").GetValue(inter),
+			inter.GetGlobal("res2"),
 		)
 	})
 
@@ -129,7 +129,7 @@ func TestInterpretEquality(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let n: Int? = 1
           let res = nil == n
 		`)
@@ -138,7 +138,7 @@ func TestInterpretEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.FalseValue,
-			inter.Globals.Get("res").GetValue(inter),
+			inter.GetGlobal("res"),
 		)
 	})
 }
@@ -198,7 +198,7 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 						op.Symbol(),
 					)
 
-					inter := parseCheckAndInterpret(t, code)
+					inter := parseCheckAndPrepare(t, code)
 
 					result, err := inter.Invoke("test")
 
@@ -262,7 +262,7 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 						op.Symbol(),
 					)
 
-					inter := parseCheckAndInterpret(t, code)
+					inter := parseCheckAndPrepare(t, code)
 
 					result, err := inter.Invoke("test")
 
@@ -312,7 +312,7 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 						op.Symbol(),
 					)
 
-					inter := parseCheckAndInterpret(t, code)
+					inter := parseCheckAndPrepare(t, code)
 
 					result, err := inter.Invoke("test")
 
@@ -362,7 +362,7 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 						op.Symbol(),
 					)
 
-					inter := parseCheckAndInterpret(t, code)
+					inter := parseCheckAndPrepare(t, code)
 
 					result, err := inter.Invoke("test")
 
