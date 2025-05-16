@@ -90,6 +90,17 @@ func NewUnmeteredUFix64Value(integer uint64) UFix64Value {
 	}
 }
 
+func NewUFix64ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
+	return NewUFix64Value(
+		gauge,
+		func() uint64 {
+			bytes := padWithZeroes(b, 8)
+			val := binary.BigEndian.Uint64(bytes)
+			return val
+		},
+	)
+}
+
 func ConvertUFix64(memoryGauge common.MemoryGauge, value Value, locationRange LocationRange) UFix64Value {
 	switch value := value.(type) {
 	case UFix64Value:
