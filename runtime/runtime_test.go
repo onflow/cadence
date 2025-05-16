@@ -4594,7 +4594,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 
 					assertRuntimeErrorIsUserError(t, err)
 
-					require.ErrorAs(t, err, &interpreter.ConditionError{})
+					require.ErrorAs(t, err, &&interpreter.ConditionError{})
 				}
 			})
 		}

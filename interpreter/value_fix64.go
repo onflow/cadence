@@ -58,7 +58,7 @@ func NewUnmeteredFix64ValueWithInteger(integer int64, locationRange LocationRang
 	}
 
 	if integer > sema.Fix64TypeMaxInt {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	}
@@ -127,7 +127,7 @@ func (v Fix64Value) ToInt(_ LocationRange) int {
 func (v Fix64Value) Negate(context NumberValueArithmeticContext, locationRange LocationRange) NumberValue {
 	// INT32-C
 	if v == math.MinInt64 {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	}
@@ -195,7 +195,7 @@ func (v Fix64Value) Minus(context NumberValueArithmeticContext, other NumberValu
 	valueGetter := func() int64 {
 		// INT32-C
 		if (o > 0) && (v < (math.MinInt64 + o)) {
-			panic(OverflowError{
+			panic(&OverflowError{
 				LocationRange: locationRange,
 			})
 		} else if (o < 0) && (v > (math.MaxInt64 + o)) {
@@ -260,7 +260,7 @@ func (v Fix64Value) Mul(context NumberValueArithmeticContext, other NumberValue,
 				LocationRange: locationRange,
 			})
 		} else if result.Cmp(maxInt64Big) > 0 {
-			panic(OverflowError{
+			panic(&OverflowError{
 				LocationRange: locationRange,
 			})
 		}
@@ -324,7 +324,7 @@ func (v Fix64Value) Div(context NumberValueArithmeticContext, other NumberValue,
 				LocationRange: locationRange,
 			})
 		} else if result.Cmp(maxInt64Big) > 0 {
-			panic(OverflowError{
+			panic(&OverflowError{
 				LocationRange: locationRange,
 			})
 		}
@@ -481,7 +481,7 @@ func ConvertFix64(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 
 	case UFix64Value:
 		if value.UFix64Value > Fix64MaxValue {
-			panic(OverflowError{
+			panic(&OverflowError{
 				LocationRange: locationRange,
 			})
 		}
@@ -501,7 +501,7 @@ func ConvertFix64(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 			// allows us to call `v.Int64()` safely.
 
 			if !v.IsInt64() {
-				panic(OverflowError{
+				panic(&OverflowError{
 					LocationRange: locationRange,
 				})
 			}

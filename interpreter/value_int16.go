@@ -103,7 +103,7 @@ func (v Int16Value) ToInt(_ LocationRange) int {
 func (v Int16Value) Negate(context NumberValueArithmeticContext, locationRange LocationRange) NumberValue {
 	// INT32-C
 	if v == math.MinInt16 {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	}
@@ -128,7 +128,7 @@ func (v Int16Value) Plus(context NumberValueArithmeticContext, other NumberValue
 
 	// INT32-C
 	if (o > 0) && (v > (math.MaxInt16 - o)) {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	} else if (o < 0) && (v < (math.MinInt16 - o)) {
@@ -181,7 +181,7 @@ func (v Int16Value) Minus(context NumberValueArithmeticContext, other NumberValu
 
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt16 + o)) {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	} else if (o < 0) && (v > (math.MaxInt16 + o)) {
@@ -262,7 +262,7 @@ func (v Int16Value) Mul(context NumberValueArithmeticContext, other NumberValue,
 		if o > 0 {
 			// positive * positive = positive. overflow?
 			if v > (math.MaxInt16 / o) {
-				panic(OverflowError{
+				panic(&OverflowError{
 					LocationRange: locationRange,
 				})
 			}
@@ -285,7 +285,7 @@ func (v Int16Value) Mul(context NumberValueArithmeticContext, other NumberValue,
 		} else {
 			// negative * negative = positive. overflow?
 			if (v != 0) && (o < (math.MaxInt16 / v)) {
-				panic(OverflowError{
+				panic(&OverflowError{
 					LocationRange: locationRange,
 				})
 			}
@@ -361,7 +361,7 @@ func (v Int16Value) Div(context NumberValueArithmeticContext, other NumberValue,
 			LocationRange: locationRange,
 		})
 	} else if (v == math.MinInt16) && (o == -1) {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	}
@@ -480,7 +480,7 @@ func ConvertInt16(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 		case BigNumberValue:
 			v := value.ToBigInt(memoryGauge)
 			if v.Cmp(sema.Int16TypeMaxInt) > 0 {
-				panic(OverflowError{
+				panic(&OverflowError{
 					LocationRange: locationRange,
 				})
 			} else if v.Cmp(sema.Int16TypeMinInt) < 0 {
@@ -493,7 +493,7 @@ func ConvertInt16(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 		case NumberValue:
 			v := value.ToInt(locationRange)
 			if v > math.MaxInt16 {
-				panic(OverflowError{
+				panic(&OverflowError{
 					LocationRange: locationRange,
 				})
 			} else if v < math.MinInt16 {

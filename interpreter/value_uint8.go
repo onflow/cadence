@@ -117,7 +117,7 @@ func (v UInt8Value) Plus(context NumberValueArithmeticContext, other NumberValue
 		sum := v + o
 		// INT30-C
 		if sum < v {
-			panic(OverflowError{
+			panic(&OverflowError{
 				LocationRange: locationRange,
 			})
 		}
@@ -236,7 +236,7 @@ func (v UInt8Value) Mul(context NumberValueArithmeticContext, other NumberValue,
 		func() uint8 {
 			// INT30-C
 			if (v > 0) && (o > 0) && (v > (math.MaxUint8 / o)) {
-				panic(OverflowError{
+				panic(&OverflowError{
 					LocationRange: locationRange,
 				})
 			}
@@ -392,7 +392,7 @@ func ConvertUnsigned[T Unsigned](
 	case BigNumberValue:
 		v := value.ToBigInt(memoryGauge)
 		if v.Cmp(maxBigNumber) > 0 {
-			panic(OverflowError{
+			panic(&OverflowError{
 				LocationRange: locationRange,
 			})
 		} else if v.Sign() < 0 {
@@ -405,7 +405,7 @@ func ConvertUnsigned[T Unsigned](
 	case NumberValue:
 		v := value.ToInt(locationRange)
 		if maxNumber > 0 && v > maxNumber {
-			panic(OverflowError{
+			panic(&OverflowError{
 				LocationRange: locationRange,
 			})
 		} else if v < 0 {

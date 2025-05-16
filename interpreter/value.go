@@ -272,7 +272,7 @@ type atreeContainerBackedValue interface {
 func safeAdd(a, b int, locationRange LocationRange) int {
 	// INT32-C
 	if (b > 0) && (a > (goMaxInt - b)) {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	} else if (b < 0) && (a < (goMinInt - b)) {
@@ -289,7 +289,7 @@ func safeMul(a, b int, locationRange LocationRange) int {
 		if b > 0 {
 			// positive * positive = positive. overflow?
 			if a > (goMaxInt / b) {
-				panic(OverflowError{
+				panic(&OverflowError{
 					LocationRange: locationRange,
 				})
 			}
@@ -312,7 +312,7 @@ func safeMul(a, b int, locationRange LocationRange) int {
 		} else {
 			// negative * negative = positive. overflow?
 			if (a != 0) && (b < (goMaxInt / a)) {
-				panic(OverflowError{
+				panic(&OverflowError{
 					LocationRange: locationRange,
 				})
 			}

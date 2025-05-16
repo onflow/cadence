@@ -125,7 +125,7 @@ func (Int128Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool 
 
 func (v Int128Value) ToInt(locationRange LocationRange) int {
 	if !v.BigInt.IsInt64() {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	}
@@ -165,7 +165,7 @@ func (v Int128Value) Negate(context NumberValueArithmeticContext, locationRange 
 	//       ...
 	//   }
 	if v.BigInt.Cmp(sema.Int128TypeMinIntBig) == 0 {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	}
@@ -208,7 +208,7 @@ func (v Int128Value) Plus(context NumberValueArithmeticContext, other NumberValu
 				LocationRange: locationRange,
 			})
 		} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-			panic(OverflowError{
+			panic(&OverflowError{
 				LocationRange: locationRange,
 			})
 		}
@@ -288,7 +288,7 @@ func (v Int128Value) Minus(context NumberValueArithmeticContext, other NumberVal
 				LocationRange: locationRange,
 			})
 		} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-			panic(OverflowError{
+			panic(&OverflowError{
 				LocationRange: locationRange,
 			})
 		}
@@ -383,7 +383,7 @@ func (v Int128Value) Mul(context NumberValueArithmeticContext, other NumberValue
 				LocationRange: locationRange,
 			})
 		} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-			panic(OverflowError{
+			panic(&OverflowError{
 				LocationRange: locationRange,
 			})
 		}
@@ -446,7 +446,7 @@ func (v Int128Value) Div(context NumberValueArithmeticContext, other NumberValue
 		}
 		res.SetInt64(-1)
 		if (v.BigInt.Cmp(sema.Int128TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
-			panic(OverflowError{
+			panic(&OverflowError{
 				LocationRange: locationRange,
 			})
 		}
@@ -598,7 +598,7 @@ func ConvertInt128(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 		}
 
 		if v.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-			panic(OverflowError{
+			panic(&OverflowError{
 				LocationRange: locationRange,
 			})
 		} else if v.Cmp(sema.Int128TypeMinIntBig) < 0 {

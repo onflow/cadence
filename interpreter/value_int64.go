@@ -103,7 +103,7 @@ func (v Int64Value) ToInt(_ LocationRange) int {
 func (v Int64Value) Negate(context NumberValueArithmeticContext, locationRange LocationRange) NumberValue {
 	// INT32-C
 	if v == math.MinInt64 {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	}
@@ -118,7 +118,7 @@ func (v Int64Value) Negate(context NumberValueArithmeticContext, locationRange L
 func safeAddInt64(a, b int64, locationRange LocationRange) int64 {
 	// INT32-C
 	if (b > 0) && (a > (math.MaxInt64 - b)) {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	} else if (b < 0) && (a < (math.MinInt64 - b)) {
@@ -184,7 +184,7 @@ func (v Int64Value) Minus(context NumberValueArithmeticContext, other NumberValu
 
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt64 + o)) {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	} else if (o < 0) && (v > (math.MaxInt64 + o)) {
@@ -265,7 +265,7 @@ func (v Int64Value) Mul(context NumberValueArithmeticContext, other NumberValue,
 		if o > 0 {
 			// positive * positive = positive. overflow?
 			if v > (math.MaxInt64 / o) {
-				panic(OverflowError{
+				panic(&OverflowError{
 					LocationRange: locationRange,
 				})
 			}
@@ -288,7 +288,7 @@ func (v Int64Value) Mul(context NumberValueArithmeticContext, other NumberValue,
 		} else {
 			// negative * negative = positive. overflow?
 			if (v != 0) && (o < (math.MaxInt64 / v)) {
-				panic(OverflowError{
+				panic(&OverflowError{
 					LocationRange: locationRange,
 				})
 			}
@@ -364,7 +364,7 @@ func (v Int64Value) Div(context NumberValueArithmeticContext, other NumberValue,
 			LocationRange: locationRange,
 		})
 	} else if (v == math.MinInt64) && (o == -1) {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	}
@@ -483,7 +483,7 @@ func ConvertInt64(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 		case BigNumberValue:
 			v := value.ToBigInt(memoryGauge)
 			if v.Cmp(sema.Int64TypeMaxInt) > 0 {
-				panic(OverflowError{
+				panic(&OverflowError{
 					LocationRange: locationRange,
 				})
 			} else if v.Cmp(sema.Int64TypeMinInt) < 0 {

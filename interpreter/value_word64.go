@@ -105,7 +105,7 @@ func (v Word64Value) MeteredString(context ValueStringContext, _ SeenReferences,
 
 func (v Word64Value) ToInt(locationRange LocationRange) int {
 	if v > math.MaxInt64 {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	}

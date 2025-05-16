@@ -146,7 +146,7 @@ func (v *StorageReferenceValue) dereference(context ValueStaticTypeContext, loca
 		if !IsSubTypeOfSemaType(context, staticType, v.BorrowedType) {
 			semaType := MustConvertStaticToSemaType(staticType, context)
 
-			return nil, ForceCastTypeMismatchError{
+			return nil, &ForceCastTypeMismatchError{
 				ExpectedType:  v.BorrowedType,
 				ActualType:    semaType,
 				LocationRange: locationRange,
@@ -166,10 +166,10 @@ func (v *StorageReferenceValue) ReferencedValue(
 	if err == nil {
 		return referencedValue
 	}
-	if forceCastErr, ok := err.(ForceCastTypeMismatchError); ok {
+	if forceCastErr, ok := err.(*ForceCastTypeMismatchError); ok {
 		if errorOnFailedDereference {
 			// relay the type mismatch error with a dereference error context
-			panic(DereferenceError{
+			panic(&DereferenceError{
 				ExpectedType:  forceCastErr.ExpectedType,
 				ActualType:    forceCastErr.ActualType,
 				LocationRange: locationRange,
@@ -186,7 +186,7 @@ func (v *StorageReferenceValue) mustReferencedValue(
 ) Value {
 	referencedValue := v.ReferencedValue(context, locationRange, true)
 	if referencedValue == nil {
-		panic(DereferenceError{
+		panic(&DereferenceError{
 			Cause:         "no value is stored at this path",
 			LocationRange: locationRange,
 		})

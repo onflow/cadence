@@ -135,7 +135,7 @@ func (v UIntValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool 
 
 func (v UIntValue) ToInt(locationRange LocationRange) int {
 	if !v.BigInt.IsInt64() {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	}
@@ -541,7 +541,7 @@ func (v UIntValue) BitwiseLeftShift(context ValueStaticTypeContext, other Intege
 	}
 
 	if !o.BigInt.IsUint64() {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	}
@@ -574,7 +574,7 @@ func (v UIntValue) BitwiseRightShift(context ValueStaticTypeContext, other Integ
 		})
 	}
 	if !o.BigInt.IsUint64() {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	}

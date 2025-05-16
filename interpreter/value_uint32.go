@@ -119,7 +119,7 @@ func (v UInt32Value) Plus(context NumberValueArithmeticContext, other NumberValu
 			sum := v + o
 			// INT30-C
 			if sum < v {
-				panic(OverflowError{
+				panic(&OverflowError{
 					LocationRange: locationRange,
 				})
 			}
@@ -241,7 +241,7 @@ func (v UInt32Value) Mul(context NumberValueArithmeticContext, other NumberValue
 		context,
 		func() uint32 {
 			if (v > 0) && (o > 0) && (v > (math.MaxUint32 / o)) {
-				panic(OverflowError{
+				panic(&OverflowError{
 					LocationRange: locationRange,
 				})
 			}

@@ -8731,7 +8731,7 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
 	interpreterErr := err.(interpreter.Error)
 
 	require.IsType(t,
-		interpreter.ConditionError{},
+		&interpreter.ConditionError{},
 		interpreterErr.Err,
 	)
 }

@@ -94,7 +94,7 @@ func (UInt128Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool
 
 func (v UInt128Value) ToInt(locationRange LocationRange) int {
 	if !v.BigInt.IsInt64() {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	}
@@ -159,7 +159,7 @@ func (v UInt128Value) Plus(context NumberValueArithmeticContext, other NumberVal
 			//  }
 			//
 			if sum.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
-				panic(OverflowError{
+				panic(&OverflowError{
 					LocationRange: locationRange,
 				})
 			}
@@ -314,7 +314,7 @@ func (v UInt128Value) Mul(context NumberValueArithmeticContext, other NumberValu
 			res := new(big.Int)
 			res.Mul(v.BigInt, o.BigInt)
 			if res.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
-				panic(OverflowError{
+				panic(&OverflowError{
 					LocationRange: locationRange,
 				})
 			}
@@ -496,7 +496,7 @@ func ConvertUInt128(memoryGauge common.MemoryGauge, value Value, locationRange L
 			}
 
 			if v.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
-				panic(OverflowError{
+				panic(&OverflowError{
 					LocationRange: locationRange,
 				})
 			} else if v.Sign() < 0 {

@@ -94,7 +94,7 @@ func (Word128Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool
 
 func (v Word128Value) ToInt(locationRange LocationRange) int {
 	if !v.BigInt.IsInt64() {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	}

@@ -88,7 +88,7 @@ func (e Error) ChildErrors() []error {
 
 		errs = append(
 			errs,
-			StackTraceError{
+			&StackTraceError{
 				LocationRange: locationRange,
 			},
 		)
@@ -105,19 +105,23 @@ type StackTraceError struct {
 	LocationRange
 }
 
-func (e StackTraceError) Error() string {
+func (e *StackTraceError) Error() string {
 	return ""
 }
 
-func (e StackTraceError) Prefix() string {
+func (e *StackTraceError) Prefix() string {
 	return ""
 }
 
-func (e StackTraceError) ImportLocation() common.Location {
+func (e *StackTraceError) ImportLocation() common.Location {
 	return e.Location
 }
 
-// PositionedError wraps an unpositioned error with position info
+func (e *StackTraceError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
+// PositionedError wraps an un-positioned error with position info.
 type PositionedError struct {
 	Err error
 	ast.Range
@@ -217,15 +221,20 @@ type ConditionError struct {
 	ConditionKind ast.ConditionKind
 }
 
-var _ errors.UserError = ConditionError{}
+var _ errors.UserError = &ConditionError{}
+var _ HasLocationRange = &ConditionError{}
 
-func (ConditionError) IsUserError() {}
+func (*ConditionError) IsUserError() {}
 
-func (e ConditionError) Error() string {
+func (e *ConditionError) Error() string {
 	if e.Message == "" {
 		return fmt.Sprintf("%s failed", e.ConditionKind.Name())
 	}
 	return fmt.Sprintf("%s failed: %s", e.ConditionKind.Name(), e.Message)
+}
+
+func (e *ConditionError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // RedeclarationError
@@ -234,7 +243,7 @@ type RedeclarationError struct {
 	Name string
 }
 
-var _ errors.UserError = RedeclarationError{}
+var _ errors.UserError = &RedeclarationError{}
 
 func (RedeclarationError) IsUserError() {}
 
@@ -251,16 +260,17 @@ type DereferenceError struct {
 	LocationRange
 }
 
-var _ errors.UserError = DereferenceError{}
-var _ errors.SecondaryError = DereferenceError{}
+var _ errors.UserError = &DereferenceError{}
+var _ errors.SecondaryError = &DereferenceError{}
+var _ HasLocationRange = &DereferenceError{}
 
-func (DereferenceError) IsUserError() {}
+func (*DereferenceError) IsUserError() {}
 
-func (e DereferenceError) Error() string {
+func (e *DereferenceError) Error() string {
 	return "dereference failed"
 }
 
-func (e DereferenceError) SecondaryError() string {
+func (e *DereferenceError) SecondaryError() string {
 	if e.Cause != "" {
 		return e.Cause
 	}
@@ -276,18 +286,27 @@ func (e DereferenceError) SecondaryError() string {
 	)
 }
 
+func (e *DereferenceError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
 // OverflowError
 
 type OverflowError struct {
 	LocationRange
 }
 
-var _ errors.UserError = OverflowError{}
+var _ errors.UserError = &OverflowError{}
+var _ HasLocationRange = &OverflowError{}
 
-func (OverflowError) IsUserError() {}
+func (*OverflowError) IsUserError() {}
 
-func (e OverflowError) Error() string {
+func (e *OverflowError) Error() string {
 	return "overflow"
+}
+
+func (e *OverflowError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // UnderflowError
@@ -296,12 +315,17 @@ type UnderflowError struct {
 	LocationRange
 }
 
-var _ errors.UserError = UnderflowError{}
+var _ errors.UserError = &UnderflowError{}
+var _ HasLocationRange = &UnderflowError{}
 
-func (UnderflowError) IsUserError() {}
+func (*UnderflowError) IsUserError() {}
 
-func (e UnderflowError) Error() string {
+func (e *UnderflowError) Error() string {
 	return "underflow"
+}
+
+func (e *UnderflowError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // NegativeShiftError
@@ -310,12 +334,17 @@ type NegativeShiftError struct {
 	LocationRange
 }
 
-var _ errors.UserError = NegativeShiftError{}
+var _ errors.UserError = &NegativeShiftError{}
+var _ HasLocationRange = &NegativeShiftError{}
 
-func (NegativeShiftError) IsUserError() {}
+func (*NegativeShiftError) IsUserError() {}
 
-func (e NegativeShiftError) Error() string {
+func (e *NegativeShiftError) Error() string {
 	return "negative shift"
+}
+
+func (e *NegativeShiftError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // DivisionByZeroError
@@ -324,12 +353,17 @@ type DivisionByZeroError struct {
 	LocationRange
 }
 
-var _ errors.UserError = DivisionByZeroError{}
+var _ errors.UserError = &DivisionByZeroError{}
+var _ HasLocationRange = &DivisionByZeroError{}
 
-func (DivisionByZeroError) IsUserError() {}
+func (*DivisionByZeroError) IsUserError() {}
 
-func (e DivisionByZeroError) Error() string {
+func (e *DivisionByZeroError) Error() string {
 	return "division by zero"
+}
+
+func (e *DivisionByZeroError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // InvalidatedResourceError
@@ -337,15 +371,20 @@ type InvalidatedResourceError struct {
 	LocationRange
 }
 
-var _ errors.InternalError = InvalidatedResourceError{}
+var _ errors.InternalError = &InvalidatedResourceError{}
+var _ HasLocationRange = &InvalidatedResourceError{}
 
-func (InvalidatedResourceError) IsInternalError() {}
+func (*InvalidatedResourceError) IsInternalError() {}
 
-func (e InvalidatedResourceError) Error() string {
+func (e *InvalidatedResourceError) Error() string {
 	return fmt.Sprintf(
 		"%s resource is invalidated and cannot be used anymore",
 		errors.InternalErrorMessagePrefix,
 	)
+}
+
+func (e *InvalidatedResourceError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // DestroyedResourceError is the error which is reported
@@ -354,12 +393,17 @@ type DestroyedResourceError struct {
 	LocationRange
 }
 
-var _ errors.UserError = DestroyedResourceError{}
+var _ errors.UserError = &DestroyedResourceError{}
+var _ HasLocationRange = &DestroyedResourceError{}
 
-func (DestroyedResourceError) IsUserError() {}
+func (*DestroyedResourceError) IsUserError() {}
 
-func (e DestroyedResourceError) Error() string {
+func (e *DestroyedResourceError) Error() string {
 	return "resource was destroyed and cannot be used anymore"
+}
+
+func (e *DestroyedResourceError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // ForceNilError
@@ -367,12 +411,17 @@ type ForceNilError struct {
 	LocationRange
 }
 
-var _ errors.UserError = ForceNilError{}
+var _ errors.UserError = &ForceNilError{}
+var _ HasLocationRange = &ForceNilError{}
 
-func (ForceNilError) IsUserError() {}
+func (*ForceNilError) IsUserError() {}
 
-func (e ForceNilError) Error() string {
+func (e *ForceNilError) Error() string {
 	return "unexpectedly found nil while forcing an Optional value"
+}
+
+func (e *ForceNilError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // ForceCastTypeMismatchError
@@ -382,11 +431,12 @@ type ForceCastTypeMismatchError struct {
 	LocationRange
 }
 
-var _ errors.UserError = ForceCastTypeMismatchError{}
+var _ errors.UserError = &ForceCastTypeMismatchError{}
+var _ HasLocationRange = &ForceCastTypeMismatchError{}
 
-func (ForceCastTypeMismatchError) IsUserError() {}
+func (*ForceCastTypeMismatchError) IsUserError() {}
 
-func (e ForceCastTypeMismatchError) Error() string {
+func (e *ForceCastTypeMismatchError) Error() string {
 	expected, actual := sema.ErrorMessageExpectedActualTypes(
 		e.ExpectedType,
 		e.ActualType,
@@ -399,6 +449,10 @@ func (e ForceCastTypeMismatchError) Error() string {
 	)
 }
 
+func (e *ForceCastTypeMismatchError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
 // TypeMismatchError
 type TypeMismatchError struct {
 	ExpectedType sema.Type
@@ -406,11 +460,12 @@ type TypeMismatchError struct {
 	LocationRange
 }
 
-var _ errors.UserError = TypeMismatchError{}
+var _ errors.UserError = &TypeMismatchError{}
+var _ HasLocationRange = &TypeMismatchError{}
 
-func (TypeMismatchError) IsUserError() {}
+func (*TypeMismatchError) IsUserError() {}
 
-func (e TypeMismatchError) Error() string {
+func (e *TypeMismatchError) Error() string {
 	expected, actual := sema.ErrorMessageExpectedActualTypes(
 		e.ExpectedType,
 		e.ActualType,
@@ -423,6 +478,10 @@ func (e TypeMismatchError) Error() string {
 	)
 }
 
+func (e *TypeMismatchError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
 // InvalidMemberReferenceError
 type InvalidMemberReferenceError struct {
 	ExpectedType sema.Type
@@ -430,11 +489,12 @@ type InvalidMemberReferenceError struct {
 	LocationRange
 }
 
-var _ errors.UserError = InvalidMemberReferenceError{}
+var _ errors.UserError = &InvalidMemberReferenceError{}
+var _ HasLocationRange = &InvalidMemberReferenceError{}
 
-func (InvalidMemberReferenceError) IsUserError() {}
+func (*InvalidMemberReferenceError) IsUserError() {}
 
-func (e InvalidMemberReferenceError) Error() string {
+func (e *InvalidMemberReferenceError) Error() string {
 	expected, actual := sema.ErrorMessageExpectedActualTypes(
 		e.ExpectedType,
 		e.ActualType,
@@ -447,6 +507,10 @@ func (e InvalidMemberReferenceError) Error() string {
 	)
 }
 
+func (e *InvalidMemberReferenceError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
 // InvalidPathDomainError
 type InvalidPathDomainError struct {
 	LocationRange
@@ -454,16 +518,17 @@ type InvalidPathDomainError struct {
 	ActualDomain    common.PathDomain
 }
 
-var _ errors.UserError = InvalidPathDomainError{}
-var _ errors.SecondaryError = InvalidPathDomainError{}
+var _ errors.UserError = &InvalidPathDomainError{}
+var _ errors.SecondaryError = &InvalidPathDomainError{}
+var _ HasLocationRange = &InvalidPathDomainError{}
 
-func (InvalidPathDomainError) IsUserError() {}
+func (*InvalidPathDomainError) IsUserError() {}
 
-func (e InvalidPathDomainError) Error() string {
+func (e *InvalidPathDomainError) Error() string {
 	return "invalid path domain"
 }
 
-func (e InvalidPathDomainError) SecondaryError() string {
+func (e *InvalidPathDomainError) SecondaryError() string {
 
 	domainNames := make([]string, len(e.ExpectedDomains))
 
@@ -478,6 +543,10 @@ func (e InvalidPathDomainError) SecondaryError() string {
 	)
 }
 
+func (e *InvalidPathDomainError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
 // OverwriteError
 type OverwriteError struct {
 	LocationRange
@@ -485,16 +554,21 @@ type OverwriteError struct {
 	Address AddressValue
 }
 
-var _ errors.UserError = OverwriteError{}
+var _ errors.UserError = &OverwriteError{}
+var _ HasLocationRange = &OverwriteError{}
 
-func (OverwriteError) IsUserError() {}
+func (*OverwriteError) IsUserError() {}
 
-func (e OverwriteError) Error() string {
+func (e *OverwriteError) Error() string {
 	return fmt.Sprintf(
 		"failed to save object: path %s in account %s already stores an object",
 		e.Path,
 		e.Address,
 	)
+}
+
+func (e *OverwriteError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // ArrayIndexOutOfBoundsError
@@ -529,15 +603,20 @@ type ArraySliceIndicesError struct {
 	Size      int
 }
 
-var _ errors.UserError = ArraySliceIndicesError{}
+var _ errors.UserError = &ArraySliceIndicesError{}
+var _ HasLocationRange = &ArraySliceIndicesError{}
 
-func (ArraySliceIndicesError) IsUserError() {}
+func (*ArraySliceIndicesError) IsUserError() {}
 
-func (e ArraySliceIndicesError) Error() string {
+func (e *ArraySliceIndicesError) Error() string {
 	return fmt.Sprintf(
 		"slice indices [%d:%d] are out of bounds (size %d)",
 		e.FromIndex, e.UpToIndex, e.Size,
 	)
+}
+
+func (e *ArraySliceIndicesError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // InvalidSliceIndexError is returned when a slice index is invalid, such as fromIndex > upToIndex
@@ -548,12 +627,17 @@ type InvalidSliceIndexError struct {
 	UpToIndex int
 }
 
-var _ errors.UserError = InvalidSliceIndexError{}
+var _ errors.UserError = &InvalidSliceIndexError{}
+var _ HasLocationRange = &InvalidSliceIndexError{}
 
-func (InvalidSliceIndexError) IsUserError() {}
+func (*InvalidSliceIndexError) IsUserError() {}
 
-func (e InvalidSliceIndexError) Error() string {
+func (e *InvalidSliceIndexError) Error() string {
 	return fmt.Sprintf("invalid slice index: %d > %d", e.FromIndex, e.UpToIndex)
+}
+
+func (e *InvalidSliceIndexError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // StringIndexOutOfBoundsError
@@ -563,16 +647,21 @@ type StringIndexOutOfBoundsError struct {
 	Length int
 }
 
-var _ errors.UserError = StringIndexOutOfBoundsError{}
+var _ errors.UserError = &StringIndexOutOfBoundsError{}
+var _ HasLocationRange = &StringIndexOutOfBoundsError{}
 
-func (StringIndexOutOfBoundsError) IsUserError() {}
+func (*StringIndexOutOfBoundsError) IsUserError() {}
 
-func (e StringIndexOutOfBoundsError) Error() string {
+func (e *StringIndexOutOfBoundsError) Error() string {
 	return fmt.Sprintf(
 		"string index out of bounds: %d, but length is %d",
 		e.Index,
 		e.Length,
 	)
+}
+
+func (e *StringIndexOutOfBoundsError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // StringSliceIndicesError
@@ -583,15 +672,20 @@ type StringSliceIndicesError struct {
 	Length    int
 }
 
-var _ errors.UserError = StringSliceIndicesError{}
+var _ errors.UserError = &StringSliceIndicesError{}
+var _ HasLocationRange = &StringSliceIndicesError{}
 
-func (StringSliceIndicesError) IsUserError() {}
+func (*StringSliceIndicesError) IsUserError() {}
 
-func (e StringSliceIndicesError) Error() string {
+func (e *StringSliceIndicesError) Error() string {
 	return fmt.Sprintf(
 		"string slice indices [%d:%d] are out of bounds (length %d)",
 		e.FromIndex, e.UpToIndex, e.Length,
 	)
+}
+
+func (e *StringSliceIndicesError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // EventEmissionUnavailableError
@@ -599,12 +693,17 @@ type EventEmissionUnavailableError struct {
 	LocationRange
 }
 
-var _ errors.UserError = EventEmissionUnavailableError{}
+var _ errors.UserError = &EventEmissionUnavailableError{}
+var _ HasLocationRange = &EventEmissionUnavailableError{}
 
-func (EventEmissionUnavailableError) IsUserError() {}
+func (*EventEmissionUnavailableError) IsUserError() {}
 
-func (e EventEmissionUnavailableError) Error() string {
+func (e *EventEmissionUnavailableError) Error() string {
 	return "cannot emit event: event emission is unavailable in this configuration of Cadence"
+}
+
+func (e *EventEmissionUnavailableError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // UUIDUnavailableError
@@ -612,12 +711,17 @@ type UUIDUnavailableError struct {
 	LocationRange
 }
 
-var _ errors.UserError = UUIDUnavailableError{}
+var _ errors.UserError = &UUIDUnavailableError{}
+var _ HasLocationRange = &UUIDUnavailableError{}
 
-func (UUIDUnavailableError) IsUserError() {}
+func (*UUIDUnavailableError) IsUserError() {}
 
-func (e UUIDUnavailableError) Error() string {
+func (e *UUIDUnavailableError) Error() string {
 	return "cannot get UUID: UUID access is unavailable in this configuration of Cadence"
+}
+
+func (e *UUIDUnavailableError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // TypeLoadingError
@@ -625,11 +729,11 @@ type TypeLoadingError struct {
 	TypeID TypeID
 }
 
-var _ errors.UserError = TypeLoadingError{}
+var _ errors.UserError = &TypeLoadingError{}
 
-func (TypeLoadingError) IsUserError() {}
+func (*TypeLoadingError) IsUserError() {}
 
-func (e TypeLoadingError) Error() string {
+func (e *TypeLoadingError) Error() string {
 	return fmt.Sprintf("failed to load type: %s", e.TypeID)
 }
 
@@ -639,12 +743,17 @@ type UseBeforeInitializationError struct {
 	Name string
 }
 
-var _ errors.UserError = UseBeforeInitializationError{}
+var _ errors.UserError = &UseBeforeInitializationError{}
+var _ HasLocationRange = &UseBeforeInitializationError{}
 
-func (UseBeforeInitializationError) IsUserError() {}
+func (*UseBeforeInitializationError) IsUserError() {}
 
-func (e UseBeforeInitializationError) Error() string {
+func (e *UseBeforeInitializationError) Error() string {
 	return fmt.Sprintf("member `%s` is used before it has been initialized", e.Name)
+}
+
+func (e *UseBeforeInitializationError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // MemberAccessTypeError
@@ -654,17 +763,22 @@ type MemberAccessTypeError struct {
 	LocationRange
 }
 
-var _ errors.InternalError = MemberAccessTypeError{}
+var _ errors.InternalError = &MemberAccessTypeError{}
+var _ HasLocationRange = &MemberAccessTypeError{}
 
-func (MemberAccessTypeError) IsInternalError() {}
+func (*MemberAccessTypeError) IsInternalError() {}
 
-func (e MemberAccessTypeError) Error() string {
+func (e *MemberAccessTypeError) Error() string {
 	return fmt.Sprintf(
 		"%s invalid member access: expected `%s`, got `%s`",
 		errors.InternalErrorMessagePrefix,
 		e.ExpectedType.QualifiedString(),
 		e.ActualType.QualifiedString(),
 	)
+}
+
+func (e *MemberAccessTypeError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // ValueTransferTypeError
@@ -674,11 +788,12 @@ type ValueTransferTypeError struct {
 	LocationRange
 }
 
-var _ errors.InternalError = ValueTransferTypeError{}
+var _ errors.InternalError = &ValueTransferTypeError{}
+var _ HasLocationRange = &ValueTransferTypeError{}
 
-func (ValueTransferTypeError) IsInternalError() {}
+func (*ValueTransferTypeError) IsInternalError() {}
 
-func (e ValueTransferTypeError) Error() string {
+func (e *ValueTransferTypeError) Error() string {
 	expected, actual := sema.ErrorMessageExpectedActualTypes(
 		e.ExpectedType,
 		e.ActualType,
@@ -692,22 +807,31 @@ func (e ValueTransferTypeError) Error() string {
 	)
 }
 
+func (e *ValueTransferTypeError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
 // UnexpectedMappedEntitlementError
 type UnexpectedMappedEntitlementError struct {
 	Type sema.Type
 	LocationRange
 }
 
-var _ errors.InternalError = UnexpectedMappedEntitlementError{}
+var _ errors.InternalError = &UnexpectedMappedEntitlementError{}
+var _ HasLocationRange = &UnexpectedMappedEntitlementError{}
 
-func (UnexpectedMappedEntitlementError) IsInternalError() {}
+func (*UnexpectedMappedEntitlementError) IsInternalError() {}
 
-func (e UnexpectedMappedEntitlementError) Error() string {
+func (e *UnexpectedMappedEntitlementError) Error() string {
 	return fmt.Sprintf(
 		"%s invalid transfer of value: found an unexpected runtime mapped entitlement `%s`",
 		errors.InternalErrorMessagePrefix,
 		e.Type.QualifiedString(),
 	)
+}
+
+func (e *UnexpectedMappedEntitlementError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // ResourceConstructionError
@@ -716,17 +840,22 @@ type ResourceConstructionError struct {
 	LocationRange
 }
 
-var _ errors.InternalError = ResourceConstructionError{}
+var _ errors.InternalError = &ResourceConstructionError{}
+var _ HasLocationRange = &ResourceConstructionError{}
 
-func (ResourceConstructionError) IsInternalError() {}
+func (*ResourceConstructionError) IsInternalError() {}
 
-func (e ResourceConstructionError) Error() string {
+func (e *ResourceConstructionError) Error() string {
 	return fmt.Sprintf(
 		"%s cannot create resource `%s`: outside of declaring location %s",
 		errors.InternalErrorMessagePrefix,
 		e.CompositeType.QualifiedString(),
 		e.CompositeType.Location.String(),
 	)
+}
+
+func (e *ResourceConstructionError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // ContainerMutationError
@@ -736,11 +865,12 @@ type ContainerMutationError struct {
 	LocationRange
 }
 
-var _ errors.UserError = ContainerMutationError{}
+var _ errors.UserError = &ContainerMutationError{}
+var _ HasLocationRange = &ContainerMutationError{}
 
-func (ContainerMutationError) IsUserError() {}
+func (*ContainerMutationError) IsUserError() {}
 
-func (e ContainerMutationError) Error() string {
+func (e *ContainerMutationError) Error() string {
 	return fmt.Sprintf(
 		"invalid container update: expected a subtype of `%s`, found `%s`",
 		e.ExpectedType.QualifiedString(),
@@ -748,16 +878,20 @@ func (e ContainerMutationError) Error() string {
 	)
 }
 
+func (e *ContainerMutationError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
 // NonStorableValueError
 type NonStorableValueError struct {
 	Value Value
 }
 
-var _ errors.UserError = NonStorableValueError{}
+var _ errors.UserError = &NonStorableValueError{}
 
-func (NonStorableValueError) IsUserError() {}
+func (*NonStorableValueError) IsUserError() {}
 
-func (e NonStorableValueError) Error() string {
+func (e *NonStorableValueError) Error() string {
 	return "cannot store non-storable value"
 }
 
@@ -766,11 +900,11 @@ type NonStorableStaticTypeError struct {
 	Type sema.Type
 }
 
-var _ errors.UserError = NonStorableStaticTypeError{}
+var _ errors.UserError = &NonStorableStaticTypeError{}
 
-func (NonStorableStaticTypeError) IsUserError() {}
+func (*NonStorableStaticTypeError) IsUserError() {}
 
-func (e NonStorableStaticTypeError) Error() string {
+func (e *NonStorableStaticTypeError) Error() string {
 	return fmt.Sprintf(
 		"cannot store non-storable type: `%s`",
 		e.Type.QualifiedString(),
@@ -783,11 +917,11 @@ type InterfaceMissingLocationError struct {
 	QualifiedIdentifier string
 }
 
-var _ errors.UserError = InterfaceMissingLocationError{}
+var _ errors.UserError = &InterfaceMissingLocationError{}
 
-func (InterfaceMissingLocationError) IsUserError() {}
+func (*InterfaceMissingLocationError) IsUserError() {}
 
-func (e InterfaceMissingLocationError) Error() string {
+func (e *InterfaceMissingLocationError) Error() string {
 	return fmt.Sprintf(
 		"tried to look up interface %s without a location",
 		e.QualifiedIdentifier,
@@ -803,11 +937,12 @@ type InvalidOperandsError struct {
 	Operation    ast.Operation
 }
 
-var _ errors.UserError = InvalidOperandsError{}
+var _ errors.UserError = &InvalidOperandsError{}
+var _ HasLocationRange = &InvalidOperandsError{}
 
-func (InvalidOperandsError) IsUserError() {}
+func (*InvalidOperandsError) IsUserError() {}
 
-func (e InvalidOperandsError) Error() string {
+func (e *InvalidOperandsError) Error() string {
 	var op string
 	if e.Operation == ast.OperationUnknown {
 		op = e.FunctionName
@@ -823,6 +958,10 @@ func (e InvalidOperandsError) Error() string {
 	)
 }
 
+func (e *InvalidOperandsError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
 // InvalidPublicKeyError is reported during PublicKey creation, if the PublicKey is invalid.
 type InvalidPublicKeyError struct {
 	PublicKey *ArrayValue
@@ -830,16 +969,21 @@ type InvalidPublicKeyError struct {
 	LocationRange
 }
 
-var _ errors.UserError = InvalidPublicKeyError{}
+var _ errors.UserError = &InvalidPublicKeyError{}
+var _ HasLocationRange = &InvalidPublicKeyError{}
 
-func (InvalidPublicKeyError) IsUserError() {}
+func (*InvalidPublicKeyError) IsUserError() {}
 
-func (e InvalidPublicKeyError) Error() string {
+func (e *InvalidPublicKeyError) Error() string {
 	return fmt.Sprintf("invalid public key: %s, err: %s", e.PublicKey, e.Err)
 }
 
-func (e InvalidPublicKeyError) Unwrap() error {
+func (e *InvalidPublicKeyError) Unwrap() error {
 	return e.Err
+}
+
+func (e *InvalidPublicKeyError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // NonTransferableValueError
@@ -847,11 +991,11 @@ type NonTransferableValueError struct {
 	Value Value
 }
 
-var _ errors.UserError = NonTransferableValueError{}
+var _ errors.UserError = &NonTransferableValueError{}
 
-func (NonTransferableValueError) IsUserError() {}
+func (*NonTransferableValueError) IsUserError() {}
 
-func (e NonTransferableValueError) Error() string {
+func (e *NonTransferableValueError) Error() string {
 	return "cannot transfer non-transferable value"
 }
 
@@ -860,12 +1004,17 @@ type DuplicateKeyInResourceDictionaryError struct {
 	LocationRange
 }
 
-var _ errors.UserError = DuplicateKeyInResourceDictionaryError{}
+var _ errors.UserError = &DuplicateKeyInResourceDictionaryError{}
+var _ HasLocationRange = &DuplicateKeyInResourceDictionaryError{}
 
-func (DuplicateKeyInResourceDictionaryError) IsUserError() {}
+func (*DuplicateKeyInResourceDictionaryError) IsUserError() {}
 
-func (e DuplicateKeyInResourceDictionaryError) Error() string {
+func (e *DuplicateKeyInResourceDictionaryError) Error() string {
 	return "duplicate key in resource dictionary"
+}
+
+func (e *DuplicateKeyInResourceDictionaryError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // StorageMutatedDuringIterationError
@@ -873,7 +1022,8 @@ type StorageMutatedDuringIterationError struct {
 	LocationRange
 }
 
-var _ errors.UserError = StorageMutatedDuringIterationError{}
+var _ errors.UserError = &StorageMutatedDuringIterationError{}
+var _ HasLocationRange = &StorageMutatedDuringIterationError{}
 
 func (StorageMutatedDuringIterationError) IsUserError() {}
 
@@ -881,17 +1031,26 @@ func (StorageMutatedDuringIterationError) Error() string {
 	return "storage iteration continued after modifying storage"
 }
 
+func (e *StorageMutatedDuringIterationError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
 // ContainerMutatedDuringIterationError
 type ContainerMutatedDuringIterationError struct {
 	LocationRange
 }
 
-var _ errors.UserError = ContainerMutatedDuringIterationError{}
+var _ errors.UserError = &ContainerMutatedDuringIterationError{}
+var _ HasLocationRange = &ContainerMutatedDuringIterationError{}
 
-func (ContainerMutatedDuringIterationError) IsUserError() {}
+func (*ContainerMutatedDuringIterationError) IsUserError() {}
 
-func (ContainerMutatedDuringIterationError) Error() string {
+func (*ContainerMutatedDuringIterationError) Error() string {
 	return "resource container modified during iteration"
+}
+
+func (e *ContainerMutatedDuringIterationError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // InvalidHexByteError
@@ -900,12 +1059,17 @@ type InvalidHexByteError struct {
 	Byte byte
 }
 
-var _ errors.UserError = InvalidHexByteError{}
+var _ errors.UserError = &InvalidHexByteError{}
+var _ HasLocationRange = &InvalidHexByteError{}
 
-func (InvalidHexByteError) IsUserError() {}
+func (*InvalidHexByteError) IsUserError() {}
 
-func (e InvalidHexByteError) Error() string {
+func (e *InvalidHexByteError) Error() string {
 	return fmt.Sprintf("invalid byte in hex string: %x", e.Byte)
+}
+
+func (e *InvalidHexByteError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // InvalidHexLengthError
@@ -913,12 +1077,17 @@ type InvalidHexLengthError struct {
 	LocationRange
 }
 
-var _ errors.UserError = InvalidHexLengthError{}
+var _ errors.UserError = &InvalidHexLengthError{}
+var _ HasLocationRange = &InvalidHexLengthError{}
 
-func (InvalidHexLengthError) IsUserError() {}
+func (*InvalidHexLengthError) IsUserError() {}
 
-func (InvalidHexLengthError) Error() string {
+func (*InvalidHexLengthError) Error() string {
 	return "hex string has non-even length"
+}
+
+func (e *InvalidHexLengthError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // InvalidatedResourceReferenceError is reported when accessing a reference value
@@ -927,12 +1096,17 @@ type InvalidatedResourceReferenceError struct {
 	LocationRange
 }
 
-var _ errors.UserError = InvalidatedResourceReferenceError{}
+var _ errors.UserError = &InvalidatedResourceReferenceError{}
+var _ HasLocationRange = &InvalidatedResourceReferenceError{}
 
-func (InvalidatedResourceReferenceError) IsUserError() {}
+func (*InvalidatedResourceReferenceError) IsUserError() {}
 
-func (e InvalidatedResourceReferenceError) Error() string {
+func (e *InvalidatedResourceReferenceError) Error() string {
 	return "referenced resource has been moved or destroyed after taking the reference"
+}
+
+func (e *InvalidatedResourceReferenceError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // DuplicateAttachmentError
@@ -942,16 +1116,21 @@ type DuplicateAttachmentError struct {
 	LocationRange
 }
 
-var _ errors.UserError = DuplicateAttachmentError{}
+var _ errors.UserError = &DuplicateAttachmentError{}
+var _ HasLocationRange = &DuplicateAttachmentError{}
 
-func (DuplicateAttachmentError) IsUserError() {}
+func (*DuplicateAttachmentError) IsUserError() {}
 
-func (e DuplicateAttachmentError) Error() string {
+func (e *DuplicateAttachmentError) Error() string {
 	return fmt.Sprintf(
 		"cannot attach %s to %s, as it already exists on that value",
 		e.AttachmentType.QualifiedString(),
 		e.Value.QualifiedIdentifier,
 	)
+}
+
+func (e *DuplicateAttachmentError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // AttachmentIterationMutationError
@@ -960,15 +1139,20 @@ type AttachmentIterationMutationError struct {
 	LocationRange
 }
 
-var _ errors.UserError = AttachmentIterationMutationError{}
+var _ errors.UserError = &AttachmentIterationMutationError{}
+var _ HasLocationRange = &AttachmentIterationMutationError{}
 
-func (AttachmentIterationMutationError) IsUserError() {}
+func (*AttachmentIterationMutationError) IsUserError() {}
 
-func (e AttachmentIterationMutationError) Error() string {
+func (e *AttachmentIterationMutationError) Error() string {
 	return fmt.Sprintf(
 		"cannot modify %s's attachments while iterating over them",
 		e.Value.QualifiedIdentifier,
 	)
+}
+
+func (e *AttachmentIterationMutationError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // InvalidAttachmentOperationTargetError
@@ -977,11 +1161,12 @@ type InvalidAttachmentOperationTargetError struct {
 	LocationRange
 }
 
-var _ errors.InternalError = InvalidAttachmentOperationTargetError{}
+var _ errors.InternalError = &InvalidAttachmentOperationTargetError{}
+var _ HasLocationRange = &InvalidAttachmentOperationTargetError{}
 
-func (InvalidAttachmentOperationTargetError) IsInternalError() {}
+func (*InvalidAttachmentOperationTargetError) IsInternalError() {}
 
-func (e InvalidAttachmentOperationTargetError) Error() string {
+func (e *InvalidAttachmentOperationTargetError) Error() string {
 	return fmt.Sprintf(
 		"%s cannot add or remove attachment with non-owned value (%T)",
 		errors.InternalErrorMessagePrefix,
@@ -989,17 +1174,26 @@ func (e InvalidAttachmentOperationTargetError) Error() string {
 	)
 }
 
+func (e *InvalidAttachmentOperationTargetError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
 // RecursiveTransferError
 type RecursiveTransferError struct {
 	LocationRange
 }
 
-var _ errors.UserError = RecursiveTransferError{}
+var _ errors.UserError = &RecursiveTransferError{}
+var _ HasLocationRange = &RecursiveTransferError{}
 
-func (RecursiveTransferError) IsUserError() {}
+func (*RecursiveTransferError) IsUserError() {}
 
-func (RecursiveTransferError) Error() string {
+func (*RecursiveTransferError) Error() string {
 	return "recursive transfer of value"
+}
+
+func (e *RecursiveTransferError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 func WrappedExternalError(err error) error {
@@ -1028,16 +1222,21 @@ type CapabilityAddressPublishingError struct {
 	AccountAddress    AddressValue
 }
 
-var _ errors.UserError = CapabilityAddressPublishingError{}
+var _ errors.UserError = &CapabilityAddressPublishingError{}
+var _ HasLocationRange = &CapabilityAddressPublishingError{}
 
-func (CapabilityAddressPublishingError) IsUserError() {}
+func (*CapabilityAddressPublishingError) IsUserError() {}
 
-func (e CapabilityAddressPublishingError) Error() string {
+func (e *CapabilityAddressPublishingError) Error() string {
 	return fmt.Sprintf(
 		"cannot publish capability of account %s in account %s",
 		e.CapabilityAddress.String(),
 		e.AccountAddress.String(),
 	)
+}
+
+func (e *CapabilityAddressPublishingError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // EntitledCapabilityPublishingError
@@ -1047,16 +1246,21 @@ type EntitledCapabilityPublishingError struct {
 	Path       PathValue
 }
 
-var _ errors.UserError = EntitledCapabilityPublishingError{}
+var _ errors.UserError = &EntitledCapabilityPublishingError{}
+var _ HasLocationRange = &EntitledCapabilityPublishingError{}
 
-func (EntitledCapabilityPublishingError) IsUserError() {}
+func (*EntitledCapabilityPublishingError) IsUserError() {}
 
-func (e EntitledCapabilityPublishingError) Error() string {
+func (e *EntitledCapabilityPublishingError) Error() string {
 	return fmt.Sprintf(
 		"cannot publish capability of type `%s` to the path %s",
 		e.BorrowType.ID(),
 		e.Path.String(),
 	)
+}
+
+func (e *EntitledCapabilityPublishingError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // NestedReferenceError
@@ -1065,15 +1269,20 @@ type NestedReferenceError struct {
 	LocationRange
 }
 
-var _ errors.UserError = NestedReferenceError{}
+var _ errors.UserError = &NestedReferenceError{}
+var _ HasLocationRange = &NestedReferenceError{}
 
-func (NestedReferenceError) IsUserError() {}
+func (*NestedReferenceError) IsUserError() {}
 
-func (e NestedReferenceError) Error() string {
+func (e *NestedReferenceError) Error() string {
 	return fmt.Sprintf(
 		"cannot create a nested reference to %s",
 		e.Value.String(),
 	)
+}
+
+func (e *NestedReferenceError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // NonOptionalReferenceToNilError
@@ -1082,15 +1291,20 @@ type NonOptionalReferenceToNilError struct {
 	LocationRange
 }
 
-var _ errors.UserError = NonOptionalReferenceToNilError{}
+var _ errors.UserError = &NonOptionalReferenceToNilError{}
+var _ HasLocationRange = &NonOptionalReferenceToNilError{}
 
-func (NonOptionalReferenceToNilError) IsUserError() {}
+func (*NonOptionalReferenceToNilError) IsUserError() {}
 
-func (e NonOptionalReferenceToNilError) Error() string {
+func (e *NonOptionalReferenceToNilError) Error() string {
 	return fmt.Sprintf(
 		"cannot create a reference to nil: expected `%s`, but found `nil`",
 		e.ReferenceType.ID(),
 	)
+}
+
+func (e *NonOptionalReferenceToNilError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // InclusiveRangeConstructionError
@@ -1100,16 +1314,21 @@ type InclusiveRangeConstructionError struct {
 	Message string
 }
 
-var _ errors.UserError = InclusiveRangeConstructionError{}
+var _ errors.UserError = &InclusiveRangeConstructionError{}
+var _ HasLocationRange = &InclusiveRangeConstructionError{}
 
-func (InclusiveRangeConstructionError) IsUserError() {}
+func (*InclusiveRangeConstructionError) IsUserError() {}
 
-func (e InclusiveRangeConstructionError) Error() string {
+func (e *InclusiveRangeConstructionError) Error() string {
 	const message = "InclusiveRange construction failed"
 	if e.Message == "" {
 		return message
 	}
 	return fmt.Sprintf("%s: %s", message, e.Message)
+}
+
+func (e *InclusiveRangeConstructionError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // InvalidCapabilityIssueTypeError
@@ -1119,11 +1338,12 @@ type InvalidCapabilityIssueTypeError struct {
 	LocationRange
 }
 
-var _ errors.UserError = InvalidCapabilityIssueTypeError{}
+var _ errors.UserError = &InvalidCapabilityIssueTypeError{}
+var _ HasLocationRange = &InvalidCapabilityIssueTypeError{}
 
-func (InvalidCapabilityIssueTypeError) IsUserError() {}
+func (*InvalidCapabilityIssueTypeError) IsUserError() {}
 
-func (e InvalidCapabilityIssueTypeError) Error() string {
+func (e *InvalidCapabilityIssueTypeError) Error() string {
 	return fmt.Sprintf(
 		"invalid type: expected %s, got `%s`",
 		e.ExpectedTypeDescription,
@@ -1131,20 +1351,29 @@ func (e InvalidCapabilityIssueTypeError) Error() string {
 	)
 }
 
+func (e *InvalidCapabilityIssueTypeError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
 // ResourceReferenceDereferenceError
 type ResourceReferenceDereferenceError struct {
 	LocationRange
 }
 
-var _ errors.InternalError = ResourceReferenceDereferenceError{}
+var _ errors.InternalError = &ResourceReferenceDereferenceError{}
+var _ HasLocationRange = &ResourceReferenceDereferenceError{}
 
-func (ResourceReferenceDereferenceError) IsInternalError() {}
+func (*ResourceReferenceDereferenceError) IsInternalError() {}
 
-func (e ResourceReferenceDereferenceError) Error() string {
+func (e *ResourceReferenceDereferenceError) Error() string {
 	return fmt.Sprintf(
 		"%s resource-references cannot be dereferenced",
 		errors.InternalErrorMessagePrefix,
 	)
+}
+
+func (e *ResourceReferenceDereferenceError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // ResourceLossError
@@ -1152,23 +1381,28 @@ type ResourceLossError struct {
 	LocationRange
 }
 
-var _ errors.UserError = ResourceLossError{}
+var _ errors.UserError = &ResourceLossError{}
+var _ HasLocationRange = &ResourceLossError{}
 
-func (ResourceLossError) IsUserError() {}
+func (*ResourceLossError) IsUserError() {}
 
-func (e ResourceLossError) Error() string {
+func (e *ResourceLossError) Error() string {
 	return "resource loss: attempting to assign to non-nil resource-typed value"
+}
+
+func (e *ResourceLossError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // InvalidCapabilityIDError
 
 type InvalidCapabilityIDError struct{}
 
-var _ errors.InternalError = InvalidCapabilityIDError{}
+var _ errors.InternalError = &InvalidCapabilityIDError{}
 
-func (InvalidCapabilityIDError) IsInternalError() {}
+func (*InvalidCapabilityIDError) IsInternalError() {}
 
-func (e InvalidCapabilityIDError) Error() string {
+func (e *InvalidCapabilityIDError) Error() string {
 	return fmt.Sprintf(
 		"%s capability created with invalid ID",
 		errors.InternalErrorMessagePrefix,
@@ -1180,12 +1414,17 @@ type ReferencedValueChangedError struct {
 	LocationRange
 }
 
-var _ errors.UserError = ReferencedValueChangedError{}
+var _ errors.UserError = &ReferencedValueChangedError{}
+var _ HasLocationRange = &ReferencedValueChangedError{}
 
-func (ReferencedValueChangedError) IsUserError() {}
+func (*ReferencedValueChangedError) IsUserError() {}
 
-func (e ReferencedValueChangedError) Error() string {
+func (e *ReferencedValueChangedError) Error() string {
 	return "referenced value has been changed after taking the reference"
+}
+
+func (e *ReferencedValueChangedError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // GetCapabilityError
@@ -1193,10 +1432,15 @@ type GetCapabilityError struct {
 	LocationRange
 }
 
-var _ errors.UserError = GetCapabilityError{}
+var _ errors.UserError = &GetCapabilityError{}
+var _ HasLocationRange = &GetCapabilityError{}
 
-func (GetCapabilityError) IsUserError() {}
+func (*GetCapabilityError) IsUserError() {}
 
-func (e GetCapabilityError) Error() string {
+func (e *GetCapabilityError) Error() string {
 	return "cannot get capability"
+}
+
+func (e *GetCapabilityError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
