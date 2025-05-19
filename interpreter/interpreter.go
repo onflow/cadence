@@ -944,7 +944,7 @@ func (interpreter *Interpreter) visitCondition(condition ast.Condition, kind ast
 			message = messageValue.(*StringValue).Str
 		}
 
-		panic(ConditionError{
+		panic(&ConditionError{
 			ConditionKind: kind,
 			Message:       message,
 			LocationRange: LocationRange{
@@ -1417,7 +1417,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				if compositeType.Kind == common.CompositeKindResource &&
 					invocationContext.GetLocation() != compositeType.Location {
 
-					panic(ResourceConstructionError{
+					panic(&ResourceConstructionError{
 						CompositeType: compositeType,
 						LocationRange: locationRange,
 					})
@@ -1442,7 +1442,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 					uuidHandler := config.UUIDHandler
 					if uuidHandler == nil {
-						panic(UUIDUnavailableError{
+						panic(&UUIDUnavailableError{
 							LocationRange: locationRange,
 						})
 					}
@@ -1912,7 +1912,7 @@ func TransferAndConvert(
 
 		resultSemaType := MustConvertStaticToSemaType(resultStaticType, context)
 
-		panic(ValueTransferTypeError{
+		panic(&ValueTransferTypeError{
 			ExpectedType:  targetType,
 			ActualType:    resultSemaType,
 			LocationRange: locationRange,
@@ -2344,7 +2344,7 @@ func shouldConvertReference(
 func checkMappedEntitlements(unwrappedTargetType *sema.ReferenceType, locationRange LocationRange) {
 	// check defensively that we never create a runtime mapped entitlement value
 	if _, isMappedAuth := unwrappedTargetType.Authorization.(*sema.EntitlementMapAccess); isMappedAuth {
-		panic(UnexpectedMappedEntitlementError{
+		panic(&UnexpectedMappedEntitlementError{
 			Type:          unwrappedTargetType,
 			LocationRange: locationRange,
 		})
@@ -4273,7 +4273,7 @@ func AccountStorageIterate(
 		// In order to be safe, we perform this check here to effectively enforce
 		// that users return `false` from their callback in all cases where storage is mutated.
 		if invocationContext.StorageMutatedDuringIteration() {
-			panic(StorageMutatedDuringIterationError{
+			panic(&StorageMutatedDuringIterationError{
 				LocationRange: locationRange,
 			})
 		}
@@ -4434,7 +4434,7 @@ func AccountStorageSave(
 
 	if StoredValueExists(context, address, domain, storageMapKey) {
 		panic(
-			OverwriteError{
+			&OverwriteError{
 				Address:       addressValue,
 				Path:          path,
 				LocationRange: locationRange,
@@ -4621,7 +4621,7 @@ func AccountStorageRead(
 	if !IsSubTypeOfSemaType(invocationContext, valueStaticType, typeParameter) {
 		valueSemaType := MustConvertStaticToSemaType(valueStaticType, invocationContext)
 
-		panic(ForceCastTypeMismatchError{
+		panic(&ForceCastTypeMismatchError{
 			ExpectedType:  typeParameter,
 			ActualType:    valueSemaType,
 			LocationRange: locationRange,
@@ -5069,7 +5069,7 @@ func (interpreter *Interpreter) GetInterfaceType(
 		if interfaceType != nil {
 			return interfaceType, nil
 		}
-		return nil, InterfaceMissingLocationError{
+		return nil, &InterfaceMissingLocationError{
 			QualifiedIdentifier: qualifiedIdentifier,
 		}
 	}
@@ -5268,7 +5268,7 @@ func checkContainerMutation(
 	actualElementType := element.StaticType(context)
 
 	if !IsSubType(context, actualElementType, elementType) {
-		panic(ContainerMutationError{
+		panic(&ContainerMutationError{
 			ExpectedType:  MustConvertStaticToSemaType(elementType, context),
 			ActualType:    MustSemaTypeOfValue(element, context),
 			LocationRange: locationRange,
@@ -5562,7 +5562,7 @@ func (interpreter *Interpreter) startResourceTracking(
 	// resource variable that has not been invalidated properly.
 	// This should not be allowed, and must have been caught by the checker ideally.
 	if _, exists := interpreter.SharedState.resourceVariables[resourceKindedValue]; exists {
-		panic(InvalidatedResourceError{
+		panic(&InvalidatedResourceError{
 			LocationRange: LocationRange{
 				Location:    interpreter.Location,
 				HasPosition: hasPosition,
@@ -5597,7 +5597,7 @@ func (interpreter *Interpreter) checkInvalidatedResourceUse(
 	//
 	// Note: if the `resourceVariables` doesn't have a mapping, that implies an invalidated resource.
 	if existingVar, exists := interpreter.SharedState.resourceVariables[resourceKindedValue]; !exists || existingVar != variable {
-		panic(InvalidatedResourceError{
+		panic(&InvalidatedResourceError{
 			LocationRange: LocationRange{
 				Location:    interpreter.Location,
 				HasPosition: hasPosition,
@@ -5799,7 +5799,7 @@ func (interpreter *Interpreter) ValidateMutation(valueID atree.ValueID, location
 	if !present {
 		return
 	}
-	panic(ContainerMutatedDuringIterationError{
+	panic(&ContainerMutatedDuringIterationError{
 		LocationRange: locationRange,
 	})
 }
@@ -5828,7 +5828,7 @@ func (interpreter *Interpreter) EnforceNotResourceDestruction(
 ) {
 	_, exists := interpreter.SharedState.destroyedResources[valueID]
 	if exists {
-		panic(DestroyedResourceError{
+		panic(&DestroyedResourceError{
 			LocationRange: locationRange,
 		})
 	}
@@ -5868,7 +5868,7 @@ func checkResourceLoss(context ValueStaticTypeContext, value Value, locationRang
 	}
 
 	if !resourceKindedValue.isInvalidatedResource(context) {
-		panic(ResourceLossError{
+		panic(&ResourceLossError{
 			LocationRange: locationRange,
 		})
 	}

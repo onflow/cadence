@@ -210,7 +210,7 @@ func TestInterpretContractTransfer(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var nonTransferableValueError interpreter.NonTransferableValueError
+		var nonTransferableValueError *interpreter.NonTransferableValueError
 		require.ErrorAs(t, err, &nonTransferableValueError)
 	}
 

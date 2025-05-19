@@ -122,7 +122,7 @@ func TestInterpretTransactions(t *testing.T) {
 		err := inter.InvokeTransaction(nil)
 		RequireError(t, err)
 
-		var conditionErr interpreter.ConditionError
+		var conditionErr *interpreter.ConditionError
 		require.ErrorAs(t, err, &conditionErr)
 
 		assert.Equal(t,
@@ -184,7 +184,7 @@ func TestInterpretTransactions(t *testing.T) {
 		err := inter.InvokeTransaction(nil)
 		RequireError(t, err)
 
-		var conditionErr interpreter.ConditionError
+		var conditionErr *interpreter.ConditionError
 		require.ErrorAs(t, err, &conditionErr)
 
 		assert.Equal(t,
@@ -451,7 +451,8 @@ func TestInterpretInvalidTransferInExecute(t *testing.T) {
 	)
 
 	err := inter.InvokeTransaction(nil, signer1)
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	var invalidatedResourceError *interpreter.InvalidatedResourceError
+	require.ErrorAs(t, err, &invalidatedResourceError)
 }
 
 func TestInterpretInvalidRecursiveTransferInExecute(t *testing.T) {
@@ -477,7 +478,8 @@ func TestInterpretInvalidRecursiveTransferInExecute(t *testing.T) {
         `)
 
 		err := inter.InvokeTransaction(nil)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("Dictionary", func(t *testing.T) {
@@ -499,7 +501,8 @@ func TestInterpretInvalidRecursiveTransferInExecute(t *testing.T) {
         `)
 
 		err := inter.InvokeTransaction(nil)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("resource", func(t *testing.T) {
@@ -527,6 +530,7 @@ func TestInterpretInvalidRecursiveTransferInExecute(t *testing.T) {
         `)
 
 		err := inter.InvokeTransaction(nil)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 }

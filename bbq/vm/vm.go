@@ -984,7 +984,7 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 
 	fieldValue := memberAccessibleValue.GetMember(vm.context, EmptyLocationRange, fieldName)
 	if fieldValue == nil {
-		panic(interpreter.UseBeforeInitializationError{
+		panic(&interpreter.UseBeforeInitializationError{
 			Name: fieldName,
 		})
 	}
@@ -1091,7 +1091,7 @@ func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 		targetSemaType := interpreter.MustConvertStaticToSemaType(targetType, vm.context)
 		valueSemaType := interpreter.MustConvertStaticToSemaType(valueType, vm.context)
 
-		panic(interpreter.ForceCastTypeMismatchError{
+		panic(&interpreter.ForceCastTypeMismatchError{
 			ExpectedType:  targetSemaType,
 			ActualType:    valueSemaType,
 			LocationRange: vm.LocationRange(),
@@ -1168,7 +1168,7 @@ func opUnwrap(vm *VM) {
 	case *interpreter.SomeValue:
 		vm.replaceTop(value.InnerValue())
 	case interpreter.NilValue:
-		panic(interpreter.ForceNilError{})
+		panic(&interpreter.ForceNilError{})
 	default:
 		// Non-optional. Leave as is.
 	}

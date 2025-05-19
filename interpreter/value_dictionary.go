@@ -125,7 +125,7 @@ func NewDictionaryValueWithAddress(
 		// then we need to prevent a resource loss
 		if _, ok := existingValue.(*SomeValue); ok {
 			if v.IsResourceKinded(context) {
-				panic(DuplicateKeyInResourceDictionaryError{
+				panic(&DuplicateKeyInResourceDictionaryError{
 					LocationRange: locationRange,
 				})
 			}
@@ -1328,7 +1328,7 @@ func (v *DictionaryValue) Transfer(
 	if preventTransfer == nil {
 		preventTransfer = map[atree.ValueID]struct{}{}
 	} else if _, ok := preventTransfer[currentValueID]; ok {
-		panic(RecursiveTransferError{
+		panic(&RecursiveTransferError{
 			LocationRange: locationRange,
 		})
 	}

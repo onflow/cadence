@@ -58,7 +58,7 @@ func DereferenceValue(
 
 	// Defensive check: ensure that the referenced value is not a resource
 	if referencedValue.IsResourceKinded(context) {
-		panic(ResourceReferenceDereferenceError{
+		panic(&ResourceReferenceDereferenceError{
 			LocationRange: locationRange,
 		})
 	}

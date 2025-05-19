@@ -1193,7 +1193,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						)
 						RequireError(t, err)
 
-						var overwriteErr interpreter.OverwriteError
+						var overwriteErr *interpreter.OverwriteError
 						require.ErrorAs(t, err, &overwriteErr)
 
 						require.Equal(t,
@@ -1228,7 +1228,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						)
 						RequireError(t, err)
 
-						var overwriteErr interpreter.OverwriteError
+						var overwriteErr *interpreter.OverwriteError
 						require.ErrorAs(t, err, &overwriteErr)
 
 						require.Equal(t,
@@ -1272,7 +1272,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						)
 						RequireError(t, err)
 
-						var publishingError interpreter.CapabilityAddressPublishingError
+						var publishingError *interpreter.CapabilityAddressPublishingError
 						require.ErrorAs(t, err, &publishingError)
 						assert.Equal(t,
 							interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x2}),
@@ -1318,7 +1318,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						)
 						RequireError(t, err)
 
-						var publishingError interpreter.CapabilityAddressPublishingError
+						var publishingError *interpreter.CapabilityAddressPublishingError
 						require.ErrorAs(t, err, &publishingError)
 						assert.Equal(t,
 							interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x2}),
@@ -1493,7 +1493,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			)
 			RequireError(t, err)
 
-			require.ErrorAs(t, err, &interpreter.InvalidCapabilityIssueTypeError{})
+			var capabilityIssueTypeError *interpreter.InvalidCapabilityIssueTypeError
+			require.ErrorAs(t, err, &capabilityIssueTypeError)
 
 			require.Equal(t,
 				[]string{},
@@ -2177,7 +2178,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			)
 			RequireError(t, err)
 
-			require.ErrorAs(t, err, &interpreter.InvalidCapabilityIssueTypeError{})
+			var capabilityIssueTypeError *interpreter.InvalidCapabilityIssueTypeError
+			require.ErrorAs(t, err, &capabilityIssueTypeError)
 
 			require.Equal(t,
 				[]string{},

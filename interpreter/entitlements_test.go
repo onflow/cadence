@@ -1115,7 +1115,7 @@ func TestInterpretEntitledResult(t *testing.T) {
 			var panicError stdlib.PanicError
 			require.ErrorAs(t, err, &panicError)
 		} else {
-			var conditionError interpreter.ConditionError
+			var conditionError *interpreter.ConditionError
 			require.ErrorAs(t, err, &conditionError)
 		}
 	})

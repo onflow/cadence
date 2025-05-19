@@ -52,7 +52,7 @@ func NewUnmeteredEphemeralReferenceValue(
 	locationRange LocationRange,
 ) *EphemeralReferenceValue {
 	if reference, isReference := value.(ReferenceValue); isReference {
-		panic(NestedReferenceError{
+		panic(&NestedReferenceError{
 			Value:         reference,
 			LocationRange: locationRange,
 		})
