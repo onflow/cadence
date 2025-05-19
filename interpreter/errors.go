@@ -729,11 +729,11 @@ type TypeLoadingError struct {
 	TypeID TypeID
 }
 
-var _ errors.UserError = &TypeLoadingError{}
+var _ errors.UserError = TypeLoadingError{}
 
-func (*TypeLoadingError) IsUserError() {}
+func (TypeLoadingError) IsUserError() {}
 
-func (e *TypeLoadingError) Error() string {
+func (e TypeLoadingError) Error() string {
 	return fmt.Sprintf("failed to load type: %s", e.TypeID)
 }
 
@@ -887,11 +887,11 @@ type NonStorableValueError struct {
 	Value Value
 }
 
-var _ errors.UserError = &NonStorableValueError{}
+var _ errors.UserError = NonStorableValueError{}
 
-func (*NonStorableValueError) IsUserError() {}
+func (NonStorableValueError) IsUserError() {}
 
-func (e *NonStorableValueError) Error() string {
+func (e NonStorableValueError) Error() string {
 	return "cannot store non-storable value"
 }
 
@@ -900,11 +900,11 @@ type NonStorableStaticTypeError struct {
 	Type sema.Type
 }
 
-var _ errors.UserError = &NonStorableStaticTypeError{}
+var _ errors.UserError = NonStorableStaticTypeError{}
 
-func (*NonStorableStaticTypeError) IsUserError() {}
+func (NonStorableStaticTypeError) IsUserError() {}
 
-func (e *NonStorableStaticTypeError) Error() string {
+func (e NonStorableStaticTypeError) Error() string {
 	return fmt.Sprintf(
 		"cannot store non-storable type: `%s`",
 		e.Type.QualifiedString(),
@@ -917,11 +917,11 @@ type InterfaceMissingLocationError struct {
 	QualifiedIdentifier string
 }
 
-var _ errors.UserError = &InterfaceMissingLocationError{}
+var _ errors.UserError = InterfaceMissingLocationError{}
 
-func (*InterfaceMissingLocationError) IsUserError() {}
+func (InterfaceMissingLocationError) IsUserError() {}
 
-func (e *InterfaceMissingLocationError) Error() string {
+func (e InterfaceMissingLocationError) Error() string {
 	return fmt.Sprintf(
 		"tried to look up interface %s without a location",
 		e.QualifiedIdentifier,
@@ -1398,11 +1398,11 @@ func (e *ResourceLossError) SetLocationRange(locationRange LocationRange) {
 
 type InvalidCapabilityIDError struct{}
 
-var _ errors.InternalError = &InvalidCapabilityIDError{}
+var _ errors.InternalError = InvalidCapabilityIDError{}
 
-func (*InvalidCapabilityIDError) IsInternalError() {}
+func (InvalidCapabilityIDError) IsInternalError() {}
 
-func (e *InvalidCapabilityIDError) Error() string {
+func (e InvalidCapabilityIDError) Error() string {
 	return fmt.Sprintf(
 		"%s capability created with invalid ID",
 		errors.InternalErrorMessagePrefix,

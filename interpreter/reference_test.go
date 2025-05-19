@@ -127,7 +127,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var containerMutationErr interpreter.ContainerMutationError
+		var containerMutationErr *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationErr)
 	})
 
@@ -161,7 +161,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var containerMutationErr interpreter.ContainerMutationError
+		var containerMutationErr *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationErr)
 	})
 
@@ -200,7 +200,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var containerMutationError interpreter.ContainerMutationError
+		var containerMutationError *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
 	})
 
@@ -238,7 +238,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var containerMutationError interpreter.ContainerMutationError
+		var containerMutationError *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
 	})
 
@@ -282,7 +282,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var containerMutationError interpreter.ContainerMutationError
+		var containerMutationError *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
 	})
 
@@ -324,7 +324,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var containerMutationError interpreter.ContainerMutationError
+		var containerMutationError *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
 	})
 
@@ -352,7 +352,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var containerMutationError interpreter.ContainerMutationError
+		var containerMutationError *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
 	})
 
@@ -382,7 +382,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var containerMutationError interpreter.ContainerMutationError
+		var containerMutationError *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
 	})
 
@@ -406,7 +406,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var containerMutationError interpreter.ContainerMutationError
+		var containerMutationError *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
 	})
 
@@ -430,7 +430,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var containerMutationError interpreter.ContainerMutationError
+		var containerMutationError *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
 	})
 }
@@ -565,7 +565,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("stack to account readonly", func(t *testing.T) {
@@ -596,7 +597,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("account to stack", func(t *testing.T) {
@@ -662,7 +664,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("test", arrayRef)
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("stack to stack", func(t *testing.T) {
@@ -705,7 +708,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("one account to another account", func(t *testing.T) {
@@ -795,7 +799,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("test", arrayRef1, arrayRef2)
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("account to stack to same account", func(t *testing.T) {
@@ -868,7 +873,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("test", arrayRef)
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("account to stack storage reference", func(t *testing.T) {
@@ -904,7 +910,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.DereferenceError{})
+		var dereferenceError *interpreter.DereferenceError
+			require.ErrorAs(t, err, &dereferenceError)
 	})
 
 	t.Run("multiple references with moves", func(t *testing.T) {
@@ -998,12 +1005,13 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		// First reference must be invalid
 		_, err = inter.Invoke("getRef1Id")
 		RequireError(t, err)
-		assert.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		assert.ErrorAs(t, err, &invalidatedResourceReferenceError)
 
 		// Second reference must be invalid
 		_, err = inter.Invoke("getRef2Id")
 		RequireError(t, err)
-		assert.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		assert.ErrorAs(t, err, &invalidatedResourceReferenceError)
 
 		// Third reference must be valid
 		result, err := inter.Invoke("getRef3Id")
@@ -1058,7 +1066,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("ref target is field", func(t *testing.T) {
@@ -1102,7 +1111,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("resource is array element", func(t *testing.T) {
@@ -1141,7 +1151,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("resource is dictionary entry", func(t *testing.T) {
@@ -1180,7 +1191,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("nested resource in composite", func(t *testing.T) {
@@ -1234,7 +1246,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("nested resource in dictionary", func(t *testing.T) {
@@ -1267,7 +1280,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("nested resource in array", func(t *testing.T) {
@@ -1300,7 +1314,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("nested optional resource", func(t *testing.T) {
@@ -1345,7 +1360,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("reference created by field access", func(t *testing.T) {
@@ -1391,7 +1407,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("reference created by index access", func(t *testing.T) {
@@ -1430,7 +1447,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("reference created by field and index access", func(t *testing.T) {
@@ -1476,7 +1494,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("downcasted reference", func(t *testing.T) {
@@ -1511,7 +1530,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 }
 
@@ -1558,7 +1578,8 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("ref source is field", func(t *testing.T) {
@@ -1601,7 +1622,8 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 
 	})
 }
@@ -1647,7 +1669,8 @@ func TestInterpretReferenceTrackingOnInvocation(t *testing.T) {
 	_, err := inter.Invoke("main")
 	RequireError(t, err)
 
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 }
 
 func TestInterpretInvalidReferenceToOptionalConfusion(t *testing.T) {
@@ -1671,7 +1694,8 @@ func TestInterpretInvalidReferenceToOptionalConfusion(t *testing.T) {
 	_, err := inter.Invoke("main")
 	RequireError(t, err)
 
-	require.ErrorAs(t, err, &interpreter.NonOptionalReferenceToNilError{})
+	var referenceToNilError *interpreter.NonOptionalReferenceToNilError
+		require.ErrorAs(t, err, &referenceToNilError)
 }
 
 func TestInterpretReferenceToOptional(t *testing.T) {
@@ -1690,7 +1714,8 @@ func TestInterpretReferenceToOptional(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.NonOptionalReferenceToNilError{})
+		var referenceToNilError *interpreter.NonOptionalReferenceToNilError
+		require.ErrorAs(t, err, &referenceToNilError)
 	})
 
 	t.Run("nil in optional", func(t *testing.T) {
@@ -1742,7 +1767,8 @@ func TestInterpretInvalidatedReferenceToOptional(t *testing.T) {
 	_, err := inter.Invoke("main")
 	RequireError(t, err)
 
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 }
 
 func TestInterpretReferenceToReference(t *testing.T) {
@@ -1768,7 +1794,8 @@ func TestInterpretReferenceToReference(t *testing.T) {
 		_, err = inter.Invoke("main")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+		var nestedReferenceError *interpreter.NestedReferenceError
+		require.ErrorAs(t, err, &nestedReferenceError)
 	})
 
 	t.Run("upcast to anystruct", func(t *testing.T) {
@@ -1785,7 +1812,8 @@ func TestInterpretReferenceToReference(t *testing.T) {
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+		var nestedReferenceError *interpreter.NestedReferenceError
+		require.ErrorAs(t, err, &nestedReferenceError)
 	})
 
 	t.Run("optional", func(t *testing.T) {
@@ -1808,7 +1836,8 @@ func TestInterpretReferenceToReference(t *testing.T) {
 		_, err = inter.Invoke("main")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+		var nestedReferenceError *interpreter.NestedReferenceError
+		require.ErrorAs(t, err, &nestedReferenceError)
 	})
 
 	t.Run("upcast to optional anystruct", func(t *testing.T) {
@@ -1825,7 +1854,8 @@ func TestInterpretReferenceToReference(t *testing.T) {
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+		var nestedReferenceError *interpreter.NestedReferenceError
+		require.ErrorAs(t, err, &nestedReferenceError)
 	})
 
 	t.Run("reference to storage reference", func(t *testing.T) {
@@ -1850,7 +1880,8 @@ func TestInterpretReferenceToReference(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+		var nestedReferenceError *interpreter.NestedReferenceError
+		require.ErrorAs(t, err, &nestedReferenceError)
 	})
 
 	t.Run("nested optional reference as AnyStruct", func(t *testing.T) {
@@ -1869,7 +1900,8 @@ func TestInterpretReferenceToReference(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+		var nestedReferenceError *interpreter.NestedReferenceError
+		require.ErrorAs(t, err, &nestedReferenceError)
 	})
 }
 
@@ -3063,7 +3095,8 @@ func TestInterpretDereference(t *testing.T) {
 			_, err = inter.Invoke("main")
 			RequireError(t, err)
 
-			require.ErrorAs(t, err, &interpreter.ResourceReferenceDereferenceError{})
+			var dereferenceError *interpreter.ResourceReferenceDereferenceError
+			require.ErrorAs(t, err, &dereferenceError)
 		})
 
 		t.Run("array", func(t *testing.T) {
@@ -3094,7 +3127,8 @@ func TestInterpretDereference(t *testing.T) {
 			_, err = inter.Invoke("main")
 			RequireError(t, err)
 
-			require.ErrorAs(t, err, &interpreter.ResourceReferenceDereferenceError{})
+			var dereferenceError *interpreter.ResourceReferenceDereferenceError
+			require.ErrorAs(t, err, &dereferenceError)
 		})
 	})
 
@@ -3142,7 +3176,7 @@ func TestInterpretOptionalReference(t *testing.T) {
 		_, err := inter.Invoke("absent")
 		RequireError(t, err)
 
-		var forceNilError interpreter.ForceNilError
+		var forceNilError *interpreter.ForceNilError
 		require.ErrorAs(t, err, &forceNilError)
 	})
 
@@ -3190,7 +3224,7 @@ func TestInterpretHostFunctionReferenceInvalidation(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		invalidatedRefError := interpreter.InvalidatedResourceReferenceError{}
+		var invalidatedRefError *interpreter.InvalidatedResourceReferenceError
 		assert.ErrorAs(t, err, &invalidatedRefError)
 	})
 
@@ -3266,7 +3300,7 @@ func TestInterpretHostFunctionReferenceInvalidation(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		invalidatedRefError := interpreter.InvalidatedResourceReferenceError{}
+		var invalidatedRefError *interpreter.InvalidatedResourceReferenceError
 		assert.ErrorAs(t, err, &invalidatedRefError)
 	})
 
@@ -3474,7 +3508,8 @@ func TestInterpretCreatingCircularDependentResource(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		assert.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		assert.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("resource field", func(t *testing.T) {
@@ -3508,6 +3543,7 @@ func TestInterpretCreatingCircularDependentResource(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		assert.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		assert.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 }

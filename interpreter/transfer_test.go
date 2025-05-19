@@ -94,7 +94,8 @@ func TestInterpretTransferCheck(t *testing.T) {
 		_, err = inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
+		var transferTypeError *interpreter.ValueTransferTypeError
+	require.ErrorAs(t, err, &transferTypeError)
 	})
 
 	t.Run("contract and intersection type", func(t *testing.T) {

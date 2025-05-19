@@ -753,7 +753,7 @@ func TestInterpretInvalidStringIndexing(t *testing.T) {
 			_, err := inter.Invoke("test", indexValue)
 			RequireError(t, err)
 
-			var indexErr interpreter.StringIndexOutOfBoundsError
+			var indexErr *interpreter.StringIndexOutOfBoundsError
 			require.ErrorAs(t, err, &indexErr)
 
 			assert.Equal(t, index, indexErr.Index)
@@ -840,7 +840,7 @@ func TestInterpretStringSlicing(t *testing.T) {
 		{"abcdef", 1, 6, "bcdef", nil},
 		// Invalid indices
 		{"abcdef", -1, 0, "", func(t *testing.T, err error) {
-			var sliceErr interpreter.StringSliceIndicesError
+			var sliceErr *interpreter.StringSliceIndicesError
 			require.ErrorAs(t, err, &sliceErr)
 
 			assert.Equal(t, -1, sliceErr.FromIndex)
@@ -856,7 +856,7 @@ func TestInterpretStringSlicing(t *testing.T) {
 			)
 		}},
 		{"abcdef", 0, -1, "", func(t *testing.T, err error) {
-			var sliceErr interpreter.StringSliceIndicesError
+			var sliceErr *interpreter.StringSliceIndicesError
 			require.ErrorAs(t, err, &sliceErr)
 
 			assert.Equal(t, 0, sliceErr.FromIndex)
@@ -872,7 +872,7 @@ func TestInterpretStringSlicing(t *testing.T) {
 			)
 		}},
 		{"abcdef", 0, 10, "", func(t *testing.T, err error) {
-			var sliceErr interpreter.StringSliceIndicesError
+			var sliceErr *interpreter.StringSliceIndicesError
 			require.ErrorAs(t, err, &sliceErr)
 
 			assert.Equal(t, 0, sliceErr.FromIndex)
@@ -888,7 +888,7 @@ func TestInterpretStringSlicing(t *testing.T) {
 			)
 		}},
 		{"abcdef", 2, 1, "", func(t *testing.T, err error) {
-			var indexErr interpreter.InvalidSliceIndexError
+			var indexErr *interpreter.InvalidSliceIndexError
 			require.ErrorAs(t, err, &indexErr)
 
 			assert.Equal(t, 2, indexErr.FromIndex)
@@ -5832,7 +5832,7 @@ func TestInterpretArraySlicing(t *testing.T) {
 		{"[1, 2, 3, 4, 5, 6]", 1, 6, "[2, 3, 4, 5, 6]", nil},
 		// Invalid indices
 		{"[1, 2, 3, 4, 5, 6]", -1, 0, "", func(t *testing.T, err error) {
-			var sliceErr interpreter.ArraySliceIndicesError
+			var sliceErr *interpreter.ArraySliceIndicesError
 			require.ErrorAs(t, err, &sliceErr)
 
 			assert.Equal(t, -1, sliceErr.FromIndex)
@@ -5848,7 +5848,7 @@ func TestInterpretArraySlicing(t *testing.T) {
 			)
 		}},
 		{"[1, 2, 3, 4, 5, 6]", 0, -1, "", func(t *testing.T, err error) {
-			var sliceErr interpreter.ArraySliceIndicesError
+			var sliceErr *interpreter.ArraySliceIndicesError
 			require.ErrorAs(t, err, &sliceErr)
 
 			assert.Equal(t, 0, sliceErr.FromIndex)
@@ -5864,7 +5864,7 @@ func TestInterpretArraySlicing(t *testing.T) {
 			)
 		}},
 		{"[1, 2, 3, 4, 5, 6]", 0, 10, "", func(t *testing.T, err error) {
-			var sliceErr interpreter.ArraySliceIndicesError
+			var sliceErr *interpreter.ArraySliceIndicesError
 			require.ErrorAs(t, err, &sliceErr)
 
 			assert.Equal(t, 0, sliceErr.FromIndex)
@@ -5880,7 +5880,7 @@ func TestInterpretArraySlicing(t *testing.T) {
 			)
 		}},
 		{"[1, 2, 3, 4, 5, 6]", 2, 1, "", func(t *testing.T, err error) {
-			var indexErr interpreter.InvalidSliceIndexError
+			var indexErr *interpreter.InvalidSliceIndexError
 			require.ErrorAs(t, err, &indexErr)
 
 			assert.Equal(t, 2, indexErr.FromIndex)
@@ -8862,7 +8862,8 @@ func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
 		_, err := inter.Invoke("testNil")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ForceNilError{})
+		var forceNilError *interpreter.ForceNilError
+		require.ErrorAs(t, err, &forceNilError)
 	})
 }
 
@@ -9240,7 +9241,8 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ResourceLossError{})
+		var resourceLossError *interpreter.ResourceLossError
+		require.ErrorAs(t, err, &resourceLossError)
 	})
 
 	t.Run("existing to nil", func(t *testing.T) {
@@ -9276,7 +9278,8 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ResourceLossError{})
+		var resourceLossError *interpreter.ResourceLossError
+		require.ErrorAs(t, err, &resourceLossError)
 	})
 
 	t.Run("force-assignment initialization", func(t *testing.T) {
@@ -9368,7 +9371,8 @@ func TestInterpretForce(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ForceNilError{})
+		var forceNilError *interpreter.ForceNilError
+		require.ErrorAs(t, err, &forceNilError)
 	})
 
 	t.Run("nil, AnyStruct", func(t *testing.T) {
@@ -9387,7 +9391,8 @@ func TestInterpretForce(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ForceNilError{})
+		var forceNilError *interpreter.ForceNilError
+		require.ErrorAs(t, err, &forceNilError)
 	})
 
 	t.Run("non-optional", func(t *testing.T) {
@@ -9977,7 +9982,7 @@ func TestInterpretMissingMember(t *testing.T) {
 	_, err := inter.Invoke("test")
 	RequireError(t, err)
 
-	var missingMemberError interpreter.UseBeforeInitializationError
+	var missingMemberError *interpreter.UseBeforeInitializationError
 	require.ErrorAs(t, err, &missingMemberError)
 
 	require.Equal(t, "y", missingMemberError.Name)
@@ -11982,7 +11987,8 @@ func TestInterpretDictionaryDuplicateKey(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.DuplicateKeyInResourceDictionaryError{})
+		var duplicateKeyError *interpreter.DuplicateKeyInResourceDictionaryError
+		require.ErrorAs(t, err, &duplicateKeyError)
 	})
 
 	t.Run("resource", func(t *testing.T) {
@@ -12006,7 +12012,8 @@ func TestInterpretDictionaryDuplicateKey(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.ResourceLossError{})
+		var resourceLossError *interpreter.ResourceLossError
+		require.ErrorAs(t, err, &resourceLossError)
 	})
 }
 
@@ -12476,7 +12483,8 @@ func TestInterpretSwapDictionaryKeysWithSideEffects(t *testing.T) {
 		_, err = inter.Invoke("test")
 		RequireError(t, err)
 
-		assert.ErrorAs(t, err, &interpreter.UseBeforeInitializationError{})
+		var initializationError *interpreter.UseBeforeInitializationError
+		require.ErrorAs(t, err, &initializationError)
 
 		require.Empty(t, getEvents())
 	})

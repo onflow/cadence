@@ -269,7 +269,7 @@ func TestInterpretBitwiseNegativeShift(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var shiftErr interpreter.NegativeShiftError
+		var shiftErr *interpreter.NegativeShiftError
 		require.ErrorAs(t, err, &shiftErr)
 	})
 
@@ -285,7 +285,7 @@ func TestInterpretBitwiseNegativeShift(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var shiftErr interpreter.NegativeShiftError
+		var shiftErr *interpreter.NegativeShiftError
 		require.ErrorAs(t, err, &shiftErr)
 	})
 
@@ -301,7 +301,7 @@ func TestInterpretBitwiseNegativeShift(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var shiftErr interpreter.NegativeShiftError
+		var shiftErr *interpreter.NegativeShiftError
 		require.ErrorAs(t, err, &shiftErr)
 	})
 
@@ -317,7 +317,7 @@ func TestInterpretBitwiseNegativeShift(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var shiftErr interpreter.NegativeShiftError
+		var shiftErr *interpreter.NegativeShiftError
 		require.ErrorAs(t, err, &shiftErr)
 	})
 
@@ -333,7 +333,7 @@ func TestInterpretBitwiseNegativeShift(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var shiftErr interpreter.NegativeShiftError
+		var shiftErr *interpreter.NegativeShiftError
 		require.ErrorAs(t, err, &shiftErr)
 	})
 
@@ -349,7 +349,7 @@ func TestInterpretBitwiseNegativeShift(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var shiftErr interpreter.NegativeShiftError
+		var shiftErr *interpreter.NegativeShiftError
 		require.ErrorAs(t, err, &shiftErr)
 	})
 }
@@ -603,7 +603,7 @@ func TestInterpretBitwiseLeftShift128(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var shiftErr interpreter.NegativeShiftError
+		var shiftErr *interpreter.NegativeShiftError
 		require.ErrorAs(t, err, &shiftErr)
 	})
 
@@ -776,7 +776,7 @@ func TestInterpretBitwiseLeftShift256(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var shiftErr interpreter.NegativeShiftError
+		var shiftErr *interpreter.NegativeShiftError
 		require.ErrorAs(t, err, &shiftErr)
 	})
 
@@ -893,7 +893,7 @@ func TestInterpretBitwiseRightShift128(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var shiftErr interpreter.NegativeShiftError
+		var shiftErr *interpreter.NegativeShiftError
 		require.ErrorAs(t, err, &shiftErr)
 	})
 
@@ -1010,7 +1010,7 @@ func TestInterpretBitwiseRightShift256(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var shiftErr interpreter.NegativeShiftError
+		var shiftErr *interpreter.NegativeShiftError
 		require.ErrorAs(t, err, &shiftErr)
 	})
 

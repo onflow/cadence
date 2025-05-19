@@ -144,7 +144,7 @@ func (v Word256Value) Negate(NumberValueArithmeticContext, LocationRange) Number
 func (v Word256Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationPlus,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -186,7 +186,7 @@ func (v Word256Value) SaturatingPlus(_ NumberValueArithmeticContext, _ NumberVal
 func (v Word256Value) Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationMinus,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -228,7 +228,7 @@ func (v Word256Value) SaturatingMinus(_ NumberValueArithmeticContext, _ NumberVa
 func (v Word256Value) Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationMod,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -241,7 +241,7 @@ func (v Word256Value) Mod(context NumberValueArithmeticContext, other NumberValu
 		func() *big.Int {
 			res := new(big.Int)
 			if o.BigInt.Cmp(res) == 0 {
-				panic(DivisionByZeroError{
+				panic(&DivisionByZeroError{
 					LocationRange: locationRange,
 				})
 			}
@@ -253,7 +253,7 @@ func (v Word256Value) Mod(context NumberValueArithmeticContext, other NumberValu
 func (v Word256Value) Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationMul,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -281,7 +281,7 @@ func (v Word256Value) SaturatingMul(_ NumberValueArithmeticContext, _ NumberValu
 func (v Word256Value) Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationDiv,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -294,7 +294,7 @@ func (v Word256Value) Div(context NumberValueArithmeticContext, other NumberValu
 		func() *big.Int {
 			res := new(big.Int)
 			if o.BigInt.Cmp(res) == 0 {
-				panic(DivisionByZeroError{
+				panic(&DivisionByZeroError{
 					LocationRange: locationRange,
 				})
 			}
@@ -311,7 +311,7 @@ func (v Word256Value) SaturatingDiv(_ NumberValueArithmeticContext, _ NumberValu
 func (v Word256Value) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationLess,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -326,7 +326,7 @@ func (v Word256Value) Less(context ValueComparisonContext, other ComparableValue
 func (v Word256Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationLessEqual,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -341,7 +341,7 @@ func (v Word256Value) LessEqual(context ValueComparisonContext, other Comparable
 func (v Word256Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationGreater,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -356,7 +356,7 @@ func (v Word256Value) Greater(context ValueComparisonContext, other ComparableVa
 func (v Word256Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationGreaterEqual,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -428,7 +428,7 @@ func ConvertWord256(memoryGauge common.MemoryGauge, value Value, locationRange L
 func (v Word256Value) BitwiseOr(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationBitwiseOr,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -448,7 +448,7 @@ func (v Word256Value) BitwiseOr(context ValueStaticTypeContext, other IntegerVal
 func (v Word256Value) BitwiseXor(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationBitwiseXor,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -468,7 +468,7 @@ func (v Word256Value) BitwiseXor(context ValueStaticTypeContext, other IntegerVa
 func (v Word256Value) BitwiseAnd(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationBitwiseAnd,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -489,7 +489,7 @@ func (v Word256Value) BitwiseAnd(context ValueStaticTypeContext, other IntegerVa
 func (v Word256Value) BitwiseLeftShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationBitwiseLeftShift,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -498,7 +498,7 @@ func (v Word256Value) BitwiseLeftShift(context ValueStaticTypeContext, other Int
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(NegativeShiftError{
+		panic(&NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
@@ -524,7 +524,7 @@ func (v Word256Value) BitwiseLeftShift(context ValueStaticTypeContext, other Int
 func (v Word256Value) BitwiseRightShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationBitwiseRightShift,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -533,7 +533,7 @@ func (v Word256Value) BitwiseRightShift(context ValueStaticTypeContext, other In
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(NegativeShiftError{
+		panic(&NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}

@@ -3462,19 +3462,26 @@ func TestPublicKeyValue(t *testing.T) {
 			UInt8Value(sema.SignatureAlgorithmECDSA_secp256k1.RawValue()),
 		)
 
-		assert.PanicsWithValue(t,
-			InvalidPublicKeyError{PublicKey: publicKey, Err: fakeError},
-			func() {
-				_ = NewPublicKeyValue(
-					inter,
-					EmptyLocationRange,
-					publicKey,
-					sigAlgo,
-					func(context PublicKeyValidationContext, locationRange LocationRange, publicKey *CompositeValue) error {
-						return fakeError
-					},
+		func() {
+			defer func() {
+				r :=  recover()
+				assert.Equal(
+					t,
+					&InvalidPublicKeyError{PublicKey: publicKey, Err: fakeError},
+					r,
 				)
-			})
+			}()
+
+			_ = NewPublicKeyValue(
+				inter,
+				EmptyLocationRange,
+				publicKey,
+				sigAlgo,
+				func(context PublicKeyValidationContext, locationRange LocationRange, publicKey *CompositeValue) error {
+					return fakeError
+				},
+			)
+		}()
 	})
 }
 
