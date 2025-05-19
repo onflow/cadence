@@ -243,7 +243,7 @@ type RedeclarationError struct {
 	Name string
 }
 
-var _ errors.UserError = &RedeclarationError{}
+var _ errors.UserError = RedeclarationError{}
 
 func (RedeclarationError) IsUserError() {}
 

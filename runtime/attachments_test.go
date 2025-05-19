@@ -230,7 +230,7 @@ func TestRuntimeAccountAttachmentExportFailure(t *testing.T) {
 	)
 	require.Error(t, err)
 	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
-		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
+	require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 }
 
 func TestRuntimeAccountAttachmentExport(t *testing.T) {

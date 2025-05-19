@@ -911,7 +911,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 		var dereferenceError *interpreter.DereferenceError
-			require.ErrorAs(t, err, &dereferenceError)
+		require.ErrorAs(t, err, &dereferenceError)
 	})
 
 	t.Run("multiple references with moves", func(t *testing.T) {
@@ -1670,7 +1670,7 @@ func TestInterpretReferenceTrackingOnInvocation(t *testing.T) {
 	RequireError(t, err)
 
 	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
-		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
+	require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 }
 
 func TestInterpretInvalidReferenceToOptionalConfusion(t *testing.T) {
@@ -1695,7 +1695,7 @@ func TestInterpretInvalidReferenceToOptionalConfusion(t *testing.T) {
 	RequireError(t, err)
 
 	var referenceToNilError *interpreter.NonOptionalReferenceToNilError
-		require.ErrorAs(t, err, &referenceToNilError)
+	require.ErrorAs(t, err, &referenceToNilError)
 }
 
 func TestInterpretReferenceToOptional(t *testing.T) {
@@ -1768,7 +1768,7 @@ func TestInterpretInvalidatedReferenceToOptional(t *testing.T) {
 	RequireError(t, err)
 
 	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
-		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
+	require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 }
 
 func TestInterpretReferenceToReference(t *testing.T) {
