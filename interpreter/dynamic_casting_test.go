@@ -94,7 +94,7 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 
 							t.Run(fmt.Sprintf("valid: from %s to %s", fromType, targetType), func(t *testing.T) {
 
-								inter := parseCheckAndInterpret(t,
+								inter := parseCheckAndPrepare(t,
 									fmt.Sprintf(
 										`
                                           let x: %[1]s = %[2]s
@@ -142,7 +142,7 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 
 							t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
 
-								inter := parseCheckAndInterpret(t,
+								inter := parseCheckAndPrepare(t,
 									fmt.Sprintf(
 										`
                                           fun test(): %[4]s? {

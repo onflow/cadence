@@ -46,7 +46,7 @@ func TestImperativeFib(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, imperativeFib)
+	inter := parseCheckAndPrepare(t, imperativeFib)
 
 	var value interpreter.Value = interpreter.NewUnmeteredIntValueFromInt64(7)
 
@@ -57,7 +57,7 @@ func TestImperativeFib(t *testing.T) {
 
 func BenchmarkImperativeFib(b *testing.B) {
 
-	inter := parseCheckAndInterpret(b, imperativeFib)
+	inter := parseCheckAndPrepare(b, imperativeFib)
 
 	var value interpreter.Value = interpreter.NewUnmeteredIntValueFromInt64(14)
 
