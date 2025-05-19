@@ -273,7 +273,7 @@ func printfConstantArgument(
 	formattedConstant := c.String()
 	switch c.Kind {
 	case constant.String:
-		formattedConstant = strconv.Quote(formattedConstant)
+		break
 	default:
 		formattedConstant = fmt.Sprintf("%s(%s)", formattedConstant, c.Kind)
 	}
