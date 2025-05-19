@@ -1506,7 +1506,11 @@ func (c *Compiler[_, _]) VisitIntegerExpression(expression *ast.IntegerExpressio
 		data = value.Bytes()
 
 	default:
-		panic(errors.NewUnexpectedError("unsupported constant kind: %s", constantKind))
+		panic(errors.NewUnexpectedError(
+			"unsupported integer type %s / constant kind %s",
+			integerType,
+			constantKind,
+		))
 	}
 
 	c.emitGetConstant(c.addConstant(constantKind, data))
