@@ -155,7 +155,7 @@ func (v *StringValue) Equal(_ ValueComparisonContext, _ LocationRange, other Val
 func (v *StringValue) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	otherString, ok := other.(*StringValue)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationLess,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -169,7 +169,7 @@ func (v *StringValue) Less(context ValueComparisonContext, other ComparableValue
 func (v *StringValue) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	otherString, ok := other.(*StringValue)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationLessEqual,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -183,7 +183,7 @@ func (v *StringValue) LessEqual(context ValueComparisonContext, other Comparable
 func (v *StringValue) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	otherString, ok := other.(*StringValue)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationGreater,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -197,7 +197,7 @@ func (v *StringValue) Greater(context ValueComparisonContext, other ComparableVa
 func (v *StringValue) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	otherString, ok := other.(*StringValue)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationGreaterEqual,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -270,7 +270,7 @@ func (v *StringValue) slice(fromIndex int, toIndex int, locationRange LocationRa
 	length := v.Length()
 
 	if fromIndex < 0 || fromIndex > length || toIndex < 0 || toIndex > length {
-		panic(StringSliceIndicesError{
+		panic(&StringSliceIndicesError{
 			FromIndex:     fromIndex,
 			UpToIndex:     toIndex,
 			Length:        length,
@@ -279,7 +279,7 @@ func (v *StringValue) slice(fromIndex int, toIndex int, locationRange LocationRa
 	}
 
 	if fromIndex > toIndex {
-		panic(InvalidSliceIndexError{
+		panic(&InvalidSliceIndexError{
 			FromIndex:     fromIndex,
 			UpToIndex:     toIndex,
 			LocationRange: locationRange,
@@ -320,7 +320,7 @@ func (v *StringValue) checkBounds(index int, locationRange LocationRange) {
 	length := v.Length()
 
 	if index < 0 || index >= length {
-		panic(StringIndexOutOfBoundsError{
+		panic(&StringIndexOutOfBoundsError{
 			Index:         index,
 			Length:        length,
 			LocationRange: locationRange,
@@ -828,14 +828,14 @@ func (v *StringValue) DecodeHex(context ArrayCreationContext, locationRange Loca
 	bs, err := hex.DecodeString(v.Str)
 	if err != nil {
 		if err, ok := err.(hex.InvalidByteError); ok {
-			panic(InvalidHexByteError{
+			panic(&InvalidHexByteError{
 				LocationRange: locationRange,
 				Byte:          byte(err),
 			})
 		}
 
 		if err == hex.ErrLength {
-			panic(InvalidHexLengthError{
+			panic(&InvalidHexLengthError{
 				LocationRange: locationRange,
 			})
 		}

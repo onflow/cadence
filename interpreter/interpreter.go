@@ -19,7 +19,6 @@
 package interpreter
 
 import (
-	"encoding/binary"
 	goErrors "errors"
 	"fmt"
 	"math"
@@ -41,7 +40,6 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/values"
 )
 
 type getterSetter struct {
@@ -426,7 +424,37 @@ func InvokeExternally(
 	result Value,
 	err error,
 ) {
+	preparedArguments, err := PrepareExternalInvocationArguments(context, functionType, arguments)
+	if err != nil {
+		return nil, err
+	}
 
+	var self *Value
+	var base *EphemeralReferenceValue
+	if boundFunc, ok := functionValue.(BoundFunctionValue); ok {
+		self = boundFunc.SelfReference.ReferencedValue(
+			context,
+			EmptyLocationRange,
+			true,
+		)
+		base = boundFunc.Base
+	}
+
+	// NOTE: can't fill argument types, as they are unknown
+	invocation := NewInvocation(
+		context,
+		self,
+		base,
+		preparedArguments,
+		nil,
+		nil,
+		EmptyLocationRange,
+	)
+
+	return functionValue.Invoke(invocation), nil
+}
+
+func PrepareExternalInvocationArguments(context InvocationContext, functionType *sema.FunctionType, arguments []Value) ([]Value, error) {
 	// ensures the invocation's argument count matches the function's parameter count
 
 	parameters := functionType.Parameters
@@ -451,8 +479,6 @@ func InvokeExternally(
 		}
 	}
 
-	locationRange := EmptyLocationRange
-
 	var preparedArguments []Value
 	if argumentCount > 0 {
 		preparedArguments = make([]Value, argumentCount)
@@ -460,33 +486,11 @@ func InvokeExternally(
 			parameterType := parameters[i].TypeAnnotation.Type
 
 			// converts the argument into the parameter type declared by the function
-			preparedArguments[i] = ConvertAndBox(context, locationRange, argument, nil, parameterType)
+			preparedArguments[i] = ConvertAndBox(context, EmptyLocationRange, argument, nil, parameterType)
 		}
 	}
 
-	var self *Value
-	var base *EphemeralReferenceValue
-	if boundFunc, ok := functionValue.(BoundFunctionValue); ok {
-		self = boundFunc.SelfReference.ReferencedValue(
-			context,
-			EmptyLocationRange,
-			true,
-		)
-		base = boundFunc.Base
-	}
-
-	// NOTE: can't fill argument types, as they are unknown
-	invocation := NewInvocation(
-		context,
-		self,
-		base,
-		preparedArguments,
-		nil,
-		nil,
-		locationRange,
-	)
-
-	return functionValue.Invoke(invocation), nil
+	return preparedArguments, nil
 }
 
 // Invoke invokes a global function with the given arguments
@@ -512,24 +516,28 @@ func InvokeFunction(errorHandler ErrorHandler, function FunctionValue, invocatio
 	return
 }
 
-func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value) (err error) {
+func (interpreter *Interpreter) InvokeTransaction(arguments []Value, signers ...Value) (err error) {
 
 	// recover internal panics and return them as an error
 	defer interpreter.RecoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
-	if index >= len(interpreter.Transactions) {
-		return TransactionNotDeclaredError{Index: index}
-	}
+	const transactionIndex = 0
 
-	functionValue := interpreter.Transactions[index]
+	functionValue := interpreter.Transactions[transactionIndex]
 
-	transactionType := interpreter.Program.Elaboration.TransactionTypes[index]
+	transactionType := interpreter.Program.Elaboration.TransactionTypes[transactionIndex]
 	functionType := transactionType.EntryPointFunctionType()
 
-	_, err = InvokeExternally(interpreter, functionValue, functionType, arguments)
-	return err
+	_, err = InvokeExternally(
+		interpreter,
+		functionValue,
+		functionType,
+		common.Concat(arguments, signers),
+	)
+
+	return
 }
 
 func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
@@ -936,7 +944,7 @@ func (interpreter *Interpreter) visitCondition(condition ast.Condition, kind ast
 			message = messageValue.(*StringValue).Str
 		}
 
-		panic(ConditionError{
+		panic(&ConditionError{
 			ConditionKind: kind,
 			Message:       message,
 			LocationRange: LocationRange{
@@ -1409,7 +1417,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				if compositeType.Kind == common.CompositeKindResource &&
 					invocationContext.GetLocation() != compositeType.Location {
 
-					panic(ResourceConstructionError{
+					panic(&ResourceConstructionError{
 						CompositeType: compositeType,
 						LocationRange: locationRange,
 					})
@@ -1434,7 +1442,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 					uuidHandler := config.UUIDHandler
 					if uuidHandler == nil {
-						panic(UUIDUnavailableError{
+						panic(&UUIDUnavailableError{
 							LocationRange: locationRange,
 						})
 					}
@@ -1904,7 +1912,7 @@ func TransferAndConvert(
 
 		resultSemaType := MustConvertStaticToSemaType(resultStaticType, context)
 
-		panic(ValueTransferTypeError{
+		panic(&ValueTransferTypeError{
 			ExpectedType:  targetType,
 			ActualType:    resultSemaType,
 			LocationRange: locationRange,
@@ -2336,7 +2344,7 @@ func shouldConvertReference(
 func checkMappedEntitlements(unwrappedTargetType *sema.ReferenceType, locationRange LocationRange) {
 	// check defensively that we never create a runtime mapped entitlement value
 	if _, isMappedAuth := unwrappedTargetType.Authorization.(*sema.EntitlementMapAccess); isMappedAuth {
-		panic(UnexpectedMappedEntitlementError{
+		panic(&UnexpectedMappedEntitlementError{
 			Type:          unwrappedTargetType,
 			LocationRange: locationRange,
 		})
@@ -2982,12 +2990,12 @@ func padWithZeroes(b []byte, expectedLen int) []byte {
 }
 
 // a function that attempts to create a Number from a big-endian bytes.
-type bigEndianBytesConverter func(common.MemoryGauge, []byte) Value
+type bigEndianBytesConverter[T Value] func(common.MemoryGauge, []byte) T
 
-func newFromBigEndianBytesFunction(
+func newFromBigEndianBytesFunction[T Value](
 	ty sema.Type,
-	byteLength int,
-	converter bigEndianBytesConverter,
+	byteLength uint,
+	converter bigEndianBytesConverter[T],
 ) fromBigEndianBytesFunctionValue {
 	functionType := sema.FromBigEndianBytesFunctionType(ty)
 
@@ -3007,7 +3015,7 @@ func newFromBigEndianBytesFunction(
 			}
 
 			// overflow
-			if byteLength != 0 && len(bytes) > byteLength {
+			if byteLength != 0 && uint(len(bytes)) > byteLength {
 				return Nil
 			}
 
@@ -3022,148 +3030,37 @@ func newFromBigEndianBytesFunction(
 
 var fromBigEndianBytesFunctionValues = func() map[string]fromBigEndianBytesFunctionValue {
 	declarations := []fromBigEndianBytesFunctionValue{
-		// signed int values
-		newFromBigEndianBytesFunction(sema.Int8Type, 1, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewInt8Value(gauge, func() int8 {
-				bytes := padWithZeroes(b, 1)
-				return int8(bytes[0])
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.Int16Type, 2, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewInt16Value(gauge, func() int16 {
-				bytes := padWithZeroes(b, 2)
-				val := binary.BigEndian.Uint16(bytes)
-				return int16(val)
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.Int32Type, 4, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewInt32Value(gauge, func() int32 {
-				bytes := padWithZeroes(b, 4)
-				val := binary.BigEndian.Uint32(bytes)
-				return int32(val)
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.Int64Type, 8, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewInt64Value(gauge, func() int64 {
-				bytes := padWithZeroes(b, 8)
-				val := binary.BigEndian.Uint64(bytes)
-				return int64(val)
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.Int128Type, 16, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewInt128ValueFromBigInt(gauge, func() *big.Int {
-				bi := values.BigEndianBytesToSignedBigInt(b)
-				return bi
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.Int256Type, 32, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewInt256ValueFromBigInt(gauge, func() *big.Int {
-				bi := values.BigEndianBytesToSignedBigInt(b)
-				return bi
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.IntType, 0, func(gauge common.MemoryGauge, b []byte) Value {
-			bi := values.BigEndianBytesToSignedBigInt(b)
-			memoryUsage := common.NewBigIntMemoryUsage(
-				common.BigIntByteLength(bi),
-			)
-			return NewIntValueFromBigInt(gauge, memoryUsage, func() *big.Int { return bi })
-		}),
+		// Int*
+		newFromBigEndianBytesFunction(sema.Int8Type, sema.Int8TypeSize, NewInt8ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.Int16Type, sema.Int16TypeSize, NewInt16ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.Int32Type, sema.Int32TypeSize, NewInt32ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.Int64Type, sema.Int64TypeSize, NewInt64ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.Int128Type, sema.Int128TypeSize, NewInt128ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.Int256Type, sema.Int256TypeSize, NewInt256ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.IntType, 0, NewIntValueFromBigEndianBytes),
 
-		// unsigned int values
-		newFromBigEndianBytesFunction(sema.UInt8Type, 1, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewUInt8Value(gauge, func() uint8 { return b[0] })
-		}),
-		newFromBigEndianBytesFunction(sema.UInt16Type, 2, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewUInt16Value(gauge, func() uint16 {
-				bytes := padWithZeroes(b, 2)
-				val := binary.BigEndian.Uint16(bytes)
-				return val
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.UInt32Type, 4, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewUInt32Value(gauge, func() uint32 {
-				bytes := padWithZeroes(b, 4)
-				val := binary.BigEndian.Uint32(bytes)
-				return val
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.UInt64Type, 8, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewUInt64Value(gauge, func() uint64 {
-				bytes := padWithZeroes(b, 8)
-				val := binary.BigEndian.Uint64(bytes)
-				return val
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.UInt128Type, 16, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewUInt128ValueFromBigInt(gauge, func() *big.Int {
-				return values.BigEndianBytesToUnsignedBigInt(b)
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.UInt256Type, 32, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewUInt256ValueFromBigInt(gauge, func() *big.Int {
-				return values.BigEndianBytesToUnsignedBigInt(b)
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.UIntType, 0, func(gauge common.MemoryGauge, b []byte) Value {
-			bi := values.BigEndianBytesToUnsignedBigInt(b)
-			memoryUsage := common.NewBigIntMemoryUsage(
-				common.BigIntByteLength(bi),
-			)
-			return NewUIntValueFromBigInt(gauge, memoryUsage, func() *big.Int { return bi })
-		}),
+		// UInt*
+		newFromBigEndianBytesFunction(sema.UInt8Type, sema.UInt8TypeSize, NewUInt8ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.UInt16Type, sema.UInt16TypeSize, NewUInt16ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.UInt32Type, sema.UInt32TypeSize, NewUInt32ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.UInt64Type, sema.UInt64TypeSize, NewUInt64ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.UInt128Type, sema.UInt128TypeSize, NewUInt128ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.UInt256Type, sema.UInt256TypeSize, NewUInt256ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.UIntType, 0, NewUIntValueFromBigEndianBytes),
 
-		// machine-sized word types
-		newFromBigEndianBytesFunction(sema.Word8Type, 1, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewWord8Value(gauge, func() uint8 { return b[0] })
-		}),
-		newFromBigEndianBytesFunction(sema.Word16Type, 2, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewWord16Value(gauge, func() uint16 {
-				bytes := padWithZeroes(b, 2)
-				val := binary.BigEndian.Uint16(bytes)
-				return val
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.Word32Type, 4, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewWord32Value(gauge, func() uint32 {
-				bytes := padWithZeroes(b, 4)
-				val := binary.BigEndian.Uint32(bytes)
-				return val
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.Word64Type, 8, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewWord64Value(gauge, func() uint64 {
-				bytes := padWithZeroes(b, 8)
-				val := binary.BigEndian.Uint64(bytes)
-				return val
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.Word128Type, 16, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewWord128ValueFromBigInt(gauge, func() *big.Int {
-				return values.BigEndianBytesToUnsignedBigInt(b)
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.Word256Type, 32, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewWord256ValueFromBigInt(gauge, func() *big.Int {
-				return values.BigEndianBytesToUnsignedBigInt(b)
-			})
-		}),
+		// Word*
+		newFromBigEndianBytesFunction(sema.Word8Type, sema.Word8TypeSize, NewWord8ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.Word16Type, sema.Word16TypeSize, NewWord16ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.Word32Type, sema.Word32TypeSize, NewWord32ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.Word64Type, sema.Word64TypeSize, NewWord64ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.Word128Type, sema.Word128TypeSize, NewWord128ValueFromBigEndianBytes),
+		newFromBigEndianBytesFunction(sema.Word256Type, sema.Word256TypeSize, NewWord256ValueFromBigEndianBytes),
 
-		// fixed-points
-		newFromBigEndianBytesFunction(sema.Fix64Type, 8, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewFix64Value(gauge, func() int64 {
-				bytes := padWithZeroes(b, 8)
-				val := binary.BigEndian.Uint64(bytes)
-				return int64(val)
-			})
-		}),
-		newFromBigEndianBytesFunction(sema.UFix64Type, 8, func(gauge common.MemoryGauge, b []byte) Value {
-			return NewUFix64Value(gauge, func() uint64 {
-				bytes := padWithZeroes(b, 8)
-				val := binary.BigEndian.Uint64(bytes)
-				return val
-			})
-		}),
+		// Fix*
+		newFromBigEndianBytesFunction(sema.Fix64Type, sema.Fix64TypeSize, NewFix64ValueFromBigEndianBytes),
+
+		// UFix*
+		newFromBigEndianBytesFunction(sema.UFix64Type, sema.UFix64TypeSize, NewUFix64ValueFromBigEndianBytes),
 	}
 
 	values := make(map[string]fromBigEndianBytesFunctionValue, len(declarations))
@@ -4376,7 +4273,7 @@ func AccountStorageIterate(
 		// In order to be safe, we perform this check here to effectively enforce
 		// that users return `false` from their callback in all cases where storage is mutated.
 		if invocationContext.StorageMutatedDuringIteration() {
-			panic(StorageMutatedDuringIterationError{
+			panic(&StorageMutatedDuringIterationError{
 				LocationRange: locationRange,
 			})
 		}
@@ -4537,7 +4434,7 @@ func AccountStorageSave(
 
 	if StoredValueExists(context, address, domain, storageMapKey) {
 		panic(
-			OverwriteError{
+			&OverwriteError{
 				Address:       addressValue,
 				Path:          path,
 				LocationRange: locationRange,
@@ -4724,7 +4621,7 @@ func AccountStorageRead(
 	if !IsSubTypeOfSemaType(invocationContext, valueStaticType, typeParameter) {
 		valueSemaType := MustConvertStaticToSemaType(valueStaticType, invocationContext)
 
-		panic(ForceCastTypeMismatchError{
+		panic(&ForceCastTypeMismatchError{
 			ExpectedType:  typeParameter,
 			ActualType:    valueSemaType,
 			LocationRange: locationRange,
@@ -5172,7 +5069,7 @@ func (interpreter *Interpreter) GetInterfaceType(
 		if interfaceType != nil {
 			return interfaceType, nil
 		}
-		return nil, InterfaceMissingLocationError{
+		return nil, &InterfaceMissingLocationError{
 			QualifiedIdentifier: qualifiedIdentifier,
 		}
 	}
@@ -5371,7 +5268,7 @@ func checkContainerMutation(
 	actualElementType := element.StaticType(context)
 
 	if !IsSubType(context, actualElementType, elementType) {
-		panic(ContainerMutationError{
+		panic(&ContainerMutationError{
 			ExpectedType:  MustConvertStaticToSemaType(elementType, context),
 			ActualType:    MustSemaTypeOfValue(element, context),
 			LocationRange: locationRange,
@@ -5665,7 +5562,7 @@ func (interpreter *Interpreter) startResourceTracking(
 	// resource variable that has not been invalidated properly.
 	// This should not be allowed, and must have been caught by the checker ideally.
 	if _, exists := interpreter.SharedState.resourceVariables[resourceKindedValue]; exists {
-		panic(InvalidatedResourceError{
+		panic(&InvalidatedResourceError{
 			LocationRange: LocationRange{
 				Location:    interpreter.Location,
 				HasPosition: hasPosition,
@@ -5700,7 +5597,7 @@ func (interpreter *Interpreter) checkInvalidatedResourceUse(
 	//
 	// Note: if the `resourceVariables` doesn't have a mapping, that implies an invalidated resource.
 	if existingVar, exists := interpreter.SharedState.resourceVariables[resourceKindedValue]; !exists || existingVar != variable {
-		panic(InvalidatedResourceError{
+		panic(&InvalidatedResourceError{
 			LocationRange: LocationRange{
 				Location:    interpreter.Location,
 				HasPosition: hasPosition,
@@ -5902,7 +5799,7 @@ func (interpreter *Interpreter) ValidateMutation(valueID atree.ValueID, location
 	if !present {
 		return
 	}
-	panic(ContainerMutatedDuringIterationError{
+	panic(&ContainerMutatedDuringIterationError{
 		LocationRange: locationRange,
 	})
 }
@@ -5931,7 +5828,7 @@ func (interpreter *Interpreter) EnforceNotResourceDestruction(
 ) {
 	_, exists := interpreter.SharedState.destroyedResources[valueID]
 	if exists {
-		panic(DestroyedResourceError{
+		panic(&DestroyedResourceError{
 			LocationRange: locationRange,
 		})
 	}
@@ -5971,7 +5868,7 @@ func checkResourceLoss(context ValueStaticTypeContext, value Value, locationRang
 	}
 
 	if !resourceKindedValue.isInvalidatedResource(context) {
-		panic(ResourceLossError{
+		panic(&ResourceLossError{
 			LocationRange: locationRange,
 		})
 	}

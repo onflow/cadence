@@ -41,7 +41,7 @@ func TestInterpretToString(t *testing.T) {
 
 		t.Run(ty.String(), func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       let x: %s = 42
@@ -55,7 +55,7 @@ func TestInterpretToString(t *testing.T) {
 				t,
 				inter,
 				interpreter.NewUnmeteredStringValue("42"),
-				inter.Globals.Get("y").GetValue(inter),
+				inter.GetGlobal("y"),
 			)
 		})
 	}
@@ -64,7 +64,7 @@ func TestInterpretToString(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let x: Address = 0x42
           let y = x.toString()
         `)
@@ -73,7 +73,7 @@ func TestInterpretToString(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("0x0000000000000042"),
-			inter.Globals.Get("y").GetValue(inter),
+			inter.GetGlobal("y"),
 		)
 	})
 
@@ -94,7 +94,7 @@ func TestInterpretToString(t *testing.T) {
 				expected = interpreter.NewUnmeteredStringValue("12.34000000")
 			}
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       let x: %s = %s
@@ -109,7 +109,7 @@ func TestInterpretToString(t *testing.T) {
 				t,
 				inter,
 				expected,
-				inter.Globals.Get("y").GetValue(inter),
+				inter.GetGlobal("y"),
 			)
 		})
 	}
@@ -147,7 +147,7 @@ func TestInterpretToBytes(t *testing.T) {
 				interpreter.NewUnmeteredUInt8Value(0x34),
 				interpreter.NewUnmeteredUInt8Value(0x56),
 			),
-			inter.Globals.Get("y").GetValue(inter),
+			inter.GetGlobal("y"),
 		)
 	})
 }
@@ -503,21 +503,23 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 			"18446744073709551615": {255, 255, 255, 255, 255, 255, 255, 255},
 		},
 		"Word128": {
-			"0":   {0},
-			"42":  {42},
-			"127": {127},
-			"128": {128},
+			"0":     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			"42":    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42},
+			"127":   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 127},
+			"128":   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128},
+			"200":   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200},
+			"10000": {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 39, 16},
 			"170141183460469231731687303715884105727": {127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 			"170141183460469231731687303715884105728": {128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			"340282366920938463463374607431768211455": {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 		},
 		"Word256": {
-			"0":   {0},
-			"42":  {42},
-			"127": {127},
-			"128": {128},
-			"57896044618658097711785492504343953926634992332820282019728792003956564819967":  {127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
-			"57896044618658097711785492504343953926634992332820282019728792003956564819968":  {128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			"0":     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			"42":    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42},
+			"127":   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 127},
+			"128":   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128},
+			"200":   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200},
+			"10000": {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 39, 16},
 			"115792089237316195423570985008687907853269984665640564039457584007913129639935": {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 		},
 		// Fix*

@@ -94,7 +94,14 @@ func (d *VariableDeclaration) EndPosition(memoryGauge common.MemoryGauge) Positi
 	if d.SecondValue != nil {
 		return d.SecondValue.EndPosition(memoryGauge)
 	}
-	return d.Value.EndPosition(memoryGauge)
+
+	// Some variable declarations may not have a value.
+	// e.g: Desugared variable declarations.
+	if d.Value != nil {
+		return d.Value.EndPosition(memoryGauge)
+	}
+
+	return d.Identifier.EndPosition(memoryGauge)
 }
 
 func (*VariableDeclaration) isIfStatementTest() {}

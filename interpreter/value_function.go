@@ -482,7 +482,7 @@ func GetReceiver(
 		// `storageRef.ReferencedValue` above already checks for the type validity, if it's not nil.
 		// If nil, that means the value has been moved out of storage.
 		if receiver == nil {
-			panic(ReferencedValueChangedError{
+			panic(&ReferencedValueChangedError{
 				LocationRange: locationRange,
 			})
 		}
