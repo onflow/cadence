@@ -743,7 +743,7 @@ func TestInterpretInvalidStringIndexing(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t, `
+			inter := parseCheckAndPrepare(t, `
                fun test(_ index: Int) {
                    let x = "ab"
                    x[index]
@@ -927,7 +927,7 @@ func TestInterpretStringSlicing(t *testing.T) {
 
 			t.Parallel()
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       fun test(): String {
@@ -952,11 +952,6 @@ func TestInterpretStringSlicing(t *testing.T) {
 					value,
 				)
 			} else {
-				require.IsType(t,
-					interpreter.Error{},
-					err,
-				)
-
 				test.checkError(t, err)
 			}
 		})
@@ -5902,8 +5897,7 @@ func TestInterpretArraySlicing(t *testing.T) {
 
 			t.Parallel()
 
-			// TODO: Enable test: require location info for assertions.
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       fun test(): [Int] {
@@ -6355,7 +6349,7 @@ func TestInterpretDictionaryKeyTypes(t *testing.T) {
 	for ty, code := range tests {
 		t.Run(ty, func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       let k: %s = %s
@@ -9579,7 +9573,7 @@ func TestInterpretCountDigits256(t *testing.T) {
 
 		t.Run(test.Type.String(), func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       fun countDigits(_ x: %[2]s): UInt8 {

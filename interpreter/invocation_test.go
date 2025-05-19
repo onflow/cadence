@@ -151,7 +151,7 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 
 	value := interpreter.NewUnmeteredUIntValueFromUint64(42)
 
-	test := inter.Globals.Get("test").GetValue(inter).(interpreter.FunctionValue)
+	test := inter.GetGlobal("test").(interpreter.FunctionValue)
 
 	invocation := interpreter.NewInvocation(
 		inter,

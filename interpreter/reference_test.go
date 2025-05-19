@@ -414,7 +414,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           fun f(_ value: [UInt8]) {}
 
           fun test() {
@@ -1916,7 +1916,7 @@ func TestInterpretDereference(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			inter := parseCheckAndInterpret(t, code)
+			inter := parseCheckAndPrepare(t, code)
 
 			value, err := inter.Invoke("main")
 			require.NoError(t, err)
