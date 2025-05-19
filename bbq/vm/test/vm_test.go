@@ -5050,23 +5050,28 @@ func TestCasting(t *testing.T) {
 			interpreter.TrueValue,
 		)
 		require.Error(t, err)
-		assert.ErrorIs(
+		assert.Equal(
 			t,
-			err,
 			interpreter.ForceCastTypeMismatchError{
 				ExpectedType: sema.IntType,
 				ActualType:   sema.BoolType,
 				LocationRange: interpreter.LocationRange{
 					Location: TestLocation,
-					HasPosition: vm.Positioned{
+					HasPosition: bbq.Position{
 						StartPos: ast.Position{
 							Offset: 70,
 							Line:   3,
 							Column: 25,
 						},
+						EndPos: ast.Position{
+							Offset: 78,
+							Line:   3,
+							Column: 33,
+						},
 					},
 				},
 			},
+			err,
 		)
 	})
 
