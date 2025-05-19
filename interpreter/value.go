@@ -276,7 +276,7 @@ func safeAdd(a, b int, locationRange LocationRange) int {
 			LocationRange: locationRange,
 		})
 	} else if (b < 0) && (a < (goMinInt - b)) {
-		panic(UnderflowError{
+		panic(&UnderflowError{
 			LocationRange: locationRange,
 		})
 	}
@@ -296,7 +296,7 @@ func safeMul(a, b int, locationRange LocationRange) int {
 		} else {
 			// positive * negative = negative. underflow?
 			if b < (goMinInt / a) {
-				panic(UnderflowError{
+				panic(&UnderflowError{
 					LocationRange: locationRange,
 				})
 			}
@@ -305,7 +305,7 @@ func safeMul(a, b int, locationRange LocationRange) int {
 		if b > 0 {
 			// negative * positive = negative. underflow?
 			if a < (goMinInt / b) {
-				panic(UnderflowError{
+				panic(&UnderflowError{
 					LocationRange: locationRange,
 				})
 			}

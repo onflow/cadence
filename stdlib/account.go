@@ -1007,7 +1007,7 @@ func newAccountInboxUnpublishFunction(
 				ty := sema.NewCapabilityType(inter, typeParameterPair.Value)
 				publishedType := publishedValue.Value.StaticType(invocation.InvocationContext)
 				if !interpreter.IsSubTypeOfSemaType(inter, publishedType, ty) {
-					panic(interpreter.ForceCastTypeMismatchError{
+					panic(&interpreter.ForceCastTypeMismatchError{
 						ExpectedType:  ty,
 						ActualType:    interpreter.MustConvertStaticToSemaType(publishedType, inter),
 						LocationRange: locationRange,
@@ -1097,7 +1097,7 @@ func newAccountInboxClaimFunction(
 				ty := sema.NewCapabilityType(inter, typeParameterPair.Value)
 				publishedType := publishedValue.Value.StaticType(invocation.InvocationContext)
 				if !interpreter.IsSubTypeOfSemaType(inter, publishedType, ty) {
-					panic(interpreter.ForceCastTypeMismatchError{
+					panic(&interpreter.ForceCastTypeMismatchError{
 						ExpectedType:  ty,
 						ActualType:    interpreter.MustConvertStaticToSemaType(publishedType, inter),
 						LocationRange: locationRange,
@@ -2752,7 +2752,7 @@ func checkAndIssueStorageCapabilityControllerWithType(
 
 	borrowType, ok := ty.(*sema.ReferenceType)
 	if !ok {
-		panic(interpreter.InvalidCapabilityIssueTypeError{
+		panic(&interpreter.InvalidCapabilityIssueTypeError{
 			ExpectedTypeDescription: "reference type",
 			ActualType:              ty,
 			LocationRange:           locationRange,
@@ -2930,7 +2930,7 @@ func checkAndIssueAccountCapabilityControllerWithType(
 
 	typeBound := sema.AccountReferenceType
 	if !sema.IsSubType(ty, typeBound) {
-		panic(interpreter.InvalidCapabilityIssueTypeError{
+		panic(&interpreter.InvalidCapabilityIssueTypeError{
 			ExpectedTypeDescription: fmt.Sprintf("`%s`", typeBound.QualifiedString()),
 			ActualType:              ty,
 			LocationRange:           locationRange,
@@ -3584,7 +3584,7 @@ func AccountCapabilitiesPublish(
 
 	capabilityAddressValue := capabilityValue.Address()
 	if capabilityAddressValue != accountAddressValue {
-		panic(interpreter.CapabilityAddressPublishingError{
+		panic(&interpreter.CapabilityAddressPublishingError{
 			LocationRange:     locationRange,
 			CapabilityAddress: capabilityAddressValue,
 			AccountAddress:    accountAddressValue,
@@ -3622,7 +3622,7 @@ func AccountCapabilitiesPublish(
 				panic(err)
 			}
 			if !valid {
-				panic(interpreter.EntitledCapabilityPublishingError{
+				panic(&interpreter.EntitledCapabilityPublishingError{
 					LocationRange: locationRange,
 					BorrowType:    capabilityBorrowType,
 					Path:          pathValue,
@@ -3641,7 +3641,7 @@ func AccountCapabilitiesPublish(
 		domain,
 		storageMapKey,
 	) {
-		panic(interpreter.OverwriteError{
+		panic(&interpreter.OverwriteError{
 			Address:       accountAddressValue,
 			Path:          pathValue,
 			LocationRange: locationRange,

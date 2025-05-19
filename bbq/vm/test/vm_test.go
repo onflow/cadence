@@ -5052,7 +5052,7 @@ func TestCasting(t *testing.T) {
 		require.Error(t, err)
 		assert.Equal(
 			t,
-			interpreter.ForceCastTypeMismatchError{
+			&interpreter.ForceCastTypeMismatchError{
 				ExpectedType: sema.IntType,
 				ActualType:   sema.BoolType,
 				LocationRange: interpreter.LocationRange{
@@ -5819,7 +5819,9 @@ func TestCompileForce(t *testing.T) {
 			interpreter.Nil,
 		)
 		require.Error(t, err)
-		assert.ErrorIs(t, err, interpreter.ForceNilError{})
+
+		var forceNilError *interpreter.ForceNilError
+		require.ErrorAs(t, err, &forceNilError)
 	})
 
 	t.Run("nil, AnyStruct", func(t *testing.T) {
@@ -5836,7 +5838,8 @@ func TestCompileForce(t *testing.T) {
 			interpreter.Nil,
 		)
 		require.Error(t, err)
-		assert.ErrorIs(t, err, interpreter.ForceNilError{})
+		var forceNilError *interpreter.ForceNilError
+		require.ErrorAs(t, err, &forceNilError)
 	})
 
 	t.Run("non-optional", func(t *testing.T) {

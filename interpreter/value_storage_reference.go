@@ -134,7 +134,7 @@ func (v *StorageReferenceValue) dereference(context ValueStaticTypeContext, loca
 	}
 
 	if reference, isReference := referenced.(ReferenceValue); isReference {
-		panic(NestedReferenceError{
+		panic(&NestedReferenceError{
 			Value:         reference,
 			LocationRange: locationRange,
 		})

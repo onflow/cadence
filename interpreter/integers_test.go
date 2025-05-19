@@ -246,7 +246,8 @@ func TestInterpretAddressConversion(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.OverflowError{})
+		var overflowError *interpreter.OverflowError
+		require.ErrorAs(t, err, &overflowError)
 	})
 
 	t.Run("conversion function, underflow", func(t *testing.T) {
@@ -263,7 +264,8 @@ func TestInterpretAddressConversion(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.UnderflowError{})
+		var underflowError *interpreter.UnderflowError
+		require.ErrorAs(t, err, &underflowError)
 	})
 }
 
@@ -734,7 +736,14 @@ func TestInterpretIntegerConversion(t *testing.T) {
 						sema.Word256Type:
 					default:
 						t.Run("underflow", func(t *testing.T) {
-							test(t, sourceType, targetType, sourceValues.min, nil, interpreter.UnderflowError{})
+							test(
+								t,
+								sourceType,
+								targetType,
+								sourceValues.min,
+								nil,
+								&interpreter.UnderflowError{},
+							)
 						})
 					}
 				}
@@ -761,7 +770,14 @@ func TestInterpretIntegerConversion(t *testing.T) {
 						sema.Word256Type:
 					default:
 						t.Run("overflow", func(t *testing.T) {
-							test(t, sourceType, targetType, sourceValues.max, nil, interpreter.OverflowError{})
+							test(
+								t,
+								sourceType,
+								targetType,
+								sourceValues.max,
+								nil,
+								&interpreter.OverflowError{},
+							)
 						})
 					}
 				}
@@ -772,7 +788,14 @@ func TestInterpretIntegerConversion(t *testing.T) {
 
 				if sourceMaxInt != nil && (targetMaxInt == nil || sourceMaxInt.Cmp(targetMaxInt) < 0) {
 					t.Run("max", func(t *testing.T) {
-						test(t, sourceType, targetType, sourceValues.max, nil, nil)
+						test(
+							t,
+							sourceType,
+							targetType,
+							sourceValues.max,
+							nil,
+							nil,
+						)
 					})
 				}
 			})

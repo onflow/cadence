@@ -163,6 +163,7 @@ func TestInterpretContractUseBeforeInitializationComplete(t *testing.T) {
 
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.UseBeforeInitializationError{})
+		var initializationError *interpreter.UseBeforeInitializationError
+		require.ErrorAs(t, err, &initializationError)
 	})
 }

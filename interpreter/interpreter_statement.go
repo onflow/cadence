@@ -369,7 +369,7 @@ func (interpreter *Interpreter) EmitEvent(
 
 	onEventEmitted := config.OnEventEmitted
 	if onEventEmitted == nil {
-		panic(EventEmissionUnavailableError{
+		panic(&EventEmissionUnavailableError{
 			LocationRange: locationRange,
 		})
 	}
@@ -442,14 +442,14 @@ func (interpreter *Interpreter) VisitRemoveStatement(removeStatement *ast.Remove
 
 	// we enforce this in the checker, but check defensively anyways
 	if !ok || !base.Kind.SupportsAttachments() {
-		panic(InvalidAttachmentOperationTargetError{
+		panic(&InvalidAttachmentOperationTargetError{
 			Value:         removeTarget,
 			LocationRange: locationRange,
 		})
 	}
 
 	if inIteration := interpreter.SharedState.inAttachmentIteration(base); inIteration {
-		panic(AttachmentIterationMutationError{
+		panic(&AttachmentIterationMutationError{
 			Value:         base,
 			LocationRange: locationRange,
 		})
@@ -648,7 +648,7 @@ func (interpreter *Interpreter) checkSwapValue(value Value, expression ast.Expre
 	}
 
 	if expression, ok := expression.(*ast.MemberExpression); ok {
-		panic(UseBeforeInitializationError{
+		panic(&UseBeforeInitializationError{
 			Name: expression.Identifier.Identifier,
 			LocationRange: LocationRange{
 				Location:    interpreter.Location,

@@ -330,7 +330,8 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.UnderflowError{})
+		var underflowError *interpreter.UnderflowError
+		require.ErrorAs(t, err, &underflowError)
 	})
 
 	t.Run("invalid UFix64 > max Fix64 int to Fix64", func(t *testing.T) {
@@ -350,7 +351,8 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.OverflowError{})
+		var overflowError *interpreter.OverflowError
+		require.ErrorAs(t, err, &overflowError)
 	})
 
 	t.Run("invalid negative integer to UFix64", func(t *testing.T) {
@@ -379,7 +381,8 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					err,
 				)
 
-				require.ErrorAs(t, err, &interpreter.UnderflowError{})
+				var underflowError *interpreter.UnderflowError
+				require.ErrorAs(t, err, &underflowError)
 			})
 		}
 	})
@@ -417,7 +420,8 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				_, err := inter.Invoke("test")
 				RequireError(t, err)
 
-				require.ErrorAs(t, err, &interpreter.OverflowError{})
+				var overflowError *interpreter.OverflowError
+		require.ErrorAs(t, err, &overflowError)
 			})
 		}
 	})
@@ -454,7 +458,8 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				_, err := inter.Invoke("test")
 				RequireError(t, err)
 
-				require.ErrorAs(t, err, &interpreter.OverflowError{})
+				var overflowError *interpreter.OverflowError
+		require.ErrorAs(t, err, &overflowError)
 			})
 		}
 	})
@@ -491,7 +496,8 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				_, err := inter.Invoke("test")
 				RequireError(t, err)
 
-				require.ErrorAs(t, err, &interpreter.OverflowError{})
+				var overflowError *interpreter.OverflowError
+		require.ErrorAs(t, err, &overflowError)
 			})
 		}
 	})
@@ -528,7 +534,8 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				_, err := inter.Invoke("test")
 				RequireError(t, err)
 
-				require.ErrorAs(t, err, &interpreter.UnderflowError{})
+				var underflowError *interpreter.UnderflowError
+				require.ErrorAs(t, err, &underflowError)
 			})
 		}
 	})

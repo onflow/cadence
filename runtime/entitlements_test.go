@@ -213,7 +213,8 @@ func TestRuntimeAccountEntitlementSaveAndLoadFail(t *testing.T) {
 		},
 	)
 
-	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+	var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 }
 
 func TestRuntimeAccountEntitlementAttachment(t *testing.T) {
@@ -599,7 +600,8 @@ func TestRuntimeAccountEntitlementCapabilityCasting(t *testing.T) {
 		},
 	)
 
-	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+	var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 }
 
 func TestRuntimeAccountEntitlementCapabilityDictionary(t *testing.T) {
@@ -714,7 +716,8 @@ func TestRuntimeAccountEntitlementCapabilityDictionary(t *testing.T) {
 		},
 	)
 
-	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+	var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 }
 
 func TestRuntimeAccountEntitlementGenericCapabilityDictionary(t *testing.T) {

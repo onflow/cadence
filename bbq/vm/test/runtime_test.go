@@ -222,7 +222,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 	//
 	//	_, err := compileAndInvoke(t, code, "test")
 	//	require.Error(t, err)
-	//	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	//	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+	//	require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	//})
 	//
 	//t.Run("stack to account readonly", func(t *testing.T) {
@@ -253,7 +254,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 	//
 	//	_, err := inter.Invoke("test")
 	//	RequireError(t, err)
-	//	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	//	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+	//	require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	//})
 	//
 	//t.Run("account to stack", func(t *testing.T) {
@@ -319,7 +321,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 	//
 	//	_, err := inter.Invoke("test", arrayRef)
 	//	RequireError(t, err)
-	//	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	//	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+	//	require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	//})
 	//
 	//t.Run("stack to stack", func(t *testing.T) {
@@ -358,7 +361,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 	//
 	//	_, err := compileAndInvoke(t, code, "test")
 	//	require.Error(t, err)
-	//	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	//	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+	//	require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	//})
 	//
 	//t.Run("one account to another account", func(t *testing.T) {
@@ -448,7 +452,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 	//
 	//	_, err := inter.Invoke("test", arrayRef1, arrayRef2)
 	//	RequireError(t, err)
-	//	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	//	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+	//	require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	//})
 }
 

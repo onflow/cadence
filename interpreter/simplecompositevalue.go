@@ -292,7 +292,7 @@ func (v *SimpleCompositeValue) Transfer(
 	}
 
 	if v.isTransaction {
-		panic(NonTransferableValueError{
+		panic(&NonTransferableValueError{
 			Value: v,
 		})
 	}

@@ -149,7 +149,7 @@ func (v Int256Value) Negate(context NumberValueArithmeticContext, locationRange 
 func (v Int256Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationPlus,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -173,7 +173,7 @@ func (v Int256Value) Plus(context NumberValueArithmeticContext, other NumberValu
 		res := new(big.Int)
 		res.Add(v.BigInt, o.BigInt)
 		if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
-			panic(UnderflowError{
+			panic(&UnderflowError{
 				LocationRange: locationRange,
 			})
 		} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
@@ -191,7 +191,7 @@ func (v Int256Value) Plus(context NumberValueArithmeticContext, other NumberValu
 func (v Int256Value) SaturatingPlus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingAddFunctionName,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -229,7 +229,7 @@ func (v Int256Value) SaturatingPlus(context NumberValueArithmeticContext, other 
 func (v Int256Value) Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationMinus,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -253,7 +253,7 @@ func (v Int256Value) Minus(context NumberValueArithmeticContext, other NumberVal
 		res := new(big.Int)
 		res.Sub(v.BigInt, o.BigInt)
 		if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
-			panic(UnderflowError{
+			panic(&UnderflowError{
 				LocationRange: locationRange,
 			})
 		} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
@@ -271,7 +271,7 @@ func (v Int256Value) Minus(context NumberValueArithmeticContext, other NumberVal
 func (v Int256Value) SaturatingMinus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingSubtractFunctionName,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -309,7 +309,7 @@ func (v Int256Value) SaturatingMinus(context NumberValueArithmeticContext, other
 func (v Int256Value) Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationMod,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -321,7 +321,7 @@ func (v Int256Value) Mod(context NumberValueArithmeticContext, other NumberValue
 		res := new(big.Int)
 		// INT33-C
 		if o.BigInt.Cmp(res) == 0 {
-			panic(DivisionByZeroError{
+			panic(&DivisionByZeroError{
 				LocationRange: locationRange,
 			})
 		}
@@ -336,7 +336,7 @@ func (v Int256Value) Mod(context NumberValueArithmeticContext, other NumberValue
 func (v Int256Value) Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationMul,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -348,7 +348,7 @@ func (v Int256Value) Mul(context NumberValueArithmeticContext, other NumberValue
 		res := new(big.Int)
 		res.Mul(v.BigInt, o.BigInt)
 		if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
-			panic(UnderflowError{
+			panic(&UnderflowError{
 				LocationRange: locationRange,
 			})
 		} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
@@ -366,7 +366,7 @@ func (v Int256Value) Mul(context NumberValueArithmeticContext, other NumberValue
 func (v Int256Value) SaturatingMul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingMultiplyFunctionName,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -392,7 +392,7 @@ func (v Int256Value) SaturatingMul(context NumberValueArithmeticContext, other N
 func (v Int256Value) Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationDiv,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -409,7 +409,7 @@ func (v Int256Value) Div(context NumberValueArithmeticContext, other NumberValue
 		//       ...
 		//   }
 		if o.BigInt.Cmp(res) == 0 {
-			panic(DivisionByZeroError{
+			panic(&DivisionByZeroError{
 				LocationRange: locationRange,
 			})
 		}
@@ -429,7 +429,7 @@ func (v Int256Value) Div(context NumberValueArithmeticContext, other NumberValue
 func (v Int256Value) SaturatingDiv(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingDivideFunctionName,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -446,7 +446,7 @@ func (v Int256Value) SaturatingDiv(context NumberValueArithmeticContext, other N
 		//       ...
 		//   }
 		if o.BigInt.Cmp(res) == 0 {
-			panic(DivisionByZeroError{
+			panic(&DivisionByZeroError{
 				LocationRange: locationRange,
 			})
 		}
@@ -464,7 +464,7 @@ func (v Int256Value) SaturatingDiv(context NumberValueArithmeticContext, other N
 func (v Int256Value) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationLess,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -479,7 +479,7 @@ func (v Int256Value) Less(context ValueComparisonContext, other ComparableValue,
 func (v Int256Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationLessEqual,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -494,7 +494,7 @@ func (v Int256Value) LessEqual(context ValueComparisonContext, other ComparableV
 func (v Int256Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationGreater,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -509,7 +509,7 @@ func (v Int256Value) Greater(context ValueComparisonContext, other ComparableVal
 func (v Int256Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationGreaterEqual,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -569,7 +569,7 @@ func ConvertInt256(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 				LocationRange: locationRange,
 			})
 		} else if v.Cmp(sema.Int256TypeMinIntBig) < 0 {
-			panic(UnderflowError{
+			panic(&UnderflowError{
 				LocationRange: locationRange,
 			})
 		}
@@ -583,7 +583,7 @@ func ConvertInt256(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 func (v Int256Value) BitwiseOr(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Int256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationBitwiseOr,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -603,7 +603,7 @@ func (v Int256Value) BitwiseOr(context ValueStaticTypeContext, other IntegerValu
 func (v Int256Value) BitwiseXor(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Int256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationBitwiseXor,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -623,7 +623,7 @@ func (v Int256Value) BitwiseXor(context ValueStaticTypeContext, other IntegerVal
 func (v Int256Value) BitwiseAnd(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Int256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationBitwiseAnd,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -643,7 +643,7 @@ func (v Int256Value) BitwiseAnd(context ValueStaticTypeContext, other IntegerVal
 func (v Int256Value) BitwiseLeftShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Int256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationBitwiseLeftShift,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -652,7 +652,7 @@ func (v Int256Value) BitwiseLeftShift(context ValueStaticTypeContext, other Inte
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(NegativeShiftError{
+		panic(&NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
@@ -679,7 +679,7 @@ func (v Int256Value) BitwiseLeftShift(context ValueStaticTypeContext, other Inte
 func (v Int256Value) BitwiseRightShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Int256Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationBitwiseRightShift,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -688,7 +688,7 @@ func (v Int256Value) BitwiseRightShift(context ValueStaticTypeContext, other Int
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(NegativeShiftError{
+		panic(&NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}

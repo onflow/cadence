@@ -118,7 +118,7 @@ func (v Int32Value) Negate(context NumberValueArithmeticContext, locationRange L
 func (v Int32Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationPlus,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -132,7 +132,7 @@ func (v Int32Value) Plus(context NumberValueArithmeticContext, other NumberValue
 			LocationRange: locationRange,
 		})
 	} else if (o < 0) && (v < (math.MinInt32 - o)) {
-		panic(UnderflowError{
+		panic(&UnderflowError{
 			LocationRange: locationRange,
 		})
 	}
@@ -147,7 +147,7 @@ func (v Int32Value) Plus(context NumberValueArithmeticContext, other NumberValue
 func (v Int32Value) SaturatingPlus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingAddFunctionName,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -171,7 +171,7 @@ func (v Int32Value) SaturatingPlus(context NumberValueArithmeticContext, other N
 func (v Int32Value) Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationMinus,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -185,7 +185,7 @@ func (v Int32Value) Minus(context NumberValueArithmeticContext, other NumberValu
 			LocationRange: locationRange,
 		})
 	} else if (o < 0) && (v > (math.MaxInt32 + o)) {
-		panic(UnderflowError{
+		panic(&UnderflowError{
 			LocationRange: locationRange,
 		})
 	}
@@ -200,7 +200,7 @@ func (v Int32Value) Minus(context NumberValueArithmeticContext, other NumberValu
 func (v Int32Value) SaturatingMinus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingSubtractFunctionName,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -224,7 +224,7 @@ func (v Int32Value) SaturatingMinus(context NumberValueArithmeticContext, other 
 func (v Int32Value) Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationMod,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -234,7 +234,7 @@ func (v Int32Value) Mod(context NumberValueArithmeticContext, other NumberValue,
 
 	// INT33-C
 	if o == 0 {
-		panic(DivisionByZeroError{
+		panic(&DivisionByZeroError{
 			LocationRange: locationRange,
 		})
 	}
@@ -249,7 +249,7 @@ func (v Int32Value) Mod(context NumberValueArithmeticContext, other NumberValue,
 func (v Int32Value) Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationMul,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -269,7 +269,7 @@ func (v Int32Value) Mul(context NumberValueArithmeticContext, other NumberValue,
 		} else {
 			// positive * negative = negative. underflow?
 			if o < (math.MinInt32 / v) {
-				panic(UnderflowError{
+				panic(&UnderflowError{
 					LocationRange: locationRange,
 				})
 			}
@@ -278,7 +278,7 @@ func (v Int32Value) Mul(context NumberValueArithmeticContext, other NumberValue,
 		if o > 0 {
 			// negative * positive = negative. underflow?
 			if v < (math.MinInt32 / o) {
-				panic(UnderflowError{
+				panic(&UnderflowError{
 					LocationRange: locationRange,
 				})
 			}
@@ -302,7 +302,7 @@ func (v Int32Value) Mul(context NumberValueArithmeticContext, other NumberValue,
 func (v Int32Value) SaturatingMul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingMultiplyFunctionName,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -346,7 +346,7 @@ func (v Int32Value) SaturatingMul(context NumberValueArithmeticContext, other Nu
 func (v Int32Value) Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationDiv,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -357,7 +357,7 @@ func (v Int32Value) Div(context NumberValueArithmeticContext, other NumberValue,
 	// INT33-C
 	// https://golang.org/ref/spec#Integer_operators
 	if o == 0 {
-		panic(DivisionByZeroError{
+		panic(&DivisionByZeroError{
 			LocationRange: locationRange,
 		})
 	} else if (v == math.MinInt32) && (o == -1) {
@@ -376,7 +376,7 @@ func (v Int32Value) Div(context NumberValueArithmeticContext, other NumberValue,
 func (v Int32Value) SaturatingDiv(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingDivideFunctionName,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -388,7 +388,7 @@ func (v Int32Value) SaturatingDiv(context NumberValueArithmeticContext, other Nu
 		// INT33-C
 		// https://golang.org/ref/spec#Integer_operators
 		if o == 0 {
-			panic(DivisionByZeroError{
+			panic(&DivisionByZeroError{
 				LocationRange: locationRange,
 			})
 		} else if (v == math.MinInt32) && (o == -1) {
@@ -404,7 +404,7 @@ func (v Int32Value) SaturatingDiv(context NumberValueArithmeticContext, other Nu
 func (v Int32Value) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationLess,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -418,7 +418,7 @@ func (v Int32Value) Less(context ValueComparisonContext, other ComparableValue, 
 func (v Int32Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationLessEqual,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -432,7 +432,7 @@ func (v Int32Value) LessEqual(context ValueComparisonContext, other ComparableVa
 func (v Int32Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationGreater,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -446,7 +446,7 @@ func (v Int32Value) Greater(context ValueComparisonContext, other ComparableValu
 func (v Int32Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationGreaterEqual,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -484,7 +484,7 @@ func ConvertInt32(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 					LocationRange: locationRange,
 				})
 			} else if v.Cmp(sema.Int32TypeMinInt) < 0 {
-				panic(UnderflowError{
+				panic(&UnderflowError{
 					LocationRange: locationRange,
 				})
 			}
@@ -497,7 +497,7 @@ func ConvertInt32(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 					LocationRange: locationRange,
 				})
 			} else if v < math.MinInt32 {
-				panic(UnderflowError{
+				panic(&UnderflowError{
 					LocationRange: locationRange,
 				})
 			}
@@ -514,7 +514,7 @@ func ConvertInt32(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 func (v Int32Value) BitwiseOr(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Int32Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationBitwiseOr,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -532,7 +532,7 @@ func (v Int32Value) BitwiseOr(context ValueStaticTypeContext, other IntegerValue
 func (v Int32Value) BitwiseXor(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Int32Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationBitwiseXor,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -550,7 +550,7 @@ func (v Int32Value) BitwiseXor(context ValueStaticTypeContext, other IntegerValu
 func (v Int32Value) BitwiseAnd(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Int32Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationBitwiseAnd,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -568,7 +568,7 @@ func (v Int32Value) BitwiseAnd(context ValueStaticTypeContext, other IntegerValu
 func (v Int32Value) BitwiseLeftShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Int32Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationBitwiseLeftShift,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -577,7 +577,7 @@ func (v Int32Value) BitwiseLeftShift(context ValueStaticTypeContext, other Integ
 	}
 
 	if o < 0 {
-		panic(NegativeShiftError{
+		panic(&NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}
@@ -592,7 +592,7 @@ func (v Int32Value) BitwiseLeftShift(context ValueStaticTypeContext, other Integ
 func (v Int32Value) BitwiseRightShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Int32Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationBitwiseRightShift,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -601,7 +601,7 @@ func (v Int32Value) BitwiseRightShift(context ValueStaticTypeContext, other Inte
 	}
 
 	if o < 0 {
-		panic(NegativeShiftError{
+		panic(&NegativeShiftError{
 			LocationRange: locationRange,
 		})
 	}

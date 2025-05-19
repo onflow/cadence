@@ -333,7 +333,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 19, invalidatedResourceErr.StartPosition().Line)
@@ -379,7 +379,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 19, invalidatedResourceErr.StartPosition().Line)
@@ -425,7 +425,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 19, invalidatedResourceErr.StartPosition().Line)
@@ -471,7 +471,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 19, invalidatedResourceErr.StartPosition().Line)
@@ -514,7 +514,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
@@ -554,7 +554,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
@@ -594,7 +594,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
@@ -634,7 +634,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
@@ -676,7 +676,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
@@ -717,7 +717,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
@@ -755,7 +755,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 7, invalidatedResourceErr.StartPosition().Line)
@@ -788,7 +788,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 7, invalidatedResourceErr.StartPosition().Line)
@@ -821,7 +821,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 			})
 
@@ -852,7 +852,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 7, invalidatedResourceErr.StartPosition().Line)
@@ -903,7 +903,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 19, invalidatedResourceErr.StartPosition().Line)
@@ -948,7 +948,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 19, invalidatedResourceErr.StartPosition().Line)
@@ -993,7 +993,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 19, invalidatedResourceErr.StartPosition().Line)
@@ -1038,7 +1038,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 19, invalidatedResourceErr.StartPosition().Line)
@@ -1079,7 +1079,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
@@ -1117,7 +1117,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
@@ -1155,7 +1155,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
@@ -1193,7 +1193,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
@@ -1234,7 +1234,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
@@ -1274,7 +1274,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
@@ -1312,7 +1312,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 7, invalidatedResourceErr.StartPosition().Line)
@@ -1344,7 +1344,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 7, invalidatedResourceErr.StartPosition().Line)
@@ -1376,7 +1376,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 7, invalidatedResourceErr.StartPosition().Line)
@@ -1408,7 +1408,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				_, err = inter.Invoke("test")
 				RequireError(t, err)
 
-				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				var invalidatedResourceErr *interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
 
 				assert.Equal(t, 7, invalidatedResourceErr.StartPosition().Line)
@@ -1442,7 +1442,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 		_, err = inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+		var invalidatedResourceError *interpreter.InvalidatedResourceError
+		require.ErrorAs(t, err, &invalidatedResourceError)
 	})
 
 	t.Run("in reference expression", func(t *testing.T) {
@@ -1471,7 +1472,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 		_, err = inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+		var invalidatedResourceError *interpreter.InvalidatedResourceError
+		require.ErrorAs(t, err, &invalidatedResourceError)
 	})
 
 	t.Run("in conditional expression", func(t *testing.T) {
@@ -1508,7 +1510,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 		_, err = inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+		var invalidatedResourceError *interpreter.InvalidatedResourceError
+		require.ErrorAs(t, err, &invalidatedResourceError)
 	})
 
 	t.Run("in force expression", func(t *testing.T) {
@@ -1537,7 +1540,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 		_, err = inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+		var invalidatedResourceError *interpreter.InvalidatedResourceError
+		require.ErrorAs(t, err, &invalidatedResourceError)
 	})
 
 	t.Run("in destroy expression", func(t *testing.T) {
@@ -1565,7 +1569,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 		_, err = inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+		var invalidatedResourceError *interpreter.InvalidatedResourceError
+		require.ErrorAs(t, err, &invalidatedResourceError)
 	})
 
 	t.Run("in function invocation expression", func(t *testing.T) {
@@ -1597,7 +1602,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 		_, err = inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+		var invalidatedResourceError *interpreter.InvalidatedResourceError
+		require.ErrorAs(t, err, &invalidatedResourceError)
 	})
 
 	t.Run("in array expression", func(t *testing.T) {
@@ -1626,7 +1632,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 		_, err = inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+		var invalidatedResourceError *interpreter.InvalidatedResourceError
+		require.ErrorAs(t, err, &invalidatedResourceError)
 	})
 
 	t.Run("in dictionary expression", func(t *testing.T) {
@@ -1655,7 +1662,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 		_, err = inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+		var invalidatedResourceError *interpreter.InvalidatedResourceError
+		require.ErrorAs(t, err, &invalidatedResourceError)
 	})
 
 	t.Run("with inner conditional expression", func(t *testing.T) {
@@ -1688,7 +1696,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 		_, err = inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+		var invalidatedResourceError *interpreter.InvalidatedResourceError
+		require.ErrorAs(t, err, &invalidatedResourceError)
 	})
 
 	t.Run("force move", func(t *testing.T) {
@@ -1721,7 +1730,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 		_, err = inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+		var invalidatedResourceError *interpreter.InvalidatedResourceError
+		require.ErrorAs(t, err, &invalidatedResourceError)
 	})
 }
 
@@ -1753,7 +1763,8 @@ func TestInterpretResourceInvalidationWithConditionalExprInDestroy(t *testing.T)
 	_, err = inter.Invoke("test")
 	RequireError(t, err)
 
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	var invalidatedResourceError *interpreter.InvalidatedResourceError
+	require.ErrorAs(t, err, &invalidatedResourceError)
 }
 
 func TestInterpretResourceUseAfterInvalidation(t *testing.T) {
@@ -1795,7 +1806,7 @@ func TestInterpretResourceUseAfterInvalidation(t *testing.T) {
 		_, err = inter.Invoke("test")
 		RequireError(t, err)
 
-		invalidatedResourceError := interpreter.InvalidatedResourceError{}
+		var invalidatedResourceError *interpreter.InvalidatedResourceError
 		require.ErrorAs(t, err, &invalidatedResourceError)
 
 		// error must be thrown at field access
@@ -1832,7 +1843,8 @@ func TestInterpretResourceUseAfterInvalidation(t *testing.T) {
 		_, err = inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+		var invalidatedResourceError *interpreter.InvalidatedResourceError
+		require.ErrorAs(t, err, &invalidatedResourceError)
 	})
 }
 
@@ -1894,7 +1906,8 @@ func TestInterpreterResourcePostCondition(t *testing.T) {
 
 	_, err := inter.Invoke("test")
 	RequireError(t, err)
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	var invalidatedResourceError *interpreter.InvalidatedResourceError
+	require.ErrorAs(t, err, &invalidatedResourceError)
 }
 
 func TestInterpreterResourcePreAndPostCondition(t *testing.T) {
@@ -1934,7 +1947,8 @@ func TestInterpreterResourcePreAndPostCondition(t *testing.T) {
 
 	_, err := inter.Invoke("test")
 	RequireError(t, err)
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	var invalidatedResourceError *interpreter.InvalidatedResourceError
+	require.ErrorAs(t, err, &invalidatedResourceError)
 }
 
 func TestInterpreterResourceConditionAdditionalParam(t *testing.T) {
@@ -2056,7 +2070,8 @@ func TestInterpreterResourceDoubleWrappedPostCondition(t *testing.T) {
 
 	_, err := inter.Invoke("test")
 	RequireError(t, err)
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	var invalidatedResourceError *interpreter.InvalidatedResourceError
+	require.ErrorAs(t, err, &invalidatedResourceError)
 }
 
 func TestInterpretOptionalResourceReference(t *testing.T) {
@@ -2088,7 +2103,8 @@ func TestInterpretOptionalResourceReference(t *testing.T) {
 
 	_, err := inter.Invoke("test")
 	RequireError(t, err)
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+	require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 }
 
 func TestInterpretArrayOptionalResourceReference(t *testing.T) {
@@ -2120,7 +2136,8 @@ func TestInterpretArrayOptionalResourceReference(t *testing.T) {
 
 	_, err := inter.Invoke("test")
 	RequireError(t, err)
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+	require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 }
 
 func TestInterpretResourceDestroyedInPreCondition(t *testing.T) {
@@ -2171,7 +2188,8 @@ func TestInterpretResourceDestroyedInPreCondition(t *testing.T) {
 	_, err = inter.Invoke("test")
 	RequireError(t, err)
 
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	var invalidatedResourceError *interpreter.InvalidatedResourceError
+	require.ErrorAs(t, err, &invalidatedResourceError)
 }
 
 func TestInterpretResourceFunctionReferenceValidity(t *testing.T) {
@@ -2963,7 +2981,8 @@ func TestInterpretNestedSwap(t *testing.T) {
 	_, err = inter.Invoke("main")
 	RequireError(t, err)
 
-	assert.ErrorAs(t, err, &interpreter.UseBeforeInitializationError{})
+	var initializationError *interpreter.UseBeforeInitializationError
+	require.ErrorAs(t, err, &initializationError)
 
 	assert.Equal(t,
 		[]string{
@@ -3011,8 +3030,8 @@ func TestInterpretMovedResourceInOptionalBinding(t *testing.T) {
 
 	_, err = inter.Invoke("main")
 	RequireError(t, err)
-	invalidResourceError := &interpreter.InvalidatedResourceError{}
-	require.ErrorAs(t, err, invalidResourceError)
+	var invalidResourceError *interpreter.InvalidatedResourceError
+	require.ErrorAs(t, err, &invalidResourceError)
 
 	// Error must be thrown at `copy2: <- victim`
 	errorStartPos := invalidResourceError.LocationRange.StartPosition()
@@ -3054,8 +3073,8 @@ func TestInterpretMovedResourceInSecondValue(t *testing.T) {
 
 	_, err = inter.Invoke("main")
 	RequireError(t, err)
-	invalidResourceError := &interpreter.InvalidatedResourceError{}
-	require.ErrorAs(t, err, invalidResourceError)
+	var invalidResourceError *interpreter.InvalidatedResourceError
+	require.ErrorAs(t, err, &invalidResourceError)
 
 	// Error must be thrown at `copy2: <- victim`
 	errorStartPos := invalidResourceError.LocationRange.StartPosition()
@@ -3117,7 +3136,8 @@ func TestInterpretResourceLoss(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.ResourceLossError{})
+		var resourceLossError *interpreter.ResourceLossError
+		require.ErrorAs(t, err, &resourceLossError)
 	})
 
 	t.Run("force nil assignment", func(t *testing.T) {
@@ -3142,7 +3162,8 @@ func TestInterpretResourceLoss(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.ResourceLossError{})
+		var resourceLossError *interpreter.ResourceLossError
+		require.ErrorAs(t, err, &resourceLossError)
 	})
 }
 
@@ -3189,7 +3210,8 @@ func TestInterpretPreConditionResourceMove(t *testing.T) {
 
 	_, err = inter.Invoke("main")
 	RequireError(t, err)
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	var invalidatedResourceError *interpreter.InvalidatedResourceError
+	require.ErrorAs(t, err, &invalidatedResourceError)
 }
 
 func TestInterpretResourceSelfSwap(t *testing.T) {
@@ -3211,7 +3233,7 @@ func TestInterpretResourceSelfSwap(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		var invalidatedResourceErr interpreter.InvalidatedResourceError
+		var invalidatedResourceErr *interpreter.InvalidatedResourceError
 		require.ErrorAs(t, err, &invalidatedResourceErr)
 	})
 
@@ -3230,7 +3252,7 @@ func TestInterpretResourceSelfSwap(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		var invalidatedResourceErr interpreter.InvalidatedResourceError
+		var invalidatedResourceErr *interpreter.InvalidatedResourceError
 		require.ErrorAs(t, err, &invalidatedResourceErr)
 	})
 
@@ -3247,7 +3269,7 @@ func TestInterpretResourceSelfSwap(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		var invalidatedResourceErr interpreter.InvalidatedResourceError
+		var invalidatedResourceErr *interpreter.InvalidatedResourceError
 		require.ErrorAs(t, err, &invalidatedResourceErr)
 	})
 
@@ -3264,7 +3286,7 @@ func TestInterpretResourceSelfSwap(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		var invalidatedResourceErr interpreter.InvalidatedResourceError
+		var invalidatedResourceErr *interpreter.InvalidatedResourceError
 		require.ErrorAs(t, err, &invalidatedResourceErr)
 	})
 }
@@ -3375,7 +3397,8 @@ func TestInterpretInvalidatingLoopedReference(t *testing.T) {
 
 	_, err := inter.Invoke("main")
 	RequireError(t, err)
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+	require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 }
 
 func TestInterpretInvalidatingAttachmentLoopedReference(t *testing.T) {
@@ -3471,7 +3494,8 @@ func TestInterpretInvalidatingAttachmentLoopedReference(t *testing.T) {
 
 	_, err := inter.Invoke("main")
 	RequireError(t, err)
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+	require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 }
 
 func TestInterpretResourceReferenceInvalidation(t *testing.T) {
@@ -3499,7 +3523,8 @@ func TestInterpretResourceReferenceInvalidation(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("incomplete optional indirection", func(t *testing.T) {
@@ -3530,7 +3555,8 @@ func TestInterpretResourceReferenceInvalidation(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("optional indirection", func(t *testing.T) {
@@ -3561,7 +3587,8 @@ func TestInterpretResourceReferenceInvalidation(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("invalid reference logged in array", func(t *testing.T) {
@@ -3589,7 +3616,8 @@ func TestInterpretResourceReferenceInvalidation(t *testing.T) {
 
 		_, err = inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("invalid optional reference logged in array", func(t *testing.T) {
@@ -3621,7 +3649,8 @@ func TestInterpretResourceReferenceInvalidation(t *testing.T) {
 
 		_, err = inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("invalid reference logged in dict", func(t *testing.T) {
@@ -3647,7 +3676,8 @@ func TestInterpretResourceReferenceInvalidation(t *testing.T) {
 
 		_, err = inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("invalid reference logged in composite", func(t *testing.T) {
@@ -3680,7 +3710,8 @@ func TestInterpretResourceReferenceInvalidation(t *testing.T) {
 
 		_, err = inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 }
 
@@ -3765,7 +3796,7 @@ func TestInterpretInvalidNilCoalescingResourceDuplication(t *testing.T) {
 		_, err = inter.Invoke("main")
 		RequireError(t, err)
 
-		var destroyedResourceErr interpreter.DestroyedResourceError
+		var destroyedResourceErr *interpreter.DestroyedResourceError
 		require.ErrorAs(t, err, &destroyedResourceErr)
 	})
 

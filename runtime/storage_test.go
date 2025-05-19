@@ -1417,7 +1417,8 @@ func TestRuntimeStorageReferenceDowncast(t *testing.T) {
 		},
 	)
 
-	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+	var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+	require.ErrorAs(t, err, &forceCastTypeMismatchError)
 }
 
 func TestRuntimeStorageNonStorable(t *testing.T) {
@@ -5027,7 +5028,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 		)
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+		var storageMutationError *interpreter.StorageMutatedDuringIterationError
+		require.ErrorAs(t, err, &storageMutationError)
 	})
 
 	t.Run("forEachStored with early termination", func(t *testing.T) {
@@ -5167,7 +5169,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 			if continueAfterMutation {
 				RequireError(t, err)
 
-				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+				var storageMutationError *interpreter.StorageMutatedDuringIterationError
+				require.ErrorAs(t, err, &storageMutationError)
 			} else {
 				require.NoError(t, err)
 			}
@@ -5219,7 +5222,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 			if continueAfterMutation {
 				RequireError(t, err)
 
-				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+				var storageMutationError *interpreter.StorageMutatedDuringIterationError
+				require.ErrorAs(t, err, &storageMutationError)
 			} else {
 				require.NoError(t, err)
 			}
@@ -5273,7 +5277,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 			if continueAfterMutation {
 				RequireError(t, err)
 
-				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+				var storageMutationError *interpreter.StorageMutatedDuringIterationError
+				require.ErrorAs(t, err, &storageMutationError)
 			} else {
 				require.NoError(t, err)
 			}
@@ -5330,7 +5335,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 			if continueAfterMutation {
 				RequireError(t, err)
 
-				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+				var storageMutationError *interpreter.StorageMutatedDuringIterationError
+				require.ErrorAs(t, err, &storageMutationError)
 			} else {
 				require.NoError(t, err)
 			}
@@ -5376,7 +5382,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 			if continueAfterMutation {
 				RequireError(t, err)
 
-				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+				var storageMutationError *interpreter.StorageMutatedDuringIterationError
+				require.ErrorAs(t, err, &storageMutationError)
 			} else {
 				require.NoError(t, err)
 			}
@@ -5424,7 +5431,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 			if continueAfterMutation {
 				RequireError(t, err)
 
-				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+				var storageMutationError *interpreter.StorageMutatedDuringIterationError
+				require.ErrorAs(t, err, &storageMutationError)
 			} else {
 				require.NoError(t, err)
 			}
@@ -5472,7 +5480,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 			if continueAfterMutation {
 				RequireError(t, err)
 
-				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+				var storageMutationError *interpreter.StorageMutatedDuringIterationError
+				require.ErrorAs(t, err, &storageMutationError)
 			} else {
 				require.NoError(t, err)
 			}
@@ -5547,7 +5556,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 			if continueAfterMutation {
 				RequireError(t, err)
 
-				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+				var storageMutationError *interpreter.StorageMutatedDuringIterationError
+				require.ErrorAs(t, err, &storageMutationError)
 			} else {
 				require.NoError(t, err)
 			}
@@ -5942,7 +5952,8 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 		)
 
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.ReferencedValueChangedError{})
+		var referencedValueChangedError *interpreter.ReferencedValueChangedError
+		require.ErrorAs(t, err, &referencedValueChangedError)
 	})
 
 	t.Run("struct", func(t *testing.T) {
@@ -5994,7 +6005,8 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 			})
 
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.ReferencedValueChangedError{})
+		var referencedValueChangedError *interpreter.ReferencedValueChangedError
+		require.ErrorAs(t, err, &referencedValueChangedError)
 	})
 
 	t.Run("replace resource", func(t *testing.T) {
@@ -6104,7 +6116,8 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 		)
 
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.DereferenceError{})
+		var dereferenceError *interpreter.DereferenceError
+		require.ErrorAs(t, err, &dereferenceError)
 	})
 
 }
@@ -6203,7 +6216,8 @@ func TestRuntimeStorageReferenceAccess(t *testing.T) {
 			},
 		)
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.DereferenceError{})
+		var dereferenceError *interpreter.DereferenceError
+		require.ErrorAs(t, err, &dereferenceError)
 	})
 
 	t.Run("optional reference", func(t *testing.T) {
@@ -6232,7 +6246,8 @@ func TestRuntimeStorageReferenceAccess(t *testing.T) {
 			},
 		)
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.DereferenceError{})
+		var dereferenceError *interpreter.DereferenceError
+		require.ErrorAs(t, err, &dereferenceError)
 	})
 }
 

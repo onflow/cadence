@@ -269,7 +269,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(
 			}
 
 			if resultValue == nil && !allowMissing {
-				panic(UseBeforeInitializationError{
+				panic(&UseBeforeInitializationError{
 					Name:          identifier,
 					LocationRange: locationRange,
 				})
@@ -365,7 +365,7 @@ func (interpreter *Interpreter) checkMemberAccess(
 		if _, ok := targetStaticType.(*OptionalStaticType); !ok {
 			targetSemaType := MustConvertStaticToSemaType(targetStaticType, interpreter)
 
-			panic(MemberAccessTypeError{
+			panic(&MemberAccessTypeError{
 				ExpectedType:  expectedType,
 				ActualType:    targetSemaType,
 				LocationRange: locationRange,
@@ -376,7 +376,7 @@ func (interpreter *Interpreter) checkMemberAccess(
 	if !IsSubTypeOfSemaType(interpreter, targetStaticType, expectedType) {
 		targetSemaType := MustConvertStaticToSemaType(targetStaticType, interpreter)
 
-		panic(MemberAccessTypeError{
+		panic(&MemberAccessTypeError{
 			ExpectedType:  expectedType,
 			ActualType:    targetSemaType,
 			LocationRange: locationRange,
@@ -423,13 +423,13 @@ func CheckInvalidatedResourceOrResourceReference(
 	switch value := value.(type) {
 	case ResourceKindedValue:
 		if value.isInvalidatedResource(context) {
-			panic(InvalidatedResourceError{
+			panic(&InvalidatedResourceError{
 				LocationRange: locationRange,
 			})
 		}
 	case *EphemeralReferenceValue:
 		if value.Value == nil {
-			panic(InvalidatedResourceReferenceError{
+			panic(&InvalidatedResourceReferenceError{
 				LocationRange: locationRange,
 			})
 		} else {
@@ -461,7 +461,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 	}
 
 	error := func(right Value) {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     expression.Operation,
 			LeftType:      leftValue.StaticType(interpreter),
 			RightType:     right.StaticType(interpreter),
@@ -679,7 +679,7 @@ func (interpreter *Interpreter) testComparison(left, right Value, expression *as
 	rightComparable, rightOk := right.(ComparableValue)
 
 	if !leftOk || !rightOk {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     expression.Operation,
 			LeftType:      left.StaticType(interpreter),
 			RightType:     right.StaticType(interpreter),
@@ -1373,7 +1373,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 					HasPosition: expression.Expression,
 				}
 
-				panic(ForceCastTypeMismatchError{
+				panic(&ForceCastTypeMismatchError{
 					ExpectedType:  expectedType,
 					ActualType:    valueSemaType,
 					LocationRange: locationRange,
@@ -1510,7 +1510,7 @@ func CreateReferenceValue(
 		case NilValue:
 			// Case (3.b) value is nil.
 			// Since the resulting type can NOT accommodate a nil (non-optional reference), error-out.
-			panic(NonOptionalReferenceToNilError{
+			panic(&NonOptionalReferenceToNilError{
 				ReferenceType: typ,
 				LocationRange: locationRange,
 			})
@@ -1525,7 +1525,7 @@ func CreateReferenceValue(
 				// result reference type is unauthorized
 				staticType := value.StaticType(context)
 				if typ.Authorization != sema.UnauthorizedAccess || !IsSubTypeOfSemaType(context, staticType, typ) {
-					panic(InvalidMemberReferenceError{
+					panic(&InvalidMemberReferenceError{
 						ExpectedType:  typ,
 						ActualType:    MustConvertStaticToSemaType(staticType, context),
 						LocationRange: locationRange,
@@ -1573,7 +1573,7 @@ func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpres
 
 	case NilValue:
 		panic(
-			ForceNilError{
+			&ForceNilError{
 				LocationRange: LocationRange{
 					Location:    interpreter.Location,
 					HasPosition: expression,
@@ -1611,14 +1611,14 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 
 	// we enforce this in the checker, but check defensively anyway
 	if !ok || !base.Kind.SupportsAttachments() {
-		panic(InvalidAttachmentOperationTargetError{
+		panic(&InvalidAttachmentOperationTargetError{
 			Value:         attachTarget,
 			LocationRange: locationRange,
 		})
 	}
 
 	if inIteration := interpreter.SharedState.inAttachmentIteration(base); inIteration {
-		panic(AttachmentIterationMutationError{
+		panic(&AttachmentIterationMutationError{
 			Value:         base,
 			LocationRange: locationRange,
 		})

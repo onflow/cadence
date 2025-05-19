@@ -230,7 +230,8 @@ func TestInterpretResultVariable(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("getID")
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("reference invalidation, non optional", func(t *testing.T) {
@@ -289,7 +290,8 @@ func TestInterpretResultVariable(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("getID")
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 }
 
@@ -393,7 +395,7 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
 
-		var typeErr interpreter.ForceCastTypeMismatchError
+		var typeErr *interpreter.ForceCastTypeMismatchError
 		require.ErrorAs(t, err, &typeErr)
 	})
 }

@@ -1194,7 +1194,7 @@ func (v *CompositeValue) Transfer(
 	if preventTransfer == nil {
 		preventTransfer = map[atree.ValueID]struct{}{}
 	} else if _, ok := preventTransfer[currentValueID]; ok {
-		panic(RecursiveTransferError{
+		panic(&RecursiveTransferError{
 			LocationRange: locationRange,
 		})
 	}
@@ -1207,7 +1207,7 @@ func (v *CompositeValue) Transfer(
 	isResourceKinded := v.IsResourceKinded(context)
 
 	if needsStoreTo && v.Kind == common.CompositeKindContract {
-		panic(NonTransferableValueError{
+		panic(&NonTransferableValueError{
 			Value: v,
 		})
 	}
@@ -1874,7 +1874,7 @@ func (v *CompositeValue) SetTypeKey(
 ) {
 	memberName := AttachmentMemberName(string(attachmentType.ID()))
 	if v.SetMember(context, locationRange, memberName, attachment) {
-		panic(DuplicateAttachmentError{
+		panic(&DuplicateAttachmentError{
 			AttachmentType: attachmentType,
 			Value:          v,
 			LocationRange:  locationRange,

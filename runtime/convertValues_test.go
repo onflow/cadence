@@ -3489,7 +3489,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 				RequireError(t, err)
 				assertUserError(t, err)
 
-				var containerMutationError interpreter.ContainerMutationError
+				var containerMutationError *interpreter.ContainerMutationError
 				require.ErrorAs(t, err, &containerMutationError)
 			} else {
 				require.NoError(t, err)
@@ -4031,7 +4031,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		RequireError(t, err)
 		assertUserError(t, err)
 
-		var argErr interpreter.ContainerMutationError
+		var argErr *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &argErr)
 	})
 }
@@ -4408,7 +4408,10 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 						var invalidEntryPointArgumentError *InvalidEntryPointArgumentError
 						assert.ErrorAs(t, err, &invalidEntryPointArgumentError)
-						assert.ErrorAs(t, err, &interpreter.InvalidPublicKeyError{})
+
+						var publicKeyError *interpreter.InvalidPublicKeyError
+						assert.ErrorAs(t, err, &publicKeyError)
+
 						assert.ErrorAs(t, err, &publicKeyActualError)
 					}
 				},
@@ -5359,7 +5362,8 @@ func TestRuntimeDestroyedResourceReferenceExport(t *testing.T) {
 		},
 	)
 	require.Error(t, err)
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 }
 
 func TestRuntimeDeploymentResultValueImportExport(t *testing.T) {

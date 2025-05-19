@@ -217,7 +217,7 @@ func assertConditionError(
 		return
 	}
 
-	var conditionErr interpreter.ConditionError
+	var conditionErr *interpreter.ConditionError
 	require.ErrorAs(t, err, &conditionErr)
 
 	assert.Equal(t,
@@ -241,7 +241,7 @@ func assertConditionErrorWithMessage(
 		return
 	}
 
-	var conditionErr interpreter.ConditionError
+	var conditionErr *interpreter.ConditionError
 	require.ErrorAs(t, err, &conditionErr)
 
 	assert.Equal(

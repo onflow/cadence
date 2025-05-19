@@ -460,7 +460,8 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("Auth ref", func(t *testing.T) {
@@ -574,7 +575,8 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
+		var containerMutationError *interpreter.ContainerMutatedDuringIterationError
+		require.ErrorAs(t, err, &containerMutationError)
 	})
 
 	t.Run("Mutating reference to struct array", func(t *testing.T) {
@@ -602,7 +604,8 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		assert.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
+		var containerMutationError *interpreter.ContainerMutatedDuringIterationError
+		require.ErrorAs(t, err, &containerMutationError)
 	})
 
 	t.Run("String ref", func(t *testing.T) {
@@ -773,7 +776,8 @@ func TestInterpretStorageReferencesInForLoop(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.DereferenceError{})
+		var dereferenceError *interpreter.DereferenceError
+			require.ErrorAs(t, err, &dereferenceError)
 	})
 }
 

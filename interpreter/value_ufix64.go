@@ -97,7 +97,7 @@ func ConvertUFix64(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 
 	case Fix64Value:
 		if value < 0 {
-			panic(UnderflowError{
+			panic(&UnderflowError{
 				LocationRange: locationRange,
 			})
 		}
@@ -113,7 +113,7 @@ func ConvertUFix64(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 			v := value.ToBigInt(memoryGauge)
 
 			if v.Sign() < 0 {
-				panic(UnderflowError{
+				panic(&UnderflowError{
 					LocationRange: locationRange,
 				})
 			}
@@ -138,7 +138,7 @@ func ConvertUFix64(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 		converter := func() uint64 {
 			v := value.ToInt(locationRange)
 			if v < 0 {
-				panic(UnderflowError{
+				panic(&UnderflowError{
 					LocationRange: locationRange,
 				})
 			}
@@ -210,7 +210,7 @@ func (v UFix64Value) Negate(NumberValueArithmeticContext, LocationRange) NumberV
 func (v UFix64Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationPlus,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -227,7 +227,7 @@ func (v UFix64Value) Plus(context NumberValueArithmeticContext, other NumberValu
 func (v UFix64Value) SaturatingPlus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingAddFunctionName,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -245,7 +245,7 @@ func (v UFix64Value) SaturatingPlus(context NumberValueArithmeticContext, other 
 func (v UFix64Value) Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationMinus,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -263,7 +263,7 @@ func (v UFix64Value) Minus(context NumberValueArithmeticContext, other NumberVal
 func (v UFix64Value) SaturatingMinus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingSubtractFunctionName,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -281,7 +281,7 @@ func (v UFix64Value) SaturatingMinus(context NumberValueArithmeticContext, other
 func (v UFix64Value) Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationMul,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -299,7 +299,7 @@ func (v UFix64Value) Mul(context NumberValueArithmeticContext, other NumberValue
 func (v UFix64Value) SaturatingMul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingMultiplyFunctionName,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -317,7 +317,7 @@ func (v UFix64Value) SaturatingMul(context NumberValueArithmeticContext, other N
 func (v UFix64Value) Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationDiv,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -335,8 +335,8 @@ func (v UFix64Value) Div(context NumberValueArithmeticContext, other NumberValue
 func (v UFix64Value) SaturatingDiv(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	defer func() {
 		r := recover()
-		if _, ok := r.(InvalidOperandsError); ok {
-			panic(InvalidOperandsError{
+		if _, ok := r.(*InvalidOperandsError); ok {
+			panic(&InvalidOperandsError{
 				FunctionName:  sema.NumericTypeSaturatingDivideFunctionName,
 				LeftType:      v.StaticType(context),
 				RightType:     other.StaticType(context),
@@ -351,7 +351,7 @@ func (v UFix64Value) SaturatingDiv(context NumberValueArithmeticContext, other N
 func (v UFix64Value) Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationMod,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -369,7 +369,7 @@ func (v UFix64Value) Mod(context NumberValueArithmeticContext, other NumberValue
 func (v UFix64Value) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationLess,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -383,7 +383,7 @@ func (v UFix64Value) Less(context ValueComparisonContext, other ComparableValue,
 func (v UFix64Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationLessEqual,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -397,7 +397,7 @@ func (v UFix64Value) LessEqual(context ValueComparisonContext, other ComparableV
 func (v UFix64Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationGreater,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -411,7 +411,7 @@ func (v UFix64Value) Greater(context ValueComparisonContext, other ComparableVal
 func (v UFix64Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationGreaterEqual,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),

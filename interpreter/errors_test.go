@@ -32,7 +32,7 @@ import (
 func TestOverwriteError_Error(t *testing.T) {
 
 	require.EqualError(t,
-		OverwriteError{
+		&OverwriteError{
 			Address: NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 			Path: PathValue{
 				Domain:     common.PathDomainStorage,

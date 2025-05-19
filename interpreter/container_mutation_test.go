@@ -84,8 +84,8 @@ func TestInterpretArrayMutation(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		mutationError := &interpreter.ContainerMutationError{}
-		require.ErrorAs(t, err, mutationError)
+		var mutationError *interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &mutationError)
 
 		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
 		assert.Equal(t, sema.IntType, mutationError.ActualType)
@@ -104,8 +104,8 @@ func TestInterpretArrayMutation(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		mutationError := &interpreter.ContainerMutationError{}
-		require.ErrorAs(t, err, mutationError)
+		var mutationError *interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &mutationError)
 
 		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
 		assert.Equal(t, sema.IntType, mutationError.ActualType)
@@ -159,8 +159,8 @@ func TestInterpretArrayMutation(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		mutationError := &interpreter.ContainerMutationError{}
-		require.ErrorAs(t, err, mutationError)
+		var mutationError *interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &mutationError)
 
 		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
 		assert.Equal(t, sema.IntType, mutationError.ActualType)
@@ -179,8 +179,8 @@ func TestInterpretArrayMutation(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		mutationError := &interpreter.ContainerMutationError{}
-		require.ErrorAs(t, err, mutationError)
+		var mutationError *interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &mutationError)
 
 		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
 		assert.Equal(t, sema.IntType, mutationError.ActualType)
@@ -234,8 +234,8 @@ func TestInterpretArrayMutation(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		mutationError := &interpreter.ContainerMutationError{}
-		require.ErrorAs(t, err, mutationError)
+		var mutationError *interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &mutationError)
 
 		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
 		assert.Equal(t, sema.IntType, mutationError.ActualType)
@@ -256,7 +256,8 @@ func TestInterpretArrayMutation(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ContainerMutationError{})
+		var mutationError *interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &mutationError)
 
 		// Check original array
 
@@ -295,8 +296,8 @@ func TestInterpretArrayMutation(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		mutationError := &interpreter.ContainerMutationError{}
-		require.ErrorAs(t, err, mutationError)
+		var mutationError *interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &mutationError)
 
 		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
 		assert.Equal(t, sema.IntType, mutationError.ActualType)
@@ -495,8 +496,8 @@ func TestInterpretArrayMutation(t *testing.T) {
 		_, err = inter.Invoke("test")
 		RequireError(t, err)
 
-		mutationError := &interpreter.ContainerMutationError{}
-		require.ErrorAs(t, err, mutationError)
+		var mutationError *interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &mutationError)
 
 		// Expected type
 		require.IsType(t, &sema.OptionalType{}, mutationError.ExpectedType)
@@ -562,8 +563,8 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		mutationError := &interpreter.ContainerMutationError{}
-		require.ErrorAs(t, err, mutationError)
+		var mutationError *interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &mutationError)
 
 		assert.Equal(t,
 			&sema.OptionalType{
@@ -641,8 +642,8 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		mutationError := &interpreter.ContainerMutationError{}
-		require.ErrorAs(t, err, mutationError)
+		var mutationError *interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &mutationError)
 
 		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
 		assert.Equal(t, sema.IntType, mutationError.ActualType)
@@ -661,8 +662,8 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		mutationError := &interpreter.ContainerMutationError{}
-		require.ErrorAs(t, err, mutationError)
+		var mutationError *interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &mutationError)
 
 		assert.Equal(t, sema.PublicPathType, mutationError.ExpectedType)
 		assert.Equal(t, sema.PrivatePathType, mutationError.ActualType)
@@ -682,8 +683,8 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		mutationError := &interpreter.ContainerMutationError{}
-		require.ErrorAs(t, err, mutationError)
+		var mutationError *interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &mutationError)
 
 		assert.Equal(t,
 			&sema.OptionalType{
@@ -893,8 +894,8 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 		_, err = inter.Invoke("test")
 		RequireError(t, err)
 
-		mutationError := &interpreter.ContainerMutationError{}
-		require.ErrorAs(t, err, mutationError)
+		var mutationError *interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &mutationError)
 
 		// Expected type
 		require.IsType(t, &sema.OptionalType{}, mutationError.ExpectedType)
@@ -996,7 +997,9 @@ func TestInterpretContainerMutationWhileIterating(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		assert.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
+
+		var containerMutationError *interpreter.ContainerMutatedDuringIterationError
+		require.ErrorAs(t, err, &containerMutationError)
 	})
 
 	t.Run("array, remove", func(t *testing.T) {
@@ -1017,7 +1020,8 @@ func TestInterpretContainerMutationWhileIterating(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		assert.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
+		var containerMutationError *interpreter.ContainerMutatedDuringIterationError
+		require.ErrorAs(t, err, &containerMutationError)
 	})
 
 	t.Run("dictionary, add", func(t *testing.T) {
@@ -1043,7 +1047,8 @@ func TestInterpretContainerMutationWhileIterating(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		assert.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
+		var containerMutationError *interpreter.ContainerMutatedDuringIterationError
+		require.ErrorAs(t, err, &containerMutationError)
 	})
 
 	t.Run("dictionary, remove", func(t *testing.T) {
@@ -1067,7 +1072,8 @@ func TestInterpretContainerMutationWhileIterating(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		assert.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
+		var containerMutationError *interpreter.ContainerMutatedDuringIterationError
+		require.ErrorAs(t, err, &containerMutationError)
 	})
 
 	t.Run("resource dictionary, remove", func(t *testing.T) {
@@ -1095,7 +1101,8 @@ func TestInterpretContainerMutationWhileIterating(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		assert.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
+		var containerMutationError *interpreter.ContainerMutatedDuringIterationError
+		require.ErrorAs(t, err, &containerMutationError)
 	})
 }
 

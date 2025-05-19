@@ -353,7 +353,8 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		)
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.OverflowError{})
+		var overflowError *interpreter.OverflowError
+		require.ErrorAs(t, err, &overflowError)
 	})
 
 	t.Run("get index overflow", func(t *testing.T) {
@@ -381,7 +382,8 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		)
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.OverflowError{})
+		var overflowError *interpreter.OverflowError
+		require.ErrorAs(t, err, &overflowError)
 	})
 
 	t.Run("revoke existing key", func(t *testing.T) {
@@ -553,7 +555,8 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		)
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.OverflowError{})
+		var overflowError *interpreter.OverflowError
+		require.ErrorAs(t, err, &overflowError)
 	})
 
 	t.Run("revoke index overflow", func(t *testing.T) {
@@ -581,7 +584,8 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		)
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.OverflowError{})
+		var overflowError *interpreter.OverflowError
+		require.ErrorAs(t, err, &overflowError)
 	})
 
 }
@@ -897,7 +901,8 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 		_, err := test.executeScript(testEnv.runtime, testEnv.runtimeInterface)
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.OverflowError{})
+		var overflowError *interpreter.OverflowError
+		require.ErrorAs(t, err, &overflowError)
 	})
 
 	t.Run("get index overflow", func(t *testing.T) {
@@ -919,7 +924,8 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 		_, err := test.executeScript(testEnv.runtime, testEnv.runtimeInterface)
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.OverflowError{})
+		var overflowError *interpreter.OverflowError
+		require.ErrorAs(t, err, &overflowError)
 	})
 
 	t.Run("get revoked key", func(t *testing.T) {
@@ -1563,7 +1569,9 @@ func TestRuntimePublicKey(t *testing.T) {
 				RequireError(t, err)
 
 				assert.ErrorAs(t, err, &errorToReturn)
-				assert.ErrorAs(t, err, &interpreter.InvalidPublicKeyError{})
+
+				var publicKeyError *interpreter.InvalidPublicKeyError
+				assert.ErrorAs(t, err, &publicKeyError)
 			}
 		}
 	})

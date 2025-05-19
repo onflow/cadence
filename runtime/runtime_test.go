@@ -609,7 +609,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 
 				assertRuntimeErrorIsUserError(t, err)
 
-				var argErr interpreter.ContainerMutationError
+				var argErr *interpreter.ContainerMutationError
 				require.ErrorAs(t, err, &argErr)
 			},
 		},
@@ -1000,7 +1000,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 
 				assertRuntimeErrorIsUserError(t, err)
 
-				var argErr interpreter.ContainerMutationError
+				var argErr *interpreter.ContainerMutationError
 				require.ErrorAs(t, err, &argErr)
 			},
 		},
@@ -3113,7 +3113,8 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 		if *compile {
 			require.ErrorContains(t, err, "invalid transfer: expected 'String', found 'Int'")
 		} else {
-			require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
+			var transferTypeError *interpreter.ValueTransferTypeError
+			require.ErrorAs(t, err, &transferTypeError)
 		}
 
 	})
@@ -4594,7 +4595,8 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 
 					assertRuntimeErrorIsUserError(t, err)
 
-					require.ErrorAs(t, err, &&interpreter.ConditionError{})
+					var conditionErr *interpreter.ConditionError
+					require.ErrorAs(t, err, &conditionErr)
 				}
 			})
 		}
@@ -7179,7 +7181,7 @@ func TestRuntimeAccountsInDictionary(t *testing.T) {
 
 		assertRuntimeErrorIsUserError(t, err)
 
-		var typeErr interpreter.ContainerMutationError
+		var typeErr *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &typeErr)
 	})
 
@@ -8416,7 +8418,7 @@ func TestRuntimeInvalidatedResourceUse(t *testing.T) {
 	)
 	RequireError(t, err)
 
-	var invalidatedResourceReferenceError interpreter.InvalidatedResourceReferenceError
+	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
 	require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 
 }
@@ -8696,7 +8698,8 @@ func TestRuntimeReturnDestroyedOptional(t *testing.T) {
 	)
 
 	RequireError(t, err)
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+	require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 }
 
 type computationHitsExceededError struct {
@@ -10126,7 +10129,7 @@ func TestRuntimeStorageReferenceStaticTypeSpoofing(t *testing.T) {
 		)
 
 		require.Error(t, err)
-		var dereferenceError interpreter.DereferenceError
+		var dereferenceError *interpreter.DereferenceError
 		require.ErrorAs(t, err, &dereferenceError)
 	})
 
@@ -10279,7 +10282,7 @@ func TestRuntimeStorageReferenceStaticTypeSpoofing(t *testing.T) {
 		)
 
 		require.Error(t, err)
-		var dereferenceError interpreter.DereferenceError
+		var dereferenceError *interpreter.DereferenceError
 		require.ErrorAs(t, err, &dereferenceError)
 	})
 }
@@ -10536,7 +10539,8 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 	)
 	RequireError(t, err)
 
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+	require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 }
 
 func TestRuntimeValueTransferResourceLoss(t *testing.T) {
@@ -10975,7 +10979,7 @@ func TestRuntimeAccountStorageBorrowEphemeralReferenceValue(t *testing.T) {
 	)
 	RequireError(t, err)
 
-	var nestedReferenceErr interpreter.NestedReferenceError
+	var nestedReferenceErr *interpreter.NestedReferenceError
 	require.ErrorAs(t, err, &nestedReferenceErr)
 }
 
@@ -11218,7 +11222,8 @@ func TestRuntimeForbidPublicEntitlementPublish(t *testing.T) {
 		)
 
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.EntitledCapabilityPublishingError{})
+		var capabilityPublishingError *interpreter.EntitledCapabilityPublishingError
+		require.ErrorAs(t, err, &capabilityPublishingError)
 	})
 
 	t.Run("non entitled capability", func(t *testing.T) {
@@ -11332,7 +11337,8 @@ func TestRuntimeForbidPublicEntitlementPublish(t *testing.T) {
 		)
 
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.EntitledCapabilityPublishingError{})
+		var capabilityPublishingError *interpreter.EntitledCapabilityPublishingError
+		require.ErrorAs(t, err, &capabilityPublishingError)
 	})
 }
 

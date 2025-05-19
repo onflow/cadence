@@ -240,7 +240,7 @@ func (c *Config) EmitEvent(
 ) {
 	onEventEmitted := c.interpreterConfig.OnEventEmitted
 	if onEventEmitted == nil {
-		panic(interpreter.EventEmissionUnavailableError{
+		panic(&interpreter.EventEmissionUnavailableError{
 			LocationRange: locationRange,
 		})
 	}
