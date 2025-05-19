@@ -80,7 +80,7 @@ func TestInterpretPlusOperator(t *testing.T) {
 
 		t.Run(ty, func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       let a: %[1]s = 20
@@ -95,7 +95,7 @@ func TestInterpretPlusOperator(t *testing.T) {
 				t,
 				inter,
 				value,
-				inter.Globals.Get("c").GetValue(inter),
+				inter.GetGlobal("c"),
 			)
 		})
 	}
@@ -109,7 +109,7 @@ func TestInterpretMinusOperator(t *testing.T) {
 
 		t.Run(ty, func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       let a: %[1]s = 80
@@ -124,7 +124,7 @@ func TestInterpretMinusOperator(t *testing.T) {
 				t,
 				inter,
 				value,
-				inter.Globals.Get("c").GetValue(inter),
+				inter.GetGlobal("c"),
 			)
 		})
 	}
@@ -138,7 +138,7 @@ func TestInterpretMulOperator(t *testing.T) {
 
 		t.Run(ty, func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       let a: %[1]s = 20
@@ -153,7 +153,7 @@ func TestInterpretMulOperator(t *testing.T) {
 				t,
 				inter,
 				value,
-				inter.Globals.Get("c").GetValue(inter),
+				inter.GetGlobal("c"),
 			)
 		})
 	}
@@ -167,7 +167,7 @@ func TestInterpretDivOperator(t *testing.T) {
 
 		t.Run(ty, func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       let a: %[1]s = 120
@@ -182,7 +182,7 @@ func TestInterpretDivOperator(t *testing.T) {
 				t,
 				inter,
 				value,
-				inter.Globals.Get("c").GetValue(inter),
+				inter.GetGlobal("c"),
 			)
 		})
 	}
@@ -196,7 +196,7 @@ func TestInterpretModOperator(t *testing.T) {
 
 		t.Run(ty, func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       let a: %[1]s = 126
@@ -211,7 +211,7 @@ func TestInterpretModOperator(t *testing.T) {
 				t,
 				inter,
 				value,
-				inter.Globals.Get("c").GetValue(inter),
+				inter.GetGlobal("c"),
 			)
 		})
 	}
@@ -805,7 +805,7 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 
 			t.Run(fmt.Sprintf("%s %s %s", ty, method, kind), func(t *testing.T) {
 
-				inter := parseCheckAndInterpret(t,
+				inter := parseCheckAndPrepare(t,
 					fmt.Sprintf(
 						`
                           fun test(a: %[1]s, b: %[1]s): %[1]s {

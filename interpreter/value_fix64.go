@@ -75,6 +75,17 @@ func NewUnmeteredFix64Value(integer int64) Fix64Value {
 	return Fix64Value(integer)
 }
 
+func NewFix64ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Fix64Value {
+	return NewFix64Value(
+		gauge,
+		func() int64 {
+			bytes := padWithZeroes(b, 8)
+			val := binary.BigEndian.Uint64(bytes)
+			return int64(val)
+		},
+	)
+}
+
 var _ Value = Fix64Value(0)
 var _ atree.Storable = Fix64Value(0)
 var _ NumberValue = Fix64Value(0)

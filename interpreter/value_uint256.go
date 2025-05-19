@@ -65,6 +65,15 @@ func NewUnmeteredUInt256ValueFromBigInt(value *big.Int) UInt256Value {
 	}
 }
 
+func NewUInt256ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
+	return NewUInt256ValueFromBigInt(
+		gauge,
+		func() *big.Int {
+			return values.BigEndianBytesToUnsignedBigInt(b)
+		},
+	)
+}
+
 var _ Value = UInt256Value{}
 var _ atree.Storable = UInt256Value{}
 var _ NumberValue = UInt256Value{}

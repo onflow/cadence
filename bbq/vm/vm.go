@@ -25,7 +25,6 @@ import (
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/constant"
-	"github.com/onflow/cadence/bbq/leb128"
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -1521,178 +1520,70 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 		value = interpreter.NewUnmeteredCharacterValue(string(c.Data))
 
 	case constant.Int:
-		// TODO: support larger integers
-		v, _, err := leb128.ReadInt64(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Int constant: %s", err))
-		}
-		value = interpreter.NewIntValueFromInt64(memoryGauge, v)
+		value = interpreter.NewIntValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.Int8:
-		v, _, err := leb128.ReadInt32(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Int8 constant: %s", err))
-		}
-		value = interpreter.NewInt8Value(
-			memoryGauge,
-			func() int8 {
-				return int8(v)
-			},
-		)
+		value = interpreter.NewInt8ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.Int16:
-		v, _, err := leb128.ReadInt32(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Int16 constant: %s", err))
-		}
-		value = interpreter.NewInt16Value(
-			memoryGauge,
-			func() int16 {
-				return int16(v)
-			},
-		)
+		value = interpreter.NewInt16ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.Int32:
-		v, _, err := leb128.ReadInt32(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Int32 constant: %s", err))
-		}
-		value = interpreter.NewInt32Value(
-			memoryGauge,
-			func() int32 {
-				return v
-			},
-		)
+		value = interpreter.NewInt32ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.Int64:
-		v, _, err := leb128.ReadInt64(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Int64 constant: %s", err))
-		}
-		value = interpreter.NewInt64Value(
-			memoryGauge,
-			func() int64 {
-				return v
-			},
-		)
+		value = interpreter.NewInt64ValueFromBigEndianBytes(memoryGauge, c.Data)
+
+	case constant.Int128:
+		value = interpreter.NewInt128ValueFromBigEndianBytes(memoryGauge, c.Data)
+
+	case constant.Int256:
+		value = interpreter.NewInt256ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.UInt:
-		// TODO: support larger integers
-		v, _, err := leb128.ReadUint64(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read UInt constant: %s", err))
-		}
-		value = interpreter.NewUIntValueFromUint64(memoryGauge, v)
+		value = interpreter.NewUIntValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.UInt8:
-		v, _, err := leb128.ReadUint32(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read UInt8 constant: %s", err))
-		}
-		value = interpreter.NewUInt8Value(
-			memoryGauge,
-			func() uint8 {
-				return uint8(v)
-			},
-		)
+		value = interpreter.NewUInt8ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.UInt16:
-		v, _, err := leb128.ReadUint32(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read UInt16 constant: %s", err))
-		}
-		value = interpreter.NewUInt16Value(
-			memoryGauge,
-			func() uint16 {
-				return uint16(v)
-			},
-		)
+		value = interpreter.NewUInt16ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.UInt32:
-		v, _, err := leb128.ReadUint32(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read UInt32 constant: %s", err))
-		}
-		value = interpreter.NewUInt32Value(
-			memoryGauge,
-			func() uint32 {
-				return v
-			},
-		)
+		value = interpreter.NewUInt32ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.UInt64:
-		v, _, err := leb128.ReadUint64(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read UInt64 constant: %s", err))
-		}
-		value = interpreter.NewUInt64Value(
-			memoryGauge,
-			func() uint64 {
-				return v
-			},
-		)
+		value = interpreter.NewUInt64ValueFromBigEndianBytes(memoryGauge, c.Data)
+
+	case constant.UInt128:
+		value = interpreter.NewUInt128ValueFromBigEndianBytes(memoryGauge, c.Data)
+
+	case constant.UInt256:
+		value = interpreter.NewUInt256ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.Word8:
-		v, _, err := leb128.ReadUint32(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Word8 constant: %s", err))
-		}
-		value = interpreter.NewWord8Value(
-			memoryGauge,
-			func() uint8 {
-				return uint8(v)
-			},
-		)
+		value = interpreter.NewWord8ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.Word16:
-		v, _, err := leb128.ReadUint32(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Word16 constant: %s", err))
-		}
-		value = interpreter.NewWord16Value(
-			memoryGauge,
-			func() uint16 {
-				return uint16(v)
-			},
-		)
+		value = interpreter.NewWord16ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.Word32:
-		v, _, err := leb128.ReadUint32(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Word32 constant: %s", err))
-		}
-		value = interpreter.NewWord32Value(
-			memoryGauge,
-			func() uint32 {
-				return v
-			},
-		)
+		value = interpreter.NewWord32ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.Word64:
-		v, _, err := leb128.ReadUint64(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Word64 constant: %s", err))
-		}
-		value = interpreter.NewWord64Value(
-			memoryGauge,
-			func() uint64 {
-				return v
-			},
-		)
+		value = interpreter.NewWord64ValueFromBigEndianBytes(memoryGauge, c.Data)
+
+	case constant.Word128:
+		value = interpreter.NewWord128ValueFromBigEndianBytes(memoryGauge, c.Data)
+
+	case constant.Word256:
+		value = interpreter.NewWord256ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.Fix64:
-		v, _, err := leb128.ReadInt64(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Fix64 constant: %s", err))
-		}
-		value = interpreter.NewUnmeteredFix64Value(v)
+		value = interpreter.NewFix64ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.UFix64:
-		v, _, err := leb128.ReadUint64(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read UFix64 constant: %s", err))
-		}
-		value = interpreter.NewUnmeteredUFix64Value(v)
+		value = interpreter.NewUFix64ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.Address:
 		value = interpreter.NewAddressValueFromBytes(
@@ -1701,14 +1592,6 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 				return c.Data
 			},
 		)
-
-	// TODO:
-	// case constantkind.Int128:
-	// case constantkind.Int256:
-	// case constantkind.UInt128:
-	// case constantkind.UInt256:
-	// case constantkind.Word128:
-	// case constantkind.Word256:
 
 	default:
 		panic(errors.NewUnexpectedError("unsupported constant kind: %s", c.Kind))

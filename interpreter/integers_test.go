@@ -82,7 +82,7 @@ func TestInterpretIntegerConversions(t *testing.T) {
 
 		t.Run(integerType, func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       let x: %[1]s = 50
@@ -97,21 +97,21 @@ func TestInterpretIntegerConversions(t *testing.T) {
 				t,
 				inter,
 				value,
-				inter.Globals.Get("x").GetValue(inter),
+				inter.GetGlobal("x"),
 			)
 
 			AssertValuesEqual(
 				t,
 				inter,
 				value,
-				inter.Globals.Get("y").GetValue(inter),
+				inter.GetGlobal("y"),
 			)
 
 			AssertValuesEqual(
 				t,
 				inter,
 				interpreter.TrueValue,
-				inter.Globals.Get("z").GetValue(inter),
+				inter.GetGlobal("z"),
 			)
 
 		})
@@ -135,7 +135,7 @@ func TestInterpretWordOverflowConversions(t *testing.T) {
 
 		t.Run(typeName, func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       let x = %s
@@ -149,7 +149,7 @@ func TestInterpretWordOverflowConversions(t *testing.T) {
 			require.Equal(
 				t,
 				"0",
-				inter.Globals.Get("y").GetValue(inter).String(),
+				inter.GetGlobal("y").String(),
 			)
 		})
 	}
@@ -172,7 +172,7 @@ func TestInterpretWordUnderflowConversions(t *testing.T) {
 
 		t.Run(typeName, func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       let x = 0
@@ -185,7 +185,7 @@ func TestInterpretWordUnderflowConversions(t *testing.T) {
 			require.Equal(
 				t,
 				value.String(),
-				inter.Globals.Get("y").GetValue(inter).String(),
+				inter.GetGlobal("y").String(),
 			)
 		})
 	}
@@ -199,7 +199,7 @@ func TestInterpretAddressConversion(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let x: Address = 0x1
         `)
 
@@ -209,7 +209,7 @@ func TestInterpretAddressConversion(t *testing.T) {
 			interpreter.AddressValue{
 				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
 			},
-			inter.Globals.Get("x").GetValue(inter),
+			inter.GetGlobal("x"),
 		)
 
 	})
@@ -218,7 +218,7 @@ func TestInterpretAddressConversion(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let x = Address(0x2)
         `)
 
@@ -228,7 +228,7 @@ func TestInterpretAddressConversion(t *testing.T) {
 			interpreter.AddressValue{
 				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
 			},
-			inter.Globals.Get("x").GetValue(inter),
+			inter.GetGlobal("x"),
 		)
 	})
 
@@ -236,7 +236,7 @@ func TestInterpretAddressConversion(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           fun test() {
               let y = 0x1111111111111111111
               let x = Address(y)
@@ -254,7 +254,7 @@ func TestInterpretAddressConversion(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           fun test() {
               let y = -0x1
               let x = Address(y)
@@ -277,7 +277,7 @@ func TestInterpretIntegerLiteralTypeConversionInVariableDeclaration(t *testing.T
 
 		t.Run(integerType, func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       let x: %s = 50
@@ -290,7 +290,7 @@ func TestInterpretIntegerLiteralTypeConversionInVariableDeclaration(t *testing.T
 				t,
 				inter,
 				value,
-				inter.Globals.Get("x").GetValue(inter),
+				inter.GetGlobal("x"),
 			)
 
 		})
@@ -305,7 +305,7 @@ func TestInterpretIntegerLiteralTypeConversionInVariableDeclarationOptional(t *t
 
 		t.Run(integerType, func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                         let x: %s? = 50
@@ -318,7 +318,7 @@ func TestInterpretIntegerLiteralTypeConversionInVariableDeclarationOptional(t *t
 				t,
 				inter,
 				interpreter.NewUnmeteredSomeValueNonCopying(value),
-				inter.Globals.Get("x").GetValue(inter),
+				inter.GetGlobal("x"),
 			)
 		})
 	}
@@ -332,7 +332,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignment(t *testing.T) {
 
 		t.Run(integerType, func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       var x: %s = 50
@@ -348,7 +348,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignment(t *testing.T) {
 				t,
 				inter,
 				value,
-				inter.Globals.Get("x").GetValue(inter),
+				inter.GetGlobal("x"),
 			)
 
 			_, err := inter.Invoke("test")
@@ -359,7 +359,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignment(t *testing.T) {
 				t,
 				inter,
 				numberValue.Plus(inter, numberValue, interpreter.EmptyLocationRange),
-				inter.Globals.Get("x").GetValue(inter),
+				inter.GetGlobal("x"),
 			)
 		})
 	}
@@ -373,7 +373,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignmentOptional(t *testing.T)
 
 		t.Run(integerType, func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       var x: %s? = 50
@@ -389,7 +389,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignmentOptional(t *testing.T)
 				t,
 				inter,
 				interpreter.NewUnmeteredSomeValueNonCopying(value),
-				inter.Globals.Get("x").GetValue(inter),
+				inter.GetGlobal("x"),
 			)
 
 			_, err := inter.Invoke("test")
@@ -403,7 +403,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignmentOptional(t *testing.T)
 				interpreter.NewUnmeteredSomeValueNonCopying(
 					numberValue.Plus(inter, numberValue, interpreter.EmptyLocationRange),
 				),
-				inter.Globals.Get("x").GetValue(inter),
+				inter.GetGlobal("x"),
 			)
 		})
 	}
@@ -417,7 +417,7 @@ func TestInterpretIntegerLiteralTypeConversionInFunctionCallArgument(t *testing.
 
 		t.Run(integerType, func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       fun test(_ x: %[1]s): %[1]s {
@@ -433,7 +433,7 @@ func TestInterpretIntegerLiteralTypeConversionInFunctionCallArgument(t *testing.
 				t,
 				inter,
 				value,
-				inter.Globals.Get("x").GetValue(inter),
+				inter.GetGlobal("x"),
 			)
 		})
 	}
@@ -447,7 +447,7 @@ func TestInterpretIntegerLiteralTypeConversionInFunctionCallArgumentOptional(t *
 
 		t.Run(integerType, func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                         fun test(_ x: %[1]s?): %[1]s? {
@@ -463,7 +463,7 @@ func TestInterpretIntegerLiteralTypeConversionInFunctionCallArgumentOptional(t *
 				t,
 				inter,
 				interpreter.NewUnmeteredSomeValueNonCopying(value),
-				inter.Globals.Get("x").GetValue(inter),
+				inter.GetGlobal("x"),
 			)
 		})
 	}
@@ -477,7 +477,7 @@ func TestInterpretIntegerLiteralTypeConversionInReturn(t *testing.T) {
 
 		t.Run(integerType, func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       fun test(): %s {
@@ -509,7 +509,7 @@ func TestInterpretIntegerLiteralTypeConversionInReturnOptional(t *testing.T) {
 
 		t.Run(integerType, func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       fun test(): %s? {
@@ -546,13 +546,13 @@ func TestInterpretIntegerConversion(t *testing.T) {
 		expectedError error,
 	) {
 
-		inter := parseCheckAndInterpret(t,
+		inter := parseCheckAndPrepare(t,
 			fmt.Sprintf(
 				`
                   fun test(value: %[1]s): %[2]s {
                       return %[2]s(value)
                   }
-				`,
+                `,
 				sourceType,
 				targetType,
 			),
@@ -817,8 +817,8 @@ func TestInterpretIntegerMinMax(t *testing.T) {
 		inter := parseCheckAndInterpret(t,
 			fmt.Sprintf(
 				`
-				  let x = %s.%s
-				`,
+                  let x = %s.%s
+                `,
 				ty,
 				field,
 			),
@@ -952,11 +952,14 @@ func TestInterpretStringIntegerConversion(t *testing.T) {
 			high = big.NewInt(math.MaxInt64)
 		}
 
-		code := fmt.Sprintf(`
-			fun testFromString(_ input: String): Int? {
-				return %s.fromString(input).map(Int)
-			}
-		`, typ.String())
+		code := fmt.Sprintf(
+			`
+              fun testFromString(_ input: String): Int? {
+                  return %s.fromString(input).map(Int)
+              }
+            `,
+			typ,
+		)
 		inter := parseCheckAndInterpret(t, code)
 
 		placeInRange := func(x *big.Int) *big.Int {

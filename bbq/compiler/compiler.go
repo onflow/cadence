@@ -26,7 +26,6 @@ import (
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/constant"
-	"github.com/onflow/cadence/bbq/leb128"
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -370,7 +369,8 @@ func (c *Compiler[_, _]) emitIntConst(i int64) {
 }
 
 func (c *Compiler[_, _]) addIntConst(i int64) *Constant {
-	data := leb128.AppendInt64(nil, i)
+	// NOTE: also adjust VisitIntegerExpression!
+	data := interpreter.NewUnmeteredIntValueFromInt64(i).ToBigEndianBytes()
 	return c.addConstant(constant.Int, data)
 }
 
@@ -1442,46 +1442,75 @@ func (c *Compiler[_, _]) VisitIntegerExpression(expression *ast.IntegerExpressio
 
 	switch constantKind {
 	case constant.Int:
-		// TODO: support larger integers
-		data = leb128.AppendInt64(nil, value.Int64())
+		// NOTE: also adjust addIntConst!
+		data = interpreter.NewUnmeteredIntValueFromBigInt(value).ToBigEndianBytes()
 
-	case constant.Int8,
-		constant.Int16,
-		constant.Int32:
-		data = leb128.AppendInt32(nil, int32(value.Int64()))
+	case constant.Int8:
+		data = interpreter.NewUnmeteredInt8Value(int8(value.Int64())).ToBigEndianBytes()
+
+	case constant.Int16:
+		data = interpreter.NewUnmeteredInt16Value(int16(value.Int64())).ToBigEndianBytes()
+
+	case constant.Int32:
+		data = interpreter.NewUnmeteredInt32Value(int32(value.Int64())).ToBigEndianBytes()
 
 	case constant.Int64:
-		data = leb128.AppendInt64(nil, value.Int64())
+		data = interpreter.NewUnmeteredInt64Value(value.Int64()).ToBigEndianBytes()
+
+	case constant.Int128:
+		data = interpreter.NewUnmeteredInt128ValueFromBigInt(value).ToBigEndianBytes()
+
+	case constant.Int256:
+		data = interpreter.NewUnmeteredInt256ValueFromBigInt(value).ToBigEndianBytes()
 
 	case constant.UInt:
-		// TODO: support larger integers
-		data = leb128.AppendUint64(nil, value.Uint64())
+		data = interpreter.NewUnmeteredUIntValueFromBigInt(value).ToBigEndianBytes()
 
-	case constant.UInt8,
-		constant.Word8,
-		constant.UInt16,
-		constant.Word16,
-		constant.UInt32,
-		constant.Word32:
-		data = leb128.AppendUint32(nil, uint32(value.Uint64()))
+	case constant.UInt8:
+		data = interpreter.NewUnmeteredUInt8Value(uint8(value.Uint64())).ToBigEndianBytes()
 
-	case constant.UInt64,
-		constant.Word64:
-		data = leb128.AppendUint64(nil, value.Uint64())
+	case constant.UInt16:
+		data = interpreter.NewUnmeteredUInt16Value(uint16(value.Uint64())).ToBigEndianBytes()
+
+	case constant.UInt32:
+		data = interpreter.NewUnmeteredUInt32Value(uint32(value.Uint64())).ToBigEndianBytes()
+
+	case constant.UInt64:
+		data = interpreter.NewUnmeteredUInt64Value(value.Uint64()).ToBigEndianBytes()
+
+	case constant.UInt128:
+		data = interpreter.NewUnmeteredUInt128ValueFromBigInt(value).ToBigEndianBytes()
+
+	case constant.UInt256:
+		data = interpreter.NewUnmeteredUInt256ValueFromBigInt(value).ToBigEndianBytes()
+
+	case constant.Word8:
+		data = interpreter.NewUnmeteredWord8Value(uint8(value.Uint64())).ToBigEndianBytes()
+
+	case constant.Word16:
+		data = interpreter.NewUnmeteredWord16Value(uint16(value.Uint64())).ToBigEndianBytes()
+
+	case constant.Word32:
+		data = interpreter.NewUnmeteredWord32Value(uint32(value.Uint64())).ToBigEndianBytes()
+
+	case constant.Word64:
+		data = interpreter.NewUnmeteredWord64Value(value.Uint64()).ToBigEndianBytes()
+
+	case constant.Word128:
+		data = interpreter.NewUnmeteredWord128ValueFromBigInt(value).ToBigEndianBytes()
+
+	case constant.Word256:
+		data = interpreter.NewUnmeteredWord256ValueFromBigInt(value).ToBigEndianBytes()
 
 	case constant.Address:
 		data = value.Bytes()
 
-	// TODO:
-	// case constantkind.Int128:
-	// case constantkind.Int256:
-	// case constantkind.UInt128:
-	// case constantkind.UInt256:
-	// case constantkind.Word128:
-	// case constantkind.Word256:
-
 	default:
-		panic(errors.NewUnexpectedError("unsupported constant kind: %s", constantKind))
+		panic(errors.NewUnexpectedError(
+			"unsupported integer type %s / constant kind %s",
+			integerType,
+			constantKind,
+		))
 	}
 
 	c.emitGetConstant(c.addConstant(constantKind, data))
@@ -1527,12 +1556,12 @@ func (c *Compiler[_, _]) VisitFixedPointExpression(expression *ast.FixedPointExp
 }
 
 func (c *Compiler[_, _]) addUFix64Constant(value *big.Int) *Constant {
-	data := leb128.AppendUint64(nil, value.Uint64())
+	data := interpreter.NewUnmeteredUFix64Value(value.Uint64()).ToBigEndianBytes()
 	return c.addConstant(constant.UFix64, data)
 }
 
 func (c *Compiler[_, _]) addFix64Constant(value *big.Int) *Constant {
-	data := leb128.AppendInt64(nil, value.Int64())
+	data := interpreter.NewUnmeteredFix64Value(value.Int64()).ToBigEndianBytes()
 	return c.addConstant(constant.Fix64, data)
 }
 
