@@ -3464,7 +3464,7 @@ func TestPublicKeyValue(t *testing.T) {
 
 		func() {
 			defer func() {
-				r :=  recover()
+				r := recover()
 				assert.Equal(
 					t,
 					&InvalidPublicKeyError{PublicKey: publicKey, Err: fakeError},

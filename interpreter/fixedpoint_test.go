@@ -416,7 +416,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				RequireError(t, err)
 
 				var overflowError *interpreter.OverflowError
-		require.ErrorAs(t, err, &overflowError)
+				require.ErrorAs(t, err, &overflowError)
 			})
 		}
 	})
@@ -454,7 +454,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				RequireError(t, err)
 
 				var overflowError *interpreter.OverflowError
-		require.ErrorAs(t, err, &overflowError)
+				require.ErrorAs(t, err, &overflowError)
 			})
 		}
 	})
@@ -492,7 +492,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				RequireError(t, err)
 
 				var overflowError *interpreter.OverflowError
-		require.ErrorAs(t, err, &overflowError)
+				require.ErrorAs(t, err, &overflowError)
 			})
 		}
 	})

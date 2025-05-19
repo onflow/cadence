@@ -777,7 +777,7 @@ func TestInterpretStorageReferencesInForLoop(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 		var dereferenceError *interpreter.DereferenceError
-			require.ErrorAs(t, err, &dereferenceError)
+		require.ErrorAs(t, err, &dereferenceError)
 	})
 }
 

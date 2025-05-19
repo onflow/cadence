@@ -4814,7 +4814,7 @@ func (interpreter *Interpreter) GetEntitlementType(typeID common.TypeID) (*sema.
 
 	ty := elaboration.EntitlementType(typeID)
 	if ty == nil {
-		return nil,TypeLoadingError{
+		return nil, TypeLoadingError{
 			TypeID: typeID,
 		}
 	}
@@ -4831,7 +4831,7 @@ func (interpreter *Interpreter) GetEntitlementMapType(typeID common.TypeID) (*se
 	if location == nil {
 		ty := sema.BuiltinEntitlementMappings[qualifiedIdentifier]
 		if ty == nil {
-			return nil,TypeLoadingError{
+			return nil, TypeLoadingError{
 				TypeID: typeID,
 			}
 		}
@@ -4841,14 +4841,14 @@ func (interpreter *Interpreter) GetEntitlementMapType(typeID common.TypeID) (*se
 
 	elaboration := interpreter.getElaboration(location)
 	if elaboration == nil {
-		return nil,TypeLoadingError{
+		return nil, TypeLoadingError{
 			TypeID: typeID,
 		}
 	}
 
 	ty := elaboration.EntitlementMapType(typeID)
 	if ty == nil {
-		return nil,TypeLoadingError{
+		return nil, TypeLoadingError{
 			TypeID: typeID,
 		}
 	}
@@ -5045,7 +5045,7 @@ func (interpreter *Interpreter) GetCompositeType(
 		}
 	}
 
-	return nil,TypeLoadingError{
+	return nil, TypeLoadingError{
 		TypeID: typeID,
 	}
 }
@@ -5085,14 +5085,14 @@ func (interpreter *Interpreter) GetInterfaceType(
 
 	elaboration := interpreter.getElaboration(location)
 	if elaboration == nil {
-		return nil,TypeLoadingError{
+		return nil, TypeLoadingError{
 			TypeID: typeID,
 		}
 	}
 
 	ty := elaboration.InterfaceType(typeID)
 	if ty == nil {
-		return nil,TypeLoadingError{
+		return nil, TypeLoadingError{
 			TypeID: typeID,
 		}
 	}

@@ -153,5 +153,5 @@ func TestCheckArrayReferenceTypeInferenceWithDowncasting(t *testing.T) {
 	_, err := inter.Invoke("test")
 	require.Error(t, err)
 	var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+	require.ErrorAs(t, err, &forceCastTypeMismatchError)
 }
