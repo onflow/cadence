@@ -561,13 +561,13 @@ func TestInterpretFixedPointMinMax(t *testing.T) {
 			t,
 			inter,
 			test.min,
-			inter.Globals.Get("min").GetValue(inter),
+			inter.GetGlobal("min"),
 		)
 		RequireValuesEqual(
 			t,
 			inter,
 			test.max,
-			inter.Globals.Get("max").GetValue(inter),
+			inter.GetGlobal("max"),
 		)
 	}
 
