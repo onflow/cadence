@@ -2951,15 +2951,15 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		programSets = locationAccessCounts{}
 
 		runtimeInterface = &TestRuntimeInterface{
-			OnGetAndSetProgram: func(
+			OnGetOrLoadProgram: func(
 				location Location,
-				load func() (*interpreter.Program, error),
+				load func() (*Program, error),
 			) (
-				program *interpreter.Program,
+				program *Program,
 				err error,
 			) {
 				if runtimeInterface.Programs == nil {
-					runtimeInterface.Programs = map[Location]*interpreter.Program{}
+					runtimeInterface.Programs = map[Location]*Program{}
 				}
 
 				var ok bool

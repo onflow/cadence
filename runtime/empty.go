@@ -46,7 +46,7 @@ func (EmptyRuntimeInterface) ResolveLocation(_ []Identifier, _ Location) ([]Reso
 	panic("unexpected call to ResolveLocation")
 }
 
-func (EmptyRuntimeInterface) GetOrLoadProgram(_ Location, _ func() (*interpreter.Program, error)) (*interpreter.Program, error) {
+func (EmptyRuntimeInterface) GetOrLoadProgram(_ Location, _ func() (*Program, error)) (*Program, error) {
 	panic("unexpected call to GetOrLoadProgram")
 }
 

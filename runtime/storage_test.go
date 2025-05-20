@@ -3646,10 +3646,10 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		runtimeInterface = newRuntimeInterface()
 
-		runtimeInterface.OnGetAndSetProgram = func(
+		runtimeInterface.OnGetOrLoadProgram = func(
 			location Location,
-			load func() (*interpreter.Program, error),
-		) (*interpreter.Program, error) {
+			load func() (*Program, error),
+		) (*Program, error) {
 			program, err := load()
 			if err != nil {
 				// Return a wrapped error

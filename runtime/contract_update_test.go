@@ -26,7 +26,6 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/json"
-	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
@@ -45,7 +44,7 @@ func TestRuntimeContractUpdateWithDependencies(t *testing.T) {
 	}
 	var checkGetAndSetProgram, getProgramCalled bool
 
-	programs := map[Location]*interpreter.Program{}
+	programs := map[Location]*Program{}
 	clearPrograms := func() {
 		for l := range programs {
 			delete(programs, l)
@@ -74,11 +73,11 @@ func TestRuntimeContractUpdateWithDependencies(t *testing.T) {
 		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 			return json.Decode(nil, b)
 		},
-		OnGetAndSetProgram: func(
+		OnGetOrLoadProgram: func(
 			location Location,
-			load func() (*interpreter.Program, error),
+			load func() (*Program, error),
 		) (
-			program *interpreter.Program,
+			program *Program,
 			err error,
 		) {
 			_, isTransactionLocation := location.(common.TransactionLocation)
@@ -695,7 +694,7 @@ func TestRuntimeContractUpdateWithOldProgramError(t *testing.T) {
 	}
 	var checkGetAndSetProgram, getProgramCalled bool
 
-	programs := map[Location]*interpreter.Program{}
+	programs := map[Location]*Program{}
 	clearPrograms := func() {
 		for l := range programs {
 			delete(programs, l)
@@ -727,11 +726,11 @@ func TestRuntimeContractUpdateWithOldProgramError(t *testing.T) {
 		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 			return json.Decode(nil, b)
 		},
-		OnGetAndSetProgram: func(
+		OnGetOrLoadProgram: func(
 			location Location,
-			load func() (*interpreter.Program, error),
+			load func() (*Program, error),
 		) (
-			program *interpreter.Program,
+			program *Program,
 			err error,
 		) {
 			_, isTransactionLocation := location.(common.TransactionLocation)
