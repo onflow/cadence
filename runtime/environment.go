@@ -121,7 +121,7 @@ func NewInterpreterEnvironment(config Config) *interpreterEnvironment {
 
 	env := &interpreterEnvironment{
 		config:                        config,
-		checkingEnvironment:           newCheckingEnvironment(nil),
+		checkingEnvironment:           newCheckingEnvironment(),
 		defaultBaseActivation:         defaultBaseActivation,
 		stackDepthLimiter:             newStackDepthLimiter(config.StackDepthLimit),
 		SimpleContractAdditionTracker: stdlib.NewSimpleContractAdditionTracker(),

@@ -64,20 +64,14 @@ type checkingEnvironment struct {
 	// Base value activations are lazily / implicitly created
 	// by DeclareValue / semaBaseActivationFor
 	baseValueActivationsByLocation map[common.Location]*sema.VariableActivation
-
-	// compile is the optional function used to compile the program
-	compile compileFunc
 }
 
-type compileFunc func(program *interpreter.Program, location common.Location) compiledProgram
-
-func newCheckingEnvironment(compile compileFunc) *checkingEnvironment {
+func newCheckingEnvironment() *checkingEnvironment {
 	defaultBaseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	defaultBaseTypeActivation := sema.NewVariableActivation(sema.BaseTypeActivation)
 	env := &checkingEnvironment{
 		defaultBaseValueActivation: defaultBaseValueActivation,
 		defaultBaseTypeActivation:  defaultBaseTypeActivation,
-		compile:                    compile,
 	}
 	env.config = env.newConfig()
 	return env
