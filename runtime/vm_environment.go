@@ -31,7 +31,6 @@ import (
 	"github.com/onflow/cadence/stdlib"
 )
 
-type compiledPrograms map[common.Location]compiledProgram
 type compiledProgram struct {
 	program              *bbq.InstructionProgram
 	desugaredElaboration *compiler.DesugaredElaboration
@@ -80,7 +79,7 @@ func newVMEnvironment(config Config) *vmEnvironment {
 		config:                        config,
 		SimpleContractAdditionTracker: stdlib.NewSimpleContractAdditionTracker(),
 	}
-	env.checkingEnvironment = newCheckingEnvironment(env.compileProgram)
+	env.checkingEnvironment = newCheckingEnvironment()
 	env.vmConfig = env.newVMConfig()
 	env.compilerConfig = env.newCompilerConfig()
 	return env
@@ -283,12 +282,10 @@ func (e *vmEnvironment) loadProgram(location common.Location) (*Program, error) 
 		return nil, err
 	}
 
-	// TODO: Maybe make the `program.compiledProgram` a pointer?
-	if program.compiledProgram.program == nil {
-		compile := e.checkingEnvironment.compile
-		if compile != nil {
-			program.compiledProgram = compile(program.interpreterProgram, location)
-		}
+	// If the program is not compiled yet, compile it.
+	// Directly update the program (pointer), which will also update the program "cache" kept by the embedder.
+	if program.compiledProgram == nil {
+		program.compiledProgram = e.compileProgram(program.interpreterProgram, location)
 	}
 
 	return program, nil
@@ -340,14 +337,14 @@ func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.Ty
 func (e *vmEnvironment) compileProgram(
 	program *interpreter.Program,
 	location common.Location,
-) compiledProgram {
+) *compiledProgram {
 	comp := compiler.NewInstructionCompilerWithConfig(
 		program,
 		location,
 		e.compilerConfig,
 	)
 
-	return compiledProgram{
+	return &compiledProgram{
 		program:              comp.Compile(),
 		desugaredElaboration: comp.DesugaredElaboration,
 	}
@@ -359,7 +356,7 @@ func (e *vmEnvironment) resolveDesugaredElaboration(location common.Location) (*
 		return nil, err
 	}
 
-	return program.desugaredElaboration, nil
+	return program.compiledProgram.desugaredElaboration, nil
 }
 
 func (e *vmEnvironment) importProgram(location common.Location) *bbq.InstructionProgram {
@@ -367,7 +364,7 @@ func (e *vmEnvironment) importProgram(location common.Location) *bbq.Instruction
 	if err != nil {
 		panic(fmt.Errorf("failed to load program for imported location %s: %w", location, err))
 	}
-	return program.program
+	return program.compiledProgram.program
 }
 
 func (e *vmEnvironment) newVM(

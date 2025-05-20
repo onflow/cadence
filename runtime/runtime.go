@@ -33,7 +33,7 @@ import (
 
 type Program struct {
 	interpreterProgram *interpreter.Program
-	compiledProgram
+	compiledProgram    *compiledProgram
 }
 
 type Script struct {
