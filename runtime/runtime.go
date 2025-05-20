@@ -31,6 +31,11 @@ import (
 	"github.com/onflow/cadence/stdlib"
 )
 
+type Program struct {
+	interpreterProgram *interpreter.Program
+	compiledProgram
+}
+
 type Script struct {
 	Source    []byte
 	Arguments [][]byte

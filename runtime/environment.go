@@ -121,7 +121,7 @@ func NewInterpreterEnvironment(config Config) *interpreterEnvironment {
 
 	env := &interpreterEnvironment{
 		config:                        config,
-		checkingEnvironment:           newCheckingEnvironment(),
+		checkingEnvironment:           newCheckingEnvironment(nil),
 		defaultBaseActivation:         defaultBaseActivation,
 		stackDepthLimiter:             newStackDepthLimiter(config.StackDepthLimit),
 		SimpleContractAdditionTracker: stdlib.NewSimpleContractAdditionTracker(),
@@ -414,7 +414,15 @@ func (e *interpreterEnvironment) newImportLocationHandler() interpreter.ImportLo
 			panic(err)
 		}
 
-		subInterpreter, err := inter.NewSubInterpreter(program, location)
+		var interpreterProgram *interpreter.Program
+		if program != nil {
+			interpreterProgram = program.interpreterProgram
+		}
+
+		subInterpreter, err := inter.NewSubInterpreter(
+			interpreterProgram,
+			location,
+		)
 		if err != nil {
 			panic(err)
 		}

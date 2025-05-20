@@ -56,8 +56,8 @@ type Interface interface {
 	// - Do NOT implement this as a cache!
 	GetOrLoadProgram(
 		location Location,
-		load func() (*interpreter.Program, error),
-	) (*interpreter.Program, error)
+		load func() (*Program, error),
+	) (*Program, error)
 	// SetInterpreterSharedState sets the shared state of all interpreters.
 	SetInterpreterSharedState(state *interpreter.SharedState)
 	// GetInterpreterSharedState gets the shared state of all interpreters.

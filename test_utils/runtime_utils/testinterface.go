@@ -42,10 +42,10 @@ type TestRuntimeInterface struct {
 
 	OnResolveLocation  sema.LocationHandlerFunc
 	OnGetCode          func(_ runtime.Location) ([]byte, error)
-	OnGetAndSetProgram func(
+	OnGetOrLoadProgram func(
 		location runtime.Location,
-		load func() (*interpreter.Program, error),
-	) (*interpreter.Program, error)
+		load func() (*runtime.Program, error),
+	) (*runtime.Program, error)
 	OnSetInterpreterSharedState func(state *interpreter.SharedState)
 	OnGetInterpreterSharedState func() *interpreter.SharedState
 	OnCreateAccount             func(payer runtime.Address) (address runtime.Address, err error)
@@ -97,7 +97,7 @@ type TestRuntimeInterface struct {
 	OnGetAccountAvailableBalance func(_ runtime.Address) (uint64, error)
 	OnGetStorageUsed             func(_ runtime.Address) (uint64, error)
 	OnGetStorageCapacity         func(_ runtime.Address) (uint64, error)
-	Programs                     map[runtime.Location]*interpreter.Program
+	Programs                     map[runtime.Location]*runtime.Program
 	OnImplementationDebugLog     func(message string) error
 	OnValidatePublicKey          func(publicKey *stdlib.PublicKey) error
 	OnBLSVerifyPOP               func(pk *stdlib.PublicKey, s []byte) (bool, error)
@@ -165,14 +165,14 @@ func (i *TestRuntimeInterface) GetCode(location runtime.Location) ([]byte, error
 
 func (i *TestRuntimeInterface) GetOrLoadProgram(
 	location runtime.Location,
-	load func() (*interpreter.Program, error),
+	load func() (*runtime.Program, error),
 ) (
-	program *interpreter.Program,
+	program *runtime.Program,
 	err error,
 ) {
-	if i.OnGetAndSetProgram == nil {
+	if i.OnGetOrLoadProgram == nil {
 		if i.Programs == nil {
-			i.Programs = map[runtime.Location]*interpreter.Program{}
+			i.Programs = map[runtime.Location]*runtime.Program{}
 		}
 
 		var ok bool
@@ -191,7 +191,7 @@ func (i *TestRuntimeInterface) GetOrLoadProgram(
 		return
 	}
 
-	return i.OnGetAndSetProgram(location, load)
+	return i.OnGetOrLoadProgram(location, load)
 }
 
 func (i *TestRuntimeInterface) SetInterpreterSharedState(state *interpreter.SharedState) {
