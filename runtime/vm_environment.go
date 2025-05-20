@@ -283,6 +283,14 @@ func (e *vmEnvironment) loadProgram(location common.Location) (*Program, error) 
 		return nil, err
 	}
 
+	// TODO: Maybe make the `program.compiledProgram` a pointer?
+	if program.compiledProgram.program == nil {
+		compile := e.checkingEnvironment.compile
+		if compile != nil {
+			program.compiledProgram = compile(program.interpreterProgram, location)
+		}
+	}
+
 	return program, nil
 }
 
